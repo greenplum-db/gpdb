@@ -9,7 +9,7 @@ return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replac
 CREATE
 
 -- stop a primary in order to trigger a mirror promotion
-select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration where role='p' and content=0), 'stop', NULL, NULL);
 pg_ctl                                              
 ----------------------------------------------------
 waiting for server to shut down done
@@ -75,17 +75,17 @@ Force FTS probe scan:  2018-01-07 11:24:40.253186: FTS probe refreshed catalog
 2018-01-07 11:24:40.253288: fetching cluster configuration
 2018-01-07 11:24:40.274012: fetched cluster configuration
 found 3 distinct content IDs
-:  2018-01-07 11:24:40.293600: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
-:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  | replication_port 
-:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+------------------
-:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion |                 
-:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion |                 
-:      2 |       0 | m    | p              | s    | u      | 25432 | pchampion | pchampion |                 
-:      5 |       0 | p    | m              | s    | u      | 25435 | pchampion | pchampion |                 
-:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion |                 
-:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion |                 
-:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion |                 
-:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion |                 
+:  2018-01-07 14:44:29.373816: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
+:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  |                                      datadir                                      
+:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+-----------------------------------------------------------------------------------
+:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/standby
+:      2 |       0 | m    | p              | s    | u      | 25432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+:      5 |       0 | p    | m              | s    | u      | 25435 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
+:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
 :  (8 rows)
 :  
 :  
@@ -104,7 +104,7 @@ content|preferred_role|role|status|mode
 (2 rows)
 
 -- now, let's stop the new primary, so that we can restore original role
-select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration where role='p' and content=0), 'stop', NULL, NULL);
 pg_ctl                                              
 ----------------------------------------------------
 waiting for server to shut down done
@@ -169,17 +169,17 @@ Force FTS probe scan:  2018-01-07 11:24:48.398303: FTS probe refreshed catalog
 2018-01-07 11:24:48.398427: fetching cluster configuration
 2018-01-07 11:24:48.413256: fetched cluster configuration
 found 3 distinct content IDs
-:  2018-01-07 11:24:48.426700: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
-:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  | replication_port 
-:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+------------------
-:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion |                 
-:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion |                 
-:      2 |       0 | p    | p              | s    | u      | 25432 | pchampion | pchampion |                 
-:      5 |       0 | m    | m              | s    | u      | 25435 | pchampion | pchampion |                 
-:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion |                 
-:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion |                 
-:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion |                 
-:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion |                 
+:  2018-01-07 14:44:37.662766: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
+:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  |                                      datadir                                      
+:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+-----------------------------------------------------------------------------------
+:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/standby
+:      2 |       0 | p    | p              | s    | u      | 25432 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+:      5 |       0 | m    | m              | s    | u      | 25435 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
+:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion | /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
 :  (8 rows)
 :  
 :  

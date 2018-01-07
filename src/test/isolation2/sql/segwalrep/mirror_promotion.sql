@@ -21,8 +21,8 @@ returns text as $$
 $$ language plpythonu;
 
 -- stop a primary in order to trigger a mirror promotion
-select pg_ctl((select fselocation from gp_segment_configuration c,
-pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration
+	where role='p' and content=0), 'stop', NULL, NULL);
 
 -- trigger failover
 select gp_request_fts_probe_scan();
@@ -45,8 +45,8 @@ from gp_segment_configuration
 where content = 0;
 
 -- now, let's stop the new primary, so that we can restore original role
-select pg_ctl((select fselocation from gp_segment_configuration c,
-pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration
+	where role='p' and content=0), 'stop', NULL, NULL);
 
 -- trigger failover
 select gp_request_fts_probe_scan();
