@@ -252,9 +252,8 @@ class GPAddmirrorsTestCase(MPPTestCase):
                 content_id = cols[0]
                 adress = cols[1]
                 port = cols[2]
-                mir_replication_port = cols[3]
-                query_on_configuration = '''select * from gp_segment_configuration where content=\'%s\' and address=\'%s\' and port=\'%s\' 
-                                            and replication_port=\'%s\'''' % (content_id, adress, port, mir_replication_port)
+                query_on_configuration = '''select * from gp_segment_configuration where content=\'%s\' and address=\'%s\'
+                                            and port=\'%s\'''' % (content_id, adress, port)
                 config_info = PSQL.run_sql_command(query_on_configuration, flags='-q -t', dbname='template1')
                 config_info = config_info.strip()
                 # as intended, the entry should be existing in the cluster
