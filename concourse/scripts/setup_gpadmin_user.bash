@@ -56,17 +56,17 @@ set_limits() {
 }
 
 setup_gpadmin_user() {
-  groupadd supergroup
+
   case "$TEST_OS" in
     sles)
       groupadd gpadmin
-      /usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin
+      /usr/sbin/useradd -G gpadmin,tty gpadmin
       ;;
     centos)
-      /usr/sbin/useradd -G supergroup,tty gpadmin
+      /usr/sbin/useradd -G tty gpadmin
       ;;
     ubuntu)
-      /usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash
+      /usr/sbin/useradd -G tty gpadmin -s /bin/bash
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
