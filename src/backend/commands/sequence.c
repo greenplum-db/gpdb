@@ -1766,8 +1766,10 @@ mask_seq_values(Page page)
  * Mask a Sequence page before performing consistency checks on it.
  */
 void
-seq_mask(char *page, BlockNumber blkno)
+seq_mask(char *pagedata, BlockNumber blkno)
 {
+	Page		page = (Page) pagedata;
+
 	mask_page_lsn_and_checksum(page);
 
 	/*
