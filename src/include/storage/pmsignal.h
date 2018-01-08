@@ -33,19 +33,6 @@ typedef enum
 
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
 
-	PMSIGNAL_FILEREP_STATE_CHANGE,	      /* filerep is reporting state change */ 
-
-	PMSIGNAL_PRIMARY_MIRROR_TRANSITION_RECEIVED, /* a primary mirror transition has been received by a backend */
-	PMSIGNAL_PRIMARY_MIRROR_ALL_BACKENDS_SHUTDOWN, /* filerep has shut down all backends */
-
-	/* a filerep subprocess crashed in a way that requires postmaster reset */
-    PMSIGNAL_POSTMASTER_RESET_FILEREP,
-
-    /* peer segment requested postmaster reset */
-    PMSIGNAL_POSTMASTER_RESET_BY_PEER,
-
-	PMSIGNAL_SEGCONFIG_CHANGE,	/* segment configuration hs changed */
-
 	NUM_PMSIGNALS				/* Must be last value of enum! */
 } PMSignalReason;
 

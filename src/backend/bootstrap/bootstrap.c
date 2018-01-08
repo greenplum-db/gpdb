@@ -355,12 +355,6 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			case WalReceiverProcess:
 				statmsg = "wal receiver process";
 				break;
-			case FilerepProcess:
-				statmsg = "filerep process";
-				break;
-			case FilerepResetPeerProcess:
-				statmsg = "filerep reset peer process";
-				break;
 			default:
 				statmsg = "??? process";
 				break;
@@ -401,13 +395,7 @@ AuxiliaryProcessMain(int argc, char *argv[])
 	 * InitPostgres pushups, but there are a couple of things that need to get
 	 * lit up even in an auxiliary process.
 	 */
-	/*
-	 * FileRep Main process does not use LWLock and so PGPROC is not required 
-	 * to be initialized.
-	 * It is temporary fix to handle that here as an exception.
-	 */
-	if (IsUnderPostmaster && (MyAuxProcType != FilerepProcess &&
-							  MyAuxProcType != FilerepResetPeerProcess))
+	if (IsUnderPostmaster)
 	{
 		/*
 		 * Create a PGPROC so we can use LWLocks.  In the EXEC_BACKEND case,

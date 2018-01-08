@@ -37,7 +37,6 @@
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "miscadmin.h"
-#include "postmaster/primary_mirror_mode.h"
 
 #ifdef FAULT_INJECTOR
 
@@ -434,15 +433,6 @@ FaultInjector_InjectFaultNameIfSet(
 			for (ii=0; ii < cnt; ii++)
 			{
 				pg_usleep(1000000L); // sleep for 1 sec (1 sec * 3600 = 1 hour)
-				SegmentState_e segmentState;
-				getFileRepRoleAndState(NULL, &segmentState, NULL, NULL, NULL);
-
-				if (segmentState == SegmentStateImmediateShutdown ||
-					segmentState == SegmentStateShutdown ||
-					IsFtsShudownRequested())
-				{
-					break;
-				}
 			}
 			break;
 		case FaultInjectorTypeDataCorruption:

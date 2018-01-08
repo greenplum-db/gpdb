@@ -210,19 +210,6 @@ typedef struct CancelRequestPacket
  */
 #define NEGOTIATE_SSL_CODE PG_PROTOCOL(1234,5679)
 
-/*
- * Filerep Add a pre-startup message primary-mirror-transition-request,
- * and a primary-mirror-transition-query
- */
-#define PRIMARY_MIRROR_TRANSITION_REQUEST_CODE PG_PROTOCOL(1234,5680)
-#define PRIMARY_MIRROR_TRANSITION_QUERY_CODE PG_PROTOCOL(1234,5681)
-
-typedef struct PrimaryMirrorTransitionPacket
-{
-	MsgType protocolCode;
-	PacketLen dataLength;
-} PrimaryMirrorTransitionPacket;
-
 /* the number of times trying to acquire the send mutex for the front
  * end connection after detecting process is exitting */
 #define PQ_BUSY_TEST_COUNT_IN_EXITING 5

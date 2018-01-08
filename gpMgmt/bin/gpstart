@@ -417,7 +417,7 @@ class GpStart:
 
         numContentsInCluster = 0
         cmd = gp.MasterStart('master in utility mode', self.master_datadir,
-                             self.port, d.dbid, d.standby_dbid or 0,
+                             self.port, d.dbid,
                              numContentsInCluster, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
@@ -745,7 +745,7 @@ class GpStart:
 
         # attempt to start master
         gp.MasterStart.local("Starting Master instance",
-                             self.master_datadir, self.port, self.gparray.master.dbid, standby_dbid,
+                             self.master_datadir, self.port, self.gparray.master.dbid,
                              numContentsInCluster, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,

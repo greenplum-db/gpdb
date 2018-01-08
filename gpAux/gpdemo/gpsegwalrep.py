@@ -143,14 +143,13 @@ class StartInstances():
         contentid = segconfig.content
         segment_port = segconfig.port
         segment_dir = segconfig.datadir
-        segment_role = StartInstances.getRole(contentid)
 
         # Need to set the dbid to 0 on segments to prevent use in mmxlog records
         if contentid != GpSegmentConfiguration.MASTER_CONTENT_ID:
             dbid = 0
 
-        opts = ("-p %d --gp_dbid=%d --silent-mode=true -i -M %s --gp_contentid=%d --gp_num_contents_in_cluster=%d" %
-                (segment_port, dbid, segment_role, contentid, self.clusterconfig.get_num_contents()))
+        opts = ("-p %d --gp_dbid=%d --silent-mode=true -i --gp_contentid=%d --gp_num_contents_in_cluster=%d" %
+                (segment_port, dbid, contentid, self.clusterconfig.get_num_contents()))
 
         # Arguments for the master.
         #

@@ -44,7 +44,6 @@
 #include "storage/pmsignal.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
-#include "postmaster/primary_mirror_mode.h"
 
 /* ----------
  * Timer definitions.

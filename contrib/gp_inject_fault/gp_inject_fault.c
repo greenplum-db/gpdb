@@ -9,7 +9,6 @@
 #include "cdb/cdbvars.h"
 #include "libpq/ip.h"
 #include "postmaster/postmaster.h"
-#include "postmaster/primary_mirror_transition_client.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
@@ -19,26 +18,90 @@ PG_MODULE_MAGIC;
 
 extern Datum gp_inject_fault(PG_FUNCTION_ARGS);
 
-static StringInfo transitionMsgErrors;
-
-static void
-transitionErrorLogFn(char *response)
+static char *
+processTransitionRequest_faultInject(char *faultName, char *type, char *ddlStatement, char *databaseName, char *tableName, int numOccurrences, int sleepTimeSeconds)
 {
-	appendStringInfo(transitionMsgErrors, "%s\n", response);
+	StringInfo buf = makeStringInfo();
+#ifdef FAULT_INJECTOR
+	FaultInjectorEntry_s    faultInjectorEntry;
+
+	elog(DEBUG1, "FAULT INJECTED: Name %s Type %s, DDL %s, DB %s, Table %s, NumOccurrences %d  SleepTime %d",
+		 faultName, type, ddlStatement, databaseName, tableName, numOccurrences, sleepTimeSeconds );
+
+	strlcpy(faultInjectorEntry.faultName, faultName, sizeof(faultInjectorEntry.faultName));
+	faultInjectorEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
+	if (faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified) {
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("could not recognize fault name")));
+
+		appendStringInfo(buf, "Failure: could not recognize fault name");
+		goto exit;
+	}
+
+	faultInjectorEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
+	if (faultInjectorEntry.faultInjectorType == FaultInjectorTypeNotSpecified ||
+		faultInjectorEntry.faultInjectorType == FaultInjectorTypeMax) {
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("could not recognize fault type")));
+
+		appendStringInfo(buf, "Failure: could not recognize fault type");
+		goto exit;
+	}
+
+	faultInjectorEntry.sleepTime = sleepTimeSeconds;
+	if (sleepTimeSeconds < 0 || sleepTimeSeconds > 7200) {
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("invalid sleep time, allowed range [0, 7200 sec]")));
+
+		appendStringInfo(buf, "Failure: invalid sleep time, allowed range [0, 7200 sec]");
+		goto exit;
+	}
+
+	faultInjectorEntry.ddlStatement = FaultInjectorDDLStringToEnum(ddlStatement);
+	if (faultInjectorEntry.ddlStatement == DDLMax) {
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("could not recognize DDL statement")));
+
+		appendStringInfo(buf, "Failure: could not recognize DDL statement");
+		goto exit;
+	}
+
+	snprintf(faultInjectorEntry.databaseName, sizeof(faultInjectorEntry.databaseName), "%s", databaseName);
+
+	snprintf(faultInjectorEntry.tableName, sizeof(faultInjectorEntry.tableName), "%s", tableName);
+
+	faultInjectorEntry.occurrence = numOccurrences;
+	if (numOccurrences > 1000)
+	{
+		ereport(COMMERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("invalid occurrence number, allowed range [1, 1000]")));
+
+		appendStringInfo(buf, "Failure: invalid occurrence number, allowed range [1, 1000]");
+		goto exit;
+	}
+
+	if (FaultInjector_SetFaultInjection(&faultInjectorEntry) == STATUS_OK)
+	{
+		if (faultInjectorEntry.faultInjectorType == FaultInjectorTypeStatus)
+			appendStringInfo(buf, "%s", faultInjectorEntry.bufOutput);
+		else
+			appendStringInfo(buf, "Success:");
+	}
+	else
+		appendStringInfo(buf, "Failure: %s", faultInjectorEntry.bufOutput);
+
+exit:
+#else
+	appendStringInfo(buf, "Failure: Fault Injector not available");
+#endif
+	return buf->data;
 }
 
-static void
-transitionReceivedDataFn(char *response)
-{
-	elog(NOTICE, "%s", response);
-}
-
-static bool
-checkForNeedToExitFn(void)
-{
-	CHECK_FOR_INTERRUPTS();
-	return false;
-}
 
 PG_FUNCTION_INFO_V1(gp_inject_fault);
 Datum
@@ -52,102 +115,47 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	int			numOccurrences = PG_GETARG_INT32(5);
 	int			sleepTimeSeconds = PG_GETARG_INT32(6);
 	int         dbid = PG_GETARG_INT32(7);
-	StringInfo  faultmsg = makeStringInfo();
 
 	/* Fast path if injecting fault in our postmaster. */
 	if (GpIdentity.dbid == dbid)
 	{
-		appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%d\n%d\n",
-						 faultName, type, ddlStatement, databaseName,
-						 tableName, numOccurrences, sleepTimeSeconds);
-		int offset = 0;
-		char *response =
-			processTransitionRequest_faultInject(
-				faultmsg->data, &offset, faultmsg->len);
+		char	   *response;
+
+		response = processTransitionRequest_faultInject(
+			faultName, type, ddlStatement, databaseName,
+			tableName, numOccurrences, sleepTimeSeconds);
 		if (!response)
 			elog(ERROR, "failed to inject fault locally (dbid %d)", dbid);
 		if (strncmp(response, "Success:",  strlen("Success:")) != 0)
 			elog(ERROR, "%s", response);
 
 		elog(NOTICE, "%s", response);
-		PG_RETURN_DATUM(true);
 	}
-
-	/* Obtain host and port of the requested dbid */
-	HeapTuple tuple;
-	Relation rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	ScanKeyInit(&scankey,
-				Anum_gp_segment_configuration_dbid,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum((int16) dbid));
-	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
-							   GetTransactionSnapshot(), 1, &scankey);
-	tuple = systable_getnext(sscan);
-
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cannot find dbid %d", dbid);
-
-	bool isnull;
-	Datum datum = heap_getattr(tuple, Anum_gp_segment_configuration_hostname,
-							   RelationGetDescr(rel), &isnull);
-	char *hostname;
-	if (!isnull)
-		hostname =
-				DatumGetCString(DirectFunctionCall1(textout, datum));
-	else
-		elog(ERROR, "hostname is null for dbid %d", dbid);
-	int port = DatumGetInt32(heap_getattr(tuple,
-										  Anum_gp_segment_configuration_port,
-										  RelationGetDescr(rel), &isnull));
-	systable_endscan(sscan);
-	heap_close(rel, NoLock);
-
-	struct addrinfo *addrList = NULL;
-	struct addrinfo hint;
-	int			ret;
-
-	/* Initialize hint structure */
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;
-
-	char portStr[100];
-	if (snprintf(portStr, sizeof(portStr), "%d", port) >= sizeof(portStr))
-		elog(ERROR, "port number too long for dbid %d", dbid);
-
-	/* Use pg_getaddrinfo_all() to resolve the address */
-	ret = pg_getaddrinfo_all(hostname, portStr, &hint, &addrList);
-	if (ret || !addrList)
+	else if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (addrList)
-			pg_freeaddrinfo_all(hint.ai_family, addrList);
-		elog(ERROR, "could not translate host name \"%s\" to address: %s\n",
-			 hostname, gai_strerror(ret));
+		/*
+		 * Otherwise, relay the command to executor nodes.
+		 *
+		 * We'd only really need to dispatch it to the one that it's meant for,
+		 * but for now, just send it everywhere. The other nodes will just
+		 * ignore it.
+		 *
+		 * (Perhaps this function should be defined as EXECUTE ON SEGMENTS,
+		 * instead of dispatching manually here? But then it wouldn't run on
+		 * QD. There is no EXECUTE ON SEGMENTS AND MASTER options, at the
+		 * moment...)
+		 */
+		char *sql;
+
+		sql = psprintf("select gp_inject_fault(%s, %s, %s, %s, %s, %d, %d, %d)",
+					   quote_literal_internal(faultName),
+					   quote_literal_internal(type),
+					   quote_literal_internal(ddlStatement),
+					   quote_literal_internal(databaseName),
+					   quote_literal_internal(tableName),
+					   numOccurrences,
+					   sleepTimeSeconds,
+					   dbid);
 	}
-
-	PrimaryMirrorTransitionClientInfo client;
-	client.receivedDataCallbackFn = transitionReceivedDataFn;
-	client.errorLogFn = transitionErrorLogFn;
-	client.checkForNeedToExitFn = checkForNeedToExitFn;
-	transitionMsgErrors = makeStringInfo();
-
-	appendStringInfo(faultmsg, "%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n",
-					 "faultInject",	faultName, type, ddlStatement,
-					 databaseName, tableName, numOccurrences,
-					 sleepTimeSeconds);
-
-	if (sendTransitionMessage(&client, addrList, faultmsg->data, faultmsg->len,
-							  1 /* retries */, 60 /* timeout */) !=
-		TRANS_ERRCODE_SUCCESS)
-	{
-		pg_freeaddrinfo_all(hint.ai_family, addrList);
-		ereport(ERROR, (errmsg("failed to inject %s fault in dbid %d",
-							   faultName, dbid),
-						errdetail("%s", transitionMsgErrors->data)));
-	}
-
-	pg_freeaddrinfo_all(hint.ai_family, addrList);
 	PG_RETURN_DATUM(BoolGetDatum(true));
 }

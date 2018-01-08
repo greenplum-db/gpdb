@@ -66,20 +66,5 @@ extern void ShmemBackendArrayAllocation(void);
 
 /* CDB */
 typedef int (PMSubStartCallback)(void);
-extern bool GPIsSegmentDatabase(void);
-extern bool GPAreFileReplicationStructuresRequired(void);
-extern int PostmasterGetMppLocalProcessCounter(void);
-
-extern void StartMasterOrPrimaryPostmasterProcesses(void);
-extern void SignalShutdownFilerepProcess(void);
-extern void SignalShutdownFilerepBackendProcesses(void);
-extern bool IsFilerepBackendsDoneShutdown(void);
-extern void NotifyProcessesOfFilerepStateChange(void);
-extern void StartFilerepProcesses(void);
-extern bool IsFilerepProcessRunning(void);
-extern void SetFilerepPeerResetResult(bool success);
-extern bool IsDatabaseInRunMode(void);
-extern char *processTransitionRequest_faultInject(
-	void * inputBuf, int *offsetPtr, int length);
 
 #endif   /* _POSTMASTER_H */

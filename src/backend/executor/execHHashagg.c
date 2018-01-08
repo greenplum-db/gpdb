@@ -37,7 +37,6 @@
 
 #include "cdb/cdbexplain.h"
 #include "cdb/cdbvars.h"
-#include "postmaster/primary_mirror_mode.h"
 
 
 #define HHA_MSG_LVL DEBUG2
