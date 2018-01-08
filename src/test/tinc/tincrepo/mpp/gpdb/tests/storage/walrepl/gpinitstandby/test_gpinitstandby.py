@@ -95,7 +95,7 @@ class GpinitStandsbyTestCase(MPPTestCase):
         self.touch_file(self.mdd + '/gpperfmon/data/testfile')
         self.touch_file(self.mdd + '/pg_log/testfile')
 
-        self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gp.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
 
         shutil.rmtree(self.mdd + '/db_dumps')
         os.remove(self.mdd + '/gpperfmon/logs/test.log')
@@ -117,7 +117,7 @@ class GpinitStandsbyTestCase(MPPTestCase):
 
     def test_gpinitstandby_to_same_host_new_port_and_new_mdd(self):
         pgutil.clean_dir(self.host,self.standby_loc)
-        self.assertTrue(self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc)))
+        self.assertTrue(self.gp.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc)))
         self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
         
 
@@ -130,37 +130,37 @@ class GpinitStandsbyTestCase(MPPTestCase):
     @unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
     def test_gpinitstandby_new_host_new_mdd(self):
         self.create_directory(self.standby_loc)
-        self.assertTrue(self.gp.run(option = '-F pg_system:%s -s %s' % (self.standby_loc, self.standby)))
+        self.assertTrue(self.gp.run(option = '-F %s -s %s' % (self.standby_loc, self.standby)))
         self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
     
-
-    def test_gpinitstandby_to_same_with_filespaces(self):
-        from mpp.lib.gpfilespace import Gpfilespace
-        gpfile = Gpfilespace()
-        gpfile.create_filespace('fs_walrepl_a')
-        PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
-        filespace_loc = self.gp.get_filespace_location() 
-        filespace_loc = os.path.join(os.path.split(filespace_loc)[0], 'newstandby')
-        filespaces = "pg_system:%s,fs_walrepl_a:%s" %(self.standby_loc , filespace_loc)
-        self.assertTrue(self.gp.run(option = '-F %s -s %s -P %s' % (filespaces, self.host, self.standby_port)))
-        self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
-    
-    @unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
-    def test_gpinitstandby_new_host_with_filespace(self):
-        from mpp.lib.gpfilespace import Gpfilespace
-        gpfile = Gpfilespace()
-        gpfile.create_filespace('fs_walrepl_a')
-        PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
-        filespace_loc = self.gp.get_filespace_location()
-        self.create_directory(filespace_loc)
-        filespaces = "pg_system:%s,fs_walrepl_a:%s" % (self.mdd, filespace_loc)
-        self.assertTrue(self.gp.run(option = '-F %s -s %s -P %s' % (filespaces, self.standby, self.standby_port)))
-        self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
+	# WALREP_FIXME: Enable this after tablespace with walrep works
+    #def test_gpinitstandby_to_same_with_filespaces(self):
+    #    from mpp.lib.gpfilespace import Gpfilespace
+    #    gpfile = Gpfilespace()
+    #    gpfile.create_filespace('fs_walrepl_a')
+    #    PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
+    #    filespace_loc = self.gp.get_filespace_location() 
+    #    filespace_loc = os.path.join(os.path.split(filespace_loc)[0], 'newstandby')
+    #    filespaces = "pg_system:%s,fs_walrepl_a:%s" %(self.standby_loc , filespace_loc)
+    #    self.assertTrue(self.gp.run(option = '-F %s -s %s -P %s' % (filespaces, self.host, self.standby_port)))
+    #    self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
+    #
+    #@unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
+    #def test_gpinitstandby_new_host_with_filespace(self):
+    #    from mpp.lib.gpfilespace import Gpfilespace
+    #    gpfile = Gpfilespace()
+    #    gpfile.create_filespace('fs_walrepl_a')
+    #    PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
+    #    filespace_loc = self.gp.get_filespace_location()
+    #    self.create_directory(filespace_loc)
+    #    filespaces = "pg_system:%s,fs_walrepl_a:%s" % (self.mdd, filespace_loc)
+    #    self.assertTrue(self.gp.run(option = '-F %s -s %s -P %s' % (filespaces, self.standby, self.standby_port)))
+    #    self.assertTrue(self.gp.verify_gpinitstandby(self.primary_pid))
     
     def test_gpinitstandby_remove_from_same_host(self):
         #self.gp.create_dir_on_standby(self.host, self.standby_loc)
         pgutil.clean_dir(self.host,self.standby_loc)
-        self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gp.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
         self.assertTrue(self.gp.run(option = '-r'))
 
     @unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
@@ -171,13 +171,13 @@ class GpinitStandsbyTestCase(MPPTestCase):
    
     def test_gpinitstandby_n_with_no_standby_stop(self):
         pgutil.clean_dir(self.host,self.standby_loc)
-        self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gp.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
         (rc,out) = pgutil.run(command='gpinitstandby -n')
         self.assertTrue('Standy master is already up and running' in out)
 
     def test_gpinitstandby_n_with_standby_stop(self):
         pgutil.clean_dir(self.host,self.standby_loc)
-        self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gp.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
         self.standby = Standby(self.standby_loc,
                                         self.standby_port)
 
@@ -188,22 +188,23 @@ class GpinitStandsbyTestCase(MPPTestCase):
     def test_gpinitstandby_with_no_default_path(self):
         self.assertTrue(self.gp.initstand_by_with_default())
     
-    @unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
-    def test_gpinitstandby_prompt_for_filespace(self):
-        from mpp.lib.gpfilespace import Gpfilespace
-        gpfile = Gpfilespace()
-        gpfile.create_filespace('fs_walrepl_a')
-        PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
-        filespace_loc = self.gp.get_filespace_location()
-        self.create_directory(filespace_loc)
-        self.assertTrue(self.gp.init_with_prompt(filespace_loc))
+	# WALREP_FIXME: Enable this after tablespace with walrep works
+    #@unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
+    #def test_gpinitstandby_prompt_for_filespace(self):
+    #    from mpp.lib.gpfilespace import Gpfilespace
+    #    gpfile = Gpfilespace()
+    #    gpfile.create_filespace('fs_walrepl_a')
+    #    PSQL.run_sql_file(local_path('filespace.sql'), dbname = self.db_name)
+    #    filespace_loc = self.gp.get_filespace_location()
+    #    self.create_directory(filespace_loc)
+    #    self.assertTrue(self.gp.init_with_prompt(filespace_loc))
 
     def test_gpinistandby_with_M(self):
         '''
         @product_version gpdb: [4.3.1.0-MAIN]
         '''
         pgutil.clean_dir(self.host,self.standby_loc)
-        self.assertTrue(self.gp.run(option = '-P %s -s %s -F pg_system:%s -M smart' % (self.standby_port, self.host, self.standby_loc)))
+        self.assertTrue(self.gp.run(option = '-P %s -s %s -F %s -M smart' % (self.standby_port, self.host, self.standby_loc)))
         self.assertTrue(self.gp.run(option = '-r'))
 
     def test_gpinitstandby_to_same_host_new_port_and_new_mdd_with_error(self):
@@ -213,7 +214,7 @@ class GpinitStandsbyTestCase(MPPTestCase):
         pgutil.clean_dir(self.host,self.standby_loc)
         try:
             self.create_unmodifiable_file('foo')
-            (rc, out) = pgutil.run(command='gpinitstandby -a -P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+            (rc, out) = pgutil.run(command='gpinitstandby -a -P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
             self.assertTrue('ERROR:  could not open file "./foo": Permission denied' in out)
             self.assertFalse('server closed the connection unexpectedly' in out)
         finally:

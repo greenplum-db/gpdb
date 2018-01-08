@@ -127,10 +127,8 @@ class GpactivateStandby(object):
         return self.config.get_master_standbyhost()
 
     def get_filespace_location(self):
-        fs_sql = """select fselocation from pg_filespace_entry
-            where fselocation like '%fs_walrepl_a%' and
-                fsedbid = (select dbid from gp_segment_configuration
-                            where role = 'p' and content = -1);"""
+        fs_sql = """select datadir from gp_segment_configuration
+                    where role = 'p' and content = -1;"""
         filespace_loc = PSQL.run_sql_command(fs_sql, flags = '-q -t', dbname= 'postgres')
         return filespace_loc.strip()
 
@@ -146,7 +144,7 @@ class GpactivateStandby(object):
 
 
     def get_standby_dd(self):
-        stdby_dir_sql = 'select fselocation from gp_segment_configuration, pg_filespace_entry where dbid = fsedbid and fsefsoid=3052 and content = -1 and preferred_role=\'m\' ;'
+        stdby_dir_sql = 'select datadir from gp_segment_configuration where content = -1 and preferred_role=\'m\' ;'
         result = PSQL.run_sql_command(stdby_dir_sql, flags = '-q -t', dbname= 'template1')
         standby_loc = result.strip()
         if len(standby_loc) > 0:

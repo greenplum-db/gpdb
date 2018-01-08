@@ -363,6 +363,9 @@ def create_standby(options):
             logger.error('Failed to retrieve configuration information from the master.')
             raise GpInitStandbyException(ex)
 
+        if options.standby_datadir is None:
+            options.standby_datadir = array.master.getSegmentDataDirectory()
+
         # validate
         validate_standby_init(options, array)
         

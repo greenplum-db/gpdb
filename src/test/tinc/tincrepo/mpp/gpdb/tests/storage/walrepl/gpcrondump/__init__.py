@@ -95,7 +95,7 @@ class BkupRestore(MPPTestCase):
         ''' Create a standby '''
         gputil.create_dir(self.host,self.standby_loc)
         gputil.clean_dir(self.host,self.standby_loc)
-        self.gpinit.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gpinit.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
         
     def run_remote(self, standbyhost, rmt_cmd, pgport = '', standbydd = ''):
         '''Runs remote command and returns rc, result '''
