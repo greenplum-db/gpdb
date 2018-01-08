@@ -5304,10 +5304,10 @@ select_gp_replication_config_files(const char *configdir, const char *progname)
  * values before writing them.
  */
 static void
-write_gp_replication_conf_file(int fd, const char *filename, struct name_value_pair *head)
+write_gp_replication_conf_file(int fd, const char *filename, ConfigVariable *head)
 {
 	StringInfoData buf;
-	struct name_value_pair *item;
+	ConfigVariable *item;
 
 	initStringInfo(&buf);
 
@@ -5372,11 +5372,10 @@ write_gp_replication_conf_file(int fd, const char *filename, struct name_value_p
  * or deleting the entry for item "name" (delete if "value" == NULL).
  */
 static void
-replace_gp_replication_config_value(struct name_value_pair  **head_p, struct name_value_pair **tail_p,
+replace_gp_replication_config_value(ConfigVariable **head_p, ConfigVariable **tail_p,
                                     const char *name, const char *value)
 {
-	struct name_value_pair  *item,
-			*prev = NULL;
+	ConfigVariable *item, *prev = NULL;
 
 	/* Search the list for an existing match (we assume there's only one) */
 	for (item = *head_p; item != NULL; item = item->next)
@@ -5550,8 +5549,8 @@ validate_gp_replication_conf_option(struct config_generic *record,
 void
 set_gp_replication_config(const char *name, const char *value)
 {
-	struct name_value_pair *head = NULL;
-	struct name_value_pair *tail = NULL;
+	ConfigVariable *head = NULL;
+	ConfigVariable *tail = NULL;
 	volatile int Tmpfd;
 	char GpReplicationConfigTempFilename[MAXPGPATH];
 	char GpReplicationConfigFilename[MAXPGPATH];
@@ -5592,7 +5591,7 @@ set_gp_replication_config(const char *name, const char *value)
 					               GpReplicationConfigFilename)));
 
 		/* parse it */
-		if (!ParseConfigFile(GpReplicationConfigFilename, NULL, 0, PGC_SUSET, LOG, &head, &tail))
+		if (!ParseConfigFile(GpReplicationConfigFilename, 0, PGC_SUSET, LOG, &head, &tail))
 			ereport(ERROR,
 			        (errcode(ERRCODE_CONFIG_FILE_ERROR),
 					        errmsg("could not parse contents of file \"%s\"",

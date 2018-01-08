@@ -110,6 +110,26 @@ typedef enum
 } GucSource;
 
 /*
+ * Parsing the configuation file will return a list of name-value pairs
+ */
+typedef struct ConfigVariable
+{
+	char       *name;
+	char       *value;
+	char	   *filename;
+	int			sourceline;
+	struct ConfigVariable  *next;
+} ConfigVariable;
+
+extern bool ParseConfigFile(const char *config_file, const char *calling_file,
+				int depth, int elevel,
+				ConfigVariable **head_p, ConfigVariable **tail_p);
+extern bool ParseConfigFp(FILE *fp, const char *config_file,
+			  int depth, int elevel,
+			  ConfigVariable **head_p, ConfigVariable **tail_p);
+extern void FreeConfigVariables(ConfigVariable *list);
+
+/*
  * Enum values are made up of an array of name-value pairs
  */
 struct config_enum_entry
@@ -118,21 +138,6 @@ struct config_enum_entry
 	int			val;
 	bool		hidden;
 };
-
-typedef struct name_value_pair
-{
-	char       *name;
-	char       *value;
-	char	   *filename;
-	int			sourceline;
-	struct name_value_pair *next;
-} name_value_pair;
-
-extern bool ParseConfigFile(const char *config_file, const char *calling_file,
-							int depth, GucContext context, int elevel,
-							struct name_value_pair **head_p,
-							struct name_value_pair **tail_p);
-extern void free_name_value_list(struct name_value_pair * list);
 
 typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
 typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
@@ -343,6 +348,7 @@ extern int Debug_dtm_action_protocol;
 extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
+extern char *data_directory;
 extern char *ConfigFileName;
 extern char *HbaFileName;
 extern char *IdentFileName;

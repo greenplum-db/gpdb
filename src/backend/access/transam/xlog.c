@@ -5879,18 +5879,17 @@ str_time(pg_time_t tnow)
  * See if there is a recovery command file (recovery.conf), and if so
  * read in parameters for recovery in standby mode.
  *
- * XXX longer term intention is to expand this to
- * cater for additional parameters and controls
- * possibly use a flex lexer similar to the GUC one
+ * The file is parsed using the main configuration parser.
  */
 void
 XLogReadRecoveryCommandFile(int emode)
 {
 	FILE	   *fd;
-	char		cmdline[MAXPGPATH];
 	TimeLineID	rtli = 0;
 	bool		rtliGiven = false;
-	bool		syntaxError = false;
+	ConfigVariable *item,
+				   *head = NULL,
+				   *tail = NULL;
 
 	fd = AllocateFile(RECOVERY_COMMAND_FILE, "r");
 	if (fd == NULL)
@@ -5908,71 +5907,33 @@ XLogReadRecoveryCommandFile(int emode)
 					" for recovery in standby mode")));
 
 	/*
-	 * Parse the file...
-	 */
-	while (fgets(cmdline, sizeof(cmdline), fd) != NULL)
+	 * Since we're asking ParseConfigFp() to error out at FATAL, there's no
+	 * need to check the return value.
+	 */ 
+	ParseConfigFp(fd, RECOVERY_COMMAND_FILE, 0, FATAL, &head, &tail);
+
+	for (item = head; item; item = item->next)
 	{
-		/* skip leading whitespace and check for # comment */
-		char	   *ptr;
-		char	   *tok1;
-		char	   *tok2;
-
-		for (ptr = cmdline; *ptr; ptr++)
+		if (strcmp(item->name, "recovery_end_command") == 0)
 		{
-			if (!isspace((unsigned char) *ptr))
-				break;
-		}
-		if (*ptr == '\0' || *ptr == '#')
-			continue;
-
-		/* identify the quoted parameter value */
-		tok1 = strtok(ptr, "'");
-		if (!tok1)
-		{
-			syntaxError = true;
-			break;
-		}
-		tok2 = strtok(NULL, "'");
-		if (!tok2)
-		{
-			syntaxError = true;
-			break;
-		}
-		/* reparse to get just the parameter name */
-		tok1 = strtok(ptr, " \t=");
-		if (!tok1)
-		{
-			syntaxError = true;
-			break;
-		}
-
-		if (strcmp(tok1, "primary_conninfo") == 0)
-		{
-			PrimaryConnInfo = pstrdup(tok2);
-			ereport(emode,
-					(errmsg("primary_conninfo = \"%s\"",
-							PrimaryConnInfo)));
-		}
-		else if (strcmp(tok1, "recovery_end_command") == 0)
-		{
-			recoveryEndCommand = pstrdup(tok2);
-			ereport(LOG,
+			recoveryEndCommand = pstrdup(item->value);
+			ereport(DEBUG2,
 					(errmsg("recovery_end_command = '%s'",
 							recoveryEndCommand)));
 		}
-		else if (strcmp(tok1, "recovery_target_timeline") == 0)
+		else if (strcmp(item->name, "recovery_target_timeline") == 0)
 		{
 			rtliGiven = true;
-			if (strcmp(tok2, "latest") == 0)
+			if (strcmp(item->value, "latest") == 0)
 				rtli = 0;
 			else
 			{
 				errno = 0;
-				rtli = (TimeLineID) strtoul(tok2, NULL, 0);
+				rtli = (TimeLineID) strtoul(item->value, NULL, 0);
 				if (errno == EINVAL || errno == ERANGE)
 					ereport(FATAL,
 							(errmsg("recovery_target_timeline is not a valid number: \"%s\"",
-									tok2)));
+									item->value)));
 			}
 			if (rtli)
 				ereport(LOG,
@@ -5981,21 +5942,21 @@ XLogReadRecoveryCommandFile(int emode)
 				ereport(LOG,
 						(errmsg("recovery_target_timeline = latest")));
 		}
-		else if (strcmp(tok1, "recovery_target_xid") == 0)
+		else if (strcmp(item->name, "recovery_target_xid") == 0)
 		{
 			errno = 0;
-			recoveryTargetXid = (TransactionId) strtoul(tok2, NULL, 0);
+			recoveryTargetXid = (TransactionId) strtoul(item->value, NULL, 0);
 			if (errno == EINVAL || errno == ERANGE)
 				ereport(FATAL,
 				 (errmsg("recovery_target_xid is not a valid number: \"%s\"",
-						 tok2)));
-			ereport(LOG,
+						 item->value)));
+			ereport(DEBUG2,
 					(errmsg("recovery_target_xid = %u",
 							recoveryTargetXid)));
 			recoveryTarget = true;
 			recoveryTargetExact = true;
 		}
-		else if (strcmp(tok1, "recovery_target_time") == 0)
+		else if (strcmp(item->name, "recovery_target_time") == 0)
 		{
 			/*
 			 * if recovery_target_xid specified, then this overrides
@@ -6011,45 +5972,46 @@ XLogReadRecoveryCommandFile(int emode)
 			 */
 			recoveryTargetTime =
 				DatumGetTimestampTz(DirectFunctionCall3(timestamptz_in,
-														CStringGetDatum(tok2),
+														CStringGetDatum(item->value),
 												ObjectIdGetDatum(InvalidOid),
 														Int32GetDatum(-1)));
 			ereport(LOG,
 					(errmsg("recovery_target_time = '%s'",
 							timestamptz_to_str(recoveryTargetTime))));
 		}
-		else if (strcmp(tok1, "recovery_target_inclusive") == 0)
+		else if (strcmp(item->name, "recovery_target_inclusive") == 0)
 		{
 			/*
 			 * does nothing if a recovery_target is not also set
 			 */
-			if (!parse_bool(tok2, &recoveryTargetInclusive))
+			if (!parse_bool(item->value, &recoveryTargetInclusive))
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("parameter \"recovery_target_inclusive\" requires a Boolean value")));
-			ereport(LOG,
-					(errmsg("standby_mode = %s", tok2)));
+						 errmsg("parameter \"%s\" requires a Boolean value", "recovery_target_inclusive")));
+			ereport(DEBUG2,
+					(errmsg("recovery_target_inclusive = %s", item->value)));
 		}
-		else if (strcmp(tok1, "standby_mode") == 0)
+		else if (strcmp(item->name, "standby_mode") == 0)
 		{
-			if (!parse_bool(tok2, &StandbyModeRequested))
-				  ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					  errmsg("parameter \"standby_mode\" requires a Boolean value")));
+			if (!parse_bool(item->value, &StandbyModeRequested))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("parameter \"%s\" requires a Boolean value", "standby_mode")));
+			ereport(DEBUG2,
+					(errmsg("standby_mode = '%s'", item->value)));
+		}
+		else if (strcmp(item->name, "primary_conninfo") == 0)
+		{
+			PrimaryConnInfo = pstrdup(item->value);
+			ereport(DEBUG2,
+					(errmsg("primary_conninfo = '%s'",
+							PrimaryConnInfo)));
 		}
 		else
 			ereport(FATAL,
 					(errmsg("unrecognized recovery parameter \"%s\"",
-							tok1)));
+							item->name)));
 	}
-
-	FreeFile(fd);
-
-	if (syntaxError)
-		ereport(FATAL,
-				(errmsg("syntax error in recovery command file: %s",
-						cmdline),
-			  errhint("Lines should have the format parameter = 'value'.")));
 
 	/*
 	 * Check for compulsory parameters
@@ -6069,6 +6031,9 @@ XLogReadRecoveryCommandFile(int emode)
 				(errmsg("recovery command file \"%s\" request for standby mode not specified",
 						RECOVERY_COMMAND_FILE)));
 	}
+
+	FreeConfigVariables(head);
+	FreeFile(fd);
 }
 
 /*

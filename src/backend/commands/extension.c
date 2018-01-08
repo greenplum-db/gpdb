@@ -449,7 +449,7 @@ parse_extension_control_file(ExtensionControlFile *control,
 {
 	char	   *filename;
 	FILE	   *file;
-	struct name_value_pair *item,
+	ConfigVariable *item,
 			   *head = NULL,
 			   *tail = NULL;
 
@@ -481,7 +481,7 @@ parse_extension_control_file(ExtensionControlFile *control,
 	 * Parse the file content, using GUC's file parsing code.  We need not
 	 * check the return value since any errors will be thrown at ERROR level.
 	 */
-	(void) ParseConfigFile(filename, NULL, 0, PGC_SIGHUP, ERROR, &head, &tail);
+	(void) ParseConfigFile(filename, 0, PGC_SIGHUP, ERROR, &head, &tail);
 
 
 	/*
@@ -568,7 +568,7 @@ parse_extension_control_file(ExtensionControlFile *control,
 							item->name, filename)));
 	}
 
-	free_name_value_list(head);
+	FreeConfigVariables(head);
 
 	if (control->relocatable && control->schema != NULL)
 		ereport(ERROR,
