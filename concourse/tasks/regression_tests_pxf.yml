@@ -6,5 +6,6 @@ inputs:
   - name: bin_gpdb
   - name: singlecluster
   - name: pxf_infra_src
+  - name: pxf_maven_dependencies
 run:
   path: gpdb_src/concourse/scripts/regression_tests_pxf.bash

@@ -40,6 +40,7 @@ groups:
   ## --------------------------------------------------------------------
   - gate_compile_start
 {% if "centos6" in os_types %}
+  - compile_pxf
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
@@ -177,6 +178,7 @@ groups:
   jobs:
   - gate_compile_start
 {% if "centos6" in os_types %}
+  - compile_pxf
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
@@ -479,6 +481,12 @@ resources:
     repository: pivotaldata/centos-gpdb-dev
     tag: '6-gcc6.2-llvm3.7'
 
+- name: centos-pxf-dev-6
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb-dev
+    tag: centos6
+
 {% endif %}
 {% if "centos7" in os_types %}
 - name: centos-gpdb-dev-7
@@ -511,6 +519,33 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: bin_pxf
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf/pxf.tar.gz
+
+- name: pxf_gradle_dependencies
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf/pxf_gradle_dependencies.tar.gz
+
+- name: pxf_maven_dependencies
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf/pxf_maven_dependencies.tar.gz
 
 - name: bin_gpdb_segwalrep_centos6
   type: s3
@@ -858,6 +893,7 @@ jobs:
     - get: gpdb_src_binary_swap
       trigger: true
     - get: centos-gpdb-dev-6
+    - get: centos-pxf-dev-6
 {% endif %}
 {% if "centos7" in os_types %}
     - get: centos-gpdb-dev-7
@@ -871,6 +907,29 @@ jobs:
 {% endif %}
 
 {% if "centos6" in os_types %}
+- name: compile_pxf
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_compile_start]
+      trigger: ((gpdb_src-trigger-flag))
+    - get: pxf_src
+      trigger: true
+      passed: [gate_compile_start]
+    - get: pxf_gradle_dependencies
+    - get: centos-pxf-dev-6
+      passed: [gate_compile_start]
+  - task: compile_pxf
+    file: gpdb_src/concourse/tasks/compile_pxf.yml
+    image: centos-pxf-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+  - aggregate:
+    - put: bin_pxf
+      params:
+        file: pxf_artifacts/pxf.tar.gz
+
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
@@ -881,9 +940,9 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
+    - get: bin_pxf
       trigger: true
-      passed: [gate_compile_start]
+      passed: [compile_pxf]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -913,9 +972,9 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
+    - get: bin_pxf
       trigger: true
-      passed: [gate_compile_start]
+      passed: [compile_pxf]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -948,8 +1007,8 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
+    - get: bin_pxf
+      passed: [compile_pxf]
       trigger: true
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
@@ -982,8 +1041,8 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
+    - get: bin_pxf
+      passed: [compile_pxf]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
     params:
@@ -1069,8 +1128,8 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
+    - get: bin_pxf
+      passed: [compile_pxf]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -1103,8 +1162,8 @@ jobs:
     - get: gpaddon_src
       passed: [gate_compile_start]
       tags: ["wix"]
-    - get: pxf_src
-      passed: [gate_compile_start]
+    - get: bin_pxf
+      passed: [compile_pxf]
       tags: ["wix"]
     - get: centos-mingw
       passed: [gate_compile_start]
@@ -2806,10 +2865,11 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
+    - get: pxf_maven_dependencies
+    - get: centos-pxf-dev-6
   - task: regression_tests_pxf
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
+    image: centos-pxf-dev-6
     params:
       GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: [[ hadoop_platform ]]
@@ -2832,10 +2892,11 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
+    - get: pxf_maven_dependencies
+    - get: centos-pxf-dev-6
   - task: regression_tests_pxf
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
+    image: centos-pxf-dev-6
     params:
       GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: TAR
@@ -2852,10 +2913,10 @@ jobs:
       passed: [gate_ud_start]
       trigger: [[ test_trigger ]]
       resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
+    - get: centos-pxf-dev-6
   - task: regression_tests_gphdfs
     file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-dev-6
+    image: centos-pxf-dev-6
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -2975,6 +3036,7 @@ jobs:
   - get: gpdb_src
     trigger: true
     passed:
+    - compile_pxf
     - compile_gpdb_centos6
     - compile_gpdb_open_source_centos6
     - compile_gpdb_centos7

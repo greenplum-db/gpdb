@@ -73,17 +73,18 @@ function run_regression_test() {
 }
 
 function setup_gpadmin_user() {
-	./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TARGET_OS"
+	./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "${TARGET_OS}"
+	echo 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /home/gpadmin/.bashrc
 }
 
 function _main() {
-	if [ -z "$TARGET_OS" ]; then
+	if [ -z "${TARGET_OS}" ]; then
 		echo "FATAL: TARGET_OS is not set"
 		exit 1
 	fi
 
-	if [ "$TARGET_OS" != "centos" -a "$TARGET_OS" != "sles" ]; then
-		echo "FATAL: TARGET_OS is set to an invalid value: $TARGET_OS"
+	if [ "${TARGET_OS}" != "centos" -a "${TARGET_OS}" != "sles" ]; then
+		echo "FATAL: TARGET_OS is set to an invalid value: ${TARGET_OS}"
 		echo "Configure TARGET_OS to be centos or sles"
 		exit 1
 	fi

@@ -4,7 +4,7 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: gpaddon_src
-  - name: pxf_src
+  - name: bin_pxf
 outputs:
   - name: gpdb_artifacts
 run:

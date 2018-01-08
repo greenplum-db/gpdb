@@ -60,6 +60,10 @@ function run_pxf_automation() {
 
 function setup_gpadmin_user() {
 	./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TARGET_OS"
+	if [ -d pxf_maven_dependencies ]; then
+		mkdir -p /home/gpadmin/.m2
+		tar -xzf pxf_maven_dependencies/pxf_maven_dependencies.tar.gz -C /home/gpadmin/.m2
+	fi
 }
 
 function unpack_tarball() {
