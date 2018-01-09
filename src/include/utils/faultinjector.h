@@ -277,6 +277,7 @@ typedef enum FaultInjectorType_e {
 
 	FaultInjectorTypeCheckpointAndPanic,
 
+	FaultInjectorTypeWaitUntilTriggered,
 	/* INSERT has to be done before that line */
 	FaultInjectorTypeMax,
 	
