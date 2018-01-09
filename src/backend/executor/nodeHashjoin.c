@@ -25,14 +25,11 @@
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
-/* Returns true for JOIN_LEFT, JOIN_ANTI and JOIN_LASJ_NOTIN jointypes */
-#define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
-
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"			/* work_mem */
 
-/* Returns true for JOIN_LEFT and JOIN_ANTI jointypes */
-#define HASHJOIN_IS_OUTER(hjstate)	((hjstate)->hj_NullInnerTupleSlot != NULL)
+/* Returns true for JOIN_LEFT, JOIN_ANTI and JOIN_LASJ_NOTIN jointypes */
+#define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
 
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
