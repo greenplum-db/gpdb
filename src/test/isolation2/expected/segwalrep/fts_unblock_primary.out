@@ -22,6 +22,15 @@ content|role|preferred_role|mode|status
 2      |m   |m             |s   |u     
 (2 rows)
 
+-- synchronous_standby_names should be set to '*' by default on primary 2, since
+-- we have a working/sync'd mirror
+-- XXX We assume primary 2 is DBID 4, which may not be the case.
+4U: show synchronous_standby_names;
+synchronous_standby_names
+-------------------------
+*                        
+(1 row)
+
 -- create table and show commits are not blocked
 create table fts_unblock_primary (a int) distributed by (a);
 CREATE
@@ -87,6 +96,13 @@ content|role|preferred_role|mode|status
 2<:  <... completed>
 COMMIT
 
+-- synchronous_standby_names should now be empty on the primary
+4U: show synchronous_standby_names;
+synchronous_standby_names
+-------------------------
+                         
+(1 row)
+
 -- bring the mirror back up and see primary s/u and mirror s/u
 1U: select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='m' and c.content=2 and c.dbid = f.fsedbid), 'start', (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), 2);
 pg_ctl          
@@ -109,3 +125,10 @@ content|role|preferred_role|mode|status
 -- everything is back to normal
 insert into fts_unblock_primary select i from generate_series(1,10)i;
 INSERT 10
+
+-- synchronous_standby_names should be back to its original value on the primary
+4U: show synchronous_standby_names;
+synchronous_standby_names
+-------------------------
+*                        
+(1 row)
