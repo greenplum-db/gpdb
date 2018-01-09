@@ -2610,7 +2610,7 @@ class GpTransfer(object):
         if self._options.partition_transfer or self._options.partition_transfer_non_pt_target:
             self._validate_partition_table_transfer_set()
 
-        self._validate_filespace(self._options.source_host, self._options.source_port, self._options.source_user,
+        self._validate_tablespace(self._options.source_host, self._options.source_port, self._options.source_user,
                                  self._options.dest_host, self._options.dest_port, self._options.dest_user,
                                  self._options.full)
 
@@ -3332,48 +3332,49 @@ class GpTransfer(object):
                     dest_conn.close()
         return before_dest_tables_dict
 
-    # Validate if destination system is missing required filespaces
-    def _validate_filespace(self, source_host, source_port, source_user, dest_host, dest_port, dest_user, full):
-        # Get all the filespaces of destination system
-        list_dest_fs = self._get_destination_filespaces(dest_host, dest_port, 'template1', dest_user)
+    # Validate if destination system is missing required tablespaces
+    def _validate_tablespace(self, source_host, source_port, source_user, dest_host, dest_port, dest_user, full):
+        # Get all the tablespaces of destination system
+        list_dest_ts = self._get_destination_tablespaces(dest_host, dest_port, 'template1', dest_user)
 
-        # Check if source filespace exists in destination system
+        # Check if source tablespace exists in destination system
         if full:
             # For transferring in full mode
-            source_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace"""
-            self._check_filespace(source_host, source_port, 'template1', source_user, list_dest_fs, source_fs_sql)
+            source_ts_sql = """SELECT spcname FROM pg_catalog.pg_tablespace"""
+            self._check_tablespace(source_host, source_port, 'template1', source_user, list_dest_ts, source_ts_sql)
         else:
             # For transferring in table mode
-            template_source_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace WHERE oid IN
-                                        (SELECT spcfsoid FROM pg_catalog.pg_tablespace
-                                        WHERE oid IN (SELECT dattablespace FROM pg_catalog.pg_database WHERE datname = '%s')
-                                        OR oid IN (SELECT reltablespace FROM pg_catalog.pg_class WHERE relname = '%s'));"""
+            template_source_ts_sql = """SELECT spcname FROM pg_catalog.pg_tablespace
+                                        WHERE oid IN
+                                        (SELECT dattablespace FROM pg_catalog.pg_database WHERE datname = '%s')
+                                        OR oid IN
+                                        (SELECT reltablespace FROM pg_catalog.pg_class WHERE relname = '%s');"""
             for table_pair in self._table_transfer_set:
                 dbname = pg.escape_string(table_pair.source.database)
                 tablename = pg.escape_string(table_pair.source.table)
-                source_fs_sql = template_source_fs_sql % (dbname, tablename)
-                self._check_filespace(source_host, source_port, table_pair.source.database, source_user, list_dest_fs,
-                                      source_fs_sql)
+                source_ts_sql = template_source_ts_sql % (dbname, tablename)
+                self._check_tablespace(source_host, source_port, table_pair.source.database, source_user, list_dest_ts,
+                                      source_ts_sql)
 
-    def _get_destination_filespaces(self, dest_host, dest_port, database, dest_user):
-        list_dest_fs = []
-        dest_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace"""
+    def _get_destination_tablespaces(self, dest_host, dest_port, database, dest_user):
+        list_dest_ts = []
+        dest_ts_sql = """SELECT spcname FROM pg_catalog.pg_tablespace"""
         with dbconn.connect(dbconn.DbURL(dest_host, dest_port, database, dest_user)) as dest_conn:
-            dest_cur = execSQL(dest_conn, dest_fs_sql)
+            dest_cur = execSQL(dest_conn, dest_ts_sql)
             for row in dest_cur:
-                list_dest_fs.append(row[0])
+                list_dest_ts.append(row[0])
             dest_cur.close()
-        return list_dest_fs
+        return list_dest_ts
 
-    def _check_filespace(self, source_host, source_port, database, source_user, list_dest_fs, source_fs_sql):
+    def _check_tablespace(self, source_host, source_port, database, source_user, list_dest_ts, source_ts_sql):
         with dbconn.connect(dbconn.DbURL(source_host, source_port, database, source_user)) as source_conn:
-            source_cur = execSQL(source_conn, source_fs_sql)
+            source_cur = execSQL(source_conn, source_ts_sql)
             for row in source_cur:
                 fs = row[0]
-                if fs not in list_dest_fs:
+                if fs not in list_dest_ts:
                     source_cur.close()
                     raise Exception(
-                        "Filespace '%s' does not exist on destination. Please create the filespace to run gptransfer" % fs)
+                        "Tablespace '%s' does not exist on destination. Please create the tablespace to run gptransfer" % fs)
             source_cur.close()
 
     def _get_configurations(self):

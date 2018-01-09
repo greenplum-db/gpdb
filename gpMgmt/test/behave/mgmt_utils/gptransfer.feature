@@ -751,12 +751,8 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
         And the user modifies the external_table.sql file "test/behave/mgmt_utils/steps/data/gptransfer_setup/external_table.sql" with host "GPTRANSFER_SOURCE_HOST" and port "2345"
         And the user starts the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
         And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer_setup" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptest"
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -765,59 +761,6 @@ Feature: gptransfer tests
         And the user stops the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-
-    Scenario: gptransfer full with all ddl, dml and filespace
-        Given the gptransfer test is initialized
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
-        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
-        And the user runs "psql -d template1 -f test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.sql > test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.out"
-        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-
-    Scenario: gptransfer full in change tracking
-        Given the gptransfer test is initialized
-        And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "ct"
-        When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "sync"
-
-    Scenario: gptransfer in resync
-        Given the gptransfer test is initialized
-        And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "resync"
-        When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "sync"
-
-    Scenario: gptransfer filespace exists test with --full -t and -d options
-        Given the gptransfer test is initialized
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test.sql -d template1"
-        And psql should return a return code of 0
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt --batch-size=10"
-        Then gptransfer should return a return code of 2
-        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
-        And the user runs "gptransfer -d gptransfer_filespace_test --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt --batch-size=10"
-        Then gptransfer should return a return code of 2
-        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
-        And the user runs "gptransfer -t gptransfer_filespace_test.public.t2 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt --batch-size=10"
-        Then gptransfer should return a return code of 2
-        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test_teardown.sql -d template1"
-        And psql should return a return code of 0
 
     Scenario: gptransfer with max-line-length of 16KB
         Given the gptransfer test is initialized

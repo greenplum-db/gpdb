@@ -560,35 +560,6 @@ def impl(context, dir, dbconn):
             run_command(context, command)
 
 
-@given(
-    'the user "{USER}" creates filespace_config file for "{fs_name}" on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
-@then(
-    'the user "{USER}" creates filespace_config file for "{fs_name}" on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
-def impl(context, USER, HOST, PORT, fs_name, config_file, dir):
-    user = os.environ.get(USER)
-    host = os.environ.get(HOST)
-    port = os.environ.get(PORT)
-    if not dir.startswith("/"):
-        dir = os.environ.get(dir)
-    config_file_path = dir + "/" + config_file
-    create_gpfilespace_config(host, port, user, fs_name, config_file_path, dir)
-
-
-@given(
-    'the user "{USER}" creates filespace on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
-@when(
-    'the user "{USER}" creates filespace on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
-def impl(context, USER, HOST, PORT, config_file, dir):
-    user = os.environ.get(USER)
-    host = os.environ.get(HOST)
-    port = os.environ.get(PORT)
-    if not dir.startswith("/"):
-        dir = os.environ.get(dir)
-    config_file_path = dir + "/" + config_file
-    cmdStr = 'gpfilespace -h %s -p %s -U %s -c "%s"' % (host, port, user, config_file_path)
-    run_command(context, cmdStr)
-
-
 @given('the user modifies the external_table.sql file "{filepath}" with host "{HOST}" and port "{port}"')
 @when('the user modifies the external_table.sql file "{filepath}" with host "{HOST}" and port "{port}"')
 def impl(context, filepath, HOST, port):
