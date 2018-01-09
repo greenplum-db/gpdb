@@ -63,31 +63,27 @@ void GetMirrorStatus(FtsResponse *response)
 void
 SetSyncStandbysDefined(void)
 {
-	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-
 	if (!WalSndCtl->sync_standbys_defined)
 	{
-		SyncRepStandbyNames = "*";
-		set_gp_replication_config("synchronous_standby_names", SyncRepStandbyNames);
-		SyncRepUpdateSyncStandbysDefined();
-	}
+		set_gp_replication_config("synchronous_standby_names", "*");
 
-	LWLockRelease(SyncRepLock);
+		/* Signal a reload to the postmaster. */
+		elog(LOG, "signaling configuration reload: setting synchronous_standby_names to '*'");
+		DirectFunctionCall1(pg_reload_conf, PointerGetDatum(NULL) /* unused */);
+	}
 }
 
 void
 UnsetSyncStandbysDefined(void)
 {
-	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-
 	if (WalSndCtl->sync_standbys_defined)
 	{
-		SyncRepStandbyNames = "";
-		set_gp_replication_config("synchronous_standby_names", SyncRepStandbyNames);
-		SyncRepUpdateSyncStandbysDefined();
-	}
+		set_gp_replication_config("synchronous_standby_names", "");
 
-	LWLockRelease(SyncRepLock);
+		/* Signal a reload to the postmaster. */
+		elog(LOG, "signaling configuration reload: setting synchronous_standby_names to ''");
+		DirectFunctionCall1(pg_reload_conf, PointerGetDatum(NULL) /* unused */);
+	}
 }
 #endif
 
