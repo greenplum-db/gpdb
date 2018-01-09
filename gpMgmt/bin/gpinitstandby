@@ -184,7 +184,7 @@ def parseargs():
    
    
 #-------------------------------------------------------------------------
-def print_summary(options, array):
+def print_summary(options, array, standby_datadir):
     """Display summary of gpinitstandby operations."""
     
     logger.info('-----------------------------------------------------')
@@ -216,14 +216,15 @@ def print_summary(options, array):
     logger.info('Greenplum standby master port           = %d' \
                     % standby_port)
 
-    if not array.standbyMaster:
-        if options.standby_datadir:
-            logger.info('Greenplum standby master data directory = %s' % options.standby_datadir)
-        else:
-            GpInitStandbyException('Failed to find data directory for standby master')
-    else:
+    if array.standbyMaster:
         logger.info('Greenplum standby master data directory = %s' \
                         % array.standbyMaster.getSegmentDataDirectory())
+    else:
+        if standby_datadir:
+            logger.info('Greenplum standby master data directory = %s' % standby_datadir)
+        else:
+            GpInitStandbyException('No data directory specified for standby master')
+
     if not options.remove and options.no_update:
         logger.info('Greenplum update system catalog         = Off')
     elif not options.remove:
@@ -268,7 +269,7 @@ def delete_standby(options):
                      'but no standby located.')
         raise GpInitStandbyException('no standby configured')
     
-    print_summary(options, array)
+    print_summary(options, array, array.standby_datadir)
 
     # Disable Ctrl-C
     signal.signal(signal.SIGINT,signal.SIG_IGN)
@@ -363,11 +364,14 @@ def create_standby(options):
             logger.error('Failed to retrieve configuration information from the master.')
             raise GpInitStandbyException(ex)
 
+        # prefer a user-passed flag, but default to the same filepath as master
+        standby_datadir = options.standby_datadir or array.master.getSegmentDataDirectory()
+
         # validate
-        validate_standby_init(options, array)
+        validate_standby_init(options, array, standby_datadir)
         
         # display summary
-        print_summary(options, array)
+        print_summary(options, array, standby_datadir)
         
         # sync packages
         # The design decision here is to squash any exceptions resulting from the 
@@ -384,7 +388,7 @@ def create_standby(options):
         signal.signal(signal.SIGINT,signal.SIG_IGN)
 
         # update the catalog if needed
-        array = add_standby_to_catalog(options)
+        array = add_standby_to_catalog(options, standby_datadir)
 
         logger.info('Updating pg_hba.conf file...')
         update_pg_hba_conf(options, array)
@@ -392,8 +396,7 @@ def create_standby(options):
         update_pg_hba_conf_on_segments(array, options.standby_host)
         logger.info('pg_hba.conf files updated successfully.')
 
-        copy_master_datadir_to_standby(options, array,
-                                       options.standby_datadir)
+        copy_master_datadir_to_standby(options, array, standby_datadir)
         update_postgresql_conf(options, array)
         update_gpdbid_file(options, array)
 
@@ -561,7 +564,7 @@ def cleanup_pg_hba_conf_backup(array):
     
 
 #-------------------------------------------------------------------------
-def validate_standby_init(options, array):
+def validate_standby_init(options, array, standby_datadir):
     """Validates the parameters and environment."""
     
     logger.info('Validating environment and parameters for standby initialization...')
@@ -571,7 +574,7 @@ def validate_standby_init(options, array):
         raise GpInitStandbyException('standby master already configured')
     
     # make sure we have top level dir
-    base_dir = os.path.dirname(os.path.normpath(options.standby_datadir))
+    base_dir = os.path.dirname(os.path.normpath(standby_datadir))
     if not unix.FileDirExists.remote('check for parent of data dir',
                                      options.standby_host,
                                      base_dir):
@@ -580,8 +583,8 @@ def validate_standby_init(options, array):
         raise GpInitStandbyException('Parent directory %s does not exist' % base_dir)
 
     # check that master data dir does not exist on new host unless we are just re-syncing
-    logger.info('Checking for data directory %s on %s' % (options.standby_datadir, options.standby_host))
-    if unix.FileDirExists.remote('check for data dir', options.standby_host, options.standby_datadir):
+    logger.info('Checking for data directory %s on %s' % (standby_datadir, options.standby_host))
+    if unix.FileDirExists.remote('check for data dir', options.standby_host, standby_datadir):
         logger.error('Data directory already exists on host %s' % options.standby_host)
         if array.standbyMaster:
             logger.error('If you want to just start the stopped standby, use the -n option')
@@ -613,7 +616,7 @@ def get_remove_standby_sql():
 
 
 #-------------------------------------------------------------------------
-def add_standby_to_catalog(options):
+def add_standby_to_catalog(options, standby_datadir):
     """Adds the standby to the catalog."""
     
     global g_init_standby_state
@@ -627,7 +630,7 @@ def add_standby_to_catalog(options):
     
         sql = get_add_standby_sql(options.standby_host,
                                   options.standby_host,
-                                  options.standby_datadir,
+                                  standby_datadir,
                                   options.standby_port)
     
         dbconn.execSQL(conn, sql)
