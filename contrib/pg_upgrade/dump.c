@@ -22,7 +22,7 @@ generate_old_dump(void)
 	prep_status("Creating dump of global objects");
 
 	/* run new pg_dumpall binary for globals */
-	exec_prog(UTILITY_LOG_FILE, NULL, true,
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
 			  "PGOPTIONS='-c gp_session_role=utility' "
 			  "\"%s/pg_dumpall\" %s --schema-only --globals-only "
 			  "--quote-all-identifiers --binary-upgrade %s -f %s",

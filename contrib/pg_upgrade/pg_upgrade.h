@@ -504,10 +504,10 @@ void		generate_old_dump(void);
 /* exec.c */
 
 #define EXEC_PSQL_ARGS "--echo-queries --set ON_ERROR_STOP=on --no-psqlrc --dbname=template1"
-bool
-exec_prog(const char *log_file, const char *opt_log_file,
-		  bool throw_error, const char *fmt,...)
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 4, 5)));
+
+bool exec_prog(const char *log_file, const char *opt_log_file,
+		  bool report_error, bool exit_on_error, const char *fmt,...)
+		  __attribute__((format(PG_PRINTF_ATTRIBUTE, 5, 6)));
 void		verify_directories(void);
 bool		pid_lock_file_exists(const char *datadir);
 
@@ -605,8 +605,8 @@ __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 char	   *cluster_conn_opts(ClusterInfo *cluster);
 
-bool		start_postmaster(ClusterInfo *cluster, bool throw_error);
-void		stop_postmaster(bool fast);
+bool		start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error);
+void		stop_postmaster(bool in_atexit);
 uint32		get_major_server_version(ClusterInfo *cluster);
 void		check_pghost_envvar(void);
 
