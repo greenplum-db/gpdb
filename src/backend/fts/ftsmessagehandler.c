@@ -116,6 +116,7 @@ HandleFtsWalRepSyncRepOff(void)
 			(errmsg("turning off synchronous wal replication due to FTS request")));
 	UnsetSyncStandbysDefined();
 	GetMirrorStatus(&response);
+
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
 }
 

@@ -7570,7 +7570,14 @@ StartupXLOG(void)
 							   true);
 #endif
 
-	bool needToPromoteCatalog = (ControlFile->state == DB_IN_STANDBY_PROMOTED);
+	/*
+	 * If we are a standby with contentid -1 and undergoing promotion,
+	 * update ourselves as the new master in catalog.  This does not
+	 * apply to a mirror (standby of a GPDB segment) because it is
+	 * managed by FTS.
+	 */
+	bool needToPromoteCatalog = (GpIdentity.segindex == MASTER_CONTENT_ID &&
+								 ControlFile->state == DB_IN_STANDBY_PROMOTED);
 
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
 	ControlFile->state = DB_IN_PRODUCTION;
