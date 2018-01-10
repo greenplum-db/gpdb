@@ -145,7 +145,6 @@ create_empty_extension(PG_FUNCTION_ARGS)
 Datum		preassign_type_oid(PG_FUNCTION_ARGS);
 Datum		preassign_arraytype_oid(PG_FUNCTION_ARGS);
 Datum		preassign_extprotocol_oid(PG_FUNCTION_ARGS);
-Datum		preassign_filespace_oid(PG_FUNCTION_ARGS);
 Datum		preassign_tablespace_oid(PG_FUNCTION_ARGS);
 Datum		preassign_opclass_oid(PG_FUNCTION_ARGS);
 Datum		preassign_conversion_oid(PG_FUNCTION_ARGS);
@@ -177,7 +176,6 @@ Datum		preassign_user_mapping_oid(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(preassign_type_oid);
 PG_FUNCTION_INFO_V1(preassign_arraytype_oid);
 PG_FUNCTION_INFO_V1(preassign_extprotocol_oid);
-PG_FUNCTION_INFO_V1(preassign_filespace_oid);
 PG_FUNCTION_INFO_V1(preassign_tablespace_oid);
 PG_FUNCTION_INFO_V1(preassign_opclass_oid);
 PG_FUNCTION_INFO_V1(preassign_conversion_oid);
