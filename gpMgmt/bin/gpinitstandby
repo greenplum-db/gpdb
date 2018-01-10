@@ -269,7 +269,7 @@ def delete_standby(options):
                      'but no standby located.')
         raise GpInitStandbyException('no standby configured')
     
-    print_summary(options, array, array.standby_datadir)
+    print_summary(options, array, array.standbyMaster.getSegmentDataDirectory())
 
     # Disable Ctrl-C
     signal.signal(signal.SIGINT,signal.SIG_IGN)
