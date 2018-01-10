@@ -119,6 +119,11 @@ OPTIONS
  The host name of the standby master host. 
 
 
+-T <tablespace-mapping>
+
+ Relocate tablespace in OLDDIR to NEWDIR in OLDDIR=NEWDIR format
+
+
 -v
 
  Displays the version, status, last updated date, and check sum of this 

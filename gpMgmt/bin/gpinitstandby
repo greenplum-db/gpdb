@@ -127,6 +127,8 @@ def parseargs():
                       help='remove current warm master standby.  Use this option '
                       'if the warm master standby host has failed.  This option will '
                       'need to shutdown the GPDB array to be able to complete the request')
+    optgrp.add_option('-T', '--tablespace-mapping', type='string', dest='tablespace_mapping', default=None,
+                      help='relocate tablespace in OLDDIR to NEWDIR in OLDDIR=NEWDIR format')
 
     # XXX - This option is added to keep backward compatibility with DCA tools.
     # But this option plays no role in the whole process, its a No-Op
@@ -691,16 +693,21 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
     
     # We exclude certain unnecessary directories from being copied as they will greatly
     # slow down the speed of gpinitstandby if containing a lot of data
-    cmd_str = ' '.join(['pg_basebackup',
-                        '-x', '-R',
-                        '-c', 'fast',
-                        '-E', './pg_log',
-                        '-E', './db_dumps',
-                        '-E', './gpperfmon/data',
-                        '-E', './gpperfmon/logs',
-                        '-D', standby_datadir,
-                        '-h', array.master.getSegmentHostName(),
-                        '-p', str(array.master.getSegmentPort())])
+    cmd_args = ['pg_basebackup',
+               '-x', '-R',
+               '-c', 'fast',
+               '-E', './pg_log',
+               '-E', './db_dumps',
+               '-E', './gpperfmon/data',
+               '-E', './gpperfmon/logs',
+               '-D', standby_datadir,
+               '-h', array.master.getSegmentHostName(),
+               '-p', str(array.master.getSegmentPort())]
+
+    if options.tablespace_mapping:
+        cmd_args += [ '-T', options.tablespace_mapping ]
+
+    cmd_str = ' '.join(cmd_args)
     cmd = base.Command('pg_basebackup',
                        cmd_str,
                        ctxt=base.REMOTE,
