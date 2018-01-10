@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TYPE <varname>name</varname> OWNER TO <varname>new_owner</varname>
+<topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER TYPE <varname>name</varname> OWNER TO <varname>new_owner</varname>
 ALTER TYPE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING (<i>storage_directive</i> [,...])</codeblock>
 <p>where <varname>storage_directive</varname> is:</p>
       <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
    COMPRESSLEVEL={0-19}
    BLOCKSIZE={8192-2097152}</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TYPE</codeph> changes the definition of an existing type.
-You can change the owner and the schema of a type. You can also add or update storage options for a scalar type.<note>Greenplum Database does not support adding storage options for row or composite types.</note></p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change
+You can change the name, the owner, and the schema of a type. You can also add or update storage options for a scalar type.<note>Greenplum Database does not support adding storage options for row or composite types.</note></p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change
 the schema of a type, you must also have <codeph>CREATE</codeph> privilege
 on the new schema. To alter the owner, you must also be a direct or indirect
 member of the new owning role, and that role must have <codeph>CREATE</codeph>
 privilege on the type's schema. (These restrictions enforce that altering
 the owner does not do anything that could be done by dropping and recreating
 the type. However, a superuser can alter ownership of any type.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing type to alter.
-</pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The user name of the new owner of the type. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the type. </pd></plentry>
+</pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>The new name for the type.</pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The user name of the new owner of the type. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the type. </pd></plentry>
 <plentry><pt><varname>storage_directive</varname></pt><pd>Identifies default storage options for the type when specified in a table column definition. Options include <codeph>COMPRESSTYPE</codeph>, <codeph>COMPRESSLEVEL</codeph>, and <codeph>BLOCKSIZE</codeph>.</pd><pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
               <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
               of compression used.<note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
@@ -27,7 +28,7 @@ the type. However, a superuser can alter ownership of any type.)</p></section><s
             (fastest compression) to 4 (highest compression ratio). The default compression level is 1.</pd>
           <pd><b>BLOCKSIZE</b> — Set to the size, in bytes, for each block in the column. The
               <codeph>BLOCKSIZE</codeph> must be between 8192 and 2097152 bytes, and be a multiple
-            of 8192. The default block size is 32768.<note><varname>storage_directives</varname> defined at the table- or column- level override the default storage options defined for a type.</note></pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To change the owner of the user-defined type <codeph>email</codeph> to <codeph>joe</codeph>: </p><codeblock>ALTER TYPE email OWNER TO joe;</codeblock><p>To change the schema of the user-defined type <codeph>email</codeph> to
+            of 8192. The default block size is 32768.<note><varname>storage_directives</varname> defined at the table- or column- level override the default storage options defined for a type.</note></pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To rename the data type named <codeph>electronic_mail</codeph>: </p><codeblock>ALTER TYPE electronic_mail RENAME TO email;</codeblock><p>To change the owner of the user-defined type <codeph>email</codeph> to <codeph>joe</codeph>: </p><codeblock>ALTER TYPE email OWNER TO joe;</codeblock><p>To change the schema of the user-defined type <codeph>email</codeph> to
           <codeph>customers</codeph>: </p><codeblock>ALTER TYPE email SET SCHEMA customers;</codeblock><p>To set or alter the compression type and compression level of the user-defined type named <codeph>int33</codeph>:
           </p><codeblock>ALTER TYPE int33 SET DEFAULT ENCODING (compresstype=zlib, compresslevel=7);</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TYPE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
