@@ -17,7 +17,7 @@
 /* no guard ifndef, because this should only be included from pg_proc.h */
 
 
-/* TIDYCAT_BEGIN_PG_PROC_GEN 
+/* TIDYCAT_BEGIN_PG_PROC_GEN
 
 
    WARNING: DO NOT MODIFY THE FOLLOWING SECTION: 
@@ -436,22 +436,6 @@ DESCR("I/O");
 
 
 /* Greenplum MPP exposed internally-defined functions.  */
-/* gp_backup_launch(text, text, text, text, text) => text */
-DATA(insert OID = 6003 ( gp_backup_launch  PGNSP PGUID 12 1 0 0 f f f f f v 5 0 25 "25 25 25 25 25" _null_ _null_ _null_ _null_ gp_backup_launch__ _null_ _null_ _null_ n a ));
-DESCR("launch mpp backup on outboard Postgres instances");
-
-/* gp_restore_launch(text, text, text, text, text, text, int4, bool) => text */
-DATA(insert OID = 6004 ( gp_restore_launch  PGNSP PGUID 12 1 0 0 f f f f f v 8 0 25 "25 25 25 25 25 25 23 16" _null_ _null_ _null_ _null_ gp_restore_launch__ _null_ _null_ _null_ n a ));
-DESCR("launch mpp restore on outboard Postgres instances");
-
-/* gp_read_backup_file(text, text, regproc) => text */
-DATA(insert OID = 6005 ( gp_read_backup_file  PGNSP PGUID 12 1 0 0 f f f f f v 3 0 25 "25 25 24" _null_ _null_ _null_ _null_ gp_read_backup_file__ _null_ _null_ _null_ n a ));
-DESCR("read mpp backup file on outboard Postgres instances");
-
-/* gp_write_backup_file(text, text, text) => text */
-DATA(insert OID = 6006 ( gp_write_backup_file  PGNSP PGUID 12 1 0 0 f f f f f v 3 0 25 "25 25 25" _null_ _null_ _null_ _null_ gp_write_backup_file__ _null_ _null_ _null_ n a ));
-DESCR("write mpp backup file on outboard Postgres instances");
-
 /* gp_pgdatabase() => SETOF record */
 DATA(insert OID = 6007 ( gp_pgdatabase  PGNSP PGUID 12 1 1000 0 f f f f t v 0 0 2249 "" _null_ _null_ _null_ _null_ gp_pgdatabase__ _null_ _null_ _null_ n a ));
 DESCR("view mpp pgdatabase state");

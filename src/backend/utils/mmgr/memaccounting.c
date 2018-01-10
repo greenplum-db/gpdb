@@ -214,11 +214,6 @@ MemoryAccounting_Reset()
 	 */
 	if (MemoryAccounting_IsInitialized())
 	{
-		if (gp_dump_memory_usage)
-		{
-			MemoryAccounting_SaveToFile(currentSliceId);
-		}
-
 		/* No one should create child context under MemoryAccountMemoryContext */
 		Assert(MemoryAccountMemoryContext->firstchild == NULL);
 

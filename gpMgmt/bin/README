@@ -33,8 +33,6 @@ bin/run_operator_tests.pl -
 
 List of Management Scripts Written in Bash
 ------------------------------------------
-bin/gpcrondump          -  Dumps a database 
-bin/gpdbrestore         -  Restores a database dumped from gpcrondump
 bin/gpinitsystem        -  Creates a new Greenplum Database
 bin/gpload              -  Sets env variables and calls gpload.py
 

@@ -277,6 +277,6 @@ clean distclean:
 	rm -rf $(PYLIB_SRC)/subprocess32/build
 	rm -rf $(STREAM_DIR)/stream lib/stream
 	rm -rf *.pyc lib/*.pyc
-	rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
+	rm -f gpcheckcatc gpexpandc gptransferc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt
 	rm -f gppylib/data/$(GP_MAJORVERSION).json

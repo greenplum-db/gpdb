@@ -3,9 +3,8 @@
 -- Greenplum DB backup test
 --
 
--- Check database version and gp_dump, pg_dump
+-- Check database version and pg_dump
 select version();
-\! gp_dump --version
 \! pg_dump --version
 
 -- Create target database

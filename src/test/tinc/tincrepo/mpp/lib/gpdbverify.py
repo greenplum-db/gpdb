@@ -149,9 +149,9 @@ class GpdbVerify:
         fix_outfile = self.LOGPATH + "/fixfile_" + cur_time
         if options is None:
             if master:
-                options = " -mastermirror=true  -exclude recovery.conf -ignore 'gp_restore' -ignore 'gp_cdatabase' -ignore 'gp_dump' -ignore '_data' -ignore 'wet_execute.tbl' -ignore 'pg_xlog' -ignore 'pg_changetracking' -ignore 'pg_verify' -ignore 'backup_label.old' -dirignore 'pg_xlog' -ignore 'pg_subtrans' -ignore '/errlog/' -dirignore 'gpperfmon/data' "
+                options = " -mastermirror=true  -exclude recovery.conf -ignore 'gp_cdatabase' -ignore '_data' -ignore 'wet_execute.tbl' -ignore 'pg_xlog' -ignore 'pg_changetracking' -ignore 'pg_verify' -ignore 'backup_label.old' -dirignore 'pg_xlog' -ignore 'pg_subtrans' -ignore '/errlog/' -dirignore 'gpperfmon/data' "
             else:
-                options = " -ignore '_data' -ignore 'wet_execute.tbl' -ignore 'gp_dump' -ignore 'core' -ignore pg_changetracking -ignore 'pg_xlog' -ignore 'pg_verify' -ignore '/errlog/' -parallel=true"
+                options = " -ignore '_data' -ignore 'wet_execute.tbl' -ignore 'core' -ignore pg_changetracking -ignore 'pg_xlog' -ignore 'pg_verify' -ignore '/errlog/' -parallel=true"
 
         command = "gpcheckmirrorseg.pl -connect '-p %d -d %s' -fixfile %s" \
                 % (self.pgport, self.dbname, fix_outfile)

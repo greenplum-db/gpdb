@@ -3,7 +3,6 @@ import os
 import shutil
 from gppylib.db import dbconn
 from test.behave_utils.utils import check_schema_exists, check_table_exists, drop_table_if_exists
-from gppylib.operations.backup_utils import get_lines_from_file
 from behave import given, when, then
 
 CREATE_MULTI_PARTITION_TABLE_SQL = """
@@ -234,20 +233,22 @@ def table_found_in_state_file(dbname, qualified_table):
     state_file = ""
     for state_file in files:
         found = False
-        for line in get_lines_from_file(state_file):
-            if comma_name in line:
-                found = True
-                continue
-        if not found:
-            return False, state_file
+        with open(state_file) as fd:
+            for line in fd:
+                if comma_name in line:
+                    found = True
+                    continue
+            if not found:
+                return False, state_file
     return True, state_file
 
 
 def table_found_in_report_file(dbname, qualified_table):
     report_file = get_latest_analyze_report_file(dbname)
-    for line in get_lines_from_file(report_file):
-        if qualified_table == line:
-            return True, report_file
+    with open(report_file) as fd:
+        for line in fd:
+            if qualified_table == line.strip('\n'):
+                return True, report_file
 
     return False, report_file
 
@@ -261,12 +262,14 @@ def column_found_in_state_file(dbname, qualified_table, col_name_list):
     for state_file in files:
         if "col_state_file" not in state_file:
             continue
-        for line in get_lines_from_file(state_file):
-            if comma_name in line:
-                for column in col_name_list.split(','):
-                    if column not in line.split(',')[2:]:
-                        return False, column, state_file
-                return True, "", state_file
+        with open(state_file) as fd:
+            for line in fd:
+                line = line.strip('\n')
+                if comma_name in line:
+                    for column in col_name_list.split(','):
+                        if column not in line.split(',')[2:]:
+                            return False, column, state_file
+                    return True, "", state_file
         return False, col_name_list, state_file
 
 
@@ -274,7 +277,10 @@ def delete_table_from_state_files(dbname, qualified_table):
     comma_name = ','.join(qualified_table.split('.'))
     files = get_latest_analyze_state_files(dbname)
     for filename in files:
-        lines = get_lines_from_file(filename)
+        lines = []
+        with open(filename) as fd:
+            for line in fd:
+                lines.append(line.strip('\n'))
         f = open(filename, "w")
         for line in lines:
             if comma_name not in line:

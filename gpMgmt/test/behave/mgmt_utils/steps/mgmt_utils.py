@@ -29,8 +29,6 @@ from behave import given, when, then
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
-from gppylib.operations.backup_utils import Context
-from gppylib.operations.dump import get_partition_state
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
@@ -38,10 +36,6 @@ from test.behave_utils.utils import *
 from test.behave_utils.PgHba import PgHba, Entry
 from gppylib.commands.base import Command, REMOTE
 
-labels_json = '/tmp/old_to_new_timestamp_labels.json'
-timestamp_json = '/tmp/old_to_new_timestamps.json'
-global_labels = {}
-global_timestamps = {}
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
@@ -130,15 +124,6 @@ def impl(context):
         if cmd.get_return_code() == 0:
             return
     raise Exception("Database did not start up within 5 minutes`")
-
-
-@given('the old timestamps are read from json')
-def impl(context):
-    json_timestamps = _read_timestamp_from_json(context)
-    context.backup_timestamp = json_timestamps[-1]
-    context.inc_backup_timestamps = json_timestamps[1:]
-    context.backup_subdir = json_timestamps[-1][:8]
-    context.full_backup_timestamp = json_timestamps[0]
 
 
 @given('the timestamp labels for scenario "{scenario_number}" are read from json')
@@ -400,13 +385,6 @@ def impl(context, tabletype, table_name, compression_type, dbname):
                          compression_type=compression_type)
 
 
-@given('there is a mixed storage partition table "{tablename}" in "{dbname}" with data')
-def impl(context, tablename, dbname):
-    create_database_if_not_exists(context, dbname)
-    drop_table_if_exists(context, table_name=tablename, dbname=dbname)
-    create_mixed_storage_partition(context, tablename, dbname)
-
-
 @given(
     'there is a partition table "{tablename}" has external partitions of gpfdist with file "{filename}" on port "{port}" in "{dbname}" with data')
 def impl(context, tablename, dbname, filename, port):
@@ -461,11 +439,6 @@ def impl(context, dbname):
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')
 def impl(context, command):
-    if 'gpcrondump' in command:
-        command = append_storage_config_to_backup_command(context, command)
-    elif 'gpdbrestore' in command:
-        command = append_storage_config_to_restore_command(context, command)
-
     run_gpcommand(context, command)
 
 
@@ -608,29 +581,6 @@ def run_valgrind_command(context, command, suppressions_file):
     raise Exception('Could not find "ERROR SUMMARY" in %s' % context.error_message)
 
 
-@then('the user runs valgrind with "{command}" and options "{options}"')
-@when('the user runs valgrind with "{command}" and options "{options}"')
-def impl(context, command, options):
-    port = os.environ.get('PGPORT')
-    user = getpass.getuser()
-    if hasattr(context, 'backup_timestamp'):
-        ts = context.backup_timestamp
-    bnr_tool = command.split()[0].strip()
-    if bnr_tool == 'gp_dump':
-        command_str = command
-    elif bnr_tool == 'gp_dump_agent':
-        command_str = command + ' -p %s' % port
-    elif bnr_tool == 'gp_restore':
-        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s --gp-r db_dumps/%s" % (
-            command, options, context.backup_timestamp, context.backup_timestamp[0:8], context.backup_timestamp[0:8])
-    elif bnr_tool == 'gp_restore_agent':
-        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s -p %s -U %s --target-host localhost " \
-                      "--target-port %s db_dumps/%s/gp_dump_-1_1_%s_post_data.gz" % (
-                        command, options, ts, ts[0:8], port, user, port, ts[0:8], ts)
-    command_str = append_storage_config_to_restore_command(context, command_str)
-    run_valgrind_command(context, command_str, "valgrind_suppression.txt")
-
-
 @when('the timestamp key is stored')
 def impl(context):
     stdout = context.stdout_message
@@ -732,48 +682,6 @@ def impl(context):
     raise Exception('segments are not in resync after %d seconds' % (times * sleeptime))
 
 
-@when('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
-@then('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
-@given('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
-def impl(context, table_list, dbname):
-    tables = table_list.split(',')
-    for t in tables:
-        modify_data(context, t.strip(), dbname)
-        backup_data(context, t.strip(), dbname)
-
-    get_distribution_policy(dbname)
-
-
-@given('all the data from "{dbname}" is saved for verification')
-@when('all the data from "{dbname}" is saved for verification')
-@then('all the data from "{dbname}" is saved for verification')
-def impl(context, dbname):
-    backup_db_data(context, dbname)
-
-
-@then(
-    'partition "{partition}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-@when(
-    'partition "{partition}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-@given(
-    'partition "{partition}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-@then(
-    'partition "{partition}" in partition level "{partitionlevel}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-@when(
-    'partition "{partition}" in partition level "{partitionlevel}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-@given(
-    'partition "{partition}" in partition level "{partitionlevel}" of partition table "{table_list}" is assumed to be in dirty state in "{dbname}" in schema "{schema}"')
-def impl(context, partition, table_list, dbname, schema, partitionlevel=1):
-    tables = table_list.split(',')
-    for t in tables:
-        part_t = get_partition_names(schema, t.strip(), dbname, partitionlevel, partition)
-        if len(part_t) < 1 or len(part_t[0]) < 1:
-            print part_t
-        dirty_table_name = part_t[0][0].strip()
-        modify_partition_data(context, dirty_table_name, dbname, int(partition))
-        backup_data(context, dirty_table_name, dbname)
-
-
 def validate_timestamp(ts):
     try:
         int_ts = int(ts)
@@ -782,19 +690,6 @@ def validate_timestamp(ts):
 
     if len(ts) != 14:
         raise Exception('Timestamp is invalid %s' % ts)
-
-
-@when('the subdir from gpcrondump is stored')
-@then('the subdir from gpcrondump is stored')
-def impl(context):
-    stdout = context.stdout_message
-    for line in stdout.splitlines():
-        if 'Dump subdirectory' in line:
-            log_msg, delim, subdir = line.partition('=')
-            context.backup_subdir = subdir.strip()
-            return
-
-    raise Exception('Dump subdirectory not found %s' % stdout)
 
 
 def get_timestamp_from_output(context):
@@ -808,88 +703,6 @@ def get_timestamp_from_output(context):
             return ts
 
     raise Exception('Timestamp not found %s' % stdout)
-
-
-@given('the full backup timestamp from gpcrondump is stored')
-@when('the full backup timestamp from gpcrondump is stored')
-@then('the full backup timestamp from gpcrondump is stored')
-def impl(context):
-    context.full_backup_timestamp = get_timestamp_from_output(context)
-    _write_timestamp_to_json(context)
-
-
-@when('the timestamp from gpcrondump is stored')
-@then('the timestamp from gpcrondump is stored')
-def impl(context):
-    context.backup_timestamp = get_timestamp_from_output(context)
-    _write_timestamp_to_json(context)
-
-
-@when('the timestamp is labeled "{lbl}"')
-def impl(context, lbl):
-    if not 'timestamp_labels' in global_labels:
-        global_labels['timestamp_labels'] = {}
-
-    global_labels['timestamp_labels'][lbl] = get_timestamp_from_output(context)
-
-
-@when('the timestamp for scenario "{scenario_number}" is labeled "{lbl}"')
-def impl(context, scenario_number, lbl):
-    labels_key = 'timestamp_labels' + scenario_number
-    if not labels_key in global_labels:
-        global_labels[labels_key] = {}
-
-    global_labels[labels_key][lbl] = get_timestamp_from_output(context)
-    _write_label_to_json(context, labels_key, lbl)
-
-
-@given('there is a list to store the incremental backup timestamps')
-def impl(context):
-    context.inc_backup_timestamps = []
-
-
-@then('the timestamp from gpcrondump is stored in a list')
-@when('the timestamp from gpcrondump is stored in a list')
-def impl(context):
-    context.backup_timestamp = get_timestamp_from_output(context)
-    context.inc_backup_timestamps.append(context.backup_timestamp)
-    _write_timestamp_to_json(context)
-
-
-@when('the timestamp for database dumps "{db_list}" are stored')
-def impl(context, db_list):
-    context.db_timestamps = get_timestamp_from_output_for_db(context)
-    scenario_name = context._stack[0]['scenario'].name
-    if not global_timestamps.has_key(scenario_name):
-        global_timestamps[scenario_name] = list()
-    global_timestamps[scenario_name].append(context.db_timestamps.values())
-    with open(timestamp_json, 'w') as outfile:
-        json.dump(global_timestamps, outfile)
-
-
-def get_timestamp_from_output_for_db(context):
-    db_timestamps = {}
-    ts = None
-    database = None
-    stdout = context.stdout_message
-    for line in stdout.splitlines():
-        if 'Target database' in line:
-            log_msg, delim, database = line.partition('=')
-            db = database.strip()
-        elif 'Dump key ' in line:
-            log_msg, delim, timestamp = line.partition('=')
-            ts = timestamp.strip()
-            validate_timestamp(ts)
-            # TODO: database could be an empty string; need to check result of line.partition()
-            if database is None:
-                raise Exception('Database not found for timestamp "%s"' % ts)
-            db_timestamps[db] = ts
-            database = None
-
-    if not db_timestamps:
-        raise Exception('No Timestamps found')
-
-    return db_timestamps
 
 
 @then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dirname}"')
@@ -949,55 +762,6 @@ def impl(context, dirname):
                         full_filename_path, diff_file_contents))
 
 
-@then('verify that the incremental file has the stored timestamp')
-def impl(context):
-    dump_dir = get_dump_dir(context, "")
-    inc_file_name = 'gp_dump_%s_increments' % context.full_backup_timestamp
-    subdirectory = context.full_backup_timestamp[0:8]
-    full_path = os.path.join(dump_dir, subdirectory, inc_file_name)
-
-    if not os.path.isfile(full_path):
-        raise Exception("Can not find increments file: %s" % full_path)
-
-    contents = ""
-    with open(full_path) as fd:
-        contents = fd.read().strip()
-
-    if context.backup_timestamp != contents:
-        raise Exception(
-            "The increments file '%s' does not contain the timestamp %s" % (full_path, context.backup_timestamp))
-
-
-def check_increments_file_for_list(context, location):
-    dump_dir = get_dump_dir(context, location)
-    inc_file_name = 'gp_dump_%s_increments' % context.full_backup_timestamp
-    subdirectory = context.full_backup_timestamp[0:8]
-    full_path = os.path.join(dump_dir, subdirectory, inc_file_name)
-
-    if not os.path.isfile(full_path):
-        raise Exception("Can not find increments file: %s" % full_path)
-
-    found_timestamps = []
-    contents = ""
-    with open(full_path) as fd:
-        contents = fd.read()
-        for line in contents.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            found_timestamps.append(line)
-
-    found_timestamps = sorted(found_timestamps)
-    context.inc_backup_timestamps = sorted(context.inc_backup_timestamps)
-
-    if found_timestamps != context.inc_backup_timestamps:
-        print "Found timestamps: "
-        print found_timestamps
-        print "Expected timestamps: "
-        print context.inc_backup_timestamps
-        raise Exception("Expected timestamps not found")
-
-
 @then('verify that the incremental file in "{location}" has all the stored timestamps')
 def impl(context, location):
     check_increments_file_for_list(context, location)
@@ -1006,98 +770,6 @@ def impl(context, location):
 @then('verify that the incremental file has all the stored timestamps')
 def impl(context):
     check_increments_file_for_list(context, master_data_dir)
-
-
-@then('verify that the plan file is created for the latest timestamp')
-def impl(context):
-    context.inc_backup_timestamps = sorted(context.inc_backup_timestamps)
-    latest_ts = context.inc_backup_timestamps[-1]
-    plan_file_dir = get_dump_dir(context, master_data_dir) + '/' + latest_ts[0:8]
-    plan_file_count = len(glob.glob('/%s/*%s*_plan' % (plan_file_dir, latest_ts)))
-    if plan_file_count != 1:
-        raise Exception('Expected only one plan file, found %s' % plan_file_count)
-    filename = '%s/gp_restore_%s_plan' % (plan_file_dir, latest_ts)
-    if not os.path.exists(filename):
-        raise Exception('Plan file %s not created for the latest timestamp' % filename)
-
-
-def get_dump_dir(context, directory):
-    dump_dir = directory.strip() if len(directory.strip()) != 0 else master_data_dir
-    if use_ddboost():
-        dump_dir = os.path.join(dump_dir, context._root['ddboost_backupdir'])
-    else:
-        dump_dir = os.path.join(dump_dir, 'db_dumps')
-    return dump_dir
-
-
-@when('the state files are generated under "{directory}" for stored "{backup_type}" timestamp')
-@then('the state files are generated under "{directory}" for stored "{backup_type}" timestamp')
-def impl(context, directory, backup_type):
-    dump_dir = get_dump_dir(context, directory)
-    if backup_type == 'full':
-        timestamp = context.full_backup_timestamp
-    else:
-        timestamp = context.backup_timestamp
-
-    ao_state_filename = "%s/%s/gp_dump_%s_ao_state_file" % (dump_dir, timestamp[0:8], timestamp)
-    co_state_filename = "%s/%s/gp_dump_%s_co_state_file" % (dump_dir, timestamp[0:8], timestamp)
-
-    if not os.path.exists(ao_state_filename):
-        raise Exception('AO state file %s not generated' % ao_state_filename)
-    if not os.path.exists(co_state_filename):
-        raise Exception('CO state file %s not generated' % co_state_filename)
-
-    verify_integer_tuple_counts(context, ao_state_filename)
-    verify_integer_tuple_counts(context, co_state_filename)
-
-
-@then('the "{file_type}" files are generated under "{dirname}" for stored "{backup_type}" timestamp')
-def impl(context, file_type, dirname, backup_type):
-    dump_dir = get_dump_dir(context, dirname)
-    if backup_type == 'full':
-        timestamp = context.full_backup_timestamp
-    else:
-        timestamp = context.backup_timestamp
-    last_operation_filename = "%s/%s/gp_dump_%s_last_operation" % (dump_dir, timestamp[0:8], timestamp)
-    if not os.path.exists(last_operation_filename):
-        raise Exception('Last operation file %s not generated' % last_operation_filename)
-
-
-@when('the user runs gpdbrestore -e with the stored timestamp')
-@then('the user runs gpdbrestore -e with the stored timestamp')
-def impl(context):
-    command = 'gpdbrestore -e -t %s -a' % context.backup_timestamp
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
-@when('the user runs gpdbrestore -e with the stored timestamp and options "{options}"')
-def impl(context, options):
-    command = 'gpdbrestore -e -t %s %s -a' % (context.backup_timestamp, options)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-@then('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
-@when('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
-def impl(context, options):
-    command = 'gpdbrestore -e -t %s %s -a' % (context.full_backup_timestamp, options)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-@then('the user runs gpdbrestore -e with the date directory')
-@when('the user runs gpdbrestore -e with the date directory')
-def impl(context):
-    command = 'gpdbrestore -e -b %s -a' % (context.backup_timestamp[0:8])
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@when('the user runs gpdbrestore without -e with the stored timestamp and options "{options}"')
-def impl(context, options):
-    command = 'gpdbrestore -t %s %s -a' % (context.backup_timestamp, options)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
 
 
 @then('verify that there is no table "{tablename}" in "{dbname}"')
@@ -1196,29 +868,6 @@ def impl(context, table_name, dbname):
     validate_table_data_on_segments(context, table_name, dbname)
 
 
-@then('verify that the data of the {filename} under "{directory}" in "{dbname}" is validated after restore')
-def impl(context, filename, dbname, directory):
-    dump_dir = get_dump_dir(context, directory)
-    if filename == 'dirty tables':
-        dirty_list_filename = '%s/%s/gp_dump_%s_dirty_list' % (
-        dump_dir, context.backup_timestamp[0:8], context.backup_timestamp)
-    elif filename == 'table_filter_file':
-        dirty_list_filename = os.path.join(os.getcwd(), filename)
-
-    if not os.path.exists(dirty_list_filename):
-        raise Exception('Dirty list filename %s does not exist' % dirty_list_filename)
-
-    with open(dirty_list_filename) as fd:
-        tables = fd.readlines()
-        for table in tables:
-            validate_restore_data(context, table.strip(), dbname)
-
-
-@then('verify that the distribution policy of all the tables in "{dbname}" are validated after restore')
-def impl(context, dbname):
-    validate_distribution_policy(context, dbname)
-
-
 @then('verify that tables "{table_list}" in "{dbname}" has no rows')
 def impl(context, table_list, dbname):
     tables = [t.strip() for t in table_list.split(',')]
@@ -1271,37 +920,6 @@ def check_x_empty_parts(dbname, tname, x):
         raise Exception("%s.%s has %d empty partitions and should have %d" % (dbname, tname, num_empty, x))
 
 
-@then('the user runs gpdbrestore with "{opt}" option in path "{path}"')
-def impl(context, opt, path):
-    command = 'gpdbrestore -e -a %s localhost:%s/db_dumps/%s --verbose' % (opt, path, context.backup_subdir)
-    run_gpcommand(context, command)
-
-
-@then('all files for full backup have been removed in path "{path}"')
-def impl(context, path):
-    path = path if len(path.strip()) != 0 else master_data_dir
-    file_pattern = "*_%s*" % context.full_backup_timestamp
-    dir = "%s/db_dumps/%s" % (path, context.backup_subdir)
-    cleanup_cmd = "rm -f %s/%s" % (dir, file_pattern)
-    run_command(context, cleanup_cmd)
-    if context.exception:
-        raise context.exception
-
-
-@given('there are no backup files')
-@then('there are no backup files')
-@when('there are no backup files')
-def impl(context):
-    cleanup_backup_files(context, 'template1')
-
-
-@given('the backup files in "{location}" are deleted')
-@when('the backup files in "{location}" are deleted')
-@then('the backup files in "{location}" are deleted')
-def impl(context, location):
-    cleanup_backup_files(context, 'template1', location)
-
-
 @then('there are no report files in the master data directory')
 def impl(context):
     cleanup_report_files(context, master_data_dir)
@@ -1314,41 +932,6 @@ def impl(context, table_list, dbname, num_parts):
     tables = [t.strip() for t in table_list.split(',')]
     for t in tables:
         check_x_empty_parts(dbname, t, expected_num_parts)
-
-
-@given('a backup file of tables "{table_list}" in "{dbname}" exists for validation')
-@when('a backup file of tables "{table_list}" in "{dbname}" exists for validation')
-@then('a backup file of tables "{table_list}" in "{dbname}" exists for validation')
-def impl(context, table_list, dbname):
-    tables = [t.strip() for t in table_list.split(',')]
-    for t in tables:
-        backup_data(context, t.strip(), dbname)
-
-
-@when(
-    'verify that there is a table "{tablename}" of "{tabletype}" type in "{dbname}" with same data as table "{backedup_table}"')
-@then(
-    'verify that there is a table "{tablename}" of "{tabletype}" type in "{dbname}" with same data as table "{backedup_table}"')
-def impl(context, tablename, tabletype, dbname, backedup_table):
-    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=tabletype):
-        raise Exception("Table '%s' does not exist when it should" % tablename)
-    validate_restore_data(context, tablename, dbname, backedup_table)
-
-
-@when('check that there is a "{table_type}" table "{tablename}" in "{dbname}" with same data from "{backedup_dbname}"')
-@then('check that there is a "{table_type}" table "{tablename}" in "{dbname}" with same data from "{backedup_dbname}"')
-def impl(context, table_type, tablename, dbname, backedup_dbname):
-    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
-        raise Exception("Table '%s' does not exist when it should" % tablename)
-    validate_restore_data(context, tablename, dbname, None, backedup_dbname)
-
-
-@when('verify that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
-@then('verify that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
-def impl(context, table_type, tablename, dbname):
-    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
-        raise Exception("Table '%s' does not exist when it should" % tablename)
-    validate_restore_data(context, tablename, dbname)
 
 
 @given('schema "{schema_list}" exists in "{dbname}"')
@@ -1393,54 +976,6 @@ def impl(context, table, dbname):
     create_fake_pg_aoseg_table(context, table, dbname)
 
 
-def verify_file_contents(context, file_type, file_dir, text_find, should_contain=True):
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-
-    if file_type == 'pg_dump_log':
-        fn = 'pg_dump_log'
-        context.backup_timestamp = '0'
-    elif file_type == 'report':
-        fn = '%sgp_dump_%s.rpt' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == 'status':
-        fn = '%sgp_dump_status_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == 'filter':
-        fn = '%sgp_dump_%s_filter' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == "statistics":
-        fn = '%sgp_statistics_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == 'schema':
-        fn = '%sgp_dump_%s_schema' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == 'cdatabase':
-        fn = '%sgp_cdatabase_*_1_%s' % (context.dump_prefix, context.backup_timestamp)
-    elif file_type == 'dump':
-        fn = '%sgp_dump_*_1_%s.gz' % (context.dump_prefix, context.backup_timestamp)
-
-    file_dir = get_dump_dir(context, file_dir)
-    subdirectory = context.backup_timestamp[0:8]
-
-    if file_type == 'pg_dump_log':
-        full_path = os.path.join(file_dir, fn)
-    else:
-        full_path = glob.glob(os.path.join(file_dir, subdirectory, fn))[0]
-
-    if not os.path.isfile(full_path):
-        raise Exception("Can not find %s file: %s" % (file_type, full_path))
-
-    contents = ""
-
-    if file_type == 'dump':
-        fd = gzip.open(full_path)
-    else:
-        fd = open(full_path)
-    contents = fd.read()
-    fd.close()
-
-    if should_contain and not text_find in contents:
-        raise Exception("Did not find '%s' in file %s" % (text_find, full_path))
-    elif not should_contain and text_find in contents:
-        raise Exception("Found '%s' in file '%s'" % (text_find, full_path))
-
-
 @then('verify that the "{file_type}" file in "{file_dir}" dir contains "{text_find}"')
 def impl(context, file_type, file_dir, text_find):
     verify_file_contents(context, file_type, file_dir, text_find)
@@ -1451,254 +986,6 @@ def impl(context, file_type, file_dir, text_find):
     verify_file_contents(context, file_type, file_dir, text_find, should_contain=False)
 
 
-@then('the timestamp in the report file should be same as timestamp key')
-def impl(context):
-    if not hasattr(context, 'timestamp_key'):
-        raise Exception('Unable to find timestamp key in context')
-
-    if hasattr(context, 'backup_dir'):
-        report_file = os.path.join(context.backup_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]),
-                                   'gp_dump_%s.rpt' % context.timestamp_key)
-    else:
-        report_file = os.path.join(master_data_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]),
-                                   'gp_dump_%s.rpt' % context.timestamp_key)
-
-    with open(report_file) as rpt:
-        for line in rpt:
-            if line.startswith('Timestamp Key'):
-                timestamp_key = line.split(':')[-1].strip()
-                if timestamp_key != context.timestamp_key:
-                    raise Exception('Expected timestamp key to be %s, but found %s in report file %s' % (
-                    context.timestamp_key, timestamp_key, report_file))
-
-
-@then('there should be dump files with filename having timestamp key in "{dbname}"')
-def impl(context, dbname):
-    if not hasattr(context, 'timestamp_key'):
-        raise Exception('Unable to find timestamp key in context')
-
-    master_hostname = get_master_hostname(dbname)
-    results = get_hosts_and_datadirs(dbname)
-
-    for (host, datadir) in results:
-        if host == master_hostname:
-            if hasattr(context, 'backup_dir'):
-                dump_dir = os.path.join(context.backup_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
-            else:
-                dump_dir = os.path.join(master_data_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
-            master_dump_files = ['%s/gp_dump_-1_1_%s' % (dump_dir, context.timestamp_key),
-                                 '%s/gp_dump_status_-1_1_%s' % (dump_dir, context.timestamp_key),
-                                 '%s/gp_cdatabase_-1_1_%s' % (dump_dir, context.timestamp_key),
-                                 '%s/gp_dump_-1_1_%s_post_data' % (dump_dir, context.timestamp_key)]
-
-            for dump_file in master_dump_files:
-                cmd = Command('check for dump files', 'ls -1 %s | wc -l' % (dump_file))
-                cmd.run(validateAfter=True)
-                if int(cmd.get_stdout()) != 1:
-                    raise Exception('Dump file %s not found after gp_dump on host %s' % (dump_file, host))
-        else:
-            if hasattr(context, 'backup_dir'):
-                dump_dir = os.path.join(context.backup_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
-            else:
-                dump_dir = os.path.join(datadir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
-
-            segment_dump_files = ['%s/gp_dump_*_*_%s' % (dump_dir, context.timestamp_key),
-                                  '%s/gp_dump_status_*_*_%s' % (dump_dir, context.timestamp_key)]
-
-            for dump_file in segment_dump_files:
-                cmd = Command('check for dump files', 'ls -1 %s | wc -l' % (dump_file), ctxt=REMOTE, remoteHost=host)
-                cmd.run(validateAfter=True)
-                if int(cmd.get_stdout()) != 1:
-                    raise Exception('Dump file %s not found after gp_dump on host %s' % (dump_file, host))
-
-
-@then('"{filetype}" file should not be created under "{directory}"')
-def impl(context, filetype, directory):
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Unable to find out the %s because backup timestamp has not been stored' % filetype)
-
-    if filetype == "dirty_list":
-        filename = 'gp_dump_%s_dirty_list' % context.backup_timestamp
-    elif filetype == "plan":
-        filename = 'gp_restore_%s_plan' % context.backup_timestamp
-    elif filetype == 'pipes':
-        filename = 'gp_dump_%s_pipes' % context.backup_timestamp
-    elif filetype == 'regular_files':
-        filename = 'gp_dump_%s_regular_files' % context.backup_timestamp
-    else:
-        raise Exception("Unknown filetype '%s' specified" % filetype)
-
-    dump_dir = get_dump_dir(context, directory)
-    file_path = os.path.join(dump_dir, context.backup_timestamp[0:8], filename)
-
-    if os.path.exists(file_path):
-        raise Exception("File path %s should not exist for filetype '%s'" % (file_path, filetype))
-
-
-def get_plan_filename(context):
-    filename = 'gp_restore_%s_plan' % context.backup_timestamp
-    return os.path.join(master_data_dir, 'db_dumps', context.backup_timestamp[0:8], filename)
-
-
-def get_dirty_list_filename(context, backup_dir=None):
-    if not backup_dir:
-        backup_dir = master_data_dir
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-    filename = '%sgp_dump_%s_dirty_list' % (context.dump_prefix, context.backup_timestamp)
-    return os.path.join(backup_dir, 'db_dumps', context.backup_timestamp[0:8], filename)
-
-
-@then('plan file should match "{filename}"')
-def impl(context, filename):
-    current_path = os.path.realpath(__file__)
-    current_dir = os.path.dirname(current_path)
-    golden_filename = "%s/%s" % (current_dir, filename)
-    generated_filename = get_plan_filename(context)
-    diff_files(golden_filename, generated_filename)
-
-
-def parse_plan_file(filename):
-    plan = {}
-    with open(filename) as fd:
-        for line in fd:
-            parts = line.partition(":")
-            ts = parts[0].strip()
-            if ts not in plan:
-                plan[ts] = set()
-                tables = parts[2].split(",")
-                for t in tables:
-                    if t not in plan[ts]:
-                        plan[ts].add(t.strip())
-    return plan
-
-
-def modify_plan_with_labels(context, expected_plan, scenario_number=""):
-    labels_key = 'timestamp_labels' + scenario_number
-    newplan = {}
-    for k in expected_plan:
-        if k not in global_labels[labels_key]:
-            raise Exception("Label '%s' not specified in behave test" % k)
-        ts = global_labels[labels_key][k]
-        newplan[ts] = expected_plan[k]
-    return newplan
-
-
-def compare_plans(expected, actual):
-    expected_keys = expected.keys()
-    actual_keys = actual.keys()
-
-    if len(expected_keys) != len(actual_keys):
-        raise Exception(
-            "Expected plan has %s timestamps actual plan has %s timestamps" % (len(expected_keys), len(actual_keys)))
-
-    for k in expected:
-        if k not in actual:
-            raise Exception("Expected timestamp in plan and did not find it: %s " % k)
-        expected_tables = sorted(expected[k])
-        actual_tables = sorted(actual[k])
-        if expected_tables != actual_tables:
-            print "Expected plan: %s" % expected
-            print "Actual plan: %s" % actual
-            raise Exception("Tables in plan for timestamp '%s' do not match expected tables" % k)
-
-
-@then('the plan file is validated against "{expected_plan}"')
-def impl(context, expected_plan):
-    context.restore_plan = parse_plan_file(get_plan_filename(context))
-
-    current_path = os.path.realpath(__file__)
-    current_dir = os.path.dirname(current_path)
-    expected_file = '%s/%s' % (current_dir, expected_plan)
-    expected_plan = parse_plan_file(expected_file)
-    expected_plan = modify_plan_with_labels(context, expected_plan)
-    compare_plans(expected_plan, context.restore_plan)
-
-
-@then('the plan file for scenario "{scenario_number}" is validated against "{expected_plan}"')
-def impl(context, scenario_number, expected_plan):
-    context.restore_plan = parse_plan_file(get_plan_filename(context))
-
-    current_path = os.path.realpath(__file__)
-    current_dir = os.path.dirname(current_path)
-    expected_file = '%s/%s' % (current_dir, expected_plan)
-    expected_plan = parse_plan_file(expected_file)
-    expected_plan = modify_plan_with_labels(context, expected_plan, scenario_number)
-    compare_plans(expected_plan, context.restore_plan)
-
-
-@then('there should be "{numtimestamps}" timestamps in the plan file')
-def impl(context, numtimestamps):
-    num = int(numtimestamps)
-    if len(context.restore_plan) != num:
-        raise Exception("Expected %d timestamps and found %d in restore plan" % (num, len(context.restore_plan)))
-
-
-@then('restore plan for timestamp "{ts}" should contain "{numtables}" tables')
-def impl(context, ts, numtables):
-    num = int(numtables)
-    if ts not in context.restore_plan:
-        raise Exception("Timestamp label '%s' not found in restore plan" % ts)
-
-
-@then('"{filetype}" file is removed under "{directory}"')
-def impl(context, filetype, directory):
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Backup timestamp has not been stored')
-
-    if filetype == "dirty_list":
-        filename = 'gp_dump_%s_dirty_list' % context.backup_timestamp
-    elif filetype == "plan":
-        filename = 'gp_restore_%s_plan' % context.backup_timestamp
-    elif filetype == "global":
-        filename = 'gp_global_*_1_%s' % context.backup_timestamp
-    elif filetype == "report":
-        filename = 'gp_dump_%s.rpt' % context.backup_timestamp
-    elif filetype == "dump":
-        filename = 'gp_dump_*_1_%s.gz' % context.backup_timestamp
-    else:
-        raise Exception("Unknown filetype '%s' specified" % filetype)
-    dump_dir = get_dump_dir(context, directory)
-    file_path = glob.glob(os.path.join(dump_dir, context.backup_timestamp[0:8], filename))[0]
-
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-
-@when('"{filetype}" file should be created under "{directory}"')
-@then('"{filetype}" file should be created under "{directory}"')
-def impl(context, filetype, directory):
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Backup timestamp has not been stored')
-
-    if filetype == "dirty_list":
-        filename = 'gp_dump_%s_dirty_list' % context.backup_timestamp
-    elif filetype == "plan":
-        filename = 'gp_restore_%s_plan' % context.backup_timestamp
-    elif filetype == "global":
-        filename = 'gp_global_*_1_%s' % context.backup_timestamp
-    elif filetype == "statistics":
-        filename = 'gp_statistics_*_1_%s' % context.backup_timestamp
-    elif filetype == 'pipes':
-        filename = 'gp_dump_%s_pipes' % context.backup_timestamp
-    elif filetype == 'regular_files':
-        filename = 'gp_dump_%s_regular_files' % context.backup_timestamp
-    elif filetype == '_filter':
-        filename = 'gp_dump_%s_filter' % context.backup_timestamp
-    elif filetype == '_schema':
-        filename = 'gp_dump_%s_schema' % context.backup_timestamp
-    elif filetype == 'table':
-        filename = 'gp_dump_%s_table' % context.backup_timestamp
-    else:
-        raise Exception("Unknown filetype '%s' specified" % filetype)
-
-    dump_dir = get_dump_dir(context, directory)
-    file_path = glob.glob(os.path.join(dump_dir, context.backup_timestamp[0:8], '%s%s' % (context.dump_prefix, filename)))
-    if len(file_path) == 0 or not os.path.exists(file_path[0]):
-        raise Exception("File path %s does not exist for filetype '%s'" % (file_path, filetype))
-
 @then('verify there are no "{tmp_file_prefix}" tempfiles')
 def impl(context, tmp_file_prefix):
     if tmp_file_prefix is not None and tmp_file_prefix:
@@ -1706,16 +993,6 @@ def impl(context, tmp_file_prefix):
             raise Exception('Found temp %s files where they should not be present' % tmp_file_prefix)
     else:
         raise Exception('Invalid call to temp file removal %s' % tmp_file_prefix)
-
-
-def compare_table_lists(table_names, stored_table_names, dbname):
-    if table_names != stored_table_names:
-        print "Table names after backup:"
-        print stored_table_names
-        print "Table names after restore:"
-        print table_names
-        raise Exception(
-            'Schema not restored correctly. List of tables are not equal before and after restore in database %s' % dbname)
 
 
 @then('tables names should be identical to stored table names in "{dbname}" except "{fq_table_name}"')
@@ -1763,23 +1040,6 @@ def impl(context, dbname, expected_count, backedup_dbname):
     validate_db_data(context, dbname, int(expected_count), backedup_dbname=backedup_dbname)
 
 
-@then('all the data from the remote segments in "{dbname}" are stored in path "{dir}" for "{backup_type}"')
-def impl(context, dbname, dir, backup_type):
-    segs = get_segment_hostnames(context, dbname)
-    if backup_type == 'inc':
-        timestamp = context.backup_timestamp[0:8]
-    elif backup_type == 'full':
-        timestamp = context.full_backup_timestamp[0:8]
-
-    from_path = '%s/db_dumps/%s' % (dir, timestamp)
-    to_path = '%s/db_dumps' % (dir)
-    for seg in segs:
-        print type(seg[0].strip())
-        cmdStr = "%s -o 'StrictHostKeyChecking no' -r %s:%s %s" % (
-        findCmdInPath('scp'), seg[0].strip(), from_path, to_path)
-        run_command(context, cmdStr)
-
-
 @then('pg_stat_last_operation registers the truncate for tables "{table_list}" in "{dbname}" in schema "{schema}"')
 def impl(context, table_list, dbname, schema):
     if not table_list:
@@ -1811,58 +1071,6 @@ def impl(context, lownum, highnum, tablename, dbname):
 def impl(context, cname, ctype, defval, tname, dbname):
     sql = "ALTER table %s ADD COLUMN %s %s DEFAULT %s" % (tname, cname, ctype, defval)
     execute_sql(dbname, sql)
-
-
-@given('there is a fake timestamp for "{ts}"')
-def impl(context, ts):
-    dname = os.path.join(get_dump_dir(context, master_data_dir), ts[0:8])
-    os.makedirs(dname)
-
-    contents = """
-Timestamp Key: %s
-Backup Type: Full
-gp_dump utility finished successfully.
-""" % ts
-
-    fname = os.path.join(dname, 'gp_dump_%s.rpt' % ts)
-    with open(fname, 'w') as fd:
-        fd.write(contents)
-
-
-@then('a timestamp in increments file in "{directory}" is modified to be newer')
-def impl(context, directory):
-    if not hasattr(context, 'full_backup_timestamp'):
-        raise Exception('Full backup timestamp needs to be specified in the test')
-
-    if not directory.strip():
-        directory = master_data_dir
-
-    dump_dir = os.path.join(directory, 'db_dumps', context.full_backup_timestamp[0:8])
-    increments_filename = os.path.join(dump_dir, 'gp_dump_%s_increments' % context.full_backup_timestamp)
-
-    if not os.path.exists(increments_filename):
-        raise Exception('Increments file %s does not exist !' % increments_filename)
-
-    with open(increments_filename) as fd:
-        lines = fd.readlines()
-        lines[0] = str(int(lines[0].strip()) + 10000)
-
-    with open(increments_filename, 'w') as fd:
-        for line in lines:
-            fd.write(line + '\n')
-
-
-@then('the "{table_type}" state file under "{backup_dir}" is saved for the "{backup_type}" timestamp')
-def impl(context, table_type, backup_dir, backup_type):
-    timestamp_key = None
-    if backup_type == 'full':
-        timestamp_key = context.full_backup_timestamp
-    elif backup_type == 'inc':
-        timestamp_key = context.backup_timestamp
-
-    backup_dir = backup_dir if len(backup_dir.strip()) != 0 else master_data_dir
-    context.state_file = os.path.join(backup_dir, 'db_dumps', timestamp_key[0:8],
-                                      'gp_dump_%s_%s_state_file' % (timestamp_key, table_type))
 
 
 @then('the saved state file is deleted')
@@ -1908,37 +1116,9 @@ def impl(context, table_name, dbname):
     execute_sql(dbname, recreate_sql)
 
 
-@then('verify that plan file has latest timestamp for "{table_name}"')
-def impl(context, table_name):
-    plan_file = get_plan_filename(context)
-    with open(plan_file) as fp:
-        for line in fp:
-            if table_name in line.strip():
-                timestamp = line.split(':')[0].strip()
-                if timestamp != context.backup_timestamp:
-                    raise Exception('Expected table %s with timestamp %s in plan file %s does not match timestamp %s' \
-                                    % (table_name, context.backup_timestamp, plan_file, timestamp))
-
-
 @given('the row "{row_values}" is inserted into "{table}" in "{dbname}"')
 def impl(context, row_values, table, dbname):
     insert_row(context, row_values, table, dbname)
-
-
-@when('the method get_partition_state is executed on table "{table}" in "{dbname}" for ao table "{ao_table}"')
-def impl(context, table, dbname, ao_table):
-    (sch, tbl) = table.split('.')
-    ao_sch, ao_tbl = ao_table.split('.')
-    part_info = [(1, ao_sch, ao_tbl, tbl)]
-    try:
-        backup_utils = Context()
-        backup_utils.master_port = os.environ.get('PGPORT')
-        backup_utils.target_db = dbname
-        context.exception = None
-        context.partition_list_res = None
-        context.partition_list_res = get_partition_state(backup_utils, sch, part_info)
-    except Exception as e:
-        context.exception = e
 
 
 @then('an exception should be raised with "{txt}"')
@@ -1948,121 +1128,6 @@ def impl(context, txt):
     output = context.exception.__str__()
     if not txt in output:
         raise Exception("Exception output is not matching: '%s'" % output)
-
-
-@then('the get_partition_state result should contain "{elem}"')
-def impl(context, elem):
-    if not context.partition_list_res:
-        raise Exception('get_partition_state did not return any results')
-
-    if len(context.partition_list_res) != 1:
-        raise Exception('get_partition_state returned more results than expected "%s"' % context.partition_list_res)
-
-    if elem not in context.partition_list_res:
-        raise Exception('Expected text "%s" not found in partition list returned by get_partition_state "%s"' % (
-        elem, context.partition_list_res))
-
-
-@given('older backup directories "{dirlist}" exists')
-@when('older backup directories "{dirlist}" exists')
-@then('older backup directories "{dirlist}" exists')
-def impl(context, dirlist):
-    dirs = [d.strip() for d in dirlist.split(',')]
-
-    for d in dirs:
-        if len(d) != 8 or not d.isdigit():
-            raise Exception('Invalid directory name provided %s' % d)
-
-    for d in dirs:
-        dump_dir = os.path.join(master_data_dir, 'db_dumps', d)
-        if os.path.exists(dump_dir):
-            continue
-        os.makedirs(dump_dir)
-        for i in range(10):
-            with open(os.path.join(dump_dir, '%s_%s' % (d, i)), 'w'):
-                pass
-
-
-@then('the dump directories "{dirlist}" should not exist')
-def impl(context, dirlist):
-    dirs = [d.strip() for d in dirlist.split(',')]
-
-    for d in dirs:
-        if len(d) != 8 or not d.isdigit():
-            raise Exception('Invalid directory name provided %s' % d)
-
-    for d in dirs:
-        dump_dir = os.path.join(master_data_dir, 'db_dumps', d)
-        if os.path.exists(dump_dir):
-            raise Exception('Unexpected directory exists %s' % dump_dir)
-
-
-@then('the dump directory for the stored timestamp should exist')
-def impl(context):
-    if not hasattr(context, 'full_backup_timestamp'):
-        raise Exception('Full backup timestamp needs to be stored')
-
-    dump_dir = os.path.join(master_data_dir, 'db_dumps', context.full_backup_timestamp[0:8])
-    if not os.path.exists(dump_dir):
-        raise Exception('Expected directory does not exist %s' % dump_dir)
-
-
-def validate_master_config_backup_files(context, directory=master_data_dir):
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-    dump_dir = os.path.join(get_dump_dir(context, directory), context.backup_timestamp[0:8])
-    dump_files = os.listdir(dump_dir)
-    for df in dump_files:
-        if df.startswith('%sgp_master_config_files' % context.dump_prefix) and df.endswith('.tar'):
-            return
-    raise Exception('Config files not backed up on master "%s"' % dump_dir)
-
-
-def validate_segment_config_backup_files(context, directory=None):
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-
-    for ps in primary_segs:
-        seg_data_dir = directory if directory is not None else ps.getSegmentDataDirectory()
-        dump_dir = os.path.join(get_dump_dir(context, seg_data_dir), context.backup_timestamp[0:8])
-        dump_files = ListRemoteFilesByPattern(dump_dir,
-                                              '%sgp_segment_config_files_*_%d_%s.tar' % (
-                                              context.dump_prefix, ps.getSegmentDbId(), context.backup_timestamp),
-                                              ps.getSegmentHostName()).run()
-        if len(dump_files) != 1:
-            raise Exception('Found too many config files for segment %s: %s' % (dump_files, seg_data_dir))
-
-
-@then('config files should be backed up on all segments')
-def impl(context):
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Backup timestamp needs to be stored')
-
-    validate_master_config_backup_files(context)
-    validate_segment_config_backup_files(context)
-
-
-@then('config files should be backed up on all segments in directory "{directory}"')
-def impl(context, directory):
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Backup timestamp needs to be stored')
-
-    validate_master_config_backup_files(context, directory=directory)
-    validate_segment_config_backup_files(context, directory=directory)
-
-
-@then('verify that the table "{table_name}" in "{dbname}" has dump info for the stored timestamp')
-def impl(context, table_name, dbname):
-    dump_history = {}
-    dump_history_sql = 'select dump_key,options from public.%s' % table_name
-    dump_history = getRows(dbname, dump_history_sql)
-    for (dump_key, options) in dump_history:
-        if context.backup_timestamp == dump_key.strip() and dbname in options:
-            return
-
-    raise Exception('Could not find dump info for timestamp %s in %s table' % (context.backup_timestamp, table_name))
 
 
 @then('verify that database "{dbname}" does not exist')
@@ -2160,20 +1225,6 @@ def impl(context, tablename, dbname, file_location):
             'Creation of external table failed for "%s:%s, row count = %s"' % (file_location, tablename, row_count))
 
 
-@then('verify that there is no "{tablename}" in the "{file_type}" file in "{backup_dir}"')
-def impl(context, tablename, file_type, backup_dir):
-    dump_dir = backup_dir if len(backup_dir.strip()) != 0 else master_data_dir
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-
-    filename = '%s/db_dumps/%s/%sgp_dump_%s_%s' % (
-    dump_dir, context.backup_timestamp[0:8], context.dump_prefix, context.backup_timestamp, file_type)
-    with open(filename) as fd:
-        for line in fd:
-            if tablename.strip() == line.strip():
-                raise Exception('Found an unwanted table in the file: "%s" in line: "%s"' % (filename, line))
-
-
 @then('verify that exactly "{num_tables}" tables in "{dbname}" have been restored')
 def impl(context, num_tables, dbname):
     validate_num_restored_tables(context, num_tables, dbname)
@@ -2182,36 +1233,6 @@ def impl(context, num_tables, dbname):
 @then('verify that exactly "{num_tables}" tables in "{dbname}" have been restored from "{backedup_dbname}"')
 def impl(context, num_tables, dbname, backedup_dbname):
     validate_num_restored_tables(context, num_tables, dbname, backedup_dbname=backedup_dbname)
-
-
-@then('the user runs gpdbrestore on dump date directory with options "{options}"')
-def impl(context, options):
-    command = 'gpdbrestore -e -b %s %s -a' % (context.backup_timestamp[0:8], options)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the timestamps should be printed in sorted order')
-def impl(context):
-    stdout_lines = context.stdout_message.split('\n')
-    process_ts = False
-    timestamps = []
-    for line in stdout_lines:
-        if '--------------------------' in line:
-            process_ts = True
-        elif process_ts:
-            if 'Enter timestamp number to restore' not in line:
-                timestamps.append(line.strip().split('......')[-1].strip())
-            else:
-                process_ts = False
-                break
-
-    timestamps = [ts.split()[0] + ts.split()[1] for ts in timestamps]
-
-    sorted_timestamps = sorted(timestamps, key=lambda x: int(x))
-
-    if sorted_timestamps != timestamps:
-        raise Exception('Timestamps are not in sorted order "%s"' % timestamps)
 
 
 @given('there are "{table_count}" "{tabletype}" tables "{table_name}" with data in "{dbname}"')
@@ -2251,62 +1272,6 @@ def impl(context, part_num, table_list, dbname, schema, dirty_hack_file):
 
     if not os.path.exists(dirty_hack_file):
         raise Exception('Failed to write to dirty hack file "%s"' % dirty_hack_file)
-
-
-@then('verify that the config files are backed up with the stored timestamp')
-def impl(context):
-    if not hasattr(context, 'backup_timestamp'):
-        raise Exception('Timestamp needs to be stored')
-
-    config_file = os.path.join(master_data_dir, 'db_dumps', context.backup_timestamp[0:8],
-                               'gp_master_config_files_%s.tar' % context.backup_timestamp)
-    if not os.path.exists(config_file):
-        raise Exception('Failed to locate config file on master "%s"' % config_file)
-
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-
-    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
-
-    for seg in primary_segs:
-        segment_config_file = os.path.join(seg.getSegmentDataDirectory(), 'db_dumps', context.backup_timestamp[0:8],
-                                           'gp_segment_config_files_0_%s_%s.tar' % (
-                                           seg.getSegmentDbId(), context.backup_timestamp))
-        if not CheckRemoteFile(segment_config_file, seg.getSegmentAddress()):
-            raise Exception('Failed to locate "%s" on "%s"' % segment_config_file, seg.getSegmentDataDirectory())
-
-
-@then('verify that the list of stored timestamps is printed to stdout')
-def impl(context):
-    found_ts = 0
-    stdout = context.stdout_message
-    for ts in context.inc_backup_timestamps:
-        for line in stdout.splitlines():
-            ts_str = 'Backup Timestamp: %s' % ts
-            if ts_str in line:
-                found_ts += 1
-
-    print 'context.inc_backup_timestamps = ', context.inc_backup_timestamps
-    if found_ts != len(context.inc_backup_timestamps):
-        raise Exception(
-            'Expected "%d" timestamps but found "%d" timestamps' % (len(context.inc_backup_timestamps), found_ts))
-
-
-@given('there is a "{table_type}" table "{tablename}" with funny characters in "{dbname}"')
-def impl(context, table_type, tablename, dbname):
-    funny_chars_table_name_sql = """create table "%s
-        new line in it" (a int)""" % tablename.strip()
-
-    table_type = table_type.strip()
-    if table_type == 'ao':
-        funny_chars_table_name_sql += ' with(appendonly=true)'
-    elif table_type == 'co':
-        funny_chars_table_name_sql += ' with(appendonly=true, orientation=column)'
-    elif table_type == 'heap':
-        pass
-    else:
-        raise Exception('Unknown table type specified "%s"' % table_type)
-
-    execute_sql(dbname.strip(), funny_chars_table_name_sql)
 
 
 @then('verify that the tuple count of all appendonly tables are consistent in "{dbname}"')
@@ -2707,23 +1672,6 @@ def impl(context):
     run_gpcommand(context, cmd_str)
 
 
-@then('the temp files "{filename_prefix}" are not created in the system')
-def impl(context, filename_prefix):
-    hostlist = get_all_hostnames_as_list(context, 'template1')
-    print hostlist
-    file_pattern = 'ls /tmp/%s* | wc -l' % filename_prefix
-    print file_pattern
-    for host in hostlist:
-        cmd = Command(name='check for temp files',
-                      cmdStr=file_pattern,
-                      ctxt=REMOTE,
-                      remoteHost=host)
-        cmd.run(validateAfter=True)
-        if int(cmd.get_stdout()) > 0:
-            raise Exception(
-                'Temp files with prefix %s are not cleaned up on host %s after gpcrondump' % (filename_prefix, host))
-
-
 @when('the user activates standby on the standbyhost')
 @then('the user activates standby on the standbyhost')
 def impl(context):
@@ -2852,15 +1800,6 @@ def verify_timestamps_on_segments(timestamp):
         verify_num_files(cmd.get_results(), '2', timestamp)
 
 
-@then('verify that "{dump_type}" dump files have stored timestamp in their filename')
-def impl(context, dump_type):
-    if dump_type.strip().lower() != 'full' and dump_type.strip().lower() != 'incremental':
-        raise Exception('Invalid dump type "%s"' % dump_type)
-
-    verify_timestamps_on_master(context.backup_timestamp, dump_type.strip().lower())
-    verify_timestamps_on_segments(context.backup_timestamp)
-
-
 def validate_files(file_list, pattern_list, expected_file_count):
     file_count = 0
     for pattern in pattern_list:
@@ -2878,125 +1817,6 @@ def validate_files(file_list, pattern_list, expected_file_count):
     if file_count != expected_file_count:
         raise Exception('Expected count of %d does not match actual count %d in file list "%s"' % (
         expected_file_count, file_count, file_list))
-
-
-@then('the "{file_type}" file under "{directory}" with options "{options}" is validated after dump operation')
-def impl(context, file_type, directory, options):
-    backup_dir = directory.strip() if directory.strip() != '' else master_data_dir
-    if len(options.split(',')) > 3:
-        raise Exception('Invalid options specified "%s"' % options)
-    option_list = options.split(',')
-
-    pipe_file_count = 1 + get_num_segments(primary=True, mirror=False, master=True, standby=False)
-    reg_file_count = 6
-
-    pipes_pattern_list = ['gp_dump_.*_%s.*(?:\.gz)?' % context.backup_timestamp]
-    regular_pattern_list = ['gp_cdatabase_.*_1_%s' % context.backup_timestamp,
-            'gp_dump_%s.*' % context.backup_timestamp,
-            'gp_dump_status_.*_1_%s' % context.backup_timestamp]
-
-    if '-G' in option_list:
-        pipe_file_count += 1
-        pipes_pattern_list += ['gp_global_.*_1_%s' % context.backup_timestamp]
-    if '-g' in option_list:
-        pipe_file_count += get_num_segments(primary=True, mirror=False, master=True, standby=False)
-        pipes_pattern_list += ['gp_master_config_files_%s.*' % context.backup_timestamp,
-                               'gp_segment_config_files_.*_.*_%s.*' % context.backup_timestamp]
-    if '--incremental' in option_list:
-        regular_pattern_list += ['gp_dump_%s.*' % context.full_backup_timestamp]
-        reg_file_count += 1
-
-    if hasattr(context, "dump_prefix"):
-        if '-t' in option_list or '-T' in option_list:
-            reg_file_count += 1
-        for id, p in enumerate(pipes_pattern_list):
-            pipes_pattern_list[id] = '%s%s' % (context.dump_prefix, p)
-        for id, p in enumerate(regular_pattern_list):
-            regular_pattern_list[id] = '%s%s' % (context.dump_prefix, p)
-
-    filename = '%s/db_dumps/%s/%sgp_dump_%s_%s' % (
-    backup_dir, context.backup_timestamp[0:8], context.dump_prefix, context.backup_timestamp, file_type.strip())
-
-    with open(filename) as fp:
-        file_list = fp.readlines()
-
-    if file_type == 'pipes':
-        validate_files(file_list, pipes_pattern_list, pipe_file_count)
-    elif file_type == 'regular_files':
-        validate_files(file_list, regular_pattern_list, reg_file_count)
-
-
-@then('the timestamp key "{timestamp_key}" for gpcrondump is stored')
-def impl(context, timestamp_key):
-    context.backup_timestamp = timestamp_key
-
-
-@given('the prefix "{prefix}" is stored')
-def impl(context, prefix):
-    context.dump_prefix = prefix + '_'
-
-
-def get_segment_dump_files(context, dir):
-    results = []
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-    for seg in primary_segs:
-        segment_dump_dir = dir.strip() if len(dir.strip()) != 0 else seg.getSegmentDataDirectory()
-        cmd = Command('check dump files', 'ls %s/db_dumps/%s/*%s*' % (
-        segment_dump_dir, context.backup_timestamp[0:8], context.backup_timestamp), ctxt=REMOTE,
-                      remoteHost=seg.getSegmentHostName())
-        cmd.run(validateAfter=False)  # because we expect ls to fail
-        results.append((seg, [os.path.basename(r) for r in cmd.get_stdout().split()]))
-    return results
-
-
-@then('the named pipes are created for the timestamp "{timestamp_key}" under "{dir}"')
-def impl(context, timestamp_key, dir):
-    dump_dir = dir if len(dir.strip()) != 0 else master_data_dir
-    pipes_filename = '%s/db_dumps/%s/gp_dump_%s_pipes' % (dump_dir, timestamp_key[0:8], timestamp_key)
-
-    with open(pipes_filename, 'r') as fp:
-        for f in fp:
-            (host, filename) = [t.strip() for t in f.split(':')]
-            cmd_str = 'mkdir -p %s' % os.path.dirname(filename)
-            cmd = Command('create named pipes directory', cmd_str, ctxt=REMOTE, remoteHost=host)
-            cmd.run(validateAfter=True)
-            if int(cmd.get_return_code()) != 0:
-                raise Exception('Non zero return code during makedirs command')
-
-            cmd = Command('create named pipes', 'mkfifo %s' % filename, ctxt=REMOTE, remoteHost=host)
-            cmd.run(validateAfter=True)
-            if int(cmd.get_return_code()) != 0:
-                raise Exception('Non zero return code during mkfifo command')
-
-
-@then('the named pipes are validated against the timestamp "{timestamp_key}" under "{dir}"')
-def impl(context, timestamp_key, dir):
-    dump_dir = dir if len(dir.strip()) != 0 else master_data_dir
-    pipes_filename = '%s/db_dumps/%s/gp_dump_%s_pipes' % (dump_dir, timestamp_key[0:8], timestamp_key)
-
-    with open(pipes_filename, 'r') as fp:
-        for f in fp:
-            (host, filename) = [t.strip() for t in f.split(':')]
-            cmd = Command('create named pipes', 'file %s' % filename, ctxt=REMOTE, remoteHost=host)
-            cmd.run(validateAfter=True)
-            if int(cmd.get_return_code()) != 0:
-                raise Exception('Non zero return code during mkfifo command')
-            if not 'named pipe' in cmd.get_stdout():
-                raise Exception('Expected %s to be a named pipe' % filename)
-
-
-@when('the named pipe script for the "{operation}" is run for the files under "{dump_directory}"')
-@then('the named pipe script for the "{operation}" is run for the files under "{dump_directory}"')
-def impl(context, operation, dump_directory):
-    dump_dir = dump_directory if len(dump_directory.strip()) != 0 else master_data_dir
-    if operation == 'restore' and hasattr(context, 'inc_backup_timestamps'):
-        if not hasattr(context, 'backup_timestamp'):
-            raise Exception('Backup timestamp not stored')
-        for ts in context.inc_backup_timestamps:
-            open_named_pipes(context, operation, ts, dump_dir)
-    else:
-        open_named_pipes(context, operation, context.backup_timestamp, dump_dir)
 
 
 @then('close all opened pipes')
@@ -3024,27 +1844,6 @@ def impl(context):
         results = find_cmd.get_stdout()
         if results:
             raise Exception('Unexpected pipe processes found "%s"' % results)
-
-
-def open_named_pipes(context, operation, timestamp, dump_dir):
-    sleeptime = 5
-    pipes_filename = '%s/db_dumps/%s/gp_dump_%s_pipes' % (dump_dir, timestamp[0:8], timestamp)
-
-    filename = os.path.join(os.getcwd(), './test/data/%s_pipe.py' % operation)
-
-    segs = get_all_hostnames_as_list(context, 'template1')
-
-    for seg in segs:
-        cmdStr = "%s -o 'StrictHostKeyChecking no' %s %s:%s" % (findCmdInPath('scp'), filename, seg, '/tmp')
-        run_command(context, cmdStr)
-
-    with open(pipes_filename, 'r') as fp:
-        for f in fp:
-            (host, filename) = [t.strip() for t in f.split(':')]
-            cmd = Command('run pipe script', 'sh -c "python /tmp/%s_pipe.py %s" &>/dev/null &' % (operation, filename),
-                          ctxt=REMOTE, remoteHost=host)
-            cmd.run(validateAfter=True)
-            time.sleep(sleeptime)
 
 
 @given('the core dump directory is stored')
@@ -3123,55 +1922,6 @@ def impl(context, filetype, file_path, cond):
         raise Exception('The %s "%s" does not exist' % (filetype, file_path))
     elif cond == 'not' and existence_check_fn(file_path):
         raise Exception('The %s "%s" exist' % (filetype, file_path))
-
-
-@then('the directory "{file_path}" is removed')
-def impl(context, file_path):
-    if file_path[0] == '~':
-        file_path = os.path.join(os.path.expanduser('~'), file_path[2:])
-    backup_file_path = file_path + '.bk'
-
-    if not os.path.exists(backup_file_path):
-        raise Exception('Backup file "%s" must exist in order to delete the file "%s"' % (backup_file_path, file_path))
-
-    if '*' in file_path:
-        raise Exception('WildCard found in file path !!!!. Cannot delete')
-
-    run_command(context, 'rm -rf %s' % file_path)
-
-
-@then('there should be dump files under "{directory}" with prefix "{prefix}"')
-def impl(context, directory, prefix):
-    if not hasattr(context, "dump_prefix"):
-        context.dump_prefix = ''
-    dump_prefix = '%s_gp' % prefix.strip()
-    dump_dir = get_dump_dir(context, directory)
-
-    segment_dump_files = get_segment_dump_files(context, directory)
-
-    if not use_ddboost():
-        for seg, dump_files in segment_dump_files:
-            segment_dump_dir = directory if len(directory.strip()) != 0 else seg.getSegmentDataDirectory()
-            if len(dump_files) == 0:
-                raise Exception('Failed to find dump files on the segment %s under %s/db_dumps/%s' % (
-                seg.getSegmentDataDirectory(), segment_dump_dir, context.backup_timestamp[0:8]))
-            for dump_file in dump_files:
-                if not dump_file.startswith(dump_prefix):
-                    raise Exception(
-                        'Dump file %s on the segment %s under %s/db_dumps/%s does not start with required prefix %s' % (
-                        dump_file, seg.getSegmentDataDirectory(), segment_dump_dir, context.backup_timestamp[0:8], prefix))
-
-    cmd = Command('check dump files',
-                  'ls %s/%s/*%s*' % (dump_dir, context.backup_timestamp[0:8], context.backup_timestamp))
-    cmd.run(validateAfter=True)
-    results = cmd.get_stdout().split('\n')
-
-    if len(results) == 0:
-        raise Exception('Failed to find dump files %s on the master under %s' % (results, dump_dir))
-    for filename in results:
-        if not os.path.basename(filename).startswith(prefix.strip()):
-            raise Exception('Dump file %s on master under %s does not have required prefix %s' % (
-            filename, dump_dir, prefix))
 
 
 @given('the environment variable "{var}" is not set')
@@ -4042,45 +2792,6 @@ def impl(context, dbname):
                 fp.write('{schema}.{table}:{comp}\n'.format(schema=p[1], table=p[2], comp=compression_rate))
 
 
-@then('verify that the compression ratio of "{table}" in "{dbname}" is good')
-def impl(context, table, dbname):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        query = """SELECT get_ao_compression_ratio('{table}')""".format(table=table)
-        compression_rate = dbconn.execSQLForSingleton(conn, query)
-
-    found = False
-    with open('test/data/compression_{db}_backup'.format(db=dbname)) as fp:
-        for line in fp:
-            t, c = line.split(':')
-            if t == table:
-                if float(c) != compression_rate and float(c) - 0.1 * float(
-                        c) > compression_rate:  # 10% more than original compression rate
-                    raise Exception('Expected compression ratio to be greater than or equal to %s but got %s' % (
-                    c, compression_rate))
-            found = True
-    if not found:
-        raise Exception('Compression ratio for table %s was not stored' % table)
-
-
-@then('verify that the data of tables in "{dbname}" is validated after reload')
-def impl(context, dbname):
-    tbls = get_table_names(dbname)
-    backed_up_data = []
-    reloaded_data = []
-    for t in tbls:
-        with open('test/data/%s.%s_backup' % (t[0], t[1])) as fp:
-            for line in fp:
-                toks = line.split()
-                backed_up_data.append(
-                    ' '.join(toks[1:]))  # Ignore the gp_segment_id value since it changes after reload
-        with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-            res = dbconn.execSQL(conn, 'select * from %s.%s' % (t[0], t[1]))
-            for r in res:
-                reloaded_data.append(' '.join([str(x) for x in r]))
-        if sorted(reloaded_data) != sorted(backed_up_data):
-            raise Exception('Data does not match for table %s.%s' % (t[0], t[1]))
-
-
 @given('the schemas "{schema_list}" do not exist in "{dbname}"')
 @then('the schemas "{schema_list}" do not exist in "{dbname}"')
 def impl(context, schema_list, dbname):
@@ -4273,20 +2984,6 @@ def impl(context):
     check_dump_dir_exists(context, 'template1')
 
 
-@when('verify that the restored table "{table_name}" in database "{dbname}" is analyzed')
-@then('verify that the restored table "{table_name}" in database "{dbname}" is analyzed')
-def impl(context, table_name, dbname):
-    if verify_restored_table_is_analyzed(context, table_name, dbname) is not True:
-        raise Exception("The restored table \'%s\' of database \'%s\' is not analyzed" % (table_name, dbname))
-
-
-@when('verify that the table "{table_name}" in database "{dbname}" is not analyzed')
-@then('verify that the table "{table_name}" in database "{dbname}" is not analyzed')
-def impl(context, table_name, dbname):
-    if (verify_restored_table_is_analyzed(context, table_name, dbname)):
-        raise Exception("The restored table \'%s\' of database \'%s\' is analyzed" % (table_name, dbname))
-
-
 @given('the database "{dbname}" is analyzed')
 def impl(context, dbname):
     analyze_database(context, dbname)
@@ -4378,43 +3075,6 @@ def execute_sql_until_stopped(context, dbname, query):
 @then('the user stops all background queries')
 def impl(context):
     context.background_query_lock = True
-
-
-@given('the backup test is initialized with no backup files')
-def impl(context):
-    context.execute_steps(u'''
-        Given the database is running
-        And database "bkdb" is dropped and recreated
-        And there are no backup files
-        And the backup files in "/tmp" are deleted
-        And the DDBoost dump directory is deleted for the "local" storage unit
-        And the DDBoost dump directory is deleted for the "remote" storage unit
-    ''')
-
-
-@given('the backup test is initialized with database "{dbname}"')
-def impl(context, dbname):
-    context.execute_steps(u'''
-        Given the database is running
-        And database "%s" is dropped and recreated
-    ''' % dbname)
-
-
-@given('the backup test is initialized for special characters')
-def impl(context):
-    os.environ["SP_CHAR_DB"] = """ DB`~@#$%^&*()_-+[{]}|\;: \\'/?><;1 """
-    os.environ["SP_CHAR_SCHEMA"] = """ S`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
-    os.environ["SP_CHAR_SCHEMA2"] = """ S`~@#$%^&*()_-+[{]}|\;: \\'"/?><2 """
-    os.environ["SP_CHAR_HEAP"] = """ heap_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
-    os.environ["SP_CHAR_AO"] = """ ao_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
-    os.environ["SP_CHAR_CO"] = """ co_T`~@#$%^&*()-+[{]}|\;: \\'"/?><1 """
-    context.execute_steps(u'''
-        Given the database is running
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_database.sql template1"
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_schema.sql template1"
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/create_special_table.sql template1"
-        And the user runs "psql -f test/behave/mgmt_utils/steps/data/special_chars/insert_into_special_table.sql template1"
-    ''')
 
 
 @then('validate and run gpcheckcat repair')
@@ -4759,91 +3419,6 @@ def impl(context, role_name):
         conn.commit()
 
 
-@given('the backup files for the stored timestamp are in the old format in dir "{directory}"')
-@when('the backup files for the stored timestamp are in the old format in dir "{directory}"')
-@then('the backup files for the stored timestamp are in the old format in dir "{directory}"')
-def impl(context, directory):
-    store_timestamp_in_old_format(context, directory=directory)
-
-
-@given('the backup files for the stored timestamp are in the old format')
-@when('the backup files for the stored timestamp are in the old format')
-@then('the backup files for the stored timestamp are in the old format')
-def impl(context):
-    store_timestamp_in_old_format(context)
-
-
-@given('the backup files for the stored timestamp are in the old format with prefix "{prefix}"')
-@when('the backup files for the stored timestamp are in the old format with prefix "{prefix}"')
-@then('the backup files for the stored timestamp are in the old format with prefix "{prefix}"')
-def impl(context, prefix):
-    store_timestamp_in_old_format(context, prefix=prefix)
-
-
-def store_timestamp_in_old_format(context, directory=None, prefix=""):
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary() or seg.isSegmentMaster()]
-
-    try:
-        context.backup_timestamp
-    except:
-        context.backup_timestamp = None
-
-    if context.backup_timestamp is not None:
-        timestamp = context.backup_timestamp
-    else:
-        timestamp = context.full_backup_timestamp
-
-    if directory is None:
-        master_dump_dir = gparray.master.getSegmentDataDirectory()
-    else:
-        master_dump_dir = directory
-
-    if prefix is not "":
-        prefix = prefix + "_"
-    for ps in primary_segs:
-        if directory is None:
-            seg_dir = ps.getSegmentDataDirectory()
-        else:
-            seg_dir = directory
-        dump_dir = os.path.join(seg_dir, 'db_dumps', timestamp[0:8])
-        segdbId = ps.getSegmentDbId()
-        segcid = ps.getSegmentContentId()
-        segdbname = ps.getSegmentHostName()
-        new_format = "%s_%s" % (segcid, segdbId)
-        old_format = "%s_%s" % (1 if ps.isSegmentMaster() else 0, segdbId)
-
-        rename_files_to_older_format = """ ssh {segdbname} 'if [ -d "{dump_dir}" ]; then for i in `ls {dump_dir}/*{new_format}_{timestamp}* | xargs`; do
-                                           old_format=${{i/{new_format}/{old_format}}}
-                                           if [ ! -f $old_format ]; then mv $i $old_format; fi ;
-                                           done; fi;'
-                                       """.format(segdbname=segdbname,
-                                                  dump_dir=dump_dir,
-                                                  new_format=new_format,
-                                                  old_format=old_format,
-                                                  timestamp=timestamp)
-
-        run_command(context, rename_files_to_older_format)
-
-        if context.exception:
-            raise context.exception
-
-        # replace new format with old format on master directory report file
-        master_report_file = os.path.join(master_dump_dir, 'db_dumps', timestamp[0:8],
-                                          '%sgp_dump_%s.rpt' % (prefix, timestamp))
-        change_report_file_content = "sed -i 's|%s|%s|' %s" % (new_format, old_format, master_report_file)
-
-        run_command(context, change_report_file_content)
-
-
-# todo this seems like it can only be a given or a when, not a "then"
-@then('the timestamp will be stored in json format')
-@given('the timestamp will be stored in json format')
-@when('the timestamp will be stored in json format')
-def impl(context):
-    context.is_timestamp_stored_as_json = True
-
-
 @given('the gptransfer test is initialized')
 def impl(context):
     context.execute_steps(u'''
@@ -4948,160 +3523,6 @@ def impl(context):
     if os.path.exists(context.fake_timestamp_file):
         raise Exception("expected no file at: %s" % context.fake_timestamp_file)
 
-def use_netbackup():
-    if os.getenv('NETBACKUP'):
-        return True
-    else:
-        return False
-
-def use_ddboost():
-    if os.getenv('DDBOOST'):
-        return True
-    else:
-        return False
-
-def append_storage_config_to_backup_command(context, command):
-    if use_netbackup():
-        command += " --netbackup-service-host " + context._root['netbackup_service_host'] + " --netbackup-policy " + context._root['netbackup_policy'] + " --netbackup-schedule " + context._root['netbackup_schedule']
-    elif use_ddboost():
-        command += " --ddboost"
-    return command
-
-def append_storage_config_to_restore_command(context, command):
-    if use_netbackup():
-        command += " --netbackup-service-host " + context._root['netbackup_service_host']
-    elif use_ddboost():
-        command += " --ddboost"
-    return command
-
-def parse_config_params():
-    if use_netbackup():
-        current_path = os.path.realpath(__file__)
-        current_dir = os.path.dirname(current_path)
-        netbackup_yaml_file_path = os.path.join(current_dir, 'data/netbackup_behave_config.yaml')
-        config_yaml = read_config_yaml(netbackup_yaml_file_path)
-    elif use_ddboost():
-        mdd = os.getenv('MASTER_DATA_DIRECTORY')
-        ddboost_yaml_file_path = os.path.join(mdd,'ddboost_config.yml')
-        config_yaml = read_config_yaml(ddboost_yaml_file_path)
-    return config_yaml
-
-def ddboost_config_setup(context, storage_unit=None):
-    cmd_remove_config = "gpcrondump --ddboost-config-remove"
-    print "context is %s" % context
-    print "cmd is %s" % cmd_remove_config
-    run_command(context, cmd_remove_config)
-
-    cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s" % \
-                    (context._root['local_ddboost_host'], \
-                    context._root['local_ddboost_user'], \
-                    context._root['ddboost_backupdir'])
-
-    if storage_unit:
-        cmd_config += " --ddboost-storage-unit %s" % storage_unit
-
-    cmd_config
-    local = pexpect.spawn(cmd_config)
-    local.expect('Password: ', timeout=60)
-    local.sendline(context._root['local_ddboost_password'])
-    local.expect(pexpect.EOF, timeout=60)
-    local.close()
-
-    cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s --ddboost-remote" % \
-                    (context._root['remote_ddboost_host'], \
-                    context._root['remote_ddboost_user'], \
-                    context._root['ddboost_backupdir'])
-
-    if storage_unit:
-        cmd_config += " --ddboost-storage-unit %s" % storage_unit
-
-    cmd_config
-    local = pexpect.spawn(cmd_config)
-    local.expect('Password: ', timeout=60)
-    local.sendline(context._root['remote_ddboost_password'])
-    local.expect(pexpect.EOF, timeout=60)
-    local.close()
-
-def _copy_nbu_lib_files(context, ver, gphome):
-    ver = ver.replace('.', '')
-    hosts = set(get_all_hostnames_as_list(context, 'template1'))
-    cpCmd = 'cp -f {gphome}/lib/nbu{ver}/lib/* {gphome}/lib/'.format(gphome=gphome,
-                                                                     ver=ver)
-    for host in hosts:
-        cmd = Command(name='Copy NBU lib files',
-                cmdStr=cpCmd,
-                ctxt=REMOTE,
-                remoteHost=host)
-        cmd.run(validateAfter=True)
-
-def read_config_yaml(yaml_file):
-    """ Reads in a yaml file. """
-
-    try:
-        cfgfile = open(yaml_file, 'r')
-    except IOError as e:
-        raise Exception("Unable to open file %s: %s" % (yaml_file, e))
-
-    try:
-        cfgyamldata = yaml.load(cfgfile.read())
-    except yaml.YAMLError, exc:
-        raise Exception("Error reading file %s: %s" % (yaml_file, exc))
-    finally:
-        cfgfile.close()
-
-    if len(cfgyamldata) == 0:
-        raise Exception("The load of the config file %s failed.\
-            No configuration information to continue testing operation." % yaml_file)
-    else:
-        return cfgyamldata
-
-@given('the test suite is initialized for Netbackup "{ver}"')
-def impl(context, ver):
-    gphome = os.environ.get('GPHOME')
-    _copy_nbu_lib_files(context=context, ver=ver, gphome=gphome)
-    os.environ["NETBACKUP"] = "TRUE"
-
-    NETBACKUPDICT = defaultdict(dict)
-    NETBACKUPDICT['NETBACKUPINFO'] = parse_config_params()
-    context._root['netbackup_service_host'] = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_SERVICE_HOST']
-    context._root['netbackup_policy'] = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_POLICY']
-    context._root['netbackup_schedule'] = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_SCHEDULE']
-
-@given('the test suite is initialized for DDBoost')
-def impl(context):
-    os.environ["DDBOOST"] = "TRUE"
-    context._root['local_ddboost_host'] = os.environ["DD_SOURCE_HOST"]
-    context._root['local_ddboost_user'] = os.environ["DD_USER"]
-    context._root['local_ddboost_password'] = os.environ["DD_PASSWORD"]
-    context._root['remote_ddboost_host'] = os.environ["DD_DEST_HOST"]
-    context._root['remote_ddboost_user'] = os.environ["DD_USER"]
-    context._root['remote_ddboost_password'] = os.environ["DD_PASSWORD"]
-    if 'ddboost_backupdir' not in context._root:
-        with open("/tmp/terraform_name", 'r') as tf_name_file:
-            directory = "GPDB-" + tf_name_file.readline() + "-DIR"
-        context._root['ddboost_backupdir'] = directory
-    ddboost_config_setup(context, storage_unit="GPDB")
-
-@given('the DDBoost dump directory is deleted for the "{which}" storage unit')
-@then('the DDBoost dump directory is deleted for the "{which}" storage unit')
-@when('the DDBoost dump directory is deleted for the "{which}" storage unit')
-def impl(context, which):
-    if use_ddboost():
-        if which == "local":
-            cmd_del_dir = "gpddboost --del-dir=%s" % context._root['ddboost_backupdir']
-        elif which == "remote":
-            cmd_del_dir = "gpddboost --del-dir=%s --remote" % context._root['ddboost_backupdir']
-        else:
-            raise Exception('Invalid storage unit specified.  Options are "local" and "remote".')
-        run_command(context, cmd_del_dir)
-
-@then('gpcrondump should print the correct disk space check message')
-def impl(context):
-    if use_ddboost():
-        check_stdout_msg(context, "Bypassing disk space checks due to DDBoost parameters")
-    else:
-        check_stdout_msg(context, "Validating disk space")
-
 @then('store the vacuum timestamp for verification in database "{dbname}"')
 def impl(context, dbname):
     sleep(2)
@@ -5121,13 +3542,6 @@ def impl(context, utility, directory):
     if not os.path.isfile(filepath[0]):
         err_str = "The output file '%s' does not exist.\n" % filepath
         raise Exception(err_str)
-
-@then('no dump files should be present on the data domain server')
-def impl(context):
-    command = 'gpddboost --listDirectory --dir=%s' % (os.path.join(context._root['ddboost_backupdir'], context.full_backup_timestamp[0:8]))
-    run_gpcommand(context, command)
-    if not context.exception:
-        raise Exception("Directory for date %s still exists" % context.full_backup_timestamp[0:8])
 
 @then('"{gppkg_name}" gppkg files exist on all hosts')
 def impl(context, gppkg_name):

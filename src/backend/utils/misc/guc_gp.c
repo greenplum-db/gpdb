@@ -171,7 +171,6 @@ char	   *memory_profiler_run_id = "none";
 char	   *memory_profiler_dataset_id = "none";
 char	   *memory_profiler_query_id = "none";
 int			memory_profiler_dataset_size = 0;
-bool		gp_dump_memory_usage = FALSE;
 
 bool		rle_type_compression_stats = false;
 
@@ -191,7 +190,6 @@ bool		debug_latch = false;
 bool		gp_crash_recovery_suppress_ao_eof = false;
 bool		gp_keep_all_xlog = false;
 int			keep_wal_segments = 0;
-int			ddboost_buf_size = 512 * 1024;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
 bool		Debug_dtm_action_primary = DEBUG_DTM_ACTION_PRIMARY_DEFAULT;
@@ -908,16 +906,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_enable_explain_allstat,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_dump_memory_usage", PGC_USERSET, CLIENT_CONN_OTHER,
-			gettext_noop("Save memory usage in each segment."),
-			NULL,
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_dump_memory_usage,
 		false, NULL, NULL
 	},
 
@@ -2980,17 +2968,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 struct config_int ConfigureNamesInt_gp[] =
 {
-	/* maximum read/write I/O size for DD Boost is 1MB */
-	{
-		{"ddboost_buf_size", PGC_SIGHUP, DEVELOPER_OPTIONS,
-			gettext_noop("size of ddboost dump/restore buffer"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&ddboost_buf_size,
-		524288, 65536, 1048576, NULL, NULL
-	},
-
 	{
 		{"readable_external_table_timeout", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Cancel the query if no data read within N seconds."),
@@ -4694,7 +4671,7 @@ struct config_string ConfigureNamesString_gp[] =
 		{"pljava_classpath", PGC_SUSET, CUSTOM_OPTIONS,
 			gettext_noop("classpath used by the the JVM"),
 			NULL,
-			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE 
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
 		},
 		&pljava_classpath,
 		"", NULL, NULL

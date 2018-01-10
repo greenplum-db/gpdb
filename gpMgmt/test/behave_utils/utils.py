@@ -17,15 +17,7 @@ from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED, MODE_RESYNCHRONIZATION
-from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString
-
-# We do this to allow behave to use 4.3 or 5.0 source code
-# 4.3 does not have the escape_string function
-have_escape_string = True
-try:
-    from gppylib.operations.backup_utils import escape_string
-except ImportError:
-    have_escape_string = False
+from pygresql import pg
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -315,10 +307,7 @@ def get_table_data_to_file(filename, tablename, dbname):
                                     OR c.relname = '%s'
                         ) AS q;
                 """
-        if have_escape_string:
-            query = query_format % (escape_string(tablename, conn=conn), escape_string(tablename, conn=conn))
-        else:
-            query = query_format % (pg.escape_string(tablename), pg.escape_string(tablename))
+        query = query_format % (escape_string(tablename, conn=conn), escape_string(tablename, conn=conn))
         res = dbconn.execSQLForSingleton(conn, query)
         # check if tablename is fully qualified <schema_name>.<table_name>
         if '.' in tablename:
@@ -348,75 +337,9 @@ def diff_files(expected_file, result_file):
         expected_file, result_file, diff_contents))
 
 
-def validate_restore_data(context, new_table, dbname, backedup_table=None, backedup_dbname=None):
-    if new_table == "public.gpcrondump_history":
-        return
-    dbname = dbname.strip()
-    new_table = new_table.strip()
-    filename = dbname + "_" + new_table + "_restore"
-    get_table_data_to_file(filename, new_table, dbname)
-    current_dir = os.getcwd()
-
-    if backedup_table != None:
-        tablename = backedup_table
-    else:
-        tablename = new_table
-
-    if backedup_dbname == None:
-        backedup_dbname = dbname
-
-    backup_filename = backedup_dbname + '_' + tablename.strip()
-    backup_path = os.path.join(current_dir, './test/data', backup_filename + "_backup")
-
-    restore_filename = dbname + '_' + new_table.strip()
-    restore_path = os.path.join(current_dir, './test/data', restore_filename + "_restore")
-
-    diff_files(backup_path, restore_path)
-
-
-def validate_restore_data_in_file(context, tablename, dbname, file_name, backedup_table=None):
-    filename = file_name + "_restore"
-    get_table_data_to_file(filename, tablename, dbname)
-    current_dir = os.getcwd()
-    if backedup_table != None:
-        backup_file = os.path.join(current_dir, './test/data',
-                                   backedup_table.strip() + "_" + backedup_table.strip() + "_backup")
-    else:
-        backup_file = os.path.join(current_dir, './test/data', file_name + "_backup")
-    restore_file = os.path.join(current_dir, './test/data', file_name + "_restore")
-    diff_files(backup_file, restore_file)
-
-
-def validate_db_data(context, dbname, expected_table_count, backedup_dbname=None):
-    tbls = get_table_names(dbname)
-    if len(tbls) != expected_table_count:
-        raise Exception(
-            "db %s does not have expected number of tables %d != %d" % (dbname, expected_table_count, len(tbls)))
-    for t in tbls:
-        name = "%s.%s" % (t[0], t[1])
-        validate_restore_data(context, name, dbname, backedup_table=None, backedup_dbname=backedup_dbname)
-
-
 def get_segment_hostnames(context, dbname):
     sql = "SELECT DISTINCT(hostname) FROM gp_segment_configuration WHERE content != -1;"
     return getRows(dbname, sql)
-
-
-def backup_db_data(context, dbname):
-    tbls = get_table_names(dbname)
-    for t in tbls:
-        nm = "%s.%s" % (t[0], t[1])
-        backup_data(context, nm, dbname)
-
-
-def backup_data(context, tablename, dbname):
-    filename = dbname.strip() + "_" + tablename.strip() + "_backup"
-    get_table_data_to_file(filename, tablename, dbname)
-
-
-def backup_data_to_file(context, tablename, dbname, filename):
-    filename = filename + "_backup"
-    get_table_data_to_file(filename, tablename, dbname)
 
 
 def check_partition_table_exists(context, dbname, schemaname, table_name, table_type=None, part_level=1, part_number=1):
@@ -435,20 +358,14 @@ def check_table_exists(context, dbname, table_name, table_type=None, host=None, 
                 FROM pg_class c, pg_namespace n
                 WHERE c.relname = '%s' AND n.nspname = '%s' AND c.relnamespace = n.oid;
                 """
-            if have_escape_string:
-                SQL = SQL_format % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
-            else:
-                SQL = SQL_format % (pg.escape_string(tablename), pg.escape_string(schemaname))
+            SQL = SQL_format % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
         else:
             SQL_format = """
                 SELECT oid, relkind, relstorage, reloptions \
                 FROM pg_class \
                 WHERE relname = E'%s';\
                 """
-            if have_escape_string:
-                SQL = SQL_format % (escape_string(table_name, conn=conn))
-            else:
-                SQL = SQL_format % (pg.escape_string(table_name))
+            SQL = SQL_format % (escape_string(table_name, conn=conn))
 
         table_row = None
         try:
@@ -925,11 +842,6 @@ def is_any_segment_resynchronized():
     return False
 
 
-def get_distribution_policy(dbname):
-    filename = dbname.strip() + "_dist_policy_backup"
-    get_dist_policy_to_file(filename, dbname)
-
-
 def get_dist_policy_to_file(filename, dbname):
     dist_policy_sql = " \
             SELECT \
@@ -950,15 +862,6 @@ def get_dist_policy_to_file(filename, dbname):
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         dbconn.execSQL(conn, data_sql)
         conn.commit()
-
-
-def validate_distribution_policy(context, dbname):
-    filename = dbname.strip() + "_dist_policy_restore"
-    get_dist_policy_to_file(filename, dbname)
-    current_dir = os.getcwd()
-    backup_file = os.path.join(current_dir, './test/data', dbname.strip() + "_dist_policy_backup")
-    restore_file = os.path.join(current_dir, './test/data', dbname.strip() + "_dist_policy_restore")
-    diff_files(backup_file, restore_file)
 
 
 def check_row_count(tablename, dbname, nrows):
@@ -1013,35 +916,6 @@ def get_hosts_and_datadirs(dbname='template1'):
 def get_hosts(dbname='template1'):
     get_hosts_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE role='p';"
     return getRows(dbname, get_hosts_sql)
-
-
-def get_backup_dirs_for_hosts(dbname='template1'):
-    get_backup_dir_sql = "SELECT hostname,f.fselocation FROM pg_filespace_entry f INNER JOIN gp_segment_configuration g ON f.fsedbid=g.dbid AND g.role='p'"
-    results = getRows(dbname, get_backup_dir_sql)
-    dir_map = {}
-    for res in results:
-        host, dir = res
-        dir_map.setdefault(host, []).append(dir)
-    return dir_map
-
-
-def cleanup_backup_files(context, dbname, location=None):
-    dir_map = get_backup_dirs_for_hosts(dbname)
-    for host in dir_map:
-
-        if os.getenv('DDBOOST'):
-            ddboost_dir = context._root['ddboost_backupdir']
-            cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/%s\" ]; then rm -rf $DIR/%s $DIR/gpcrondump.pid; fi; done'"
-            cmd = cmd_str % (host, " ".join(dir_map[host]), ddboost_dir, ddboost_dir)
-        elif location:
-            cmd_str = "ssh %s 'DIR=%s;if [ -d \"$DIR/db_dumps/\" ]; then rm -rf $DIR/db_dumps $DIR/gpcrondump.pid; fi'"
-            cmd = cmd_str % (host, location)
-        else:
-            cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/db_dumps/\" ]; then rm -rf $DIR/db_dumps $DIR/gpcrondump.pid; fi; done'"
-            cmd = cmd_str % (host, " ".join(dir_map[host]))
-        run_command(context, cmd)
-        if context.exception:
-            raise context.exception
 
 
 def cleanup_report_files(context, master_data_dir):
@@ -1175,23 +1049,6 @@ def create_large_num_partitions(table_type, table_name, db_name, num_partitions=
     if num_rows != 1:
         raise Exception('Creation of table "%s:%s" failed. Num rows in pg_class = %s' % (db_name, table_name, num_rows))
 
-
-def validate_num_restored_tables(context, num_tables, dbname, backedup_dbname=None):
-    tbls = get_table_names(dbname)
-
-    num_validate_tables = 0
-    for t in tbls:
-        name = '%s.%s' % (t[0], t[1])
-        count = getRows(dbname, "SELECT count(*) FROM %s" % name)[0][0]
-        if count == 0:
-            continue
-        else:
-            validate_restore_data(context, name, dbname, backedup_dbname=backedup_dbname)
-            num_validate_tables += 1
-
-    if num_validate_tables != int(num_tables.strip()):
-        raise Exception(
-            'Invalid number of tables were restored. Expected "%s", Actual "%s"' % (num_tables, num_validate_tables))
 
 
 def get_partition_list(partition_type, dbname):
@@ -1555,45 +1412,6 @@ def wait_till_resync_transition(host='localhost', port=os.environ.get('PGPORT'),
         return True
 
 
-def check_dump_dir_exists(context, dbname):
-    dir_map = get_backup_dirs_for_hosts(dbname)
-    cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/db_dumps/\" ]; then echo \"$DIR EXISTS\"; else echo \"$DIR NOT FOUND\"; fi; done'"
-    for host in dir_map:
-        cmd = cmd_str % (host, " ".join(dir_map[host]))
-        run_command(context, cmd)
-        if context.exception:
-            raise context.exception
-        if 'EXISTS' in context.stdout_message:
-            raise Exception("db_dumps directory is present in master/segments.")
-
-
-def verify_restored_table_is_analyzed(context, table_name, dbname):
-    ROW_COUNT_SQL = """SELECT count(*) FROM %s""" % table_name
-    if table_name.find('.') != -1:
-        schema_name, table_name = table_name.split(".")
-    else:
-        schema_name = 'public'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        if have_escape_string:
-            schema_name = escape_string(schema_name, conn=conn)
-            table_name = escape_string(table_name, conn=conn)
-        else:
-            schema_name = pg.escape_string(schema_name)
-            table_name = pg.escape_string(table_name)
-
-        ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
-                                    AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (
-        table_name, schema_name)
-        curs = dbconn.execSQL(conn, ROW_COUNT_SQL)
-        rows = curs.fetchall()
-        curs = dbconn.execSQL(conn, ROW_COUNT_PG_CLASS_SQL)
-        rows_from_pgclass = curs.fetchall()
-    if rows == rows_from_pgclass:
-        return True
-    else:
-        return False
-
-
 def analyze_database(context, dbname):
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         dbconn.execSQL(conn, "analyze")
@@ -1698,3 +1516,6 @@ def replace_special_char_env(str):
             str = str.replace("$%s" % var, os.environ[var])
     return str
 
+
+def escape_string(string, conn):
+    return pg.DB(db=conn).escape_string(string)

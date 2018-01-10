@@ -17,7 +17,6 @@ import sys
 
 try:
     import gppylib
-    import gppylib.operations.backup_utils as backup_utils
     from datetime import datetime
     from gppylib import gplog
     from gppylib import pgconf
@@ -30,7 +29,6 @@ try:
     from gppylib.gparray import GpArray
     from gppylib.db import dbconn
     from getpass import getpass
-    import gppylib.operations.backup_utils
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
  

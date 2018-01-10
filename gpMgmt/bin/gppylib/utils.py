@@ -693,3 +693,11 @@ def shellEscape(string):
             res.append('\\')
         res.append(ch)
     return ''.join(res)
+
+
+def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
+    string = string.replace('"', '""')
+
+    if forceDoubleQuote:
+        string = '"' + string + '"'
+    return string

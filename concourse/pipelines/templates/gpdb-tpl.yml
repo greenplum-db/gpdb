@@ -141,7 +141,6 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - DPM_backup-restore
   - gate_dpm_end
 {% endif %}
 {% if "UD" in test_sections %}
@@ -307,7 +306,6 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - DPM_backup-restore
   - gate_dpm_end
 
 {% endif %}
@@ -2697,48 +2695,6 @@ jobs:
   ensure:
     <<: *set_failed_2_cluster
 
-- name: DPM_backup-restore
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["ccp"]
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_dpm_start]
-    - get: gpdb_binary
-      tags: ["ccp"]
-      resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-      tags: ["ccp"]
-    - get: centos-gpdb-dev-6
-      tags: ["ccp"]
-  - put: terraform
-    tags: ["ccp"]
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    tags: ["ccp"]
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: run_tests
-    tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
-    on_success:
-      <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
-  ensure:
-    <<: *set_failed
-
 - name: gate_dpm_end
   plan:
   - aggregate:
@@ -2747,7 +2703,6 @@ jobs:
       passed:
       - DPM_gptransfer_43x_to_master
       - DPM_gptransfer
-      - DPM_backup-restore
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -2994,7 +2949,6 @@ jobs:
     - mpp_resource_group_centos6
     - mpp_resource_group_centos7
     - mpp_resource_group_sles12
-    - DPM_backup-restore
     - fts
     - storage
     - segwalrep_mirrorless_centos6

@@ -139,28 +139,6 @@ class BackupTestCase(MPPTestCase):
         args = ['-d', self.dbname, '-f', self._dump_file]
         SimpleCommand('psql', args).run_or_fail()
 
-    def _gp_dump(self):
-        """Run gp_dump.  This call will obtain the timestamp key."""
-
-        args = ['-d', self.dbname]
-        stdout, stderr = SimpleCommand('gp_dump', args).run_or_fail()
-        gp_k = None
-        for line in stdout.splitlines():
-            m = re.match(r"Timestamp Key: (\d{14})", line)
-            if m:
-                gp_k = m.group(1)
-
-        assert gp_k is not None, "Timestamp key not found"
-        self.gp_dump_timestamp = gp_k
-
-    def _gp_restore(self):
-        """Run gp_restore.  gp_dump should be run beforehand where
-        we obtain timestamp key fro the dump directory.
-        """
-
-        args = ['--gp-k', self.gp_dump_timestamp, '-d', self.dbname]
-        SimpleCommand('gp_restore', args).run_or_fail()
-
     def _refresh_database(self):
         "Drop (if exists) and create a database."
         self._drop_database()
@@ -171,10 +149,7 @@ class BackupTestCase(MPPTestCase):
         logger.debug("Database created")
 
     def _drop_database(self):
-        """Drop if exists database.
-        We need retry-psql here, as gp_dump keeps connection for a while,
-        which prevents an immediate DROP DATABASE.
-        """
+        """Drop if exists database. """
 
         psql = RetryPSQL(sql_cmd="""
                 DROP DATABASE IF EXISTS {dbname}
@@ -197,7 +172,7 @@ class BackupTestCase(MPPTestCase):
 
     def _run_test(self, test_name, test_type):
         """Run the actual test.
-        @param test_type pg_dump or gp_dump
+        @param test_type pg_dump
         """
         base = self._base_file_path()
         base = os.path.join(base, test_name)
@@ -217,15 +192,11 @@ class BackupTestCase(MPPTestCase):
         self._validate(self._pre_out_file, self._ans_file)
         if test_type == 'pg_dump':
             self._pg_dump()
-        elif test_type == 'gp_dump':
-            self._gp_dump()
         else:
             assert False, "unknown test_type " + test_type
         self._refresh_database()
         if test_type == 'pg_dump':
             self._pg_restore()
-        elif test_type == 'gp_dump':
-            self._gp_restore()
 
         self._run_sql(self._sql_file, self._post_out_file)
         self._validate(self._post_out_file, self._ans_file)

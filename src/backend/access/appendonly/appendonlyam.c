@@ -263,7 +263,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 
 		/*
 		 * special case: we are the QD reading from an AO table in utility
-		 * mode (gp_dump). We see entries in the aoseg table but no files or
+		 * mode. We see entries in the aoseg table but no files or
 		 * data actually exist. If we try to open this file we'll get an
 		 * error, so we must skip to the next. For now, we can test if the
 		 * file exists by looking at the eof value - it's always 0 on the QD.

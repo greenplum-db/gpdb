@@ -31,9 +31,6 @@ try:
     from gppylib.gpversion import GpVersion
     from gppylib.db import dbconn
     from gppylib.operations.unix import CheckDir, CheckFile, MakeDir
-    from gppylib.operations.dump import get_partition_state_tuples, compare_dict, \
-        write_lines_to_file, verify_lines_in_file, ValidateSchemaExists
-    from gppylib.operations.backup_utils import execute_sql, get_lines_from_file, Context
     from pygresql import pg
 
 except ImportError, e:
@@ -154,6 +151,92 @@ SELECT schemaname, tablename FROM
 ORDER BY tableoid DESC;
 """
 
+def validate_schema_exists(pg_port, dbname, schema):
+    conn = None
+    try:
+        dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
+        conn = dbconn.connect(dburl)
+        count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % pg.escape_string(schema))
+        if count == 0:
+            raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (schema, dbname))
+    finally:
+        if conn:
+            conn.close()
+
+def execute_sql(query, master_port, dbname):
+    dburl = dbconn.DbURL(port=master_port, dbname=dbname)
+    conn = dbconn.connect(dburl)
+    cursor = dbconn.execSQL(conn, query)
+    return cursor.fetchall()
+
+def get_lines_from_file(fname):
+    content = []
+    with open(fname) as fd:
+        for line in fd:
+            content.append(line.strip('\n'))
+    return content
+
+def compare_dict(last_dict, curr_dict):
+    diffkeys = set()
+    for k in curr_dict:
+        if k not in last_dict or (curr_dict[k] != last_dict[k]):
+            diffkeys.add(k)
+    return diffkeys
+
+def write_lines_to_file(filename, lines):
+    with open(filename, 'w') as fp:
+        for line in lines:
+            fp.write("%s\n" % line.strip('\n'))
+
+def verify_lines_in_file(fname, expected):
+    lines = get_lines_from_file(fname)
+
+    if lines != expected:
+        raise Exception("After writing file '%s' contents not as expected.\nLines read from file: %s\nLines expected from file: %s\n" % (fname, lines, expected))
+
+def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
+    """
+    Reads the partition state for an AO or AOCS relation, which is the sum of
+    the modication counters over all ao segment files.
+    The sum might be an invalid number even when the relation contains tuples.
+    The reason is that the master aoseg info tuple for segno 0 is not there
+    after the CTAS. Vacuum will correct in missing state on the master.
+
+    Thus, partition state returns 0 also when the aoseg relation is empty.
+    Why is that correct?
+    A table that as a modcount of 0 can only be there iff the last operation
+    was a special operation (TRUNCATE, CREATE, ALTER TABLE). Every DML operation
+    will increase the modcount by 1. Therefore it is save to assume that to
+    relations with modcount 0 with the same last special operation do not have a
+    logical change in them.
+
+    The result is a list of tuples, of the format (schema_schema, partition_name, modcount)
+    """
+    partition_list = list()
+    dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
+    num_sqls = 0
+    with dbconn.connect(dburl) as conn:
+        for (oid, schemaname, partition_name, tupletable) in partition_info:
+            modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from %s.%s" % (catalog_schema, tupletable)
+            modcount = dbconn.execSQLForSingleton(conn, modcount_sql)
+            num_sqls += 1
+            if num_sqls == 1000: # The choice of batch size was chosen arbitrarily
+                logger.debug('Completed executing batch of 1000 tuple count SQLs')
+                conn.commit()
+                num_sqls = 0
+            if modcount:
+                modcount = modcount.strip()
+            validate_modcount(schemaname, partition_name, modcount)
+            partition_list.append((schemaname, partition_name, modcount))
+    return partition_list
+
+def validate_modcount(schema, tablename, cnt):
+    if not cnt:
+        return
+    if not cnt.isdigit():
+        raise Exception("Can not convert modification count for table. Possibly exceeded  backup max tuple count of 1 quadrillion rows per table for: '%s.%s' '%s'" % (schema, tablename, cnt))
+    if len(cnt) > 15:
+        raise Exception("Exceeded backup max tuple count of 1 quadrillion rows per table for: '%s.%s' '%s'" % (schema, tablename, cnt))
 
 class AnalyzeDb(Operation):
     def __init__(self, options, args):
@@ -271,11 +354,6 @@ class AnalyzeDb(Operation):
         try:
             if self.clean_all or self.clean_last:
                 return 0
-
-            # The below object is needed for some functions imported from dump.py
-            self.context = Context()
-            self.context.master_port = self.pg_port
-            self.context.target_db = self.dbname
 
             # The input_col_dict keeps track of the requested columns to analyze.
             # key: table name (e.g. 'public.foo')
@@ -465,7 +543,7 @@ class AnalyzeDb(Operation):
             self._parse_column(col_dict, self.single_table, schema, table, self.include_cols, self.exclude_cols, True)
 
         elif self.schema:  # all tables in a schema
-            ValidateSchemaExists(self.context, self.schema).run()
+            validate_schema_exists(self.pg_port, self.dbname, self.schema)
             logger.debug("getting all tables in the schema...")
             all_schema_tables = run_sql(self.conn, GET_ALL_DATA_TABLES_IN_SCHEMA_SQL % self.schema)
             # convert table name from ['public','foo'] to 'public.foo' and populate col_dict as all columns requested
@@ -566,7 +644,7 @@ class AnalyzeDb(Operation):
         logger.debug("getting ao state...")
         oid_str = get_oid_str(input_tables_set)
         ao_partition_info = run_sql(self.conn, GET_REQUESTED_AO_DATA_TABLE_INFO_SQL % oid_str)
-        return get_partition_state_tuples(self.context, 'pg_aoseg', ao_partition_info)
+        return get_partition_state_tuples(self.pg_port, self.dbname, 'pg_aoseg', ao_partition_info)
 
     def _get_lastop_state(self, input_tables_set):
         # oid, action, subtype, timestamp

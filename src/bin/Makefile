@@ -11,17 +11,10 @@
 
 subdir = src/bin
 top_builddir = ../..
-nbu_libdir = $(shell cd $(top_builddir)/gpAux/ext/$(BLD_ARCH)/Netbackup/nbu77/lib; pwd)
 include $(top_builddir)/src/Makefile.global
 
-ifneq ($(enable_coverage), yes)
-unittest-check:
-	$(MAKE) -e LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(nbu_libdir) -C pg_dump/cdb/test check
-	$(MAKE) -C pg_dump/test check
-else
 unittest-check:
 	$(MAKE) -C pg_dump/test check
-endif
 
 DIRS = initdb pg_basebackup pg_ctl pg_dump \
 	psql scripts pg_config pg_controldata pg_resetxlog \

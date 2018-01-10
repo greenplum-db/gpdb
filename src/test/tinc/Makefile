@@ -62,7 +62,6 @@ storage_persistent_accessmethods_and_vacuum:
 walrep_1:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \
 	-s gpactivatestandby \
-	-s gpcrondump \
 	-s gpinitstandby \
 	-s gpstart \
 	-s gpstate \

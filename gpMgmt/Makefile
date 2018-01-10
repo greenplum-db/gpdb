@@ -10,8 +10,6 @@ SET_VERSION_SCRIPTS = \
 	bin/gpactivatestandby \
 	bin/gpaddmirrors \
 	bin/gpcheckperf \
-	bin/gpcrondump \
-	bin/gpdbrestore \
 	bin/gpdeletesystem \
 	bin/gpexpand \
 	bin/gpinitstandby \
