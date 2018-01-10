@@ -100,16 +100,17 @@
     <body>
       <p>You upgrade an installed MADlib package with the Greenplum Database <codeph>gppkg</codeph>
         utility and the MADlib <codeph>madpack</codeph> command.</p>
+      <p>For information about the upgrade paths that MADlib supports, see the MADlib support and
+        upgrade matrix in the <xref
+          href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
+          format="html" scope="external">MADlib FAQ page</xref>.</p>
     </body>
     <topic id="topic_tb3_2gd_3w">
       <title>Upgrading a MADlib Package</title>
       <body>
-        <p>These steps upgrade an installed MADlib package to MADlib 1.11.</p>
-        <ol>
-          <li> Run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph> option. This
-            command upgrades an installed MADlib package to MADlib
-            1.11.<codeblock>gppkg -u madlib-ossv1.11_pv1.9.8_gpdb&lt;version>-rhel6-x86_64.gppkg</codeblock></li>
-        </ol>
+        <p>Run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph> option. For example,
+          this command upgrades an installed MADlib package to MADlib
+          1.12.<codeblock>gppkg -u madlib-1.12-gp5-rhel6-x86_64.tar.gz.gppkg</codeblock></p>
       </body>
     </topic>
     <topic id="topic_bql_bgd_3w">
