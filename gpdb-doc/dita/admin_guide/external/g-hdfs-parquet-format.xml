@@ -16,7 +16,7 @@
           Parquet supports very efficient compression and encoding schemes. Parquet allows
           compression schemes to be specified on a per-column level, and supports adding more
           encodings as they are invented and implemented.</p>
-        <p>For information about the Parquet, see the Parquet documentation <xref
+        <p>For information about the Parquet file format, see the Parquet documentation <xref
             href="http://parquet.apache.org/documentation/latest/" format="html" scope="external"
             >http://parquet.apache.org/documentation/latest/</xref>.</p>
         <p>For an overview of columnar data storage and the Parquet file format, see <xref
@@ -111,7 +111,7 @@ done</codeblock></p>
       <topic id="topic_f3f_124_hs">
         <title>Reading a Parquet File</title>
         <body>
-          <p>The following table lists how Greenplum database converts the Parquet data type if the
+          <p>The following table identifies how Greenplum database converts the Parquet data type if the
             Parquet schema definition does not contain an annotation.</p>
           <table id="table_wm5_1x4_hs">
             <title>Data Type Conversion when Reading a Parquet File</title>
@@ -150,11 +150,11 @@ done</codeblock></p>
                   <entry>double </entry>
                 </row>
                 <row>
-                  <entry>fixed_lenth_byte_array</entry>
+                  <entry>byte_array</entry>
                   <entry>bytea </entry>
                 </row>
                 <row>
-                  <entry>byte_array</entry>
+                  <entry>fixed_len_byte_array</entry>
                   <entry>bytea </entry>
                 </row>
               </tbody>
@@ -193,7 +193,7 @@ done</codeblock></p>
                   <entry>smallint</entry>
                 </row>
                 <row>
-                  <entry>int32, int64, fixed_lenth_byte_array, or binary with
+                  <entry>int32, int64, fixed_len_byte_array, or binary with
                       <codeph>decimal</codeph> annotation</entry>
                   <entry>decimal</entry>
                 </row>
