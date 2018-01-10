@@ -37,9 +37,9 @@
             <p>For example, a function defined with the <codeph>IMMUTABLE</codeph> attribute can be
                 executed at query planning time, while a function with the <codeph>VOLATILE</codeph>
                 attribute must be executed for every row in the query. A function with the
-                    <codeph>EXECUTE ON MASTER</codeph> attribute is executed only on the master
+                    <codeph>EXECUTE ON MASTER</codeph> attribute executes only on the master
                 segment, and a function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute
-                is executed on all primary segment instances (not the master). </p>
+                executes on all primary segment instances (not the master). </p>
             <p>These tables summarize what Greenplum Database assumes about function execution based
                 on the attribute.</p>
             <table id="in201681">
@@ -109,10 +109,10 @@
                             <entry colname="col1">EXECUTE ON ANY</entry>
                             <entry colname="col3">Indicates that the function can be executed on the
                                 master, or any segment instance, and it returns the same result
-                                regardless of where it is executed. This is the default
+                                regardless of where it executes. This is the default
                                 attribute.</entry>
                             <entry colname="col4">Greenplum Database determines where the function
-                                is executed.</entry>
+                                executes.</entry>
                         </row>
                         <row>
                             <entry colname="col1">EXECUTE ON MASTER</entry>
@@ -195,8 +195,8 @@ SELECT foo();</codeblock>
                 your user-defined function is <codeph>IMMUTABLE</codeph> or <codeph>STABLE</codeph>,
                 you must specify the correct volatility level when you register your function.</p>
             <p>By default, user-defined functions are declared as <codeph>EXEUCTE ON ANY</codeph>. A
-                function that executes queries to access tables is supported only when a function is
-                executed on the master instance. Such functions should be defined with the
+                function that executes queries to access tables is supported only when a function
+                executes on the master instance. Such functions must be defined with the
                     <codeph>EXECUTE ON MASTER</codeph> attribute. Otherwise, the function might
                 return incorrect results when the function is used in a complicated query. Without
                 the attribute, planner optimization might determine it would be beneficial to push

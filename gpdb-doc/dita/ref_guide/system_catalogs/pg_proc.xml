@@ -277,9 +277,9 @@
             <entry colname="col1"><codeph>proexeclocation</codeph></entry>
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Where the function is executed when it is invoked:
-                <codeph>m</codeph> - master only, <codeph>a</codeph> - any segment instance,
-                <codeph>s</codeph> - all segment instances.</entry>
+            <entry colname="col4">Where the function executes when it is invoked: <codeph>m</codeph>
+              - master only, <codeph>a</codeph> - any segment instance, <codeph>s</codeph> - all
+              segment instances.</entry>
           </row>
         </tbody>
       </tgroup>

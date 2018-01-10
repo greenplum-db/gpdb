@@ -104,15 +104,15 @@ RESET ALL</codeblock></section>
           <pt>EXECUTE ON MASTER</pt>
           <pt>EXECUTE ON ALL SEGMENTS</pt>
           <pd>The <codeph>EXECUTE ON</codeph> attributes specify where (master or segment instance)
-            a function is executed when it is invoked during the query execution process.</pd>
+            a function executes when it is invoked during the query execution process.</pd>
           <pd><codeph>EXECUTE ON ANY</codeph> (the default) indicates that the function can be
             executed on the master, or any segment instance, and it returns the same result
-            regardless of where it is executed. Greenplum Database determines where the function is
-            executed.</pd>
-          <pd><codeph>EXECUTE ON MASTER</codeph> indicates that the function must be executed on the
-            master instance. </pd>
-          <pd><codeph>EXECUTE ON ALL SEGMENTS</codeph> indicates that the function must be executed
-            on all primary segment instances, but not the master, for each invocation. The overall
+            regardless of where it is executed. Greenplum Database determines where the function
+            executes.</pd>
+          <pd><codeph>EXECUTE ON MASTER</codeph> indicates that the function must execute only on
+            the master instance. </pd>
+          <pd><codeph>EXECUTE ON ALL SEGMENTS</codeph> indicates that the function must execute on
+            all primary segment instances, but not the master, for each invocation. The overall
             result of the function is the <codeph>UNION ALL</codeph> of the results from all segment
             instances. </pd>
           <pd>For more information about the <codeph>EXECUTE ON</codeph> attributes, see
