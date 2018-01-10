@@ -150,6 +150,7 @@ static void
 probeWalRepUpdateConfig_will_be_called_with(
 											int16 dbid,
 											int16 segindex,
+											char role,
 											char status,
 											char mode)
 {
@@ -174,11 +175,11 @@ probeWalRepUpdateConfig_will_be_called_with(
 		Int16GetDatum(dbid);
 
 	snprintf(desc, sizeof(desc),
-			 "FTS: update status and mode for dbid %d with contentid %d to %c and %c",
-			 dbid, segindex,
-			 status,
-			 mode
-		);
+		 "FTS: update role, status, and mode for dbid %d with contentid %d to %c, %c, and %c",
+		 dbid, segindex, role,
+		 status,
+		 mode
+		 );
 
 	histvals[Anum_gp_configuration_history_desc - 1] =
 		CStringGetTextDatum(desc);
@@ -225,6 +226,16 @@ probeWalRepUpdateConfig_will_be_called_with(
 	will_be_called_count(systable_beginscan, 1);
 
 	static HeapTupleData config_tuple;
+	
+	typedef struct {
+	  HeapTupleHeaderData header;
+	  FormData_gp_segment_configuration data;
+	} gp_segment_configuration_tuple;
+	
+	static gp_segment_configuration_tuple tuple;
+	
+	config_tuple.t_data = &tuple;
+	tuple.data.role = role;
 
 	expect_any(systable_getnext, sysscan);
 	will_return(systable_getnext, &config_tuple);
@@ -260,6 +271,8 @@ ExpectedPrimaryAndMirrorConfiguration(CdbComponentDatabases *cdbs,
 									  char primaryStatus,
 									  char mirrorStatus,
 									  char mode,
+				      char newPrimaryRole,
+				      char newMirrorRole,
 									  bool willUpdatePrimary,
 									  bool willUpdateMirror)
 {
@@ -272,6 +285,7 @@ ExpectedPrimaryAndMirrorConfiguration(CdbComponentDatabases *cdbs,
 		probeWalRepUpdateConfig_will_be_called_with(
 													primary->dbid,
 													primary->segindex,
+													newPrimaryRole,
 													primaryStatus,
 													mode);
 	}
@@ -284,6 +298,7 @@ ExpectedPrimaryAndMirrorConfiguration(CdbComponentDatabases *cdbs,
 		probeWalRepUpdateConfig_will_be_called_with(
 													mirror->dbid,
 													mirror->segindex,
+													newMirrorRole,
 													mirrorStatus,
 													mode);
 	}
@@ -303,7 +318,7 @@ test_probeWalRepPublishUpdate_for_zero_segment(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 0;
+	context.num_of_requests = 0;
 
 	bool is_updated = probeWalRepPublishUpdate(NULL, &context);
 
@@ -320,7 +335,7 @@ test_probeWalRepPublishUpdate_for_FtsIsActive_false(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 1;
+	context.num_of_requests = 1;
 	probe_response_per_segment response;
 
 	context.responses = &response;
@@ -346,7 +361,7 @@ test_probeWalRepPublishUpdate_for_shutdown_requested(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 1;
+	context.num_of_requests = 1;
 	probe_response_per_segment response;
 
 	context.responses = &response;
@@ -459,6 +474,8 @@ test_PrimayUpMirrorUpNotInSync_to_PrimaryUpMirrorDownNotInSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ false,
 										   /* willUpdateMirror */ true);
 
@@ -514,6 +531,8 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorUpNotInSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ false,
 										   /* willUpdateMirror */ true);
 
@@ -577,6 +596,8 @@ test_probeWalRepPublishUpdate_multiple_segments(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ false,
 										   /* willUpdateMirror */ true);
 
@@ -590,6 +611,8 @@ test_probeWalRepPublishUpdate_multiple_segments(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ false,
 										   /* willUpdateMirror */ true);
 	/* Fourth segment will not change status */
@@ -632,6 +655,8 @@ test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorUpNotInSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ true,
 										   /* willUpdateMirror */ true);
 
@@ -682,6 +707,8 @@ test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorDownNotInSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ true,
 										   /* willUpdateMirror */ true);
 
@@ -697,11 +724,11 @@ test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorDownNotInSync(void **state)
 }
 
 /*
- * 1 segment, is_updated is true, because primary will be marked down and
- * both will be marked not in sync
+ * 1 segment, is_updated is true, because FTS found primary goes down and
+ * both will be marked not in sync, then FTS promote mirror
  */
 void
-test_PrimayUpMirrorUpSync_to_PrimaryDown(void **state)
+test_PrimayUpMirrorUpSync_to_PrimaryDown_to_MirrorPromote(void **state)
 {
 	fts_context context;
 	CdbComponentDatabases *cdb_component_dbs;
@@ -725,13 +752,23 @@ test_PrimayUpMirrorUpSync_to_PrimaryDown(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
 										   /* willUpdatePrimary */ true,
 										   /* willUpdateMirror */ true);
 
 	bool is_updated = probeWalRepPublishUpdate(cdb_component_dbs, &context);
 
 	assert_true(is_updated);
-	assert_false(FtsWalRepSetupMessageContext(&context));
+	/* expect to be true, since we need to send PROMOTE message to the mirror now. */
+	assert_true(FtsWalRepSetupMessageContext(&context));
+	assert_string_equal(context.responses[0].message, FTS_MSG_PROMOTE);
+	CdbComponentDatabaseInfo *mirror =
+	GetSegmentFromCdbComponentDatabases(
+										cdb_component_dbs, 0, GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
+
+	assert_int_equal(context.responses[0].segment_db_info->dbid, mirror->dbid);
+
 	pfree(cdb_component_dbs);
 }
 
@@ -764,6 +801,8 @@ test_PrimayUpMirrorUpNotInSync_to_PrimayUpMirrorUpSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_INSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ true,
 										   /* willUpdateMirror */ true);
 
@@ -811,6 +850,8 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorUpSync(void **state)
 										   /* primary status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mirror status */ GP_SEGMENT_CONFIGURATION_STATUS_UP,
 										   /* mode */ GP_SEGMENT_CONFIGURATION_MODE_INSYNC,
+										   /* newPrimaryRole */ GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+										   /* newMirrorRole */ GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 										   /* willUpdatePrimary */ true,
 										   /* willUpdateMirror */ true);
 
@@ -908,7 +949,7 @@ main(int argc, char *argv[])
 
 		unit_test(test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorUpNotInSync),
 		unit_test(test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorDownNotInSync),
-		unit_test(test_PrimayUpMirrorUpSync_to_PrimaryDown),
+		unit_test(test_PrimayUpMirrorUpSync_to_PrimaryDown_to_MirrorPromote),
 
 		unit_test(test_PrimayUpMirrorUpNotInSync_to_PrimayUpMirrorUpSync),
 		unit_test(test_PrimayUpMirrorUpNotInSync_to_PrimayUpMirrorUpNotInSync),

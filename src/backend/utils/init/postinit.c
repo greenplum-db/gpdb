@@ -718,8 +718,13 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * Start a new transaction here before first access to db, and get a
 	 * snapshot.  We don't have a use for the snapshot itself, but we're
 	 * interested in the secondary effect that it sets RecentGlobalXmin.
+	 *
+	 * Skip these steps if we are responding to a FTS message on mirror.
+	 * Mirror operates in standby mode and is not ready to start a
+	 * transaction or create a snapshot.  Neither are they required to
+	 * respond to a FTS message.
 	 */
-	if (!bootstrap)
+	if (!bootstrap && !(am_ftshandler && am_mirror))
 	{
 		StartTransactionCommand();
 		(void) GetTransactionSnapshot();
@@ -746,6 +751,17 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 					 errmsg("no roles are defined in this database system"),
 					 errhint("You should immediately run CREATE USER \"%s\" CREATEUSER;.",
 							 username)));
+	}
+	else if (am_ftshandler && am_mirror)
+	{
+		/*
+		 * A mirror must receive and act upon FTS messages.  Performing proper
+		 * authentication involves reading pg_authid.  Heap access is not
+		 * possible on mirror, which is in standby mode.
+		 */
+		FakeClientAuthentication(MyProcPort);
+		InitializeSessionUserIdStandalone();
+		am_superuser = true;
 	}
 	else
 	{
@@ -803,7 +819,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		/*
 		 * We don't have replication role, which existed in postgres.
 		 */
-		if (!superuser())
+		if (!am_superuser)
 			ereport(FATAL,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("must be superuser role to start walsender")));
@@ -823,7 +839,8 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		pgstat_bestart();
 
 		/* close the transaction we started above */
-		CommitTransactionCommand();
+		if (!(am_ftshandler && am_mirror))
+			CommitTransactionCommand();
 
 		return;
 	}
@@ -990,7 +1007,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * process_startup_options parses the GUC.
 	 */
 	if (gp_maintenance_mode && Gp_role == GP_ROLE_DISPATCH &&
-		!(superuser() && gp_maintenance_conn))
+		!(am_superuser && gp_maintenance_conn))
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("maintenance mode: connected by superuser only"),

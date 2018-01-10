@@ -34,6 +34,8 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
+#include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -582,7 +584,8 @@ void
 InitializeSessionUserIdStandalone(void)
 {
 	/* This function should only be called in a single-user backend. */
-	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup);
+	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup
+				|| (am_ftshandler && am_mirror));
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));

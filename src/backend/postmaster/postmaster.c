@@ -154,6 +154,8 @@ void SeqServerMain(int argc, char *argv[]);
 void FtsProbeMain(int argc, char *argv[]);
 #endif
 
+bool am_mirror = false;
+
 
 /*
  * List of active backends (or child processes anyway; we don't actually
@@ -2471,6 +2473,23 @@ initMasks(fd_set *rmask)
 	return maxsock + 1;
 }
 
+/*
+ * XXX check to see if we're a mirror.  And if we are: (1) Assume that we
+ * are running as super user. (2) No data pages need to be accessed by this
+ * backend - no snapshot / transaction needed.
+ *
+ * The recovery.conf file is renamed to recovery.done at the end of xlog
+ * replay.  Normal backends can be created thereafter.
+ */
+bool
+IsRoleMirror(void)
+{
+	struct stat stat_buf;
+	return (stat(RECOVERY_COMMAND_FILE, &stat_buf) == 0);
+}
+
+
+
 
 /*
  * Read a client's startup packet and do something according to it.
@@ -2669,8 +2688,13 @@ retry1:
 			{
 				if (strcmp(valptr, GPCONN_TYPE_FTS) == 0)
 				{
+					if (GpIdentity.segindex == MASTER_CONTENT_ID)
+						ereport(FATAL,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("cannot handle FTS connection on master")));
 					elog(LOG, "handling FTS connection");
 					am_ftshandler = true;
+					am_mirror = IsRoleMirror();
 				}
 				else
 					ereport(FATAL,
@@ -2786,6 +2810,8 @@ retry1:
 	switch (port->canAcceptConnections)
 	{
 		case CAC_STARTUP:
+			if (am_ftshandler && am_mirror)
+				break;
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 					 errSendAlert(false),
@@ -6919,6 +6945,18 @@ sigusr1_handler(SIGNAL_ARGS)
 	PG_SETMASK(&UnBlockSig);
 
 	errno = save_errno;
+}
+
+/* XXX */
+void SignalPromote(void)
+{
+	FILE *fd;
+	if ((fd = fopen(PROMOTE_SIGNAL_FILE, "w")))
+	{
+		/* XXX what if it fails? */
+		fclose(fd);
+	}
+	signal_child(StartupPID, SIGUSR2);
 }
 
 

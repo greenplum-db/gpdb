@@ -6,6 +6,8 @@
 #include <poll.h>
 
 static int poll_expected_return_value;
+static const char true_value = 1;
+static const char false_value = 0;
 
 #define poll poll_mock
 
@@ -102,12 +104,12 @@ static void PQclear_will_be_called()
 	will_be_called(PQclear);
 }
 
-static void PQgetvalue_will_return(int attnum, bool value)
+static void PQgetvalue_will_return(int attnum, bool *value)
 {
 	expect_any(PQgetvalue, res);
 	expect_value(PQgetvalue, tup_num, 0);
 	expect_value(PQgetvalue, field_num, attnum);
-	will_return(PQgetvalue, &value);
+	will_return(PQgetvalue, value);
 }
 
 /*
@@ -215,9 +217,10 @@ static void ftsReceive_request_retry_setup()
 	expect_any(PQntuples, res);
 	will_return(PQntuples, FTS_MESSAGE_RESPONSE_NTUPLES);
 
-	PQgetvalue_will_return(Anum_fts_message_response_is_mirror_up, true);
-	PQgetvalue_will_return(Anum_fts_message_response_is_in_sync, true);
-	PQgetvalue_will_return(Anum_fts_message_response_is_syncrep_enabled, true);
+	PQgetvalue_will_return(Anum_fts_message_response_is_mirror_up, &true_value);
+	PQgetvalue_will_return(Anum_fts_message_response_is_in_sync, &true_value);
+	PQgetvalue_will_return(Anum_fts_message_response_is_syncrep_enabled, &true_value);
+	PQgetvalue_will_return(Anum_fts_message_response_is_role_mirror, &true_value);
 }
 
 void
@@ -235,7 +238,7 @@ test_ftsReceive_when_primary_request_retry_true(void **state)
 	ftsReceive_request_retry_setup();
 	write_log_will_be_called();
 	write_log_will_be_called();
-	PQgetvalue_will_return(Anum_fts_message_response_request_retry, true);
+	PQgetvalue_will_return(Anum_fts_message_response_request_retry, &true_value);
 
 	/* TEST */
 	bool actual_return_value = ftsReceive(&info);
@@ -256,7 +259,7 @@ test_ftsReceive_when_primary_request_retry_false(void **state)
 
 	ftsReceive_request_retry_setup();
 	write_log_will_be_called();
-	PQgetvalue_will_return(Anum_fts_message_response_request_retry, false);
+	PQgetvalue_will_return(Anum_fts_message_response_request_retry, &false_value);
 
 	/* TEST */
 	bool actual_return_value = ftsReceive(&info);

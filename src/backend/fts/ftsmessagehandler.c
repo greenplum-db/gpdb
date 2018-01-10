@@ -16,6 +16,7 @@
 #include "libpq/pqformat.h"
 #include "libpq/libpq.h"
 #include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "utils/guc.h"
 #include "replication/gp_replication.h"
 
@@ -29,7 +30,7 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	BeginCommand(messagetype, DestRemote);
 
 	pq_beginmessage(&buf, 'T');
-	pq_sendint(&buf, Natts_fts_message_response, 2); /* 3 fields */
+	pq_sendint(&buf, Natts_fts_message_response, 2); /* # of columns */
 
 	pq_sendstring(&buf, "is_mirror_up");
 	pq_sendint(&buf, 0, 4);		/* table oid */
@@ -50,6 +51,14 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	pq_sendstring(&buf, "is_syncrep_enabled");
 	pq_sendint(&buf, 0, 4);		/* table oid */
 	pq_sendint(&buf, Anum_fts_message_response_is_syncrep_enabled, 2);		/* attnum */
+	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
+	pq_sendint(&buf, 1, 2);	/* typlen */
+	pq_sendint(&buf, -1, 4);		/* typmod */
+	pq_sendint(&buf, 0, 2);		/* format code */
+
+	pq_sendstring(&buf, "is_role_mirror");
+	pq_sendint(&buf, 0, 4);		/* table oid */
+	pq_sendint(&buf, Anum_fts_message_response_is_role_mirror, 2);		/* attnum */
 	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
 	pq_sendint(&buf, 1, 2);	/* typlen */
 	pq_sendint(&buf, -1, 4);		/* typmod */
@@ -79,6 +88,9 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	pq_sendint(&buf, response->IsSyncRepEnabled, 1);
 
 	pq_sendint(&buf, 1, 4); /* col4 len */
+	pq_sendint(&buf, response->IsRoleMirror, 1);
+
+	pq_sendint(&buf, 1, 4); /* col5 len */
 	pq_sendint(&buf, response->RequestRetry, 1);
 
 	pq_endmessage(&buf);
@@ -89,7 +101,13 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 static void
 HandleFtsWalRepProbe(void)
 {
-	FtsResponse response;
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false, /* IsSyncRepEnabled */
+		false, /* IsRoleMirror */
+		false, /* RequestRetry */
+	};
 
 	GetMirrorStatus(&response);
 
@@ -103,6 +121,13 @@ HandleFtsWalRepProbe(void)
 		/* Syncrep is enabled now, so respond accordingly. */
 		response.IsSyncRepEnabled = true;
 	}
+	else if (!response.IsMirrorUp && am_mirror)
+	{
+		Assert(!response.IsInSync);
+		Assert(!response.IsSyncRepEnabled);
+		response.IsRoleMirror = true;
+		elog(LOG, "received probe message while acting as mirror");
+	}
 
 	SendFtsResponse(&response, FTS_MSG_PROBE);
 }
@@ -110,14 +135,50 @@ HandleFtsWalRepProbe(void)
 static void
 HandleFtsWalRepSyncRepOff(void)
 {
-	FtsResponse response;
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false, /* IsSyncRepEnabled */
+		false, /* IsRoleMirror */
+		false, /* RequestRetry */
+	};
 
 	ereport(LOG,
 			(errmsg("turning off synchronous wal replication due to FTS request")));
 	UnsetSyncStandbysDefined();
 	GetMirrorStatus(&response);
-
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
+}
+
+static void
+HandleFtsWalRepPromote(void)
+{
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false, /* IsSyncRepEnabled */
+		am_mirror,  /* IsRoleMirror */
+		false, /* RequestRetry */
+	};
+
+	ereport(LOG,
+			(errmsg("promoting mirror to primary due to FTS request")));
+
+	/*
+	 * FTS sends promote message to a mirror.  The mirror may be undergoing
+	 * promotion.  Promote messages should therefore be handled in an
+	 * idempotent way.
+	 */
+	DBState state = GetCurrentDBState();
+	if (state == DB_IN_STANDBY_MODE)
+		SignalPromote();
+	else
+	{
+		elog(LOG, "ignoring promote request, walreceiver not running,"
+			 " DBState = %d", state);
+	}
+
+	SendFtsResponse(&response, FTS_MSG_PROMOTE);
 }
 
 void
@@ -129,6 +190,9 @@ HandleFtsMessage(const char* query_string)
 	else if (strncmp(query_string, FTS_MSG_SYNCREP_OFF,
 					 strlen(FTS_MSG_SYNCREP_OFF)) == 0)
 		HandleFtsWalRepSyncRepOff();
+	else if (strncmp(query_string, FTS_MSG_PROMOTE,
+					 strlen(FTS_MSG_PROMOTE)) == 0)
+		HandleFtsWalRepPromote();
 	else
 		ereport(ERROR,
 				(errmsg("received unknown FTS query: %s", query_string)));

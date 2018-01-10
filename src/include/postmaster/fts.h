@@ -23,12 +23,14 @@
 /* Queries for FTS messages */
 #define	FTS_MSG_PROBE "PROBE"
 #define FTS_MSG_SYNCREP_OFF "SYNCREP_OFF"
+#define FTS_MSG_PROMOTE "PROMOTE"
 
-#define Natts_fts_message_response 4
+#define Natts_fts_message_response 5
 #define Anum_fts_message_response_is_mirror_up 0
 #define Anum_fts_message_response_is_in_sync 1
 #define Anum_fts_message_response_is_syncrep_enabled 2
-#define Anum_fts_message_response_request_retry 3
+#define Anum_fts_message_response_is_role_mirror 3
+#define Anum_fts_message_response_request_retry 4
 
 #define FTS_MESSAGE_RESPONSE_NTUPLES 1
 
@@ -39,6 +41,7 @@ typedef struct
 	bool isMirrorAlive;
 	bool isInSync;
 	bool isSyncRepEnabled;
+	bool isRoleMirror;
 	bool retryRequested;
 } probe_result;
 
@@ -52,7 +55,7 @@ typedef struct
 
 typedef struct
 {
-	int num_primary_segments; /* total number of primary segments */
+	int num_of_requests; /* number of primaries (with mirror) we want to request */
 	probe_response_per_segment *responses;
 } fts_context;
 
@@ -61,10 +64,12 @@ typedef struct FtsResponse
 	bool IsMirrorUp;
 	bool IsInSync;
 	bool IsSyncRepEnabled;
+	bool IsRoleMirror;
 	bool RequestRetry;
 } FtsResponse;
 
 extern bool am_ftshandler;
+extern bool am_mirror;
 
 /*
  * ENUMS
