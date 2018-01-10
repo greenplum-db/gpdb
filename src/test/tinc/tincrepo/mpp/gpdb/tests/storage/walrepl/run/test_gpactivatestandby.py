@@ -85,7 +85,7 @@ class gpactivatestandby(StandbyRunMixin, MPPTestCase):
                 ' '.join(['gpinitstandby', '-a',
                     '-s', self.standby_host,
                     '-P', self.standby_port,
-                    '-F', 'pg_system:' + self.standby_datadir]))
+                    '-F', self.standby_datadir]))
         cmd.run(validateAfter=True)
 
         nsender = self.wait_for_walsender()

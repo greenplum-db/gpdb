@@ -117,19 +117,14 @@ class GpinitStandby(object):
     def initstand_by_with_default(self):
         master_host = self.get_masterhost()
         gp_cmd =  "/bin/bash -c 'gpinitstandby -s %s'" % (master_host)
-        logfile = open(local_path('install.log'),'w')
-
-        child = pexpect.spawn(gp_cmd, timeout=400)
-        child.logfile = logfile
+        cmd = Command(name='Running the command', cmdStr = gp_cmd)
+        tinctest.logger.info('%s' % cmd)
+        cmd.run(validateAfter=False)
         sleep(2)
-        check = child.expect(['.* Enter standby filespace location for filespace pg_system .*', ' '])
-        if check != 0:
-            child.close()
-
-        l_file = open(local_path('install.log'),'r')
-        lines = l_file.readlines()
+        result = cmd.get_results()
+        lines = result.stdout.splitlines()
         for line in lines:
-            if 'default: NA' in line:
+            if 'Data directory already exists' in line:
                 return True
         return False
 
