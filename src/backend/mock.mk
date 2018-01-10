@@ -58,7 +58,6 @@ EXCL_OBJS+=\
 	src/backend/utils/adt/lockfuncs.o \
 	src/backend/utils/adt/mac.o \
 	src/backend/utils/adt/matrix.o \
-	src/backend/utils/adt/misc.o \
 	src/backend/utils/adt/oracle_compat.o \
 	src/backend/utils/adt/pgstatfuncs.o \
 	src/backend/utils/adt/pivot.o \
