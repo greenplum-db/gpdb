@@ -342,7 +342,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>ALTER TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"/>
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>SET DEFAULT ENCODING</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER USER</codeph></entry>
@@ -570,7 +570,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Limitations:</b><p>The functions used to implement a new base
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>COMPRESSTYPE | COMPRESSLEVEL | BLOCKSIZE</codeph></p><p><b>Limitations:</b></p><p>The functions used to implement a new base
                   type must be <codeph>IMMUTABLE</codeph> functions.</p></entry>
             </row>
             <row>
