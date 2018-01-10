@@ -106,16 +106,6 @@ function unittest_check_gpdb() {
   popd
 }
 
-function build_pxf() {
-  pushd pxf_src/pxf
-  export TERM=xterm
-  export BUILD_NUMBER="${TARGET_OS}"
-  export PXF_HOME="${GREENPLUM_INSTALL_DIR}/pxf"
-  export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
-  make install -s DATABASE=gpdb | grep -v "Download http"
-  popd
-}
-
 function export_gpdb() {
   TARBALL="$GPDB_ARTIFACTS_DIR"/$GPDB_BIN_FILENAME
   pushd $GREENPLUM_INSTALL_DIR
@@ -195,10 +185,6 @@ function _main() {
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.
       unittest_check_gpdb
-  fi
-  if [ "$TARGET_OS" == "centos" ]; then
-      # Build pxf(server) only for centos
-      build_pxf
   fi
   export_gpdb
   export_gpdb_extensions

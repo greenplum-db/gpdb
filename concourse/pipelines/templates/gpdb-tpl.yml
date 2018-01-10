@@ -24,8 +24,6 @@
                       'gpinitstandby'] %}
 {% set MM_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
-{% set hadoop_platforms = ['HDP',
-                           'CDH'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___ 
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -147,10 +145,7 @@ groups:
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_ud_start
-{% for hadoop_platform in hadoop_platforms %}
-  - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-  - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+  - regression_tests_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
 {% endif %}
@@ -317,10 +312,7 @@ groups:
 - name: G:UD
   jobs:
   - gate_ud_start
-{% for hadoop_platform in hadoop_platforms %}
-  - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-  - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+  - regression_tests_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
 
@@ -445,14 +437,6 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
-- name: pxf_src
-  type: git
-  source:
-    branch: {{pxf-git-branch}}
-    tag_filter: {{pxf-git-filter}}
-    private_key: {{pxf-git-key}}
-    uri: {{pxf-git-remote}}
-
 {% if "UD" in test_sections %}
 - name: pxf_infra_src
   type: git
@@ -460,8 +444,6 @@ resources:
     branch: {{pxf_infra-git-branch}}
     private_key: {{pxf_infra-git-key}}
     uri: {{pxf_infra-git-remote}}
-    paths:
-    - pxf_automation
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -511,6 +493,24 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: bin_gpdb_centos6_stable
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos/gpdb_branch_master/stable/bin_gpdb.tar.gz
+
+- name: pxf_tarball
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{pxf-aws-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf_artifacts/gpdb_branch_master/stable/pxf.tar.gz
 
 - name: bin_gpdb_segwalrep_centos6
   type: s3
@@ -634,17 +634,15 @@ resources:
 
 {% endif %}
 {% if "UD" in test_sections %}
-{% for hadoop_platform in hadoop_platforms %}
-- name: singlecluster-[[ hadoop_platform ]]
+- name: singlecluster
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     secret_access_key: {{bucket-secret-access-key}}
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
-    versioned_file: singlecluster-without-pxf/singlecluster-[[ hadoop_platform ]].tar.gz
+    versioned_file: singlecluster/singlecluster-HDP.tar.gz
 
-{% endfor %}
 {% endif %}
 {% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
 - name: nightly-trigger
@@ -852,8 +850,6 @@ jobs:
       trigger: true
     - get: gpaddon_src
       trigger: true
-    - get: pxf_src
-      trigger: true
 {% if "centos6" in os_types %}
     - get: gpdb_src_binary_swap
       trigger: true
@@ -880,9 +876,6 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
-    - get: pxf_src
-      trigger: true
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
@@ -912,9 +905,6 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
-    - get: pxf_src
-      trigger: true
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
@@ -948,9 +938,6 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
-      trigger: true
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -981,8 +968,6 @@ jobs:
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
-    - get: pxf_src
       passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
@@ -1069,8 +1054,6 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -1101,9 +1084,6 @@ jobs:
       passed: [gate_compile_start]
       tags: ["wix"]
     - get: gpaddon_src
-      passed: [gate_compile_start]
-      tags: ["wix"]
-    - get: pxf_src
       passed: [gate_compile_start]
       tags: ["wix"]
     - get: centos-mingw
@@ -1694,6 +1674,17 @@ jobs:
 - name: gate_icw_end
   plan:
   - aggregate:
+    - get: bin_gpdb_centos6
+      passed:
+{% if "centos6" in os_types %}
+      - icw_gporca_centos6
+      - icw_gporca_centos6_gpos_memory
+      - icw_planner_centos6
+      - icw_planner_ictcp_centos6
+      - QP_memory-accounting
+      - icw_extensions_gpcloud
+{% endif %}
+      trigger: true
     - get: gpdb_src
       passed:
 {% if "centos6" in os_types %}
@@ -1721,6 +1712,9 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
+  - put: bin_gpdb_centos6_stable
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "CS" in test_sections %}
@@ -2791,8 +2785,7 @@ jobs:
       - gate_compile_end
 {% endif %}
 
-{% for hadoop_platform in hadoop_platforms %}
-- name: regression_tests_pxf_[[ hadoop_platform ]]_rpm
+- name: regression_tests_pxf
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2802,47 +2795,21 @@ jobs:
       passed: [gate_ud_start]
       trigger: [[ test_trigger ]]
     - get: singlecluster
-      resource: singlecluster-[[ hadoop_platform ]]
+      trigger: [[ test_trigger ]]
+    - get: pxf_tarball
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+    file: pxf_infra_src/concourse/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: {{pxf_infra_test_group}}
-      HADOOP_CLIENT: [[ hadoop_platform ]]
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-{% endfor %}
-{% for hadoop_platform in hadoop_platforms %}
-- name: regression_tests_pxf_[[ hadoop_platform ]]_tar
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-    - get: singlecluster
-      resource: singlecluster-[[ hadoop_platform ]]
-      trigger: [[ test_trigger ]]
-    - get: pxf_infra_src
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_infra_test_group}}
+      GROUP:
       HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
-{% endfor %}
 - name: regression_tests_gphdfs_centos
   plan:
   - aggregate:
@@ -2865,10 +2832,7 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-{% for hadoop_platform in hadoop_platforms %}
-      - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-      - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+      - regression_tests_pxf
       - regression_tests_gphdfs_centos
       trigger: true
 
@@ -3012,10 +2976,7 @@ jobs:
 {% endfor %}
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
-{% for hadoop_platform in hadoop_platforms %}
-    - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-    - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+    - regression_tests_pxf
 {% for test_name in MM_1_suites +
                     MM_2_suites +
                     MM_gpexpand_suites %}
