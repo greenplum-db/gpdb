@@ -520,7 +520,9 @@ class SegmentPair:
         prim_mode = self.primaryDB.getSegmentMode()
 
         if not self.mirrorDB:
-            return (prim_status, prim_mode) in VALID_SEGMENT_STATES
+            # Since we don't have a mirror, we can assume that the status would
+            # be down and not in sync.
+            return (prim_status, prim_mode, STATUS_DOWN, MODE_NOT_SYNC) in VALID_SEGMENT_STATES
 
         mirror_status = self.mirrorDB.getSegmentStatus()
         mirror_role = self.mirrorDB.getSegmentMode()

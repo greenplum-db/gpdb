@@ -200,8 +200,8 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         # add the new segment
         dbId = self.__callSegmentAdd(conn, gpArray, seg)
 
-        # update the segment mode and status
-        self.__updateSegmentModeStatus(conn, seg)
+        # We should assume that gp_add_segment_primary() will update the
+        # mode and status
 
         # get the newly added segment's content id
         # MPP-12393 et al WARNING: there is an unusual side effect going on here.
@@ -231,7 +231,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         and record our action in gp_configuration_history.
         """
         dbId = self.__callSegmentAddMirror(conn, gpArray, seg)
-        self.__updateSegmentModeStatus(conn, seg)
         self.__insertConfigHistory(conn, dbId, "%s: inserted mirror segment configuration" % textForConfigTable)
 
 
@@ -246,8 +245,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
         dbId = self.__callSegmentAddMirror(conn, gpArray, seg)
 
-        # now update mode/status since this is not done by gp_add_segment_mirror
-        self.__updateSegmentModeStatus(conn, seg)
         self.__insertConfigHistory(conn, seg.getSegmentDbId(),
                                    "%s: inserted segment configuration for full recovery or original dbid %s" \
                                    % (textForConfigTable, origDbId))
