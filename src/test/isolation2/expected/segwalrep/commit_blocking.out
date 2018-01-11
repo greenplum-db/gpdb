@@ -16,6 +16,17 @@ CREATE
 insert into segwalrep_commit_blocking values (1);
 INSERT 1
 
+-- WALREP_FIXME: we don't wait for the GUC to propagate to the ftsprobe process; it's
+-- possible that one final probe could get through after we shut down the mirror
+-- in the next line and throw off the test (since if the mirror is marked down,
+-- the primary won't block). As a temporary nasty hack, try to reduce possible
+-- flake by issuing a probe manually, which will delay the next one by a minute.
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+
 -- turn off fts
 ! gpconfig -c gp_fts_probe_pause -v true --masteronly --skipvalidation;
 completed successfully with parameters '-c gp_fts_probe_pause -v true --masteronly --skipvalidation'
