@@ -494,17 +494,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
-{% if pipeline_type == "prod" %}
-- name: bin_gpdb_centos6_stable
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: bin_gpdb_centos/gpdb_branch_master/stable/bin_gpdb.tar.gz
-
-{% endif %}
 - name: pxf_tarball
   type: s3
   source:
@@ -1714,11 +1703,6 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
-{% if pipeline_type == "prod" %}
-  - put: bin_gpdb_centos6_stable
-    params:
-      file: bin_gpdb_centos6/bin_gpdb.tar.gz
-{% endif %}
 
 {% endif %}
 {% if "CS" in test_sections %}
@@ -2809,7 +2793,7 @@ jobs:
     file: pxf_infra_src/concourse/test_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP:
+      GROUP: smoke
       HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
