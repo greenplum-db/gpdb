@@ -5,7 +5,7 @@ import tempfile
 from StringIO import StringIO
 
 from commands.base import CommandResult
-from commands.gp import GpReadConfig
+from commands.gp import GpReadConfig, ConfigureNewSegment
 from gparray import Segment, GpArray, SegmentPair
 import shutil
 from mock import *

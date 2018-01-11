@@ -1101,9 +1101,9 @@ class ConfigureNewSegment(Command):
                         : if primary then 'true' else 'false'
                         : if target is reused location then 'true' else 'false'
                         : <segment dbid>
-
         """
         result = {}
+
         for segIndex, seg in enumerate(segments):
             if primaryMirror == 'primary' and seg.isSegmentPrimary() == False:
                continue
@@ -1115,16 +1115,37 @@ class ConfigureNewSegment(Command):
             else:
                 result[hostname] = ''
 
-            isTargetReusedLocation = isTargetReusedLocationArr and isTargetReusedLocationArr[segIndex]
+            # only a mirror segment has these two attributes
+            # added on the fly, by callers
+            primaryHostname = getattr(seg, 'primaryHostname', "")
+            primarySegmentPort = getattr(seg, 'primarySegmentPort', "-1")
 
-            result[hostname] += '%s:%d:%s:%s:%d' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
-                        "true" if seg.isSegmentPrimary(current_role=True) else "false",
-                        "true" if isTargetReusedLocation else "false",
-                        seg.getSegmentDbId()
+            isTargetReusedLocation = isTargetReusedLocationArr and isTargetReusedLocationArr[segIndex]
+            result[hostname] += '%s:%d:%s:%s:%d:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
+                                                          "true" if seg.isSegmentPrimary(current_role=True) else "false",
+                                                          "true" if isTargetReusedLocation else "false",
+                                                          seg.getSegmentDbId(),
+                                                          primaryHostname,
+                                                          primarySegmentPort
             )
         return result
 
+def buildSegInfo(seg, isTargetReusedLocation="false", primarySegment=None):
+    # if primaryMirror == 'primary' and seg.isSegmentPrimary() == False:
+    #    continue
+    # elif primaryMirror == 'mirror' and seg.isSegmentPrimary() == True:
+    #    continue
 
+    result = '%s:%d:%s:%s:%d:%s' % (seg.getSegmentDataDirectory(),
+                                            seg.getSegmentPort(),
+                                            "true" if seg.isSegmentPrimary(current_role=True) else "false",
+                                            isTargetReusedLocation,
+                                            seg.getSegmentDbId(),
+                                            "notapplicableonprimary",
+                                            "notapplicableonprimary",
+                                            #segPrimary.getSegmentHostName() if seg.isSegmentMirror() else "notapplicableonprimary"
+                                            )
+    return result
 
 #-----------------------------------------------
 class GpVersion(Command):
