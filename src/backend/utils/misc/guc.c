@@ -396,6 +396,7 @@ int			log_temp_files = -1;
 
 int			num_temp_buffers = 1000;
 
+char	   *data_directory;
 char	   *ConfigFileName;
 char	   *HbaFileName;
 char	   *IdentFileName;
