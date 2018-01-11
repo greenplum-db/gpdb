@@ -1685,13 +1685,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 if restore_conn != None:
                     restore_conn.close()
 
-    def sync_new_mirrors(self):
-        """ This method will execute gprecoverseg so that all new segments sync with their mirrors."""
-        if self.gparray.get_mirroring_enabled() == True:
-            self.logger.info('Starting new mirror segment synchronization')
-            cmd = GpRecoverSeg(name="gpexpand syncing mirrors", options="-a -F")
-            cmd.run(validateAfter=True)
-
     def start_prepare(self):
         """Inserts into gpexpand.status that expansion preparation has started."""
         if self.options.filename:
@@ -2792,7 +2785,7 @@ def main(options, args, parser):
             _gp_expand.prepare_schema()
             logger.info('Starting Greenplum Database')
             GpStart.local('gpexpand expansion prepare final start')
-            _gp_expand.sync_new_mirrors()
+            # When the mirrors come up, it should sync with the primary on its own.
             logger.info('************************************************')
             logger.info('Initialization of the system expansion complete.')
             logger.info('To begin table expansion onto the new segments')
