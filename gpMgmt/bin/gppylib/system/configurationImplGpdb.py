@@ -200,8 +200,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         # add the new segment
         dbId = self.__callSegmentAdd(conn, gpArray, seg)
 
-        # We should assume that gp_add_segment_primary() will update the
-        # mode and status
+        # gp_add_segment_primary() will update the mode and status.
 
         # get the newly added segment's content id
         # MPP-12393 et al WARNING: there is an unusual side effect going on here.
