@@ -4,22 +4,25 @@
  *	  delete & vacuum routines for the postgres GIN
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginvacuum.c,v 1.19 2008/01/01 19:45:46 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginvacuum.c,v 1.30 2009/06/11 14:48:53 momjian Exp $
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
+
 #include "access/genam.h"
 #include "access/gin.h"
-#include "access/heapam.h"
-#include "miscadmin.h"
-#include "storage/freespace.h"
-#include "storage/freespace.h"
+#include "catalog/storage.h"
 #include "commands/vacuum.h"
+#include "miscadmin.h"
+#include "postmaster/autovacuum.h"
+#include "storage/bufmgr.h"
+#include "storage/indexfsm.h"
+#include "storage/lmgr.h"
 
 typedef struct
 {
@@ -158,7 +161,8 @@ ginVacuumPostingTreeLeaves(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, 
 
 	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
-	buffer = ReadBufferWithStrategy(gvs->index, blkno, gvs->strategy);
+	buffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, blkno,
+								RBM_NORMAL, gvs->strategy);
 	page = BufferGetPage(buffer);
 
 	/*
@@ -251,10 +255,17 @@ ginDeletePage(GinVacuumState *gvs, BlockNumber deleteBlkno, BlockNumber leftBlkn
 
 	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
-	dBuffer = ReadBufferWithStrategy(gvs->index, deleteBlkno, gvs->strategy);
-	lBuffer = (leftBlkno == InvalidBlockNumber) ?
-		InvalidBuffer : ReadBufferWithStrategy(gvs->index, leftBlkno, gvs->strategy);
-	pBuffer = ReadBufferWithStrategy(gvs->index, parentBlkno, gvs->strategy);
+	dBuffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, deleteBlkno,
+								 RBM_NORMAL, gvs->strategy);
+
+	if (leftBlkno != InvalidBlockNumber)
+		lBuffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, leftBlkno,
+									 RBM_NORMAL, gvs->strategy);
+	else
+		lBuffer = InvalidBuffer;
+
+	pBuffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, parentBlkno,
+								 RBM_NORMAL, gvs->strategy);
 
 	LockBuffer(dBuffer, GIN_EXCLUSIVE);
 	if (!isParentRoot)			/* parent is already locked by
@@ -407,11 +418,12 @@ ginScanToDelete(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, DataPageDel
 		else
 			me = parent->child;
 	}
-	
+
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = ReadBufferWithStrategy(gvs->index, blkno, gvs->strategy);
+
+	buffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, blkno,
+								RBM_NORMAL, gvs->strategy);
 	page = BufferGetPage(buffer);
 
 	Assert(GinPageIsData(page));
@@ -529,8 +541,8 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 
 			if (GinGetNPosting(itup) != newN)
 			{
-				bool		isnull;
 				Datum		value;
+				OffsetNumber attnum;
 
 				/*
 				 * Some ItemPointers was deleted, so we should remake our
@@ -543,7 +555,7 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 					 * On first difference we create temporary page in memory
 					 * and copies content in to it.
 					 */
-					tmppage = GinPageGetCopyPage(origpage);
+					tmppage = PageGetTempPageCopy(origpage);
 
 					if (newN > 0)
 					{
@@ -558,8 +570,9 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 					itup = (IndexTuple) PageGetItem(tmppage, PageGetItemId(tmppage, i));
 				}
 
-				value = index_getattr(itup, FirstOffsetNumber, gvs->ginstate.tupdesc, &isnull);
-				itup = GinFormTuple(&gvs->ginstate, value, GinGetPosting(itup), newN);
+				value = gin_index_getattr(&gvs->ginstate, itup);
+				attnum = gintuple_get_attrnum(&gvs->ginstate, itup);
+				itup = GinFormTuple(&gvs->ginstate, attnum, value, GinGetPosting(itup), newN);
 				PageIndexTupleDelete(tmppage, i);
 
 				if (PageAddItem(tmppage, (Item) itup, IndexTupleSize(itup), i, false, false) != i)
@@ -590,23 +603,30 @@ ginbulkdelete(PG_FUNCTION_ARGS)
 	BlockNumber rootOfPostingTree[BLCKSZ / (sizeof(IndexTupleData) + sizeof(ItemId))];
 	uint32		nRoot;
 
-	/* first time through? */
-	if (stats == NULL)
-		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
-	/* we'll re-count the tuples each time */
-	stats->num_index_tuples = 0;
-
 	gvs.index = index;
-	gvs.result = stats;
 	gvs.callback = callback;
 	gvs.callback_state = callback_state;
 	gvs.strategy = info->strategy;
 	initGinState(&gvs.ginstate, index);
-	
+
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = ReadBufferWithStrategy(index, blkno, info->strategy);
+
+	/* first time through? */
+	if (stats == NULL)
+	{
+		/* Yes, so initialize stats to zeroes */
+		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
+		/* and cleanup any pending inserts */
+		ginInsertCleanup(index, &gvs.ginstate, true, stats);
+	}
+
+	/* we'll re-count the tuples each time */
+	stats->num_index_tuples = 0;
+	gvs.result = stats;
+
+	buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno,
+								RBM_NORMAL, info->strategy);
 
 	/* find leaf page */
 	for (;;)
@@ -638,7 +658,8 @@ ginbulkdelete(PG_FUNCTION_ARGS)
 		Assert(blkno != InvalidBlockNumber);
 
 		UnlockReleaseBuffer(buffer);
-		buffer = ReadBufferWithStrategy(index, blkno, info->strategy);
+		buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno,
+									RBM_NORMAL, info->strategy);
 	}
 
 	/* right now we found leftmost page in entry's BTree */
@@ -680,7 +701,8 @@ ginbulkdelete(PG_FUNCTION_ARGS)
 		if (blkno == InvalidBlockNumber)		/* rightmost page */
 			break;
 
-		buffer = ReadBufferWithStrategy(index, blkno, info->strategy);
+		buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno,
+									RBM_NORMAL, info->strategy);
 		LockBuffer(buffer, GIN_EXCLUSIVE);
 	}
 	
@@ -701,16 +723,35 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 	bool		needLock;
 	BlockNumber npages,
 				blkno;
-	BlockNumber totFreePages,
-				nFreePages,
-			   *freePages,
-				maxFreePages;
+	BlockNumber totFreePages;
 	BlockNumber lastBlock = GIN_ROOT_BLKNO,
 				lastFilledBlock = GIN_ROOT_BLKNO;
+	GinState	ginstate;
 
-	/* Set up all-zero stats if ginbulkdelete wasn't called */
+	/*
+	 * In an autovacuum analyze, we want to clean up pending insertions.
+	 * Otherwise, an ANALYZE-only call is a no-op.
+	 */
+	if (info->analyze_only)
+	{
+		if (IsAutoVacuumWorkerProcess())
+		{
+			initGinState(&ginstate, index);
+			ginInsertCleanup(index, &ginstate, true, stats);
+		}
+		PG_RETURN_POINTER(stats);
+	}
+
+	/*
+	 * Set up all-zero stats and cleanup pending inserts if ginbulkdelete
+	 * wasn't called
+	 */
 	if (stats == NULL)
+	{
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
+		initGinState(&ginstate, index);
+		ginInsertCleanup(index, &ginstate, true, stats);
+	}
 
 	/*
 	 * XXX we always report the heap tuple count as the number of index
@@ -718,6 +759,7 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 	 * tell how many distinct heap entries are referenced by a GIN index.
 	 */
 	stats->num_index_tuples = info->num_heap_tuples;
+	stats->estimated_count = info->estimated_count;
 
 	/*
 	 * If vacuum full, we already have exclusive lock on the index. Otherwise,
@@ -734,12 +776,7 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 	if (needLock)
 		UnlockRelationForExtension(index, ExclusiveLock);
 
-	maxFreePages = npages;
-	if (maxFreePages > MaxFSMPages)
-		maxFreePages = MaxFSMPages;
-
-	totFreePages = nFreePages = 0;
-	freePages = (BlockNumber *) palloc(sizeof(BlockNumber) * maxFreePages);
+	totFreePages = 0;
 
 	for (blkno = GIN_ROOT_BLKNO + 1; blkno < npages; blkno++)
 	{
@@ -747,18 +784,18 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 		Page		page;
 
 		vacuum_delay_point();
-		
+
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
-		
-		buffer = ReadBufferWithStrategy(index, blkno, info->strategy);
+
+		buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno,
+									RBM_NORMAL, info->strategy);
 		LockBuffer(buffer, GIN_SHARE);
 		page = (Page) BufferGetPage(buffer);
 
 		if (GinPageIsDeleted(page))
 		{
-			if (nFreePages < maxFreePages)
-				freePages[nFreePages++] = blkno;
+			RecordFreeIndexPage(index, blkno);
 			totFreePages++;
 		}
 		else
@@ -772,28 +809,19 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 	}
 	lastBlock = npages - 1;
 
-	if (info->vacuum_full && nFreePages > 0)
+	if (info->vacuum_full && lastBlock > lastFilledBlock)
 	{
 		/* try to truncate index */
-		int			i;
-
-		for (i = 0; i < nFreePages; i++)
-			if (freePages[i] >= lastFilledBlock)
-			{
-				totFreePages = nFreePages = i;
-				break;
-			}
-
-		if (lastBlock > lastFilledBlock)
-			RelationTruncate(
-					index, 
-					lastFilledBlock + 1,
-					/* markPersistentAsPhysicallyTruncated */ true);
+		RelationTruncate(index, lastFilledBlock + 1,
+						 /* markPersistentAsPhysicallyTruncated */ true);
 
 		stats->pages_removed = lastBlock - lastFilledBlock;
+		totFreePages = totFreePages - stats->pages_removed;
 	}
 
-	RecordIndexFreeSpace(&index->rd_node, totFreePages, nFreePages, freePages);
+	/* Finally, vacuum the FSM */
+	IndexFreeSpaceMapVacuum(info->index);
+
 	stats->pages_free = totFreePages;
 
 	if (needLock)

@@ -31,7 +31,14 @@ TEST(Config, Basic) {
 
     EXPECT_FALSE(params.isDebugCurl());
 
+    EXPECT_EQ("", params.getProxy());
+
+    EXPECT_TRUE(params.isAutoCompress());
+    EXPECT_TRUE(params.isVerifyCert());
+
     EXPECT_EQ(SSE_S3, params.getSSEType());
+
+    EXPECT_EQ("\n", params.getGpcheckcloud_newline());
 }
 
 TEST(Config, SpecialSectionValues) {
@@ -65,6 +72,7 @@ TEST(Config, SpecialSwitches) {
     S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_switches");
 
     EXPECT_TRUE(params.isDebugCurl());
+    EXPECT_FALSE(params.isAutoCompress());
 }
 
 TEST(Config, SectionExist) {
@@ -100,4 +108,16 @@ TEST(Config, SkipVerify) {
 TEST(Config, Proxy) {
     S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=proxy");
     EXPECT_EQ("https://127.0.0.1:8080", params.getProxy());
+}
+
+TEST(Config, Gpcheckcloud_eol) {
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=default");
+    EXPECT_EQ("\n", params.getGpcheckcloud_newline());
+
+    params = InitConfig("s3://abc/a config=data/s3test.conf section=gpcheckcloud_newline");
+    EXPECT_EQ("\r\n", params.getGpcheckcloud_newline());
+
+    EXPECT_THROW(
+        InitConfig("s3://abc/a config=data/s3test.conf section=gpcheckcloud_newline_error"),
+        S3ConfigError);
 }

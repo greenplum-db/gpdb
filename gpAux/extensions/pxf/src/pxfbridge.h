@@ -33,28 +33,38 @@
  */
 typedef struct
 {
-    CHURL_HEADERS   churl_headers;
-    CHURL_HANDLE    churl_handle;
-    GPHDUri*        gphd_uri;
-    StringInfoData  uri;
-    ListCell*       current_fragment;
-    StringInfoData  write_file_name;
-    Relation        relation;
+	CHURL_HEADERS churl_headers;
+	CHURL_HANDLE churl_handle;
+	GPHDUri    *gphd_uri;
+	StringInfoData uri;
+	ListCell   *current_fragment;
+	StringInfoData write_file_name;
+	Relation	relation;
 } gphadoop_context;
 
 /*
  * Clean up churl related data structures from the context
  */
-void gpbridge_cleanup(gphadoop_context *context);
+void		gpbridge_cleanup(gphadoop_context *context);
 
 /*
  * Sets up data before starting import
  */
-void gpbridge_import_start(gphadoop_context *context);
+void		gpbridge_import_start(gphadoop_context *context);
 
 /*
- * Reads data from PXF into the given buffer of a given size
+ * Sets up data before starting export
  */
-int  gpbridge_read(gphadoop_context *context, char *databuf, int datalen);
+void		gpbridge_export_start(gphadoop_context *context);
 
-#endif //_PXFBRIDGE_H
+/*
+ * Reads data from the PXF server into the given buffer of a given size
+ */
+int			gpbridge_read(gphadoop_context *context, char *databuf, int datalen);
+
+/*
+ * Writes data from the given buffer of a given size to the PXF server
+ */
+int			gpbridge_write(gphadoop_context *context, char *databuf, int datalen);
+
+#endif							/* _PXFBRIDGE_H */

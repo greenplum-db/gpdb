@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_resetxlog/pg_resetxlog.c,v 1.63.2.2 2009/05/03 23:13:44 tgl Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_resetxlog/pg_resetxlog.c,v 1.74 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,11 +31,9 @@
 /*
  * We have to use postgres.h not postgres_fe.h here, because there's so much
  * backend-only stuff in the XLOG include files we need.  But we need a
- * frontend-ish environment otherwise.  Hence this ugly hack.
+ * frontend-ish environment otherwise.	Hence this ugly hack.
  */
-#ifndef FRONTEND
 #define FRONTEND 1
-#endif 
 
 #include "postgres.h"
 #include "pgtime.h"
@@ -553,7 +551,6 @@ GuessControlValues(void)
 {
 	uint64		sysidentifier;
 	struct timeval tv;
-	char	   *localeptr;
 
 	/*
 	 * Set up a completely default set of pg_control values.
@@ -599,27 +596,13 @@ GuessControlValues(void)
 	ControlFile.indexMaxKeys = INDEX_MAX_KEYS;
 	ControlFile.toast_max_chunk_size = TOAST_MAX_CHUNK_SIZE;
 #ifdef HAVE_INT64_TIMESTAMP
-	ControlFile.enableIntTimes = TRUE;
+	ControlFile.enableIntTimes = true;
 #else
-	ControlFile.enableIntTimes = FALSE;
+	ControlFile.enableIntTimes = false;
 #endif
-	ControlFile.localeBuflen = LOCALE_NAME_BUFLEN;
+	ControlFile.float4ByVal = FLOAT4PASSBYVAL;
+	ControlFile.float8ByVal = FLOAT8PASSBYVAL;
 	ControlFile.data_checksum_version = PG_DATA_CHECKSUM_VERSION;
-
-	localeptr = setlocale(LC_COLLATE, "");
-	if (!localeptr)
-	{
-		fprintf(stderr, _("%s: invalid LC_COLLATE setting\n"), progname);
-		exit(1);
-	}
-	strlcpy(ControlFile.lc_collate, localeptr, sizeof(ControlFile.lc_collate));
-	localeptr = setlocale(LC_CTYPE, "");
-	if (!localeptr)
-	{
-		fprintf(stderr, _("%s: invalid LC_CTYPE setting\n"), progname);
-		exit(1);
-	}
-	strlcpy(ControlFile.lc_ctype, localeptr, sizeof(ControlFile.lc_ctype));
 
 	/*
 	 * XXX eventually, should try to grovel through old XLOG to develop more
@@ -693,12 +676,10 @@ PrintControlValues(bool guessed)
 		   ControlFile.toast_max_chunk_size);
 	printf(_("Date/time type storage:               %s\n"),
 		   (ControlFile.enableIntTimes ? _("64-bit integers") : _("floating-point numbers")));
-	printf(_("Maximum length of locale name:        %u\n"),
-		   ControlFile.localeBuflen);
-	printf(_("LC_COLLATE:                           %s\n"),
-		   ControlFile.lc_collate);
-	printf(_("LC_CTYPE:                             %s\n"),
-		   ControlFile.lc_ctype);
+	printf(_("Float4 argument passing:              %s\n"),
+		   (ControlFile.float4ByVal ? _("by value") : _("by reference")));
+	printf(_("Float8 argument passing:              %s\n"),
+		   (ControlFile.float8ByVal ? _("by value") : _("by reference")));
 	printf(_("Data page checksum version:           %u\n"),
 		   ControlFile.data_checksum_version);
 }
@@ -720,7 +701,7 @@ RewriteControlFile(void)
 	ControlFile.checkPointCopy.redo.xlogid = newXlogId;
 	ControlFile.checkPointCopy.redo.xrecoff =
 		newXlogSeg * XLogSegSize + SizeOfXLogLongPHD;
-	ControlFile.checkPointCopy.time = time(NULL);
+	ControlFile.checkPointCopy.time = (pg_time_t) time(NULL);
 
 	ControlFile.state = DB_SHUTDOWNED;
 	ControlFile.time = (pg_time_t) time(NULL);
@@ -948,7 +929,7 @@ KillExistingArchiveStatus(void)
 	struct dirent *xlde;
 	char		path[MAXPGPATH];
 
-#define ARCHSTATDIR	XLOGDIR "/archive_status"
+#define ARCHSTATDIR XLOGDIR "/archive_status"
 
 	xldir = opendir(ARCHSTATDIR);
 	if (xldir == NULL)
@@ -963,7 +944,7 @@ KillExistingArchiveStatus(void)
 	{
 		if (strspn(xlde->d_name, "0123456789ABCDEF") == 24 &&
 			(strcmp(xlde->d_name + 24, ".ready") == 0 ||
-			 strcmp(xlde->d_name + 24, ".done")  == 0))
+			 strcmp(xlde->d_name + 24, ".done") == 0))
 		{
 			snprintf(path, MAXPGPATH, "%s/%s", ARCHSTATDIR, xlde->d_name);
 			if (unlink(path) < 0)
@@ -1142,6 +1123,7 @@ usage(void)
 	printf(_("  -m XID          set next multitransaction ID\n"));
 	printf(_("  -n              no update, just show extracted control values (for testing)\n"));
 	printf(_("  -o OID          set next OID\n"));
+	printf(_("  -r RELFILENODE  set next RELFILENODE\n"));
 	printf(_("  -O OFFSET       set next multitransaction offset\n"));
 	printf(_("  -x XID          set next transaction ID\n"));
 	printf(_("  --help          show this help, then exit\n"));

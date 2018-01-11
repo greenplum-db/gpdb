@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* uriparser.c
-*	  Functions for parsing URI strings
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * uriparser.c
+ *	  Functions for parsing URI strings
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/uriparser.c
+ *
+ *-------------------------------------------------------------------------
+ */
 
 #include "postgres.h"
 #include "utils/uri.h"
@@ -42,7 +47,7 @@ ParseExternalTableUri(const char *uri_str)
 		uri->protocol = URI_FILE;
 		protocol_len = strlen(PROTOCOL_FILE);
 	}
-	else if (pg_strncasecmp(uri_str, PROTOCOL_FTP, strlen(PROTOCOL_FTP)) == 0)
+	else if (IS_FTP_URI(uri_str))
 	{
 		uri->protocol = URI_FTP;
 		protocol_len = strlen(PROTOCOL_FTP);
@@ -95,7 +100,7 @@ ParseExternalTableUri(const char *uri_str)
 	if (strlen(uri_str) <= protocol_len)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-		errmsg("invalid URI \'%s\' : missing host name and path", uri_str)));
+				 errmsg("invalid URI \'%s\' : missing host name and path", uri_str)));
 
 	/*
 	 * parse host name
@@ -105,13 +110,7 @@ ParseExternalTableUri(const char *uri_str)
 	if (*start == '/')			/* format "prot:///" ? (no hostname) */
 	{
 		/* the default is "localhost" */
-		const char *lh = "localhost";
-		
-		len = strlen(lh);
-
-		uri->hostname = (char *) palloc(len + 1);
-		strncpy(uri->hostname, lh, len);
-		uri->hostname[len] = '\0';
+		uri->hostname = pstrdup("localhost");
 
 		end = start;
 	}

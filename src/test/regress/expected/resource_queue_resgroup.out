@@ -1,7 +1,7 @@
 -- SQL coverage of RESOURCE QUEUE
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -9,8 +9,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -18,8 +18,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq COST THRESHOLD 3000.00 OVERCOMMIT;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -27,8 +27,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq COST THRESHOLD 4e+3 NOOVERCOMMIT;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -36,8 +36,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 DROP RESOURCE QUEUE regressq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ---------+---------------+--------------+---------------+--------------------
@@ -45,8 +45,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 
 -- more coverage
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -54,8 +54,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITHOUT (max_cost);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -67,8 +67,8 @@ WITHOUT (overcommit); -- negative
 ERROR:  option "overcommit" is not a valid resource type
 ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000)
 WITHOUT (cost_overcommit); -- works
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -76,8 +76,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq OVERCOMMIT WITH (max_cost=2000);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -85,8 +85,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq IGNORE THRESHOLD 1 WITHOUT (max_cost);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ----------+---------------+--------------+---------------+--------------------
@@ -94,8 +94,8 @@ SELECT * FROM pg_resqueue WHERE rsqname='regressq';
 (1 row)
 
 ALTER RESOURCE QUEUE regressq WITH (priority=high);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
  rsqname  |      resname      | ressetting | restypid 
 ----------+-------------------+------------+----------
@@ -108,8 +108,8 @@ SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
 (6 rows)
 
 ALTER RESOURCE QUEUE regressq WITH (priority='MeDiUm');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
  rsqname  |      resname      | ressetting | restypid 
 ----------+-------------------+------------+----------
@@ -124,8 +124,8 @@ SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
 ALTER RESOURCE QUEUE regressq;
 ERROR:  at least one threshold, overcommit or ignore limit must be specified
 DROP RESOURCE QUEUE regressq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SELECT * FROM pg_resqueue WHERE rsqname='regressq';
  rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 ---------+---------------+--------------+---------------+--------------------
@@ -138,8 +138,8 @@ CREATE RESOURCE QUEUE none ACTIVE THRESHOLD 2;
 ERROR:  resource queue name "none" is reserved
 ;
 CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 ALTER RESOURCE QUEUE regressq2 ACTIVE THRESHOLD -10;
 ERROR:  active threshold cannot be less than -1 or equal to 0
 ALTER RESOURCE QUEUE regressq2 COST THRESHOLD -1000.00;
@@ -151,8 +151,8 @@ ERROR:  Invalid parameter value "funky" for resource type "PRIORITY"
 ALTER RESOURCE QUEUE regressq2 WITHOUT(PRIORITY);
 ERROR:  option "priority" cannot be disabled
 DROP RESOURCE QUEUE regressq2;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD -10;
 ERROR:  active threshold cannot be less than -1 or equal to 0
 CREATE RESOURCE QUEUE regressq2 COST THRESHOLD -1000.00;
@@ -172,8 +172,8 @@ ERROR:  conflicting or redundant options
 CREATE RESOURCE QUEUE regressq2 WITH (WITHLISTSTART=funky);
 ERROR:  option "withliststart" is not a valid resource type
 CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 ALTER RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2 ACTIVE THRESHOLD 2;
 ERROR:  conflicting or redundant options
 ALTER RESOURCE QUEUE regressq2 COST THRESHOLD 2 COST THRESHOLD 2;
@@ -187,12 +187,12 @@ ERROR:  conflicting or redundant options
 ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
 ERROR:  resource queue "none" does not exist
 DROP RESOURCE QUEUE regressq2;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- Create resource queue with cost_overcommit=true
 create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 select * from pg_resqueue where rsqname='t3_test_q';
   rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 -----------+---------------+--------------+---------------+--------------------
@@ -200,8 +200,8 @@ select * from pg_resqueue where rsqname='t3_test_q';
 (1 row)
 
 drop resource queue t3_test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- Resource Queue should not be created inside Transaction block the error is the expected behavior
 begin;
 CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
@@ -217,45 +217,45 @@ create resource queue test_rq with (max_cost=2000000, memory_limit='0'); -- shou
 ERROR:  Invalid parameter value "0" for resource type "MEMORY_LIMIT". Value must be at least 10240kB
 -- Creates and drops
 create resource queue test_rq with (active_statements=2);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 drop resource queue test_rq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 create resource queue test_rq with (active_statements=2, memory_limit='1024MB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- Alters
 alter resource queue test_rq with (memory_limit='1024mb');
 ERROR:  Invalid parameter value "1024mb" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.
 alter resource queue test_rq with (memory_limit='1024Kb');
 ERROR:  Invalid parameter value "1024Kb" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.
 alter resource queue test_rq with (memory_limit='2GB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 alter resource queue test_rq without (memory_limit);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 drop resource queue test_rq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- SQL coverage of ROLE -> RESOURCE QUEUE
 CREATE RESOURCE QUEUE reg_activeq ACTIVE THRESHOLD 2;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE RESOURCE QUEUE reg_costq COST THRESHOLD 30000.00;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE USER reg_u1 RESOURCE QUEUE reg_costq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set gp_resource_manager=queue
 GRANT SELECT ON tenk1 TO reg_u1;
 SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
  rolname | rolsuper |  rsqname  
@@ -264,14 +264,14 @@ SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHE
 (1 row)
 
 ALTER USER reg_u1 RESOURCE QUEUE reg_activeq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set gp_resource_manager=queue
 SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
  rolname | rolsuper |   rsqname   
 ---------+----------+-------------
@@ -279,15 +279,15 @@ SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHE
 (1 row)
 
 CREATE USER reg_u2 RESOURCE QUEUE reg_activeq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set gp_resource_manager=queue
 GRANT SELECT ON tenk1 TO reg_u2;
 SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and r.rsqname='reg_activeq';
  rolname | rolsuper |   rsqname   
@@ -332,14 +332,14 @@ END;
 -- switch to a cost-limited queue
 RESET SESSION AUTHORIZATION;
 ALTER USER reg_u2 RESOURCE QUEUE reg_costq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set gp_resource_manager=queue
 SET SESSION AUTHORIZATION reg_u2;
 BEGIN;
 DECLARE c1 CURSOR FOR SELECT * FROM tenk1;
@@ -411,26 +411,26 @@ DROP OWNED BY reg_u1, reg_u2 CASCADE;
 DROP USER reg_u1;
 DROP USER reg_u2;
 DROP RESOURCE QUEUE reg_activeq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 DROP RESOURCE QUEUE reg_costq;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- Followup additional tests.
 -- MPP-7474
 CREATE RESOURCE QUEUE rq_test_q ACTIVE THRESHOLD 1;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE USER rq_test_u RESOURCE QUEUE rq_test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set gp_resource_manager=queue
 create table rq_product (
 	pn int not null,
 	pname text not null,
@@ -671,6 +671,6 @@ RESET SESSION_AUTHORIZATION;
 DROP OWNED BY rq_test_u CASCADE;
 DROP USER rq_test_u;
 DROP RESOURCE QUEUE rq_test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 DROP TABLE rq_product;

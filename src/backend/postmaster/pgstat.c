@@ -13,7 +13,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.169.2.2 2009/10/02 22:50:03 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.189 2009/06/11 14:49:01 momjian Exp $
  * ----------
  */
 #include "postgres.h"
@@ -43,12 +43,12 @@
 #include "access/xact.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_proc.h"
+#include "executor/instrument.h"
 #include "libpq/ip.h"
 #include "libpq/libpq.h"
 #include "libpq/pqsignal.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
-#include "executor/instrument.h"
 #include "pg_trace.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/fork_process.h"
@@ -114,10 +114,10 @@
  */
 bool		pgstat_track_activities = false;
 bool		pgstat_track_counts = false;
+int			pgstat_track_functions = TRACK_FUNC_OFF;
+int			pgstat_track_activity_query_size = 1024;
 
 bool		pgstat_collect_queuelevel = false;
-
-int			pgstat_track_functions = TRACK_FUNC_OFF;
 
 /* ----------
  * Built from GUC parameter
@@ -234,6 +234,13 @@ static TimestampTz last_statrequest;
 
 static volatile bool need_exit = false;
 static volatile bool got_SIGHUP = false;
+
+/*
+ * Total time charged to functions so far in the current backend.
+ * We use this to help separate "self" and "other" time charges.
+ * (We assume this initializes to zero.)
+ */
+static instr_time total_func_time;
 
 /*
  * Total time charged to functions so far in the current backend.
@@ -698,8 +705,8 @@ pgstat_report_stat(bool force)
 	int			i;
 
 	/* Don't expend a clock check if nothing to do */
-	if ((pgStatTabList == NULL || pgStatTabList->tsa_used == 0) &&
-		!have_function_stats)
+	if ((pgStatTabList == NULL || pgStatTabList->tsa_used == 0)
+		&& !have_function_stats)
 		return;
 
 	/*
@@ -1203,7 +1210,7 @@ pgstat_report_autovac(Oid dboid)
  * ---------
  */
 void
-pgstat_report_vacuum(Oid tableoid, bool shared, bool scanned_all,
+pgstat_report_vacuum(Oid tableoid, bool shared,
 					 bool analyze, PgStat_Counter tuples)
 {
 	PgStat_MsgVacuum msg;
@@ -1214,7 +1221,6 @@ pgstat_report_vacuum(Oid tableoid, bool shared, bool scanned_all,
 	pgstat_setheader(&msg.m_hdr, PGSTAT_MTYPE_VACUUM);
 	msg.m_databaseid = shared ? InvalidOid : MyDatabaseId;
 	msg.m_tableoid = tableoid;
-	msg.m_scanned_all = scanned_all;
 	msg.m_analyze = analyze;
 	msg.m_autovacuum = IsAutoVacuumWorkerProcess();		/* is this autovacuum? */
 	msg.m_vacuumtime = GetCurrentTimestamp();
@@ -1238,14 +1244,14 @@ pgstat_report_analyze(Relation rel, PgStat_Counter livetuples,
 		return;
 
 	/*
-	 * Unlike VACUUM, ANALYZE might be running inside a transaction that
-	 * has already inserted and/or deleted rows in the target table.
-	 * ANALYZE will have counted such rows as live or dead respectively.
-	 * Because we will report our counts of such rows at transaction end,
-	 * we should subtract off these counts from what we send to the collector
-	 * now, else they'll be double-counted after commit.  (This approach also
-	 * ensures that the collector ends up with the right numbers if we abort
-	 * instead of committing.)
+	 * Unlike VACUUM, ANALYZE might be running inside a transaction that has
+	 * already inserted and/or deleted rows in the target table. ANALYZE will
+	 * have counted such rows as live or dead respectively. Because we will
+	 * report our counts of such rows at transaction end, we should subtract
+	 * off these counts from what we send to the collector now, else they'll
+	 * be double-counted after commit.	(This approach also ensures that the
+	 * collector ends up with the right numbers if we abort instead of
+	 * committing.)
 	 */
 	if (rel->pgstat_info != NULL)
 	{
@@ -1266,7 +1272,7 @@ pgstat_report_analyze(Relation rel, PgStat_Counter livetuples,
 	pgstat_setheader(&msg.m_hdr, PGSTAT_MTYPE_ANALYZE);
 	msg.m_databaseid = rel->rd_rel->relisshared ? InvalidOid : MyDatabaseId;
 	msg.m_tableoid = RelationGetRelid(rel);
-	msg.m_autovacuum = IsAutoVacuumWorkerProcess();	/* is this autovacuum? */
+	msg.m_autovacuum = IsAutoVacuumWorkerProcess();		/* is this autovacuum? */
 	msg.m_analyzetime = GetCurrentTimestamp();
 	msg.m_live_tuples = livetuples;
 	msg.m_dead_tuples = deadtuples;
@@ -2334,6 +2340,8 @@ pgstat_report_activity(const char *cmd_str)
 	TimestampTz start_timestamp;
 	int			len;
 
+	TRACE_POSTGRESQL_STATEMENT_STATUS(cmd_str);
+
 	if (!pgstat_track_activities || !beentry)
 		return;
 
@@ -2794,7 +2802,7 @@ PgstatCollectorMain(int argc, char *argv[])
 	/*
 	 * Arrange to write the initial status file right away
 	 */
-    last_statrequest = GetCurrentTimestamp();
+	last_statrequest = GetCurrentTimestamp();
 	last_statwrite = last_statrequest - 1;
 
 	/*
@@ -2876,7 +2884,7 @@ PgstatCollectorMain(int argc, char *argv[])
 		got_data = (input_fd.revents != 0);
 #else							/* !HAVE_POLL */
 
-		FD_SET(pgStatSock, &rfds);
+		FD_SET		(pgStatSock, &rfds);
 
 		/*
 		 * timeout struct is modified by select() on some operating systems,
@@ -3320,14 +3328,6 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
 		return dbhash;
 
-		/*
-	 * Try to open the status file. If it doesn't exist, the backends simply
-	 * return zero for anything and the collector simply starts from scratch
-	 * with empty counters.
-	 */
-	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
-		return dbhash;
-
 	/*
 	 * Verify it's of the expected format.
 	 */
@@ -3471,7 +3471,7 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 				/*
 				 * 'F'	A PgStat_StatFuncEntry follows.
 				 */
-            case 'F':
+			case 'F':
 				if (fread(&funcbuf, 1, sizeof(PgStat_StatFuncEntry),
 						  fpin) != sizeof(PgStat_StatFuncEntry))
 				{
@@ -3499,6 +3499,7 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 
 				memcpy(funcentry, &funcbuf, sizeof(funcbuf));
 				break;
+
 				/*
 				 * 'Q'	A PgStat_StatQueueEntry follows.  (GPDB)
 				 */
@@ -3610,10 +3611,10 @@ backend_read_statsfile(void)
 	TimestampTz min_ts;
 	int			count;
 
-		/* already read it? */
-		if (pgStatDBHash)
-			return;
-		Assert(!pgStatRunningInCollector);
+	/* already read it? */
+	if (pgStatDBHash)
+		return;
+	Assert(!pgStatRunningInCollector);
 
 	/*
 	 * We set the minimum acceptable timestamp to PGSTAT_STAT_INTERVAL msec
@@ -3633,8 +3634,8 @@ backend_read_statsfile(void)
 		min_ts = TimestampTzPlusMilliseconds(GetCurrentTimestamp(),
 											 -PGSTAT_RETRY_DELAY);
 	else
-	 	min_ts = TimestampTzPlusMilliseconds(GetCurrentTimestamp(),
-	 										 -PGSTAT_STAT_INTERVAL);
+		min_ts = TimestampTzPlusMilliseconds(GetCurrentTimestamp(),
+											 -PGSTAT_STAT_INTERVAL);
 
 	/*
 	 * Loop until fresh enough stats file is available or we ran out of time.
@@ -3662,7 +3663,10 @@ backend_read_statsfile(void)
 						"because stats collector is not responding")));
 
 	/* Autovacuum launcher wants stats about all databases */
-	pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	if (IsAutoVacuumLauncherProcess())
+		pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	else
+		pgStatDBHash = pgstat_read_statsfile(MyDatabaseId, false);
 }
 
 
@@ -3997,21 +4001,12 @@ pgstat_recv_vacuum(PgStat_MsgVacuum *msg, int len)
 		tabentry->autovac_vacuum_timestamp = msg->m_vacuumtime;
 	else
 		tabentry->vacuum_timestamp = msg->m_vacuumtime;
-	if (msg->m_scanned_all)
 	tabentry->n_live_tuples = msg->m_tuples;
 	/* Resetting dead_tuples to 0 is an approximation ... */
 	tabentry->n_dead_tuples = 0;
 	if (msg->m_analyze)
 	{
-		if (msg->m_scanned_all)
 		tabentry->last_anl_tuples = msg->m_tuples;
-		else
-		{
-			/* last_anl_tuples must never exceed n_live_tuples+n_dead_tuples */
-			tabentry->last_anl_tuples = Min(tabentry->last_anl_tuples,
-											tabentry->n_live_tuples);
-		}
-
 		if (msg->m_autovacuum)
 			tabentry->autovac_analyze_timestamp = msg->m_vacuumtime;
 		else
@@ -4132,7 +4127,6 @@ pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len)
 	queueentry->n_queries_wait += msg->m_queries_wait;
 	queueentry->elapsed_exec += msg->m_elapsed_exec;
 	queueentry->elapsed_wait += msg->m_elapsed_wait;
-
 }
 
 
@@ -4145,10 +4139,8 @@ pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len)
 void
 pgstat_init_localportalhash(void)
 {
-
 	HASHCTL		info;
 	int			hash_flags;
-
 
 	info.keysize = sizeof(uint32);
 	info.entrysize = sizeof(PgStat_StatPortalEntry);
@@ -4212,12 +4204,10 @@ pgstat_report_queuestat()
 	PgStat_StatPortalEntry	*pentry;
 	PgStat_MsgQueuestat		msg;
 
+	/* Not collecting queue stats or collector disabled. */
 	if (pgStatSock < 0 || !pgstat_collect_queuelevel)
-	{
-		return;			/* Not collecting queue stats or collector disabled. */
-	}
+		return;
 
-	
 	/* Do a sequential scan through the local portal/queue hash*/
 	hash_seq_init(&hstat, localStatPortalHash);
 	while ((pentry = (PgStat_StatPortalEntry *) hash_seq_search(&hstat)) != NULL)
@@ -4244,10 +4234,7 @@ pgstat_report_queuestat()
 		pentry->queueentry.elapsed_wait = 0;
 
 		pgstat_send(&msg, sizeof(msg));
-
 	}
-
-
 }
 
 

@@ -1,0 +1,22 @@
+---
+title: PXF Architecture
+---
+    
+The Greenplum Platform Extension Framework (PXF) is composed of a Greenplum Database protocol and associated C client library plus a Java service. These components work together to provide you access to data stored in sources external to your Greenplum Database deployment. 
+
+Your Greenplum Database deployment consists of a master node and multiple segment hosts. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This PXF process (referred to as the PXF agent) spawns a thread for each segment instance on a segment host that participates in a query against a PXF external table. Multiple segment instances on each segment host communicate via a REST API with PXF in parallel, and the PXF agents on multiple hosts communicate with HDFS in parallel.
+
+<span class="figtitleprefix">Figure: </span>PXF Architecture
+
+<img src="graphics/pxfarch.png" class="image" />
+
+When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to all segment hosts. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
+
+1. Spawns a thread for the segment instance.
+2. Invokes the HDFS Java API to request metadata information for the HDFS file from the HDFS NameNode. 
+3. Provides the metadata information returned by the HDFS NameNode to the segment instance.  
+
+A segment instance uses its Greenplum Database `gp_segment_id` and the file block information described in the metadata to assign itself a specific portion of the query data. The segment instance then sends a request to the PXF agent to read the assigned data. This data may reside on one or more HDFS DataNodes.
+
+The PXF agent invokes the HDFS Java API to read the data and deliver it to the segment instance. The segment instance delivers its portion of the data to the Greenplum Database master node. This communication occurs across segment hosts and segment instances in parallel.
+

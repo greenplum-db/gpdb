@@ -2,7 +2,12 @@
  * tupser.c
  *	   Functions for serializing and deserializing a heap tuple.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/tupser.c
  *
  *      Reviewers: jzhang, ftian, tkordas
  *
@@ -67,50 +72,14 @@ static void addByteStringToChunkList(TupleChunkList tcList, char *data, int data
 static inline void
 addPadding(TupleChunkList tcList, TupleChunkListCache *cache, int size)
 {
-	while (size++ & (TUPLE_CHUNK_ALIGN-1))
-		addCharToChunkList(tcList,0,cache);
+	while (size++ & (TUPLE_CHUNK_ALIGN - 1))
+		addCharToChunkList(tcList, 0, cache);
 }
 
 static inline void
 skipPadding(StringInfo serialTup)
 {
-	serialTup->cursor = TYPEALIGN(TUPLE_CHUNK_ALIGN,serialTup->cursor);
-}
-
-/*
- * stringInfoGetInt32
- *
- * Pull a 4-byte integer out of str, at the current cursor location.  The
- * cursor is then incremented by 4.  If there is not 4 bytes left between the
- * cursor and the end of the string, an error is reported.
- *
- * The input is expected to be in the current architecture's byte-ordering.
- *
- * Hopefully this is faster than the stuff in stringinfo.c or pqformat.c!
- */
-static inline int32
-stringInfoGetInt32(StringInfo str)
-{
-	int32		res;
-
-	/* Make sure there are enough bytes left. */
-	if (str->len - str->cursor < 4)
-	{
-		ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-						errmsg("deserialize data underflow")));
-	}
-
-	/*
-	 * Pull out the int32.	We cast the pointer to the next part of the data
-	 * to an int32 pointer, and just retrieve the integer from that location
-	 * in the array.
-	 */
-	res = *((int32 *) (str->data + str->cursor));
-
-	/* Update the cursor. */
-	str->cursor += 4;
-
-	return res;
+	serialTup->cursor = TYPEALIGN(TUPLE_CHUNK_ALIGN, serialTup->cursor);
 }
 
 /* Look up all of the information that SerializeTuple() and DeserializeTuple()
@@ -123,7 +92,7 @@ stringInfoGetInt32(StringInfo str)
  *		  the desired memory-context before calling this function.
  */
 void
-InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
+InitSerTupInfo(TupleDesc tupdesc, SerTupInfo *pSerInfo)
 {
 	int			i,
 				numAttrs;
@@ -137,7 +106,8 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 		s_tupSerMemCtxt =
 			AllocSetContextCreate(TopMemoryContext,
 								  "TupSerMemCtxt",
-								  ALLOCSET_DEFAULT_INITSIZE,	/* always have some memory */
+								  ALLOCSET_DEFAULT_INITSIZE,	/* always have some
+																 * memory */
 								  ALLOCSET_DEFAULT_INITSIZE,
 								  ALLOCSET_DEFAULT_MAXSIZE);
 	}
@@ -175,15 +145,11 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 		 * operations for some attribute-types.
 		 */
 		attrInfo->atttypid = tupdesc->attrs[i]->atttypid;
-		
+
 		/*
-		 * Ok, we want the Binary input/output routines for the type if they exist,
-		 * else we want the normal text input/output routines.
-		 * 
-		 * User defined types might or might not have binary routines.
-		 * 
-		 * getTypeBinaryOutputInfo throws an error if we try to call it to get
-		 * the binary output routine and one doesn't exist, so let's not call that.
+		 * Serialization will be performed at a high level abstraction, we
+		 * only care about whether it's toasted or pass-by-value or a CString,
+		 * so only track the high level type information.
 		 */
 		{
 			HeapTuple	typeTuple;
@@ -194,8 +160,11 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 			if (!HeapTupleIsValid(typeTuple))
 				elog(ERROR, "cache lookup failed for type %u", attrInfo->atttypid);
 			pt = (Form_pg_type) GETSTRUCT(typeTuple);
-		
-			/* Consider any non-basic types as potential containers of record types */
+
+			/*
+			 * Consider any non-basic types as potential containers of record
+			 * types
+			 */
 			if (pt->typtype != TYPTYPE_BASE)
 				pSerInfo->has_record_types = true;
 
@@ -204,63 +173,19 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
 						 errmsg("type %s is only a shell",
 								format_type_be(attrInfo->atttypid))));
-								
-			/* If we don't have both binary routines */
-			if (!OidIsValid(pt->typsend) || !OidIsValid(pt->typreceive))
-			{
-				/* Use the normal text routines (slower) */
-				if (!OidIsValid(pt->typoutput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no output function available for type %s",
-								format_type_be(attrInfo->atttypid))));
-				if (!OidIsValid(pt->typinput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no input function available for type %s",
-								format_type_be(attrInfo->atttypid))));
-		
-				attrInfo->typsend = pt->typoutput;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv = pt->typinput;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
-			}
-			else
-			{
-				/* Use binary routines */
-		
-				attrInfo->typsend = pt->typsend;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv  = pt->typreceive;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
-			}
+
+			attrInfo->typlen = pt->typlen;
+			attrInfo->typbyval = pt->typbyval;
 
 			ReleaseSysCache(typeTuple);
 		}
-		
-		fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
-
-		fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
-
-#ifdef TUPSER_SCRATCH_SPACE
-
-		/*
-		 * If the field is a varlena, allocate some space to use for
-		 * deserializing it.  If most of the values are smaller than this
-		 * scratch-space then we save time on allocation and freeing.
-		 */
-		attrInfo->pv_varlen_scratch = palloc(VARLEN_SCRATCH_SIZE);
-		attrInfo->varlen_scratch_size = VARLEN_SCRATCH_SIZE;
-#endif
 	}
 }
 
 
 /* Free up storage in a previously initialized SerTupInfo struct. */
 void
-CleanupSerTupInfo(SerTupInfo * pSerInfo)
+CleanupSerTupInfo(SerTupInfo *pSerInfo)
 {
 	AssertArg(pSerInfo != NULL);
 
@@ -361,7 +286,7 @@ addByteStringToChunkList(TupleChunkList tcList, char *data, int datalen, TupleCh
 
 typedef struct TupSerHeader
 {
-	uint32		tuplen;	
+	uint32		tuplen;
 	uint16		natts;			/* number of attributes */
 	uint16		infomask;		/* various flag bits */
 } TupSerHeader;
@@ -380,9 +305,9 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	TupleChunkListItem tcItem = NULL;
 	MemoryContext oldCtxt;
 	TupSerHeader tsh;
-	List *typelist = NULL;
-	int size = -1;
-	char * buf = NULL;
+	List	   *typelist = NULL;
+	int			size = -1;
+	char	   *buf = NULL;
 
 	AssertArg(tcList != NULL);
 	AssertArg(pSerInfo != NULL);
@@ -410,10 +335,10 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 
 	/*
 	 * To avoid inconsistency of record cache between sender and receiver in
-	 * the same motion, send the serialized record cache to receiver before the
-	 * first tuple is sent, the receiver is responsible for registering the
-	 * records to its own local cache and remapping the typmod of tuples sent
-	 * by sender.
+	 * the same motion, send the serialized record cache to receiver before
+	 * the first tuple is sent, the receiver is responsible for registering
+	 * the records to its own local cache and remapping the typmod of tuples
+	 * sent by sender.
 	 */
 	oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
 	typelist = build_tuple_node_list(conn->sent_record_typmod);
@@ -430,7 +355,7 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	tsh.infomask = RECORD_CACHE_MAGIC_INFOMASK;
 
 	addByteStringToChunkList(tcList,
-							 (char *)&tsh,
+							 (char *) &tsh,
 							 sizeof(TupSerHeader),
 							 &pSerInfo->chunkCache);
 	addByteStringToChunkList(tcList, buf, size, &pSerInfo->chunkCache);
@@ -443,7 +368,7 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	if (tcList->num_chunks > 1)
 	{
 		TupleChunkListItem first,
-			last;
+					last;
 
 		first = tcList->p_first;
 		last = tcList->p_last;
@@ -471,17 +396,16 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
  * This code is based on the printtup_internal_20() function in printtup.c.
  */
 void
-SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList tcList)
+SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkList tcList)
 {
 	TupleChunkListItem tcItem = NULL;
 	MemoryContext oldCtxt;
 	TupleDesc	tupdesc;
 	int			i,
-		natts;
-	bool		fHandled;
+				natts;
 
 	AssertArg(tcList != NULL);
-	AssertArg(tuple != NULL);
+	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
 
 	tupdesc = pSerInfo->tupdesc;
@@ -525,19 +449,20 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 
 	AssertState(s_tupSerMemCtxt != NULL);
 
-	if (is_heaptuple_memtuple(tuple))
+	if (is_memtuple(gtuple))
 	{
-		addByteStringToChunkList(tcList, (char *)tuple, memtuple_get_size((MemTuple)tuple), &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size((MemTuple)tuple));
+		MemTuple mtuple = (MemTuple) gtuple;
+		addByteStringToChunkList(tcList, (char *) mtuple, memtuple_get_size(mtuple), &pSerInfo->chunkCache);
+		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(mtuple));
 	}
 	else
 	{
+		HeapTuple tuple = (HeapTuple) gtuple;
+		HeapTupleHeader t_data = tuple->t_data;
 		TupSerHeader tsh;
 
-		unsigned int	datalen;
-		unsigned int	nullslen;
-
-		HeapTupleHeader t_data = tuple->t_data;
+		unsigned int datalen;
+		unsigned int nullslen;
 
 		datalen = tuple->t_len - t_data->t_hoff;
 		if (HeapTupleHasNulls(tuple))
@@ -545,30 +470,34 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 		else
 			nullslen = 0;
 
-		tsh.tuplen = sizeof(TupSerHeader) + TYPEALIGN(TUPLE_CHUNK_ALIGN,nullslen) + datalen;
+		tsh.tuplen = sizeof(TupSerHeader) + TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) + datalen;
 		tsh.natts = HeapTupleHeaderGetNatts(t_data);
 		tsh.infomask = t_data->t_infomask;
 
-		addByteStringToChunkList(tcList, (char *)&tsh, sizeof(TupSerHeader), &pSerInfo->chunkCache);
-		/* If we don't have any attributes which have been toasted, we
-		 * can be very very simple: just send the raw data. */
+		addByteStringToChunkList(tcList, (char *) &tsh, sizeof(TupSerHeader), &pSerInfo->chunkCache);
+
+		/*
+		 * If we don't have any attributes which have been toasted, we can be
+		 * very very simple: just send the raw data.
+		 */
 		if ((tsh.infomask & HEAP_HASEXTERNAL) == 0)
 		{
 			if (nullslen)
 			{
-				addByteStringToChunkList(tcList, (char *)t_data->t_bits, nullslen, &pSerInfo->chunkCache);
-				addPadding(tcList,&pSerInfo->chunkCache,nullslen);
+				addByteStringToChunkList(tcList, (char *) t_data->t_bits, nullslen, &pSerInfo->chunkCache);
+				addPadding(tcList, &pSerInfo->chunkCache, nullslen);
 			}
 
-			addByteStringToChunkList(tcList, (char *)t_data + t_data->t_hoff, datalen, &pSerInfo->chunkCache);
-			addPadding(tcList,&pSerInfo->chunkCache,datalen);
+			addByteStringToChunkList(tcList, (char *) t_data + t_data->t_hoff, datalen, &pSerInfo->chunkCache);
+			addPadding(tcList, &pSerInfo->chunkCache, datalen);
 		}
 		else
 		{
-			/* We have to be more careful when we have tuples that
-			 * have been toasted. Ideally we'd like to send the
-			 * untoasted attributes in as "raw" a format as possible
-			 * but that makes rebuilding the tuple harder .
+			/*
+			 * We have to be more careful when we have tuples that have been
+			 * toasted. Ideally we'd like to send the untoasted attributes in
+			 * as "raw" a format as possible but that makes rebuilding the
+			 * tuple harder .
 			 */
 			oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
 
@@ -579,176 +508,80 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 
 			/* Send the nulls character-array. */
 			addByteStringToChunkList(tcList, pSerInfo->nulls, natts, &pSerInfo->chunkCache);
-			addPadding(tcList,&pSerInfo->chunkCache,natts);
+			addPadding(tcList, &pSerInfo->chunkCache, natts);
 
 			/*
-			 * send the attributes of this tuple: NOTE anything which allocates
-			 * temporary space (e.g. could result in a PG_DETOAST_DATUM) should be
-			 * executed with the memory context set to s_tupSerMemCtxt
+			 * send the attributes of this tuple: NOTE anything which
+			 * allocates temporary space (e.g. could result in a
+			 * PG_DETOAST_DATUM) should be executed with the memory context
+			 * set to s_tupSerMemCtxt
 			 */
 			for (i = 0; i < natts; ++i)
 			{
 				SerAttrInfo *attrInfo = pSerInfo->myinfo + i;
 				Datum		origattr = pSerInfo->values[i],
-					attr;
-				bytea	   *outputbytes=0;
+							attr;
 
 				/* skip null attributes (already taken care of above) */
 				if (pSerInfo->nulls[i])
 					continue;
 
-				/*
-				 * If we have a toasted datum, forcibly detoast it here to avoid
-				 * memory leakage: we want to force the detoast allocation(s) to
-				 * happen in our reset-able serialization context.
-				 */
-				if (attrInfo->typisvarlena)
+				if (attrInfo->typlen == -1)
 				{
+					int32		sz;
+					char	   *data;
+
+					/*
+					 * If we have a toasted datum, forcibly detoast it here to
+					 * avoid memory leakage: we want to force the detoast
+					 * allocation(s) to happen in our reset-able serialization
+					 * context.
+					 */
 					oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
-					/* we want to detoast but leave compressed, if
-					 * possible, but we have to handle varlena
-					 * attributes (and others ?) differently than we
-					 * currently do (first step is to use
-					 * heap_tuple_fetch_attr() instead of
-					 * PG_DETOAST_DATUM()). */
-					attr = PointerGetDatum(PG_DETOAST_DATUM(origattr));
+					attr = PointerGetDatum(PG_DETOAST_DATUM_PACKED(origattr));
 					MemoryContextSwitchTo(oldCtxt);
+
+					sz = VARSIZE_ANY_EXHDR(attr);
+					data = VARDATA_ANY(attr);
+
+					/* Send length first, then data */
+					addInt32ToChunkList(tcList, sz, &pSerInfo->chunkCache);
+					addByteStringToChunkList(tcList, data, sz, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sz);
+				}
+				else if (attrInfo->typlen == -2)
+				{
+					int32		sz;
+					char	   *data;
+
+					/*
+					 * CString, we would send the string with the terminating
+					 * '\0'
+					 */
+					data = DatumGetCString(origattr);
+					sz = strlen(data) + 1;
+
+					/* Send length first, then data */
+					addInt32ToChunkList(tcList, sz, &pSerInfo->chunkCache);
+					addByteStringToChunkList(tcList, data, sz, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sz);
+				}
+				else if (attrInfo->typbyval)
+				{
+					/*
+					 * We send a full-width Datum for all pass-by-value types,
+					 * regardless of the actual size.
+					 */
+					addByteStringToChunkList(tcList, (char *) &origattr, sizeof(Datum), &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sizeof(Datum));
 				}
 				else
+				{
+					addByteStringToChunkList(tcList, DatumGetPointer(origattr), attrInfo->typlen, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, attrInfo->typlen);
+
 					attr = origattr;
-
-				/*
-				 * Assume that the data's output will be handled by the special IO
-				 * code, and if not then we can handle it the slow way.
-				 */
-				fHandled = true;
-				switch (attrInfo->atttypid)
-				{
-					case INT4OID:
-						addInt32ToChunkList(tcList, DatumGetInt32(attr), &pSerInfo->chunkCache);
-						break;
-					case CHAROID:
-						addCharToChunkList(tcList, DatumGetChar(attr), &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,1);
-						break;
-					case BPCHAROID:
-					case VARCHAROID:
-					case INT2VECTOROID: /* postgres serialization logic broken, use our own */
-					case OIDVECTOROID: /* postgres serialization logic broken, use our own */
-					case ANYARRAYOID:
-					{
-						text	   *pText = DatumGetTextP(attr);
-						int32		textSize = VARSIZE(pText) - VARHDRSZ;
-
-						addInt32ToChunkList(tcList, textSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, (char *) VARDATA(pText), textSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,textSize);
-						break;
-					}
-					case DATEOID:
-					{
-						DateADT date = DatumGetDateADT(attr);
-
-						addByteStringToChunkList(tcList, (char *) &date, sizeof(DateADT), &pSerInfo->chunkCache);
-						break;
-					}
-					case NUMERICOID:
-					{
-						/*
-						 * Treat the numeric as a varlena variable, and just push
-						 * the whole shebang to the output-buffer.	We don't care
-						 * about the guts of the numeric.
-						 */
-						Numeric		num = DatumGetNumeric(attr);
-						int32		numSize = VARSIZE(num) - VARHDRSZ;
-
-						addInt32ToChunkList(tcList, numSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, (char *) VARDATA(num), numSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,numSize);
-						break;
-					}
-
-					case ACLITEMOID:
-					{
-						AclItem		*aip = DatumGetAclItemP(attr);
-						char		*outputstring;
-						int32		aclSize ;
-
-						outputstring = DatumGetCString(DirectFunctionCall1(aclitemout,
-																		   PointerGetDatum(aip)));
-
-						aclSize = strlen(outputstring);
-						addInt32ToChunkList(tcList, aclSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, outputstring,aclSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,aclSize);
-						break;
-					}	
-
-					case 210: /* storage manager */
-					{
-						char		*smgrstr;
-						int32		strsize;
-
-						smgrstr = DatumGetCString(DirectFunctionCall1(smgrout, 0));
-						strsize = strlen(smgrstr);
-						addInt32ToChunkList(tcList, strsize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, smgrstr, strsize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,strsize);
-						break;
-					}
-
-					default:
-						fHandled = false;
 				}
-
-				if (fHandled)
-					continue;
-
-				/*
-				 * the FunctionCall2 call into the send function may result in some
-				 * allocations which we'd like to have contained by our reset-able
-				 * context
-				 */
-				oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);						  
-							  
-				/* Call the attribute type's binary input converter. */
-				if (attrInfo->send_finfo.fn_nargs == 1)
-					outputbytes =
-						DatumGetByteaP(FunctionCall1(&attrInfo->send_finfo,
-													 attr));
-				else if (attrInfo->send_finfo.fn_nargs == 2)
-					outputbytes =
-						DatumGetByteaP(FunctionCall2(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param)));
-				else if (attrInfo->send_finfo.fn_nargs == 3)
-					outputbytes =
-						DatumGetByteaP(FunctionCall3(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param),
-													 Int32GetDatum(tupdesc->attrs[i]->atttypmod)));
-				else
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-							 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
-				}
-		
-				MemoryContextSwitchTo(oldCtxt);
-
-				/* We assume the result will not have been toasted */
-				addInt32ToChunkList(tcList, VARSIZE(outputbytes) - VARHDRSZ, &pSerInfo->chunkCache);
-				addByteStringToChunkList(tcList, VARDATA(outputbytes),
-										 VARSIZE(outputbytes) - VARHDRSZ, &pSerInfo->chunkCache);
-				addPadding(tcList,&pSerInfo->chunkCache,VARSIZE(outputbytes) - VARHDRSZ);
-
-				/*
-				 * this was allocated in our reset-able context, but we *are* done
-				 * with it; and for tuples with several large columns it'd be nice to
-				 * free the memory back to the context
-				 */
-				pfree(outputbytes);
-
 			}
 
 			MemoryContextReset(s_tupSerMemCtxt);
@@ -762,7 +595,7 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 	if (tcList->num_chunks > 1)
 	{
 		TupleChunkListItem first,
-			last;
+					last;
 
 		first = tcList->p_first;
 		last = tcList->p_last;
@@ -789,13 +622,13 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
  * We're called with at least enough space for a tuple-chunk-header.
  */
 int
-SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransportBuffer *b)
+SerializeTupleDirect(GenericTuple gtuple, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
 {
-	int natts;
-	int dataSize = TUPLE_CHUNK_HEADER_SIZE;
+	int			natts;
+	int			dataSize = TUPLE_CHUNK_HEADER_SIZE;
 	TupleDesc	tupdesc;
 
-	AssertArg(tuple != NULL);
+	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
 	AssertArg(b != NULL);
 
@@ -814,12 +647,13 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 		}
 
 		/* easy case */
-		if (is_heaptuple_memtuple(tuple))
+		if (is_memtuple(gtuple))
 		{
-			int tupleSize;
-			int paddedSize;
+			MemTuple	tuple = (MemTuple) gtuple;
+			int			tupleSize;
+			int			paddedSize;
 
-			tupleSize = memtuple_get_size((MemTuple)tuple);
+			tupleSize = memtuple_get_size(tuple);
 			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
 
 			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE > b->prilen)
@@ -837,10 +671,11 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 		}
 		else
 		{
+			HeapTuple	tuple = (HeapTuple) gtuple;
 			TupSerHeader tsh;
 
-			unsigned int	datalen;
-			unsigned int	nullslen;
+			unsigned int datalen;
+			unsigned int nullslen;
 
 			HeapTupleHeader t_data = tuple->t_data;
 
@@ -862,18 +697,18 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 
 			pos = b->pri + TUPLE_CHUNK_HEADER_SIZE;
 
-			memcpy(pos, (char *)&tsh, sizeof(TupSerHeader));
+			memcpy(pos, (char *) &tsh, sizeof(TupSerHeader));
 			pos += sizeof(TupSerHeader);
 
 			if (nullslen)
 			{
-				memcpy(pos, (char *)t_data->t_bits, nullslen);
+				memcpy(pos, (char *) t_data->t_bits, nullslen);
 				pos += nullslen;
 				memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen);
 				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen;
 			}
 
-			memcpy(pos,  (char *)t_data + t_data->t_hoff, datalen);
+			memcpy(pos, (char *) t_data + t_data->t_hoff, datalen);
 			pos += datalen;
 			memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen);
 			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen;
@@ -886,12 +721,15 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 			break;
 		}
 
-		/* tuple that we can't handle here (big ?) -- do the older "out-of-line" serialization */
+		/*
+		 * tuple that we can't handle here (big ?) -- do the older
+		 * "out-of-line" serialization
+		 */
 		return 0;
 	}
 	while (0);
 
-	return dataSize;   
+	return dataSize;
 }
 
 /*
@@ -900,18 +738,14 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
  * This code is based on the binary input handling functions in copy.c.
  */
 HeapTuple
-DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
+DeserializeTuple(SerTupInfo *pSerInfo, StringInfo serialTup)
 {
 	MemoryContext oldCtxt;
 	TupleDesc	tupdesc;
 	HeapTuple	htup;
 	int			natts;
 	SerAttrInfo *attrInfo;
-	uint32		attr_size;
-
 	int			i;
-	StringInfoData attr_data;
-	bool		fHandled;
 
 	AssertArg(pSerInfo != NULL);
 	AssertArg(serialTup != NULL);
@@ -931,191 +765,66 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 	skipPadding(serialTup);
 
 	/* Deserialize the non-NULL attributes of this tuple */
-	initStringInfo(&attr_data);
 	for (i = 0; i < natts; ++i)
 	{
 		attrInfo = pSerInfo->myinfo + i;
 
-		if (pSerInfo->nulls[i])	/* NULL field. */
+		if (pSerInfo->nulls[i]) /* NULL field. */
 		{
 			pSerInfo->values[i] = (Datum) 0;
 			continue;
 		}
 
-		/*
-		 * Assume that the data's output will be handled by the special IO
-		 * code, and if not then we can handle it the slow way.
-		 */
-		fHandled = true;
-		switch (attrInfo->atttypid)
+		if (attrInfo->typlen == -1)
 		{
-			case INT4OID:
-				pSerInfo->values[i] = Int32GetDatum(stringInfoGetInt32(serialTup));
-				break;
+			int32		sz;
+			struct varlena *p;
 
-			case CHAROID:
-				pSerInfo->values[i] = CharGetDatum(pq_getmsgbyte(serialTup));
-				skipPadding(serialTup);
-				break;
+			/* Read length first */
+			pq_copymsgbytes(serialTup, (char *) &sz, sizeof(int32));
+			if (sz < 0)
+				elog(ERROR, "invalid length received for a varlen Datum");
 
-			case BPCHAROID:
-			case VARCHAROID:
-			case INT2VECTOROID: /* postgres serialization logic broken, use our own */
-			case OIDVECTOROID: /* postgres serialization logic broken, use our own */
-			case ANYARRAYOID:
-			{
-				text	   *pText;
-				int			textSize;
+			p = palloc(sz + VARHDRSZ);
 
-				textSize = stringInfoGetInt32(serialTup);
+			pq_copymsgbytes(serialTup, VARDATA(p), sz);
+			SET_VARSIZE(p, sz + VARHDRSZ);
 
-#ifdef TUPSER_SCRATCH_SPACE
-				if (textSize + VARHDRSZ <= attrInfo->varlen_scratch_size)
-					pText = (text *) attrInfo->pv_varlen_scratch;
-				else
-					pText = (text *) palloc(textSize + VARHDRSZ);
-#else
-				pText = (text *) palloc(textSize + VARHDRSZ);
-#endif
-
-				SET_VARSIZE(pText, textSize + VARHDRSZ);
-				pq_copymsgbytes(serialTup, VARDATA(pText), textSize);
-				skipPadding(serialTup);
-				pSerInfo->values[i] = PointerGetDatum(pText);
-				break;
-			}
-
-			case DATEOID:
-			{
-				/*
-				 * TODO:  I would LIKE to do something more efficient, but
-				 * DateADT is not strictly limited to 4 bytes by its
-				 * definition.
-				 */
-				DateADT date;
-
-				pq_copymsgbytes(serialTup, (char *) &date, sizeof(DateADT));
-				skipPadding(serialTup);
-				pSerInfo->values[i] = DateADTGetDatum(date);
-				break;
-			}
-
-			case NUMERICOID:
-			{
-				/*
-				 * Treat the numeric as a varlena variable, and just push
-				 * the whole shebang to the output-buffer.	We don't care
-				 * about the guts of the numeric.
-				 */
-				Numeric		num;
-				int			numSize;
-
-				numSize = stringInfoGetInt32(serialTup);
-
-#ifdef TUPSER_SCRATCH_SPACE
-				if (numSize + VARHDRSZ <= attrInfo->varlen_scratch_size)
-					num = (Numeric) attrInfo->pv_varlen_scratch;
-				else
-					num = (Numeric) palloc(numSize + VARHDRSZ);
-#else
-				num = (Numeric) palloc(numSize + VARHDRSZ);
-#endif
-
-				SET_VARSIZE(num, numSize + VARHDRSZ);
-				pq_copymsgbytes(serialTup, VARDATA(num), numSize);
-				skipPadding(serialTup);
-				pSerInfo->values[i] = NumericGetDatum(num);
-				break;
-			}
-
-			case ACLITEMOID:
-			{
-				int		aclSize, k, cnt;
-				char		*inputstring, *starsfree;
-
-				aclSize = stringInfoGetInt32(serialTup);
-				inputstring = (char*) palloc(aclSize  + 1);
-				starsfree = (char*) palloc(aclSize  + 1);
-				cnt = 0;
-	
-
-				pq_copymsgbytes(serialTup, inputstring, aclSize);
-				skipPadding(serialTup);
-				inputstring[aclSize] = '\0';
-				for(k=0; k<aclSize; k++)
-				{					
-					if( inputstring[k] != '*')
-					{
-						starsfree[cnt] = inputstring[k];
-						cnt++;
-					}
-				}
-				starsfree[cnt] = '\0';
-
-				pSerInfo->values[i] = DirectFunctionCall1(aclitemin, CStringGetDatum(starsfree));
-				pfree(inputstring);
-				break;
-			}
-
-			case 210:
-			{
-				int 		strsize;
-				char		*smgrstr;
-
-				strsize = stringInfoGetInt32(serialTup);
-				smgrstr = (char*) palloc(strsize + 1);
-				pq_copymsgbytes(serialTup, smgrstr, strsize);
-				skipPadding(serialTup);
-				smgrstr[strsize] = '\0';
-
-				pSerInfo->values[i] = DirectFunctionCall1(smgrin, CStringGetDatum(smgrstr));
-				break;
-			}
-			default:
-				fHandled = false;
+			pSerInfo->values[i] = PointerGetDatum(p);
 		}
+		else if (attrInfo->typlen == -2)
+		{
+			int32		sz;
+			char	   *p;
 
-		if (fHandled)
-			continue;
+			/* CString, with terminating '\0' included */
 
-		attr_size = stringInfoGetInt32(serialTup);
+			/* Read length first */
+			pq_copymsgbytes(serialTup, (char *) &sz, sizeof(int32));
+			if (sz < 0)
+				elog(ERROR, "invalid length received for a CString");
 
-		/* reset attr_data to empty, and load raw data into it */
+			p = palloc(sz + VARHDRSZ);
 
-		attr_data.len = 0;
-		attr_data.data[0] = '\0';
-		attr_data.cursor = 0;
+			/* Then data */
+			pq_copymsgbytes(serialTup, p, sz);
 
-		appendBinaryStringInfo(&attr_data,
-							   pq_getmsgbytes(serialTup, attr_size), attr_size);
-		skipPadding(serialTup);
+			pSerInfo->values[i] = CStringGetDatum(p);
+		}
+		else if (attrInfo->typbyval)
+		{
+			/* Read a whole Datum */
 
-		/* Call the attribute type's binary input converter. */
-		if (attrInfo->recv_finfo.fn_nargs == 1)
-			pSerInfo->values[i] = FunctionCall1(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data));
-		else if (attrInfo->recv_finfo.fn_nargs == 2)
-			pSerInfo->values[i] = FunctionCall2(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param));
-		else if (attrInfo->recv_finfo.fn_nargs == 3)
-			pSerInfo->values[i] = FunctionCall3(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param),
-												Int32GetDatum(tupdesc->attrs[i]->atttypmod) );  
+			pq_copymsgbytes(serialTup, (char *) &(pSerInfo->values[i]), sizeof(Datum));
+		}
 		else
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
-		}
+			/* fixed width, pass-by-ref */
+			char	   *p = palloc(attrInfo->typlen);
 
-		/* Trouble if it didn't eat the whole buffer */
-		if (attr_data.cursor != attr_data.len)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("incorrect binary data format")));
+			pq_copymsgbytes(serialTup, p, attrInfo->typlen);
+
+			pSerInfo->values[i] = PointerGetDatum(p);
 		}
 	}
 
@@ -1129,17 +838,23 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 
 	MemoryContextReset(s_tupSerMemCtxt);
 
+	/* Trouble if it didn't eat the whole buffer */
+	if (serialTup->cursor != serialTup->len)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+				 errmsg("incorrect binary data format")));
+
 	/* All done.  Return the result. */
 	return htup;
 }
 
-HeapTuple
-CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *remapper)
+GenericTuple
+CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remapper)
 {
 	StringInfoData serData;
 	TupleChunkListItem tcItem;
 	int			i;
-	HeapTuple	htup;
+	GenericTuple tup;
 	TupleChunkType tcType;
 
 	AssertArg(tcList != NULL);
@@ -1155,14 +870,13 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 		if (tcType == TC_EMPTY)
 		{
 			/*
-			 * the sender is indicating that there was a row with no attributes:
-			 * return a NULL tuple
+			 * the sender is indicating that there was a row with no
+			 * attributes: return a NULL tuple
 			 */
 			clearTCList(NULL, tcList);
 
-			htup = heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
-
-			return htup;
+			return (GenericTuple)
+				heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
 		}
 	}
 
@@ -1243,22 +957,23 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 
 	{
 		TupSerHeader *tshp;
-		unsigned int	datalen;
-		unsigned int	nullslen;
-		unsigned int	hoff;
+		unsigned int datalen;
+		unsigned int nullslen;
+		unsigned int hoff;
 		HeapTupleHeader t_data;
-		char *pos = (char *)serData.data;
+		char	   *pos = (char *) serData.data;
 
-		tshp = (TupSerHeader *)pos;
+		tshp = (TupSerHeader *) pos;
 
 		if (!(tshp->tuplen & MEMTUP_LEAD_BIT) &&
 			tshp->natts == RECORD_CACHE_MAGIC_NATTS &&
 			tshp->infomask == RECORD_CACHE_MAGIC_INFOMASK)
 		{
 			uint32		tuplen = tshp->tuplen & ~MEMTUP_LEAD_BIT;
+
 			/* a special tuple with record type cache */
-			List * typelist = (List *) deserializeNode(pos + sizeof(TupSerHeader),
-													   tuplen - sizeof(TupSerHeader));
+			List	   *typelist = (List *) deserializeNode(pos + sizeof(TupSerHeader),
+															tuplen - sizeof(TupSerHeader));
 
 			TRHandleTypeLists(remapper, typelist);
 
@@ -1270,26 +985,32 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 
 		if ((tshp->tuplen & MEMTUP_LEAD_BIT) != 0)
 		{
-			uint32 tuplen = memtuple_size_from_uint32(tshp->tuplen);
-			htup = (HeapTuple) palloc(tuplen);
-			memcpy(htup, pos, tuplen);
+			uint32		tuplen = memtuple_size_from_uint32(tshp->tuplen);
 
-			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN,tuplen);
+			tup = (GenericTuple) palloc(tuplen);
+			memcpy(tup, pos, tuplen);
+
+			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, tuplen);
 		}
 		else
 		{
-			pos += sizeof(TupSerHeader);	
-			/* if the tuple had toasted elements we have to deserialize
-			 * the old slow way. */
+			HeapTuple htup;
+
+			pos += sizeof(TupSerHeader);
+
+			/*
+			 * if the tuple had toasted elements we have to deserialize the
+			 * old slow way.
+			 */
 			if ((tshp->infomask & HEAP_HASEXTERNAL) != 0)
 			{
 				serData.cursor += sizeof(TupSerHeader);
 
-				htup = DeserializeTuple(pSerInfo, &serData);
+				tup = (GenericTuple) DeserializeTuple(pSerInfo, &serData);
 
 				/* Free up memory we used. */
 				pfree(serData.data);
-				return htup;
+				return tup;
 			}
 
 			/* reconstruct lengths of null bitmap and data part */
@@ -1302,7 +1023,7 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("Interconnect error: cannot convert chunks to a  heap tuple."),
 								errdetail("tuple len %d < nullslen %d + headersize (%d)",
-										  tshp->tuplen, nullslen, (int)sizeof(TupSerHeader))));
+										  tshp->tuplen, nullslen, (int) sizeof(TupSerHeader))));
 
 			datalen = tshp->tuplen - sizeof(TupSerHeader) - TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
 
@@ -1313,9 +1034,10 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 			hoff = MAXALIGN(hoff);
 
 			/* Allocate the space in one chunk, like heap_form_tuple */
-			htup = (HeapTuple)palloc(HEAPTUPLESIZE + hoff + datalen);
+			htup = (HeapTuple) palloc(HEAPTUPLESIZE + hoff + datalen);
+			tup = (GenericTuple) htup;
 
-			t_data = (HeapTupleHeader) ((char *)htup + HEAPTUPLESIZE);
+			t_data = (HeapTupleHeader) ((char *) htup + HEAPTUPLESIZE);
 
 			/* make sure unused header fields are zeroed */
 			MemSetAligned(t_data, 0, hoff);
@@ -1334,26 +1056,30 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo, TupleRemapper *
 
 			if (nullslen)
 			{
-				memcpy((void *)t_data->t_bits, pos, nullslen);
-				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN,nullslen);
+				memcpy((void *) t_data->t_bits, pos, nullslen);
+				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
 			}
 
-			/* does the tuple descriptor expect an OID ? Note: we don't
-			 * have to set the oid itself, just the flag! (see heap_formtuple()) */
-			if (pSerInfo->tupdesc->tdhasoid)		/* else leave infomask = 0 */
+			/*
+			 * does the tuple descriptor expect an OID ? Note: we don't have
+			 * to set the oid itself, just the flag! (see heap_formtuple())
+			 */
+			if (pSerInfo->tupdesc->tdhasoid)	/* else leave infomask = 0 */
 			{
 				t_data->t_infomask |= HEAP_HASOID;
 			}
 
-			/* and now the data proper (it would be nice if we could just
-			 * point our caller into our existing buffer in-place, but
-			 * we'll leave that for another day) */
-			memcpy((char *)t_data + hoff, pos, datalen);
+			/*
+			 * and now the data proper (it would be nice if we could just
+			 * point our caller into our existing buffer in-place, but we'll
+			 * leave that for another day)
+			 */
+			memcpy((char *) t_data + hoff, pos, datalen);
 		}
 	}
 
 	/* Free up memory we used. */
 	pfree(serData.data);
 
-	return htup;
+	return tup;
 }

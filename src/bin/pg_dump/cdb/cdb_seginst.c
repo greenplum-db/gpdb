@@ -9,6 +9,9 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
+ * IDENTIFICATION
+ *	    src/bin/pg_dump/cdb/cdb_seginst.c
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -98,29 +101,15 @@ GetDumpSegmentDatabaseArray(PGconn *pConn,
 
 	pQry = createPQExpBuffer();
 
-	if (remote_version >= 80214)
-		/* 4.0 and beyond */
-		appendPQExpBuffer(pQry, "SELECT"
-						  " dbid,"
-						  " content,"
-						  " hostname,"
-						  " port "
-						  "FROM "
-						  " gp_segment_configuration "
-						  "WHERE role='p' "
-						  "ORDER BY content DESC");
-	else
-		/* pre 4.0 */
-		appendPQExpBuffer(pQry, "SELECT"
-						  " dbid,"
-						  " content,"
-						  " hostname,"
-						  " port "
-						  "FROM"
-						  " gp_configuration "
-						  "WHERE valid = 't' "
-						  "AND isPrimary = 't' "
-						  "ORDER BY content DESC");
+	appendPQExpBuffer(pQry, "SELECT"
+					  " dbid,"
+					  " content,"
+					  " hostname,"
+					  " port "
+					  "FROM "
+					  " gp_segment_configuration "
+					  "WHERE role='p' "
+					  "ORDER BY content DESC");
 
 	pRes = PQexec(pConn, pQry->data);
 	if (!pRes || PQresultStatus(pRes) != PGRES_TUPLES_OK)

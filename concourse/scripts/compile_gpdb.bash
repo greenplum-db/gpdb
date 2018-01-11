@@ -86,9 +86,9 @@ function build_gpdb() {
     # make it much faster, and -j4 is small enough to not hurt too badly even on
     # a single-CPU system
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
+      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
     else
-      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
+      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
     fi
   popd
 }
@@ -102,7 +102,17 @@ function build_gppkg() {
 function unittest_check_gpdb() {
   pushd $GPDB_SRC_PATH
     source $GREENPLUM_INSTALL_DIR/greenplum_path.sh
-    make GPROOT=/usr/local unittest-check
+    make GPROOT=/usr/local -s unittest-check
+  popd
+}
+
+function build_pxf() {
+  pushd pxf_src/pxf
+  export TERM=xterm
+  export BUILD_NUMBER="${TARGET_OS}"
+  export PXF_HOME="${GREENPLUM_INSTALL_DIR}/pxf"
+  export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
+  make install -s DATABASE=gpdb | grep -v "Download http"
   popd
 }
 
@@ -110,7 +120,7 @@ function export_gpdb() {
   TARBALL="$GPDB_ARTIFACTS_DIR"/$GPDB_BIN_FILENAME
   pushd $GREENPLUM_INSTALL_DIR
     source greenplum_path.sh
-    python -m compileall -x test .
+    python -m compileall -q -x test .
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd
@@ -146,6 +156,7 @@ function _main() {
       ;;
     win32)
         export BLD_ARCH=win32
+        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
         echo "only centos, sles and win32 are supported TARGET_OS'es"
@@ -177,13 +188,17 @@ function _main() {
   # symlink and `cd`s to the actual directory. Currently the Makefile in the
   # addon directory assumes that it is located in a particular location under
   # the source tree and hence needs to be copied over.
-  rsync -auv gpaddon_src/ $GPDB_SRC_PATH/gpAux/$ADDON_DIR
+  rsync -au gpaddon_src/ $GPDB_SRC_PATH/gpAux/$ADDON_DIR
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   build_gppkg
   if [ "$TARGET_OS" != "win32" ] ; then
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.
       unittest_check_gpdb
+  fi
+  if [ "$TARGET_OS" == "centos" ]; then
+      # Build pxf(server) only for centos
+      build_pxf
   fi
   export_gpdb
   export_gpdb_extensions

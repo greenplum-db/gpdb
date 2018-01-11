@@ -368,7 +368,7 @@ exec_command(const char *cmd,
 					success = describeTableDetails(pattern, show_verbose, show_system);
 				else
 					/* standard listing of interesting things */
-					success = listTables("tvsxr", NULL, show_verbose, show_system);
+					success = listTables("tvsE", NULL, show_verbose, show_system);
 				break;
 			case 'a':
 				success = describeAggregates(pattern, show_verbose, show_system);
@@ -447,9 +447,7 @@ exec_command(const char *cmd,
 					success = listDbRoleSettings(pattern, pattern2);
 				}
 				else
-					//success = PSQL_CMD_UNKNOWN;
-					/* GPDB uses \dr for foreign tables ? */
-					success = listTables(&cmd[1], pattern, show_verbose, show_system);
+					success = PSQL_CMD_UNKNOWN;
 				break;
 			case 'u':
 				success = describeRoles(pattern, show_verbose);
@@ -469,6 +467,23 @@ exec_command(const char *cmd,
 						break;
 					case 't':
 						success = listTSTemplates(pattern, show_verbose);
+						break;
+					default:
+						status = PSQL_CMD_UNKNOWN;
+						break;
+				}
+				break;
+			case 'e':			/* SQL/MED subsystem */
+				switch (cmd[2])
+				{
+					case 's':
+						success = listForeignServers(pattern, show_verbose);
+						break;
+					case 'u':
+						success = listUserMappings(pattern, show_verbose);
+						break;
+					case 'w':
+						success = listForeignDataWrappers(pattern, show_verbose);
 						break;
 					default:
 						status = PSQL_CMD_UNKNOWN;

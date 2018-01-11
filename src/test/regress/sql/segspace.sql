@@ -39,7 +39,6 @@ select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
-set gp_hashjoin_metadata_memory_percent=0;
 
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
@@ -70,7 +69,6 @@ create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
-set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
@@ -110,7 +108,6 @@ drop table if exists segspace_t1_created;
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
-set gp_hashjoin_metadata_memory_percent=0;
 
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);

@@ -77,21 +77,6 @@ bool sha256hmac_hex(const char *str, char out_hash_hex[65], const char *secret, 
     return true;
 }
 
-CURL *CreateCurlHandler(const char *path) {
-    CURL *curl = NULL;
-    if (!path) {
-        return NULL;
-    } else {
-        curl = curl_easy_init();
-    }
-
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, path);
-        // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-    return curl;
-}
-
 /*
  * It would be more efficient to use a variation of KMP to
  * benefit from the failure function.
@@ -101,7 +86,7 @@ CURL *CreateCurlHandler(const char *path) {
 size_t find_Nth(const string &str,  // where to work
                 unsigned N,         // N'th occurrence
                 const string &find  // what to 'find'
-                ) {
+) {
     if (0 == N) {
         return string::npos;
     }

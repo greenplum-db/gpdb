@@ -731,7 +731,7 @@ XLogWalRcvFlush(bool dying)
 		}
 		SpinLockRelease(&walrcv->mutex);
 
-		/* Signal the startup process and walsender that new WAL has arrived */
+		/* Signal the startup process that new WAL has arrived */
 		WakeupRecovery();
 
 		/* Report XLOG streaming progress in PS display */

@@ -3,12 +3,12 @@
  * parse_node.c
  *	  various routines that make nodes for querytrees
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_node.c,v 1.99 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_node.c,v 1.105 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 #include "catalog/pg_type.h"
 #include "mb/pg_wchar.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
@@ -47,9 +48,6 @@ make_parsestate(ParseState *parentParseState)
 
 	pstate->parentParseState = parentParseState;
 
-	/* disable propagateSetopTypes by default */
-	pstate->p_propagateSetopTypes = false;
-
 	/* Fill in fields that don't start at null/false/zero */
 	pstate->p_next_resno = 1;
 
@@ -57,11 +55,6 @@ make_parsestate(ParseState *parentParseState)
 	{
 		pstate->p_sourcetext = parentParseState->p_sourcetext;
 		pstate->p_variableparams = parentParseState->p_variableparams;
-		if (parentParseState->p_propagateSetopTypes)
-		{
-			pstate->p_setopTypes = parentParseState->p_setopTypes;
-			pstate->p_setopTypmods = parentParseState->p_setopTypmods;
-		}
 	}
 
 	return pstate;
@@ -168,7 +161,7 @@ parser_errposition(ParseState *pstate, int location)
  * Sometimes the parser calls functions that aren't part of the parser
  * subsystem and can't reasonably be passed a ParseState; yet we would
  * like any errors thrown in those functions to be tagged with a parse
- * error location.  Use this function to set up an error context stack
+ * error location.	Use this function to set up an error context stack
  * entry that will accomplish that.  Usage pattern:
  *
  *		declare a local variable "ParseCallbackState pcbstate"
@@ -345,7 +338,7 @@ transformArraySubscripts(ParseState *pstate,
 		{
 			if (ai->lidx)
 			{
-				subexpr = transformExpr(pstate, ai->lidx);
+				subexpr = transformExpr(pstate, ai->lidx, pstate->p_expr_kind);
 				/* If it's not int4 already, try to coerce */
 				subexpr = coerce_to_target_type(pstate,
 												subexpr, exprType(subexpr),
@@ -356,7 +349,8 @@ transformArraySubscripts(ParseState *pstate,
 				if (subexpr == NULL)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATATYPE_MISMATCH),
-						  errmsg("array subscript must have type integer")));
+							 errmsg("array subscript must have type integer"),
+						parser_errposition(pstate, exprLocation(ai->lidx))));
 			}
 			else
 			{
@@ -370,7 +364,7 @@ transformArraySubscripts(ParseState *pstate,
 			}
 			lowerIndexpr = lappend(lowerIndexpr, subexpr);
 		}
-		subexpr = transformExpr(pstate, ai->uidx);
+		subexpr = transformExpr(pstate, ai->uidx, pstate->p_expr_kind);
 		/* If it's not int4 already, try to coerce */
 		subexpr = coerce_to_target_type(pstate,
 										subexpr, exprType(subexpr),
@@ -381,7 +375,8 @@ transformArraySubscripts(ParseState *pstate,
 		if (subexpr == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("array subscript must have type integer")));
+					 errmsg("array subscript must have type integer"),
+					 parser_errposition(pstate, exprLocation(ai->uidx))));
 		upperIndexpr = lappend(upperIndexpr, subexpr);
 	}
 
@@ -393,21 +388,24 @@ transformArraySubscripts(ParseState *pstate,
 	{
 		Oid			typesource = exprType(assignFrom);
 		Oid			typeneeded = isSlice ? arrayType : elementType;
+		Node	   *newFrom;
 
-		assignFrom = coerce_to_target_type(pstate,
-										   assignFrom, typesource,
-										   typeneeded, elementTypMod,
-										   COERCION_ASSIGNMENT,
-										   COERCE_IMPLICIT_CAST,
-										   -1);
-		if (assignFrom == NULL)
+		newFrom = coerce_to_target_type(pstate,
+										assignFrom, typesource,
+										typeneeded, elementTypMod,
+										COERCION_ASSIGNMENT,
+										COERCE_IMPLICIT_CAST,
+										-1);
+		if (newFrom == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 					 errmsg("array assignment requires type %s"
 							" but expression is of type %s",
 							format_type_be(typeneeded),
 							format_type_be(typesource)),
-			   errhint("You will need to rewrite or cast the expression.")));
+				 errhint("You will need to rewrite or cast the expression."),
+					 parser_errposition(pstate, exprLocation(assignFrom))));
+		assignFrom = newFrom;
 	}
 
 	/*
@@ -488,7 +486,7 @@ make_const(ParseState *pstate, Value *value, int location)
 
 					typeid = INT8OID;
 					typelen = sizeof(int64);
-					typebyval = true;	/* XXX might change someday */
+					typebyval = FLOAT8PASSBYVAL;		/* int8 and float8 alike */
 				}
 			}
 			else

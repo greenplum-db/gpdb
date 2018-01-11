@@ -1,0 +1,88 @@
+---
+title: Installing and Configuring the Hive Client for PXF
+---
+
+You use the PXF Hive connector to access Hive table data. The PXF Hive connector requires a Hive client installation on each Greenplum Database segment host. You must install the Hive client from a tarball.
+
+This topic describes how to install and configure the Hive client for PXF access. 
+
+## <a id="hive-pxf-prereq"></a>Prerequisites
+
+Compatible Hive clients for PXF are Cloudera and Hortonworks Data Platform Hive.
+
+Before setting up the Hive Client for PXF, ensure that you:
+
+- Have `scp` access to a running Hadoop cluster with the Hive Metastore service.
+- Have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
+
+
+## <a id="hive-pxf-config-steps"></a>Procedure
+Perform the following procedure to install and configure the Hive client for PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
+
+1. Create a text file that lists your Greenplum Database segment hosts, one host name per line. Ensure that there are no blank lines or extra spaces in the file. For example, a file named `seghostfile` may include:
+
+    ``` pre
+    seghost1
+    seghost2
+    seghost3
+    ```
+
+2. Download a compatible Hive client and install on **each** Greenplum Database segment host. The Hive client must be a tarball distribution. You must install the same Hive client distribution in the same file system location on each host.
+
+    If you are running Cloudera Hive:
+    
+    1. Download the Hive distribution:
+
+        ``` shell
+        gpadmin@master$ wget http://archive.cloudera.com/cdh5/cdh/5/hive-1.1.0-cdh5.10.2.tar.gz -O /tmp/hive-1.1.0-cdh5.10.2.tar.gz
+        ```
+        
+    2. Copy the Cloudera Hadoop distribution to each Greenplum Database segment host. For example, to copy the distribution to the `/home/gpadmin` directory:
+
+        ``` shell
+        gpadmin@master$ gpscp -v -f seghostfile /tmp/hive-1.1.0-cdh5.10.2.tar.gz =:/home/gpadmin
+        ```
+        
+    3. Unpack the Cloudera Hadoop distribution on each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@master$ gpssh -e -v -f seghostfile "tar zxf /home/gpadmin/hive-1.1.0-cdh5.10.2.tar.gz"
+        ```
+
+    4. Ensure that the `gpadmin` user has read and execute permission on all Hive client libraries on each segment host. For example:
+
+    
+        ``` shell
+        gpadmin@master$ gpssh -e -v -f seghostfile "chmod -R 755 /home/gpadmin/hive-1.1.0-cdh5.10.2"
+        ```
+
+3. Locate the base install directory of the Hive client. Edit the `gpadmin` user's `.bash_profile` file on each segment host to include this `$PXF_HIVE_HOME` setting. For example: 
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export PXF_HIVE_HOME=/home/gpadmin/hive-1.1.0-cdh5.10.2' >> /home/gpadmin/.bash_profile"
+    ```
+
+4. The Hive `hive-site.xml` configuration file `hive.metastore.uris` property value identifies the Hive Metastore URI. PXF requires this information to access the Hive service. A sample `hive.metastore.uris` setting follows:
+
+    ``` xml
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://metastorehost.domain:9083</value>
+    </property>
+    ```
+    
+    Complete the PXF Hive client configuration by copying Hive configuration from your Hadoop cluster to each Greenplum Database segment host.
+    
+    1. Copy the `hive-site.xml` Hive configuration files from your Hadoop cluster NameNode host to the current host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hive/conf/hive-site.xml .
+        ```
+
+    2. Next, copy the `hive-site.xml` configuration file to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hive-site.xml =:\$PXF_HIVE_HOME/conf/hive-site.xml
+        ```
+
+**Note**: If you update your Hive configuration while the PXF service is running, you must copy the updated `hive-site.xml` file to each Greenplum Database segment host and restart PXF.

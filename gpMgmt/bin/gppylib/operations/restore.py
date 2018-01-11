@@ -290,6 +290,9 @@ class RestoreDatabase(Operation):
         self.context = context
 
     def execute(self):
+        if self.context.batch_default <= 0:
+            raise Exception("-B <parallel processes> must be greater than 0")
+
         if self.context.redirected_restore_db:
             self.context.target_db = self.context.redirected_restore_db
 
@@ -371,9 +374,9 @@ class RestoreDatabase(Operation):
                 update_ao_statistics(self.context, self.context.restore_tables, self.context.restore_schemas, restore_all=restore_all)
 
         if not self.context.metadata_only:
-            if (not self.context.no_analyze) and len(self.context.restore_tables) == 0:
+            if (not self.context.no_analyze) and len(self.context.restore_tables) == 0 and len(self.context.restore_schemas) == 0:
                 self._analyze(self.context)
-            elif (not self.context.no_analyze) and len(self.context.restore_tables) > 0:
+            elif (not self.context.no_analyze) and (len(self.context.restore_tables) > 0 or len(self.context.restore_schemas) > 0):
                 self._analyze_restore_tables()
         if self.context.restore_stats:
             self._restore_stats()
@@ -900,10 +903,11 @@ class ValidateSegments(Operation):
                 raise ExceptionNoStackTraceNeeded("Host %s dir %s dbid %d marked as invalid" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory(), seg.getSegmentDbId()))
 
             if self.context.netbackup_service_host is None:
+                user_or_default_dir = self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory())
                 remote_file = get_filename_for_content(self.context, "dump", seg.getSegmentContentId(),
-                                                       self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory()), seg.getSegmentHostName())
+                                                       user_or_default_dir, seg.getSegmentHostName())
                 if not remote_file:
-                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
+                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), user_or_default_dir))
 
 def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
     """

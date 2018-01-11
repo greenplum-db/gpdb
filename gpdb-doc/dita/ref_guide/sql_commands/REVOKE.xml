@@ -46,13 +46,12 @@ REVOKE [ADMIN OPTION FOR] <varname>parent_role</varname> [, ...]
        [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>REVOKE</codeph> command revokes previously granted privileges
 from one or more roles. The key word <codeph>PUBLIC</codeph> refers to
 the implicitly defined group of all roles. </p><p>See the description of the <codeph><xref href="GRANT.xml#topic1" type="topic" format="dita"
-          /></codeph> command for the meaning of the privilege types. </p><p>Note that any particular role will have the sum of privileges granted
-directly to it, privileges granted to any role it is presently a member
-of, and privileges granted to <codeph>PUBLIC</codeph>. Thus, for example,
-revoking <codeph>SELECT</codeph> privilege from <codeph>PUBLIC</codeph>
-does not necessarily mean that all roles have lost <codeph>SELECT</codeph>
-privilege on the object: those who have it granted directly or via another
-role will still have it.</p><p>If <codeph>GRANT OPTION FOR</codeph> is specified, only the grant
+          /></codeph> command for the meaning of the privilege types. </p><p>Note that any particular role will have the sum of privileges granted directly to it, privileges
+        granted to any role it is presently a member of, and privileges granted to
+          <codeph>PUBLIC</codeph>. Thus, for example, revoking <codeph>SELECT</codeph> privilege
+        from <codeph>PUBLIC</codeph> does not necessarily mean that all roles have lost
+          <codeph>SELECT</codeph> privilege on the object: those who have it granted directly or via
+            another role will still have it. Similarly, revoking <codeph>SELECT</codeph> from a user might not prevent that user from using <codeph>SELECT</codeph> if <codeph>PUBLIC</codeph> or another membership role still has <codeph>SELECT</codeph> rights.</p><p>If <codeph>GRANT OPTION FOR</codeph> is specified, only the grant
 option for the privilege is revoked, not the privilege itself. Otherwise,
 both the privilege and the grant option are revoked. </p><p>If a role holds a privilege with grant option and has granted it to
 other roles then the privileges held by those other roles are called

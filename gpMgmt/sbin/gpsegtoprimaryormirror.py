@@ -56,13 +56,10 @@ class SegToPrimaryMirrorStatus():
 #
 class GpSegToPrimaryMirror():
     ######
-    def __init__(self,dblist,gpversion,collation,targetMirroringMode,pickledTransitionData):
+    def __init__(self,dblist,gpversion,targetMirroringMode,pickledTransitionData):
         self.dblist=dblist
         self.expected_gpversion=gpversion
         self.pool = base.WorkerPool(numWorkers=len(dblist))
-        self.expected_lc_collate=None
-        self.expected_lc_monetary=None
-        self.expected_lc_numeric=None
         self.targetMirroringMode = targetMirroringMode
         self.pickledTransitionData = pickledTransitionData
         
@@ -75,11 +72,6 @@ class GpSegToPrimaryMirror():
                             "But we were expecting it to be: '%s'\n"
                             "Please review and correct" % (self.actual_gpversion,self.expected_gpversion))
         
-        collation_strings=collation.split(':')
-        if len(collation_strings) != 3:
-            raise Exception("Invalid collation string specified!")
-        (self.expected_lc_collate,self.expected_lc_monetary,self.expected_lc_numeric)=collation_strings
-
         pass
 
     def run(self):
@@ -149,8 +141,6 @@ class GpSegToPrimaryMirror():
 
         addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption=False)
 
-        parser.add_option("-C", "--collation", type="string",
-                            help="values for lc_collate, lc_monetary, lc_numeric separated by :")
         parser.add_option("-D","--datadir",dest="dblist", action="append", type="string")
         parser.add_option("-p","--pickledTransitionData",dest="pickledTransitionData", type="string")
         parser.add_option("-M","--mirroringMode",dest="mirroringMode", type="string")
@@ -171,7 +161,7 @@ class GpSegToPrimaryMirror():
         Called by simple_main()
         """
 
-        return GpSegToPrimaryMirror(options.dblist,options.gpversion,options.collation,options.mirroringMode,options.pickledTransitionData)
+        return GpSegToPrimaryMirror(options.dblist,options.gpversion,options.mirroringMode,options.pickledTransitionData)
 
 #------------------------------------------------------------------------- 
 if __name__ == '__main__':

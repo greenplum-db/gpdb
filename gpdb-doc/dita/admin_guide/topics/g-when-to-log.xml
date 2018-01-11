@@ -6,17 +6,15 @@
    <body>
       <simpletable id="kh163424">
          <strow>
-            <stentry>
-               <p>
+            <stentry><p>
                   <codeph>client_min_messages</codeph>
                </p>
+                  <p><codeph>gp_interconnect_debug_retry_interval</codeph></p>
                <p>
                   <codeph>log_error_verbosity</codeph>
-               </p>
-               <p>
+               </p><p>
                   <codeph>log_min_duration_statement</codeph>
-               </p>
-            </stentry>
+               </p></stentry>
             <stentry>
                <p>
                   <codeph>log_min_error_statement</codeph>

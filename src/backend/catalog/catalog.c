@@ -5,12 +5,12 @@
  *		bits of hard-wired knowledge
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.72.2.1 2008/02/20 17:44:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.83 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include "access/genam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
@@ -46,28 +47,26 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_trigger.h"
 
-#include "catalog/gp_configuration.h"
-#include "catalog/gp_configuration.h"
+#include "catalog/gp_configuration_history.h"
 #include "catalog/gp_segment_config.h"
-#include "catalog/gp_fault_strategy.h"
 
 #include "catalog/gp_persistent.h"
 #include "catalog/gp_global_sequence.h"
 #include "catalog/gp_id.h"
 #include "catalog/gp_version.h"
 #include "catalog/toasting.h"
-#include "catalog/gp_policy.h"
 
 #include "miscadmin.h"
 #include "storage/fd.h"
 #include "utils/fmgroids.h"
-#include "utils/relcache.h"
-#include "utils/lsyscache.h"
+#include "utils/rel.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbpersistenttablespace.h"
 #include "cdb/cdbvars.h"
 
-#define OIDCHARS	10			/* max chars printed by %u */
+#define OIDCHARS		10		/* max chars printed by %u */
+#define FORKNAMECHARS	4		/* max chars for a fork name */
 
 static char *
 GetFilespacePathForTablespace(Oid tablespaceOid)
@@ -93,14 +92,14 @@ GetFilespacePathForTablespace(Oid tablespaceOid)
 	{
 	case PersistentTablespaceGetFilespaces_TablespaceNotFound:
 		ereport(ERROR, 
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Unable to find entry for tablespace OID = %u when forming file-system path",
 						tablespaceOid)));
 		break;
 			
 	case PersistentTablespaceGetFilespaces_FilespaceNotFound:
 		ereport(ERROR, 
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Unable to find entry for filespace OID = %u when forming file-system path for tablespace OID = %u",
 				 		filespaceOid,
 						tablespaceOid)));
@@ -127,12 +126,44 @@ GetFilespacePathForTablespace(Oid tablespaceOid)
 }
 
 /*
+ * Lookup table of fork name by fork number.
+ *
+ * If you add a new entry, remember to update the errhint below, and the
+ * documentation for pg_relation_size(). Also keep FORKNAMECHARS above
+ * up-to-date.
+ */
+const char *forkNames[] = {
+	"main",						/* MAIN_FORKNUM */
+	"fsm",						/* FSM_FORKNUM */
+	"vm"						/* VISIBILITYMAP_FORKNUM */
+};
+
+/*
+ * forkname_to_number - look up fork number by name
+ */
+ForkNumber
+forkname_to_number(char *forkName)
+{
+	ForkNumber	forkNum;
+
+	for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+		if (strcmp(forkNames[forkNum], forkName) == 0)
+			return forkNum;
+
+	ereport(ERROR,
+			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+			 errmsg("invalid fork name"),
+			 errhint("Valid fork names are \"main\", \"fsm\", and \"vm\".")));
+	return InvalidForkNumber;	/* keep compiler quiet */
+}
+
+/*
  * relpath			- construct path to a relation's file
  *
  * Result is a palloc'd string.
  */
 char *
-relpath(RelFileNode rnode)
+relpath(RelFileNode rnode, ForkNumber forknum)
 {
 	int			pathlen;
 	char	   *path;
@@ -142,21 +173,27 @@ relpath(RelFileNode rnode)
 	{
 		/* Shared system relations live in {datadir}/global */
 		Assert(rnode.dbNode == 0);
-		pathlen = 7 + OIDCHARS + 1;
+		pathlen = 7 + OIDCHARS + 1 + FORKNAMECHARS + 1;
 		path = (char *) palloc(pathlen);
-		snprintfResult =
-			snprintf(path, pathlen, "global/%u",
-					 rnode.relNode);
-		
+		if (forknum != MAIN_FORKNUM)
+			snprintfResult = snprintf(path, pathlen, "global/%u_%s",
+									  rnode.relNode, forkNames[forknum]);
+		else
+			snprintfResult = snprintf(path, pathlen, "global/%u",
+									  rnode.relNode);
 	}
 	else if (rnode.spcNode == DEFAULTTABLESPACE_OID)
 	{
 		/* The default tablespace is {datadir}/base */
-		pathlen = 5 + OIDCHARS + 1 + OIDCHARS + 1;
+		pathlen = 5 + OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1;
 		path = (char *) palloc(pathlen);
-		snprintfResult =
-			snprintf(path, pathlen, "base/%u/%u",
-					 rnode.dbNode, rnode.relNode);
+		if (forknum != MAIN_FORKNUM)
+			snprintfResult = snprintf(path, pathlen, "base/%u/%u_%s",
+									  rnode.dbNode, rnode.relNode,
+									  forkNames[forknum]);
+		else
+			snprintfResult = snprintf(path, pathlen, "base/%u/%u",
+									  rnode.dbNode, rnode.relNode);
 	}
 	else
 	{
@@ -169,11 +206,17 @@ relpath(RelFileNode rnode)
 		 * We should develop an interface for the above that doesn't
 		 * require reallocating to a slightly larger size...
 		 */
-		pathlen = strlen(primary_path)+1+OIDCHARS+1+OIDCHARS+1+OIDCHARS+1;
+		pathlen = strlen(primary_path) + 1 + OIDCHARS + 1 + OIDCHARS + 1
+			+ OIDCHARS + 1 + FORKNAMECHARS + 1;
 		path = (char *) palloc(pathlen);
-		snprintfResult =
-			snprintf(path, pathlen, "%s/%u/%u/%u",
-					 primary_path, rnode.spcNode, rnode.dbNode, rnode.relNode);
+		if (forknum != MAIN_FORKNUM)
+			snprintfResult = snprintf(path, pathlen, "%s/%u/%u/%u_%s",
+									  primary_path, rnode.spcNode, rnode.dbNode,
+									  rnode.relNode, forkNames[forknum]);
+		else
+			snprintfResult = snprintf(path, pathlen, "%s/%u/%u/%u",
+									  primary_path, rnode.spcNode, rnode.dbNode,
+									  rnode.relNode);
 
 		/* Throw away the allocation we got from persistent layer */
 		pfree(primary_path);
@@ -592,11 +635,7 @@ IsSharedRelation(Oid relationId)
 		relationId == ResQueueCapabilityRelationId ||
 		relationId == ResGroupRelationId ||
 		relationId == ResGroupCapabilityRelationId ||
-		relationId == GpFaultStrategyRelationId ||
-		relationId == GpConfigurationRelationId ||
 		relationId == GpConfigHistoryRelationId ||
-		relationId == GpDbInterfacesRelationId ||
-		relationId == GpInterfacesRelationId ||
 		relationId == GpSegmentConfigRelationId ||
 		relationId == FileSpaceEntryRelationId ||
 
@@ -641,10 +680,6 @@ IsSharedRelation(Oid relationId)
 		relationId == ResGroupCapabilityResgroupidResLimittypeIndexId ||
 		relationId == AuthIdRolResQueueIndexId ||
 		relationId == AuthIdRolResGroupIndexId ||
-		relationId == GpConfigurationContentDefinedprimaryIndexId ||
-		relationId == GpConfigurationDbidIndexId ||
-		relationId == GpDbInterfacesDbidIndexId ||
-		relationId == GpInterfacesInterfaceidIndexId ||
 		relationId == GpSegmentConfigContentPreferred_roleIndexId ||
 		relationId == GpSegmentConfigDbidIndexId ||
 		relationId == FileSpaceEntryFsefsoidIndexId ||
@@ -742,7 +777,6 @@ GetNewOid(Relation relation)
 {
 	Oid			newOid;
 	Oid			oidIndex;
-	Relation	indexrel;
 
 	/* If relation doesn't have OIDs at all, caller is confused */
 	Assert(relation->rd_rel->relhasoids);
@@ -770,11 +804,9 @@ GetNewOid(Relation relation)
 	}
 
 	/* Otherwise, use the index to find a nonconflicting OID */
-	indexrel = index_open(oidIndex, AccessShareLock);
 	do {
-		newOid = GetNewOidWithIndex(relation, indexrel);
+		newOid = GetNewOidWithIndex(relation, oidIndex, ObjectIdAttributeNumber);
 	} while(!IsOidAcceptable(newOid));
-	index_close(indexrel, AccessShareLock);
 
 	/*
 	 * Most catalog objects need to have the same OID in the master and all
@@ -799,16 +831,17 @@ GetNewOid(Relation relation)
  * an index that will not be recognized by RelationGetOidIndex: TOAST tables
  * and pg_largeobject have indexes that are usable, but have multiple columns
  * and are on ordinary columns rather than a true OID column.  This code
- * will work anyway, so long as the OID is the index's first column.
+ * will work anyway, so long as the OID is the index's first column.  The
+ * caller must pass in the actual heap attnum of the OID column, however.
  *
  * Caller must have a suitable lock on the relation.
  */
 Oid
-GetNewOidWithIndex(Relation relation, Relation indexrel)
+GetNewOidWithIndex(Relation relation, Oid indexId, AttrNumber oidcolumn)
 {
 	Oid			newOid;
 	SnapshotData SnapshotDirty;
-	IndexScanDesc scan;
+	SysScanDesc scan;
 	ScanKeyData key;
 	bool		collides;
 
@@ -822,17 +855,17 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
 		newOid = GetNewObjectId();
 
 		ScanKeyInit(&key,
-					(AttrNumber) 1,
+					oidcolumn,
 					BTEqualStrategyNumber, F_OIDEQ,
 					ObjectIdGetDatum(newOid));
 
 		/* see notes above about using SnapshotDirty */
-		scan = index_beginscan(relation, indexrel,
-							   &SnapshotDirty, 1, &key);
+		scan = systable_beginscan(relation, indexId, true,
+								  &SnapshotDirty, 1, &key);
 
-		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
+		collides = HeapTupleIsValid(systable_getnext(scan));
 
-		index_endscan(scan);
+		systable_endscan(scan);
 	} while (collides);
 
 	return newOid;
@@ -896,7 +929,8 @@ GetNewSequenceRelationOid(Relation relation)
 		if (!collides)
 		{
 			/* Check for existing file of same name */
-			rpath = relpath(rnode);
+			/* GPDB_84_MERGE_FIXME: check my work; is MAIN_FORKNUM right? */
+			rpath = relpath(rnode, MAIN_FORKNUM);
 			fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
 
 			if (fd >= 0)
@@ -973,7 +1007,7 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared)
 			continue;
 
 		/* Check for existing file of same name */
-		rpath = relpath(rnode);
+		rpath = relpath(rnode, MAIN_FORKNUM);
 		fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
 
 		if (fd >= 0)

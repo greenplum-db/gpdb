@@ -45,9 +45,6 @@ CREATE FUNCTION
 
 -- end_ignore
 
-alter resource group admin_group set concurrency 30;
-ALTER
-
 -- This function execute commands N times.
 -- % in command will be replaced by number specified by range1 sequentially
 -- # in command will be replaced by number specified by range2 randomly
@@ -128,6 +125,44 @@ exec_commands_n
 60             
 (1 row)
 
+1: select dblink_disconnect('dblink_rg_test1');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+2: select dblink_disconnect('dblink_rg_test2');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+3: select dblink_disconnect('dblink_rg_test3');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+4: select dblink_disconnect('dblink_rg_test4');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+5: select dblink_disconnect('dblink_rg_test5');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+6: select dblink_disconnect('dblink_rg_test6');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+
+
+1q: ... <quitting>
+2q: ... <quitting>
+3q: ... <quitting>
+4q: ... <quitting>
+5q: ... <quitting>
+6q: ... <quitting>
 --
 -- DDLs vs DMLs
 --
@@ -136,6 +171,10 @@ create table rg_test_foo as select i as c1, i as c2 from generate_series(1,1000)
 CREATE 1000
 create table rg_test_bar as select i as c1, i as c2 from generate_series(1,1000) i;
 CREATE 1000
+grant all on rg_test_foo to public;
+GRANT
+grant all on rg_test_bar to public;
+GRANT
 
 -- start_ignore
 select dblink_connect('dblink_rg_test', 'dbname=isolation2resgrouptest');
@@ -250,7 +289,7 @@ dblink_connect
 --------------
 OK            
 (1 row)
-31>: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', '', '', 1000, '1-6', '1-5', true);  <waiting ...>
+31>: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '0-5', true);  <waiting ...>
 
 -- start a new session to alter cpu_rate_limit randomly
 32: select dblink_connect('dblink_rg_test32', 'dbname=isolation2resgrouptest');
@@ -258,7 +297,7 @@ dblink_connect
 --------------
 OK            
 (1 row)
-32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_rate_limit #', '', '', 1000, '1-6', '1-6', true);  <waiting ...>
+32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_rate_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-6', true);  <waiting ...>
 
 -- start a new session to alter memory_limit randomly
 33: select dblink_connect('dblink_rg_test33', 'dbname=isolation2resgrouptest');
@@ -266,7 +305,7 @@ dblink_connect
 --------------
 OK            
 (1 row)
-33>: select exec_commands_n('dblink_rg_test33', 'alter resource group rg_test_g% set memory_limit #', '', '', 1000, '1-6', '1-7', true);  <waiting ...>
+33>: select exec_commands_n('dblink_rg_test33', 'alter resource group rg_test_g% set memory_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-7', true);  <waiting ...>
 
 -- start a new session to alter memory_shared_quota randomly
 34: select dblink_connect('dblink_rg_test34', 'dbname=isolation2resgrouptest');
@@ -274,7 +313,7 @@ dblink_connect
 --------------
 OK            
 (1 row)
-34>: select exec_commands_n('dblink_rg_test34', 'alter resource group rg_test_g% set memory_shared_quota #', '', '', 1000, '1-6', '1-80', true);  <waiting ...>
+34>: select exec_commands_n('dblink_rg_test34', 'alter resource group rg_test_g% set memory_shared_quota #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-80', true);  <waiting ...>
 
 --
 -- 4* : CREATE/DROP tables & groups
@@ -295,8 +334,24 @@ OK
 (1 row)
 42>: select exec_commands_n('dblink_rg_test42', 'create resource group rg_test_g7 with (cpu_rate_limit=1, memory_limit=1)', 'drop resource group rg_test_g7', '', 1000, '', '', true);  <waiting ...>
 
--- start a new session to drop a resource group with running queries, it will failed because a role is associated with the resource group.
-43>: drop resource group rg_test_g3;  <waiting ...>
+31<:  <... completed>
+exec_commands_n
+---------------
+1000           
+(1 row)
+31: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 6, '1-6', '1-5', true);
+exec_commands_n
+---------------
+6              
+(1 row)
+
+-- start a new session to acquire the status of resource groups
+44: select dblink_connect('dblink_rg_test44', 'dbname=isolation2resgrouptest');
+dblink_connect
+--------------
+OK            
+(1 row)
+44>: select exec_commands_n('dblink_rg_test44', 'select count(*) from gp_toolkit.gp_resgroup_status;', '', '', 100, '', '', true);  <waiting ...>
 
 -- wait all sessions to finish
 21<:  <... completed>
@@ -329,11 +384,6 @@ exec_commands_n
 ---------------
 6000           
 (1 row)
-31<:  <... completed>
-exec_commands_n
----------------
-1000           
-(1 row)
 32<:  <... completed>
 exec_commands_n
 ---------------
@@ -359,8 +409,11 @@ exec_commands_n
 ---------------
 1000           
 (1 row)
-43<:  <... completed>
-ERROR:  resource group "rg_test_g3" is used by at least one role
+44<:  <... completed>
+exec_commands_n
+---------------
+100            
+(1 row)
 
 21: select dblink_disconnect('dblink_rg_test21');
 dblink_disconnect
@@ -422,6 +475,24 @@ dblink_disconnect
 -----------------
 OK               
 (1 row)
+44: select dblink_disconnect('dblink_rg_test44');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+
+21q: ... <quitting>
+22q: ... <quitting>
+23q: ... <quitting>
+24q: ... <quitting>
+25q: ... <quitting>
+26q: ... <quitting>
+31q: ... <quitting>
+32q: ... <quitting>
+33q: ... <quitting>
+34q: ... <quitting>
+41q: ... <quitting>
+42q: ... <quitting>
 
 select groupname, concurrency::int < 7, cpu_rate_limit::int < 7 from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
 groupname |?column?|?column?
@@ -447,7 +518,7 @@ t
 (6 rows)
 
 -- After all queries finished in each resource group, the memory_usage should be zero, no memory leak
-with t_1 as ( select rsgname, row_to_json(json_each(memory_usage::json)) as j from gp_toolkit.gp_resgroup_status where rsgname like 'rg_test_g%' order by rsgname ) select rsgname, sum((j->'value')::text::int) from t_1 group by rsgname ;
+with t_1 as ( select rsgname, row_to_json(json_each(memory_usage::json)) as j from gp_toolkit.gp_resgroup_status where rsgname like 'rg_test_g%' order by rsgname ) select rsgname, sum(((j->'value')->>'used')::int) from t_1 group by rsgname ;
 rsgname   |sum
 ----------+---
 rg_test_g1|0  
@@ -527,21 +598,25 @@ exec_commands_n
 100            
 (1 row)
 
-51:select dblink_disconnect('dblink_rg_test51');
+51: select dblink_disconnect('dblink_rg_test51');
 dblink_disconnect
 -----------------
 OK               
 (1 row)
-52:select dblink_disconnect('dblink_rg_test52');
+52: select dblink_disconnect('dblink_rg_test52');
 dblink_disconnect
 -----------------
 OK               
 (1 row)
-53:select dblink_disconnect('dblink_rg_test53');
+53: select dblink_disconnect('dblink_rg_test53');
 dblink_disconnect
 -----------------
 OK               
 (1 row)
+
+51q: ... <quitting>
+52q: ... <quitting>
+53q: ... <quitting>
 
 -- num_executed and num_queued must be zero
 select num_queued, num_executed from gp_toolkit.gp_resgroup_status where rsgname = 'rg_test_g8';
@@ -555,11 +630,9 @@ drop resource group rg_test_g8;
 DROP
 
 -- clean up
-alter resource group admin_group set concurrency 20;
-ALTER
 select * from gp_toolkit.gp_resgroup_config;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
 6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-6438   |admin_group  |20         |20                  |10            |10          |10                   |50                 |50                          |20                |20                         
+6438   |admin_group  |40         |40                  |10            |10          |10                   |50                 |50                          |20                |20                         
 (2 rows)

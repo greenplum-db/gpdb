@@ -3,10 +3,10 @@
  * trigger.h
  *	  Declarations for trigger handling.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/trigger.h,v 1.66.2.1 2008/09/19 14:43:47 mha Exp $
+ * $PostgreSQL: pgsql/src/include/commands/trigger.h,v 1.73 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -41,21 +41,26 @@ typedef struct TriggerData
 	Buffer		tg_newtuplebuf;
 } TriggerData;
 
-/* TriggerEvent bit flags */
-
+/*
+ * TriggerEvent bit flags
+ *
+ * Note that we assume different event types (INSERT/DELETE/UPDATE/TRUNCATE)
+ * can't be OR'd together in a single TriggerEvent.  This is unlike the
+ * situation for pg_trigger rows, so pg_trigger.tgtype uses a different
+ * representation!
+ */
 #define TRIGGER_EVENT_INSERT			0x00000000
 #define TRIGGER_EVENT_DELETE			0x00000001
 #define TRIGGER_EVENT_UPDATE			0x00000002
+#define TRIGGER_EVENT_TRUNCATE			0x00000003
 #define TRIGGER_EVENT_OPMASK			0x00000003
 #define TRIGGER_EVENT_ROW				0x00000004
 #define TRIGGER_EVENT_BEFORE			0x00000008
 
 /* More TriggerEvent flags, used only within trigger.c */
 
-#define AFTER_TRIGGER_DONE				0x00000010
-#define AFTER_TRIGGER_IN_PROGRESS		0x00000020
-#define AFTER_TRIGGER_DEFERRABLE		0x00000040
-#define AFTER_TRIGGER_INITDEFERRED		0x00000080
+#define AFTER_TRIGGER_DEFERRABLE		0x00000010
+#define AFTER_TRIGGER_INITDEFERRED		0x00000020
 
 #define TRIGGER_FIRED_BY_INSERT(event)	\
 		(((TriggerEvent) (event) & TRIGGER_EVENT_OPMASK) == \
@@ -68,6 +73,10 @@ typedef struct TriggerData
 #define TRIGGER_FIRED_BY_UPDATE(event)	\
 		(((TriggerEvent) (event) & TRIGGER_EVENT_OPMASK) == \
 												TRIGGER_EVENT_UPDATE)
+
+#define TRIGGER_FIRED_BY_TRUNCATE(event) \
+		(((TriggerEvent) (event) & TRIGGER_EVENT_OPMASK) == \
+												TRIGGER_EVENT_TRUNCATE)
 
 #define TRIGGER_FIRED_FOR_ROW(event)			\
 		((TriggerEvent) (event) & TRIGGER_EVENT_ROW)
@@ -87,14 +96,19 @@ typedef struct TriggerData
 #define SESSION_REPLICATION_ROLE_ORIGIN		0
 #define SESSION_REPLICATION_ROLE_REPLICA	1
 #define SESSION_REPLICATION_ROLE_LOCAL		2
-extern PGDLLIMPORT int	SessionReplicationRole;
+extern PGDLLIMPORT int SessionReplicationRole;
 
+/*
+ * States at which a trigger can be fired. These are the
+ * possible values for pg_trigger.tgenabled.
+ */
 #define TRIGGER_FIRES_ON_ORIGIN				'O'
 #define TRIGGER_FIRES_ALWAYS				'A'
 #define TRIGGER_FIRES_ON_REPLICA			'R'
 #define TRIGGER_DISABLED					'D'
 
-extern Oid	CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid);
+extern Oid CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid,
+			  bool checkPermissions);
 
 extern void DropTrigger(Oid relid, const char *trigname,
 			DropBehavior behavior, bool missing_ok);
@@ -144,6 +158,10 @@ extern void ExecARUpdateTriggers(EState *estate,
 					 ResultRelInfo *relinfo,
 					 ItemPointer tupleid,
 					 HeapTuple newtuple);
+extern void ExecBSTruncateTriggers(EState *estate,
+					   ResultRelInfo *relinfo);
+extern void ExecASTruncateTriggers(EState *estate,
+					   ResultRelInfo *relinfo);
 
 extern void AfterTriggerBeginXact(void);
 extern void AfterTriggerBeginQuery(void);

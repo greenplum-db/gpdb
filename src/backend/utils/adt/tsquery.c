@@ -3,11 +3,11 @@
  * tsquery.c
  *	  I/O functions for tsquery
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery.c,v 1.15.2.1 2008/04/11 22:52:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery.c,v 1.20 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "tsearch/ts_locale.h"
 #include "tsearch/ts_type.h"
 #include "tsearch/ts_utils.h"
+#include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/pg_crc.h"
 
@@ -55,12 +56,14 @@ struct TSQueryParserStateData
 #define WAITSINGLEOPERAND 4
 
 /*
- * subroutine to parse the weight part, like ':1AB' of a query.
+ * subroutine to parse the modifiers (weight and prefix flag currently)
+ * part, like ':1AB' of a query.
  */
 static char *
-get_weight(char *buf, int16 *weight)
+get_modifiers(char *buf, int16 *weight, bool *prefix)
 {
 	*weight = 0;
+	*prefix = false;
 
 	if (!t_iseq(buf, ':'))
 		return buf;
@@ -85,6 +88,9 @@ get_weight(char *buf, int16 *weight)
 			case 'd':
 			case 'D':
 				*weight |= 1;
+				break;
+			case '*':
+				*prefix = true;
 				break;
 			default:
 				return buf;
@@ -117,8 +123,11 @@ typedef enum
 static ts_tokentype
 gettoken_query(TSQueryParserState state,
 			   int8 *operator,
-			   int *lenval, char **strval, int16 *weight)
+			   int *lenval, char **strval, int16 *weight, bool *prefix)
 {
+	*weight = 0;
+	*prefix = false;
+
 	while (1)
 	{
 		switch (state->state)
@@ -156,7 +165,7 @@ gettoken_query(TSQueryParserState state,
 					reset_tsvector_parser(state->valstate, state->buf);
 					if (gettoken_tsvector(state->valstate, strval, lenval, NULL, NULL, &state->buf))
 					{
-						state->buf = get_weight(state->buf, weight);
+						state->buf = get_modifiers(state->buf, weight, prefix);
 						state->state = WAITOPERATOR;
 						return PT_VAL;
 					}
@@ -231,7 +240,7 @@ pushOperator(TSQueryParserState state, int8 oper)
 }
 
 static void
-pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int lenval, int weight)
+pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int lenval, int weight, bool prefix)
 {
 	QueryOperand *tmp;
 
@@ -249,6 +258,7 @@ pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int 
 	tmp = (QueryOperand *) palloc0(sizeof(QueryOperand));
 	tmp->type = QI_VAL;
 	tmp->weight = weight;
+	tmp->prefix = prefix;
 	tmp->valcrc = (int32) valcrc;
 	tmp->length = lenval;
 	tmp->distance = distance;
@@ -263,7 +273,7 @@ pushValue_internal(TSQueryParserState state, pg_crc32 valcrc, int distance, int 
  * of the string.
  */
 void
-pushValue(TSQueryParserState state, char *strval, int lenval, int2 weight)
+pushValue(TSQueryParserState state, char *strval, int lenval, int2 weight, bool prefix)
 {
 	pg_crc32	valcrc;
 
@@ -276,7 +286,7 @@ pushValue(TSQueryParserState state, char *strval, int lenval, int2 weight)
 	INIT_LEGACY_CRC32(valcrc);
 	COMP_LEGACY_CRC32(valcrc, strval, lenval);
 	FIN_LEGACY_CRC32(valcrc);
-	pushValue_internal(state, valcrc, state->curop - state->op, lenval, weight);
+	pushValue_internal(state, valcrc, state->curop - state->op, lenval, weight, prefix);
 
 	/* append the value string to state.op, enlarging buffer if needed first */
 	while (state->curop - state->op + lenval + 1 >= state->lenop)
@@ -329,16 +339,17 @@ makepol(TSQueryParserState state,
 	int8		opstack[STACKDEPTH];
 	int			lenstack = 0;
 	int16		weight = 0;
+	bool		prefix;
 
 	/* since this function recurses, it could be driven to stack overflow */
 	check_stack_depth();
 
-	while ((type = gettoken_query(state, &operator, &lenval, &strval, &weight)) != PT_END)
+	while ((type = gettoken_query(state, &operator, &lenval, &strval, &weight, &prefix)) != PT_END)
 	{
 		switch (type)
 		{
 			case PT_VAL:
-				pushval(opaque, state, strval, lenval, weight);
+				pushval(opaque, state, strval, lenval, weight, prefix);
 				while (lenstack && (opstack[lenstack - 1] == OP_AND ||
 									opstack[lenstack - 1] == OP_NOT))
 				{
@@ -548,9 +559,9 @@ parse_tsquery(char *buf,
 
 static void
 pushval_asis(Datum opaque, TSQueryParserState state, char *strval, int lenval,
-			 int16 weight)
+			 int16 weight, bool prefix)
 {
-	pushValue(state, strval, lenval, weight);
+	pushValue(state, strval, lenval, weight, prefix);
 }
 
 /*
@@ -604,7 +615,7 @@ infix(INFIX *in, bool first)
 		char	   *op = in->op + curpol->distance;
 		int			clen;
 
-		RESIZEBUF(in, curpol->length * (pg_database_encoding_max_length() + 1) + 2 + 5);
+		RESIZEBUF(in, curpol->length * (pg_database_encoding_max_length() + 1) + 2 + 6);
 		*(in->cur) = '\'';
 		in->cur++;
 		while (*op)
@@ -627,10 +638,15 @@ infix(INFIX *in, bool first)
 		}
 		*(in->cur) = '\'';
 		in->cur++;
-		if (curpol->weight)
+		if (curpol->weight || curpol->prefix)
 		{
 			*(in->cur) = ':';
 			in->cur++;
+			if (curpol->prefix)
+			{
+				*(in->cur) = '*';
+				in->cur++;
+			}
 			if (curpol->weight & (1 << 3))
 			{
 				*(in->cur) = 'A';
@@ -768,6 +784,7 @@ tsqueryout(PG_FUNCTION_ARGS)
  * uint8	type, QI_VAL
  * uint8	weight
  *			operand text in client encoding, null-terminated
+ * uint8	prefix
  *
  * For each operator:
  * uint8	type, QI_OPR
@@ -792,6 +809,7 @@ tsquerysend(PG_FUNCTION_ARGS)
 		{
 			case QI_VAL:
 				pq_sendint(&buf, item->operand.weight, sizeof(uint8));
+				pq_sendint(&buf, item->operand.prefix, sizeof(uint8));
 				pq_sendstring(&buf, GETOPERAND(query) + item->operand.distance);
 				break;
 			case QI_OPR:
@@ -843,10 +861,12 @@ tsqueryrecv(PG_FUNCTION_ARGS)
 		{
 			size_t		val_len;	/* length after recoding to server encoding */
 			uint8		weight;
+			uint8		prefix;
 			const char *val;
 			pg_crc32	valcrc;
 
 			weight = (uint8) pq_getmsgint(buf, sizeof(uint8));
+			prefix = (uint8) pq_getmsgint(buf, sizeof(uint8));
 			val = pq_getmsgstring(buf);
 			val_len = strlen(val);
 
@@ -868,6 +888,7 @@ tsqueryrecv(PG_FUNCTION_ARGS)
 			FIN_LEGACY_CRC32(valcrc);
 
 			item->operand.weight = weight;
+			item->operand.prefix = (prefix) ? true : false;
 			item->operand.valcrc = (int32) valcrc;
 			item->operand.length = val_len;
 			item->operand.distance = datalen;
@@ -954,9 +975,7 @@ tsquerytree(PG_FUNCTION_ARGS)
 
 	if (!q)
 	{
-		res = (text *) palloc(1 + VARHDRSZ);
-		SET_VARSIZE(res, 1 + VARHDRSZ);
-		*((char *) VARDATA(res)) = 'T';
+		res = cstring_to_text("T");
 	}
 	else
 	{
@@ -966,14 +985,11 @@ tsquerytree(PG_FUNCTION_ARGS)
 		*(nrm.cur) = '\0';
 		nrm.op = GETOPERAND(query);
 		infix(&nrm, true);
-
-		res = (text *) palloc(nrm.cur - nrm.buf + VARHDRSZ);
-		SET_VARSIZE(res, nrm.cur - nrm.buf + VARHDRSZ);
-		strncpy(VARDATA(res), nrm.buf, nrm.cur - nrm.buf);
+		res = cstring_to_text_with_len(nrm.buf, nrm.cur - nrm.buf);
 		pfree(q);
 	}
 
 	PG_FREE_IF_COPY(query, 0);
 
-	PG_RETURN_POINTER(res);
+	PG_RETURN_TEXT_P(res);
 }

@@ -1,18 +1,17 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_type.sgml,v 1.4 2006/09/16 00:30:16 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_type.sgml,v 1.7 2008/11/14 10:22:45 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTYPE">
  <refmeta>
   <refentrytitle id="sql-altertype-title">ALTER TYPE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
  <refnamediv>
-  <refname>
-   ALTER TYPE
-  </refname>
+  <refname>ALTER TYPE</refname>
   <refpurpose>
    change the definition of a type
   </refpurpose>
@@ -24,10 +23,10 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
   <synopsis>
-ALTER TYPE <replaceable class="PARAMETER">name</replaceable> 
-   SET DEFAULT ENCODING ( storage_directive )
-     OWNER TO <replaceable class="PARAMETER">new_owner</replaceable> 
-   | SET SCHEMA <replaceable class="PARAMETER">new_schema</replaceable>
+ALTER TYPE <replaceable class="PARAMETER">name</replaceable> RENAME TO <replaceable class="PARAMETER">new_name</replaceable>
+ALTER TYPE <replaceable class="PARAMETER">name</replaceable> OWNER TO <replaceable class="PARAMETER">new_owner</replaceable> 
+ALTER TYPE <replaceable class="PARAMETER">name</replaceable> SET SCHEMA <replaceable class="PARAMETER">new_schema</replaceable>
+ALTER TYPE <replaceable class="PARAMETER">name</replaceable> SET DEFAULT ENCODING ( storage_directive )
   </synopsis>
  </refsynopsisdiv>
 
@@ -36,8 +35,6 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
 
   <para>
    <command>ALTER TYPE</command> changes the definition of an existing type.
-   The only currently available capabilities are changing the owner and schema
-   of a type.
   </para>
 
   <para>
@@ -68,6 +65,15 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
      </varlistentry>
 
      <varlistentry>
+      <term><replaceable class="PARAMETER">new_name</replaceable></term>
+      <listitem>
+       <para>
+        The new name for the type.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><replaceable class="PARAMETER">new_owner</replaceable></term>
       <listitem>
        <para>
@@ -85,23 +91,6 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
       </listitem>
      </varlistentry>
 
-     <varlistentry>
-      <term><replaceable class="PARAMETER">storage_directive</replaceable></term>
-      <listitem>
-       <para>
-        Sets any or all of the following: compression type, compression level, 
-        and blocksize, using the following format:
-        COMPRESSTYPE={ZLIB | QUICKLZ | RLE_TYPE | NONE} | 
-        COMPRESSLEVEL={0-9} | BLOCKSIZE={8192-2097152}
-       </para>
-       <para>
-       For more information on the compression and blocksize parameters, see the
-       "Storage Directives for Column-level Compression" in the Greenplum
-       Database Administrator Guide.
-       </para>
-      </listitem>
-     </varlistentry>
-
     </variablelist>
    </para>
   </refsect1>
@@ -110,7 +99,14 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
   <title>Examples</title>
 
   <para> 
-   To change the owner of the user-defined type <literal>email</literal>
+   To rename a data type:
+   <programlisting>
+ALTER TYPE electronic_mail RENAME TO email;
+   </programlisting>
+  </para>
+
+  <para> 
+   To change the owner of the type <literal>email</literal>
    to <literal>joe</literal>:
    <programlisting>
 ALTER TYPE email OWNER TO joe;
@@ -118,17 +114,10 @@ ALTER TYPE email OWNER TO joe;
   </para>
 
   <para>
-   To change the schema of the user-defined type <literal>email</literal>
+   To change the schema of the type <literal>email</literal>
    to <literal>customers</literal>:
    <programlisting>
 ALTER TYPE email SET SCHEMA customers;
-   </programlisting>
-  </para>
-
-  <para>
-   To change the type int to have ZLIB column compression:
-   <programlisting>
-ALTER TYPE int SET DEFAULT ENCODING (COMPRESSTYPE=ZLIB);
    </programlisting>
   </para>
  </refsect1>

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_comp.c,v 1.121.2.1 2008/10/09 16:35:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_comp.c,v 1.136 2009/06/11 14:49:14 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,12 +19,12 @@
 
 #include "pl_gram.h"
 
-#include "access/heapam.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_proc.h"
+#include "catalog/pg_proc_fn.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "nodes/makefuncs.h"
@@ -262,7 +262,7 @@ do_compile(FunctionCallInfo fcinfo,
 		   bool forValidator)
 {
 	Form_pg_proc procStruct = (Form_pg_proc) GETSTRUCT(procTup);
-	int			functype = CALLED_AS_TRIGGER(fcinfo) ? T_TRIGGER : T_FUNCTION;
+	bool		is_trigger = CALLED_AS_TRIGGER(fcinfo);
 	Datum		prosrcdatum;
 	bool		isnull;
 	char	   *proc_source;
@@ -293,8 +293,8 @@ do_compile(FunctionCallInfo fcinfo,
 								  Anum_pg_proc_prosrc, &isnull);
 	if (isnull)
 		elog(ERROR, "null prosrc");
-	proc_source = DatumGetCString(DirectFunctionCall1(textout, prosrcdatum));
-	plpgsql_scanner_init(proc_source, functype);
+	proc_source = TextDatumGetCString(prosrcdatum);
+	plpgsql_scanner_init(proc_source);
 
 	plpgsql_error_funcname = pstrdup(NameStr(procStruct->proname));
 	plpgsql_error_lineno = 0;
@@ -360,13 +360,13 @@ do_compile(FunctionCallInfo fcinfo,
 	function->fn_oid = fcinfo->flinfo->fn_oid;
 	function->fn_xmin = HeapTupleHeaderGetXmin(procTup->t_data);
 	function->fn_tid = procTup->t_self;
-	function->fn_functype = functype;
+	function->fn_is_trigger = is_trigger;
 	function->fn_cxt = func_cxt;
 	function->out_param_varno = -1;		/* set up for no OUT param */
 
-	switch (functype)
+	switch (is_trigger)
 	{
-		case T_FUNCTION:
+		case false:
 
 			/*
 			 * Fetch info about the procedure's parameters. Allocations aren't
@@ -416,8 +416,8 @@ do_compile(FunctionCallInfo fcinfo,
 					argdtype->ttype != PLPGSQL_TTYPE_ROW)
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("plpgsql functions cannot take type %s",
-									format_type_be(argtypeid))));
+						   errmsg("PL/pgSQL functions cannot accept type %s",
+								  format_type_be(argtypeid))));
 
 				/* Build variable and add to datum list */
 				argvariable = plpgsql_build_variable(buf, 0,
@@ -488,7 +488,7 @@ do_compile(FunctionCallInfo fcinfo,
 													   num_out_args);
 
 				plpgsql_adddatum((PLpgSQL_datum *) row);
-				function->out_param_varno = row->rowno;
+				function->out_param_varno = row->dno;
 			}
 
 			/*
@@ -554,8 +554,8 @@ do_compile(FunctionCallInfo fcinfo,
 				else
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("plpgsql functions cannot return type %s",
-									format_type_be(rettypeid))));
+						   errmsg("PL/pgSQL functions cannot return type %s",
+								  format_type_be(rettypeid))));
 			}
 
 			if (typeStruct->typrelid != InvalidOid ||
@@ -584,7 +584,7 @@ do_compile(FunctionCallInfo fcinfo,
 			ReleaseSysCache(typeTup);
 			break;
 
-		case T_TRIGGER:
+		case true:
 			/* Trigger procedure's return type is unknown yet */
 			function->fn_rettype = InvalidOid;
 			function->fn_retbyval = false;
@@ -596,29 +596,15 @@ do_compile(FunctionCallInfo fcinfo,
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				  errmsg("trigger functions cannot have declared arguments"),
-						 errhint("You probably want to use TG_NARGS and TG_ARGV instead.")));
+						 errhint("The arguments of the trigger can be accessed through TG_NARGS and TG_ARGV instead.")));
 
 			/* Add the record for referencing NEW */
-			rec = palloc0(sizeof(PLpgSQL_rec));
-			rec->dtype = PLPGSQL_DTYPE_REC;
-			rec->refname = pstrdup("new");
-			rec->tup = NULL;
-			rec->tupdesc = NULL;
-			rec->freetup = false;
-			plpgsql_adddatum((PLpgSQL_datum *) rec);
-			plpgsql_ns_additem(PLPGSQL_NSTYPE_REC, rec->recno, rec->refname);
-			function->new_varno = rec->recno;
+			rec = plpgsql_build_record("new", 0, true);
+			function->new_varno = rec->dno;
 
 			/* Add the record for referencing OLD */
-			rec = palloc0(sizeof(PLpgSQL_rec));
-			rec->dtype = PLPGSQL_DTYPE_REC;
-			rec->refname = pstrdup("old");
-			rec->tup = NULL;
-			rec->tupdesc = NULL;
-			rec->freetup = false;
-			plpgsql_adddatum((PLpgSQL_datum *) rec);
-			plpgsql_ns_additem(PLPGSQL_NSTYPE_REC, rec->recno, rec->refname);
-			function->old_varno = rec->recno;
+			rec = plpgsql_build_record("old", 0, true);
+			function->old_varno = rec->dno;
 
 			/* Add the variable tg_name */
 			var = plpgsql_build_variable("tg_name", 0,
@@ -679,7 +665,7 @@ do_compile(FunctionCallInfo fcinfo,
 			break;
 
 		default:
-			elog(ERROR, "unrecognized function typecode: %u", functype);
+			elog(ERROR, "unrecognized function typecode: %d", (int) is_trigger);
 			break;
 	}
 
@@ -764,7 +750,6 @@ PLpgSQL_function *
 plpgsql_compile_inline(FunctionCallInfo fcinfo, char *proc_source)
 {
 	char	   *func_name = "inline_code_block";
-	int			functype = CALLED_AS_TRIGGER(fcinfo) ? T_TRIGGER : T_FUNCTION;
 	PLpgSQL_function *function;
 	ErrorContextCallback plerrcontext;
 	Oid			typinput;
@@ -778,7 +763,7 @@ plpgsql_compile_inline(FunctionCallInfo fcinfo, char *proc_source)
 	 * cannot be invoked recursively, so there's no need to save and restore
 	 * the static variables used here.
 	 */
-	plpgsql_scanner_init(proc_source, functype);
+	plpgsql_scanner_init(proc_source);
 
 	plpgsql_error_funcname = func_name;
 	plpgsql_error_lineno = 0;
@@ -914,7 +899,7 @@ plpgsql_compile_error_callback(void *arg)
 	}
 
 	if (plpgsql_error_funcname)
-		errcontext("compile of PL/pgSQL function \"%s\" near line %d",
+		errcontext("compilation of PL/pgSQL function \"%s\" near line %d",
 				   plpgsql_error_funcname, plpgsql_error_lineno);
 }
 
@@ -970,10 +955,10 @@ plpgsql_parse_word(const char *word)
 	plpgsql_convert_ident(word, cp, 1);
 
 	/*
-	 * Recognize tg_argv when compiling triggers
-	 * (XXX this sucks, it should be a regular variable in the namestack)
+	 * Recognize tg_argv when compiling triggers (XXX this sucks, it should be
+	 * a regular variable in the namestack)
 	 */
-	if (plpgsql_curr_compile->fn_functype == T_TRIGGER)
+	if (plpgsql_curr_compile->fn_is_trigger)
 	{
 		if (strcmp(cp[0], "tg_argv") == 0)
 		{
@@ -1160,8 +1145,8 @@ plpgsql_parse_tripword(const char *word)
 	plpgsql_convert_ident(word, cp, 3);
 
 	/*
-	 * Do a lookup on the compiler's namestack.
-	 * Must find a qualified reference.
+	 * Do a lookup on the compiler's namestack. Must find a qualified
+	 * reference.
 	 */
 	ns = plpgsql_ns_lookup(cp[0], cp[1], cp[2], &nnames);
 	if (ns == NULL || nnames != 2)
@@ -1351,8 +1336,8 @@ plpgsql_parse_dblwordtype(char *word)
 	pfree(cp[2]);
 
 	/*
-	 * Do a lookup on the compiler's namestack.  Ensure we scan all levels.
-	 * We don't need to check number of names matched, because we will only
+	 * Do a lookup on the compiler's namestack.  Ensure we scan all levels. We
+	 * don't need to check number of names matched, because we will only
 	 * consider scalar variables.
 	 */
 	old_nsstate = plpgsql_ns_setlocal(false);
@@ -1628,7 +1613,7 @@ plpgsql_build_variable(const char *refname, int lineno, PLpgSQL_type *dtype,
 				plpgsql_adddatum((PLpgSQL_datum *) var);
 				if (add2namespace)
 					plpgsql_ns_additem(PLPGSQL_NSTYPE_VAR,
-									   var->varno,
+									   var->dno,
 									   refname);
 				result = (PLpgSQL_variable *) var;
 				break;
@@ -1647,28 +1632,17 @@ plpgsql_build_variable(const char *refname, int lineno, PLpgSQL_type *dtype,
 				plpgsql_adddatum((PLpgSQL_datum *) row);
 				if (add2namespace)
 					plpgsql_ns_additem(PLPGSQL_NSTYPE_ROW,
-									   row->rowno,
+									   row->dno,
 									   refname);
 				result = (PLpgSQL_variable *) row;
 				break;
 			}
 		case PLPGSQL_TTYPE_REC:
 			{
-				/*
-				 * "record" type -- build a variable-contents record variable
-				 */
+				/* "record" type -- build a record variable */
 				PLpgSQL_rec *rec;
 
-				rec = palloc0(sizeof(PLpgSQL_rec));
-				rec->dtype = PLPGSQL_DTYPE_REC;
-				rec->refname = pstrdup(refname);
-				rec->lineno = lineno;
-
-				plpgsql_adddatum((PLpgSQL_datum *) rec);
-				if (add2namespace)
-					plpgsql_ns_additem(PLPGSQL_NSTYPE_REC,
-									   rec->recno,
-									   refname);
+				rec = plpgsql_build_record(refname, lineno, add2namespace);
 				result = (PLpgSQL_variable *) rec;
 				break;
 			}
@@ -1686,6 +1660,28 @@ plpgsql_build_variable(const char *refname, int lineno, PLpgSQL_type *dtype,
 	}
 
 	return result;
+}
+
+/*
+ * Build empty named record variable, and optionally add it to namespace
+ */
+PLpgSQL_rec *
+plpgsql_build_record(const char *refname, int lineno, bool add2namespace)
+{
+	PLpgSQL_rec *rec;
+
+	rec = palloc0(sizeof(PLpgSQL_rec));
+	rec->dtype = PLPGSQL_DTYPE_REC;
+	rec->refname = pstrdup(refname);
+	rec->lineno = lineno;
+	rec->tup = NULL;
+	rec->tupdesc = NULL;
+	rec->freetup = false;
+	plpgsql_adddatum((PLpgSQL_datum *) rec);
+	if (add2namespace)
+		plpgsql_ns_additem(PLPGSQL_NSTYPE_REC, rec->dno, rec->refname);
+
+	return rec;
 }
 
 /*
@@ -1924,6 +1920,42 @@ build_datatype(HeapTuple typeTup, int32 typmod)
 	typ->atttypmod = typmod;
 
 	return typ;
+}
+
+/*
+ *	plpgsql_recognize_err_condition
+ *		Check condition name and translate it to SQLSTATE.
+ *
+ * Note: there are some cases where the same condition name has multiple
+ * entries in the table.  We arbitrarily return the first match.
+ */
+int
+plpgsql_recognize_err_condition(const char *condname, bool allow_sqlstate)
+{
+	int			i;
+
+	if (allow_sqlstate)
+	{
+		if (strlen(condname) == 5 &&
+			strspn(condname, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") == 5)
+			return MAKE_SQLSTATE(condname[0],
+								 condname[1],
+								 condname[2],
+								 condname[3],
+								 condname[4]);
+	}
+
+	for (i = 0; exception_label_map[i].label != NULL; i++)
+	{
+		if (strcmp(condname, exception_label_map[i].label) == 0)
+			return exception_label_map[i].sqlerrstate;
+	}
+
+	ereport(ERROR,
+			(errcode(ERRCODE_UNDEFINED_OBJECT),
+			 errmsg("unrecognized exception condition \"%s\"",
+					condname)));
+	return 0;					/* keep compiler quiet */
 }
 
 /*

@@ -47,7 +47,7 @@ LargeObjectCreate(Oid loid)
 	 */
 	for (i = 0; i < Natts_pg_largeobject; i++)
 	{
-		values[i] = (Datum) 0;
+		values[i] = (Datum) NULL;
 		nulls[i] = false;
 	}
 

@@ -12,7 +12,7 @@
  -- and field "col_empty" only contains blanks, 
  -- then a NULL will be loaded into the table,
  -- even with preseve_blanks = on
- select * from tbl_ext_fixedwidth where col_empty is null order by s1;
+ select * from tbl_ext_fixedwidth where col_empty is null;
 
  -- 2. Define null = 'vara'
  DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
@@ -27,7 +27,7 @@
  -- and field "col_empty" only contains blanks, 
  -- then an empty string will be loaded into the table
  -- only word 'vara' will be replaced as null
- select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
+ select * from tbl_ext_fixedwidth where col_empty is not null;
 
  select * from tbl_ext_fixedwidth where s2 is null and col_empty is not null;
 
@@ -44,6 +44,6 @@
  -- and field "col_empty" only contains blanks, 
  -- then an empty string will be loaded into the table
  -- only word 'NULL' will be replaced as null
- select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
+ select * from tbl_ext_fixedwidth where col_empty is not null;
 
  select * from tbl_ext_fixedwidth where col_null is null and col_empty is not null;

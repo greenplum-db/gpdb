@@ -1,8 +1,16 @@
-/* 
- * In Memory Tuple format
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2008, Greenplum inc
+ * memtup.h
+ *	  In Memory Tuple format
  *
+ * Portions Copyright (c) 2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/memtup.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef MEMTUP_H
 #define MEMTUP_H

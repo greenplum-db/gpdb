@@ -4,10 +4,10 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeSort.h,v 1.24 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeSort.h,v 1.25 2009/01/01 17:23:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,10 +24,5 @@ extern void ExecSortMarkPos(SortState *node);
 extern void ExecSortRestrPos(SortState *node);
 extern void ExecReScanSort(SortState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeSort(SortState *node);
-
-static inline gpmon_packet_t * GpmonPktFromSortState(SortState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 
 #endif   /* NODESORT_H */

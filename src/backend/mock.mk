@@ -8,7 +8,7 @@
 include $(top_srcdir)/src/Makefile.mock
 
 override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
-					-I$(top_srcdir)/src/backend/gp_libpq_fe \
+					-I$(libpq_srcdir) \
 					-I$(top_srcdir)/src/backend/postmaster \
 					-I. -I$(top_builddir)/src/port \
 					-DDLSUFFIX=$(DLSUFFIX) \
@@ -16,7 +16,7 @@ override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
 
 # TODO: add ldl for quick hack; we need to figure out why
 # postgres in src/backend/Makefile doesn't need this and -pthread.
-MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS)) $(LDAP_LIBS_BE)
+MOCK_LIBS := -ldl $(filter-out -ledit, $(LIBS)) $(LDAP_LIBS_BE)
 
 # These files are not linked into test programs.
 EXCL_OBJS=\
@@ -38,11 +38,7 @@ EXCL_OBJS+=\
 	src/backend/access/gist/%.o \
 	src/backend/access/gin/%.o \
 	src/backend/access/hash/hash.o \
-	src/backend/access/hash/hashinsert.o \
-	src/backend/access/hash/hashovfl.o \
-	src/backend/access/hash/hashpage.o \
 	src/backend/access/hash/hashsearch.o \
-	src/backend/access/hash/hashutil.o \
 	\
 	src/backend/utils/adt/ascii.o \
 	src/backend/utils/adt/cash.o \

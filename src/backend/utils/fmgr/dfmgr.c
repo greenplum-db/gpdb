@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/dfmgr.c,v 1.99.2.1 2009/09/03 22:11:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/dfmgr.c,v 1.99 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -319,12 +319,7 @@ get_magic_product(const Pg_magic_struct *module_magic_data)
 
 		/* Handle Unrecognized product codes */
 		default:
-		{
-			size_t len = sizeof("Product()") + 10 + 1;
-			char *prodname = palloc(len);
-			snprintf(prodname, len, "Product(%d)", module_magic_data->product);
-			return prodname;
-		}
+			return psprintf("Product(%d)", module_magic_data->product);
 	}
 }
 
@@ -387,9 +382,7 @@ incompatible_module_error(const char *libname,
 	if (module_magic_data->funcmaxargs != magic_data.funcmaxargs)
 	{
 		if (details.len)
-		{
 			appendStringInfoChar(&details, '\n');
-		}
 		appendStringInfo(&details,
 						 _("Server has FUNC_MAX_ARGS = %d, library has %d."),
 						 magic_data.funcmaxargs,
@@ -398,9 +391,7 @@ incompatible_module_error(const char *libname,
 	if (module_magic_data->indexmaxkeys != magic_data.indexmaxkeys)
 	{
 		if (details.len)
-		{
 			appendStringInfoChar(&details, '\n');
-		}
 		appendStringInfo(&details,
 						 _("Server has INDEX_MAX_KEYS = %d, library has %d."),
 						 magic_data.indexmaxkeys,
@@ -409,9 +400,7 @@ incompatible_module_error(const char *libname,
 	if (module_magic_data->namedatalen != magic_data.namedatalen)
 	{
 		if (details.len)
-		{
 			appendStringInfoChar(&details, '\n');
-		}
 		appendStringInfo(&details,
 						 _("Server has NAMEDATALEN = %d, library has %d."),
 						 magic_data.namedatalen,
@@ -420,9 +409,7 @@ incompatible_module_error(const char *libname,
 	if (module_magic_data->float4byval != magic_data.float4byval)
 	{
 		if (details.len)
-		{
 			appendStringInfoChar(&details, '\n');
-		}
 		appendStringInfo(&details,
 					   _("Server has FLOAT4PASSBYVAL = %s, library has %s."),
 						 magic_data.float4byval ? "true" : "false",
@@ -431,9 +418,7 @@ incompatible_module_error(const char *libname,
 	if (module_magic_data->float8byval != magic_data.float8byval)
 	{
 		if (details.len)
-		{
 			appendStringInfoChar(&details, '\n');
-		}
 		appendStringInfo(&details,
 					   _("Server has FLOAT8PASSBYVAL = %s, library has %s."),
 						 magic_data.float8byval ? "true" : "false",
@@ -441,10 +426,8 @@ incompatible_module_error(const char *libname,
 	}
 
 	if (details.len == 0)
-	{
 		appendStringInfo(&details,
 			  _("Magic block has unexpected length or padding difference."));
-	}
 
 	ereport(ERROR,
 			(errmsg("incompatible library \"%s\": magic block mismatch",

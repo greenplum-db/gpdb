@@ -57,7 +57,9 @@ select gp_inject_fault('qe_got_snapshot_and_interconnect', 'suspend', 2);
 DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
+-- start_ignore
 select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', 2);
+-- end_ignore
 select gp_inject_fault('qe_got_snapshot_and_interconnect', 'resume', 2);
 FETCH cursor_c2;
 SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
@@ -386,8 +388,32 @@ SET gp_interconnect_queue_depth to 20;
 FETCH ABSOLUTE 1 IN CUR;
 
 COMMIT;
+
+
+--
+-- Shared snapshot files for cursor should be gone after transaction commits.
+--
+CREATE EXTERNAL WEB TABLE check_cursor_files(a int)
+EXECUTE 'find base | grep pgsql_tmp | grep _sync | wc -l'
+FORMAT 'TEXT';
+
+BEGIN;
+DECLARE c CURSOR FOR SELECT * FROM ctest ORDER BY id;
+FETCH 1 FROM c;
+
+-- There should be a shared snapshot file on every segment.
+SELECT DISTINCT a FROM check_cursor_files;
+
+-- holdable cursor should be ok
+DECLARE c_hold CURSOR WITH HOLD FOR SELECT * FROM ctest ORDER BY id;
+COMMIT;
+
+-- After commit, the shared snapshot files should be deleted.
+SELECT DISTINCT a FROM check_cursor_files;
+
+FETCH 1 FROM c_hold;
+
 --start_ignore
 DROP INDEX if exists ctest_id_idx;
 DROP TABLE if exists ctest;
 --end_ignore
-

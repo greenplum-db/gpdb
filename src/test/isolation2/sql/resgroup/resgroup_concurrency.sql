@@ -127,10 +127,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 
--- test5: concurrently alter resource group cpu rate limit
--- NONE
-
--- test6: cancel a query that is waiting for a slot
+-- test5: QD exit before QE 
 DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
@@ -152,6 +149,25 @@ SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='re
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 
+-- test6: cancel a query that is waiting for a slot
+DROP ROLE IF EXISTS role_concurrency_test;
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+51:SET ROLE role_concurrency_test;
+51:BEGIN;
+52:SET ROLE role_concurrency_test;
+52&:BEGIN;
+51q:
+52<:
+52q:
+DROP ROLE role_concurrency_test;
+DROP RESOURCE GROUP rg_concurrency_test;
+
+
 -- test7: terminate a query that is waiting for a slot
 DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
@@ -168,6 +184,42 @@ SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting_reason=
 62<:
 61q:
 62q:
+DROP ROLE role_concurrency_test;
+DROP RESOURCE GROUP rg_concurrency_test;
+
+-- test8: create a resgroup with concurrency=0
+DROP ROLE IF EXISTS role_concurrency_test;
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+61:SET ROLE role_concurrency_test;
+61&:BEGIN;
+SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+61<:
+61q:
+DROP ROLE role_concurrency_test;
+DROP RESOURCE GROUP rg_concurrency_test;
+
+-- test9: SET command should be bypassed
+DROP ROLE IF EXISTS role_concurrency_test;
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+61: SET ROLE role_concurrency_test;
+61&: SELECT 1;
+ALTER RESOURCE GROUP rg_concurrency_test set concurrency 1;
+61<:
+ALTER RESOURCE GROUP rg_concurrency_test set concurrency 0;
+61: SET enable_hashagg to on;
+61: SHOW enable_hashagg;
+61: invalid_syntax;
+61q:
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 

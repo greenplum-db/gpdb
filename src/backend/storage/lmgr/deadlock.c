@@ -7,12 +7,12 @@
  * detection and resolution algorithms.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/deadlock.c,v 1.51 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/deadlock.c,v 1.57 2009/06/11 14:49:02 momjian Exp $
  *
  *	Interface:
  *
@@ -26,6 +26,8 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "pg_trace.h"
+#include "pgstat.h"
 #include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "utils/memutils.h"
@@ -222,6 +224,8 @@ DeadLockCheck(PGPROC *proc)
 		 * deadlockDetails[] for the basic state with no rearrangements.
 		 */
 		int			nSoftEdges;
+
+		TRACE_POSTGRESQL_DEADLOCK_FOUND();
 
 		nWaitOrders = 0;
 		if (!FindLockCycle(proc, possibleConstraints, &nSoftEdges))
@@ -496,7 +500,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 	/*
 	 * If the proc is not waiting, we have no outgoing waits-for edges.
 	 */
-	if (checkProc->links.next == INVALID_OFFSET)
+	if (checkProc->links.next == NULL)
 		return false;
 	lock = checkProc->waitLock;
 	if (lock == NULL)
@@ -638,7 +642,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 		waitQueue = &(lock->waitProcs);
 		queue_size = waitQueue->size;
 
-		proc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+		proc = (PGPROC *) waitQueue->links.next;
 
 		while (queue_size-- > 0)
 		{
@@ -671,7 +675,7 @@ FindLockCycleRecurse(PGPROC *checkProc,
 				}
 			}
 
-			proc = (PGPROC *) MAKE_PTR(proc->links.next);
+			proc = (PGPROC *) proc->links.next;
 		}
 	}
 
@@ -781,11 +785,11 @@ TopoSort(LOCK *lock,
 				last;
 
 	/* First, fill topoProcs[] array with the procs in their current order */
-	proc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+	proc = (PGPROC *) waitQueue->links.next;
 	for (i = 0; i < queue_size; i++)
 	{
 		topoProcs[i] = proc;
-		proc = (PGPROC *) MAKE_PTR(proc->links.next);
+		proc = (PGPROC *) proc->links.next;
 	}
 
 	/*
@@ -873,12 +877,12 @@ PrintLockQueue(LOCK *lock, const char *info)
 	PGPROC	   *proc;
 	int			i;
 
-	printf("%s lock %lx queue ", info, MAKE_OFFSET(lock));
-	proc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
+	printf("%s lock %p queue ", info, lock);
+	proc = (PGPROC *) waitQueue->links.next;
 	for (i = 0; i < queue_size; i++)
 	{
 		printf(" %d", proc->pid);
-		proc = (PGPROC *) MAKE_PTR(proc->links.next);
+		proc = (PGPROC *) proc->links.next;
 	}
 	printf("\n");
 	fflush(stdout);
@@ -891,13 +895,16 @@ PrintLockQueue(LOCK *lock, const char *info)
 void
 DeadLockReport(void)
 {
-	StringInfoData buf;
-	StringInfoData buf2;
+	StringInfoData clientbuf;	/* errdetail for client */
+	StringInfoData logbuf;		/* errdetail for server log */
+	StringInfoData locktagbuf;
 	int			i;
 
-	initStringInfo(&buf);
-	initStringInfo(&buf2);
+	initStringInfo(&clientbuf);
+	initStringInfo(&logbuf);
+	initStringInfo(&locktagbuf);
 
+	/* Generate the "waits for" lines sent to the client */
 	for (i = 0; i < nDeadlockDetails; i++)
 	{
 		DEADLOCK_INFO *info = &deadlockDetails[i];
@@ -909,26 +916,45 @@ DeadLockReport(void)
 		else
 			nextpid = deadlockDetails[0].pid;
 
+		/* reset locktagbuf to hold next object description */
+		resetStringInfo(&locktagbuf);
+
+		DescribeLockTag(&locktagbuf, &info->locktag);
+
 		if (i > 0)
-			appendStringInfoChar(&buf, '\n');
+			appendStringInfoChar(&clientbuf, '\n');
 
-		/* reset buf2 to hold next object description */
-		resetStringInfo(&buf2);
-
-		DescribeLockTag(&buf2, &info->locktag);
-
-		appendStringInfo(&buf,
+		appendStringInfo(&clientbuf,
 				  _("Process %d waits for %s on %s; blocked by process %d."),
 						 info->pid,
 						 GetLockmodeName(info->locktag.locktag_lockmethodid,
 										 info->lockmode),
-						 buf2.data,
+						 locktagbuf.data,
 						 nextpid);
 	}
+
+	/* Duplicate all the above for the server ... */
+	appendStringInfoString(&logbuf, clientbuf.data);
+
+	/* ... and add info about query strings */
+	for (i = 0; i < nDeadlockDetails; i++)
+	{
+		DEADLOCK_INFO *info = &deadlockDetails[i];
+
+		appendStringInfoChar(&logbuf, '\n');
+
+		appendStringInfo(&logbuf,
+						 _("Process %d: %s"),
+						 info->pid,
+					  pgstat_get_backend_current_activity(info->pid, false));
+	}
+
 	ereport(ERROR,
 			(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
 			 errmsg("deadlock detected"),
-			 errdetail("%s", buf.data)));
+			 errdetail("%s", clientbuf.data),
+			 errdetail_log("%s", logbuf.data),
+			 errhint("See server log for query details.")));
 }
 
 /*

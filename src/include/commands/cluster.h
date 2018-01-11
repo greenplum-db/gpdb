@@ -3,10 +3,10 @@
  * cluster.h
  *	  header file for postgres cluster command stuff
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/cluster.h,v 1.34 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/cluster.h,v 1.36 2009/01/01 17:23:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -14,7 +14,7 @@
 #define CLUSTER_H
 
 #include "nodes/parsenodes.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 
 
 extern void cluster(ClusterStmt *stmt, bool isTopLevel);

@@ -1055,7 +1055,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a);
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.13..2.18 rows=4 width=4)
-   ->  Hash EXISTS Join  (cost=1.13..2.18 rows=2 width=4)
+   ->  Hash Semi Join  (cost=1.13..2.18 rows=2 width=4)
          Hash Cond: public.table_a.a0 = "IN_subquery".max
          ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=4)
          ->  Hash  (cost=1.12..1.12 rows=1 width=4)
@@ -1095,7 +1095,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.13..2.18 rows=4 width=4)
-   ->  Hash EXISTS Join  (cost=1.13..2.18 rows=2 width=4)
+   ->  Hash Semi Join  (cost=1.13..2.18 rows=2 width=4)
          Hash Cond: public.table_a.a0 = "IN_subquery".max
          ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=4)
          ->  Hash  (cost=1.12..1.12 rows=1 width=4)

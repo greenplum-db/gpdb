@@ -57,9 +57,9 @@
             <entry colname="col2">smallint</entry>
             <entry colname="col3"/>
             <entry colname="col4">The compression level, with compression ratio increasing from 1 to
-              9. <p otherprops="pivotal">When <codeph>quicklz</codeph><sup>1</sup> is specified for
+              19. <p otherprops="pivotal">When <codeph>quicklz</codeph><sup>1</sup> is specified for
                 compresstype, valid values are 1 or 3. With <codeph>zlib</codeph> specified, valid
-                values are 1-9. </p></entry>
+                values are 1-9. When <codeph>zstd</codeph> is specified, valid values are 1-19.</p></entry>
           </row>
           <row>
             <entry colname="col1">
@@ -95,6 +95,7 @@
             <entry colname="col4">Type of compression used to compress append-optimized tables.
               Valid values are:<ul id="ul_mrr_hwj_f1b">
                 <li><codeph>zlib</codeph> (gzip compression)</li>
+                <li><codeph>zstd</codeph> (Zstandard compression)</li>
                 <li otherprops="pivotal"><codeph>quicklz</codeph><sup>1</sup></li>
               </ul></entry>
           </row>

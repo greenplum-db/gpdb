@@ -14,9 +14,9 @@ The generator will be owned by the user issuing the command. </p><p>If a schema 
 schema. Otherwise it is created in the current schema. Temporary sequences
 exist in a special schema, so a schema name may not be given when creating
 a temporary sequence. The sequence name must be distinct from the name
-of any other sequence, table, index, or view in the same schema. </p><p>After a sequence is created, you use the <codeph>nextval</codeph>
+of any other sequence, table, index, or view in the same schema. </p><p>After a sequence is created, you use the <codeph>nextval()</codeph>
 function to operate on the sequence. For example, to insert a row into
-a table that gets the next value of a sequence:</p><codeblock>INSERT INTO distributors VALUES (nextval('myserial'), 'acme');</codeblock><p>You can also use the function <codeph>setval</codeph> to operate on a
+a table that gets the next value of a sequence:</p><codeblock>INSERT INTO distributors VALUES (nextval('myserial'), 'acme');</codeblock><p>You can also use the function <codeph>setval()</codeph> to operate on a
 sequence, but only for queries that do not operate on distributed data.
 For example, the following query is allowed because it resets the sequence
 counter value for the sequence generator process on the master:</p><codeblock>SELECT setval('myserial', 201);</codeblock><p>But the following query will be rejected in Greenplum Database because
@@ -29,10 +29,10 @@ correctly and the sequence moves forward in the right order. A sequence
 server process runs on the master and is the point-of-truth for a sequence
 in a Greenplum distributed database. Segments get sequence values at
 runtime from the master.</p><p>Because of this distributed sequence design, there are some limitations
-on the functions that operate on a sequence in Greenplum Database:</p><ul><li id="cc148439"><codeph>lastval</codeph> and <codeph>currval</codeph> functions are
-not supported. </li><li id="cc149500"><codeph>setval</codeph> can only be used to set the value of the sequence
+on the functions that operate on a sequence in Greenplum Database:</p><ul><li id="cc148439"><codeph>lastval()</codeph> and <codeph>currval()</codeph> functions are
+not supported. </li><li id="cc149500"><codeph>setval()</codeph> can only be used to set the value of the sequence
 generator on the master, it cannot be used in subqueries to update records
-on distributed table data.</li><li id="cc149515"><codeph>nextval</codeph> sometimes grabs a block of values from the
+on distributed table data.</li><li id="cc149515"><codeph>nextval()</codeph> sometimes grabs a block of values from the
 master for a segment to use, depending on the query. So values may sometimes
 be skipped in the sequence if all of the block turns out not to be needed
 at the segment level. Note that a regular PostgreSQL database does this
@@ -59,7 +59,7 @@ cache). </pd></plentry><plentry><pt>CYCLE</pt><pt>NO CYCLE</pt><pd>Allows the se
 ascending) or <varname>minvalue</varname> (for descending) has been reached. If the
 limit is reached, the next number generated will be the <varname>minvalue</varname>
 (for ascending) or <varname>maxvalue</varname> (for descending). If <codeph>NO CYCLE</codeph>
-is specified, any calls to <codeph>nextval</codeph> after the sequence
+is specified, any calls to <codeph>nextval()</codeph> after the sequence
 has reached its maximum value will return an error. If not specified,
 <codeph>NO CYCLE</codeph> is the default.</pd></plentry><plentry><pt>OWNED BY <varname>table.column</varname></pt><pt>OWNED BY NONE</pt><pd>Causes the sequence to be associated with a specific table column,
 such that if that column (or its whole table) is dropped, the sequence
@@ -71,10 +71,10 @@ values, the values may be generated out of sequence when all the sessions
 are considered. For example, session A might reserve values 1..10 and
 return <codeph>nextval=1</codeph>, then session B might reserve values
 11..20 and return <codeph>nextval=11</codeph> before session A has generated
-nextval=2. Thus, you should only assume that the <codeph>nextval</codeph>
+nextval=2. Thus, you should only assume that the <codeph>nextval()</codeph>
 values are all distinct, not that they are generated purely sequentially.
 Also, <varname>last_value</varname> will reflect the latest value reserved by any
-session, whether or not it has yet been returned by <codeph>nextval</codeph>.</p></section><section id="section6"><title>Examples</title><p>Create a sequence named <varname>myseq</varname>:</p><codeblock>CREATE SEQUENCE myseq START 101;</codeblock><p>Insert a row into a table that gets the next value:</p><codeblock>INSERT INTO distributors VALUES (nextval('myseq'), 'acme'); </codeblock><p>Reset the sequence counter value on the master:</p><codeblock>SELECT setval('myseq', 201);</codeblock><p>Illegal use of <codeph>setval</codeph> in Greenplum Database (setting
+session, whether or not it has yet been returned by <codeph>nextval()</codeph>.</p></section><section id="section6"><title>Examples</title><p>Create a sequence named <varname>myseq</varname>:</p><codeblock>CREATE SEQUENCE myseq START 101;</codeblock><p>Insert a row into a table that gets the next value of the sequence named <varname>idseq</varname>:</p><codeblock>INSERT INTO distributors VALUES (nextval('idseq'), 'acme'); </codeblock><p>Reset the sequence counter value on the master:</p><codeblock>SELECT setval('myseq', 201);</codeblock><p>Illegal use of <codeph>setval()</codeph> in Greenplum Database (setting
 sequence values on distributed data):</p><codeblock>INSERT INTO product VALUES (setval('myseq', 201), 'gizmo'); </codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE SEQUENCE</codeph> conforms to the SQL standard, with
 the following exceptions: </p><ul><li id="cc148458">The <codeph>AS <varname>data_type</varname></codeph> expression specified in the SQL standard
           is not supported. </li><li id="cc148460">Obtaining the next value is done using the <codeph>nextval()</codeph>

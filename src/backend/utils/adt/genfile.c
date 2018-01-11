@@ -4,12 +4,12 @@
  *		Functions for direct access to files
  *
  *
- * Copyright (c) 2004-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2009, PostgreSQL Global Development Group
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/genfile.c,v 1.17.2.1 2008/03/31 01:32:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/genfile.c,v 1.21 2009/01/01 17:23:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <dirent.h>
 
-#include "access/heapam.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -59,12 +58,9 @@ typedef struct
 static char *
 convert_and_check_filename(text *arg)
 {
-	int			input_len = VARSIZE(arg) - VARHDRSZ;
-	char	   *filename = palloc(input_len + 1);
+	char	   *filename;
 
-	memcpy(filename, VARDATA(arg), input_len);
-	filename[input_len] = '\0';
-
+	filename = text_to_cstring(arg);
 	canonicalize_path(filename);	/* filename can change length here */
 
 	/* Disallow ".." in the path */
@@ -342,18 +338,11 @@ pg_ls_dir(PG_FUNCTION_ARGS)
 
 	while ((de = ReadDir(fctx->dirdesc, fctx->location)) != NULL)
 	{
-		int			len = strlen(de->d_name);
-		text	   *result;
-
 		if (strcmp(de->d_name, ".") == 0 ||
 			strcmp(de->d_name, "..") == 0)
 			continue;
 
-		result = palloc(len + VARHDRSZ);
-		SET_VARSIZE(result, len + VARHDRSZ);
-		memcpy(VARDATA(result), de->d_name, len);
-
-		SRF_RETURN_NEXT(funcctx, PointerGetDatum(result));
+		SRF_RETURN_NEXT(funcctx, CStringGetTextDatum(de->d_name));
 	}
 
 	FreeDir(fctx->dirdesc);

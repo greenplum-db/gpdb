@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Defines a new table from the results of a query.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">[ WITH <varname>with_query</varname> [, ...] ]
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     * | <varname>expression</varname> [AS <varname>output_name</varname>] [, ...]
     INTO [TEMPORARY | TEMP] [TABLE] <varname>new_table</varname>
@@ -23,11 +23,20 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     [...]]</codeblock>
         </section>
         <section id="section3">
+            <p><b>Note:</b>
+                <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is
+                not recommended for production use.</p>
             <title>Description</title>
             <p><codeph>SELECT INTO</codeph> creates a new table and fills it with data computed by a
                 query. The data is not returned to the client, as it is with a normal
                     <codeph>SELECT</codeph>. The new table's columns have the names and data types
                 associated with the output columns of the <codeph>SELECT</codeph>. </p>
+            <p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server
+                configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
+                    <codeph>true</codeph>.<note type="warning">The <codeph>RECURSIVE</codeph>
+                    keyword is an experimental feature and is not intended for use in a production
+                    environment. Experimental features are subject to change without notice in
+                    future releases.</note></p>
         </section>
         <section id="section4">
             <title>Parameters</title>

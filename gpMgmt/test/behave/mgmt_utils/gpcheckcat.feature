@@ -1,6 +1,11 @@
 @gpcheckcat
 Feature: gpcheckcat tests
 
+    @logging
+    Scenario: gpcheckcat should log into gpAdminLogs
+        When the user runs "gpcheckcat -l"
+        Then verify that the utility gpcheckcat ever does logging into the user's "gpAdminLogs" directory
+
     @all
     Scenario: run all the checks in gpcheckcat
         Given database "all_good" is dropped and recreated
@@ -24,13 +29,12 @@ Feature: gpcheckcat tests
         And psql should print "(1 row)" to stdout
         When the user runs "gpcheckcat leak_db"
         Then gpchekcat should return a return code of 0
-        Then gpcheckcat should print "Found and dropped 1 unbound temporary schemas" to stdout
+        Then gpcheckcat should print "Found and dropped 2 unbound temporary schemas" to stdout
         And the user runs "psql leak_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/leaked_schema.sql"
         Then psql should return a return code of 0
         And psql should print "(0 rows)" to stdout
         And verify that the schema "good_schema" exists in "leak_db"
         And the user runs "dropdb leak_db"
-        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
 
     @unique_index
     Scenario: gpcheckcat should report unique index violations
@@ -42,7 +46,6 @@ Feature: gpcheckcat tests
         Then gpcheckcat should return a return code of 3
         And gpcheckcat should print "Table pg_compression has a violated unique index: pg_compression_compname_index" to stdout
         And the user runs "dropdb unique_index_db"
-        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
 
     @miss_attr_table
     Scenario Outline: gpcheckcat should discover missing attributes for tables

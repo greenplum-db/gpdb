@@ -8,13 +8,14 @@
       <conf name="suse11_x86_64"  visibility="public"/>
       <conf name="sles11_x86_64"  visibility="public"/>
       <conf name="win32"          visibility="public"/>
+      <conf name="aix7_ppc_64"    visibility="public"/>
     </configurations>
 
     <dependencies>
       <dependency org="apache"          name="apr"             rev="1.5.2"          conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64" />
       <dependency org="apache"          name="apr-util"        rev="1.2.12"         conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse11_x86_64->suse10_x86_64;sles11_x86_64->suse10_x86_64" />
       <dependency org="xerces"          name="xerces-c"        rev="3.1.1-p1"       conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse11_x86_64->suse10_x86_64;sles11_x86_64->suse10_x86_64" />
-      <dependency org="OpenSSL"         name="openssl"         rev="1.0.2l"         conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64" />
+      <dependency org="OpenSSL"         name="openssl"         rev="1.0.2l"         conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64;aix7_ppc_64->aix7_ppc_64" />
       <dependency org="emc"             name="DDBoostSDK"      rev="3.3.0.4-550644" conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64" />
       <dependency org="gnu"             name="libstdc"         rev="6.0.22"         conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->suse11_x86_64;sles11_x86_64->suse11_x86_64" />
       <dependency org="third-party"     name="ext"             rev="1.1"            conf="win32->win32" />
@@ -26,5 +27,13 @@
       <dependency org="cURL"            name="curl"            rev="7.54.0"         conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64" />
       <dependency org="Samba"           name="ccache"          rev="3.2.3"          conf="rhel7_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse11_x86_64->suse11_x86_64;sles11_x86_64->suse11_x86_64" />
       <dependency org="OpenLDAP"        name="openldap"        rev="2.4.44"         conf="rhel7_x86_64->rhel6_x86_64;rhel6_x86_64->rhel6_x86_64;suse11_x86_64->sles11_x86_64;sles11_x86_64->sles11_x86_64" />
+      <dependency org="OpenLDAP"        name="openldap"        rev="2.4.45"         conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="PyYAML"          name="yaml"            rev="0.1.7"          conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="apache"          name="apr"             rev="1.6.2"          conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="apache"          name="apr-util"        rev="1.6.0"          conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="bzip"            name="bzip2"           rev="1.0.6"          conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="libevent"        name="libevent"        rev="2.1.8"          conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="mit"             name="krb5"            rev="1.15.1"         conf="aix7_ppc_64->aix7_ppc_64" />
+      <dependency org="zlib"            name="zlib"            rev="1.2.11"         conf="aix7_ppc_64->aix7_ppc_64" />
     </dependencies>
 </ivy-module>

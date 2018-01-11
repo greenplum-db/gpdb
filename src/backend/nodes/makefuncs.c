@@ -4,12 +4,12 @@
  *	  creator functions for primitive nodes. The functions here are for
  *	  the most frequently created nodes.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.58 2008/01/01 19:45:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.64 2009/04/04 21:12:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -344,6 +344,7 @@ makeFuncExpr(Oid funcid, Oid rettype, List *args, CoercionForm fformat)
 	funcexpr->funcid = funcid;
 	funcexpr->funcresulttype = rettype;
 	funcexpr->funcretset = false;		/* only allowed case here */
+	funcexpr->funcvariadic = false;		/* only allowed case here */
 	funcexpr->funcformat = fformat;
 	funcexpr->args = args;
 	funcexpr->location = -1;
@@ -363,35 +364,28 @@ makeDefElem(char *name, Node *arg)
 {
 	DefElem    *res = makeNode(DefElem);
 
+	res->defnamespace = NULL;
 	res->defname = name;
 	res->arg = arg;
 	res->defaction = DEFELEM_UNSPEC;
+
 	return res;
 }
 
 /*
- * makeAggrefByOid -
- * 	make a trivial aggregate expression.
- *
- * If you need more info, add it to the returned pointer.
+ * makeDefElemExtended -
+ *	build a DefElem node with all fields available to be specified
  */
-Aggref *
-makeAggrefByOid(Oid aggfnoid, List *args)
+DefElem *
+makeDefElemExtended(char *namespace, char *name, Node *arg,
+					DefElemAction defaction)
 {
-	Aggref	   *aggref;
-	Oid			rettype;
+	DefElem    *res = makeNode(DefElem);
 
-	get_func_result_type(aggfnoid, &rettype, NULL);
-	aggref = makeNode(Aggref);
-	aggref->aggfnoid = aggfnoid;
-	aggref->aggtype = rettype;
-	aggref->args = args;
-	aggref->agglevelsup = 0;
-	aggref->aggstar = false;
-	aggref->aggdistinct = false;
-	aggref->aggstage = AGGSTAGE_NORMAL;
-	aggref->aggorder = NULL;
+	res->defnamespace = namespace;
+	res->defname = name;
+	res->arg = arg;
+	res->defaction = defaction;
 
-	return aggref;
+	return res;
 }
-

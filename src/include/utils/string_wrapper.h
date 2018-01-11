@@ -1,10 +1,13 @@
 /*-----------------------------------------------------------------------
  *
- * Wrappers around string.h functions
+ * string_wrapper.h
+ *	  Wrappers around string.h functions
  *
- * $PostgreSQL: pgsql/src/include/utils/string_wrapper.h,v 1.27 2009/01/01 17:24:02 cwhipkey Exp $
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2009, Greenplum Inc.
+ * IDENTIFICATION
+ *	  src/include/utils/string_wrapper.h
  *
  *-----------------------------------------------------------------------
  */
@@ -46,7 +49,7 @@ int gp_strcoll(const char *left, const char *right)
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to compare strings.  "
 							       "Error: %s.  "
 							       "First string has length %lu and value (limited to 100 characters): '%.100s'.  "
@@ -87,7 +90,7 @@ size_t gp_strxfrm(char *dst, const char *src, size_t n)
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to process string for comparison or sorting.  Error: %s.  "
 							        "String has length %lu and value (limited to 100 characters): '%.100s'",
 									strerror(errno),

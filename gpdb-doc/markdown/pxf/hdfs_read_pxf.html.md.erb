@@ -1,0 +1,692 @@
+---
+title: Reading Data from HDFS with PXF
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+HDFS is the primary distributed storage mechanism used by Apache Hadoop applications. The PXF HDFS connector reads file data stored in HDFS. The connector supports plain delimited and comma-separated-value format data.  The HDFS connector also supports JSON and the Avro binary format.
+
+This section describes how to use PXF to access HDFS data, including how to create and query an external table referencing files in the HDFS data store.
+
+## <a id="hdfs_prereq"></a>Prerequisites
+
+Before working with HDFS data using PXF, ensure that:
+
+- You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions. If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
+- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- You have granted the `gpadmin` user read permission on the relevant portions of your HDFS file system.
+
+
+## <a id="hdfs_fileformats"></a>HDFS Data Formats
+
+The PXF HDFS connector supports reading the following data formats:
+
+- Text - comma-separated value (.csv) or delimited format plain text data
+- Avro - JSON-defined, schema-based data serialization format
+- JSON - JSON format data
+
+The PXF HDFS connector provides the following profiles to read the data formats listed above:
+
+| Data Format | Profile Name(s) | Description |
+|-------|---------|------------|----------------|
+| Text | HdfsTextSimple | Read delimited single line records from plain text data on HDFS.|
+| Text | HdfsTextMulti | Read delimited single or multi-line records with quoted linefeeds from plain text data on HDFS. |
+| Avro | Avro | Read Avro format binary data (\<filename\>.avro). |
+| JSON | Json | Read JSON format data (\<filename\>.json). |
+
+
+## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer
+Hadoop includes command-line tools that interact directly with your HDFS file system. These tools support typical file system operations including copying and listing files, changing file permissions, and so forth.
+
+The HDFS file system command syntax is `hdfs dfs <options> [<file>]`. Invoked with no options, `hdfs dfs` lists the file system options supported by the tool.
+
+The user invoking the `hdfs dfs` command must have read privileges on the HDFS data store to list and view directory and file contents, and write permission to create directories and files.
+
+The `hdfs dfs` options used in this topic are:
+
+| Option  | Description |
+|-------|-------------------------------------|
+| `-cat`    | Display file contents. |
+| `-mkdir`    | Create a directory in HDFS. |
+| `-put`    | Copy a file from the local file system to HDFS. |
+
+Examples:
+
+Create a directory in HDFS:
+
+``` shell
+$ hdfs dfs -mkdir -p /data/exampledir
+```
+
+Copy a text file from your local file system to HDFS:
+
+``` shell
+$ hdfs dfs -put /tmp/example.txt /data/exampledir/
+```
+
+Display the contents of a text file located in HDFS:
+
+``` shell
+$ hdfs dfs -cat /data/exampledir/example.txt
+```
+
+
+## <a id="hdfs_queryextdata"></a>Querying External HDFS Data
+The PXF HDFS connector supports the `HdfsTextSimple`, `HdfsTextMulti`, and `Avro` profiles.
+
+Use the following syntax to create a Greenplum Database readable external table referencing HDFS data: 
+
+``` sql
+CREATE EXTERNAL TABLE <table_name> 
+    ( <column_name> <data_type> [, ...] | LIKE <other_table> )
+LOCATION ('pxf://<path-to-hdfs-file>
+    ?PROFILE=HdfsTextSimple|HdfsTextMulti|Avro|Json[&<custom-option>=<value>[...]]')
+FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
+```
+
+The specific keywords and values used by the `pxf` protocol in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
+
+| Keyword  | Value |
+|-------|-------------------------------------|
+| \<path-to-hdfs-file\>    | The absolute path to the directory or file in the HDFS data store. |
+| PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, or `Json`. |
+| \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
+| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value data.  |
+| FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with  the `Avro` and `Json` profiles. The `Avro` and `Json` `'CUSTOM'` `FORMAT`s require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
+ \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
+
+**Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
+
+## <a id="profile_hdfstextsimple"></a>Reading Text Data
+
+Use the `HdfsTextSimple` profile when you read a plain text delimited or .csv data where each row is a single record.
+
+\<formatting-properties\> supported by the `HdfsTextSimple` profile include:
+
+| Keyword  | Syntax, Example(s) | Description |
+|-------|--------------|-----------------------|
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
+
+### <a id="profile_hdfstextsimple_query" class="no-quick-link"></a>Example: Using the HdfsTextSimple Profile
+
+Perform the following procedure to create a sample text file, copy the file to HDFS, and use the `HdfsTextSimple` profile to create two PXF external tables to query the data:
+
+1. Create an HDFS directory for PXF example data files. For example:
+
+    ``` shell
+    $ hdfs dfs -mkdir -p /data/pxf_examples
+    ```
+
+2. Create a delimited plain text data file named `pxf_hdfs_simple.txt`:
+
+    ``` shell
+    $ echo 'Prague,Jan,101,4875.33
+Rome,Mar,87,1557.39
+Bangalore,May,317,8936.99
+Beijing,Jul,411,11600.67' > /tmp/pxf_hdfs_simple.txt
+    ```
+
+    Note the use of the comma `,` to separate the four data fields.
+
+4. Add the data file to HDFS:
+
+    ``` shell
+    $ hdfs dfs -put /tmp/pxf_hdfs_simple.txt /data/pxf_examples/
+    ```
+
+5. Display the contents of the `pxf_hdfs_simple.txt` file stored in HDFS:
+
+    ``` shell
+    $ hdfs dfs -cat /data/pxf_examples/pxf_hdfs_simple.txt
+    ```
+
+4. Start the `psql` subsystem:
+
+    ``` shell
+    $ psql -d postgres
+    ```
+
+1. Use the PXF `HdfsTextSimple` profile to create a Greenplum Database external table referencing the `pxf_hdfs_simple.txt` file you just created and added to HDFS:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple(location text, month text, num_orders int, total_sales float8)
+                LOCATION ('pxf://data/pxf_examples/pxf_hdfs_simple.txt?PROFILE=HdfsTextSimple')
+              FORMAT 'TEXT' (delimiter=E',');
+    ```
+              
+2. Query the external table:
+
+    ``` sql
+    postgres=# SELECT * FROM pxf_hdfs_textsimple;          
+    ```
+
+    ``` pre
+       location    | month | num_orders | total_sales 
+    ---------------+-------+------------+-------------
+     Prague        | Jan   |        101 |     4875.33
+     Rome          | Mar   |         87 |     1557.39
+     Bangalore     | May   |        317 |     8936.99
+     Beijing       | Jul   |        411 |    11600.67
+    (4 rows)
+    ```
+
+2. Create a second external table referencing `pxf_hdfs_simple.txt`, this time specifying the `CSV` `FORMAT`:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple_csv(location text, month text, num_orders int, total_sales float8)
+                LOCATION ('pxf://data/pxf_examples/pxf_hdfs_simple.txt?PROFILE=HdfsTextSimple')
+              FORMAT 'CSV';
+    postgres=# SELECT * FROM pxf_hdfs_textsimple_csv;          
+    ```
+
+    When specifying `FORMAT 'CSV'` for comma-separated value data no `delimiter` formatter option is required because comma is the default delimiter value.
+
+## <a id="profile_hdfstextmulti"></a>Reading Text Data with Quoted Linefeeds
+
+Use the `HdfsTextMulti` profile to read plain text data with delimited single- or multi- line records that include embedded (quoted) linefeed characters.
+
+\<formatting-properties\> supported by the `HdfsTextMulti` profile include:
+
+| Keyword  | Syntax, Example(s) | Value |
+|-------|--------------|-----------------------|
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
+
+### <a id="profile_hdfstextmulti_query" class="no-quick-link"></a>Example: Using the HdfsTextMulti Profile
+
+Perform the following steps to create a sample text file, copy the file to HDFS, and use the PXF `HdfsTextMulti` profile to create a Greenplum Database readable external table to query the data:
+
+1. Create a second delimited plain text file:
+
+    ``` shell
+    $ vi /tmp/pxf_hdfs_multi.txt
+    ```
+
+2. Copy/paste the following data into `pxf_hdfs_multi.txt`:
+
+    ``` pre
+    "4627 Star Rd.
+    San Francisco, CA  94107":Sept:2017
+    "113 Moon St.
+    San Diego, CA  92093":Jan:2018
+    "51 Belt Ct.
+    Denver, CO  90123":Dec:2016
+    "93114 Radial Rd.
+    Chicago, IL  60605":Jul:2017
+    "7301 Brookview Ave.
+    Columbus, OH  43213":Dec:2018
+    ```
+
+    Notice the use of the colon `:` to separate the three fields. Also notice the quotes around the first (address) field. This field includes an embedded line feed separating the street address from the city and state.
+
+3. Copy the text file to HDFS:
+
+    ``` shell
+    $ hdfs dfs -put /tmp/pxf_hdfs_multi.txt /data/pxf_examples/
+    ```
+
+4. Use the `HdfsTextMulti` profile to create an external table referencing the `pxf_hdfs_multi.txt` HDFS file, making sure to identify the `:` (colon) as the field separator:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textmulti(address text, month text, year int)
+                LOCATION ('pxf://data/pxf_examples/pxf_hdfs_multi.txt?PROFILE=HdfsTextMulti')
+              FORMAT 'CSV' (delimiter ':');
+    ```
+    
+    Notice the alternate syntax for specifying the `delimiter`.
+    
+2. Query the `pxf_hdfs_textmulti` table:
+
+    ``` sql
+    postgres=# SELECT * FROM pxf_hdfs_textmulti;
+    ```
+
+    ``` pre
+             address          | month | year 
+    --------------------------+-------+------
+     4627 Star Rd.            | Sept  | 2017
+     San Francisco, CA  94107           
+     113 Moon St.             | Jan   | 2018
+     San Diego, CA  92093               
+     51 Belt Ct.              | Dec   | 2016
+     Denver, CO  90123                  
+     93114 Radial Rd.         | Jul   | 2017
+     Chicago, IL  60605                 
+     7301 Brookview Ave.      | Dec   | 2018
+     Columbus, OH  43213                
+    (5 rows)
+    ```
+
+## <a id="profile_hdfsavro"></a>Reading Avro Data
+
+Apache Avro is a data serialization framework where the data is serialized in a compact binary format. Avro specifies that data types be defined in JSON. Avro format data has an independent schema, also defined in JSON. An Avro schema, together with its data, is fully self-describing.
+
+### <a id="profile_hdfsavrodatamap" class="no-quick-link"></a>Data Type Mapping
+
+Avro supports both primitive and complex data types. 
+
+To represent Avro primitive data types in Greenplum Database, map data values to Greenplum Database columns of the same type. 
+
+Avro supports complex data types including arrays, maps, records, enumerations, and fixed types. Map top-level fields of these complex data types to the Greenplum Database `TEXT` type. While Greenplum Database does not natively support these types, you can create Greenplum Database functions or application code to extract or further process subcomponents of these complex data types.
+
+The following table summarizes external mapping rules for Avro data.
+
+<a id="topic_oy3_qwm_ss__table_j4s_h1n_ss"></a>
+
+| Avro Data Type                                                    | PXF/Greenplum Data Type                                                                                                                                                                                            |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| boolean | boolean |
+| bytes | bytea |
+| double | double |
+| float | real |
+| int | int or smallint |
+| long | bigint |
+| string | text |
+| Complex type: Array, Map, Record, or Enum                         | text, with delimiters inserted between collection items, mapped key-value pairs, and record data.                                                                                           |
+| Complex type: Fixed                                               | bytea                                                                                                                                                                                               |
+| Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; supports Null values.                                                                     |
+
+### <a id="profile_hdfsavroptipns" class="no-quick-link"></a>Avro-Specific Options
+
+For complex types, the PXF `Avro` profile inserts default delimiters between collection items and values. You can use non-default delimiter characters by identifying values for specific `Avro` custom options in the `CREATE EXTERNAL TABLE` command. 
+
+The `Avro` profile supports the following \<custom-option\>s:
+
+| Option Name   | Description       
+|---------------|--------------------|                                                                                        
+| COLLECTION_DELIM | The delimiter character(s) to place between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. |
+| MAPKEY_DELIM | The delimiter character(s) to place between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
+| RECORDKEY_DELIM | The delimiter character(s) to place between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
+
+The \<formatting-properties\> supported by the `Avro` profile include:
+
+| Keyword  | Syntax, Example | Description |
+|-------|--------------|-----------------------|
+| formatter    | `(formatter='pxfwritable_import')` | Must identify `pxfwritable_import`.|
+
+
+### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts" class="no-quick-link"></a>Avro Schemas and Data
+
+Avro schemas are defined using JSON, and composed of the same primitive and complex types identified in the data type mapping section above. Avro schema files typically have a `.avsc` suffix.
+
+Fields in an Avro schema file are defined via an array of objects, each of which is specified by a name and a type.
+
+
+### <a id="topic_tr3_dpg_ts_example" class="no-quick-link"></a>Example: Using the Avro Profile
+
+The examples in this section will operate on Avro data with the following field name and data type record schema:
+
+- id - long
+- username - string
+- followers - array of string
+- fmap - map of long
+- relationship - enumerated type
+- address - record comprised of street number (int), street name (string), and city (string)
+
+
+#### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts_99"></a>Create Schema
+
+Perform the following operations to create an Avro schema to represent the example schema described above.
+
+1. Create a file named `avro_schema.avsc`:
+
+    ``` shell
+    $ vi /tmp/avro_schema.avsc
+    ```
+
+2. Copy and paste the following text into `avro_schema.avsc`:
+
+    ``` json
+    {
+    "type" : "record",
+      "name" : "example_schema",
+      "namespace" : "com.example",
+      "fields" : [ {
+        "name" : "id",
+        "type" : "long",
+        "doc" : "Id of the user account"
+      }, {
+        "name" : "username",
+        "type" : "string",
+        "doc" : "Name of the user account"
+      }, {
+        "name" : "followers",
+        "type" : {"type": "array", "items": "string"},
+        "doc" : "Users followers"
+      }, {
+        "name": "fmap",
+        "type": {"type": "map", "values": "long"}
+      }, {
+        "name": "relationship",
+        "type": {
+            "type": "enum",
+            "name": "relationshipEnum",
+            "symbols": ["MARRIED","LOVE","FRIEND","COLLEAGUE","STRANGER","ENEMY"]
+        }
+      }, {
+        "name": "address",
+        "type": {
+            "type": "record",
+            "name": "addressRecord",
+            "fields": [
+                {"name":"number", "type":"int"},
+                {"name":"street", "type":"string"},
+                {"name":"city", "type":"string"}]
+        }
+      } ],
+      "doc:" : "A basic schema for storing messages"
+    }
+    ```
+
+#### <a id="topic_tr3_dpgspk_15g_tsdata"></a>Create Avro Data File (JSON)
+
+Perform the following steps to create a sample Avro data file conforming to the above schema.
+
+1.  Create a text file named `pxf_hdfs_avro.txt`:
+
+    ``` shell
+    $ vi /tmp/pxf_hdfs_avro.txt
+    ```
+
+2. Enter the following data into `pxf_hdfs_avro.txt`:
+
+    ``` pre
+    {"id":1, "username":"john","followers":["kate", "santosh"], "relationship": "FRIEND", "fmap": {"kate":10,"santosh":4}, "address":{"number":1, "street":"renaissance drive", "city":"san jose"}}
+    
+    {"id":2, "username":"jim","followers":["john", "pam"], "relationship": "COLLEAGUE", "fmap": {"john":3,"pam":3}, "address":{"number":9, "street":"deer creek", "city":"palo alto"}}
+    ```
+
+    The sample data uses a comma `,` to separate top level records and a colon `:` to separate map/key values and record field name/values.
+
+3. Convert the text file to Avro format. There are various ways to perform the conversion, both programmatically and via the command line. In this example, we use the [Java Avro tools](http://avro.apache.org/releases.html); the jar `avro-tools-1.8.1.jar` file resides in the current directory:
+
+    ``` shell
+    $ java -jar ./avro-tools-1.8.1.jar fromjson --schema-file /tmp/avro_schema.avsc /tmp/pxf_hdfs_avro.txt > /tmp/pxf_hdfs_avro.avro
+    ```
+
+    The generated Avro binary data file is written to `/tmp/pxf_hdfs_avro.avro`. 
+    
+4. Copy the generated Avro file to HDFS:
+
+    ``` shell
+    $ hdfs dfs -put /tmp/pxf_hdfs_avro.avro /data/pxf_examples/
+    ```
+    
+#### <a id="topic_avro_querydata"></a>Query With Avro Profile
+
+Perform the following operations to create and query an external table referencing the `pxf_hdfs_avro.avro` file that you added to HDFS in the previous section. When creating the table:
+
+-  Map the top-level primitive fields, `id` (type long) and `username` (type string), to their equivalent Greenplum Database types (bigint and text). 
+-  Map the remaining complex fields to type text.
+-  Explicitly set the record, map, and collection delimiters using the Avro profile custom options.
+
+
+1. Use the `Avro` profile to create a queryable external table from the `pxf_hdfs_avro.avro` file:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE pxf_hdfs_avro(id bigint, username text, followers text, fmap text, relationship text, address text)
+                LOCATION ('pxf://data/pxf_examples/pxf_hdfs_avro.avro?PROFILE=Avro&COLLECTION_DELIM=,&MAPKEY_DELIM=:&RECORDKEY_DELIM=:')
+              FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+    ```
+
+2. Perform a simple query of the `pxf_hdfs_avro` table:
+
+    ``` sql
+    postgres=# SELECT * FROM pxf_hdfs_avro;
+    ```
+
+    ``` pre
+     id | username |   followers    |        fmap         | relationship |                      address                      
+    ----+----------+----------------+--------------------+--------------+---------------------------------------------------
+      1 | john     | [kate,santosh] | {kate:10,santosh:4} | FRIEND       | {number:1,street:renaissance drive,city:san jose}
+      2 | jim      | [john,pam]     | {pam:3,john:3}      | COLLEAGUE    | {number:9,street:deer creek,city:palo alto}
+    (2 rows)
+    ```
+
+    The simple query of the external table shows the components of the complex type data separated with the delimiters specified in the `CREATE EXTERNAL TABLE` call.
+
+
+3. Process the delimited components in the text columns as necessary for your application. For example, the following command uses the Greenplum Database internal `string_to_array` function to convert entries in the `followers` field to a text array column in a new view.
+
+    ``` sql
+    postgres=# CREATE VIEW followers_view AS 
+  SELECT username, address, string_to_array(substring(followers FROM 2 FOR (char_length(followers) - 2)), ',')::text[] 
+        AS followers 
+      FROM pxf_hdfs_avro;
+    ```
+
+4. Query the view to filter rows based on whether a particular follower appears in the view:
+
+    ``` sql
+    postgres=# SELECT username, address FROM followers_view WHERE followers @> '{john}';
+    ```
+
+    ``` pre
+     username |                   address                   
+    ----------+---------------------------------------------
+     jim      | {number:9,street:deer creek,city:palo alto}
+    ```
+
+
+## <a id="profile_hdfsjson"></a>Reading JSON Data
+
+Use the `Json` profile when you want to read native JSON format data from HDFS.
+
+
+### <a id="hdfsjson_work" class="no-quick-link"></a>Working with JSON Data
+
+JSON is a text-based data-interchange format. JSON data is typically stored in a file with a `.json` suffix. 
+
+A `.json` file will contain a collection of objects. A JSON object is a collection of unordered name/value pairs. A value can be a string, a number, true, false, null, or an object or an array. You can define nested JSON objects and arrays.
+
+Sample JSON data file content:
+
+``` json
+  {
+    "created_at":"MonSep3004:04:53+00002013",
+    "id_str":"384529256681725952",
+    "user": {
+      "id":31424214,
+      "location":"COLUMBUS"
+    },
+    "coordinates":{
+      "type":"Point",
+      "values":[
+         13,
+         99
+      ]
+    }
+  }
+```
+
+In the sample above, `user` is an object composed of fields named `id` and `location`. To specify the nested fields in the `user` object as Greenplum Database external table columns, use `.` projection:
+
+``` pre
+user.id
+user.location
+```
+
+`coordinates` is an object composed of a text field named `type` and an array of integers named `values`. Use `[]` to identify specific elements of the `values` array as Greenplum Database external table columns:
+
+``` pre
+coordinates.values[0]
+coordinates.values[1]
+```
+
+Refer to [Introducing JSON](http://www.json.org/) for detailed information on JSON syntax.
+
+#### <a id="datatypemap_json"></a>JSON to Greenplum Database Data Type Mapping</a>
+
+To represent JSON data in Greenplum Database, map data values that use a primitive data type to Greenplum Database columns of the same type. JSON supports complex data types including projections and arrays. Use N-level projection to map members of nested objects and arrays to primitive data types.
+
+The following table summarizes external mapping rules for JSON data.
+
+<caption><span class="tablecap">Table 1. JSON Mapping</span></caption>
+
+<a id="topic_table_jsondatamap"></a>
+
+| JSON Data Type                                                    | PXF/Greenplum Data Type                                                                                                                                                                                            |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Primitive type (integer, float, string, boolean, null) | Use the corresponding Greenplum Database built-in data type; see [Greenplum Database Data Types](../ref_guide/data_types.html). |
+| Array                         | Use `[]` brackets to identify a specific array index to a member of primitive type.                                                                                            |
+| Object                | Use dot `.` notation to specify each level of projection (nesting) to a member of a primitive type.                                                                                         |
+
+#### <a id="topic_jsonreadmodes"></a>JSON Data Read Modes
+
+PXF supports two data read modes. The default mode expects one full JSON record per line.  PXF also supports a read mode operating on JSON records that span multiple lines.
+
+In upcoming examples, you will use both read modes to operate on a sample data set. The schema of the sample data set defines objects with the following member names and value data types:
+
+   - "created_at" - text
+   - "id_str" - text
+   - "user" - object
+      - "id" - integer
+      - "location" - text
+   - "coordinates" - object (optional)
+      - "type" - text
+      - "values" - array
+         - [0] - integer
+         - [1] - integer
+
+
+The single-JSON-record-per-line data set follows:
+
+``` pre
+{"created_at":"FriJun0722:45:03+00002013","id_str":"343136551322136576","user":{
+"id":395504494,"location":"NearCornwall"},"coordinates":{"type":"Point","values"
+: [ 6, 50 ]}},
+{"created_at":"FriJun0722:45:02+00002013","id_str":"343136547115253761","user":{
+"id":26643566,"location":"Austin,Texas"}, "coordinates": null},
+{"created_at":"FriJun0722:45:02+00002013","id_str":"343136547136233472","user":{
+"id":287819058,"location":""}, "coordinates": null}
+```  
+
+This is the data set for for the multi-line JSON record data set:
+
+``` json
+{
+  "root":[
+    {
+      "record_obj":{
+        "created_at":"MonSep3004:04:53+00002013",
+        "id_str":"384529256681725952",
+        "user":{
+          "id":31424214,
+          "location":"COLUMBUS"
+        },
+        "coordinates":null
+      },
+      "record_obj":{
+        "created_at":"MonSep3004:04:54+00002013",
+        "id_str":"384529260872228864",
+        "user":{
+          "id":67600981,
+          "location":"KryberWorld"
+        },
+        "coordinates":{
+          "type":"Point",
+          "values":[
+             8,
+             52
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+You will create JSON files for the sample data sets and add them to HDFS in the next section.
+
+### <a id="jsontohdfs" class="no-quick-link"></a>Loading the Sample JSON Data to HDFS
+
+The PXF HDFS connector reads native JSON stored in HDFS. Before you can use Greenplum Database to query JSON format data, the data must reside in your HDFS data store.
+
+Copy and paste the single line JSON record sample data set above to a file named `singleline.json`. Similarly, copy and paste the multi-line JSON record data set to a file named `multiline.json`.
+
+**Note**: Ensure that there are **no** blank lines in your JSON files.
+
+Copy the JSON data files you just created to your HDFS data store. Create the `/data/pxf_examples` directory if you did not do so in a previous exercise. For example:
+
+``` shell
+$ hdfs dfs -mkdir /data/pxf_examples
+$ hdfs dfs -put singleline.json /data/pxf_examples
+$ hdfs dfs -put multiline.json /data/pxf_examples
+```
+
+Once the data is loaded to HDFS, you can use Greenplum Database and PXF to query and analyze the JSON data.
+
+### <a id="json_customopts" class="no-quick-link"></a>Custom Options
+
+PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object:
+
+| Keyword  | Syntax, Example(s) | Description |
+|-------|--------------|-----------------------|
+| IDENTIFIER  | `&IDENTIFIER=<value>`<br>`&IDENTIFIER=created_at`| You must include the `IDENTIFIER` keyword and \<value\> in the `LOCATION` string only when you are accessing JSON data comprised of multi-line records. Use the \<value\> to identify the member name of the first field in the JSON record object. | 
+
+
+### <a id="jsonexample1" class="no-quick-link"></a>Example: Single Line JSON Records
+
+Use the following [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) SQL command to create a readable external table that references the single-line-per-record JSON data file.
+
+``` sql 
+CREATE EXTERNAL TABLE singleline_json_tbl(
+  created_at TEXT,
+  id_str TEXT,
+  "user.id" INTEGER,
+  "user.location" TEXT,
+  "coordinates.values[0]" INTEGER,
+  "coordinates.values[1]" INTEGER
+)
+LOCATION('pxf://data/pxf_examples/singleline.json?PROFILE=Json')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+```
+
+Notice the use of `.` projection to access the nested fields in the `user` and `coordinates` objects.  Also notice the use of `[]` to access specific elements of the `coordinates.values[]` array.
+
+To query the JSON data in the external table:
+
+``` sql
+SELECT * FROM singleline_json_tbl;
+```
+
+### <a id="jsonexample2" class="no-quick-link"></a>Example: Multi-Line Records
+
+The SQL command to create a readable external table from the multi-line-per-record JSON file is very similar to that of the single line data set above. You must additionally specify the `LOCATION` clause `IDENTIFIER` keyword and an associated value when you want to read multi-line JSON records. For example:
+
+``` sql
+CREATE EXTERNAL TABLE multiline_json_tbl(
+  created_at TEXT,
+  id_str TEXT,
+  "user.id" INTEGER,
+  "user.location" TEXT,
+  "coordinates.values[0]" INTEGER,
+  "coordinates.values[1]" INTEGER
+)
+LOCATION('pxf://data/pxf_examples/multiline.json?PROFILE=Json&IDENTIFIER=created_at')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+```
+
+`created_at` identifies the member name of the first field in the JSON record `record_obj` in the sample data schema.
+
+To query the JSON data in this external table:
+
+``` sql
+SELECT * FROM multiline_json_tbl;
+```

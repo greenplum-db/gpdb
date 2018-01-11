@@ -151,7 +151,7 @@ and c1.language = 'ZHS') bar,
 foo
 WHERE foo.fid = bar.flex_value_set_id;
 
--- double free mixed bitmap indexes (StreamBitmap with HashBitmap)
+-- double free mixed bitmap indexes (StreamBitmap with TIDBitmap)
 CREATE TABLE bmcrash (
     btree_col2 date DEFAULT now(),
     bitmap_col text NOT NULL,

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.116 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.120 2009/05/05 19:36:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,8 +17,12 @@
 
 #include "access/genam.h"
 #include "access/nbtree.h"
+#include "access/relscan.h"
+#include "miscadmin.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 
 
 static bool _bt_readpage(IndexScanDesc scan, ScanDirection dir,
@@ -1172,16 +1176,16 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 
 		for (;;)
 		{
-			/* if we're at end of scan, release the buffer and return */
+			/* release the previous buffer */
+			_bt_relbuf(rel, so->currPos.buf);
+			so->currPos.buf = InvalidBuffer;
+			/* if we're at end of scan, give up */
 			if (blkno == P_NONE || !so->currPos.moreRight)
-			{
-				_bt_relbuf(rel, so->currPos.buf);
-				so->currPos.buf = InvalidBuffer;
 				return false;
-			}
+			/* check for interrupts while we're not holding any buffer lock */
+			CHECK_FOR_INTERRUPTS();
 			/* step right one page */
-			so->currPos.buf = _bt_relandgetbuf(rel, so->currPos.buf,
-											   blkno, BT_READ);
+			so->currPos.buf = _bt_getbuf(rel, blkno, BT_READ);
 			/* check for deleted page */
 			page = BufferGetPage(so->currPos.buf);
 			opaque = (BTPageOpaque) PageGetSpecialPointer(page);

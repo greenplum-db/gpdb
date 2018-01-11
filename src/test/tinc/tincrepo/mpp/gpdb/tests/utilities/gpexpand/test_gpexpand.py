@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -85,7 +85,7 @@ class GpSegInstall(Command):
         run_shell_command('gpssh-exkeys -f %s' %self.hostfile, 'gpssh-exkeys', res)
 
         if res['rc'] > 0:
-            raise Exception("Failed to do gpssh-exkeys: %s" %res[stderr])
+            raise Exception("Failed to do gpssh-exkeys: %s" %res['stderr'])
 
         res = {'rc':0, 'stderr':'', 'stdout':''}
         run_shell_command("gpssh -f %s -e 'mkdir -p %s'" %(self.hostfile, self.gphome), 'gpssh-exkeys', res)
@@ -169,12 +169,11 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
 
         self.hosts = ['localhost']
 
-        # TODO: See if we can parameterize this
-        self.port_base = '40000'
+        self.port_base = '20500'
         self.master_port = os.environ.get('PGPORT', '10300')
-        self.mirror_port_base = '50000'
-        self.rep_port_base = '41000'
-        self.mirror_rep_port_base = '51000'
+        self.mirror_port_base = '21500'
+        self.rep_port_base = '22500'
+        self.mirror_rep_port_base = '23500'
 
         self.testcase_primary_dir = os.path.join(self.testcase_out_dir, 'data/primary')
         self.testcase_mirror_dir = os.path.join(self.testcase_out_dir, 'data/mirror')

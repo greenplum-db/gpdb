@@ -13,332 +13,460 @@
 #include "mock/libchurl_mock.c"
 #include "mock/pxfuriparser_mock.c"
 #include "mock/pxfheaders_mock.c"
+#include "mock/pxfutils_mock.c"
 #include "../src/pxfbridge.h"
 
 /* helper functions */
-static void expect_set_headers_call(CHURL_HEADERS headers_handle, const char* header_key, const char* header_value);
+static void expect_set_headers_call(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value);
 
-static const char* AUTHORITY = "127.0.0.1";
+static const char *AUTHORITY = "127.0.0.1";
 
 void
 test_gpbridge_cleanup(void **state)
 {
-    /* init data in context that will be cleaned up */
-    gphadoop_context *context = palloc0(sizeof(gphadoop_context));
-    context->churl_handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    context->churl_headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	/* init data in context that will be cleaned up */
+	gphadoop_context *context = palloc0(sizeof(gphadoop_context));
 
-    /* set mock behavior for churl cleanup */
-    expect_value(churl_cleanup, handle, context->churl_handle);
-    expect_value(churl_cleanup, after_error, false);
-    will_be_called(churl_cleanup);
+	context->churl_handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
+	context->churl_headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
 
-    expect_value(churl_headers_cleanup, headers, context->churl_headers);
-    will_be_called(churl_headers_cleanup);
+	/* set mock behavior for churl cleanup */
+	expect_value(churl_cleanup, handle, context->churl_handle);
+	expect_value(churl_cleanup, after_error, false);
+	will_be_called(churl_cleanup);
 
-    expect_value(freeGPHDUri, uri, context->gphd_uri);
-    will_be_called(freeGPHDUri);
+	expect_value(churl_headers_cleanup, headers, context->churl_headers);
+	will_be_called(churl_headers_cleanup);
 
-    /* call function under test */
-    gpbridge_cleanup(context);
+	expect_value(freeGPHDUri, uri, context->gphd_uri);
+	will_be_called(freeGPHDUri);
 
-    /* assert call results */
-    assert_true(context->churl_handle == NULL);
-    assert_true(context->churl_headers == NULL);
-    assert_true(context->gphd_uri == NULL);
+	/* call function under test */
+	gpbridge_cleanup(context);
 
-    /* cleanup */
-    pfree(context);
+	/* assert call results */
+	assert_true(context->churl_handle == NULL);
+	assert_true(context->churl_headers == NULL);
+	assert_true(context->gphd_uri == NULL);
+
+	/* cleanup */
+	pfree(context);
 }
 
 void
 test_gpbridge_import_start(void **state)
 {
-    /* init data in context that will be cleaned up */
-    gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-    initStringInfo(&context->uri);
+	/* init data in context that will be cleaned up */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
-    /* setup list of fragments */
-    FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
-    fragment->authority = AUTHORITY;
-    fragment->fragment_md = "md";
-    fragment->index = "1";
-    fragment->profile = NULL;
-    fragment->source_name = "source";
-    fragment->user_data = "user_data";
+	initStringInfo(&context->uri);
 
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-    List* list = list_make1(fragment);
-    context->gphd_uri->fragments = list;
-    context->gphd_uri->profile = "profile";
+	/* setup list of fragments */
+	FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
 
-    CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-    will_return(churl_headers_init, headers);
+	fragment->authority = AUTHORITY;
+	fragment->fragment_md = "md";
+	fragment->index = "1";
+	fragment->profile = NULL;
+	fragment->source_name = "source";
+	fragment->user_data = "user_data";
 
-    expect_any(build_http_headers, input); // might verify params later
-    will_be_called(build_http_headers);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	List	   *list = list_make1(fragment);
 
-    expect_set_headers_call(headers, "X-GP-DATA-DIR", fragment->source_name);
-    expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
-    expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
+	context->gphd_uri->fragments = list;
+	context->gphd_uri->profile = "profile";
 
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    expect_value(churl_init_download, url, context->uri.data);
-    expect_value(churl_init_download, headers, headers);
-    will_return(churl_init_download, handle);
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
 
-    expect_value(churl_read_check_connectivity, handle, handle);
-    will_be_called(churl_read_check_connectivity);
+	will_return(churl_headers_init, headers);
 
-    /* call function under test */
-    gpbridge_import_start(context);
+	expect_any(build_http_headers, input);
+	/* might verify params later */
+	will_be_called(build_http_headers);
 
-    /* assert call results */
-    assert_int_equal(context->current_fragment, list_head(context->gphd_uri->fragments));
+	expect_set_headers_call(headers, "X-GP-DATA-DIR", fragment->source_name);
+	expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
+	expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
 
-    StringInfoData expected_uri;
-    initStringInfo(&expected_uri);
-    appendStringInfo(&expected_uri,
-                     "http://%s/%s/%s/Bridge/",
-                     AUTHORITY, PXF_SERVICE_PREFIX, PXF_VERSION);
-    assert_string_equal(context->uri.data, expected_uri.data);
-    assert_int_equal(context->churl_headers, headers);
-    assert_int_equal(context->churl_handle, handle);
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
-    /* cleanup */
-    list_free_deep(list);
-    pfree(handle);
-    pfree(headers);
-    pfree(context->gphd_uri);
-    pfree(context);
+	expect_value(churl_init_download, url, context->uri.data);
+	expect_value(churl_init_download, headers, headers);
+	will_return(churl_init_download, handle);
+
+	expect_value(churl_read_check_connectivity, handle, handle);
+	will_be_called(churl_read_check_connectivity);
+
+	/* call function under test */
+	gpbridge_import_start(context);
+
+	/* assert call results */
+	assert_int_equal(context->current_fragment, list_head(context->gphd_uri->fragments));
+
+	StringInfoData expected_uri;
+
+	initStringInfo(&expected_uri);
+	appendStringInfo(&expected_uri,
+					 "http://%s/%s/%s/Bridge/",
+					 AUTHORITY, PXF_SERVICE_PREFIX, PXF_VERSION);
+	assert_string_equal(context->uri.data, expected_uri.data);
+	assert_int_equal(context->churl_headers, headers);
+	assert_int_equal(context->churl_handle, handle);
+
+	/* cleanup */
+	list_free_deep(list);
+	pfree(handle);
+	pfree(headers);
+	pfree(context->gphd_uri);
+	pfree(context);
+}
+
+void
+test_gpbridge_export_start(void **state)
+{
+	/* init data in context that will be cleaned up */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+	initStringInfo(&context->uri);
+	initStringInfo(&context->write_file_name);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->data = "path";
+	context->gphd_uri->profile = "profile";
+
+	/* expectations for creating file name for write */
+	char		xid[TMGIDSIZE]="abcdefghijklmnopqrstu";
+
+	GpIdentity.segindex = 3;
+	char* expected_file_name = psprintf("/%s/%s_%d", "path", xid, 3);
+	expect_any(getDistributedTransactionIdentifier, id);
+	will_assign_memory(getDistributedTransactionIdentifier, id, xid, TMGIDSIZE);
+	will_return(getDistributedTransactionIdentifier, true);
+
+	/* expectation for remote uri construction */
+	will_return(get_authority, "abc:123");
+	char* expected_uri = psprintf("http://abc:123/pxf/v15/Writable/stream?path=%s", expected_file_name);
+
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+	will_return(churl_headers_init, headers);
+
+	expect_any(build_http_headers, input);
+	/* might verify params later */
+	will_be_called(build_http_headers);
+
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
+	expect_value(churl_init_upload, url, context->uri.data);
+	expect_value(churl_init_upload, headers, headers);
+	will_return(churl_init_upload, handle);
+
+	/* call function under test */
+	gpbridge_export_start(context);
+
+	/* assert call results */
+	assert_string_equal(context->write_file_name.data, expected_file_name);
+	assert_string_equal(context->uri.data, expected_uri);
+	assert_int_equal(context->churl_headers, headers);
+	assert_int_equal(context->churl_handle, handle);
+
+	/* cleanup */
+	pfree(handle);
+	pfree(headers);
+	pfree(context->gphd_uri);
+	pfree(context);
 }
 
 void
 test_gpbridge_read_one_fragment_less_than_buffer(void **state)
 {
-    /* init data in context */
-    gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    context->churl_handle = handle;
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
-    int datalen = 10;
-    char *databuf = (char *) palloc0(datalen);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
-    /* first call returns less bytes than buffer size (4 bytes read) */
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf);
-    expect_value(churl_read, max_size, datalen);
-    will_return(churl_read, 4);
+	context->churl_handle = handle;
 
-    /* second call returns 0, indicating no more data */
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf + 4);
-    expect_value(churl_read, max_size, datalen - 4);
-    will_return(churl_read, 0);
+	int			datalen = 10;
+	char	   *databuf = (char *) palloc0(datalen);
 
-    /* call function under test */
-    int bytes_read = gpbridge_read(context, databuf, datalen);
+	/* first call returns less bytes than buffer size (4 bytes read) */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf);
+	expect_value(churl_read, max_size, datalen);
+	will_return(churl_read, 4);
 
-    /* assert call results */
-    assert_int_equal(bytes_read, 4);
+	/* second call returns 0, indicating no more data */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf + 4);
+	expect_value(churl_read, max_size, datalen - 4);
+	will_return(churl_read, 0);
 
-    /* cleanup */
-    pfree(handle);
-    pfree(databuf);
-    pfree(context);
+	/* call function under test */
+	int			bytes_read = gpbridge_read(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_read, 4);
+
+	/* cleanup */
+	pfree(handle);
+	pfree(databuf);
+	pfree(context);
 }
 
 void
 test_gpbridge_read_one_fragment_buffer(void **state)
 {
-    /* init data in context */
-    gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    context->churl_handle = handle;
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
-    int datalen = 10;
-    char *databuf = (char *) palloc0(datalen);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
-    // first call returns as many bytes as buffer size (10 bytes read), only 1 call to read
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf);
-    expect_value(churl_read, max_size, datalen);
-    will_return(churl_read, 10);
+	context->churl_handle = handle;
 
-    /* call function under test */
-    int bytes_read = gpbridge_read(context, databuf, datalen);
+	int			datalen = 10;
+	char	   *databuf = (char *) palloc0(datalen);
 
-    /* assert call results */
-    assert_int_equal(bytes_read, 10);
+	/*
+	 * first call returns as many bytes as buffer size (10 bytes read), only 1
+	 * call to read
+	 */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf);
+	expect_value(churl_read, max_size, datalen);
+	will_return(churl_read, 10);
 
-    /* cleanup */
-    pfree(handle);
-    pfree(databuf);
-    pfree(context);
+	/* call function under test */
+	int			bytes_read = gpbridge_read(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_read, 10);
+
+	/* cleanup */
+	pfree(handle);
+	pfree(databuf);
+	pfree(context);
 }
 
 void
 test_gpbridge_read_next_fragment_buffer(void **state)
 {
-    /* init data in context */
-    gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    context->churl_handle = handle;
-    CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-    context->churl_headers = headers;
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
-    initStringInfo(&context->uri);
+	context->churl_handle = handle;
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
 
-    /* setup list of fragments */
-    FragmentData *prev_fragment = (FragmentData *) palloc0(sizeof(FragmentData));
-    FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
-    fragment->authority = AUTHORITY;
-    fragment->fragment_md = "md";
-    fragment->index = "1";
-    fragment->profile = NULL;
-    fragment->source_name = "source";
-    fragment->user_data = "user_data";
+	context->churl_headers = headers;
 
-    List *list = list_make2(prev_fragment,fragment);
-    context->current_fragment = list_head(list);
+	initStringInfo(&context->uri);
 
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-    context->gphd_uri->profile = "profile";
-    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	/* setup list of fragments */
+	FragmentData *prev_fragment = (FragmentData *) palloc0(sizeof(FragmentData));
+	FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
 
-    int datalen = 10;
-    char *databuf = (char *) palloc0(datalen);
+	fragment->authority = AUTHORITY;
+	fragment->fragment_md = "md";
+	fragment->index = "1";
+	fragment->profile = NULL;
+	fragment->source_name = "source";
+	fragment->user_data = "user_data";
 
-    /* first call for current fragment returns 0 as no more data available */
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf);
-    expect_value(churl_read, max_size, datalen);
-    will_return(churl_read, 0);
+	List	   *list = list_make2(prev_fragment, fragment);
 
-    expect_value(churl_read_check_connectivity, handle, handle);
-    will_be_called(churl_read_check_connectivity);
+	context->current_fragment = list_head(list);
 
-    expect_set_headers_call(headers, "X-GP-DATA-DIR", fragment->source_name);
-    expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
-    expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
-    expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->profile = "profile";
+	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
 
-    expect_value(churl_download_restart, handle, handle);
-    expect_value(churl_download_restart, url, context->uri.data);
-    expect_value(churl_download_restart, headers, headers);
-    will_be_called(churl_download_restart);
+	int			datalen = 10;
+	char	   *databuf = (char *) palloc0(datalen);
 
-    expect_value(churl_read_check_connectivity, handle, handle);
-    will_be_called(churl_read_check_connectivity);
+	/* first call for current fragment returns 0 as no more data available */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf);
+	expect_value(churl_read, max_size, datalen);
+	will_return(churl_read, 0);
 
-    /* call returns as many bytes as buffer size (10 bytes read), only 1 call to read */
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf);
-    expect_value(churl_read, max_size, datalen);
-    will_return(churl_read, 10);
+	expect_value(churl_read_check_connectivity, handle, handle);
+	will_be_called(churl_read_check_connectivity);
 
-    /* call function under test */
-    int bytes_read = gpbridge_read(context, databuf, datalen);
+	expect_set_headers_call(headers, "X-GP-DATA-DIR", fragment->source_name);
+	expect_set_headers_call(headers, "X-GP-DATA-FRAGMENT", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-METADATA", fragment->fragment_md);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-INDEX", fragment->index);
+	expect_set_headers_call(headers, "X-GP-FRAGMENT-USER-DATA", fragment->user_data);
+	expect_set_headers_call(headers, "X-GP-PROFILE", context->gphd_uri->profile);
 
-    /* assert call results */
-    assert_int_equal(bytes_read, 10);
-    assert_int_equal(context->current_fragment, lnext(list_head((list)))); // second fragment became current
+	expect_value(churl_download_restart, handle, handle);
+	expect_value(churl_download_restart, url, context->uri.data);
+	expect_value(churl_download_restart, headers, headers);
+	will_be_called(churl_download_restart);
 
-    /* cleanup */
-    list_free_deep(list);
-    pfree(handle);
-    pfree(headers);
-    pfree(databuf);
-    pfree(context->gphd_uri);
-    pfree(context);
+	expect_value(churl_read_check_connectivity, handle, handle);
+	will_be_called(churl_read_check_connectivity);
+
+	/*
+	 * call returns as many bytes as buffer size (10 bytes read), only 1 call
+	 * to read
+	 */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf);
+	expect_value(churl_read, max_size, datalen);
+	will_return(churl_read, 10);
+
+	/* call function under test */
+	int			bytes_read = gpbridge_read(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_read, 10);
+	assert_int_equal(context->current_fragment, lnext(list_head((list))));
+	/* second fragment became current */
+
+	/* cleanup */
+	list_free_deep(list);
+	pfree(handle);
+	pfree(headers);
+	pfree(databuf);
+	pfree(context->gphd_uri);
+	pfree(context);
 }
 
 void
 test_gpbridge_read_last_fragment_finished(void **state)
 {
-    /* init data in context */
-    gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-    context->churl_handle = handle;
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
-    initStringInfo(&context->uri);
+	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
-    /* setup list of fragments */
-    FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
-    fragment->authority = AUTHORITY;
-    fragment->fragment_md = "md";
-    fragment->index = "1";
-    fragment->profile = NULL;
-    fragment->source_name = "source";
-    fragment->user_data = "user_data";
+	context->churl_handle = handle;
 
-    List* list = list_make1(fragment);
-    context->current_fragment = list_head(list);
+	initStringInfo(&context->uri);
 
-    int datalen = 10;
-    char *databuf = (char *) palloc0(datalen);
+	/* setup list of fragments */
+	FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
 
-    /* first call for current fragment returns 0 as no more data available */
-    expect_value(churl_read, handle, context->churl_handle);
-    expect_value(churl_read, buf, databuf);
-    expect_value(churl_read, max_size, datalen);
-    will_return(churl_read, 0);
+	fragment->authority = AUTHORITY;
+	fragment->fragment_md = "md";
+	fragment->index = "1";
+	fragment->profile = NULL;
+	fragment->source_name = "source";
+	fragment->user_data = "user_data";
 
-    expect_value(churl_read_check_connectivity, handle, handle);
-    will_be_called(churl_read_check_connectivity);
+	List	   *list = list_make1(fragment);
 
-    /* then since the next fragment is not available, reading is completed */
+	context->current_fragment = list_head(list);
 
-    /* call function under test */
-    int bytes_read = gpbridge_read(context, databuf, datalen);
+	int			datalen = 10;
+	char	   *databuf = (char *) palloc0(datalen);
 
-    /* assert call results */
-    assert_int_equal(bytes_read, 0);
-    assert_int_equal(context->current_fragment, NULL); // second fragment became current
+	/* first call for current fragment returns 0 as no more data available */
+	expect_value(churl_read, handle, context->churl_handle);
+	expect_value(churl_read, buf, databuf);
+	expect_value(churl_read, max_size, datalen);
+	will_return(churl_read, 0);
 
-    /* cleanup */
-    list_free_deep(list);
-    pfree(handle);
-    pfree(databuf);
-    pfree(context);
+	expect_value(churl_read_check_connectivity, handle, handle);
+	will_be_called(churl_read_check_connectivity);
+
+	/* then since the next fragment is not available, reading is completed */
+
+	/* call function under test */
+	int			bytes_read = gpbridge_read(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_read, 0);
+	assert_int_equal(context->current_fragment, NULL);
+	/* second fragment became current */
+
+	/* cleanup */
+	list_free_deep(list);
+	pfree(handle);
+	pfree(databuf);
+	pfree(context);
+}
+
+void
+test_gpbridge_write_data(void **state) {
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+	initStringInfo(&context->write_file_name);
+	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
+	context->churl_handle = handle;
+
+	/* set mock behavior */
+	char*	databuf = "foo";
+	int		datalen = 3;
+	expect_value(churl_write, handle, context->churl_handle);
+	expect_value(churl_write, buf, databuf);
+	expect_value(churl_write, bufsize, datalen);
+	will_return(churl_write, 3);
+
+	/* call function under test */
+	int bytes_written = gpbridge_write(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_written, 3);
+
+	/* cleanup */
+	pfree(handle);
+	pfree(context);
+}
+
+void
+test_gpbridge_write_no_data(void **state) {
+	/* init data in context */
+	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+
+	/* call function under test */
+	char*	databuf = NULL;
+	int		datalen = 0;
+	int bytes_written = gpbridge_write(context, databuf, datalen);
+
+	/* assert call results */
+	assert_int_equal(bytes_written, 0);
+
+	/* cleanup */
+	pfree(context);
 }
 
 static void
-expect_set_headers_call(CHURL_HEADERS headers_handle, const char* header_key, const char* header_value)
+expect_set_headers_call(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value)
 {
-    expect_string(churl_headers_override, headers, headers_handle);
-    expect_string(churl_headers_override, key, header_key);
-    expect_string(churl_headers_override, value, header_value);
-    will_be_called(churl_headers_override);
+	expect_string(churl_headers_override, headers, headers_handle);
+	expect_string(churl_headers_override, key, header_key);
+	expect_string(churl_headers_override, value, header_value);
+	will_be_called(churl_headers_override);
 }
 
 int
-main(int argc, char* argv[])
+main(int argc, char *argv[])
 {
-    cmockery_parse_arguments(argc, argv);
+	cmockery_parse_arguments(argc, argv);
 
-    const UnitTest tests[] = {
-            unit_test(test_gpbridge_cleanup),
-            unit_test(test_gpbridge_import_start),
-            unit_test(test_gpbridge_read_one_fragment_less_than_buffer),
-            unit_test(test_gpbridge_read_one_fragment_buffer),
-            unit_test(test_gpbridge_read_next_fragment_buffer),
-            unit_test(test_gpbridge_read_last_fragment_finished)
-    };
+	const		UnitTest tests[] = {
+		unit_test(test_gpbridge_cleanup),
+		unit_test(test_gpbridge_import_start),
+		unit_test(test_gpbridge_read_one_fragment_less_than_buffer),
+		unit_test(test_gpbridge_read_one_fragment_buffer),
+		unit_test(test_gpbridge_read_next_fragment_buffer),
+		unit_test(test_gpbridge_read_last_fragment_finished),
+		unit_test(test_gpbridge_export_start),
+		unit_test(test_gpbridge_write_data),
+		unit_test(test_gpbridge_write_no_data)
+	};
 
-    MemoryContextInit();
+	MemoryContextInit();
 
-    return run_tests(tests);
+	return run_tests(tests);
 }

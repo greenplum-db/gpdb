@@ -3,12 +3,12 @@
  * pgstatfuncs.c
  *	  Functions for accessing the statistics collector data
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.48 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.54 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -44,6 +44,10 @@ extern Datum pg_stat_get_last_vacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autovacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_analyze_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS);
+
+extern Datum pg_stat_get_function_calls(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_function_time(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_function_self_time(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_backend_idset(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_activity(PG_FUNCTION_ARGS);
@@ -357,6 +361,39 @@ pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_stat_get_function_calls(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_numcalls);
+}
+
+Datum
+pg_stat_get_function_time(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_time);
+}
+
+Datum
+pg_stat_get_function_self_time(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_time_self);
+}
+
+Datum
 pg_stat_get_backend_idset(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
@@ -426,7 +463,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "sess_id", INT4OID, -1, 0);  /* GPDB */
 
 		if (nattr > 12)
-			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_for", TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_reason", TEXTOID, -1, 0);
 
 		if (nattr > 13)
 		{

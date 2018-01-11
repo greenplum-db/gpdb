@@ -3,13 +3,14 @@
  * syscache.c
  *	  System cache management routines
  *
- * Copyright (c) 2007-2010, Greenplum inc
+ * Portions Copyright (c) 2007-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.114 2008/01/01 19:45:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.120 2009/06/11 14:49:05 momjian Exp $
  *
  * NOTES
  *	  These routines allow the parser/planner/executor to perform
@@ -36,6 +37,8 @@
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_enum.h"
+#include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -52,7 +55,8 @@
 #include "catalog/pg_ts_parser.h"
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
-#include "catalog/pg_window.h"
+#include "catalog/pg_user_mapping.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 
@@ -342,6 +346,50 @@ static const struct cachedesc cacheinfo[] = {
 			0
 		},
 		256
+	},
+	{ForeignDataWrapperRelationId,		/* FOREIGNDATAWRAPPERNAME */
+		ForeignDataWrapperNameIndexId,
+		1,
+		{
+			Anum_pg_foreign_data_wrapper_fdwname,
+			0,
+			0,
+			0
+		},
+		8
+	},
+	{ForeignDataWrapperRelationId,		/* FOREIGNDATAWRAPPEROID */
+		ForeignDataWrapperOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		8
+	},
+	{ForeignServerRelationId,	/* FOREIGNSERVERNAME */
+		ForeignServerNameIndexId,
+		1,
+		{
+			Anum_pg_foreign_server_srvname,
+			0,
+			0,
+			0
+		},
+		32
+	},
+	{ForeignServerRelationId,	/* FOREIGNSERVEROID */
+		ForeignServerOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		32
 	},
 	{IndexRelationId,			/* INDEXRELID */
 		IndexRelidIndexId,
@@ -651,16 +699,27 @@ static const struct cachedesc cacheinfo[] = {
 		},
 		1024
 	},
-	{WindowRelationId,			/* WINFNOID */
-		WindowWinfnoidIndexId,
+	{UserMappingRelationId,		/* USERMAPPINGOID */
+		UserMappingOidIndexId,
 		1,
 		{
-			Anum_pg_window_winfnoid,
+			ObjectIdAttributeNumber,
 			0,
 			0,
 			0
 		},
-		32
+		128
+	},
+	{UserMappingRelationId,		/* USERMAPPINGUSERSERVER */
+		UserMappingUserServerIndexId,
+		2,
+		{
+			Anum_pg_user_mapping_umuser,
+			Anum_pg_user_mapping_umserver,
+			0,
+			0
+		},
+		128
 	}
 };
 

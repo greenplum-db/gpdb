@@ -4,7 +4,12 @@
  * routines for multi-thread implementation of dispatching commands
  * to the qExec processes.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbdisp_thread.h
  *
  *-------------------------------------------------------------------------
  */

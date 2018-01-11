@@ -22,9 +22,9 @@
 #include <vector>
 
 using std::map;
-using std::vector;
 using std::string;
 using std::stringstream;
+using std::vector;
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>

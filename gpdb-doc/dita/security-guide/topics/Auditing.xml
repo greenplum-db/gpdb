@@ -2,6 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_ufw_zn2_jr">
   <title>Auditing</title>
+  <shortdesc>Describes Greenplum Database events that are logged and should be monitored to detect
+    security threats.</shortdesc>
   <body>
     <p>Greenplum Database is capable of auditing a variety of events, including startup and shutdown
       of the system, segment database failures, SQL statements that result in an error, and all

@@ -134,11 +134,87 @@ SELECT E'De\\123dBeEf'::bytea;
  DeSdBeEf
 (1 row)
 
+-- Unicode escapes
+SET standard_conforming_strings TO on;
+SELECT U&'d\0061t\+000061' AS U&"d\0061t\+000061";
+ data 
+------
+ data
+(1 row)
+
+SELECT U&'d!0061t\+000061' UESCAPE '!' AS U&"d*0061t\+000061" UESCAPE '*';
+ dat\+000061 
+-------------
+ dat\+000061
+(1 row)
+
+SELECT U&' \' UESCAPE '!' AS "tricky";
+ tricky 
+--------
+  \
+(1 row)
+
+SELECT 'tricky' AS U&"\" UESCAPE '!';
+   \    
+--------
+ tricky
+(1 row)
+
+SELECT U&'wrong: \061';
+ERROR:  invalid Unicode escape value at or near "\061'"
+LINE 1: SELECT U&'wrong: \061';
+                         ^
+SELECT U&'wrong: \+0061';
+ERROR:  invalid Unicode escape value at or near "\+0061'"
+LINE 1: SELECT U&'wrong: \+0061';
+                         ^
+SELECT U&'wrong: +0061' UESCAPE '+';
+ERROR:  invalid Unicode escape character at or near "+'"
+LINE 1: SELECT U&'wrong: +0061' UESCAPE '+';
+                                         ^
+SET standard_conforming_strings TO off;
+SELECT U&'d\0061t\+000061' AS U&"d\0061t\+000061";
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&'d\0061t\+000061' AS U&"d\0061t\+000061";
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+SELECT U&'d!0061t\+000061' UESCAPE '!' AS U&"d*0061t\+000061" UESCAPE '*';
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&'d!0061t\+000061' UESCAPE '!' AS U&"d*0061t\+000061...
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+SELECT U&' \' UESCAPE '!' AS "tricky";
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&' \' UESCAPE '!' AS "tricky";
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+SELECT 'tricky' AS U&"\" UESCAPE '!';
+   \    
+--------
+ tricky
+(1 row)
+
+SELECT U&'wrong: \061';
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&'wrong: \061';
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+SELECT U&'wrong: \+0061';
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&'wrong: \+0061';
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+SELECT U&'wrong: +0061' UESCAPE '+';
+ERROR:  unsafe use of string constant with Unicode escapes
+LINE 1: SELECT U&'wrong: +0061' UESCAPE '+';
+               ^
+DETAIL:  String constants with Unicode escapes cannot be used when standard_conforming_strings is off.
+RESET standard_conforming_strings;
 --
 -- test conversions between various string types
 -- E021-10 implicit casting among the character data types
 --
-SELECT CAST(f1 AS text) AS "text(char)" FROM CHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS text) AS "text(char)" FROM CHAR_STRINGS_TBL;
  text(char) 
 ------------
  a
@@ -147,7 +223,7 @@ SELECT CAST(f1 AS text) AS "text(char)" FROM CHAR_STRINGS_TBL ORDER BY 1;
  abcd
 (4 rows)
 
-SELECT CAST(f1 AS text) AS "text(varchar)" FROM VARCHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS text) AS "text(varchar)" FROM VARCHAR_STRINGS_TBL;
  text(varchar) 
 ---------------
  a
@@ -163,7 +239,7 @@ SELECT CAST(name 'namefield' AS text) AS "text(name)";
 (1 row)
 
 -- since this is an explicit cast, it should truncate w/o error:
-SELECT CAST(f1 AS char(10)) AS "char(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(10)) AS "char(text)" FROM TEXT_STRINGS_TBL;
  char(text) 
 ------------
  doh!      
@@ -171,14 +247,14 @@ SELECT CAST(f1 AS char(10)) AS "char(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
 (2 rows)
 
 -- note: implicit-cast case is tested in char.sql
-SELECT CAST(f1 AS char(20)) AS "char(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(20)) AS "char(text)" FROM TEXT_STRINGS_TBL;
       char(text)      
 ----------------------
  doh!                
  hi de ho neighbor   
 (2 rows)
 
-SELECT CAST(f1 AS char(10)) AS "char(varchar)" FROM VARCHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(10)) AS "char(varchar)" FROM VARCHAR_STRINGS_TBL;
  char(varchar) 
 ---------------
  a         
@@ -193,14 +269,14 @@ SELECT CAST(name 'namefield' AS char(10)) AS "char(name)";
  namefield 
 (1 row)
 
-SELECT CAST(f1 AS varchar) AS "varchar(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS varchar) AS "varchar(text)" FROM TEXT_STRINGS_TBL;
    varchar(text)   
 -------------------
  doh!
  hi de ho neighbor
 (2 rows)
 
-SELECT CAST(f1 AS varchar) AS "varchar(char)" FROM CHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS varchar) AS "varchar(char)" FROM CHAR_STRINGS_TBL;
  varchar(char) 
 ---------------
  a

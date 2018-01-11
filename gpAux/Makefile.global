@@ -15,6 +15,7 @@ endif
 BLD_WHERE_THE_LIBRARY_THINGS_ARE=LD_LIBRARY_PATH
 aix5_ppc_64_WHERE_THE_LIBRARY_THINGS_ARE=LIBPATH
 aix5_ppc_32_WHERE_THE_LIBRARY_THINGS_ARE=LIBPATH
+aix7_ppc_64_WHERE_THE_LIBRARY_THINGS_ARE=LIBPATH
 osx106_x86_WHERE_THE_LIBRARY_THINGS_ARE=DYLD_LIBRARY_PATH
 ifneq "$($(BLD_ARCH)_WHERE_THE_LIBRARY_THINGS_ARE)" ""
 BLD_WHERE_THE_LIBRARY_THINGS_ARE=$($(BLD_ARCH)_WHERE_THE_LIBRARY_THINGS_ARE)
@@ -54,6 +55,7 @@ endif
 ifneq "$(BLD_PATH_FIXED)" "true"
 aix5_ppc_64_PATH_PREPEND=/opt/freeware/bin
 aix5_ppc_32_PATH_PREPEND=/opt/freeware/bin
+aix7_ppc_64_PATH_PREPEND=/opt/freeware/bin
 osx106_x86_PATH_PREPEND=$(BLD_THIRDPARTY_BIN_DIR)
 sol10_x86_32_PATH_PREPEND=/opt/python32-2.5.1/bin
 sol10_sparc_64_PATH_PREPEND=/opt/gcc-4.1.1/bin
@@ -68,6 +70,7 @@ endif
 # take over the library search path
 aix5_ppc_64_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
 aix5_ppc_32_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
+aix7_ppc_64_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
 ifneq "$(BLD_LD_LIBRARY_PATH_FIXED)" "true"
 sol10_x86_32_LD_LIBRARY_PATH_PREPEND=/opt/python32-2.5.1/lib
 sol10_sparc_32_LD_LIBRARY_PATH_PREPEND=/opt/python32-2.5.1/lib
@@ -81,6 +84,7 @@ export BLD_LD_LIBRARY_PATH_FIXED=true
 # specify python version to use for build-time and run-time
 aix5_ppc_32_PYTHONHOME=/opt/pware
 aix5_ppc_64_PYTHONHOME=/opt/pware64
+aix7_ppc_64_PYTHONHOME=/opt/freeware
 hpux_ia64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.5.6
 osx106_x86_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 rhel5_x86_32_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
@@ -103,6 +107,7 @@ ifneq "$(PYTHONHOME)" ""
 export PYTHON=$(PYTHONHOME)/bin/python
 aix5_ppc_32_PYTHON=$(PYTHONHOME)/bin/python2.7
 aix5_ppc_64_PYTHON=$(PYTHONHOME)/bin/python2.7_64
+aix7_ppc_64_PYTHON=$(PYTHONHOME)/bin/python2.7_64
 ifneq "$($(BLD_ARCH)_PYTHON)" ""
 export PYTHON=$($(BLD_ARCH)_PYTHON)
 endif
@@ -110,7 +115,7 @@ endif
 
 # if PYTHONHOME was specified above, use it for the build
 ifneq "$(PYTHONHOME)" ""
-ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 aix7_ppc_64)" ""
 tmpPATH=$(PYTHONHOME)/bin:$(PATH)
 export PATH:=$(tmpPATH)
 tmpLD_LIBRARY_PATH=$(PYTHONHOME)/lib:$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
@@ -158,15 +163,17 @@ sles11_x86_64_BLD_CFLAGS=-m64
 win64_BLD_CFLAGS=-m64
 win32_BLD_CFLAGS=-m32
 aix5_ppc_64_BLD_CFLAGS=-maix64
+aix7_ppc_64_BLD_CFLAGS=-maix64
 aix5_ppc_32_BLD_CFLAGS=
 BLD_CFLAGS=$($(BLD_ARCH)_BLD_CFLAGS)
 
 aix5_ppc_64_BLD_LDFLAGS=-maix64 -Wl,-bbigtoc
+aix7_ppc_64_BLD_LDFLAGS=-maix64 -Wl,-bbigtoc
 rhel5_x86_32_BLD_LDFLAGS=-m32
 BLD_LDFLAGS=$($(BLD_ARCH)_BLD_LDFLAGS)
 
 # See http://www.postgresql.org/docs/faqs.FAQ_AIX.html for an explanation of this
-ifeq "$(BLD_ARCH)" "aix5_ppc_64"
+ifneq "$(findstring $(BLD_ARCH), aix5_ppc_64 aix7_ppc_64)" ""
 export OBJECT_MODE=64
 export CONFIG_SHELL=/usr/bin/bash
 endif
@@ -181,6 +188,7 @@ sol10_sparc_BLD_BITS=64
 osx106_x86_BLD_BITS=32
 aix5_ppc_64_BLD_BITS=64
 aix5_ppc_32_BLD_BITS=32
+aix7_ppc_64_BLD_BITS=64
 BLD_BITS=$($(BLD_ARCH)_BLD_BITS)
 endif
 
@@ -196,6 +204,7 @@ endif
 GREP=grep
 aix5_ppc_64_GREP=/opt/freeware/bin/grep
 aix5_ppc_32_GREP=/opt/freeware/bin/grep
+aix7_ppc_64_GREP=/opt/freeware/bin/grep
 sol10_x86_64_GREP=ggrep
 sol10_x86_32_GREP=ggrep
 sol10_sparc_64_GREP=ggrep
@@ -209,6 +218,7 @@ endif
 TAR=tar
 aix5_ppc_32_TAR=gtar
 aix5_ppc_64_TAR=gtar
+aix7_ppc_64_TAR=gtar
 sol10_x86_32_TAR=gtar
 sol10_x86_64_TAR=gtar
 sol10_sparc_TAR=gtar
@@ -221,6 +231,7 @@ endif
 # awk by platform
 aix5_ppc_32_AWK=gawk
 aix5_ppc_64_AWK=gawk
+aix7_ppc_64_AWK=gawk
 sol10_x86_32_AWK=nawk
 sol10_x86_64_AWK=nawk
 sol10_sparc_AWK=nawk

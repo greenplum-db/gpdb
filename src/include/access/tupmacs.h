@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/tupmacs.h,v 1.35 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/tupmacs.h,v 1.36 2009/01/01 17:23:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -191,17 +191,7 @@
 		} \
 	} while (0)
 
-/* Proper align with zero padding */
-static inline char * att_align_zero(char *data, char alignchar)
-{
-    size_t  misalignment = (size_t)att_align_nominal(1, alignchar) - 1;
-
-    while ((size_t)data & misalignment)
-		*(data++) = 0;
-
-	return data;
-}
-
+#ifndef FRONTEND
 /*
  * Determine if a datum of type oid can be stored in short varlena format.
  * The caller must've checked that it's a pass-by-reference type.
@@ -216,4 +206,6 @@ value_type_could_short(Pointer ptr, Oid typid)
 		  typid != OIDVECTOROID &&
 		  typid < FirstNormalObjectId));
 }
+#endif
+
 #endif

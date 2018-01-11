@@ -1,5 +1,5 @@
 # ----------
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.46 2007/11/24 19:49:23 darcy Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.55 2009/01/27 12:40:15 petere Exp $
 #
 # By convention, we put no more than twenty tests in any one parallel group;
 # this limits the number of connections needed to run the tests.
@@ -8,7 +8,7 @@
 # ----------
 # The first group of parallel tests
 # ----------
-test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money null
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money
 
 # Depends on things setup during char, varchar and text
 test: strings
@@ -18,7 +18,7 @@ test: numerology
 # ----------
 # The second group of parallel tests
 # ----------
-test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet tstypes comments
+test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet macaddr tstypes comments
 
 # ----------
 # Another group of parallel tests
@@ -55,7 +55,7 @@ test: constraints create_misc create_aggregate create_operator vacuum drop_if_ex
 # 'triggers' test is disabled in GPDB, because it contains a trigger function
 # that would need to access rows on other segments, which doens't work. You
 # get errors like:
-# ERROR: function cannot execute on segment because it accesses relation "public.pkeys"
+# ERROR: function cannot execute on a QE slice because it accesses relation "public.pkeys"
 #test: triggers
 
 # Depends on the above
@@ -80,7 +80,7 @@ ignore: random
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update delete lock
+test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update update_gp delete lock
 
 # In PostgreSQL, namespace test is run as part of the fourth group, but there
 # are some GPDB additions in it that will show diff if concurrent tests use
@@ -92,7 +92,7 @@ test: namespace
 
 # The 'transactions' test is disabled in GPDB, because it uses functions
 # in segments in a way that doesn't work:
-# ERROR:  function cannot execute on segment because it accesses relation "public.xacttest"
+# ERROR:  function cannot execute on a QE slice because it accesses relation "public.xacttest"
 #test: transactions
 
 test: privileges
@@ -101,8 +101,12 @@ test: misc
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc tsearch tsdicts json
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window json
 
+# GPDB_84_MERGE_FIXME: While disabling this was not really an effect of the 8.4
+# merge, it was done a long time ago, it's time to revisit this so we can re-
+# enable it
+#
 # 'rules' test is disabled in GPDB. Maintaining the list of views in it is
 # too painful, and there are also errors because of cross-segment UPDATEs
 # and functions.
@@ -118,9 +122,11 @@ test: select_views portals_p2 cluster dependency guc tsearch tsdicts json
 
 # ----------
 # Another group of parallel tests
+# NB: temp.sql does a reconnect which transiently uses 2 connections,
+# so keep this parallel group to at most 19 tests
 # ----------
 # "plpgsql" cannot run concurrently with "rules", nor can "plancache"
-test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes xml
+test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes with xml
 
 # GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 # test: largeobject

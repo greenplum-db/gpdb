@@ -446,17 +446,17 @@ HINT:  No operator matches the given name and argument type(s). You might need t
     SELECT * FROM t1 WHERE EXISTS ( 
         TABLE(select a from t1 where a < 5) 
     );
-ERROR:  syntax error at or near "TABLE"
+ERROR:  syntax error at or near "("
 LINE 2:         TABLE(select a from t1 where a < 5) 
-                ^
+                     ^
     -- ERROR:  syntax error at or near "TABLE"
     -- TVE in NOT EXIST clause
     SELECT * FROM t1 WHERE NOT EXISTS ( 
         TABLE(select a from t1 where a < 5) 
     );
-ERROR:  syntax error at or near "TABLE"
+ERROR:  syntax error at or near "("
 LINE 2:         TABLE(select a from t1 where a < 5) 
-                ^
+                     ^
     -- ERROR:  syntax error at or near "TABLE"
     -- TVE in ANY/SOME clause
     SELECT * FROM t1 WHERE a < ANY ( 
@@ -672,7 +672,7 @@ LINE 1: select array_append(array['value1','value2']::anytable, 'val...
     -- Verify anyelement cannot be casted to anytable
     select array_append(array['value1','value2'], 'value3'::anytable);
 ERROR:  cannot cast type unknown to anytable
-LINE 1: ... array_append(array['value1','value2'], 'value3'::anytable);
+LINE 1: ...ct array_append(array['value1','value2'], 'value3'::anytable...
                                                              ^
     -- Verify pseudo types anytable and anyelement cannot be used for PREPARE
     PREPARE p1(anyelement) AS SELECT $1;
@@ -797,7 +797,7 @@ LINE 2:     SCATTER BY (a,b);
 (10 rows)
 
     SELECT * FROM transform( TABLE(select distinct b,c from t1) );
-ERROR:  invalid input tuple for function mytransform (gppc.c:1340)  (seg0 slice2 172.17.0.4:25432 pid=35333)
+ERROR:  invalid input tuple for function mytransform   (seg0 slice2 172.17.0.4:25432 pid=35333)
     -- CONSTANT input
     SELECT * FROM transform( TABLE( SELECT 2 as id,'haha'::text as value FROM intable) );
   a   | b 
@@ -2228,10 +2228,10 @@ HINT:  No function matches the given name and argument types. You might need to 
     -- using incorrect parentheses for order by 
     SELECT * FROM tabfunc( TABLE(select * from t1 
                            ORDER BY (a,b)) );
-ERROR:  could not identify an ordering operator for type record
-LINE 2:                            ORDER BY (a,b)) );
-                                            ^
-HINT:  Use an explicit ordering operator or modify the query.
+ERROR:  function tabfunc(anytable) does not exist
+LINE 1: SELECT * FROM tabfunc( TABLE(select * from t1 
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
     -- ERROR:  could not identify an ordering operator for type record
 -- Negative: using SCATTER outside of ETF sub-query
      SELECT * FROM tabfunc( TABLE(select * from t1)
@@ -2422,10 +2422,7 @@ select transform( TABLE(select * from intable));
 ERROR:  table functions must be invoked in FROM clause
 -- ETF in ORDER BY
 select * from t1 order by transform( TABLE(select * from intable));
-ERROR:  could not identify an ordering operator for type record
-LINE 1: select * from t1 order by transform( TABLE(select * from int...
-                                  ^
-HINT:  Use an explicit ordering operator or modify the query.
+ERROR:  table functions must be invoked in FROM clause
 -- ETF in LIMIT
 select * from t1 LIMIT transform (TABLE(select * from intable));
 ERROR:  argument of LIMIT must be type bigint, not type record
@@ -2434,8 +2431,7 @@ LINE 1: select * from t1 LIMIT transform (TABLE(select * from intabl...
 -- ETF in GROUP BY
 select avg(a) from t1 group by 
                   (transform(TABLE(select * from t1 where a<10 )));
-ERROR:  could not identify an ordering operator for type record
-HINT:  Use an explicit ordering operator or modify the query.
+ERROR:  table functions must be invoked in FROM clause
 -- ETF in IN clause
 select * from t1 where a in 
               (transform(TABLE(select a,e from t1 where a<10)));
@@ -2986,33 +2982,35 @@ drop function if exists find_operator(query text, operator_name text);
 -- Check catalog table pg_type for new type anytable
     \x
     select * from pg_type where typname='anytable';
--[ RECORD 1 ]-+-------------
-typname       | anytable
-typnamespace  | 11
-typowner      | 10
-typlen        | -1
-typbyval      | f
-typtype       | p
-typisdefined  | t
-typdelim      | ,
-typrelid      | 0
-typelem       | 0
-typarray      | 0
-typinput      | anytable_in
-typoutput     | anytable_out
-typreceive    | -
-typsend       | -
-typmodin      | -
-typmodout     | -
-typanalyze    | -
-typalign      | d
-typstorage    | x
-typnotnull    | f
-typbasetype   | 0
-typtypmod     | -1
-typndims      | 0
-typdefaultbin | 
-typdefault    | 
+-[ RECORD 1 ]--+-------------
+typname        | anytable
+typnamespace   | 11
+typowner       | 10
+typlen         | -1
+typbyval       | f
+typtype        | p
+typcategory    | P
+typispreferred | f
+typisdefined   | t
+typdelim       | ,
+typrelid       | 0
+typelem        | 0
+typarray       | 0
+typinput       | anytable_in
+typoutput      | anytable_out
+typreceive     | -
+typsend        | -
+typmodin       | -
+typmodout      | -
+typanalyze     | -
+typalign       | d
+typstorage     | x
+typnotnull     | f
+typbasetype    | 0
+typtypmod      | -1
+typndims       | 0
+typdefaultbin  | 
+typdefault     | 
 
 -- Verify pg_proc catalog table for specific columns:
 -- # prorettype
@@ -3551,19 +3549,19 @@ LINE 1: SELECT id FROM project( TABLE( SELECT time,id FROM history )...
     WITH (describe = project_desc);
 -- Invalid projection position 
     SELECT * FROM project( TABLE( SELECT * FROM history ), NULL);
-ERROR:  the 2nd argument must be an integer (gppc.c:1340)
+ERROR:  the 2nd argument must be an integer 
     SELECT * FROM project( TABLE( SELECT * FROM history ), -1);
-ERROR:  invalid column position -1 (gppc.c:1340)
+ERROR:  invalid column position -1 
     SELECT * FROM project( TABLE( SELECT * FROM history ), 0);
-ERROR:  invalid column position 0 (gppc.c:1340)
+ERROR:  invalid column position 0 
     SELECT * FROM project( TABLE( SELECT * FROM history ), 25);
-ERROR:  invalid column position 25 (gppc.c:1340)
+ERROR:  invalid column position 25 
     SELECT * FROM project( TABLE( SELECT time FROM history ), 2);
-ERROR:  invalid column position 2 (gppc.c:1340)
+ERROR:  invalid column position 2 
     SELECT * FROM project( TABLE( SELECT * FROM t1 ), (ARRAY[2,3])[1]);
 ERROR:  unable to resolve function argument
-LINE 1: ...T * FROM project( TABLE( SELECT * FROM t1 ), (ARRAY[2,3])[1]...
-                                                             ^
+LINE 1: SELECT * FROM project( TABLE( SELECT * FROM t1 ), (ARRAY[2,3...
+                                                          ^
 -- The following queries should work
     SELECT * FROM project( TABLE( SELECT * FROM history ), 1+1) order by time;
            time           
@@ -3798,8 +3796,8 @@ LINE 1: ... SELECT * FROM project( TABLE( SELECT * FROM history ), $1);
     -- Cannot drop describe (callback) function 
     -- while there is dyr table function (project) is using it
     DROP FUNCTION project_desc(internal);
-NOTICE:  function project(anytable,integer) depends on function project_desc(internal)
 ERROR:  cannot drop function project_desc(internal) because other objects depend on it
+DETAIL:  function project(anytable,integer) depends on function project_desc(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
     --start_ignore
     -- Drop dyr table function first
@@ -4849,7 +4847,7 @@ ERROR:  CREATE VIEW statements cannot include calls to dynamically typed functio
 CREATE OR REPLACE FUNCTION project_errorcallback(anytable, OUT int, OUT int) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
 SELECT * FROM project_errorcallback(TABLE(SELECT CASE WHEN a < 10 THEN a END, a FROM generate_series(1, 10)a SCATTER BY a));
 INFO:  message: Hello, world!  (seg2 slice2 172.17.0.4:25434 pid=36338)
-ERROR:  first attribute is NULL (gppc.c:1340)  (seg2 slice2 172.17.0.4:25434 pid=36338)
+ERROR:  first attribute is NULL   (seg2 slice2 172.17.0.4:25434 pid=36338)
 SELECT * FROM project_errorcallback(TABLE(SELECT a, a FROM generate_series(1, 5)a SCATTER BY a)) ORDER BY 1;
  column1 | column2 
 ---------+---------

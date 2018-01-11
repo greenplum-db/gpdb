@@ -2,8 +2,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: yolo/gpdbdev
-    tag: centos6
+    repository: pivotaldata/qp-gpdbdev
 inputs:
   - name: bin_orca
   - name: bin_xerces
@@ -15,5 +14,8 @@ run:
   args:
     - --mode=orca
     - --output_dir=bin_gpdb/install
+    - --action=build
+    - --configure-option=--disable-gpcloud
+    - --orca-in-gpdb-install-location
     - bin_orca
     - bin_xerces

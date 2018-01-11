@@ -262,17 +262,15 @@ create function dfunc(a int, b double precision default random()*10) returns dou
 
 create view dview as select random()*10, dfunc(4);
 select pg_get_viewdef('dview',true);
-                           pg_get_viewdef                           
---------------------------------------------------------------------
-  SELECT random() * 10::double precision, public.dfunc(4) AS dfunc;
+                       pg_get_viewdef                        
+-------------------------------------------------------------
+  SELECT random() * 10::double precision, dfunc(4) AS dfunc;
 (1 row)
 
 -- need drop cascade
 drop function dfunc(int, double precision);
-NOTICE:  rule _RETURN on view dview depends on function dfunc(integer,double precision)
-NOTICE:  view dview depends on rule _RETURN on view dview
 ERROR:  cannot drop function dfunc(integer,double precision) because other objects depend on it
+DETAIL:  view dview depends on function dfunc(integer,double precision)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 drop function dfunc(int, double precision) cascade;
-NOTICE:  drop cascades to rule _RETURN on view dview
 NOTICE:  drop cascades to view dview

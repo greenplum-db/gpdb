@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/printtup.c,v 1.101 2008/01/01 19:45:45 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/printtup.c,v 1.105 2009/06/11 14:48:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,30 +69,15 @@ typedef struct
  * ----------------
  */
 DestReceiver *
-printtup_create_DR(CommandDest dest, Portal portal)
+printtup_create_DR(CommandDest dest)
 {
-	DR_printtup *self = (DR_printtup *) palloc(sizeof(DR_printtup));
+	DR_printtup *self = (DR_printtup *) palloc0(sizeof(DR_printtup));
 
-	if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
-		self->pub.receiveSlot = printtup;
-	else
-	{
-		/*
-		 * In protocol 2.0 the Bind message does not exist, so there is no way
-		 * for the columns to have different print formats; it's sufficient to
-		 * look at the first one.
-		 */
-		if (portal->formats && portal->formats[0] != 0)
-			self->pub.receiveSlot = printtup_internal_20;
-		else
-			self->pub.receiveSlot = printtup_20;
-	}
+	self->pub.receiveSlot = printtup;	/* might get changed later */
 	self->pub.rStartup = printtup_startup;
 	self->pub.rShutdown = printtup_shutdown;
 	self->pub.rDestroy = printtup_destroy;
 	self->pub.mydest = dest;
-
-	self->portal = portal;
 
 	/*
 	 * Send T message automatically if DestRemote, but not if
@@ -105,6 +90,33 @@ printtup_create_DR(CommandDest dest, Portal portal)
 	self->myinfo = NULL;
 
 	return (DestReceiver *) self;
+}
+
+/*
+ * Set parameters for a DestRemote (or DestRemoteExecute) receiver
+ */
+void
+SetRemoteDestReceiverParams(DestReceiver *self, Portal portal)
+{
+	DR_printtup *myState = (DR_printtup *) self;
+
+	Assert(myState->pub.mydest == DestRemote ||
+		   myState->pub.mydest == DestRemoteExecute);
+
+	myState->portal = portal;
+
+	if (PG_PROTOCOL_MAJOR(FrontendProtocol) < 3)
+	{
+		/*
+		 * In protocol 2.0 the Bind message does not exist, so there is no way
+		 * for the columns to have different print formats; it's sufficient to
+		 * look at the first one.
+		 */
+		if (portal->formats && portal->formats[0] != 0)
+			myState->pub.receiveSlot = printtup_internal_20;
+		else
+			myState->pub.receiveSlot = printtup_20;
+	}
 }
 
 static void

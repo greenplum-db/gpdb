@@ -3,10 +3,10 @@
  * rewriteheap.h
  *	  Declarations for heap rewrite support functions
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/rewriteheap.h,v 1.4 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/rewriteheap.h,v 1.6 2009/01/01 17:23:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -14,7 +14,7 @@
 #define REWRITE_HEAP_H
 
 #include "access/htup.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 
 /* struct definition is private to rewriteheap.c */
 typedef struct RewriteStateData *RewriteState;

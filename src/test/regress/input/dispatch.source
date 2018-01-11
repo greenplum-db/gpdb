@@ -11,6 +11,19 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- end_matchsubs
 
 -- Test quoting of GUC values and database names when they're sent to segments
+set client_min_messages='warning';
+DROP DATABASE IF EXISTS "funny""db'with\\quotes";
+reset client_min_messages;
+
+CREATE DATABASE "funny""db'with\\quotes";
+ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quotes";
+
+-- GPDB_91_MERGE_FIXME: It would be good to leave the database in place, to
+-- also test gpcheckcat and pg_upgrade after all the regression tests have
+-- completed. As of this writing pg_upgrade does not in fact handle that well.
+-- Remove this DROP DATABASE once it's fixed. That should happen when we
+-- reach commit a2385cac13, which was backported to PostgreSQL 9.1.
+DROP DATABASE "funny""db'with\\quotes";
 
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
@@ -308,3 +321,13 @@ select 1 from gp_dist_random('gp_id') limit 1;
 -- if previous gang is not destroyed, snapshot collision would happen
 select 1 from gp_dist_random('gp_id') limit 1;
 select gp_inject_fault('gang_created', 'reset', 1);
+
+--
+-- Test that an error happens after a big command is dispatched.
+--
+select gp_inject_fault('after_one_slice_dispatched', 'error', 1);
+select * from gp_dist_random('gp_id')
+	where gpname > (select * from repeat('sssss', 10000000));
+select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
+select * from gp_dist_random('gp_id')
+	where gpname > (select * from repeat('sssss', 10000000));

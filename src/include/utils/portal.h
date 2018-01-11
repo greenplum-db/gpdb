@@ -36,10 +36,10 @@
  * to look like NO SCROLL cursors.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/portal.h,v 1.78.2.1 2010/07/05 09:27:31 heikki Exp $
+ * $PostgreSQL: pgsql/src/include/utils/portal.h,v 1.81 2009/01/01 17:24:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -104,10 +104,7 @@ typedef enum PortalStatus
 	PORTAL_FAILED				/* portal got error (can't re-run it) */
 } PortalStatus;
 
-/*
- * Note: typedef Portal is declared in tcop/dest.h as
- *		typedef struct PortalData *Portal;
- */
+typedef struct PortalData *Portal;
 
 typedef struct PortalData
 {
@@ -134,7 +131,7 @@ typedef struct PortalData
 	Oid			queueId;		/* Oid of queue locking this portal */
 
 	/* The query or queries the portal will execute */
-	const char *sourceText;		/* text of query (as of PlannedStmt, never NULL) */
+	const char *sourceText;		/* text of query (as of 8.4, never NULL) */
 	const char *commandTag;		/* command tag for original query */
 	List	   *stmts;			/* PlannedStmts and/or utility statements */
 	CachedPlan *cplan;			/* CachedPlan, if stmts are from one */
@@ -172,15 +169,14 @@ typedef struct PortalData
 	 * atStart, atEnd and portalPos indicate the current cursor position.
 	 * portalPos is zero before the first row, N after fetching N'th row of
 	 * query.  After we run off the end, portalPos = # of rows in query, and
-	 * atEnd is true.  If portalPos overflows, set posOverflow (this causes us
-	 * to stop relying on its value for navigation).  Note that atStart
-	 * implies portalPos == 0, but not the reverse (portalPos could have
-	 * overflowed).
+	 * atEnd is true.  Note that atStart implies portalPos == 0, but not the
+	 * reverse: we might have backed up only as far as the first row, not to
+	 * the start.  Also note that various code inspects atStart and atEnd, but
+	 * only the portal movement routines should touch portalPos.
 	 */
 	bool		atStart;
 	bool		atEnd;
-	bool		posOverflow;
-	int64		portalPos;
+	uint64		portalPos;
 
 	/* Presentation data, primarily used by the pg_cursors system view */
 	TimestampTz creation_time;	/* time at which this portal was defined */
@@ -188,7 +184,6 @@ typedef struct PortalData
 
 	/* MPP: is this portal a CURSOR, or protocol level portal? */
 	bool		is_extended_query; /* simple or extended query protocol? */
-	bool		is_simply_updatable;
 } PortalData;
 
 /*

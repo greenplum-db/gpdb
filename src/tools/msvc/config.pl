@@ -9,6 +9,8 @@ our $config = {
     # float8byval=>1,         # --disable-float8-byval, on by default
     # blocksize => 32,        # --with-blocksize, 8kB by default
     # ldap=>1,				# --with-ldap
+    # wal_blocksize => 8,     # --with-wal-blocksize, 8kb by default
+    # wal_segsize => 16,      # --with-wal-segsize, 16MB by default
     nls=>undef,				# --enable-nls=<path>
     tcl=>undef,				# --with-tls=<path>
     perl=>undef, 			# --with-perl
@@ -22,7 +24,7 @@ our $config = {
     zlib=>'c:\zlib64',			# --with-zlib=<path>  (GPDB needs zlib)
     pthread=>'c:\pthreads',  		# gpdb needs pthreads 
     curl=>'c:\zlib', 			# gpdb needs libcurl
-    bzlib=>'c:\pgbuild\bzlib'
+    bz2=>'c:\pgbuild\bzlib'
     #readline=>'c:\progra~1\GnuWin32' 	# readline for windows?
 };
 

@@ -1,9 +1,74 @@
+-- Tests for old bugs related to OLAP queries.
+
+-- First create a schema to contain the test tables, and few common test
+-- tables that are shared by several test queries.
+create schema bfv_olap;
+set search_path=bfv_olap;
+
+create table customer
+(
+  cn int not null,
+  cname text not null,
+  cloc text,
+
+  primary key (cn)
+
+) distributed by (cn);
+
+insert into customer values
+  ( 1, 'Macbeth', 'Inverness'),
+  ( 2, 'Duncan', 'Forres'),
+  ( 3, 'Lady Macbeth', 'Inverness'),
+  ( 4, 'Witches, Inc', 'Lonely Heath');
+
+create table vendor
+(
+  vn int not null,
+  vname text not null,
+  vloc text,
+
+  primary key (vn)
+
+) distributed by (vn);
+
+insert into vendor values
+  ( 10, 'Witches, Inc', 'Lonely Heath'),
+  ( 20, 'Lady Macbeth', 'Inverness'),
+  ( 30, 'Duncan', 'Forres'),
+  ( 40, 'Macbeth', 'Inverness'),
+  ( 50, 'Macduff', 'Fife');
+
+create table sale
+(
+  cn int not null,
+  vn int not null,
+  pn int not null,
+  dt date not null,
+  qty int not null,
+  prc float not null,
+
+  primary key (cn, vn, pn)
+
+) distributed by (cn,vn,pn);
+
+insert into sale values
+  ( 2, 40, 100, '1401-1-1', 1100, 2400),
+  ( 1, 10, 200, '1401-3-1', 1, 0),
+  ( 3, 40, 200, '1401-4-1', 1, 0),
+  ( 1, 20, 100, '1401-5-1', 1, 0),
+  ( 1, 30, 300, '1401-5-2', 1, 0),
+  ( 1, 50, 400, '1401-6-1', 1, 0),
+  ( 2, 50, 400, '1401-6-1', 1, 0),
+  ( 1, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 600, '1401-6-1', 12, 5),
+  ( 4, 40, 700, '1401-6-1', 1, 1),
+  ( 4, 40, 800, '1401-6-1', 1, 1);
+
+
 --
 -- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
 --
-
-create schema bfv_olap;
-set search_path=bfv_olap;
 
 -- SETUP
 -- start_ignore
@@ -71,9 +136,10 @@ create aggregate ema(float, float) (
     initcond = '(,)');
 
 create table ema_test (k int, v float ) distributed by (k);
-insert into ema_test select i, 4*random() + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
+insert into ema_test select i, 4*(i::float/20) + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
 
 -- TEST
+select k, v, ema(v, 0.9) over (order by k) from ema_test order by k;
 select k, v, ema(v, 0.9) over (order by k rows between unbounded preceding and current row) from ema_test order by k;
 
 -- CLEANUP
@@ -84,71 +150,6 @@ drop function if exists ema_fin(t ema_type) cascade;
 drop function if exists ema_adv(t ema_type, v float, x float) cascade;
 drop type if exists ema_type cascade;
 -- end_ignore
-
---
--- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
---
-
--- SETUP
--- start_ignore
-drop type if exists ema_type cascade;
-drop function if exists ema_adv(t ema_type, v float, x float) cascade;
-drop function if exists ema_fin(t ema_type) cascade;
-drop aggregate if exists ema(float, float);
-drop table if exists ema_test cascade;
--- end_ignore
-create type ema_type as (x float, e float);
-
-create function ema_adv(t ema_type, v float, x float)
-    returns ema_type
-    as $$
-        begin
-            if t.e is null then
-                t.e = v;
-                t.x = x;
-            else
-                if t.x != x then
-                    raise exception 'ema smoothing x may not vary';
-                end if;
-                t.e = t.e + (v - t.e) * t.x;
-            end if;
-            return t;
-        end;
-    $$ language plpgsql;
-
-create function ema_fin(t ema_type)
-    returns float
-    as $$
-       begin
-           return t.e;
-       end;
-    $$ language plpgsql;
-
-create aggregate ema(float, float) (
-    sfunc = ema_adv,
-    stype = ema_type,
-    finalfunc = ema_fin,
-    initcond = '(,)');
-
-create table ema_test (k int, v float ) distributed by (k);
-insert into ema_test select i, 4*random() + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
-
--- TEST
-select k, v, ema(v, 0.9) over (order by k) from ema_test order by k;
-
--- CLEANUP
--- start_ignore
-drop table if exists ema_test cascade;
-drop aggregate if exists ema(float, float);
-drop function if exists ema_fin(t ema_type) cascade;
-drop function if exists ema_adv(t ema_type, v float, x float) cascade;
-drop type if exists ema_type cascade;
--- end_ignore
-
-
-
-
-
 
 
 --
@@ -173,61 +174,13 @@ ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
 SELECT MAX(a) AS m FROM r GROUP BY b ORDER BY m;
 SELECT MAX(a) AS m FROM r GROUP BY a ORDER BY m;
 SELECT MAX(a) AS m FROM r GROUP BY b;
- 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
 
-
---
 -- ORDER BY clause includes some grouping column or not
---
-
--- SETUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
-CREATE TABLE r
-(
-    a INT NOT NULL, 
-    b INT, 
-    c CHARACTER VARYING(200),  
-    d NUMERIC(10,0), 
-    e DATE
-) DISTRIBUTED BY (a,b);
-ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-
---TEST
 SELECT MAX(a) AS m FROM R GROUP BY b ORDER BY m,b;
 SELECT MAX(a) AS m FROM R GROUP BY b,e ORDER BY m,b,e;
 SELECT MAX(a) AS m FROM R GROUP BY b,e ORDER BY m;
 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
-
-
---
 -- ORDER BY 1 or more columns
---
-
--- SETUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
-CREATE TABLE r
-(
-    a INT NOT NULL, 
-    b INT, 
-    c CHARACTER VARYING(200),  
-    d NUMERIC(10,0), 
-    e DATE
-) DISTRIBUTED BY (a,b);
-ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-
---TEST
 SELECT MAX(a),d,e AS m FROM r GROUP BY b,d,e ORDER BY m,e,d;
 SELECT MIN(a),d,e AS m FROM r GROUP BY b,e,d ORDER BY e,d;
 SELECT MAX(a) AS m FROM r GROUP BY b,c,d,e ORDER BY e,d;
@@ -238,7 +191,6 @@ SELECT MAX(e) AS m FROM r GROUP BY b ORDER BY m;
 -- start_ignore
 DROP TABLE IF EXISTS r;
 -- end_ignore
-
 
 --
 -- ORDER BY clause includes some grouping column or not
@@ -325,57 +277,6 @@ drop table if exists t;
 --
 -- Passing through distribution matching type in default implementation
 --
-
--- SETUP
--- start_ignore
-drop table if exists customer;
-drop table if exists sale;
--- end_ignore
-create table customer
-(
-	cn int not null,
-	cname text not null,
-	cloc text,
-
-	primary key (cn)
-
-) distributed by (cn);
-
-
-insert into customer values
-  ( 1, 'Macbeth', 'Inverness'),
-  ( 2, 'Duncan', 'Forres'),
-  ( 3, 'Lady Macbeth', 'Inverness'),
-  ( 4, 'Witches, Inc', 'Lonely Heath');
-
-
-create table sale
-(
-	cn int not null,
-	vn int not null,
-	pn int not null,
-	dt date not null,
-	qty int not null,
-	prc float not null,
-
-	primary key (cn, vn, pn)
-
-) distributed by (cn,vn,pn);
-
-
-insert into sale values
-  ( 2, 40, 100, '1401-1-1', 1100, 2400),
-  ( 1, 10, 200, '1401-3-1', 1, 0),
-  ( 3, 40, 200, '1401-4-1', 1, 0),
-  ( 1, 20, 100, '1401-5-1', 1, 0),
-  ( 1, 30, 300, '1401-5-2', 1, 0),
-  ( 1, 50, 400, '1401-6-1', 1, 0),
-  ( 2, 50, 400, '1401-6-1', 1, 0),
-  ( 1, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 600, '1401-6-1', 12, 5),
-  ( 4, 40, 700, '1401-6-1', 1, 1),
-  ( 4, 40, 800, '1401-6-1', 1, 1);
   
 -- TEST
 select cname,
@@ -384,15 +285,9 @@ from sale, customer
 where sale.cn = customer.cn
 order by 1, 2;
 
--- CLEANUP
--- start_ignore
-drop table if exists customer;
-drop table if exists sale;
--- end_ignore
-
 
 --
--- Optimzier query crashing for logical window with no window functions
+-- Optimizer query crashing for logical window with no window functions
 --
 
 -- SETUP
@@ -415,13 +310,56 @@ from (select * from mpp23240 where f > 10) x;
 drop table mpp23240;
 -- end_ignore
 
+
+--
 -- Test for the bug reported at https://github.com/greenplum-db/gpdb/issues/2236
+--
 create table test1 (x int, y int, z double precision);
 insert into test1 select a, b, a*10 + b from generate_series(1, 5) a, generate_series(1, 5) b;
 
 select sum(z) over (partition by x) as sumx, sum(z) over (partition by y) as sumy from test1;
 
 drop table test1;
+
+
+--
+-- This failed at one point because of an over-zealous syntax check, with
+-- "window functions not allowed in WHERE clause" error.
+--
+select sum(g) from generate_series(1, 5) g
+where g in (
+  select rank() over (order by x) from generate_series(1,5) x
+);
+
+
+--
+-- This caused a crash in ROLLUP planning at one point.
+--
+SELECT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+
+SELECT DISTINCT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+
+
+--
+-- Test window function with constant PARTITION BY
+--
+CREATE TABLE testtab (a int4);
+insert into testtab values (1), (2);
+SELECT count(*) OVER (PARTITION BY 1) AS count FROM testtab;
+
+-- Another variant, where the PARTITION BY is not a literal, but the
+-- planner can deduce that it's a constant through equivalence classes.
+SELECT 1
+FROM (
+  SELECT a, count(*) OVER (PARTITION BY a) FROM (VALUES (1,1)) AS foo(a)
+) AS sup(c, d)
+WHERE c = 87 ;
 
 
 -- CLEANUP

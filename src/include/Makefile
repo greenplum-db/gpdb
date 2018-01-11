@@ -4,7 +4,7 @@
 #
 # 'make install' installs whole contents of src/include.
 #
-# $PostgreSQL: pgsql/src/include/Makefile,v 1.23.2.1 2009/07/20 20:38:58 alvherre Exp $
+# $PostgreSQL: pgsql/src/include/Makefile,v 1.26 2008/08/29 13:02:32 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ install: all installdirs
 	  chmod $(INSTALL_DATA_MODE) '$(DESTDIR)$(includedir_server)'/$$dir/*.h  || exit; \
 	done
 ifeq ($(vpath_build),yes)
-	for file in dynloader.h parser/parse.h; do \
+	for file in dynloader.h parser/gram.h utils/probes.h; do \
 	  cp $$file '$(DESTDIR)$(includedir_server)'/$$file || exit; \
 	  chmod $(INSTALL_DATA_MODE) '$(DESTDIR)$(includedir_server)'/$$file || exit; \
 	done
@@ -70,7 +70,7 @@ check_oids:
 	(cd $(abs_top_srcdir)/src/include/catalog/ && ./duplicate_oids) 
 
 clean:
-	rm -f utils/fmgroids.h parser/parse.h parser/gram.h utils/probes.h
+	rm -f utils/fmgroids.h parser/gram.h utils/probes.h
 
 distclean maintainer-clean: clean
 	rm -f pg_config.h dynloader.h pg_config_os.h stamp-h

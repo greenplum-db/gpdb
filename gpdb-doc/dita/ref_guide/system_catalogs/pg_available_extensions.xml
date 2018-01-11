@@ -5,8 +5,8 @@
   <title id="gn143896">pg_available_extensions</title>
   <body>
     <p>The <codeph>pg_available_extensions</codeph> view lists the extensions that are available for
-      installation. The <xref href="pg_extension.xml#topic_ygy_xfx_tz"><i>pg_extension</i></xref>
-      system catalog table shows the extensions currently installed.</p>
+      installation. The <xref href="pg_extension.xml"><i>pg_extension</i></xref> system catalog
+      table shows the extensions currently installed.</p>
     <p>The view is read only.</p>
     <table id="gn143898">
       <title>pg_catalog.pg_available_extensions</title>

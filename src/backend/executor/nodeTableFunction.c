@@ -26,7 +26,13 @@
  *	 ExecStopTableFunctionScan		closes external resources before EOD.
  *	 ExecTableFunctionReScan		rescans the relation
  *
- * Copyright (c) 2011, EMC
+ * Portions Copyright (c) 2011, EMC
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeTableFunction.c
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -43,7 +49,6 @@
 
 static void setupFunctionArguments(TableFunctionState *node);
 static TupleTableSlot *TableFunctionNext(TableFunctionState *node);
-static gpmon_packet_t *GpmonPktFromTableFunctionState(TableFunctionState *node);
 static void initGpmonPktForTableFunction(Plan *planNode,
 										 gpmon_packet_t *gpmon_pkt, 
 										 EState *estate);
@@ -248,14 +253,6 @@ TableFunctionNext(TableFunctionState *node)
 	Assert(!TupIsNull(slot));
 
 	node->ss.ss_ScanTupleSlot = slot;
-
-	/* Update gpmon statistics */
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromTableFunctionState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-	}
-
 	return slot;
 }
 
@@ -489,12 +486,6 @@ initGpmonPktForTableFunction(Plan *planNode,
 	Assert(IsA(planNode, TableFunctionScan));
 
 	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
-
-gpmon_packet_t *
-GpmonPktFromTableFunctionState(TableFunctionState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
 }
 
 

@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,10 @@ import tinctest
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
-        self.command_pattern = re.compile(r"^(\d+)([&\\<\\>Uq]?)\:(.*)")
+        # The re.S flag makes the "." in the regex match newlines.
+        # When matched against a command in process_command(), all
+        # lines in the command are matched and sent as SQL query.
+        self.command_pattern = re.compile(r"^(\d+)([&\\<\\>Uq]?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:

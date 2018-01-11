@@ -51,6 +51,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/acl.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
 #include "cdb/cdbdisp_query.h"
@@ -694,7 +695,7 @@ execute_sql_string(const char *sql, const char *filename)
 	raw_parsetree_list = pg_parse_query(sql);
 
 	/* All output from SELECTs goes to the bit bucket */
-	dest = CreateDestReceiver(DestNone, NULL);
+	dest = CreateDestReceiver(DestNone);
 
 	/*
 	 * Do parse analysis, rule rewrite, planning, and execution for each raw
@@ -711,12 +712,11 @@ execute_sql_string(const char *sql, const char *filename)
 										   sql,
 										   NULL,
 										   0);
-		stmt_list = pg_plan_queries(stmt_list, 0, NULL, false);
+		stmt_list = pg_plan_queries(stmt_list, 0, NULL);
 
 		foreach(lc2, stmt_list)
 		{
 			Node	   *stmt = (Node *) lfirst(lc2);
-			Snapshot	saveActiveSnapshot;
 
 			if (IsA(stmt, TransactionStmt))
 				ereport(ERROR,
@@ -725,8 +725,7 @@ execute_sql_string(const char *sql, const char *filename)
 
 			CommandCounterIncrement();
 
-			saveActiveSnapshot = ActiveSnapshot;
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+			PushActiveSnapshot(GetTransactionSnapshot());
 
 			if (IsA(stmt, PlannedStmt) &&
 				((PlannedStmt *) stmt)->utilityStmt == NULL)
@@ -735,7 +734,7 @@ execute_sql_string(const char *sql, const char *filename)
 
 				qdesc = CreateQueryDesc((PlannedStmt *) stmt,
 										sql,
-										ActiveSnapshot, NULL,
+										GetActiveSnapshot(), NULL,
 										dest, NULL, false);
 
 				ExecutorStart(qdesc, 0);
@@ -754,8 +753,7 @@ execute_sql_string(const char *sql, const char *filename)
 							   NULL);
 			}
 
-			FreeSnapshot(ActiveSnapshot);
-			ActiveSnapshot = saveActiveSnapshot;
+			PopActiveSnapshot();
 		}
 	}
 
@@ -1631,64 +1629,64 @@ InsertExtensionTuple(const char *extName, Oid extOwner,
 
 
 /*
- * RemoveExtension
+ *	RemoveExtensions
  *		Implements DROP EXTENSION.
  */
 void
-RemoveExtension(List *names, DropBehavior behavior, bool missing_ok)
+RemoveExtensions(DropStmt *drop)
 {
-	char	   *extensionName;
-	Oid			extensionId = InvalidOid;
-	ObjectAddress object;
+	ObjectAddresses *objects;
+	ListCell   *cell;
 
 	/*
-	 * General DROP (object) syntax allows fully qualified names, but
-	 * extensions are global objects that do not live in schemas, so
-	 * it is a syntax error if a fully qualified name was given.
+	 * First we identify all the extensions, then we delete them in a single
+	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
+	 * RESTRICT errors if one of the extensions depends on another.
 	 */
-	if (list_length(names) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("extension name cannot be qualified")));
-	extensionName = strVal(linitial(names));
+	objects = new_object_addresses();
 
-	/* find extension Oid. error inline if doesn't exist */
-	extensionId = get_extension_oid(extensionName, missing_ok);
-
-	if (!OidIsValid(extensionId))
+	foreach(cell, drop->objects)
 	{
-		if (!missing_ok)
-		{
+		List	   *names = (List *) lfirst(cell);
+		char	   *extensionName;
+		Oid			extensionId;
+		ObjectAddress object;
+
+		if (list_length(names) != 1)
 			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("extension \"%s\" does not exist",
-							extensionName)));
-		}
-		else
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("extension name cannot be qualified")));
+		extensionName = strVal(linitial(names));
+
+		extensionId = get_extension_oid(extensionName, drop->missing_ok);
+
+		if (!OidIsValid(extensionId))
 		{
-			if (Gp_role != GP_ROLE_EXECUTE)
-				ereport(NOTICE,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("extension \"%s\" does not exist, skipping",
-								extensionName)));
+			ereport(NOTICE,
+					(errmsg("extension \"%s\" does not exist, skipping",
+							extensionName)));
+			continue;
 		}
 
-		return;
+		/* Permission check: must own extension */
+		if (!pg_extension_ownercheck(extensionId, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTENSION,
+						   extensionName);
+
+		object.classId = ExtensionRelationId;
+		object.objectId = extensionId;
+		object.objectSubId = 0;
+
+		add_exact_object_address(&object, objects);
 	}
 
-	/* Permission check: must own extension */
-	if (!pg_extension_ownercheck(extensionId, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTENSION,
-					   extensionName);
-
 	/*
-	 * Do the deletion
+	 * Do the deletions.  Objects contained in the extension(s) are removed by
+	 * means of their dependency links to the extensions.
 	 */
-	object.classId = ExtensionRelationId;
-	object.objectId = extensionId;
-	object.objectSubId = 0;
+	performMultipleDeletions(objects, drop->behavior);
 
-	performDeletion(&object, behavior);
+	free_object_addresses(objects);
 }
 
 

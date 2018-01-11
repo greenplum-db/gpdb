@@ -33,7 +33,7 @@ WHERE p1.typbyval AND
     (p1.typlen != 1 OR p1.typalign != 'c') AND
     (p1.typlen != 2 OR p1.typalign != 's') AND
     (p1.typlen != 4 OR p1.typalign != 'i') AND
-	(p1.typlen != 8 OR p1.typalign != 'd') ;
+    (p1.typlen != 8 OR p1.typalign != 'd');
 
 -- Look for "toastable" types that aren't varlena.
 
@@ -213,6 +213,12 @@ SELECT p1.oid, p1.typname, p2.oid, p2.typname
 FROM pg_type AS p1, pg_type AS p2
 WHERE p1.typelem = p2.oid AND NOT
     (p1.typmodin = p2.typmodin AND p1.typmodout = p2.typmodout);
+
+-- Array types should have same typdelim as their element types
+
+SELECT p1.oid, p1.typname, p2.oid, p2.typname
+FROM pg_type AS p1, pg_type AS p2
+WHERE p1.typarray = p2.oid AND NOT (p1.typdelim = p2.typdelim);
 
 -- Check for bogus typanalyze routines
 

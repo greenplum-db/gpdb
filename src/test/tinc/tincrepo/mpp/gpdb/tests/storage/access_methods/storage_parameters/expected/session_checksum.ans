@@ -156,7 +156,7 @@ DROP TABLE
 Create table  ao_ss_ck_t4 ( i int, j int) with(checksum=xxxx);
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  invalid parameter value for "checksum": "xxxx"
+psql:/path/sql_file:1: ERROR:  invalid value for boolean option "checksum": xxxx
 -- Create a table with appendonly=false
 Drop table if exists  ao_ss_ck_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ck_t5" does not exist, skipping
@@ -405,7 +405,7 @@ DROP TABLE
 Create table  ao_ss_ck_t4 ( i int, j int) with(checksum=xxxx);
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-psql:/path/sql_file:1: ERROR:  invalid parameter value for "checksum": "xxxx"
+psql:/path/sql_file:1: ERROR:  invalid value for boolean option "checksum": xxxx
 -- Create table with appendonly=false
 Drop table if exists ao_ss_ck_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ck_t5" does not exist, skipping

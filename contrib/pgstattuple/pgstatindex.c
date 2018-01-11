@@ -1,4 +1,7 @@
 /*
+ * $PostgreSQL: pgsql/contrib/pgstattuple/pgstatindex.c,v 1.13 2009/06/11 14:48:52 momjian Exp $
+ *
+ *
  * pgstatindex
  *
  * Copyright (c) 2006 Satoshi Nagayasu <nagayasus@nttdata.co.jp>
@@ -30,6 +33,7 @@
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "utils/builtins.h"
 
 
@@ -50,20 +54,20 @@ PG_FUNCTION_INFO_V1(pg_relpages);
 typedef struct BTIndexStat
 {
 	uint32		version;
-	BlockNumber root_blkno;
 	uint32		level;
+	BlockNumber root_blkno;
 
-	uint32		root_pages;
-	uint32		internal_pages;
-	uint32		leaf_pages;
-	uint32		empty_pages;
-	uint32		deleted_pages;
+	uint64		root_pages;
+	uint64		internal_pages;
+	uint64		leaf_pages;
+	uint64		empty_pages;
+	uint64		deleted_pages;
 
-	uint32		max_avail;
-	uint32		free_space;
+	uint64		max_avail;
+	uint64		free_space;
 
-	uint32		fragments;
-}	BTIndexStat;
+	uint64		fragments;
+} BTIndexStat;
 
 /* ------------------------------------------------------
  * pgstatindex()
@@ -78,8 +82,8 @@ pgstatindex(PG_FUNCTION_ARGS)
 	Relation	rel;
 	RangeVar   *relrv;
 	Datum		result;
-	uint32		nblocks;
-	uint32		blkno;
+	BlockNumber nblocks;
+	BlockNumber blkno;
 	BTIndexStat indexStat;
 
 	if (!superuser())
@@ -95,11 +99,11 @@ pgstatindex(PG_FUNCTION_ARGS)
 			 RelationGetRelationName(rel));
 
 	/*
-	 * Reject attempts to read non-local temporary relations; we would
-	 * be likely to get wrong data since we have no visibility into the
-	 * owning session's local buffers.
+	 * Reject attempts to read non-local temporary relations; we would be
+	 * likely to get wrong data since we have no visibility into the owning
+	 * session's local buffers.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(rel)))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot access temporary tables of other sessions")));
@@ -113,30 +117,29 @@ pgstatindex(PG_FUNCTION_ARGS)
 		BTMetaPageData *metad = BTPageGetMeta(page);
 
 		indexStat.version = metad->btm_version;
-		indexStat.root_blkno = metad->btm_root;
 		indexStat.level = metad->btm_level;
+		indexStat.root_blkno = metad->btm_root;
 
 		ReleaseBuffer(buffer);
 	}
 
-	nblocks = RelationGetNumberOfBlocks(rel);
-
-	/* -- init stat -- */
-	indexStat.fragments = 0;
-
+	/* -- init counters -- */
 	indexStat.root_pages = 0;
-	indexStat.leaf_pages = 0;
 	indexStat.internal_pages = 0;
+	indexStat.leaf_pages = 0;
 	indexStat.empty_pages = 0;
 	indexStat.deleted_pages = 0;
 
 	indexStat.max_avail = 0;
 	indexStat.free_space = 0;
 
-	/*-----------------------
-	 * Scan all blocks
-	 *-----------------------
+	indexStat.fragments = 0;
+
+	/*
+	 * Scan all blocks except the metapage
 	 */
+	nblocks = RelationGetNumberOfBlocks(rel);
+
 	for (blkno = 1; blkno < nblocks; blkno++)
 	{
 		Buffer		buffer;
@@ -154,13 +157,7 @@ pgstatindex(PG_FUNCTION_ARGS)
 
 		/* Determine page type, and update totals */
 
-		if (P_ISDELETED(opaque))
-			indexStat.deleted_pages++;
-
-		else if (P_IGNORE(opaque))
-			indexStat.empty_pages++;
-
-		else if (P_ISLEAF(opaque))
+		if (P_ISLEAF(opaque))
 		{
 			int			max_avail;
 
@@ -177,9 +174,12 @@ pgstatindex(PG_FUNCTION_ARGS)
 			if (opaque->btpo_next != P_NONE && opaque->btpo_next < blkno)
 				indexStat.fragments++;
 		}
+		else if (P_ISDELETED(opaque))
+			indexStat.deleted_pages++;
+		else if (P_IGNORE(opaque))
+			indexStat.empty_pages++;
 		else if (P_ISROOT(opaque))
 			indexStat.root_pages++;
-
 		else
 			indexStat.internal_pages++;
 
@@ -210,21 +210,22 @@ pgstatindex(PG_FUNCTION_ARGS)
 		values[j] = palloc(32);
 		snprintf(values[j++], 32, "%d", indexStat.level);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", (indexStat.root_pages +
-										 indexStat.leaf_pages +
-										 indexStat.internal_pages +
-										 indexStat.deleted_pages +
-										 indexStat.empty_pages) * BLCKSZ);
+		snprintf(values[j++], 32, INT64_FORMAT,
+				 (indexStat.root_pages +
+				  indexStat.leaf_pages +
+				  indexStat.internal_pages +
+				  indexStat.deleted_pages +
+				  indexStat.empty_pages) * BLCKSZ);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.root_blkno);
+		snprintf(values[j++], 32, "%u", indexStat.root_blkno);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.internal_pages);
+		snprintf(values[j++], 32, INT64_FORMAT, indexStat.internal_pages);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.leaf_pages);
+		snprintf(values[j++], 32, INT64_FORMAT, indexStat.leaf_pages);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.empty_pages);
+		snprintf(values[j++], 32, INT64_FORMAT, indexStat.empty_pages);
 		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.deleted_pages);
+		snprintf(values[j++], 32, INT64_FORMAT, indexStat.deleted_pages);
 		values[j] = palloc(32);
 
 		if (indexStat.max_avail > 0)
@@ -261,9 +262,9 @@ Datum
 pg_relpages(PG_FUNCTION_ARGS)
 {
 	text	   *relname = PG_GETARG_TEXT_P(0);
+	int64		relpages;
 	Relation	rel;
 	RangeVar   *relrv;
-	int4		relpages;
 
 	if (!superuser())
 		ereport(ERROR,
@@ -279,5 +280,5 @@ pg_relpages(PG_FUNCTION_ARGS)
 
 	relation_close(rel, AccessShareLock);
 
-	PG_RETURN_INT32(relpages);
+	PG_RETURN_INT64(relpages);
 }

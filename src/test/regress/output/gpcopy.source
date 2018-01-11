@@ -1,5 +1,5 @@
 --
--- This test suite tests COPY code that is unique to greenplum db. 
+-- This test suite tests COPY code that is unique to greenplum db.
 --
 -- ######################################################
 -- different distribution columns and distribution types
@@ -703,19 +703,26 @@ SELECT * FROM segment_reject_limit_from;
  1 | 2
 (2 rows)
 
--- STDIN is not support by copy from on segment
+-- STDIN is not support by copy from on segment and copy program
 COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
 ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from from PROGRAM STDIN log errors segment reject limit 3 rows;
+ERROR:  STDIN/STDOUT not allowed with PROGRAM
 SELECT * FROM segment_reject_limit_from;
- a | b
+ a | b 
 ---+---
  1 | 1
  1 | 2
 (2 rows)
 
--- STDOUT is not support by copy to on segment
+-- STDOUT is not support by copy to on segment and copy program
 COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
 ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit 3 rows;
+ERROR:  STDIN/STDOUT not allowed with PROGRAM
+-- 'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'
+COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
+ERROR:  'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'.
 -- \copy from doesn't support on segment
 --on segment lower case
 \COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment;
@@ -742,6 +749,11 @@ ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
 --on segment with \t
 \copy segment_reject_limit_from from '/tmp/copy_on_segment<SEGID>.csv' on       segment;
 \COPY command doesn't support ON SEGMENT
+-- \copy to/from 'stdin'/'stdout' (quoted)
+\copy segment_reject_limit_from to 'stdin';
+\copy segment_reject_limit_from from 'stdin';
+\copy segment_reject_limit_from to 'stdout';
+\copy segment_reject_limit_from from 'stdout';
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
@@ -938,6 +950,9 @@ DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore
 CREATE TABLE LINEITEM ( L_ORDERKEY INTEGER NOT NULL,
 L_PARTKEY INTEGER NOT NULL,
@@ -957,6 +972,9 @@ L_SHIPMODE CHAR(10) NOT NULL,
 L_COMMENT VARCHAR(44) NOT NULL);
 CREATE TABLE LINEITEM_1 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_2 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_3 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_4 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_5 (LIKE LINEITEM);
 COPY LINEITEM FROM '@abs_srcdir@/data/lineitem.csv' WITH DELIMITER '|' CSV;
 SELECT COUNT(*) FROM LINEITEM;
  count 
@@ -990,12 +1008,47 @@ SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_2;
 ------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
 (0 rows)
 
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_3 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_3;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_3;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM_4 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM LINEITEM_4;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_4;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
+\COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program_client.csv' CSV;
+\COPY LINEITEM_5 FROM PROGRAM 'cat /tmp/lineitem_program_client.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_5;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_5;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
 --Test for `COPY FROM ON SEGMENT` checking the distribution key restriction 
 -- start_matchsubs
--- m/^ERROR:  Value of distribution key doesn't belong to segment with ID \d, it belongs to segment with ID \d.*$/
--- s/^ERROR:  Value of distribution key doesn't belong to segment with ID \d, it belongs to segment with ID \d.*$/ERROR:  Value of distribution key doesn't belong to segment/
--- m/^ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.*$/
--- s/^ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.*$/ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table./
 -- m/^CONTEXT:  COPY .*, line \d*: .*$/
 -- s/^CONTEXT:  COPY .*, line \d*: .*$/CONTEXT:  COPY xxxxx line x: xxx/
 -- end_matchsubs
@@ -1006,15 +1059,21 @@ DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_TOW_DSITKEY;
 NOTICE:  table "copy_on_segment_check_tow_dsitkey" does not exist, skipping
 DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 NOTICE:  table "copy_on_segment_check_distkey_partioned" does not exist, skipping
+DROP TABLE IF EXISTS COPY_FROM_PARTITION_TABLE;
+NOTICE:  table "copy_from_partition_table" does not exist, skipping
 DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
 NOTICE:  table "copy_on_segment_check_distkey_subpartition" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_DIST_RANDOMLY;
+NOTICE:  table "copy_on_segment_dist_randomly" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY;
+NOTICE:  table "copy_on_segment_partion_dist_randomly" does not exist, skipping
 -- end_ignore
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY(a int)DISTRIBUTED BY(a);
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY SELECT generate_series(0,10);
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY0.csv' CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=13551)
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey, line 2: "0"
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
@@ -1024,9 +1083,12 @@ INSERT INTO COPY_ON_SEGMENT_CHECK_TOW_DSITKEY SELECT generate_series(0,10),gener
 COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY to '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY to '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY0.csv' CSV;
 COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=13551)
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_tow_dsitkey, line 1: "0,0"
---`COPY FROM ON SEGMENT` partitoned table
+-- COPY FRON ON SEGMENT DISTRIBUTED RANDOMLY
+CREATE TABLE COPY_ON_SEGMENT_DIST_RANDOMLY(a int) DISTRIBUTED RANDOMLY;
+COPY COPY_ON_SEGMENT_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
+-- COPY FROM ON SEGMENT partitoned table
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED(a int) DISTRIBUTED BY (a) PARTITION BY range(a) ( START (0) END (10) EVERY (5));
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
@@ -1039,7 +1101,7 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  Value of distribution key doesn't belong to segment with ID 1, it belongs to segment with ID 2. (copy.c:5049)  (seg1 172.17.0.2:40000 pid=13551)
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey_partioned, line 1: "0"
 SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
  count 
@@ -1049,14 +1111,60 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 
 ALTER table copy_on_segment_check_distkey_partioned_1_prt_1 set DISTRIBUTED RANDOMLY ;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.
+ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table
+HINT:  "SET gp_enable_segment_copy_checking=off" can be used to disable distribution key checking.
 set gp_vmem_idle_resource_timeout=1;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
---`COPY FROM ON SEGMENT` SUBPARTITION table
+-- COPY FROM ON SEGMENT partitoned table distributed randomly
+CREATE TABLE COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY (a int) DISTRIBUTED RANDOMLY PARTITION BY range(a) ( START (0) END (10) EVERY (5));
+NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_1" for table "copy_on_segment_partion_dist_randomly"
+NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_2" for table "copy_on_segment_partion_dist_randomly"
+COPY COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
+-- COPY FROM partitoned table
+TRUNCATE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);
+SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+ count 
+-------
+    10
+(1 row)
+
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED.csv' CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED.csv' CSV;
+SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+ count 
+-------
+    20
+(1 row)
+
+--COPY FROM partition table mulitple attributes
+CREATE TABLE COPY_FROM_PARTITION_TABLE (a text ,b int) PARTITION BY range(b) (START (0) END (10) EVERY(5));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "copy_from_partition_table_1_prt_1" for table "copy_from_partition_table"
+NOTICE:  CREATE TABLE will create partition "copy_from_partition_table_1_prt_2" for table "copy_from_partition_table"
+INSERT INTO COPY_FROM_PARTITION_TABLE values('aa',1);
+INSERT INTO COPY_FROM_PARTITION_TABLE values('bb',2);
+INSERT INTO COPY_FROM_PARTITION_TABLE values('cc',8);
+SELECT COUNT(*) FROM COPY_FROM_PARTITION_TABLE;
+ count 
+-------
+     3
+(1 row)
+
+COPY COPY_FROM_PARTITION_TABLE TO '/tmp/COPY_FROM_PARTITION_TABLE.txt';
+COPY COPY_FROM_PARTITION_TABLE FROM '/tmp/COPY_FROM_PARTITION_TABLE.txt';
+SELECT COUNT(*) FROM COPY_FROM_PARTITION_TABLE;
+ count 
+-------
+     6
+(1 row)
+
+--COPY FROM ON SEGMENT SUBPARTITION table
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION(a int,b int) DISTRIBUTED BY (a) PARTITION BY range(a) 
  SUBPARTITION BY RANGE (b)
     SUBPARTITION TEMPLATE (
@@ -1074,13 +1182,120 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
 
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=20583)
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey_subpartition, line 2: "0,0"
 ALTER table copy_on_segment_check_distkey_subpartition_1_prt_1_2_prt_1 set DISTRIBUTED RANDOMLY ;
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table. (copy.c:1692)
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table
+HINT:  "SET gp_enable_segment_copy_checking=off" can be used to disable distribution key checking.
 -- start_ignore
-DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore
+-- Test for COPY PROGRAM PRINT STDERR
+-- start_ignore
+DROP TABLE IF EXISTS COPY_TO_PROGRAM_ERROR;
+DROP TABLE IF EXISTS COPY_FROM_PROGRAM_ERROR;
+-- end_ignore
+CREATE TABLE COPY_TO_PROGRAM_ERROR(dir text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dir' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo && echo "error" >&2 && exit 255';
+ERROR:  command error message: error
+COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo <SEGID>&& echo "error" >&2 && exit 255' on segment;
+ERROR:  Error from segment 0: ERROR:  command error message: error
+CREATE TABLE COPY_FROM_PROGRAM_ERROR(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo 1; echo "error" >&2 && exit 255';
+ERROR:  command error message: error
+SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
+ count 
+-------
+     0
+(1 row)
+
+INSERT INTO COPY_FROM_PROGRAM_ERROR VALUES(0);
+COPY COPY_FROM_PROGRAM_ERROR TO '/tmp/program_error_<SEGID>.csv' ON SEGMENT;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'cat /tmp/program_error_<SEGID>.csv && echo "error" >&2 && exit 255' ON SEGMENT;
+ERROR:  command error message: error
+CONTEXT:  COPY copy_from_program_error, line 0: ""
+SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
+ count 
+-------
+     1
+(1 row)
+
+-- Test for COPY PROGRAM ENVIROMENT VAR
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_ID';
+SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
+ count 
+-------
+     2
+(1 row)
+
+\COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_ID';
+ERROR:  invalid input syntax for integer: ""
+CONTEXT:  COPY copy_from_program_error, line 1, column 
+SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
+ count 
+-------
+     2
+(1 row)
+
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_I';
+ERROR:  invalid input syntax for integer: ""
+CONTEXT:  COPY copy_from_program_error, line 1, column 
+SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
+ count 
+-------
+     2
+(1 row)
+
+SET gp_enable_segment_copy_checking=off;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_ID\n<SEGID>"' on segment;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'printf "$GP_SEGMENT_I\n<SEGID>"' on segment;
+ERROR:  invalid input syntax for integer: ""  (seg0 172.17.0.2:40000 pid=27935)
+CONTEXT:  COPY copy_from_program_error, line 1, column 
+SET gp_enable_segment_copy_checking=on;
+-- Test that xlog records are generated for COPY in the same transaction as
+-- created table. The actual validation for this test will be performed once the
+-- gp_replica_check tool is enabled.
+BEGIN;
+CREATE TABLE copy_from_same_txn(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+COPY copy_from_same_txn FROM stdin;
+COMMIT;
+-- Test that issuing a cancel requests during COPY aborts the processing before
+-- the entire contents has been copied out. The hardcoded rowcount 57190 is the
+-- number of rows in the lineitem table.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault
+-----------------
+ t
+(1 row)
+
+SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'interrupt', 1);
+NOTICE:  Success:
+ gp_inject_fault
+-----------------
+ t
+(1 row)
+
+COPY lineitem TO '/tmp/aborted.data';
+ERROR:  canceling statement due to user request
+CREATE TABLE lineitem_aborted (LIKE lineitem);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+COPY lineitem_aborted FROM '/tmp/aborted.data';
+SELECT count(*) < 57190 FROM lineitem_aborted;
+ ?column?
+----------
+ t
+(1 row)
+

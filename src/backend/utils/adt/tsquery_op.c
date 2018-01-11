@@ -3,11 +3,11 @@
  * tsquery_op.c
  *	  Various operations with tsquery
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_op.c,v 1.3.2.3 2010/08/03 00:10:58 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_op.c,v 1.6 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -188,7 +188,9 @@ NAME(PG_FUNCTION_ARGS) {						\
 	PG_FREE_IF_COPY(b,1);						\
 												\
 	PG_RETURN_BOOL( CONDITION );				\
-}
+}	\
+/* keep compiler quiet - no extra ; */			\
+extern int no_such_variable
 
 CMPFUNC(tsquery_lt, res < 0);
 CMPFUNC(tsquery_le, res <= 0);

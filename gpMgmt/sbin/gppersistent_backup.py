@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Pivotal Inc 2014. All Rights Reserved.
+# Copyright (c) 2014-Present Pivotal Software, Inc.
+#
 
 """
 Internal Use Function.

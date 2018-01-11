@@ -4,10 +4,10 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeFunctionscan.h,v 1.12 2008/10/01 19:51:49 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeFunctionscan.h,v 1.13 2009/01/01 17:23:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,10 +22,5 @@ extern TupleTableSlot *ExecFunctionScan(FunctionScanState *node);
 extern void ExecEndFunctionScan(FunctionScanState *node);
 extern void ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeFunctionScan(FunctionScanState *node);
-
-static inline gpmon_packet_t * GpmonPktFromFuncScanState(FunctionScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 
 #endif   /* NODEFUNCTIONSCAN_H */

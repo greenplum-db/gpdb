@@ -8,7 +8,12 @@
       define new data types using the <codeph>CREATE TYPE</codeph> command. This reference shows all
       of the built-in data types. In addition to the types listed here, there are also some
       internally used data types, such as <i>oid</i> (object identifier), but those are not
-      documented in this guide.</p>
+      documented in this guide. </p>
+    <p>Optional modules in the <filepath>contrib</filepath> directory may also install new data
+      types.  The <codeph>hstore</codeph> module, for example, introduces a new data type and
+      associated functions for working with key-value pairs. See <xref
+        href="../utility_guide/hstore.xml#topic_vcn_jkq_1bb"/>. The <codeph>citext</codeph> module 
+        adds a case-insensitive text data type. See <xref href="../utility_guide/citext.xml"/>.</p>
     <p>The following data types are specified by SQL: <i>bit</i>, <i>bit varying</i>,
       <i>boolean</i>, <i>character varying, varchar</i>, <i>character, char</i>, <i>date</i>,
         <i>double precision</i>, <i>integer</i>, <i>interval</i>, <i>numeric</i>, <i>decimal</i>,
@@ -327,7 +332,7 @@
       <p>The pseudo-type <i>void</i> indicates that a function returns no value.</p>
       <note>Greenplum Database does not support triggers and the pseudo-type <i>trigger</i>.</note>
       <p>The types <i>anyelement</i>, <i>anyarray</i>, <i>anynonarray</i>, and <i>anyenum</i> are
-        psuedo-types called polymorphic types. Some procedural languages also support polymorphic
+        pseudo-types called polymorphic types. Some procedural languages also support polymorphic
         functions using the types <i>anyarray</i>, <i>anyelement</i>, <i>anyenum</i>, and
           <i>anynonarray</i>.</p>
       <p>For more information about pseudo-types, see the Postgres documentation about <xref

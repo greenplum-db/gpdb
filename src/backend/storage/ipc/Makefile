@@ -1,13 +1,13 @@
 #
 # Makefile for storage/ipc
 #
-# $PostgreSQL: pgsql/src/backend/storage/ipc/Makefile,v 1.20 2007/01/20 17:16:12 petere Exp $
+# $PostgreSQL: pgsql/src/backend/storage/ipc/Makefile,v 1.21 2008/02/19 10:30:08 petere Exp $
 #
 
 subdir = src/backend/storage/ipc
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 # seems to be required 1999/07/22 bjm
 ifeq "$(findstring alpha,$(host_cpu))" "alpha"

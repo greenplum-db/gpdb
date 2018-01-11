@@ -4,6 +4,7 @@
 <topic id="topic1" xml:lang="en">
   <title id="hk141670">pg_resgroupcapability</title>
   <body>
+    <note>The <codeph>pg_resgroupcapability</codeph> system catalog table is valid only when resource group-based resource management is active.</note>
     <p>The <codeph>pg_resgroupcapability</codeph> system catalog table contains information about
       the capabilities and limits of defined Greenplum Database resource groups.
       You can join this table to the <xref
@@ -56,8 +57,8 @@
             <entry colname="col2">opaque type</entry>
             <entry colname="col3"/>
             <entry colname="col4">The specific value set for the resource limit referenced in 
-              this record. This value may have a different data type depending upon the limit 
-              referenced. </entry>
+              this record. This value has the fixed type <codeph>text</codeph>, and will be
+              converted to a different data type depending upon the limit referenced. </entry>
           </row>
           <row>
             <entry colname="col1">

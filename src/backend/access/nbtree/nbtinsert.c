@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtinsert.c,v 1.173 2009/08/01 20:59:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtinsert.c,v 1.170 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,7 +21,10 @@
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "utils/inval.h"
+#include "utils/tqual.h"
 
 
 typedef struct
@@ -505,7 +508,7 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
  *		removing any LP_DEAD tuples.
  *
  *		On entry, *buf and *offsetptr point to the first legal position
- *		where the new tuple could be inserted.  The caller should hold an
+ *		where the new tuple could be inserted.	The caller should hold an
  *		exclusive lock on *buf.  *offsetptr can also be set to
  *		InvalidOffsetNumber, in which case the function will search for the
  *		right location within the page if needed.  On exit, they point to the
@@ -954,7 +957,7 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 	 * rightpage as zeroes before throwing any error.
 	 */
 	origpage = BufferGetPage(buf);
-	leftpage = PageGetTempPage(origpage, sizeof(BTPageOpaqueData));
+	leftpage = PageGetTempPage(origpage);
 	rightpage = BufferGetPage(rbuf);
 
 	origpagenumber = BufferGetBlockNumber(buf);

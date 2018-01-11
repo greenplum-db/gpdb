@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="iz173472">Managing Resources</title>
+  <shortdesc>Greenplum Database provides features to help you prioritize and allocate resources to
+    queries according to business requirements and to prevent queries from starting when resources
+    are unavailable.</shortdesc>
+  <body>
+    <p>You can use resource management features to limit the number of concurrent queries, the
+      amount of memory used to execute a query, and the relative amount of CPU devoted to processing
+      a query. Greenplum Database provides two schemes to manage resources - Resource Queues and
+      Resource Groups.</p>
+    <note type="important">Significant Greenplum Database performance degradation has been observed
+      when enabling resource group-based workload management on RedHat 6.x, CentOS 6.x, and SuSE 11
+      systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in
+      CentOS 7.x and Red Hat 7.x systems, and on SuSE 12 SP2/SP3 systems with kernel version
+      4.4.73-5.1 or newer. <p>If you use RedHat 6 and the performance with resource groups is
+        acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to benefit
+        from other fixes to the cgroups implementation. </p><p>SuSE 11 does not have a kernel
+        version that resolves this issue; resource groups are still considered to be an experimental
+        feature on this platform. <ph otherprops="pivotal">Resource groups are not supported on SuSE
+          11 for production use.</ph></p></note>
+    <p>Either the resource queue or the resource group management scheme can be active in Greenplum
+      Database; both schemes cannot be active at the same time.</p>
+    <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
+      While you can create and assign resource groups when resource queues are active, you must
+      explicitly enable resource groups to start using that management scheme.</p>
+    <p>The following table summarizes some of the differences between Resource Queues and Resource
+      Groups.</p>
+    <table id="queue_group_compare">
+      <tgroup cols="3">
+        <colspec colnum="1" colname="col1" colwidth="1*"/>
+        <colspec colnum="2" colname="col2" colwidth="1*"/>
+        <colspec colnum="3" colname="col3" colwidth="1*"/>
+        <thead>
+          <row>
+            <entry colname="col1">Metric</entry>
+            <entry colname="col2">Resource Queues</entry>
+            <entry colname="col3">Resource Groups</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry colname="col1">Concurrency</entry>
+            <entry colname="col2">Managed at the query level</entry>
+            <entry colname="col3">Managed at the transaction level</entry>
+          </row>
+          <row>
+            <entry colname="col1">CPU</entry>
+            <entry colname="col2">Specify query priority</entry>
+            <entry colname="col3">Specify percentage of CPU resources; uses Linux Control
+              Groups</entry>
+          </row>
+          <row>
+            <entry colname="col1">Memory</entry>
+            <entry colname="col2">Managed at the queue and operator level; users can
+              over-subscribe</entry>
+            <entry colname="col3">Managed at the transaction level, with enhanced allocation and
+              tracking; users cannot over-subscribe</entry>
+          </row>
+          <row>
+            <entry colname="col1">Memory Isolation</entry>
+            <entry colname="col2">None</entry>
+            <entry colname="col3">Memory is isolated between resource groups and between
+              transactions within the same resource group</entry>
+          </row>
+          <row>
+            <entry colname="col1">Users</entry>
+            <entry colname="col2">Limits are applied only to non-admin users</entry>
+            <entry colname="col3">Limits are applied to <codeph>SUPERUSER</codeph> and non-admin
+              users alike</entry>
+          </row>
+          <row>
+            <entry colname="col1">Queueing</entry>
+            <entry colname="col2">Queue only when no slot available</entry>
+            <entry colname="col3">Queue when no slot is available or not enough available
+              memory</entry>
+          </row>
+          <row>
+            <entry colname="col1">Query Failure</entry>
+            <entry colname="col2">Query may fail immediately if not enough memory</entry>
+            <entry colname="col3">Query may fail after reaching transaction memory limit</entry>
+          </row>
+          <row>
+            <entry colname="col1">Limit Bypass</entry>
+            <entry colname="col2">Limits are not enforced for <codeph>SUPERUSER</codeph> roles and
+              certain operators and functions</entry>
+            <entry colname="col3">Limits are not enforced on <codeph>SET</codeph>, <codeph>RESET</codeph>, and <codeph>SHOW</codeph> commands</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </body>
+</topic>

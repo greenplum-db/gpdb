@@ -4,12 +4,13 @@
  *	  POSTGRES relation descriptor cache code
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/relcache.c,v 1.266.2.10 2010/09/02 03:17:06 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/relcache.c,v 1.287 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -63,6 +64,7 @@
 #include "optimizer/var.h"
 #include "rewrite/rewriteDefine.h"
 #include "storage/fd.h"
+#include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -72,6 +74,7 @@
 #include "utils/relationnode.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 #include "catalog/gp_policy.h"         /* GpPolicy */
 #include "cdb/cdbtm.h"
@@ -79,6 +82,7 @@
 #include "cdb/cdbmirroredflatfile.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbsreh.h"
+#include "utils/visibility_summary.h"
 
 
 /*
@@ -781,6 +785,8 @@ AllocateRelationDesc(Form_pg_class relp)
 	 * clear fields of reldesc that should initialize to something non-zero
 	 */
 	relation->rd_targblock = InvalidBlockNumber;
+	relation->rd_fsm_nblocks = InvalidBlockNumber;
+	relation->rd_vm_nblocks = InvalidBlockNumber;
 
 	/* make sure relation is marked as having no open file yet */
 	relation->rd_smgr = NULL;
@@ -833,8 +839,6 @@ AllocateRelationDesc(Form_pg_class relp)
 static void
 RelationParseRelOptions(Relation relation, HeapTuple tuple)
 {
-	Datum		datum;
-	bool		isnull;
 	bytea	   *options;
 
 	relation->rd_options = NULL;
@@ -858,34 +862,10 @@ RelationParseRelOptions(Relation relation, HeapTuple tuple)
 	 * we might not have any other for pg_class yet (consider executing this
 	 * code for pg_class itself)
 	 */
-	datum = fastgetattr(tuple,
-						Anum_pg_class_reloptions,
-						GetPgClassDescriptor(),
-						&isnull);
-	if (isnull)
-		return;
-
-	/* Parse into appropriate format; don't error out here */
-	switch (relation->rd_rel->relkind)
-	{
-		case RELKIND_RELATION:
-		case RELKIND_TOASTVALUE:
-		case RELKIND_AOSEGMENTS:
-		case RELKIND_AOBLOCKDIR:
-		case RELKIND_AOVISIMAP:
-		case RELKIND_UNCATALOGED:
-			options = heap_reloptions(relation->rd_rel->relkind, datum,
-									  false);
-			break;
-		case RELKIND_INDEX:
-			options = index_reloptions(relation->rd_am->amoptions, datum,
-									   false);
-			break;
-		default:
-			Assert(false);		/* can't get here */
-			options = NULL;		/* keep compiler quiet */
-			break;
-	}
+	options = extractRelOptions(tuple,
+								GetPgClassDescriptor(),
+								relation->rd_rel->relkind == RELKIND_INDEX ?
+								relation->rd_am->amoptions : InvalidOid);
 
 	/*
 	 * Copy parsed data into CacheMemoryContext.  To guard against the
@@ -1217,6 +1197,17 @@ RelationBuildRuleLock(Relation relation)
 	heap_close(rewrite_desc, AccessShareLock);
 
 	/*
+	 * there might not be any rules (if relhasrules is out-of-date)
+	 */
+	if (numlocks == 0)
+	{
+		relation->rd_rules = NULL;
+		relation->rd_rulescxt = NULL;
+		MemoryContextDelete(rulescxt);
+		return;
+	}
+
+	/*
 	 * form a RuleLock and insert into relation
 	 */
 	rulelock = (RuleLock *) MemoryContextAlloc(rulescxt, sizeof(RuleLock));
@@ -1335,7 +1326,11 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 	relation->rd_isnailed = false;
 	relation->rd_createSubid = InvalidSubTransactionId;
 	relation->rd_newRelfilenodeSubid = InvalidSubTransactionId;
-	relation->rd_istemp = isTempOrToastNamespace(relation->rd_rel->relnamespace);
+	relation->rd_istemp = relation->rd_rel->relistemp;
+	if (relation->rd_istemp)
+		relation->rd_islocaltemp = isTempOrToastNamespace(relation->rd_rel->relnamespace);
+	else
+		relation->rd_islocaltemp = false;
 	relation->rd_issyscat = (strncmp(relation->rd_rel->relname.data, "pg_", 3) == 0);
 
 	/*
@@ -1366,7 +1361,7 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		relation->rd_rulescxt = NULL;
 	}
 
-	if (relation->rd_rel->reltriggers > 0)
+	if (relation->rd_rel->relhastriggers)
 		RelationBuildTriggers(relation);
 	else
 		relation->trigdesc = NULL;
@@ -1661,7 +1656,7 @@ IndexSupportInitialize(oidvector *indclass,
  * Note there is no provision for flushing the cache.  This is OK at the
  * moment because there is no way to ALTER any interesting properties of an
  * existing opclass --- all you can do is drop it, which will result in
- * a useless but harmless dead entry in the cache.  To support altering
+ * a useless but harmless dead entry in the cache.	To support altering
  * opclass membership (not the same as opfamily membership!), we'd need to
  * be able to flush this cache as well as the contents of relcache entries
  * for indexes.
@@ -1728,10 +1723,10 @@ LookupOpclassInfo(Oid operatorClassOid,
 
 	/*
 	 * When testing for cache-flush hazards, we intentionally disable the
-	 * operator class cache and force reloading of the info on each call.
-	 * This is helpful because we want to test the case where a cache flush
-	 * occurs while we are loading the info, and it's very hard to provoke
-	 * that if this happens only once per opclass per backend.
+	 * operator class cache and force reloading of the info on each call. This
+	 * is helpful because we want to test the case where a cache flush occurs
+	 * while we are loading the info, and it's very hard to provoke that if
+	 * this happens only once per opclass per backend.
 	 */
 #if defined(CLOBBER_CACHE_ALWAYS)
 	opcentry->valid = false;
@@ -1897,6 +1892,8 @@ formrdesc(const char *relationName, Oid relationReltype,
 	 */
 	relation = (Relation) palloc0(sizeof(RelationData));
 	relation->rd_targblock = InvalidBlockNumber;
+	relation->rd_fsm_nblocks = InvalidBlockNumber;
+	relation->rd_vm_nblocks = InvalidBlockNumber;
 
 	/* make sure relation is marked as having no open file yet */
 	relation->rd_smgr = NULL;
@@ -1914,6 +1911,7 @@ formrdesc(const char *relationName, Oid relationReltype,
 	relation->rd_createSubid = InvalidSubTransactionId;
 	relation->rd_newRelfilenodeSubid = InvalidSubTransactionId;
 	relation->rd_istemp = false;
+	relation->rd_islocaltemp = false;
 	relation->rd_issyscat = (strncmp(relationName, "pg_", 3) == 0);	/* GP */
     relation->rd_isLocalBuf = false;    /*CDB*/
 
@@ -2287,6 +2285,18 @@ RelationReloadIndexInfo(Relation relation)
 	/* We must recalculate physical address in case it changed */
 	RelationInitPhysicalAddr(relation);
 
+	/*
+	 * Must reset targblock, fsm_nblocks and vm_nblocks in case rel was
+	 * truncated
+	 */
+	relation->rd_targblock = InvalidBlockNumber;
+	relation->rd_fsm_nblocks = InvalidBlockNumber;
+	relation->rd_vm_nblocks = InvalidBlockNumber;
+	/* Must free any AM cached data, too */
+	if (relation->rd_amcache)
+		pfree(relation->rd_amcache);
+	relation->rd_amcache = NULL;
+
 	/* Forget gp_relation_node information -- it may have changed. */
 	MemSet(&relation->rd_segfile0_relationnodeinfo, 0, sizeof(RelationNodeInfo));
 
@@ -2439,6 +2449,8 @@ RelationClearRelation(Relation relation, bool rebuild)
 	if (relation->rd_isnailed)
 	{
 		relation->rd_targblock = InvalidBlockNumber;
+		relation->rd_fsm_nblocks = InvalidBlockNumber;
+		relation->rd_vm_nblocks = InvalidBlockNumber;
 		if (relation->rd_rel->relkind == RELKIND_INDEX)
 		{
 			relation->rd_isvalid = false;		/* needs to be revalidated */
@@ -3098,6 +3110,8 @@ RelationBuildLocalRelation(const char *relname,
 	rel = (Relation) palloc0(sizeof(RelationData));
 
 	rel->rd_targblock = InvalidBlockNumber;
+	rel->rd_fsm_nblocks = InvalidBlockNumber;
+	rel->rd_vm_nblocks = InvalidBlockNumber;
 
 	/* make sure relation is marked as having no open file yet */
 	rel->rd_smgr = NULL;
@@ -3114,8 +3128,9 @@ RelationBuildLocalRelation(const char *relname,
 	/* must flag that we have rels created in this transaction */
 	need_eoxact_work = true;
 
-	/* is it a temporary relation? */
+	/* it is temporary if and only if it is in my temp-table namespace */
 	rel->rd_istemp = isTempOrToastNamespace(relnamespace);
+	rel->rd_islocaltemp = rel->rd_istemp;
 
 	/* is it a system catalog? */
 	rel->rd_issyscat = (strncmp(relname, "pg_", 3) == 0);
@@ -3192,6 +3207,7 @@ RelationBuildLocalRelation(const char *relname,
 	 * pg_upgrade gets confused if they don't match.
 	 */
 	rel->rd_rel->relisshared = shared_relation;
+	rel->rd_rel->relistemp = rel->rd_istemp;
 
 	RelationGetRelid(rel) = relid;
 
@@ -3558,11 +3574,11 @@ RelationCacheInitializePhase3(void)
 				relation->rd_rel->relhasrules = false;
 			restart = true;
 		}
-		if (relation->rd_rel->reltriggers > 0 && relation->trigdesc == NULL)
+		if (relation->rd_rel->relhastriggers && relation->trigdesc == NULL)
 		{
 			RelationBuildTriggers(relation);
 			if (relation->trigdesc == NULL)
-				relation->rd_rel->reltriggers = 0;
+				relation->rd_rel->relhastriggers = false;
 			restart = true;
 		}
 
@@ -4594,6 +4610,8 @@ load_relcache_init_file(bool shared)
 		 */
 		rel->rd_smgr = NULL;
 		rel->rd_targblock = InvalidBlockNumber;
+		rel->rd_fsm_nblocks = InvalidBlockNumber;
+		rel->rd_vm_nblocks = InvalidBlockNumber;
 		if (rel->rd_isnailed)
 			rel->rd_refcnt = 1;
 		else

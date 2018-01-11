@@ -71,14 +71,13 @@ class StartSegmentsOperation:
 
     """
 
-    def __init__(self, workerPool, quiet, localeData, gpVersion, 
+    def __init__(self, workerPool, quiet, gpVersion,
                  gpHome, masterDataDirectory, timeout=SEGMENT_TIMEOUT_DEFAULT,
                  specialMode=None, wrapper=None, wrapper_args=None,
                  logfileDirectory=False):
         checkNotNone("workerPool", workerPool)
         self.__workerPool = workerPool
         self.__quiet = quiet
-        self.__localeData = localeData
         self.__gpVersion = gpVersion
         self.__gpHome = gpHome
         self.__masterDataDirectory = masterDataDirectory
@@ -200,7 +199,7 @@ class StartSegmentsOperation:
             # This will call sbin/gpsegstart.py
             #
             cmd = gp.GpSegStartCmd("remote segment starts on host '%s'" % hostName,
-                                   self.__gpHome, segments, self.__localeData,
+                                   self.__gpHome, segments,
                                    self.__gpVersion,
                                    mirroringModePreTransition,
                                    numContentsInCluster,
@@ -325,7 +324,7 @@ class StartSegmentsOperation:
             address = segments[0].getSegmentAddress()
             cmd=gp.GpSegChangeMirrorModeCmd(
                     "remote segment mirror mode conversion on host '%s' using address '%s'" % (hostName, address),
-                    self.__gpHome, self.__localeData, self.__gpVersion,
+                    self.__gpHome, self.__gpVersion,
                     segments, targetMode, pickledParams, verbose=logging_is_verbose(),
                     ctxt=base.REMOTE,
                     remoteHost=address)

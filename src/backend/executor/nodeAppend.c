@@ -3,12 +3,12 @@
  * nodeAppend.c
  *	  routines to handle append nodes.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAppend.c,v 1.73 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAppend.c,v 1.74 2009/01/01 17:23:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -282,8 +282,6 @@ ExecInitAppend(Append *node, EState *estate, int eflags)
 	appendstate->as_whichplan = appendstate->as_firstplan;
 	exec_append_initialize_next(appendstate);
 
-	initGpmonPktForAppend((Plan *)node, &appendstate->ps.gpmon_pkt, estate);
-	
 	return appendstate;
 }
 
@@ -334,8 +332,6 @@ ExecAppend(AppendState *node)
 
 				ResetExprContext(econtext);
 
-				node->ps.ps_OuterTupleSlot = result;
-
 				/*
 				 * XXX gross hack. use outer tuple as scan tuple for projection
 				 */
@@ -352,8 +348,6 @@ ExecAppend(AppendState *node)
 			 * because it may have the wrong tuple descriptor in
 			 * inherited-UPDATE cases.
 			 */
-			Gpmon_Incr_Rows_Out(GpmonPktFromAppendState(node));
-			CheckSendPlanStateGpmonPkt(&node->ps);
 			return result;
 		}
 
@@ -367,8 +361,6 @@ ExecAppend(AppendState *node)
 			node->as_whichplan++;
 		else
 			node->as_whichplan--;
-
-		CheckSendPlanStateGpmonPkt(&node->ps);
 
 		if (!exec_append_initialize_next(node))
 			return ExecClearTuple(node->ps.ps_ResultTupleSlot);
@@ -442,21 +434,4 @@ ExecReScanAppend(AppendState *node, ExprContext *exprCtxt)
 	}
 	node->as_whichplan = node->as_firstplan;
 	exec_append_initialize_next(node);
-}
-
-void
-initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	int last_plan;
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Append));
-
-	last_plan = list_length(((Append*)planNode)->appendplans) - 1;
-
-	if (((Append*)planNode)->isTarget && estate->es_evTuple != NULL)
-	{
-		last_plan = estate->es_result_relation_info - estate->es_result_relations;
-		Assert(last_plan >= 0 && last_plan < list_length(((Append*)planNode)->appendplans));
-	}
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

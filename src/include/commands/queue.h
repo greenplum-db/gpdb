@@ -3,9 +3,12 @@
  * queue.h
  *	  Commands for manipulating resource queues.
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * $PostgreSQL$
+ *
+ * IDENTIFICATION
+ *	    src/include/commands/queue.h
  *
  *-------------------------------------------------------------------------
  */

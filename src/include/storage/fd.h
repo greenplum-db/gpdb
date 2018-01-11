@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.61 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.64 2009/01/12 05:10:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,6 +78,7 @@ OpenNamedFile(const char   *fileName,
                   bool          closeAtEOXact);
 
 extern void FileClose(File file);
+extern int	FilePrefetch(File file, off_t offset, int amount);
 extern int	FileRead(File file, char *buffer, int amount);
 extern int	FileWrite(File file, char *buffer, int amount);
 extern int	FileSync(File file);

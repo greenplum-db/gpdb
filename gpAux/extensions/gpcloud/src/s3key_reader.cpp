@@ -144,7 +144,7 @@ uint64_t ChunkBuffer::fill() {
     return (this->isError()) ? -1 : readLen;
 }
 
-void* DownloadThreadFunc(void* data) {
+static void* DownloadThreadFunc(void* data) {
     MaskThreadSignals();
 
     ChunkBuffer* buffer = static_cast<ChunkBuffer*>(data);

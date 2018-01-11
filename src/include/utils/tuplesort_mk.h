@@ -4,6 +4,11 @@
  *	  Public API to GPDB multi-key tuple sorting routines.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/tuplesort_mk.h
  *
  *-------------------------------------------------------------------------
  */
@@ -61,6 +66,7 @@ extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos
 extern bool tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward, TupleTableSlot *slot);
 extern IndexTuple tuplesort_getindextuple_mk(Tuplesortstate_mk *state, bool forward, bool *should_free);
 extern bool tuplesort_getdatum_mk(Tuplesortstate_mk *state, bool forward, Datum *val, bool *isNull);
+extern bool tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, bool forward);
 
 extern void tuplesort_end_mk(Tuplesortstate_mk *state);
 extern void tuplesort_flush_mk(Tuplesortstate_mk *state);

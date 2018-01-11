@@ -74,11 +74,11 @@ m/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VAC
 m/^WARNING:  could not close temporary file .*: No such file or directory/
 
 # Messages when resource group is enabled:
-# WARNING:  resource scheduling is disabled
-# HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+# WARNING:  resource queue is disabled
+# HINT:  To enable set gp_resource_manager=queue
 # NOTICE:  resource group required -- using default resource group "default_group"
-m/^WARNING:  resource scheduling is disabled$/
-m/^HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue$/
+m/^WARNING:  resource queue is disabled$/
+m/^HINT:  To enable set gp_resource_manager=queue$/
 m/^NOTICE:  resource group required -- using .* resource group ".*"$/
 -- end_matchignore
 
@@ -98,4 +98,8 @@ s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 # Mask out oid in error concurrent drop message
 m/\d+ was concurrently dropped/
 s/\d+ was concurrently dropped/##### was concurrently dropped/
+
+# Segment number is not predictable
+m/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/
+s/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/ERROR:  There are more external files (URLs) than primary segments that can read them./
 -- end_matchsubs

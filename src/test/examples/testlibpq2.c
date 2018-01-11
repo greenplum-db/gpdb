@@ -103,7 +103,7 @@ main(int argc, char **argv)
 			break;				/* shouldn't happen */
 
 		FD_ZERO(&input_mask);
-		FD_SET(sock, &input_mask);
+		FD_SET		(sock, &input_mask);
 
 		if (select(sock + 1, &input_mask, NULL, NULL, NULL) < 0)
 		{

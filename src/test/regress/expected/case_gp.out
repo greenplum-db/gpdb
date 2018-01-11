@@ -333,12 +333,13 @@ SELECT a,b,"decode"(a,1,1),
 -- Negative test: type mismatches
 SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[5,6],'u',ARRAY[7,8],'i',ARRAY[9,10],0) as newb from mytable;
 ERROR:  CASE types integer and integer[] cannot be matched
+LINE 1: SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[...
+                                ^
 --
 -- Clean up
 --
 DROP TABLE mytable CASCADE;
 DROP TABLE products CASCADE;
-NOTICE:  drop cascades to rule _RETURN on view myview
 NOTICE:  drop cascades to view myview
 DROP TABLE calls_to_blip;
 DROP FUNCTION negate(int);
@@ -548,6 +549,8 @@ select sid,
 from nomatch_case
 order by sid, name;
 ERROR:  operator does not exist: date = integer
+LINE 9:            WHEN 2007 THEN 2007
+                   ^
 HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 select sid,
        name,

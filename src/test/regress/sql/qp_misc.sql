@@ -10355,8 +10355,6 @@ group by
 f1,f2,f3,f4,f5
 ) Q ) P;
 -- OlapCoreCountRowsBetween_p2
--- test expected to fail until GPDB supports function
--- GPDB Limitation: ERROR:  window specifications with a framing clause must have an ORDER BY clause
 select 'OlapCoreCountRowsBetween_p2' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
 select f1,f2,f3,f4,f5, count(*) c  from (

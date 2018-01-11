@@ -4,6 +4,11 @@
  *	  append-only columnar relation access method definitions.
  *
  * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbaocsam.h
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +24,6 @@
 #include "executor/tuptable.h"
 #include "nodes/primnodes.h"
 #include "storage/block.h"
-#include "storage/lmgr.h"
 #include "utils/rel.h"
 #include "utils/tqual.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
@@ -260,4 +264,6 @@ extern void aocs_addcol_finish(AOCSAddColumnDesc desc);
 extern void aocs_addcol_emptyvpe(
 		Relation rel, AOCSFileSegInfo **segInfos,
 		int32 nseg, int num_newcols);
+extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
+		int64 firstRowNum);
 #endif   /* AOCSAM_H */

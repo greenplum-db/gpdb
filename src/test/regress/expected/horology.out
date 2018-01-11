@@ -1050,11 +1050,11 @@ SELECT time '03:30' + interval '1 month 04:01' AS "07:31:00";
 SELECT CAST(time with time zone '01:02-08' AS interval) AS "+00:01";
 ERROR:  cannot cast type time with time zone to interval
 LINE 1: SELECT CAST(time with time zone '01:02-08' AS interval) AS "...
-                                                      ^
+               ^
 SELECT CAST(interval '02:03' AS time with time zone) AS "02:03:00-08";
 ERROR:  cannot cast type interval to time with time zone
 LINE 1: SELECT CAST(interval '02:03' AS time with time zone) AS "02:...
-                                        ^
+               ^
 SELECT time with time zone '01:30-08' - interval '02:01' AS "23:29:00-08";
  23:29:00-08 
 -------------
@@ -1091,7 +1091,7 @@ SELECT t.d1 AS t, i.f1 AS i, t.d1 + i.f1 AS "add", t.d1 - i.f1 AS "subtract"
   WHERE t.d1 BETWEEN '1990-01-01' AND '2001-01-01'
     AND i.f1 BETWEEN '00:00' AND '23:00'
   ORDER BY 1,2;
-              t             |     i     |             add            |          subtract           
+             t              |     i     |            add             |          subtract          
 ----------------------------+-----------+----------------------------+----------------------------
  Wed Feb 28 17:32:01 1996   | @ 1 min   | Wed Feb 28 17:33:01 1996   | Wed Feb 28 17:31:01 1996
  Wed Feb 28 17:32:01 1996   | @ 5 hours | Wed Feb 28 22:32:01 1996   | Wed Feb 28 12:32:01 1996

@@ -3,11 +3,11 @@
  * to_tsany.c
  *		to_ts* function definitions
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/to_tsany.c,v 1.8.2.1 2008/03/07 15:29:27 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/to_tsany.c,v 1.14 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,23 +32,22 @@ get_current_ts_config(PG_FUNCTION_ARGS)
 static int
 compareWORD(const void *a, const void *b)
 {
-	if (((ParsedWord *) a)->len == ((ParsedWord *) b)->len)
+	int			res;
+
+	res = tsCompareString(
+						  ((ParsedWord *) a)->word, ((ParsedWord *) a)->len,
+						  ((ParsedWord *) b)->word, ((ParsedWord *) b)->len,
+						  false);
+
+	if (res == 0)
 	{
-		int			res = strncmp(
-								  ((ParsedWord *) a)->word,
-								  ((ParsedWord *) b)->word,
-								  ((ParsedWord *) b)->len);
+		if (((ParsedWord *) a)->pos.pos == ((ParsedWord *) b)->pos.pos)
+			return 0;
 
-		if (res == 0)
-		{
-			if (((ParsedWord *) a)->pos.pos == ((ParsedWord *) b)->pos.pos)
-				return 0;
-
-			return (((ParsedWord *) a)->pos.pos > ((ParsedWord *) b)->pos.pos) ? 1 : -1;
-		}
-		return res;
+		res = (((ParsedWord *) a)->pos.pos > ((ParsedWord *) b)->pos.pos) ? 1 : -1;
 	}
-	return (((ParsedWord *) a)->len > ((ParsedWord *) b)->len) ? 1 : -1;
+
+	return res;
 }
 
 static int
@@ -163,7 +162,7 @@ make_tsvector(ParsedText *prs)
 	if (lenstr > MAXSTRPOS)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("string is too long for tsvector")));
+				 errmsg("string is too long for tsvector (%d bytes, max %d bytes)", lenstr, MAXSTRPOS)));
 
 	totallen = CALCDATASIZE(prs->curwords, lenstr);
 	in = (TSVector) palloc0(totallen);
@@ -268,7 +267,7 @@ to_tsvector(PG_FUNCTION_ARGS)
  * and different variants are ORred together.
  */
 static void
-pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, int2 weight)
+pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, int2 weight, bool prefix)
 {
 	int4		count = 0;
 	ParsedText	prs;
@@ -302,7 +301,8 @@ pushval_morph(Datum opaque, TSQueryParserState state, char *strval, int lenval, 
 				while (count < prs.curwords && pos == prs.words[count].pos.pos && variant == prs.words[count].nvariant)
 				{
 
-					pushValue(state, prs.words[count].word, prs.words[count].len, weight);
+					pushValue(state, prs.words[count].word, prs.words[count].len, weight,
+							  ((prs.words[count].flags & TSL_PREFIX) || prefix) ? true : false);
 					pfree(prs.words[count].word);
 					if (cnt)
 						pushOperator(state, OP_AND);
@@ -337,7 +337,7 @@ to_tsquery_byid(PG_FUNCTION_ARGS)
 	QueryItem  *res;
 	int4		len;
 
-	query = parse_tsquery(TextPGetCString(in), pushval_morph, ObjectIdGetDatum(cfgid), false);
+	query = parse_tsquery(text_to_cstring(in), pushval_morph, ObjectIdGetDatum(cfgid), false);
 
 	if (query->size == 0)
 		PG_RETURN_TSQUERY(query);
@@ -356,15 +356,16 @@ to_tsquery_byid(PG_FUNCTION_ARGS)
 	 * Removing the stopword placeholders might've resulted in fewer
 	 * QueryItems. If so, move the operands up accordingly.
 	 */
-	if ( len != query->size ) {
-		char 		*oldoperand = GETOPERAND(query);
-		int4 lenoperand = VARSIZE(query) - (oldoperand - (char*)query);
+	if (len != query->size)
+	{
+		char	   *oldoperand = GETOPERAND(query);
+		int4		lenoperand = VARSIZE(query) - (oldoperand - (char *) query);
 
-		Assert( len < query->size );
+		Assert(len < query->size);
 
 		query->size = len;
-		memmove((void *) GETOPERAND(query), oldoperand, VARSIZE(query) - (oldoperand - (char*)query) );
-		SET_VARSIZE(query, COMPUTESIZE( len, lenoperand )); 
+		memmove((void *) GETOPERAND(query), oldoperand, VARSIZE(query) - (oldoperand - (char *) query));
+		SET_VARSIZE(query, COMPUTESIZE(len, lenoperand));
 	}
 
 	pfree(res);
@@ -392,7 +393,7 @@ plainto_tsquery_byid(PG_FUNCTION_ARGS)
 	QueryItem  *res;
 	int4		len;
 
-	query = parse_tsquery(TextPGetCString(in), pushval_morph, ObjectIdGetDatum(cfgid), true);
+	query = parse_tsquery(text_to_cstring(in), pushval_morph, ObjectIdGetDatum(cfgid), true);
 
 	if (query->size == 0)
 		PG_RETURN_TSQUERY(query);
@@ -406,15 +407,16 @@ plainto_tsquery_byid(PG_FUNCTION_ARGS)
 	}
 	memcpy((void *) GETQUERY(query), (void *) res, len * sizeof(QueryItem));
 
-	if ( len != query->size ) {
-		char 		*oldoperand = GETOPERAND(query);
-		int4 lenoperand = VARSIZE(query) - (oldoperand - (char*)query);
+	if (len != query->size)
+	{
+		char	   *oldoperand = GETOPERAND(query);
+		int4		lenoperand = VARSIZE(query) - (oldoperand - (char *) query);
 
-		Assert( len < query->size );
+		Assert(len < query->size);
 
 		query->size = len;
-		memcpy((void *) GETOPERAND(query), oldoperand, lenoperand );
-		SET_VARSIZE(query, COMPUTESIZE( len, lenoperand )); 
+		memcpy((void *) GETOPERAND(query), oldoperand, lenoperand);
+		SET_VARSIZE(query, COMPUTESIZE(len, lenoperand));
 	}
 
 	pfree(res);

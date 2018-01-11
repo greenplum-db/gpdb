@@ -2140,20 +2140,6 @@ def impl(context, table_type, table_name, db_name, num_partitions):
     create_large_num_partitions(table_type, table_name, db_name, num_partitions)
 
 
-@given('the length of partition names of table "{table_name}" in "{db_name}" exceeds the command line maximum limit')
-def impl(context, table_name, db_name):
-    partitions = get_partition_tablenames(table_name, db_name)
-    partition_list_string = ''
-    for part in partitions:
-        partition_list_string += (part[0] + ',')
-    if partition_list_string[-1] == ',':
-        parition_list_string = partition_list_string[:-1]
-    MAX_COMMAND_LINE_LEN = 100000
-    if len(partition_list_string) < MAX_COMMAND_LINE_LEN:
-        raise Exception('Expected the length of the string to be greater than %s, but got %s instead' % (
-        MAX_COMMAND_LINE_LEN, len(partition_list_string)))
-
-
 @given('there is a table-file "{filename}" with tables "{table_list}"')
 @then('there is a table-file "{filename}" with tables "{table_list}"')
 def impl(context, filename, table_list):
@@ -3302,6 +3288,7 @@ def impl(context, dbname):
 
 
 @when('sql "{sql}" is executed in "{dbname}" db')
+@then('sql "{sql}" is executed in "{dbname}" db')
 def impl(context, sql, dbname):
     execute_sql(dbname, sql)
 
@@ -3885,6 +3872,7 @@ def impl(context, seg):
 def impl(context, to_file):
     write_lines = []
     BLDWRAP_TOP = os.environ.get('BLDWRAP_TOP')
+    # this file is the output of the pulse system, where gpinit has been run
     from_file = BLDWRAP_TOP + '/sys_mgmt_test/test/general/cluster_conf.out'
     with open(from_file) as fr:
         lines = fr.readlines()
@@ -4137,29 +4125,25 @@ def impl(context, schema_name, dbname):
         raise Exception("Schema '%s' does not exist in the database '%s'" % (schema_name, dbname))
 
 
-def get_log_name(utilname, logdir):
-    today = datetime.now()
-    logname = "%s/%s_%s.log" % (logdir, utilname, today.strftime('%Y%m%d'))
-    return logname
-
-
-@then('verify that a log was created by {utilname} in the user\'s "{dirname}" directory')
+@then('verify that the utility {utilname} ever does logging into the user\'s "{dirname}" directory')
 def impl(context, utilname, dirname):
     absdirname = "%s/%s" % (os.path.expanduser("~"), dirname)
     if not os.path.exists(absdirname):
         raise Exception('No such directory: %s' % absdirname)
-    logname = get_log_name(utilname, absdirname)
-    if not os.path.exists(logname):
-        raise Exception('Log "%s" was not created' % logname)
+    pattern = "%s/%s_*.log" % (absdirname, utilname)
+    logs_for_a_util = glob.glob(pattern)
+    if not logs_for_a_util:
+        raise Exception('Logs matching "%s" were not created' % pattern)
 
 
 @then('verify that a log was created by {utilname} in the "{dirname}" directory')
 def impl(context, utilname, dirname):
     if not os.path.exists(dirname):
         raise Exception('No such directory: %s' % dirname)
-    logname = get_log_name(utilname, dirname)
-    if not os.path.exists(logname):
-        raise Exception('Log "%s" was not created' % logname)
+    pattern = "%s/%s_*.log" % (dirname, utilname)
+    logs_for_a_util = glob.glob(pattern)
+    if not logs_for_a_util:
+        raise Exception('Logs matching "%s" were not created' % pattern)
 
 
 @given('a table is created containing rows of length "{length}" with connection "{dbconn}"')
@@ -4182,53 +4166,16 @@ def impl(context, tablename, dbconn):
     run_gpcommand(context, command)
 
 
-# gptransfer must be run in verbose mode (-v) with default log location when using this step
-@then('verify that gptransfer has a sub batch size of "{num}"')
-def impl(context, num):
-    num = int(num)
-    log_dir = _get_gpAdminLogs_directory()
-    if not os.path.exists(log_dir):
-        raise Exception('No such directory: %s' % log_dir)
-    log_name = get_log_name('gptransfer', log_dir)
-
-    full_path = os.path.join(log_dir, log_name)
-
-    if not os.path.isfile(full_path):
-        raise Exception("Can not find file: %s" % full_path)
-
-    # todo why open file if we don't care about contents?
-    with open(full_path) as fd:
-        fd.read()
-
-    for i in range(num):
-        worker = "\[DEBUG\]:-\[worker%d\]" % i
-        try:
-            check_stdout_msg(context, worker)
-        except:
-            raise Exception("gptransfer sub batch size should be %d, is %d" % (num, i))
-
-    worker = "\[DEBUG\]:-\[worker%d\]" % num
-    try:
-        check_string_not_present_stdout(context, worker)
-    except:
-        raise Exception("gptransfer sub batch size should be %d, is at least %d" % (num, num + 1))
 
 
 def _get_gpAdminLogs_directory():
     return "%s/gpAdminLogs" % os.path.expanduser("~")
 
 
-# Read in a full map file, remove the first host, print it to a new file
 @given('an incomplete map file is created')
 def impl(context):
-    map_file = os.environ['GPTRANSFER_MAP_FILE']
-    contents = []
-    with open(map_file, 'r') as fd:
-        contents = fd.readlines()
-
     with open('/tmp/incomplete_map_file', 'w') as fd:
-        for line in contents[1:]:
-            fd.write(line)
+        fd.write('nonexistent_host,nonexistent_host')
 
 
 @given(
@@ -4537,8 +4484,18 @@ def impl(context, tabletype, table_name, dbname):
 @when('read pid from file "{filename}" and kill the process')
 @given('read pid from file "{filename}" and kill the process')
 def impl(context, filename):
-    with open(filename) as fr:
-        pid = fr.readline().strip()
+    retry = 0
+    pid = None
+
+    while retry < 5:
+        try:
+            with open(filename) as fr:
+                pid = fr.readline().strip()
+            if pid:
+                break
+        except:
+            retry += 1
+            time.sleep(retry * 0.1) # 100 millis, 200 millis, etc.
 
     if not pid:
         raise Exception("process id '%s' not found in the file '%s'" % (pid, filename))
@@ -5072,9 +5029,9 @@ def ddboost_config_setup(context, storage_unit=None):
 
     cmd_config
     local = pexpect.spawn(cmd_config)
-    local.expect('Password: ')
+    local.expect('Password: ', timeout=60)
     local.sendline(context._root['local_ddboost_password'])
-    local.expect(pexpect.EOF)
+    local.expect(pexpect.EOF, timeout=60)
     local.close()
 
     cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s --ddboost-remote" % \
@@ -5087,9 +5044,9 @@ def ddboost_config_setup(context, storage_unit=None):
 
     cmd_config
     local = pexpect.spawn(cmd_config)
-    local.expect('Password: ')
+    local.expect('Password: ', timeout=60)
     local.sendline(context._root['remote_ddboost_password'])
-    local.expect(pexpect.EOF)
+    local.expect(pexpect.EOF, timeout=60)
     local.close()
 
 def _copy_nbu_lib_files(context, ver, gphome):
@@ -5140,16 +5097,15 @@ def impl(context, ver):
 @given('the test suite is initialized for DDBoost')
 def impl(context):
     os.environ["DDBOOST"] = "TRUE"
-    DDBOOSTDICT = defaultdict(dict)
-    DDBOOSTDICT['DDBOOSTINFO'] = parse_config_params()
-    context._root['local_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_1']
-    context._root['local_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_1']
-    context._root['local_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_1']
-    context._root['remote_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_2']
-    context._root['remote_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_2']
-    context._root['remote_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_2']
+    context._root['local_ddboost_host'] = os.environ["DD_SOURCE_HOST"]
+    context._root['local_ddboost_user'] = os.environ["DD_USER"]
+    context._root['local_ddboost_password'] = os.environ["DD_PASSWORD"]
+    context._root['remote_ddboost_host'] = os.environ["DD_DEST_HOST"]
+    context._root['remote_ddboost_user'] = os.environ["DD_USER"]
+    context._root['remote_ddboost_password'] = os.environ["DD_PASSWORD"]
     if 'ddboost_backupdir' not in context._root:
-        directory = os.getenv('PULSE_PROJECT', default='GPDB') + os.getenv('PULSE_BUILD_VERSION', default='') + os.getenv('PULSE_STAGE', default='') + '_DIR'
+        with open("/tmp/terraform_name", 'r') as tf_name_file:
+            directory = "GPDB-" + tf_name_file.readline() + "-DIR"
         context._root['ddboost_backupdir'] = directory
     ddboost_config_setup(context, storage_unit="GPDB")
 

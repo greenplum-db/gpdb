@@ -8,14 +8,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.113.2.2 2009/12/09 21:58:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.126 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
@@ -23,7 +22,7 @@
 #include "executor/spi.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
-#include "parser/parse_expr.h"
+#include "nodes/nodeFuncs.h"
 #include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -223,7 +222,15 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	/*
 	 * If it has prosecdef set, or non-null proconfig, use
 	 * fmgr_security_definer call handler --- unless we are being called again
-	 * by fmgr_security_definer or fmgr_info_other_lang.
+	 * by fmgr_security_definer.
+	 *
+	 * When using fmgr_security_definer, function stats tracking is always
+	 * disabled at the outer level, and instead we set the flag properly in
+	 * fmgr_security_definer's private flinfo and implement the tracking
+	 * inside fmgr_security_definer.  This loses the ability to charge the
+	 * overhead of fmgr_security_definer to the function, but gains the
+	 * ability to set the track_functions GUC as a local GUC parameter of an
+	 * interesting function and have the right things happen.
 	 */
 	if (!ignore_security &&
 		(procedureStruct->prosecdef ||
@@ -966,7 +973,7 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 
 	/*
 	 * We don't need to restore GUC or userid settings on error, because the
-	 * ensuing xact or subxact abort will do that.  The PG_TRY block is only
+	 * ensuing xact or subxact abort will do that.	The PG_TRY block is only
 	 * needed to clean up the flinfo link.
 	 */
 	save_flinfo = fcinfo->flinfo;
@@ -1870,7 +1877,7 @@ OidFunctionCall9(Oid functionId, Datum arg1, Datum arg2,
  *
  * One important difference from the bare function call is that we will
  * push any active SPI context, allowing SPI-using I/O functions to be
- * called from other SPI functions without extra notation.  This is a hack,
+ * called from other SPI functions without extra notation.	This is a hack,
  * but the alternative of expecting all SPI functions to do SPI_push/SPI_pop
  * around I/O calls seems worse.
  */
@@ -2057,6 +2064,129 @@ OidSendFunctionCall(Oid functionId, Datum val)
 	return SendFunctionCall(&flinfo, val);
 }
 
+
+/*
+ * On GPDB, int64, float8 and float4 are always pass-by-value, and there are
+ * static inline functions in postgres.h to implement these.
+ */
+#if 0
+/*-------------------------------------------------------------------------
+ *		Support routines for standard maybe-pass-by-reference datatypes
+ *
+ * int8, float4, and float8 can be passed by value if Datum is wide enough.
+ * (For backwards-compatibility reasons, we allow pass-by-ref to be chosen
+ * at compile time even if pass-by-val is possible.)  For the float types,
+ * we need a support routine even if we are passing by value, because many
+ * machines pass int and float function parameters/results differently;
+ * so we need to play weird games with unions.
+ *
+ * Note: there is only one switch controlling the pass-by-value option for
+ * both int8 and float8; this is to avoid making things unduly complicated
+ * for the timestamp types, which might have either representation.
+ *-------------------------------------------------------------------------
+ */
+
+#ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
+
+Datum
+Int64GetDatum(int64 X)
+{
+#ifndef INT64_IS_BUSTED
+	int64	   *retval = (int64 *) palloc(sizeof(int64));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#else							/* INT64_IS_BUSTED */
+
+	/*
+	 * On a machine with no 64-bit-int C datatype, sizeof(int64) will not be
+	 * 8, but we want Int64GetDatum to return an 8-byte object anyway, with
+	 * zeroes in the unused bits.  This is needed so that, for example, hash
+	 * join of int8 will behave properly.
+	 */
+	int64	   *retval = (int64 *) palloc0(Max(sizeof(int64), 8));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif   /* INT64_IS_BUSTED */
+}
+#endif   /* USE_FLOAT8_BYVAL */
+
+Datum
+Float4GetDatum(float4 X)
+{
+#ifdef USE_FLOAT4_BYVAL
+	union
+	{
+		float4		value;
+		int32		retval;
+	}			myunion;
+
+	myunion.value = X;
+	return SET_4_BYTES(myunion.retval);
+#else
+	float4	   *retval = (float4 *) palloc(sizeof(float4));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif
+}
+
+#ifdef USE_FLOAT4_BYVAL
+
+float4
+DatumGetFloat4(Datum X)
+{
+	union
+	{
+		int32		value;
+		float4		retval;
+	}			myunion;
+
+	myunion.value = GET_4_BYTES(X);
+	return myunion.retval;
+}
+#endif   /* USE_FLOAT4_BYVAL */
+
+Datum
+Float8GetDatum(float8 X)
+{
+#ifdef USE_FLOAT8_BYVAL
+	union
+	{
+		float8		value;
+		int64		retval;
+	}			myunion;
+
+	myunion.value = X;
+	return SET_8_BYTES(myunion.retval);
+#else
+	float8	   *retval = (float8 *) palloc(sizeof(float8));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif
+}
+
+#ifdef USE_FLOAT8_BYVAL
+
+float8
+DatumGetFloat8(Datum X)
+{
+	union
+	{
+		int64		value;
+		float8		retval;
+	}			myunion;
+
+	myunion.value = GET_8_BYTES(X);
+	return myunion.retval;
+}
+#endif   /* USE_FLOAT8_BYVAL */
+
+#endif /* GPDB */
+
+
 /*-------------------------------------------------------------------------
  *		Support routines for toastable datatypes
  *-------------------------------------------------------------------------
@@ -2109,6 +2239,7 @@ pg_detoast_datum_packed(struct varlena * datum)
  * These are needed by polymorphic functions, which accept multiple possible
  * input types and need help from the parser to know what they've got.
  * Also, some functions might be interested in whether a parameter is constant.
+ * Functions taking VARIADIC ANY also need to know about the VARIADIC keyword.
  *-------------------------------------------------------------------------
  */
 
@@ -2179,6 +2310,8 @@ get_call_expr_argtype(Node *expr, int argnum)
 		args = list_make1(((ArrayCoerceExpr *) expr)->arg);
 	else if (IsA(expr, NullIfExpr))
 		args = ((NullIfExpr *) expr)->args;
+	else if (IsA(expr, WindowFunc))
+		args = ((WindowFunc *) expr)->args;
 	else
 		return InvalidOid;
 
@@ -2200,6 +2333,103 @@ get_call_expr_argtype(Node *expr, int argnum)
 		argtype = get_element_type(argtype);
 
 	return argtype;
+}
+
+/*
+ * Find out whether a specific function argument is constant for the
+ * duration of a query
+ *
+ * Returns false if information is not available
+ */
+bool
+get_fn_expr_arg_stable(FmgrInfo *flinfo, int argnum)
+{
+	/*
+	 * can't return anything useful if we have no FmgrInfo or if its fn_expr
+	 * node has not been initialized
+	 */
+	if (!flinfo || !flinfo->fn_expr)
+		return false;
+
+	return get_call_expr_arg_stable(flinfo->fn_expr, argnum);
+}
+
+/*
+ * Find out whether a specific function argument is constant for the
+ * duration of a query, but working from the calling expression tree
+ *
+ * Returns false if information is not available
+ */
+bool
+get_call_expr_arg_stable(Node *expr, int argnum)
+{
+	List	   *args;
+	Node	   *arg;
+
+	if (expr == NULL)
+		return false;
+
+	if (IsA(expr, FuncExpr))
+		args = ((FuncExpr *) expr)->args;
+	else if (IsA(expr, OpExpr))
+		args = ((OpExpr *) expr)->args;
+	else if (IsA(expr, DistinctExpr))
+		args = ((DistinctExpr *) expr)->args;
+	else if (IsA(expr, ScalarArrayOpExpr))
+		args = ((ScalarArrayOpExpr *) expr)->args;
+	else if (IsA(expr, ArrayCoerceExpr))
+		args = list_make1(((ArrayCoerceExpr *) expr)->arg);
+	else if (IsA(expr, NullIfExpr))
+		args = ((NullIfExpr *) expr)->args;
+	else if (IsA(expr, WindowFunc))
+		args = ((WindowFunc *) expr)->args;
+	else
+		return false;
+
+	if (argnum < 0 || argnum >= list_length(args))
+		return false;
+
+	arg = (Node *) list_nth(args, argnum);
+
+	/*
+	 * Either a true Const or an external Param will have a value that doesn't
+	 * change during the execution of the query.  In future we might want to
+	 * consider other cases too, e.g. now().
+	 */
+	if (IsA(arg, Const))
+		return true;
+	if (IsA(arg, Param) &&
+		((Param *) arg)->paramkind == PARAM_EXTERN)
+		return true;
+
+	return false;
+}
+
+/*
+ * Get the VARIADIC flag from the function invocation
+ *
+ * Returns false (the default assumption) if information is not available
+ *
+ * Note this is generally only of interest to VARIADIC ANY functions
+ */
+bool
+get_fn_expr_variadic(FmgrInfo *flinfo)
+{
+	Node	   *expr;
+
+	/*
+	 * can't return anything useful if we have no FmgrInfo or if its fn_expr
+	 * node has not been initialized
+	 */
+	if (!flinfo || !flinfo->fn_expr)
+		return false;
+
+	expr = flinfo->fn_expr;
+
+	if (IsA(expr, FuncExpr))
+		return ((FuncExpr *) expr)->funcvariadic;
+	else
+		return false;
 }
 
 /*-------------------------------------------------------------------------

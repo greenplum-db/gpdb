@@ -23,7 +23,7 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>Creates a new resource queue for Greenplum Database workload management. A resource queue
+      <p>Creates a new resource queue for Greenplum Database resource management. A resource queue
         must have either an <codeph>ACTIVE_STATEMENTS</codeph> or a <codeph>MAX_COST</codeph> value
         (or it can have both). Only a superuser can create a resource queue.</p>
       <p>Resource queues with an <codeph>ACTIVE_STATEMENTS</codeph> threshold set a maximum limit on
@@ -45,6 +45,16 @@
         exceed the cost limit will always be rejected and never allowed to run. Specifying a value
         for <codeph>MIN_COST</codeph> allows the administrator to define a cost for small queries
         that will be exempt from resource queueing.</p>
+      <note>GPORCA and the legacy Greenplum Database query optimizer utilize different
+              query costing models and may compute different costs for the same query.
+              The Greenplum Database resource queue resource management scheme neither
+              differentiates nor aligns costs between GPORCA and the legacy optimizer; it
+              uses the literal cost value returned from the optimizer to throttle
+              queries.<p> When resource queue-based resource management is active, use the
+              <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> limits for
+              resource queues rather than configuring cost-based limits. Even when using GPORCA,
+              Greenplum Database may fall back to using the legacy query optimizer for certain
+              queries, so using cost-based limits can lead to unexpected results.</p></note>
       <p>If a value is not defined for <codeph>ACTIVE_STATEMENTS</codeph> or
           <codeph>MAX_COST</codeph>, it is set to <codeph>-1</codeph> by default (meaning no limit).
         After defining a resource queue, you must assign roles to the queue using the <codeph><xref
@@ -181,7 +191,7 @@
     <section id="section7">
       <title>Compatibility</title>
       <p><codeph>CREATE RESOURCE QUEUE</codeph> is a Greenplum Database extension. There is no
-        provision for resource queues or workload management in the SQL standard.</p>
+        provision for resource queues or resource management in the SQL standard.</p>
     </section>
     <section id="section8">
       <title>See Also</title>

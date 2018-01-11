@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_table.sgml,v 1.102 2008/12/13 19:13:44 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_table.sgml,v 1.106 2009/05/03 20:45:43 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTABLE">
  <refmeta>
   <refentrytitle id="sql-altertable-title">ALTER TABLE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -43,7 +44,7 @@ where action is one of:
       [ ENCODING ( storage_directive [,...] ) ] 
       [column_constraint [ ... ]]
   DROP [COLUMN] column [RESTRICT | CASCADE]
-  ALTER [COLUMN] column TYPE type [USING expression]
+  ALTER [COLUMN] column [ SET DATA ] TYPE type [USING expression]
   ALTER [COLUMN] column SET DEFAULT expression
   ALTER [COLUMN] column DROP DEFAULT
   ALTER [COLUMN] column { SET | DROP } NOT NULL
@@ -54,6 +55,7 @@ where action is one of:
   ENABLE TRIGGER [trigger_name | ALL | USER]
   CLUSTER ON index_name
   SET WITHOUT CLUSTER
+  SET WITH OIDS
   SET WITHOUT OIDS
   SET (FILLFACTOR = value)
   RESET (FILLFACTOR)
@@ -155,7 +157,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>ALTER COLUMN TYPE</literal></term>
+    <term><literal>SET DATA TYPE</literal></term>
     <listitem>
      <para>
       This form changes the type of a column of a table. Indexes and
@@ -246,7 +248,7 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
       This form adds a new constraint to a table using the same syntax as
-      <xref linkend="SQL-CREATETABLE" endterm="SQL-CREATETABLE-TITLE">. 
+      <xref linkend="SQL-CREATETABLE" endterm="SQL-CREATETABLE-TITLE">.
      </para>
     </listitem>
    </varlistentry>
@@ -278,10 +280,10 @@ Where column_reference_storage_directive is:
       The trigger firing mechanism is also affected by the configuration
       variable <xref linkend="guc-session-replication-role">. Simply enabled
       triggers will fire when the replication role is <quote>origin</>
-      (the default) or <quote>local</>. Triggers configured <literal>ENABLE REPLICA</literal>
-      will only fire if the session is in <quote>replica</> mode and triggers 
-      configured <literal>ENABLE ALWAYS</literal> will fire regardless of the current replication 
-      mode.
+      (the default) or <quote>local</>. Triggers configured as <literal>ENABLE
+      REPLICA</literal> will only fire if the session is in <quote>replica</>
+      mode, and triggers configured as <literal>ENABLE ALWAYS</literal> will
+      fire regardless of the current replication mode.
      </para>
     </listitem>
    </varlistentry>
@@ -304,7 +306,7 @@ Where column_reference_storage_directive is:
     <term><literal>CLUSTER</literal></term>
     <listitem>
      <para>
-      This form selects the default index for future 
+      This form selects the default index for future
       <xref linkend="SQL-CLUSTER" endterm="sql-cluster-title">
       operations.  It does not actually re-cluster the table.
      </para>
@@ -324,6 +326,23 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
+    <term><literal>SET WITH OIDS</literal></term>
+    <listitem>
+     <para>
+      This form adds an <literal>oid</literal> system column to the
+      table (see <xref linkend="ddl-system-columns">).
+      It does nothing if the table already has OIDs.
+     </para>
+
+     <para>
+      Note that this is not equivalent to <literal>ADD COLUMN oid oid</>;
+      that would add a normal column that happened to be named
+      <literal>oid</>, not a system column.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>SET WITHOUT OIDS</literal></term>
     <listitem>
      <para>
@@ -333,12 +352,6 @@ Where column_reference_storage_directive is:
       except that it will not complain if there is already no
       <literal>oid</literal> column.
      </para>
-
-     <para>
-      Note that there is no variant of <command>ALTER TABLE</command>
-      that allows OIDs to be restored to a table once they have been
-      removed.
-     </para>
     </listitem>
    </varlistentry>
 
@@ -347,7 +360,8 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
       This form changes one or more storage parameters for the table.  See
-      <xref linkend="SQL-CREATETABLE" endterm="sql-createtable-title">
+      <xref linkend="SQL-CREATETABLE-storage-parameters"
+      endterm="sql-createtable-storage-parameters-title">
       for details on the available parameters.  Note that the table contents
       will not be modified immediately by this command; depending on the
       parameter you might need to rewrite the table to get the desired effects.
@@ -362,7 +376,8 @@ Where column_reference_storage_directive is:
        in the <literal>WITH (<replaceable
        class="PARAMETER">storage_parameter</>)</literal> syntax,
        <command>ALTER TABLE</> does not treat <literal>OIDS</> as a
-       storage parameter.
+       storage parameter.  Instead use the <literal>SET WITH OIDS</>
+       and <literal>SET WITHOUT OIDS</> forms to change OID status.
       </para>
      </note>
     </listitem>
@@ -433,7 +448,7 @@ Where column_reference_storage_directive is:
       moves the data file(s) associated with the table to the new tablespace.
       Indexes on the table, if any, are not moved; but they can be moved
       separately with additional <literal>SET TABLESPACE</literal> commands.
-      See also 
+      See also
       <xref linkend="SQL-CREATETABLESPACE" endterm="sql-createtablespace-title">.
      </para>
     </listitem>
@@ -702,7 +717,8 @@ Where column_reference_storage_directive is:
     Adding a column with a non-null default or changing the type of an
     existing column will require the entire table to be rewritten.  This
     might take a significant amount of time for a large table; and it will
-    temporarily require double the disk space.
+    temporarily require double the disk space.  Adding or removing a system
+    <literal>oid</> column likewise requires rewriting the entire table.
    </para>
 
    <para>
@@ -721,9 +737,11 @@ Where column_reference_storage_directive is:
     the column, but simply makes it invisible to SQL operations.  Subsequent
     insert and update operations in the table will store a null value for the
     column. Thus, dropping a column is quick but it will not immediately
-    reduce the on-disk size of your table, as the space occupied 
+    reduce the on-disk size of your table, as the space occupied
     by the dropped column is not reclaimed.  The space will be
-    reclaimed over time as existing rows are updated.
+    reclaimed over time as existing rows are updated.  (These statements do
+    not apply when dropping the system <literal>oid</> column; that is done
+    with an immediate rewrite.)
    </para>
 
    <para>
@@ -780,7 +798,8 @@ ALTER TABLE table ALTER COLUMN anycol TYPE anytype;
     The <literal>TRIGGER</>, <literal>CLUSTER</>, <literal>OWNER</>,
     and <literal>TABLESPACE</> actions never recurse to descendant tables;
     that is, they always act as though <literal>ONLY</> were specified.
-    Adding a constraint can recurse only for <literal>CHECK</> constraints.
+    Adding a constraint can recurse only for <literal>CHECK</> constraints,
+    and is required to do so for such constraints.
    </para>
 
    <para>
@@ -826,7 +845,7 @@ ALTER TABLE distributors
    with time zone</type> via a <literal>USING</literal> clause:
 <programlisting>
 ALTER TABLE foo
-    ALTER COLUMN foo_timestamp TYPE timestamp with time zone
+    ALTER COLUMN foo_timestamp SET DATA TYPE timestamp with time zone
     USING
         timestamp with time zone 'epoch' + foo_timestamp * interval '1 second';
 </programlisting>
@@ -870,35 +889,43 @@ ALTER TABLE distributors ALTER COLUMN street DROP NOT NULL;
 </programlisting>
   </para>
 
-  <para> 
-   To add a check constraint to a table:
+  <para>
+   To add a check constraint to a table and all its children:
 <programlisting>
 ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5);
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    To remove a check constraint from a table and all its children:
 <programlisting>
 ALTER TABLE distributors DROP CONSTRAINT zipchk;
 </programlisting>
   </para>
 
-  <para> 
+  <para>
+   To remove a check constraint from a table only:
+<programlisting>
+ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;
+</programlisting>
+   (The check constraint remains in place for any child tables.)
+  </para>
+
+  <para>
    To add a foreign key constraint to a table:
 <programlisting>
 ALTER TABLE distributors ADD CONSTRAINT distfk FOREIGN KEY (address) REFERENCES addresses (address) MATCH FULL;
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    To add a (multicolumn) unique constraint to a table:
 <programlisting>
 ALTER TABLE distributors ADD CONSTRAINT dist_id_zipcode_key UNIQUE (dist_id, zipcode);
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    To add an automatically named primary key constraint to a table, noting
    that a table can only ever have one primary key:
 <programlisting>
@@ -906,14 +933,14 @@ ALTER TABLE distributors ADD PRIMARY KEY (dist_id);
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    To move a table to a different tablespace:
 <programlisting>
 ALTER TABLE distributors SET TABLESPACE fasttablespace;
 </programlisting>
   </para>
 
-  <para> 
+  <para>
    To move a table to a different schema:
 <programlisting>
 ALTER TABLE myschema.distributors SET SCHEMA yourschema;
@@ -926,8 +953,9 @@ ALTER TABLE myschema.distributors SET SCHEMA yourschema;
   <title>Compatibility</title>
 
   <para>
-   The <literal>ADD</literal>, <literal>DROP</>, and <literal>SET DEFAULT</>
-   forms conform with the SQL standard.  The other forms are
+   The forms <literal>ADD</literal>, <literal>DROP</>, <literal>SET DEFAULT</>,
+   and <literal>SET DATA TYPE</literal> (without <literal>USING</literal>)
+   conform with the SQL standard.  The other forms are
    <productname>PostgreSQL</productname> extensions of the SQL standard.
    Also, the ability to specify more than one manipulation in a single
    <command>ALTER TABLE</> command is an extension.

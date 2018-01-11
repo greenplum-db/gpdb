@@ -1,5 +1,5 @@
 --
--- This is created by pgsql/contrib/findoidjoins/make_oidjoin_check
+-- This is created by pgsql/src/tools/findoidjoins/make_oidjoins_check
 --
 SELECT	ctid, aggfnoid 
 FROM	pg_catalog.pg_aggregate fk 
@@ -21,6 +21,10 @@ SELECT	ctid, aggtranstype
 FROM	pg_catalog.pg_aggregate fk 
 WHERE	aggtranstype != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.aggtranstype);
+SELECT	ctid, amkeytype 
+FROM	pg_catalog.pg_am fk 
+WHERE	amkeytype != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.amkeytype);
 SELECT	ctid, aminsert 
 FROM	pg_catalog.pg_am fk 
 WHERE	aminsert != 0 AND 
@@ -33,10 +37,10 @@ SELECT	ctid, amgettuple
 FROM	pg_catalog.pg_am fk 
 WHERE	amgettuple != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.amgettuple);
-SELECT	ctid, amgetmulti 
+SELECT	ctid, amgetbitmap 
 FROM	pg_catalog.pg_am fk 
-WHERE	amgetmulti != 0 AND 
-	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.amgetmulti);
+WHERE	amgetbitmap != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.amgetbitmap);
 SELECT	ctid, amrescan 
 FROM	pg_catalog.pg_am fk 
 WHERE	amrescan != 0 AND 
@@ -461,6 +465,10 @@ SELECT	ctid, typmodout
 FROM	pg_catalog.pg_type fk 
 WHERE	typmodout != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.typmodout);
+SELECT	ctid, typanalyze 
+FROM	pg_catalog.pg_type fk 
+WHERE	typanalyze != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.typanalyze);
 SELECT	ctid, typbasetype 
 FROM	pg_catalog.pg_type fk 
 WHERE	typbasetype != 0 AND 

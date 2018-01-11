@@ -49,7 +49,7 @@ begin
 end
 $$ language plpgsql READS SQL DATA;
 select * from (select refcursor (1, 10)) t1, test;
-ERROR:  function cannot execute on segment because it accesses relation "public.test"  (seg0 slice1 usensimiobmbp.corp.emc.com:18506 pid=17309)
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.test"  (seg0 slice1 usensimiobmbp.corp.emc.com:18506 pid=17309)
 DETAIL:  
 	 SQL statement " select * from test where a >  $1  and b >  $2 "
 PL/pgSQL function "refcursor" line 6 at OPEN

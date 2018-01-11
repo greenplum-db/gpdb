@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Retrieves rows from a table or view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH <varname>with_query</varname> [, ...] ]
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
   [FROM <varname>from_item</varname> [, ...]]
@@ -20,7 +20,7 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname>]
   [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock>
-      <p>where <varname>with_query is:</varname> is:</p>
+      <p>where <varname>with_query:</varname> is:</p>
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> )</codeblock>
       <p>where <varname>grouping_element</varname> can be one of:</p>
       <codeblock>  ()
@@ -54,6 +54,9 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
               ( <varname>column_definition</varname> [, ...] )
 <varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
           [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock>
+      <p><b>Note:</b>
+        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
+        recommended for production use.</p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -114,7 +117,55 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p>
+          executed at the same time. </p><p>The <codeph>RECURSIVE</codeph> keyword can be enabled by
+          setting the server configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
+            <codeph>true</codeph>. For information about the parameter, see <xref
+            href="../config_params/guc_config.xml#topic1"/>.<note type="warning">The
+              <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not intended for
+            use in a production environment. Experimental features are subject to change without
+            notice in future releases.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it
+          allows a subquery to reference itself by name. Such a subquery, the
+            <varname>select</varname> portion of the <varname>with_query</varname> , must have the
+          form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL] <varname>recursive_term</varname></codeblock><p>The
+          recursive self-reference must appear on the right-hand side of the <codeph>UNION
+            [ALL]</codeph>. Only one recursive self-reference is permitted per query. </p><p>If the
+            <codeph>RECURSIVE</codeph> keyword is specified, the <codeph>WITH</codeph> queries need
+          not be ordered: a query can reference another query that is later in the list. However,
+          circular references, or mutual recursion, are not supported. </p><p>Without the
+            <codeph>RECURSIVE</codeph> keyword, <codeph>WITH</codeph> queries can only reference
+          sibling <codeph>WITH</codeph> queries that are earlier in the <codeph>WITH</codeph>
+          list.</p><p><codeph>WITH RECURSIVE</codeph> limitations. These items are not supported,<ul
+            id="ul_b21_szt_n1b">
+            <li>A recursive <codeph>WITH</codeph> clause that contains the following in the
+                <varname>recursive_term</varname>. <ul id="ul_c1b_nhf_p1b">
+                <li>Subqueries with a self-reference</li>
+                <li><codeph>DISTINCT</codeph> clause</li>
+                <li><codeph>GROUP BY</codeph> clause</li>
+                <li>A window function</li>
+              </ul></li>
+            <li>A recursive <codeph>WITH</codeph> clause where the
+                <varname>with_query_name</varname> is a part of a set operation.</li>
+          </ul></p><p>An example the set operation limitation. This query returns an error because
+          the set operation <codeph>UNION</codeph> contains a reference to the table
+            <codeph>foo</codeph>.
+          <codeblock>WITH RECURSIVE foo(i) AS (
+    SELECT 1
+  UNION ALL
+    SELECT i+1 FROM (SELECT * FROM foo UNION SELECT 0) bar
+)
+SELECT * FROM foo LIMIT 5;</codeblock></p><p>This
+          recursive CTE is allowed because the set operation <codeph>UNION</codeph> does not have a
+          reference to the CTE
+          <codeph>foo</codeph>.<codeblock>WITH RECURSIVE foo(i) AS (
+    SELECT 1
+  UNION ALL
+    SELECT i+1 FROM (SELECT * FROM bar UNION SELECT 0) bar, foo
+    WHERE foo.i = bar.a
+)
+SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
+            <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+            otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
+          for additional information.</p>
       </sectiondiv><sectiondiv id="section5">
         <b>The SELECT List</b>
         <p>The <codeph>SELECT</codeph> list (between the key words <codeph>SELECT</codeph> and
@@ -737,10 +788,29 @@ SELECT region, product, SUM(quantity) AS product_units,
    SUM(amount) AS product_sales
 FROM orders
 WHERE region IN (SELECT region FROM top_regions) 
-GROUP BY region, product;
-</codeblock>
+GROUP BY region, product;</codeblock>
       <p>The example could have been written without the <codeph>WITH</codeph> clause but would have
         required two levels of nested sub-<codeph>SELECT</codeph> statements.</p>
+      <p>This example uses the <codeph>WITH RECURSIVE</codeph> clause to find all subordinates
+        (direct or indirect) of the employee Mary, and their level of indirectness, from a table
+        that shows only direct subordinates:</p>
+      <codeblock>WITH RECURSIVE employee_recursive(distance, employee_name, manager_name) AS (
+    SELECT 1, employee_name, manager_name
+    FROM employee
+    WHERE manager_name = 'Mary'
+  UNION ALL
+    SELECT er.distance + 1, e.employee_name, e.manager_name
+    FROM employee_recursive er, employee e
+    WHERE er.employee_name = e.manager_name
+  )
+SELECT distance, employee_name FROM employee_recursive;</codeblock>
+      <p>The typical form of recursive queries: an initial condition, followed by <codeph>UNION
+          [ALL]</codeph>, followed by the recursive part of the query. Be sure that the recursive
+        part of the query will eventually return no tuples, or else the query will loop
+        indefinitely. See <xref
+          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+          otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
+        more examples.</p>
     </section>
     <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
         compatible with the SQL standard, but there are some extensions and some missing features.

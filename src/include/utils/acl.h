@@ -4,10 +4,10 @@
  *	  Definition of (and support for) access control list data structures.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.103 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.108 2009/06/11 14:49:13 momjian Exp $
  *
  * NOTES
  *	  An ACL array is simply an array of AclItems, representing the union
@@ -143,10 +143,13 @@ typedef ArrayType Acl;
 /*
  * Bitmasks defining "all rights" for each supported object type
  */
+#define ACL_ALL_RIGHTS_COLUMN		(ACL_INSERT|ACL_SELECT|ACL_UPDATE|ACL_REFERENCES)
 #define ACL_ALL_RIGHTS_RELATION		(ACL_INSERT|ACL_SELECT|ACL_UPDATE|ACL_DELETE|ACL_TRUNCATE|ACL_REFERENCES|ACL_TRIGGER)
 #define ACL_ALL_RIGHTS_SEQUENCE		(ACL_USAGE|ACL_SELECT|ACL_UPDATE)
 #define ACL_ALL_RIGHTS_DATABASE		(ACL_CREATE|ACL_CREATE_TEMP|ACL_CONNECT)
 #define ACL_ALL_RIGHTS_EXTPROTOCOL  (ACL_INSERT|ACL_SELECT)
+#define ACL_ALL_RIGHTS_FDW			(ACL_USAGE)
+#define ACL_ALL_RIGHTS_FOREIGN_SERVER (ACL_USAGE)
 #define ACL_ALL_RIGHTS_FUNCTION		(ACL_EXECUTE)
 #define ACL_ALL_RIGHTS_LANGUAGE		(ACL_USAGE)
 #define ACL_ALL_RIGHTS_NAMESPACE	(ACL_USAGE|ACL_CREATE)
@@ -171,6 +174,7 @@ typedef enum
 /* currently it's only used to tell aclcheck_error what to say */
 typedef enum AclObjectKind
 {
+	ACL_KIND_COLUMN,			/* pg_attribute */
 	ACL_KIND_CLASS,				/* pg_class */
 	ACL_KIND_SEQUENCE,			/* pg_sequence */
 	ACL_KIND_DATABASE,			/* pg_database */
@@ -185,6 +189,8 @@ typedef enum AclObjectKind
 	ACL_KIND_TABLESPACE,		/* pg_tablespace */
 	ACL_KIND_TSDICTIONARY,		/* pg_ts_dict */
 	ACL_KIND_TSCONFIGURATION,	/* pg_ts_config */
+	ACL_KIND_FDW,				/* pg_foreign_data_wrapper */
+	ACL_KIND_FOREIGN_SERVER,	/* pg_foreign_server */
 	ACL_KIND_FILESPACE,         /* pg_filespace */
 	ACL_KIND_EXTPROTOCOL,		/* pg_extprotocol */
 	ACL_KIND_EXTENSION,         /* pg_extension */
@@ -195,9 +201,14 @@ typedef enum AclObjectKind
  * The information about one Grant/Revoke statement, in internal format: object
  * and grantees names have been turned into Oids, the privilege list is an
  * AclMode bitmask.  If 'privileges' is ACL_NO_RIGHTS (the 0 value) and
- * all_privs is true, it will be internally turned into the right kind of
+ * all_privs is true, 'privileges' will be internally set to the right kind of
  * ACL_ALL_RIGHTS_*, depending on the object type (NB - this will modify the
  * InternalGrant struct!)
+ *
+ * Note: 'all_privs' and 'privileges' represent object-level privileges only.
+ * There might also be column-level privilege specifications, which are
+ * represented in col_privs (this is a list of untransformed AccessPriv nodes).
+ * Column privileges are only valid for objtype ACL_OBJECT_RELATION.
  */
 typedef struct
 {
@@ -206,10 +217,10 @@ typedef struct
 	List	   *objects;
 	bool		all_privs;
 	AclMode		privileges;
+	List	   *col_privs;
 	List	   *grantees;
 	bool		grant_option;
 	DropBehavior behavior;
-	List	   *cooked_privs; /* precooked AclItems from partitioning code */
 } InternalGrant;
 
 /*
@@ -217,8 +228,10 @@ typedef struct
  */
 extern Acl *acldefault(GrantObjectType objtype, Oid ownerId);
 extern Acl *aclupdate(const Acl *old_acl, const AclItem *mod_aip,
-		  int modechg, Oid ownerId, DropBehavior behavior, char *objName);
+		  int modechg, Oid ownerId, DropBehavior behavior);
 extern Acl *aclnewowner(const Acl *old_acl, Oid oldOwnerId, Oid newOwnerId);
+extern Acl *aclcopy(const Acl *orig_acl);
+extern Acl *aclconcat(const Acl *left_acl, const Acl *right_acl);
 
 extern AclMode aclmask(const Acl *acl, Oid roleid, Oid ownerId,
 		AclMode mask, AclMaskHow how);
@@ -236,6 +249,9 @@ extern void select_best_grantor(Oid roleId, AclMode privileges,
 					Oid *grantorId, AclMode *grantOptions);
 
 extern void initialize_acl(void);
+
+extern bool revoked_something;
+
 
 /*
  * SQL functions (from acl.c)
@@ -255,6 +271,10 @@ extern Datum hash_aclitem(PG_FUNCTION_ARGS);
 extern void ExecuteGrantStmt(GrantStmt *stmt);
 extern void ExecGrantStmt_oids(InternalGrant *istmt);
 
+extern void CopyRelationAcls(Oid src, Oid dest);
+
+extern AclMode pg_attribute_aclmask(Oid table_oid, AttrNumber attnum,
+					 Oid roleid, AclMode mask, AclMaskHow how);
 extern AclMode pg_class_aclmask(Oid table_oid, Oid roleid,
 				 AclMode mask, AclMaskHow how);
 extern AclMode pg_database_aclmask(Oid db_oid, Oid roleid,
@@ -267,19 +287,32 @@ extern AclMode pg_namespace_aclmask(Oid nsp_oid, Oid roleid,
 					 AclMode mask, AclMaskHow how);
 extern AclMode pg_tablespace_aclmask(Oid spc_oid, Oid roleid,
 					  AclMode mask, AclMaskHow how);
+extern AclMode pg_foreign_data_wrapper_aclmask(Oid fdw_oid, Oid roleid,
+								AclMode mask, AclMaskHow how);
+extern AclMode pg_foreign_server_aclmask(Oid srv_oid, Oid roleid,
+						  AclMode mask, AclMaskHow how);
 extern AclMode pg_extprotocol_aclmask(Oid ptc_oid, Oid roleid,
 					   AclMode mask, AclMaskHow how);
 
+extern AclResult pg_attribute_aclcheck(Oid table_oid, AttrNumber attnum,
+					  Oid roleid, AclMode mode);
+extern AclResult pg_attribute_aclcheck_all(Oid table_oid, Oid roleid,
+						  AclMode mode, AclMaskHow how);
 extern AclResult pg_class_aclcheck(Oid table_oid, Oid roleid, AclMode mode);
 extern AclResult pg_database_aclcheck(Oid db_oid, Oid roleid, AclMode mode);
 extern AclResult pg_proc_aclcheck(Oid proc_oid, Oid roleid, AclMode mode);
 extern AclResult pg_language_aclcheck(Oid lang_oid, Oid roleid, AclMode mode);
 extern AclResult pg_namespace_aclcheck(Oid nsp_oid, Oid roleid, AclMode mode);
 extern AclResult pg_tablespace_aclcheck(Oid spc_oid, Oid roleid, AclMode mode);
+extern AclResult pg_foreign_data_wrapper_aclcheck(Oid fdw_oid, Oid roleid, AclMode mode);
+extern AclResult pg_foreign_server_aclcheck(Oid srv_oid, Oid roleid, AclMode mode);
 extern AclResult pg_extprotocol_aclcheck(Oid ptc_oid, Oid roleid, AclMode mode);
 
 extern void aclcheck_error(AclResult aclerr, AclObjectKind objectkind,
 			   const char *objectname);
+
+extern void aclcheck_error_col(AclResult aclerr, AclObjectKind objectkind,
+				   const char *objectname, const char *colname);
 
 /* ownercheck routines just return true (owner) or false (not) */
 extern bool pg_extension_ownercheck(Oid ext_oid, Oid roleid);
@@ -297,6 +330,7 @@ extern bool pg_database_ownercheck(Oid db_oid, Oid roleid);
 extern bool pg_conversion_ownercheck(Oid conv_oid, Oid roleid);
 extern bool pg_ts_dict_ownercheck(Oid dict_oid, Oid roleid);
 extern bool pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid);
+extern bool pg_foreign_server_ownercheck(Oid srv_oid, Oid roleid);
 extern bool has_createrole_privilege(Oid roleid);
 extern bool pg_extprotocol_ownercheck(Oid ptc_oid, Oid roleid);
 

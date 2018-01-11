@@ -1,14 +1,20 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * faultinject.c
- * 	 Fault injection utilities
+ *	  Fault injection utilities
  * 
- * Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/error/faultinject.c
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 #include "funcapi.h"
 #include "utils/faultinjection.h"
-#include "utils/debugbreak.h"
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
@@ -154,15 +160,6 @@ gp_fault_inject_impl(int32 reason, int64 arg)
 		case GP_FAULT_USER_ASSERT_FAILURE:
 			Assert(!"Inject an assert failure");
 			break;
-
-        case GP_FAULT_USER_DEBUGBREAK:
-            {
-                if (arg == 0)
-                    debug_break();
-                else
-                    debug_break_n(arg);
-            }
-            break;
 
 		case GP_FAULT_USER_SEGV_CRITICAL:
 			START_CRIT_SECTION();

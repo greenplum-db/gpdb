@@ -31,7 +31,7 @@ typedef struct
 int orafce_float4_cmp(const void *a, const void *b);
 int orafce_float8_cmp(const void *a, const void *b);
 
-#if PG_VERSION_NUM >= 80400 && PG_VERSION_NUM < 90000
+#if PG_VERSION_NUM >= 80400 && PG_VERSION_NUM < 90000 && !defined(GP_VERSION_NUM)
 static int
 AggCheckCallContext(FunctionCallInfo fcinfo, MemoryContext *aggcontext)
 {

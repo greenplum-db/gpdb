@@ -3,11 +3,11 @@
  * ts_parse.c
  *		main parse functions for tsearch
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_parse.c,v 1.7.2.2 2009/08/30 16:53:45 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_parse.c,v 1.12 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -414,6 +414,7 @@ parsetext(Oid cfgId, ParsedText *prs, char *buf, int buflen)
 				prs->words[prs->curwords].len = strlen(ptr->lexeme);
 				prs->words[prs->curwords].word = ptr->lexeme;
 				prs->words[prs->curwords].nvariant = ptr->nvariant;
+				prs->words[prs->curwords].flags = ptr->flags & TSL_PREFIX;
 				prs->words[prs->curwords].alen = 0;
 				prs->words[prs->curwords].pos.pos = LIMITPOS(prs->pos);
 				ptr++;
@@ -462,8 +463,8 @@ hlfinditem(HeadlineParsedText *prs, TSQuery query, char *buf, int buflen)
 	for (i = 0; i < query->size; i++)
 	{
 		if (item->type == QI_VAL &&
-			item->operand.length == buflen &&
-		strncmp(GETOPERAND(query) + item->operand.distance, buf, buflen) == 0)
+			tsCompareString(GETOPERAND(query) + item->operand.distance, item->operand.length,
+							buf, buflen, item->operand.prefix) == 0)
 		{
 			if (word->item)
 			{
@@ -581,8 +582,11 @@ text *
 generateHeadline(HeadlineParsedText *prs)
 {
 	text	   *out;
-	int			len = 128;
 	char	   *ptr;
+	int			len = 128;
+	int			numfragments = 0;
+	int2		infrag = 0;
+
 	HeadlineWordEntry *wrd = prs->words;
 
 	out = (text *) palloc(len);
@@ -590,7 +594,7 @@ generateHeadline(HeadlineParsedText *prs)
 
 	while (wrd - prs->words < prs->curwords)
 	{
-		while (wrd->len + prs->stopsellen + prs->startsellen + (ptr - ((char *) out)) >= len)
+		while (wrd->len + prs->stopsellen + prs->startsellen + prs->fragdelimlen + (ptr - ((char *) out)) >= len)
 		{
 			int			dist = ptr - ((char *) out);
 
@@ -601,6 +605,20 @@ generateHeadline(HeadlineParsedText *prs)
 
 		if (wrd->in && !wrd->repeated)
 		{
+			if (!infrag)
+			{
+
+				/* start of a new fragment */
+				infrag = 1;
+				numfragments++;
+				/* add a fragment delimitor if this is after the first one */
+				if (numfragments > 1)
+				{
+					memcpy(ptr, prs->fragdelim, prs->fragdelimlen);
+					ptr += prs->fragdelimlen;
+				}
+
+			}
 			if (wrd->replace)
 			{
 				*ptr = ' ';
@@ -623,7 +641,11 @@ generateHeadline(HeadlineParsedText *prs)
 			}
 		}
 		else if (!wrd->repeated)
+		{
+			if (infrag)
+				infrag = 0;
 			pfree(wrd->word);
+		}
 
 		wrd++;
 	}

@@ -5,19 +5,18 @@
  *	  However, we define it here so that the format is documented.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.39 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.43 2009/01/01 17:23:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef PG_CONTROL_H
 #define PG_CONTROL_H
 
-#include <time.h>
-
 #include "access/xlogdefs.h"
+#include "pgtime.h"				/* for pg_time_t */
 #include "port/pg_crc32c.h"
 
 
@@ -27,7 +26,7 @@
  * The first three digits is the PostgreSQL version number. The last
  * four digits indicates the GPDB version.
  */
-#define PG_CONTROL_VERSION	8330500
+#define PG_CONTROL_VERSION	8430600
 
 /*
  * Body of CheckPoint XLOG records.  This is declared here because we keep
@@ -44,7 +43,7 @@ typedef struct CheckPoint
 	Oid			nextRelfilenode;	/* next free Relfilenode */
 	MultiXactId nextMulti;		/* next free MultiXactId */
 	MultiXactOffset nextMultiOffset;	/* next free MultiXact offset */
-	time_t		time;			/* time stamp of checkpoint */
+	pg_time_t	time;			/* time stamp of checkpoint */
 
 	/* IN XLOG RECORD, MORE DATA FOLLOWS AT END OF STRUCT FOR DTM CHECKPOINT */
 
@@ -68,21 +67,19 @@ typedef enum DBState
 	DB_SHUTDOWNED,
 	DB_SHUTDOWNING,
 	DB_IN_CRASH_RECOVERY,
+	DB_IN_ARCHIVE_RECOVERY,
 	DB_IN_STANDBY_MODE,
 	DB_IN_STANDBY_PROMOTED,
 	DB_IN_STANDBY_NEW_TLI_SET,
 	DB_IN_PRODUCTION
 } DBState;
 
-#define LOCALE_NAME_BUFLEN	128
-
 /*
  * Contents of pg_control.
  *
  * NOTE: try to keep this under 512 bytes so that it will fit on one physical
  * sector of typical disk drives.  This reduces the odds of corruption due to
- * power failure midway through a write.  Currently it fits comfortably,
- * but we could probably reduce LOCALE_NAME_BUFLEN if things get tight.
+ * power failure midway through a write.
  */
 
 typedef struct ControlFileData
@@ -113,7 +110,7 @@ typedef struct ControlFileData
 	 * System status data
 	 */
 	DBState		state;			/* see enum above */
-	time_t		time;			/* time stamp of last pg_control update */
+	pg_time_t	time;			/* time stamp of last pg_control update */
 	XLogRecPtr	checkPoint;		/* last check point record ptr */
 	XLogRecPtr	prevCheckPoint; /* previous check point record ptr */
 
@@ -179,12 +176,11 @@ typedef struct ControlFileData
 	uint32		toast_max_chunk_size;	/* chunk size in TOAST tables */
 
 	/* flag indicating internal format of timestamp, interval, time */
-	uint32		enableIntTimes; /* int64 storage enabled? */
+	bool		enableIntTimes; /* int64 storage enabled? */
 
-	/* active locales */
-	uint32		localeBuflen;
-	char		lc_collate[LOCALE_NAME_BUFLEN];
-	char		lc_ctype[LOCALE_NAME_BUFLEN];
+	/* flags indicating pass-by-value status of various types */
+	bool		float4ByVal;	/* float4 pass-by-value? */
+	bool		float8ByVal;	/* float8, int8, etc pass-by-value? */
 
 	/* Are data pages protected by checksums? Zero if no checksum version */
 	uint32		data_checksum_version;

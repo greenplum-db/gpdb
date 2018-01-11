@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/insert.sgml,v 1.35 2007/01/31 23:26:04 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/insert.sgml,v 1.38 2009/01/22 20:15:59 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-INSERT">
  <refmeta>
   <refentrytitle id="SQL-INSERT-TITLE">INSERT</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -22,7 +23,7 @@ PostgreSQL documentation
 <synopsis>
 INSERT INTO <replaceable class="PARAMETER">table</replaceable> [ ( <replaceable class="PARAMETER">column</replaceable> [, ...] ) ]
     { DEFAULT VALUES | VALUES ( { <replaceable class="PARAMETER">expression</replaceable> | DEFAULT } [, ...] ) [, ...] | <replaceable class="PARAMETER">query</replaceable> }
-    [ RETURNING * | <replaceable class="parameter">output_expression</replaceable> [ AS <replaceable class="parameter">output_name</replaceable> ] [, ...] ]
+    [ RETURNING * | <replaceable class="parameter">output_expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...] ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -68,11 +69,14 @@ INSERT INTO <replaceable class="PARAMETER">table</replaceable> [ ( <replaceable 
 
   <para>
    You must have <literal>INSERT</literal> privilege on a table in
-   order to insert into it, and <literal>SELECT</> privilege on it to
-   use <literal>RETURNING</>.  If you use the <replaceable
+   order to insert into it.  If a column list is specified, you only
+   need <literal>INSERT</literal> privilege on the listed columns.
+   Use of the <literal>RETURNING</> clause requires <literal>SELECT</>
+   privilege on all columns mentioned in <literal>RETURNING</>.
+   If you use the <replaceable
    class="PARAMETER">query</replaceable> clause to insert rows from a
-   query, you also need to have <literal>SELECT</literal> privilege on
-   any table used in the query.
+   query, you of course need to have <literal>SELECT</literal> privilege on
+   any table or column used in the query.
   </para>
  </refsect1>
 

@@ -15,10 +15,10 @@
  * there's hardly any use case for using these without superuser-rights
  * anyway.
  *
- * Copyright (c) 2007-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/pageinspect/heapfuncs.c,v 1.4 2008/01/01 20:31:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/contrib/pageinspect/heapfuncs.c,v 1.7 2009/06/11 14:48:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,8 +36,6 @@
 
 Datum		heap_page_items(PG_FUNCTION_ARGS);
 
-#define GET_TEXT(str_) \
-		DirectFunctionCall1(textin, CStringGetDatum(str_))
 
 /*
  * bits_to_text
@@ -74,7 +72,7 @@ typedef struct heap_page_items_state
 	TupleDesc	tupd;
 	Page		page;
 	uint16		offset;
-}	heap_page_items_state;
+} heap_page_items_state;
 
 Datum
 heap_page_items(PG_FUNCTION_ARGS)
@@ -190,7 +188,7 @@ heap_page_items(PG_FUNCTION_ARGS)
 					bits_len = tuphdr->t_hoff -
 						(((char *) tuphdr->t_bits) -((char *) tuphdr));
 
-					values[11] = GET_TEXT(
+					values[11] = CStringGetTextDatum(
 								 bits_to_text(tuphdr->t_bits, bits_len * 8));
 				}
 				else

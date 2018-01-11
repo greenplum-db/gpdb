@@ -9,6 +9,7 @@
  *	  more likely to break across PostgreSQL releases than code that uses
  *	  only the official API.
  *
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -21,7 +22,7 @@
 #define LIBPQ_INT_H
 
 /* We assume libpq-fe.h has already been included. */
-#include "postgres_fe.h"
+#include "c.h"
 #include "libpq-events.h"
 
 #include <time.h>
@@ -86,8 +87,8 @@ typedef struct
  * POSTGRES backend dependent Constants.
  */
 
-/* 
- * Note:  GPDB uses 72 for COMPLETION_TAG_BUFSIZE, PostgreSQL uses 64.  
+/*
+ * Note:  GPDB uses 72 for COMPLETION_TAG_BUFSIZE, PostgreSQL uses 64.
  * Does this cause a problem?   It seems like it will if any application is compiled with
  * the PostgreSQL header files, and "cheats" by looking directly in to the pg_result struct,
  * instead of accessing the struct through the normal functions.
@@ -177,6 +178,14 @@ typedef struct PGEvent
 	bool		resultInitialized;		/* T if RESULTCREATE/COPY succeeded */
 } PGEvent;
 
+/* CDB: Statistical response message list element */
+typedef struct pgCdbStatCell
+{
+    struct pgCdbStatCell   *next;
+    int         len;
+    char       *data;
+} pgCdbStatCell;
+
 struct pg_result
 {
 	int			ntups;
@@ -220,6 +229,24 @@ struct pg_result
 	PGresult_data *curBlock;	/* most recently allocated block */
 	int			curOffset;		/* start offset of free space in block */
 	int			spaceLeft;		/* number of free bytes remaining in block */
+
+    /* CDB: List of statistical response messages ('Y') from qExec. */
+    pgCdbStatCell  *cdbstats;   /* ordered from newest to oldest */
+
+	/*
+	 * Used for gang management commands and stats collected from QEs for
+	 * Vacuum and Analyze commands.
+	 */
+    void * extras;
+    int	   extraslen;
+
+	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
+	int			numRejected;
+	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
+	int			numCompleted;
+	/* GPDB: number of processed tuples for each AO partition */
+	int			naotupcounts;
+	PQaoRelTupCount *aotupcounts;
 };
 
 /* PGAsyncStatusType defines the state of the query-execution state machine */
@@ -342,6 +369,8 @@ struct pg_conn
 #if defined(KRB5) || defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	char	   *krbsrvname;		/* Kerberos service name */
 #endif
+    char       *gpconntype; /* type of connection */
+    char       *gpqeid;        /* MPP: session id & startup info for qExec */
 
 	/* Optional file to write trace info to */
 	FILE	   *Pfdebug;
@@ -395,6 +424,9 @@ struct pg_conn
 	/* Miscellaneous stuff */
 	int			be_pid;			/* PID of backend --- needed for cancels */
 	int			be_key;			/* key of backend --- needed for cancels */
+
+    int64      mop_high_watermark;   /* highwater mark for mop */
+
 	char		md5Salt[4];		/* password salt received from backend */
 	pgParameterStatus *pstatus; /* ParameterStatus data */
 	int			client_encoding;	/* encoding id */
@@ -413,6 +445,9 @@ struct pg_conn
 	char	   *outBuffer;		/* currently allocated buffer */
 	int			outBufSize;		/* allocated size of buffer */
 	int			outCount;		/* number of chars waiting in buffer */
+
+	bool		outBuffer_shared; /* are we sending external buffer? */
+	char	   *outBufferSaved; /* stash area in case of outBuffer_shared */
 
 	/* State for constructing messages in outBuffer */
 	int			outMsgStart;	/* offset to msg start (length word); if -1,
@@ -540,6 +575,7 @@ extern void pqSaveParameterStatus(PGconn *conn, const char *name,
 					  const char *value);
 extern int	pqRowProcessor(PGconn *conn, const char **errmsgp);
 extern void pqHandleSendFailure(PGconn *conn);
+extern bool PQsendQueryStart(PGconn *conn);
 
 /* === in fe-protocol2.c === */
 
@@ -590,13 +626,18 @@ extern int	pqGetnchar(char *s, size_t len, PGconn *conn);
 extern int	pqSkipnchar(size_t len, PGconn *conn);
 extern int	pqPutnchar(const char *s, size_t len, PGconn *conn);
 extern int	pqGetInt(int *result, size_t bytes, PGconn *conn);
+extern int64 pqGetInt64(int64 *result, PGconn *conn);  /* GPDB only */
 extern int	pqPutInt(int value, size_t bytes, PGconn *conn);
 extern int	pqPutMsgStart(char msg_type, bool force_len, PGconn *conn);
 extern int	pqPutMsgEnd(PGconn *conn);
+extern void pqPutMsgEndNoAutoFlush(PGconn *conn);   /* GPDB only */
 extern int	pqReadData(PGconn *conn);
 extern int	pqFlush(PGconn *conn);
+extern int	pqFlushNonBlocking(PGconn *conn);
 extern int	pqWait(int forRead, int forWrite, PGconn *conn);
 extern int pqWaitTimed(int forRead, int forWrite, PGconn *conn,
+			time_t finish_time);
+extern int pqWaitTimeout(int forRead, int forWrite, PGconn *conn,
 			time_t finish_time);
 extern int	pqReadReady(PGconn *conn);
 extern int	pqWriteReady(PGconn *conn);

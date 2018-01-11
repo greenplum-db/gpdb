@@ -4,7 +4,7 @@
 #
 # Copyright (c) 1998-2009, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/Makefile,v 1.142 2009/03/07 00:13:58 alvherre Exp $
+# $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/Makefile,v 1.132 2008/03/18 17:46:23 petere Exp $
 #
 #-------------------------------------------------------------------------
 

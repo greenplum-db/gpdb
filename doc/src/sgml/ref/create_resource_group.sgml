@@ -1,0 +1,52 @@
+<!--
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_resource_group.sgml,v 1.4.2.1 2006/10/05 03:06:17 dhutchinson Exp $
+PostgreSQL documentation
+-->
+
+<refentry id="SQL-CREATERESOURCEGROUP">
+ <refmeta>
+  <refentrytitle id="sql-createresourcegroup-title">CREATE RESOURCE GROUP</refentrytitle>
+  <refmiscinfo>SQL - Language Statements</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>CREATE RESOURCE GROUP</refname>
+  <refpurpose>define a new resource group</refpurpose>
+ </refnamediv>
+
+ <indexterm zone="sql-createresourcegroup">
+  <primary>CREATE RESOURCE GROUP</primary>
+ </indexterm>
+
+ <refsynopsisdiv>
+<synopsis>
+
+CREATE RESOURCE GROUP name WITH (group_attribute=value [, ... ]) 
+where group_attribute is:
+   CPU_RATE_LIMIT=integer
+   MEMORY_LIMIT=integer
+   [ CONCURRENCY=integer ]
+   [ MEMORY_SHARED_QUOTA=integer ]
+   [ MEMORY_SPILL_RATIO=integer ]
+
+</synopsis>
+ </refsynopsisdiv>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:nil
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../reference.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:"/usr/lib/sgml/catalog"
+sgml-local-ecat-files:nil
+End:
+-->

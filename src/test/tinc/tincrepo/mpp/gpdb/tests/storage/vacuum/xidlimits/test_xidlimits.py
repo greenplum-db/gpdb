@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -201,7 +201,7 @@ class XidlimitsTests(MPPTestCase):
 
         @param limit: one of WARN_LIMIT, STOP_LIMIT and WRAP_LIMIT.
 
-        @param segdb: an instance of GpDB class representing the segment on
+        @param segdb: an instance of Segment class representing the segment on
         which the limit will be exceeded.
         """
         dburl = dbconn.DbURL(hostname=segdb.hostname, port=segdb.port)
@@ -274,7 +274,7 @@ class XidlimitsTests(MPPTestCase):
         that is created off template0.
 
         @param segdb: identifies the segment on which to operate.  It is an
-        instance of GpDB class.
+        instance of Segment class.
 
         Note that the database dbname must have all tuples frozen (xmin=2).
         This holds true of template0 and of a database created off template0,

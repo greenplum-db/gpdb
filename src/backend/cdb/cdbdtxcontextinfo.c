@@ -2,7 +2,12 @@
  *
  * cdbdtxcontextinfo.c
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbdtxcontextinfo.c
  *
  *-------------------------------------------------------------------------
  */
@@ -37,8 +42,8 @@ void
 DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo,
 							  int txnOptions, Snapshot snapshot)
 {
-	int i;
-	CommandId curcid = 0;
+	int			i;
+	CommandId	curcid = 0;
 
 	if (snapshot)
 		curcid = snapshot->curcid;
@@ -90,73 +95,73 @@ DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo,
 
 	if (DEBUG5 >= log_min_messages || Debug_print_full_dtm)
 	{
-		char gid[TMGIDSIZE];
+		char		gid[TMGIDSIZE];
 		DistributedSnapshot *ds = &dtxContextInfo->distributedSnapshot;
 
 		if (!getDistributedTransactionIdentifier(gid))
 			memcpy(gid, "<empty>", 8);
-		
+
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DtxContextInfo_CreateOnMaster Gp_role is DISPATCH and have currentGxact = %s, gxid = %u --> have distributed snapshot",
-			 gid, 
+			 gid,
 			 getDistributedTransactionId());
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DtxContextInfo_CreateOnMaster distributedXid = %u, "
-		     "distributedSnapshotHeader (xminAllDistributedSnapshots %u, xmin = %u, xmax = %u, count = %d, maxCount %d)",
+			 "distributedSnapshotHeader (xminAllDistributedSnapshots %u, xmin = %u, xmax = %u, count = %d, maxCount %d)",
 			 dtxContextInfo->distributedXid,
 			 ds->xminAllDistributedSnapshots,
 			 ds->xmin,
 			 ds->xmax,
 			 ds->count,
 			 ds->maxCount);
-		
+
 		for (i = 0; i < ds->count; i++)
 		{
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "....    distributedSnapshotData->xip[%d] = %u", 
-			     i, ds->inProgressXidArray[i]);
+				 "....    distributedSnapshotData->xip[%d] = %u",
+				 i, ds->inProgressXidArray[i]);
 		}
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DtxContextInfo_CreateOnMaster curcid = %u",
 			 dtxContextInfo->curcid);
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DtxContextInfo_CreateOnMaster txnOptions = 0x%x, needTwoPhase = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.", 
-			 txnOptions, 
+			 "DtxContextInfo_CreateOnMaster txnOptions = 0x%x, needTwoPhase = %s, explicitBegin = %s, isoLevel = %s, readOnly = %s.",
+			 txnOptions,
 			 (isMppTxOptions_NeedTwoPhase(txnOptions) ? "true" : "false"),
 			 (isMppTxOptions_ExplicitBegin(txnOptions) ? "true" : "false"),
 			 IsoLevelAsUpperString(mppTxOptions_IsoLevel(txnOptions)),
-			 (isMppTxOptions_ReadOnly(txnOptions) ? "true" : "false")); 
+			 (isMppTxOptions_ReadOnly(txnOptions) ? "true" : "false"));
 	}
 }
 
-int 
+int
 DtxContextInfo_SerializeSize(DtxContextInfo *dtxContextInfo)
 {
-	int size = 0;
+	int			size = 0;
 
 	size += sizeof(DistributedTransactionId);	/* distributedXid */
 
 	if (dtxContextInfo->distributedXid != InvalidDistributedTransactionId)
 	{
 		size += sizeof(DistributedTransactionTimeStamp);
-		size += TMGIDSIZE;				/* distributedId */
-		size += sizeof(CommandId);		/* curcid */
+		size += TMGIDSIZE;		/* distributedId */
+		size += sizeof(CommandId);	/* curcid */
 	}
 
-	size += sizeof(uint32); /* segmateSync */
-	size += sizeof(uint32); /* nestingLevel */
-	size += sizeof(bool);	/* haveDistributedSnapshot */
-	size += sizeof(bool);	/* cursorContext */
+	size += sizeof(uint32);		/* segmateSync */
+	size += sizeof(uint32);		/* nestingLevel */
+	size += sizeof(bool);		/* haveDistributedSnapshot */
+	size += sizeof(bool);		/* cursorContext */
 
 	if (dtxContextInfo->haveDistributedSnapshot)
 	{
 		size += DistributedSnapshot_SerializeSize(
-			&dtxContextInfo->distributedSnapshot);
+												  &dtxContextInfo->distributedSnapshot);
 	}
 
 	size += sizeof(int);		/* distributedTxnOptions */
-	
+
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "DtxContextInfo_SerializeSize is returning size = %d", size);
 
@@ -166,22 +171,22 @@ DtxContextInfo_SerializeSize(DtxContextInfo *dtxContextInfo)
 void
 DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo)
 {
-	char *p = buffer;
-	int i;
-	int used;
+	char	   *p = buffer;
+	int			i;
+	int			used;
 	DistributedSnapshot *ds = &dtxContextInfo->distributedSnapshot;
 
 	memcpy(p, &dtxContextInfo->distributedXid, sizeof(DistributedTransactionId));
 	p += sizeof(DistributedTransactionId);
 	if (dtxContextInfo->distributedXid != InvalidDistributedTransactionId)
 	{
-		memcpy(p, &dtxContextInfo->distributedTimeStamp, sizeof(DistributedTransactionTimeStamp)); 
+		memcpy(p, &dtxContextInfo->distributedTimeStamp, sizeof(DistributedTransactionTimeStamp));
 		p += sizeof(DistributedTransactionTimeStamp);
 		if (strlen(dtxContextInfo->distributedId) >= TMGIDSIZE)
 			elog(PANIC, "Distribute transaction identifier too long (%d)",
-				 (int)strlen(dtxContextInfo->distributedId));
+				 (int) strlen(dtxContextInfo->distributedId));
 		memcpy(p, dtxContextInfo->distributedId, TMGIDSIZE);
-		p += TMGIDSIZE;		
+		p += TMGIDSIZE;
 		memcpy(p, &dtxContextInfo->curcid, sizeof(CommandId));
 		p += sizeof(CommandId);
 	}
@@ -193,7 +198,7 @@ DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo)
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG3),
 		 "DtxContextInfo_Serialize distributedTimeStamp %u, distributedXid = %u, curcid %d nestingLevel %d segmateSync %u",
-		 dtxContextInfo->distributedTimeStamp, dtxContextInfo->distributedXid, 
+		 dtxContextInfo->distributedTimeStamp, dtxContextInfo->distributedXid,
 		 dtxContextInfo->curcid, dtxContextInfo->nestingLevel, dtxContextInfo->segmateSync);
 
 	memcpy(p, &dtxContextInfo->segmateSync, sizeof(uint32));
@@ -217,14 +222,14 @@ DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo)
 	p += sizeof(int);
 
 	used = (p - buffer);
-	
+
 	if (DEBUG5 >= log_min_messages || Debug_print_full_dtm || Debug_print_snapshot_dtm)
 	{
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DtxContextInfo_Serialize distributedTimeStamp %u, distributedXid = %u, "
 			 "curcid %d",
 			 dtxContextInfo->distributedTimeStamp,
-			 dtxContextInfo->distributedXid, 
+			 dtxContextInfo->distributedXid,
 			 dtxContextInfo->curcid);
 
 		if (dtxContextInfo->haveDistributedSnapshot)
@@ -239,18 +244,18 @@ DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo)
 			for (i = 0; i < ds->count; i++)
 			{
 				elog((Debug_print_full_dtm ? LOG : DEBUG5),
-					 "....    inProgressXidArray[%d] = %u", 
-				     i, ds->inProgressXidArray[i]);
+					 "....    inProgressXidArray[%d] = %u",
+					 i, ds->inProgressXidArray[i]);
 			}
 			elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				 "[Distributed Snapshot #%u] *Serialize* currcid = %d (gxid = %u, '%s')", 
+				 "[Distributed Snapshot #%u] *Serialize* currcid = %d (gxid = %u, '%s')",
 				 ds->distribSnapshotId,
-			 	 dtxContextInfo->curcid,
-			 	 getDistributedTransactionId(),
+				 dtxContextInfo->curcid,
+				 getDistributedTransactionId(),
 				 DtxContextToString(DistributedTransactionContext));
 		}
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),"DtxContextInfo_Serialize txnOptions = 0x%x", dtxContextInfo->distributedTxnOptions);
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),"DtxContextInfo_Serialize copied %d bytes", used);
+		elog((Debug_print_full_dtm ? LOG : DEBUG5), "DtxContextInfo_Serialize txnOptions = 0x%x", dtxContextInfo->distributedTxnOptions);
+		elog((Debug_print_full_dtm ? LOG : DEBUG5), "DtxContextInfo_Serialize copied %d bytes", used);
 	}
 }
 
@@ -267,7 +272,7 @@ DtxContextInfo_Reset(DtxContextInfo *dtxContextInfo)
 	dtxContextInfo->nestingLevel = 0;
 
 	dtxContextInfo->haveDistributedSnapshot = false;
-	
+
 	DistributedSnapshot_Reset(&dtxContextInfo->distributedSnapshot);
 
 	dtxContextInfo->distributedTxnOptions = 0;
@@ -275,8 +280,8 @@ DtxContextInfo_Reset(DtxContextInfo *dtxContextInfo)
 
 void
 DtxContextInfo_Copy(
-	DtxContextInfo *target, 
-	DtxContextInfo *source)
+					DtxContextInfo *target,
+					DtxContextInfo *source)
 {
 	DtxContextInfo_Reset(target);
 
@@ -284,9 +289,9 @@ DtxContextInfo_Copy(
 	target->distributedXid = source->distributedXid;
 	Assert(strlen(source->distributedId) < TMGIDSIZE);
 	memcpy(
-		target->distributedId,
-		source->distributedId,
-		TMGIDSIZE);
+		   target->distributedId,
+		   source->distributedId,
+		   TMGIDSIZE);
 
 	target->segmateSync = source->segmateSync;
 	target->nestingLevel = source->nestingLevel;
@@ -297,9 +302,8 @@ DtxContextInfo_Copy(
 	target->cursorContext = source->cursorContext;
 
 	if (source->haveDistributedSnapshot)
-		DistributedSnapshot_Copy(
-			&target->distributedSnapshot,
-			&source->distributedSnapshot);
+		DistributedSnapshot_Copy(&target->distributedSnapshot,
+								 &source->distributedSnapshot);
 
 	target->distributedTxnOptions = source->distributedTxnOptions;
 
@@ -321,7 +325,7 @@ DtxContextInfo_Copy(
 			 target->distributedSnapshot.xmin,
 			 target->distributedSnapshot.count,
 			 target->distributedSnapshot.xmax);
-		 
+
 }
 
 void
@@ -329,7 +333,7 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 						   int serializedDtxContextInfolen,
 						   DtxContextInfo *dtxContextInfo)
 {
-	int i;
+	int			i;
 	DistributedSnapshot *ds = &dtxContextInfo->distributedSnapshot;
 
 	DtxContextInfo_Reset(dtxContextInfo);
@@ -340,7 +344,7 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DtxContextInfo_Deserialize serializedDtxContextInfolen = %d.",
-		     serializedDtxContextInfolen);
+			 serializedDtxContextInfolen);
 
 		memcpy(&dtxContextInfo->distributedXid, p, sizeof(DistributedTransactionId));
 		p += sizeof(DistributedTransactionId);
@@ -352,7 +356,7 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 			memcpy(dtxContextInfo->distributedId, p, TMGIDSIZE);
 			if (strlen(dtxContextInfo->distributedId) >= TMGIDSIZE)
 				elog(PANIC, "Distribute transaction identifier too long (%d)",
-					 (int)strlen(dtxContextInfo->distributedId));
+					 (int) strlen(dtxContextInfo->distributedId));
 			p += TMGIDSIZE;
 			memcpy(&dtxContextInfo->curcid, p, sizeof(CommandId));
 			p += sizeof(CommandId);
@@ -375,8 +379,8 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG3),
 			 "DtxContextInfo_Deserialize distributedTimeStamp %u, distributedXid = %u, curcid %d nestingLevel %d segmateSync %u as %s",
-			 dtxContextInfo->distributedTimeStamp, dtxContextInfo->distributedXid, 
-			 dtxContextInfo->curcid, dtxContextInfo->nestingLevel, 
+			 dtxContextInfo->distributedTimeStamp, dtxContextInfo->distributedXid,
+			 dtxContextInfo->curcid, dtxContextInfo->nestingLevel,
 			 dtxContextInfo->segmateSync, (Gp_is_writer ? "WRITER" : "READER"));
 
 		if (dtxContextInfo->haveDistributedSnapshot)
@@ -397,15 +401,15 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
 				 "DtxContextInfo_Deserialize distributedTimeStamp %u, distributedXid = %u, "
 				 "distributedId = %s",
-			     dtxContextInfo->distributedTimeStamp,
+				 dtxContextInfo->distributedTimeStamp,
 				 dtxContextInfo->distributedXid,
 				 dtxContextInfo->distributedId);
 
 			if (dtxContextInfo->haveDistributedSnapshot)
 			{
 				elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				     "distributedSnapshotHeader (xminAllDistributedSnapshots %u, xmin = %u, xmax = %u, count = %d, maxCount = %d)",
-				     ds->xminAllDistributedSnapshots,
+					 "distributedSnapshotHeader (xminAllDistributedSnapshots %u, xmin = %u, xmax = %u, count = %d, maxCount = %d)",
+					 ds->xminAllDistributedSnapshots,
 					 ds->xmin,
 					 ds->xmax,
 					 ds->count,
@@ -415,7 +419,7 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 				{
 					elog((Debug_print_full_dtm ? LOG : DEBUG5),
 						 "....    inProgressXidArray[%d] = %u",
-					     i, ds->inProgressXidArray[i]);
+						 i, ds->inProgressXidArray[i]);
 				}
 
 				elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),

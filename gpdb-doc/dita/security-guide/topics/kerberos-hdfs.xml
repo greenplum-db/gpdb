@@ -2,10 +2,12 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_lhr_yrf_qr">
   <title>Enabling gphdfs Authentication with a Kerberos-secured Hadoop Cluster</title>
-  <shortdesc>Using external tables and the <codeph>gphdfs</codeph> protocol, Greenplum Database can
-    read files from and write files to a Hadoop File System (HDFS). Greenplum segments read and
-    write files in parallel from HDFS for fast performance. </shortdesc>
+  <shortdesc>Provides steps for configuring Greenplum Database to access external tables in a Hadoop
+    cluster secured with Kerberos. </shortdesc>
   <body>
+    <p>Using external tables and the <codeph>gphdfs</codeph> protocol, Greenplum Database can read
+      files from and write files to a Hadoop File System (HDFS). Greenplum segments read and write
+      files in parallel from HDFS for fast performance.</p>
     <p>When a Hadoop cluster is secured with Kerberos ("Kerberized"), Greenplum Database must be
       configured to allow the Greenplum Database gpadmin role, which owns external tables in HDFS,
       to authenticate through Kerberos. This topic provides the steps for configuring Greenplum

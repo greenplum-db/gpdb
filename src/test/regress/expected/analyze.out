@@ -791,6 +791,9 @@ select * from pg_stats where tablename like 'p3_sales%' order by tablename, attn
  public     | p3_sales  | year    |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           1
 (5 rows)
 
+-- start_ignore
+DROP TABLE IF EXISTS p3_sales;
+-- end_ignore
 --
 -- Test statistics collection on very large datums. In the current implementation,
 -- they are left out of the sample, to avoid running out of memory for the main relation
@@ -823,6 +826,20 @@ SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_co
  (1 row)
 
 DROP TABLE IF EXISTS foo_stats;
--- start_ignore
-DROP TABLE IF EXISTS p3_sales;
--- end_ignore
+-- Test the case that every value in a column is "very large".
+CREATE TABLE foo_stats (a text, b bytea, c varchar, d int) DISTRIBUTED RANDOMLY;
+alter table foo  alter column t set storage external;
+ERROR:  relation "foo" does not exist
+INSERT INTO foo_stats values (repeat('a', 100000), 'bbbbb2', 'cccc2', 3);
+INSERT INTO foo_stats values (repeat('b', 100000), 'bbbbb2', 'cccc2', 3);
+ANALYZE foo_stats;
+SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
+ schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------
+ public     | foo_stats | a       |         0 |      1024 |          0 |                  |                   | 
+ public     | foo_stats | b       |         0 |         7 |       -0.5 | {bbbbb2}         | {1}               | 
+ public     | foo_stats | c       |         0 |         6 |       -0.5 | {cccc2}          | {1}               | 
+ public     | foo_stats | d       |         0 |         4 |       -0.5 | {3}              | {1}               | 
+(4 rows)
+
+DROP TABLE IF EXISTS foo_stats;

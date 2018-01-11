@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_attrdef;
- adrelid | adnum | adbin | adsrc 
----------+-------+-------+-------
-(0 rows)
-
--- end_ignore

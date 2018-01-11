@@ -91,7 +91,6 @@ SELECT relname, relhasindex
  pg_attribute            | t
  pg_auth_members         | t
  pg_authid               | t
- pg_autovacuum           | t
  pg_cast                 | t
  pg_class                | t
  pg_constraint           | t
@@ -103,6 +102,8 @@ SELECT relname, relhasindex
  pg_foreign_data_wrapper | t
  pg_foreign_server       | t
  pg_enum                 | t
+ pg_foreign_data_wrapper | t
+ pg_foreign_server       | t
  pg_index                | t
  pg_inherits             | t
  pg_language             | t
@@ -155,7 +156,7 @@ SELECT relname, relhasindex
  timetz_tbl              | f
  tinterval_tbl           | f
  varchar_tbl             | f
-(139 rows)
+(143 rows)
 
 --
 -- another sanity check: every system catalog that has OIDs should have

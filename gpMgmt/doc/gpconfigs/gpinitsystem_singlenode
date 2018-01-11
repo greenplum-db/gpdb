@@ -40,7 +40,7 @@ SEG_PREFIX=gpsne
 # started on a segment host. The base port number will be 
 # incremented by one for each segment instance started on a host. 
 
-PORT_BASE=40000
+PORT_BASE=20000
 
 
 # This specifies the data storage location(s) where the script will 

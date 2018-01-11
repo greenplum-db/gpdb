@@ -1394,7 +1394,7 @@ def create_parser():
     addTo.add_option('--inserts', const='--inserts', action='append_const', dest='output_options',
                      help="Dump data as INSERT, rather than COPY, commands.")
     addTo.add_option('--column-inserts', const='--column-inserts', action='append_const', dest='output_options',
-                     help="Dump data as INSERT commands with colun names.")
+                     help="Dump data as INSERT commands with column names.")
     addTo.add_option('--oids', const='--oids', action='append_const', dest='output_options',
                      help="Include OIDs in dump.")
     addTo.add_option('--no-owner', const='--no-owner', action='append_const', dest='output_options',

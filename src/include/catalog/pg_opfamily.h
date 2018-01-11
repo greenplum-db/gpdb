@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opfamily.h,v 1.7 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_opfamily.h,v 1.11 2009/01/01 17:23:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -20,13 +20,6 @@
 #define PG_OPFAMILY_H
 
 #include "catalog/genbki.h"
-
-/* ----------------
- *		postgres.h contains the system type definitions and the
- *		CATALOG(), BKI_BOOTSTRAP and DATA() sugar words so this file
- *		can be read by both genbki.sh and the C compiler.
- * ----------------
- */
 
 /* ----------------
  *		pg_opfamily definition. cpp turns this into
@@ -106,6 +99,7 @@ DATA(insert OID = 1989 (	403		oid_ops			PGNSP PGUID ));
 DATA(insert OID = 1990 (	405		oid_ops			PGNSP PGUID ));
 DATA(insert OID = 1991 (	403		oidvector_ops	PGNSP PGUID ));
 DATA(insert OID = 1992 (	405		oidvector_ops	PGNSP PGUID ));
+DATA(insert OID = 2994 (	403		record_ops		PGNSP PGUID ));
 DATA(insert OID = 1994 (	403		text_ops		PGNSP PGUID ));
 #define TEXT_BTREE_FAM_OID 1994
 DATA(insert OID = 1995 (	405		text_ops		PGNSP PGUID ));
@@ -120,8 +114,6 @@ DATA(insert OID = 2095 (	403		text_pattern_ops	PGNSP PGUID ));
 #define TEXT_PATTERN_BTREE_FAM_OID 2095
 DATA(insert OID = 2097 (	403		bpchar_pattern_ops	PGNSP PGUID ));
 #define BPCHAR_PATTERN_BTREE_FAM_OID 2097
-DATA(insert OID = 2098 (	403		name_pattern_ops	PGNSP PGUID ));
-#define NAME_PATTERN_BTREE_FAM_OID 2098
 DATA(insert OID = 2099 (	403		money_ops		PGNSP PGUID ));
 DATA(insert OID = 2222 (	405		bool_ops		PGNSP PGUID ));
 #define BOOL_HASH_FAM_OID 2222
@@ -134,7 +126,6 @@ DATA(insert OID = 2227 (	405		abstime_ops		PGNSP PGUID ));
 DATA(insert OID = 2228 (	405		reltime_ops		PGNSP PGUID ));
 DATA(insert OID = 2229 (	405		text_pattern_ops	PGNSP PGUID ));
 DATA(insert OID = 2231 (	405		bpchar_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 2232 (	405		name_pattern_ops	PGNSP PGUID ));
 DATA(insert OID = 2233 (	403		reltime_ops		PGNSP PGUID ));
 DATA(insert OID = 2234 (	403		tinterval_ops	PGNSP PGUID ));
 DATA(insert OID = 2235 (	405		aclitem_ops		PGNSP PGUID ));
@@ -160,37 +151,36 @@ DATA(insert OID = 7080 (	403		xlogloc_ops		PGNSP PGUID ));
 /*
  * on-disk bitmap index opfamilies.
  */
-DATA(insert OID = 3014 (	3013	abstime_ops		PGNSP PGUID ));
-DATA(insert OID = 3015 (	3013	array_ops		PGNSP PGUID ));
-DATA(insert OID = 3016 (	3013	bit_ops			PGNSP PGUID ));
-DATA(insert OID = 3017 (	3013	bool_ops		PGNSP PGUID ));
-DATA(insert OID = 3018 (	3013	bpchar_ops		PGNSP PGUID ));
-DATA(insert OID = 3019 (	3013	bytea_ops		PGNSP PGUID ));
-DATA(insert OID = 3020 (	3013	char_ops		PGNSP PGUID ));
-DATA(insert OID = 3022 (	3013	date_ops		PGNSP PGUID ));
-DATA(insert OID = 3023 (	3013	float4_ops		PGNSP PGUID ));
-DATA(insert OID = 3024 (	3013	float8_ops		PGNSP PGUID ));
-DATA(insert OID = 3025 (	3013	inet_ops		PGNSP PGUID ));
-DATA(insert OID = 3026 (	3013	int2_ops		PGNSP PGUID ));
-DATA(insert OID = 3027 (	3013	int4_ops		PGNSP PGUID ));
-DATA(insert OID = 3028 (	3013	int8_ops		PGNSP PGUID ));
-DATA(insert OID = 3029 (	3013	interval_ops	PGNSP PGUID ));
-DATA(insert OID = 3030 (	3013	macaddr_ops		PGNSP PGUID ));
-DATA(insert OID = 3031 (	3013	name_ops		PGNSP PGUID ));
-DATA(insert OID = 3032 (	3013	numeric_ops		PGNSP PGUID ));
-DATA(insert OID = 3033 (	3013	oid_ops			PGNSP PGUID ));
-DATA(insert OID = 3034 (	3013	oidvector_ops	PGNSP PGUID ));
-DATA(insert OID = 3035 (	3013	text_ops		PGNSP PGUID ));
-DATA(insert OID = 3036 (	3013	time_ops		PGNSP PGUID ));
-DATA(insert OID = 3037 (	3013	timestamptz_ops	PGNSP PGUID ));
-DATA(insert OID = 3038 (	3013	timetz_ops		PGNSP PGUID ));
-DATA(insert OID = 3039 (	3013	varbit_ops		PGNSP PGUID ));
-DATA(insert OID = 3041 (	3013	timestamp_ops	PGNSP PGUID ));
-DATA(insert OID = 3042 (	3013	text_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 3044 (	3013	bpchar_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 3045 (	3013	name_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 3046 (	3013	money_ops		PGNSP PGUID ));
-DATA(insert OID = 3047 (	3013	reltime_ops		PGNSP PGUID ));
-DATA(insert OID = 3048 (	3013	tinterval_ops	PGNSP PGUID ));
+DATA(insert OID = 7014 (	7013	abstime_ops		PGNSP PGUID ));
+DATA(insert OID = 7015 (	7013	array_ops		PGNSP PGUID ));
+DATA(insert OID = 7016 (	7013	bit_ops			PGNSP PGUID ));
+DATA(insert OID = 7017 (	7013	bool_ops		PGNSP PGUID ));
+DATA(insert OID = 7018 (	7013	bpchar_ops		PGNSP PGUID ));
+DATA(insert OID = 7019 (	7013	bytea_ops		PGNSP PGUID ));
+DATA(insert OID = 7020 (	7013	char_ops		PGNSP PGUID ));
+DATA(insert OID = 7022 (	7013	date_ops		PGNSP PGUID ));
+DATA(insert OID = 7023 (	7013	float4_ops		PGNSP PGUID ));
+DATA(insert OID = 7024 (	7013	float8_ops		PGNSP PGUID ));
+DATA(insert OID = 7025 (	7013	inet_ops		PGNSP PGUID ));
+DATA(insert OID = 7026 (	7013	int2_ops		PGNSP PGUID ));
+DATA(insert OID = 7027 (	7013	int4_ops		PGNSP PGUID ));
+DATA(insert OID = 7028 (	7013	int8_ops		PGNSP PGUID ));
+DATA(insert OID = 7029 (	7013	interval_ops	PGNSP PGUID ));
+DATA(insert OID = 7030 (	7013	macaddr_ops		PGNSP PGUID ));
+DATA(insert OID = 7031 (	7013	name_ops		PGNSP PGUID ));
+DATA(insert OID = 7032 (	7013	numeric_ops		PGNSP PGUID ));
+DATA(insert OID = 7033 (	7013	oid_ops			PGNSP PGUID ));
+DATA(insert OID = 7034 (	7013	oidvector_ops	PGNSP PGUID ));
+DATA(insert OID = 7035 (	7013	text_ops		PGNSP PGUID ));
+DATA(insert OID = 7036 (	7013	time_ops		PGNSP PGUID ));
+DATA(insert OID = 7037 (	7013	timestamptz_ops	PGNSP PGUID ));
+DATA(insert OID = 7038 (	7013	timetz_ops		PGNSP PGUID ));
+DATA(insert OID = 7039 (	7013	varbit_ops		PGNSP PGUID ));
+DATA(insert OID = 7041 (	7013	timestamp_ops	PGNSP PGUID ));
+DATA(insert OID = 7042 (	7013	text_pattern_ops	PGNSP PGUID ));
+DATA(insert OID = 7044 (	7013	bpchar_pattern_ops	PGNSP PGUID ));
+DATA(insert OID = 7046 (	7013	money_ops		PGNSP PGUID ));
+DATA(insert OID = 7047 (	7013	reltime_ops		PGNSP PGUID ));
+DATA(insert OID = 7048 (	7013	tinterval_ops	PGNSP PGUID ));
 
 #endif   /* PG_OPFAMILY_H */

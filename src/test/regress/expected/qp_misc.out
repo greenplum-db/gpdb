@@ -13120,9 +13120,11 @@ select rnum, c1, c2, c3, avg( c3 ) over(partition by c1 rows between unbounded p
 group by
 f1,f2,f3,f4,f5
 ) Q ) P;
-ERROR:  window specifications with a framing clause must have an ORDER BY clause
-LINE 12: select rnum, c1, c2, c3, avg( c3 ) over(partition by c1 rows...
-                                                ^
+      test_name_part       | pass_ind 
+---------------------------+----------
+ OlapCoreAvgRowsBetween_p1 |        1
+(1 row)
+
 -- OlapCoreCountMultiplePartitions_p1
 select 'OlapCoreCountMultiplePartitions_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -13168,8 +13170,6 @@ f1,f2,f3,f4,f5
 (1 row)
 
 -- OlapCoreCountRowsBetween_p2
--- test expected to fail until GPDB supports function
--- GPDB Limitation: ERROR:  window specifications with a framing clause must have an ORDER BY clause
 select 'OlapCoreCountRowsBetween_p2' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
 select f1,f2,f3,f4,f5, count(*) c  from (
@@ -13186,9 +13186,11 @@ select rnum, c1, c2, c3, count( c3 ) over(partition by c1 rows between unbounded
 group by
 f1,f2,f3,f4,f5
 ) Q ) P;
-ERROR:  window specifications with a framing clause must have an ORDER BY clause
-LINE 12: select rnum, c1, c2, c3, count( c3 ) over(partition by c1 ro...
-                                                  ^
+       test_name_part        | pass_ind 
+-----------------------------+----------
+ OlapCoreCountRowsBetween_p2 |        1
+(1 row)
+
 -- OlapCoreCountStar_p1
 select 'OlapCoreCountStar_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -14162,9 +14164,11 @@ select rnum, c1, c2, sum(c3) over w1, sum (c3) over w2 from tolap  window w1 as 
 group by
 f1,f2,f3,f4,f5
 ) Q ) P;
-ERROR:  syntax error at or near "w1"
-LINE 12: select rnum, c1, c2, sum(c3) over w1, sum (c3) over w2 from ...
-                                           ^
+             test_name_part             | pass_ind 
+----------------------------------------+----------
+ OlapCoreWindowFrameWindowDefinition_p1 |        1
+(1 row)
+
 -- OperatorAnd_p1
 select 'OperatorAnd_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (

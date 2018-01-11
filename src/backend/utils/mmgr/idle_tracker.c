@@ -6,7 +6,11 @@
  *	 This module coordinates with the runaway cleaner to ensure that an active
  *	 process cannot become idle before cleaning up for a pending runaway event.
  *
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/mmgr/idle_tracker.c
  *
  *-------------------------------------------------------------------------
  */

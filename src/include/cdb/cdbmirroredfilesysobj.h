@@ -3,7 +3,12 @@
  * cdbmirroredfilesysobj.h
  *	  Create and drop mirrored files and directories.
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbmirroredfilesysobj.h
  *
  *-------------------------------------------------------------------------
  */
@@ -152,7 +157,7 @@ extern void MirroredFileSysObj_DropDbDir(
 	bool						*mirrorDataLossOccurred);
 
 extern void MirroredFileSysObj_TransactionCreateBufferPoolFile(
-	SMgrRelation 			smgrOpen,
+	RelFileNode *rnode,
 
 	PersistentFileSysRelBufpoolKind relBufpoolKind,
 

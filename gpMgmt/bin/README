@@ -84,18 +84,18 @@ dattimeutils.py  -  Several utility functions for dealing with date/time data
 
 gparray.py
    |
-   +-  GpDB      - Configuration information for a single dbid
+   +-  Segment      - Configuration information for a single dbid
    |
-   +-  GpSegment - Configuration information for a single content id
-   |     \-  Contains multiple GpDB objects
+   +-  SegmentPair - Configuration information for a single content id
+   |     \-  Contains multiple Segment objects
    |
    +-  GpArray   - Configuration information for a Greenplum Database
-         \-  Contains multiple GpSegment objects
+         \-  Contains multiple SegmentPair objects
 
 gphostcache.py   
   |
   +- GpHost      - Information about a single Host
-  |    \- Contains all the GpDB objects on the host
+  |    \- Contains all the Segment objects on the host
   |
   +- GpHostCache - Helps resolve interface->hostname lookups
        \- Contains all the GpHosts referenced in a Greenplum Database

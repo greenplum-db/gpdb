@@ -2,9 +2,9 @@
 /*
  * Scanner for the configuration file
  *
- * Copyright (c) 2000-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.53 2008/01/01 19:45:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.59 2009/04/09 14:21:02 tgl Exp $
  */
 
 %{
@@ -157,6 +157,15 @@ ProcessConfigFile(GucContext context)
 						 &head, &tail))
 		goto cleanup_list;
 
+#ifdef USE_SEGWALREP
+	Assert(gp_replication_config_filename);
+
+	if (!ParseConfigFile(gp_replication_config_filename, NULL,
+						 0, context, elevel,
+						 &head, &tail))
+		goto cleanup_list;
+#endif
+
 	/*
 	 * We need the proposed new value of custom_variable_classes to check
 	 * custom variables with.  ParseConfigFile ensured that if it's in
@@ -272,8 +281,9 @@ ProcessConfigFile(GucContext context)
 		{
 			ereport(elevel,
 					(errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM),
-					 errmsg("parameter \"%s\" cannot be changed after server start; configuration file change ignored",
-							gconf->name)));
+					 errmsg("attempted change of parameter \"%s\" ignored",
+							gconf->name),
+					 errdetail("This parameter cannot be changed after server start.")));
 			continue;
 		}
 
@@ -320,9 +330,16 @@ ProcessConfigFile(GucContext context)
 	/* If we got here all the options checked out okay, so apply them. */
 	for (item = head; item; item = item->next)
 	{
-		set_config_option(item->name, item->value, context,
-						  PGC_S_FILE, GUC_ACTION_SET, true);
+		if (set_config_option(item->name, item->value, context,
+			   					 PGC_S_FILE, GUC_ACTION_SET, true))
+		{
+			set_config_sourcefile(item->name, item->filename,
+								  item->sourceline);
+		}
 	}
+
+	/* Remember when we last successfully loaded the config file. */
+	PgReloadTime = GetCurrentTimestamp();
 
  cleanup_list:
 	free_name_value_list(head);
@@ -360,9 +377,9 @@ GUC_flex_fatal(const char *msg)
  * Output parameters:
  *	head_p, tail_p: head and tail of linked list of name/value pairs
  *
- * *head_p and *tail_p must be initialized to NULL before calling the outer
- * recursion level.  On exit, they contain a list of name-value pairs read
- * from the input file(s).
+ * *head_p and *tail_p must be initialized to NULL for the first call to the top
+ * recursion level.  On exit, they contain a list of name-value pairs read from
+ * the input file(s).
  *
  * Returns TRUE if successful, FALSE if an error occurred.  The error has
  * already been ereport'd, it is only necessary for the caller to clean up
@@ -488,8 +505,13 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 
 		/* now we'd like an end of line, or possibly EOF */
 		token = yylex();
-		if (token != GUC_EOL && token != 0)
-			goto parse_error;
+		if (token != GUC_EOL)
+		{
+			if (token != 0)
+				goto parse_error;
+			/* treat EOF like \n for line numbering purposes, cf bug 4752 */
+			ConfigFileLineno++;
+		}
 
 		/* OK, process the option name and value */
 		if (guc_name_compare(opt_name, "include") == 0)
@@ -498,8 +520,6 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 			 * An include directive isn't a variable and should be processed
 			 * immediately.
 			 */
-			unsigned int save_ConfigFileLineno = ConfigFileLineno;
-
 			if (!ParseConfigFile(opt_value, config_file,
 								 depth + 1, context, elevel,
 								 head_p, tail_p))
@@ -531,6 +551,8 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 				pfree(item->value);
 				item->name = opt_name;
 				item->value = opt_value;
+				item->filename = pstrdup(config_file);
+				item->sourceline = ConfigFileLineno-1;
 			}
 			else
 			{
@@ -538,6 +560,8 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 				item = palloc(sizeof *item);
 				item->name = opt_name;
 				item->value = opt_value;
+				item->filename = pstrdup(config_file);
+				item->sourceline = ConfigFileLineno-1;
 				item->next = *head_p;
 				*head_p = item;
 				if (*tail_p == NULL)
@@ -550,6 +574,8 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 			item = palloc(sizeof *item);
 			item->name = opt_name;
 			item->value = opt_value;
+			item->filename = pstrdup(config_file);
+			item->sourceline = ConfigFileLineno-1;
 			item->next = NULL;
 			if (*head_p == NULL)
 				*head_p = item;
@@ -607,6 +633,7 @@ free_name_value_list(struct name_value_pair *list)
 
 		pfree(item->name);
 		pfree(item->value);
+		pfree(item->filename);
 		pfree(item);
 		item = next;
 	}

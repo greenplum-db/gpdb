@@ -27,7 +27,7 @@ class ComputeCatalogUpdate:
 
     mirror_to_remove	     - to be removed (e.g. via gp_remove_segment_mirror())
     primary_to_remove	     - to be removed (e.g. via gp_remove_segment())
-    primary_to_add	     - to be added (e.g. via gp_add_segment())
+    primary_to_add	     - to be added (e.g. via gp_add_segment_primary())
     mirror_to_add	     - to be added (e.g. via gp_add_segment_mirror())
     mirror_to_remove_and_add - change or force list requires this mirror
                                 to be removed and then added back

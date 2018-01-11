@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_djz_rmn_wbb">
+  <title>Collecting Root Partition Statistics</title>
+  <shortdesc>For a partitioned table, GPORCA uses statistics of the table root partition to generate
+    query plans. These statistics are used for determining the join order, for splitting and joining
+    aggregate nodes, and for costing the query steps. This is in contrast to the legacy planner,
+    which uses the statistics of each leaf partition. If you execute queries on partitioned tables,
+    you must collect statistics on the root partition and periodically update those statistics to
+    ensure that GPORCA can generate optimal query plans.</shortdesc>
+  <topic id="topic_r5d_hv1_kr">
+    <title>Setting the optimizer_analyze_root_partition Parameter</title>
+    <body>
+      <p>A primary way to ensure that you collect root partition statistics is to set the
+          <codeph>optimizer_analyze_root_partition</codeph> configuration parameter to
+          <codeph>on</codeph>. When the parameter is enabled, Greenplum Database collects root
+        partition statistics (<codeph>ANALYZE ROOTPARTITION</codeph> operation) any time you run an
+          <codeph>ANALYZE</codeph> command against a partitioned table.  </p>
+      <ol id="ol_n22_hv1_kr">
+        <li>Log into the Greenplum Database master host as <codeph>gpadmin</codeph>, the Greenplum
+          Database administrator.</li>
+        <li>Set the values of the server configuration parameters. These Greenplum Database
+            <codeph>gpconfig</codeph> utility commands sets the value of the parameters to
+            <codeph>on</codeph>:<codeblock>$ gpconfig -c optimizer_analyze_root_partition -v on --masteronly</codeblock></li>
+        <li>Restart Greenplum Database. This Greenplum Database <codeph>gpstop</codeph> utility
+          command reloads the <codeph>postgresql.conf</codeph> files of the master and segments
+          without shutting down Greenplum Database. <codeblock>gpstop -u</codeblock></li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic_w1y_srn_wbb">
+    <title>Running ANALYZE ROOTPARTITION</title>
+    <body>
+      <p>The <codeph>ANALYZE ROOTPARTITION</codeph> command samples the leaf partition data in a
+        table, and stores the statistics in the root partition. The leaf partition data is only
+        sampled, but statistics are not collected on the leaf partitions. Keep in mind that
+          <codeph>ANALYZE ROOTPARTITION</codeph> always scans the entire table before updating the
+        root partition statistics. If your table is very large, this operation can take a
+        significant amount of time. <codeph>ANALYZE ROOTPARTITION</codeph> also uses an
+          <codeph>ACCESS SHARE</codeph> lock that prevents certain operations, such as
+          <codeph>TRUNCATE</codeph> and <codeph>VACUUM</codeph> operations, during execution. For
+        these reason, you should schedule <codeph>ANALYZE ROOTPARTITION</codeph> operations
+        periodically, or when there are significant changes to leaf partition data.</p>
+      <p>Keep in mind that even if the root partition statistics are not up-to-date or do not exist,
+        GPORCA will still perform dynamic partition elimination for queries against the table.</p>
+      <p>Follow these best practices for running <codeph>ANALYZE ROOTPARTITION</codeph> in your
+          system:<ul id="ul_vm4_fsn_wbb">
+          <li>Always run <codeph>ANALYZE ROOTPARTITION</codeph> at least once for each newly-created
+            partitioned table, after adding initial data. If you execute a query on a root partition
+            that has no statistics but has tuples, you receive the
+            notice:<codeblock>NOTICE: One or more columns in the following table(s) do not have statistics: &lt;table_name>
+HINT: For non-partitioned tables, run analyze &lt;table_name>(&lt;column_list>). For partitioned tables, 
+run analyze rootpartition &lt;table_name>(&lt;column_list>). See log for columns missing statistics.</codeblock></li>
+          <li>Update root partition statistics when you observe query performance regression in
+            EXPLAIN plans against the table, or after significant changes to leaf partition data.
+            For example, if you add a new leaf partition at some point after generating root
+            partition statistics, consider running <codeph>ANALYZE ROOTPARTITION</codeph> to update
+            root partition statistics with the new tuples inserted from the new leaf partition.</li>
+          <li>For very large tables, run <codeph>ANALYZE ROOTPARTITION</codeph> only weekly, or at
+            some interval longer than daily.</li>
+          <li>Avoid running <codeph>ANALYZE</codeph> with no arguments, because doing so executes
+            the command on all database tables including partitioned tables. With large databases,
+            these global <codeph>ANALYZE</codeph> operations are difficult to monitor, and it can be
+            difficult to predict the time needed for completion.</li>
+          <li>Consider running multiple <codeph>ANALYZE ROOTPARTITION &lt;table_name></codeph>
+            operations in parallel to speed the operation of statistics collection, if your I/O
+            throughput can support the load.</li>
+          <li>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update
+            table statistics. Using <codeph>analyzedb</codeph> ensures that tables that were
+            previously analzyed are not re-analyzed if no modifications were made to the leaf
+            partition.</li>
+        </ul></p>
+    </body>
+  </topic>
+  <topic id="topic_h2x_hks_wbb">
+    <title>GPORCA and Leaf Partition Statistics</title>
+    <body>
+      <p>Although creating and maintaining root partition statistics is crucial for GPORCA query
+        performance with partitioned tables, maintaining leaf partition statistics is also
+        important. If GPORCA cannot generate a plan for a query against a partitioned table, then
+        the legacy planner is used and leaf partition statistics are needed to produce the optimal
+        plan for that query. </p>
+      <p>GPORCA itself also uses leaf partition statistics for any queries that access leaf
+        partitions directly, instead of using the root partition with predicates to eliminate
+        partitions. For example, if you know which partitions hold necessary tuples for a query, you
+        can directly query the leaf partition table itself; in this case GPORCA uses the leaf
+        partition statistics.</p>
+    </body>
+  </topic>
+</topic>

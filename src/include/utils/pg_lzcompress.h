@@ -60,10 +60,6 @@ typedef struct PGLZ_Header
  *		first_success_by	Abandon compression if we find no compressible
  *							data within the first this-many bytes.
  *
- *		min_comp_rate		Minimum compression rate (0-99%) to require for
- *							inputs smaller than force_input_size.  If not
- *							achieved, the output will be uncompressed.
- *
  *		match_size_good		The initial GOOD match size when starting history
  *							lookup. When looking up the history to find a
  *							match that could be expressed as a tag, the

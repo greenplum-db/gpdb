@@ -2,12 +2,13 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
     <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html" otherprops="pivotal"/>
+        format="html"/>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
         <topicref href="admin_utilities/util_ref.xml" linking="targetonly">
             <topicref href="admin_utilities/analyzedb.xml"/>
             <topicref href="admin_utilities/gpactivatestandby.xml"/>
             <topicref href="admin_utilities/gpaddmirrors.xml"/>
+            <topicref href="admin_utilities/gpbackup.xml"/>
             <topicref href="admin_utilities/gpcheck.xml"/>
             <topicref href="admin_utilities/gpcheckcat.xml"/>
             <topicref href="admin_utilities/gpcheckperf.xml"/>
@@ -24,13 +25,14 @@
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
             <topicref href="admin_utilities/gpmfr.xml"/>
-<!-- hidden until testing is complete -msk
+            <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
 -->
             <topicref href="admin_utilities/gpperfmon_install.xml"/>
             <topicref href="admin_utilities/gppkg.xml"/>
             <topicref href="admin_utilities/gprecoverseg.xml"/>
             <topicref href="admin_utilities/gpreload.xml"/>
+            <topicref href="admin_utilities/gprestore.xml"/>
             <topicref href="admin_utilities/gpscp.xml"/>
             <topicref href="admin_utilities/gpseginstall.xml"/>
             <topicref href="admin_utilities/gpssh.xml"/>
@@ -60,7 +62,12 @@
                 <topicref href="client_utilities/vacuumdb.xml"/>
             </topicref>
         </topicref>
-        <topicref href="orafce_ref.xml"/>
-        <topicref href="dblink.xml"/>
+        <topicref href="contrib-modules.xml">
+            <topicref href="citext.xml"/>
+            <topicref href="dblink.xml"/>
+            <topicref href="hstore.xml"/>
+            <topicref href="orafce_ref.xml"/>
+            <topicref href="passwordcheck.xml"/>
+        </topicref>
     </topicref>
 </map>

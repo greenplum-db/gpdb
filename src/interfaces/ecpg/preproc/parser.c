@@ -105,19 +105,8 @@ filtered_base_yylex(void)
 			next_token = base_yylex();
 			switch (next_token)
 			{
-#ifdef WITH_TIME
 				case TIME:
 					cur_token = WITH_TIME;
-					break;
-#endif
-				case CASCADED:
-					cur_token = WITH_CASCADED;
-					break;
-				case LOCAL:
-					cur_token = WITH_LOCAL;
-					break;
-				case CHECK:
-					cur_token = WITH_CHECK;
 					break;
 				default:
 					/* save the lookahead token for next time */

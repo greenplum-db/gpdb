@@ -1,6 +1,13 @@
 #!/bin/bash
 
 # ======================================================================
+# Configuration Variables
+# ======================================================================
+
+# Set to zero to force cluster to be created without data checksums
+DATACHECKSUMS=1
+
+# ======================================================================
 # Data Directories
 # ======================================================================
 
@@ -68,9 +75,10 @@ checkDemoConfig(){
 
 USAGE(){
     echo ""
-    echo " `basename $0` -c -d -u"
-    echo " -c : check if demo is possible."
+    echo " `basename $0` {-c | -d | -u} <-K>"
+    echo " -c : Check if demo is possible."
     echo " -d : Delete the demo."
+    echo " -K : Create cluster without data checksums."
     echo " -u : Usage, prints this message."
     echo ""
 }
@@ -118,7 +126,7 @@ cleanDemo(){
 # Main Section
 #*****************************************************************************
 
-while getopts ":cd'?'" opt
+while getopts ":cdK'?'" opt
 do
 	case $opt in 
 		'?' ) USAGE ;;
@@ -132,6 +140,9 @@ do
            ;;
         d) cleanDemo
            exit 0
+           ;;
+        K) DATACHECKSUMS=0
+           shift
            ;;
         *) USAGE
            exit 0
@@ -278,6 +289,13 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	ENCODING=UNICODE
 EOF
 
+if [ "${DATACHECKSUMS}" == "0" ]; then
+    cat >> $CLUSTER_CONFIG <<-EOF
+	# Turn off data checksums
+	HEAP_CHECKSUM=off
+EOF
+fi
+
 if [ "${WITH_MIRRORS}" == "true" ]; then
     cat >> $CLUSTER_CONFIG <<-EOF
 
@@ -350,6 +368,9 @@ if [ "${BLDWRAP_POSTGRES_CONF_ADDONS}" != "__none__" ]  && \
     for addon in $( echo ${BLDWRAP_POSTGRES_CONF_ADDONS} | sed -e "s/|/ /g" ); do
         echo "" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
         echo $addon >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
+	if [ "$addon" == "fsync=off" ]; then
+		echo "WARNING: fsync is off, database consistency is not guaranteed."
+	fi
         echo "" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
     done
 

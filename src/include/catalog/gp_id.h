@@ -4,7 +4,12 @@
  *	  definition of the system "database identifier" relation (gp_dbid)
  *	  along with the relation's initial contents.
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/gp_id.h
  *
  * NOTES
  *    Historically this table was used to supply every segment with its

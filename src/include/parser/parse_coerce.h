@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_coerce.h,v 1.75 2008/01/11 18:39:41 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_coerce.h,v 1.79 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,25 +17,8 @@
 #include "parser/parse_node.h"
 
 
-/* Type categories (kluge ... ought to be extensible) */
 /* Type categories (see TYPCATEGORY_xxx symbols in catalog/pg_type.h) */
 typedef char TYPCATEGORY;
-
-typedef enum CATEGORY
-{
-	INVALID_TYPE,
-	UNKNOWN_TYPE,
-	GENERIC_TYPE,
-	BOOLEAN_TYPE,
-	STRING_TYPE,
-	BITSTRING_TYPE,
-	NUMERIC_TYPE,
-	DATETIME_TYPE,
-	TIMESPAN_TYPE,
-	GEOMETRIC_TYPE,
-	NETWORK_TYPE,
-	USER_TYPE
-} CATEGORY;
 
 /* Result codes for find_coercion_pathway */
 typedef enum CoercionPathType
@@ -49,8 +32,8 @@ typedef enum CoercionPathType
 
 
 extern bool IsBinaryCoercible(Oid srctype, Oid targettype);
-extern bool IsPreferredType(CATEGORY category, Oid type);
-extern CATEGORY TypeCategory(Oid type);
+extern bool IsPreferredType(TYPCATEGORY category, Oid type);
+extern TYPCATEGORY TypeCategory(Oid type);
 
 extern Node* coerce_to_specific_type(ParseState *pstate,
 									 Node *node,
@@ -79,7 +62,12 @@ extern Node *coerce_to_specific_type(ParseState *pstate, Node *node,
 						Oid targetTypeId,
 						const char *constructName);
 
-extern Oid	select_common_type(List *typeids, const char *context);
+extern int parser_coercion_errposition(ParseState *pstate,
+							int coerce_location,
+							Node *input_expr);
+
+extern Oid select_common_type(ParseState *pstate, List *exprs,
+				   const char *context, Node **which_expr);
 extern Node *coerce_to_common_type(ParseState *pstate, Node *node,
 					  Oid targetTypeId,
 					  const char *context);

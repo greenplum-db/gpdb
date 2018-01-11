@@ -69,7 +69,6 @@
 #include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "nodes/nodeFuncs.h"
-#include "parser/parse_expr.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
@@ -81,8 +80,8 @@
 
 
 /* GUC variables */
-int			xmlbinary;
-int			xmloption;
+int xmlbinary;
+int xmloption;
 
 #ifdef USE_LIBXML
 
@@ -129,7 +128,7 @@ static const char *map_sql_catalog_to_xmlschema_types(List *nspid_list,
 static const char *map_sql_type_to_xml_name(Oid typeoid, int typmod);
 static const char *map_sql_typecoll_to_xmlschema_types(List *tupdesc_list);
 static const char *map_sql_type_to_xmlschema_type(Oid typeoid, int typmod);
-static void SPI_sql_row_to_xmlelement(int rownum, StringInfo result,
+static void SPI_sql_row_to_xmlelement(uint64 rownum, StringInfo result,
 						  char *tablename, bool nulls, bool tableforest,
 						  const char *targetns, bool top_level);
 
@@ -1943,7 +1942,7 @@ _SPI_strdup(const char *s)
 static List *
 query_to_oid_list(const char *query)
 {
-	int			i;
+	uint64			i;
 	List	   *list = NIL;
 
 	SPI_execute(query, true, 0);
@@ -2062,7 +2061,7 @@ cursor_to_xml(PG_FUNCTION_ARGS)
 
 	StringInfoData result;
 	Portal		portal;
-	int			i;
+	uint64			i;
 
 	initStringInfo(&result);
 
@@ -2137,7 +2136,7 @@ query_to_xml_internal(const char *query, char *tablename,
 {
 	StringInfo	result;
 	char	   *xmltn;
-	int			i;
+	uint64			i;
 
 	if (tablename)
 		xmltn = map_sql_identifier_to_xml_name(tablename, true, false);
@@ -3212,7 +3211,7 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
  * SPI cursor.  See also SQL/XML:2008 section 9.10.
  */
 static void
-SPI_sql_row_to_xmlelement(int rownum, StringInfo result, char *tablename,
+SPI_sql_row_to_xmlelement(uint64 rownum, StringInfo result, char *tablename,
 						  bool nulls, bool tableforest,
 						  const char *targetns, bool top_level)
 {

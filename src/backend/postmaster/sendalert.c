@@ -3,7 +3,12 @@
  * sendalert.c
  *	  Send alerts via SMTP (email) or SNMP INFORM messages.
  *
- * Copyright (c) 2009, Greenplum
+ * Portions Copyright (c) 2009, Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/sendalert.c
  *
  *-------------------------------------------------------------------------
  */

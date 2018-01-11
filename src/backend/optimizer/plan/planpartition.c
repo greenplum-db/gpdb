@@ -4,6 +4,12 @@
  *	  Transforms to produce plans that achieve dynamic partition elimination.
  *
  * Portions Copyright (c) 2011-2013, EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	  src/backend/optimizer/plan/planpartition.c
+ *
  *-------------------------------------------------------------------------
  */
 

@@ -2,6 +2,6 @@ COMMON_OBJS = gpreader.o gpwriter.o s3conf.o s3utils.o s3log.o s3url.o s3http_he
 
 COMMON_LINK_OPTIONS = -lstdc++ -lxml2 -lpthread -lcrypto -lcurl -lz
 
-COMMON_CPP_FLAGS = -O2 -std=c++11 -Wall -fPIC -I/usr/include/libxml2 -I/usr/local/opt/openssl/include
+COMMON_CPP_FLAGS = -std=c++11 -fPIC -I/usr/include/libxml2 -I/usr/local/opt/openssl/include
 
 TEST_OBJS = $(patsubst %.o,%_test.o,$(COMMON_OBJS))

@@ -2,7 +2,12 @@
  *
  * cdbdistributedsnapshot.h
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbdistributedsnapshot.h
  *
  *-------------------------------------------------------------------------
  */
@@ -16,37 +21,27 @@
 
 typedef struct DistributedSnapshot
 {
-	DistributedTransactionTimeStamp		distribTransactionTimeStamp;
-										/*
-										 * The unique timestamp for this
-										 * start of the DTM.  It applies to
-										 * all of the distributed transactions
-										 * in this snapshot.
-										 */
+	/*
+	 * The unique timestamp for this start of the DTM.  It applies to all of
+	 * the distributed transactions in this snapshot.
+	 */
+	DistributedTransactionTimeStamp	distribTransactionTimeStamp;
 
-	DistributedTransactionId		xminAllDistributedSnapshots;
-										/*
-										 * The lowest distributed transaction
-										 * being used for distributed snapshots.
-										 */
-	
-	DistributedSnapshotId			distribSnapshotId;
-										/* 
-										 * Unique number identifying this
-										 * particular distributed snapshot.
-										 */
-										   
-	DistributedTransactionId 	xmin;	/* XID < xmin are visible to me */
-	DistributedTransactionId 	xmax;	/* XID >= xmax are invisible to me */
-	int32						count;	/* 
-										 * Count of distributed transactions
-										 * in inProgress*Array. 
-										 */
-	int32						maxCount;
-										/*
-										 * Max entry count for 
-										 * inProgress*Array.
-										 */
+	/*
+	 * The lowest distributed transaction being used for distributed snapshots.
+	 */
+	DistributedTransactionId xminAllDistributedSnapshots;
+
+	/*
+	 * Unique number identifying this particular distributed snapshot.
+	 */
+	DistributedSnapshotId distribSnapshotId;
+
+	DistributedTransactionId xmin;	/* XID < xmin are visible to me */
+	DistributedTransactionId xmax;	/* XID >= xmax are invisible to me */
+	int32		count;		/*  # of distributed xids in inProgressXidArray */
+	int32		maxCount;	/* allocated size of inProgressXidArray, or -1
+							 * if it's not malloc'd */
 
 	/* Array of distributed transactions in progress. */
 	DistributedTransactionId        *inProgressXidArray;

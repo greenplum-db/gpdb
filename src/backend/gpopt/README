@@ -1,7 +1,7 @@
 ===================================================================================================
 This document describes the type and source of all metadata used and requested from optimizer. GPDB
 collects all these data using GPDB function wrappers. 
-Copyright (c) 2015, Pivotal Software, Inc.
+Copyright (c) 2015-Present Pivotal Software, Inc.
 ---------------------------------------------------------------------------------------------------
 
 

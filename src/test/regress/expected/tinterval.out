@@ -26,20 +26,20 @@ ERROR:  invalid input syntax for type abstime: ""
 LINE 2:    VALUES ('["" "infinity"]');
                    ^
 -- test tinterval operators
-SELECT '' AS five, * FROM TINTERVAL_TBL ORDER BY 2;
+SELECT '' AS five, * FROM TINTERVAL_TBL;
  five |                               f1                                
 ------+-----------------------------------------------------------------
       | ["-infinity" "infinity"]
-      | ["Sun Sep 04 23:59:12 1983 PDT" "Tue Oct 04 23:59:12 1983 PDT"]
-      | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
-      | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
       | ["Sat May 10 23:59:12 1947 PST" "Sun Jan 14 03:14:21 1973 PST"]
+      | ["Sun Sep 04 23:59:12 1983 PDT" "Tue Oct 04 23:59:12 1983 PDT"]
+      | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
+      | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
 (5 rows)
 
 -- length ==
 SELECT '' AS one, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #= '@ 1 months' ORDER BY 2;
+   WHERE t.f1 #= '@ 1 months';
  one |                               f1                                
 -----+-----------------------------------------------------------------
      | ["Sun Sep 04 23:59:12 1983 PDT" "Tue Oct 04 23:59:12 1983 PDT"]
@@ -48,18 +48,18 @@ SELECT '' AS one, t.*
 -- length <>
 SELECT '' AS three, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #<> '@ 1 months' ORDER BY 2;
+   WHERE t.f1 #<> '@ 1 months';
  three |                               f1                                
 -------+-----------------------------------------------------------------
-       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
-       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
        | ["Sat May 10 23:59:12 1947 PST" "Sun Jan 14 03:14:21 1973 PST"]
+       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
+       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
 (3 rows)
 
 -- length <
 SELECT '' AS zero, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #< '@ 1 month' ORDER BY 2;
+   WHERE t.f1 #< '@ 1 month';
  zero | f1 
 ------+----
 (0 rows)
@@ -67,7 +67,7 @@ SELECT '' AS zero, t.*
 -- length <=
 SELECT '' AS one, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #<= '@ 1 month' ORDER BY 2;
+   WHERE t.f1 #<= '@ 1 month';
  one |                               f1                                
 -----+-----------------------------------------------------------------
      | ["Sun Sep 04 23:59:12 1983 PDT" "Tue Oct 04 23:59:12 1983 PDT"]
@@ -76,30 +76,30 @@ SELECT '' AS one, t.*
 -- length >
 SELECT '' AS three, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #> '@ 1 year' ORDER BY 2;
+   WHERE t.f1 #> '@ 1 year';
  three |                               f1                                
 -------+-----------------------------------------------------------------
-       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
-       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
        | ["Sat May 10 23:59:12 1947 PST" "Sun Jan 14 03:14:21 1973 PST"]
+       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
+       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
 (3 rows)
 
 -- length >=
 SELECT '' AS three, t.*
    FROM TINTERVAL_TBL t
-   WHERE t.f1 #>= '@ 3 years' ORDER BY 2;
+   WHERE t.f1 #>= '@ 3 years';
  three |                               f1                                
 -------+-----------------------------------------------------------------
-       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
-       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
        | ["Sat May 10 23:59:12 1947 PST" "Sun Jan 14 03:14:21 1973 PST"]
+       | ["Wed Dec 31 16:00:00 1969 PST" "Mon May 01 00:30:30 1995 PDT"]
+       | ["Thu Feb 15 12:15:03 1990 PST" "Sun Sep 23 11:12:13 2001 PDT"]
 (3 rows)
 
 -- overlaps
 SELECT '' AS three, t1.*
    FROM TINTERVAL_TBL t1
    WHERE t1.f1 &&
-        tinterval '["Aug 15 14:23:19 1983" "Sep 16 14:23:19 1983"]' ORDER BY 2;
+        tinterval '["Aug 15 14:23:19 1983" "Sep 16 14:23:19 1983"]';
  three |                               f1                                
 -------+-----------------------------------------------------------------
        | ["-infinity" "infinity"]

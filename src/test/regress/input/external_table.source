@@ -53,6 +53,45 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- --------------------------------------
 -- check platform
 -- --------------------------------------
+DROP TABLE IF EXISTS REG_REGION;
+DROP TABLE IF EXISTS tableless_heap;
+DROP TABLE IF EXISTS errlog_save;
+DROP TABLE IF EXISTS exttab_insert_1;
+DROP TABLE IF EXISTS exttab_ctas_1;
+DROP TABLE IF EXISTS exttab_constraints_insert_1;
+
+DROP EXTERNAL TABLE IF EXISTS tableless_ext;
+DROP EXTERNAL TABLE IF EXISTS ret_too_many_uris;
+DROP EXTERNAL TABLE IF EXISTS wet_too_many_uris;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_3;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_4;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_5;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_6;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_7;
+DROP EXTERNAL TABLE IF EXISTS exttab_constraints_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cte_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cte_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_3;
+DROP EXTERNAL TABLE IF EXISTS exttab_subq_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_subq_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_subtxs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_subtxs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_txs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_txs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_udfs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_udfs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_views_3;
+
+DROP VIEW IF EXISTS exttab_views_3;
+
+DROP PROTOCOL IF EXISTS demoprot_untrusted;
+
 drop external web table if exists check_ps;
 CREATE EXTERNAL WEB TABLE check_ps (x text)
 execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
@@ -181,6 +220,11 @@ DROP EXTERNAL TABLE ext_r;
 RESET SESSION AUTHORIZATION;
 REVOKE ALL PRIVILEGES ON PROTOCOL demoprot FROM extprotu;
 DROP ROLE IF EXISTS extprotu;
+
+-- Test multi-object DROP
+CREATE PROTOCOL demoprot_droptest1 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+CREATE PROTOCOL demoprot_droptest2 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
 
 --
 -- WET tests
@@ -422,9 +466,7 @@ WHERE e1.i = e2.i ORDER BY e1.i
 )
 SELECT * FROM cte1 ORDER BY cte1.i;
 select count(*) from gp_read_error_log('exttab_cte_2');
-select count(*) from gp_read_error_log('exttab_cte_1');
 -- start_ignore
-select gp_read_error_log('exttab_cte_1');
 select gp_read_error_log('exttab_cte_2');
 -- end_ignore
 
@@ -436,7 +478,6 @@ with cte1 as
 SELECT e1.i, e2.j FROM exttab_cte_1 e1, exttab_cte_1 e2 WHERE e1.i = e2.i AND e1.i > 5 ORDER BY e1.i
 )
 SELECT  cte1.i , cte1.j FROM cte1 ORDER BY cte1.i;
-select count(*) from gp_read_error_log('exttab_cte_1');
 
 -- Define a cursor on an external table scan query with segment reject limit reached
 -- does not reach reject limit
@@ -459,8 +500,6 @@ SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i 
 UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i;
 COMMIT;
--- This should have the errors populated already
-SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_1');
 reset CLIENT_MIN_MESSAGES;
 
 -- Fetch on external table scans with segment reject limit reached
@@ -504,8 +543,6 @@ FETCH exttab_cur1;
 FETCH exttab_cur1;
 FETCH exttab_cur1;
 COMMIT;
--- This should have errors populated already
-SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_1');
 
 -- Check permissions with gp_truncate_error_log and gp_read_error_log
 -- does not reach reject limit
@@ -534,7 +571,6 @@ RESET ROLE;
 DROP ROLE IF EXISTS exttab_superuser;
 CREATE ROLE exttab_superuser WITH SUPERUSER LOGIN;
 SET ROLE exttab_superuser;
-SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
 SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_2');
 SELECT gp_truncate_error_log('*');
 SELECT gp_truncate_error_log('*.*');
@@ -643,7 +679,6 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subq_1 WHERE i < 10) e2
 group by e1.j order by 3,2,1;
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_2');
 SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
@@ -651,20 +686,17 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 10) e2
 group by e1.j
 HAVING sum(distinct e1.i) > (SELECT max(i) FROM exttab_subq_1);
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_2');
 SELECT e1.i , e1.j FROM
 exttab_subq_1 e1, exttab_subq_1 e2
 WHERE e1.j = e2.j and 
 e1.i + 1 IN ( SELECT i from exttab_subq_1 WHERE i <= e1.i);
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_1');
 SELECT gp_truncate_error_log('exttab_subq_2');
 SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
 
 -- CSQ
 SELECT gp_truncate_error_log('exttab_subq_1');
@@ -1056,8 +1088,6 @@ UNION
 SELECT e1.i, e2.j from exttab_union_1 e1 INNER JOIN exttab_union_1 e2 ON e1.i = e2.i;
 -- should return the right result
 SELECT * from exttab_union_insert_1 order by i;
--- Error table count
-select count(*) > 0 FROM gp_read_error_log('exttab_union_1');
 
 -- Views reaching segment reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_views_1 CASCADE;
@@ -1177,7 +1207,6 @@ SELECT * FROM cte1 c1, cte2 c2
 WHERE c1.i = c2.i
 ORDER BY c1.i
 limit 5;
-SELECT relname,linenum,errmsg,rawdata FROM gp_read_error_log('exttab_windows_1') ORDER BY linenum LIMIT 2;
 
 -- with reaching segment reject limit
 SELECT gp_truncate_error_log('exttab_windows_1');
@@ -1238,7 +1267,7 @@ SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
 WHERE e1.i = e2.i LIMIT 5
 )
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 3;
-SELECT count(*) FROM gp_read_error_log('exttab_limit_1');
+SELECT count(*) FROM gp_read_error_log('exttab_limit_2');
 SELECT gp_truncate_error_log('exttab_limit_1');
 SELECT gp_truncate_error_log('exttab_limit_2');
 -- Note that even though we use exttab_limit_2 here , the LIMIT 3 will not throw a segment reject limit error
@@ -1261,7 +1290,6 @@ UNION
 (SELECT * FROM exttab_limit_2 LIMIT 3)
 ) FOO
 ORDER BY i LIMIT 5;
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_1');
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_2');
 
 -- LIMIT queries with segment reject limit reached

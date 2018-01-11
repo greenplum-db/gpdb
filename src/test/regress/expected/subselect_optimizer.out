@@ -78,8 +78,6 @@ CREATE TABLE SUBSELECT_TBL (
   f2 integer,
   f3 float
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO SUBSELECT_TBL VALUES (1, 2, 3);
 INSERT INTO SUBSELECT_TBL VALUES (2, 3, 4);
 INSERT INTO SUBSELECT_TBL VALUES (3, 4, 5);
@@ -88,22 +86,22 @@ INSERT INTO SUBSELECT_TBL VALUES (2, 2, 2);
 INSERT INTO SUBSELECT_TBL VALUES (3, 3, 3);
 INSERT INTO SUBSELECT_TBL VALUES (6, 7, 8);
 INSERT INTO SUBSELECT_TBL VALUES (8, 9, NULL);
-SELECT '' AS eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
+SELECT '' AS eight, * FROM SUBSELECT_TBL;
  eight | f1 | f2 | f3 
 -------+----+----+----
-       |  1 |  1 |  1
        |  1 |  2 |  3
-       |  2 |  2 |  2
        |  2 |  3 |  4
-       |  3 |  3 |  3
        |  3 |  4 |  5
+       |  1 |  1 |  1
+       |  2 |  2 |  2
+       |  3 |  3 |  3
        |  6 |  7 |  8
        |  8 |  9 |   
 (8 rows)
 
 -- Uncorrelated subselects
 SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL
-  WHERE f1 IN (SELECT 1) ORDER BY 2;
+  WHERE f1 IN (SELECT 1);
  two | Constant Select 
 -----+-----------------
      |               1
@@ -111,34 +109,34 @@ SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL
 (2 rows)
 
 SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
-  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL) ORDER BY 2;
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL);
  six | Uncorrelated Field 
 -----+--------------------
      |                  1
-     |                  1
-     |                  2
      |                  2
      |                  3
+     |                  1
+     |                  2
      |                  3
 (6 rows)
 
 SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
   WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE
-    f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 2;
+    f2 IN (SELECT f1 FROM SUBSELECT_TBL));
  six | Uncorrelated Field 
 -----+--------------------
      |                  1
-     |                  1
-     |                  2
      |                  2
      |                  3
+     |                  1
+     |                  2
      |                  3
 (6 rows)
 
 SELECT '' AS three, f1, f2
   FROM SUBSELECT_TBL
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
-                         WHERE f3 IS NOT NULL) ORDER BY 2,3;
+                         WHERE f3 IS NOT NULL);
  three | f1 | f2 
 -------+----+----
        |  1 |  2
@@ -149,34 +147,34 @@ SELECT '' AS three, f1, f2
 -- Correlated subselects
 SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
   FROM SUBSELECT_TBL upper
-  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1) ORDER BY 2,3;
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1);
  six | Correlated Field | Second Field 
 -----+------------------+--------------
-     |                1 |            1
      |                1 |            2
-     |                2 |            2
      |                2 |            3
-     |                3 |            3
      |                3 |            4
+     |                1 |            1
+     |                2 |            2
+     |                3 |            3
 (6 rows)
 
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f1 IN
-    (SELECT f2 FROM SUBSELECT_TBL WHERE CAST(upper.f2 AS float) = f3) ORDER BY 2,3;
+    (SELECT f2 FROM SUBSELECT_TBL WHERE CAST(upper.f2 AS float) = f3);
  six | Correlated Field | Second Field 
 -----+------------------+--------------
+     |                2 |            4
+     |                3 |            5
      |                1 |            1
      |                2 |            2
-     |                2 |            4
      |                3 |            3
-     |                3 |            5
 (5 rows)
 
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL
-               WHERE f2 = CAST(f3 AS integer)) ORDER BY 2,3;
+               WHERE f2 = CAST(f3 AS integer));
  six | Correlated Field | Second Field 
 -----+------------------+--------------
      |                1 |            3
@@ -188,13 +186,13 @@ SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
 SELECT '' AS five, f1 AS "Correlated Field"
   FROM SUBSELECT_TBL
   WHERE (f1, f2) IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
-                     WHERE f3 IS NOT NULL) ORDER BY 2;
+                     WHERE f3 IS NOT NULL);
  five | Correlated Field 
 ------+------------------
-      |                1
-      |                2
       |                2
       |                3
+      |                1
+      |                2
       |                3
 (5 rows)
 
@@ -204,13 +202,13 @@ SELECT '' AS five, f1 AS "Correlated Field"
 SELECT '' AS eight, ss.f1 AS "Correlated Field", ss.f3 AS "Second Field"
   FROM SUBSELECT_TBL ss
   WHERE f1 NOT IN (SELECT f1+1 FROM INT4_TBL
-                   WHERE f1 != ss.f1 AND f1 < 2147483647) ORDER BY 2,3;
+                   WHERE f1 != ss.f1 AND f1 < 2147483647);
  eight | Correlated Field | Second Field 
 -------+------------------+--------------
-       |                2 |            2
        |                2 |            4
-       |                3 |            3
        |                3 |            5
+       |                2 |            2
+       |                3 |            3
        |                6 |            8
        |                8 |             
 (6 rows)
@@ -265,25 +263,21 @@ select count(distinct ss.ten) from
 -- Luca Pireddu and Michael Fuhr.
 --
 CREATE TEMP TABLE foo (id integer);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TEMP TABLE bar (id1 integer, id2 integer);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO foo VALUES (1);
 INSERT INTO bar VALUES (1, 1);
 INSERT INTO bar VALUES (2, 2);
 INSERT INTO bar VALUES (3, 1);
 -- These cases require an extra level of distinct-ing above subquery s
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s);
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT id1,id2 FROM bar GROUP BY id1,id2) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT id1,id2 FROM bar GROUP BY id1,id2) AS s);
  id 
 ----
   1
@@ -291,7 +285,7 @@ SELECT * FROM foo WHERE id IN
 
 SELECT * FROM foo WHERE id IN
     (SELECT id2 FROM (SELECT id1, id2 FROM bar UNION
-                      SELECT id1, id2 FROM bar) AS s) ORDER BY 1;
+                      SELECT id1, id2 FROM bar) AS s);
  id 
 ----
   1
@@ -299,14 +293,14 @@ SELECT * FROM foo WHERE id IN
 
 -- These cases do not
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT DISTINCT ON (id2) id1, id2 FROM bar) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT DISTINCT ON (id2) id1, id2 FROM bar) AS s);
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT id2 FROM bar GROUP BY id2) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT id2 FROM bar GROUP BY id2) AS s);
  id 
 ----
   1
@@ -314,7 +308,7 @@ SELECT * FROM foo WHERE id IN
 
 SELECT * FROM foo WHERE id IN
     (SELECT id2 FROM (SELECT id2 FROM bar UNION
-                      SELECT id2 FROM bar) AS s) ORDER BY 1;
+                      SELECT id2 FROM bar) AS s);
  id 
 ----
   1
@@ -329,8 +323,6 @@ CREATE TABLE orderstest (
     po_ref integer,
     ordercancelled boolean
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'approver_ref' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO orderstest VALUES (1, 1, false);
 INSERT INTO orderstest VALUES (66, 5, false);
 INSERT INTO orderstest VALUES (66, 6, false);
@@ -378,24 +370,23 @@ END) AS "Status",
 	END) 
 END) AS "Status_OK"
 FROM orderstest ord;
-SELECT * FROM orders_view ORDER BY 1,2,5;
+SELECT * FROM orders_view;
  approver_ref | po_ref | ordercancelled | Approved |  Status   | Status_OK 
 --------------+--------+----------------+----------+-----------+-----------
             1 |      1 | f              | ---      | ---       | ---
-            1 |      1 | f              | ---      | ---       | ---
-            1 |      1 | f              | ---      | ---       | ---
-           66 |      1 | f              | Approved | Approved  | Approved
-           66 |      1 | f              | Approved | Approved  | Approved
-           66 |      1 | t              | Approved | Cancelled | Cancelled
            66 |      5 | f              | Approved | PO        | PO
            66 |      6 | f              | Approved | PO        | PO
            66 |      7 | f              | Approved | PO        | PO
+           66 |      1 | t              | Approved | Cancelled | Cancelled
            66 |      8 | f              | Approved | PO        | PO
+           66 |      1 | f              | Approved | Approved  | Approved
            77 |      1 | f              | Approved | Approved  | Approved
+            1 |      1 | f              | ---      | ---       | ---
+           66 |      1 | f              | Approved | Approved  | Approved
+            1 |      1 | f              | ---      | ---       | ---
 (11 rows)
 
 DROP TABLE orderstest cascade;
-NOTICE:  drop cascades to rule _RETURN on view orders_view
 NOTICE:  drop cascades to view orders_view
 --
 -- Test cases to catch situations where rule rewriter fails to propagate
@@ -405,16 +396,12 @@ create temp table parts (
     partnum     text,
     cost        float8
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'partnum' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create temp table shipped (
     ttype       char(2),
     ordnum      int4,
     partnum     text,
     value       float8
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ttype' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create temp view shipped_view as
     select * from shipped where ttype = 'wt';
 create rule shipped_view_insert as on insert to shipped_view do instead
@@ -431,7 +418,7 @@ select * from shipped_view;
 create rule shipped_view_update as on update to shipped_view do instead
     update shipped set partnum = new.partnum, value = new.value
         where ttype = new.ttype and ordnum = new.ordnum;
-select * from shipped_view ORDER BY 1,2;
+select * from shipped_view;
  ttype | ordnum | partnum |  value  
 -------+--------+---------+---------
  wt    |      0 | 1       | 1234.56
@@ -442,10 +429,10 @@ select f1, ss1 as relabel from
      from int4_tbl a) ss;
      f1      |  relabel   
 -------------+------------
-  2147483647 | 2147483647
            0 | 2147607103
       123456 | 2147607103
      -123456 | 2147483647
+  2147483647 | 2147483647
  -2147483647 |          0
 (5 rows)
 
@@ -548,10 +535,52 @@ group by f1,f2,fs;
 (0 rows)
 
 --
+-- Test case for bug #5514 (mishandling of whole-row Vars in subselects)
+--
+create temp table table_a(id integer);
+insert into table_a values (42);
+create temp view view_a as select * from table_a;
+select view_a from view_a;
+ view_a 
+--------
+ (42)
+(1 row)
+
+select (select view_a) from view_a;
+ ?column? 
+----------
+ (42)
+(1 row)
+
+select (select (select view_a)) from view_a;
+ ?column? 
+----------
+ (42)
+(1 row)
+
+select (select (a.*)::text) from view_a a;
+ ?column? 
+----------
+ (42)
+(1 row)
+
+--
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
-select q from (select max(f1) as max from int4_tbl group by f1 order by f1) q order by max;
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+       q
+---------------
+ (-2147483647)
+ (-123456)
+ (0)
+ (123456)
+ (2147483647)
+(5 rows)
+
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
        q       
 ---------------
  (-2147483647)
@@ -605,3 +634,42 @@ select '1'::text in (select '1'::name union all select '1'::name);
  t
 (1 row)
 
+--
+-- Check sane behavior with nested IN SubLinks
+--
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+ f1 
+----
+  0
+(1 row)
+
+--
+-- Check for incorrect optimization when IN subquery contains a SRF
+--
+set enable_hashjoin to 0;
+explain select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..2.03 rows=1 width=4)
+   ->  Seq Scan on int4_tbl o  (cost=1.02..2.03 rows=1 width=4)
+         Filter: (hashed SubPlan 1)
+         SubPlan 1
+           ->  Materialize  (cost=1.02..1.03 rows=1 width=4)
+                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
+                       ->  Result  (cost=0.00..1.01 rows=1 width=4)
+                             ->  Seq Scan on int4_tbl i  (cost=0.00..1.01 rows=1 width=4)
+ Settings:  enable_hashjoin=off; optimizer=on
+ Optimizer status: legacy query optimizer
+(10 rows)
+
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+ f1 
+----
+  0
+(1 row)
+
+reset enable_hashjoin;

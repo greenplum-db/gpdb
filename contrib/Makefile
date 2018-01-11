@@ -1,10 +1,28 @@
-# $PostgreSQL: pgsql/contrib/Makefile,v 1.82.2.1 2008/05/08 16:49:47 tgl Exp $
+# $PostgreSQL: pgsql/contrib/Makefile,v 1.87 2009/03/25 23:20:01 tgl Exp $
 
 subdir = contrib
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
 WANTED_DIRS = \
+		auto_explain	\
+		btree_gin	\
+		citext		\
+		dblink		\
+		dict_int	\
+		dict_xsyn	\
+		fuzzystrmatch	\
+		hstore		\
+		intarray \
+		pageinspect \
+		pg_stat_statements \
+		pg_upgrade \
+		pg_upgrade_support \
+		test_parser \
+		pgcrypto
+
+# Greenplum-specific additions (to ease merge pain).
+WANTED_DIRS += \
 		xlogdump \
 		pgbench \
 		changetrackingdump \
@@ -16,14 +34,7 @@ WANTED_DIRS = \
 		gp_inject_fault \
 		gp_cancel_query \
 		indexscan \
-		dict_int \
-		dict_xsyn \
-		intarray \
-		pageinspect \
-		pg_upgrade \
-		pg_upgrade_support \
-		test_parser \
-		pgcrypto
+    passwordcheck
 
 ifeq ($(with_openssl),yes)
 WANTED_DIRS += sslinfo
@@ -41,6 +52,9 @@ ifeq ($(enable_orca),yes)
 WANTED_DIRS += orca_debug
 endif
 
+ifeq ($(enable_segwalrep),yes)
+WANTED_DIRS += gp_replica_check
+endif
 
 # Missing:
 #		start-scripts	\ (does not have a makefile)

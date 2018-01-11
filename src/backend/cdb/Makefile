@@ -9,7 +9,6 @@
 subdir = src/backend/cdb
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 SUBDIRS := motion dispatcher
@@ -57,7 +56,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbtm.o cdbtmutils.o \
 	   cdbutil.o \
 	   cdbvars.o cdbvarblock.o \
-	   cdbpersistentcheck.o \
 	   partitionselection.o
 
 ifeq ($(PORTNAME),cygwin)

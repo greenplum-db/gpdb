@@ -92,13 +92,12 @@ opt_write_test:
 	echo "Sync Ivy project dependency management framework ..."
 	type curl; \
 	if [ $$? = 0 ]; then curl --silent http://releng.sanmateo.greenplum.com/tools/apache-ant.1.8.1.tar.gz -o /tmp/apache-ant.1.8.1.tar.gz; \
-	else wget http://releng.sanmateo.greenplum.com/tools/apache-ant.1.8.1.tar.gz -O /tmp/apache-ant.1.8.1.tar.gz; fi; \
+	else wget -q http://releng.sanmateo.greenplum.com/tools/apache-ant.1.8.1.tar.gz -O /tmp/apache-ant.1.8.1.tar.gz; fi; \
 	( umask 002; [ ! -d /opt/releng ] && mkdir -p /opt/releng; \
 	   cd /opt/releng; \
 	   gunzip -qc /tmp/apache-ant.1.8.1.tar.gz | tar xf -; \
 	   rm -f /tmp/apache-ant.1.8.1.tar.gz; \
 	   chmod -R a+w /opt/releng/apache-ant )
-
 
 # ----------------------------------------------------------------------
 # Populate dependent internal and thirdparty dependencies.  This
@@ -107,20 +106,23 @@ opt_write_test:
 # ----------------------------------------------------------------------
 
 sync_tools: opt_write_test /opt/releng/apache-ant
-	@LCK_FILES=$$( find /opt/releng/tools -name "*.lck" ); \
-	if [ -n "$${LCK_FILES}" ]; then \
-		echo "Removing existing .lck files!"; \
-		find /opt/releng/tools -name "*.lck" | xargs rm; \
+	@if [ -d /opt/releng/tools ]; then \
+	    LCK_FILES=$$( find /opt/releng/tools -name "*.lck" ); \
+	    if [ -n "$${LCK_FILES}" ]; then \
+	        echo "Removing existing .lck files!"; \
+	        find /opt/releng/tools -name "*.lck" | xargs rm; \
+	    fi \
 	fi
 
 	@cd releng/make/dependencies; \
 	 (umask 002; ANT_OPTS="-Djavax.net.ssl.trustStore=$(BLD_TOP)/releng/make/dependencies/cacerts" \
 	/opt/releng/apache-ant/bin/ant -DBLD_ARCH=$(BLD_ARCH) \
 	-Divyrepo.host=$(IVYREPO_HOST) -Divyrepo.realm="$(IVYREPO_REALM)" \
-	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" resolve);
-	@echo "Resolve finished";
+	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" -quiet resolve);
 
-	LD_LIBRARY_PATH='' wget -O - https://github.com/greenplum-db/gporca/releases/download/v2.40.3/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+ifeq "$(findstring aix,$(BLD_ARCH))" ""
+	LD_LIBRARY_PATH='' wget -q -O - https://github.com/greenplum-db/gporca/releases/download/v2.53.4/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+endif
 
 clean_tools: opt_write_test
 	@cd releng/make/dependencies; \

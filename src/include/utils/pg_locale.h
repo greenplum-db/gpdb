@@ -31,6 +31,13 @@ extern char *localized_abbrev_months[];
 extern char *localized_full_months[];
 
 
+/* lc_time localization cache */
+extern char *localized_abbrev_days[];
+extern char *localized_full_days[];
+extern char *localized_abbrev_months[];
+extern char *localized_full_months[];
+
+
 extern const char *locale_messages_assign(const char *value,
 					   bool doit, GucSource source);
 extern const char *locale_monetary_assign(const char *value,

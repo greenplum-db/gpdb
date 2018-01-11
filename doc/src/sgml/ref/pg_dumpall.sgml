@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.69 2007/12/11 19:57:32 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.79 2009/03/22 16:44:26 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -40,7 +40,8 @@ PostgreSQL documentation
    that are common to all databases.
    (<application>pg_dump</application> does not save these objects.)
    This currently includes information about database users and
-   groups, and access permissions that apply to databases as a whole.
+   groups, tablespaces, and properties such as access permissions
+   that apply to databases as a whole.
   </para>
 
   <para>
@@ -98,38 +99,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-d</option></term>
-      <term><option>--inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands (rather
-        than <command>COPY</command>).  This will make restoration very slow;
-        it is mainly useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.  Note that
-        the restore might fail altogether if you have rearranged column order.
-        The <option>-D</option> option is safer, though even slower.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-D</option></term>
-      <term><option>--column-inserts</option></term>
-      <term><option>--attribute-inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands with explicit
-        column names (<literal>INSERT INTO
-        <replaceable>table</replaceable>
-        (<replaceable>column</replaceable>, ...) VALUES
-        ...</literal>).  This will make restoration very slow; it is mainly
-        useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.
-       </para>
-      </listitem>
-     </varlistentry>
- 
-     <varlistentry>
       <term><option>-f <replaceable class="parameter">filename</replaceable></option></term>
       <term><option>--file=<replaceable class="parameter">filename</replaceable></option></term>
       <listitem>
@@ -155,7 +124,7 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-	    This option has been deprecated.
+        A deprecated option that is now ignored.
        </para>
       </listitem>
      </varlistentry>
@@ -182,7 +151,7 @@ PostgreSQL documentation
         Do not output commands to set
         ownership of objects to match the original database.
         By default, <application>pg_dumpall</application> issues
-        <command>ALTER OWNER</> or 
+        <command>ALTER OWNER</> or
         <command>SET SESSION AUTHORIZATION</command>
         statements to set ownership of created schema elements.
         These statements
@@ -200,6 +169,39 @@ PostgreSQL documentation
        <para>
         Dump <literal>resource queues</literal> and <literal>role</literal>
         to <literal>resource queue</literal> associations. 
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--resource-groups</option></term>
+      <listitem>
+       <para>
+        Dump <literal>resource groups</literal> and <literal>role</literal>
+        to <literal>resource groups</literal> associations.
+      <term><option>--lock-wait-timeout=<replaceable class="parameter">timeout</replaceable></option></term>
+      <listitem>
+       <para>
+        Do not wait forever to acquire shared table locks at the beginning of
+        the dump. Instead fail if unable to lock a table within the specified
+        <replaceable class="parameter">timeout</>. The timeout may be
+        specified in any of the formats accepted by <command>SET
+        statement_timeout</>.  (Allowed values vary depending on the server
+        version you are dumping from, but an integer number of milliseconds
+        is accepted by all versions since 7.3.  This option is ignored when
+        dumping from a pre-7.3 server.)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-tablespaces</option></term>
+      <listitem>
+       <para>
+        Do not output commands to create tablespaces nor select tablespaces
+        for objects.
+        With this option, all objects will be created in whichever
+        tablespace is the default during restore.
        </para>
       </listitem>
      </varlistentry>
@@ -271,6 +273,49 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>--binary-upgrade</option></term>
+      <listitem>
+       <para>
+        This option is for use by in-place upgrade utilities.  Its use
+        for other purposes is not recommended or supported.  The
+        behavior of the option may change in future releases without
+        notice.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands (rather
+        than <command>COPY</command>).  This will make restoration very slow;
+        it is mainly useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.  Note that
+        the restore might fail altogether if you have rearranged column order.
+        The <option>--column-inserts</option> option is safer, though even
+        slower.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--column-inserts</option></term>
+      <term><option>--attribute-inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands with explicit
+        column names (<literal>INSERT INTO
+        <replaceable>table</replaceable>
+        (<replaceable>column</replaceable>, ...) VALUES
+        ...</literal>).  This will make restoration very slow; it is mainly
+        useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--disable-dollar-quoting</></term>
       <listitem>
        <para>
@@ -322,8 +367,8 @@ PostgreSQL documentation
 
    <variablelist>
      <varlistentry>
-      <term>-h <replaceable>host</replaceable></term>
-      <term>--host=<replaceable>host</replaceable></term>
+      <term><option>-h <replaceable>host</replaceable></option></term>
+      <term><option>--host=<replaceable>host</replaceable></option></term>
       <listitem>
        <para>
         Specifies the host name of the machine on which the database
@@ -334,10 +379,10 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
- 
+
      <varlistentry>
-      <term>-l <replaceable>dbname</replaceable></term>
-      <term>--database=<replaceable>dbname</replaceable></term>
+      <term><option>-l <replaceable>dbname</replaceable></option></term>
+      <term><option>--database=<replaceable>dbname</replaceable></option></term>
       <listitem>
        <para>
          Specifies the name of the database to connect to to dump global
@@ -349,8 +394,8 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term>-p <replaceable>port</replaceable></term>
-      <term>--port=<replaceable>port</replaceable></term>
+      <term><option>-p <replaceable>port</replaceable></option></term>
+      <term><option>--port=<replaceable>port</replaceable></option></term>
       <listitem>
        <para>
         Specifies the TCP port or local Unix domain socket file
@@ -362,8 +407,8 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term>-U <replaceable>username</replaceable></term>
-      <term>--username=<replaceable>username</replaceable></term>
+      <term><option>-U <replaceable>username</replaceable></option></term>
+      <term><option>--username=<replaceable>username</replaceable></option></term>
       <listitem>
        <para>
         User name to connect as.
@@ -372,12 +417,27 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term>-W</term>
-      <term>--password</term>
+      <term><option>-w</></term>
+      <term><option>--no-password</></term>
+      <listitem>
+       <para>
+        Never issue a password prompt.  If the server requires
+        password authentication and a password is not available by
+        other means such as a <filename>.pgpass</filename> file, the
+        connection attempt will fail.  This option can be useful in
+        batch jobs and scripts where no user is present to enter a
+        password.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-W</option></term>
+      <term><option>--password</option></term>
       <listitem>
        <para>
         Force <application>pg_dumpall</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>
@@ -397,6 +457,23 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term><option>--role=<replaceable class="parameter">rolename</replaceable></option></term>
+      <listitem>
+       <para>
+        Specifies a role name to be used to create the dump.
+        This option causes <application>pg_dumpall</> to issue a
+        <command>SET ROLE</> <replaceable class="parameter">rolename</>
+        command after connecting to the database. It is useful when the
+        authenticated user (specified by <option>-U</>) lacks privileges
+        needed by <application>pg_dumpall</>, but can switch to a role with
+        the required rights.  Some installations have a policy against
+        logging in directly as a superuser, and use of this option allows
+        dumps to be made without violating the policy.
+       </para>
+      </listitem>
+     </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -408,6 +485,7 @@ PostgreSQL documentation
   <variablelist>
    <varlistentry>
     <term><envar>PGHOST</envar></term>
+    <term><envar>PGOPTIONS</envar></term>
     <term><envar>PGPORT</envar></term>
     <term><envar>PGUSER</envar></term>
 
@@ -446,7 +524,7 @@ PostgreSQL documentation
 
   <para>
    <application>pg_dumpall</application> requires all needed
-   tablespace directories to exist before the restore or
+   tablespace directories to exist before the restore, else
    database creation will fail for databases in non-default
    locations.
   </para>
@@ -488,6 +566,6 @@ PostgreSQL documentation
     Check <xref linkend="app-pgdump"> for details on possible
     error conditions.
   </para>
- </refsect1>   
+ </refsect1>
 
 </refentry>

@@ -4,7 +4,12 @@
  *	 A generic synchronized cache implementation that lives in the
  *	 shared memory.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/cache/sharedcache.c
  *
  *-------------------------------------------------------------------------
  */

@@ -54,30 +54,57 @@ SELECT E'DeAdBeEf'::bytea;
 SELECT E'De\\000dBeEf'::bytea;
 SELECT E'De\\123dBeEf'::bytea;
 
+-- Unicode escapes
+SET standard_conforming_strings TO on;
+
+SELECT U&'d\0061t\+000061' AS U&"d\0061t\+000061";
+SELECT U&'d!0061t\+000061' UESCAPE '!' AS U&"d*0061t\+000061" UESCAPE '*';
+
+SELECT U&' \' UESCAPE '!' AS "tricky";
+SELECT 'tricky' AS U&"\" UESCAPE '!';
+
+SELECT U&'wrong: \061';
+SELECT U&'wrong: \+0061';
+SELECT U&'wrong: +0061' UESCAPE '+';
+
+SET standard_conforming_strings TO off;
+
+SELECT U&'d\0061t\+000061' AS U&"d\0061t\+000061";
+SELECT U&'d!0061t\+000061' UESCAPE '!' AS U&"d*0061t\+000061" UESCAPE '*';
+
+SELECT U&' \' UESCAPE '!' AS "tricky";
+SELECT 'tricky' AS U&"\" UESCAPE '!';
+
+SELECT U&'wrong: \061';
+SELECT U&'wrong: \+0061';
+SELECT U&'wrong: +0061' UESCAPE '+';
+
+RESET standard_conforming_strings;
+
 --
 -- test conversions between various string types
 -- E021-10 implicit casting among the character data types
 --
 
-SELECT CAST(f1 AS text) AS "text(char)" FROM CHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS text) AS "text(char)" FROM CHAR_STRINGS_TBL;
 
-SELECT CAST(f1 AS text) AS "text(varchar)" FROM VARCHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS text) AS "text(varchar)" FROM VARCHAR_STRINGS_TBL;
 
 SELECT CAST(name 'namefield' AS text) AS "text(name)";
 
 -- since this is an explicit cast, it should truncate w/o error:
-SELECT CAST(f1 AS char(10)) AS "char(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(10)) AS "char(text)" FROM TEXT_STRINGS_TBL;
 -- note: implicit-cast case is tested in char.sql
 
-SELECT CAST(f1 AS char(20)) AS "char(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(20)) AS "char(text)" FROM TEXT_STRINGS_TBL;
 
-SELECT CAST(f1 AS char(10)) AS "char(varchar)" FROM VARCHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS char(10)) AS "char(varchar)" FROM VARCHAR_STRINGS_TBL;
 
 SELECT CAST(name 'namefield' AS char(10)) AS "char(name)";
 
-SELECT CAST(f1 AS varchar) AS "varchar(text)" FROM TEXT_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS varchar) AS "varchar(text)" FROM TEXT_STRINGS_TBL;
 
-SELECT CAST(f1 AS varchar) AS "varchar(char)" FROM CHAR_STRINGS_TBL ORDER BY 1;
+SELECT CAST(f1 AS varchar) AS "varchar(char)" FROM CHAR_STRINGS_TBL;
 
 SELECT CAST(name 'namefield' AS varchar) AS "varchar(name)";
 

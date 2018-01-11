@@ -2,7 +2,6 @@
 -- OLAP_WINDOW 
 --
 -- Changes here should also be made to olap_window_seq.sql
-set gp_enable_sequential_window_plans to true;
 ---- 1 -- Null window specification -- OVER () ----
 select row_number() over (), cn,pn,vn 
 from sale; -- mvd 1->1
@@ -24,14 +23,40 @@ from sale; -- mvd 1->1
 
 select rank() over (), * 
 from sale; --error - order by req'd
-ERROR:  window function "rank" requires a window specification with an ordering clause
-LINE 1: select rank() over (), * 
-               ^
+ rank | cn | vn | pn  |     dt     | qty  | prc  
+------+----+----+-----+------------+------+------
+    1 |  1 | 10 | 200 | 03-01-1401 |    1 |    0
+    1 |  1 | 20 | 100 | 05-01-1401 |    1 |    0
+    1 |  1 | 30 | 300 | 05-02-1401 |    1 |    0
+    1 |  1 | 30 | 500 | 06-01-1401 |   12 |    5
+    1 |  1 | 50 | 400 | 06-01-1401 |    1 |    0
+    1 |  2 | 40 | 100 | 01-01-1401 | 1100 | 2400
+    1 |  2 | 50 | 400 | 06-01-1401 |    1 |    0
+    1 |  3 | 30 | 500 | 06-01-1401 |   12 |    5
+    1 |  3 | 30 | 600 | 06-01-1401 |   12 |    5
+    1 |  3 | 40 | 200 | 04-01-1401 |    1 |    0
+    1 |  4 | 40 | 700 | 06-01-1401 |    1 |    1
+    1 |  4 | 40 | 800 | 06-01-1401 |    1 |    1
+(12 rows)
+
 select dense_rank() over (), * 
 from sale; --error - order by order by req'd
-ERROR:  window function "dense_rank" requires a window specification with an ordering clause
-LINE 1: select dense_rank() over (), * 
-               ^
+ dense_rank | cn | vn | pn  |     dt     | qty  | prc  
+------------+----+----+-----+------------+------+------
+          1 |  1 | 10 | 200 | 03-01-1401 |    1 |    0
+          1 |  1 | 20 | 100 | 05-01-1401 |    1 |    0
+          1 |  1 | 30 | 300 | 05-02-1401 |    1 |    0
+          1 |  1 | 30 | 500 | 06-01-1401 |   12 |    5
+          1 |  1 | 50 | 400 | 06-01-1401 |    1 |    0
+          1 |  2 | 40 | 100 | 01-01-1401 | 1100 | 2400
+          1 |  2 | 50 | 400 | 06-01-1401 |    1 |    0
+          1 |  3 | 30 | 500 | 06-01-1401 |   12 |    5
+          1 |  3 | 30 | 600 | 06-01-1401 |   12 |    5
+          1 |  3 | 40 | 200 | 04-01-1401 |    1 |    0
+          1 |  4 | 40 | 700 | 06-01-1401 |    1 |    1
+          1 |  4 | 40 | 800 | 06-01-1401 |    1 |    1
+(12 rows)
+
 -- 2 -- Plan trivial windows over various input plan types ----
 select row_number() over (), pn, cn, vn, dt, qty, prc
 from sale; -- mvd 1->1
@@ -139,24 +164,23 @@ select  count(*) over (w2) from customer
 window
     w1 as (),
     w2 as (w1 partition by cn); --error - can't partition if referencing ordering window
-ERROR:  PARTITION BY not allowed when an existing window name is specified
+ERROR:  cannot override PARTITION BY clause of window "w1"
 LINE 4:     w2 as (w1 partition by cn);
                   ^
 select count(*) over (w2) from customer
 window
     w1 as (partition by cloc order by cname),
     w2 as (w1 order by cn); --error - can't reorder the ordering window
-ERROR:  conflicting ORDER BY clauses in window specification
+ERROR:  cannot override ORDER BY clause of window "w1"
 LINE 4:     w2 as (w1 order by cn);
                   ^
 select  count(*) over (w2) from customer
 window 
     w1 as (order by cn rows unbounded preceding),
     w2 as (w1); --error - ordering window can't specify framing
-ERROR:  window specification "w1" cannot have a framing clause
-LINE 3:     w1 as (order by cn rows unbounded preceding),
+ERROR:  cannot copy window "w1" because it has a frame clause
+LINE 4:     w2 as (w1);
                   ^
-HINT:  Window specifications which are referenced by other window specifications cannot have framing clauses
 select * from sale
 window 
     w as (partition by pn),
@@ -185,12 +209,12 @@ select * from customer
 window 
     w as (partition by cn), 
     w as (w order by cname); --error - can't refer to window in its definition
-ERROR:  window "w" cannot reference itself
+ERROR:  window "w" is already defined
 LINE 4:     w as (w order by cname);
                  ^
 select * from customer
 window w as (w order by cname); --error - can't refer to window in its definition
-ERROR:  window "w" cannot reference itself
+ERROR:  window "w" does not exist
 LINE 2: window w as (w order by cname);
                     ^
 -- test the frame parser
@@ -261,14 +285,40 @@ from sale; -- mvd 2,3->1
 
 select rank() over (partition by cn), cn, pn 
 from sale; --error - rank requires ordering
-ERROR:  window function "rank" requires a window specification with an ordering clause
-LINE 1: select rank() over (partition by cn), cn, pn 
-               ^
+ rank | cn | pn  
+------+----+-----
+    1 |  1 | 100
+    1 |  1 | 200
+    1 |  1 | 300
+    1 |  1 | 400
+    1 |  1 | 500
+    1 |  2 | 100
+    1 |  2 | 400
+    1 |  3 | 200
+    1 |  3 | 500
+    1 |  3 | 600
+    1 |  4 | 700
+    1 |  4 | 800
+(12 rows)
+
 select dense_rank() over (partition by cn), cn, pn 
 from sale; --error - dense_rank requires ordering
-ERROR:  window function "dense_rank" requires a window specification with an ordering clause
-LINE 1: select dense_rank() over (partition by cn), cn, pn 
-               ^
+ dense_rank | cn | pn  
+------------+----+-----
+          1 |  1 | 100
+          1 |  1 | 200
+          1 |  1 | 300
+          1 |  1 | 400
+          1 |  1 | 500
+          1 |  2 | 100
+          1 |  2 | 400
+          1 |  3 | 200
+          1 |  3 | 500
+          1 |  3 | 600
+          1 |  4 | 700
+          1 |  4 | 800
+(12 rows)
+
 select row_number() over (partition by pname, cname), pname, cname
 from sale s, customer c, product p 
 where s.cn = c.cn and s.pn = p.pn; -- mvd 2,3->1
@@ -1556,14 +1606,13 @@ sum(qty) over (order by ord,cn rows between 1 preceding and 1 following)
 from sale_ord;
                                 QUERY PLAN                                 
 ---------------------------------------------------------------------------
- Window  (cost=2.34..2.67 rows=12 width=12)
+ WindowAgg  (cost=2.34..2.67 rows=12 width=12)
    Order By: ord, cn
    ->  Gather Motion 2:1  (slice1)  (cost=2.34..2.61 rows=12 width=12)
          Merge Key: ord, cn
          ->  Sort  (cost=2.34..2.37 rows=6 width=12)
                Sort Key: ord, cn
                ->  Seq Scan on sale_ord  (cost=0.00..2.12 rows=6 width=12)
- Settings:  gp_enable_sequential_window_plans=on
 (8 rows)
 
 select cn,
@@ -2023,120 +2072,19 @@ SELECT sale.pn,sale.cn,sale.prc,
 
 -- Check LEAD()
 -- sanity tests
-select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lead' order by 1,2;
-     proname      |    proargtypes    
-------------------+-------------------
- lead_any         | 2281 2277
- lead_any         | 2281 2277 20
- lead_any         | 2281 2277 20 2277
- lead_bit         | 2281 1560
- lead_bit         | 2281 1560 20
- lead_bit         | 2281 1560 20 1560
- lead_bool        | 2281 16
- lead_bool        | 2281 16 20
- lead_bool        | 2281 16 20 16
- lead_box         | 2281 603
- lead_box         | 2281 603 20
- lead_box         | 2281 603 20 603
- lead_bytea       | 2281 17
- lead_bytea       | 2281 17 20
- lead_bytea       | 2281 17 20 17
- lead_char        | 2281 18
- lead_char        | 2281 18 20
- lead_char        | 2281 18 20 18
- lead_cidr        | 2281 650
- lead_cidr        | 2281 650 20
- lead_cidr        | 2281 650 20 650
- lead_circle      | 2281 718
- lead_circle      | 2281 718 20
- lead_circle      | 2281 718 20 718
- lead_float4      | 2281 700
- lead_float4      | 2281 700 20
- lead_float4      | 2281 700 20 700
- lead_float8      | 2281 701
- lead_float8      | 2281 701 20
- lead_float8      | 2281 701 20 701
- lead_inet        | 2281 869
- lead_inet        | 2281 869 20
- lead_inet        | 2281 869 20 869
- lead_int         | 2281 23
- lead_int         | 2281 23 20
- lead_int         | 2281 23 20 23
- lead_int8        | 2281 20
- lead_int8        | 2281 20 20
- lead_int8        | 2281 20 20 20
- lead_interval    | 2281 1186
- lead_interval    | 2281 1186 20
- lead_interval    | 2281 1186 20 1186
- lead_line        | 2281 628
- lead_line        | 2281 628 20
- lead_line        | 2281 628 20 628
- lead_lseg        | 2281 601
- lead_lseg        | 2281 601 20
- lead_lseg        | 2281 601 20 601
- lead_macaddr     | 2281 829
- lead_macaddr     | 2281 829 20
- lead_macaddr     | 2281 829 20 829
- lead_money       | 2281 790
- lead_money       | 2281 790 20
- lead_money       | 2281 790 20 790
- lead_name        | 2281 19
- lead_name        | 2281 19 20
- lead_name        | 2281 19 20 19
- lead_numeric     | 2281 1700
- lead_numeric     | 2281 1700 20
- lead_numeric     | 2281 1700 20 1700
- lead_oid         | 2281 26
- lead_oid         | 2281 26 20
- lead_oid         | 2281 26 20 26
- lead_path        | 2281 602
- lead_path        | 2281 602 20
- lead_path        | 2281 602 20 602
- lead_point       | 2281 600
- lead_point       | 2281 600 20
- lead_point       | 2281 600 20 600
- lead_polygon     | 2281 604
- lead_polygon     | 2281 604 20
- lead_polygon     | 2281 604 20 604
- lead_reltime     | 2281 703
- lead_reltime     | 2281 703 20
- lead_reltime     | 2281 703 20 703
- lead_smallint    | 2281 21
- lead_smallint    | 2281 21 20
- lead_smallint    | 2281 21 20 21
- lead_text        | 2281 25
- lead_text        | 2281 25 20
- lead_text        | 2281 25 20 25
- lead_tid         | 2281 27
- lead_tid         | 2281 27 20
- lead_tid         | 2281 27 20 27
- lead_time        | 2281 1083
- lead_time        | 2281 1083 20
- lead_time        | 2281 1083 20 1083
- lead_timestamp   | 2281 1114
- lead_timestamp   | 2281 1114 20
- lead_timestamp   | 2281 1114 20 1114
- lead_timestamptz | 2281 1184
- lead_timestamptz | 2281 1184 20
- lead_timestamptz | 2281 1184 20 1184
- lead_timetz      | 2281 1266
- lead_timetz      | 2281 1266 20
- lead_timetz      | 2281 1266 20 1266
- lead_varbit      | 2281 1562
- lead_varbit      | 2281 1562 20
- lead_varbit      | 2281 1562 20 1562
- lead_varchar     | 2281 1043
- lead_varchar     | 2281 1043 20
- lead_varchar     | 2281 1043 20 1043
- lead_xid         | 2281 28
- lead_xid         | 2281 28 20
- lead_xid         | 2281 28 20 28
-(105 rows)
-
 select lead(cn) from sale;
-ERROR:  function lead(integer) may only be called as a window function  (seg1 slice1 localhost:10002 pid=57055)
+ERROR:  window function lead requires an OVER clause
+LINE 1: select lead(cn) from sale;
+               ^
 select cn, cname, lead(cname, -1) over (order by cn) from customer;
-ERROR:  LEAD offset cannot be negative
+ cn |    cname     |     lead     
+----+--------------+--------------
+  1 | Macbeth      | 
+  2 | Duncan       | Macbeth
+  3 | Lady Macbeth | Duncan
+  4 | Witches, Inc | Lady Macbeth
+(4 rows)
+
 -- actual LEAD tests
 select cn, cname, lead(cname, 2, 'undefined') over (order by cn) from customer;
  cn |    cname     |     lead     
@@ -2203,117 +2151,6 @@ order by 1, 2, 3;
 (12 rows)
 
 -- Check LAG()
--- sanity tests
-select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lag' order by 1,2;
-     proname     |    proargtypes    
------------------+-------------------
- lag_any         | 2281 2277
- lag_any         | 2281 2277 20
- lag_any         | 2281 2277 20 2277
- lag_bit         | 2281 1560
- lag_bit         | 2281 1560 20
- lag_bit         | 2281 1560 20 1560
- lag_bool        | 2281 16
- lag_bool        | 2281 16 20
- lag_bool        | 2281 16 20 16
- lag_box         | 2281 603
- lag_box         | 2281 603 20
- lag_box         | 2281 603 20 603
- lag_bytea       | 2281 17
- lag_bytea       | 2281 17 20
- lag_bytea       | 2281 17 20 17
- lag_char        | 2281 18
- lag_char        | 2281 18 20
- lag_char        | 2281 18 20 18
- lag_cidr        | 2281 650
- lag_cidr        | 2281 650 20
- lag_cidr        | 2281 650 20 650
- lag_circle      | 2281 718
- lag_circle      | 2281 718 20
- lag_circle      | 2281 718 20 718
- lag_float4      | 2281 700
- lag_float4      | 2281 700 20
- lag_float4      | 2281 700 20 700
- lag_float8      | 2281 701
- lag_float8      | 2281 701 20
- lag_float8      | 2281 701 20 701
- lag_inet        | 2281 869
- lag_inet        | 2281 869 20
- lag_inet        | 2281 869 20 869
- lag_int4        | 2281 23
- lag_int4        | 2281 23 20
- lag_int4        | 2281 23 20 23
- lag_int8        | 2281 20
- lag_int8        | 2281 20 20
- lag_int8        | 2281 20 20 20
- lag_interval    | 2281 1186
- lag_interval    | 2281 1186 20
- lag_interval    | 2281 1186 20 1186
- lag_line        | 2281 628
- lag_line        | 2281 628 20
- lag_line        | 2281 628 20 628
- lag_lseg        | 2281 601
- lag_lseg        | 2281 601 20
- lag_lseg        | 2281 601 20 601
- lag_macaddr     | 2281 829
- lag_macaddr     | 2281 829 20
- lag_macaddr     | 2281 829 20 829
- lag_money       | 2281 790
- lag_money       | 2281 790 20
- lag_money       | 2281 790 20 790
- lag_name        | 2281 19
- lag_name        | 2281 19 20
- lag_name        | 2281 19 20 19
- lag_numeric     | 2281 1700
- lag_numeric     | 2281 1700 20
- lag_numeric     | 2281 1700 20 1700
- lag_oid         | 2281 26
- lag_oid         | 2281 26 20
- lag_oid         | 2281 26 20 26
- lag_path        | 2281 602
- lag_path        | 2281 602 20
- lag_path        | 2281 602 20 602
- lag_point       | 2281 600
- lag_point       | 2281 600 20
- lag_point       | 2281 600 20 600
- lag_polygon     | 2281 604
- lag_polygon     | 2281 604 20
- lag_polygon     | 2281 604 20 604
- lag_reltime     | 2281 703
- lag_reltime     | 2281 703 20
- lag_reltime     | 2281 703 20 703
- lag_smallint    | 2281 21
- lag_smallint    | 2281 21 20
- lag_smallint    | 2281 21 20 21
- lag_text        | 2281 25
- lag_text        | 2281 25 20
- lag_text        | 2281 25 20 25
- lag_tid         | 2281 27
- lag_tid         | 2281 27 20
- lag_tid         | 2281 27 20 27
- lag_time        | 2281 1083
- lag_time        | 2281 1083 20
- lag_time        | 2281 1083 20 1083
- lag_timestamp   | 2281 1114
- lag_timestamp   | 2281 1114 20
- lag_timestamp   | 2281 1114 20 1114
- lag_timestamptz | 2281 1184
- lag_timestamptz | 2281 1184 20
- lag_timestamptz | 2281 1184 20 1184
- lag_timetz      | 2281 1266
- lag_timetz      | 2281 1266 20
- lag_timetz      | 2281 1266 20 1266
- lag_varbit      | 2281 1562
- lag_varbit      | 2281 1562 20
- lag_varbit      | 2281 1562 20 1562
- lag_varchar     | 2281 1043
- lag_varchar     | 2281 1043 20
- lag_varchar     | 2281 1043 20 1043
- lag_xid         | 2281 28
- lag_xid         | 2281 28 20
- lag_xid         | 2281 28 20 28
-(105 rows)
-
 -- actual LAG tests
 select cn, cname, lag(cname, 2, 'undefined') over (order by cn) from customer;
  cn |    cname     |    lag    
@@ -7209,9 +7046,39 @@ select cn,vn,ntile(cn) over(partition by cn order by vn) from sale; --mvd 1->3
 (12 rows)
 
 select cn,vn,ntile(qty) over(partition by cn order by vn) from sale;
-ERROR:  NTILE function argument expression should be in PARTITION BY.
+ cn | vn | ntile 
+----+----+-------
+  1 | 10 |     1
+  1 | 20 |     1
+  1 | 30 |     1
+  1 | 30 |     1
+  1 | 50 |     1
+  2 | 40 |     1
+  2 | 50 |     2
+  3 | 30 |     1
+  3 | 30 |     2
+  3 | 40 |     3
+  4 | 40 |     1
+  4 | 40 |     1
+(12 rows)
+
 select cn,vn,ntile(cn) over(partition by cn+vn order by vn) from sale;
-ERROR:  NTILE function argument expression should be in PARTITION BY.
+ cn | vn | ntile 
+----+----+-------
+  1 | 10 |     1
+  1 | 20 |     1
+  1 | 30 |     1
+  1 | 30 |     1
+  1 | 50 |     1
+  2 | 40 |     1
+  2 | 50 |     1
+  3 | 30 |     1
+  3 | 30 |     2
+  3 | 40 |     1
+  4 | 40 |     1
+  4 | 40 |     2
+(12 rows)
+
 select cn,vn,ntile(cn+vn) over(partition by cn+vn order by vn) from sale; --mvd 1,2->3
  cn | vn | ntile 
 ----+----+-------
@@ -7501,15 +7368,15 @@ FROM (SELECT * FROM sale) sale; --mvd 3,4,5->6; 3,4->7
 create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
-\d v1
-      View "public.v1"
- Column |  Type  | Modifiers 
---------+--------+-----------
- dt     | date   | 
- sum    | bigint | 
+\d+ v1
+                  View "public.v1"
+ Column |  Type  | Modifiers | Storage | Description 
+--------+--------+-----------+---------+-------------
+ dt     | date   |           | plain   | 
+ sum    | bigint |           | plain   | 
 View definition:
- SELECT "Window".dt, sum("Window".cn) OVER(
-  ORDER BY "Window".att_3 RANGE "Window".att_3 PRECEDING) AS sum
+ SELECT "Window".dt, sum("Window".cn) OVER (
+ ORDER BY "Window".att_3 RANGE "Window".att_3 PRECEDING) AS sum
    FROM ( SELECT sale.cn, sale.dt, grouping(sale.cn) AS att_3
            FROM sale
           GROUP BY ROLLUP (sale.cn, sale.dt)) "Window"(cn, dt, att_3);
@@ -7613,42 +7480,11 @@ select ord, cn,vn,sum(vn) over (order by ord rows between 3 following and floor(
   12 |  4 | 40 |    
 (12 rows)
 
--- Test use of window functions in places they shouldn't be allowed: MPP-2382
--- CHECK constraints
-CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in check constraint
-CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in default expression
--- index expression and function
-CREATE TABLE wintest_for_window_seq (i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
-ERROR:  cannot use window function in index predicate
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
-ERROR:  syntax error at or near "("
-LINE 1: ...window_seq on wintest_for_window_seq (sum(i) over (order by ...
-                                                             ^
--- alter table
-ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
-ERROR:  cannot use window function in default expression
-alter table wintest_for_window_seq alter column i type float using count(*) over (order by
-i)::float;
-ERROR:  cannot use window function in transform expression
--- update
-insert into wintest_for_window_seq values(1);
-update wintest_for_window_seq set i = count(*) over (order by i);
-ERROR:  cannot use window function in UPDATE
 -- domain suport
 create domain wintestd as int default count(*) over ();
-ERROR:  cannot use window function in default expression
+ERROR:  window functions are not allowed in DEFAULT expressions
 create domain wintestd as int check (value < count(*) over ());
-ERROR:  cannot use window function in check constraint
-drop table wintest_for_window_seq;
+ERROR:  window functions are not allowed in check constraints
 -- MPP-3295
 -- begin equivalent
 select cn,vn,rank() over (partition by cn order by vn) as rank
@@ -7746,8 +7582,8 @@ from (select cn,vn,sum(qty) as sum from sale group by cn, vn) sale order by rank
 (9 rows)
 
 -- end equivalent
-select cn, first_value(NULL) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
-	from sale order by first_value(NULL) over (
+select cn, first_value(NULL::text) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
+	from sale order by first_value(NULL::text) over (
 	partition by cn order by case when 1=1 then (pn || ' ') else 'test'::character varying(15) end); --mvd 1->2
  cn | first_value 
 ----+-------------
@@ -7765,8 +7601,8 @@ select cn, first_value(NULL) over (partition by cn order by case when 1=1 then p
   2 | 
 (12 rows)
 
-select cn, first_value(NULL) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
-	from sale order by first_value(NULL) over (
+select cn, first_value(NULL::text) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
+	from sale order by first_value(NULL::text) over (
 	partition by cn order by case when 1=1 then (pn || ' ') else 'test' end); --mvd 1->2
  cn | first_value 
 ----+-------------
@@ -7835,16 +7671,17 @@ order by 1,2,3;
  Plain     | Donuts    | 500 | 1 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |    
 (8 rows)
 
--- MPP-4840
+-- Once upon a time, there was a bug in deparsing a WindowAgg node with EXPLAIN
+-- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- HashAggregate  (cost=0.03..0.04 rows=1 width=8)
-   Group By: n
-   ->  Subquery Scan r  (cost=0.00..0.02 rows=2 width=8)
-         ->  Window  (cost=0.00..0.01 rows=0 width=0)
-               ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=0 width=0)
- Settings:  gp_enable_sequential_window_plans=on
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ HashAggregate  (cost=0.02..0.03 rows=1 width=8)
+   Group By: pg_catalog.row_number()
+   ->  WindowAgg  (cost=0.00..0.01 rows=1 width=0)
+         ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
 (6 rows)
 
 -- Test for MPP-11645
@@ -8046,24 +7883,27 @@ select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 
 
 -- End MPP-12913
 -- MPP-13710
+-- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes redundant SORT operators
+-- while GPDB did generate such plans
 create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Subquery Scan coplan  (cost=0.01..0.06 rows=1 width=8)
-   ->  Window  (cost=0.01..0.05 rows=1 width=8)
-         Order By: coplan.i
-         ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.01..0.05 rows=1 width=8)
-               Merge Key: coplan.i, coplan.j
-               ->  Subquery Scan coplan  (cost=0.01..0.03 rows=1 width=8)
-                     ->  Window  (cost=0.01..0.02 rows=1 width=8)
-                           Partition By: redundant_sort_check.i
-                           Order By: redundant_sort_check.j
-                           ->  Sort  (cost=0.01..0.02 rows=1 width=8)
-                                 Sort Key: redundant_sort_check.i, redundant_sort_check.j
-                                 ->  Seq Scan on redundant_sort_check  (cost=0.00..0.00 rows=1 width=8)
- Settings:  gp_enable_sequential_window_plans=on
-(13 rows)
+ WindowAgg  (cost=14900.48..16458.48 rows=77900 width=8)
+   Partition By: i
+   Order By: j
+   ->  Sort  (cost=14900.48..15095.23 rows=77900 width=8)
+         Sort Key: i, j
+         ->  WindowAgg  (cost=7208.12..8571.37 rows=77900 width=8)
+               Order By: i
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7208.12..7402.87 rows=77900 width=8)
+                     Merge Key: i
+                     ->  Sort  (cost=7208.12..7402.87 rows=25967 width=8)
+                           Sort Key: i
+                           ->  Seq Scan on redundant_sort_check  (cost=0.00..879.00 rows=25967 width=8)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(14 rows)
 
 -- End of MPP-13710
 -- MPP-13879
@@ -8247,7 +8087,7 @@ from empsalary;
 --                       
 -- ----------------------------------------------------------------------------------------------------------------------
 --  Gather Motion 2:1  (slice3; segments: 2)  (cost=3.56..3.60 rows=5 width=12)
---    ->  Window  (cost=3.56..3.60 rows=3 width=12)
+--    ->  WindowAgg  (cost=3.56..3.60 rows=3 width=12)
 --          Partition By: bar.a
 --          Order By: bar.b
 --          ->  Sort  (cost=3.56..3.57 rows=3 width=12)
@@ -8283,7 +8123,7 @@ explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, 
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=3.46..3.50 rows=5 width=12)
-   ->  Window  (cost=3.46..3.50 rows=3 width=12)
+   ->  WindowAgg  (cost=3.46..3.50 rows=3 width=12)
          Partition By: bar.a
          Order By: bar.b
          ->  Sort  (cost=3.46..3.47 rows=3 width=12)
@@ -8295,7 +8135,6 @@ explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, 
                            ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.15 rows=3 width=8)
                                  Hash Key: bar.a
                                  ->  Seq Scan on bar  (cost=0.00..1.05 rows=3 width=8)
- Settings:  gp_enable_sequential_window_plans=off
 (14 rows)
 
 drop table foo, bar;
@@ -8324,3 +8163,54 @@ SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
 
 reset optimizer_segments;
 drop table foo, bar;
+CREATE TABLE foo (a int, b int, c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo select i,i,i,i from generate_series(1, 10) i;
+-- Check that the planner can spot ORDER BYs that are supersets of each
+-- other, and sort directly to the longest sort order. This query can
+-- be satisfied with just two Sorts.
+-- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes
+-- redundant SORT operators, while GPDB did generate such plans
+EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
+       count(*) over (PARTITION BY a ORDER BY b, c) as count2,
+       count(*) over (PARTITION BY a ORDER BY b) as count3,
+       count(*) over (PARTITION BY a ORDER BY c) as count1,
+       count(*) over (PARTITION BY a ORDER BY c, b) as count2,
+       count(*) over (PARTITION BY a ORDER BY c, b, d) as count3
+FROM foo;
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.81..5.06 rows=10 width=16)
+   ->  WindowAgg  (cost=4.81..5.06 rows=4 width=16)
+         Partition By: a
+         Order By: c, b, d
+         ->  Sort  (cost=4.81..4.84 rows=4 width=16)
+               Sort Key: a, c, b, d
+               ->  WindowAgg  (cost=4.42..4.65 rows=4 width=16)
+                     Partition By: a
+                     Order By: c, b
+                     ->  Sort  (cost=4.42..4.45 rows=4 width=16)
+                           Sort Key: a, c, b
+                           ->  WindowAgg  (cost=4.06..4.26 rows=4 width=16)
+                                 Partition By: a
+                                 Order By: c
+                                 ->  Sort  (cost=4.06..4.08 rows=4 width=16)
+                                       Sort Key: a, c
+                                       ->  WindowAgg  (cost=3.27..3.89 rows=4 width=16)
+                                             Partition By: a
+                                             Order By: b
+                                             ->  WindowAgg  (cost=3.27..3.72 rows=4 width=16)
+                                                   Partition By: a
+                                                   Order By: b, c
+                                                   ->  WindowAgg  (cost=3.27..3.52 rows=4 width=16)
+                                                         Partition By: a
+                                                         Order By: b, c, d
+                                                         ->  Sort  (cost=3.27..3.29 rows=4 width=16)
+                                                               Sort Key: a, b, c, d
+                                                               ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=16)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(30 rows)
+
+drop table foo;

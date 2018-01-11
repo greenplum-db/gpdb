@@ -86,7 +86,7 @@ class Context(Values, object):
         if timestamp is None:
             timestamp = self.timestamp
 
-        if directory:
+        if directory is not None:
             use_dir = directory
         elif dbid == 1:
             use_dir = self.get_backup_dir(timestamp)
@@ -99,19 +99,18 @@ class Context(Values, object):
         format_str =  "%s/%sgp_%s_%s%s" % (use_dir, self.dump_prefix, "%s", timestamp, "%s")
         filename = format_str % (self.filename_dict[filetype][0], self.filename_dict[filetype][1])
         if "%(content)d_%(dbid)s" in filename:
-            if use_old_format:
-                if content is not None: # Doesn't use "if not content" because 0 is a valid content id
-                    dbids = ["%d" % id for id in self.content_map if self.content_map[id] == content]
-                    filename = filename % {"content": 1 if content == -1 else 0, "dbid": "[%s]" % ("|".join(dbids))}
-                elif dbid == 1:
-                    filename = filename % {"content": 1, "dbid": 1}
-                else:
-                    filename = filename % {"content": 0, "dbid": dbid}
+            content_num = -2
+            dbid_str = ""
+            if content is not None: # Doesn't use "if not content" because 0 is a valid content id
+                content_num = content
+                dbids = ["%d" % id for id in self.content_map if self.content_map[id] == content]
+                dbid_str = "(%s)" % ("|".join(dbids))
             else:
-                if content is not None:
-                    filename = filename % {"content": content, "dbid": "*"}
-                else:
-                    filename = filename % {"content": self.content_map[dbid], "dbid": dbid}
+                content_num = self.content_map[dbid]
+                dbid_str = dbid
+            if use_old_format:
+                content_num = 1 if content_num == -1 else 0
+            filename = filename % {"content": content_num, "dbid": dbid_str}
         if self.compress and filetype in ["metadata", "dump", "postdata"] and use_compress:
             filename += ".gz"
         return filename
@@ -158,7 +157,9 @@ class Context(Values, object):
         if not report_file:
             raise Exception("Unable to locate report file for timestamp %s" % timestamp)
         report_contents = get_lines_from_file(report_file)
-        old_metadata = self.generate_filename("metadata", timestamp=timestamp, use_old_format=True, use_compress=False)
+        # We specify directory='' because we only care about matching the
+        # filename and not the full path
+        old_metadata = self.generate_filename("metadata", timestamp=timestamp, use_old_format=True, use_compress=False, directory='')
         old_format = False
         for line in report_contents:
             if old_metadata in line:
@@ -290,16 +291,18 @@ def get_filename_for_content(context, filetype, content, remote_directory=None, 
         if not host:
             raise Exception("Must supply name of remote host to check for %s file" % filetype)
         cmd = Command(name = "Find file of type %s for content %d on host %s" % (filetype, content, host),
-                cmdStr = 'python -c "import glob; print glob.glob(\'%s\')[0]"' % filetype_glob, ctxt = REMOTE, remoteHost = host)
+                cmdStr = 'echo "import glob, re\nfor f in glob.glob(\'%s/*\'):\n    if re.match(\'%s\', f):\n        print f\n        break" | python'
+                            % (remote_directory, filetype_glob), ctxt = REMOTE, remoteHost = host)
         cmd.run()
 
         if cmd.get_results().rc == 0 and cmd.get_results().stdout:
             return cmd.get_results().stdout
         return None
     else:
-        filenames = glob.glob(filetype_glob)
-        if filenames and len(filenames) > 0:
-            return filenames[0]
+        filenames = glob.glob("%s/*" % context.get_backup_dir())
+        for filename in filenames:
+            if re.match(filetype_glob, filename):
+                return filename
         return None
 
 def expand_partitions_and_populate_filter_file(context, partition_list, file_prefix):
@@ -1021,4 +1024,4 @@ def validate_netbackup_params(param_dict):
     for label, param in param_dict.iteritems():
         if param and len(param) > max_len:
             raise Exception("Netbackup {0} ({1}) exceeds the maximum length of {2} characters".format(label, param, max_len))
-    
+

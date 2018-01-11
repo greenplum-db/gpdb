@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.146 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.155 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -73,6 +74,21 @@ struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
  * If this is called in QD or utility mode, this will return true.
  */
 
+/* Hook for plugins to get control in ExecutorStart() */
+typedef void (*ExecutorStart_hook_type) (QueryDesc *queryDesc, int eflags);
+extern PGDLLIMPORT ExecutorStart_hook_type ExecutorStart_hook;
+
+/* Hook for plugins to get control in ExecutorRun() */
+typedef void (*ExecutorRun_hook_type) (QueryDesc *queryDesc,
+												   ScanDirection direction,
+												   long count);
+extern PGDLLIMPORT ExecutorRun_hook_type ExecutorRun_hook;
+
+/* Hook for plugins to get control in ExecutorEnd() */
+typedef void (*ExecutorEnd_hook_type) (QueryDesc *queryDesc);
+extern PGDLLIMPORT ExecutorEnd_hook_type ExecutorEnd_hook;
+
+
 /*
  * prototypes from functions in execAmi.c
  */
@@ -81,7 +97,6 @@ extern void ExecMarkPos(PlanState *node);
 extern void ExecRestrPos(PlanState *node);
 extern bool ExecSupportsMarkRestore(NodeTag plantype);
 extern bool ExecSupportsBackwardScan(Plan *node);
-extern bool ExecMayReturnRawTuples(PlanState *node);
 extern void ExecEagerFree(PlanState *node);
 extern void ExecEagerFreeChildNodes(PlanState *node, bool subplanDone);
 
@@ -93,7 +108,8 @@ extern void getCurrentOf(CurrentOfExpr *cexpr,
 			  Oid table_oid,
 			  ItemPointer current_tid,
 			  int *current_gp_segment_id,
-			  Oid *current_table_oid);
+			  Oid *current_table_oid,
+			  char **cursor_name_p);
 extern bool execCurrentOf(CurrentOfExpr *cexpr,
 			  ExprContext *econtext,
 			  Oid table_oid,
@@ -220,11 +236,19 @@ typedef struct ScanMethod
 } ScanMethod;
 
 extern void ExecutorStart(QueryDesc *queryDesc, int eflags);
-extern TupleTableSlot *ExecutorRun(QueryDesc *queryDesc,
-			ScanDirection direction, long count);
+extern void standard_ExecutorStart(QueryDesc *queryDesc, int eflags);
+extern void ExecutorRun(QueryDesc *queryDesc,
+			ScanDirection direction, int64 count);
+extern void standard_ExecutorRun(QueryDesc *queryDesc,
+					 ScanDirection direction, long count);
 extern void ExecutorEnd(QueryDesc *queryDesc);
+extern void standard_ExecutorEnd(QueryDesc *queryDesc);
 extern void ExecutorRewind(QueryDesc *queryDesc);
-extern void ExecEndPlan(PlanState *planstate, EState *estate);
+extern void InitResultRelInfo(ResultRelInfo *resultRelInfo,
+				  Relation resultRelationDesc,
+				  Index resultRelationIndex,
+				  CmdType operation,
+				  bool doInstrument);
 extern ResultRelInfo *ExecGetTriggerResultRel(EState *estate, Oid relid);
 extern bool ExecContextForcesOids(PlanState *planstate, bool *hasoids);
 extern void ExecConstraints(ResultRelInfo *resultRelInfo,
@@ -233,6 +257,8 @@ extern TupleTableSlot *EvalPlanQual(EState *estate, Index rti,
 			 ItemPointer tid, TransactionId priorXmax);
 extern PlanState *ExecGetActivePlanTree(QueryDesc *queryDesc);
 extern DestReceiver *CreateIntoRelDestReceiver(void);
+
+extern Oid GetIntoRelOid(QueryDesc *queryDesc);
 
 extern AttrMap *makeAttrMap(int base_count, AttrNumber *base_map);
 extern AttrNumber attrMap(AttrMap *map, AttrNumber anum);
@@ -284,7 +310,8 @@ extern ExprDoneCond ExecEvalFuncArgs(FunctionCallInfo fcinfo,
 extern Tuplestorestate *ExecMakeTableFunctionResult(ExprState *funcexpr,
 							ExprContext *econtext,
 							TupleDesc expectedDesc,
-							uint64 memKB); 
+							bool randomAccess,
+							uint64 operatorMemKB);
 extern Datum ExecEvalExprSwitchContext(ExprState *expression, ExprContext *econtext,
 						  bool *isNull, ExprDoneCond *isDone);
 extern ExprState *ExecInitExpr(Expr *node, PlanState *parent);

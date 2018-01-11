@@ -469,13 +469,35 @@ RESET ALL;
 CREATE TABLE nt (i INT, j INT) DISTRIBUTED BY (j);
 INSERT INTO nt SELECT i, i FROM generate_series(1,10) i;
 SELECT lag(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM nt;
-ERROR:  window function "lag" cannot be used with a framed window specification
-LINE 1: SELECT lag(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECED...
-               ^
+ lag 
+-----
+    
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+(10 rows)
+
 SELECT lag(j) OVER (w) FROM nt WINDOW w AS (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING);
-ERROR:  window function "lag" cannot be used with a framed window specification
-LINE 1: SELECT lag(j) OVER (w) FROM nt WINDOW w AS (ORDER BY i ROWS ...
-               ^
+ lag 
+-----
+    
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+(10 rows)
+
 SELECT lag(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PARTITION BY y ORDER BY z), wx AS (w);
  lag 
 -----
@@ -483,13 +505,35 @@ SELECT lag(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PART
 (1 row)
 
 SELECT lead(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM nt;
-ERROR:  window function "lead" cannot be used with a framed window specification
-LINE 1: SELECT lead(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECE...
-               ^
+ lead 
+------
+     
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
+   10
+(10 rows)
+
 SELECT lead(j) OVER (w) FROM nt WINDOW w AS (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING);
-ERROR:  window function "lead" cannot be used with a framed window specification
-LINE 1: SELECT lead(j) OVER (w) FROM nt WINDOW w AS (ORDER BY i ROWS...
-               ^
+ lead 
+------
+     
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
+   10
+(10 rows)
+
 SELECT lead(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PARTITION BY y ORDER BY z), wx AS (w);
  lead 
 ------
@@ -512,7 +556,7 @@ select * from ccdd1;
 -- Test: 34
 -- ----------------------------------------------------------------------
 -- This is expected to fail, with an error along the lines of:
--- function cannot execute on segment because it accesses relation "qp_misc_rio.testdata_in"
+-- function cannot execute on a QE slice because it accesses relation "qp_misc_rio.testdata_in"
 set search_path to qp_misc_rio;
 CREATE TABLE testdata_in ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
 INSERT INTO testdata_in SELECT i, i FROM generate_series(1,10) i;
@@ -522,7 +566,7 @@ AS $$
         return plpy.execute(sqlstm);
 $$ LANGUAGE plpythonu;
 INSERT INTO testdata_in SELECT * FROM func_plpythonu(2);
-ERROR:  plpy.SPIError: function cannot execute on segment because it accesses relation "qp_misc_rio.testdata_in"  (entry db krajaraman:15432 pid=63091)
+ERROR:  plpy.SPIError: function cannot execute on a QE slice because it accesses relation "qp_misc_rio.testdata_in"  (entry db krajaraman:15432 pid=63091)
 DETAIL:  
 Traceback (most recent call last):
   PL/Python function "func_plpythonu", line 3, in <module>
@@ -680,6 +724,29 @@ order by a;
      10 |  10
 (10 rows)
 
+-- ----------------------------------------------------------------------
+-- Test: to_date() boundaries.
+--
+-- to_date() used to not check the input like the date input function
+-- does. The fix was submitted to upstream PostgreSQL and fixed there in
+-- version 8.4.16 (commit 5c4eb9166e.)
+-- ----------------------------------------------------------------------
+select to_date('-4713-11-23', 'yyyy-mm-dd');
+ERROR:  date out of range: "-4713-11-23"
+select to_date('-4713-11-24', 'yyyy-mm-dd');
+    to_date    
+---------------
+ 11-24-4714 BC
+(1 row)
+
+select to_date('5874897-12-31', 'yyyy-mm-dd');
+    to_date    
+---------------
+ 12-31-5874897
+(1 row)
+
+select to_date('5874898-01-01', 'yyyy-mm-dd');
+ERROR:  date out of range: "5874898-01-01"
 -- start_ignore
 drop schema qp_misc_rio cascade;
 NOTICE:  drop cascades to table qp_misc_rio.ccdd1

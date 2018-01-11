@@ -1,0 +1,31 @@
+2017-11-10 02:46:20|INFO|gpload session started 2017-11-10 02:46:20
+2017-11-10 02:46:20|WARN|ERROR_TABLE is not supported. We will set LOG_ERRORS and REUSE_TABLES to True for compatibility.
+2017-11-10 02:46:20|INFO|setting schema 'public' for table 'csvtable'
+2017-11-10 02:46:20|INFO|started gpfdist -p 8081 -P 8082 -f "/usr/local/greenplum-db-devel/bin/gpload_test/gpload2/data_file.csv" -t 30
+2017-11-10 02:46:20|INFO|did not find an external table to reuse. creating ext_gpload_reusable_54fd9764_c5c1_11e7_b31f_0242ac110003
+2017-11-10 02:46:20|WARN|5000 bad rows
+2017-11-10 02:46:20|WARN|Please use following query to access the detailed error
+2017-11-10 02:46:20|WARN|select * from gp_read_error_log('ext_gpload_reusable_54fd9764_c5c1_11e7_b31f_0242ac110003') where cmdtime > to_timestamp('1510281980.34')
+2017-11-10 02:46:20|INFO|running time: 0.34 seconds
+2017-11-10 02:46:20|INFO|rows Inserted          = 5000
+2017-11-10 02:46:20|INFO|rows Updated           = 0
+2017-11-10 02:46:20|INFO|data formatting errors = 5000
+2017-11-10 02:46:20|INFO|gpload succeeded with warnings
+2017-11-10 02:46:20|INFO|gpload session started 2017-11-10 02:46:20
+2017-11-10 02:46:20|WARN|ERROR_TABLE is not supported. We will set LOG_ERRORS and REUSE_TABLES to True for compatibility.
+2017-11-10 02:46:20|INFO|setting schema 'public' for table 'csvtable'
+2017-11-10 02:46:20|INFO|started gpfdist -p 8081 -P 8082 -f "/usr/local/greenplum-db-devel/bin/gpload_test/gpload2/data_file.csv" -t 30
+2017-11-10 02:46:20|INFO|reusing external table ext_gpload_reusable_54fd9764_c5c1_11e7_b31f_0242ac110003
+2017-11-10 02:46:21|WARN|5000 bad rows
+2017-11-10 02:46:21|WARN|Please use following query to access the detailed error
+2017-11-10 02:46:21|WARN|select * from gp_read_error_log('ext_gpload_reusable_54fd9764_c5c1_11e7_b31f_0242ac110003') where cmdtime > to_timestamp('1510281980.77')
+2017-11-10 02:46:21|INFO|running time: 0.31 seconds
+2017-11-10 02:46:21|INFO|rows Inserted          = 5000
+2017-11-10 02:46:21|INFO|rows Updated           = 0
+2017-11-10 02:46:21|INFO|data formatting errors = 5000
+2017-11-10 02:46:21|INFO|gpload succeeded with warnings
+ count 
+-------
+ 10000
+(1 row)
+

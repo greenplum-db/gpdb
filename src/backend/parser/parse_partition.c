@@ -4,6 +4,7 @@
  *	  handle partition clauses in parser
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -21,6 +22,7 @@
 #include "commands/defrem.h"
 #include "commands/tablespace.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/walkers.h"
 #include "parser/analyze.h"
@@ -79,14 +81,13 @@ static void make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtCont
 				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc);
-static void expand_hash_partition_spec(PartitionBy *pBy);
-static int	deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize);
+static char *deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent);
 static Node *
 make_prule_catalog(ParseState *pstate,
 				   CreateStmtContext *cxt, CreateStmt *stmt,
 				   Node *partitionBy, PartitionElem *pElem,
 				   char *at_depth, char *child_name_str,
-				   char *exprBuf,
+				   char *whereExpr,
 				   Node *pWhere
 );
 static int partition_range_compare(ParseState *pstate,
@@ -113,9 +114,8 @@ make_prule_rulestmt(ParseState *pstate,
 					CreateStmtContext *cxt, CreateStmt *stmt,
 					Node *partitionBy, PartitionElem *pElem,
 					char *at_depth, char *child_name_str,
-					char *exprBuf,
-					Node *pWhere
-);
+					char *whereExpr,
+					Node *pWhere);
 static void preprocess_range_spec(partValidationState *vstate);
 static void validate_range_partition(partValidationState *vstate);
 static void validate_list_partition(partValidationState *vstate);
@@ -244,38 +244,8 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	}
 
 	/*
-	 * Derive the number of partitions from the PARTITIONS clause.
-	 */
-	if (pBy->partNum)
-	{
-		A_Const    *con = (A_Const *) pBy->partNum;
-
-		Assert(IsA(&con->val, Integer));
-
-		partNumber = intVal(&con->val);
-
-		if (pBy->partType != PARTTYP_HASH)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("%sPARTITIONS clause requires a HASH partition%s",
-							pBy->partDepth != 0 ? "SUB" : "", at_depth),
-					 parser_errposition(pstate, pBy->location)));
-		}
-
-		if (partNumber < 1)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("%sPARTITIONS cannot be less than one%s",
-							pBy->partDepth != 0 ? "SUB" : "", at_depth),
-					 parser_errposition(pstate, pBy->location)));
-		}
-	}
-
-	/*
-	 * The recursive nature of this code means that if we're processing a sub
-	 * partition rule, the opclass may have been looked up already.
+	 * The recursive nature of this code means that if we're processing a
+	 * subpartition rule, the opclass may have been looked up already.
 	 */
 	lookup_opclass = list_length(pBy->keyopclass) == 0;
 
@@ -356,9 +326,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 			/* get access method ID for this partition type */
 			switch (pBy->partType)
 			{
-				case PARTTYP_HASH:
-					accessMethodId = HASH_AM_OID;
-					break;
 				case PARTTYP_RANGE:
 				case PARTTYP_LIST:
 					accessMethodId = BTREE_AM_OID;
@@ -429,26 +396,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	}
 	key_attnames = NIL;
 
-	if (pBy->partType == PARTTYP_HASH)
-	{
-		if (pBy->partSpec == NULL)
-		{
-			if (pBy->partNum == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("hash partition requires PARTITIONS clause "
-								"or partition specification"),
-						 parser_errposition(pstate, pBy->location)));
-
-			/*
-			 * Users don't have to specify a partition specification for HASH.
-			 * If they didn't, create one so that the rest of the code can
-			 * generate some valid partition children.
-			 */
-			expand_hash_partition_spec(pBy);
-		}
-	}
-
 	if (pBy->partSpec)
 	{
 		partNumber = validate_partition_spec(pstate, cxt, stmt, pBy, at_depth,
@@ -513,8 +460,10 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	Assert(partNumber > 0);
 
 	/*
-	 * We must iterate through the elements in this way to support HASH
-	 * partitioning, which likely has no partitioning elements.
+	 * We iterated through the elements in this way to support HASH
+	 * partitioning, which likely had no partitioning elements.
+	 * FIXME: can we refactor this code now that HASH partitioning
+	 * is removed?
 	 */
 	lc = list_head(partElts);
 
@@ -647,7 +596,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 				newSub->partType = psubBy->partType;
 				newSub->keys = psubBy->keys;
-				newSub->partNum = psubBy->partNum;
 				newSub->subPart = psubBy->subPart;
 				newSub->partSpec = pElem->subSpec;		/* use the subspec */
 				newSub->partDepth = psubBy->partDepth;
@@ -823,7 +771,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 			curPby->keys = key_attnums;
 
 			curPby->keyopclass = copyObject(pBy->keyopclass);
-			curPby->partNum = copyObject(pBy->partNum);
 
 			if (pElem)
 			{
@@ -1023,13 +970,9 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 
 	merge_part_column_encodings(child_tab_stmt, stenc);
 
-	/* Hash partitioning special case. */
-	if (pConstraint && ((enable_partition_rules &&
-						 curPby->partType == PARTTYP_HASH) ||
-						curPby->partType != PARTTYP_HASH))
-		child_tab_stmt->tableElts =
-			lappend(child_tab_stmt->tableElts,
-					pConstraint);
+	if (pConstraint)
+		child_tab_stmt->tableElts = lappend(child_tab_stmt->tableElts,
+											pConstraint);
 
 	/*
 	 * XXX XXX: inheriting the parent causes a headache in
@@ -1143,34 +1086,6 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 	cxt->alist = list_concat(cxt->alist, childstmts);
 }
 
-static void
-expand_hash_partition_spec(PartitionBy *pBy)
-{
-	PartitionSpec *spec;
-	long		i;
-	long		max;
-	List	   *elem = NIL;
-	A_Const    *con;
-
-	Assert(pBy->partType == PARTTYP_HASH);
-	Assert(pBy->partSpec == NULL);
-
-	spec = makeNode(PartitionSpec);
-
-	con = (A_Const *) pBy->partNum;
-	Assert(IsA(&con->val, Integer));
-	max = intVal(&con->val);
-
-	for (i = 0; i < max; i++)
-	{
-		PartitionElem *el = makeNode(PartitionElem);
-
-		elem = lappend(elem, el);
-	}
-	spec->partElem = elem;
-	pBy->partSpec = (Node *) spec;
-}
-
 static List *
 make_partition_rules(ParseState *pstate,
 					 CreateStmtContext *cxt, CreateStmt *stmt,
@@ -1186,173 +1101,7 @@ make_partition_rules(ParseState *pstate,
 	Node	   *pRule = NULL;
 	List	   *allRules = NULL;
 
-	if (pBy->partType != PARTTYP_HASH)
-	{
-		Assert(pElem);
-	}
-	if (pBy->partType == PARTTYP_HASH)
-	{
-		List	   *colElts = pBy->keys;
-		ListCell   *lc = NULL;
-		char		exprBuf[10000];
-		StringInfoData sid;
-		int			colcnt = 0;
-		Node	   *pHashArgs = NULL;
-		Node	   *pExpr = NULL;
-		PartitionBoundSpec *pBSpec = NULL;
-
-		if (pElem)
-		{
-			pBSpec = (PartitionBoundSpec *) pElem->boundSpec;
-		}
-		exprBuf[0] = '\0';
-
-		initStringInfo(&sid);
-
-		lc = list_head(colElts);
-
-		for (; lc; lc = lnext(lc))		/* for all cols */
-		{
-			Node	   *pCol = lfirst(lc);
-			Value	   *pColConst;
-			ColumnRef  *pCRef = NULL;
-
-			pColConst = (Value *) pCol;
-
-			Assert(IsA(pColConst, String));
-
-			if (!deparse_partition_rule((Node *) pCol,
-										exprBuf, sizeof(exprBuf)))
-			{
-				int			loco = pBy->location;
-
-				if (pBSpec)
-					loco = pBSpec->location;
-
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("unknown type or operator%s",
-								at_depth),
-						 parser_errposition(pstate, loco)));
-			}
-
-			pCRef = makeNode(ColumnRef);
-			pCRef->location = -1;
-			pCRef->fields = list_make1(pCol);
-
-			if (colcnt)
-			{
-				Node	   *pAppOp = NULL;
-
-				pAppOp =
-					(Node *) makeSimpleA_Expr(AEXPR_OP, "||",
-											  pHashArgs,
-											  (Node *) pCRef,
-											  -1);
-				pHashArgs = pAppOp;
-
-				appendStringInfo(&sid, "||");
-			}
-			else
-			{
-				pHashArgs = (Node *) pCRef;
-			}
-
-			appendStringInfo(&sid, "%s", exprBuf);
-
-			colcnt++;
-		}						/* end for all cols */
-
-		/*
-		 * magic_hash: maximum number of partitions is maxPartNum current
-		 * partition number is parNumId
-		 */
-
-		/*
-		 * modulus arithmetic is 0 to N-1, so go to (partNumId-1). Also,
-		 * hashtext can return a negative, so fix it up
-		 */
-
-		snprintf(exprBuf, sizeof(exprBuf),
-/*				 "magic_hash(%d, %s) = %d", */
-/* double % for % literal - ((hash(cols)%max + max) % max) */
-				 "(hashtext(%s)%%%d + %d)%%%d = %d",
-				 sid.data,
-				 maxPartNum,
-				 maxPartNum,
-				 maxPartNum,
-				 (partNumId - 1)
-			);
-
-		pfree(sid.data);
-
-		{
-			Node	   *pPlusOp = NULL;
-			Node	   *pModOp = NULL;
-			A_Const    *pModBy = NULL;
-			A_Const    *pPartID = NULL;
-			FuncCall   *pFC = makeNode(FuncCall);
-
-			pFC->funcname = list_make1(makeString("hashtext"));
-			pFC->args = list_make1(pHashArgs);
-			pFC->agg_star = FALSE;
-			pFC->agg_distinct = FALSE;
-			pFC->location = -1;
-			pFC->over = NULL;
-
-			pModBy = makeNode(A_Const);
-			pModBy->val.type = T_Integer;
-			pModBy->val.val.ival = maxPartNum;
-			pModBy->location = -1;
-
-			pPartID = makeNode(A_Const);
-			pPartID->val.type = T_Integer;
-			pPartID->val.val.ival = (partNumId - 1);
-			pPartID->location = -1;
-
-			pModOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "%",
-										  (Node *) pFC, (Node *) pModBy, -1);
-
-			pPlusOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "+",
-									   (Node *) pModOp, (Node *) pModBy, -1);
-
-			pModOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "%",
-									  (Node *) pPlusOp, (Node *) pModBy, -1);
-
-			pExpr = (Node *) makeSimpleA_Expr(AEXPR_OP, "=",
-											  pModOp, (Node *) pPartID, -1);
-
-		}
-
-		/*
-		 * first the CHECK constraint, then the INSERT statement, then the
-		 * RULE statement
-		 */
-		allRules = list_make1(pExpr);
-
-		if (doRuleStmt)
-		{
-			pRule = make_prule_catalog(pstate,
-									   cxt, stmt,
-									   partitionBy, pElem,
-									   at_depth, child_name_str,
-									   exprBuf,
-									   pExpr);
-
-			allRules = lappend(allRules, pRule);
-
-			pRule = make_prule_rulestmt(pstate,
-										cxt, stmt,
-										partitionBy, pElem,
-										at_depth, child_name_str,
-										exprBuf,
-										pExpr);
-
-			allRules = lappend(allRules, pRule);
-		}
-
-
-	}							/* end if HASH */
+	Assert(pElem);
 
 	if (pBy->partType == PARTTYP_LIST)
 	{
@@ -1363,14 +1112,13 @@ make_partition_rules(ParseState *pstate,
 		List	   *valElts = NULL;
 		ListCell   *lc_val = NULL;
 		ListCell   *lc_valent = NULL;
-		char		exprBuf[10000];
-		char		ANDBuf[10000];
-		char		ORBuf[10000];
+		char	   *exprStr;
+		StringInfoData ANDBuf;
+		StringInfoData ORBuf;
 		PartitionValuesSpec *spec = (PartitionValuesSpec *) pElem->boundSpec;
 
-		exprBuf[0] = '\0';
-		ANDBuf[0] = '\0';
-		ORBuf[0] = '\0';
+		initStringInfo(&ANDBuf);
+		initStringInfo(&ORBuf);
 
 		valElts = spec->partValues;
 		lc_valent = list_head(valElts);
@@ -1459,17 +1207,7 @@ make_partition_rules(ParseState *pstate,
 													(Node *) pValConst,
 													-1 /* position */ );
 
-
-				if (!deparse_partition_rule((Node *) pEq,
-											exprBuf, sizeof(exprBuf)))
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("unknown type or operator%s",
-									at_depth),
-							 parser_errposition(pstate, spec->location)));
-
-				}
+				exprStr = deparse_partition_rule((Node *) pEq, pstate, (Node *) spec);
 
 				/*
 				 * for multiple cols - AND the matches eg: (col = value) AND
@@ -1477,7 +1215,7 @@ make_partition_rules(ParseState *pstate,
 				 */
 				if (pIndAND)
 				{
-					char	   *pfoo = pstrdup(ANDBuf);
+					char	   *pfoo = pstrdup(ANDBuf.data);
 
 					pIndAND =
 						(Node *) makeA_Expr(AEXPR_AND, NIL,
@@ -1485,17 +1223,17 @@ make_partition_rules(ParseState *pstate,
 											pEq,
 											-1 /* position */ );
 
-					snprintf(ANDBuf, sizeof(ANDBuf), "((%s) and %s)",
-							 exprBuf,
-							 pfoo
-						);
+					resetStringInfo(&ANDBuf);
+					appendStringInfo(&ANDBuf, "((%s) and %s)",
+									 exprStr, pfoo);
 
 					pfree(pfoo);
 				}
 				else
 				{
 					pIndAND = pEq;
-					snprintf(ANDBuf, sizeof(ANDBuf), "(%s)", exprBuf);
+					resetStringInfo(&ANDBuf);
+					appendStringInfo(&ANDBuf, "(%s)", exprStr);
 				}
 
 				lc_val = lnext(lc_val);
@@ -1512,7 +1250,7 @@ make_partition_rules(ParseState *pstate,
 			 */
 			if (pIndOR)
 			{
-				char	   *pfoo = pstrdup(ORBuf);
+				char	   *pfoo = pstrdup(ORBuf.data);
 
 				pIndOR =
 					(Node *) makeA_Expr(AEXPR_OR, NIL,
@@ -1520,10 +1258,9 @@ make_partition_rules(ParseState *pstate,
 										pIndAND,
 										-1 /* position */ );
 
-				snprintf(ORBuf, sizeof(ORBuf), "((%s) OR %s)",
-						 ANDBuf,
-						 pfoo
-					);
+				resetStringInfo(&ORBuf);
+				appendStringInfo(&ORBuf, "((%s) OR %s)",
+								 ANDBuf.data, pfoo);
 
 				pfree(pfoo);
 
@@ -1531,7 +1268,8 @@ make_partition_rules(ParseState *pstate,
 			else
 			{
 				pIndOR = pIndAND;
-				snprintf(ORBuf, sizeof(ORBuf), "(%s)", ANDBuf);
+				resetStringInfo(&ORBuf);
+				appendStringInfo(&ORBuf, "(%s)", ANDBuf.data);
 			}
 			if (lc_val == NULL)
 			{
@@ -1554,7 +1292,7 @@ make_partition_rules(ParseState *pstate,
 									   cxt, stmt,
 									   partitionBy, pElem,
 									   at_depth, child_name_str,
-									   ORBuf,
+									   ORBuf.data,
 									   pIndOR);
 
 			allRules = lappend(allRules, pRule);
@@ -1563,7 +1301,7 @@ make_partition_rules(ParseState *pstate,
 										cxt, stmt,
 										partitionBy, pElem,
 										at_depth, child_name_str,
-										ORBuf,
+										ORBuf.data,
 										pIndOR);
 
 			allRules = lappend(allRules, pRule);
@@ -1587,9 +1325,9 @@ make_partition_rules(ParseState *pstate,
 		List	   *valElts = NULL;
 		ListCell   *lc_val = NULL;
 		PartitionRangeItem *pRI = NULL;
-		char		exprBuf[10000];
-		char		ANDBuf[10000];
-		char		ORBuf[10000];
+		char	   *exprStr;
+		StringInfoData ANDBuf;
+		StringInfoData ORBuf;
 		int			range_idx;
 		PartitionBoundSpec *pBSpec = NULL;
 
@@ -1600,9 +1338,9 @@ make_partition_rules(ParseState *pstate,
 		{
 			pBSpec = (PartitionBoundSpec *) pElem->boundSpec;
 		}
-		exprBuf[0] = '\0';
-		ANDBuf[0] = '\0';
-		ORBuf[0] = '\0';
+
+		initStringInfo(&ANDBuf);
+		initStringInfo(&ORBuf);
 
 		pRI = (PartitionRangeItem *) (pBSpec->partStart);
 
@@ -1757,17 +1495,7 @@ make_partition_rules(ParseState *pstate,
 													(Node *) pValConst,
 													-1 /* position */ );
 
-					if (!deparse_partition_rule((Node *) pEq,
-												exprBuf, sizeof(exprBuf)))
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("unknown type or operator%s",
-										at_depth),
-							  parser_errposition(pstate, pBSpec->location)));
-
-					}
-
+					exprStr = deparse_partition_rule((Node *) pEq, pstate, (Node *) pBSpec);
 
 					/*
 					 * for multiple cols - AND the matches eg: (col = value)
@@ -1775,7 +1503,7 @@ make_partition_rules(ParseState *pstate,
 					 */
 					if (pIndAND)
 					{
-						char	   *pfoo = pstrdup(ANDBuf);
+						char	   *pfoo = pstrdup(ANDBuf.data);
 
 						pIndAND =
 							(Node *) makeA_Expr(AEXPR_AND, NIL,
@@ -1783,17 +1511,17 @@ make_partition_rules(ParseState *pstate,
 												pEq,
 												-1 /* position */ );
 
-						snprintf(ANDBuf, sizeof(ANDBuf), "((%s) and %s)",
-								 exprBuf,
-								 pfoo
-							);
+						resetStringInfo(&ANDBuf);
+						appendStringInfo(&ANDBuf, "((%s) and %s)",
+										 exprStr, pfoo);
 
 						pfree(pfoo);
 					}
 					else
 					{
 						pIndAND = pEq;
-						snprintf(ANDBuf, sizeof(ANDBuf), "(%s)", exprBuf);
+						resetStringInfo(&ANDBuf);
+						appendStringInfo(&ANDBuf, "(%s)", exprStr);
 					}
 
 					lc_val = lnext(lc_val);
@@ -1834,7 +1562,7 @@ make_partition_rules(ParseState *pstate,
 
 				if (pIndOR)
 				{
-					char	   *pfoo = pstrdup(ORBuf);
+					char	   *pfoo = pstrdup(ORBuf.data);
 
 					/*
 					 * XXX XXX build an AND for now.  But later we split this
@@ -1847,10 +1575,9 @@ make_partition_rules(ParseState *pstate,
 											pIndAND,
 											-1 /* position */ );
 
-					snprintf(ORBuf, sizeof(ORBuf), "((%s) AND %s)",
-							 ANDBuf,
-							 pfoo
-						);
+					resetStringInfo(&ORBuf);
+					appendStringInfo(&ORBuf, "((%s) AND %s)",
+									 ANDBuf.data, pfoo);
 
 					pfree(pfoo);
 
@@ -1858,7 +1585,8 @@ make_partition_rules(ParseState *pstate,
 				else
 				{
 					pIndOR = pIndAND;
-					snprintf(ORBuf, sizeof(ORBuf), "(%s)", ANDBuf);
+					resetStringInfo(&ORBuf);
+					appendStringInfo(&ORBuf, "(%s)", ANDBuf.data);
 				}
 
 			}					/* end for all vals */
@@ -1877,7 +1605,7 @@ make_partition_rules(ParseState *pstate,
 									   cxt, stmt,
 									   partitionBy, pElem,
 									   at_depth, child_name_str,
-									   ORBuf,
+									   ORBuf.data,
 									   pIndOR);
 			allRules = lappend(allRules, pRule);
 
@@ -1885,7 +1613,7 @@ make_partition_rules(ParseState *pstate,
 										cxt, stmt,
 										partitionBy, pElem,
 										at_depth, child_name_str,
-										ORBuf,
+										ORBuf.data,
 										pIndOR);
 			allRules = lappend(allRules, pRule);
 		}
@@ -1895,28 +1623,28 @@ make_partition_rules(ParseState *pstate,
 }	/* end make_partition_rules */
 
 
-static int
-deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize)
+static char *
+deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent)
 {
 	if (!pNode)
-		return 0;
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("unknown type or operator in partitioning rule"),
+				 parser_errposition(pstate, exprLocation(parent))));
 
 	switch (nodeTag(pNode))
 	{
 		case T_NullTest:
 			{
 				NullTest   *nt = (NullTest *) pNode;
-				char		leftbuf[1000];
+				char	   *left;
 
-				if (!deparse_partition_rule((Node *) nt->arg, leftbuf,
-											sizeof(leftbuf)))
-					return 0;
+				left = deparse_partition_rule((Node *) nt->arg, pstate, (Node *) nt);
 
-				snprintf(outbuf, outsize, "%s %s",
-						 leftbuf, nt->nulltesttype == IS_NULL ?
-						 "ISNULL" : "IS NOT NULL");
+				return psprintf("%s %s",
+								left,
+								nt->nulltesttype == IS_NULL ? "ISNULL" : "IS NOT NULL");
 			}
-
 			break;
 		case T_Value:
 
@@ -1927,7 +1655,7 @@ deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize)
 			{
 				ColumnRef  *pCRef = (ColumnRef *) pNode;
 				List	   *coldefs = pCRef->fields;
-				ListCell   *lc = NULL;
+				ListCell   *lc;
 				StringInfoData sid;
 				int			colcnt = 0;
 
@@ -1938,73 +1666,43 @@ deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize)
 				for (; lc; lc = lnext(lc))		/* for all cols */
 				{
 					Node	   *pCol = lfirst(lc);
-					char		leftBuf[10000];
+					char	   *left;
 
-					if (!deparse_partition_rule(pCol, leftBuf, sizeof(leftBuf)))
-						return 0;
-
+					left = deparse_partition_rule(pCol, pstate, parent);
 					if (colcnt)
-					{
 						appendStringInfo(&sid, ".");
-					}
 
-					appendStringInfo(&sid, "%s", leftBuf);
+					appendStringInfo(&sid, "%s", left);
 
 					colcnt++;
 				}				/* end for all cols */
 
-				outbuf[0] = '\0';
-				snprintf(outbuf, outsize, "%s", sid.data);
-				pfree(sid.data);
-
-				break;
+				return sid.data;
 			}
+			break;
 		case T_String:
-			snprintf(outbuf, outsize, "%s",
-					 strVal(pNode));
+			return pstrdup(strVal(pNode));
 			break;
 		case T_Integer:
-			snprintf(outbuf, outsize, "%ld",
-					 intVal(pNode));
-			break;
+			return psprintf("%ld", intVal(pNode));
 		case T_Float:
-			snprintf(outbuf, outsize, "%f",
-					 floatVal(pNode));
-			break;
+			return psprintf("%f", floatVal(pNode));
 		case T_A_Const:
 			{
 				A_Const    *acs = (A_Const *) pNode;
 
 				if (acs->val.type == T_String)
 				{
-					if (acs->typeName)	/* deal with explicit types */
-					{
-						/*
-						 * XXX XXX: simple types only -- need to handle
-						 * Interval, etc
-						 */
-
-						snprintf(outbuf, outsize, "\'%s\'::%s",
-								 acs->val.val.str,
-								 TypeNameToString(acs->typeName));
-					}
-					else
-					{
-						snprintf(outbuf, outsize, "\'%s\'",
-								 acs->val.val.str);
-					}
-
-					return 1;
+					return psprintf("\'%s\'", acs->val.val.str);
 				}
-				return (deparse_partition_rule((Node *) &(acs->val),
-											   outbuf, outsize));
+				return deparse_partition_rule((Node *) &(acs->val), pstate, parent);
 			}
 			break;
 		case T_A_Expr:
 			{
 				A_Expr	   *ax = (A_Expr *) pNode;
-				char		leftBuf[10000];
-				char		rightBuf[10000];
+				char	   *left;
+				char	   *right;
 				char	   *infix_op;
 
 				switch (ax->kind)
@@ -2016,10 +1714,9 @@ deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize)
 					default:
 						return 0;
 				}
-				if (!deparse_partition_rule(ax->lexpr, leftBuf, sizeof(leftBuf)))
-					return 0;
-				if (!deparse_partition_rule(ax->rexpr, rightBuf, sizeof(rightBuf)))
-					return 0;
+				left = deparse_partition_rule(ax->lexpr, pstate, parent);
+				right = deparse_partition_rule(ax->rexpr, pstate, parent);
+
 				switch (ax->kind)
 				{
 					case AEXPR_OP:		/* normal operator */
@@ -2034,19 +1731,16 @@ deparse_partition_rule(Node *pNode, char *outbuf, size_t outsize)
 					default:
 						return 0;
 				}
-				snprintf(outbuf, outsize, "(%s %s %s)",
-						 leftBuf, infix_op, rightBuf);
-
+				return psprintf("(%s %s %s)",
+								left, infix_op, right);
 			}
 			break;
-		case T_Var:
-			{
-/*				Var		   *var = (Var *) node; */
-			}
 		default:
 			break;
 	}
-	return 1;
+
+	elog(ERROR, "unexpected node type %u in partitioning rule", nodeTag(pNode));
+	return NULL;
 }
 
 static Node *
@@ -2054,51 +1748,43 @@ make_prule_catalog(ParseState *pstate,
 				   CreateStmtContext *cxt, CreateStmt *stmt,
 				   Node *partitionBy, PartitionElem *pElem,
 				   char *at_depth, char *child_name_str,
-				   char *exprBuf,
+				   char *whereExpr,
 				   Node *pWhere
 )
 {
-	Node	   *pResult = NULL;
-	InsertStmt *pIns = NULL;
+	Node	   *pResult;
+	InsertStmt *pIns;
 	RangeVar   *parent_tab_name;
 	RangeVar   *child_tab_name;
-	char		ruleBuf[10000];
-	char		newVals[10000];
+	char	   *ruleStr;
+	StringInfoData newValsBuf;
+	ListCell   *lc;
+	int			colcnt;
 
+	initStringInfo(&newValsBuf);
+
+	appendStringInfo(&newValsBuf, "VALUES (");
+	colcnt = 0;
+	foreach(lc, stmt->tableElts)		/* for all cols */
 	{
-		List	   *coldefs = stmt->tableElts;
-		ListCell   *lc = NULL;
-		StringInfoData sid;
-		int			colcnt = 0;
+		Node	   *pCol = lfirst(lc);
+		ColumnDef  *pColDef;
 
-		initStringInfo(&sid);
+		if (nodeTag(pCol) != T_ColumnDef)	/* avoid constraints, etc */
+			continue;
 
-		lc = list_head(coldefs);
+		pColDef = (ColumnDef *) pCol;
 
-		for (; lc; lc = lnext(lc))		/* for all cols */
+		if (colcnt)
 		{
-			Node	   *pCol = lfirst(lc);
-			ColumnDef  *pColDef;
+			appendStringInfo(&newValsBuf, ", ");
+		}
 
-			if (nodeTag(pCol) != T_ColumnDef)	/* avoid constraints, etc */
-				continue;
+		appendStringInfo(&newValsBuf, "new.%s", pColDef->colname);
 
-			pColDef = (ColumnDef *) pCol;
-
-			if (colcnt)
-			{
-				appendStringInfo(&sid, ", ");
-			}
-
-			appendStringInfo(&sid, "new.%s", pColDef->colname);
-
-			colcnt++;
-		}						/* end for all cols */
-
-		newVals[0] = '\0';
-		snprintf(newVals, sizeof(newVals), "VALUES (%s)", sid.data);
-		pfree(sid.data);
-	}
+		colcnt++;
+	}						/* end for all cols */
+	appendStringInfo(&newValsBuf, ")");
 
 	parent_tab_name = makeNode(RangeVar);
 	parent_tab_name->catalogname = cxt->relation->catalogname;
@@ -2112,9 +1798,8 @@ make_prule_catalog(ParseState *pstate,
 	child_tab_name->relname = child_name_str;
 	child_tab_name->location = -1;
 
-	snprintf(ruleBuf, sizeof(ruleBuf),
-			 "CREATE RULE %s AS ON INSERT to %s WHERE %s DO INSTEAD INSERT INTO %s %s", child_name_str, parent_tab_name->relname, exprBuf, child_name_str, newVals);
-
+	ruleStr = psprintf("CREATE RULE %s AS ON INSERT to %s WHERE %s DO INSTEAD INSERT INTO %s %s",
+					   child_name_str, parent_tab_name->relname, whereExpr, child_name_str, newValsBuf.data);
 
 	pIns = makeNode(InsertStmt);
 
@@ -2130,13 +1815,12 @@ make_prule_catalog(ParseState *pstate,
 
 	if (1)
 	{
-		List	   *vl1 = NULL;
+		List	   *vl1;
 
 		A_Const    *acs = makeNode(A_Const);
 
 		acs->val.type = T_String;
 		acs->val.val.str = pstrdup(parent_tab_name->relname);
-		acs->typeName = SystemTypeName("text");
 		acs->location = -1;
 
 		vl1 = list_make1(acs);
@@ -2144,23 +1828,20 @@ make_prule_catalog(ParseState *pstate,
 		acs = makeNode(A_Const);
 		acs->val.type = T_String;
 		acs->val.val.str = pstrdup(child_name_str);
-		acs->typeName = SystemTypeName("text");
 		acs->location = -1;
 
 		vl1 = lappend(vl1, acs);
 
 		acs = makeNode(A_Const);
 		acs->val.type = T_String;
-		acs->val.val.str = pstrdup(exprBuf);
-		acs->typeName = SystemTypeName("text");
+		acs->val.val.str = pstrdup(whereExpr);
 		acs->location = -1;
 
 		vl1 = lappend(vl1, acs);
 
 		acs = makeNode(A_Const);
 		acs->val.type = T_String;
-		acs->val.val.str = pstrdup(ruleBuf);
-		acs->typeName = SystemTypeName("text");
+		acs->val.val.str = ruleStr;
 		acs->location = -1;
 
 		vl1 = lappend(vl1, acs);
@@ -2168,7 +1849,6 @@ make_prule_catalog(ParseState *pstate,
 		pIns->selectStmt = (Node *) makeNode(SelectStmt);
 		((SelectStmt *) pIns->selectStmt)->valuesLists =
 			list_make1(vl1);
-
 	}
 
 	return (pResult);
@@ -2608,8 +2288,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 	pSpec = (PartitionSpec *) pBy->partSpec;
 
 	/*
-	 * Find number of partitions in the specification, and match it up with
-	 * the PARTITIONS clause if partitioned by HASH, and determine the
+	 * Find number of partitions in the specification, and determine the
 	 * subpartition specifications.  Perform basic error checking on boundary
 	 * specifications.
 	 */
@@ -2689,9 +2368,8 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 			/*
 			 * handle all default partition cases:
 			 *
-			 * - HASH partitioned tables cannot have DEFAULT partitions. - Can
-			 * only have a single DEFAULT partition. - Default partitions
-			 * cannot have a boundary specification.
+			 * - Can only have a single DEFAULT partition.
+			 * - Default partitions cannot have a boundary specification.
 			 */
 			if (pElem->isDefault)
 			{
@@ -2711,18 +2389,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 				}
 
 				pDefaultElem = pElem;	/* save the default */
-
-				if (PARTTYP_HASH == pBy->partType)
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("invalid use of DEFAULT partition "
-									"for partition%s of type HASH%s",
-									namBuf,
-									at_depth),
-							 parser_errposition(pstate, pElem->location)));
-
-				}
 
 				if (pBSpec)
 				{
@@ -2790,31 +2456,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 
 		switch (pBy->partType)
 		{
-			case PARTTYP_HASH:
-				if (vstate->spec)
-				{
-					char	   *specTName = "RANGE";
-
-					if (IsA(vstate->spec, PartitionValuesSpec))
-						specTName = "LIST";
-
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						   errmsg("invalid use of %s boundary specification "
-								  "in partition%s of type HASH%s",
-								  specTName,
-								  vstate->namBuf,
-								  vstate->at_depth),
-					/* MPP-4249: use value spec location if have one */
-							 ((IsA(vstate->spec, PartitionValuesSpec)) ?
-							  parser_errposition(pstate,
-						  ((PartitionValuesSpec *) vstate->spec)->location) :
-					/* else use boundspec */
-							  parser_errposition(pstate,
-							 ((PartitionBoundSpec *) vstate->spec)->location)
-							  )));
-				}
-				break;
 			case PARTTYP_RANGE:
 				validate_range_partition(vstate);
 				break;
@@ -2823,7 +2464,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 				validate_list_partition(vstate);
 				break;
 
-			case PARTTYP_REFERENCE:		/* for future use... */
 			default:
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
@@ -3001,7 +2641,8 @@ preprocess_range_spec(partValidationState *vstate)
 			continue;
 		}
 
-		pbs = (PartitionBoundSpec *) transformExpr(pstate, (Node *) pbs);
+		pbs = (PartitionBoundSpec *) transformExpr(pstate, (Node *) pbs,
+												   EXPR_KIND_PARTITION_EXPRESSION);
 
 		pStoreAttr = el->storeAttr;
 
@@ -3625,21 +3266,24 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				oprcompare = lappend(NIL, makeString(compare_op));
 				ltop = lappend(NIL, makeString("<"));
 
-				n1t = transformExpr(pstate, n1);
+				n1t = transformExpr(pstate, n1,
+									EXPR_KIND_PARTITION_EXPRESSION);
 				n1t = coerce_type(NULL, n1t, exprType(n1t), coltypid,
 								  coltypmod,
 								  COERCION_EXPLICIT, COERCE_IMPLICIT_CAST,
 								  -1);
 				n1t = (Node *) flatten_partition_val(n1t, coltypid);
 
-				n2t = transformExpr(pstate, n2);
+				n2t = transformExpr(pstate, n2,
+									EXPR_KIND_PARTITION_EXPRESSION);
 				n2t = coerce_type(NULL, n2t, exprType(n2t), coltypid,
 								  coltypmod,
 								  COERCION_EXPLICIT, COERCE_IMPLICIT_CAST,
 								  -1);
 				n2t = (Node *) flatten_partition_val(n2t, coltypid);
 
-				n3t = transformExpr(pstate, n3);
+				n3t = transformExpr(pstate, n3,
+									EXPR_KIND_PARTITION_EXPRESSION);
 				n3t = (Node *) flatten_partition_val(n3t, exprType(n3t));
 
 				Assert(IsA(n3t, Const));
@@ -3652,7 +3296,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				restypid = InvalidOid;
 				res = eval_basic_opexpr(pstate, oprmul, (Node *) everyCnt, n3t,
 										NULL, NULL, &restypid,
-										((A_Const *) n3)->location);
+										exprLocation(n3));
 				typ = typeidType(restypid);
 				c = makeConst(restypid, -1, typeLen(typ), res, false,
 							  typeByVal(typ));
@@ -3669,7 +3313,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				res = eval_basic_opexpr(pstate, oprplus, n1t, (Node *) c,
 										NULL, NULL,
 										&restypid,
-										((A_Const *) n1)->location);
+										exprLocation(n1));
 				typ = typeidType(restypid);
 				newend = makeConst(restypid, -1, typeLen(typ), res, false,
 								   typeByVal(typ));
@@ -3718,7 +3362,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 					uncast = eval_basic_opexpr(pstate, oprplus, n1t,
 											   (Node *) c, NULL, NULL,
 											   &test_typid,
-											   ((A_Const *) n1)->location);
+											   exprLocation(n1));
 
 					typ = typeidType(test_typid);
 					tmpconst = makeConst(test_typid, -1, typeLen(typ), uncast,
@@ -3734,7 +3378,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 								 errmsg("EVERY parameter produces ambiguous partition rule"),
 								 parser_errposition(pstate,
-											   ((A_Const *) n3)->location)));
+													exprLocation(n3))));
 
 				}
 
@@ -3753,7 +3397,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 											 (Node *) newend,
 											 NULL, NULL,
 											 &tmptyp,
-											 ((A_Const *) n3)->location);
+											 exprLocation(n3));
 
 					if (!DatumGetBool(res2))
 					{
@@ -3764,10 +3408,10 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 						if (do_every_param_test)
 						{
 							ereport(ERROR,
-								  (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								   errmsg("EVERY parameter too small"),
-								   parser_errposition(pstate,
-											   ((A_Const *) n3)->location)));
+									(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+									 errmsg("EVERY parameter too small"),
+									 parser_errposition(pstate,
+														exprLocation(n3))));
 						}
 						else
 						{
@@ -3776,10 +3420,10 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 							 * thought so it must be an overflow.
 							 */
 							ereport(ERROR,
-								  (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								   errmsg("END parameter not reached before type overflows"),
-								   parser_errposition(pstate,
-											   ((A_Const *) n2)->location)));
+									(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+									 errmsg("END parameter not reached before type overflows"),
+									 parser_errposition(pstate,
+														exprLocation(n2))));
 						}
 					}
 				}
@@ -3806,7 +3450,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				res = eval_basic_opexpr(pstate, oprcompare, (Node *) newend, n2t,
 										NULL, NULL,
 										&restypid,
-										((A_Const *) n2)->location);
+										exprLocation(n2));
 
 				/*
 				 * XXX XXX: also check stop flag. and free up prev if stop is
@@ -3882,8 +3526,7 @@ l_next_iteration:
 
 /*
  * Basic partition validation:
- * Check that PARTITIONS matches specification (for HASH). Perform basic error
- * checking on boundary specifications.
+ * Perform basic error checking on boundary specifications.
  */
 static void
 validate_range_partition(partValidationState *vstate)
@@ -4693,7 +4336,8 @@ validate_list_partition(partValidationState *vstate)
 			foreach(lc_val, vals)
 			{
 				Node	   *node = transformExpr(vstate->pstate,
-												 (Node *) lfirst(lc_val));
+												 (Node *) lfirst(lc_val),
+												 EXPR_KIND_PARTITION_EXPRESSION);
 				TypeName   *type = lfirst(llc2);
 				int32		typmod;
 				Oid			typid = typenameTypeId(vstate->pstate, type, &typmod);
@@ -4972,7 +4616,7 @@ range_partition_walker(Node *node, void *context)
 					 parser_errposition(ctx->pstate, ctx->location)));
 		return false;
 	}
-	return expression_tree_walker(node, range_partition_walker, ctx);
+	return raw_expression_tree_walker(node, range_partition_walker, ctx);
 }
 
 Node *
@@ -4987,60 +4631,31 @@ coerce_partition_value(Node *node, Oid typid, int32 typmod,
 								COERCION_EXPLICIT,
 								COERCE_IMPLICIT_CAST,
 								-1);
+
 	/* MPP-3626: better error message */
 	if (!out)
 	{
-		char		exprBuf[10000];
-		char	   *specTName = "";
-		char	   *pparam = "";
-		StringInfoData sid;
+		char		   *pparam;
+		StringInfoData	sid;
 
-/*		elog(ERROR, "cannot coerce partition parameter to column type"); */
+		initStringInfo(&sid);
 
-		switch (partype)
-		{
-			case PARTTYP_HASH:
-				specTName = "HASH ";
-				break;
-			case PARTTYP_LIST:
-				specTName = "LIST ";
-				break;
-			case PARTTYP_RANGE:
-				specTName = "RANGE ";
-				break;
-			default:
-				break;
-		}
-
-		/* try to build a printable string of the node value */
+		/*
+		 * Try to build a printable string of the node value.
+		 * deparse_expression() returns a palloc'd buffer from a StringInfo so
+		 * we can safely inspect it.
+		 */
 		pparam = deparse_expression(node,
-									deparse_context_for("partition",
-														InvalidOid),
+									deparse_context_for("partition", InvalidOid),
 									false, false);
-		if (pparam)
-		{
-			initStringInfo(&sid);
-			appendStringInfo(&sid, "(");
-			appendStringInfoString(&sid, pparam);
-			appendStringInfo(&sid, ") ");
-
-			pfree(pparam);
-
-			exprBuf[0] = '\0';
-			snprintf(exprBuf, sizeof(exprBuf), "%s", sid.data);
-			pfree(sid.data);
-
-			pparam = exprBuf;
-		}
-		else
-			pparam = "";
+		if (strlen(pparam) != 0)
+			appendStringInfo(&sid, "(%s) ", pparam);
 
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("cannot coerce %spartition parameter %s"
-						"to column type (%s)",
-						specTName,
-						pparam,
+				 errmsg("cannot coerce %s partition parameter %s to column type (%s)",
+						(partype == PARTTYP_LIST) ? "LIST" : "RANGE",
+						sid.data,
 						format_type_be(typid))));
 	}
 

@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/truncate.sgml,v 1.24 2007/05/11 19:40:08 neilc Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/truncate.sgml,v 1.33 2009/04/26 02:56:52 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-TRUNCATE">
  <refmeta>
   <refentrytitle id="SQL-TRUNCATE-TITLE">TRUNCATE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -20,7 +21,8 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ CASCADE | RESTRICT ]
+TRUNCATE [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ... ]
+    [ RESTART IDENTITY | CONTINUE IDENTITY ] [ CASCADE | RESTRICT ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -36,7 +38,7 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
    operation. This is most useful on large tables.
   </para>
  </refsect1>
-  
+
  <refsect1>
   <title>Parameters</title>
 
@@ -45,7 +47,29 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
     <term><replaceable class="PARAMETER">name</replaceable></term>
     <listitem>
      <para>
-      The name (optionally schema-qualified) of a table to be truncated.
+      The name (optionally schema-qualified) of a table to be
+      truncated.  If <literal>ONLY</> is specified, only that table is
+      truncated.  If <literal>ONLY</> is not specified, the table and
+      all its descendant tables (if any) are truncated.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>RESTART IDENTITY</literal></term>
+    <listitem>
+     <para>
+      Automatically restart sequences owned by columns of
+      the truncated table(s).
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>CONTINUE IDENTITY</literal></term>
+    <listitem>
+     <para>
+      Do not change the values of sequences.  This is the default.
      </para>
     </listitem>
    </varlistentry>
@@ -66,7 +90,7 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
     <listitem>
      <para>
       Refuse to truncate if any of the tables have foreign-key references
-      from tables that are not to be truncated.  This is the default.
+      from tables that are not listed in the command.  This is the default.
      </para>
     </listitem>
    </varlistentry>
@@ -77,7 +101,15 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
   <title>Notes</title>
 
   <para>
-   Only the owner of a table can <command>TRUNCATE</> it.
+   You must have the <literal>TRUNCATE</literal> privilege on a table
+   to truncate it.
+  </para>
+
+  <para>
+   <command>TRUNCATE</> acquires an <literal>ACCESS EXCLUSIVE</> lock on each
+   table it operates on, which blocks all other concurrent operations
+   on the table.  If concurrent access to a table is required, then
+   the <command>DELETE</> command should be used instead.
   </para>
 
   <para>
@@ -91,8 +123,16 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
   </para>
 
   <para>
-   <command>TRUNCATE</> will not run any <literal>ON DELETE</literal>
-   triggers that might exist for the tables.
+   <command>TRUNCATE</> will not fire any <literal>ON DELETE</literal>
+   triggers that might exist for the tables.  But it will fire
+   <literal>ON TRUNCATE</literal> triggers.
+   If <literal>ON TRUNCATE</> triggers are defined for any of
+   the tables, then all <literal>BEFORE TRUNCATE</literal> triggers are
+   fired before any truncation happens, and all <literal>AFTER
+   TRUNCATE</literal> triggers are fired after the last truncation is
+   performed.  The triggers will fire in the order that the tables are
+   to be processed (first those listed in the command, and then any
+   that were added due to cascading).
   </para>
 
   <warning>
@@ -111,11 +151,38 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
      cause visible inconsistency between the contents of the truncated
      table and other tables in the database.
    </para>
+  </warning>
 
+  <para>
+   <command>TRUNCATE</> is transaction-safe with respect to the data
+   in the tables: the truncation will be safely rolled back if the surrounding
+   transaction does not commit.
+  </para>
+
+  <warning>
    <para>
-    <command>TRUNCATE</> is transaction-safe, however: the truncation
-    will be safely rolled back if the surrounding transaction does not
-    commit.
+    Any <command>ALTER SEQUENCE RESTART</> operations performed as a
+    consequence of using the <literal>RESTART IDENTITY</> option are
+    nontransactional and will not be rolled back on failure.  To minimize
+    the risk, these operations are performed only after all the rest of
+    <command>TRUNCATE</>'s work is done.  However, there is still a risk
+    if <command>TRUNCATE</> is performed inside a transaction block that is
+    aborted afterwards.  For example, consider
+
+<programlisting>
+BEGIN;
+TRUNCATE TABLE foo RESTART IDENTITY;
+COPY foo FROM ...;
+COMMIT;
+</programlisting>
+
+    If the <command>COPY</> fails partway through, the table data
+    rolls back correctly, but the sequences will be left with values
+    that are probably smaller than they had before, possibly leading
+    to duplicate-key failures or other problems in later transactions.
+    If this is likely to be a problem, it's best to avoid using
+    <literal>RESTART IDENTITY</>, and accept that the new contents of
+    the table will have higher serial numbers than the old.
    </para>
   </warning>
  </refsect1>
@@ -124,10 +191,19 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ...] [ C
   <title>Examples</title>
 
   <para>
-   Truncate the tables <literal>bigtable</literal> and <literal>fattable</literal>:
+   Truncate the tables <literal>bigtable</literal> and
+   <literal>fattable</literal>:
 
 <programlisting>
 TRUNCATE bigtable, fattable;
+</programlisting>
+  </para>
+
+  <para>
+   The same, and also reset any associated sequence generators:
+
+<programlisting>
+TRUNCATE bigtable, fattable RESTART IDENTITY;
 </programlisting>
   </para>
 
@@ -146,7 +222,13 @@ TRUNCATE othertable CASCADE;
   <title>Compatibility</title>
 
   <para>
-   There is no <command>TRUNCATE</command> command in the SQL standard.
+   The SQL:2008 standard includes a <command>TRUNCATE</command> command with the syntax
+   <literal>TRUNCATE TABLE <replaceable>tablename</replaceable></literal>.
+   The clauses <literal>CONTINUE IDENTITY</literal>/<literal>RESTART IDENTITY</literal>
+   also appear in that standard but have slightly different but related meanings.
+   Some of the concurrency behavior of this command is left implementation-defined
+   by the standard, so the above notes should be considered and compared with
+   other implementations if necessary.
   </para>
  </refsect1>
 </refentry>

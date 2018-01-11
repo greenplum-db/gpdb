@@ -1,0 +1,14 @@
+platform: linux
+
+inputs:
+ - name: ccp_src
+ - name: cluster_env_files
+ - name: gpdb_binary
+ - name: gpdb_src
+
+params:
+  MAKE_TEST_COMMAND: ""
+  TEST_OS: ""
+
+run:
+  path: gpdb_src/concourse/scripts/ic_gpdb_sles12.bash

@@ -37,8 +37,7 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
+		 * switch to memory context appropriate for multiple function calls
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -59,8 +58,8 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
 		/*
-		 * Collect all the locking information that we will format and
-		 * send out as a result set.
+		 * Collect all the locking information that we will format and send
+		 * out as a result set.
 		 */
 		getAllDistributedXactStatus(&allDistributedXactStatus);
 		funcctx->user_fctx = (void *) allDistributedXactStatus;
@@ -74,14 +73,14 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 	while (true)
 	{
 		TMGXACTSTATUS *distributedXactStatus;
-		
+
 		Datum		values[6];
 		bool		nulls[6];
 		HeapTuple	tuple;
 		Datum		result;
 
 		if (!getNextDistributedXactStatus(allDistributedXactStatus,
-				&distributedXactStatus))
+										  &distributedXactStatus))
 			break;
 
 		/*
@@ -91,10 +90,8 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 		MemSet(nulls, false, sizeof(nulls));
 
 		values[0] = TransactionIdGetDatum(distributedXactStatus->gxid);
-		values[1] = DirectFunctionCall1(textin,
-					  CStringGetDatum(distributedXactStatus->gid));
-		values[2] = DirectFunctionCall1(textin,
-					  CStringGetDatum(DtxStateToString(distributedXactStatus->state)));
+		values[1] = CStringGetTextDatum(distributedXactStatus->gid);
+		values[2] = CStringGetTextDatum(DtxStateToString(distributedXactStatus->state));
 
 		values[3] = UInt32GetDatum(distributedXactStatus->sessionId);
 		values[4] = TransactionIdGetDatum(distributedXactStatus->xminDistributedSnapshot);
@@ -106,4 +103,3 @@ gp_distributed_xacts__(PG_FUNCTION_ARGS)
 
 	SRF_RETURN_DONE(funcctx);
 }
-

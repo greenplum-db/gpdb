@@ -1,13 +1,10 @@
 platform: linux
 image_resource:
   type: docker-image
-  source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: '6-gcc6.2-llvm3.7'
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
   - name: singlecluster
-  - name: pxf_tarball
+  - name: pxf_infra_src
 run:
   path: gpdb_src/concourse/scripts/regression_tests_pxf.bash

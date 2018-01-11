@@ -268,7 +268,7 @@ help(const char *progname)
 	printf(_("  -f, --full                      do full vacuuming\n"));
 	printf(_("  -F, --freeze                    freeze row transaction information\n"));
 	printf(_("  -q, --quiet                     don't write any messages\n"));
-	printf(_("  -t, --table='TABLE'             vacuum specific table only\n"));
+	printf(_("  -t, --table='TABLE[(COLUMNS)]'  vacuum specific table only\n"));
 	printf(_("  -v, --verbose                   write a lot of output\n"));
 	printf(_("  -z, --analyze                   update optimizer hints\n"));
 	printf(_("  --help                          show this help, then exit\n"));

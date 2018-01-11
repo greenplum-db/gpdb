@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gist/gistutil.c,v 1.25 2008/01/01 19:45:46 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gist/gistutil.c,v 1.34 2009/06/11 14:48:53 momjian Exp $
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
@@ -16,9 +16,12 @@
 #include <math.h>
 
 #include "access/gist_private.h"
-#include "access/heapam.h"
 #include "access/reloptions.h"
 #include "storage/freespace.h"
+#include "storage/indexfsm.h"
+#include "storage/lmgr.h"
+#include "storage/bufmgr.h"
+#include "utils/rel.h"
 
 /*
  * static *S used for temrorary storage (saves stack and palloc() call)
@@ -30,9 +33,8 @@ static bool isnullS[INDEX_MAX_KEYS];
 /*
  * Write itup vector to page, has no control of free space.
  */
-OffsetNumber
-gistfillbuffer(Relation r, Page page, IndexTuple *itup,
-			   int len, OffsetNumber off)
+void
+gistfillbuffer(Page page, IndexTuple *itup, int len, OffsetNumber off)
 {
 	OffsetNumber l = InvalidOffsetNumber;
 	int			i;
@@ -43,14 +45,14 @@ gistfillbuffer(Relation r, Page page, IndexTuple *itup,
 
 	for (i = 0; i < len; i++)
 	{
-		l = PageAddItem(page, (Item) itup[i], IndexTupleSize(itup[i]),
-						off, false, false);
+		Size		sz = IndexTupleSize(itup[i]);
+
+		l = PageAddItem(page, (Item) itup[i], sz, off, false, false);
 		if (l == InvalidOffsetNumber)
-			elog(ERROR, "failed to add item to index page in \"%s\"",
-				 RelationGetRelationName(r));
+			elog(ERROR, "failed to add item to GiST index page, item %d out of %d, size %d bytes",
+				 i, len, (int) sz);
 		off++;
 	}
-	return l;
 }
 
 /*
@@ -648,8 +650,7 @@ gistcheckpage(Relation rel, Buffer buf)
 	/*
 	 * Additionally check that the special area looks sane.
 	 */
-	if (((PageHeader) (page))->pd_special !=
-		(BLCKSZ - MAXALIGN(sizeof(GISTPageOpaqueData))))
+	if (PageGetSpecialSize(page) != MAXALIGN(sizeof(GISTPageOpaqueData)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
 				 errmsg("index \"%s\" contains corrupted page at block %u",
@@ -678,7 +679,7 @@ gistNewBuffer(Relation r)
 	/* First, try to get a page from FSM */
 	for (;;)
 	{
-		BlockNumber blkno = GetFreeIndexPage(&r->rd_node);
+		BlockNumber blkno = GetFreeIndexPage(r);
 
 		if (blkno == InvalidBlockNumber)
 			break;				/* nothing left in FSM */
@@ -730,10 +731,8 @@ gistoptions(PG_FUNCTION_ARGS)
 	bool		validate = PG_GETARG_BOOL(1);
 	bytea	   *result;
 
-	result = default_reloptions(reloptions, validate,
-								RELKIND_INDEX,
-								GIST_MIN_FILLFACTOR,
-								GIST_DEFAULT_FILLFACTOR);
+	result = default_reloptions(reloptions, validate, RELOPT_KIND_GIST);
+
 	if (result)
 		PG_RETURN_BYTEA_P(result);
 	PG_RETURN_NULL();

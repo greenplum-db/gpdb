@@ -4,7 +4,7 @@ from gppylib.gplog import *
 from gppylib.system.configurationInterface import *
 from gppylib.system import configurationImplTest, fileSystemImplTest, fileSystemInterface, osInterface, osImplTest, \
         faultProberInterface, faultProberImplTest
-from gppylib.gparray import GpDB, FAULT_STRATEGY_NONE, FAULT_STRATEGY_FILE_REPLICATION
+from gppylib.gparray import Segment
 
 logger = get_default_logger()
 
@@ -29,13 +29,12 @@ class TestDriver:
     # Include the header in what you paste!
     #
     #
-    def setSegments(self, segmentData, faultStrategy):
+    def setSegments(self, segmentData):
         lines = segmentData.strip().split("\n")
         
         assert len(lines[1].split("+")) == len(lines[0].split("|")) # verify header is listed
 
         self.__configurationProvider = configurationImplTest.GpConfigurationProviderForTesting()
-        self.__configurationProvider.setFaultStrategy(faultStrategy)
         for line in lines[2:len(lines)]:
             row = [s.strip() for s in line.strip().split("|")]
 
@@ -52,17 +51,17 @@ class TestDriver:
             dataDirectory = row[9]
             replicationPort = None if row[10] == "" else int(row[10])
 
-            segment = GpDB(content=contentId,
-                           preferred_role=preferredRole,
-                           dbid=dbId,
-                           role=role,
-                           mode=mode,
-                           status=status,
-                           hostname=hostName,
-                           address=address,
-                           port=port,
-                           datadir=dataDirectory,
-                           replicationPort=replicationPort)
+            segment = Segment(content=contentId,
+                              preferred_role=preferredRole,
+                              dbid=dbId,
+                              role=role,
+                              mode=mode,
+                              status=status,
+                              hostname=hostName,
+                              address=address,
+                              port=port,
+                              datadir=dataDirectory,
+                              replicationPort=replicationPort)
 
             self.__configurationProvider.addTestSegment(segment)
 
@@ -94,7 +93,7 @@ class TestDriver:
                 
         """
 
-        self.setSegments(configStr, FAULT_STRATEGY_FILE_REPLICATION)
+        self.setSegments(configStr)
         return self
 
     def initTwoSegmentOneFailedMirrorConfiguration(self):
@@ -114,7 +113,7 @@ class TestDriver:
 
         """
 
-        self.setSegments(configStr, FAULT_STRATEGY_FILE_REPLICATION)
+        self.setSegments(configStr)
         return self
 
     def initThreeHostMultiHomeNoMirrors(self):
@@ -132,7 +131,7 @@ class TestDriver:
 
         """
 
-        self.setSegments(configStr, FAULT_STRATEGY_NONE)
+        self.setSegments(configStr)
         return self
 
 

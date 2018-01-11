@@ -1,15 +1,24 @@
 /*-------------------------------------------------------------------------
  *
- * Copyright (c) 2010 Greenplum
+ * persistentutil.c
  *
  * Functions to support administrative tasks against gp_persistent_*_node
  * tables, gp_global_sequence and gp_relation_node. These tables do not have
  * normal MVCC semantics and changing them is usually part of a more complex
- * chain of events in the backend. So, we cannot modify them with INSERT, UPDATE
- * or DELETE as we might other catalog tables.
+ * chain of events in the backend. So, we cannot modify them with INSERT,
+ * UPDATE or DELETE as we might other catalog tables.
  *
  * So we provide these functions which update the tables and also update the in
  * memory persistent table / file rep data structures.
+ *
+ * Portions Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/gp/persistentutil.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 #include "miscadmin.h"
@@ -45,7 +54,7 @@ typedef struct
 static bool strToRelfilenode(char *str, Oid *relfilenode, int32 *segmentnum);
 static void nodeCheckCleanup(Datum arg);
 
-
+#define MAX_STRING_LEN_RELFILENODE 10 /* strlen("2147483648") */
 #define NYI elog(ERROR, "not yet implemented")
 
 Datum
@@ -497,7 +506,7 @@ gp_persistent_relation_node_check(PG_FUNCTION_ARGS)
 			struct dirent		*dent;
 			Datum				 values[Natts_gp_persistent_relation_node];
 			bool				 nulls[Natts_gp_persistent_relation_node];
-			
+
 			dent = ReadDir(fdata->databaseDir, fdata->databaseDirName);
 			if (!dent)
 			{  /* step out of innermost loop */
@@ -558,8 +567,9 @@ gp_persistent_relation_node_check(PG_FUNCTION_ARGS)
 				continue;
 
 			/* convert the string to an oid */
-			fdata->databaseOid = pg_atoi(dent->d_name, 4, 0);
-			
+			fdata->databaseOid = DatumGetObjectId(DirectFunctionCall1(oidin,
+						CStringGetDatum(dent->d_name)));
+
 			/* form a database path using this oid */
 			snprintf(fdata->databaseDirName, MAXPGPATH, "%s/%s",
 					 fdata->tablespaceDirName, 
@@ -672,25 +682,33 @@ nodeCheckCleanup(Datum arg)
 static bool
 strToRelfilenode(char *str, Oid *relfilenode, int32 *segmentnum)
 {
+	char largestStringValue[MAX_STRING_LEN_RELFILENODE + 1];
+	int32 relfilenodeStrLen = 0;
 	char *s;
 
+	relfilenodeStrLen = strlen(str);
 	/* String must contain characters */
-	if (strlen(str) == 0)
+	if (relfilenodeStrLen == 0)
 		return false;
 
 	/* If it isn't numbers and dots then its not a relfilenode. */
-	if (strlen(str) != strspn(str, "0123456789."))
-		return false;
-
-	/* first character can't be a dot */
-	if (str[0] == '.')
+	if (relfilenodeStrLen != strspn(str, "0123456789."))
 		return false;
 	
-	/* Convert the string to a number for the relfilenode */
-	*relfilenode = pg_atoi(str, 4, '.');
-
-	/* Find the dot, if any, and repeat for the segmentnum */
+	/* Find the dot, and convert the preceeding part */
 	s = strchr(str, '.');
+
+	if (s != NULL)
+		relfilenodeStrLen = s - str;
+
+	memcpy(largestStringValue, str, relfilenodeStrLen);
+	largestStringValue[relfilenodeStrLen] = '\0';
+
+	/* Convert the string to a number for the relfilenode */
+	*relfilenode = DatumGetObjectId(DirectFunctionCall1(oidin,
+				CStringGetDatum(largestStringValue)));
+
+	/* If we found a dot, convert the segmentnum */
 	if (s == NULL)
 	{
 		*segmentnum = 0;
@@ -711,4 +729,3 @@ strToRelfilenode(char *str, Oid *relfilenode, int32 *segmentnum)
 	/* All done, return success */
 	return true;
 }
-

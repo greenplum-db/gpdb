@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/move.sgml,v 1.30 2006/09/16 00:30:19 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/move.sgml,v 1.32 2009/06/22 07:12:50 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-MOVE">
  <refmeta>
   <refentrytitle id="SQL-MOVE-TITLE">MOVE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -39,7 +40,8 @@ MOVE [ <replaceable class="PARAMETER">direction</replaceable> { FROM | IN } ] <r
   </para>
 
   <para>
-   Refer to 
+   The parameters for the <command>MOVE</command> command are identical to 
+   those of the <command>FETCH</command> command; refer to
    <xref linkend="sql-fetch" endterm="sql-fetch-title">
    for details on syntax and usage.
   </para>

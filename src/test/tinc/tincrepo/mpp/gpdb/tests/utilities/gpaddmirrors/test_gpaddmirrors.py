@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -339,61 +339,8 @@ class GpAddmirrorsTests(GPAddmirrorsTestCase):
         super(GpAddmirrorsTests, self).tearDown()
 
 
-    def test_version(self):
-        """
-        check the version of the gpadmirror to see if it reflects the same as database version
-        """
-        res = {'rc': 0, 'stdout' : '', 'stderr': ''}
-        run_shell_command("gpaddmirrors --version", 'run gpaddmirrros --version', res)
-        self.assertEqual(0, res['rc'])
-        version_build_info = res['stdout'].split('gpaddmirrors version')[1].strip()
-        gpdb_version_build_info = PSQL.run_sql_command('SELECT VERSION();', flags = '-q -t', dbname = 'template1')
-        self.assertIn(version_build_info, gpdb_version_build_info)
-
-    def test_help(self):
-        """
-        check the help option of gpaddmirrors
-        """
-        help_doc = local_path('data/help_doc')
-        help_output = local_path('data/help_output')
-        Command('output the help information', 'gpaddmirrors --help > %s' % help_output).run(validateAfter=True)
-        self.assertTrue(Gpdiff.are_files_equal(help_output, help_doc))
-
-
-    def test_option_h(self):
-        """
-        check the -h option of the gpaddmirrors
-        """
-        help_doc = local_path('data/help_doc')
-        help_output = local_path('data/help_output')
-        Command('output the help information', 'gpaddmirrors -h > %s' % help_output).run(validateAfter=True)
-        self.assertTrue(Gpdiff.are_files_equal(help_output, help_doc))
-
-
-    def test_question_mark_help_option(self):
-        """
-        check the question mark option -? of gpaddmirrors
-        """
-        help_doc = local_path('data/help_doc')
-        help_output = local_path('data/help_output')
-        Command('output the help information', 'gpaddmirrors -? > %s' % help_output).run(validateAfter=True)
-        self.assertTrue(Gpdiff.are_files_equal(help_output, help_doc))
-
-
-    def test_option_d(self):
-        """
-        check the -d option of gpaddmirrors
-        """
-        gprecover = GpRecover()
-        self._setup_gpaddmirrors()
-        self._cleanup_segment_data_dir(self.host_file, self.mirror_data_dir)
-        del os.environ['MASTER_DATA_DIRECTORY']
-        Command('run gpaddmirrors -i -d', 'gpaddmirrors -a -i %s -d %s' % (self.mirror_config_file, self.mdd)).run(validateAfter=True)
-        os.environ['MASTER_DATA_DIRECTORY']=self.mdd
-        gprecover.wait_till_insync_transition()
-        self.verify_config_file_with_gp_config()
-        self.check_mirror_seg() 
-
+# The following test should not be ported because the gpaddmirror functionality is already tested by other tests, and
+# this test in particular is only testing if worker pool can handle a batch size of 4.
 
     def test_batch_size_4(self):
         """
@@ -420,39 +367,7 @@ class GpAddmirrorsTests(GPAddmirrorsTestCase):
         self.check_mirror_seg()
 
 
-    def test_option_port_offset(self):
-        """
-	primary port + offset = mirror database port
-	primary port + (2 * offset) = mirror replication port
-	primary port + (3 * offset) = primary replication port
-        """
-        gprecover = GpRecover()
-        port_offset = 500
-        self._setup_gpaddmirrors(port_offset = port_offset)
-        self._cleanup_segment_data_dir(self.host_file, self.mirror_data_dir)
-
-        res = {'rc': 0, 'stdout' : '', 'stderr': ''}
-        run_shell_command("gpaddmirrors -a -i %s -d %s --verbose" % (self.mirror_config_file, self.mdd), 'run gpaddmirrros with non default port_offset', res)
-        self.assertEqual(0, res['rc'])
-        query_ports = 'SELECT port, replication_port FROM gp_segment_configuration WHERE content = 0 ORDER BY preferred_role DESC;'
-        result = PSQL.run_sql_command(query_ports, flags='-q -t', dbname='template1')
-        ports = result.strip().split('\n')
-        primary_ports = ports[0]
-        mirror_ports = ports[1]
-        primary_ports = primary_ports.split('|')
-        primary_ports = [port.strip() for port in primary_ports]
-        primary_db_port = int(primary_ports[0])
-        primary_replic_port = int(primary_ports[1])
-        mirror_ports = mirror_ports.split('|')
-        mirror_ports = [port.strip() for port in mirror_ports]
-        mirror_db_port = int(mirror_ports[0])
-        mirror_replic_port = int(mirror_ports[1])  
-        self.assertEqual(primary_db_port + port_offset, mirror_db_port)
-        self.assertEqual(primary_db_port + 2*port_offset, mirror_replic_port)
-        self.assertEqual(primary_db_port + 3*port_offset, primary_replic_port)
-        gprecover.wait_till_insync_transition()
-        self.verify_config_file_with_gp_config()
-        self.check_mirror_seg()
+#The following tests need to be ported to Behave.
 
     def test_mirror_spread(self):
         """

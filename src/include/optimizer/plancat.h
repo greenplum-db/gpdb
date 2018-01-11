@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.47.2.1 2008/04/01 00:48:44 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.54 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,8 +38,6 @@ extern bool relation_excluded_by_constraints(PlannerInfo *root,
 
 extern List *build_physical_tlist(PlannerInfo *root, RelOptInfo *rel);
 
-extern List *find_inheritance_children(Oid inhparent);
-
 extern bool has_unique_index(RelOptInfo *rel, AttrNumber attno);
 
 extern Selectivity restriction_selectivity(PlannerInfo *root,
@@ -49,7 +48,8 @@ extern Selectivity restriction_selectivity(PlannerInfo *root,
 extern Selectivity join_selectivity(PlannerInfo *root,
 				 Oid operatorid,
 				 List *args,
-				 JoinType jointype);
+				 JoinType jointype,
+				 SpecialJoinInfo *sjinfo);
 
 extern void cdb_default_stats_warning_for_table(Oid reloid);
 

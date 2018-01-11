@@ -1,18 +1,25 @@
 /*-------------------------------------------------------------------------
-*
-* aosegfiles.h
-*	  internal specifications of the pg_aoseg_* Append Only file segment
-*	  list relation.
-*
-* Portions Copyright (c) 2008, Greenplum Inc.
-*-------------------------------------------------------------------------
-*/
+ *
+ * aosegfiles.h
+ *	  Internal specifications of the pg_aoseg_* Append Only file segment
+ *	  list relation.
+ *
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/aosegfiles.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef AOSEGFILES_H
 #define AOSEGFILES_H
 
-#include "utils/rel.h"
-#include "utils/tqual.h"
 #include "catalog/pg_appendonly.h"
+#include "utils/rel.h"
+#include "utils/snapshot.h"
+#include "utils/visibility_summary.h"
 
 #define Natts_pg_aoseg					8
 #define Anum_pg_aoseg_segno				1
@@ -37,7 +44,7 @@
  * when a state parameter in a function should not change the
  * current state.
  * AOSEG_STATE_DEFAULT is the default state. The segment file can be used for
- * insertions and compactions. The contents if the segment file 
+ * insertions and compactions. The contents if the segment file
  * is visible under the limitations  of the visimap and the eof.
  * AOSEG_STATE_AWAITING_DROP is used if a compaction drop transaction on that
  * segment fails because the transaction was aborted. The segment
@@ -46,9 +53,9 @@
  * is not visible to scan/fetches.
  *
  * The state of the segment file is only maintained at the
- * segment node level. The state at the master is always 
+ * segment node level. The state at the master is always
  * AOSEG_STATE_DEFAULT.
- */ 
+ */
 typedef enum FileSegInfoState
 {
 	/* 0 is reserved */
@@ -79,68 +86,70 @@ typedef enum FileSegInfoState
 #define Class_pg_aoseg \
   {"pg_appendonly"}, PG_CATALOG_NAMESPACE, -1, BOOTSTRAP_SUPERUSERID, 0, \
                -1, DEFAULTTABLESPACE_OID, \
-               25, 10000, 0, 0, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_aoseg, \
-               0, 0, 0, 0, 0, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
+               25, 10000, 0, 0, false, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_aoseg, \
+               0, false, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
 
 
 /*
  * GUC variables
  */
-extern int MaxAppendOnlyTables;		/* Max # of tables */
+extern int	MaxAppendOnlyTables;	/* Max # of tables */
 
 /*
  * Descriptor of a single AO relation file segment.
  */
 typedef struct FileSegInfo
 {
-	TupleVisibilitySummary	tupleVisibilitySummary;
+	TupleVisibilitySummary tupleVisibilitySummary;
 
 	/* the file segment number */
-	int	segno;	
+	int			segno;
 
 	/* total (i.e. including invisible) number of tuples in this fileseg */
-	int64 total_tupcount;	
+	int64		total_tupcount;
 
-	/* total number of varblocks in this fileseg */	
-	int64 varblockcount;
-	
+	/* total number of varblocks in this fileseg */
+	int64		varblockcount;
+
 	/*
 	 * Number of data modification operations
 	 */
-	int64 modcount;
+	int64		modcount;
 
 	/* the effective eof for this segno  */
-	int64 eof;
+	int64		eof;
 
-	/* what would have been the eof if we didn't 
-	   compress this rel (= eof if no compression) */
-	int64 eof_uncompressed;
+	/*
+	 * what would have been the eof if we didn't compress this rel (= eof if
+	 * no compression)
+	 */
+	int64		eof_uncompressed;
 
 	/* File format version number */
 	int16		formatversion;
 
-	/* 
-     * state of the segno.
-	 * The state is only maintained on the segments.
+	/*
+	 * state of the segno. The state is only maintained on the segments.
 	 */
-	FileSegInfoState state; 
+	FileSegInfoState state;
 
 } FileSegInfo;
 
 /*
  * Structure that sums up the field total of all file 'segments'.
- * Note that even though we could actually use FileSegInfo for 
+ * Note that even though we could actually use FileSegInfo for
  * this purpose we choose not too since it's likely that FileSegInfo
  * will go back to using int instead of float8 now that each segment
  * has a size limit.
  */
 typedef struct FileSegTotals
 {
-	int			totalfilesegs;  /* total number of file segments */
+	int			totalfilesegs;	/* total number of file segments */
 	int64		totalbytes;		/* the sum of all 'eof' values  */
 	int64		totaltuples;	/* the sum of all 'tupcount' values */
-	int64		totalvarblocks;	/* the sum of all 'varblockcount' values */
-	int64		totalbytesuncompressed; /* the sum of all 'eofuncompressed' values */
+	int64		totalvarblocks; /* the sum of all 'varblockcount' values */
+	int64		totalbytesuncompressed; /* the sum of all 'eofuncompressed'
+										 * values */
 } FileSegTotals;
 
 typedef enum
@@ -148,69 +157,64 @@ typedef enum
 	SegfileNoLock,
 	SegfileTryLock,
 	SegfileForceLock
-} SegfileLockStrategy;
+}			SegfileLockStrategy;
 
 extern FileSegInfo *NewFileSegInfo(int segno);
 
 extern void InsertInitialSegnoEntry(Relation parentrel, int segno);
- 
+
  /*
   * GetFileSegInfo
   *
   * Get the catalog entry for an appendonly (row-oriented) relation from the
-  * pg_aoseg_* relation that belongs to the currently used
-  * AppendOnly table.
+  * pg_aoseg_* relation that belongs to the currently used AppendOnly table.
   *
-  * If a caller intends to append to this file segment entry they must
-  * already hold a relation Append-Only segment file (transaction-scope) lock (tag 
-  * LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE) in order to guarantee
-  * stability of the pg_aoseg information on this segment file and exclusive right
-  * to append data to the segment file.
+  * If a caller intends to append to this file segment entry they must already
+  * hold a relation Append-Only segment file (transaction-scope) lock (tag
+  * LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE) in order to guarantee stability
+  * of the pg_aoseg information on this segment file and exclusive right to
+  * append data to the segment file.
   */
-extern FileSegInfo *
-GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno);
+extern FileSegInfo *GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno);
 
-extern FileSegInfo **
-GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
+extern FileSegInfo **GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
 
-extern FileSegInfo **
-GetAllFileSegInfo_pg_aoseg_rel(char *relationName, Relation pg_aoseg_rel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
+extern FileSegInfo **GetAllFileSegInfo_pg_aoseg_rel(char *relationName, Relation pg_aoseg_rel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
 
 extern void UpdateFileSegInfo(Relation parentrel,
 				  int segno,
 				  int64 eof,
 				  int64 eof_uncompressed,
-				  int64 tuples_added, 
+				  int64 tuples_added,
 				  int64 varblocks_added,
 				  int64 modcount_added,
 				  FileSegInfoState newState);
 
 extern void ClearFileSegInfo(Relation parentrel, int segno, FileSegInfoState newState);
 extern void SetFileSegInfoState(Relation parentrel, int segno, FileSegInfoState newState);
-extern FileSegTotals *
-GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
+extern FileSegTotals *GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
 
 extern int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
 
 extern void FreeAllSegFileInfo(FileSegInfo **allSegInfo,
-							   int totalSegFiles);
-
-extern Datum 
-gp_update_ao_master_stats_name(PG_FUNCTION_ARGS);
-
-extern Datum 
-gp_update_ao_master_stats_oid(PG_FUNCTION_ARGS);
-
-extern Datum 
-get_ao_distribution_name(PG_FUNCTION_ARGS);
+				   int totalSegFiles);
 
 extern Datum
-get_ao_distribution_oid(PG_FUNCTION_ARGS);
+			gp_update_ao_master_stats_name(PG_FUNCTION_ARGS);
 
-extern Datum 
-get_ao_compression_ratio_name(PG_FUNCTION_ARGS);
+extern Datum
+			gp_update_ao_master_stats_oid(PG_FUNCTION_ARGS);
 
-extern Datum 
-get_ao_compression_ratio_oid(PG_FUNCTION_ARGS);
+extern Datum
+			get_ao_distribution_name(PG_FUNCTION_ARGS);
 
-#endif   /* AOSEGFILES_H */
+extern Datum
+			get_ao_distribution_oid(PG_FUNCTION_ARGS);
+
+extern Datum
+			get_ao_compression_ratio_name(PG_FUNCTION_ARGS);
+
+extern Datum
+			get_ao_compression_ratio_oid(PG_FUNCTION_ARGS);
+
+#endif							/* AOSEGFILES_H */

@@ -9,7 +9,7 @@
 """
 import os
 
-from gppylib.gparray import GpArray, GpDB, createSegmentRows, FAULT_STRATEGY_NONE, get_gparray_from_config
+from gppylib.gparray import GpArray, Segment, createSegmentRows, get_gparray_from_config
 from gppylib import gplog
 from gp_unittest import *
 from mock import patch, Mock
@@ -169,13 +169,13 @@ class GpArrayTestCase(GpTestCase):
         getConfigProviderFunctionMock.return_value = configProviderMock
         configProviderMock.initializeProvider.return_value = configProviderMock
         gpArrayMock = Mock(spec=GpArray)
-        gpArrayMock.getFaultStrategy.return_value = FAULT_STRATEGY_NONE
+        gpArrayMock.hasMirrors = False
         configProviderMock.loadSystemConfig.return_value = gpArrayMock
         gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
 
         gpArray = get_gparray_from_config()
 
-        self.assertEquals(gpArray.getFaultStrategy(), FAULT_STRATEGY_NONE)
+        self.assertEquals(gpArray.hasMirrors, False)
         gpMasterEnvironmentMock.assert_called_once_with("MY_TEST_DIR", False)
         getConfigProviderFunctionMock.assert_any_call()
         configProviderMock.initializeProvider.assert_called_once_with(123456)
@@ -185,17 +185,17 @@ class GpArrayTestCase(GpTestCase):
 #------------------------------- non-test helpers --------------------------------
     def _setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type,
                        mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase):
-        master = GpDB(content = -1,
-                    preferred_role = 'p',
-                    dbid = 0,
-                    role = 'p',
-                    mode = 's',
-                    status = 'u',
-                    hostname = 'masterhost',
-                    address = 'masterhost-1',
-                    port = 5432,
-                    datadir = '/masterdir',
-                    replicationPort = 5433)
+        master = Segment(content = -1,
+                         preferred_role = 'p',
+                         dbid = 0,
+                         role = 'p',
+                         mode = 's',
+                         status = 'u',
+                         hostname = 'masterhost',
+                         address = 'masterhost-1',
+                         port = 5432,
+                         datadir = '/masterdir',
+                         replicationPort = 5433)
         allrows = []
         allrows.append(master)                 
         rows =  createSegmentRows(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
@@ -203,17 +203,17 @@ class GpArrayTestCase(GpTestCase):
         
         
         for row in rows:
-            newrow = GpDB(content = row.content, 
-                          preferred_role = 'p' if convert_bool(row.isprimary) else 'm', 
-                          dbid = row.dbid,
-                          role = 'p' if convert_bool(row.isprimary) else 'm',
-                          mode = 's', 
-                          status = 'u', 
-                          hostname = row.host, 
-                          address = row.address, 
-                          port = row.port, 
-                          datadir = row.fulldir, 
-                          replicationPort = row.prPort) 
+            newrow = Segment(content = row.content,
+                             preferred_role = 'p' if convert_bool(row.isprimary) else 'm',
+                             dbid = row.dbid,
+                             role = 'p' if convert_bool(row.isprimary) else 'm',
+                             mode = 's',
+                             status = 'u',
+                             hostname = row.host,
+                             address = row.address,
+                             port = row.port,
+                             datadir = row.fulldir,
+                             replicationPort = row.prPort)
             allrows.append(newrow)
         
         gparray = GpArray(allrows)
@@ -222,9 +222,9 @@ class GpArrayTestCase(GpTestCase):
     def _validate_array(self, gparray): 
         portdict = {}
         lastport = 0
-        for seg in gparray.segments:
+        for seg in gparray.segmentPairs:
             prim = seg.primaryDB            
-            mir = seg.mirrorDBs[0]
+            mir = seg.mirrorDB
             self.assertNotEqual(prim.hostname, mir.hostname)
             if prim.port not in portdict:
                 portdict[prim.port] = 1

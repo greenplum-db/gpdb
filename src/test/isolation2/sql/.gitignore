@@ -5,3 +5,4 @@ enable_resgroup.sql
 enable_resgroup_validate.sql
 resgroup_cpu_rate_limit.sql
 resgroup_alter_memory.sql
+pt_io_in_progress_deadlock.sql

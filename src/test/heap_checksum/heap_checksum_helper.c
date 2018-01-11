@@ -20,7 +20,7 @@ invalidate_buffers(PG_FUNCTION_ARGS)
 	rnode.dbNode  = PG_GETARG_OID(1);
 	rnode.relNode = PG_GETARG_OID(2);
 
-	DropRelFileNodeBuffers(rnode, false, 0);
+	DropRelFileNodeBuffers(rnode, MAIN_FORKNUM, false, 0);
 
 	PG_RETURN_BOOL(true);
 }

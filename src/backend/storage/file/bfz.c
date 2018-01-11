@@ -51,6 +51,12 @@ bfz_string_to_compression(const char *string)
 	return -1;
 }
 
+static const char *
+bfz_compression_to_string(int index)
+{
+	return compression_algorithms[index].name[0];
+}
+
 #define BFZ_CHECKSUM_EQ(c1, c2) EQ_CRC32C(c1, c2)
 
 /*
@@ -311,11 +317,6 @@ bfz_create_internal(const char *fileName, bool open_existing,
 
 	bfz_handle->has_checksum = gp_workfile_checksumming;
 
-	if (gp_workfile_checksumming || gp_workfile_faultinject)
-	{
-		srandom((unsigned int) time(NULL));
-	}
-
 	bfz_handle->numBlocks = bfz_handle->blockNo = bfz_handle->chosenBlockNo = 0;
 	
 	fs = bfz_handle->freeable_stuff;
@@ -406,8 +407,10 @@ bfz_append_end(bfz_t * thiz)
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("could not seek in temporary file: %m")));
 
-	elog(DEBUG1, "bfz file size uncompressed %lld, compressed %lld, savings %d%%",
-		 (long long) tot_bytes, (long long) tot_compressed,
+	elog(DEBUG1, "bfz file size uncompressed " INT64_FORMAT ", compressed with %s to " INT64_FORMAT", savings %d%%",
+		 tot_bytes,
+		 bfz_compression_to_string(thiz->compression_index),
+		 tot_compressed,
 		 tot_bytes == 0 ? 0 : (int) ((tot_bytes - tot_compressed) * 100 / tot_bytes));
 
 	return tot_compressed;

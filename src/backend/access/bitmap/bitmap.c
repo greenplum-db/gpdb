@@ -1,19 +1,23 @@
-
 /*-------------------------------------------------------------------------
  *
  * bitmap.c
- *	Implementation of the Hybrid Run-Length (HRL) on-disk bitmap index.
+ *	  Implementation of the Hybrid Run-Length (HRL) on-disk bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ *
  *
  * IDENTIFICATION
- *	$PostgreSQL$
+ *	  src/backend/access/bitmap/bitmap.c
  *
  * NOTES
  *	This file contains only the public interface routines.
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -33,9 +37,8 @@ static bool words_get_match(BMBatchWords *words, BMIterateResult *result,
                             BlockNumber blockno, PagetableEntry *entry,
 							bool newentry);
 static IndexScanDesc copy_scan_desc(IndexScanDesc scan);
-static void stream_free(StreamNode *self);
 static void indexstream_free(StreamNode *self);
-static bool pull_stream(StreamNode *self, PagetableEntry *e);
+static bool pull_stream(StreamBMIterator *iterator, PagetableEntry *e);
 static void cleanup_pos(BMScanPosition pos);
 
 /* type to hide BM specific stream state */
@@ -46,6 +49,8 @@ typedef struct BMStreamOpaque
 	/* Indicate that this stream contains no more bitmap words. */
 	bool is_done;
 } BMStreamOpaque;
+
+static void stream_free(BMStreamOpaque *so);
 
 /*
  * bmbuild() -- Build a new bitmap index.
@@ -62,7 +67,6 @@ bmbuild(PG_FUNCTION_ARGS)
 	BMBuildState bmstate;
 	IndexBuildResult *result;
 	TupleDesc	tupDesc;
-	bool		useWal;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
@@ -81,10 +85,8 @@ bmbuild(PG_FUNCTION_ARGS)
 
 	tupDesc = RelationGetDescr(index);
 
-	useWal = (!XLog_UnconvertedCanBypassWal() && !index->rd_istemp);
-
 	/* initialize the bitmap index. */
-	_bitmap_init(index, useWal);
+	_bitmap_init(index, !index->rd_istemp);
 
 	/* initialize the build state. */
 	_bitmap_init_buildstate(index, &bmstate);
@@ -94,23 +96,6 @@ bmbuild(PG_FUNCTION_ARGS)
 							  bmbuildCallback, (void *)&bmstate);
 	/* clean up the build state */
 	_bitmap_cleanup_buildstate(index, &bmstate);
-
-	/*
-	 * fsync the relevant files to disk, unless we're building
-	 * a temporary index
-	 */
-    if (!useWal)
-    {
-		FlushRelationBuffers(bmstate.bm_lov_heap);
-        smgrimmedsync(bmstate.bm_lov_heap->rd_smgr);
-
-		FlushRelationBuffers(bmstate.bm_lov_index);
-		smgrimmedsync(bmstate.bm_lov_index->rd_smgr);
-
-		FlushRelationBuffers(index);
-		/* FlushRelationBuffers will have opened rd_smgr */
-        smgrimmedsync(index->rd_smgr);
-    }
 	
 	/* return statistics */
 	result = (IndexBuildResult *) palloc0(sizeof(IndexBuildResult));
@@ -162,6 +147,9 @@ bmgettuple(PG_FUNCTION_ARGS)
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
+	/* This implementation of a bitmap index is never lossy */
+	scan->xs_recheck = false;
+
 	/* 
 	 * If we have already begun our scan, continue in the same direction.
 	 * Otherwise, start up the scan.
@@ -176,11 +164,39 @@ bmgettuple(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(res);
 }
 
+static void
+stream_end_iterate(StreamBMIterator *self)
+{
+	/* opaque may be NULL */
+	if (self->opaque) {
+		stream_free(self->opaque);
+		self->opaque = NULL;
+	}
+}
+
+static void
+stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
+{
+	BMStreamOpaque *so;
+	IndexScanDesc scan = self->opaque;
+
+	iterator->pull = pull_stream;
+	iterator->end_iterate = stream_end_iterate;
+
+	/* create a memory context for the stream */
+	so = palloc(sizeof(BMStreamOpaque));
+	so->scan = copy_scan_desc(scan);
+	so->entry = NULL;
+	so->is_done = false;
+
+	iterator->opaque = so;
+}
+
 /*
- * bmgetmulti() -- return a stream bitmap.
+ * bmgetbitmap() -- return a stream bitmap.
  */
 Datum
-bmgetmulti(PG_FUNCTION_ARGS)
+bmgetbitmap(PG_FUNCTION_ARGS)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 
@@ -200,28 +216,16 @@ bmgetmulti(PG_FUNCTION_ARGS)
 
 	if (res)
 	{
-		BMScanPosition  sp;
-		IndexScanDesc copy = copy_scan_desc(scan);
-		BMStreamOpaque *so;
 		int vec;
 
 		/* perhaps this should be in a special context? */
 		is = (IndexStream *)palloc0(sizeof(IndexStream));
 		is->type = BMS_INDEX;
-		is->pull = pull_stream;
-		is->nextblock = 0;
+		is->begin_iterate = stream_begin_iterate;
 		is->free = indexstream_free;
 		is->set_instrument = NULL;
 		is->upd_instrument = NULL;
-
-		/* create a memory context for the stream */
-
-		so = palloc(sizeof(BMStreamOpaque));
-		sp = ((BMScanOpaque)copy->opaque)->bm_currPos;
-		so->scan = copy;
-		so->entry = NULL;
-		so->is_done = false;
-		is->opaque = (void *)so;
+		is->opaque = copy_scan_desc(scan);
 
 		if(!bm)
 		{
@@ -256,6 +260,11 @@ bmgetmulti(PG_FUNCTION_ARGS)
 			BMVector bmvec = &(scanPos->posvecs[vec]);
 			bmvec->bm_lovBuffer = InvalidBuffer;
 		}
+	}
+	else
+	{
+		/* Return an empty bitmap */
+		bm = (Node *) tbm_create(10 * 1024L);
 	}
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
@@ -354,20 +363,15 @@ bmendscan(PG_FUNCTION_ARGS)
 		 * release the buffers that have been stored for each related 
 		 * bitmap vector.
 		 */
-		if (so->bm_currPos->nvec > 1)
-			 _bitmap_cleanup_batchwords(so->bm_currPos->bm_batchWords);
-		_bitmap_cleanup_scanpos(so->bm_currPos->posvecs,
-								so->bm_currPos->nvec);
+		cleanup_pos(so->bm_currPos);
 		pfree(so->bm_currPos);
 		so->bm_currPos = NULL;
 	}
 
 	if (so->bm_markPos != NULL)
 	{
-		if (so->bm_markPos->nvec > 1)
-			 _bitmap_cleanup_batchwords(so->bm_markPos->bm_batchWords);
-		_bitmap_cleanup_scanpos(so->bm_markPos->posvecs,
-								so->bm_markPos->nvec);
+		cleanup_pos(so->bm_markPos);
+		pfree(so->bm_markPos);
 		so->bm_markPos = NULL;
 	}
 
@@ -605,40 +609,67 @@ bmbuildCallback(Relation index, ItemPointer tupleId, Datum *attdata,
 }
 
 /*
+ * Free an IndexScanDesc created by copy_scan_desc(). If releaseBuffers is true,
+ * any Buffers pointed to by the BMScanPositions will be released as well.
+ */
+static void
+free_scan_desc(IndexScanDesc scan, bool releaseBuffers)
+{
+	BMScanOpaque s = scan->opaque;
+	int vec;
+
+	if (s->bm_currPos)
+	{
+		if (!releaseBuffers)
+		{
+			for (vec = 0; vec < s->bm_currPos->nvec; vec++)
+			{
+				BMVector bmvec = &(s->bm_currPos->posvecs[vec]);
+				bmvec->bm_lovBuffer = InvalidBuffer;
+			}
+		}
+
+		cleanup_pos(s->bm_currPos);
+		pfree(s->bm_currPos);
+		s->bm_currPos = NULL;
+	}
+	if (s->bm_markPos)
+	{
+		if (!releaseBuffers)
+		{
+			for (vec = 0; vec < s->bm_markPos->nvec; vec++)
+			{
+				BMVector bmvec = &(s->bm_markPos->posvecs[vec]);
+				bmvec->bm_lovBuffer = InvalidBuffer;
+			}
+		}
+
+		cleanup_pos(s->bm_markPos);
+		pfree(s->bm_markPos);
+		s->bm_markPos = NULL;
+	}
+
+	pfree(s);
+	pfree(scan);
+}
+
+/*
  * free the memory associated with the stream
  */
 
 static void
-stream_free(StreamNode *self)
+stream_free(BMStreamOpaque *so)
 {
-	IndexStream *is = self;
-	BMStreamOpaque *so = (BMStreamOpaque *)is->opaque;
-
 	/* opaque may be NULL */
 	if (so)
 	{
-		IndexScanDesc scan = so->scan;
-		BMScanOpaque s = (BMScanOpaque)scan->opaque;
-
-		is->opaque = NULL;
-		if(s->bm_currPos)
-		{
-			cleanup_pos(s->bm_currPos);
-			pfree(s->bm_currPos);
-			s->bm_currPos = NULL;
-		}
-		if(s->bm_markPos)
-		{
-			cleanup_pos(s->bm_markPos);
-			pfree(s->bm_markPos);
-			s->bm_markPos = NULL;
-		}
+		free_scan_desc(so->scan, false /* we can't release the underlying
+										  Buffers yet as there may be other
+										  iterators in operation */);
 
 		if (so->entry != NULL)
 			pfree(so->entry);
 
-		pfree(s);
-		pfree(scan);
 		pfree(so);
 	}
 }
@@ -648,8 +679,8 @@ stream_free(StreamNode *self)
  */
 static void
 indexstream_free(StreamNode *self) {
-	stream_free(self);
-
+	IndexScanDesc scan = self->opaque;
+	free_scan_desc(scan, true /* we can release the scanned Buffers now */);
 	pfree(self);
 }
 
@@ -665,7 +696,11 @@ cleanup_pos(BMScanPosition pos)
 	 * case.
 	 */
 	if (pos->nvec > 1)
-		 _bitmap_cleanup_batchwords(pos->bm_batchWords);
+	{
+		_bitmap_cleanup_batchwords(pos->bm_batchWords);
+		if (pos->bm_batchWords != NULL)
+			pfree(pos->bm_batchWords);
+	}
 	_bitmap_cleanup_scanpos(pos->posvecs, pos->nvec);
 }
 
@@ -675,41 +710,39 @@ cleanup_pos(BMScanPosition pos)
  */
 
 static bool 
-pull_stream(StreamNode *self, PagetableEntry *e)
+pull_stream(StreamBMIterator *iterator, PagetableEntry *e)
 {
-	StreamNode 	   *n = self;
 	bool			res = false;
 	bool 			newentry = true;
-	IndexStream    *is = (IndexStream *)n;
 	PagetableEntry *next;
 	BMScanPosition	scanPos;
 	IndexScanDesc	scan;
-	BMStreamOpaque *so;
+	BMStreamOpaque *so = iterator->opaque;
 
-	so = (BMStreamOpaque *)is->opaque;
 	/* empty bitmap vector */
 	if(so == NULL)
 		return false;
 	next = so->entry;
 
 	/* have we already got an entry? */
-	if(next && is->nextblock <= next->blockno)
+	if(next && iterator->nextblock <= next->blockno)
 	{
 		memcpy(e, next, sizeof(PagetableEntry));
 		return true;
 	}
 	else if (so->is_done)
 	{
-		stream_free(n);
-		is->opaque = NULL;
+		/* Just free opaque state early so that we could short circuit. */
+		if (iterator->opaque) {
+			stream_free(iterator->opaque);
+			iterator->opaque = NULL;
+		}
 		return false;
 	}
-	
-	MemSet(e, 0, sizeof(PagetableEntry));
 
 	scan = so->scan;
 	scanPos = ((BMScanOpaque)scan->opaque)->bm_currPos;
-	e->blockno = is->nextblock;
+	e->blockno = iterator->nextblock;
 
 	so->is_done = false;
 
@@ -726,7 +759,7 @@ pull_stream(StreamNode *self, PagetableEntry *e)
 			elog(ERROR, "scan position uninitialized");
 
 		found = words_get_match(scanPos->bm_batchWords, &(scanPos->bm_result),
-							   is->nextblock, e, newentry);
+							   iterator->nextblock, e, newentry);
 
 		if(found)
 		{
@@ -749,7 +782,7 @@ pull_stream(StreamNode *self, PagetableEntry *e)
 				 * tell words_get_match() to continue looking at the page
 				 * it finished at
 				 */
-				is->nextblock = e->blockno;
+				iterator->nextblock = e->blockno;
 				newentry = false;
 			}
 		}
@@ -760,9 +793,9 @@ pull_stream(StreamNode *self, PagetableEntry *e)
 	 * contain possible query results, since in AO index cases, this range
 	 * can be very large.
 	 */
-	is->nextblock = e->blockno + 1;
+	iterator->nextblock = e->blockno + 1;
 	if (scanPos->bm_result.nextTid / BM_MAX_TUPLES_PER_PAGE > e->blockno + 1)
-		is->nextblock = scanPos->bm_result.nextTid / BM_MAX_TUPLES_PER_PAGE;
+		iterator->nextblock = scanPos->bm_result.nextTid / BM_MAX_TUPLES_PER_PAGE;
 	if (so->entry == NULL)
 		so->entry = (PagetableEntry *) palloc(sizeof(PagetableEntry));
 	memcpy(so->entry, e, sizeof(PagetableEntry));
@@ -788,8 +821,6 @@ copy_scan_desc(IndexScanDesc scan)
 	/* we only need a few fields */
 	s = (IndexScanDesc)palloc0(sizeof(IndexScanDescData));
 	s->opaque = palloc(sizeof(BMScanOpaqueData));
-	spcopy = palloc0(sizeof(BMScanPositionData));
-	w = (BMBatchWords *)palloc(sizeof(BMBatchWords));
 
 	s->indexRelation = scan->indexRelation;
 	so = (BMScanOpaque)scan->opaque;
@@ -799,29 +830,20 @@ copy_scan_desc(IndexScanDesc scan)
 	{
 		int vec;
 
+		spcopy = palloc0(sizeof(BMScanPositionData));
+
 		spcopy->done = sp->done;
 		spcopy->nvec = sp->nvec;
-		spcopy->bm_batchWords = w;
 
 		/* now the batch words */
-		w->maxNumOfWords = sp->bm_batchWords->maxNumOfWords;
-		w->nwordsread = sp->bm_batchWords->nwordsread;
-		w->nextread = sp->bm_batchWords->nextread;
-		w->firstTid = sp->bm_batchWords->firstTid;
-		w->startNo = sp->bm_batchWords->startNo;
-		w->nwords = sp->bm_batchWords->nwords;
-
-		/* the actual words now */
-		/* use copy */
+		w = (BMBatchWords *)palloc(sizeof(BMBatchWords));
 	    w->hwords = palloc0(sizeof(BM_HRL_WORD) * 
 					BM_CALC_H_WORDS(sp->bm_batchWords->maxNumOfWords));
     	w->cwords = palloc0(sizeof(BM_HRL_WORD) * 
 					sp->bm_batchWords->maxNumOfWords);
 
-		memcpy(w->hwords, sp->bm_batchWords->hwords,
-			BM_CALC_H_WORDS(sp->bm_batchWords->maxNumOfWords) * sizeof(BM_HRL_WORD));
-		memcpy(w->cwords, sp->bm_batchWords->cwords,
-			sp->bm_batchWords->maxNumOfWords * sizeof(BM_HRL_WORD));
+		_bitmap_copy_batchwords(sp->bm_batchWords, w);
+		spcopy->bm_batchWords = w;
 
 		memcpy(&spcopy->bm_result, &sp->bm_result, sizeof(BMIterateResult));
 

@@ -1,9 +1,13 @@
 /*------------------------------------------------------------------------------
  *
- * bitmap_compression
- *   compression codes tailed to compression the bitmap
+ * bitmap_compression.c
+ *	  Compression code tailored to compression of bitmap
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/bitmap_compression.c
  *
  *------------------------------------------------------------------------------
 */

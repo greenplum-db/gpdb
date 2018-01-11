@@ -3,12 +3,12 @@
  * nodeIndexscan.c
  *	  Routines to support indexed scans of relations
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.125 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.132 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,51 +27,13 @@
 #include "access/genam.h"
 #include "access/nbtree.h"
 #include "cdb/cdbvars.h"
+#include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
-#include "executor/execIndexscan.h"
-#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-
-
-/*
- * Initialize the index scan descriptor if it is not initialized.
- */
-static inline void
-initScanDesc(IndexScanState *indexstate)
-{
-	Relation currentRelation = indexstate->ss.ss_currentRelation;
-	EState *estate = indexstate->ss.ps.state;
-	
-	if (indexstate->iss_ScanDesc == NULL)
-	{
-		/*
-		 * Initialize scan descriptor.
-		 */
-		indexstate->iss_ScanDesc = index_beginscan(currentRelation,
-												   indexstate->iss_RelationDesc,
-												   estate->es_snapshot,
-												   indexstate->iss_NumScanKeys,
-												   indexstate->iss_ScanKeys);
-	}
-}
-	
-/*
- * Free the index scan descriptor.
- */
-static inline void
-freeScanDesc(IndexScanState *indexstate)
-{
-	if (indexstate->iss_ScanDesc != NULL)
-	{
-		index_endscan(indexstate->iss_ScanDesc);
-		indexstate->iss_ScanDesc = NULL;
-	}
-}
-
 
 /* ----------------------------------------------------------------
  *		IndexNext
@@ -96,9 +58,6 @@ IndexNext(IndexScanState *node)
 	 */
 	estate = node->ss.ps.state;
 	direction = estate->es_direction;
-
-	initScanDesc(node);
-
 	/* flip direction if this is an overall backward scan */
 	if (ScanDirectionIsBackward(((IndexScan *) node->ss.ps.plan)->indexorderdir))
 	{
@@ -131,7 +90,8 @@ IndexNext(IndexScanState *node)
 			return ExecClearTuple(slot);
 		}
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1],
+					   slot, InvalidBuffer, false);
 
 		/* Does the tuple meet the indexqual condition? */
 		econtext->ecxt_scantuple = slot;
@@ -151,15 +111,13 @@ IndexNext(IndexScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
-                CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return slot;
 	}
 
 	/*
 	 * ok, now that we have what we need, fetch the next tuple.
 	 */
-	if ((tuple = index_getnext(scandesc, direction)) != NULL)
+	while ((tuple = index_getnext(scandesc, direction)) != NULL)
 	{
 		/*
 		 * Store the scanned tuple in the scan tuple slot of the scan state.
@@ -171,8 +129,18 @@ IndexNext(IndexScanState *node)
 					   scandesc->xs_cbuf,		/* buffer containing tuple */
 					   false);	/* don't pfree */
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
-                CheckSendPlanStateGpmonPkt(&node->ss.ps);
+		/*
+		 * If the index was lossy, we have to recheck the index quals using
+		 * the real tuple.
+		 */
+		if (scandesc->xs_recheck)
+		{
+			econtext->ecxt_scantuple = slot;
+			ResetExprContext(econtext);
+			if (!ExecQual(node->indexqualorig, econtext, false))
+				continue;		/* nope, so ask index for another one */
+		}
+
 		return slot;
 	}
 
@@ -224,8 +192,6 @@ ExecIndexReScan(IndexScanState *node, ExprContext *exprCtxt)
 	ExprContext *econtext;
 	Index		scanrelid;
 
-	initScanDesc(node);
-
 	estate = node->ss.ps.state;
 	econtext = node->iss_RuntimeContext;		/* context for runtime keys */
 	scanrelid = ((IndexScan *) node->ss.ps.plan)->scan.scanrelid;
@@ -276,8 +242,6 @@ ExecIndexReScan(IndexScanState *node, ExprContext *exprCtxt)
 
 	/* reset index scan */
 	index_rescan(node->iss_ScanDesc, node->iss_ScanKeys);
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 
@@ -416,7 +380,13 @@ ExecIndexAdvanceArrayKeys(IndexArrayKeyInfo *arrayKeys, int numArrayKeys)
 	bool		found = false;
 	int			j;
 
-	for (j = 0; j < numArrayKeys; j++)
+	/*
+	 * Note we advance the rightmost array key most quickly, since it will
+	 * correspond to the lowest-order index column among the available
+	 * qualifications.	This is hypothesized to result in better locality of
+	 * access in the index.
+	 */
+	for (j = numArrayKeys - 1; j >= 0; j--)
 	{
 		ScanKey		scan_key = arrayKeys[j].scan_key;
 		int			next_elem = arrayKeys[j].next_elem;
@@ -465,8 +435,11 @@ ExecEndIndexScan(IndexScanState *node)
 
 	/*
 	 * Free the exprcontext(s) ... now dead code, see ExecFreeExprContext
+	 *
+	 * GPDB: This is not dead code in GPDB, because we don't want to leak
+	 * exprcontexts in a dynamic index scan.
 	 */
-#ifdef NOT_USED
+#if 1
 	ExecFreeExprContext(&node->ss.ps);
 	if (node->iss_RuntimeContext)
 		FreeExprContext(node->iss_RuntimeContext);
@@ -490,7 +463,6 @@ ExecEndIndexScan(IndexScanState *node)
 	 */
 	ExecCloseScanRelation(relation);
 
-	FreeRuntimeKeysContext(node);
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -512,7 +484,6 @@ void
 ExecIndexRestrPos(IndexScanState *node)
 {
 	index_restrpos(node->iss_ScanDesc);
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------
@@ -529,8 +500,22 @@ ExecIndexRestrPos(IndexScanState *node)
 IndexScanState *
 ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 {
-	IndexScanState *indexstate;
 	Relation	currentRelation;
+
+	/*
+	 * open the base relation and acquire appropriate lock on it.
+	 */
+	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid);
+
+	return ExecInitIndexScanForPartition(node, estate, eflags,
+										 currentRelation, node->indexid);
+}
+
+IndexScanState *
+ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
+							  Relation currentRelation, Oid indexid)
+{
+	IndexScanState *indexstate;
 	bool		relistarget;
 
 	/*
@@ -576,11 +561,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &indexstate->ss.ps);
 	ExecInitScanTupleSlot(estate, &indexstate->ss);
 
-	/*
-	 * open the base relation and acquire appropriate lock on it.
-	 */
-	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid);
-
 	indexstate->ss.ss_currentRelation = currentRelation;
 
 	/*
@@ -610,17 +590,21 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * taking another lock here.  Otherwise we need a normal reader's lock.
 	 */
 	relistarget = ExecRelationIsTargetRelation(estate, node->scan.scanrelid);
-	indexstate->iss_RelationDesc = index_open(node->indexid,
+	indexstate->iss_RelationDesc = index_open(indexid,
 									 relistarget ? NoLock : AccessShareLock);
+
+	/*
+	 * Initialize index-specific scan state
+	 */
+	indexstate->iss_RuntimeKeysReady = false;
 
 	/*
 	 * build the index scan keys from the index qualification
 	 */
 	ExecIndexBuildScanKeys((PlanState *) indexstate,
 						   indexstate->iss_RelationDesc,
+						   node->scan.scanrelid,
 						   node->indexqual,
-						   node->indexstrategy,
-						   node->indexsubtype,
 						   &indexstate->iss_ScanKeys,
 						   &indexstate->iss_NumScanKeys,
 						   &indexstate->iss_RuntimeKeys,
@@ -628,15 +612,38 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 						   NULL,	/* no ArrayKeys */
 						   NULL);
 
-	InitRuntimeKeysContext(indexstate);
-	Assert(NULL != indexstate->iss_RuntimeContext);
+	/*
+	 * If we have runtime keys, we need an ExprContext to evaluate them. The
+	 * node's standard context won't do because we want to reset that context
+	 * for every tuple.  So, build another context just like the other one...
+	 * -tgl 7/11/00
+	 */
+	/*
+	 * GPDB_84_MERGE_FIXME: For some reason, in GPDB we need the runtime key
+	 * context even when there are no runtime keys. I tried removing this,
+	 * but got a crash from the 'dpe' regression test.
+	 */
+	if (indexstate->iss_NumRuntimeKeys != 0 || TRUE)
+	{
+		ExprContext *stdecontext = indexstate->ss.ps.ps_ExprContext;
+
+		ExecAssignExprContext(estate, &indexstate->ss.ps);
+		indexstate->iss_RuntimeContext = indexstate->ss.ps.ps_ExprContext;
+		indexstate->ss.ps.ps_ExprContext = stdecontext;
+	}
+	else
+	{
+		indexstate->iss_RuntimeContext = NULL;
+	}
 
 	/*
-	 * Initialize index-specific scan state
+	 * Initialize scan descriptor.
 	 */
-	indexstate->iss_RuntimeKeysReady = false;
-
-	initGpmonPktForIndexScan((Plan *)node, &indexstate->ss.ps.gpmon_pkt, estate);
+	indexstate->iss_ScanDesc = index_beginscan(currentRelation,
+											   indexstate->iss_RelationDesc,
+											   estate->es_snapshot,
+											   indexstate->iss_NumScanKeys,
+											   indexstate->iss_ScanKeys);
 
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
@@ -686,13 +693,8 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
  *
  * planstate: executor state node we are working for
  * index: the index we are building scan keys for
+ * scanrelid: varno of the index's relation within current query
  * quals: indexquals expressions
- * strategies: associated operator strategy numbers
- * subtypes: associated operator subtype OIDs
- *
- * (Any elements of the strategies and subtypes lists that correspond to
- * RowCompareExpr quals are not used here; instead we look up the info
- * afresh.)
  *
  * Output params are:
  *
@@ -707,15 +709,12 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
  * ScalarArrayOpExpr quals are not supported.
  */
 void
-ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					   List *quals, List *strategies, List *subtypes,
-					   ScanKey *scanKeys, int *numScanKeys,
+ExecIndexBuildScanKeys(PlanState *planstate, Relation index, Index scanrelid,
+					   List *quals, ScanKey *scanKeys, int *numScanKeys,
 					   IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					   IndexArrayKeyInfo **arrayKeys, int *numArrayKeys)
 {
 	ListCell   *qual_cell;
-	ListCell   *strategy_cell;
-	ListCell   *subtype_cell;
 	ScanKey		scan_keys;
 	IndexRuntimeKeyInfo *runtime_keys;
 	IndexArrayKeyInfo *array_keys;
@@ -757,33 +756,23 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 	extra_scan_keys = n_scan_keys;
 
 	/*
-	 * for each opclause in the given qual, convert each qual's opclause into
-	 * a single scan key
+	 * for each opclause in the given qual, convert the opclause into a single
+	 * scan key
 	 */
-	qual_cell = list_head(quals);
-	strategy_cell = list_head(strategies);
-	subtype_cell = list_head(subtypes);
-
-	for (j = 0; j < n_scan_keys; j++)
+	j = 0;
+	foreach(qual_cell, quals)
 	{
-		ScanKey		this_scan_key = &scan_keys[j];
-		Expr	   *clause;		/* one clause of index qual */
+		Expr	   *clause = (Expr *) lfirst(qual_cell);
+		ScanKey		this_scan_key = &scan_keys[j++];
+		Oid			opno;		/* operator's OID */
 		RegProcedure opfuncid;	/* operator proc id used in scan */
-		StrategyNumber strategy;	/* op's strategy number */
-		Oid			subtype;	/* op's strategy subtype */
+		Oid			opfamily;	/* opfamily of index column */
+		int			op_strategy;	/* operator's strategy number */
+		Oid			op_lefttype;	/* operator's declared input types */
+		Oid			op_righttype;
 		Expr	   *leftop;		/* expr on lhs of operator */
 		Expr	   *rightop;	/* expr on rhs ... */
 		AttrNumber	varattno;	/* att number used in scan */
-
-		/*
-		 * extract clause information from the qualification
-		 */
-		clause = (Expr *) lfirst(qual_cell);
-		qual_cell = lnext(qual_cell);
-		strategy = lfirst_int(strategy_cell);
-		strategy_cell = lnext(strategy_cell);
-		subtype = lfirst_oid(subtype_cell);
-		subtype_cell = lnext(subtype_cell);
 
 		if (IsA(clause, OpExpr))
 		{
@@ -791,6 +780,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			int			flags = 0;
 			Datum		scanvalue;
 
+			opno = ((OpExpr *) clause)->opno;
 			opfuncid = ((OpExpr *) clause)->opfuncid;
 
 			/*
@@ -804,10 +794,23 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			Assert(leftop != NULL);
 
 			if (!(IsA(leftop, Var) &&
-				  var_is_rel((Var *) leftop)))
+				  ((Var *) leftop)->varno == scanrelid))
 				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
+			if (varattno < 1 || varattno > index->rd_index->indnatts)
+				elog(ERROR, "bogus index qualification");
+
+			/*
+			 * We have to look up the operator's strategy number.  This
+			 * provides a cross-check that the operator does match the index.
+			 */
+			opfamily = index->rd_opfamily[varattno - 1];
+
+			get_op_opfamily_properties(opno, opfamily,
+									   &op_strategy,
+									   &op_lefttype,
+									   &op_righttype);
 
 			/*
 			 * rightop is the constant or variable comparison value
@@ -842,8 +845,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   flags,
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   op_strategy, /* op's strategy */
+								   op_righttype,		/* strategy subtype */
 								   opfuncid,	/* reg proc to use */
 								   scanvalue);	/* constant */
 		}
@@ -862,12 +865,6 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				ScanKey		this_sub_key = &scan_keys[extra_scan_keys];
 				int			flags = SK_ROW_MEMBER;
 				Datum		scanvalue;
-				Oid			opno;
-				Oid			opfamily;
-				int			op_strategy;
-				Oid			op_lefttype;
-				Oid			op_righttype;
-				bool		op_recheck;
 
 				/*
 				 * leftop should be the index key Var, possibly relabeled
@@ -881,7 +878,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				Assert(leftop != NULL);
 
 				if (!(IsA(leftop, Var) &&
-					  var_is_rel((Var *) leftop)))
+					  ((Var *) leftop)->varno == scanrelid))
 					elog(ERROR, "indexqual doesn't have key on left side");
 
 				varattno = ((Var *) leftop)->varattno;
@@ -929,8 +926,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				get_op_opfamily_properties(opno, opfamily,
 										   &op_strategy,
 										   &op_lefttype,
-										   &op_righttype,
-										   &op_recheck);
+										   &op_righttype);
 
 				if (op_strategy != rc->rctype)
 					elog(ERROR, "RowCompare index qualification contains wrong operator");
@@ -973,6 +969,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
 
 			Assert(saop->useOr);
+			opno = saop->opno;
 			opfuncid = saop->opfuncid;
 
 			/*
@@ -986,10 +983,23 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			Assert(leftop != NULL);
 
 			if (!(IsA(leftop, Var) &&
-				  var_is_rel((Var *) leftop)))
+				  ((Var *) leftop)->varno == scanrelid))
 				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
+			if (varattno < 1 || varattno > index->rd_index->indnatts)
+				elog(ERROR, "bogus index qualification");
+
+			/*
+			 * We have to look up the operator's strategy number.  This
+			 * provides a cross-check that the operator does match the index.
+			 */
+			opfamily = index->rd_opfamily[varattno - 1];
+
+			get_op_opfamily_properties(opno, opfamily,
+									   &op_strategy,
+									   &op_lefttype,
+									   &op_righttype);
 
 			/*
 			 * rightop is the constant or variable array value
@@ -1013,8 +1023,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   0,	/* flags */
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   op_strategy, /* op's strategy */
+								   op_righttype,		/* strategy subtype */
 								   opfuncid,	/* reg proc to use */
 								   (Datum) 0);	/* constant */
 		}
@@ -1034,7 +1044,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			Assert(leftop != NULL);
 
 			if (!(IsA(leftop, Var) &&
-				  var_is_rel((Var *) leftop)))
+				  ((Var *) leftop)->varno == scanrelid))
 				elog(ERROR, "NullTest indexqual has wrong key");
 
 			varattno = ((Var *) leftop)->varattno;
@@ -1045,8 +1055,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   SK_ISNULL | SK_SEARCHNULL,
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   InvalidStrategy,		/* no strategy */
+								   InvalidOid,	/* no strategy subtype */
 								   InvalidOid,	/* no reg proc for this */
 								   (Datum) 0);	/* constant */
 		}
@@ -1091,15 +1101,11 @@ ExecCountSlotsIndexScan(IndexScan *node)
 }
 
 void
-initGpmonPktForIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, IndexScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
-
-void
 ExecEagerFreeIndexScan(IndexScanState *node)
 {
-	freeScanDesc(node);
+	if (node->iss_ScanDesc != NULL)
+	{
+		index_endscan(node->iss_ScanDesc);
+		node->iss_ScanDesc = NULL;
+	}
 }

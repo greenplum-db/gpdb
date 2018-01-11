@@ -38,12 +38,13 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.201.2.5 2010/05/08 16:40:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.216 2009/06/25 23:07:15 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -87,7 +88,6 @@
 #include "cdb/cdbselect.h"
 #include "pgtime.h"
 
-#include "utils/debugbreak.h"
 #include "utils/builtins.h"  /* gp_elog() */
 
 #include "miscadmin.h"
@@ -117,6 +117,14 @@ __attribute__((format_arg(1)));
 
 #undef _
 #define _(x) err_gettext(x)
+
+#undef _
+#define _(x) err_gettext(x)
+
+static const char *err_gettext(const char *str)
+/* This extension allows gcc to check the format string for consistency with
+   the supplied arguments. */
+__attribute__((format_arg(1)));
 
 /* Global variables */
 ErrorContextCallback *error_context_stack = NULL;
@@ -231,6 +239,10 @@ static void verify_and_replace_mbstr(char **str, int len)
 		*str = pstrdup("Message skipped due to incorrect encoding.");
 	}
 }
+
+static void setup_formatted_log_time(void);
+static void setup_formatted_start_time(void);
+
 
 /*
  * in_error_recursion_trouble --- are we at risk of infinite error recursion?
@@ -440,8 +452,8 @@ errstart(int elevel, const char *filename, int lineno,
 		MemoryContextReset(ErrorContext);
 
 		/*
-		 * Infinite error recursion might be due to something broken
-		 * in a context traceback routine.	Abandon them too.  We also abandon
+		 * Infinite error recursion might be due to something broken in a
+		 * context traceback routine.  Abandon them too.  We also abandon
 		 * attempting to print the error statement (which, if long, could
 		 * itself be the source of the recursive failure).
 		 */
@@ -1081,31 +1093,6 @@ errdetail(const char *fmt,...)
 
 
 /*
- * errdetail_log --- add a detail_log error message text to the current error
- */
-int
-errdetail_log(const char *fmt,...)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	MemoryContext oldcontext;
-
-	recursion_depth++;
-	CHECK_STACK_DEPTH();
-	oldcontext = MemoryContextSwitchTo(ErrorContext);
-
-	EVALUATE_MESSAGE(detail_log, false, true);
-
-	/* enforce correct encoding */
-	verify_and_replace_mbstr(&(edata->detail_log), strlen(edata->detail_log));
-
-	MemoryContextSwitchTo(oldcontext);
-	recursion_depth--;
-	errno = edata->saved_errno; /*CDB*/
-	return 0;					/* return value does not matter */
-}
-
-
-/*
  * errdetail_plural --- add a detail error message text to the current error,
  * with support for pluralization of the message text
  */
@@ -1124,6 +1111,31 @@ errdetail_plural(const char *fmt_singular, const char *fmt_plural,
 
 	/* enforce correct encoding */
 	verify_and_replace_mbstr(&(edata->detail), strlen(edata->detail));
+
+	MemoryContextSwitchTo(oldcontext);
+	recursion_depth--;
+	errno = edata->saved_errno; /*CDB*/
+	return 0;					/* return value does not matter */
+}
+
+
+/*
+ * errdetail_log --- add a detail_log error message text to the current error
+ */
+int
+errdetail_log(const char *fmt,...)
+{
+	ErrorData  *edata = &errordata[errordata_stack_depth];
+	MemoryContext oldcontext;
+
+	recursion_depth++;
+	CHECK_STACK_DEPTH();
+	oldcontext = MemoryContextSwitchTo(ErrorContext);
+
+	EVALUATE_MESSAGE(detail_log, false, true);
+
+	/* enforce correct encoding */
+	verify_and_replace_mbstr(&(edata->detail_log), strlen(edata->detail_log));
 
 	MemoryContextSwitchTo(oldcontext);
 	recursion_depth--;
@@ -1746,12 +1758,16 @@ pg_re_throw(void)
 bool
 elog_demote(int downgrade_to_elevel)
 {
-	ErrorData  *edata = &errordata[errordata_stack_depth];
+	ErrorData  *edata;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
 
 	if (downgrade_to_elevel >= ERROR ||
 		recursion_depth != 0 ||
-		errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1 ||
 		edata->elevel > ERROR ||
 		edata->elevel < downgrade_to_elevel)
 		return false;
@@ -1782,14 +1798,18 @@ elog_demote(int downgrade_to_elevel)
 bool
 elog_dismiss(int downgrade_to_elevel)
 {
-	ErrorContextCallback *saveCallbackStack = error_context_stack;
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	bool		shouldEmit = false;
+	ErrorContextCallback   *saveCallbackStack = error_context_stack;
+	ErrorData			   *edata;
+	bool					shouldEmit = false;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
 
 	if (downgrade_to_elevel >= ERROR ||
 		recursion_depth != 0 ||
-		errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1 ||
 		edata->elevel > ERROR)
 		return false;
 
@@ -1923,7 +1943,6 @@ DebugFileOpen(void)
 								OutputFileName)));
 	}
 }
-
 
 
 #ifdef HAVE_SYSLOG
@@ -2250,6 +2269,60 @@ cdb_tidy_message(ErrorData *edata)
 }							   /* cdb_tidy_message */
 
 /*
+ * setup formatted_log_time, for consistent times between CSV and regular logs
+ */
+static void
+setup_formatted_log_time(void)
+{
+	struct timeval tv;
+	pg_time_t	stamp_time;
+	pg_tz	   *tz;
+	char		msbuf[8];
+
+	gettimeofday(&tv, NULL);
+	stamp_time = (pg_time_t) tv.tv_sec;
+
+	/*
+	 * Normally we print log timestamps in log_timezone, but during startup we
+	 * could get here before that's set. If so, fall back to gmt_timezone
+	 * (which guc.c ensures is set up before Log_line_prefix can become
+	 * nonempty).
+	 */
+	tz = log_timezone ? log_timezone : gmt_timezone;
+
+	pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
+				/* leave room for microseconds... */
+				"%Y-%m-%d %H:%M:%S        %Z",
+				pg_localtime(&stamp_time, tz));
+
+	/* 'paste' microseconds into place... */
+	sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
+	strncpy(formatted_log_time + 19, msbuf, 4);
+}
+
+/*
+ * setup formatted_start_time
+ */
+static void
+setup_formatted_start_time(void)
+{
+	pg_time_t	stamp_time = (pg_time_t) MyStartTime;
+	pg_tz	   *tz;
+
+	/*
+	 * Normally we print log timestamps in log_timezone, but during startup we
+	 * could get here before that's set. If so, fall back to gmt_timezone
+	 * (which guc.c ensures is set up before Log_line_prefix can become
+	 * nonempty).
+	 */
+	tz = log_timezone ? log_timezone : gmt_timezone;
+
+	pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
+				"%Y-%m-%d %H:%M:%S %Z",
+				pg_localtime(&stamp_time, tz));
+}
+
+/*
  * Format tag info for log lines; append to the provided buffer.
  */
 static void
@@ -2330,51 +2403,8 @@ log_line_prefix(StringInfo buf)
 				appendStringInfo(buf, "%ld", log_line_number);
 				break;
 			case 'm':
-				{
-					/*
-					 * Note: for %m, %t, and %s we deliberately use the C
-					 * library's strftime/localtime, and not the equivalent
-					 * functions from src/timezone.  This ensures that all
-					 * backends will report log entries in the same timezone,
-					 * namely whatever C-library setting they inherit from the
-					 * postmaster.	If we used src/timezone then local
-					 * settings of the TimeZone GUC variable would confuse the
-					 * log.
-					 *
-					 * 	CDB:  It is not safe to call strftime since it is not async-safe, and it
-					 * is expensive to call strftime to get timezone everytime, we use
-					 * pg_strftime, but stick on a fixed timezone (log_timezone)
-					 * instead a settable timezone as PostgreSQL does, since we want all
-					 * log messages to have the same time format. See MPP-2591.
-					 *
-					 */
-					struct timeval tv;
-					pg_time_t	stamp_time;
-					pg_tz	   *tz;
-					char		msbuf[8];
-
-					gettimeofday(&tv, NULL);
-					stamp_time = (pg_time_t) tv.tv_sec;
-
-					/*
-					 * Normally we print log timestamps in log_timezone, but
-					 * during startup we could get here before that's set. If
-					 * so, fall back to gmt_timezone (which guc.c ensures is
-					 * set up before Log_line_prefix can become nonempty).
-					 */
-					tz = log_timezone ? log_timezone : gmt_timezone;
-
-					pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
-					/* leave room for microseconds... */
-								"%Y-%m-%d %H:%M:%S        %Z",
-							 pg_localtime(&stamp_time, log_timezone ? log_timezone : gmt_timezone));
-
-					/* 'paste' microseconds into place... */
-					sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
-					strncpy(formatted_log_time + 19, msbuf, 4);
-
-					appendStringInfoString(buf, formatted_log_time);
-				}
+				setup_formatted_log_time();
+				appendStringInfoString(buf, formatted_log_time);
 				break;
 			case 't':
 				{
@@ -2392,16 +2422,7 @@ log_line_prefix(StringInfo buf)
 				break;
 			case 's':
 				if (formatted_start_time[0] == '\0')
-				{
-					pg_time_t	stamp_time = (pg_time_t) MyStartTime;
-					pg_tz	   *tz;
-
-					tz = log_timezone ? log_timezone : gmt_timezone;
-
-					pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
-								"%Y-%m-%d %H:%M:%S %Z",
-								pg_localtime(&stamp_time, tz));
-				}
+					setup_formatted_start_time();
 				appendStringInfoString(buf, formatted_start_time);
 				break;
 			case 'i':
@@ -2436,7 +2457,7 @@ log_line_prefix(StringInfo buf)
 				break;
 			case 'v':
 				/* keep VXID format in sync with lockfuncs.c */
-				if (MyProc != NULL)
+				if (MyProc != NULL && MyProc->backendId != InvalidBackendId)
 					appendStringInfo(buf, "%d/%u",
 									 MyProc->backendId, MyProc->lxid);
 				break;
@@ -2576,7 +2597,7 @@ static void
 write_csvlog(ErrorData *edata)
 {
 	StringInfoData buf;
-	bool	print_stmt = false;
+	bool		print_stmt = false;
 
 	/* static counter for line numbers */
 	static long log_line_number = 0;
@@ -2607,32 +2628,8 @@ write_csvlog(ErrorData *edata)
 	 * to put same timestamp in both syslog and csvlog messages.
 	 */
 	if (formatted_log_time[0] == '\0')
-	{
-		struct timeval tv;
-		pg_time_t	stamp_time;
-		pg_tz	   *tz;
-		char		msbuf[8];
+		setup_formatted_log_time();
 
-		gettimeofday(&tv, NULL);
-		stamp_time = (pg_time_t) tv.tv_sec;
-
-		/*
-		 * Normally we print log timestamps in log_timezone, but during
-		 * startup we could get here before that's set. If so, fall back to
-		 * gmt_timezone (which guc.c ensures is set up before Log_line_prefix
-		 * can become nonempty).
-		 */
-		tz = log_timezone ? log_timezone : gmt_timezone;
-
-		pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
-		/* leave room for milliseconds... */
-					"%Y-%m-%d %H:%M:%S     %Z",
-					pg_localtime(&stamp_time, tz));
-
-		/* 'paste' milliseconds into place... */
-		sprintf(msbuf, ".%03d", (int) (tv.tv_usec / 1000));
-		strncpy(formatted_log_time + 19, msbuf, 4);
-	}
 	appendStringInfoString(&buf, formatted_log_time);
 	appendStringInfoChar(&buf, ',');
 
@@ -2689,14 +2686,7 @@ write_csvlog(ErrorData *edata)
 
 	/* session start timestamp */
 	if (formatted_start_time[0] == '\0')
-	{
-		pg_time_t	stamp_time = (pg_time_t) MyStartTime;
-		pg_tz	   *tz = log_timezone ? log_timezone : gmt_timezone;
-
-		pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
-					"%Y-%m-%d %H:%M:%S %Z",
-					pg_localtime(&stamp_time, tz));
-	}
+		setup_formatted_start_time();
 	appendStringInfoString(&buf, formatted_start_time);
 	appendStringInfoChar(&buf, ',');
 
@@ -2722,8 +2712,11 @@ write_csvlog(ErrorData *edata)
 	appendCSVLiteral(&buf, edata->message);
 	appendStringInfoCharMacro(&buf, ',');
 
-	/* errdetail */
-	appendCSVLiteral(&buf, edata->detail);
+	/* errdetail or errdetail_log */
+	if (edata->detail_log)
+		appendCSVLiteral(&buf, edata->detail_log);
+	else
+		appendCSVLiteral(&buf, edata->detail);
 	appendStringInfoCharMacro(&buf, ',');
 
 	/* errhint */
@@ -2758,7 +2751,7 @@ write_csvlog(ErrorData *edata)
 	/* file error location */
 	if (Log_error_verbosity >= PGERROR_VERBOSE)
 	{
-		StringInfoData	msgbuf;
+		StringInfoData msgbuf;
 
 		initStringInfo(&msgbuf);
 
@@ -3572,7 +3565,14 @@ send_message_to_server_log(ErrorData *edata)
 
 	if (Log_error_verbosity >= PGERROR_DEFAULT)
 	{
-		if (edata->detail)
+		if (edata->detail_log)
+		{
+			log_line_prefix(&buf);
+			appendStringInfoString(&buf, _("DETAIL:  "));
+			append_with_tabs(&buf, edata->detail_log);
+			appendStringInfoChar(&buf, '\n');
+		}
+		else if (edata->detail)
 		{
 			appendBinaryStringInfo(&buf, prefix.data, prefix.len);
 			appendStringInfoString(&buf, _("DETAIL:  "));

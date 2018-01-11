@@ -5,8 +5,6 @@ from mock import *
 from gp_unittest import *
 from gpcheckcat_modules.mirror_matching_check import MirrorMatchingCheck
 
-from gppylib.gparray import FAULT_STRATEGY_FILE_REPLICATION, FAULT_STRATEGY_NONE
-
 class MirrorMatchingTestCase(GpTestCase):
     def setUp(self):
         self.subject = MirrorMatchingCheck()
@@ -23,8 +21,9 @@ class MirrorMatchingTestCase(GpTestCase):
         tests = self._get_list_of_tests_for_permutations_of_matching()
         for test in tests:
             segment_states = self._create_mirror_states(mirror_id_and_state_collection=test["segment_ids_and_states"])
-            config_mirror_strategy = FAULT_STRATEGY_FILE_REPLICATION if test["config"] else FAULT_STRATEGY_NONE
-            self.gpConfigMock.getFaultStrategy.return_value = config_mirror_strategy
+            config_has_mirrors = True if test["config"] else False
+            self.gpConfigMock.hasMirrors = config_has_mirrors
+
             self.db_connection.reset_mock()
             self.logger.reset_mock()
             self._setup_mirroring_matching(
@@ -37,19 +36,19 @@ class MirrorMatchingTestCase(GpTestCase):
                 info_messages = self.logger.info.call_args_list
                 self.assertIn("[OK] mirroring_matching", info_messages[2][0])
             else:
-                self._assert_mirroring_mismatch(segment_states, config_mirror_strategy)
+                self._assert_mirroring_mismatch(segment_states, config_has_mirrors)
 
     ####################### PRIVATE METHODS #######################
 
     def _setup_mirroring_matching(self, database_mirror_states=None):
         self.db_connection.query.return_value.getresult.return_value = database_mirror_states
 
-    def _assert_mirroring_mismatch(self, segment_states, config_mirror_strategy):
+    def _assert_mirroring_mismatch(self, segment_states, config_has_mirrors):
         info_messages = self.logger.info.call_args_list
         self.assertIn('[FAIL] Mirroring mismatch detected', info_messages[2][0])
 
         error_messages = self.logger.error.call_args_list
-        config_enabled = config_mirror_strategy == FAULT_STRATEGY_FILE_REPLICATION
+        config_enabled = config_has_mirrors == True
         self.assertIn("The GP configuration reports mirror enabling is: %s" % config_enabled, info_messages[3][0])
         self.assertIn("The following segments are mismatched in PT:", error_messages[0][0])
         self.assertIn("Segment ID:\tmirror_existence_state:", error_messages[2][0])

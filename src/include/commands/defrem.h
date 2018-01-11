@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/defrem.h,v 1.88.2.1 2010/07/03 13:53:38 rhaas Exp $
+ * $PostgreSQL: pgsql/src/include/commands/defrem.h,v 1.94 2009/04/04 21:12:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 #define DEFREM_H
 
 #include "nodes/parsenodes.h"
+#include "utils/array.h"
 
 struct HTAB;  /* utils/hsearch.h */
 
@@ -36,7 +37,6 @@ extern void DefineIndex(RangeVar *heapRelation,
 			bool quiet,
 			bool concurrent,
 			IndexStmt *stmt /* MPP */);
-extern void RemoveIndex(RangeVar *relation, DropBehavior behavior);
 extern void ReindexIndex(ReindexStmt *stmt);
 extern void ReindexTable(ReindexStmt *stmt);
 extern void ReindexDatabase(ReindexStmt *stmt);
@@ -64,6 +64,17 @@ extern void DropCast(DropCastStmt *stmt);
 extern void DropCastById(Oid castOid);
 extern void ExecuteDoStmt(DoStmt *stmt);
 extern Oid  get_cast_oid(Oid sourcetypeid, Oid targettypeid, bool missing_ok);
+extern void interpret_function_parameter_list(List *parameters,
+								  Oid languageOid,
+								  bool is_aggregate,
+								  const char *queryString,
+								  oidvector **parameterTypes,
+								  ArrayType **allParameterTypes,
+								  ArrayType **parameterModes,
+								  ArrayType **parameterNames,
+								  List **parameterDefaults,
+								  Oid *variadicArgType,
+								  Oid *requiredResultType);
 extern void AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 					   const char *newschema);
 extern Oid	AlterFunctionNamespace_oid(Oid procOid, Oid nspOid);
@@ -80,10 +91,11 @@ extern Oid	AlterOperatorNamespace_oid(Oid operOid, Oid newNspOid);
 
 /* commands/aggregatecmds.c */
 extern void DefineAggregate(List *name, List *args, bool oldstyle,
-							List *parameters, bool ordered);
+							List *parameters, bool ordered, const char *queryString);
 extern void RemoveAggregate(RemoveFuncStmt *stmt);
 extern void RenameAggregate(List *name, List *args, const char *newname);
 extern void AlterAggregateOwner(List *name, List *args, Oid newOwnerId);
+
 /* commands/opclasscmds.c */
 extern void DefineOpClass(CreateOpClassStmt *stmt);
 extern void DefineOpFamily(CreateOpFamilyStmt *stmt);
@@ -111,34 +123,46 @@ extern Oid  get_opfamily_oid(Oid amID, List *opfamilyname, bool missing_ok);
 /* commands/tsearchcmds.c */
 extern void DefineTSParser(List *names, List *parameters);
 extern void RenameTSParser(List *oldname, const char *newname);
-extern void RemoveTSParser(List *names, DropBehavior behavior,
-			   bool missing_ok);
+extern void RemoveTSParsers(DropStmt *drop);
 extern void RemoveTSParserById(Oid prsId);
 
 extern void DefineTSDictionary(List *names, List *parameters);
 extern void RenameTSDictionary(List *oldname, const char *newname);
-extern void RemoveTSDictionary(List *names, DropBehavior behavior,
-				   bool missing_ok);
+extern void RemoveTSDictionaries(DropStmt *drop);
 extern void RemoveTSDictionaryById(Oid dictId);
 extern void AlterTSDictionary(AlterTSDictionaryStmt *stmt);
 extern void AlterTSDictionaryOwner(List *name, Oid newOwnerId);
 
 extern void DefineTSTemplate(List *names, List *parameters);
 extern void RenameTSTemplate(List *oldname, const char *newname);
-extern void RemoveTSTemplate(List *names, DropBehavior behavior,
-				 bool missing_ok);
+extern void RemoveTSTemplates(DropStmt *stmt);
 extern void RemoveTSTemplateById(Oid tmplId);
 
 extern void DefineTSConfiguration(List *names, List *parameters);
 extern void RenameTSConfiguration(List *oldname, const char *newname);
-extern void RemoveTSConfiguration(List *names, DropBehavior behavior,
-					  bool missing_ok);
+extern void RemoveTSConfigurations(DropStmt *stmt);
 extern void RemoveTSConfigurationById(Oid cfgId);
 extern void AlterTSConfiguration(AlterTSConfigurationStmt *stmt);
 extern void AlterTSConfigurationOwner(List *name, Oid newOwnerId);
 
 extern text *serialize_deflist(List *deflist);
 extern List *deserialize_deflist(Datum txt);
+
+/* commands/foreigncmds.c */
+extern void AlterForeignServerOwner(const char *name, Oid newOwnerId);
+extern void AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId);
+extern void CreateForeignDataWrapper(CreateFdwStmt *stmt);
+extern void AlterForeignDataWrapper(AlterFdwStmt *stmt);
+extern void RemoveForeignDataWrapper(DropFdwStmt *stmt);
+extern void RemoveForeignDataWrapperById(Oid fdwId);
+extern void CreateForeignServer(CreateForeignServerStmt *stmt);
+extern void AlterForeignServer(AlterForeignServerStmt *stmt);
+extern void RemoveForeignServer(DropForeignServerStmt *stmt);
+extern void RemoveForeignServerById(Oid srvId);
+extern void CreateUserMapping(CreateUserMappingStmt *stmt);
+extern void AlterUserMapping(AlterUserMappingStmt *stmt);
+extern void RemoveUserMapping(DropUserMappingStmt *stmt);
+extern void RemoveUserMappingById(Oid umId);
 
 /* support routines in commands/define.c */
 

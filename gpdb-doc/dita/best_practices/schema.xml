@@ -2,9 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="schema_design">
   <title>Schema Design</title>
+  <shortdesc>Best practices for designing Greenplum Database schemas.</shortdesc>
 
   <body>
-    <p>This topic contains best practices for designing Greenplum Database schemas. </p>
     <p>Greenplum Database is an analytical, shared-nothing database, which is much different than a
       highly normalized, transactional SMP database. Greenplum Database performs best with a
       denormalized schema design suited for MPP analytical processing, a star or snowflake schema,
@@ -130,7 +130,7 @@
         compression. </p>
       <p>Data compression should never be used for data that is stored on a compressed file system. </p>
       <p>Test different compression types and ordering methods to determine the best compression for
-        your specific data. For example, you might start zlib compression at level 4 or 5 and adjust
+        your specific data. For example, you might start zstd compression at level 8 or 9 and adjust
         for best results. RLE compression works best with files that contain repetitive data.</p>
     </body>
   </topic>

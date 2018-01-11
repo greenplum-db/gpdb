@@ -3,12 +3,12 @@
  * pg_depend.c
  *	  routines to support manipulation of the pg_depend relation
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_depend.c,v 1.26 2008/01/01 19:45:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_depend.c,v 1.32 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,8 @@
 #include "miscadmin.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
+#include "utils/tqual.h"
 
 
 static bool isObjectPinned(const ObjectAddress *object, Relation rel);
@@ -584,6 +586,58 @@ markSequenceUnowned(Oid seqId)
 	heap_close(depRel, RowExclusiveLock);
 }
 
+/*
+ * Collect a list of OIDs of all sequences owned by the specified relation.
+ */
+List *
+getOwnedSequences(Oid relid)
+{
+	List	   *result = NIL;
+	Relation	depRel;
+	ScanKeyData key[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
+
+	depRel = heap_open(DependRelationId, AccessShareLock);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_depend_refclassid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationRelationId));
+	ScanKeyInit(&key[1],
+				Anum_pg_depend_refobjid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
+							  SnapshotNow, 2, key);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		Form_pg_depend deprec = (Form_pg_depend) GETSTRUCT(tup);
+
+		/*
+		 * We assume any auto dependency of a sequence on a column must be
+		 * what we are looking for.  (We need the relkind test because indexes
+		 * can also have auto dependencies on columns.)
+		 */
+		if (deprec->classid == RelationRelationId &&
+			deprec->objsubid == 0 &&
+			deprec->refobjsubid != 0 &&
+			deprec->deptype == DEPENDENCY_AUTO &&
+			get_rel_relkind(deprec->objid) == RELKIND_SEQUENCE)
+		{
+			result = lappend_oid(result, deprec->objid);
+		}
+	}
+
+	systable_endscan(scan);
+
+	heap_close(depRel, AccessShareLock);
+
+	return result;
+}
+
 
 /*
  * get_constraint_index
@@ -684,8 +738,8 @@ get_index_constraint(Oid indexId)
 		Form_pg_depend deprec = (Form_pg_depend) GETSTRUCT(tup);
 
 		/*
-		 * We assume any internal dependency on a constraint
-		 * must be what we are looking for.
+		 * We assume any internal dependency on a constraint must be what we
+		 * are looking for.
 		 */
 		if (deprec->refclassid == ConstraintRelationId &&
 			deprec->refobjsubid == 0 &&

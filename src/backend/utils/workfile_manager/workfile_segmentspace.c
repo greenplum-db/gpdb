@@ -3,7 +3,12 @@
  * workfile_segmentspace.c
  *	 Implementation of workfile manager per-segment disk space accounting
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_segmentspace.c
  *
  *-------------------------------------------------------------------------
  */

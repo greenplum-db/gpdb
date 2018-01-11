@@ -1,0 +1,105 @@
+pgindent'ing Greenplum Code
+============================
+On upstream Postgres, pgindent is run before major releases to maintain a
+uniform layout style across the codebase. However, pgindent is not run as
+regularly against the GPDB codebase.
+
+Ideally, all GPDB code should be kept pgindent'ed consistently, but currently it
+is not. The reason for this is that GPDB is composed of several types of code:
+1. Code originating from Postgres 8.3
+2. Code originating from Postgres 8.4
+3. Code that was cherry-picked from a newer version of Postgres
+4. Code that was purely written for GPDB
+5. A Frankenstein-like mix of code originating from many places
+
+To further complicate matters, pgindent formatting rules have changed between
+Postgres releases and the version of the pgindent binaries living in the GPDB
+repository was actually cherry-picked from 9.1 (before it was later removed).
+
+UPSTREAM CODE:
+
+Because there are plans to merge commits from newer versions of Postgres into
+GPDB, upstream code should not be pgindent'ed using newer versions of pgindent.
+For example, if code originating from Postgres 8.3 was pgindent'ed using the
+newest pgindent binaries, there would be merge conflicts when commits from
+Postgres 8.4 were cherry-picked on top of it.
+
+PURE GPDB CODE:
+
+For these files, using the latest pgindent binaries seems to make the most sense.
+It has been run on certain GPDB-only directories, such as
+`src/backend/access/appendonly` and `src/backend/cdb`:
+https://github.com/greenplum-db/gpdb/pull/3384
+https://github.com/greenplum-db/gpdb/pull/3400
+https://github.com/greenplum-db/gpdb/pull/3423
+
+OTHER CODE:
+
+For GPDB-specific code that lives in files inherited from upstream PostgreSQL,
+there is no clear answer, especially if it is a mix of code from different
+versions of Postgres. One possible answer is to only pgindent GPDB code that
+is added into that file using the version of pgindent corresponding to the
+newest verison of Postgres code that appears in the file.
+
+CONCLUSION:
+
+Although it is always awkward, pgindent'ing code is a good practice in general
+if done understanding the above constraints.
+
+
+DOING THE INDENT RUN:
+
+For the reasons mentioned above, the pgindent binaries were removed from GPDB
+and the below practice is instead recommended.
+
+1. Determine which version of pgindent you need.
+2. Download that version of the Postgres code.
+3. Run pgindent by following the `src/tools/pgindent/README` of the downloaded
+Postgres code, but using the `src/tools/pgindent/typedefs.list` provided with
+GPDB.
+
+For example, running the latest version of the Postgres pgindent tool against
+`src/backend/access/appendonly/aosegfiles.c` will produce no diffs because
+that file is following the latest pgindent rules:
+```bash
+~/workspace/postgres/src/tools/pgindent/pgindent ~/workspace/gpdb/src/tools/pgindent/typedefs.list ~/workspace/gpdb/src/backend/access/appendonly/aosegfiles.c
+```
+
+However, running it against `src/backend/main/main.c` which originated from
+Postgres 8.3 (as of this writing) will produce diffs:
+```bash
+~/workspace/postgres/src/tools/pgindent/pgindent \
+	~/workspace/gpdb/src/tools/pgindent/typedefs.list \
+	~/workspace/gpdb/src/backend/main/main.c
+```
+
+
+Updating typedefs.list
+======================
+typedefs.list contains a list of all the data structures in the GPDB code. It is
+constantly changing (perhaps every day) and also varies depending on the
+configure flags passed when compiling GPDB. It is thus not easy to keep
+up-to-date in a GitHub repository. Postgres gets around this issue by using
+a BuildFarm (see the upstream pgindent README).
+
+We provide an out-of-date typedefs.list in the GPDB pgindent folder for
+convenience, but it is recommended that you update it before running pgindent.
+
+The below commands were used to generate typedefs.list from a GPDB postgres
+binary built on Concourse, but they might not work on Mac or other environments.
+```bash
+objdump -W postgres |\
+ egrep -A3 DW_TAG_typedef |\
+ perl -e ' while (<>) { chomp; @flds = split;next unless (1 < @flds);\
+     next if $flds[0]  ne "DW_AT_name" && $flds[1] ne "DW_AT_name";\
+     next if $flds[-1] =~ /^DW_FORM_str/;\
+     print $flds[-1],"\n"; }'  |\
+ sort | uniq > typedefs.list
+```
+
+
+Editor Code Style Configuration
+===============================
+The `src/tools/editors` directory contains sample settings that can be used with
+the emacs, xemacs, vim and CLion editors, that assist in keeping to PostgreSQL
+coding standards.

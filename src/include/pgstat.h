@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.71.2.1 2008/04/03 16:27:32 tgl Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.83 2009/06/11 14:49:08 momjian Exp $
  * ----------
  */
 #ifndef PGSTAT_H
@@ -14,7 +14,6 @@
 #include "libpq/pqcomm.h"
 #include "portability/instr_time.h"
 #include "utils/hsearch.h"
-#include "utils/rel.h"
 #include "utils/relcache.h"
 #include "utils/timestamp.h"
 
@@ -286,7 +285,6 @@ typedef struct PgStat_MsgVacuum
 	Oid			m_tableoid;
 	bool		m_analyze;
 	bool		m_autovacuum;
-	bool		m_scanned_all;
 	TimestampTz m_vacuumtime;
 	PgStat_Counter m_tuples;
 } PgStat_MsgVacuum;
@@ -638,7 +636,7 @@ typedef struct PgBackendStatus
 	char	   *st_appname;
 
 	/* current command string; MUST be null-terminated */
-	char		*st_activity;
+	char	   *st_activity;
 
 	Oid			st_rsgid;
 } PgBackendStatus;
@@ -666,6 +664,10 @@ typedef struct PgStat_FunctionCallUsage
  */
 extern bool pgstat_track_activities;
 extern bool pgstat_track_counts;
+extern int	pgstat_track_functions;
+extern PGDLLIMPORT int pgstat_track_activity_query_size;
+extern char *pgstat_stat_tmpname;
+extern char *pgstat_stat_filename;
 
 extern bool pgstat_collect_queuelevel;
 
@@ -711,7 +713,7 @@ extern void pgstat_clear_snapshot(void);
 extern void pgstat_reset_counters(void);
 
 extern void pgstat_report_autovac(Oid dboid);
-extern void pgstat_report_vacuum(Oid tableoid, bool shared, bool scanned_all,
+extern void pgstat_report_vacuum(Oid tableoid, bool shared,
 					 bool analyze, PgStat_Counter tuples);
 extern void pgstat_report_analyze(Relation rel,
 					  PgStat_Counter livetuples,
@@ -884,6 +886,11 @@ extern void pgstat_count_heap_insert(Relation rel);
 extern void pgstat_count_heap_update(Relation rel, bool hot);
 extern void pgstat_count_heap_delete(Relation rel);
 extern void pgstat_update_heap_dead_tuples(Relation rel, int delta);
+
+extern void pgstat_init_function_usage(FunctionCallInfoData *fcinfo,
+						   PgStat_FunctionCallUsage *fcu);
+extern void pgstat_end_function_usage(PgStat_FunctionCallUsage *fcu,
+						  bool finalize);
 
 extern void AtEOXact_PgStat(bool isCommit);
 extern void AtEOSubXact_PgStat(bool isCommit, int nestDepth);

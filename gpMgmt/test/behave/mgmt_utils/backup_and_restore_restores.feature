@@ -17,6 +17,16 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 0
         And verify that plan file has latest timestamp for "public.ao_table"
 
+    @nbuonly
+    @nbupartI
+    @nbupartII
+    @nbupartIII
+    Scenario: NetBackup dummy to absorb flakiness
+        Given the backup test is initialized with database "bkdb_nbu"
+        And there is a "ao" table "public.ao_table" in "bkdb_nbu" with data
+        When the user runs "gpcrondump -a -x bkdb_nbu"
+        #We don't care what happens because we expect it to fail
+
     @nbupartI
     @ddpartI
     Scenario: 2 Simple Incremental Backup
@@ -935,12 +945,17 @@ Feature: Validate command line arguments
     Scenario: 96 gpdbrestore runs ANALYZE on restored table only
         Given the old timestamps are read from json
         And the backup test is initialized with database "bkdb96"
+        And schema "testschema" exists in "bkdb96"
         And there is a "heap" table "public.heap_table" in "bkdb96" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb96" with data
         When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_index_table"
         Then gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb96" with data
         And verify that the restored table "public.ao_index_table" in database "bkdb96" is analyzed
         And verify that the table "public.heap_table" in database "bkdb96" is not analyzed
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-S public"
+        And verify that the restored table "public.heap_table" in database "bkdb96" is analyzed
+        And verify that the table "testschema.heap_table" in database "bkdb96" is not analyzed
 
     @nbupartIII
     @ddpartII

@@ -9,11 +9,11 @@
  * and implementing search-path-controlled searches.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.104.2.1 2010/08/13 16:27:35 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.118 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,6 +27,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_conversion.h"
+#include "catalog/pg_conversion_fn.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -44,6 +45,7 @@
 #include "parser/parse_func.h"
 #include "storage/backendid.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/sinval.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -52,6 +54,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
 #include "tcop/utility.h"
@@ -773,7 +776,7 @@ TypeIsVisible(Oid typid)
  * and the returned nvargs will always be zero.
  *
  * If expand_defaults is true, functions that could match after insertion of
- * default argument values will also be retrieved.  In this case the returned
+ * default argument values will also be retrieved.	In this case the returned
  * structs could have nargs > passed-in nargs, and ndargs is set to the number
  * of additional args (which can be retrieved from the function's
  * proargdefaults entry).
@@ -802,15 +805,10 @@ TypeIsVisible(Oid typid)
  * we report such situations by setting oid = 0 in the ambiguous entries.
  * The caller might end up discarding such an entry anyway, but if it selects
  * such an entry it should react as though the call were ambiguous.
- *
- * GPDB: this function has been backported from PostgreSQL 8.4, to get
- * support for variadic arguments and default arguments.
- *
  */
 FuncCandidateList
 FuncnameGetCandidates(List *names, int nargs,
-					  bool expand_variadic,
-					  bool expand_defaults)
+					  bool expand_variadic, bool expand_defaults)
 {
 	FuncCandidateList resultList = NULL;
 	bool		any_special = false;
@@ -996,7 +994,7 @@ FuncnameGetCandidates(List *names, int nargs,
 			if (prevResult)
 			{
 				/*
-				 * We have a match with a previous result.  Decide which one
+				 * We have a match with a previous result.	Decide which one
 				 * to keep, or mark it ambiguous if we can't decide.  The
 				 * logic here is preference > 0 means prefer the old result,
 				 * preference < 0 means prefer the new, preference = 0 means
@@ -2546,6 +2544,9 @@ makeRangeVarFromNameList(List *names)
  *
  * This is used primarily to form error messages, and so we do not quote
  * the list elements, for the sake of legibility.
+ *
+ * In most scenarios the list elements should always be Value strings,
+ * but we also allow A_Star for the convenience of ColumnRef processing.
  */
 char *
 NameListToString(List *names)
@@ -2557,9 +2558,18 @@ NameListToString(List *names)
 
 	foreach(l, names)
 	{
+		Node	   *name = (Node *) lfirst(l);
+
 		if (l != list_head(names))
 			appendStringInfoChar(&string, '.');
-		appendStringInfoString(&string, strVal(lfirst(l)));
+
+		if (IsA(name, String))
+			appendStringInfoString(&string, strVal(name));
+		else if (IsA(name, A_Star))
+			appendStringInfoString(&string, "*");
+		else
+			elog(ERROR, "unexpected node type in name list: %d",
+				 (int) nodeTag(name));
 	}
 
 	return string.data;
@@ -2667,6 +2677,9 @@ isAnyTempNamespace(Oid namespaceId)
 /*
  * isOtherTempNamespace - is the given namespace some other backend's
  * temporary-table namespace (including temporary-toast-table namespaces)?
+ *
+ * Note: for most purposes in the C code, this function is obsolete.  Use
+ * RELATION_IS_OTHER_TEMP() instead to detect non-local temp relations.
  */
 bool
 isOtherTempNamespace(Oid namespaceId)
@@ -2676,6 +2689,32 @@ isOtherTempNamespace(Oid namespaceId)
 		return false;
 	/* Else, if it's any temp namespace, say "true" */
 	return isAnyTempNamespace(namespaceId);
+}
+
+/*
+ * GetTempNamespaceBackendId - if the given namespace is a temporary-table
+ * namespace (either my own, or another backend's), return the BackendId
+ * that owns it.  Temporary-toast-table namespaces are included, too.
+ * If it isn't a temp namespace, return -1.
+ */
+int
+GetTempNamespaceBackendId(Oid namespaceId)
+{
+	int			result;
+	char	   *nspname;
+
+	/* See if the namespace name starts with "pg_temp_" or "pg_toast_temp_" */
+	nspname = get_namespace_name(namespaceId);
+	if (!nspname)
+		return -1;				/* no such namespace? */
+	if (strncmp(nspname, "pg_temp_", 8) == 0)
+		result = atoi(nspname + 8);
+	else if (strncmp(nspname, "pg_toast_temp_", 14) == 0)
+		result = atoi(nspname + 14);
+	else
+		result = -1;
+	pfree(nspname);
+	return result;
 }
 
 /*
@@ -3131,7 +3170,7 @@ InitTempTableNamespace(void)
 	/*
 	 * GPDB: Delete old temp schema.
 	 *
-	 * Remove any vestigages of old temporary schema, if any.  This can
+	 * Remove any vestiges of old temporary schema, if any.  This can
 	 * happen when an old session crashes and doesn't run normal session
 	 * shutdown.
 	 *
@@ -3164,8 +3203,8 @@ InitTempTableNamespace(void)
 	CommandCounterIncrement();
 
 	/*
-	 * If the corresponding toast-table namespace doesn't exist yet, create it.
-	 * (We assume there is no need to clean it out if it does exist, since
+	 * If the corresponding toast-table namespace doesn't exist yet, create
+	 * it. (We assume there is no need to clean it out if it does exist, since
 	 * dropping a parent table should make its toast table go away.)
 	 * (in GPDB, though, we drop and recreate it anyway, to make sure it has
 	 * the same OID on master and segments.)
@@ -3467,6 +3506,7 @@ RemoveTempRelationsCallback(int code, Datum arg)
 
 			/* MPP-3390: drop pg_temp_N schema entry from pg_namespace */
 			RemoveSchemaById(myTempNamespace);
+			RemoveSchemaById(myTempToastNamespace);
 			elog(DEBUG1, "Remove schema entry %u from pg_namespace", 
 				 myTempNamespace); 
 		}
@@ -3702,7 +3742,7 @@ fetch_search_path(bool includeImplicit)
 
 /*
  * Fetch the active search path into a caller-allocated array of OIDs.
- * Returns the number of path entries.  (If this is more than sarray_len,
+ * Returns the number of path entries.	(If this is more than sarray_len,
  * then the data didn't fit and is not all stored.)
  *
  * The returned list always includes the implicitly-prepended namespaces,

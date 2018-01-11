@@ -1,41 +1,106 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ak20941">ALTER EXTERNAL TABLE</title><body><p id="sql_command_desc">Changes the definition of an external table.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE <varname>name</varname> RENAME [COLUMN] <varname>column</varname> TO <varname>new_column</varname>
-
-ALTER EXTERNAL TABLE <varname>name</varname> RENAME TO <varname>new_name</varname>
-
-ALTER EXTERNAL TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
-
-ALTER EXTERNAL TABLE <varname>name</varname> <varname>action</varname> [, ... ]</codeblock><p>where <varname>action</varname> is one of:</p><codeblock>  ADD [COLUMN] <varname>column_name type</varname>
-  DROP [COLUMN] <varname>column</varname>
-  ALTER [COLUMN] <varname>column</varname>
-  TYPE <varname>type</varname> [USING <varname>expression</varname>]
-  OWNER TO <varname>new_owner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER EXTERNAL TABLE</codeph> changes the definition of an existing
-external table. There are several subforms: </p><ul><li id="ak136720"><b>ADD COLUMN</b> — Adds a new column to the external table definition.
-</li><li id="ak136723"><b>DROP COLUMN</b> — Drops a column from the external table definition.
-Note that if you drop readable external table columns, it only changes
-the table definition in Greenplum Database. External data files are not
-changed. </li><li id="ak142648"><b>ALTER COLUMN TYPE</b> — Changes the data type of a column of a
-table. The optional <codeph>USING</codeph> clause specifies how to compute
-the new column value from the old. If omitted, the default conversion
-is the same as an assignment cast from old data type to new. A <codeph>USING</codeph>
-clause must be provided if there is no implicit or assignment cast from
-the old to new type.</li><li id="ak137262"><b>OWNER</b> — Changes the owner of the external table to the specified
-user. </li><li id="ak137292"><b>RENAME</b> — Changes the name of an external table or the name
-of an individual column in the table. There is no effect on the external
-data.</li><li id="ak137307"><b>SET SCHEMA</b> — Moves the external table into another schema.</li></ul><p>You must own the external table to use <codeph>ALTER EXTERNAL TABLE</codeph>.
-To change the schema of an external table, you must also have <codeph>CREATE</codeph>
-privilege on the new schema. To alter the owner, you must also be a direct
-or indirect member of the new owning role, and that role must have <codeph>CREATE</codeph>
-privilege on the external table's schema. A superuser has these privileges
-automatically.</p><p>In this release, <codeph>ALTER EXTERNAL TABLE</codeph> cannot modify
-the external table type, the data format, or the location of the external
-data. To modify this information, you must drop and recreate the external
-table definition. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (possibly schema-qualified) of an existing external table
-definition to alter.</pd></plentry><plentry><pt><varname>column</varname></pt><pd>Name of a new or existing column.</pd></plentry><plentry><pt><varname>new_column</varname></pt><pd>New name for an existing column. </pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>New name for the external table. </pd></plentry><plentry><pt><varname>type</varname></pt><pd>Data type of the new column, or new data type for an existing column.</pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The role name of the new owner of the external table. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The name of the schema to which the external table will be moved.
-</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Add a new column to an external table definition:</p><codeblock>ALTER EXTERNAL TABLE ext_expenses ADD COLUMN manager text;</codeblock><p>Change the name of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_data RENAME TO ext_sales_data;</codeblock><p>Change the owner of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_data OWNER TO jojo;</codeblock><p>Change the schema of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_leads SET SCHEMA marketing;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>ALTER EXTERNAL TABLE</codeph> is a Greenplum Database extension.
-There is no <codeph>ALTER EXTERNAL TABLE</codeph> statement in the SQL
-standard or regular PostgreSQL. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
+<topic id="topic1">
+  <title id="ak20941">ALTER EXTERNAL TABLE</title>
+  <body>
+    <p id="sql_command_desc">Changes the definition of an external table.</p>
+    <section id="section2"
+      ><title>Synopsis</title>
+      <sectiondiv id="sql_cmd_synopsis" >
+        <codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE <varname>name</varname> <varname>action</varname> [, ... ]</codeblock>
+        <p>where <varname>action</varname> is one of:</p>
+        <codeblock>  ADD [COLUMN] <varname>new_column</varname> <varname>type</varname>
+  DROP [COLUMN] <varname>column</varname> [RESTRICT|CASCADE]
+  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname> [USING <varname>expression</varname>]
+  OWNER TO <varname>new_owner</varname></codeblock>
+      </sectiondiv></section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER EXTERNAL TABLE</codeph> changes the definition of an existing external table.
+        These are the supported <codeph>ALTER EXTERNAL TABLE</codeph> actions: </p>
+      <ul>
+        <li id="ak136720"><b>ADD COLUMN</b> — Adds a new column to the external table definition. </li>
+        <li id="ak136723"><b>DROP COLUMN</b> — Drops a column from the external table definition. If
+          you drop readable external table columns, it only changes the table definition in
+          Greenplum Database. The <codeph>CASCADE</codeph> keyword is required if anything outside
+          the table depends on the column, such as a view that references the column. </li>
+        <li id="ak142648"><b>ALTER COLUMN TYPE</b> — Changes the data type of a table column. </li>
+        <li id="ak137262"><b>OWNER</b> — Changes the owner of the external table to the specified
+          user. </li>
+      </ul>
+      <p>Use the <codeph>ALTER TABLE</codeph> command to perform these actions on an external
+          table.<ul id="ul_gtv_mcm_kbb">
+          <li>Set (change) the table schema.</li>
+          <li>Rename the table.</li>
+          <li>Rename a table column.</li>
+        </ul></p>
+      <p>You must own the external table to use <codeph>ALTER EXTERNAL TABLE</codeph>. To change the
+        schema of an external table, you must also have <codeph>CREATE</codeph> privilege on the new
+        schema. To alter the owner, you must also be a direct or indirect member of the new owning
+        role, and that role must have <codeph>CREATE</codeph> privilege on the external table's
+        schema. A superuser has these privileges automatically.</p>
+      <p>Changes to the external table definition with either <codeph>ALTER EXTERNAL TABLE</codeph>
+        or <codeph>ALTER TABLE</codeph> do not affect the external data. </p>
+      <p>The <codeph>ALTER EXTERNAL TABLE</codeph> and <codeph>ALTER TABLE</codeph> commands cannot
+        modify the type external table (read, write, web), the table <codeph>FORMAT</codeph>
+        information, or the location of the external data. To modify this information, you must drop
+        and recreate the external table definition. </p>
+    </section>
+    <section id="section4"><title>Parameters</title><parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name (possibly schema-qualified) of an existing external table definition to
+            alter.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>column</varname></pt>
+          <pd>Name of an existing column.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_column</varname></pt>
+          <pd>Name of a new column.</pd>
+        </plentry>
+        <plentry>
+          <pt>USING <varname>expression</varname></pt>
+          <pd>Optional if an implicit or assignment cast exists from the old column data type to new
+            data type. The clause is required if there is no implicit or assignment cast. </pd>
+          <pd>The <codeph>USING</codeph> clause does not affect the external data.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>type</varname></pt>
+          <pd>Data type of the new column, or new data type for an existing column.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_owner</varname></pt>
+          <pd>The role name of the new owner of the external table. </pd>
+        </plentry>
+        <plentry>
+          <pt>CASCADE</pt>
+          <pd>Automatically drop objects that depend on the dropped column, such as a view that
+            references the column. </pd>
+        </plentry>
+        <plentry>
+          <pt>RESTRICT</pt>
+          <pd>Refuse to drop the column or constraint if there are any dependent objects. This is
+            the default behavior. </pd>
+        </plentry>
+      </parml></section>
+    <section id="section5"><title>Examples</title><p>Add a new column to an external table
+        definition:</p><codeblock>ALTER EXTERNAL TABLE ext_expenses ADD COLUMN manager text;</codeblock><p>Change
+        the owner of an external
+        table:</p><codeblock>ALTER EXTERNAL TABLE ext_data OWNER TO jojo;</codeblock><p>Change the
+        data type of an external table:</p><codeblock>ALTER EXTERNAL TABLE ext_leads ALTER COLUMN acct_code TYPE integer USING acct_code::integer</codeblock>
+      <p>When altering the column data type from <codeph>text</codeph> to <codeph>integer</codeph>,
+        the <codeph>USING</codeph> clause is required but does not affect the external data.
+      </p></section>
+    <section id="section6"><title>Compatibility</title><p><codeph>ALTER EXTERNAL TABLE</codeph> is a
+        Greenplum Database extension. There is no <codeph>ALTER EXTERNAL TABLE</codeph> statement in
+        the SQL standard or regular PostgreSQL. </p></section>
+    <section id="section7"><title>See Also</title><p><codeph><xref
+            href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph></p></section></body></topic>
+          /></codeph>, <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
+          /></codeph></p></section>
+  </body>
+</topic>

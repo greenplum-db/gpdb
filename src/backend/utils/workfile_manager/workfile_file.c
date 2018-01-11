@@ -3,7 +3,12 @@
  * workfile_file.c
  *	 Implementation of workfile manager file operations
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_file.c
  *
  *-------------------------------------------------------------------------
  */

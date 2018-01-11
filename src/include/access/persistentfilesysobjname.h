@@ -2,7 +2,12 @@
  *
  * persistentfilesysobjname.h
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/persistentfilesysobjname.h
  *
  *-------------------------------------------------------------------------
  */
@@ -17,7 +22,7 @@
 
 typedef enum PersistentFsObjType
 {
-	PersistentFsObjType_First = 0,	// Must start at 0 for 0-based indexing.
+	PersistentFsObjType_First = 0, //Must start at 0 for 0 - based indexing.
 	PersistentFsObjType_RelationFile = PersistentFsObjType_First,
 	PersistentFsObjType_DatabaseDir = 1,
 	PersistentFsObjType_TablespaceDir = 2,
@@ -26,41 +31,43 @@ typedef enum PersistentFsObjType
 	CountPersistentFsObjType = PersistentFsObjType_Last - PersistentFsObjType_First + 1
 } PersistentFsObjType;
 
-inline static bool PersistentFsObjType_IsValid(
-	PersistentFsObjType	fsObjType)
-{
-	return (fsObjType >= PersistentFsObjType_First &&
-		    fsObjType <= PersistentFsObjType_Last);
-}
+inline
+	static bool PersistentFsObjType_IsValid(
+											PersistentFsObjType fsObjType)
+	{
+		return (fsObjType >= PersistentFsObjType_First &&
+				fsObjType <= PersistentFsObjType_Last);
+	}
 
 typedef union PersistentFileSysObjNameVariant
 {
 	struct rel
 	{
-		RelFileNode 	relFileNode;
+		RelFileNode relFileNode;
 
-		int32 segmentFileNum;
-	} rel; 
+		int32		segmentFileNum;
+	}			rel;
 
-	DbDirNode		dbDirNode;
+	DbDirNode	dbDirNode;
 
-	Oid 	tablespaceOid;
-	
-	Oid 	filespaceOid;
+	Oid			tablespaceOid;
+
+	Oid			filespaceOid;
 
 } PersistentFileSysObjNameVariant;
 
 typedef struct PersistentFileSysObjName
 {
-	PersistentFsObjType		type;
+	PersistentFsObjType type;
 
 	PersistentFileSysObjNameVariant variant;
 } PersistentFileSysObjName;
 
-inline static void PersistentFileSysObjName_SetRelationFile(
-	PersistentFileSysObjName	*fsObjName,
-	RelFileNode					*relFileNode,
-	int32						segmentFileNum)
+inline static void
+PersistentFileSysObjName_SetRelationFile(
+										 PersistentFileSysObjName *fsObjName,
+										 RelFileNode *relFileNode,
+										 int32 segmentFileNum)
 {
 	MemSet(fsObjName, 0, sizeof(PersistentFileSysObjName));
 	fsObjName->type = PersistentFsObjType_RelationFile;
@@ -68,34 +75,38 @@ inline static void PersistentFileSysObjName_SetRelationFile(
 	fsObjName->variant.rel.segmentFileNum = segmentFileNum;
 }
 
-inline static RelFileNode PersistentFileSysObjName_GetRelFileNode(
-	PersistentFileSysObjName	*fsObjName)
+inline static RelFileNode
+PersistentFileSysObjName_GetRelFileNode(
+										PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_RelationFile);
 
 	return fsObjName->variant.rel.relFileNode;
 }
 
-inline static RelFileNode *PersistentFileSysObjName_GetRelFileNodePtr(
-	PersistentFileSysObjName	*fsObjName)
+inline static RelFileNode *
+PersistentFileSysObjName_GetRelFileNodePtr(
+										   PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_RelationFile);
 
 	return &fsObjName->variant.rel.relFileNode;
 }
 
-inline static int32 PersistentFileSysObjName_GetSegmentFileNum(
-	PersistentFileSysObjName	*fsObjName)
+inline static int32
+PersistentFileSysObjName_GetSegmentFileNum(
+										   PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_RelationFile);
 
 	return fsObjName->variant.rel.segmentFileNum;
 }
 
-inline static void PersistentFileSysObjName_SetDatabaseDir(
-	PersistentFileSysObjName	*fsObjName,
-	Oid							tablespaceOid,
-	Oid							databaseOid)
+inline static void
+PersistentFileSysObjName_SetDatabaseDir(
+										PersistentFileSysObjName *fsObjName,
+										Oid tablespaceOid,
+										Oid databaseOid)
 {
 	MemSet(fsObjName, 0, sizeof(PersistentFileSysObjName));
 	fsObjName->type = PersistentFsObjType_DatabaseDir;
@@ -103,42 +114,47 @@ inline static void PersistentFileSysObjName_SetDatabaseDir(
 	fsObjName->variant.dbDirNode.database = databaseOid;
 }
 
-inline static DbDirNode *PersistentFileSysObjName_GetDbDirNodePtr(
-	PersistentFileSysObjName	*fsObjName)
+inline static DbDirNode *
+PersistentFileSysObjName_GetDbDirNodePtr(
+										 PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_DatabaseDir);
 
 	return &fsObjName->variant.dbDirNode;
 }
 
-inline static void PersistentFileSysObjName_SetTablespaceDir(
-	PersistentFileSysObjName	*fsObjName,
-	Oid							tablespaceOid)
+inline static void
+PersistentFileSysObjName_SetTablespaceDir(
+										  PersistentFileSysObjName *fsObjName,
+										  Oid tablespaceOid)
 {
 	MemSet(fsObjName, 0, sizeof(PersistentFileSysObjName));
 	fsObjName->type = PersistentFsObjType_TablespaceDir;
 	fsObjName->variant.tablespaceOid = tablespaceOid;
 }
 
-inline static Oid PersistentFileSysObjName_GetTablespaceDir(
-	PersistentFileSysObjName	*fsObjName)
+inline static Oid
+PersistentFileSysObjName_GetTablespaceDir(
+										  PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_TablespaceDir);
 
 	return fsObjName->variant.tablespaceOid;
 }
 
-inline static void PersistentFileSysObjName_SetFilespaceDir(
-	PersistentFileSysObjName	*fsObjName,
-	Oid							filespaceOid)
+inline static void
+PersistentFileSysObjName_SetFilespaceDir(
+										 PersistentFileSysObjName *fsObjName,
+										 Oid filespaceOid)
 {
 	MemSet(fsObjName, 0, sizeof(PersistentFileSysObjName));
 	fsObjName->type = PersistentFsObjType_FilespaceDir;
 	fsObjName->variant.filespaceOid = filespaceOid;
 }
 
-inline static Oid PersistentFileSysObjName_GetFilespaceDir(
-	PersistentFileSysObjName	*fsObjName)
+inline static Oid
+PersistentFileSysObjName_GetFilespaceDir(
+										 PersistentFileSysObjName *fsObjName)
 {
 	Assert(fsObjName->type == PersistentFsObjType_FilespaceDir);
 
@@ -153,14 +169,15 @@ typedef enum PersistentFileSysRelStorageMgr
 	PersistentFileSysRelStorageMgr_None = 0,
 	PersistentFileSysRelStorageMgr_BufferPool = 1,
 	PersistentFileSysRelStorageMgr_AppendOnly = 2,
-	MaxPersistentFileSysRelStorageMgr /* must always be last */
+	MaxPersistentFileSysRelStorageMgr	/* must always be last */
 } PersistentFileSysRelStorageMgr;
 
-inline static bool PersistentFileSysRelStorageMgr_IsValid(
-	PersistentFileSysRelStorageMgr	relStorageMgr)
+inline static bool
+PersistentFileSysRelStorageMgr_IsValid(
+									   PersistentFileSysRelStorageMgr relStorageMgr)
 {
 	return (relStorageMgr == PersistentFileSysRelStorageMgr_BufferPool ||
-		    relStorageMgr == PersistentFileSysRelStorageMgr_AppendOnly);
+			relStorageMgr == PersistentFileSysRelStorageMgr_AppendOnly);
 }
 
 
@@ -197,7 +214,7 @@ typedef enum PersistentFileSysState
 	PersistentFileSysState_AbortingCreate = 4,
 	PersistentFileSysState_JustInTimeCreatePending = 5,
 	PersistentFileSysState_BulkLoadCreatePending,
-	MaxPersistentFileSysState /* must always be last */
+	MaxPersistentFileSysState	/* must always be last */
 } PersistentFileSysState;
 
 /*
@@ -217,13 +234,14 @@ typedef enum MirroredObjectExistenceState
 	MaxMirroredObjectExistenceState /* must always be last */
 } MirroredObjectExistenceState;
 
-inline static bool MirroredObjectExistenceState_IsResynchCreated(
-	MirroredObjectExistenceState	mirrorExistenceState)
+inline static bool
+MirroredObjectExistenceState_IsResynchCreated(
+											  MirroredObjectExistenceState mirrorExistenceState)
 {
 	return (mirrorExistenceState == MirroredObjectExistenceState_MirrorCreatePending ||
-		    mirrorExistenceState == MirroredObjectExistenceState_MirrorCreated ||
-		    mirrorExistenceState == MirroredObjectExistenceState_MirrorDownBeforeCreate ||
-		    mirrorExistenceState == MirroredObjectExistenceState_MirrorDownDuringCreate);
+			mirrorExistenceState == MirroredObjectExistenceState_MirrorCreated ||
+			mirrorExistenceState == MirroredObjectExistenceState_MirrorDownBeforeCreate ||
+			mirrorExistenceState == MirroredObjectExistenceState_MirrorDownDuringCreate);
 }
 
 
@@ -239,7 +257,7 @@ typedef enum MirroredRelDataSynchronizationState
 	MirroredRelDataSynchronizationState_BufferPoolPageIncremental = 3,
 	MirroredRelDataSynchronizationState_BufferPoolScanIncremental = 4,
 	MirroredRelDataSynchronizationState_AppendOnlyCatchup = 5,
-	MaxMirroredRelDataSynchronizationState /* must always be last */
+	MaxMirroredRelDataSynchronizationState	/* must always be last */
 } MirroredRelDataSynchronizationState;
 
 
@@ -251,34 +269,33 @@ typedef enum MirroredRelDataSynchronizationState
  * index, or append-only (row- or column-store).
  */
 
-// -----------------------------------------------------------------------------
-// Helper
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Helper */
+/* ----------------------------------------------------------------------------- */
 
 extern char *PersistentFileSysObjName_ObjectName(
-	const PersistentFileSysObjName		*name);
+									const PersistentFileSysObjName *name);
 
 extern char *PersistentFileSysObjName_TypeName(
-		PersistentFsObjType		type);
+								  PersistentFsObjType type);
 
 extern char *PersistentFileSysObjName_TypeAndObjectName(
-		const PersistentFileSysObjName		*name);
+										   const PersistentFileSysObjName *name);
 
 extern int PersistentFileSysObjName_Compare(
-	const PersistentFileSysObjName		*name1,
-	const PersistentFileSysObjName		*name2);
+								 const PersistentFileSysObjName *name1,
+								 const PersistentFileSysObjName *name2);
 
 extern char *PersistentFileSysObjState_Name(
-	PersistentFileSysState state);
+							   PersistentFileSysState state);
 
 extern char *MirroredObjectExistenceState_Name(
-	MirroredObjectExistenceState mirrorExistenceState);
+								  MirroredObjectExistenceState mirrorExistenceState);
 
 extern char *PersistentFileSysRelStorageMgr_Name(
-	PersistentFileSysRelStorageMgr relStorageMgr);
+									PersistentFileSysRelStorageMgr relStorageMgr);
 
 extern char *MirroredRelDataSynchronizationState_Name(
-	MirroredRelDataSynchronizationState relDataSynchronizationState);
+										 MirroredRelDataSynchronizationState relDataSynchronizationState);
 
-#endif   /* PERSISTENTFILESYSOBJNAME_H */
-
+#endif							/* PERSISTENTFILESYSOBJNAME_H */

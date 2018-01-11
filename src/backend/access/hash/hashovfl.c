@@ -3,12 +3,12 @@
  * hashovfl.c
  *	  Overflow page management code for the Postgres hash access method
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashovfl.c,v 1.62 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashovfl.c,v 1.66 2009/01/01 17:23:35 momjian Exp $
  *
  * NOTES
  *	  Overflow pages look like ordinary relation pages.
@@ -18,6 +18,8 @@
 #include "postgres.h"
 
 #include "access/hash.h"
+#include "storage/bufmgr.h"
+#include "utils/rel.h"
 
 
 static Buffer _hash_getovflpage(Relation rel, Buffer metabuf);
@@ -189,7 +191,7 @@ _hash_getovflpage(Relation rel, Buffer metabuf)
 	_hash_chgbufaccess(rel, metabuf, HASH_NOLOCK, HASH_WRITE);
 
 	_hash_checkpage(rel, metabuf, LH_META_PAGE);
-	metap = (HashMetaPage) BufferGetPage(metabuf);
+	metap = HashPageGetMeta(BufferGetPage(metabuf));
 
 	/* start search at hashm_firstfree */
 	orig_firstfree = metap->hashm_firstfree;
@@ -454,7 +456,7 @@ _hash_freeovflpage(Relation rel, Buffer ovflbuf,
 
 	/* Read the metapage so we can determine which bitmap page to use */
 	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
-	metap = (HashMetaPage) BufferGetPage(metabuf);
+	metap = HashPageGetMeta(BufferGetPage(metabuf));
 
 	/* Identify which bit to set */
 	ovflbitno = blkno_to_bitno(metap, ovflblkno);

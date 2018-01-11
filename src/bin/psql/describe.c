@@ -22,6 +22,7 @@
 #include "settings.h"
 #include "variables.h"
 
+
 static bool describeOneTableDetails(const char *schemaname,
 						const char *relationname,
 						const char *oid,
@@ -43,41 +44,42 @@ static bool listOneExtensionContents(const char *extname, const char *oid);
 static bool isGPDB(void);
 static bool isGPDB4200OrLater(void);
 static bool isGPDB5000OrLater(void);
-
-/* GPDB 3.2 used PG version 8.2.10, and we've moved the minor number up since then for each release,  4.1 = 8.2.15 */
-/* Allow for a couple of future releases.  If the version isn't in this range, we are talking to PostgreSQL, not GPDB */
-#define mightBeGPDB() (pset.sversion >= 80210 && pset.sversion < 80400)
+static bool isGPDB6000OrLater(void);
 
 static bool isGPDB(void)
 {
-	static enum { gpdb_maybe, gpdb_yes, gpdb_no } talking_to_gpdb;
-	if (mightBeGPDB())
+	static enum
 	{
-		PGresult   *res;
-		char       *ver;
+		gpdb_maybe,
+		gpdb_yes,
+		gpdb_no
+	} talking_to_gpdb;
 
-		if (talking_to_gpdb == gpdb_yes)
-			return true;
-		else if (talking_to_gpdb == gpdb_no)
-			return false;
+	PGresult   *res;
+	char       *ver;
 
-		res = PSQLexec("select version()", false);
-		if (!res)
-			return false;
+	if (talking_to_gpdb == gpdb_yes)
+		return true;
+	else if (talking_to_gpdb == gpdb_no)
+		return false;
 
-		ver = PQgetvalue(res, 0, 0);
-		if (strstr(ver,"Greenplum") != NULL)
-		{
-			PQclear(res);
-			talking_to_gpdb = gpdb_yes;
-			return true;
-		}
+	res = PSQLexec("select pg_catalog.version()", false);
+	if (!res)
+		return false;
 
-		talking_to_gpdb = gpdb_no;
+	ver = PQgetvalue(res, 0, 0);
+	if (strstr(ver, "Greenplum") != NULL)
+	{
 		PQclear(res);
+		talking_to_gpdb = gpdb_yes;
+		return true;
 	}
 
-	talking_to_gpdb = gpdb_maybe; /* if we reconnect to a GPDB system later. do the check again */
+	talking_to_gpdb = gpdb_no;
+	PQclear(res);
+
+	/* If we reconnect to a GPDB system later, do the check again */
+	talking_to_gpdb = gpdb_maybe;
 
 	return false;
 }
@@ -148,6 +150,15 @@ static bool isGPDB5000OrLater(void)
 	return retValue;
 }
 
+static bool
+isGPDB6000OrLater(void)
+{
+	if (!isGPDB())
+		return false;		/* Not Greenplum at all. */
+
+	/* GPDB 6 is based on PostgreSQL 8.4 */
+	return pset.sversion >= 80400;
+}
 
 /*----------------
  * Handlers for various slash commands displaying some sort of list
@@ -178,7 +189,14 @@ describeAggregates(const char *pattern, bool verbose, bool showSystem)
 					  gettext_noop("Name"),
 					  gettext_noop("Result data type"));
 
-	if (pset.sversion >= 80200)
+	if (pset.sversion >= 80400)
+		appendPQExpBuffer(&buf,
+						  "  CASE WHEN p.pronargs = 0\n"
+						  "    THEN CAST('*' AS pg_catalog.text)\n"
+					 "    ELSE pg_catalog.pg_get_function_arguments(p.oid)\n"
+						  "  END AS \"%s\",\n",
+						  gettext_noop("Argument data types"));
+	else if (pset.sversion >= 80200)
 		appendPQExpBuffer(&buf,
 						  "  CASE WHEN p.pronargs = 0\n"
 						  "    THEN CAST('*' AS pg_catalog.text)\n"
@@ -358,8 +376,8 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 
 	if (pset.sversion >= 80400)
 		appendPQExpBuffer(&buf,
-						  "  pg_catalog.pg_get_function_result(p.oid) as \"%s\",\n"
-						  "  pg_catalog.pg_get_function_arguments(p.oid) as \"%s\",\n"
+					"  pg_catalog.pg_get_function_result(p.oid) as \"%s\",\n"
+				 "  pg_catalog.pg_get_function_arguments(p.oid) as \"%s\",\n"
 						  " CASE\n"
 						  "  WHEN p.proisagg THEN '%s'\n"
 						  "  WHEN p.proiswindow THEN '%s'\n"
@@ -401,15 +419,15 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "      SELECT\n"
 						  "        CASE\n"
 						  "          WHEN p.proargmodes[s.i] = 'i' THEN ''\n"
-						  "          WHEN p.proargmodes[s.i] = 'o' THEN 'OUT '\n"
-						  "          WHEN p.proargmodes[s.i] = 'b' THEN 'INOUT '\n"
-						  "          WHEN p.proargmodes[s.i] = 'v' THEN 'VARIADIC '\n"
+					  "          WHEN p.proargmodes[s.i] = 'o' THEN 'OUT '\n"
+					"          WHEN p.proargmodes[s.i] = 'b' THEN 'INOUT '\n"
+				 "          WHEN p.proargmodes[s.i] = 'v' THEN 'VARIADIC '\n"
 						  "        END ||\n"
 						  "        CASE\n"
-						  "          WHEN COALESCE(p.proargnames[s.i], '') = '' THEN ''\n"
+			 "          WHEN COALESCE(p.proargnames[s.i], '') = '' THEN ''\n"
 						  "          ELSE p.proargnames[s.i] || ' ' \n"
 						  "        END ||\n"
-						  "        pg_catalog.format_type(p.proallargtypes[s.i], NULL)\n"
+			  "        pg_catalog.format_type(p.proallargtypes[s.i], NULL)\n"
 						  "      FROM\n"
 						  "        pg_catalog.generate_series(1, pg_catalog.array_upper(p.proallargtypes, 1)) AS s(i)\n"
 						  "    ), ', ')\n"
@@ -417,10 +435,10 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "    pg_catalog.array_to_string(ARRAY(\n"
 						  "      SELECT\n"
 						  "        CASE\n"
-						  "          WHEN COALESCE(p.proargnames[s.i+1], '') = '' THEN ''\n"
+		   "          WHEN COALESCE(p.proargnames[s.i+1], '') = '' THEN ''\n"
 						  "          ELSE p.proargnames[s.i+1] || ' '\n"
 						  "          END ||\n"
-						  "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
+				 "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
 						  "      FROM\n"
 						  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
 						  "    ), ', ')\n"
@@ -470,6 +488,17 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  gettext_noop("reads sql data"),
 						  gettext_noop("modifies sql data"),
 						  gettext_noop("Data access"));
+		if (isGPDB6000OrLater())
+			appendPQExpBuffer(&buf,
+						  ",\n CASE\n"
+						  "  WHEN p.proexeclocation = 'a' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 'm' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 's' THEN '%s'\n"
+						  "END as \"%s\"",
+						  gettext_noop("any"),
+						  gettext_noop("master"),
+						  gettext_noop("all segments"),
+						  gettext_noop("Execute on"));
 		appendPQExpBuffer(&buf,
 						  ",\n CASE\n"
 						  "  WHEN p.provolatile = 'i' THEN '%s'\n"
@@ -845,17 +874,7 @@ permissionsList(const char *pattern)
 	   gettext_noop("table"), gettext_noop("view"), gettext_noop("sequence"),
 					  gettext_noop("Type"));
 
-	if (strcmp(get_line_style(&pset.popt.topt)->name,"old-ascii") != 0)
-	{
-	/*
-	 * This new code, which produces a more correct and more useful answer, is disabled
-	 * for the moment if the print format is old-ascii, because we'd need to upgrade the regression tests (cdbfast and make installcheck-good).
-	 */
 	printACLColumn(&buf, "c.relacl");
-	}
-	else
-	appendPQExpBuffer(&buf, "c.relacl as \"Access privileges\"");  /* Old style, pre-8.3 */
-
 
 	if (pset.sversion >= 80400)
 		appendPQExpBuffer(&buf,
@@ -891,15 +910,7 @@ permissionsList(const char *pattern)
 
 	myopt.nullPrint = NULL;
 
-    if (strcmp(get_line_style(&pset.popt.topt)->name,"old-ascii") == 0)
-	{
-	    printfPQExpBuffer(&buf, _("Access privileges for database \"%s\""), PQdb(pset.db));
-	}
-	else
-	{
-		/* Current pgsql does it this way, but I've disabled this and am doing it the old way above to avoid breaking regression tests */
-	    printfPQExpBuffer(&buf, _("Access privileges"));
-	}
+	printfPQExpBuffer(&buf, _("Access privileges"));
 
 	myopt.title = buf.data;
 	myopt.translate_header = true;
@@ -1319,7 +1330,7 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 			  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relhasoids, "
-						  "%s, c.reltablespace, "
+						  "%s, c.reltablespace, %s, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END\n"
 						  "FROM pg_catalog.pg_class c\n "
 		   "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
@@ -1328,6 +1339,8 @@ describeOneTableDetails(const char *schemaname,
 						   "pg_catalog.array_to_string(c.reloptions || "
 						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
 						   : "''"),
+						  /* GPDB Only:  relstorage  */
+						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
 	}
 	else if (pset.sversion >= 80400)
@@ -1335,7 +1348,7 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 			  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relhasoids, "
-						  "%s, c.reltablespace\n"
+						  "%s, c.reltablespace, %s \n"
 						  "FROM pg_catalog.pg_class c\n "
 		   "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s'\n",
@@ -1343,6 +1356,8 @@ describeOneTableDetails(const char *schemaname,
 						   "pg_catalog.array_to_string(c.reloptions || "
 						   "array(select 'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')\n"
 						   : "''"),
+						  /* GPDB Only:  relstorage  */
+						  (isGPDB() ? "c.relstorage" : "'h'"),
 						  oid);
 	}
 	else if (pset.sversion >= 80200)
@@ -1354,9 +1369,8 @@ describeOneTableDetails(const char *schemaname,
 						  "FROM pg_catalog.pg_class WHERE oid = '%s'",
 						  (verbose ?
 					 "pg_catalog.array_to_string(reloptions, E', ')" : "''"),
-					 /* GPDB Only:  relstorage  */
-					 	  (isGPDB() ?
-					 		"relstorage" : "'h'"),
+						  /* GPDB Only:  relstorage  */
+						  (isGPDB() ? "relstorage" : "'h'"),
 						  oid);
 	}
 	else if (pset.sversion >= 80000)
@@ -1404,8 +1418,7 @@ describeOneTableDetails(const char *schemaname,
 	tableinfo.reloftype = (pset.sversion >= 90000 && strcmp(PQgetvalue(res, 0, 8), "") != 0) ?
 		strdup(PQgetvalue(res, 0, 8)) : 0;
 	/* GPDB Only:  relstorage  */
-	tableinfo.relstorage = (isGPDB()) ?
-		*(PQgetvalue(res, 0, 8)) : 'h';
+	tableinfo.relstorage = (isGPDB()) ? *(PQgetvalue(res, 0, 8)) : 'h';
 	PQclear(res);
 	res = NULL;
 
@@ -1535,7 +1548,8 @@ describeOneTableDetails(const char *schemaname,
 							  schemaname, relationname);
 			break;
 		default:
-			printfPQExpBuffer(&title, _("?%c? \"%s.%s\""),
+			/* untranslated unknown relkind */
+			printfPQExpBuffer(&title, "?%c? \"%s.%s\"",
 							  tableinfo.relkind, schemaname, relationname);
 			break;
 	}
@@ -1577,7 +1591,7 @@ describeOneTableDetails(const char *schemaname,
 		printTableAddHeader(&cont, headers[i], true, 'l');
 
 	/* Check if table is a view */
-	if (tableinfo.relkind == 'v' /* && verbose  ***  GPDB change:  Do this even if not verbose, for 8.2 compatibility */)
+	if (tableinfo.relkind == 'v' && verbose)
 	{
 		PGresult   *result;
 
@@ -3129,7 +3143,6 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 	return true;
 }
 
-
 /*
  * listTables()
  *
@@ -3141,7 +3154,7 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
  * v - views
  * s - sequences
  * (any order of the above is fine)
- * If tabtypes is empty, we default to \dtvsr.
+ * If tabtypes is empty, we default to \dtvs.
  */
 bool
 listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSystem)
@@ -3151,7 +3164,7 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 	bool		showIndexes = strchr(tabtypes, 'i') != NULL;
 	bool		showViews = strchr(tabtypes, 'v') != NULL;
 	bool		showSeq = strchr(tabtypes, 's') != NULL;
-	bool		showExternal = strchr(tabtypes, 'x') != NULL;
+	bool		showExternal = strchr(tabtypes, 'E') != NULL;
 
 	PQExpBufferData buf;
 	PGresult   *res;
@@ -3199,11 +3212,7 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 						  ",\n c2.relname as \"%s\"",
 						  gettext_noop("Table"));
 
-	/*
-	 * GPDB:  Stupid check to see if we are using old-ascii, and therefore are possibly running regression tests, which haven't
-	 * been updated to expect the Size column in the result
-	 */
-	if (verbose && pset.sversion >= 80100 && strcmp(get_line_style(&pset.popt.topt)->name,"old-ascii") != 0)
+	if (verbose && pset.sversion >= 80100)
 		appendPQExpBuffer(&buf,
 						  ",\n  pg_catalog.pg_size_pretty(pg_catalog.pg_relation_size(c.oid)) as \"%s\"",
 						  gettext_noop("Size"));
@@ -4110,6 +4119,185 @@ describeOneTSConfig(const char *oid, const char *nspname, const char *cfgname,
 	printQuery(res, &myopt, pset.queryFout, pset.logfile);
 
 	termPQExpBuffer(&title);
+
+	PQclear(res);
+	return true;
+}
+
+
+/*
+ * \dew
+ *
+ * Describes foreign-data wrappers
+ */
+bool
+listForeignDataWrappers(const char *pattern, bool verbose)
+{
+	PQExpBufferData buf;
+	PGresult   *res;
+	printQueryOpt myopt = pset.popt;
+
+	if (pset.sversion < 80400)
+	{
+		fprintf(stderr, _("The server (version %d.%d) does not support foreign-data wrappers.\n"),
+				pset.sversion / 10000, (pset.sversion / 100) % 100);
+		return true;
+	}
+
+	initPQExpBuffer(&buf);
+	printfPQExpBuffer(&buf,
+					  "SELECT fdwname AS \"%s\",\n"
+					  "  pg_catalog.pg_get_userbyid(fdwowner) AS \"%s\",\n"
+					  "  fdwvalidator::pg_catalog.regproc AS \"%s\"",
+					  gettext_noop("Name"),
+					  gettext_noop("Owner"),
+					  gettext_noop("Validator"));
+
+	if (verbose)
+	{
+		appendPQExpBuffer(&buf, ",\n  ");
+		printACLColumn(&buf, "fdwacl");
+		appendPQExpBuffer(&buf,
+						  ",\n  fdwoptions AS \"%s\"",
+						  gettext_noop("Options"));
+	}
+
+	appendPQExpBuffer(&buf, "\nFROM pg_catalog.pg_foreign_data_wrapper\n");
+
+	processSQLNamePattern(pset.db, &buf, pattern, false, false,
+						  NULL, "fdwname", NULL, NULL);
+
+	appendPQExpBuffer(&buf, "ORDER BY 1;");
+
+	res = PSQLexec(buf.data, false);
+	termPQExpBuffer(&buf);
+	if (!res)
+		return false;
+
+	myopt.nullPrint = NULL;
+	myopt.title = _("List of foreign-data wrappers");
+	myopt.translate_header = true;
+
+	printQuery(res, &myopt, pset.queryFout, pset.logfile);
+
+	PQclear(res);
+	return true;
+}
+
+/*
+ * \des
+ *
+ * Describes foreign servers.
+ */
+bool
+listForeignServers(const char *pattern, bool verbose)
+{
+	PQExpBufferData buf;
+	PGresult   *res;
+	printQueryOpt myopt = pset.popt;
+
+	if (pset.sversion < 80400)
+	{
+		fprintf(stderr, _("The server (version %d.%d) does not support foreign servers.\n"),
+				pset.sversion / 10000, (pset.sversion / 100) % 100);
+		return true;
+	}
+
+	initPQExpBuffer(&buf);
+	printfPQExpBuffer(&buf,
+					  "SELECT s.srvname AS \"%s\",\n"
+					  "  pg_catalog.pg_get_userbyid(s.srvowner) AS \"%s\",\n"
+					  "  f.fdwname AS \"%s\"",
+					  gettext_noop("Name"),
+					  gettext_noop("Owner"),
+					  gettext_noop("Foreign-data wrapper"));
+
+	if (verbose)
+	{
+		appendPQExpBuffer(&buf, ",\n  ");
+		printACLColumn(&buf, "s.srvacl");
+		appendPQExpBuffer(&buf,
+						  ",\n"
+						  "  s.srvtype AS \"%s\",\n"
+						  "  s.srvversion AS \"%s\",\n"
+						  "  s.srvoptions AS \"%s\"",
+						  gettext_noop("Type"),
+						  gettext_noop("Version"),
+						  gettext_noop("Options"));
+	}
+
+	appendPQExpBuffer(&buf,
+					  "\nFROM pg_catalog.pg_foreign_server s\n"
+	   "     JOIN pg_catalog.pg_foreign_data_wrapper f ON f.oid=s.srvfdw\n");
+
+	processSQLNamePattern(pset.db, &buf, pattern, false, false,
+						  NULL, "s.srvname", NULL, NULL);
+
+	appendPQExpBuffer(&buf, "ORDER BY 1;");
+
+	res = PSQLexec(buf.data, false);
+	termPQExpBuffer(&buf);
+	if (!res)
+		return false;
+
+	myopt.nullPrint = NULL;
+	myopt.title = _("List of foreign servers");
+	myopt.translate_header = true;
+
+	printQuery(res, &myopt, pset.queryFout, pset.logfile);
+
+	PQclear(res);
+	return true;
+}
+
+/*
+ * \deu
+ *
+ * Describes user mappings.
+ */
+bool
+listUserMappings(const char *pattern, bool verbose)
+{
+	PQExpBufferData buf;
+	PGresult   *res;
+	printQueryOpt myopt = pset.popt;
+
+	if (pset.sversion < 80400)
+	{
+		fprintf(stderr, _("The server (version %d.%d) does not support user mappings.\n"),
+				pset.sversion / 10000, (pset.sversion / 100) % 100);
+		return true;
+	}
+
+	initPQExpBuffer(&buf);
+	printfPQExpBuffer(&buf,
+					  "SELECT um.srvname AS \"%s\",\n"
+					  "  um.usename AS \"%s\"",
+					  gettext_noop("Server"),
+					  gettext_noop("User name"));
+
+	if (verbose)
+		appendPQExpBuffer(&buf,
+						  ",\n  um.umoptions AS \"%s\"",
+						  gettext_noop("Options"));
+
+	appendPQExpBuffer(&buf, "\nFROM pg_catalog.pg_user_mappings um\n");
+
+	processSQLNamePattern(pset.db, &buf, pattern, false, false,
+						  NULL, "um.srvname", "um.usename", NULL);
+
+	appendPQExpBuffer(&buf, "ORDER BY 1, 2;");
+
+	res = PSQLexec(buf.data, false);
+	termPQExpBuffer(&buf);
+	if (!res)
+		return false;
+
+	myopt.nullPrint = NULL;
+	myopt.title = _("List of user mappings");
+	myopt.translate_header = true;
+
+	printQuery(res, &myopt, pset.queryFout, pset.logfile);
 
 	PQclear(res);
 	return true;

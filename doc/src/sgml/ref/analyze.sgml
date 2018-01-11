@@ -6,6 +6,7 @@ PostgreSQL documentation
 <refentry id="SQL-ANALYZE">
  <refmeta>
   <refentrytitle id="sql-analyze-title">ANALYZE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 

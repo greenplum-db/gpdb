@@ -25,10 +25,10 @@
  * AMs support this.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opclass.h,v 1.79 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_opclass.h,v 1.85 2009/01/01 17:23:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -119,8 +119,8 @@ DATA(insert (	405		int2_ops			PGNSP PGUID 1977   21 t 0 ));
 DATA(insert OID = 1978 ( 403	int4_ops	PGNSP PGUID 1976   23 t 0 ));
 #define INT4_BTREE_OPS_OID 1978
 DATA(insert (	405		int4_ops			PGNSP PGUID 1977   23 t 0 ));
-DATA(insert OID = 1980 ( 403	int8_ops	PGNSP PGUID 1976   20 t 0 ));
-#define INT8_BTREE_OPS_OID 1980
+DATA(insert OID = 3124 ( 403	int8_ops	PGNSP PGUID 1976   20 t 0 ));
+#define INT8_BTREE_OPS_OID 3124
 DATA(insert (	405		int8_ops			PGNSP PGUID 1977   20 t 0 ));
 DATA(insert (	403		interval_ops		PGNSP PGUID 1982 1186 t 0 ));
 DATA(insert (	405		interval_ops		PGNSP PGUID 1983 1186 t 0 ));
@@ -128,13 +128,13 @@ DATA(insert (	403		macaddr_ops			PGNSP PGUID 1984  829 t 0 ));
 DATA(insert (	405		macaddr_ops			PGNSP PGUID 1985  829 t 0 ));
 /*
  * Here's an ugly little hack to save space in the system catalog indexes.
- * btree and hash don't ordinarily allow a storage type different from input
- * type; but cstring and name are the same thing except for trailing padding,
+ * btree doesn't ordinarily allow a storage type different from input type;
+ * but cstring and name are the same thing except for trailing padding,
  * and we can safely omit that within an index entry.  So we declare the
- * opclasses for name as using cstring storage type.
+ * btree opclass for name as using cstring storage type.
  */
 DATA(insert (	403		name_ops			PGNSP PGUID 1986   19 t 2275 ));
-DATA(insert (	405		name_ops			PGNSP PGUID 1987   19 t 2275 ));
+DATA(insert (	405		name_ops			PGNSP PGUID 1987   19 t 0 ));
 DATA(insert (	403		numeric_ops			PGNSP PGUID 1988 1700 t 0 ));
 DATA(insert (	405		numeric_ops			PGNSP PGUID 1998 1700 t 0 ));
 DATA(insert (	403		complex_ops			PGNSP PGUID 3221 195 t 0 ));
@@ -143,6 +143,7 @@ DATA(insert OID = 1981 ( 403	oid_ops		PGNSP PGUID 1989   26 t 0 ));
 DATA(insert (	405		oid_ops				PGNSP PGUID 1990   26 t 0 ));
 DATA(insert (	403		oidvector_ops		PGNSP PGUID 1991   30 t 0 ));
 DATA(insert (	405		oidvector_ops		PGNSP PGUID 1992   30 t 0 ));
+DATA(insert (	403		record_ops			PGNSP PGUID 2994 2249 t 0 ));
 DATA(insert (	403		text_ops			PGNSP PGUID 1994   25 t 0 ));
 DATA(insert (	405		text_ops			PGNSP PGUID 1995   25 t 0 ));
 DATA(insert (	403		time_ops			PGNSP PGUID 1996 1083 t 0 ));
@@ -159,7 +160,6 @@ DATA(insert (	405		timestamp_ops		PGNSP PGUID 2040 1114 t 0 ));
 DATA(insert (	403		text_pattern_ops	PGNSP PGUID 2095   25 f 0 ));
 DATA(insert (	403		varchar_pattern_ops PGNSP PGUID 2095   25 f 0 ));
 DATA(insert (	403		bpchar_pattern_ops	PGNSP PGUID 2097 1042 f 0 ));
-DATA(insert (	403		name_pattern_ops	PGNSP PGUID 2098   19 f 0 ));
 DATA(insert (	403		money_ops			PGNSP PGUID 2099  790 t 0 ));
 DATA(insert (	405		bool_ops			PGNSP PGUID 2222   16 t 0 ));
 DATA(insert (	405		bytea_ops			PGNSP PGUID 2223   17 t 0 ));
@@ -172,7 +172,6 @@ DATA(insert (	405		reltime_ops			PGNSP PGUID 2228  703 t 0 ));
 DATA(insert (	405		text_pattern_ops	PGNSP PGUID 2229   25 f 0 ));
 DATA(insert (	405		varchar_pattern_ops PGNSP PGUID 2229   25 f 0 ));
 DATA(insert (	405		bpchar_pattern_ops	PGNSP PGUID 2231 1042 f 0 ));
-DATA(insert (	405		name_pattern_ops	PGNSP PGUID 2232   19 f 0 ));
 DATA(insert (	403		reltime_ops			PGNSP PGUID 2233  703 t 0 ));
 DATA(insert (	403		tinterval_ops		PGNSP PGUID 2234  704 t 0 ));
 DATA(insert (	405		aclitem_ops			PGNSP PGUID 2235 1033 t 0 ));
@@ -225,40 +224,39 @@ DATA(insert (	403		xlogloc_ops			PGNSP PGUID 7080  3310 t 0 ));
 /*
  * the operators for the on-disk bitmap index.
  */
-DATA(insert (	3013	abstime_ops			PGNSP PGUID 3014 702 t 0 ));
-DATA(insert (	3013	array_ops			PGNSP PGUID 3015 2277 t 0 ));
-DATA(insert (	3013	bit_ops				PGNSP PGUID 3016 1560 t 0 ));
-DATA(insert (	3013	bool_ops			PGNSP PGUID 3017 16 t 0 ));
-DATA(insert (	3013	bpchar_ops			PGNSP PGUID 3018 1042 t 0 ));
-DATA(insert (	3013	bytea_ops			PGNSP PGUID 3019 17 t 0 ));
-DATA(insert (	3013	char_ops			PGNSP PGUID 3020  18 t 0 ));
-DATA(insert (	3013	cidr_ops			PGNSP PGUID 3025  869 f 0 ));
-DATA(insert (	3013	date_ops			PGNSP PGUID 3022 1082 t 0 ));
-DATA(insert (	3013	float4_ops			PGNSP PGUID 3023 700 t 0 ));
-DATA(insert (	3013	float8_ops			PGNSP PGUID 3024 701 t 0 ));
-DATA(insert (	3013	inet_ops			PGNSP PGUID 3025 869 t 0 ));
-DATA(insert (	3013	int2_ops			PGNSP PGUID 3026  21 t 0 ));
-DATA(insert (	3013	int4_ops        	PGNSP PGUID 3027  23 t 0 ));
-DATA(insert (	3013	int8_ops			PGNSP PGUID 3028  20 t 0 ));
-DATA(insert (	3013	interval_ops		PGNSP PGUID 3029 1186 t 0 ));
-DATA(insert (	3013	macaddr_ops			PGNSP PGUID 3030  829 t 0 ));
-DATA(insert (	3013	name_ops			PGNSP PGUID 3031  19 t 0 ));
-DATA(insert (	3013	numeric_ops			PGNSP PGUID 3032 1700 t 0 ));
-DATA(insert (	3013	oid_ops				PGNSP PGUID 3033  26 t 0 ));
-DATA(insert (	3013	oidvector_ops		PGNSP PGUID 3034  30 t 0 ));
-DATA(insert (	3013	text_ops			PGNSP PGUID 3035  25 t 0 ));
-DATA(insert (	3013	time_ops			PGNSP PGUID 3036 1083 t 0 ));
-DATA(insert (	3013	timestamptz_ops 	PGNSP PGUID 3037 1184 t 0 ));
-DATA(insert (	3013	timetz_ops			PGNSP PGUID 3038 1266 t 0 ));
-DATA(insert (	3013	varbit_ops			PGNSP PGUID 3039 1562 t 0 ));
-DATA(insert (	3013	varchar_ops			PGNSP PGUID 3035  25 f 0 ));
-DATA(insert (	3013	timestamp_ops		PGNSP PGUID 3041 1114 t 0 ));
-DATA(insert (	3013	text_pattern_ops	PGNSP PGUID 3042  25 f 0 ));
-DATA(insert (	3013	varchar_pattern_ops PGNSP PGUID 3042  25 f 0 ));
-DATA(insert (	3013	bpchar_pattern_ops	PGNSP PGUID 3044 1042 f 0 ));
-DATA(insert (	3013	name_pattern_ops	PGNSP PGUID 3045  19 f 0 ));
-DATA(insert (	3013	money_ops			PGNSP PGUID 3046 790 t 0 ));
-DATA(insert (	3013	reltime_ops			PGNSP PGUID 3047 703 t 0 ));
-DATA(insert (	3013	tinterval_ops		PGNSP PGUID 3048 704 t 0 ));
+DATA(insert (	7013	abstime_ops			PGNSP PGUID 7014 702 t 0 ));
+DATA(insert (	7013	array_ops			PGNSP PGUID 7015 2277 t 0 ));
+DATA(insert (	7013	bit_ops				PGNSP PGUID 7016 1560 t 0 ));
+DATA(insert (	7013	bool_ops			PGNSP PGUID 7017 16 t 0 ));
+DATA(insert (	7013	bpchar_ops			PGNSP PGUID 7018 1042 t 0 ));
+DATA(insert (	7013	bytea_ops			PGNSP PGUID 7019 17 t 0 ));
+DATA(insert (	7013	char_ops			PGNSP PGUID 7020  18 t 0 ));
+DATA(insert (	7013	cidr_ops			PGNSP PGUID 7025  869 f 0 ));
+DATA(insert (	7013	date_ops			PGNSP PGUID 7022 1082 t 0 ));
+DATA(insert (	7013	float4_ops			PGNSP PGUID 7023 700 t 0 ));
+DATA(insert (	7013	float8_ops			PGNSP PGUID 7024 701 t 0 ));
+DATA(insert (	7013	inet_ops			PGNSP PGUID 7025 869 t 0 ));
+DATA(insert (	7013	int2_ops			PGNSP PGUID 7026  21 t 0 ));
+DATA(insert (	7013	int4_ops        	PGNSP PGUID 7027  23 t 0 ));
+DATA(insert (	7013	int8_ops			PGNSP PGUID 7028  20 t 0 ));
+DATA(insert (	7013	interval_ops		PGNSP PGUID 7029 1186 t 0 ));
+DATA(insert (	7013	macaddr_ops			PGNSP PGUID 7030  829 t 0 ));
+DATA(insert (	7013	name_ops			PGNSP PGUID 7031  19 t 0 ));
+DATA(insert (	7013	numeric_ops			PGNSP PGUID 7032 1700 t 0 ));
+DATA(insert (	7013	oid_ops				PGNSP PGUID 7033  26 t 0 ));
+DATA(insert (	7013	oidvector_ops		PGNSP PGUID 7034  30 t 0 ));
+DATA(insert (	7013	text_ops			PGNSP PGUID 7035  25 t 0 ));
+DATA(insert (	7013	time_ops			PGNSP PGUID 7036 1083 t 0 ));
+DATA(insert (	7013	timestamptz_ops 	PGNSP PGUID 7037 1184 t 0 ));
+DATA(insert (	7013	timetz_ops			PGNSP PGUID 7038 1266 t 0 ));
+DATA(insert (	7013	varbit_ops			PGNSP PGUID 7039 1562 t 0 ));
+DATA(insert (	7013	varchar_ops			PGNSP PGUID 7035  25 f 0 ));
+DATA(insert (	7013	timestamp_ops		PGNSP PGUID 7041 1114 t 0 ));
+DATA(insert (	7013	text_pattern_ops	PGNSP PGUID 7042  25 f 0 ));
+DATA(insert (	7013	varchar_pattern_ops PGNSP PGUID 7042  25 f 0 ));
+DATA(insert (	7013	bpchar_pattern_ops	PGNSP PGUID 7044 1042 f 0 ));
+DATA(insert (	7013	money_ops			PGNSP PGUID 7046 790 t 0 ));
+DATA(insert (	7013	reltime_ops			PGNSP PGUID 7047 703 t 0 ));
+DATA(insert (	7013	tinterval_ops		PGNSP PGUID 7048 704 t 0 ));
 
 #endif   /* PG_OPCLASS_H */

@@ -2,8 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="defining-queries">
     <title id="in140509">Defining Queries</title>
-    <shortdesc>Greenplum Database is based on the PostgreSQL implementation of the SQL
-        standard. </shortdesc>
+    <shortdesc>Greenplum Database is based on the PostgreSQL implementation of the SQL standard. </shortdesc>
     <body>
         <p>This topic describes how to construct SQL queries in Greenplum Database.</p>
         <ul>
@@ -20,14 +19,15 @@
         <body>
             <p>SQL is a standard language for accessing databases. The language consists of elements
                 that enable data storage, retrieval, analysis, viewing, manipulation, and so on. You
-                use SQL commands to construct queries and commands that the Greenplum Database engine understands. SQL queries consist of a sequence of
-                commands. Commands consist of a sequence of valid tokens in correct syntax order,
-                terminated by a semicolon (<codeph>;</codeph>). </p>
-            <p>For more information about SQL commands, see the <cite>Greenplum
-                    Database Reference Guide</cite>.</p>
-            <p>Greenplum Database uses PostgreSQL's structure and syntax, with some
-                exceptions. For more information about SQL rules and concepts in PostgreSQL, see
-                "SQL Syntax" in the PostgreSQL documentation.</p>
+                use SQL commands to construct queries and commands that the Greenplum Database
+                engine understands. SQL queries consist of a sequence of commands. Commands consist
+                of a sequence of valid tokens in correct syntax order, terminated by a semicolon
+                    (<codeph>;</codeph>). </p>
+            <p>For more information about SQL commands, see the <cite>Greenplum Database Reference
+                    Guide</cite>.</p>
+            <p>Greenplum Database uses PostgreSQL's structure and syntax, with some exceptions. For
+                more information about SQL rules and concepts in PostgreSQL, see "SQL Syntax" in the
+                PostgreSQL documentation.</p>
         </body>
     </topic>
     <topic id="topic4" xml:lang="en">
@@ -46,8 +46,8 @@
                 <li id="in143969">A correlated subquery</li>
                 <li id="in199893">A field selection expression</li>
                 <li id="in199900">A function call</li>
-                <li id="in205284">A new column value in an <codeph>INSERT</codeph><ph
-                       > or <codeph>UPDATE</codeph></ph></li>
+                <li id="in205284">A new column value in an <codeph>INSERT</codeph><ph> or
+                            <codeph>UPDATE</codeph></ph></li>
                 <li id="in205286">An operator invocation column reference</li>
                 <li id="in144037">A positional parameter reference, in the body of a function
                     definition or prepared statement</li>
@@ -186,9 +186,8 @@
                 <p>
                     <codeblock>sqrt(2)</codeblock>
                 </p>
-                <p>See the <cite>Greenplum Database Reference Guide</cite> for
-                    lists of the built-in functions by category. You can add custom functions,
-                    too.</p>
+                <p>For information about using and creating functions, see <xref
+                        href="functions-operators.xml#topic26"/>.</p>
             </body>
         </topic>
         <topic id="topic11" xml:lang="en">
@@ -223,10 +222,10 @@
                 <p>For predefined aggregate functions, see <xref
                         href="../topics/functions-operators.xml#topic29"/>. You can also add custom
                     aggregate functions.</p>
-                <p>Greenplum Database provides the <codeph>MEDIAN</codeph> aggregate
-                    function, which returns the fiftieth percentile of the
-                        <codeph>PERCENTILE_CONT</codeph> result and special aggregate expressions
-                    for inverse distribution functions as follows:</p>
+                <p>Greenplum Database provides the <codeph>MEDIAN</codeph> aggregate function, which
+                    returns the fiftieth percentile of the <codeph>PERCENTILE_CONT</codeph> result
+                    and special aggregate expressions for inverse distribution functions as
+                    follows:</p>
                 <p>
                     <codeblock>PERCENTILE_CONT(_percentage_) WITHIN GROUP (ORDER BY _expression_)
 </codeblock>
@@ -241,8 +240,8 @@
                 <body>
                     <p>The following are current limitations of the aggregate expressions:</p>
                     <ul>
-                        <li id="in199103">Greenplum Database does not support the
-                            following keywords: ALL, DISTINCT, FILTER and OVER. See <xref
+                        <li id="in199103">Greenplum Database does not support the following
+                            keywords: ALL, DISTINCT, FILTER and OVER. See <xref
                                 href="../topics/functions-operators.xml#topic31/in2073121"/> for
                             more details. </li>
                         <li id="in199105">An aggregate expression can appear only in the result list
@@ -259,8 +258,12 @@
                             expression acts as a constant over any one evaluation of that subquery.
                             See <xref format="dita" href="#topic15" type="topic"/> and <xref
                                 href="../topics/functions-operators.xml#topic29/in204913"/>.</li>
-                        <li id="in200915">Greenplum Database does not support DISTINCT
-                            with multiple input expressions.</li>
+                        <li id="in200915">Greenplum Database does not support DISTINCT with multiple
+                            input expressions.</li>
+                        <li id="in2009151">Greenplum Database does not support specifying an
+                            aggregate function as an argument to another aggregate function.</li>
+                        <li id="in2009152">Greenplum Database does not support specifying a window
+                            function as an argument to an aggregate function.</li>
                     </ul>
                 </body>
             </topic>
@@ -281,6 +284,8 @@
                     value for every row, but that value is calculated with respect to the rows in a
                     particular window partition. If no partition is specified, the window function
                     is computed over the complete intermediate result set.</p>
+                <p>Greenplum Database does not support specifying a window function as an argument
+                    to another window function.</p>
                 <p>The syntax of a window expression is:</p>
                 <p>
                     <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
@@ -350,7 +355,8 @@
         <topic id="topic14" xml:lang="en">
             <title>Type Casts</title>
             <body>
-                <p>A type cast specifies a conversion from one data type to another. Greenplum Database accepts two equivalent syntaxes for type casts:</p>
+                <p>A type cast specifies a conversion from one data type to another. Greenplum
+                    Database accepts two equivalent syntaxes for type casts:</p>
                 <p>
                     <codeblock>CAST ( expression AS type )
 expression::type
@@ -388,10 +394,11 @@ expression::type
                 <p>A correlated subquery (CSQ) is a <codeph>SELECT</codeph> query with a
                         <codeph>WHERE</codeph> clause or target list that contains references to the
                     parent outer clause. CSQs efficiently express results in terms of results of
-                    another query. Greenplum Database supports correlated subqueries
-                    that provide compatibility with many existing applications. A CSQ is a scalar or
-                    table subquery, depending on whether it returns one or multiple rows. Greenplum Database does not support correlated subqueries with
-                    skip-level correlations.</p>
+                    another query. Greenplum Database supports correlated subqueries that provide
+                    compatibility with many existing applications. A CSQ is a scalar or table
+                    subquery, depending on whether it returns one or multiple rows. Greenplum
+                    Database does not support correlated subqueries with skip-level
+                    correlations.</p>
             </body>
         </topic>
         <topic id="topic17" xml:lang="en">
@@ -410,16 +417,15 @@ expression::type
                     <codeblock>SELECT * FROM t1 WHERE 
 EXISTS (SELECT 1 FROM t2 WHERE t2.x = t1.x);
 </codeblock>
-                    <p>Greenplum Database uses one of the following methods to run
-                        CSQs:</p>
+                    <p>Greenplum Database uses one of the following methods to run CSQs:</p>
                     <ul>
                         <li id="in197793">Unnest the CSQ into join operations &#8211; This method is
-                            most efficient, and it is how Greenplum Database runs most
-                            CSQs, including queries from the TPC-H benchmark.</li>
+                            most efficient, and it is how Greenplum Database runs most CSQs,
+                            including queries from the TPC-H benchmark.</li>
                         <li id="in197800">Run the CSQ on every row of the outer query &#8211; This
-                            method is relatively inefficient, and it is how Greenplum Database runs queries that contain CSQs in the
-                                <codeph>SELECT</codeph> list or are connected by <codeph>OR</codeph>
-                            conditions.</li>
+                            method is relatively inefficient, and it is how Greenplum Database runs
+                            queries that contain CSQs in the <codeph>SELECT</codeph> list or are
+                            connected by <codeph>OR</codeph> conditions.</li>
                     </ul>
                     <p>The following examples illustrate how to rewrite some of these types of
                         queries to improve performance.</p>
@@ -482,14 +488,14 @@ WHERE x &lt; (SELECT count(*) FROM t3 WHERE t1.y = t3.y)
         <topic id="topic22" xml:lang="en">
             <title>Advanced Table Functions</title>
             <body>
-                <p>Greenplum Database supports table functions with
-                        <codeph>TABLE</codeph> value expressions. You can sort input rows for
-                    advanced table functions with an <codeph>ORDER BY</codeph> clause. You can
-                    redistribute them with a <codeph>SCATTER BY</codeph> clause to specify one or
-                    more columns or an expression for which rows with the specified characteristics
-                    are available to the same process. This usage is similar to using a
-                        <codeph>DISTRIBUTED BY</codeph> clause when creating a table, but the
-                    redistribution occurs when the query runs.</p>
+                <p>Greenplum Database supports table functions with <codeph>TABLE</codeph> value
+                    expressions. You can sort input rows for advanced table functions with an
+                        <codeph>ORDER BY</codeph> clause. You can redistribute them with a
+                        <codeph>SCATTER BY</codeph> clause to specify one or more columns or an
+                    expression for which rows with the specified characteristics are available to
+                    the same process. This usage is similar to using a <codeph>DISTRIBUTED
+                        BY</codeph> clause when creating a table, but the redistribution occurs when
+                    the query runs.</p>
                 <note type="note">Based on the distribution of data, Greenplum Database
                     automatically parallelizes table functions with <codeph>TABLE</codeph> value
                     parameters over the nodes of the cluster.</note>

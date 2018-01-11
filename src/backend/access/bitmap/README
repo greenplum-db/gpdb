@@ -1,4 +1,7 @@
-$PostgreSQL$
+src/backend/access/bitmap/README
+
+Bitmap Index
+============
 
 This directory contains an implementation of an on-disk bitmap index.
 

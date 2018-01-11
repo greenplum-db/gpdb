@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.98 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.107 2009/06/11 14:49:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +21,8 @@
 #include "storage/itemptr.h"
 #include "storage/relfilenode.h"
 #include "access/sysattr.h"
+
+#include "access/memtup.h"
 
 /*
  * MaxTupleAttributeNumber limits the number of (user) columns in a tuple.
@@ -174,6 +177,7 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 #define HEAP_IS_LOCKED	(HEAP_XMAX_EXCL_LOCK | HEAP_XMAX_SHARED_LOCK)
 #define HEAP_XMIN_COMMITTED		0x0100	/* t_xmin committed */
 #define HEAP_XMIN_INVALID		0x0200	/* t_xmin invalid/aborted */
+#define HEAP_XMIN_FROZEN        (HEAP_XMIN_COMMITTED|HEAP_XMIN_INVALID)
 #define HEAP_XMAX_COMMITTED		0x0400	/* t_xmax committed */
 #define HEAP_XMAX_INVALID		0x0800	/* t_xmax invalid/aborted */
 #define HEAP_XMAX_IS_MULTI		0x1000	/* t_xmax is a MultiXactId */
@@ -220,6 +224,12 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 	(tup)->t_choice.t_heap.t_xmin = (xid) \
 )
 
+#define HeapTupleHeaderXminInvalid(tup) \
+( \
+    ((tup)->t_infomask & (HEAP_XMIN_COMMITTED|HEAP_XMIN_INVALID)) == \
+        HEAP_XMIN_INVALID \
+)
+
 #define HeapTupleHeaderGetXmax(tup) \
 ( \
 	(tup)->t_choice.t_heap.t_xmax \
@@ -228,6 +238,12 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 #define HeapTupleHeaderSetXmax(tup, xid) \
 ( \
 	(tup)->t_choice.t_heap.t_xmax = (xid) \
+)
+
+#define HeapTupleHeaderSetXminFrozen(tup) \
+( \
+    AssertMacro(!HeapTupleHeaderXminInvalid(tup)), \
+    ((tup)->t_infomask |= HEAP_XMIN_FROZEN) \
 )
 
 /*
@@ -372,12 +388,12 @@ do { \
  * other stuff that has to be on a disk page.  Since heap pages use no
  * "special space", there's no deduction for that.
  *
- * NOTE: we do not need to count an ItemId for the tuple because
- * sizeof(PageHeaderData) includes the first ItemId on the page.  But beware
- * of assuming that, say, you can fit 2 tuples of size MaxHeapTupleSize/2
- * on the same page.
+ * NOTE: we allow for the ItemId that must point to the tuple, ensuring that
+ * an otherwise-empty page can indeed hold a tuple of this size.  Because
+ * ItemIds and tuples have different alignment requirements, don't assume that
+ * you can, say, fit 2 tuples of size MaxHeapTupleSize/2 on the same page.
  */
-#define MaxHeapTupleSize  (BLCKSZ - MAXALIGN(sizeof(PageHeaderData)))
+#define MaxHeapTupleSize  (BLCKSZ - MAXALIGN(SizeOfPageHeaderData + sizeof(ItemIdData)))
 
 /*
  * MaxHeapTuplesPerPage is an upper bound on the number of tuples that can
@@ -391,7 +407,7 @@ do { \
  * require increases in the size of work arrays.
  */
 #define MaxHeapTuplesPerPage	\
-	((int) ((BLCKSZ - offsetof(PageHeaderData, pd_linp)) / \
+	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
 			(MAXALIGN(offsetof(HeapTupleHeaderData, t_bits)) + sizeof(ItemIdData))))
 
 /*
@@ -431,7 +447,7 @@ do { \
  * the MINIMAL_TUPLE_OFFSET distance.  t_len does not include that, however.
  *
  * MINIMAL_TUPLE_DATA_OFFSET is the offset to the first useful (non-pad) data
- * other than the length word.  tuplesort.c and tuplestore.c use this to avoid
+ * other than the length word.	tuplesort.c and tuplestore.c use this to avoid
  * writing the padding to disk.
  */
 #define MINIMAL_TUPLE_OFFSET \
@@ -510,14 +526,24 @@ typedef HeapTupleData *HeapTuple;
 
 #define HEAPTUPLESIZE	MAXALIGN(sizeof(HeapTupleData))
 
+/*
+ * GenericTuple is a pointer that can point to either a HeapTuple or a
+ * MemTuple. Use is_memtuple() to check which one it is.
+ *
+ * GenericTupleData has no definition; this is a fake "supertype".
+ */
+struct GenericTupleData;
+typedef struct GenericTupleData *GenericTuple;
+
 /* XXX Hack Hack Hack 
  * heaptuple, or memtuple, cannot be more than 2G, so, if
  * the first bit is ever set, it is really a memtuple
  */
-static inline bool is_heaptuple_memtuple(HeapTuple htup)
+static inline bool is_memtuple(GenericTuple tup)
 {
-	return ((htup->t_len & 0x80000000) != 0);
+	return ((((HeapTuple) tup)->t_len & 0x80000000) != 0);
 }
+
 static inline bool is_heaptuple_splitter(HeapTuple htup)
 {
 	return ((char *) htup->t_data) != ((char *) htup + HEAPTUPLESIZE);
@@ -637,9 +663,10 @@ typedef struct xl_heapnode
 typedef struct xl_heap_delete
 {
 	xl_heaptid	target;			/* deleted tuple id */
+	bool		all_visible_cleared;	/* PD_ALL_VISIBLE was cleared */
 } xl_heap_delete;
 
-#define SizeOfHeapDelete	(offsetof(xl_heap_delete, target) + SizeOfHeapTid)
+#define SizeOfHeapDelete	(offsetof(xl_heap_delete, all_visible_cleared) + sizeof(bool))
 
 /*
  * We don't store the whole fixed part (HeapTupleHeaderData) of an inserted
@@ -662,21 +689,24 @@ typedef struct xl_heap_header
 typedef struct xl_heap_insert
 {
 	xl_heaptid	target;			/* inserted tuple id */
+	bool		all_visible_cleared;	/* PD_ALL_VISIBLE was cleared */
 	/* xl_heap_header & TUPLE DATA FOLLOWS AT END OF STRUCT */
 } xl_heap_insert;
 
-#define SizeOfHeapInsert	(offsetof(xl_heap_insert, target) + SizeOfHeapTid)
+#define SizeOfHeapInsert	(offsetof(xl_heap_insert, all_visible_cleared) + sizeof(bool))
 
 /* This is what we need to know about update|move|hot_update */
 typedef struct xl_heap_update
 {
 	xl_heaptid	target;			/* deleted tuple id */
 	ItemPointerData newtid;		/* new inserted tuple id */
+	bool		all_visible_cleared;	/* PD_ALL_VISIBLE was cleared */
+	bool		new_all_visible_cleared;		/* same for the page of newtid */
 	/* NEW TUPLE xl_heap_header (PLUS xmax & xmin IF MOVE OP) */
 	/* and TUPLE DATA FOLLOWS AT END OF STRUCT */
 } xl_heap_update;
 
-#define SizeOfHeapUpdate	(offsetof(xl_heap_update, newtid) + SizeOfIptrData)
+#define SizeOfHeapUpdate	(offsetof(xl_heap_update, new_all_visible_cleared) + sizeof(bool))
 
 /*
  * This is what we need to know about vacuum page cleanup/redirect
@@ -712,6 +742,7 @@ typedef struct xl_heap_clean
 typedef struct xl_heap_newpage
 {
 	xl_heapnode heapnode;
+	ForkNumber	forknum;
 	BlockNumber blkno;			/* location of new page */
 	/* entire page contents follow at end of record */
 } xl_heap_newpage;
@@ -755,5 +786,150 @@ extern CommandId HeapTupleHeaderGetCmax(HeapTupleHeader tup);
 extern void HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
 						  CommandId *cmax,
 						  bool *iscombo);
+
+extern Datum nocachegetattr(HeapTuple tup, int attnum, TupleDesc att);
+extern Datum heap_getsysattr(HeapTuple tup, int attnum, bool *isnull);
+
+/* ----------------
+ *		fastgetattr
+ *
+ *		Fetch a user attribute's value as a Datum (might be either a
+ *		value, or a pointer into the data area of the tuple).
+ *
+ *		This must not be used when a system attribute might be requested.
+ *		Furthermore, the passed attnum MUST be valid.  Use heap_getattr()
+ *		instead, if in doubt.
+ *
+ *		This gets called many times, so we macro the cacheable and NULL
+ *		lookups, and call nocachegetattr() for the rest.
+ *
+ *      CDB:  Implemented as inline function instead of macro.
+ * ----------------
+ */
+static inline Datum
+fastgetattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
+{
+    Datum               result;
+    Form_pg_attribute   att = tupleDesc->attrs[attnum-1];
+
+    Assert(attnum > 0);
+
+    if (isnull)
+        *isnull = false;
+
+    if (HeapTupleNoNulls(tup))
+    {
+        if (att->attcacheoff >= 0)
+			result = fetchatt(att,
+				              (char *)tup->t_data + tup->t_data->t_hoff +
+					            att->attcacheoff);
+        else
+            result = nocachegetattr(tup, attnum, tupleDesc);
+    }
+    else if (att_isnull(attnum-1, tup->t_data->t_bits))
+    {
+        result = Int32GetDatum(0);
+        if (isnull)
+            *isnull = true;
+    }
+    else
+        result = nocachegetattr(tup, attnum, tupleDesc);
+
+    return result;
+}                               /* fastgetattr */
+
+
+/* ----------------
+ *		heap_getattr
+ *
+ *		Extract an attribute of a heap tuple and return it as a Datum.
+ *		This works for either system or user attributes.  The given attnum
+ *		is properly range-checked.
+ *
+ *		If the field in question has a NULL value, we return a zero Datum
+ *		and set *isnull == true.  Otherwise, we set *isnull == false.
+ *
+ *		<tup> is the pointer to the heap tuple.  <attnum> is the attribute
+ *		number of the column (field) caller wants.	<tupleDesc> is a
+ *		pointer to the structure describing the row and all its fields.
+ *
+ *      CDB:  Implemented as inline function instead of macro.
+ * ----------------
+ */
+static inline Datum
+heap_getattr(HeapTuple tup, int attnum, TupleDesc tupleDesc, bool *isnull)
+{
+    Datum       result;
+
+    Assert(tup != NULL);
+
+    if (attnum > (int)HeapTupleHeaderGetNatts(tup->t_data))
+    {
+        result = DatumGetInt32(0);
+        if (isnull)
+            *isnull = true;
+    }
+    else if (attnum > 0)
+        result = fastgetattr(tup, attnum, tupleDesc, isnull);
+    else
+        result = heap_getsysattr(tup, attnum, isnull);
+
+    return result;
+}                               /* heap_getattr */
+
+/* prototypes for functions in common/heaptuple.c */
+extern Size heap_compute_data_size(TupleDesc tupleDesc,
+					   Datum *values, bool *isnull);
+extern Size heap_fill_tuple(TupleDesc tupleDesc,
+				Datum *values, bool *isnull,
+				char *data, Size data_size,
+				uint16 *infomask, bits8 *bit);
+extern Datum nocachegetattr(HeapTuple tup, int attnum, TupleDesc att);
+extern Datum heap_getsysattr(HeapTuple tup, int attnum, bool *isnull);
+extern bool heap_attisnull(HeapTuple tup, int attnum);
+extern bool heap_attisnull_normalattr(HeapTuple tup, int attnum);
+
+extern HeapTuple heaptuple_copy_to(HeapTuple tup, HeapTuple result, uint32 *len);
+
+static inline HeapTuple heap_copytuple(HeapTuple tuple)
+{
+	return heaptuple_copy_to(tuple, NULL, NULL);
+}
+
+extern void heap_copytuple_with_tuple(HeapTuple src, HeapTuple dest);
+
+extern HeapTuple heaptuple_form_to(TupleDesc tupdesc, Datum* values,
+								   bool *isnull, HeapTuple tup, uint32 *len);
+static inline HeapTuple heap_form_tuple(TupleDesc tupleDescriptor,
+				Datum *values, bool *isnull)
+{
+	return heaptuple_form_to(tupleDescriptor, values, isnull, NULL, NULL);
+}
+
+extern HeapTuple heap_modify_tuple(HeapTuple tuple,
+				  TupleDesc tupleDesc,
+				  Datum *replValues,
+				  bool *replIsnull,
+				  bool *doReplace);
+extern void heap_deform_tuple(HeapTuple tuple, TupleDesc tupleDesc,
+				  Datum *values, bool *isnull);
+
+/* these three are deprecated versions of the three above: */
+extern HeapTuple heap_formtuple(TupleDesc tupleDescriptor,
+			   Datum *values, char *nulls) __attribute__ ((deprecated));
+extern HeapTuple heap_modifytuple(HeapTuple tuple,
+				 TupleDesc tupleDesc,
+				 Datum *replValues,
+				 char *replNulls,
+				 char *replActions) __attribute__ ((deprecated));
+extern void heap_deformtuple(HeapTuple tuple, TupleDesc tupleDesc,
+				 Datum *values, char *nulls) __attribute__ ((deprecated));
+extern void heap_freetuple(HeapTuple htup);
+extern MinimalTuple heap_form_minimal_tuple(TupleDesc tupleDescriptor,
+						Datum *values, bool *isnull);
+extern void heap_free_minimal_tuple(MinimalTuple mtup);
+extern MinimalTuple heap_copy_minimal_tuple(MinimalTuple mtup);
+extern HeapTuple heap_tuple_from_minimal_tuple(MinimalTuple mtup);
+extern MinimalTuple minimal_tuple_from_heap_tuple(HeapTuple htup);
 
 #endif   /* HTUP_H */

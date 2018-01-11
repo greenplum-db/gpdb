@@ -1,8 +1,14 @@
-/* 
- * MemTuple
- * 
- * Copyright (c) 2006-2008, Greenplum inc
+/*-------------------------------------------------------------------------
  *
+ * memtuple.c
+ * 
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/common/memtuple.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
@@ -14,8 +20,6 @@
 #include "catalog/pg_type.h"
 
 #include "cdb/cdbvars.h"
-
-#include "utils/debugbreak.h"
 
 #define MAX_ATTR_COUNT_STATIC_ALLOC 20
 
@@ -619,7 +623,7 @@ MemTuple memtuple_form_to(
 				if (old_values == NULL)
 					old_values = (Datum *)palloc0(pbind->tupdesc->natts * sizeof(Datum));
 				old_values[i] = values[i];
-				values[i] = PointerGetDatum(heap_tuple_fetch_attr(DatumGetPointer(values[i])));
+				values[i] = PointerGetDatum(heap_tuple_fetch_attr((struct varlena *)DatumGetPointer(values[i])));
 
 				if (old_values[i] == values[i])
 					old_values[i] = 0;

@@ -387,15 +387,15 @@ identify_system_timezone(void)
 	 * enough to identify DST transition rules, since everybody switches on
 	 * Sundays.)  This is sufficient to cover most of the Unix time_t range,
 	 * and we don't want to look further than that since many systems won't
-	 * have sane TZ behavior further back anyway.  The further
-	 * back the zone matches, the better we score it.  This may seem like a
-	 * rather random way of doing things, but experience has shown that
-	 * system-supplied timezone definitions are likely to have DST behavior
-	 * that is right for the recent past and not so accurate further back.
-	 * Scoring in this way allows us to recognize zones that have some
-	 * commonality with the zic database, without insisting on exact match.
-	 * (Note: we probe Thursdays, not Sundays, to avoid triggering
-	 * DST-transition bugs in localtime itself.)
+	 * have sane TZ behavior further back anyway.  The further back the zone
+	 * matches, the better we score it.  This may seem like a rather random
+	 * way of doing things, but experience has shown that system-supplied
+	 * timezone definitions are likely to have DST behavior that is right for
+	 * the recent past and not so accurate further back. Scoring in this way
+	 * allows us to recognize zones that have some commonality with the zic
+	 * database, without insisting on exact match. (Note: we probe Thursdays,
+	 * not Sundays, to avoid triggering DST-transition bugs in localtime
+	 * itself.)
 	 */
 	tnow = time(NULL);
 	tm = localtime(&tnow);
@@ -404,6 +404,7 @@ identify_system_timezone(void)
 	thisyear = tm->tm_year + 1900;
 
 	t = build_time_t(thisyear, 1, 15);
+
 	/*
 	 * Round back to GMT midnight Thursday.  This depends on the knowledge
 	 * that the time_t origin is Thu Jan 01 1970.  (With a different origin

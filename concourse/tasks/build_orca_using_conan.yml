@@ -1,0 +1,16 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: gpdb/centos-gpdb-dev-conan
+    tag: 7-gcc6.2-llvm3.7
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: bin_orca
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    python gpdb_src/concourse/scripts/build_orca.py

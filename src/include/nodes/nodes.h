@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.213 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.223 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,7 +56,7 @@ typedef enum NodeTag
 	T_Join,
 
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
-	 * It will take the form of IndexScan, SeqScan, etc. 
+	 * It will take the form of IndexScan, SeqScan, etc.
 	 * CteScan will take the form of SubqueryScan.
 	 */
 	T_Result,
@@ -74,6 +75,7 @@ typedef enum NodeTag
 	T_IndexScan,
 	T_DynamicIndexScan,
 	T_BitmapIndexScan,
+	T_DynamicBitmapIndexScan,
 	T_BitmapHeapScan,
 	T_BitmapAppendOnlyScan,
 	T_BitmapTableScan,
@@ -90,13 +92,13 @@ typedef enum NodeTag
 	T_Material,
 	T_Sort,
 	T_Agg,
+	T_WindowAgg,
 	T_Unique,
 	T_Hash,
 	T_SetOp,
 	T_Limit,
 	T_Motion,
 	T_ShareInputScan,
-	T_Window,
 	T_Repeat,
 	T_DML,
 	T_SplitUpdate,
@@ -117,7 +119,7 @@ typedef enum NodeTag
 	T_JoinState,
 
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
-	 * It will take the form of IndexScan, SeqScan, etc. 
+	 * It will take the form of IndexScan, SeqScan, etc.
 	 */
 	T_ResultState,
 	T_AppendState,
@@ -134,6 +136,7 @@ typedef enum NodeTag
 	T_IndexScanState,
 	T_DynamicIndexScanState,
 	T_BitmapIndexScanState,
+	T_DynamicBitmapIndexScanState,
 	T_BitmapHeapScanState,
 	T_BitmapAppendOnlyScanState,
 	T_BitmapTableScanState,
@@ -150,13 +153,13 @@ typedef enum NodeTag
 	T_MaterialState,
 	T_SortState,
 	T_AggState,
+	T_WindowAggState,
 	T_UniqueState,
 	T_HashState,
 	T_SetOpState,
 	T_LimitState,
 	T_MotionState,
 	T_ShareInputScanState,
-	T_WindowState,
 	T_RepeatState,
 	T_DMLState,
 	T_SplitUpdateState,
@@ -175,7 +178,7 @@ typedef enum NodeTag
 	T_Const,
 	T_Param,
 	T_Aggref,
-	T_WindowRef,
+	T_WindowFunc,
 	T_ArrayRef,
 	T_FuncExpr,
 	T_OpExpr,
@@ -184,6 +187,7 @@ typedef enum NodeTag
 	T_BoolExpr,
 	T_SubLink,
 	T_SubPlan,
+	T_AlternativeSubPlan,
 	T_FieldSelect,
 	T_FieldStore,
 	T_RelabelType,
@@ -212,13 +216,8 @@ typedef enum NodeTag
 	T_FromExpr,
 	T_IntoClause,
 	T_Flow,
-	T_WindowFrame,
-	T_WindowFrameEdge,
-	T_WindowKey,
 	T_Grouping,
 	T_GroupId,
-    T_AggOrder,
-	T_PercentileExpr,
 	T_DMLActionExpr,
 	T_PartSelectedExpr,
 	T_PartDefaultExpr,
@@ -232,17 +231,19 @@ typedef enum NodeTag
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
 	 *
-	 * These correspond (not always one-for-one) to primitive nodes derived
+	 * These correspond (not always one-for-one) to primitive nodes derivedO
 	 * from Expr.
 	 */
 	T_ExprState = 400,
 	T_GenericExprState,
 	T_AggrefExprState,
+	T_WindowFuncExprState,
 	T_ArrayRefExprState,
 	T_FuncExprState,
 	T_ScalarArrayOpExprState,
 	T_BoolExprState,
 	T_SubPlanState,
+	T_AlternativeSubPlanState,
 	T_FieldSelectState,
 	T_FieldStoreState,
 	T_CoerceViaIOState,
@@ -260,9 +261,7 @@ typedef enum NodeTag
 	T_CoerceToDomainState,
 	T_DomainConstraintState,
 	T_WholeRowVarExprState,		/* will be in a more natural position in 9.3 */
-	T_WindowRefExprState,
 	T_GroupingFuncExprState,
-	T_PercentileExprState,
 	T_PartSelectedExprState,
 	T_PartDefaultExprState,
 	T_PartBoundExprState,
@@ -302,9 +301,10 @@ typedef enum NodeTag
 	T_PathKey,
 	T_RestrictInfo,
 	T_InnerIndexscanInfo,
-	T_OuterJoinInfo,
-	T_InClauseInfo,
+	T_PlaceHolderVar,
+	T_SpecialJoinInfo,
 	T_AppendRelInfo,
+	T_PlaceHolderInfo,
 	T_Partition,
 	T_PartitionRule,
 	T_PartitionNode,
@@ -425,7 +425,7 @@ typedef enum NodeTag
 	T_DeallocateStmt,
 	T_DeclareCursorStmt,
 	T_CreateTableSpaceStmt,
-	T_DropTableSpaceStmt,           /* Removed, See DropStmt */
+	T_DropTableSpaceStmt,
 	T_AlterObjectSchemaStmt,
 	T_AlterOwnerStmt,
 	T_DropOwnedStmt,
@@ -434,8 +434,15 @@ typedef enum NodeTag
 	T_CreateEnumStmt,
 	T_AlterTSDictionaryStmt,
 	T_AlterTSConfigurationStmt,
-	T_WindowSpec,
-	T_WindowSpecParse,		/* GPDB_84_MERGE_FIXME: Unused, remove once we're open for catalog changes again */
+	T_CreateFdwStmt,
+	T_AlterFdwStmt,
+	T_DropFdwStmt,
+	T_CreateForeignServerStmt,
+	T_AlterForeignServerStmt,
+	T_DropForeignServerStmt,
+	T_CreateUserMappingStmt,
+	T_AlterUserMappingStmt,
+	T_DropUserMappingStmt,
 	T_PartitionBy,
 	T_PartitionElem,
 	T_PartitionRangeItem,
@@ -447,6 +454,7 @@ typedef enum NodeTag
 	T_InheritPartitionCmd,
 	T_CreateFileSpaceStmt,
 	T_FileSpaceEntry,
+	T_DropFileSpaceStmt,
 	T_TableValueExpr,
 	T_DenyLoginInterval,
 	T_DenyLoginPoint,
@@ -471,6 +479,7 @@ typedef enum NodeTag
 	T_ResTarget,
 	T_TypeCast,
 	T_SortBy,
+	T_WindowDef,
 	T_RangeSubselect,
 	T_RangeFunction,
 	T_TypeName,
@@ -479,14 +488,14 @@ typedef enum NodeTag
 	T_Constraint,
 	T_DefElem,
 	T_RangeTblEntry,
-	T_SortClause,
-	T_GroupClause,
 	T_GroupingClause,
 	T_GroupingFunc,
+	T_WindowClause,
+	T_SortGroupClause,
 	T_FkConstraint,
 	T_PrivGrantee,
 	T_FuncWithArgs,
-	T_PrivTarget,
+	T_AccessPriv,
 	T_CreateOpClassItem,
 	T_InhRelation,
 	T_FunctionParameter,
@@ -514,16 +523,18 @@ typedef enum NodeTag
 	 */
 	T_TriggerData = 950,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
+	T_WindowObjectData,			/* private in nodeWindowAgg.c */
 	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
-    T_HashBitmap,               /* in nodes/tidbitmap.h */
+	T_TIDBitmap,				/* in nodes/tidbitmap.h */
     T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
-	
+	T_CookedConstraint,			/* in catalog/heap.h */
+
     /* CDB: tags for random other stuff */
-    T_CdbExplain_StatHdr = 950,             /* in cdb/cdbexplain.c */
+    T_CdbExplain_StatHdr = 1000,             /* in cdb/cdbexplain.c */
 
 } NodeTag;
 
@@ -673,36 +684,59 @@ typedef enum JoinType
 	JOIN_RIGHT,					/* pairs + unmatched RHS tuples */
 
 	/*
-	 * These are used for queries like WHERE foo IN (SELECT bar FROM ...).
-	 * Only JOIN_IN is actually implemented in the executor; the others are
-	 * defined for internal use in the planner.
+	 * Semijoins and anti-semijoins (as defined in relational theory) do not
+	 * appear in the SQL JOIN syntax, but there are standard idioms for
+	 * representing them (e.g., using EXISTS).	The planner recognizes these
+	 * cases and converts them to joins.  So the planner and executor must
+	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
+	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row is
+	 * guaranteed to be null-extended.
      *
      * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
-     * JOIN_UNIQUE_INNER.  The definitions are retained in case they 
-     * might be referenced in the source code of user-defined 
+     * JOIN_UNIQUE_INNER.  The definitions are retained in case they
+     * might be referenced in the source code of user-defined
      * selectivity functions brought over from PostgreSQL.
 	 */
-	JOIN_IN,					/* at most one result per outer row */
-	JOIN_REVERSE_IN,			/* at most one result per inner row */
-	JOIN_UNIQUE_OUTER,			/* outer path must be made unique */
-	JOIN_UNIQUE_INNER,			/* inner path must be made unique */
-	JOIN_LASJ,					/* Left Anti Semi Join:
-								   one copy of outer row with no match in inner */
-	JOIN_LASJ_NOTIN				/* Left Anti Semi Join with Not-In semantics:
+	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
+	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
+	JOIN_LASJ_NOTIN,			/* Left Anti Semi Join with Not-In semantics:
 									If any NULL values are produced by inner side,
 									return no join results. Otherwise, same as LASJ */
+	JOIN_REVERSE_IN,			/* at most one result per inner row */
+
+	/*
+	 * These codes are used internally in the planner, but are not supported
+	 * by the executor (nor, indeed, by most of the planner).
+	 */
+	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
+	JOIN_UNIQUE_INNER			/* RHS path must be made unique */
 
 	/*
 	 * We might need additional join types someday.
 	 */
 } JoinType;
 
+/*
+ * OUTER joins are those for which pushed-down quals must behave differently
+ * from the join's own quals.  This is in fact everything except INNER and
+ * SEMI joins.	However, this macro must also exclude the JOIN_UNIQUE symbols
+ * since those are temporary proxies for what will eventually be an INNER
+ * join.
+ *
+ * Note: semijoins are a hybrid case, but we choose to treat them as not
+ * being outer joins.  This is okay principally because the SQL syntax makes
+ * it impossible to have a pushed-down qual that refers to the inner relation
+ * of a semijoin; so there is no strong need to distinguish join quals from
+ * pushed-down quals.  This is convenient because for almost all purposes,
+ * quals attached to a semijoin can be treated the same as innerjoin quals.
+ */
 #define IS_OUTER_JOIN(jointype) \
-	((jointype) == JOIN_LEFT || \
-	 (jointype) == JOIN_FULL || \
-	 (jointype) == JOIN_RIGHT)
-
-
+	(((1 << (jointype)) & \
+	  ((1 << JOIN_LEFT) | \
+	   (1 << JOIN_FULL) | \
+	   (1 << JOIN_RIGHT) | \
+	   (1 << JOIN_ANTI) | \
+	   (1 << JOIN_LASJ_NOTIN))) != 0)
 
 /*
  * FlowType - kinds of tuple flows in parallelized plans.
@@ -728,17 +762,17 @@ typedef enum DispatchMethod
 	DISPATCH_UNDETERMINED = 0,	/* Used prior to determination. */
 	DISPATCH_SEQUENTIAL,		/* Dispatch on entry postgres process only. */
 	DISPATCH_PARALLEL			/* Dispatch on query executor and entry processes. */
-	
+
 } DispatchMethod;
 
-/* 
+/*
  * Inside the executor, if a caller to some data type manipulation functions
  * (e.g., int8inc()) is doing aggregate or window function work, we want to
  * avoid copying the input datum and just write directly over the input. This
  * isn't legal if the function is being used outside this context.
  */
 #define IS_AGG_EXECUTION_NODE(node) \
-	((IsA((Node *)(node), AggState) || IsA((Node *)(node), WindowState)) ? \
+	((IsA((Node *)(node), AggState) || IsA((Node *)(node), WindowAggState)) ? \
 	 true : false)
 
 /*

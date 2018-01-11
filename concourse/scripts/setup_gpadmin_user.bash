@@ -28,15 +28,18 @@ ssh_keyscan_for_user() {
   {
     ssh-keyscan localhost
     ssh-keyscan 0.0.0.0
-    ssh-keyscan github.com
+    ssh-keyscan `hostname`
   } >> "${home_dir}/.ssh/known_hosts"
 }
 
 transfer_ownership() {
-  chown -R gpadmin:gpadmin gpdb_src
-  [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
-  [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
-  chown -R gpadmin:gpadmin /home/gpadmin
+    chmod a+w gpdb_src
+    find gpdb_src -type d -exec chmod a+w {} \;
+    # Needed for the gpload test
+    [ -f gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv ] && chown gpadmin:gpadmin gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv
+    [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
+    [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
+    chown -R gpadmin:gpadmin /home/gpadmin
 }
 
 set_limits() {
@@ -53,14 +56,17 @@ set_limits() {
 }
 
 setup_gpadmin_user() {
-  groupadd supergroup
+
   case "$TEST_OS" in
     sles)
       groupadd gpadmin
-      /usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin
+      /usr/sbin/useradd -G gpadmin,tty gpadmin
       ;;
     centos)
-      /usr/sbin/useradd -G supergroup,tty gpadmin
+      /usr/sbin/useradd -G tty gpadmin
+      ;;
+    ubuntu)
+      /usr/sbin/useradd -G tty gpadmin -s /bin/bash
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
@@ -71,7 +77,9 @@ setup_gpadmin_user() {
 }
 
 setup_sshd() {
-  test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
+  if [ ! "$TEST_OS" = 'ubuntu' ]; then
+    test -e /etc/ssh/ssh_host_key || ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1
+  fi
   test -e /etc/ssh/ssh_host_rsa_key || ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
   test -e /etc/ssh/ssh_host_dsa_key || ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
 
@@ -85,6 +93,11 @@ setup_sshd() {
   sed -ri 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
 
   setup_ssh_for_user root
+
+  if [ "$TEST_OS" = 'ubuntu' ]; then
+    mkdir -p /var/run/sshd
+    chmod 0755 /var/run/sshd
+  fi
 
   /usr/sbin/sshd
 
@@ -101,14 +114,27 @@ determine_os() {
     echo "sles"
     return
   fi
+  if lsb_release -a | grep -q 'Ubuntu' ; then
+    echo "ubuntu"
+    return
+  fi
   echo "Could not determine operating system type" >/dev/stderr
   exit 1
+}
+
+# This might no longer be necessary, as the centos7 base image has been updated
+# with ping's setcap set properly, although it would need to be verified to work
+# for other OSs used by Concourse.
+# https://github.com/Pivotal-DataFabric/toolsmiths-images/pull/27
+workaround_before_concourse_stops_stripping_suid_bits() {
+  chmod u+s /bin/ping
 }
 
 _main() {
   TEST_OS=$(determine_os)
   setup_gpadmin_user
   setup_sshd
+  workaround_before_concourse_stops_stripping_suid_bits
 }
 
 _main "$@"

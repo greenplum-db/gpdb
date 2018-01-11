@@ -5,9 +5,9 @@
   <title>pg_available_extension_versions</title>
   <body>
     <p>The <codeph>pg_available_extension_versions</codeph> view lists the specific extension
-      versions that are available for installation. The <xref
-        href="pg_extension.xml#topic_ygy_xfx_tz"><i>pg_extension</i></xref> system catalog table
-      shows the extensions currently installed.</p>
+      versions that are available for installation. The <xref href="pg_extension.xml"
+          ><i>pg_extension</i></xref> system catalog table shows the extensions currently
+      installed.</p>
     <p>The view is read only.</p>
     <table id="table_tln_wfx_tz">
       <title>pg_catalog.pg_available_extension_versions</title>

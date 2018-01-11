@@ -2,9 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="ih135496">Working with JSON Data</title>
+  <shortdesc>Greenplum Database supports the <codeph>json</codeph> data type that stores JSON
+    (JavaScript Object Notation) data.</shortdesc>
   <body>
-    <p>Greenplum Database supports the <codeph>json</codeph> data type that stores JSON (JavaScript
-      Object Notation) data, as specified in the <xref href="http://rfc7159.net/rfc7159"
+    <p>Greenplum Database supports JSON as specified in the <xref href="https://tools.ietf.org/html/rfc7159"
         format="html" scope="external">RFC 7159</xref> document and enforces data validity according
       to the JSON rules. There are also JSON-specific functions and operators available for
         <codeph>json</codeph> data. See <xref href="#topic_gn4_x3w_mq" format="dita"/>. </p>
@@ -234,6 +235,7 @@ SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;</pre>
               </row>
             </thead>
             <tbody>
+<!--
               <row>
                 <entry><codeph>to_json(anyelement)</codeph></entry>
                 <entry>Returns the value as a valid JSON object. Arrays and composites are processed
@@ -250,6 +252,7 @@ SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;</pre>
                   <codeph>"Fred said \"Hi.\""</codeph>
                 </entry>
               </row>
+-->
               <row>
                 <entry><codeph>array_to_json(anyarray [, pretty_bool])</codeph></entry>
                 <entry>Returns the array as a JSON array. A Greenplum Database multidimensional
@@ -276,10 +279,12 @@ SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;</pre>
             </tbody>
           </tgroup>
         </table>
+<!--
         <note><codeph>array_to_json</codeph> and <codeph>row_to_json</codeph> have the same behavior
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> also applies to individual values converted by the
           other JSON creation functions.</note>
+-->
       </body>
     </topic>
     <topic id="topic_z5d_snw_2z">

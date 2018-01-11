@@ -3,17 +3,22 @@
  * cdbexplain.c
  *	  Functions supporting the Greenplum EXPLAIN ANALYZE command
  *
- * Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbexplain.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 #include "portability/instr_time.h"
 
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
-#include "cdb/cdbdispatchresult.h"		/* CdbDispatchResults */
+#include "cdb/cdbdispatchresult.h"	/* CdbDispatchResults */
 #include "cdb/cdbexplain.h"		/* me */
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"		/* Gp_segment */
@@ -93,8 +98,8 @@ typedef struct CdbExplain_StatInst
 	double		peakMemBalance; /* Max mem account balance */
 	int			numPartScanned; /* Number of part tables scanned */
 	ExplainSortMethod sortMethod;	/* Type of sort */
-	ExplainSortSpaceType sortSpaceType;	/* Sort space type */
-	long			  sortSpaceUsed; /* Memory / Disk used by sort(KBytes) */
+	ExplainSortSpaceType sortSpaceType; /* Sort space type */
+	long		sortSpaceUsed;	/* Memory / Disk used by sort(KBytes) */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
 } CdbExplain_StatInst;
@@ -123,7 +128,7 @@ typedef struct CdbExplain_StatHdr
 	int			memAccountStartOffset;	/* Where in the header our memory
 										 * account array is serialized */
 
-	CdbExplain_SliceWorker worker;		/* qExec's overall stats for slice */
+	CdbExplain_SliceWorker worker;	/* qExec's overall stats for slice */
 
 	/*
 	 * During serialization, we use this as a temporary StatInst and save
@@ -170,7 +175,7 @@ typedef struct CdbExplain_NodeSummary
 	int			ninst;			/* num of StatInst entries in inst array */
 
 	/* Array [0..ninst-1] of StatInst entries is appended starting here */
-	CdbExplain_StatInst insts[1];		/* variable size - must be last */
+	CdbExplain_StatInst insts[1];	/* variable size - must be last */
 } CdbExplain_NodeSummary;
 
 
@@ -198,11 +203,10 @@ typedef struct CdbExplain_SliceSummary
 	CdbExplain_Agg peakmemused; /* Summary of SliceWorker stats over all of
 								 * the slice's workers */
 
-	CdbExplain_Agg vmem_reserved;		/* vmem reserved by QEs */
+	CdbExplain_Agg vmem_reserved;	/* vmem reserved by QEs */
 
-	CdbExplain_Agg memory_accounting_global_peak;		/* Peak memory
-														 * accounting balance by
-														 * QEs */
+	CdbExplain_Agg memory_accounting_global_peak;	/* Peak memory accounting
+													 * balance by QEs */
 
 	/* Rollup of per-node stats over all of the slice's workers and nodes */
 	double		workmemused_max;
@@ -334,40 +338,49 @@ static int
  * in tuplesort.c / tuplesort_mk.c
  */
 static ExplainSortMethod
-String2ExplainSortMethod(const char* sortMethod)
+String2ExplainSortMethod(const char *sortMethod)
 {
-	if (sortMethod == NULL) {
+	if (sortMethod == NULL)
+	{
 		return UNINITIALIZED_SORT;
 	}
-	else if (strcmp(TOP_N_HEAP_SORT_STR, sortMethod) == 0) {
+	else if (strcmp(TOP_N_HEAP_SORT_STR, sortMethod) == 0)
+	{
 		return TOP_N_HEAP_SORT;
 	}
-	else if (strcmp(QUICK_SORT_STR, sortMethod) == 0) {
+	else if (strcmp(QUICK_SORT_STR, sortMethod) == 0)
+	{
 		return QUICK_SORT;
 	}
-	else if (strcmp(EXTERNAL_SORT_STR, sortMethod) == 0) {
+	else if (strcmp(EXTERNAL_SORT_STR, sortMethod) == 0)
+	{
 		return EXTERNAL_SORT;
 	}
-	else if (strcmp(EXTERNAL_MERGE_STR, sortMethod) == 0) {
+	else if (strcmp(EXTERNAL_MERGE_STR, sortMethod) == 0)
+	{
 		return EXTERNAL_MERGE;
 	}
-	else if (strcmp(IN_PROGRESS_SORT_STR, sortMethod) == 0) {
+	else if (strcmp(IN_PROGRESS_SORT_STR, sortMethod) == 0)
+	{
 		return IN_PROGRESS_SORT;
 	}
 	return UNINITIALIZED_SORT;
 }
 
 static ExplainSortSpaceType
-String2ExplainSortSpaceType(const char* sortSpaceType, ExplainSortMethod sortMethod)
+String2ExplainSortSpaceType(const char *sortSpaceType, ExplainSortMethod sortMethod)
 {
 	if (sortSpaceType == NULL ||
-		sortMethod == UNINITIALIZED_SORT) {
+		sortMethod == UNINITIALIZED_SORT)
+	{
 		return UNINITIALIZED_SORT_SPACE_TYPE;
 	}
-	else if (strcmp(MEMORY_STR_SORT_SPACE_TYPE, sortSpaceType) == 0) {
+	else if (strcmp(MEMORY_STR_SORT_SPACE_TYPE, sortSpaceType) == 0)
+	{
 		return MEMORY_SORT_SPACE_TYPE;
 	}
-	else {
+	else
+	{
 		Assert(strcmp(DISK_STR_SORT_SPACE_TYPE, sortSpaceType) == 0);
 		return DISK_SORT_SPACE_TYPE;
 	}
@@ -426,7 +439,7 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 	/* Obtain per-slice stats and put them in SliceSummary. */
 	cdbexplain_collectSliceStats(planstate, &ctx.send.hdr.worker);
 	cdbexplain_depositSliceStats(&ctx.send.hdr, &ctx.recv);
-}	/* cdbexplain_localExecStats */
+}								/* cdbexplain_localExecStats */
 
 
 /*
@@ -448,7 +461,7 @@ cdbexplain_localStatWalker(PlanState *planstate, void *context)
 		return CdbVisit_Skip;
 
 	return CdbVisit_Walk;
-}	/* cdbexplain_localStatWalker */
+}								/* cdbexplain_localStatWalker */
 
 
 /*
@@ -546,7 +559,7 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 
 	/* Send message to qDisp process. */
 	pq_endmessage(&ctx.buf);
-}	/* cdbexplain_sendExecStats */
+}								/* cdbexplain_sendExecStats */
 
 
 /*
@@ -570,7 +583,7 @@ cdbexplain_sendStatWalker(PlanState *planstate, void *context)
 		return CdbVisit_Skip;
 
 	return CdbVisit_Walk;
-}	/* cdbexplain_sendStatWalker */
+}								/* cdbexplain_sendStatWalker */
 
 
 /*
@@ -646,10 +659,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 		else if (dispatchResult->okindex >= 0)
 			ds.nOk++;			/* qExec returned successful completion */
 		else
-			ds.nIgnorableError++;		/* qExec returned an error that's
-										 * likely a side-effect of another
-										 * qExec's failure, e.g. an
-										 * interconnect error */
+			ds.nIgnorableError++;	/* qExec returned an error that's likely a
+									 * side-effect of another qExec's failure,
+									 * e.g. an interconnect error */
 
 		/* Find this qExec's last PGresult.  If none, skip to next qExec. */
 		pgresult = cdbdisp_getPGresult(dispatchResult, -1);
@@ -670,7 +682,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 		if ((size_t) statcell->len < sizeof(*hdr) ||
 			(size_t) statcell->len != (sizeof(*hdr) - sizeof(hdr->inst) +
 									   hdr->nInst * sizeof(hdr->inst) +
-			 hdr->memAccountCount * MemoryAccounting_SizeOfAccountInBytes() +
+									   hdr->memAccountCount * MemoryAccounting_SizeOfAccountInBytes() +
 									   hdr->enotes - hdr->bnotes) ||
 			statcell->len != hdr->enotes ||
 			hdr->segindex < -1 ||
@@ -682,9 +694,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 											"length=%d",
 											hdr->segindex,
 											statcell->len),
-						errhint("Please verify that all instances are using "
-								"the correct %s software version.",
-								PACKAGE_NAME)
+							errhint("Please verify that all instances are using "
+									"the correct %s software version.",
+									PACKAGE_NAME)
 							));
 		}
 
@@ -698,9 +710,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("Invalid execution statistics "
 									   "received stats node-count mismatch: cdbexplain_recvExecStats() ctx.nStatInst %d hdr->nInst %d", ctx.nStatInst, hdr->nInst),
-						errhint("Please verify that all instances are using "
-								"the correct %s software version.",
-								PACKAGE_NAME)));
+								errhint("Please verify that all instances are using "
+										"the correct %s software version.",
+										PACKAGE_NAME)));
 
 			Insist(ctx.nStatInst == hdr->nInst);
 		}
@@ -734,7 +746,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	/* Clean up. */
 	if (ctx.msgptrs)
 		pfree(ctx.msgptrs);
-}	/* cdbexplain_recvExecStats */
+}								/* cdbexplain_recvExecStats */
 
 
 /*
@@ -769,7 +781,7 @@ cdbexplain_recvStatWalker(PlanState *planstate, void *context)
 	}
 
 	return CdbVisit_Walk;
-}	/* cdbexplain_recvStatWalker */
+}								/* cdbexplain_recvStatWalker */
 
 
 /*
@@ -794,7 +806,7 @@ cdbexplain_collectSliceStats(PlanState *planstate,
 
 	out_worker->memory_accounting_global_peak = (double) MemoryAccounting_GetGlobalPeak();
 
-}	/* cdbexplain_collectSliceStats */
+}								/* cdbexplain_collectSliceStats */
 
 
 /*
@@ -854,8 +866,7 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	iworker = hdr->segindex - ss->segindex0;
 	ssw = &ss->workers[iworker];
 	Insist(iworker >= 0 && iworker < ss->nworker);
-	Insist(ssw->peakmemused == 0);		/* each worker should be seen just
-										 * once */
+	Insist(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
 
 	const char *originalSerializedMemoryAccountingStartAddress = ((const char *) hdr) +
@@ -886,7 +897,7 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	/* Rollup of per-node stats over the whole query into ShowStatCtx. */
 	showstatctx->workmemused_max = Max(showstatctx->workmemused_max, recvstatctx->workmemused_max);
 	showstatctx->workmemwanted_max = Max(showstatctx->workmemwanted_max, recvstatctx->workmemwanted_max);
-}	/* cdbexplain_depositSliceStats */
+}								/* cdbexplain_depositSliceStats */
 
 
 /*
@@ -942,7 +953,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
 	si->sortSpaceType = String2ExplainSortSpaceType(instr->sortSpaceType, si->sortMethod);
 	si->sortSpaceUsed = instr->sortSpaceUsed;
-}	/* cdbexplain_collectStatsFromNode */
+}								/* cdbexplain_collectStatsFromNode */
 
 
 /*
@@ -974,7 +985,7 @@ cdbexplain_depStatAcc_init0(CdbExplain_DepStatAcc *acc)
 	acc->nsimax = NULL;
 	acc->max_total = 0;
 	INSTR_TIME_SET_ZERO(acc->firststart_of_max_total);
-}	/* cdbexplain_depStatAcc_init0 */
+}								/* cdbexplain_depStatAcc_init0 */
 
 static inline void
 cdbexplain_depStatAcc_upd(CdbExplain_DepStatAcc *acc,
@@ -995,7 +1006,7 @@ cdbexplain_depStatAcc_upd(CdbExplain_DepStatAcc *acc,
 		acc->max_total = nsi->total;
 		INSTR_TIME_ASSIGN(acc->firststart_of_max_total, nsi->firststart);
 	}
-}	/* cdbexplain_depStatAcc_upd */
+}								/* cdbexplain_depStatAcc_upd */
 
 static void
 cdbexplain_depStatAcc_saveText(CdbExplain_DepStatAcc *acc,
@@ -1026,7 +1037,7 @@ cdbexplain_depStatAcc_saveText(CdbExplain_DepStatAcc *acc,
 		if (saved_inout)
 			*saved_inout = true;
 	}
-}	/* cdbexplain_depStatAcc_saveText */
+}								/* cdbexplain_depStatAcc_saveText */
 
 
 /*
@@ -1093,9 +1104,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&peakMemBalance);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
-	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
-		cdbexplain_depStatAcc_init0(&sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx]);
-		cdbexplain_depStatAcc_init0(&sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
+	{
+		cdbexplain_depStatAcc_init0(&sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx]);
+		cdbexplain_depStatAcc_init0(&sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx]);
 	}
 
 	/* Initialize per-slice accumulators. */
@@ -1143,9 +1155,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
-		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITIALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE) {
+		if (rsi->sortMethod < NUM_SORT_METHOD && rsi->sortMethod != UNINITIALIZED_SORT && rsi->sortSpaceType != UNINITIALIZED_SORT_SPACE_TYPE)
+		{
 			Assert(rsi->sortSpaceType <= NUM_SORT_SPACE_TYPE);
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortSpaceType-1][rsi->sortMethod - 1], (double)rsi->sortSpaceUsed, rsh, rsi, nsi);
+			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortSpaceType - 1][rsi->sortMethod - 1], (double) rsi->sortSpaceUsed, rsh, rsi, nsi);
 		}
 
 		/* Update per-slice accumulators. */
@@ -1162,9 +1175,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->peakMemBalance = peakMemBalance.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
-	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx) {
-		ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx] = sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx].agg;
-		ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx] = sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx].agg;
+	for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
+	{
+		ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx] = sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx].agg;
+		ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx] = sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx].agg;
 	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
@@ -1227,7 +1241,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 			ntuples.agg.vmax > 1.05 * cdbexplain_agg_avg(&ntuples.agg))
 			cdbexplain_depStatAcc_saveText(&ntuples, ctx->extratextbuf, &saved);
 	}
-}	/* cdbexplain_depositStatsToNode */
+}								/* cdbexplain_depositStatsToNode */
 
 
 /*
@@ -1269,7 +1283,7 @@ cdbexplain_collectExtraText(PlanState *planstate, StringInfo notebuf)
 	}
 
 	return bnotes;
-}	/* cdbexplain_collectExtraText */
+}								/* cdbexplain_collectExtraText */
 
 
 /*
@@ -1317,7 +1331,7 @@ cdbexplain_formatExtraText(StringInfo str,
 			break;
 		cp = nlp + 1;
 	}
-}	/* cdbexplain_formatExtraText */
+}								/* cdbexplain_formatExtraText */
 
 
 
@@ -1337,11 +1351,12 @@ cdbexplain_formatMemory(char *outbuf, int bufsize, double bytes)
 	/* check if truncation occurs */
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
-#endif   /* USE_ASSERT_CHECKING */
+#endif							/* USE_ASSERT_CHECKING */
 	snprintf(outbuf, bufsize, "%.0fK bytes", floor((bytes + 1023.0) / 1024.0));
+
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
-}	/* cdbexplain_formatMemory */
+}								/* cdbexplain_formatMemory */
 
 
 
@@ -1359,16 +1374,18 @@ cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds)
 	Assert(outbuf != NULL && "CDBEXPLAIN: char buffer is null");
 	Assert(bufsize > 0 && "CDBEXPLAIN: size of char buffer is zero");
 	double		ms = seconds * 1000.0;
+
 	/* check if truncation occurs */
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
-#endif   /* USE_ASSERT_CHECKING */
+#endif							/* USE_ASSERT_CHECKING */
 	snprintf(outbuf, bufsize, "%.*f ms",
 			 (ms < 10.0 && ms != 0.0 && ms > -10.0) ? 3 : 0,
 			 ms);
+
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
-}	/* cdbexplain_formatSeconds */
+}								/* cdbexplain_formatSeconds */
 
 
 /*
@@ -1391,8 +1408,9 @@ cdbexplain_formatSeg(char *outbuf, int bufsize, int segindex, int nInst)
 		/* check if truncation occurs */
 #ifdef USE_ASSERT_CHECKING
 		int			nchars_written =
-#endif   /* USE_ASSERT_CHECKING */
+#endif							/* USE_ASSERT_CHECKING */
 		snprintf(outbuf, bufsize, " (seg%d)", segindex);
+
 		Assert(nchars_written < bufsize &&
 			   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
 	}
@@ -1400,7 +1418,7 @@ cdbexplain_formatSeg(char *outbuf, int bufsize, int segindex, int nInst)
 	{
 		outbuf[0] = '\0';
 	}
-}	/* cdbexplain_formatSeg */
+}								/* cdbexplain_formatSeg */
 
 
 /*
@@ -1439,7 +1457,7 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
 	initStringInfoOfSize(&ctx->extratextbuf, 4000);
 
 	return ctx;
-}	/* cdbexplain_showExecStatsBegin */
+}								/* cdbexplain_showExecStatsBegin */
 
 /*
  * nodeSupportWorkfileCaching
@@ -1460,21 +1478,22 @@ nodeSupportWorkfileCaching(PlanState *planstate)
  */
 static void
 show_cumulative_sort_info(struct StringInfoData *str,
-		int indent,
-		const char *sort_method,
-		const char* sort_space_type,
-		CdbExplain_Agg *agg)
+						  int indent,
+						  const char *sort_method,
+						  const char *sort_space_type,
+						  CdbExplain_Agg *agg)
 {
-	if (agg->vcnt > 0) {
+	if (agg->vcnt > 0)
+	{
 		if (agg->vcnt > 1)
 		{
 			appendStringInfo(str, "Sort Method:  %s  Max %s: %ldKB  Avg %s: %ldKB (%d segments)\n",
-					sort_method, sort_space_type, (long)(agg->vmax), sort_space_type, (long)(agg->vsum / agg->vcnt), agg->vcnt);
+							 sort_method, sort_space_type, (long) (agg->vmax), sort_space_type, (long) (agg->vsum / agg->vcnt), agg->vcnt);
 			appendStringInfoFill(str, 2 * indent, ' ');
 		}
 		else
 		{
-			appendStringInfo(str, "Sort Method:  %s  %s: %ldKB\n", sort_method, sort_space_type, (long)(agg->vsum));
+			appendStringInfo(str, "Sort Method:  %s  %s: %ldKB\n", sort_method, sort_space_type, (long) (agg->vsum));
 			appendStringInfoFill(str, 2 * indent, ' ');
 		}
 	}
@@ -1533,6 +1552,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_BitmapIndexScanState:
+		case T_DynamicBitmapIndexScanState:
 			s_row = "";
 			if (ns->ntuples.vcnt > 1)
 				appendStringInfo(str,
@@ -1584,8 +1604,8 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		case T_SortState:
 			for (int idx = 0; idx < NUM_SORT_METHOD; ++idx)
 			{
-				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], MEMORY_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE-1][idx]);
-				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
+				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], MEMORY_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[MEMORY_SORT_SPACE_TYPE - 1][idx]);
+				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE - 1][idx]);
 			}
 			/* no break */
 		default:
@@ -1762,7 +1782,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
 			appendStringInfo(str,
 							 "Work_mem wanted: %s avg, %s max%s"
-						   " to lessen workfile I/O affecting %d workers.\n",
+							 " to lessen workfile I/O affecting %d workers.\n",
 							 avgbuf,
 							 maxbuf,
 							 segbuf,
@@ -1774,8 +1794,8 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 	 * Print number of partitioned tables scanned for dynamic scans.
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_BitmapTableScanState == planstate->type
-								|| T_DynamicTableScanState == planstate->type
-							  || T_DynamicIndexScanState == planstate->type))
+												|| T_DynamicTableScanState == planstate->type
+												|| T_DynamicIndexScanState == planstate->type))
 	{
 		double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
 
@@ -1828,7 +1848,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				else
 				{
 					appendStringInfo(str,
-							   "Partitions scanned:  %.0f (out of %d) %s.\n",
+									 "Partitions scanned:  %.0f (out of %d) %s.\n",
 									 ns->totalPartTableScanned.vmax,
 									 numTotalLeafParts,
 									 segbuf);
@@ -1856,7 +1876,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				else
 				{
 					appendStringInfo(str,
-					"Partitions scanned:  Avg %.1f (out of %d) x %d workers."
+									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers."
 									 "  Max %.0f parts%s.\n",
 									 nPartTableScanned_avg,
 									 numTotalLeafParts,
@@ -1902,6 +1922,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 							   "allstat: "
 
 		/*
+		 *
 		 * "seg_starttime_firststart_counter_firsttuple_startup_total_ntuples_n
 		 * loops"
 		 */
@@ -1931,7 +1952,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		}
 		appendStringInfoString(str, "//end\n");
 	}
-}	/* cdbexplain_showExecStats */
+}								/* cdbexplain_showExecStats */
 
 
 /*
@@ -1957,6 +1978,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 	Slice	   *slice;
 	int			sliceIndex;
 	int			flag;
+	double		total_memory_across_slices = 0;
 
 	char		avgbuf[50];
 	char		maxbuf[50];
@@ -2060,7 +2082,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->peakmemused));
 			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->peakmemused.imax, ss->nworker);
 			appendStringInfo(str,
-						   "Executor memory: %s avg x %d workers, %s max%s.",
+							 "Executor memory: %s avg x %d workers, %s max%s.",
 							 avgbuf,
 							 ss->peakmemused.vcnt,
 							 maxbuf,
@@ -2070,7 +2092,9 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		if (EXPLAIN_MEMORY_VERBOSITY_SUPPRESS < explain_memory_verbosity)
 		{
 			/* Memory accounting global peak memory usage */
-			cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->memory_accounting_global_peak.vmax);
+			double kilobytes = ss->memory_accounting_global_peak.vmax;
+			int workers = 1;
+			cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), kilobytes);
 			if (ss->memory_accounting_global_peak.vcnt == 1)
 			{
 				const char *seg = segbuf;
@@ -2095,15 +2119,21 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 			}
 			else if (ss->memory_accounting_global_peak.vcnt > 1)
 			{
-				cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->memory_accounting_global_peak));
+				kilobytes = cdbexplain_agg_avg(&ss->memory_accounting_global_peak);
+				workers = ss->memory_accounting_global_peak.vcnt;
+				kilobytes = floor((kilobytes + 1023.0) / 1024.0);
+				cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), kilobytes);
 				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->memory_accounting_global_peak.imax, ss->nworker);
 				appendStringInfo(str,
-							 "  Peak memory: %s avg x %d workers, %s max%s.",
+								 "  Peak memory: %s avg x %d workers, %s max%s.",
 								 avgbuf,
 								 ss->memory_accounting_global_peak.vcnt,
 								 maxbuf,
 								 segbuf);
 			}
+
+			kilobytes = floor((kilobytes + 1023.0) / 1024.0);
+			total_memory_across_slices += (kilobytes * workers);
 
 			/* Vmem reserved by QEs */
 			cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ss->vmem_reserved.vmax);
@@ -2134,7 +2164,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 				cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ss->vmem_reserved));
 				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ss->vmem_reserved.imax, ss->nworker);
 				appendStringInfo(str,
-						   "  Vmem reserved: %s avg x %d workers, %s max%s.",
+								 "  Vmem reserved: %s avg x %d workers, %s max%s.",
 								 avgbuf,
 								 ss->vmem_reserved.vcnt,
 								 maxbuf,
@@ -2159,10 +2189,19 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		appendStringInfoChar(str, '\n');
 	}
 
+	if (total_memory_across_slices > 0)
+	{
+		appendStringInfo(str, "Total memory used across slices: %.0fK bytes \n", total_memory_across_slices);
+	}
+
 	if (!IsResManagerMemoryPolicyNone())
 	{
 		appendStringInfoString(str, "Statement statistics:\n");
 		appendStringInfo(str, "  Memory used: %.0fK bytes", ceil((double) stmt->query_mem / 1024.0));
+		if (optimizer && explain_memory_verbosity == EXPLAIN_MEMORY_VERBOSITY_SUMMARY)
+		{
+			MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(str);
+		}
 
 		if (showstatctx->workmemwanted_max > 0)
 		{
@@ -2172,13 +2211,13 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 
 		appendStringInfoChar(str, '\n');
 	}
-}	/* cdbexplain_showExecStatsEnd */
+}								/* cdbexplain_showExecStatsEnd */
 
 static int
 cdbexplain_countLeafPartTables(PlanState *planstate)
 {
-	Assert(IsA(planstate, DynamicTableScanState) || IsA(planstate, DynamicIndexScanState)
-		   || IsA(planstate, BitmapTableScanState));
+	Assert(IsA(planstate, DynamicTableScanState) ||IsA(planstate, DynamicIndexScanState)
+		   ||IsA(planstate, BitmapTableScanState));
 	Scan	   *scan = (Scan *) planstate->plan;
 
 	Oid			root_oid = getrelid(scan->scanrelid, planstate->state->es_range_table);

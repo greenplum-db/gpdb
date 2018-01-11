@@ -3,11 +3,11 @@
  * regis.c
  *		Fast regex subset
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/regis.c,v 1.4.2.1 2009/08/30 16:53:45 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/regis.c,v 1.7 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,7 +38,7 @@ RS_isRegis(const char *str)
 		if (state == RS_IN_WAIT)
 		{
 			if (t_isalpha(c))
-				/* okay */ ;
+				 /* okay */ ;
 			else if (t_iseq(c, '['))
 				state = RS_IN_ONEOF;
 			else
@@ -56,7 +56,7 @@ RS_isRegis(const char *str)
 		else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
 		{
 			if (t_isalpha(c))
-				/* okay */ ;
+				 /* okay */ ;
 			else if (t_iseq(c, ']'))
 				state = RS_IN_WAIT;
 			else
@@ -115,7 +115,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 				ptr->type = RSF_ONEOF;
 				state = RS_IN_ONEOF;
 			}
-			else				/* shouldn't get here */
+			else	/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else if (state == RS_IN_ONEOF)
@@ -131,7 +131,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 				ptr->len = pg_mblen(c);
 				state = RS_IN_ONEOF_IN;
 			}
-			else				/* shouldn't get here */
+			else	/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else if (state == RS_IN_ONEOF_IN || state == RS_IN_NONEOF)
@@ -143,7 +143,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 			}
 			else if (t_iseq(c, ']'))
 				state = RS_IN_WAIT;
-			else				/* shouldn't get here */
+			else	/* shouldn't get here */
 				elog(ERROR, "invalid regis pattern: \"%s\"", str);
 		}
 		else
@@ -151,7 +151,7 @@ RS_compile(Regis *r, bool issuffix, const char *str)
 		c += pg_mblen(c);
 	}
 
-	if (state != RS_IN_WAIT)		/* shouldn't get here */
+	if (state != RS_IN_WAIT)	/* shouldn't get here */
 		elog(ERROR, "invalid regis pattern: \"%s\"", str);
 
 	ptr = r->node;
@@ -178,7 +178,7 @@ RS_free(Regis *r)
 	r->node = NULL;
 }
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 static bool
 mb_strchr(char *str, char *c)
 {

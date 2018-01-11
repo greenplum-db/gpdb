@@ -1,2 +1,5 @@
 /pg_upgrade
-lalshell
+/lalshell
+/clusterConfigFile
+/clusterConfigPostgresAddonsFile
+/gpdemo-env.sh

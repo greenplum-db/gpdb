@@ -215,9 +215,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the global variable 'int optreset'. */
-/* #define HAVE_INT_OPTRESET 1 */
-
 /* Define to 1 if you have the global variable 'int timezone'. */
 #define HAVE_INT_TIMEZONE
 
@@ -627,16 +624,16 @@
 #define PACKAGE_NAME "Greenplum Database"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Greenplum Database 8.3devel"
+#define PACKAGE_STRING "Greenplum Database 8.4.0"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "8.3.23"
+#define PACKAGE_VERSION "8.4.0"
 
 /* PostgreSQL version as a string */
-#define PG_VERSION "8.3.23"
+#define PG_VERSION "8.4.0"
 
 /* PostgreSQL version as a number */
-#define PG_VERSION_NUM 80323
+#define PG_VERSION_NUM 80400
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "greenplum"

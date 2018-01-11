@@ -18,8 +18,12 @@
 #ifndef FMGR_H
 #define FMGR_H
 
-/* We don't want to include primnodes.h here, so make a stub reference */
+/* We don't want to include primnodes.h here, so make some stub references */
 typedef struct Node *fmNodePtr;
+typedef struct Aggref *fmAggrefPtr;
+
+/* Likewise, avoid including execnodes.h here */
+typedef struct ExprContext *fmExprContextPtr;
 
 /* Likewise, avoid including stringinfo.h here */
 typedef struct StringInfoData *fmStringInfo;
@@ -292,6 +296,7 @@ extern struct varlena *pg_detoast_datum_packed(struct varlena * datum);
 #define PG_RETURN_FLOAT4(x)  return Float4GetDatum(x)
 #define PG_RETURN_FLOAT8(x)  return Float8GetDatum(x)
 #define PG_RETURN_INT64(x)	 return Int64GetDatum(x)
+#define PG_RETURN_UINT64(x)	 return UInt64GetDatum(x)
 /* RETURN macros for other pass-by-ref types will typically look like this: */
 #define PG_RETURN_BYTEA_P(x)   PG_RETURN_POINTER(x)
 #define PG_RETURN_TEXT_P(x)    PG_RETURN_POINTER(x)
@@ -547,6 +552,9 @@ extern Oid	fmgr_internal_function(const char *proname);
 extern Oid	get_fn_expr_rettype(FmgrInfo *flinfo);
 extern Oid	get_fn_expr_argtype(FmgrInfo *flinfo, int argnum);
 extern Oid	get_call_expr_argtype(fmNodePtr expr, int argnum);
+extern bool get_fn_expr_arg_stable(FmgrInfo *flinfo, int argnum);
+extern bool get_call_expr_arg_stable(fmNodePtr expr, int argnum);
+extern bool get_fn_expr_variadic(FmgrInfo *flinfo);
 extern bool CheckFunctionValidatorAccess(Oid validatorOid, Oid functionOid);
 
 /*
@@ -563,8 +571,8 @@ extern void **find_rendezvous_variable(const char *varName);
 /*
  * Support for aggregate functions
  *
- * This is actually in executor/nodeAgg.c, but we declare it here since the
- * whole point is for callers of it to not be overly friendly with nodeAgg.
+ * These are actually in executor/nodeAgg.c, but we declare them here since
+ * the whole point is for callers to not be overly friendly with nodeAgg.
  */
 
 /* AggCheckCallContext can return one of the following codes, or 0: */
@@ -572,6 +580,9 @@ extern void **find_rendezvous_variable(const char *varName);
 #define AGG_CONTEXT_WINDOW      2       /* window function */
 
 extern int AggCheckCallContext(FunctionCallInfo fcinfo,
-                    MemoryContext *aggcontext);
+					MemoryContext *aggcontext);
+extern fmAggrefPtr AggGetAggref(FunctionCallInfo fcinfo);
+extern fmExprContextPtr AggGetPerTupleEContext(FunctionCallInfo fcinfo);
+extern fmExprContextPtr AggGetPerAggEContext(FunctionCallInfo fcinfo);
 
 #endif   /* FMGR_H */

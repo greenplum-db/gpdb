@@ -29,7 +29,7 @@
  * All PXF's resources are under /PXF_SERVICE_PREFIX/PXF_VERSION/...
  */
 #define PXF_SERVICE_PREFIX "pxf"
-#define PXF_VERSION "v15" /* PXF version */
+#define PXF_VERSION "v15"		/* PXF version */
 #define PROTOCOL_PXF "pxf://"
 #define IS_PXF_URI(uri_str) (pg_strncasecmp(uri_str, PROTOCOL_PXF, strlen(PROTOCOL_PXF)) == 0)
 
@@ -38,8 +38,8 @@
  */
 typedef struct OptionData
 {
-    char    *key;
-    char    *value;
+	char	   *key;
+	char	   *value;
 } OptionData;
 
 /*
@@ -47,15 +47,14 @@ typedef struct OptionData
  */
 typedef struct GPHDUri
 {
-    char    *uri;       /* the unparsed user uri    */
-    char    *protocol;  /* the protocol name        */
-    char    *cluster;   /* cluster name str         */
-    char    *host;      /* host name str            */
-    char    *port;      /* port number as string    */
-    char    *data;      /* data location (path)     */
-    char    *profile;   /* profile option           */
-    List    *fragments; /* list of fragments        */
-    List    *options;   /* list of OptionData       */
+	char	   *uri;			/* the unparsed user uri    */
+	char	   *protocol;		/* the protocol name        */
+	char	   *host;			/* host name str            */
+	char	   *port;			/* port number as string    */
+	char	   *data;			/* data location (path)     */
+	char	   *profile;		/* profile option           */
+	List	   *fragments;		/* list of fragments        */
+	List	   *options;		/* list of OptionData       */
 } GPHDUri;
 
 /*
@@ -67,14 +66,13 @@ GPHDUri    *parseGPHDUriHostPort(const char *uri_str, const char *host, const in
 /*
  * Validation functions
  */
-bool    GPHDUri_opt_exists(GPHDUri *uri, char *key);
-void    GPHDUri_verify_no_duplicate_options(GPHDUri *uri);
-void    GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreOptions);
-void    GPHDUri_verify_cluster_exists(GPHDUri *uri, char* cluster);
+bool		GPHDUri_opt_exists(GPHDUri *uri, char *key);
+void		GPHDUri_verify_no_duplicate_options(GPHDUri *uri);
+void		GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreOptions);
 
 /*
  * Frees the elements of the data structure
  */
-void     freeGPHDUri(GPHDUri *uri);
+void		freeGPHDUri(GPHDUri *uri);
 
-#endif    // _PXFURIPARSER_H_
+#endif							/* _PXFURIPARSER_H_ */

@@ -1,4 +1,4 @@
-create table perct as select a, a / 10 as b from generate_series(1, 100)a;
+create table perct as select a, a / 10 as b from generate_series(1, 100)a distributed by (a);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table perct2 as select a, a / 10 as b from generate_series(1, 100)a, generate_series(1, 2);
@@ -48,473 +48,6 @@ DISTRIBUTED BY (d1,d2,d3);
 insert into mpp_22413
 select i, i, i, i, i,i
 from  (select * from generate_series(1, 99) i ) a ;
--- We test the same queries with gp_idf_deduplicate none/force. Make sure
--- both tests have the same when adding.
-set gp_idf_deduplicate to none;
-select percentile_cont(0.5) within group (order by a),
-	median(a), percentile_disc(0.5) within group(order by a) from perct;
- percentile_cont | median | percentile_disc 
------------------+--------+-----------------
-            50.5 |   50.5 |              50
-(1 row)
-
-select b, percentile_cont(0.5) within group (order by a),
-	median(a), percentile_disc(0.5) within group(order by a) from perct group by b order by b;
- b  | percentile_cont | median | percentile_disc 
-----+-----------------+--------+-----------------
-  0 |               5 |      5 |               5
-  1 |            14.5 |   14.5 |              14
-  2 |            24.5 |   24.5 |              24
-  3 |            34.5 |   34.5 |              34
-  4 |            44.5 |   44.5 |              44
-  5 |            54.5 |   54.5 |              54
-  6 |            64.5 |   64.5 |              64
-  7 |            74.5 |   74.5 |              74
-  8 |            84.5 |   84.5 |              84
-  9 |            94.5 |   94.5 |              94
- 10 |             100 |    100 |             100
-(11 rows)
-
-select percentile_cont(0.2) within group (order by a) from generate_series(1, 100)a;
- percentile_cont 
------------------
-            20.8
-(1 row)
-
-select a / 10, percentile_cont(0.2) within group (order by a) from generate_series(1, 100)a
-	group by a / 10 order by a / 10;
- ?column? | percentile_cont 
-----------+-----------------
-        0 |             2.6
-        1 |            11.8
-        2 |            21.8
-        3 |            31.8
-        4 |            41.8
-        5 |            51.8
-        6 |            61.8
-        7 |            71.8
-        8 |            81.8
-        9 |            91.8
-       10 |             100
-(11 rows)
-
-select percentile_cont(0.2) within group (order by a),
-	percentile_cont(0.8) within group (order by a desc) from perct group by b order by b;
- percentile_cont | percentile_cont 
------------------+-----------------
-             2.6 |             2.6
-            11.8 |            11.8
-            21.8 |            21.8
-            31.8 |            31.8
-            41.8 |            41.8
-            51.8 |            51.8
-            61.8 |            61.8
-            71.8 |            71.8
-            81.8 |            81.8
-            91.8 |            91.8
-             100 |             100
-(11 rows)
-
-select percentile_cont(0.1) within group (order by a), count(*), sum(a) from perct
-	group by b order by b;
- percentile_cont | count | sum 
------------------+-------+-----
-             1.8 |     9 |  45
-            10.9 |    10 | 145
-            20.9 |    10 | 245
-            30.9 |    10 | 345
-            40.9 |    10 | 445
-            50.9 |    10 | 545
-            60.9 |    10 | 645
-            70.9 |    10 | 745
-            80.9 |    10 | 845
-            90.9 |    10 | 945
-             100 |     1 | 100
-(11 rows)
-
-select percentile_cont(0.6) within group (order by a), count(*), sum(a) from perct;
- percentile_cont | count | sum  
------------------+-------+------
-            60.4 |   100 | 5050
-(1 row)
-
-select percentile_cont(0.3) within group (order by a) + count(*) from perct group by b order by b;
- ?column? 
-----------
-     12.4
-     22.7
-     32.7
-     42.7
-     52.7
-     62.7
-     72.7
-     82.7
-     92.7
-    102.7
-      101
-(11 rows)
-
-select median(a) from perct group by b having median(a) = 5;
- median 
---------
-      5
-(1 row)
-
-select median(a), percentile_cont(0.6) within group (order by a desc) from perct group by b having count(*) > 1 order by 1;
- median | percentile_cont 
---------+-----------------
-      5 |             4.2
-   14.5 |            13.6
-   24.5 |            23.6
-   34.5 |            33.6
-   44.5 |            43.6
-   54.5 |            53.6
-   64.5 |            63.6
-   74.5 |            73.6
-   84.5 |            83.6
-   94.5 |            93.6
-(10 rows)
-
-select median(10);
- median 
---------
-     10
-(1 row)
-
-select count(*), median(b+1) from perct group by b+2
-	having median(b+1) in (select avg(b+1) from perct group by b+2);
- count | median 
--------+--------
-     1 |     11
-     9 |      1
-    10 |      2
-    10 |      3
-    10 |      4
-    10 |      5
-    10 |      6
-    10 |      7
-    10 |      8
-    10 |      9
-    10 |     10
-(11 rows)
-
-select median(a) from perct2;
- median 
---------
-   50.5
-(1 row)
-
-select median(a) from perct2 group by b order by b;
- median 
---------
-      5
-   14.5
-   24.5
-   34.5
-   44.5
-   54.5
-   64.5
-   74.5
-   84.5
-   94.5
-    100
-(11 rows)
-
-select b, count(*), count(distinct a), median(a) from perct3 group by b order by b;
- b  | count | count | median 
-----+-------+-------+--------
-  0 |    66 |     9 |      5
-  1 |    67 |    10 |     15
-  2 |    72 |    10 |     24
-  3 |    70 |    10 |     35
-  4 |    68 |    10 |     44
-  5 |    73 |    10 |     55
-  6 |    64 |    10 |     64
-  7 |    76 |    10 |     74
-  8 |    67 |    10 |     85
-  9 |    72 |    10 |     94
- 10 |     8 |     1 |    100
-(11 rows)
-
-select b+1, count(*), count(distinct a),
-       median(a), percentile_cont(0.3) within group (order by a desc)
-from perct group by b+1 order by b+1;
- ?column? | count | count | median | percentile_cont 
-----------+-------+-------+--------+-----------------
-        1 |     9 |     9 |      5 |             6.6
-        2 |    10 |    10 |   14.5 |            16.3
-        3 |    10 |    10 |   24.5 |            26.3
-        4 |    10 |    10 |   34.5 |            36.3
-        5 |    10 |    10 |   44.5 |            46.3
-        6 |    10 |    10 |   54.5 |            56.3
-        7 |    10 |    10 |   64.5 |            66.3
-        8 |    10 |    10 |   74.5 |            76.3
-        9 |    10 |    10 |   84.5 |            86.3
-       10 |    10 |    10 |   94.5 |            96.3
-       11 |     1 |     1 |    100 |             100
-(11 rows)
-
-select median(a), median(c) from perct4;
- median | median 
---------+--------
-   50.5 |       
-(1 row)
-
-select median(a), median(c) from perct4 group by b;
- median | median 
---------+--------
-      5 |       
-     14 |       
-     24 |       
-     34 |       
-     44 |       
-     54 |       
-     64 |       
-     74 |       
-     84 |       
-     94 |       
-    100 |       
-(11 rows)
-
-select count(*) over (partition by b), median(a) from perct group by b order by b;
- count | median 
--------+--------
-     1 |      5
-     1 |   14.5
-     1 |   24.5
-     1 |   34.5
-     1 |   44.5
-     1 |   54.5
-     1 |   64.5
-     1 |   74.5
-     1 |   84.5
-     1 |   94.5
-     1 |    100
-(11 rows)
-
-select sum(median(a)) over (partition by b) from perct group by b order by b;
- sum  
-------
-    5
- 14.5
- 24.5
- 34.5
- 44.5
- 54.5
- 64.5
- 74.5
- 84.5
- 94.5
-  100
-(11 rows)
-
-select percentile_disc(0) within group (order by a) from perct;
- percentile_disc 
------------------
-               1
-(1 row)
-
-prepare p (float) as
-  select percentile_cont($1) within group (order by a)
-  from perct group by b order by b;
-execute p(0.1);
- percentile_cont 
------------------
-             1.8
-            10.9
-            20.9
-            30.9
-            40.9
-            50.9
-            60.9
-            70.9
-            80.9
-            90.9
-             100
-(11 rows)
-
-execute p(0.8);
- percentile_cont 
------------------
-             100
-             7.4
-            17.2
-            27.2
-            37.2
-            47.2
-            57.2
-            67.2
-            77.2
-            87.2
-            97.2
-(11 rows)
-
-deallocate p;
-select sum((select median(a) from perct)) from perct;
- sum  
-------
- 5050
-(1 row)
-
-select percentile_cont(null) within group (order by a) from perct;
- percentile_cont 
------------------
-                
-(1 row)
-
-select percentile_cont(null) within group (order by a),
-       percentile_disc(null) within group (order by a desc) from perct group by b;
- percentile_cont | percentile_disc 
------------------+-----------------
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-                 |                
-(11 rows)
-
-select median(a), percentile_cont(0.5) within group (order by a),
-       percentile_disc(0.5) within group(order by a),
-       (select min(a) from percts) - interval '1day' + interval '1day' * median(c),
-       (select min(a) from percts) - interval '1day' + interval '1day' *
-         percentile_disc(0.5) within group (order by c)
-from percts group by b order by b;
-          median          |     percentile_cont      |     percentile_disc      |         ?column?         |         ?column?         
---------------------------+--------------------------+--------------------------+--------------------------+--------------------------
- Fri Jan 06 00:00:00 2012 | Fri Jan 06 00:00:00 2012 | Fri Jan 06 00:00:00 2012 | Fri Jan 06 00:00:00 2012 | Fri Jan 06 00:00:00 2012
- Sun Jan 15 12:00:00 2012 | Sun Jan 15 12:00:00 2012 | Sun Jan 15 00:00:00 2012 | Sun Jan 15 12:00:00 2012 | Sun Jan 15 00:00:00 2012
- Wed Jan 25 12:00:00 2012 | Wed Jan 25 12:00:00 2012 | Wed Jan 25 00:00:00 2012 | Wed Jan 25 12:00:00 2012 | Wed Jan 25 00:00:00 2012
- Sat Feb 04 12:00:00 2012 | Sat Feb 04 12:00:00 2012 | Sat Feb 04 00:00:00 2012 | Sat Feb 04 12:00:00 2012 | Sat Feb 04 00:00:00 2012
- Tue Feb 14 12:00:00 2012 | Tue Feb 14 12:00:00 2012 | Tue Feb 14 00:00:00 2012 | Tue Feb 14 12:00:00 2012 | Tue Feb 14 00:00:00 2012
- Fri Feb 24 12:00:00 2012 | Fri Feb 24 12:00:00 2012 | Fri Feb 24 00:00:00 2012 | Fri Feb 24 12:00:00 2012 | Fri Feb 24 00:00:00 2012
- Mon Mar 05 12:00:00 2012 | Mon Mar 05 12:00:00 2012 | Mon Mar 05 00:00:00 2012 | Mon Mar 05 12:00:00 2012 | Mon Mar 05 00:00:00 2012
- Thu Mar 15 12:00:00 2012 | Thu Mar 15 12:00:00 2012 | Thu Mar 15 00:00:00 2012 | Thu Mar 15 12:00:00 2012 | Thu Mar 15 00:00:00 2012
- Sun Mar 25 12:00:00 2012 | Sun Mar 25 12:00:00 2012 | Sun Mar 25 00:00:00 2012 | Sun Mar 25 12:00:00 2012 | Sun Mar 25 00:00:00 2012
- Wed Apr 04 12:00:00 2012 | Wed Apr 04 12:00:00 2012 | Wed Apr 04 00:00:00 2012 | Wed Apr 04 12:00:00 2012 | Wed Apr 04 00:00:00 2012
- Tue Apr 10 00:00:00 2012 | Tue Apr 10 00:00:00 2012 | Tue Apr 10 00:00:00 2012 | Tue Apr 10 00:00:00 2012 | Tue Apr 10 00:00:00 2012
-(11 rows)
-
-select percentile_cont(1.0/86400) within group (order by a) from percts
-	where c between 1 and 2;
-     percentile_cont      
---------------------------
- Mon Jan 02 00:00:01 2012
-(1 row)
-
-select percentile_cont(0.1) within group (order by a),
-       percentile_cont(0.9) within group (order by a desc) from percts;
-     percentile_cont      |     percentile_cont      
---------------------------+--------------------------
- Wed Jan 11 21:36:00 2012 | Wed Jan 11 21:36:00 2012
-(1 row)
-
-select percentile_cont(0.1) within group (order by a),
-       percentile_cont(0.2) within group (order by a) from perctsz;
-       percentile_cont        |       percentile_cont        
-------------------------------+------------------------------
- Wed Jan 11 13:36:00 2012 PST | Sat Jan 21 11:12:00 2012 PST
-(1 row)
-
-select median(a - (select min(a) from percts)) from percts;
-       median       
---------------------
- @ 49 days 12 hours
-(1 row)
-
-select median(a), b from perct group by b order by b desc;
- median | b  
---------+----
-    100 | 10
-   94.5 |  9
-   84.5 |  8
-   74.5 |  7
-   64.5 |  6
-   54.5 |  5
-   44.5 |  4
-   34.5 |  3
-   24.5 |  2
-   14.5 |  1
-      5 |  0
-(11 rows)
-
-select count(*) from(select median(a) from perct group by ())s;
- count 
--------
-     1
-(1 row)
-
-select median(a) from perct group by grouping sets((b)) order by b;
- median 
---------
-      5
-   14.5
-   24.5
-   34.5
-   44.5
-   54.5
-   64.5
-   74.5
-   84.5
-   94.5
-    100
-(11 rows)
-
-select distinct median(a), count(*) from perct;
- median | count 
---------+-------
-   50.5 |   100
-(1 row)
-
-select perct.a, 0.2*avg(perct2.a) as avga,
-	percentile_cont(0.34)within group(order by perct2.b)
-	from
-		(select a, a / 10 b from generate_series(1, 100)a)perct,
-		(select a, a / 10 b from generate_series(1, 100)a)perct2
-	where perct.a=perct2.a group by perct.a having median(perct.b) > 10;
- a | avga | percentile_cont 
----+------+-----------------
-(0 rows)
-
-select median(a - '2011-12-31 00:00:00 UTC'::timestamptz) from perctsz group by b order by median;
-       median        
----------------------
- @ 6 days
- @ 15 days 12 hours
- @ 25 days 12 hours
- @ 35 days 12 hours
- @ 45 days 12 hours
- @ 55 days 12 hours
- @ 65 days 12 hours
- @ 74 days 35 hours
- @ 84 days 35 hours
- @ 94 days 35 hours
- @ 100 days 23 hours
-(11 rows)
-
--- view
-select * from percv;
- percentile_cont | median | percentile_disc 
------------------+--------+-----------------
-               0 |      5 |               5
-               1 |   14.5 |              14
-               2 |   24.5 |              24
-               3 |   34.5 |              34
-               4 |   44.5 |              44
-               5 |   54.5 |              54
-               6 |   64.5 |              64
-               7 |   74.5 |              74
-               8 |   84.5 |              84
-               9 |   94.5 |              94
-              10 |    100 |             100
-(11 rows)
-
-set gp_idf_deduplicate to force;
 select percentile_cont(0.5) within group (order by a),
 	median(a), percentile_disc(0.5) within group(order by a) from perct;
  percentile_cont | median | percentile_disc 
@@ -977,30 +510,31 @@ select * from percv;
               10 |    100 |             100
 (11 rows)
 
-reset gp_idf_deduplicate;
 select pg_get_viewdef('percv');
                                                                                                                                         pg_get_viewdef                                                                                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- SELECT percentile_cont(float8(0.4)) WITHIN GROUP (ORDER BY float8((perct.a / 10)))  AS "percentile_cont", median(float8(perct.a)) AS "median", percentile_disc(float8(0.51)) WITHIN GROUP (ORDER BY float8(perct.a) DESC)  AS "percentile_disc" FROM perct GROUP BY perct.b ORDER BY perct.b;
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY ((perct.a / 10))::double precision) AS percentile_cont, MEDIAN(perct.a) AS "median", percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc FROM perct GROUP BY perct.b ORDER BY perct.b;
 (1 row)
 
 select pg_get_viewdef('percv2');
                                        pg_get_viewdef                                        
----------------------------------------------------------------------------------------------
- SELECT median(float8(perct.a)) AS m1, median((perct.a)::double precision) AS m2 FROM perct;
+-------------------------------------------------------------------------------------
+ SELECT MEDIAN(perct.a) AS m1, MEDIAN((perct.a)::double precision) AS m2 FROM perct;
 (1 row)
 
 -- errors
 -- no WITHIN GROUP clause
 select percentile_cont(a) from perct;
-ERROR:  syntax error at or near "from"
+ERROR:  function percentile_cont(integer) does not exist
 LINE 1: select percentile_cont(a) from perct;
-                                  ^
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- the argument must not contain variable
 select percentile_cont(a) within group (order by a) from perct;
-ERROR:  argument of percentile function must not contain variables
+ERROR:  column "perct.a" must appear in the GROUP BY clause or be used in an aggregate function
 LINE 1: select percentile_cont(a) within group (order by a) from per...
                                ^
+DETAIL:  Direct arguments of an ordered-set aggregate must use only grouped columns.
 -- ungrouped column
 select b, percentile_disc(0.1) within group (order by a) from perct;
 ERROR:  column "perct.b" must appear in the GROUP BY clause or be used in an aggregate function
@@ -1008,7 +542,7 @@ LINE 1: select b, percentile_disc(0.1) within group (order by a) fro...
                ^
 -- nested aggregate
 select percentile_cont(count(*)) within group (order by a) from perct;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select percentile_cont(count(*)) within group (order by a) f...
                                ^
 select sum(percentile_cont(0.22) within group (order by a)) from perct;
@@ -1017,12 +551,16 @@ LINE 1: select sum(percentile_cont(0.22) within group (order by a)) ...
                    ^
 -- OVER clause
 select percentile_cont(0.3333) within group (order by a) over (partition by a%2) from perct;
-ERROR:  window OVER clause can only be used with an aggregate
+ERROR:  OVER is not supported for ordered-set aggregate percentile_cont
+LINE 1: select percentile_cont(0.3333) within group (order by a) ove...
+               ^
 select median(a) over (partition by b) from perct group by b;
-ERROR:  window OVER clause can only be used with an aggregate
+ERROR:  syntax error at or near "over"
+LINE 1: select median(a) over (partition by b) from perct group by b...
+                         ^
 -- function scan
 select * from median(10);
-ERROR:  cannot use aggregate function in function expression in FROM
+ERROR:  aggregate functions are not allowed in functions in FROM
 LINE 1: select * from median(10);
                       ^
 -- wrong type argument
@@ -1036,74 +574,101 @@ ERROR:  aggregate function calls cannot be nested
 LINE 1: select count(median(a)) from perct;
                      ^
 select median(count(*)) from perct;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select median(count(*)) from perct;
-               ^
+                      ^
 select percentile_cont(0.2) within group (order by count(*) over()) from perct;
-ERROR:  argument of percentile function must not contain window functions
-LINE 1: select percentile_cont(0.2) within group (order by count(*) ...
-               ^
+ERROR:  aggregate function calls cannot contain window function calls
+LINE 1: ...elect percentile_cont(0.2) within group (order by count(*) o...
+                                                             ^
 select percentile_disc(0.1) within group (order by group_id()) from perct;
-ERROR:  argument of percentile function must not contain grouping(), or group_id()
-LINE 1: select percentile_disc(0.1) within group (order by group_id(...
-               ^
--- subquery is not allowed to the argument
+ERROR:  aggregate function calls cannot be nested
+-- subquery in argument
 select percentile_cont((select 0.1 from gp_id)) within group (order by a) from perct;
-ERROR:  argument of percentile function must not contain subqueries
-LINE 1: select percentile_cont((select 0.1 from gp_id)) within group...
-               ^
--- the argument must not be volatile expression
-select percentile_cont(random()) within group (order by a) from perct;
-ERROR:  argument of percentile function must not contain volatile functions
-LINE 1: select percentile_cont(random()) within group (order by a) f...
-                               ^
+ percentile_cont 
+-----------------
+            10.9
+(1 row)
+
+-- volatile argument
+select percentile_cont(floor(random()*0.1)+0.5) within group (order by a) from perct;
+ percentile_cont 
+-----------------
+            50.5
+(1 row)
+
 -- out of range
 select percentile_cont(-0.1) within group (order by a) from perct;
-ERROR:  input is out of range
-HINT:  Argument to percentile function must be between 0.0 and 1.0.
+ERROR:  percentile value -0.1 is not between 0 and 1
 select percentile_cont(1.00000001) within group (order by a) from perct;
-ERROR:  input is out of range
-HINT:  Argument to percentile function must be between 0.0 and 1.0.
--- CSQ is not supported currently.  Shame.
+ERROR:  percentile value 1 is not between 0 and 1
+-- correlated subquery
 select sum((select median(a) from perct where b = t.b)) from perct t;
-ERROR:  correlated subquery cannot contain percentile functions
+ sum  
+------
+ 5050
+(1 row)
+
 -- used in LIMIT
 select * from perct limit median(a);
-ERROR:  argument of LIMIT must not contain variables
+ERROR:  aggregate functions are not allowed in LIMIT
 LINE 1: select * from perct limit median(a);
                                          ^
 -- multiple sort key
 select percentile_cont(0.8) within group (order by a, a + 1, a + 2) from perct;
-ERROR:  function "percentile_cont(double precision)" cannot accept more than one expression in ORDER BY
-LINE 1: ...ct percentile_cont(0.8) within group (order by a, a + 1, a +...
+ERROR:  function percentile_cont(numeric, integer, integer, integer) does not exist
+LINE 1: select percentile_cont(0.8) within group (order by a, a + 1,...
                                                              ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- set-returning
 select generate_series(1, 2), median(a) from perct;
 ERROR:  set-valued function called in context that cannot accept a set
 -- GROUPING SETS
 select median(a) from perct group by grouping sets((), (b));
-ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+ median 
+--------
+      5
+    100
+   14.5
+   24.5
+   34.5
+   44.5
+   50.5
+   54.5
+   64.5
+   74.5
+   84.5
+   94.5
+(12 rows)
+
 -- wrong type in ORDER BY
 select median('text') from perct;
-ERROR:  function "median(unknown)" is not unique
+ERROR:  invalid input syntax for type double precision: "text"
 LINE 1: select median('text') from perct;
-               ^
-HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
+                      ^
 select percentile_cont(now()) within group (order by a) from percts;
-ERROR:  function "percentile_cont(timestamp with time zone)" does not exist
+ERROR:  function percentile_cont(timestamp with time zone, timestamp without time zone) does not exist
 LINE 1: select percentile_cont(now()) within group (order by a) from...
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select percentile_cont(0.5) within group (order by point(0,0)) from perct;
-ERROR:  function "percentile_cont(double precision) ORDER BY (point)" does not exist
+ERROR:  function percentile_cont(numeric, point) does not exist
 LINE 1: select percentile_cont(0.5) within group (order by point(0,0...
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
--- outer reference is not allowed for now
+-- outer references
 select (select a from perct where median(t.a) = 5) from perct t;
-ERROR:  percentile functions cannot reference columns from outer queries
-LINE 1: select (select a from perct where median(t.a) = 5) from perc...
-                                                 ^
+ ?column? 
+----------
+         
+(1 row)
+
+select (select array_agg(a ORDER BY a) from perct where median(t.a) = 50.5) from (select * from perct t order by a offset 0) as t;
+                                                                                                                                               ?column?                                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100}
+(1 row)
+
 -- MPP-22219
 select count(*) from
 (SELECT b.dkey_a, MEDIAN(B.VALUE)

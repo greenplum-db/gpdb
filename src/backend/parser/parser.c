@@ -25,6 +25,8 @@
 #include "parser/gram.h"
 #include "parser/parser.h"
 
+#include "cdb/cdbvars.h"
+
 
 List	   *parsetree;			/* result of parsing is left here */
 
@@ -59,6 +61,58 @@ raw_parser(const char *str)
 		return NIL;
 
 	return parsetree;
+}
+
+
+/*
+ * pg_parse_string_token - get the value represented by a string literal
+ *
+ * Given the textual form of a SQL string literal, produce the represented
+ * value as a palloc'd string.  It is caller's responsibility that the
+ * passed string does represent one single string literal.
+ *
+ * We export this function to avoid having plpgsql depend on internal details
+ * of the core grammar (such as the token code assigned to SCONST).  Note
+ * that since the scanner isn't presently re-entrant, this cannot be used
+ * during use of the main parser/scanner.
+ */
+char *
+pg_parse_string_token(const char *token)
+{
+	int			ctoken;
+
+	/*
+	 * In GDPB, temporarily disable escape_string_warning, if we're in a QE
+	 * node. When we're parsing a PL/pgSQL function, e.g. in a CREATE FUNCTION
+	 * command, you should've gotten the same warning from the QD node already.
+	 * We could probably disable the warning in QE nodes altogether, not just
+	 * in PL/pgSQL, but it can be useful for catching escaping bugs, when
+	 * internal queries are dispatched from QD to QEs.
+	 */
+	bool		save_escape_string_warning = escape_string_warning;
+PG_TRY();
+{
+	if (Gp_role == GP_ROLE_EXECUTE)
+		escape_string_warning = false;
+
+	scanner_init(token);
+
+	ctoken = base_yylex();
+
+	if (ctoken != SCONST)		/* caller error */
+		elog(ERROR, "expected string constant, got token code %d", ctoken);
+
+	scanner_finish();
+
+}
+PG_CATCH();
+{
+	if (Gp_role == GP_ROLE_EXECUTE)
+		escape_string_warning = save_escape_string_warning;
+}
+PG_END_TRY();
+
+	return base_yylval.str;
 }
 
 
@@ -129,14 +183,7 @@ filtered_base_yylex(void)
 		case WITH:
 
 			/*
-			 * WITH TIME, CASCADED, LOCAL, or CHECK must be reduced to one token
-			 *
-			 * XXX an alternative way is to recognize just WITH_TIME and put
-			 * the ugliness into the datetime datatype productions instead of
-			 * WITH CHECK OPTION.  However that requires promoting WITH to a
-			 * fully reserved word.  If we ever have to do that anyway
-			 * (perhaps for SQL99 recursive queries), come back and simplify
-			 * this code.
+			 * WITH TIME must be reduced to one token
 			 */
 			cur_yylval = base_yylval;
 			cur_yylloc = base_yylloc;
@@ -145,15 +192,6 @@ filtered_base_yylex(void)
 			{
 				case TIME:
 					cur_token = WITH_TIME;
-					break;
-				case CASCADED:
-					cur_token = WITH_CASCADED;
-					break;
-				case LOCAL:
-					cur_token = WITH_LOCAL;
-					break;
-				case CHECK:
-					cur_token = WITH_CHECK;
 					break;
 				default:
 					/* save the lookahead token for next time */

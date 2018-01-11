@@ -37,6 +37,7 @@ create readable external table ret(like pt_ext) location('file://mdw/tmp/exttab_
 CREATE EXTERNAL TABLE
 --end_ignore 
 alter table pt_ext exchange partition part1 with table ret;
-psql:/path/sql_file:1: ERROR:  Validation of external tables not supported. Use WITHOUT VALIDATION. (tablecmds.c:15218)
+psql:/path/sql_file:1: ERROR:  validation of external tables not supported
+HINT:  Use WITHOUT VALIDATION.
 drop external table ret;
 DROP EXTERNAL TABLE

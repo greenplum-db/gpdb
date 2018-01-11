@@ -1,44 +1,26 @@
-/* $PostgreSQL: pgsql/contrib/pg_freespacemap/pg_freespacemap.sql.in,v 1.8 2007/11/13 04:24:28 momjian Exp $ */
+/* $PostgreSQL: pgsql/contrib/pg_freespacemap/pg_freespacemap.sql.in,v 1.12 2009/06/10 22:12:28 tgl Exp $ */
 
 -- Adjust this setting to control where the objects get created.
 SET search_path = public;
 
 
--- Register the functions.
-CREATE OR REPLACE FUNCTION pg_freespacemap_pages()
+-- Register the C function.
+CREATE OR REPLACE FUNCTION pg_freespace(regclass, bigint)
+RETURNS int2
+AS 'MODULE_PATHNAME', 'pg_freespace'
+LANGUAGE C STRICT;
+
+-- pg_freespace shows the recorded space avail at each block in a relation
+CREATE OR REPLACE FUNCTION
+  pg_freespace(rel regclass, blkno OUT bigint, avail OUT int2)
 RETURNS SETOF RECORD
-AS 'MODULE_PATHNAME', 'pg_freespacemap_pages'
-LANGUAGE C;
-
-CREATE OR REPLACE FUNCTION pg_freespacemap_relations()
-RETURNS SETOF RECORD
-AS 'MODULE_PATHNAME', 'pg_freespacemap_relations'
-LANGUAGE C;
+AS $$
+  SELECT blkno, pg_freespace($1, blkno) AS avail
+  FROM generate_series(0, pg_relation_size($1) / current_setting('block_size')::bigint - 1) AS blkno;
+$$
+LANGUAGE SQL;
 
 
--- Create views for convenient access.
-CREATE VIEW pg_freespacemap_pages AS
-	SELECT P.* FROM pg_freespacemap_pages() AS P
-	(reltablespace oid,
-	 reldatabase oid,
-	 relfilenode oid,
-	 relblocknumber bigint,
-	 bytes integer);
- 
-CREATE VIEW pg_freespacemap_relations AS
-	SELECT P.* FROM pg_freespacemap_relations() AS P
-	(reltablespace oid,
-	 reldatabase oid,
-	 relfilenode oid,
-	 avgrequest integer,
-	 interestingpages integer,
-	 storedpages integer,
-	 nextpage integer);
-
- 
 -- Don't want these to be available to public.
-REVOKE ALL ON FUNCTION pg_freespacemap_pages() FROM PUBLIC;
-REVOKE ALL ON pg_freespacemap_pages FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION pg_freespacemap_relations() FROM PUBLIC;
-REVOKE ALL ON pg_freespacemap_relations FROM PUBLIC;
+REVOKE ALL ON FUNCTION pg_freespace(regclass, bigint) FROM PUBLIC;
+REVOKE ALL ON FUNCTION pg_freespace(regclass) FROM PUBLIC;

@@ -8,8 +8,8 @@
 
   <resolvers>
     <url name="shared" m2compatible="true">
-      <ivy      pattern="https://repo.pivotal.io/gpdb-ext-release-local/[organization]/[module]/[revision]/ivys/ivy-[revision].xml" />
-      <artifact pattern="https://repo.pivotal.io/gpdb-ext-release-local/[organization]/[module]/[revision]/[type]s/[module]-[revision].[ext]" />
+      <ivy      pattern="https://mvnrepository.com/artifact/releases/[organisation]/[module]/[revision]/ivys/ivy-[revision].xml" />
+      <artifact pattern="https://mvnrepository.com/artifact/[organisation]/[module]/[revision]/[module]-[revision]." />
     </url>
     <filesystem name="local">
       <ivy      pattern="/opt/ivy/modules/[organisation]/[module]/ivy-[revision].xml" />

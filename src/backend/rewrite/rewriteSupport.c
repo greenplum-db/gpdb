@@ -3,12 +3,12 @@
  * rewriteSupport.c
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteSupport.c,v 1.65 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteSupport.c,v 1.67 2009/01/01 17:23:47 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 
 #include "access/heapam.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_rewrite.h"
 #include "rewrite/rewriteSupport.h"
 #include "utils/fmgroids.h"

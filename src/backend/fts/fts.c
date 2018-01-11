@@ -6,8 +6,13 @@
  *
  * Maintains an array in shared memory containing the state of each segment.
  *
- * Copyright (c) 2005-2010, Greenplum Inc.
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2005-2010, Greenplum Inc.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/fts/fts.c
  *
  *-------------------------------------------------------------------------
  */
@@ -17,14 +22,14 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/gp_configuration.h"
+#include "access/xact.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_authid.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "postmaster/fork_process.h"
 #include "postmaster/postmaster.h"
@@ -40,14 +45,16 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
+
 
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
 
-#include "catalog/gp_fault_strategy.h"
+#include "catalog/gp_configuration_history.h"
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"
@@ -60,12 +67,14 @@
 /*
  * CONSTANTS
  */
-
 /* maximum number of segments */
 #define MAX_NUM_OF_SEGMENTS  32768
 
-/* buffer size for SQL command */
-#define SQL_CMD_BUF_SIZE     1024
+bool am_ftshandler = false;
+#ifndef USE_SEGWALREP
+/* one byte of status for each segment */
+static uint8 scan_status[MAX_NUM_OF_SEGMENTS];
+#endif
 
 #define GpConfigHistoryRelName    "gp_configuration_history"
 
@@ -74,9 +83,6 @@
  * STATIC VARIABLES
  */
 
-/* one byte of status for each segment */
-static uint8 scan_status[MAX_NUM_OF_SEGMENTS];
-
 static bool am_ftsprobe = false;
 
 static volatile bool shutdown_requested = false;
@@ -84,12 +90,6 @@ static volatile bool rescan_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
 static char *probeDatabase = "postgres";
-
-static char failover_strategy='n';
-
-/* struct holding segment configuration */
-static CdbComponentDatabases *cdb_component_dbs = NULL;
-
 
 /*
  * FUNCTION PROTOTYPES
@@ -101,38 +101,7 @@ static pid_t ftsprobe_forkexec(void);
 NON_EXEC_STATIC void ftsMain(int argc, char *argv[]);
 static void FtsLoop(void);
 
-static void readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext);
-static bool probePublishUpdate(uint8 *scan_status);
-
-static uint32 getTransition(bool isPrimaryAlive, bool isMirrorAlive);
-
-static void
-buildSegmentStateChange
-	(
-	CdbComponentDatabaseInfo *segInfo,
-	FtsSegmentStatusChange *change,
-	uint8 statusNew
-	)
-	;
-
-static uint32 transition
-	(
-	uint32 stateOld,
-	uint32 trans,
-	CdbComponentDatabaseInfo *primary,
-	CdbComponentDatabaseInfo *mirror,
-	FtsSegmentStatusChange *changesPrimary,
-	FtsSegmentStatusChange *changesMirror
-	)
-	;
-
-static void updateConfiguration(FtsSegmentStatusChange *changes, int changeEntries);
-static bool probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount);
-
-static void getFailoverStrategy(char *strategy);
-static void FtsFailoverNull(FtsSegmentStatusChange *changes);
-
-
+static CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext);
 
 /*
  * Main entry point for ftsprobe process.
@@ -353,6 +322,14 @@ ftsMain(int argc, char *argv[])
 	RelationCacheInitializePhase2();
 
 	/*
+	 * Start a new transaction here before first access to db, and get a
+	 * snapshot.  We don't have a use for the snapshot itself, but we're
+	 * interested in the secondary effect that it sets RecentGlobalXmin.
+	 */
+	StartTransactionCommand();
+	(void) GetTransactionSnapshot();
+
+	/*
 	 * In order to access the catalog, we need a database, and a
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
@@ -372,6 +349,9 @@ ftsMain(int argc, char *argv[])
 
 	RelationCacheInitializePhase3();
 
+	/* close the transaction we started above */
+	CommitTransactionCommand();
+
 	/* shmem: publish probe pid */
 	ftsProbeInfo->fts_probePid = MyProcPid;
 
@@ -387,18 +367,18 @@ ftsMain(int argc, char *argv[])
  * probeContext instead of current memory context because current
  * context will be destroyed by CommitTransactionCommand().
  */
-static void
-readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
+static
+CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 {
 	int i;
 	MemoryContext save = MemoryContextSwitchTo(probeContext);
-	/* cdb_component_dbs is free'd by FtsLoop(). */
-	cdb_component_dbs = getCdbComponentInfo(false);
+	/* cdbs is free'd by FtsLoop(). */
+	CdbComponentDatabases *cdbs = getCdbComponentInfo(false);
 	MemoryContextSwitchTo(save);
 
-	for (i=0; i < cdb_component_dbs->total_segment_dbs; i++)
+	for (i=0; i < cdbs->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *segInfo = &cdb_component_dbs->segment_db_info[i];
+		CdbComponentDatabaseInfo *segInfo = &cdbs->segment_db_info[i];
 		uint8	segStatus;
 
 		segStatus = 0;
@@ -409,36 +389,340 @@ readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 		if (SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
 			segStatus |= FTS_STATUS_PRIMARY;
 
-		if (segInfo->preferred_role == 'p')
+		if (segInfo->preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			segStatus |= FTS_STATUS_DEFINEDPRIMARY;
 
-		if (segInfo->mode == 's')
+		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC)
 			segStatus |= FTS_STATUS_SYNCHRONIZED;
 
-		if (segInfo->mode == 'c')
+		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
 			segStatus |= FTS_STATUS_CHANGELOGGING;
 
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
+
+	return cdbs;
 }
+
+#ifdef USE_SEGWALREP
+static void
+probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive, bool IsInSync)
+{
+	Assert(IsInSync ? IsSegmentAlive : true);
+
+	/*
+	 * Insert new tuple into gp_configuration_history catalog.
+	 */
+	{
+		Relation histrel;
+		HeapTuple histtuple;
+		Datum histvals[Natts_gp_configuration_history];
+		bool histnulls[Natts_gp_configuration_history] = { false };
+		char desc[SQL_CMD_BUF_SIZE];
+
+		histrel = heap_open(GpConfigHistoryRelationId,
+							RowExclusiveLock);
+
+		histvals[Anum_gp_configuration_history_time-1] =
+				TimestampTzGetDatum(GetCurrentTimestamp());
+		histvals[Anum_gp_configuration_history_dbid-1] =
+				Int16GetDatum(dbid);
+		snprintf(desc, sizeof(desc),
+				 "FTS: update status and mode for dbid %d with contentid %d to %c and %c",
+				 dbid, segindex,
+				 IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
+				 GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
+				 IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
+				 GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC
+			);
+		histvals[Anum_gp_configuration_history_desc-1] =
+				CStringGetTextDatum(desc);
+		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+		simple_heap_insert(histrel, histtuple);
+		CatalogUpdateIndexes(histrel, histtuple);
+
+		heap_close(histrel, RowExclusiveLock);
+	}
+
+	/*
+	 * Find and update gp_segment_configuration tuple.
+	 */
+	{
+		Relation configrel;
+
+		HeapTuple configtuple;
+		HeapTuple newtuple;
+
+		Datum configvals[Natts_gp_segment_configuration];
+		bool confignulls[Natts_gp_segment_configuration] = { false };
+		bool repls[Natts_gp_segment_configuration] = { false };
+
+		ScanKeyData scankey;
+		SysScanDesc sscan;
+
+		configrel = heap_open(GpSegmentConfigRelationId,
+							  RowExclusiveLock);
+
+		ScanKeyInit(&scankey,
+					Anum_gp_segment_configuration_dbid,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(dbid));
+		sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
+								   true, SnapshotNow, 1, &scankey);
+
+		configtuple = systable_getnext(sscan);
+
+		if (!HeapTupleIsValid(configtuple))
+		{
+			elog(ERROR, "FTS cannot find dbid=%d in %s", dbid,
+				 RelationGetRelationName(configrel));
+		}
+
+		configvals[Anum_gp_segment_configuration_status-1] =
+			CharGetDatum(IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
+										GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
+		repls[Anum_gp_segment_configuration_status-1] = true;
+
+		configvals[Anum_gp_segment_configuration_mode-1] =
+			CharGetDatum(IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
+						 GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC);
+		repls[Anum_gp_segment_configuration_mode-1] = true;
+
+		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
+									 configvals, confignulls, repls);
+		simple_heap_update(configrel, &configtuple->t_self, newtuple);
+		CatalogUpdateIndexes(configrel, newtuple);
+
+		systable_endscan(sscan);
+		pfree(newtuple);
+
+		heap_close(configrel, RowExclusiveLock);
+	}
+}
+
+/*
+ * Process probe resonses from primary segments:
+ * (a) Update gp_segment_configuration catalog table, if needed.
+ * (b) Indicate the segments that need to be messaged subsequently.
+ */
+static bool
+probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
+{
+	bool is_updated = false;
+
+	for (int response_index = 0; response_index < context->num_primary_segments;
+		 response_index ++)
+	{
+		probe_response_per_segment *response = &(context->responses[response_index]);
+
+		Assert(SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
+
+		if (!FtsIsActive())
+			return false;
+
+		CdbComponentDatabaseInfo *primary = response->segment_db_info;
+
+		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(cdbs,
+															 primary->segindex,
+															 primary->dbid);
+
+		/*
+		 * Currently, mode of primary and mirror should be same, either both
+		 * reflecting in sync or not in sync.
+		 */
+		Assert(primary->mode == mirror->mode);
+
+		bool IsPrimaryAlive = response->result.isPrimaryAlive;
+		bool IsMirrorAlive = response->result.isMirrorAlive;
+		bool IsInSync = response->result.isInSync;
+
+		/* If are in sync, then both have to be ALIVE */
+		Assert(IsInSync ? (IsPrimaryAlive && IsMirrorAlive) : true);
+
+		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
+		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
+
+		/*
+		 * If probe response state is different from current state in
+		 * configuration, update both primary and mirror.
+		 */
+		if (IsInSync != SEGMENT_IS_IN_SYNC(primary))
+			UpdatePrimary = UpdateMirror = true;
+
+		/* Primary must block commits as long as it and its mirror are alive. */
+		AssertImply(IsMirrorAlive && IsPrimaryAlive,
+					response->result.isSyncRepEnabled);
+
+		/*
+		 * Primaries that have syncrep enabled continue to block commits.  FTS
+		 * must notify them to unblock commits by sending syncrep off message.
+		 */
+		if (!IsMirrorAlive && response->result.isSyncRepEnabled)
+		{
+			response->message = FTS_MSG_SYNCREP_OFF;
+			/*
+			 * Mirror must be marked down in FTS configuration before primary
+			 * can be notified to unblock commits.
+			 */
+			Assert(UpdateMirror || !SEGMENT_IS_ALIVE(mirror));
+		}
+
+		/*
+		 * ----------------------------
+		 * In double fault situations:
+		 *     - Primary and Mirror are up but not in SYNC
+		 *     - Mirror is down and hence are not in SYNC
+		 *
+		 * In these situations probe fails, cannot make any change to
+		 * configuration and need to leave current primary marked as UP.
+		 */
+		if (SEGMENT_IS_NOT_INSYNC(primary) && !IsPrimaryAlive)
+		{
+			elog(WARNING, "FTS double fault detected for primary dbid %d, mirror dbid %d having contentid %d",
+				 primary->dbid, mirror->dbid, primary->segindex);
+			continue;
+		}
+
+		if (UpdatePrimary || UpdateMirror)
+		{
+			/*
+			 * Commit/abort transaction below will destroy
+			 * CurrentResourceOwner.  We need it for catalog reads.
+			 */
+			ResourceOwner save = CurrentResourceOwner;
+			StartTransactionCommand();
+			GetTransactionSnapshot();
+
+			if (UpdatePrimary)
+				probeWalRepUpdateConfig(primary->dbid, primary->segindex,
+										IsPrimaryAlive, IsInSync);
+
+			if (UpdateMirror)
+				probeWalRepUpdateConfig(mirror->dbid, mirror->segindex,
+										IsMirrorAlive, IsInSync);
+
+			if (shutdown_requested)
+			{
+				elog(LOG, "Shutdown in progress, ignoring FTS prober updates.");
+				return is_updated;
+			}
+
+			is_updated = true;
+
+			CommitTransactionCommand();
+			CurrentResourceOwner = save;
+		}
+	}
+
+	return is_updated;
+}
+
+static void
+FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
+{
+	context->num_primary_segments = cdbs->total_segments;
+	context->responses = (probe_response_per_segment *) palloc(
+		context->num_primary_segments * sizeof(probe_response_per_segment));
+
+	int response_index = 0;
+
+	for(int segment_index = 0; segment_index < cdbs->total_segment_dbs; segment_index++)
+	{
+		CdbComponentDatabaseInfo *segment = &(cdbs->segment_db_info[segment_index]);
+		probe_response_per_segment *response = &(context->responses[response_index]);
+
+		if (!SEGMENT_IS_ACTIVE_PRIMARY(segment))
+			continue;
+
+		/*
+		 * We initialize the probe_result.IsPrimaryAlive and
+		 * probe_result.IsMirrorAlive to current state, and that will prevent
+		 * changing of mirror status if the primary goes down.
+		 */
+		CdbComponentDatabaseInfo *primary = segment;
+		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(cdbs,
+															 primary->segindex,
+															 primary->dbid);
+
+		/* primary in catalog will NEVER be marked down. */
+		Assert(FtsIsSegmentAlive(primary));
+
+		/*
+		 * Before we probe, we always DEFAULT the response for primary is
+		 * down. This will only be changed to true if primary is alive,
+		 * otherwise some error happened during the probe. Similarly, always
+		 * DEFAULT the response to not in sync. Only if primary communicates
+		 * positively, consider it in sync.
+		 */
+		response->result.isPrimaryAlive = false;
+		response->result.isMirrorAlive = SEGMENT_IS_ALIVE(mirror);
+		response->result.isInSync = false;
+		response->result.isSyncRepEnabled = false;
+		response->message = FTS_MSG_PROBE;
+
+		response->segment_db_info = primary;
+		response->isScheduled = false;
+
+		Assert(response_index < context->num_primary_segments);
+		response_index ++;
+	}
+}
+
+/*
+ * Setup context such that FTS threads can send a message other than PROBE to
+ * segments.  PROBE message must already be sent and response processed by the
+ * time this funtion is called.  Returns true if one or more segments need to
+ * be messaged.
+ */
+static bool
+FtsWalRepSetupMessageContext(fts_context *context)
+{
+	int i;
+	bool message_segments = false;
+
+	if (!FtsIsActive())
+		return false;
+
+	for (i = 0; i < context->num_primary_segments; i++)
+	{
+		probe_response_per_segment *response = &context->responses[i];
+		if (strcmp(response->message, FTS_MSG_PROBE) == 0)
+		{
+			response->message = NULL;
+			response->isScheduled = true;
+		}
+		else
+		{
+			Assert(strcmp(response->message, FTS_MSG_SYNCREP_OFF) == 0);
+			response->isScheduled = false;
+			response->result.isPrimaryAlive = false;
+			response->result.isInSync = false;
+			response->result.isSyncRepEnabled = false;
+			message_segments = true;
+		}
+	}
+	return message_segments;
+}
+#endif
 
 static
 void FtsLoop()
 {
-	bool	updated_bitmap, processing_fullscan;
+	bool	updated_probe_state, processing_fullscan;
 	MemoryContext probeContext = NULL, oldContext = NULL;
 	time_t elapsed,	probe_start_time;
+	CdbComponentDatabases *cdbs = NULL;
 
 	probeContext = AllocSetContextCreate(TopMemoryContext,
 										 "FtsProbeMemCtxt",
 										 ALLOCSET_DEFAULT_INITSIZE,	/* always have some memory */
 										 ALLOCSET_DEFAULT_INITSIZE,
 										 ALLOCSET_DEFAULT_MAXSIZE);
-	
-	readCdbComponentInfoAndUpdateStatus(probeContext);
 
 	for (;;)
 	{
+		bool		has_mirrors;
+
 		if (shutdown_requested)
 			break;
 		/* no need to live on if postmaster has died */
@@ -468,10 +752,10 @@ void FtsLoop()
 			goto prober_sleep;
 		}
 
-		if (cdb_component_dbs != NULL)
+		if (cdbs != NULL)
 		{
-			freeCdbComponentDatabases(cdb_component_dbs);
-			cdb_component_dbs = NULL;
+			freeCdbComponentDatabases(cdbs);
+			cdbs = NULL;
 		}
 
 		if (ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)
@@ -479,13 +763,32 @@ void FtsLoop()
 		else
 			processing_fullscan = false;
 
-		readCdbComponentInfoAndUpdateStatus(probeContext);
-		getFailoverStrategy(&failover_strategy);
+		/* Need a transaction to access the catalogs */
+		StartTransactionCommand();
+
+		cdbs = readCdbComponentInfoAndUpdateStatus(probeContext);
+
+		/* Check here gp_segment_configuration if has mirror's */
+		has_mirrors = gp_segment_config_has_mirrors();
+
+		/* close the transaction we started above */
+		CommitTransactionCommand();
+
+		if (!has_mirrors)
+		{
+			/* The dispatcher could have requested a scan so just ignore it and unblock the dispatcher */
+			if (processing_fullscan)
+			{
+				ftsProbeInfo->fts_statusVersion = ftsProbeInfo->fts_statusVersion + 1;
+				rescan_requested = false;
+			}
+			goto prober_sleep;
+		}
 
 		elog(DEBUG3, "FTS: starting %s scan with %d segments and %d contents",
 			 (processing_fullscan ? "full " : ""),
-			 cdb_component_dbs->total_segment_dbs,
-			 cdb_component_dbs->total_segments);
+			 cdbs->total_segment_dbs,
+			 cdbs->total_segments);
 
 		/*
 		 * We probe in a special context, some of the heap access
@@ -493,21 +796,32 @@ void FtsLoop()
 		 */
 		oldContext = MemoryContextSwitchTo(probeContext);
 
+#ifdef USE_SEGWALREP
+		fts_context context;
+
+		FtsWalRepInitProbeContext(cdbs, &context);
+		FtsWalRepMessageSegments(&context);
+
+		updated_probe_state = probeWalRepPublishUpdate(cdbs, &context);
+
+		if (FtsWalRepSetupMessageContext(&context))
+			FtsWalRepMessageSegments(&context);
+#else
 		/* probe segments */
-		FtsProbeSegments(cdb_component_dbs, scan_status);
+		FtsProbeSegments(cdbs, scan_status);
 
 		/*
 		 * Now we've completed the scan, update shared-memory. if we
 		 * change anything, we return true.
 		 */
-		updated_bitmap = probePublishUpdate(scan_status);
-
+		updated_probe_state = probePublishUpdate(cdbs, scan_status);
+#endif
 
 		MemoryContextSwitchTo(oldContext);
 
 		/* free any pallocs we made inside probeSegments() */
 		MemoryContextReset(probeContext);
-		cdb_component_dbs = NULL;
+		cdbs = NULL;
 
 		if (!FtsIsActive())
 		{
@@ -527,7 +841,7 @@ void FtsLoop()
 		 * bump the version (this also serves as an acknowledgement to
 		 * a probe-request).
 		 */
-		if (updated_bitmap || processing_fullscan)
+		if (updated_probe_state || processing_fullscan)
 		{
 			ftsProbeInfo->fts_statusVersion = ftsProbeInfo->fts_statusVersion + 1;
 			rescan_requested = false;
@@ -549,6 +863,8 @@ void FtsLoop()
 			if (elapsed < gp_fts_probe_interval && !shutdown_requested)
 			{
 				pg_usleep((gp_fts_probe_interval - elapsed) * USECS_PER_SEC);
+
+				CHECK_FOR_INTERRUPTS();
 			}
 		}
 	} /* end server loop */
@@ -565,433 +881,14 @@ FtsIsActive(void)
 	return (!ftsProbeInfo->fts_discardResults && !shutdown_requested);
 }
 
-/*
- * Build a set of changes, based on our current state, and the probe results.
- */
-static bool
-probePublishUpdate(uint8 *probe_results)
-{
-	bool update_found = false;
-	int i;
-
-	if (failover_strategy == 'f')
-	{
-		/* preprocess probe results to decide what is the current segment state */
-		FtsPreprocessProbeResultsFilerep(cdb_component_dbs, probe_results);
-	}
-
-	for (i = 0; i < cdb_component_dbs->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *segInfo = &cdb_component_dbs->segment_db_info[i];
-
-		/* if we've gotten a pause or shutdown request, we ignore our probe results. */
-		if (!FtsIsActive())
-		{
-			return false;
-		}
-
-		/* we check segments in pairs of primary-mirror */
-		if (!SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
-		{
-			continue;
-		}
-
-		CdbComponentDatabaseInfo *primary = segInfo;
-		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(segInfo->segindex, segInfo->dbid);
-
-		if (failover_strategy == 'n')
-		{
-			Assert(SEGMENT_IS_ACTIVE_PRIMARY(segInfo));
-			Assert(FTS_STATUS_ISALIVE(segInfo->dbid, ftsProbeInfo->fts_status));
-			Assert(mirror == NULL);
-
-			/* no mirror available to failover */
-			if (!PROBE_IS_ALIVE(segInfo))
-			{
-				FtsSegmentStatusChange changes;
-				uint8 statusOld = ftsProbeInfo->fts_status[segInfo->dbid];
-				uint8 statusNew = statusOld & ~FTS_STATUS_ALIVE;
-
-				buildSegmentStateChange(segInfo, &changes, statusNew);
-
-				FtsFailoverNull(&changes);
-			}
-			continue;
-		}
-
-		Assert(failover_strategy == 'f');
-		Assert(mirror != NULL);
-
-		/* changes required for primary and mirror */
-		FtsSegmentStatusChange changes[2];
-
-		uint32 stateOld = 0;
-		uint32 stateNew = 0;
-
-		bool isPrimaryAlive = PROBE_IS_ALIVE(primary);
-		bool isMirrorAlive = PROBE_IS_ALIVE(mirror);
-
-		/* get transition type */
-		uint32 trans = getTransition(isPrimaryAlive, isMirrorAlive);
-
-		if (gp_log_fts > GPVARS_VERBOSITY_VERBOSE)
-		{
-			elog(LOG, "FTS: primary found %s, mirror found %s, transition %d.",
-				 (isPrimaryAlive ? "alive" : "dead"), (isMirrorAlive ? "alive" : "dead"), trans);
-		}
-
-		if (trans == TRANS_D_D)
-		{
-			elog(LOG, "FTS: detected double failure for content=%d, primary (dbid=%d), mirror (dbid=%d).",
-			     primary->segindex, primary->dbid, mirror->dbid);
-		}
-
-			/* get current state */
-		stateOld = FtsGetPairStateFilerep(primary, mirror);
-
-		/* get new state */
-		stateNew = transition(stateOld, trans, primary, mirror, &changes[0], &changes[1]);
-
-		/* check if transition is required */
-		if (stateNew != stateOld)
-		{
-			update_found = true;
-			updateConfiguration(changes, ARRAY_SIZE(changes));
-		}
-	}
-
-	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-	{
-		elog(LOG, "FTS: probe result processing is complete.");
-	}
-
-	return update_found;
-}
-
-
-/*
- * Build struct with segment changes
- */
-static void
-buildSegmentStateChange(CdbComponentDatabaseInfo *segInfo, FtsSegmentStatusChange *change, uint8 statusNew)
-{
-	change->dbid = segInfo->dbid;
-	change->segindex = segInfo->segindex;
-	change->oldStatus = ftsProbeInfo->fts_status[segInfo->dbid];
-	change->newStatus = statusNew;
-}
-
-/*
- * get transition type - derived from probed primary/mirror state
- */
-static uint32
-getTransition(bool isPrimaryAlive, bool isMirrorAlive)
-{
-	uint32 state = (isPrimaryAlive ? 2 : 0) + (isMirrorAlive ? 1 : 0);
-
-	switch (state)
-	{
-		case (0):
-			/* primary and mirror dead */
-			return TRANS_D_D;
-		case (1):
-			/* primary dead, mirror alive */
-			return TRANS_D_U;
-		case (2):
-			/* primary alive, mirror dead */
-			return TRANS_U_D;
-		case (3):
-			/* primary and mirror alive */
-			return TRANS_U_U;
-		default:
-			Assert(!"Invalid transition for FTS state machine");
-			return 0;
-	}
-}
-
-
-/*
- * find new state for primary and mirror
- */
-static uint32
-transition
-	(
-	uint32 stateOld,
-	uint32 trans,
-	CdbComponentDatabaseInfo *primary,
-    CdbComponentDatabaseInfo *mirror,
-    FtsSegmentStatusChange *changesPrimary,
-    FtsSegmentStatusChange *changesMirror
-    )
-{
-	Assert(IS_VALID_TRANSITION(trans));
-
-	/* reset changes */
-	memset(changesPrimary, 0, sizeof(*changesPrimary));
-	memset(changesMirror, 0, sizeof(*changesMirror));
-
-	uint32 stateNew = stateOld;
-
-	/* in case of a double failure we don't do anything */
-	if (trans == TRANS_D_D)
-	{
-		return stateOld;
-	}
-
-	/* get new state for primary and mirror */
-	stateNew = FtsTransitionFilerep(stateOld, trans);
-
-	/* check if transition is required */
-	if (stateNew != stateOld)
-	{
-		FtsSegmentPairState pairState;
-		memset(&pairState, 0, sizeof(pairState));
-		pairState.primary = primary;
-		pairState.mirror = mirror;
-		pairState.stateNew = stateNew;
-		pairState.statePrimary = 0;
-		pairState.stateMirror = 0;
-
-		if (gp_log_fts >= GPVARS_VERBOSITY_DEBUG)
-		{
-			elog(LOG, "FTS: state machine transition from %d to %d.", stateOld, stateNew);
-		}
-
-		FtsResolveStateFilerep(&pairState);
-
-		buildSegmentStateChange(primary, changesPrimary, pairState.statePrimary);
-		buildSegmentStateChange(mirror, changesMirror, pairState.stateMirror);
-
-		FtsDumpChanges(changesPrimary, 1);
-		FtsDumpChanges(changesMirror, 1);
-	}
-
-	return stateNew;
-}
-
-
-/*
- * Apply requested segment transitions
- */
-static void
-updateConfiguration(FtsSegmentStatusChange *changes, int changeEntries)
-{
-	Assert(changes != NULL);
-
-	CdbComponentDatabaseInfo *entryDB = &cdb_component_dbs->entry_db_info[0];
-
-	if (entryDB->dbid != GpIdentity.dbid)
-	{
-		if (gp_log_fts >= GPVARS_VERBOSITY_DEBUG)
-		{
-			elog(LOG, "FTS: advancing to second entry-db.");
-		}
-		entryDB = entryDB + 1;
-	}
-
-	/* if we've gotten a pause or shutdown request, we ignore our probe results. */
-	if (!FtsIsActive())
-	{
-		return;
-	}
-
-	/* update segment configuration */
-	bool commit = probeUpdateConfig(changes, changeEntries);
-
-	if (commit)
-		FtsFailoverFilerep(changes, changeEntries);
-
-	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-	{
-		elog(LOG, "FTS: finished segment modifications.");
-	}
-}
-
-/*
- * update segment configuration in catalog and shared memory
- */
-static bool
-probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
-{
-	Relation configrel;
-	Relation histrel;
-	SysScanDesc sscan;
-	ScanKeyData scankey;
-	HeapTuple configtuple;
-	HeapTuple newtuple;
-	HeapTuple histtuple;
-	Datum configvals[Natts_gp_segment_configuration];
-	bool confignulls[Natts_gp_segment_configuration] = { false };
-	bool repls[Natts_gp_segment_configuration] = { false };
-	Datum histvals[Natts_gp_configuration_history];
-	bool histnulls[Natts_gp_configuration_history] = { false };
-	bool valid;
-	bool primary;
-	bool changelogging;
-	int i;
-	char desc[SQL_CMD_BUF_SIZE];
-
-	/*
-	 * Commit/abort transaction below will destroy
-	 * CurrentResourceOwner.  We need it for catalog reads.
-	 */
-	ResourceOwner save = CurrentResourceOwner;
-	StartTransactionCommand();
-	GetTransactionSnapshot();
-	elog(LOG, "probeUpdateConfig called for %d changes", changeCount);
-
-	histrel = heap_open(GpConfigHistoryRelationId,
-						RowExclusiveLock);
-	configrel = heap_open(GpSegmentConfigRelationId,
-						  RowExclusiveLock);
-
-	for (i = 0; i < changeCount; i++)
-	{
-		FtsSegmentStatusChange *change = &changes[i];
-		valid   = (changes[i].newStatus & FTS_STATUS_ALIVE);
-		primary = (changes[i].newStatus & FTS_STATUS_PRIMARY);
-		changelogging = (changes[i].newStatus & FTS_STATUS_CHANGELOGGING);
-
-		if (changelogging)
-		{
-			Assert(failover_strategy == 'f');
-			Assert(primary && valid);
-		}
-
-		Assert((valid || !primary) && "Primary cannot be down");
-
-		/*
-		 * Insert new tuple into gp_configuration_history catalog.
-		 */
-		histvals[Anum_gp_configuration_history_time-1] =
-				TimestampTzGetDatum(GetCurrentTimestamp());
-		histvals[Anum_gp_configuration_history_dbid-1] =
-				Int16GetDatum(changes[i].dbid);
-		snprintf(desc, sizeof(desc),
-				 "FTS: content %d fault marking status %s%s role %c",
-				 change->segindex, valid ? "UP" : "DOWN",
-				 (changelogging) ? " mode: change-tracking" : "",
-				 primary ? 'p' : 'm');
-		histvals[Anum_gp_configuration_history_desc-1] =
-					CStringGetTextDatum(desc);
-
-		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
-		simple_heap_insert(histrel, histtuple);
-		CatalogUpdateIndexes(histrel, histtuple);
-
-		/*
-		 * Find and update gp_segment_configuration tuple.
-		 */
-		ScanKeyInit(&scankey,
-					Anum_gp_segment_configuration_dbid,
-					BTEqualStrategyNumber, F_INT2EQ,
-					Int16GetDatum(changes[i].dbid));
-		sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
-								   true, SnapshotNow, 1, &scankey);
-		configtuple = systable_getnext(sscan);
-		if (!HeapTupleIsValid(configtuple))
-		{
-			elog(ERROR, "FTS cannot find dbid=%d in %s", changes[i].dbid,
-				 RelationGetRelationName(configrel));
-		}
-		configvals[Anum_gp_segment_configuration_role-1] =
-				CharGetDatum(primary ? 'p' : 'm');
-		repls[Anum_gp_segment_configuration_role-1] = true;
-		configvals[Anum_gp_segment_configuration_status-1] =
-				CharGetDatum(valid ? 'u' : 'd');
-		repls[Anum_gp_segment_configuration_status-1] = true;
-		if (changelogging)
-		{
-			configvals[Anum_gp_segment_configuration_mode-1] =
-					CharGetDatum('c');
-		}
-		repls[Anum_gp_segment_configuration_mode-1] = changelogging;
-
-		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
-									 configvals, confignulls, repls);
-		simple_heap_update(configrel, &configtuple->t_self, newtuple);
-		CatalogUpdateIndexes(configrel, newtuple);
-
-		systable_endscan(sscan);
-		pfree(newtuple);
-		/*
-		 * Update shared memory
-		 */
-		ftsProbeInfo->fts_status[changes[i].dbid] = changes[i].newStatus;
-	}
-	heap_close(histrel, RowExclusiveLock);
-	heap_close(configrel, RowExclusiveLock);
-
-	SIMPLE_FAULT_INJECTOR(FtsWaitForShutdown);
-	/*
-	 * Do not block shutdown.  We will always get a change to update
-	 * gp_segment_configuration in subsequent probes upon database
-	 * restart.
-	 */
-	if (shutdown_requested)
-	{
-		elog(LOG, "Shutdown in progress, ignoring FTS prober updates.");
-		return false;
-	}
-	CommitTransactionCommand();
-	CurrentResourceOwner = save;
-	return true;
-}
-
-static void
-getFailoverStrategy(char *strategy)
-{
-	Relation	strategy_rel;
-	HeapTuple	strategy_tup;
-	SysScanDesc sscan;
-
-	Assert(strategy != NULL);
-
-	strategy_rel = heap_open(GpFaultStrategyRelationId, AccessShareLock);
-
-	/*
-	 * SELECT * FROM gp_fault_strategy
-	 *
-	 * XXX XXX: only one of these?
-	 */
-	sscan = systable_beginscan(strategy_rel, InvalidOid, false, SnapshotNow, 0, NULL);
-	while (HeapTupleIsValid(strategy_tup = systable_getnext(sscan)))
-	{
-		Datum		strategy_datum;
-		bool		isNull = true;
-
-		strategy_datum = heap_getattr(strategy_tup, Anum_gp_fault_strategy_fault_strategy, RelationGetDescr(strategy_rel), &isNull);
-
-		if (isNull)
-			break;
-
-		*strategy = DatumGetChar(strategy_datum);
-	}
-
-	systable_endscan(sscan);
-	heap_close(strategy_rel, AccessShareLock);
-	return;
-}
-
-
 bool
 FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo)
 {
-	switch (failover_strategy)
-	{
-		case 'f':
-			if (SEGMENT_IS_ACTIVE_MIRROR(segInfo) && SEGMENT_IS_ALIVE(segInfo))
-				return true;
-			/* fallthrough */
-		case 'n':
-		case 's':
-			if (SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
-				return true;
-			break;
-		default:
-			write_log("segmentToProbe: invalid failover strategy (%c).", failover_strategy);
-			break;
-	}
+	if (SEGMENT_IS_ACTIVE_MIRROR(segInfo) && SEGMENT_IS_ALIVE(segInfo))
+		return true;
+
+	if (SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
+		return true;
 
 	return false;
 }
@@ -1020,171 +917,24 @@ FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries)
 		elog(LOG, "FTS: change state for segment (dbid=%d, content=%d) from ('%c','%c') to ('%c','%c')",
 			 changes[i].dbid,
 			 changes[i].segindex,
-			 (old_alive ? 'u' : 'd'),
-			 (old_pri ? 'p' : 'm'),
-			 (new_alive ? 'u' : 'd'),
-			 (new_pri ? 'p' : 'm'));
+			 (old_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
+			 (old_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR),
+			 (new_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
+			 (new_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR));
 	}
-}
-
-static void
-FtsFailoverNull(FtsSegmentStatusChange *changePrimary)
-{
-	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-	{
-		FtsDumpChanges(changePrimary, 1);
-	}
-}
-
-
-/**
- * Marks the given db as in-sync in the segment configuration.
- */
-void
-FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror)
-{
-	if (!FTS_STATUS_ISALIVE(primary->dbid, ftsProbeInfo->fts_status) ||
-	    !FTS_STATUS_ISALIVE(mirror->dbid, ftsProbeInfo->fts_status) ||
-	    !FTS_STATUS_ISPRIMARY(primary->dbid, ftsProbeInfo->fts_status) ||
- 	    FTS_STATUS_ISPRIMARY(mirror->dbid, ftsProbeInfo->fts_status) ||
-	    FTS_STATUS_IS_SYNCED(primary->dbid, ftsProbeInfo->fts_status) ||
-	    FTS_STATUS_IS_SYNCED(mirror->dbid, ftsProbeInfo->fts_status) ||
-	    FTS_STATUS_IS_CHANGELOGGING(primary->dbid, ftsProbeInfo->fts_status) ||
-	    FTS_STATUS_IS_CHANGELOGGING(mirror->dbid, ftsProbeInfo->fts_status))
-	{
-		FtsRequestPostmasterShutdown(primary, mirror);
-	}
-
-	if (ftsProbeInfo->fts_pauseProbes)
-	{
-		return;
-	}
-
-	uint8	segStatus=0;
-	Relation configrel;
-	Relation histrel;
-	ScanKeyData scankey;
-	SysScanDesc sscan;
-	HeapTuple configtuple;
-	HeapTuple newtuple;
-	HeapTuple histtuple;
-	Datum configvals[Natts_gp_segment_configuration];
-	bool confignulls[Natts_gp_segment_configuration] = { false };
-	bool repls[Natts_gp_segment_configuration] = { false };
-	Datum histvals[Natts_gp_configuration_history];
-	bool histnulls[Natts_gp_configuration_history] = { false };
-	char *desc = "FTS: changed segment to insync from resync.";
-	/*
-	 * Commit/abort transaction below will destroy
-	 * CurrentResourceOwner.  We need it for catalog reads.
-	 */
-	ResourceOwner save = CurrentResourceOwner;
-	StartTransactionCommand();
-	GetTransactionSnapshot();
-
-	/* update primary */
-	segStatus = ftsProbeInfo->fts_status[primary->dbid];
-	segStatus |= FTS_STATUS_SYNCHRONIZED;
-	ftsProbeInfo->fts_status[primary->dbid] = segStatus;
-
-	/* update mirror */
-	segStatus = ftsProbeInfo->fts_status[mirror->dbid];
-	segStatus |= FTS_STATUS_SYNCHRONIZED;
-	ftsProbeInfo->fts_status[mirror->dbid] = segStatus;
-
-	histrel = heap_open(GpConfigHistoryRelationId,
-						RowExclusiveLock);
-	configrel = heap_open(GpSegmentConfigRelationId,
-						  RowExclusiveLock);
-
-	/* update gp_segment_configuration to insync */
-	ScanKeyInit(&scankey,
-				Anum_gp_segment_configuration_dbid,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(primary->dbid));
-	sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
-							   true, SnapshotNow, 1, &scankey);
-	configtuple = systable_getnext(sscan);
-	if (!HeapTupleIsValid(configtuple))
-	{
-		elog(ERROR,"FTS cannot find dbid (%d, %d) in %s", primary->dbid,
-			 mirror->dbid, RelationGetRelationName(configrel));
-	}
-	configvals[Anum_gp_segment_configuration_mode-1] = CharGetDatum('s');
-	repls[Anum_gp_segment_configuration_mode-1] = true;
-	newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
-								 configvals, confignulls, repls);
-	simple_heap_update(configrel, &configtuple->t_self, newtuple);
-	CatalogUpdateIndexes(configrel, newtuple);
-
-	systable_endscan(sscan);
-
-	ScanKeyInit(&scankey,
-				Anum_gp_segment_configuration_dbid,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(mirror->dbid));
-	sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
-							   true, SnapshotNow, 1, &scankey);
-	configtuple = systable_getnext(sscan);
-	if (!HeapTupleIsValid(configtuple))
-	{
-		elog(ERROR,"FTS cannot find dbid (%d, %d) in %s", primary->dbid,
-			 mirror->dbid, RelationGetRelationName(configrel));
-	}
-	newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
-								 configvals, confignulls, repls);
-	simple_heap_update(configrel, &configtuple->t_self, newtuple);
-	CatalogUpdateIndexes(configrel, newtuple);
-
-	systable_endscan(sscan);
-
-	/* update configuration history */
-	histvals[Anum_gp_configuration_history_time-1] =
-			TimestampTzGetDatum(GetCurrentTimestamp());
-	histvals[Anum_gp_configuration_history_dbid-1] =
-			Int16GetDatum(primary->dbid);
-	histvals[Anum_gp_configuration_history_desc-1] =
-				CStringGetTextDatum(desc);
-	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
-	simple_heap_insert(histrel, histtuple);
-	CatalogUpdateIndexes(histrel, histtuple);
-
-	histvals[Anum_gp_configuration_history_dbid-1] =
-			Int16GetDatum(mirror->dbid);
-	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
-	simple_heap_insert(histrel, histtuple);
-	CatalogUpdateIndexes(histrel, histtuple);
-	ereport(LOG,
-			(errmsg("FTS: resynchronization of mirror (dbid=%d, content=%d) on %s:%d has completed.",
-					mirror->dbid, mirror->segindex, mirror->address, mirror->port ),
-			 errSendAlert(true)));
-
-	heap_close(histrel, RowExclusiveLock);
-	heap_close(configrel, RowExclusiveLock);
-	/*
-	 * Do not block shutdown.  We will always get a change to update
-	 * gp_segment_configuration in subsequent probes upon database
-	 * restart.
-	 */
-	if (shutdown_requested)
-	{
-		elog(LOG, "Shutdown in progress, ignoring FTS prober updates.");
-		return;
-	}
-	CommitTransactionCommand();
-	CurrentResourceOwner = save;
 }
 
 /*
  * Get peer segment descriptor
  */
-CdbComponentDatabaseInfo *FtsGetPeerSegment(int content, int dbid)
+CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
+											int content, int dbid)
 {
 	int i;
 
-	for (i=0; i < cdb_component_dbs->total_segment_dbs; i++)
+	for (i=0; i < cdbs->total_segment_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *segInfo = &cdb_component_dbs->segment_db_info[i];
+		CdbComponentDatabaseInfo *segInfo = &cdbs->segment_db_info[i];
 
 		if (segInfo->segindex == content && segInfo->dbid != dbid)
 		{
@@ -1218,4 +968,33 @@ void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponen
 			    );
 }
 
-/* EOF */
+/*
+ * Request the fault-prober to suspend probes -- no fault actions will
+ * be taken based on in-flight probes until the prober is unpaused.
+ */
+bool
+gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+		/*
+		 * We only want to do fancy stuff on the master (where we have a
+		 * prober).
+		 */
+		if (am_ftsprobe && ftsProbeInfo && Gp_segment == -1)
+		{
+			/*
+			 * fts_pauseProbes is externally set/cleared; fts_cancelProbes is
+			 * externally set and cleared by FTS
+			 */
+			ftsLock();
+
+			ftsProbeInfo->fts_pauseProbes = newval;
+			ftsProbeInfo->fts_discardResults = ftsProbeInfo->fts_discardResults || newval;
+			ftsUnlock();
+		}
+		gp_fts_probe_pause = newval;
+	}
+
+	return true;
+}

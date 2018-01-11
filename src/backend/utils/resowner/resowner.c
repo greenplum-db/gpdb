@@ -9,12 +9,12 @@
  * See utils/resowner/README for more info.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/resowner/resowner.c,v 1.27.2.1 2009/12/03 11:03:44 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/resowner/resowner.c,v 1.32 2009/06/11 14:49:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,13 +22,30 @@
 
 #include "access/hash.h"
 #include "cdb/cdbvars.h"
+#include "storage/bufmgr.h"
 #include "storage/proc.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/resowner.h"
-#include "utils/relcache.h"
-#include "executor/execdesc.h"
-#include "utils/resource_manager.h"
+#include "utils/snapmgr.h"
 
+/*
+ * To speed up bulk releasing or reassigning locks from a resource owner to
+ * its parent, each resource owner has a small cache of locks it owns. The
+ * lock manager has the same information in its local lock hash table, and
+ * we fall back on that if cache overflows, but traversing the hash table
+ * is slower when there are a lot of locks belonging to other resource owners.
+ *
+ * MAX_RESOWNER_LOCKS is the size of the per-resource owner cache. It's
+ * chosen based on some testing with pg_dump with a large schema. When the
+ * tests were done (on 9.2), resource owners in a pg_dump run contained up
+ * to 9 locks, regardless of the schema size, except for the top resource
+ * owner which contained much more (overflowing the cache). 15 seems like a
+ * nice round number that's somewhat higher than what pg_dump needs. Note that
+ * making this number larger is not free - the bigger the cache, the slower
+ * it is to release locks (in retail), when a resource owner holds many locks.
+ */
+#define MAX_RESOWNER_LOCKS 15
 
 /*
  * ResourceOwner objects look like this
@@ -44,6 +61,10 @@ typedef struct ResourceOwnerData
 	int			nbuffers;		/* number of owned buffer pins */
 	Buffer	   *buffers;		/* dynamically allocated array */
 	int			maxbuffers;		/* currently allocated array size */
+
+	/* We can remember up to MAX_RESOWNER_LOCKS references to local locks. */
+	int			nlocks;			/* number of owned locks */
+	LOCALLOCK  *locks[MAX_RESOWNER_LOCKS];		/* list of owned locks */
 
 	/* We have built-in support for remembering catcache references */
 	int			ncatrefs;		/* number of owned catcache pins */
@@ -68,6 +89,11 @@ typedef struct ResourceOwnerData
 	int			ntupdescs;		/* number of owned tupdesc references */
 	TupleDesc  *tupdescs;		/* dynamically allocated array */
 	int			maxtupdescs;	/* currently allocated array size */
+
+	/* We have built-in support for remembering snapshot references */
+	int			nsnapshots;		/* number of owned snapshot references */
+	Snapshot   *snapshots;		/* dynamically allocated array */
+	int			maxsnapshots;	/* currently allocated array size */
 
 	/* We have built-in support for remembering open temporary files */
 	int			nfiles;			/* number of owned temporary files */
@@ -105,6 +131,7 @@ static void ResourceOwnerReleaseInternal(ResourceOwner owner,
 static void PrintRelCacheLeakWarning(Relation rel);
 static void PrintPlanCacheLeakWarning(CachedPlan *plan);
 static void PrintTupleDescLeakWarning(TupleDesc tupdesc);
+static void PrintSnapshotLeakWarning(Snapshot snapshot);
 static void PrintFileLeakWarning(File file);
 
 
@@ -279,11 +306,30 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 			 * subtransaction, we do NOT release its locks yet, but transfer
 			 * them to the parent.
 			 */
+			LOCALLOCK **locks;
+			int			nlocks;
+
 			Assert(owner->parent != NULL);
-			if (isCommit)
-				LockReassignCurrentOwner();
+
+			/*
+			 * Pass the list of locks owned by this resource owner to the lock
+			 * manager, unless it has overflowed.
+			 */
+			if (owner->nlocks > MAX_RESOWNER_LOCKS)
+			{
+				locks = NULL;
+				nlocks = 0;
+			}
 			else
-				LockReleaseCurrentOwner();
+			{
+				locks = owner->locks;
+				nlocks = owner->nlocks;
+			}
+
+			if (isCommit)
+				LockReassignCurrentOwner(locks, nlocks);
+			else
+				LockReleaseCurrentOwner(locks, nlocks);
 		}
 	}
 	else if (phase == RESOURCE_RELEASE_AFTER_LOCKS)
@@ -325,6 +371,13 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 				PrintTupleDescLeakWarning(owner->tupdescs[owner->ntupdescs - 1]);
 			DecrTupleDescRefCount(owner->tupdescs[owner->ntupdescs - 1]);
 		}
+		/* Ditto for snapshot references */
+		while (owner->nsnapshots > 0)
+		{
+			if (isCommit)
+				PrintSnapshotLeakWarning(owner->snapshots[owner->nsnapshots - 1]);
+			UnregisterSnapshot(owner->snapshots[owner->nsnapshots - 1]);
+		}
 
 		/* Ditto for temporary files */
 		while (owner->nfiles > 0)
@@ -362,11 +415,13 @@ ResourceOwnerDelete(ResourceOwner owner)
 
 	/* And it better not own any resources, either */
 	Assert(owner->nbuffers == 0);
+	Assert(owner->nlocks == 0 || owner->nlocks == MAX_RESOWNER_LOCKS + 1);
 	Assert(owner->ncatrefs == 0);
 	Assert(owner->ncatlistrefs == 0);
 	Assert(owner->nrelrefs == 0);
 	Assert(owner->nplanrefs == 0);
 	Assert(owner->ntupdescs == 0);
+	Assert(owner->nsnapshots == 0);
 	Assert(owner->nfiles == 0);
 
 	/*
@@ -396,6 +451,8 @@ ResourceOwnerDelete(ResourceOwner owner)
 		pfree(owner->planrefs);
 	if (owner->tupdescs)
 		pfree(owner->tupdescs);
+	if (owner->snapshots)
+		pfree(owner->snapshots);
 	if (owner->files)
 		pfree(owner->files);
 
@@ -588,6 +645,56 @@ ResourceOwnerForgetBuffer(ResourceOwner owner, Buffer buffer)
 		elog(ERROR, "buffer %d is not owned by resource owner %s",
 			 buffer, owner->name);
 	}
+}
+
+/*
+ * Remember that a Local Lock is owned by a ResourceOwner
+ *
+ * This is different from the other Remember functions in that the list of
+ * locks is only a lossy cache. It can hold up to MAX_RESOWNER_LOCKS entries,
+ * and when it overflows, we stop tracking locks. The point of only remembering
+ * only up to MAX_RESOWNER_LOCKS entries is that if a lot of locks are held,
+ * ResourceOwnerForgetLock doesn't need to scan through a large array to find
+ * the entry.
+ */
+void
+ResourceOwnerRememberLock(ResourceOwner owner, LOCALLOCK *locallock)
+{
+	if (owner->nlocks > MAX_RESOWNER_LOCKS)
+		return;					/* we have already overflowed */
+
+	if (owner->nlocks < MAX_RESOWNER_LOCKS)
+		owner->locks[owner->nlocks] = locallock;
+	else
+	{
+		/* overflowed */
+	}
+	owner->nlocks++;
+}
+
+/*
+ * Forget that a Local Lock is owned by a ResourceOwner
+ */
+void
+ResourceOwnerForgetLock(ResourceOwner owner, LOCALLOCK *locallock)
+{
+	int			i;
+
+	if (owner->nlocks > MAX_RESOWNER_LOCKS)
+		return;					/* we have overflowed */
+
+	Assert(owner->nlocks > 0);
+	for (i = owner->nlocks - 1; i >= 0; i--)
+	{
+		if (locallock == owner->locks[i])
+		{
+			owner->locks[i] = owner->locks[owner->nlocks - 1];
+			owner->nlocks--;
+			return;
+		}
+	}
+	elog(ERROR, "lock reference %p is not owned by resource owner %s",
+		 locallock, owner->name);
 }
 
 /*
@@ -973,6 +1080,88 @@ PrintTupleDescLeakWarning(TupleDesc tupdesc)
 	elog(WARNING,
 		 "TupleDesc reference leak: TupleDesc %p (%u,%d) still referenced",
 		 tupdesc, tupdesc->tdtypeid, tupdesc->tdtypmod);
+}
+
+/*
+ * Make sure there is room for at least one more entry in a ResourceOwner's
+ * snapshot reference array.
+ *
+ * This is separate from actually inserting an entry because if we run out
+ * of memory, it's critical to do so *before* acquiring the resource.
+ */
+void
+ResourceOwnerEnlargeSnapshots(ResourceOwner owner)
+{
+	int			newmax;
+
+	if (owner->nsnapshots < owner->maxsnapshots)
+		return;					/* nothing to do */
+
+	if (owner->snapshots == NULL)
+	{
+		newmax = 16;
+		owner->snapshots = (Snapshot *)
+			MemoryContextAlloc(TopMemoryContext, newmax * sizeof(Snapshot));
+		owner->maxsnapshots = newmax;
+	}
+	else
+	{
+		newmax = owner->maxsnapshots * 2;
+		owner->snapshots = (Snapshot *)
+			repalloc(owner->snapshots, newmax * sizeof(Snapshot));
+		owner->maxsnapshots = newmax;
+	}
+}
+
+/*
+ * Remember that a snapshot reference is owned by a ResourceOwner
+ *
+ * Caller must have previously done ResourceOwnerEnlargeSnapshots()
+ */
+void
+ResourceOwnerRememberSnapshot(ResourceOwner owner, Snapshot snapshot)
+{
+	Assert(owner->nsnapshots < owner->maxsnapshots);
+	owner->snapshots[owner->nsnapshots] = snapshot;
+	owner->nsnapshots++;
+}
+
+/*
+ * Forget that a snapshot reference is owned by a ResourceOwner
+ */
+void
+ResourceOwnerForgetSnapshot(ResourceOwner owner, Snapshot snapshot)
+{
+	Snapshot   *snapshots = owner->snapshots;
+	int			ns1 = owner->nsnapshots - 1;
+	int			i;
+
+	for (i = ns1; i >= 0; i--)
+	{
+		if (snapshots[i] == snapshot)
+		{
+			while (i < ns1)
+			{
+				snapshots[i] = snapshots[i + 1];
+				i++;
+			}
+			owner->nsnapshots = ns1;
+			return;
+		}
+	}
+	elog(ERROR, "snapshot reference %p is not owned by resource owner %s",
+		 snapshot, owner->name);
+}
+
+/*
+ * Debugging subroutine
+ */
+static void
+PrintSnapshotLeakWarning(Snapshot snapshot)
+{
+	elog(WARNING,
+		 "Snapshot reference leak: Snapshot %p still referenced",
+		 snapshot);
 }
 
 

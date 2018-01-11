@@ -1033,6 +1033,8 @@ PLy_trigger_build_args(FunctionCallInfo fcinfo, PLyProcedure *proc, HeapTuple *r
 				pltevent = PyString_FromString("DELETE");
 			else if (TRIGGER_FIRED_BY_UPDATE(tdata->tg_event))
 				pltevent = PyString_FromString("UPDATE");
+			else if (TRIGGER_FIRED_BY_TRUNCATE(tdata->tg_event))
+				pltevent = PyString_FromString("TRUNCATE");
 			else
 			{
 				elog(ERROR, "unrecognized OP tg_event: %u", tdata->tg_event);
@@ -1530,15 +1532,19 @@ PLy_function_delete_args(PLyProcedure *proc)
 		return;
 
 	for (i = 0; i < proc->nargs; i++)
-		if (proc->argnames[i]) {
+	{
+		if (proc->argnames[i])
+		{
 			arg = PyString_FromString(proc->argnames[i]);
 
-			/* Deleting the item only if it exists in the dictionaty */
-			if (PyDict_Contains(proc->globals, arg)) {
+			/* Deleting the item only if it exists in the dictionary */
+			if (PyDict_Contains(proc->globals, arg))
+			{
 				PyDict_DelItem(proc->globals, arg);
 			}
 			Py_DECREF(arg);
 		}
+	}
 }
 
 /*
@@ -1751,7 +1757,10 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 
 		/*
 		 * Now get information required for input conversion of the
-		 * procedure's arguments.  Note that we ignore pure output arguments here. 
+		 * procedure's arguments.  Note that we ignore output arguments here
+		 * --- since we don't support returning record, and that was already
+		 * checked above, there's no need to worry about multiple output
+		 * arguments.
 		 */
 		if (procStruct->pronargs)
 		{
@@ -2902,6 +2911,7 @@ static Datum
 PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	char	   *str;
+	Datum		rv;
 
 	Assert(plrv != Py_None);
 
@@ -2947,10 +2957,12 @@ PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 					 errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g. \"[('foo')]\"")));
 	}
 
-	return InputFunctionCall(&arg->typfunc,
-							 str,
-							 arg->typioparam,
-							 typmod);
+	rv = InputFunctionCall(&arg->typfunc,
+						   str,
+						   arg->typioparam,
+						   typmod);
+	pfree(str);
+	return rv;
 }
 
 static Datum
@@ -3146,7 +3158,7 @@ PLyMapping_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 			value = PyMapping_GetItemString(mapping, key);
 			if (value == Py_None)
 			{
-				values[i] = (Datum) 0; 
+				values[i] = (Datum) NULL;
 				nulls[i] = true;
 			}
 			else if (value)
@@ -3231,7 +3243,7 @@ PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence, bool 
 			Assert(value);
 			if (value == Py_None)
 			{
-				values[i] = (Datum) 0; 
+				values[i] = (Datum) NULL;
 				nulls[i] = true;
 			}
 			else if (value)
@@ -3294,7 +3306,7 @@ PLyGenericObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *object, bo
 			value = PyObject_GetAttrString(object, key);
 			if (value == Py_None)
 			{
-				values[i] = (Datum) 0; 
+				values[i] = (Datum) NULL;
 				nulls[i] = true;
 			}
 			else if (value)

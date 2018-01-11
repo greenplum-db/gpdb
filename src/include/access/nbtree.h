@@ -4,19 +4,20 @@
  *	  header file for postgres btree access method implementation.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/nbtree.h,v 1.116.2.1 2008/04/16 23:59:51 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/access/nbtree.h,v 1.124 2009/06/11 14:49:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef NBTREE_H
 #define NBTREE_H
 
+#include "access/genam.h"
 #include "access/itup.h"
-#include "access/relscan.h"
 #include "access/sdir.h"
+#include "access/xlog.h"
 #include "access/xlogutils.h"
 
 
@@ -71,7 +72,7 @@ typedef BTPageOpaqueData *BTPageOpaque;
 #define BTP_META		(1 << 3)	/* meta-page */
 #define BTP_HALF_DEAD	(1 << 4)	/* empty, but still in tree */
 #define BTP_SPLIT_END	(1 << 5)	/* rightmost page of split group */
-#define BTP_HAS_GARBAGE (1 << 6)	/* page has LP_DELETEd tuples */
+#define BTP_HAS_GARBAGE (1 << 6)	/* page has LP_DEAD tuples */
 
 /*
  * The max allowed value of a cycle ID is a bit less than 64K.	This is
@@ -112,13 +113,10 @@ typedef struct BTMetaPageData
  *
  * We actually need to be able to fit three items on every page,
  * so restrict any one item to 1/3 the per-page available space.
- *
- * Note: sizeof(PageHeaderData) includes the first ItemId, but we have
- * to allow for 2 more, as well as the end-of-page special space.
  */
 #define BTMaxItemSize(page) \
 	MAXALIGN_DOWN((PageGetPageSize(page) - \
-				   MAXALIGN(sizeof(PageHeaderData) + 2*sizeof(ItemIdData)) - \
+				   MAXALIGN(SizeOfPageHeaderData + 3*sizeof(ItemIdData)) - \
 				   MAXALIGN(sizeof(BTPageOpaqueData))) / 3)
 
 /*
@@ -327,9 +325,9 @@ typedef struct xl_btree_split
 	 * than BlockNumber for alignment reasons: SizeOfBtreeSplit is only 16-bit
 	 * aligned.)
 	 *
-	 * If level > 0, an IndexTuple representing the HIKEY of the left page 
-	 * follows.  We don't need this on leaf pages, because it's the same
-	 * as the leftmost key in the new right page.  Also, it's suppressed if
+	 * If level > 0, an IndexTuple representing the HIKEY of the left page
+	 * follows.  We don't need this on leaf pages, because it's the same as
+	 * the leftmost key in the new right page.	Also, it's suppressed if
 	 * XLogInsert chooses to store the left page's whole page image.
 	 *
 	 * In the _L variants, next are OffsetNumber newitemoff and the new item.
@@ -545,7 +543,7 @@ extern Datum btbuild(PG_FUNCTION_ARGS);
 extern Datum btinsert(PG_FUNCTION_ARGS);
 extern Datum btbeginscan(PG_FUNCTION_ARGS);
 extern Datum btgettuple(PG_FUNCTION_ARGS);
-extern Datum btgetmulti(PG_FUNCTION_ARGS);
+extern Datum btgetbitmap(PG_FUNCTION_ARGS);
 extern Datum btrescan(PG_FUNCTION_ARGS);
 extern Datum btendscan(PG_FUNCTION_ARGS);
 extern Datum btmarkpos(PG_FUNCTION_ARGS);
@@ -635,5 +633,6 @@ extern void btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 extern void btree_xlog_startup(void);
 extern void btree_xlog_cleanup(void);
 extern bool btree_safe_restartpoint(void);
+extern void btree_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* NBTREE_H */

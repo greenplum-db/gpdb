@@ -1,5 +1,10 @@
 /**
- * Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/primary_mirror_mode.c
  *
  * Manages transitions between primary/mirror modes.
  *
@@ -169,9 +174,6 @@ typedef struct PMModuleState
 
     /* OTHER FIELDS */
 	volatile bool haveStartedDatabase;
-
-	/** used by resync processes, this field will be kept up-to-date by the postmaster */
-	volatile pid_t bgWriterPID;
 
     /**
      * a counter used to assign values to transitions; that values are for logging.
@@ -945,7 +947,6 @@ primaryMirrorModeShmemInit(void)
 	pmModuleState->transitionResultExtraInfo[0] = '\0';
 
 	pmModuleState->haveStartedDatabase = false;
-	pmModuleState->bgWriterPID = 0;
 	pmModuleState->transitionNumberCounter = 1;
 	pmModuleState->isInFaultFromPostmasterReset = false;
 	pmModuleState->isIOSuspended = false;
@@ -2251,18 +2252,6 @@ bool primaryMirrorIsIOSuspended(void)
 	return pmModuleState->isIOSuspended;
 }
 
-
-/**
- * set the bgwriter pid.  Should only be called by the postmaster
- */
-void primaryMirrorSetBGWriterPID(pid_t pid)
-{
-	assertModuleInitialized();
-
-	/* updating single int field, no need for fancy locking */
-	pmModuleState->bgWriterPID = pid;
-}
-
 /**
  * Get the arguments that were most recently copied to local memory.  This is ONLY valid
  *  in the postmaster and in children that are forked most recently after the transition.
@@ -2274,18 +2263,6 @@ PrimaryMirrorModeTransitionArguments primaryMirrorGetArgumentsFromLocalMemory(vo
 		elog(ERROR, "Request for filerep arguments from local memory made when they do not exist.");
 	}
 	return pmLocalState.mostRecentTransition;
-}
-
-/**
- * get the current bgwriter pid.  Note, of course, that the writer may crash by the time the caller
- *   can use this value -- so construct client code appropriately.
- */
-pid_t primaryMirrorGetBGWriterPID(void)
-{
-	assertModuleInitialized();
-
-	/* fetching single int field, no need for fancy locking */
-	return pmModuleState->bgWriterPID;
 }
 
 Oid

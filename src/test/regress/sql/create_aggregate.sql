@@ -38,6 +38,10 @@ CREATE AGGREGATE newcnt ("any") (
    initcond = '0'
 );
 
+COMMENT ON AGGREGATE nosuchagg (*) IS 'should fail';
+COMMENT ON AGGREGATE newcnt (*) IS 'an agg(*) comment';
+COMMENT ON AGGREGATE newcnt ("any") IS 'an agg(any) comment';
+
 -- multi-argument aggregate
 create function sum3(int8,int8,int8) returns int8 as
 'select $1 + $2 + $3' language sql CONTAINS SQL strict immutable;
@@ -47,11 +51,7 @@ create aggregate sum2(int8,int8) (
    initcond = '0'
 );
 
-
 -- multi-argument aggregates sensitive to distinct/order, strict/nonstrict
-
-/*
--- MPP: In Postgres this creates an array type with it, in GP it does not.
 create type aggtype as (a integer, b integer, c text);
 
 create function aggf_trans(aggtype[],integer,integer,text) returns aggtype[]
@@ -71,41 +71,47 @@ create aggregate aggfns(integer,integer,text) (
    sfunc = aggfns_trans, stype = aggtype[],
    initcond = '{}'
 );
-*/
-create function aggf_trans(text[],integer,integer,text) returns text[]
-as 'select array_append($1, textin(record_out(ROW($2,$3,$4))))'
-language sql CONTAINS SQL strict immutable;
 
-create function aggfns_trans(text[],integer,integer,text) returns text[]
-as 'select array_append($1, textin(record_out(ROW($2,$3,$4))))'
-language sql CONTAINS SQL immutable;
+-- variadic aggregate
+create function least_accum(anyelement, variadic anyarray)
+returns anyelement language sql as
+  'select least($1, min($2[i])) from generate_subscripts($2,1) g(i)';
 
-create ordered aggregate aggfstr(integer,integer,text) (
-   stype = text[],
-   sfunc = aggf_trans, 
-   initcond = '{}'
+create aggregate least_agg(variadic items anyarray) (
+  stype = anyelement, sfunc = least_accum
 );
 
-create ordered aggregate aggfns(integer,integer,text) (
-   stype = text[],
-   sfunc = aggfns_trans, 
-   initcond = '{}'
+-- test ordered-set aggs using built-in support functions
+create aggregate my_percentile_disc(float8 ORDER BY anyelement) (
+  stype = internal,
+  sfunc = ordered_set_transition,
+  finalfunc = percentile_disc_final,
+  finalfunc_extra = true
 );
+
+create aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any") (
+  stype = internal,
+  sfunc = ordered_set_transition_multi,
+  finalfunc = rank_final,
+  finalfunc_extra = true,
+  hypothetical
+);
+
+alter aggregate my_percentile_disc(float8 ORDER BY anyelement)
+  rename to test_percentile_disc;
+alter aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any")
+  rename to test_rank;
+
+\da test_*
+
 
 -- Negative test: "ordered aggregate prefunc is not supported"
 create ordered aggregate should_error(integer,integer,text) (
-   stype = text[],
+   stype = aggtype[],
    sfunc = aggfns_trans, 
    prefunc = array_cat,
    initcond = '{}'
 );
-
-
-
--- Comments on aggregates
-COMMENT ON AGGREGATE nosuchagg (*) IS 'should fail';
-COMMENT ON AGGREGATE newcnt (*) IS 'an agg(*) comment';
-COMMENT ON AGGREGATE newcnt ("any") IS 'an agg(any) comment';
 
 -- MPP-2863: ensure that aggregate declarations with an initial value == ''
 -- do not get converted to an initial value == NULL

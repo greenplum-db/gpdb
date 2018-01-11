@@ -2,12 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_q5g_pmj_s4">
   <title>High Availability</title>
-  <body>
-    <p>Greenplum Database supports highly available, fault-tolerant database services when you
-      enable and properly configure Greenplum high availability features. To guarantee a required
-      level of service, each component must have a standby ready to take its place if it should
-      fail.</p>
-  </body>
+  <shortdesc>Greenplum Database supports highly available, fault-tolerant database services when you
+    enable and properly configure Greenplum high availability features. To guarantee a required
+    level of service, each component must have a standby ready to take its place if it should
+    fail.</shortdesc>
   <topic id="topic_vrb_sxc_54">
     <title>Disk Storage</title>
     <body>
@@ -259,7 +257,7 @@
               <p dir="ltr">If your operating system supports direct I/O, set the
                   <codeph>gp_backup_directIO</codeph> configuration parameter to reduce CPU usage
                 during backups. See <xref
-                  href="http://docs.gpdb.pivotal.io/latest/admin_guide/managing/backup-direct-io.html"
+                  href="http://gpdb.docs.pivotal.io/latest/admin_guide/managing/backup-direct-io.html"
                   format="html" scope="external">Using Direct I/O</xref> for more information. </p>
             </li>
             <li dir="ltr">
@@ -440,7 +438,7 @@
             <codeph>gpaddmirrors -i <varname>mirror_config_file</varname></codeph> with a custom
           mirror configuration file to create the mirrors for each block. You must create the file
           system locations for the mirror segments before you run <codeph>gpaddmirrors</codeph>. See
-          the <codeph>gpadmirrors</codeph> reference page in the <cite>Greenplum Database Management
+          the <codeph>gpaddmirrors</codeph> reference page in the <cite>Greenplum Database Management
             Utility Guide</cite> for details. </p>
         <p>If you expand a system that has block mirroring or you want to implement block mirroring
           at the same time you expand a cluster, it is recommended that you complete the expansion

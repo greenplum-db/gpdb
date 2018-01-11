@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic xml:lang="en-us" id="about">
+   <title>Copyright</title>
+   <body outputclass="db.chapter">
+      <p>
+         <xref href="http://pivotal.io/privacy-policy" format="html" scope="external">Privacy
+            Policy</xref> | <xref href="http://pivotal.io/terms-of-use" format="html"
+            scope="external">Terms of Use</xref></p>
+      <p>Copyright © 2017 Pivotal Software, Inc. All rights reserved.</p>
+      <p>Pivotal Software, Inc. believes the information in this publication is accurate as of its
+         publication date. The information is subject to change without notice. THE INFORMATION IN
+         THIS PUBLICATION IS PROVIDED "AS IS." PIVOTAL SOFTWARE, INC. ("Pivotal") MAKES NO
+         REPRESENTATIONS OR WARRANTIES OF ANY KIND WITH RESPECT TO THE INFORMATION IN THIS
+         PUBLICATION, AND SPECIFICALLY DISCLAIMS IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS
+         FOR A PARTICULAR PURPOSE.</p>
+      <p>Use, copying, and distribution of any Pivotal software described in this publication
+         requires an applicable software license.</p>
+      <p>All trademarks used herein are the property of Pivotal or their respective owners.</p>
+      <p> </p>
+      <p>Revised January 2017 (4.3.11.2)</p>
+   </body>
+</topic>

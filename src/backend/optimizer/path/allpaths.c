@@ -4,18 +4,22 @@
  *	  Routines to find possible search paths for processing a query
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.174 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.183 2009/06/11 14:48:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include <math.h>
+
+#include "nodes/nodeFuncs.h"
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
 #endif
@@ -30,7 +34,6 @@
 #include "optimizer/var.h"
 #include "optimizer/planshare.h"
 #include "parser/parse_clause.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
@@ -38,11 +41,9 @@
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
 
-// TODO: these planner/executor gucs need to be refactored into PlannerConfig.
+// TODO: these planner gucs need to be refactored into PlannerConfig.
 bool		gp_enable_sort_limit = FALSE;
 bool		gp_enable_sort_distinct = FALSE;
-bool		gp_enable_mk_sort = true;
-bool		gp_enable_motion_mk_sort = true;
 
 /* Hook for plugins to replace standard_join_search() */
 join_search_hook_type join_search_hook = NULL;
@@ -66,9 +67,9 @@ static void set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel,
 static void set_values_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					RangeTblEntry *rte);
 static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel,
-							 RangeTblEntry *rte);
+				 RangeTblEntry *rte);
 static void set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel,
-								   RangeTblEntry *rte);
+					   RangeTblEntry *rte);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti, Query *subquery);
@@ -280,22 +281,28 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		return;
 	}
 
+	/*
+	 * Test any partial indexes of rel for applicability.  We must do this
+	 * first since partial unique indexes can affect size estimates.
+	 */
+	check_partial_indexes(root, rel);
+
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
-
-	/* Test any partial indexes of rel for applicability */
-	check_partial_indexes(root, rel);
 
 	/*
 	 * Check to see if we can extract any restriction conditions from join
 	 * quals that are OR-of-AND structures.  If so, add them to the rel's
-	 * restriction list, and recompute the size estimates.
+	 * restriction list, and redo the above steps.
 	 */
 	if (create_or_index_quals(root, rel))
+	{
+		check_partial_indexes(root, rel);
 		set_baserel_size_estimates(root, rel);
+	}
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/*
@@ -421,31 +428,36 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 {
 	int			parentRTindex = rti;
 	List	   *subpaths = NIL;
+	double		parent_rows;
+	double		parent_size;
+	double	   *parent_attrsizes;
+	int			nattrs;
 	ListCell   *l;
 
 	/* weighted average of widths */
 	double		width_avg = 0;
 
-	/*
-	 * XXX for now, can't handle inherited expansion of FOR UPDATE/SHARE; can
-	 * we do better?  (This will take some redesign because the executor
-	 * currently supposes that every rowMark relation is involved in every row
-	 * returned by the query.)
-	 */
-	if (get_rowmark(root->parse, parentRTindex))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("SELECT FOR UPDATE/SHARE is not supported for inheritance queries")));
-
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
 
 	/*
-	 * Initialize to compute size estimates for whole append relation
+	 * Initialize to compute size estimates for whole append relation.
+	 *
+	 * We handle width estimates by weighting the widths of different child
+	 * rels proportionally to their number of rows.  This is sensible because
+	 * the use of width estimates is mainly to compute the total relation
+	 * "footprint" if we have to sort or hash it.  To do this, we sum the
+	 * total equivalent size (in "double" arithmetic) and then divide by the
+	 * total rowcount estimate.  This is done separately for the total rel
+	 * width and each attribute.
+	 *
+	 * Note: if you consider changing this logic, beware that child rels could
+	 * have zero rows and/or width, if they were excluded by constraints.
 	 */
-	rel->rows = 0;
-	rel->tuples = 0;
-	rel->width = 0;
+	parent_rows = 0;
+	parent_size = 0;
+	nattrs = rel->max_attr - rel->min_attr + 1;
+	parent_attrsizes = (double *) palloc0(nattrs * sizeof(double));
 
 	/*
 	 * Generate access paths for each member relation, and pick the cheapest
@@ -516,11 +528,11 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		}
 
 		/*
-		 * Note: we could compute appropriate attr_needed data for the
-		 * child's variables, by transforming the parent's attr_needed
-		 * through the translated_vars mapping.  However, currently there's
-		 * no need because attr_needed is only examined for base relations
-		 * not otherrels.  So we just leave the child's attr_needed empty.
+		 * Note: we could compute appropriate attr_needed data for the child's
+		 * variables, by transforming the parent's attr_needed through the
+		 * translated_vars mapping.  However, currently there's no need
+		 * because attr_needed is only examined for base relations not
+		 * otherrels.  So we just leave the child's attr_needed empty.
 		 */
 
 		/*
@@ -542,40 +554,78 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 			subpaths = lappend(subpaths, childpath);
 
 		/*
-		 * Propagate size information from the child back to the parent. For
-		 * simplicity, we use the largest widths from any child as the parent
-		 * estimates.  (If you want to change this, beware of child
-		 * attr_widths[] entries that haven't been set and are still 0.)
+		 * Accumulate size information from each child.
 		 */
-		rel->tuples += childrel->tuples;
-		rel->rows += cdbpath_rows(root, childrel->cheapest_total_path);
-		width_avg += cdbpath_rows(root, childrel->cheapest_total_path) * childrel->width;
 
-		forboth(parentvars, rel->reltargetlist,
-				childvars, childrel->reltargetlist)
+		if (childrel->rows > 0)
 		{
-			Var		   *parentvar = (Var *) lfirst(parentvars);
-			Var		   *childvar = (Var *) lfirst(childvars);
+			parent_rows += cdbpath_rows(root, childrel->cheapest_total_path);
+			width_avg += cdbpath_rows(root, childrel->cheapest_total_path) * childrel->width;
 
-			if (IsA(parentvar, Var) &&
-				IsA(childvar, Var))
+			/*
+			 * Accumulate per-column estimates too.  Whole-row Vars and
+			 * PlaceHolderVars can be ignored here.
+			 */
+			forboth(parentvars, rel->reltargetlist,
+					childvars, childrel->reltargetlist)
 			{
-				int			pndx = parentvar->varattno - rel->min_attr;
-				int			cndx = childvar->varattno - childrel->min_attr;
+				Var		   *parentvar = (Var *) lfirst(parentvars);
+				Var		   *childvar = (Var *) lfirst(childvars);
 
-				if (childrel->attr_widths[cndx] > rel->attr_widths[pndx])
-					rel->attr_widths[pndx] = childrel->attr_widths[cndx];
+				/*
+				 * Accumulate per-column estimates too.  Whole-row Vars and
+				 * PlaceHolderVars can be ignored here.
+				 */
+				if (IsA(parentvar, Var) &&
+					IsA(childvar, Var))
+				{
+					int			pndx = parentvar->varattno - rel->min_attr;
+					int			cndx = childvar->varattno - childrel->min_attr;
+
+					parent_attrsizes[pndx] += childrel->attr_widths[cndx] * childrel->rows;
+				}
 			}
 		}
 	}
 
-	rel->width = (int) (width_avg / Max(1.0, rel->rows));
+	/*
+	 * GPDB_84_MERGE_FIXME: review the estimation math here; 8.4 changed the
+	 * logic around. In particular, we capped the minimum parent_rows at 1,
+	 * whereas upstream will divide by any positive number. We also set
+	 * rel->width to width_avg if the parent_rows are zero, whereas upstream
+	 * sets it to zero.
+	 */
+	/*
+	 * Save the finished size estimates.
+	 */
+	rel->rows = parent_rows;
+	if (parent_rows > 0)
+	{
+		int			i;
+
+		rel->width = rint(width_avg / parent_rows);
+		for (i = 0; i < nattrs; i++)
+			rel->attr_widths[i] = rint(parent_attrsizes[i] / parent_rows);
+	}
+	else
+		rel->width = 0;			/* attr_widths should be zero already */
 
 	/* CDB: Just one child (or none)?  Set flag if result is at most 1 row. */
 	if (!subpaths)
 		rel->onerow = true;
 	else if (list_length(subpaths) == 1)
 		rel->onerow = ((Path *) linitial(subpaths))->parent->onerow;
+
+	/*
+	 * GPDB_84_MERGE_FIXME: ensure that this rel->tuples count works for us.
+	 */
+	/*
+	 * Set "raw tuples" count equal to "rows" for the appendrel; needed
+	 * because some places assume rel->tuples is valid for any baserel.
+	 */
+	rel->tuples = parent_rows;
+
+	pfree(parent_attrsizes);
 
 	/*
 	 * Finally, build Append path and install it as the only access path for
@@ -708,6 +758,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 		/* Generate the plan for the subquery */
 		config = CopyPlannerConfig(root->config);
+		config->honor_order_by = false;		/* partial order is enough */
 
 		rel->subplan = subquery_planner(root->glob, subquery,
 									root,
@@ -732,7 +783,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		rel->tuples = rel->subplan->plan_rows;
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -764,7 +815,7 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -784,7 +835,7 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 static void
 set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-	PlannerConfig *config = CopyPlannerConfig(root->config);
+	PlannerConfig *config;
 	PlannerInfo *subroot = NULL;
 	FuncExpr   *fexpr = (FuncExpr *) rte->funcexpr;
 	ListCell   *arg;
@@ -792,6 +843,9 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	/* Cannot be a preplanned subquery from window_planner. */
 	Assert(!rte->subquery_plan);
 	Assert(fexpr && IsA(fexpr, FuncExpr));
+
+	config = CopyPlannerConfig(root->config);
+	config->honor_order_by = false;		/* partial order is enough */
 
 	/* Plan input subquery */
 	rel->subplan = subquery_planner(root->glob, rte->subquery, root,
@@ -820,7 +874,7 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
 	/* Attach subquery duplicate suppression info. */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
@@ -848,7 +902,7 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 				   !expression_returns_set((Node *) rte->values_lists));
 
 	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Generate appropriate path */
@@ -951,8 +1005,7 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 * qual expressions between multiple references, but
 	 * so far we don't support it.
 	 */
-	if (!root->config->gp_cte_sharing ||
-		(cte->cterefcount) == 1)
+	if (!root->config->gp_cte_sharing || cte->cterefcount == 1)
 	{
 		PlannerConfig *config = CopyPlannerConfig(root->config);
 
@@ -968,23 +1021,28 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		 */
 		config->gp_cte_sharing = false;
 
-		/*
-		 * Adjust the subquery so that 'root', i.e. this subquery, is the
-		 * parent of the CTE subquery, even though the CTE might've been
-		 * higher up syntactically. This is because some of the quals that
-		 * we push down might refer to relations between the current level
-		 * and the CTE's syntactical level. Such relations are not visible
-		 * at the CTE's syntactical level, and SS_finalize_plan() would
-		 * throw an error on them.
-		 */
-		IncrementVarSublevelsUp((Node *) subquery, rte->ctelevelsup, 1);
+		config->honor_order_by = false;
 
-		/*
-		 * Push down quals, like we do in set_subquery_pathlist()
-		 */
-		subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
+		if (!cte->cterecursive)
+		{
+			/*
+			 * Adjust the subquery so that 'root', i.e. this subquery, is the
+			 * parent of the CTE subquery, even though the CTE might've been
+			 * higher up syntactically. This is because some of the quals that
+			 * we push down might refer to relations between the current level
+			 * and the CTE's syntactical level. Such relations are not visible
+			 * at the CTE's syntactical level, and SS_finalize_plan() would
+			 * throw an error on them.
+			 */
+			IncrementVarSublevelsUp((Node *) subquery, rte->ctelevelsup, 1);
 
-		subplan = subquery_planner(cteroot->glob, subquery, root, false,
+			/*
+			 * Push down quals, like we do in set_subquery_pathlist()
+			 */
+			subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
+		}
+
+		subplan = subquery_planner(cteroot->glob, subquery, root, cte->cterecursive,
 								   tuple_fraction, &subroot, config);
 
 		subrtable = subroot->parse->rtable;
@@ -1018,7 +1076,9 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			 */
 			config->gp_cte_sharing = false;
 
-			subplan = subquery_planner(cteroot->glob, subquery, cteroot, false,
+			config->honor_order_by = false;
+
+			subplan = subquery_planner(cteroot->glob, subquery, cteroot, cte->cterecursive,
 									   tuple_fraction, &subroot, config);
 
 			cteplaninfo->shared_plan = prepare_plan_for_sharing(cteroot, subplan);
@@ -1061,11 +1121,12 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	Plan	   *cteplan;
 	PlannerInfo *cteroot;
 	Index		levelsup;
+	CdbLocusType ctelocus;
 
 	/*
 	 * We need to find the non-recursive term's plan, which is in the plan
-	 * level that's processing the recursive UNION, which is one level
-	 * *below* where the CTE comes from.
+	 * level that's processing the recursive UNION, which is one level *below*
+	 * where the CTE comes from.
 	 */
 	levelsup = rte->ctelevelsup;
 	if (levelsup == 0)			/* shouldn't happen */
@@ -1085,9 +1146,9 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/* Mark rel with estimated output rows, width, etc */
 	set_cte_size_estimates(root, rel, cteplan);
 
+	ctelocus = cteplan->flow->locustype;
 	/* Generate appropriate path */
-	// FIXME : CTE_MERGE : Do we want pathkeys for `create_worktablescan_path`?
-	add_path(root, rel, create_worktablescan_path(root, rel));
+	add_path(root, rel, create_worktablescan_path(root, rel, ctelocus));
 
 	/* Select cheapest path (pretty easy in this case...) */
 	set_cheapest(root, rel);
@@ -1385,23 +1446,19 @@ push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
  * 1. If the subquery has a LIMIT clause, we must not push down any quals,
  * since that could change the set of rows returned.
  *
- * 2. If the subquery contains EXCEPT or EXCEPT ALL set ops we cannot push
+ * 2. If the subquery contains any window functions, we can't push quals
+ * into it, because that would change the results.
+ *
+ * 3. If the subquery contains EXCEPT or EXCEPT ALL set ops we cannot push
  * quals into it, because that would change the results.
  *
- * 3. For subqueries using UNION/UNION ALL/INTERSECT/INTERSECT ALL, we can
+ * 4. For subqueries using UNION/UNION ALL/INTERSECT/INTERSECT ALL, we can
  * push quals into each component query, but the quals can only reference
  * subquery columns that suffer no type coercions in the set operation.
  * Otherwise there are possible semantic gotchas.  So, we check the
  * component queries to see if any of them have different output types;
  * differentTypes[k] is set true if column k has different type in any
  * component.
- *
- * 4. If the subquery target list has expressions containing calls to
- * window functions, we must not push down any quals since this could
- * change the meaning of the query.  At runtime, window functions refer
- * to the executor state of their Window node.  If a pushed-down qual
- * removed a tuple, the state seen by later tuples (hence the values
- * of window functions) could be affected.
  *
  * 5. Do not push down quals if the subquery is a grouping extension
  * query, since this may change the meaning of the query.
@@ -1414,6 +1471,10 @@ subquery_is_pushdown_safe(Query *subquery, Query *topquery,
 
 	/* Check point 1 */
 	if (subquery->limitOffset != NULL || subquery->limitCount != NULL)
+		return false;
+
+	/* Check point 2 */
+	if (subquery->hasWindowFuncs)
 		return false;
 
 	/* Targetlist must not contain SRF */
@@ -1518,79 +1579,6 @@ compare_tlist_datatypes(List *tlist, List *colTypes,
 		elog(ERROR, "wrong number of tlist entries");
 }
 
-
-
-/*
- * qual_contains_winref
- *
- * does qual include a window ref node?
- *
- */
-static bool
-qual_contains_winref(Query *topquery,
-					 Index rti, /* index of RTE of subquery where qual needs
-								 * to be checked */
-					 Node *qual)
-{
-	/*
-	 * extract subquery where qual needs to be checked
-	 */
-	RangeTblEntry *rte = rt_fetch(rti, topquery->rtable);
-	Query	   *subquery = rte->subquery;
-	bool		result = false;
-
-	if (NULL != subquery && NIL != subquery->windowClause)
-	{
-		/*
-		 * qual needs to be resolved first to map qual columns to the
-		 * underlying set of produced columns, e.g., if we work on a setop
-		 * child
-		 */
-		Node	   *qualNew = ResolveNew(qual, rti, 0, rte,
-										 subquery->targetList,
-										 CMD_SELECT, 0);
-
-		result = contain_windowref(qualNew, NULL);
-		pfree(qualNew);
-	}
-
-	return result;
-}
-
-
-/*
- * qual_is_pushdown_safe_set_operation
- *
- * is a particular qual safe to push down set operation?
- *
- */
-static bool
-qual_is_pushdown_safe_set_operation(Query *subquery, Node *qual)
-{
-	SetOperationStmt *setop = (SetOperationStmt *) subquery->setOperations;
-
-	/*
-	 * MPP-21075
-	 * for queries of the form:
-	 *   SELECT * from (SELECT max(i) over () as w from X Union Select 1 as w) as foo where w > 0
-	 * the qual (w > 0) is not push_down_safe since it uses a window ref
-	 *
-	 * we check if this is the case for either left or right setop inputs
-	 *
-	 */
-	Index		rtiLeft = ((RangeTblRef *) setop->larg)->rtindex;
-	Index		rtiRight = ((RangeTblRef *) setop->rarg)->rtindex;
-
-	if (qual_contains_winref(subquery, rtiLeft, qual) ||
-		qual_contains_winref(subquery, rtiRight, qual))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-
 /*
  * qual_is_pushdown_safe - is a particular qual safe to push down?
  *
@@ -1603,9 +1591,6 @@ qual_is_pushdown_safe_set_operation(Query *subquery, Node *qual)
  * it will work correctly: sublinks will already have been transformed into
  * subplans in the qual, but not in the subquery).
  *
- * 2X. If we try to push qual below set operation, then qual must be pushable
- * below set operation children
- *
  * 2. The qual must not refer to the whole-row output of the subquery
  * (since there is no easy way to name that within the subquery itself).
  *
@@ -1615,11 +1600,12 @@ qual_is_pushdown_safe_set_operation(Query *subquery, Node *qual)
  *
  * 4. If the subquery uses DISTINCT ON, we must not push down any quals that
  * refer to non-DISTINCT output columns, because that could change the set
- * of rows returned.  This condition is vacuous for DISTINCT, because then
- * there are no non-DISTINCT output columns, but unfortunately it's fairly
- * expensive to tell the difference between DISTINCT and DISTINCT ON in the
- * parsetree representation.  It's cheaper to just make sure all the Vars
- * in the qual refer to DISTINCT columns.
+ * of rows returned.  (This condition is vacuous for DISTINCT, because then
+ * there are no non-DISTINCT output columns, so we needn't check.  But note
+ * we are assuming that the qual can't distinguish values that the DISTINCT
+ * operator sees as equal.	This is a bit shaky but we have no way to test
+ * for the case, and it's unlikely enough that we shouldn't refuse the
+ * optimization just because it could theoretically happen.)
  *
  * 5. We must not push down any quals that refer to subselect outputs that
  * return sets, else we'd introduce functions-returning-sets into the
@@ -1643,25 +1629,36 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		return false;
 
 	/*
-	 * (point 2X)
-	 * if we try to push quals below set operation, make
-	 * sure that qual is pushable to below set operation children
+	 * It would be unsafe to push down window function calls, but at least for
+	 * the moment we could never see any in a qual anyhow.  (The same applies
+	 * to aggregates, which we check for in pull_var_clause below.)
 	 */
-	if (NULL != subquery->setOperations &&
-		!qual_is_pushdown_safe_set_operation(subquery, qual))
-	{
-		return false;
-	}
+	Assert(!contain_window_function(qual));
 
 	/*
 	 * Examine all Vars used in clause; since it's a restriction clause, all
 	 * such Vars must refer to subselect output columns.
 	 */
-	vars = pull_var_clause(qual, false);
+	vars = pull_var_clause(qual,
+						   PVC_REJECT_AGGREGATES,
+						   PVC_INCLUDE_PLACEHOLDERS);
 	foreach(vl, vars)
 	{
 		Var		   *var = (Var *) lfirst(vl);
 		TargetEntry *tle;
+
+		/*
+		 * XXX Punt if we find any PlaceHolderVars in the restriction clause.
+		 * It's not clear whether a PHV could safely be pushed down, and even
+		 * less clear whether such a situation could arise in any cases of
+		 * practical interest anyway.  So for the moment, just refuse to push
+		 * down.
+		 */
+		if (!IsA(var, Var))
+		{
+			safe = false;
+			break;
+		}
 
 		Assert(var->varno == rti);
 
@@ -1693,9 +1690,9 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		Assert(tle != NULL);
 		Assert(!tle->resjunk);
 
-		/* If subquery uses DISTINCT or DISTINCT ON, check point 4 */
-		if (subquery->distinctClause != NIL &&
-			!targetIsInSortGroupList(tle, InvalidOid, subquery->distinctClause))
+		/* If subquery uses DISTINCT ON, check point 4 */
+		if (subquery->hasDistinctOn &&
+			!targetIsInSortList(tle, InvalidOid, subquery->distinctClause))
 		{
 			/* non-DISTINCT column, so fail */
 			safe = false;
@@ -1730,13 +1727,13 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		 * */
 		if (subquery->windowClause != NIL)
 		{
-			ListCell   *lc = NULL;
+			ListCell   *lc;
 
 			foreach(lc, subquery->windowClause)
 			{
-				WindowSpec *ws = (WindowSpec *) lfirst(lc);
+				WindowClause *wc = (WindowClause *) lfirst(lc);
 
-				if (!targetIsInSortGroupList(tle, InvalidOid, ws->partition))
+				if (!targetIsInSortList(tle, InvalidOid, wc->partitionClause))
 				{
 					/*
 					 * qual's columns are not included in Partition-By clause,
@@ -1781,7 +1778,8 @@ subquery_push_qual(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual)
 		 */
 		qual = ResolveNew(qual, rti, 0, rte,
 						  subquery->targetList,
-						  CMD_SELECT, 0);
+						  CMD_SELECT, 0,
+						  &subquery->hasSubLinks);
 
 		/*
 		 * Now attach the qual to the proper place: normally WHERE, but if the
@@ -1841,19 +1839,20 @@ recurse_push_qual(Node *setOp, Query *topquery,
 void
 cdb_no_path_for_query(void)
 {
-	StringInfoData buf;
+	char	   *settings;
 
-	initStringInfo(&buf);
-	if (gp_guc_list_show(&buf, NULL, "%s=%s; ", PGC_S_DEFAULT, gp_guc_list_for_no_plan))
-		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
-					errmsg("Query requires a feature that has been disabled "
-						   "by a configuration setting."),
-			 errdetail("Could not devise a query plan for the given query."),
-						errhint("Current settings:  %s", buf.data)
-						));
+	settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_no_plan);
+
+	if (*settings)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
+				 errmsg("Query requires a feature that has been disabled by a configuration setting."),
+				 errdetail("Could not devise a query plan for the given query."),
+				 errhint("Current settings:  %s", settings)));
+	}
 	else
 		elog(ERROR, "Could not devise a query plan for the given query.");
-	Insist(0);					/* not reached */
 }	/* cdb_no_path_for_query */
 
 

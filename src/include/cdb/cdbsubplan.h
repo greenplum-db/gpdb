@@ -1,9 +1,15 @@
 /*-------------------------------------------------------------------------
  *
  * cdbsubplan.h
- * routines for preprocessing initPlan subplans
- *		and executing queries with initPlans *
- * Copyright (c) 2003-2008, Greenplum inc
+ *	  Routines for preprocessing initPlan subplans	and executing queries
+ *	  with initPlans
+ *
+ * Portions Copyright (c) 2003-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbsubplan.h
  *
  *-------------------------------------------------------------------------
  */

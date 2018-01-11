@@ -4,10 +4,10 @@
  *	  Declarations for operations on 64-bit integers.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/int8.h,v 1.48 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/int8.h,v 1.50 2009/01/01 17:24:02 momjian Exp $
  *
  * NOTES
  * These data types are supported on all 64-bit architectures, and may
@@ -96,6 +96,16 @@ extern Datum int48pl(PG_FUNCTION_ARGS);
 extern Datum int48mi(PG_FUNCTION_ARGS);
 extern Datum int48mul(PG_FUNCTION_ARGS);
 extern Datum int48div(PG_FUNCTION_ARGS);
+
+extern Datum int82pl(PG_FUNCTION_ARGS);
+extern Datum int82mi(PG_FUNCTION_ARGS);
+extern Datum int82mul(PG_FUNCTION_ARGS);
+extern Datum int82div(PG_FUNCTION_ARGS);
+
+extern Datum int28pl(PG_FUNCTION_ARGS);
+extern Datum int28mi(PG_FUNCTION_ARGS);
+extern Datum int28mul(PG_FUNCTION_ARGS);
+extern Datum int28div(PG_FUNCTION_ARGS);
 
 extern Datum int48(PG_FUNCTION_ARGS);
 extern Datum int84(PG_FUNCTION_ARGS);

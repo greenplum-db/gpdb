@@ -1,7 +1,9 @@
 /*
  * Greenplum system views and functions.
  *
- * Copyright (c) 2009-2010, Greenplum inc.
+ * Portions Copyright (c) 2009-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
  */
 
 BEGIN;
@@ -153,41 +155,6 @@ AS
     WHERE has_table_privilege(aut.autoid, 'select');
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_user_data_tables_readable TO public;
-
-
---------------------------------------------------------------------------------
--- @table:
---        gp_toolkit.__gp_localid
---
--- @doc:
---        External table that determines the local segment id
---
---------------------------------------------------------------------------------
-CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_localid
-(
-    localid    int
-)
-EXECUTE E'echo $GP_SEGMENT_ID' FORMAT 'TEXT';
-
-GRANT SELECT ON TABLE gp_toolkit.__gp_localid TO public;
-
-
---------------------------------------------------------------------------------
--- @table:
---        gp_toolkit.__gp_masterid
---
--- @doc:
---        External table that determines the master's segment id
---
---------------------------------------------------------------------------------
-CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_masterid
-(
-    masterid    int
-)
-EXECUTE E'echo $GP_SEGMENT_ID' ON MASTER FORMAT 'TEXT';
-
-GRANT SELECT ON TABLE gp_toolkit.__gp_masterid TO public;
-
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -444,33 +411,6 @@ AS
 
 --------------------------------------------------------------------------------
 -- @function:
---        gp_toolkit.__gp_param_local_setting
--- @in:
---        varchar - name of PARAM
--- @out:
---        int - segment id
---        text - name of PARAM
---        text - value of PARAM
---
--- @doc:
---        Evaluate current_setting for a PARAM; function is immutable and may be
---        executed on segments;
---
---------------------------------------------------------------------------------
-CREATE FUNCTION gp_toolkit.__gp_param_local_setting(varchar)
-RETURNS SETOF gp_toolkit.gp_param_setting_t
-AS
-$$
-    SELECT gp_execution_segment(), $1, current_setting($1)::text;
-$$
-LANGUAGE SQL
-IMMUTABLE CONTAINS SQL;
-
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_local_setting(varchar) TO public;
-
-
---------------------------------------------------------------------------------
--- @function:
 --        gp_toolkit.gp_param_setting
 -- @in:
 --        varchar - name of PARAM
@@ -480,36 +420,40 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_local_setting(varchar) TO public
 --        text - value of PARAM
 --
 -- @doc:
---        Collect value of a PARAM from all segments
+--        Collect value of a PARAM from master and all segments
 --
 --------------------------------------------------------------------------------
+CREATE FUNCTION gp_toolkit.__gp_param_setting_on_segments(varchar)
+RETURNS SETOF gp_toolkit.gp_param_setting_t
+AS
+$$
+    SELECT gp_execution_segment(), $1, current_setting($1);
+$$
+LANGUAGE SQL
+VOLATILE CONTAINS SQL EXECUTE ON ALL SEGMENTS;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_setting_on_segments(varchar) TO public;
+
+CREATE FUNCTION gp_toolkit.__gp_param_setting_on_master(varchar)
+RETURNS SETOF gp_toolkit.gp_param_setting_t
+AS
+$$
+    SELECT gp_execution_segment(), $1, current_setting($1);
+$$
+LANGUAGE SQL
+VOLATILE CONTAINS SQL EXECUTE ON MASTER;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_setting_on_master(varchar) TO public;
+
 CREATE FUNCTION gp_toolkit.gp_param_setting(varchar)
 RETURNS SETOF gp_toolkit.gp_param_setting_t
 AS
 $$
-DECLARE
-    paramsettings gp_toolkit.gp_param_setting_t;
-    paramdummy record;
-
-BEGIN
-    -- attempt local execution first to validate the name of the PARAM
-    SELECT gp_toolkit.__gp_param_local_setting($1) INTO paramdummy;
-
-    FOR paramsettings IN
-        SELECT gs.*
-        FROM gp_toolkit.__gp_localid, gp_toolkit.__gp_param_local_setting($1) AS gs
-
-        UNION ALL
-
-        SELECT gs.*
-        FROM gp_toolkit.__gp_masterid, gp_toolkit.__gp_param_local_setting($1) AS gs
-
-    LOOP
-        RETURN NEXT paramsettings;
-    END LOOP;
-END
+  SELECT * FROM gp_toolkit.__gp_param_setting_on_master($1)
+  UNION ALL
+  SELECT * FROM gp_toolkit.__gp_param_setting_on_segments($1);
 $$
-LANGUAGE plpgSQL READS SQL DATA;
+LANGUAGE SQL READS SQL DATA EXECUTE ON MASTER;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.gp_param_setting(varchar) TO public;
 
@@ -519,29 +463,16 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.gp_param_setting(varchar) TO public;
 --        gp_toolkit.gp_param_settings
 --
 -- @doc:
---        Collect values of a all parameters from all segments
+--        Collect values of all parameters from all segments
 --
 --------------------------------------------------------------------------------
 CREATE FUNCTION gp_toolkit.gp_param_settings()
 RETURNS SETOF gp_toolkit.gp_param_setting_t
 AS
 $$
-DECLARE
-    paramsettings gp_toolkit.gp_param_setting_t;
-    param text;
-
-BEGIN
-    FOR param in (SELECT name FROM pg_settings order by name) LOOP
-        FOR paramsettings IN
-            SELECT pls.*
-            FROM gp_toolkit.__gp_localid, gp_toolkit.__gp_param_local_setting(param) AS pls
-        LOOP
-            RETURN NEXT paramsettings;
-        END LOOP;
-    END LOOP;
-END
+    select gp_execution_segment(), name, setting from pg_settings;
 $$
-LANGUAGE plpgSQL READS SQL DATA;
+LANGUAGE SQL READS SQL DATA EXECUTE ON ALL SEGMENTS;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.gp_param_settings() TO public;
 
@@ -1050,7 +981,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_bloat_expected_pages TO public;
 --        gp_toolkit.gp_bloat_diag
 -- @in:
 --        int - actual number of pages according to statistics
---        int - expecte number of pages
+--        numeric - expected number of pages
 --        bool - is AO table?
 -- @out:
 --        int - bloat indicator
@@ -1060,7 +991,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_bloat_expected_pages TO public;
 --        diagnose table bloat based on expected and actual number of pages
 --
 --------------------------------------------------------------------------------
-CREATE FUNCTION gp_toolkit.gp_bloat_diag(btdrelpages int, btdexppages int, aotable bool,
+CREATE FUNCTION gp_toolkit.gp_bloat_diag(btdrelpages int, btdexppages numeric, aotable bool,
     OUT bltidx int, OUT bltdiag text)
 AS
 $$
@@ -1093,7 +1024,7 @@ $$
 $$
 LANGUAGE SQL READS SQL DATA;
 
-GRANT EXECUTE ON FUNCTION gp_toolkit.gp_bloat_diag(int, int, bool, OUT int, OUT text) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.gp_bloat_diag(int, numeric, bool, OUT int, OUT text) TO public;
 
 
 --------------------------------------------------------------------------------
@@ -1117,7 +1048,7 @@ AS
     (
         SELECT
             fn.*, beg.*,
-            gp_toolkit.gp_bloat_diag(btdrelpages::int, btdexppages::int, iao.iaotype::bool) AS bd
+            gp_toolkit.gp_bloat_diag(btdrelpages::int, btdexppages::numeric, iao.iaotype::bool) AS bd
         FROM
             gp_toolkit.gp_bloat_expected_pages beg,
             pg_catalog.pg_class pgc,
@@ -2092,12 +2023,19 @@ $$ LANGUAGE plpgsql;
 --
 --------------------------------------------------------------------------------
 
-CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f()
+CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
-LANGUAGE C IMMUTABLE;
+LANGUAGE C VOLATILE EXECUTE ON MASTER;
 
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f() TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f_on_master() TO public;
+
+CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f_on_segments()
+RETURNS SETOF record
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f_on_segments() TO public;
 
 
 --------------------------------------------------------------------------------
@@ -2112,7 +2050,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f() TO public;
 CREATE VIEW gp_toolkit.gp_workfile_entries AS
 WITH all_entries AS (
    SELECT C.*
-          FROM gp_toolkit.__gp_localid, gp_toolkit.__gp_workfile_entries_f() AS C (
+          FROM gp_toolkit.__gp_workfile_entries_f_on_master() AS C (
             segid int,
             path text,
             hash int,
@@ -2128,7 +2066,7 @@ WITH all_entries AS (
           )
     UNION ALL
     SELECT C.*
-          FROM gp_toolkit.__gp_masterid, gp_toolkit.__gp_workfile_entries_f() AS C (
+          FROM gp_toolkit.__gp_workfile_entries_f_on_segments() AS C (
             segid int,
             path text,
             hash int,
@@ -2216,12 +2154,19 @@ GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
 --
 --------------------------------------------------------------------------------
 
-CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f()
+CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
-LANGUAGE C IMMUTABLE;
+LANGUAGE C VOLATILE EXECUTE ON MASTER;
 
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f() TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master() TO public;
+
+CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_segments()
+RETURNS SETOF record
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_segments() TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -2232,20 +2177,17 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f() TO pub
 --
 --------------------------------------------------------------------------------
 CREATE VIEW gp_toolkit.gp_workfile_mgr_used_diskspace AS
-WITH all_entries AS (
   SELECT C.*
-	FROM gp_toolkit.__gp_localid, gp_toolkit.__gp_workfile_mgr_used_diskspace_f() as C (
+	FROM gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master() as C (
 	  segid int,
 	  bytes bigint
 	)
   UNION ALL
   SELECT C.*
-	FROM gp_toolkit.__gp_masterid, gp_toolkit.__gp_workfile_mgr_used_diskspace_f() as C (
+	FROM gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_segments() as C (
 	  segid int,
 	  bytes bigint
-	))
-SELECT segid, bytes
-FROM all_entries
+	)
 ORDER BY segid;
 
 GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;

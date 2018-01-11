@@ -2857,40 +2857,40 @@ select grouping(cn,vn,pn) from sale group by rollup(cn); --error
 ERROR:  column "sale"."vn" is not in GROUP BY
 -- Using in View --
 create view cube_view as select cn,vn,grouping(vn,cn) from sale group by cube(cn,vn);
-\d cube_view;
-    View "public.cube_view"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- cn       | integer | 
- vn       | integer | 
- grouping | bigint  | 
+\d+ cube_view;
+                View "public.cube_view"
+  Column  |  Type   | Modifiers | Storage | Description 
+----------+---------+-----------+---------+-------------
+ cn       | integer |           | plain   | 
+ vn       | integer |           | plain   | 
+ grouping | bigint  |           | plain   | 
 View definition:
  SELECT sale.cn, sale.vn, grouping(sale.vn, sale.cn) AS "grouping"
    FROM sale
   GROUP BY CUBE (sale.cn, sale.vn);
 
 create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by rollup(cn),vn,pn;
-\d rollup_view;
-   View "public.rollup_view"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- cn       | integer | 
- vn       | integer | 
- pn       | integer | 
- grouping | bigint  | 
+\d+ rollup_view;
+               View "public.rollup_view"
+  Column  |  Type   | Modifiers | Storage | Description 
+----------+---------+-----------+---------+-------------
+ cn       | integer |           | plain   | 
+ vn       | integer |           | plain   | 
+ pn       | integer |           | plain   | 
+ grouping | bigint  |           | plain   | 
 View definition:
  SELECT sale.cn, sale.vn, sale.pn, grouping(sale.cn, sale.vn, sale.pn) AS "grouping"
    FROM sale
   GROUP BY sale.vn, sale.pn, ROLLUP (sale.cn);
 
 create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping sets ((vn), (cn), (), (cn,vn));
-\d gs_view;
-     View "public.gs_view"
-  Column  |  Type   | Modifiers 
-----------+---------+-----------
- cn       | integer | 
- vn       | integer | 
- grouping | bigint  | 
+\d+ gs_view;
+                 View "public.gs_view"
+  Column  |  Type   | Modifiers | Storage | Description 
+----------+---------+-----------+---------+-------------
+ cn       | integer |           | plain   | 
+ vn       | integer |           | plain   | 
+ grouping | bigint  |           | plain   | 
 View definition:
  SELECT sale.cn, sale.vn, grouping(sale.vn, sale.cn) AS "grouping"
    FROM sale
@@ -5670,31 +5670,31 @@ select count(*) from sale group by grouping sets((), ());
 create view grp_v1 as select count(*) from sale group by ();
 create view grp_v2 as select count(*) from sale group by grouping sets(());
 create view grp_v3 as select count(*) from sale group by grouping sets((), ());
-\d grp_v1;
-    View "public.grp_v1"
- Column |  Type  | Modifiers 
---------+--------+-----------
- count  | bigint | 
+\d+ grp_v1;
+                View "public.grp_v1"
+ Column |  Type  | Modifiers | Storage | Description 
+--------+--------+-----------+---------+-------------
+ count  | bigint |           | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale
   GROUP BY ();
 
-\d grp_v2;
-    View "public.grp_v2"
- Column |  Type  | Modifiers 
---------+--------+-----------
- count  | bigint | 
+\d+ grp_v2;
+                View "public.grp_v2"
+ Column |  Type  | Modifiers | Storage | Description 
+--------+--------+-----------+---------+-------------
+ count  | bigint |           | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale
   GROUP BY GROUPING SETS (());
 
-\d grp_v3;
-    View "public.grp_v3"
- Column |  Type  | Modifiers 
---------+--------+-----------
- count  | bigint | 
+\d+ grp_v3;
+                View "public.grp_v3"
+ Column |  Type  | Modifiers | Storage | Description 
+--------+--------+-----------+---------+-------------
+ count  | bigint |           | plain   | 
 View definition:
  SELECT count(*) AS count
    FROM sale

@@ -527,7 +527,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C
                                                            Filter: qp_correlated_query.c.j = $0
                                                            ->  Materialize  (cost=0.00..862.00 rows=6 width=4)
                                                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=6 width=4)
-                                                                       ->  Hash EXISTS Join  (cost=0.00..862.00 rows=2 width=4)
+                                                                       ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
                                                                              Hash Cond: qp_correlated_query.c.i = qp_correlated_query.b.i AND qp_correlated_query.c.i = qp_correlated_query.b.i
                                                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
                                                                              ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -561,7 +561,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
          ->  Limit  (cost=0.00..1358457987.42 rows=4 width=12)
                ->  Sort  (cost=0.00..1358457987.42 rows=90 width=12)
                      Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-                     ->  Hash EXISTS Join  (cost=0.00..1358457987.38 rows=90 width=12)
+                     ->  Hash Semi Join  (cost=0.00..1358457987.38 rows=90 width=12)
                            Hash Cond: qp_correlated_query.a.j = qp_correlated_query.c.j
                            ->  Nested Loop  (cost=0.00..1356692610.50 rows=90 width=16)
                                  Join Filter: true
@@ -576,7 +576,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                            ->  Hash  (cost=1765376.85..1765376.85 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1765376.85 rows=9 width=4)
-                                       ->  Nested Loop Left Anti Semi Join  (cost=0.00..1765376.85 rows=3 width=4)
+                                       ->  Nested Loop Anti Join  (cost=0.00..1765376.85 rows=3 width=4)
                                              Join Filter: true
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                                              ->  Materialize  (cost=0.00..862.00 rows=2 width=1)
@@ -699,59 +699,58 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i = all (s
 (0 rows)
 
 explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
-                                                                                                                                                                                                                               QUERY PLAN                                                                                                                                                                                                                               
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..2712506063.63 rows=4 width=12)
-   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..2712506063.63 rows=10 width=12)
+                                                                                                                                                                                                                                  QUERY PLAN                                                                                                                                                                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2712506237.29 rows=4 width=12)
+   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..2712506237.29 rows=10 width=12)
          Merge Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-         ->  Limit  (cost=0.00..2712506063.63 rows=4 width=12)
-               ->  Sort  (cost=0.00..2712506063.63 rows=90 width=12)
+         ->  Limit  (cost=0.00..2712506237.29 rows=4 width=12)
+               ->  Sort  (cost=0.00..2712506237.29 rows=90 width=12)
                      Sort Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-                     ->  Nested Loop  (cost=0.00..2712506063.59 rows=90 width=12)
+                     ->  Nested Loop  (cost=0.00..2712506237.25 rows=90 width=12)
                            Join Filter: true
-                           ->  Hash Join  (cost=0.00..2648069.70 rows=10 width=8)
-                                 Hash Cond: a.j::bigint = (pg_catalog.sum((sum(qp_correlated_query.c.j)))) AND a.j = qp_correlated_query.c.j
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324033.12 rows=10 width=12)
-                                       Hash Key: a.j
-                                       ->  Nested Loop  (cost=0.00..1324033.12 rows=10 width=12)
-                                             Join Filter: true
-                                             ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
-                                             ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                         ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Hash  (cost=1324036.57..1324036.57 rows=3 width=12)
-                                       ->  GroupAggregate  (cost=0.00..1324036.57 rows=3 width=12)
-                                             Group By: qp_correlated_query.c.j
-                                             ->  Sort  (cost=0.00..1324036.57 rows=3 width=12)
-                                                   Sort Key: qp_correlated_query.c.j
-                                                   ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..1324036.57 rows=3 width=12)
-                                                         Hash Key: qp_correlated_query.c.j
-                                                         ->  Result  (cost=0.00..1324036.57 rows=3 width=12)
-                                                               ->  GroupAggregate  (cost=0.00..1324036.57 rows=3 width=12)
-                                                                     Group By: qp_correlated_query.c.j
-                                                                     ->  Sort  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                           Sort Key: qp_correlated_query.c.j
-                                                                           ->  Table Scan on c  (cost=0.00..1324036.57 rows=3 width=4)
-                                                                                 Filter: (subplan)
-                                                                                 SubPlan 1
-                                                                                   ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
+                                 Join Filter: true
+                                 ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                       ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                 ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+                           ->  Materialize  (cost=0.00..1324467.57 rows=5 width=4)
+                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1324467.57 rows=5 width=4)
+                                       ->  Hash Join  (cost=0.00..1324467.57 rows=2 width=4)
+                                             Hash Cond: (pg_catalog.sum((sum(qp_correlated_query.c.j)))) = a.j::bigint AND qp_correlated_query.c.j = a.j
+                                             ->  GroupAggregate  (cost=0.00..1324036.57 rows=3 width=12)
+                                                   Group By: qp_correlated_query.c.j
+                                                   ->  Sort  (cost=0.00..1324036.57 rows=3 width=12)
+                                                         Sort Key: qp_correlated_query.c.j
+                                                         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324036.57 rows=3 width=12)
+                                                               Hash Key: qp_correlated_query.c.j
+                                                               ->  Result  (cost=0.00..1324036.57 rows=3 width=12)
+                                                                     ->  GroupAggregate  (cost=0.00..1324036.57 rows=3 width=12)
+                                                                           Group By: qp_correlated_query.c.j
+                                                                           ->  Sort  (cost=0.00..1324036.57 rows=3 width=4)
+                                                                                 Sort Key: qp_correlated_query.c.j
+                                                                                 ->  Table Scan on c  (cost=0.00..1324036.57 rows=3 width=4)
+                                                                                       Filter: (SubPlan 1)
+                                                                                       SubPlan 1
                                                                                          ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                                Filter: (CASE WHEN (sum((CASE WHEN $0 <> qp_correlated_query.b.i THEN 1 ELSE 0 END))) IS NULL THEN true WHEN (sum((CASE WHEN qp_correlated_query.b.i IS NULL THEN 1 ELSE 0 END))) > 0::bigint THEN NULL::boolean WHEN $0 IS NULL THEN NULL::boolean WHEN (sum((CASE WHEN $0 <> qp_correlated_query.b.i THEN 1 ELSE 0 END))) = 0::bigint THEN true ELSE false END) = true
                                                                                                ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                                                                                                           ->  Result  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                                                                                                       Filter: $0 = qp_correlated_query.b.i
-                                                                                                                       ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                                   ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
-                                                                                                                                         Filter: i <> 10
-                           ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
-                                       ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Settings:  optimizer=on
- Optimizer status: PQO version 2.34.0
-(50 rows)
+                                                                                                     Filter: (CASE WHEN (sum((CASE WHEN $0 <> qp_correlated_query.b.i THEN 1 ELSE 0 END))) IS NULL THEN true WHEN (sum((CASE WHEN qp_correlated_query.b.i IS NULL THEN 1 ELSE 0 END))) > 0::bigint THEN NULL::boolean WHEN $0 IS NULL THEN NULL::boolean WHEN (sum((CASE WHEN $0 <> qp_correlated_query.b.i THEN 1 ELSE 0 END))) = 0::bigint THEN true ELSE false END) = true
+                                                                                                     ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                                                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                                                                                                                 ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                                       ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                                                                                                             Filter: $0 = qp_correlated_query.b.i
+                                                                                                                             ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                                                         ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                                                                                                                               Filter: i <> 10
+                                             ->  Hash  (cost=431.00..431.00 rows=2 width=8)
+                                                   ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
+                                                         Hash Key: a.j
+                                                         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+ Optimizer status: PQO version 2.51.5
+(48 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
  i | i  | j  
@@ -792,7 +791,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                            ->  Materialize  (cost=0.00..1765376.85 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1765376.85 rows=9 width=4)
-                                       ->  Nested Loop Left Anti Semi Join  (cost=0.00..1765376.85 rows=3 width=4)
+                                       ->  Nested Loop Anti Join  (cost=0.00..1765376.85 rows=3 width=4)
                                              Join Filter: true
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                                              ->  Materialize  (cost=0.00..862.00 rows=2 width=1)
@@ -1116,6 +1115,87 @@ select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j
 ---+---+---
 (0 rows)
 
+select * from A where not exists (select sum(C.i) from C where C.i = A.i);
+ i | j 
+---+---
+(0 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.12 rows=5 width=8)
+   ->  Nested Loop Anti Join  (cost=0.00..882688.12 rows=2 width=8)
+         Join Filter: true
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+         ->  Result  (cost=0.00..0.00 rows=0 width=1)
+               One-Time Filter: false
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(8 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+ i  | j  
+----+----
+ 19 |  5
+ 99 | 62
+ 78 | -1
+  1 |  1
+  1 |  1
+(5 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324035.78 rows=2 width=8)
+   Filter: (subplan)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+   SubPlan 1
+     ->  Limit  (cost=0.00..431.00 rows=1 width=8)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: c.i = $0
+                       ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                   ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(14 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+ i  | j  
+----+----
+ 99 | 62
+ 78 | -1
+  1 |  1
+  1 |  1
+ 19 |  5
+(5 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324035.78 rows=2 width=8)
+   Filter: (subplan)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+   SubPlan 1
+     ->  Limit  (cost=0.00..431.00 rows=1 width=8)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: c.i = $0
+                       ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                   ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(14 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
+ i | j 
+---+---
+(0 rows)
+
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
                                           QUERY PLAN                                           
 -----------------------------------------------------------------------------------------------
@@ -1123,7 +1203,7 @@ explain select C.j from C where not exists (select max(B.i) from B  where C.i = 
    Merge Key: c.j
    ->  Sort  (cost=0.00..862.00 rows=2 width=4)
          Sort Key: c.j
-         ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=2 width=4)
+         ->  Hash Anti Join  (cost=0.00..862.00 rows=2 width=4)
                Hash Cond: c.i = b.i
                ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
@@ -1184,27 +1264,27 @@ select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offs
 (9 rows)
 
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
-                                                       QUERY PLAN                                                       
-------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324036.36 rows=9 width=4)
    Merge Key: c.j
-   ->  Sort  (cost=0.00..862.00 rows=2 width=4)
-         Sort Key: c.j
-         ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=2 width=4)
-               Hash Cond: c.i = b.i
-               ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
-               ->  Hash  (cost=431.00..431.00 rows=6 width=4)
-                     ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=18 width=4)
-                           ->  Result  (cost=0.00..431.00 rows=2 width=4)
-                                 ->  Window  (cost=0.00..431.00 rows=2 width=4)
-                                       Order By: b.i
-                                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                             Merge Key: b.i
-                                             ->  Sort  (cost=0.00..431.00 rows=2 width=4)
-                                                   Sort Key: b.i
-                                                   ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
- Settings:  optimizer=on
- Optimizer status: PQO version 2.34.0
+   ->  Result  (cost=0.00..1324036.36 rows=3 width=4)
+         ->  Sort  (cost=0.00..1324036.36 rows=3 width=4)
+               Sort Key: c.j
+               ->  Table Scan on c  (cost=0.00..1324036.36 rows=3 width=4)
+                     Filter: (SubPlan 1)
+                     SubPlan 1
+                       ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                             ->  WindowAgg  (cost=0.00..431.00 rows=1 width=4)
+                                   Order By: b.i
+                                   ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                         Sort Key: b.i
+                                         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                               Filter: $0 = b.i
+                                               ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
+                                                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                           ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer status: PQO version 2.44.0
 (19 rows)
 
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
@@ -1215,6 +1295,128 @@ select C.j from C where not exists (select rank() over (order by B.i) from B  wh
   7
  62
 (4 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+                   QUERY PLAN                   
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=8)
+   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=8)
+         Hash Cond: a.i = c.i
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=3 width=4)
+               ->  GroupAggregate  (cost=0.00..431.00 rows=3 width=4)
+                     Group By: c.i
+                     ->  Sort  (cost=0.00..431.00 rows=3 width=4)
+                           Sort Key: c.i
+                           ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Optimizer status: PQO version 2.46.1
+(11 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+ i  | j 
+----+---
+ 19 | 5
+(1 row)
+
+explain select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=2 width=4)
+   ->  Hash Anti Join  (cost=0.00..1293.00 rows=1 width=4)
+         Hash Cond: a.i = b.i
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=862.00..862.00 rows=2 width=4)
+               ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
+                     Hash Cond: b.i = c.i
+                     ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=3 width=4)
+                           ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.40.3
+(12 rows)
+
+select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+ i  
+----
+ 19
+ 99
+ 78
+(3 rows)
+
+explain select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324895.10 rows=1 width=8)
+   ->  Hash Anti Join  (cost=0.00..1324895.10 rows=1 width=8)
+         Hash Cond: b.i = qp_correlated_query.c.i
+         ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=1324464.10..1324464.10 rows=13 width=4)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324464.10 rows=13 width=4)
+                     Hash Key: qp_correlated_query.c.i
+                     ->  Hash Semi Join  (cost=0.00..1324464.10 rows=13 width=4)
+                           Hash Cond: a.i = qp_correlated_query.c.i AND qp_correlated_query.c.i = qp_correlated_query.c.i
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324033.09 rows=15 width=8)
+                                 Hash Key: a.i
+                                 ->  Nested Loop  (cost=0.00..1324033.09 rows=15 width=8)
+                                       Join Filter: true
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=4)
+                                             ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=4)
+                                       ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+                           ->  Hash  (cost=431.00..431.00 rows=3 width=4)
+                                 ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+                                       Filter: i <> 10
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.40.3
+(21 rows)
+
+select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+ i  | j  
+----+----
+ 88 |  1
+ 32 |  5
+ -1 | 62
+  2 |  7
+(4 rows)
+
+explain select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324895.30 rows=5 width=8)
+   ->  Hash Join  (cost=0.00..1324895.30 rows=2 width=8)
+         Hash Cond: a.i = qp_correlated_query.c.j
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=1324464.30..1324464.30 rows=3 width=4)
+               ->  GroupAggregate  (cost=0.00..1324464.30 rows=3 width=4)
+                     Group By: qp_correlated_query.c.j
+                     ->  Sort  (cost=0.00..1324464.30 rows=3 width=4)
+                           Sort Key: qp_correlated_query.c.j
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324464.30 rows=3 width=4)
+                                 Hash Key: qp_correlated_query.c.j
+                                 ->  GroupAggregate  (cost=0.00..1324464.30 rows=3 width=4)
+                                       Group By: qp_correlated_query.c.j
+                                       ->  Sort  (cost=0.00..1324464.30 rows=18 width=4)
+                                             Sort Key: qp_correlated_query.c.j
+                                             ->  Hash Semi Join  (cost=0.00..1324464.30 rows=18 width=4)
+                                                   Hash Cond: b.i = qp_correlated_query.c.i
+                                                   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324033.29 rows=18 width=8)
+                                                         Hash Key: b.i
+                                                         ->  Nested Loop  (cost=0.00..1324033.29 rows=18 width=8)
+                                                               Join Filter: true
+                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                     ->  Table Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                                               ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+                                                   ->  Hash  (cost=431.00..431.00 rows=3 width=4)
+                                                         ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.40.3
+(28 rows)
+
+select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+ i | j 
+---+---
+ 1 | 1
+ 1 | 1
+(2 rows)
 
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
@@ -3465,6 +3667,36 @@ select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) or
  rnum | c1 | c2 
 ------+----+----
 (0 rows)
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE foo(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar(c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+EXPLAIN SELECT a FROM foo f1 LEFT JOIN bar on a=c WHERE NOT EXISTS(SELECT 1 FROM foo f2 WHERE f1.a = f2.a);
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=2 width=4)
+   ->  Hash Left Join  (cost=0.00..1293.00 rows=1 width=4)
+         Hash Cond: qp_correlated_query.foo.a = bar.c
+         ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=4)
+               Hash Cond: qp_correlated_query.foo.a = qp_correlated_query.foo.a
+               ->  Table Scan on foo  (cost=0.00..431.00 rows=1 width=4)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Table Scan on foo  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.46.2
+(13 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

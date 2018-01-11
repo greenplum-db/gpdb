@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.125.2.1 2009/09/03 22:08:22 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.130 2009/06/11 14:48:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,7 +25,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
+#include "utils/snapmgr.h"
 #include "mb/pg_wchar.h"
 
 /*
@@ -268,7 +268,7 @@ assign_timezone(const char *value, bool doit, GucSource source)
 
 		/*
 		 * Try to parse it.  XXX an invalid interval format will result in
-		 * ereport(ERROR), which is not desirable for GUC.  We did what we
+		 * ereport(ERROR), which is not desirable for GUC.	We did what we
 		 * could to guard against this in flatten_set_variable_args, but a
 		 * string coming in from postgresql.conf might contain anything.
 		 */
@@ -290,7 +290,7 @@ assign_timezone(const char *value, bool doit, GucSource source)
 		{
 			ereport(GUC_complaint_elevel(source),
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid interval value for time zone: day not allowed")));
+			errmsg("invalid interval value for time zone: day not allowed")));
 			pfree(interval);
 			return NULL;
 		}
@@ -582,7 +582,7 @@ assign_XactIsoLevel(const char *value, bool doit, GucSource source)
 	if (source != PGC_S_OVERRIDE &&
 			newXactIsoLevel != XactIsoLevel && IsTransactionState())
 	{
-		if (SerializableSnapshot != NULL)
+		if (FirstSnapshotSet)
 		{
 			if (source >= PGC_S_INTERACTIVE)
 				ereport(ERROR,

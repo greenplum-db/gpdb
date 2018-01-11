@@ -3,9 +3,9 @@
  * ts_type.h
  *	  Definitions for the tsvector and tsquery types
  *
- * Copyright (c) 1998-2008, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/ts_type.h,v 1.10 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tsearch/ts_type.h,v 1.15 2009/01/01 17:24:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -153,6 +153,11 @@ extern Datum ts_rankcd_wtt(PG_FUNCTION_ARGS);
 extern Datum ts_rankcd_ttf(PG_FUNCTION_ARGS);
 extern Datum ts_rankcd_wttf(PG_FUNCTION_ARGS);
 
+extern Datum tsmatchsel(PG_FUNCTION_ARGS);
+extern Datum tsmatchjoinsel(PG_FUNCTION_ARGS);
+
+extern Datum ts_typanalyze(PG_FUNCTION_ARGS);
+
 
 /*
  * TSQuery
@@ -179,6 +184,7 @@ typedef struct
 								 * bitmask of allowed weights. if it =0 then
 								 * any weight are allowed. Weights and bit
 								 * map: A: 1<<3 B: 1<<2 C: 1<<1 D: 1<<0 */
+	bool		prefix;			/* true if it's a prefix search */
 	int32		valcrc;			/* XXX: pg_crc32 would be a more appropriate
 								 * data type, but we use comparisons to signed
 								 * integers in the code. They would need to be
@@ -237,10 +243,10 @@ typedef TSQueryData *TSQuery;
  */
 #define COMPUTESIZE(size, lenofoperand) ( HDRSIZETQ + (size) * sizeof(QueryItem) + (lenofoperand) )
 
-/* Returns a pointer to the first QueryItem in a TSVector */
+/* Returns a pointer to the first QueryItem in a TSQuery */
 #define GETQUERY(x)  ((QueryItem*)( (char*)(x)+HDRSIZETQ ))
 
-/* Returns a pointer to the beginning of operands in a TSVector */
+/* Returns a pointer to the beginning of operands in a TSQuery */
 #define GETOPERAND(x)	( (char*)GETQUERY(x) + ((TSQuery)(x))->size * sizeof(QueryItem) )
 
 /*

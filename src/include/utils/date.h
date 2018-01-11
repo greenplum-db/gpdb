@@ -4,10 +4,10 @@
  *	  Definitions for the SQL92 "date" and "time" types.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/date.h,v 1.39 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/date.h,v 1.43 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -64,7 +64,7 @@ typedef struct
 #define DateADTGetDatum(X)	  Int32GetDatum(X)
 #define TimeADTGetDatum(X)	  Int64GetDatum(X)
 #define TimeTzADTPGetDatum(X) PointerGetDatum(X)
-#else
+#else							/* !HAVE_INT64_TIMESTAMP */
 
 #define MAX_TIME_PRECISION 10
 
@@ -120,6 +120,7 @@ extern Datum date_le(PG_FUNCTION_ARGS);
 extern Datum date_gt(PG_FUNCTION_ARGS);
 extern Datum date_ge(PG_FUNCTION_ARGS);
 extern Datum date_cmp(PG_FUNCTION_ARGS);
+extern Datum date_finite(PG_FUNCTION_ARGS);
 extern Datum date_larger(PG_FUNCTION_ARGS);
 extern Datum date_smaller(PG_FUNCTION_ARGS);
 extern Datum date_mi(PG_FUNCTION_ARGS);

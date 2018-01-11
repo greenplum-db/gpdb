@@ -300,7 +300,7 @@ select * from bm_table_foo where d = 3 and (d = 1 or d = 2);
 -- otherwise segments will eliminate nodes.
 select * from bm_table_foo where d = 2 and (d = 1 or d = 2);
 
--- double free mixed bitmap indexes (StreamBitmap with HashBitmap)
+-- double free mixed bitmap indexes (StreamBitmap with TIDBitmap)
 CREATE TABLE bmheapcrash (
     btree_col2 date DEFAULT now(),
     bitmap_col text NOT NULL,

@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_index.sgml,v 1.66 2007/11/26 21:36:33 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_index.sgml,v 1.71 2009/03/24 20:17:08 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEINDEX">
  <refmeta>
   <refentrytitle id="sql-createindex-title">CREATE INDEX</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -36,7 +37,7 @@ CREATE [UNIQUE] INDEX name ON table
   <title>Description</title>
 
   <para>
-   <command>CREATE INDEX</command> constructs an index <replaceable
+   <command>CREATE INDEX</command> constructs an index named <replaceable
    class="parameter">name</replaceable> on the specified table.
    Indexes are primarily used to enhance database performance (though
    inappropriate use can result in slower performance).
@@ -234,7 +235,8 @@ CREATE [UNIQUE] INDEX name ON table
       <listitem>
        <para>
         The name of an index-method-specific storage parameter.  See
-        below for details.
+        <xref linkend="sql-createindex-storage-parameters" endterm="sql-createindex-storage-parameters-title">
+        for details.
        </para>
       </listitem>
      </varlistentry>
@@ -268,7 +270,8 @@ CREATE [UNIQUE] INDEX name ON table
    <para>
     The <literal>WITH</> clause can specify <firstterm>storage parameters</>
     for indexes.  Each index method can have its own set of allowed storage
-    parameters.  The built-in index methods all accept a single parameter:
+    parameters.  The <literal>B-tree</literal>, <literal>hash</literal> and
+    <literal>GiST</literal> built-in index methods all accept a single parameter:
    </para>
 
    <variablelist>
@@ -295,6 +298,37 @@ CREATE [UNIQUE] INDEX name ON table
 
    </variablelist>
 
+   <para>
+    <literal>GIN</literal> indexes accept a different parameter:
+   </para>
+
+   <variablelist>
+
+   <varlistentry>
+    <term><literal>FASTUPDATE</></term>
+    <listitem>
+    <para>
+     This setting controls usage of the fast update technique described in
+     <xref linkend="gin-fast-update">.  It is a Boolean parameter:
+     <literal>ON</> enables fast update, <literal>OFF</> disables it.
+     (Alternative spellings of <literal>ON</> and <literal>OFF</> are
+     allowed as described in <xref linkend="config-setting">.)  The
+     default is <literal>ON</>.
+    </para>
+
+    <note>
+     <para>
+      Turning <literal>FASTUPDATE</> off via <command>ALTER INDEX</> prevents
+      future insertions from going into the list of pending index entries,
+      but does not in itself flush previous entries.  You might want to
+      <command>VACUUM</> the table afterward to ensure the pending list is
+      emptied.
+     </para>
+    </note>
+    </listitem>
+   </varlistentry>
+
+   </variablelist>
   </refsect2>
 
   <refsect2 id="SQL-CREATEINDEX-CONCURRENTLY">
@@ -398,7 +432,7 @@ Indexes:
   </para>
 
   <para>
-   Currently, only the B-tree and GiST index methods support
+   Currently, only the B-tree, GiST and GIN index methods support
    multicolumn indexes. Up to 32 fields can be specified by default.
    (This limit can be altered when building
    <productname>PostgreSQL</productname>.)  Only B-tree currently
@@ -427,7 +461,7 @@ Indexes:
    the optional clauses <literal>ASC</>, <literal>DESC</>, <literal>NULLS
    FIRST</>, and/or <literal>NULLS LAST</> can be specified to reverse
    the normal sort direction of the index.  Since an ordered index can be
-   scanned either forward or backward, it is not normally useful to create a 
+   scanned either forward or backward, it is not normally useful to create a
    single-column <literal>DESC</> index &mdash; that sort ordering is already
    available with a regular index.  The value of these options is that
    multicolumn indexes can be created that match the sort ordering requested
@@ -435,6 +469,23 @@ Indexes:
    DESC</>.  The <literal>NULLS</> options are useful if you need to support
    <quote>nulls sort low</> behavior, rather than the default <quote>nulls
    sort high</>, in queries that depend on indexes to avoid sorting steps.
+  </para>
+
+  <para>
+   For most index methods, the speed of creating an index is
+   dependent on the setting of <xref linkend="guc-maintenance-work-mem">.
+   Larger values will reduce the time needed for index creation, so long
+   as you don't make it larger than the amount of memory really available,
+   which would drive the machine into swapping.  For hash indexes, the
+   value of <xref linkend="guc-effective-cache-size"> is also relevant to
+   index creation time: <productname>PostgreSQL</productname> will use one
+   of two different hash index creation methods depending on whether the
+   estimated index size is more or less than <varname>effective_cache_size</>.
+   For best results, make sure that this parameter is also set to something
+   reflective of available memory, and be careful that the sum of
+   <varname>maintenance_work_mem</> and <varname>effective_cache_size</> is
+   less than the machine's RAM less whatever space is needed by other
+   programs.
   </para>
 
   <para>
@@ -494,6 +545,13 @@ CREATE INDEX title_idx_nulls_low ON films (title NULLS FIRST);
    To create an index with non-default fill factor:
 <programlisting>
 CREATE UNIQUE INDEX title_idx ON films (title) WITH (fillfactor = 70);
+</programlisting>
+  </para>
+
+  <para>
+   To create a <acronym>GIN</> index with fast updates disabled:
+<programlisting>
+CREATE INDEX gin_idx ON documents_table (locations) WITH (fastupdate = off);
 </programlisting>
   </para>
 

@@ -15,6 +15,7 @@
        | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
            [, ...])
        | ('gphdfs://<varname>hdfs_host</varname>[:port]/<varname>path</varname>/<varname>file</varname>')
+       | ('pxf://<varname>path-to-data</varname>?<varname>PROFILE</varname>[&amp;<varname>custom-option</varname>=<varname>value</varname>[...]]'))
        | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>]
              [region=<varname>S3-region</varname>]
             [config=<varname>config_file</varname>]')
@@ -131,7 +132,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>See "Loading and Unloading Data" in the <cite>Greenplum Database Administrator Guide</cite>
+      <p>See "Working with Exteral Tables" in the <cite>Greenplum Database Administrator Guide</cite>
         for detailed information about external tables.</p>
       <p><codeph>CREATE EXTERNAL TABLE</codeph> or <codeph>CREATE EXTERNAL WEB TABLE</codeph>
         creates a new readable external table definition in Greenplum Database. Readable external
@@ -155,24 +156,6 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         sources. Regular readable external tables access static flat files, whereas external web
         tables access dynamic data sources – either on a web server or by executing OS commands or
         scripts. </p>
-      <p>The <codeph>FORMAT</codeph> clause is used to describe how the external table files are
-        formatted. Valid file formats are delimited text (<codeph>TEXT</codeph>) and comma separated
-        values (<codeph>CSV</codeph>) format, similar to the formatting options available with the
-        PostgreSQL <codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>
-        command. If the data in the file does not use the default column delimiter, escape
-        character, null string and so on, you must specify the additional formatting options so that
-        the data in the external file is read correctly by Greenplum Database. For information about
-        using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
-          Administrator Guide</cite>.</p>
-      <p>For the <codeph>gphdfs</codeph> protocol, you can also specify the <codeph>AVRO</codeph> or
-          <codeph>PARQUET</codeph> in the <codeph>FORMAT</codeph> clause to read or write Avro or
-        Parquet format files. For information about Avro and Parquet files, see <xref
-          href="#topic1/section9" format="dita"/>.</p>
-      <p>Before you can create an external table that writes to or reads from an Amazon Web Services
-        (AWS) S3 bucket, you must configure Greenplum Database to support the protocol. S3 external
-        tables can use either CSV or text-formatted files. Writable S3 external tables support only
-        the <codeph>INSERT</codeph> operation. See <xref href="#topic1/section10" format="dita"
-        />.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -224,6 +207,18 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         </plentry>
         <plentry>
           <pt>LOCATION <varname>('protocol://host[:port]/path/file' [, ...])</varname></pt>
+          <pd>If you use the <codeph>gphdfs</codeph> protocol to read or write a file to a Hadoop
+            file system (HDFS), refer to <xref
+          href="../../admin_guide/external/g-specify-hdfs-data-in-an-external-table-definition.xml"/> for additional information about
+         the <codeph>gphdfs</codeph> protocol <codeph>LOCATION</codeph> clause syntax.</pd>
+          <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
+          refer to the <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          documentation for detailed information about
+          the <codeph>pxf</codeph> protocol <codeph>LOCATION</codeph> clause syntax.</pd>
+          <pd>If you use the <codeph>s3</codeph> protocol to read or write to S3, refer to <xref
+              href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
+            for additional information about the <codeph>s3</codeph> protocol
+              <codeph>LOCATION</codeph> clause syntax.</pd>
           <pd>For readable external tables, specifies the URI of the external data source(s) to be
             used to populate the external table or web table. Regular readable external tables allow
             the <codeph>gpfdist</codeph> or <codeph>file</codeph> protocols. External web tables
@@ -242,24 +237,6 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
 'file://seghost1/dbfast1/external/myfile.txt'
 'http://intranet.example.com/finance/expenses.csv'</codeblock>
           </pd>
-          <pd>For the <codeph>gphdfs</codeph> protocol, the URI of the <codeph>LOCATION</codeph>
-            clause cannot contain any of these four characters: <codeph>\</codeph>,
-              <codeph>'</codeph>, <codeph>&lt;</codeph>, <codeph>></codeph>. The <codeph>CREATE
-              EXTERNAL TABLE</codeph> command returns a an error if the URI contains any of the
-            characters.</pd>
-          <pd>If you are using MapR clusters with the <codeph>gphdfs</codeph> protocol, you specify
-            a specific cluster and the file:<ul id="ul_xdj_wzt_hq">
-              <li>To specify the default cluster, the first entry in the MapR configuration file
-                  <codeph>/opt/mapr/conf/mapr-clusters.conf</codeph>, specify the location of your
-                table with this
-                syntax:<codeblock> LOCATION ('gphdfs:///<varname>file_path</varname>')</codeblock>
-                The <varname>file_path</varname> is the path to the file.</li>
-              <li>To specify another MapR cluster listed in the configuration file, specify the file
-                with this syntax:
-                <codeblock> LOCATION ('gphdfs:///mapr/<varname>cluster_name</varname>/<varname>file_path</varname>')</codeblock>The
-                  <varname>cluster_name</varname> is the name of the cluster specified in the
-                configuration file and <varname>file_path</varname> is the path to the file.</li>
-            </ul></pd>
           <pd>For writable external tables, specifies the URI location of the
               <codeph>gpfdist</codeph> process or S3 protocol that will collect data output from the
             Greenplum segments and write it to one or more named files. For <codeph>gpfdist</codeph>
@@ -282,88 +259,13 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
             about specifying a transform, see <xref
               href="../../utility_guide/admin_utilities/gpfdist.xml#topic1"
               ><codeph>gpfdist</codeph></xref> in the <cite>Greenplum Utility Guide</cite>. </pd>
-          <pd>If you specify <codeph>gphdfs</codeph> protocol to read or write a file to a Hadoop
-            file system (HDFS), you can read or write an Avro or Parquet format file by specifying
-            the <codeph>FORMAT</codeph> clause with either <codeph>AVRO</codeph> or
-              <codeph>PARQUET</codeph>. </pd>
-          <pd>For information about the options when specifying a location for an Avro or Parquet
-            file, see <xref href="#topic1/section9" format="dita"/>.</pd>
-          <pd>When you create an external table with the <codeph>s3</codeph> protocol, only the
-              <codeph>TEXT</codeph> and <codeph>CSV</codeph> formats are supported. The files can be
-            in gzip compressed format. The <codeph>s3</codeph> protocol recognizes the gzip format
-            and uncompress the files. Only the gzip compression format is supported. </pd>
-          <pd>You can specify the <codeph>s3</codeph> protocol to access data on Amazon S3 or data
-            on an Amazon S3 compatible service. Before you can create external tables with the
-              <codeph>s3</codeph> protocol, you must configure Greenplum Database. For information
-            about configuring Greenplum Database, see <xref href="#topic1/section10" format="dita"
-            />.</pd>
-          <pd>For the <codeph>s3</codeph> protocol, the <codeph>LOCATION</codeph> clause specifies
-            the S3 endpoint and bucket name where data files are uploaded for the table. For
-            writable external tables you can specify an optional S3 file prefix to use when creating
-            new files for data inserted to the table.</pd>
-          <pd>If you specify an <varname>S3_prefix</varname> for read-only S3 tables, the
-              <codeph>s3</codeph> protocol selects those all those files that have the specified S3
-            file prefix.</pd>
-          <pd>
-            <note conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3-prefix-note"
-            />
-          </pd>
-          <pd>The <codeph>config</codeph> parameter in the <codeph>LOCATION</codeph> clause
-            specifies the location of the required <codeph>s3</codeph> protocol configuration file
-            that contains Amazon Web Services (AWS) connection credentials and communication
-            parameters. For information about <codeph>s3</codeph> configuration file parameters, see
-              <xref href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_config_file"
-            />.</pd>
-          <pd>This is an example read-only external table definition with the <codeph>s3</codeph>
-            protocol.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
-      config=/home/gpadmin/aws_s3/s3.conf')
-   FORMAT 'csv';</codeblock></pd>
-          <pd>The S3 bucket is at the S3 endpoint <codeph>s3-us-west-2.amazonaws.com</codeph> and
-            the S3 bucket name is <codeph>s3test.example.com</codeph>. The S3 prefix for the files
-            in the bucket is <codeph>/dataset1/normal/</codeph>. The configuration file is in
-              <codeph>/home/gpadmin/s3/s3.conf</codeph> on all Greenplum Database segments.</pd>
-          <pd>This example read-only external table specifies the same location and specifies Amazon
-            S3 region <codeph>us-west-2</codeph> with the <codeph>region</codeph>
-            parameter.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
-   LOCATION('s3://amazonaws.com/s3test.example.com/dataset1/normal/
-      region=s3-us-west-2 config=/home/gpadmin/aws_s3/s3.conf')
-   FORMAT 'csv';</codeblock></pd>
-          <pd>The <varname>port</varname> is optional in the URL of the <codeph>LOCATION</codeph>
-            clause. If the <varname>port</varname> is not specified in the URL of the
-              <codeph>LOCATION</codeph> clause, the <codeph>s3</codeph> configuration file parameter
-              <codeph>encryption</codeph> affects the port used by the <codeph>s3</codeph> protocol
-            (port 80 for HTTP or port 443 for HTTPS). If the port is specified, that port is used
-            regardless of the encryption setting. For example, if port 80 is specified in the
-              <codeph>LOCATION</codeph> clause and <codeph>encryption=true</codeph> in the
-              <codeph>s3</codeph> configuration file, HTTPS requests are sent to port 80 port
-            instead of 443 and a warning is logged. </pd>
-          <pd>To specify an Amazon S3 compatible service in the <codeph>LOCATION</codeph> clause,
-            set the <codeph>s3</codeph> configuration file parameter <codeph>version</codeph> to
-              <codeph>2</codeph> and specify the <codeph>region</codeph> parameter in the
-              <codeph>LOCATION</codeph> clause. (If <codeph>version</codeph> to <codeph>2</codeph>,
-            the <codeph>region</codeph> parameter is required in the <codeph>LOCATION</codeph>
-            clause.) When you define the service in the <codeph>LOCATION</codeph> clause, you
-            specify the service endpoint in the URL and specify the service region in the
-              <codeph>region</codeph> parameter. This is an example <codeph>LOCATION</codeph> clause
-            that contains a <codeph>region</codeph> parameter and specifies an Amazon S3 compatible
-            service.
-            <codeblock>LOCATION ('s3://test.company.com/s3test.company/dataset1/normal/ <b>region=local-test</b>
-      config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
-          <pd>When the <codeph>version</codeph> parameter is <codeph>2</codeph>, you can also
-            specify an Amazon S3 endpoint. This example specifies an Amazon S3
-            endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ <b>region=us-west-2</b>
-      config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
-          <pd>For information about the <codeph>s3</codeph> protocol, see <xref
-              href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr">s3://
-              Protocol</xref> in the <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
         <plentry>
           <pt>ON MASTER</pt>
           <pd>Restricts all table-related operations to the Greenplum master segment. Permitted only
             on readable and writable external tables created with the <codeph>s3</codeph> or custom
             protocols. The <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>,
-              <codeph>gphdfs</codeph>, and <codeph>file</codeph> protocols do not support <codeph>ON
+              <codeph>gphdfs</codeph>, <codeph>pxf</codeph>, and <codeph>file</codeph> protocols do not support <codeph>ON
               MASTER</codeph>. <note>Be aware of potential resource impacts when reading from or
               writing to external tables you create with the <codeph>ON MASTER</codeph> clause. You
               may encounter performance issues when you restrict table operations solely to the
@@ -410,13 +312,24 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
       <parml>
         <plentry>
           <pt>FORMAT 'TEXT | CSV | AVRO | PARQUET' <varname>(options)</varname></pt>
-          <pd>Specifies the format of the external or web table data - either plain text
-              (<codeph>TEXT</codeph>) or comma separated values (<codeph>CSV</codeph>) format.</pd>
-          <pd>The <codeph>AVRO</codeph> and <codeph>PARQUET</codeph> formats are supported only with
-            the <codeph>gphdfs</codeph> protocol. </pd>
-          <pd>For information about the options when specifying the <codeph>AVRO</codeph> and
-              <codeph>PARQUET</codeph> file format, see <xref href="#topic1/section9" format="dita"
-            />.</pd>
+          <pd>When the <codeph>FORMAT</codeph> clause identfies delimited text (<codeph>TEXT</codeph>)
+            or comma separated values (<codeph>CSV</codeph>) format, formatting options are similar
+        to those available with the
+        PostgreSQL <codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>
+        command. If the data in the file does not use the default column delimiter, escape
+        character, null string and so on, you must specify the additional formatting options so that
+        the data in the external file is read correctly by Greenplum Database. For information about
+        using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
+          Administrator Guide</cite>.</pd>
+          <pd>The <codeph>AVRO</codeph> and <codeph>PARQUET</codeph> formats are supported only when 
+            you specify the <codeph>gphdfs</codeph> protocol. Refer to <xref
+          href="../../admin_guide/external/g-using-hadoop-distributed-file-system--hdfs--tables.xml"/>
+         for detailed information about the <codeph>gphdfs</codeph> protocol <codeph>FORMAT</codeph>
+         clause syntax.</pd>
+          <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
+          refer to the PXF <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          documentation for detailed information about
+          the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
         </plentry>
         <plentry>
           <pt>FORMAT 'CUSTOM' (formatter=<varname>formatter_specification</varname>)</pt>
@@ -424,7 +337,11 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
             specifies the function to use to format the data, followed by comma-separated parameters
             to the formatter function. The length of the formatter specification, the string
             including <codeph>Formatter=</codeph>, can be up to approximately 50K bytes.</pd>
-          <pd>For information about using a custom format, see "Loading and Unloading Data" in the
+          <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
+          refer to the PXF <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          documentation for detailed information about
+          the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
+          <pd>For general information about using a custom format, see "Loading and Unloading Data" in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
         <plentry>
@@ -482,6 +399,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
           <pd>For the <codeph>s3</codeph> protocol, the column names in the header row cannot
             contain a newline character (<codeph>\n</codeph>) or a carriage return
               (<codeph>\r</codeph>).</pd>
+          <pd>The <codeph>pxf</codeph> protocol does not support the <codeph>HEADER</codeph> formatting option.</pd>
         </plentry>
         <plentry>
           <pt>QUOTE</pt>
@@ -661,217 +579,6 @@ customer_id=123;</codeblock>
         pipe to a single reader. An error is returned if a second reader attempts to access the
         named pipe. </p>
     </section>
-    <section id="section9"><title>HDFS File Format Support for the gphdfs Protocol</title><p>If you
-        specify <codeph>gphdfs</codeph> protocol to read or write file to a Hadoop file system
-        (HDFS), you can read or write an Avro or Parquet format file by specifying the file format
-        with the <codeph>FORMAT</codeph> clause. </p><p>To read data from or write data to an Avro
-        or Parquet file, you create an external table with the <codeph>CREATE EXTERNAL
-          TABLE</codeph> command and specify the location of the Avro file in the
-          <codeph>LOCATION</codeph> clause and <codeph>'AVRO'</codeph> in the
-          <codeph>FORMAT</codeph> clause. This example is for a readable external table that reads
-        from an Avro
-        file.<codeblock>CREATE EXTERNAL TABLE <varname>tablename</varname> (<varname>column_spec</varname>) LOCATION ( 'gphdfs://<varname>location</varname>') <b>FORMAT 'AVRO'</b> </codeblock></p>The
-        <varname>location</varname> can be a file name or a directory containing a set of files. For
-      the file name you can specify the wildcard character * to match any number of characters. If
-      the location specifies multiple files when reading files, Greenplum Database uses the schema
-      in the first file that is read as the schema for the other files. <p>As part of the
-          <varname>location</varname> parameter you can specify options for reading or writing the
-        file. After the file name, you can specify parameters with the HTTP query string syntax that
-        starts with ? and uses &amp; between field value pairs.</p><p>For this example
-          <varname>location</varname> parameter, this URL sets compression parameters for an Avro
-        format writable external table.
-        <codeblock>'gphdfs://myhdfs:8081/avro/singleAvro/array2.avro?compress=true&amp;compression_type=block&amp;codec=snappy' FORMAT 'AVRO'</codeblock></p><p>See
-        "Loading and Unloading Data" in the <i>Greenplum Database Administrator Guide</i> for
-        information about reading and writing the Avro and Parquet format files with external
-        tables.</p><p><b>Avro Files</b></p><p>For readable external tables, the only valid parameter
-        is <codeph>schema</codeph>. When reading multiple Avro files, you can specify a file that
-        contains an Avro schema. See "Avro Schema Overrides" in the <cite>Greenplum Database
-          Administrator Guide</cite>.</p><p>For writable external tables, you can specify
-          <codeph>schema</codeph>, <codeph>namespace</codeph>, and parameters for
-        compression.</p><table id="table_hd5_2yv_vs">
-        <title>Avro Format External Table location Parameters </title>
-        <tgroup cols="4">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colname="newCol3" colnum="3" colwidth="1*"/>
-          <colspec colnum="4" colname="col3" colwidth="2*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Parameter</entry>
-              <entry colname="col2">Value</entry>
-              <entry>Readable/Writable</entry>
-              <entry colname="col3">Default Value</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">schema</entry>
-              <entry colname="col2">
-                <varname>URL_to_schema_file</varname>
-              </entry>
-              <entry>Read and Write</entry>
-              <entry colname="col3">None.<p>For a readable external table<ul id="ul_el5_2yv_vs">
-                    <li>The specified schema overrides the schema in the Avro file. See "Avro Schema
-                      Overrides"</li>
-                    <li>If not specified, Greenplum Database uses the Avro file schema.</li>
-                  </ul></p><p>For a writable external table<ul id="ul_kl5_2yv_vs">
-                    <li>Uses the specified schema when creating the Avro file.</li>
-                    <li>If not specified, Greenplum Database creates a schema according to the
-                      external table definition.</li>
-                  </ul></p></entry>
-            </row>
-            <row>
-              <entry colname="col1">namespace</entry>
-              <entry colname="col2">
-                <varname>avro_namespace</varname>
-              </entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>public.avro</codeph>
-                <p>If specified, a valid Avro <varname>namespace</varname>. </p>
-              </entry>
-            </row>
-            <row>
-              <entry colname="col1">compress</entry>
-              <entry colname="col2"><codeph>true</codeph> or <codeph>false</codeph></entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>false</codeph>
-              </entry>
-            </row>
-            <row>
-              <entry colname="col1">compression_type</entry>
-              <entry colname="col2">
-                <codeph>block</codeph>
-              </entry>
-              <entry>Write only</entry>
-              <entry colname="col3">Optional. <p>For <codeph>avro</codeph> format,
-                    <codeph>compression_type</codeph> must be <codeph>block</codeph> if
-                    <codeph>compress</codeph> is <codeph>true</codeph>.</p></entry>
-            </row>
-            <row>
-              <entry colname="col1">codec</entry>
-              <entry colname="col2"><codeph>deflate</codeph> or <codeph>snappy</codeph></entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>deflate</codeph>
-              </entry>
-            </row>
-            <row>
-              <entry colname="col1">codec_level (<codeph>deflate</codeph> codec only)</entry>
-              <entry colname="col2">integer between 1 and 9</entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>6</codeph>
-                <p>The level controls the trade-off between speed and compression. Valid values are
-                  1 to 9, where 1 is the fastest and 9 is the most compressed. </p>
-              </entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table><p>This set of parameters specify <codeph>snappy</codeph>
-        compression:<codeblock> 'compress=true&amp;codec=snappy'</codeblock></p><p>These two sets of
-        parameters specify <codeph>deflate</codeph> compression and are
-          equivalent:</p><codeblock> 'compress=true&amp;codec=deflate&amp;codec_level=1'
- 'compress=true&amp;codec_level=1'</codeblock><p><b>gphdfs
-          Limitations for Avro Files</b></p><p>For a Greenplum Database writable external table
-        definition, columns cannot specify the <codeph>NOT NULL</codeph> clause.</p><p>Greenplum
-        Database supports only a single top-level schema in Avro files or specified with the
-          <codeph>schema</codeph> parameter in the <codeph>CREATE EXTERNAL TABLE</codeph> command.
-        An error is returned if Greenplum Database detects multiple top-level schemas.
-        </p><p>Greenplum Database does not support the Avro <codeph>map</codeph> data type and
-        returns an error when encountered.</p><p>When Greenplum Database reads an array from an Avro
-        file, the array is converted to the literal text value. For example, the array
-          <codeph>[1,3]</codeph> is converted to <codeph>'{1,3}'</codeph>. </p><p>User defined types
-        (UDT), including array UDT, are supported. For a writable external table, the type is
-        converted to string.</p><p><b>Parquet Files</b></p><p>For external tables, you can add
-        parameters after the file specified in the <varname>location</varname>. This table lists the
-        valid parameters and values.</p><table id="table_jpk_1j5_hs">
-        <title>Parquet Format External Table location Parameters</title>
-        <tgroup cols="4">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colname="newCol3" colnum="3" colwidth="1*"/>
-          <colspec colnum="4" colname="col3" colwidth="2*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Option</entry>
-              <entry colname="col2">Values</entry>
-              <entry>Readable/Writable</entry>
-              <entry colname="col3">Default Value</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">schema</entry>
-              <entry colname="col2">
-                <varname>URL_to_schema</varname>
-              </entry>
-              <entry>Write only</entry>
-              <entry colname="col3">None.<p>If not specified, Greenplum Database creates a schema
-                  according to the external table definition. </p></entry>
-            </row>
-            <row>
-              <entry colname="col1">pagesize</entry>
-              <entry colname="col2"> > 1024 Bytes</entry>
-              <entry>Write only</entry>
-              <entry colname="col3"> 1 MB</entry>
-            </row>
-            <row>
-              <entry colname="col1">rowgroupsize</entry>
-              <entry colname="col2"> > 1024 Bytes</entry>
-              <entry>Write only</entry>
-              <entry colname="col3"> 8 MB</entry>
-            </row>
-            <row>
-              <entry colname="col1">version</entry>
-              <entry colname="col2">
-                <codeph>v1</codeph>, <codeph>v2</codeph></entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>v1</codeph></entry>
-            </row>
-            <row>
-              <entry colname="col1">codec</entry>
-              <entry colname="col2"><codeph>UNCOMPRESSED</codeph>, <codeph>GZIP</codeph>,
-                  <codeph>LZO</codeph>, <codeph>snappy</codeph></entry>
-              <entry>Write only</entry>
-              <entry colname="col3">
-                <codeph>UNCOMPRESSED</codeph></entry>
-            </row>
-            <row>
-              <entry colname="col1">dictionaryenable<sup>1</sup></entry>
-              <entry><codeph>true</codeph>, <codeph>false</codeph></entry>
-              <entry>Write only</entry>
-              <entry colname="col3"> false</entry>
-            </row>
-            <row>
-              <entry colname="col1">dictionarypagesize<sup>1</sup></entry>
-              <entry colname="col2"> > 1024 Bytes</entry>
-              <entry>Write only</entry>
-              <entry colname="col3">512 KB</entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table><note>
-        <ol id="ol_dsg_bnw_dt">
-          <li>Creates an internal dictionary. Enabling a dictionary might improve Parquet file
-            compression if text columns contain similar or duplicate data. </li>
-        </ol>
-      </note></section>
-    <section id="section10">
-      <title>s3 Protocol Configuration</title>
-      <p>The <codeph>s3</codeph> protocol is used with a URI to specify the location of files in an
-        Amazon Simple Storage Service (Amazon S3) bucket. The protocol creates or downloads all
-        files specified by the <codeph>LOCATION</codeph> clause. Each Greenplum Database segment
-        instance downloads or uploads one file at a time using several threads. See <xref
-          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/> in the <cite>Greenplum
-          Database Administrator Guide</cite>. </p>
-    </section>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/section_tsq_n3t_3x"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_config_file"/>
     <section id="section6">
       <title>Compatibility</title>
       <p><codeph>CREATE EXTERNAL TABLE</codeph> is a Greenplum Database extension. The SQL standard

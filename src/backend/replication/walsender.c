@@ -68,7 +68,7 @@
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
 #include "utils/timestamp.h"
-
+#include "cdb/cdbvars.h"
 
 /* Array of WalSnds in shared memory */
 WalSndCtlData *WalSndCtl = NULL;
@@ -78,7 +78,7 @@ WalSnd	   *MyWalSnd = NULL;
 
 /* Global state */
 bool		am_walsender = false;		/* Am I a walsender process ? */
-int			max_wal_senders = 1;	/* the maximum number of concurrent walsenders */
+int			max_wal_senders = 0;	/* the maximum number of concurrent walsenders */
 
 /* User-settable parameters for walsender */
 int			replication_timeout = 60 * 1000;	/* maximum time to send one
@@ -786,38 +786,57 @@ InitWalSenderSlot(void)
 static void
 WalSndKill(int code, Datum arg)
 {
-	Assert(MyWalSnd != NULL);
+	WalSnd	   *walsnd = MyWalSnd;
+
+	Assert(walsnd != NULL);
+
+	if (GpIdentity.segindex == MASTER_CONTENT_ID)
+	{
+		/*
+		 * Acquire the SyncRepLock here to avoid any race conditions
+		 * that may occur when the WAL sender is waking up waiting backends in the
+		 * sync-rep queue just before its exit and a new backend comes in
+		 * to wait in the queue due to the fact that WAL sender is still alive.
+		 * Refer to the use of SyncRepLock in SyncRepWaitForLSN()
+		 */
+		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
+		{
+			/* Release any waiting backends in the sync-rep queue */
+			SyncRepWakeQueue(true, SYNC_REP_WAIT_WRITE);
+			SyncRepWakeQueue(true, SYNC_REP_WAIT_FLUSH);
+
+			SpinLockAcquire(&MyWalSnd->mutex);
+
+			MyWalSnd->synchronous = false;
+
+			/* xlog can get freed without the WAL sender worry */
+			MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
+
+			/* Mark WalSnd struct no longer in use. */
+			MyWalSnd->pid = 0;
+			SpinLockRelease(&MyWalSnd->mutex);
+
+			DisownLatch(&MyWalSnd->latch);
+		}
+		LWLockRelease(SyncRepLock);
+		/* WalSnd struct isn't mine anymore */
+		MyWalSnd = NULL;
+		return;
+	}
 
 	/*
-	 * Acquire the SyncRepLock here to avoid any race conditions
-	 * that may occur when the WAL sender is waking up waiting backends in the
-	 * sync-rep queue just before its exit and a new backend comes in
-	 * to wait in the queue due to the fact that WAL sender is still alive.
-	 * Refer to the use of SyncRepLock in SyncRepWaitForLSN()
+	 * Clear MyWalSnd first; then disown the latch.  This is so that signal
+	 * handlers won't try to touch the latch after it's no longer ours.
 	 */
-	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-	{
-		/* Release any waiting backends in the sync-rep queue */
-		SyncRepWakeQueue(true, SYNC_REP_WAIT_WRITE);
-		SyncRepWakeQueue(true, SYNC_REP_WAIT_FLUSH);
-
-		SpinLockAcquire(&MyWalSnd->mutex);
-
-		MyWalSnd->synchronous = false;
-
-		/* xlog can get freed without the WAL sender worry */
-		MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
-
-		/* Mark WalSnd struct no longer in use. */
-		MyWalSnd->pid = 0;
-		SpinLockRelease(&MyWalSnd->mutex);
-
-		DisownLatch(&MyWalSnd->latch);
-	}
-	LWLockRelease(SyncRepLock);
-
-	/* WalSnd struct isn't mine anymore */
 	MyWalSnd = NULL;
+
+	DisownLatch(&walsnd->latch);
+
+	/*
+	 * Mark WalSnd struct no longer in use. Assume that no lock is required
+	 * for this.
+	 */
+	walsnd->pid = 0;
 }
 
 /*
@@ -868,6 +887,7 @@ XLogRead(char *buf, XLogRecPtr startptr, Size count)
 			sendFile = BasicOpenFile(path, O_RDONLY | PG_BINARY, 0);
 			if (sendFile < 0)
 			{
+				WalSndCtl->error = WALSNDERROR_WALREAD;
 				/*
 				 * If the file is not found, assume it's because the standby
 				 * asked for a too old WAL segment that has already been
@@ -896,10 +916,15 @@ XLogRead(char *buf, XLogRecPtr startptr, Size count)
 		if (sendOff != startoff)
 		{
 			if (lseek(sendFile, (off_t) startoff, SEEK_SET) < 0)
+			{
+				WalSndCtl->error = WALSNDERROR_WALREAD;
+
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not seek in log file %u, segment %u to offset %u: %m",
 								sendId, sendSeg, startoff)));
+			}
+
 			sendOff = startoff;
 		}
 
@@ -911,11 +936,14 @@ XLogRead(char *buf, XLogRecPtr startptr, Size count)
 
 		readbytes = read(sendFile, p, segbytes);
 		if (readbytes <= 0)
+		{
+			WalSndCtl->error = WALSNDERROR_WALREAD;
 			ereport(ERROR,
 					(errcode_for_file_access(),
 			errmsg("could not read from log file %u, segment %u, offset %u, "
 				   "length %lu: %m",
 				   sendId, sendSeg, sendOff, (unsigned long) segbytes)));
+		}
 
 		/* Update state for read */
 		XLByteAdvance(recptr, readbytes);
@@ -939,12 +967,16 @@ XLogRead(char *buf, XLogRecPtr startptr, Size count)
 	{
 		char		filename[MAXFNAMELEN];
 
+		WalSndCtl->error = WALSNDERROR_WALREAD;
+
 		XLogFileName(filename, ThisTimeLineID, log, seg);
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("requested WAL segment %s has already been removed",
 						filename)));
 	}
+
+	WalSndCtl->error = WALSNDERROR_NONE;
 }
 
 /*

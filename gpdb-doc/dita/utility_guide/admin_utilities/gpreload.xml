@@ -1,44 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pj138418">gpreload</title><body><p>Reloads Greenplum Database table data sorting the data based on specified
-columns. </p><section id="section2"><title>Synopsis</title><codeblock><b>gpreload</b> <b>-d</b> <varname>database</varname> [<b>-p</b> <varname>port</varname>] {<b>-t</b> | <b>--table-file</b>} <varname>path_to_file</varname> [<b>-a</b>]
+<topic id="topic1">
+  <title id="pj138418">gpreload</title>
+  <body>
+    <p>Reloads Greenplum Database table data sorting the data based on specified columns. </p>
+    <section id="section2"
+      ><title>Synopsis</title><codeblock><b>gpreload</b> <b>-d</b> <varname>database</varname> [<b>-p</b> <varname>port</varname>] {<b>-t</b> | <b>--table-file</b>} <varname>path_to_file</varname> [<b>-a</b>]
 
 <b>gpreload</b> <b>-h</b> 
 
-<b>gpreload</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility reloads table data with column
-data sorted. For tables that were created with the table storage option
-<codeph>APPENDONLY=TRUE</codeph> and compression enabled, reloading the
-data with sorted data can improve table compression. You specify a list
-of tables to be reloaded the table column to be sorted in a text file.
-</p><p>Compression is improved by sorting data when the data in the column
-has a relatively low number of distinct values when compared to the total
-number of rows.</p><p>For a table being reloaded, the order of the columns to be sorted
-might affect compression. The columns with fewest distinct values should
-be listed first. For example, listing state then city would generally
-result in better compression than listing city then state. </p><codeblock>public.cust_table: state, city
-public.cust_table: city, state</codeblock><p>For information about the format of the file used with <codeph>gpreload</codeph>,
-see the <codeph>--table-file</codeph> option.</p></section><section id="section4"><title>Notes</title><p>To improve reload performance, indexes on tables being reloaded should
-be removed before reloading the data. </p><p>Running the <codeph>ANALYZE</codeph> command after reloading table
-data might query performance because of a change in the data distribution
-of the reloaded data. </p></section><section id="section5"><title>Options</title><parml><plentry><pt>-a (do not prompt)</pt><pd>Optional. If specified, the <codeph>gpreload</codeph> utility does
-not prompt the user for confirmation. </pd></plentry><plentry><pt>-d <varname>database</varname></pt><pd>The database that contains the tables to be reloaded. The <codeph>gpreload</codeph>
-utility connects to the database as the user running the utility. </pd></plentry><plentry><pt>-p <varname>port</varname></pt><pd>The Greenplum Database master port. If not specified, the value of
-the <codeph>PGPORT</codeph> environment variable is used. If the value
-is not available, an error is returned. </pd></plentry><plentry><pt>{-t | --table-file } <varname>path_to_file</varname></pt><pd>The location and name of file containing list of schema qualified
-table names to reload and the column names to reorder from the Greenplum
-Database. Only user defined tables are supported. Views or system catalog
-tables are not supported.</pd><pd>If indexes are defined on table listed in the file, <codeph>gpreload</codeph>
-prompts to continue.</pd><pd>Each line specifies a table name and the list of columns to sort.
-This is the format of each line in the file:</pd><pd><codeblock>schema.table_name: column [desc] [, column2 [desc] ... ]</codeblock></pd><pd>The table name is followed by a colon ( : ) and then at least one column
-name. If you specify more than one column, separate the column names
-with a comma. The columns are sorted in ascending order. Specify the
-keyword <codeph>desc</codeph> after the column name to sort the column
-in descending order. </pd><pd>Wildcard characters are not supported.</pd><pd>If there are errors in the file, <codeph>gpreload</codeph> reports
-the first error and exits. No data is reloaded. </pd><pd>The following example reloads three
+<b>gpreload</b> <b>--version</b></codeblock></section>
+    <section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility reloads table data with column data sorted. For tables that
+        were created with the table storage option <codeph>APPENDONLY=TRUE</codeph> and compression
+        enabled, reloading the data with sorted data can improve table compression. You specify a
+        list of tables to be reloaded and the table columns to be sorted in a text file. </p><p>Compression is improved by sorting data
+        when the data in the column has a relatively low number of distinct values when compared to
+        the total number of rows.</p><p>For a table being reloaded, the order of the columns to be sorted might affect compression. The
+        columns with the fewest distinct values should be listed first. For example, listing state
+        then city would generally result in better compression than listing city then state. </p><codeblock>public.cust_table: state, city
+public.cust_table: city, state</codeblock><p>For
+        information about the format of the file used with <codeph>gpreload</codeph>, see the
+          <codeph>--table-file</codeph> option.</p></section>
+    <section id="section4"><title>Notes</title><p>To improve reload performance, indexes on tables
+        being reloaded should be removed before reloading the data. </p><p>Running the
+          <codeph>ANALYZE</codeph> command after reloading table data might query performance
+        because of a change in the data distribution of the reloaded data. </p>
+      <p>For each table, the utility copies table data to a temporary table, truncates the existing
+        table data, and inserts data from the temporary table to the table in the specified sort
+        order. Each table reload is performed in a single transaction.</p>
+      <p>For a partitioned table, you can reload the data of a leaf child partition. However, data
+        is inserted from the root partition table, which acquires a <codeph>ROW EXLCUSIVE</codeph>
+        lock on the entire table.</p></section>
+    <section id="section5"><title>Options</title><parml>
+        <plentry>
+          <pt>-a (do not prompt)</pt>
+          <pd>Optional. If specified, the <codeph>gpreload</codeph> utility does not prompt the user
+            for confirmation. </pd>
+        </plentry>
+        <plentry>
+          <pt>-d <varname>database</varname></pt>
+          <pd>The database that contains the tables to be reloaded. The <codeph>gpreload</codeph>
+            utility connects to the database as the user running the utility. </pd>
+        </plentry>
+        <plentry>
+          <pt>-p <varname>port</varname></pt>
+          <pd>The Greenplum Database master port. If not specified, the value of the
+              <codeph>PGPORT</codeph> environment variable is used. If the value is not available,
+            an error is returned. </pd>
+        </plentry>
+        <plentry>
+          <pt>{-t | --table-file } <varname>path_to_file</varname></pt>
+          <pd>The location and name of file containing list of schema qualified table names to
+            reload and the column names to reorder from the Greenplum Database. Only user defined
+            tables are supported. Views or system catalog tables are not supported.</pd>
+          <pd>If indexes are defined on table listed in the file, <codeph>gpreload</codeph> prompts
+            to continue.</pd>
+          <pd>Each line specifies a table name and the list of columns to sort. This is the format
+            of each line in the file:</pd>
+          <pd><codeblock>schema.table_name: column [desc] [, column2 [desc] ... ]</codeblock></pd>
+          <pd>The table name is followed by a colon ( : ) and then at least one column name. If you
+            specify more than one column, separate the column names with a comma. The columns are
+            sorted in ascending order. Specify the keyword <codeph>desc</codeph> after the column
+            name to sort the column in descending order. </pd>
+          <pd>Wildcard characters are not supported.</pd>
+          <pd>If there are errors in the file, <codeph>gpreload</codeph> reports the first error and
+            exits. No data is reloaded. </pd>
+          <pd>The following example reloads three
             tables:<codeblock>public.clients: region, state, rep_id desc
 public.merchants: region, state
-test.lineitem: group, assy, whse </codeblock></pd><pd>In the first table <codeph>public.clients</codeph>, the data in the
-<codeph>rep_id</codeph> column is sorted in descending order. The data
-in the other columns are sorted in ascending order. </pd></plentry><plentry><pt>--version (show utility version)</pt><pd>Displays the version of this utility.</pd></plentry><plentry><pt>-? (help)</pt><pd>Displays the online help.</pd></plentry></parml></section><section id="section6"><title>Example</title><p>This example command reloads the tables in the database <codeph>mytest</codeph>
-that are listed in the file <codeph>data-tables.txt</codeph>. </p><codeblock>gpreload -d mytest --table-file data-tables.txt</codeblock></section><section id="section7"><title>See Also</title><p><codeph>CREATE TABLE</codeph> in the <i>Greenplum Database Reference Guide</i></p></section></body></topic>
+test.lineitem: group, assy, whse </codeblock></pd>
+          <pd>In the first table <codeph>public.clients</codeph>, the data in the
+              <codeph>rep_id</codeph> column is sorted in descending order. The data in the other
+            columns are sorted in ascending order. </pd>
+        </plentry>
+        <plentry>
+          <pt>--version (show utility version)</pt>
+          <pd>Displays the version of this utility.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? (help)</pt>
+          <pd>Displays the online help.</pd>
+        </plentry>
+      </parml></section>
+    <section id="section6"><title>Example</title><p>This example command reloads the tables in the
+        database <codeph>mytest</codeph> that are listed in the file
+          <codeph>data-tables.txt</codeph>.
+      </p><codeblock>gpreload -d mytest --table-file data-tables.txt</codeblock></section>
+    <section id="section7"><title>See Also</title><p><codeph>CREATE TABLE</codeph> in the
+          <i>Greenplum Database Reference Guide</i></p></section>
+  </body>
+</topic>

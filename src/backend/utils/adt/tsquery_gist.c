@@ -3,11 +3,11 @@
  * tsquery_gist.c
  *	  GiST index support for tsquery
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_gist.c,v 1.4.2.1 2008/04/20 09:29:48 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_gist.c,v 1.9 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,11 +53,17 @@ Datum
 gtsquery_consistent(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	TSQuerySign	key = DatumGetTSQuerySign(entry->key);
 	TSQuery		query = PG_GETARG_TSQUERY(1);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
+
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
+	TSQuerySign key = DatumGetTSQuerySign(entry->key);
 	TSQuerySign sq = makeTSQuerySign(query);
 	bool		retval;
+
+	/* All cases served by this function are inexact */
+	*recheck = true;
 
 	switch (strategy)
 	{

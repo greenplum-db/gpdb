@@ -12,17 +12,18 @@
       <codeblock>CONCURRENCY <varname>integer</varname>
 CPU_RATE_LIMIT <varname>integer</varname>
 MEMORY_LIMIT <varname>integer</varname>
-MEMORY_SHARED_QUOTA <varname>integer</varname></codeblock>
+MEMORY_SHARED_QUOTA <varname>integer</varname>
+MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>ALTER RESOURCE GROUP</codeph> changes the limits of a resource group. 
         Only a superuser can alter a resource group.</p>
         <p>You can set or reset the concurrency limit of a resource group to control the maximum
-        number of active concurrent statements in that group. You can also reset the CPU rate limit of a
-        resource group to control the amount of CPU resources that all queries submitted through
-        the group can consume on each segment host.</p>
-        <p>The new resource limit is immediately applied if current resource usage is less than or equal to the new value. If current resource usage exceeds the new limit value, Greenplum Database will defer the new limit assignment until resource usage is within the range of the new value.</p>
+        number of active concurrent statements in that group. You can also reset the memory or CPU
+        rate limit of a resource group to control the amount of memory or CPU resources that all
+        queries submitted through the group can consume on each segment host.</p>
+        <p>The new resource limit is immediately applied if current resource usage is less than or equal to the new value and there are no running transactions in the resource group. If current resource usage exceeds the new limit value, or there are running transactions in other resource groups holding some of the resource, Greenplum Database will defer the new limit assignment until resource usage is within the range of the new value.</p>
         <p>You can alter one limit type in a single <codeph>ALTER RESOURCE GROUP</codeph> call.</p>
     </section>
     <section id="section4">
@@ -39,8 +40,9 @@ MEMORY_SHARED_QUOTA <varname>integer</varname></codeblock>
             reached are queued. When a running transaction completes, the earliest queued
             transaction is executed.</pd>
           <pd> The <codeph>CONCURRENCY</codeph> value
-            must be an integer in the range [1 .. <codeph>max_connections</codeph>]. The default 
+            must be an integer in the range [0 .. <codeph>max_connections</codeph>]. The default 
             <codeph>CONCURRENCY</codeph> value is 20.</pd>
+            <pd><note>You cannot set the <codeph>CONCURRENCY</codeph> value for the <codeph>admin_group</codeph> to zero (0).</note></pd>
         </plentry>
         <plentry>
           <pt>CPU_RATE_LIMIT <varname>integer</varname></pt>
@@ -62,7 +64,15 @@ MEMORY_SHARED_QUOTA <varname>integer</varname></codeblock>
           <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>
           <pd>The percentage of memory resources to share among transactions in
             the resource group. The minimum memory shared quota percentage for a
-            resource group is 0.  The maximum is 100.</pd>
+            resource group is 0. The maximum is 100. The default
+            <codeph>MEMORY_SHARED_QUOTA</codeph> value is 20.</pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
+          <pd>The memory usage threshold for memory-intensive operators in a transaction
+            issued in the resource group. The minimum memory spill ratio percentage for a
+            resource group is 0. The maximum is 100. The default
+            <codeph>MEMORY_SPILL_RATIO</codeph> value is 20.</pd>
         </plentry>
       </parml>
     </section>
@@ -79,6 +89,10 @@ MEMORY_SHARED_QUOTA <varname>integer</varname></codeblock>
       <codeblock>ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;</codeblock>
       <p>Update the CPU limit for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup2 SET CPU_RATE_LIMIT 45;</codeblock>
+      <p>Update the memory limit for a resource group: </p>
+      <codeblock>ALTER RESOURCE GROUP rgroup3 SET MEMORY_LIMIT 30;</codeblock>
+      <p>Increase the memory spill ratio for a resource group from the default: </p>
+      <codeblock>ALTER RESOURCE GROUP rgroup4 SET MEMORY_SPILL_RATIO 25;</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>

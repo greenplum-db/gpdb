@@ -13,8 +13,8 @@
 # it is provided by or on behalf of Pivotal Software, Inc.
 
 """
-gptransfer utility is for tranfering one GPDB system to another. Currently
-only table data or the entire system can be transfered.  In the future this
+gptransfer utility is for transferring one GPDB system to another. Currently
+only table data or the entire system can be transferred.  In the future this
 transfer will include dependent roles, UDFs, UDTs, views, resource queues,
 and possibly a subset of system configuration of specified tables.
 """
@@ -36,20 +36,15 @@ from gppylib.gpversion import GpVersion
 from gptransfer_modules.partition_comparators import PartitionComparatorFactory
 
 try:
-    from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, \
-        ProgramArgumentValidationException
+    from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, ProgramArgumentValidationException
     from gppylib.gplog import get_default_logger
     from gppylib.gpparseopts import OptParser, OptChecker
-    from gppylib.commands.base import Command, LOCAL, REMOTE, WorkerPool, \
-        ExecutionError, CommandResult
-    from gppylib.commands.unix import MakeDirectory, RemoveDirectory, \
-        RemoveFiles, FileDirExists, Scp, LINUX, curr_platform
+    from gppylib.commands.base import Command, LOCAL, REMOTE, WorkerPool, ExecutionError, CommandResult
+    from gppylib.commands.unix import MakeDirectory, RemoveDirectory, FileDirExists, RemoveGlob
     from gppylib.commands.gp import get_gphome
     from gppylib.db import dbconn
-    from gppylib.db.dbconn import connect, DbURL, execSQL, \
-        execSQLForSingletonRow, UnexpectedRowsError
-    from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, \
-        dropSchemaIfExist
+    from gppylib.db.dbconn import connect, DbURL, execSQL, execSQLForSingletonRow
+    from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
     from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
@@ -1052,7 +1047,48 @@ class CountTableValidator(TableValidator):
 # --------------------------------------------------------------------------
 
 
-class MD5MergeTableValidator(TableValidator):
+class HashMergeTableValidator(TableValidator):
+    """
+    Validator class that defines some methods used by MD5 and SHA-256 validation
+    """
+
+    def _src_proc(self):
+        """
+        Thread proc that executes the SQL statement on the source side.  To
+        use this method the SQL statement must only return a single row.  If
+        your query requires more complexity you should override this.
+        """
+
+        try:
+            self._src_res = execSQL(self._src_conn, self._src_sql)
+
+        except:
+            self._src_failed = True
+        finally:
+            cmd = GpCloseNamedPipe(
+                'close source validation pipe', self._src_pipe, REMOTE, self._src_host)
+            cmd.run()
+
+    def _dest_proc(self):
+        """
+        Thread proc that executes the SQL statement on the destination side.  To
+        use this method the SQL statement must only return a single row.  If
+        your query requires more complexity you should override this.
+        """
+
+        try:
+            self._dest_res = execSQL(self._dest_conn, self._dest_sql)
+        except:
+            self._dest_failed = True
+        finally:
+            cmd = GpCloseNamedPipe(
+                'close dest validation pipe', self._dest_pipe, REMOTE, self._dest_host)
+            cmd.run()
+
+# --------------------------------------------------------------------------
+
+
+class MD5MergeTableValidator(HashMergeTableValidator):
     """
     Validation that compares the MD5 hashes of all the rows in a table.
     """
@@ -1117,39 +1153,6 @@ class MD5MergeTableValidator(TableValidator):
                                 sql % (src_schema, src_table, self._src_pipe),
                                 sql % (dest_schema, dest_table, self._dest_pipe))
 
-    def _src_proc(self):
-        """
-        Thread proc that executes the SQL statement on the source side.  To
-        use this method the SQL statement must only return a single row.  If
-        your query requires more complexity you should override this.
-        """
-
-        try:
-            self._src_res = execSQL(self._src_conn, self._src_sql)
-
-        except:
-            self._src_failed = True
-        finally:
-            cmd = GpCloseNamedPipe(
-                'close source validation pipe', self._src_pipe, REMOTE, self._src_host)
-            cmd.run()
-
-    def _dest_proc(self):
-        """
-        Thread proc that executes the SQL statement on the destination side.  To
-        use this method the SQL statement must only return a single row.  If
-        your query requires more complexity you should override this.
-        """
-
-        try:
-            self._dest_res = execSQL(self._dest_conn, self._dest_sql)
-        except:
-            self._dest_failed = True
-        finally:
-            cmd = GpCloseNamedPipe(
-                'close dest validation pipe', self._dest_pipe, REMOTE, self._dest_host)
-            cmd.run()
-
     def _compare(self):
         """
         Diff the output of the hashes
@@ -1171,6 +1174,102 @@ class MD5MergeTableValidator(TableValidator):
         Returns 'md5'
         """
         return 'md5'
+
+
+# --------------------------------------------------------------------------
+
+
+class SHA256MergeTableValidator(HashMergeTableValidator):
+    """
+    Validation that compares the SHA256 hashes of all the rows in a table.
+    """
+
+    class SHA256Sum(Command):
+        """
+        Prints sha256sum of file.
+        """
+
+        def __init__(self, name, filename, ctxt=LOCAL, remoteHost=None):
+            """
+            name: command name
+            filename: file to calculate sha256sum of
+            """
+            cmdStr = "sha256sum %s | awk '{print \\$1}'" % filename
+            Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+
+    def __init__(self, work_dir, table_pair, src_conn, dest_conn):
+        """
+        table_pair: table pair to validate
+        src_conn: Database connection to the source system
+        dest_conn: Database connection to the destination system
+        """
+
+        sql = """CREATE OR REPLACE FUNCTION pg_temp.digest(text, text)
+RETURNS bytea
+AS '$libdir/pgcrypto', 'pg_digest'
+LANGUAGE C IMMUTABLE STRICT;
+
+COPY (SELECT pg_temp.digest(textin(record_out(t.*)), 'sha256') hash
+FROM %s.%s t ORDER BY hash) TO '%s'"""
+        src_schema = table_pair.source.schema
+        src_table = table_pair.source.table
+        dest_schema = table_pair.dest.schema
+        dest_table = table_pair.dest.table
+        self._pool = WorkerPool(2)
+        self._src_pipe = os.path.join(
+            work_dir, str(table_pair.source), 'src_sha256_validation')
+        self._dest_pipe = os.path.join(
+            work_dir, str(table_pair.source), 'dest_sha256_validation')
+
+        self._src_host = DB(src_conn).host
+        self._dest_host = DB(dest_conn).host
+
+        src_pipe_cmd = GpCreateNamedPipe('Create source validation pipe',
+                                         self._src_pipe,
+                                         REMOTE, self._src_host)
+        self._pool.addCommand(src_pipe_cmd)
+
+        dest_pipe_cmd = GpCreateNamedPipe('Create destination validation pipe',
+                                          self._dest_pipe,
+                                          REMOTE, self._dest_host)
+        self._pool.addCommand(dest_pipe_cmd)
+
+        self._pool.join()
+        self._pool.check_results()
+
+        self._src_sha256_cmd = SHA256MergeTableValidator.SHA256Sum(
+            'Source SHA256Sum', self._src_pipe, REMOTE, self._src_host)
+        self._pool.addCommand(self._src_sha256_cmd)
+
+        self._dest_sha256_cmd = SHA256MergeTableValidator.SHA256Sum(
+            'Dest SHA256Sum', self._dest_pipe, REMOTE, self._dest_host)
+        self._pool.addCommand(self._dest_sha256_cmd)
+
+        TableValidator.__init__(self, work_dir, src_conn, dest_conn,
+                                sql % (src_schema, src_table, self._src_pipe),
+                                sql % (dest_schema, dest_table, self._dest_pipe))
+
+    def _compare(self):
+        """
+        Diff the output of the hashes
+        """
+        res = False
+        try:
+            self._pool.join()
+            self._pool.check_results()
+            if not self._dest_failed and not self._src_failed:
+                res = ((self._src_sha256_cmd.get_results()).stdout.strip()
+                       == (self._dest_sha256_cmd.get_results()).stdout.strip())
+        finally:
+            pass
+        return res
+
+    @staticmethod
+    def get_name():
+        """
+        Returns 'sha256'
+        """
+        return 'sha256'
 
 
 # --------------------------------------------------------------------------
@@ -1569,9 +1668,9 @@ class GpTransferCommand(Command):
         self._wext_gpfdist_urls = list()
         self._ext_gpfdist_urls = list()
         self._wext_name = ('w_ext_%s_%s' % (self._table_pair.source.table,
-                                            hashlib.md5(str(self._table_pair.source)).hexdigest()))[0:63]
+                                            hashlib.sha256(str(self._table_pair.source)).hexdigest()))[0:63]
         self._ext_name = ('ext_%s_%s' % (self._table_pair.source.table,
-                                         hashlib.md5(str(self._table_pair.source)).hexdigest()))[0:63]
+                                         hashlib.sha256(str(self._table_pair.source)).hexdigest()))[0:63]
         self._pool = None
         if validator:
             self._validator_class = validator_factory.get_validator(validator)
@@ -1627,7 +1726,8 @@ class GpTransferCommand(Command):
                     self._drop_target_table()
                     self._create_target_table()
                 if self._schema_only:
-                    return
+                    self._success = True
+                    return 0
                 if not self._table_pair.dest.external:
                     self._cleanup_named_pipes_needed = True
                     self._create_named_pipe()
@@ -2251,18 +2351,18 @@ FROM (
 
         for host in self._host_map.keys():
             address = iter(self._host_map[host]).next()
-            cmd = RemoveFiles('remove dir for table %s'
+            cmd = RemoveDirectory('remove dir for table %s'
                               % self._table_pair.source,
                               os.path.dirname(self._pipe),
                               REMOTE, address)
             self._pool.addCommand(cmd)
 
-        cmd = RemoveFiles('remove dir for table %s'
+        cmd = RemoveDirectory('remove dir for table %s'
                           % self._table_pair.source,
                           os.path.dirname(self._pipe),
                           REMOTE, self._dest_host)
         self._pool.addCommand(cmd)
-        cmd = RemoveFiles('remove dir for table %s'
+        cmd = RemoveDirectory('remove dir for table %s'
                           % self._table_pair.source,
                           os.path.dirname(self._pipe),
                           REMOTE, self._src_host)
@@ -2621,7 +2721,7 @@ class GpTransfer(object):
                 logger.warn('the data transfer.')
                 return 1
             else:
-                if self._validator_class:
+                if self._validator_class and not self._options.schema_only:
                     self._final_count_validation()
         else:
             # dry run
@@ -2788,8 +2888,8 @@ class GpTransfer(object):
 
             for host in self._host_map.keys():
                 address = iter(self._host_map[host]).next()
-                cmd = RemoveFiles('stopping gpfdist on %s' % address,
-                                os.path.join(self._work_dir, '*.pid' ), REMOTE, address)
+                cmd = RemoveGlob('stopping gpfdist on %s' % address,
+                                 os.path.join(self._work_dir, '*.pid' ), REMOTE, address)
                 self._pool.addCommand(cmd)
             # We join() here so that all pid files are removed before directories,
             # ensuring that empty directories are removed
@@ -3152,6 +3252,18 @@ class GpTransfer(object):
         if (self._options.exclude_tables or self._options.exclude_input_file) and not self._excluding_table:
             logger.warning('Found no tables to exclude from transfer table list')
             sys.exit(0)
+
+        if self._options.validator == 'sha256':
+            cmdStr = 'test -e `pg_config  --pkglibdir`/pgcrypto.so'
+            cmd = Command('test pgcrypto on source', cmdStr, REMOTE, self._options.source_host)
+            cmd.run()
+            if cmd.get_results().rc != 0:
+                raise Exception('Source system must have pgcrypto installed when using sha256 validator')
+
+            cmd = Command('test pgcrypto on destination', cmdStr, REMOTE, self._options.dest_host)
+            cmd.run()
+            if cmd.get_results().rc != 0:
+                raise Exception('Destination system must have pgcrypto installed when using sha256 validator')
 
     def _final_count_validation(self):
         logger.info('Running final table row count validation on destination tables...')
@@ -3882,9 +3994,21 @@ class GpTransfer(object):
         return src_tbl_columns == dest_tbl_columns
 
     def _get_table_columns(self, tbl, host, port, user):
+        # GPDB 6 reports the precision of timestamp et al.  datatypes
+        # differently from previous versions (see PostgreSQL commit
+        # 208d3a7555). The CASE construct below is to mask those differences
+        #when transfering between versions
         get_columns_sql = ''' select is_nullable, data_type, character_maximum_length,
                              character_octet_length, numeric_precision, numeric_precision_radix, numeric_scale,
-                             datetime_precision, interval_type, udt_name from information_schema.columns
+                             case when data_type = 'date' and datetime_precision is null then 0
+                                  when data_type in ('time without time zone',
+                                                     'timestamp without time zone',
+                                                     'time with time zone',
+                                                     'timestamp with time zone')
+                                       and datetime_precision is null then 6
+                                  when data_type = 'interval' and datetime_precision is null then 6
+                                  else datetime_precision end as datetime_precision,
+                             interval_type, udt_name from information_schema.columns
                              where table_schema = '%s' and table_name = '%s' order by ordinal_position asc;''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
         with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
             cursor = execSQL(conn, get_columns_sql)

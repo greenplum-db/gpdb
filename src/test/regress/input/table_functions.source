@@ -512,7 +512,7 @@ CREATE VIEW v1 AS
 
 SELECT * FROM v1 order by a, b;
 
-\d v1
+\d+ v1
 
 SELECT pg_get_viewdef('v1'::regclass);
 
@@ -522,7 +522,7 @@ CREATE VIEW v2 AS
 
 SELECT * FROM v2 order by a, b;
 
-\d v2
+\d+ v2
 
 SELECT pg_get_viewdef('v2'::regclass);
 
@@ -531,7 +531,7 @@ CREATE VIEW v3 AS
 
 SELECT * FROM v3 order by a, b;
 
-\d v3
+\d+ v3
 
 SELECT pg_get_viewdef('v3'::regclass);
 

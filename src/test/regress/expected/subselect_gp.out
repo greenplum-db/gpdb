@@ -220,7 +220,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.27..6.47 rows=20 width=4)
    ->  Result  (cost=3.27..6.47 rows=7 width=4)
          One-Time Filter: $0
-         InitPlan  (slice3)
+         InitPlan 1 (returns $0)  (slice3)
            ->  Limit  (cost=0.00..3.27 rows=1 width=0)
                  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.27 rows=1 width=0)
                        ->  Limit  (cost=0.00..3.25 rows=1 width=0)
@@ -242,7 +242,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x = 1);
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.27..6.47 rows=20 width=4)
    ->  Result  (cost=3.27..6.47 rows=7 width=4)
          One-Time Filter: $0
-         InitPlan  (slice3)
+         InitPlan 1 (returns $0)  (slice3)
            ->  Limit  (cost=0.00..3.27 rows=1 width=0)
                  ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..3.27 rows=1 width=0)
                        ->  Limit  (cost=0.00..3.25 rows=1 width=0)
@@ -346,7 +346,7 @@ explain select array(select x from csq_m1); -- no initplan
                           QUERY PLAN                          
 --------------------------------------------------------------
  Result  (cost=1.01..1.02 rows=1 width=0)
-   InitPlan
+   InitPlan 1 (returns $0)
      ->  Seq Scan on csq_m1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
  Optimizer status: legacy query optimizer
@@ -362,7 +362,7 @@ explain select array(select x from csq_d1); -- initplan
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Result  (cost=1.01..1.02 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
            ->  Seq Scan on csq_d1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
@@ -512,6 +512,7 @@ select count(*) from csq_t1 t1 where a > ( select avg(a)::int from csq_t1 t2 whe
 --
 CREATE OR REPLACE FUNCTION csq_f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL CONTAINS SQL;
 DROP TABLE IF EXISTS csq_r;
+NOTICE:  table "csq_r" does not exist, skipping
 CREATE TABLE csq_r(a int) distributed by (a);
 INSERT INTO csq_r VALUES (1);
 -- subqueries shouldn't be pulled into a join if the from clause has a function call
@@ -838,7 +839,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..2.07 rows=4 width=19)
-   ->  Hash Left Anti Semi Join  (cost=1.02..2.07 rows=2 width=19)
+   ->  Hash Anti Join  (cost=1.02..2.07 rows=2 width=19)
          Hash Cond: t0.t = t1.t
          ->  Seq Scan on csq_pullup t0  (cost=0.00..1.01 rows=1 width=19)
          ->  Hash  (cost=1.01..1.01 rows=1 width=4)
@@ -862,7 +863,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                                            QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.09..2.15 rows=4 width=19)
-   ->  Hash Left Anti Semi Join  (cost=1.09..2.15 rows=2 width=19)
+   ->  Hash Anti Join  (cost=1.09..2.15 rows=2 width=19)
          Hash Cond: t0.i = (t1.i + 1)
          ->  Seq Scan on csq_pullup t0  (cost=0.00..1.01 rows=1 width=19)
          ->  Hash  (cost=1.05..1.05 rows=1 width=4)
@@ -896,7 +897,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2);
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.07..2.13 rows=4 width=4)
-   ->  Hash EXISTS Join  (cost=1.07..2.13 rows=2 width=4)
+   ->  Hash Semi Join  (cost=1.07..2.13 rows=2 width=4)
          Hash Cond: subselect_t1.x = subselect_t2.y
          ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
          ->  Hash  (cost=1.03..1.03 rows=1 width=4)
@@ -919,7 +920,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2 union 
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=2.38..3.44 rows=4 width=4)
-   ->  Hash EXISTS Join  (cost=2.38..3.44 rows=2 width=4)
+   ->  Hash Semi Join  (cost=2.38..3.44 rows=2 width=4)
          Hash Cond: subselect_t1.x = "IN_subquery".y
          ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
          ->  Hash  (cost=2.30..2.30 rows=2 width=4)
@@ -945,7 +946,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
  Aggregate  (cost=2.21..2.22 rows=1 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.14..2.19 rows=1 width=8)
          ->  Aggregate  (cost=2.14..2.15 rows=1 width=8)
-               ->  Hash EXISTS Join  (cost=1.07..2.13 rows=2 width=0)
+               ->  Hash Semi Join  (cost=1.07..2.13 rows=2 width=0)
                      Hash Cond: subselect_t1.x = subselect_t2.y
                      ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
                      ->  Hash  (cost=1.03..1.03 rows=1 width=4)
@@ -969,7 +970,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
  Aggregate  (cost=3.51..3.52 rows=1 width=8)
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.45..3.50 rows=1 width=8)
          ->  Aggregate  (cost=3.45..3.46 rows=1 width=8)
-               ->  Hash EXISTS Join  (cost=2.38..3.44 rows=2 width=0)
+               ->  Hash Semi Join  (cost=2.38..3.44 rows=2 width=0)
                      Hash Cond: subselect_t1.x = "IN_subquery".y
                      ->  Seq Scan on subselect_t1  (cost=0.00..1.02 rows=1 width=4)
                      ->  Hash  (cost=2.30..2.30 rows=2 width=4)
@@ -997,9 +998,9 @@ select count(*) from
 (1 row)
 
        
----
---- Query was deadlocking because of not squelching subplans (MPP-18936)
----
+--
+-- Query was deadlocking because of not squelching subplans (MPP-18936)
+--
 drop table if exists t1; 
 drop table if exists t2; 
 drop table if exists t3; 
@@ -1085,29 +1086,72 @@ select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
 explain select * from t1,
 (select * from t1 where a=1 and a=2 and a > (select t2.b from t2)) foo
 where t1.a = foo.a;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice2; segments: 1)  (cost=2607.56..4213.88 rows=6 width=8)
-   ->  Result  (cost=2607.56..4213.88 rows=2 width=8)
-         One-Time Filter: false
-         InitPlan  (slice3)
-           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1063.00 rows=96300 width=4)
-                 ->  Seq Scan on t2  (cost=0.00..1063.00 rows=32100 width=4)
-         ->  Nested Loop  (cost=1544.56..3150.88 rows=2 width=8)
-               ->  Seq Scan on t1  (cost=0.00..1544.50 rows=19 width=4)
-                     Filter: a > $0 AND a = 1
-               ->  Materialize  (cost=1544.56..1545.11 rows=19 width=4)
-                     ->  Seq Scan on t1  (cost=0.00..1544.50 rows=19 width=4)
-                           Filter: a > $0 AND a = 1
- Settings:  optimizer_segments=3
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Result  (cost=1063.00..1063.01 rows=1 width=0)
+   One-Time Filter: false
+ Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
  Optimizer status: legacy query optimizer
-(14 rows)
+(4 rows)
 
 select * from t1,
 (select * from t1 where a=1 and a=2 and a > (select t2.b from t2)) foo
 where t1.a = foo.a;
  a | a 
 ---+---
+(0 rows)
+
+--
+-- Correlated subqueries with limit/offset clause must not be pulled up as join
+--
+insert into t1 values (1);
+insert into t2 values (1);
+explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.53 rows=1 width=0)
+   ->  Seq Scan on t1  (cost=0.00..1.53 rows=1 width=0)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Limit  (cost=0.00..1.03 rows=1 width=4)
+                 ->  Limit  (cost=0.00..1.01 rows=1 width=4)
+                       ->  Result  (cost=0.00..1.01 rows=1 width=4)
+                             One-Time Filter: $0 = 1
+                             ->  Result  (cost=1.01..1.02 rows=1 width=4)
+                                   ->  Materialize  (cost=1.01..1.02 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
+                                               ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
+ Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
+ Optimizer status: legacy query optimizer
+(14 rows)
+
+explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.05 rows=1 width=0)
+   ->  Seq Scan on t1  (cost=0.00..2.05 rows=1 width=0)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Limit  (cost=1.03..1.03 rows=1 width=4)
+                 ->  Result  (cost=0.00..1.01 rows=1 width=4)
+                       One-Time Filter: $0 = 1
+                       ->  Result  (cost=1.01..1.02 rows=1 width=4)
+                             ->  Materialize  (cost=1.01..1.02 rows=1 width=4)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
+                                         ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
+ Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
+ Optimizer status: legacy query optimizer
+(13 rows)
+
+select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
+ ?column? 
+----------
 (0 rows)
 
 drop table if exists t1;
@@ -1169,7 +1213,7 @@ from
 	t2_mpp_24563 t2 where value = 7) foo;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Window  (cost=1.02..2.12 rows=1 width=8)
+ WindowAgg  (cost=1.02..2.12 rows=1 width=8)
    Order By: t2.seq
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..1.05 rows=1 width=8)
          Merge Key: t2.seq
@@ -1218,19 +1262,13 @@ FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                      QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
- Nested Loop  (cost=8184.20..128107063.42 rows=93400 width=28)
-   ->  Aggregate  (cost=4154.80..4154.81 rows=1 width=0)
-         ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
-               ->  Materialize  (cost=3095.40..4029.40 rows=93400 width=28)
-                     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..3002.00 rows=93400 width=28)
-                           ->  Append  (cost=0.00..1134.00 rows=31134 width=28)
-                                 ->  Seq Scan on t_mpp_20470_ptr1 b  (cost=0.00..567.00 rows=15567 width=28)
-                                 ->  Seq Scan on t_mpp_20470_ptr2 b  (cost=0.00..567.00 rows=15567 width=28)
-   ->  Subquery Scan coplan  (cost=4029.40..5088.80 rows=93400 width=28)
-         ->  Window  (cost=4029.40..4154.80 rows=93400 width=28)
-               ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
+ WindowAgg  (cost=0.00..128121463.20 rows=93400 width=28)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1134.00 rows=93400 width=28)
+         ->  Append  (cost=0.00..1134.00 rows=31134 width=28)
+               ->  Seq Scan on t_mpp_20470_ptr1 b  (cost=0.00..567.00 rows=15567 width=28)
+               ->  Seq Scan on t_mpp_20470_ptr2 b  (cost=0.00..567.00 rows=15567 width=28)
    SubPlan 1
-     ->  Aggregate  (cost=1371.47..1371.48 rows=1 width=8)
+     ->  Aggregate  (cost=1371.71..1371.72 rows=1 width=8)
            ->  Result  (cost=0.00..1367.50 rows=32 width=4)
                  ->  Append  (cost=0.00..1367.50 rows=32 width=4)
                        ->  Result  (cost=683.80..684.26 rows=16 width=4)
@@ -1243,9 +1281,9 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                              ->  Materialize  (cost=683.80..684.26 rows=16 width=4)
                                    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..683.75 rows=47 width=4)
                                          ->  Seq Scan on t_mpp_20470_ptr2 a  (cost=0.00..683.75 rows=16 width=4)
- Settings:  optimizer_segments=3
+ Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
  Optimizer status: legacy query optimizer
-(27 rows)
+(21 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;
@@ -1403,7 +1441,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
    Merge Key: subselect_gp.subselect_tbl.f1
    ->  Sort  (cost=2.12..2.13 rows=2 width=4)
          Sort Key: subselect_gp.subselect_tbl.f1
-         ->  Hash EXISTS Join  (cost=1.04..2.09 rows=2 width=4)
+         ->  Hash Semi Join  (cost=3.34..6.59 rows=4 width=4)
                Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2
                ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=4)
                ->  Hash  (cost=1.03..1.03 rows=1 width=4)
@@ -1419,11 +1457,11 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
     f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 2;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=10.55..10.60 rows=21 width=4)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10.51..10.57 rows=21 width=4)
    Merge Key: subselect_gp.subselect_tbl.f1
-   ->  Sort  (cost=10.55..10.60 rows=7 width=4)
+   ->  Sort  (cost=10.51..10.57 rows=7 width=4)
          Sort Key: subselect_gp.subselect_tbl.f1
-         ->  Hash EXISTS Join  (cost=6.74..10.09 rows=7 width=4)
+         ->  Hash Semi Join  (cost=6.74..10.05 rows=7 width=4)
                Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2
                ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=4)
                ->  Hash  (cost=6.59..6.59 rows=4 width=8)
@@ -1436,29 +1474,50 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                                  ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(19 rows)
+(17 rows)
 
 EXPLAIN SELECT '' AS three, f1, f2
   FROM SUBSELECT_TBL
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
                          WHERE f3 IS NOT NULL) ORDER BY 2,3;
-                                                               QUERY PLAN                                                               
-----------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.18..2.19 rows=4 width=8)
+                                                                             QUERY PLAN                                                                              
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=11.20..11.22 rows=8 width=8)
    Merge Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
-   ->  Sort  (cost=2.18..2.19 rows=2 width=8)
+   ->  Sort  (cost=11.20..11.22 rows=3 width=8)
          Sort Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
-         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=1.07..2.15 rows=2 width=8)
-               Join Filter: subselect_gp.subselect_tbl.f1 = "NotIn_SUBQUERY".f2 AND subselect_gp.subselect_tbl.f2 = "NotIn_SUBQUERY".f3
-               ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=8)
-               ->  Materialize  (cost=1.07..1.10 rows=1 width=8)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=8)
-                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..1.02 rows=1 width=8)
-                                 ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
-                                       Filter: f3 IS NOT NULL
+         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.38..11.08 rows=3 width=8)
+               Join Filter: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2 AND subselect_gp.subselect_tbl.f2 = subselect_gp.subselect_tbl.f3::integer
+               ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=8)
+               ->  Materialize  (cost=3.38..3.59 rows=7 width=12)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.36 rows=7 width=12)
+                           ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=12)
+                                 Filter: f3 IS NOT NULL
+ Optimizer status: legacy query optimizer
+(12 rows)
+
+EXPLAIN SELECT * FROM tenk1 a, tenk1 b
+WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=872.40..1679.60 rows=10090 width=488)
+   ->  Hash Join  (cost=872.40..1679.60 rows=3364 width=488)
+         Hash Cond: c.unique1 = a.unique1
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=556.38..1212.22 rows=3364 width=248)
+               Hash Key: c.unique1
+               ->  Hash Join  (cost=556.38..1010.42 rows=3364 width=248)
+                     Hash Cond: c.unique2 = b.unique2
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=240.35..543.05 rows=3364 width=8)
+                           ->  HashAggregate  (cost=240.35..341.25 rows=3364 width=8)
+                                 Group By: c.unique1, c.unique2
+                                 ->  Seq Scan on tenk1 c  (cost=0.00..189.90 rows=3364 width=8)
+                     ->  Hash  (cost=189.90..189.90 rows=3364 width=244)
+                           ->  Seq Scan on tenk1 b  (cost=0.00..189.90 rows=3364 width=244)
+         ->  Hash  (cost=189.90..189.90 rows=3364 width=244)
+               ->  Seq Scan on tenk1 a  (cost=0.00..189.90 rows=3364 width=244)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(14 rows)
+(17 rows)
 
 -- Correlated subselects
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
@@ -1470,7 +1529,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
    Merge Key: upper.f1, upper.f2
    ->  Sort  (cost=2.10..2.11 rows=2 width=8)
          Sort Key: upper.f1, upper.f2
-         ->  Hash EXISTS Join  (cost=1.02..2.07 rows=2 width=8)
+         ->  Hash Semi Join  (cost=3.11..6.25 rows=2 width=8)
                Hash Cond: upper.f1 = subselect_tbl.f1
                ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.01 rows=1 width=8)
                ->  Hash  (cost=1.01..1.01 rows=1 width=8)
@@ -1490,7 +1549,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
    Merge Key: upper.f1, upper.f3
    ->  Sort  (cost=2.13..2.14 rows=2 width=12)
          Sort Key: upper.f1, upper.f3
-         ->  Hash EXISTS Join  (cost=1.04..2.10 rows=2 width=12)
+         ->  Hash Semi Join  (cost=3.36..6.52 rows=2 width=12)
                Hash Cond: upper.f1 = subselect_tbl.f2 AND upper.f2::double precision = subselect_tbl.f3
                ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.01 rows=1 width=16)
                ->  Hash  (cost=1.03..1.03 rows=1 width=12)
@@ -1511,7 +1570,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
    Merge Key: upper.f1, upper.f3
    ->  Sort  (cost=2.18..2.19 rows=2 width=12)
          Sort Key: upper.f1, upper.f3
-         ->  Nested Loop EXISTS Join  (cost=1.06..2.15 rows=2 width=12)
+         ->  Nested Loop Semi Join  (cost=3.16..6.90 rows=2 width=12)
                Join Filter: (upper.f1 + subselect_tbl.f2)::double precision = upper.f3
                ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.01 rows=1 width=12)
                ->  Materialize  (cost=1.06..1.09 rows=1 width=12)
@@ -1532,7 +1591,7 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
    Merge Key: subselect_gp.subselect_tbl.f1
    ->  Sort  (cost=2.13..2.14 rows=2 width=4)
          Sort Key: subselect_gp.subselect_tbl.f1
-         ->  Hash EXISTS Join  (cost=1.04..2.10 rows=2 width=4)
+         ->  Hash Semi Join  (cost=3.33..6.49 rows=2 width=4)
                Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2 AND subselect_gp.subselect_tbl.f2 = subselect_gp.subselect_tbl.f3::integer
                ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=8)
                ->  Hash  (cost=1.03..1.03 rows=1 width=12)
@@ -1572,25 +1631,22 @@ EXPLAIN select count(*) from
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select hundred from tenk1 b)) ss;
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=952.08..952.09 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=952.01..952.06 rows=1 width=8)
-         ->  Aggregate  (cost=952.01..952.02 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=8)
-                     Hash Key: a.ten
-                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=8)
-                           Hash Cond: a.unique1 = b.hundred
-                           ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
-                           ->  Hash  (cost=413.54..413.54 rows=34 width=4)
-                                 ->  HashAggregate  (cost=412.54..413.54 rows=34 width=4)
-                                       Group By: b.hundred
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.65 rows=3319 width=4)
-                                             Hash Key: b.hundred
-                                             ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=4)
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1176.00..1176.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=414.79..1126.22 rows=9955 width=4)
+         ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
+               Hash Cond: a.unique1 = b.hundred
+               ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
+               ->  Hash  (cost=413.54..413.54 rows=34 width=4)
+                     ->  HashAggregate  (cost=412.54..413.54 rows=34 width=4)
+                           Group By: b.hundred
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.65 rows=3319 width=4)
+                                 Hash Key: b.hundred
+                                 ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(16 rows)
+(13 rows)
 
 EXPLAIN select count(*) from
   (select 1 from tenk1 a
@@ -1600,7 +1656,7 @@ EXPLAIN select count(*) from
  Aggregate  (cost=752.98..752.99 rows=1 width=8)
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=752.91..752.96 rows=1 width=8)
          ->  Aggregate  (cost=752.91..752.92 rows=1 width=8)
-               ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
+               ->  Hash Join  (cost=414.79..728.02 rows=3319 width=0)
                      Hash Cond: a.unique1 = b.hundred
                      ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=4)
                      ->  Hash  (cost=413.54..413.54 rows=34 width=4)
@@ -1616,23 +1672,53 @@ EXPLAIN select count(*) from
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=952.08..952.09 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=952.01..952.06 rows=1 width=8)
-         ->  Aggregate  (cost=952.01..952.02 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=8)
-                     Hash Key: a.ten
-                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=8)
-                           Hash Cond: a.unique1 = b.hundred
-                           ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
-                           ->  Hash  (cost=413.54..413.54 rows=34 width=4)
-                                 ->  HashAggregate  (cost=412.54..413.54 rows=34 width=4)
-                                       Group By: b.hundred
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.65 rows=3319 width=4)
-                                             Hash Key: b.hundred
-                                             ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=4)
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1176.00..1176.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=414.79..1126.22 rows=9955 width=4)
+         ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
+               Hash Cond: a.unique1 = b.hundred
+               ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
+               ->  Hash  (cost=413.54..413.54 rows=34 width=4)
+                     ->  HashAggregate  (cost=412.54..413.54 rows=34 width=4)
+                           Group By: b.hundred
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.65 rows=3319 width=4)
+                                 Hash Key: b.hundred
+                                 ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=4)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(13 rows)
+
+--
+-- In case of simple exists query, planner can generate alternative
+-- subplans and choose one of them during execution based on the cost.
+-- The below test check that we are generating alternative subplans,
+-- we should see 2 subplans in the explain
+--
+EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..213.48 rows=1 width=4)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..213.48 rows=1 width=4)
+         ->  Limit  (cost=0.00..213.46 rows=1 width=4)
+               ->  Seq Scan on tenk2  (cost=0.00..2125810.65 rows=3320 width=4)
+                     SubPlan 1
+                       ->  Result  (cost=213.44..213.45 rows=1 width=0)
+                             Filter: public.tenk1.unique1 = $0
+                             ->  Materialize  (cost=213.44..213.45 rows=1 width=0)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..213.44 rows=1 width=0)
+                                         ->  Seq Scan on tenk1  (cost=0.00..213.44 rows=1 width=0)
+                     SubPlan 2
+                       ->  Materialize  (cost=198.51..298.06 rows=3319 width=4)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..188.55 rows=3319 width=4)
+                                   ->  Seq Scan on tenk1  (cost=0.00..188.55 rows=3319 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (16 rows)
+
+SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+ ?column?
+----------
+ t
+(1 row)
 

@@ -402,7 +402,8 @@ _PG_init(void)
 							 gettext_noop("If true, trusted and untrusted Perl code will be compiled in strict mode."),
 							 NULL,
 							 &plperl_use_strict,
-							 PGC_USERSET,
+							 false,
+							 PGC_USERSET, 0,
 							 NULL, NULL);
 
 	/*
@@ -415,7 +416,8 @@ _PG_init(void)
 							   gettext_noop("Perl initialization code to execute when a Perl interpreter is initialized."),
 							   NULL,
 							   &plperl_on_init,
-							   PGC_SIGHUP,
+							   NULL,
+							   PGC_SIGHUP, 0,
 							   NULL, NULL);
 
 	/*
@@ -436,14 +438,16 @@ _PG_init(void)
 							   gettext_noop("Perl initialization code to execute once when plperl is first used."),
 							   NULL,
 							   &plperl_on_plperl_init,
-							   PGC_SUSET,
+							   NULL,
+							   PGC_SUSET, 0,
 							   NULL, NULL);
 
 	DefineCustomStringVariable("plperl.on_plperlu_init",
 							   gettext_noop("Perl initialization code to execute once when plperlu is first used."),
 							   NULL,
 							   &plperl_on_plperlu_init,
-							   PGC_SUSET,
+							   NULL,
+							   PGC_SUSET, 0,
 							   NULL, NULL);
 
 	EmitWarningsOnPlaceholders("plperl");
@@ -482,6 +486,103 @@ _PG_init(void)
 	inited = true;
 }
 
+/* Each of these macros must represent a single string literal */
+
+#define PERLBOOT \
+	"SPI::bootstrap(); use vars qw(%_SHARED);" \
+	"sub ::plperl_warn { my $msg = shift; " \
+	"       $msg =~ s/\\(eval \\d+\\) //g; &elog(&NOTICE, $msg); } " \
+	"$SIG{__WARN__} = \\&::plperl_warn; " \
+	"sub ::plperl_die { my $msg = shift; " \
+	"       $msg =~ s/\\(eval \\d+\\) //g; die $msg; } " \
+	"$SIG{__DIE__} = \\&::plperl_die; " \
+	"sub ::mkunsafefunc {" \
+	"      my $ret = eval(qq[ sub { $_[0] $_[1] } ]); " \
+	"      $@ =~ s/\\(eval \\d+\\) //g if $@; return $ret; }" \
+	"use strict; " \
+	"sub ::mk_strict_unsafefunc {" \
+	"      my $ret = eval(qq[ sub { use strict; $_[0] $_[1] } ]); " \
+	"      $@ =~ s/\\(eval \\d+\\) //g if $@; return $ret; } " \
+	"sub ::_plperl_to_pg_array {" \
+	"  my $arg = shift; ref $arg eq 'ARRAY' || return $arg; " \
+	"  my $res = ''; my $first = 1; " \
+	"  foreach my $elem (@$arg) " \
+	"  { " \
+	"    $res .= ', ' unless $first; $first = undef; " \
+	"    if (ref $elem) " \
+	"    { " \
+	"      $res .= _plperl_to_pg_array($elem); " \
+	"    } " \
+	"    elsif (defined($elem)) " \
+	"    { " \
+	"      my $str = qq($elem); " \
+	"      $str =~ s/([\"\\\\])/\\\\$1/g; " \
+	"      $res .= qq(\"$str\"); " \
+	"    } " \
+	"    else " \
+	"    { "\
+	"      $res .= 'NULL' ; " \
+	"    } "\
+	"  } " \
+	"  return qq({$res}); " \
+	"} "
+
+#define SAFE_MODULE \
+	"require Safe; $Safe::VERSION"
+
+/*
+ * The temporary enabling of the caller opcode here is to work around a
+ * bug in perl 5.10, which unkindly changed the way its Safe.pm works, without
+ * notice. It is quite safe, as caller is informational only, and in any case
+ * we only enable it while we load the 'strict' module.
+ */
+
+#define SAFE_OK \
+	"use vars qw($PLContainer); $PLContainer = new Safe('PLPerl');" \
+	"$PLContainer->permit_only(':default');" \
+	"$PLContainer->permit(qw[:base_math !:base_io sort time]);" \
+	"$PLContainer->share(qw[&elog &spi_exec_query &return_next " \
+	"&spi_query &spi_fetchrow &spi_cursor_close " \
+	"&spi_prepare &spi_exec_prepared &spi_query_prepared &spi_freeplan " \
+	"&_plperl_to_pg_array " \
+	"&DEBUG &LOG &INFO &NOTICE &WARNING &ERROR %_SHARED ]);" \
+	"sub ::mksafefunc {" \
+	"      my $ret = $PLContainer->reval(qq[sub { $_[0] $_[1] }]); " \
+	"      $@ =~ s/\\(eval \\d+\\) //g if $@; return $ret; }" \
+	"$PLContainer->permit(qw[require caller]); $PLContainer->reval('use strict;');" \
+	"$PLContainer->deny(qw[require caller]); " \
+	"sub ::mk_strict_safefunc {" \
+	"      my $ret = $PLContainer->reval(qq[sub { BEGIN { strict->import(); } $_[0] $_[1] }]); " \
+	"      $@ =~ s/\\(eval \\d+\\) //g if $@; return $ret; }"
+
+#define SAFE_BAD \
+	"use vars qw($PLContainer); $PLContainer = new Safe('PLPerl');" \
+	"$PLContainer->permit_only(':default');" \
+	"$PLContainer->share(qw[&elog &ERROR ]);" \
+	"sub ::mksafefunc { return $PLContainer->reval(qq[sub { " \
+	"      elog(ERROR,'trusted Perl functions disabled - " \
+	"      please upgrade Perl Safe module to version 2.09 or later');}]); }" \
+	"sub ::mk_strict_safefunc { return $PLContainer->reval(qq[sub { " \
+	"      elog(ERROR,'trusted Perl functions disabled - " \
+	"      please upgrade Perl Safe module to version 2.09 or later');}]); }"
+
+#define TEST_FOR_MULTI \
+	"use Config; " \
+	"$Config{usemultiplicity} eq 'define' or "	\
+	"($Config{usethreads} eq 'define' " \
+	" and $Config{useithreads} eq 'define')"
+
+
+/********************************************************************
+ *
+ * We start out by creating a "held" interpreter that we can use in
+ * trusted or untrusted mode (but not both) as the need arises. Later, we
+ * assign that interpreter if it is available to either the trusted or
+ * untrusted interpreter. If it has already been assigned, and we need to
+ * create the other interpreter, we do that if we can, or error out.
+ * We detect if it is safe to run two interpreters during the setup of the
+ * dummy interpreter.
+ */
 
 static void
 set_interp_require(bool trusted)
@@ -1574,10 +1675,8 @@ plperl_trigger_build_args(FunctionCallInfo fcinfo)
 												   tupdesc));
 		}
 	}
-#if 0 /* GPDB_84_MERGE_FIXME: re-enable this when we merge with 8.4 */
 	else if (TRIGGER_FIRED_BY_TRUNCATE(tdata->tg_event))
 		event = "TRUNCATE";
-#endif
 	else
 		event = "UNKNOWN";
 
@@ -1777,7 +1876,7 @@ plperl_inline_handler(PG_FUNCTION_ARGS)
 	/* Set up a callback for error reporting */
 	pl_error_context.callback = plperl_inline_callback;
 	pl_error_context.previous = error_context_stack;
-	pl_error_context.arg = (Datum) 0;
+	pl_error_context.arg = NULL;
 	error_context_stack = &pl_error_context;
 
 	/*
@@ -2352,10 +2451,8 @@ plperl_trigger_handler(PG_FUNCTION_ARGS)
 			retval = (Datum) trigdata->tg_newtuple;
 		else if (TRIGGER_FIRED_BY_DELETE(trigdata->tg_event))
 			retval = (Datum) trigdata->tg_trigtuple;
-#if 0 /* GPDB_84_MERGE_FIXME: re-enable when we merge with 8.4 */
 		else if (TRIGGER_FIRED_BY_TRUNCATE(trigdata->tg_event))
 			retval = (Datum) trigdata->tg_trigtuple;
-#endif
 		else
 			retval = (Datum) 0; /* can this happen? */
 	}
@@ -2965,6 +3062,13 @@ plperl_return_next(SV *sv)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot use return_next in a non-SETOF function")));
 
+	if (prodesc->fn_retistuple &&
+		!(SvOK(sv) && SvTYPE(sv) == SVt_RV && SvTYPE(SvRV(sv)) == SVt_PVHV))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("SETOF-composite-returning PL/Perl function "
+						"must call return_next with reference to hash")));
+
 	if (!current_call_data->ret_tdesc)
 	{
 		TupleDesc	tupdesc;
@@ -2988,7 +3092,7 @@ plperl_return_next(SV *sv)
 
 		current_call_data->ret_tdesc = CreateTupleDescCopy(tupdesc);
 		current_call_data->tuple_store =
-			tuplestore_begin_heap(rsi->allowedModes,
+			tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize_Random,
 								  false, work_mem);
 
 		MemoryContextSwitchTo(old_cxt);
@@ -3015,12 +3119,6 @@ plperl_return_next(SV *sv)
 	if (prodesc->fn_retistuple)
 	{
 		HeapTuple	tuple;
-
-		if (!(SvOK(sv) && SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV))
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("SETOF-composite-returning PL/Perl function "
-							"must call return_next with reference to hash")));
 
 		tuple = plperl_build_tuple_result((HV *) SvRV(sv),
 										  current_call_data->ret_tdesc);

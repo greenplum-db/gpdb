@@ -1,8 +1,9 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.26 2007/06/05 21:31:04 tgl Exp $ -->
+<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.31 2008/11/14 10:22:45 petere Exp $ -->
 
 <refentry id="SQL-CREATECAST">
  <refmeta>
   <refentrytitle id="SQL-CREATECAST-TITLE">CREATE CAST</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -24,9 +25,13 @@ CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</r
 CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>)
     WITHOUT FUNCTION
     [ AS ASSIGNMENT | AS IMPLICIT ]
+
+CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>)
+    WITH INOUT
+    [ AS ASSIGNMENT | AS IMPLICIT ]
 </synopsis>
  </refsynopsisdiv>
-  
+
  <refsect1 id="sql-createcast-description">
   <title>Description</title>
 
@@ -44,12 +49,25 @@ SELECT CAST(42 AS float8);
   </para>
 
   <para>
-   Two types can be <firstterm>binary compatible</firstterm>, which
-   means that they can be converted into one another <quote>for
-   free</quote> without invoking any function.  This requires that
-   corresponding values use the same internal representation.  For
-   instance, the types <type>text</type> and <type>varchar</type> are
-   binary compatible.
+   Two types can be <firstterm>binary coercible</firstterm>, which
+   means that the conversion can be performed <quote>for free</quote>
+   without invoking any function.  This requires that corresponding
+   values use the same internal representation.  For instance, the
+   types <type>text</type> and <type>varchar</type> are binary
+   coercible both ways.  Binary coercibility is not necessarily a
+   symmetric relationship.  For example, the cast
+   from <type>xml</type> to <type>text</type> can be performed for
+   free in the present implementation, but the reverse direction
+   requires a function that performs at least a syntax check.  (Two
+   types that are binary coercible both ways are also referred to as
+   binary compatible.)
+  </para>
+
+  <para>
+   You can define a cast as an <firstterm>I/O conversion cast</> using
+   the <literal>WITH INOUT</literal> syntax. An I/O conversion cast is
+   performed by invoking the output function of the source data type, and
+   passing the result to the input function of the target data type.
   </para>
 
   <para>
@@ -125,10 +143,22 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
    to <type>int4</>, are best made explicit-only.
   </para>
 
+  <note>
+   <para>
+    Sometimes it is necessary for usability or standards-compliance reasons
+    to provide multiple implicit casts among a set of types, resulting in
+    ambiguity that cannot be avoided as above.  The parser has a fallback
+    heuristic based on <firstterm>type categories</> and <firstterm>preferred
+    types</> that can help to provide desired behavior in such cases.  See
+    <xref linkend="sql-createtype" endterm="sql-createtype-title"> for
+    more information.
+   </para>
+  </note>
+
   <para>
    To be able to create a cast, you must own the source or the target
-   data type.  To create a binary-compatible cast, you must be superuser.
-   (This restriction is made because an erroneous binary-compatible cast
+   data type.  To create a binary-coercible cast, you must be superuser.
+   (This restriction is made because an erroneous binary-coercible cast
    conversion can easily crash the server.)
   </para>
  </refsect1>
@@ -175,8 +205,20 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
 
      <listitem>
       <para>
-       Indicates that the source type and the target type are binary
-       compatible, so no function is required to perform the cast.
+       Indicates that the source type is binary-coercible to the target type,
+       so no function is required to perform the cast.
+      </para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term><literal>WITH INOUT</literal></term>
+
+     <listitem>
+      <para>
+       Indicates that the cast is an I/O conversion cast, performed by
+       invoking the output function of the source data type, and passing the
+       result to the input function of the target data type.
       </para>
      </listitem>
     </varlistentry>
@@ -205,17 +247,22 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
 
   <para>
    Cast implementation functions can have one to three arguments.
-   The first argument type must be identical to the cast's source type.
-   The second argument,
+   The first argument type must be identical to or binary-coercible from
+   the cast's source type.  The second argument,
    if present, must be type <type>integer</>; it receives the type
    modifier associated with the destination type, or <literal>-1</>
    if there is none.  The third argument,
    if present, must be type <type>boolean</>; it receives <literal>true</>
    if the cast is an explicit cast, <literal>false</> otherwise.
-   (Bizarrely, the SQL spec demands different behaviors for explicit and
+   (Bizarrely, the SQL standard demands different behaviors for explicit and
    implicit casts in some cases.  This argument is supplied for functions
    that must implement such casts.  It is not recommended that you design
    your own data types so that this matters.)
+  </para>
+
+  <para>
+   The return type of a cast function must be identical to or
+   binary-coercible to the cast's target type.
   </para>
 
   <para>
@@ -260,15 +307,13 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
   <para>
    It is normally not necessary to create casts between user-defined types
    and the standard string types (<type>text</>, <type>varchar</>, and
-   <type>char(<replaceable>n</>)</type>).  <productname>PostgreSQL</> will
-   automatically handle a cast to a string type by invoking the other
-   type's output function, or conversely handle a cast from a string type
-   by invoking the other type's input function.  These
-   automatically-provided casts are known as <firstterm>I/O conversion
-   casts</>.  I/O conversion casts to string types are treated as
-   assignment casts, while I/O conversion casts from string types are
+   <type>char(<replaceable>n</>)</type>, as well as user-defined types that
+   are defined to be in the string category).  <productname>PostgreSQL</>
+   provides automatic I/O conversion casts for that. The automatic casts to
+   string types are treated as assignment casts, while the automatic casts
+   from string types are
    explicit-only.  You can override this behavior by declaring your own
-   cast to replace an I/O conversion cast, but usually the only reason to
+   cast to replace an automatic cast, but usually the only reason to
    do so is if you want the conversion to be more easily invokable than the
    standard assignment-only or explicit-only setting.  Another possible
    reason is that you want the conversion to behave differently from the
@@ -283,7 +328,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
    the same name as a data type, returned that data type, and took one
    argument of a different type was automatically a cast function.
    This convention has been abandoned in face of the introduction of
-   schemas and to be able to represent binary compatible casts in the
+   schemas and to be able to represent binary-coercible casts in the
    system catalogs.  The built-in cast functions still follow this naming
    scheme, but they have to be shown as casts in the system catalog
    <structname>pg_cast</> as well.
@@ -311,10 +356,10 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
     request without having matched it to an actual function.
     If a function call <replaceable>name</>(<replaceable>x</>) does not
     exactly match any existing function, but <replaceable>name</> is the name
-    of a data type and <structname>pg_cast</> provides a binary-compatible cast
+    of a data type and <structname>pg_cast</> provides a binary-coercible cast
     to this type from the type of <replaceable>x</>, then the call will be
-    construed as a binary-compatible cast.  This exception is made so that
-    binary-compatible casts can be invoked using functional syntax, even
+    construed as a binary-coercible cast.  This exception is made so that
+    binary-coercible casts can be invoked using functional syntax, even
     though they lack any function.  Likewise, if there is no
     <structname>pg_cast</> entry but the cast would be to or from a string
     type, the call will be construed as an I/O conversion cast.  This
@@ -329,25 +374,24 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
   <title>Examples</title>
 
   <para>
-   To create a cast from type <type>bigint</type> to type
+   To create an assignment cast from type <type>bigint</type> to type
    <type>int4</type> using the function <literal>int4(bigint)</literal>:
 <programlisting>
-CREATE CAST (bigint AS int4) WITH FUNCTION int4(bigint);
+CREATE CAST (bigint AS int4) WITH FUNCTION int4(bigint) AS ASSIGNMENT;
 </programlisting>
    (This cast is already predefined in the system.)
   </para>
  </refsect1>
 
- 
  <refsect1 id="sql-createcast-compat">
   <title>Compatibility</title>
 
   <para>
    The <command>CREATE CAST</command> command conforms to the
    <acronym>SQL</acronym> standard,
-   except that SQL does not make provisions for binary-compatible
+   except that SQL does not make provisions for binary-coercible
    types or extra arguments to implementation functions.
-   <literal>AS IMPLICIT</> is a <productname>PostgreSQL</productname> 
+   <literal>AS IMPLICIT</> is a <productname>PostgreSQL</productname>
    extension, too.
   </para>
  </refsect1>

@@ -4,6 +4,7 @@
  *	  Core support for opening external relations via a URL execute
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  * IDENTIFICATION
  *	  src/backend/access/external/url_execute.c
@@ -21,6 +22,7 @@
 #include "cdb/cdbtimer.h"
 #include "cdb/cdbvars.h"
 #include "libpq/pqsignal.h"
+#include "utils/resowner.h"
 
 #define EXEC_DATA_P 0 /* index to data pipe */
 #define EXEC_ERR_P 1 /* index to error pipe  */
@@ -60,8 +62,9 @@ typedef struct URL_EXECUTE_FILE
 	execute_handle_t *handle;	/* ResourceOwner-tracked stuff */
 } URL_EXECUTE_FILE;
 
-static int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
-static int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
+extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
+extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
+extern char *make_command(const char *cmd, extvar_t *ev);
 static void pclose_without_stderr(int *rwepipe);
 static char *interpretError(int exitCode, char *buf, size_t buflen, char *err, size_t errlen);
 static const char *getSignalNameFromCode(int signo);
@@ -191,7 +194,7 @@ make_export(char *name, const char *value, StringInfo buf)
 }
 
 
-static char *
+char *
 make_command(const char *cmd, extvar_t *ev)
 {
 	StringInfoData buf;
@@ -311,8 +314,8 @@ url_execute_fclose(URL_FILE *file, bool failOnError, const char *relname)
 
 	cleanup_execute_handle(efile->handle);
 	efile->handle = NULL;
-	
-	url = pstrdup(file->url);	
+
+	url = pstrdup(file->url);
 	if (ret == 0)
 	{
 		/* pclose() ended successfully; no errors to reflect */
@@ -394,9 +397,28 @@ url_execute_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 size_t
 url_execute_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	URL_EXECUTE_FILE *efile = (URL_EXECUTE_FILE *) file;
+    URL_EXECUTE_FILE *efile = (URL_EXECUTE_FILE *) file;
+    int fd = efile->handle->pipes[EXEC_DATA_P];
+    size_t offset = 0;
+    const char* p = (const char* ) ptr;
 
-	return pipewrite(efile->handle->pipes[EXEC_DATA_P], ptr, size);
+    size_t n;
+    /* ensure all data in buffer is send out to pipe*/
+    while(size > offset)
+    {
+        n = pipewrite(fd,p,size - offset);
+
+        if(n == -1) return -1;
+
+        if(n == 0) break;
+
+        offset += n;
+        p = (const char*)ptr + offset;
+    }
+
+    if(offset < size) elog(WARNING,"partial write, expected %lu, written %lu", size, offset);
+
+    return offset;
 }
 
 /*
@@ -584,13 +606,13 @@ getSignalNameFromCode(int signo)
  * if 'forwrite' is set then we set the data pipe write side on the
  * parent. otherwise, we set the read side on the parent.
  */
-static int
+int
 popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 {
 	int data[2];	/* pipe to send data child <--> parent */
 	int err[2];		/* pipe to send errors child --> parent */
 	int pid = -1;
-	
+
 	const int READ = 0;
 	const int WRITE = 1;
 
@@ -606,7 +628,7 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 #ifndef WIN32
 
 	pid = fork();
-	
+
 	if (pid > 0) /* parent */
 	{
 
@@ -620,16 +642,16 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 		{
 			/* parent reads from child */
 			close(data[WRITE]);
-			pipes[EXEC_DATA_P] = data[READ]; 			
+			pipes[EXEC_DATA_P] = data[READ];
 		}
-		
+
 		close(err[WRITE]);
 		pipes[EXEC_ERR_P] = err[READ];
-		
+
 		return pid;
 	}
 	else if (pid == 0) /* child */
-	{		
+	{
 
 		/*
 		 * set up the data pipe
@@ -638,7 +660,7 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 		{
 			close(data[WRITE]);
 			close(fileno(stdin));
-			
+
 			/* assign pipes to parent to stdin */
 			if (dup2(data[READ], fileno(stdin)) < 0)
 			{
@@ -647,13 +669,13 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 			}
 
 			/* no longer needed after the duplication */
-			close(data[READ]);			
+			close(data[READ]);
 		}
 		else
 		{
 			close(data[READ]);
 			close(fileno(stdout));
-			
+
 			/* assign pipes to parent to stdout */
 			if (dup2(data[WRITE], fileno(stdout)) < 0)
 			{
@@ -664,26 +686,26 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 			/* no longer needed after the duplication */
 			close(data[WRITE]);
 		}
-		
+
 		/*
 		 * now set up the error pipe
 		 */
 		close(err[READ]);
 		close(fileno(stderr));
-		
+
 		if (dup2(err[WRITE], fileno(stderr)) < 0)
 		{
 			if(forwrite)
 				close(data[WRITE]);
 			else
 				close(data[READ]);
-			
+
 			perror("dup2 error");
-			exit(EXIT_FAILURE);			
+			exit(EXIT_FAILURE);
 		}
 
 		close(err[WRITE]);
-				
+
 		/* go ahead and execute the user command */
 		execl("/bin/sh", "sh", "-c", exe, NULL);
 
@@ -704,8 +726,8 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 		}
 		close(err[READ]);
 		close(err[WRITE]);
-		
-		return -1;		
+
+		return -1;
 	}
 #endif
 
@@ -752,14 +774,14 @@ read_err_msg(int fid, StringInfo sinfo)
  * termination status. if child terminated with error, 'buf' will
  * point to the error string retrieved from child's stderr.
  */
-static int
+int
 pclose_with_stderr(int pid, int *pipes, StringInfo sinfo)
 {
 	int status;
-	
+
 	/* close the data pipe. we can now read from error pipe without being blocked */
 	close(pipes[EXEC_DATA_P]);
-	
+
 	read_err_msg(pipes[EXEC_ERR_P], sinfo);
 
 	close(pipes[EXEC_ERR_P]);

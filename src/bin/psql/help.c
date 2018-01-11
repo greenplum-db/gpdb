@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.159 2010/05/26 19:29:22 rhaas Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.150 2009/06/11 14:49:08 momjian Exp $
  */
 #include "postgres_fe.h"
 
@@ -83,17 +83,7 @@ usage(void)
 #endif   /* WIN32 */
 	}
 
-
-
-#if 0
-    /* psql 9.0 does it this way: */
-	printf(_("psql is the PostgreSQL interactive terminal.\n\n"));
-#else
-/* GPDB : for compatibility with 4.0 and 3.3, say this */
-/* >>> If this " is the start of the string then it ought to end there to fit in 80 columns >> " */
-	printf(_("This is psql %s, the PostgreSQL interactive terminal (Greenplum version).\n\n"),
-		   PG_VERSION);
-#endif
+	printf(_("psql is the PostgreSQL interactive terminal (Greenplum version).\n\n"));
 	printf(_("Usage:\n"));
 	printf(_("  psql [OPTION]... [DBNAME [USERNAME]]\n\n"));
 
@@ -460,11 +450,13 @@ helpSQL(const char *topic, unsigned short int pager)
 void
 print_copyright(void)
 {
-	puts("Greenplum Database version of PostgreSQL Database Management System\n"
-		 "(formerly known as Postgres, then as Postgres95)\n\n"
+	puts(
+		 "Greenplum Database version of PostgreSQL Database Management System\n"
+		 "Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group\n\n"
 		 "Portions Copyright (c) 2014-Present Pivotal Software, Inc.\n\n"
 		 "Portions Copyright (c) 2011-2014 EMC\n\n"
-		 "Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group\n\n"
+		 "This software is based on Postgres95, formerly known as Postgres, which\n"
+		 "contains the following notice:\n\n"
 		 "Portions Copyright (c) 1994, The Regents of the University of California\n\n"
 		 "Permission to use, copy, modify, and distribute this software and its\n"
 		 "documentation for any purpose, without fee, and without a written agreement\n"

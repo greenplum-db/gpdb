@@ -17,7 +17,12 @@
  * distributed transaction identifier -- the timestamp -- also so we can
  * be sure which distributed transaction we are looking at.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/distributedlog.c
  *
  *-------------------------------------------------------------------------
  */
@@ -65,17 +70,50 @@ typedef struct DistributedLogShmem
 
 static DistributedLogShmem *DistributedLogShared = NULL;
 
+static void DistributedLog_SetCommitted(TransactionId localXid,
+							DistributedTransactionTimeStamp dtxStartTime,
+							DistributedTransactionId distribXid,
+							bool isRedo);
 static int	DistributedLog_ZeroPage(int page, bool writeXlog);
 static bool DistributedLog_PagePrecedes(int page1, int page2);
 static void DistributedLog_WriteZeroPageXlogRec(int page);
 static void DistributedLog_WriteTruncateXlogRec(int page);
 
+/*
+ * Record that a distributed transaction and its possible sub-transactions
+ * committed, in the distributed log.
+ */
+void
+DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
+								DistributedTransactionTimeStamp	distribTimeStamp,
+								DistributedTransactionId distribXid,
+								bool isRedo)
+{
+	int			i;
+
+	/*
+	 * GPDB_84_MERGE_FIXME: This is a naive implementation, not very efficient.
+	 * Should update the list of transaction one distributed clog page at a time.
+	 * Similar to how we do for the clog now, since commit 06da3c570.
+	 */
+	DistributedLog_SetCommitted(xid,
+								distribTimeStamp,
+								distribXid,
+								isRedo);
+	for (i = 0; i < nxids; i++)
+	{
+		DistributedLog_SetCommitted(xids[i],
+									distribTimeStamp,
+									distribXid,
+									isRedo);
+	}
+}
+
 
 /*
  * Record that a distributed transaction committed in the distributed log.
- *
  */
-void
+static void
 DistributedLog_SetCommitted(
 	TransactionId 						localXid,
 	DistributedTransactionTimeStamp		distribTimeStamp,

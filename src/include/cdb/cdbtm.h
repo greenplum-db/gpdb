@@ -224,8 +224,6 @@ typedef struct TMGXACT
 
 	bool						badPrepareGangs;
 
-	bool						retryPhase2RecursionStop;
-	
 	int							debugIndex;
 
 	bool						directTransaction;
@@ -284,7 +282,7 @@ extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
 extern void createDtx(DistributedTransactionId	*distribXid);
-extern bool createDtxSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
+extern bool CreateDistributedSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
@@ -319,8 +317,6 @@ extern void initTM(void);
 
 extern void getDtxCheckPointInfoAndLock(char **result, int *result_size);
 extern void freeDtxCheckPointInfoAndUnlock(char *info, int info_size, XLogRecPtr *recptr);
-
-extern void setRecoverTMOn(void);
 
 extern void verify_shared_snapshot_ready(void);
 

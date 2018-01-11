@@ -4,12 +4,13 @@
  *	  Routines to handle sorting of relations.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSort.c,v 1.62 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSort.c,v 1.65 2009/04/02 20:59:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,7 +22,6 @@
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "utils/tuplesort.h"
-#include "utils/tuplesort_mk.h"
 #include "cdb/cdbvars.h" /* CDB *//* gp_sort_flags */
 #include "utils/workfile_mgr.h"
 #include "executor/instrument.h"
@@ -48,8 +48,7 @@ ExecSort(SortState *node)
 {
 	EState	   *estate;
 	ScanDirection dir;
-	Tuplesortstate *tuplesortstate = NULL;
-	Tuplesortstate_mk *tuplesortstate_mk = NULL;
+	Tuplesortstate *tuplesortstate;
 	TupleTableSlot *slot = NULL;
 	Sort 		*plannode = NULL;
 	PlanState  *outerNode = NULL;
@@ -63,15 +62,7 @@ ExecSort(SortState *node)
 
 	estate = node->ss.ps.state;
 	dir = estate->es_direction;
-
-	if(gp_enable_mk_sort)
-	{
-		tuplesortstate_mk = node->tuplesortstate->sortstore_mk;
-	}
-	else
-	{
-		tuplesortstate = node->tuplesortstate->sortstore;
-	}
+	tuplesortstate = node->tuplesortstate->sortstore;
 
 	/*
 	 * In Window node, we might need to call ExecSort again even when
@@ -79,9 +70,7 @@ ExecSort(SortState *node)
 	 * eager free the tuplestore, the tuplestorestate could be NULL.
 	 * We simply return NULL in this case.
 	 */
-	if (node->sort_Done &&
-		((gp_enable_mk_sort && tuplesortstate_mk == NULL) ||
-		 (!gp_enable_mk_sort && tuplesortstate == NULL)))
+	if (node->sort_Done && tuplesortstate == NULL)
 	{
 		return NULL;
 	}
@@ -125,59 +114,30 @@ ExecSort(SortState *node)
 			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), plannode->share_id);
 			elog(LOG, "Sort node create shareinput rwfile %s", rwfile_prefix);
 
-			if(gp_enable_mk_sort)
-				tuplesortstate_mk = tuplesort_begin_heap_file_readerwriter_mk(
-					& node->ss,
-					rwfile_prefix, true,
-					tupDesc,
-					plannode->numCols,
-					plannode->sortColIdx,
-					plannode->sortOperators, plannode->nullsFirst,
-					PlanStateOperatorMemKB((PlanState *) node),
-					true
-					); 
-			else
-				tuplesortstate = tuplesort_begin_heap_file_readerwriter(
-					rwfile_prefix, true,
-					tupDesc,
-					plannode->numCols,
-					plannode->sortColIdx,
-					plannode->sortOperators, plannode->nullsFirst,
-					PlanStateOperatorMemKB((PlanState *) node),
-					true
-					); 
+			tuplesortstate = tuplesort_begin_heap_file_readerwriter(
+				&node->ss,
+				rwfile_prefix, true,
+				tupDesc,
+				plannode->numCols,
+				plannode->sortColIdx,
+				plannode->sortOperators, plannode->nullsFirst,
+				PlanStateOperatorMemKB((PlanState *) node),
+				true
+				);
 		}
 		else
 		{
-			if(gp_enable_mk_sort)
-				tuplesortstate_mk = tuplesort_begin_heap_mk(& node->ss,
-						tupDesc,
-						plannode->numCols,
-						plannode->sortColIdx,
-						plannode->sortOperators, plannode->nullsFirst,
-						PlanStateOperatorMemKB((PlanState *) node),
-						node->randomAccess);
-			else
-				tuplesortstate = tuplesort_begin_heap(tupDesc,
-						plannode->numCols,
-						plannode->sortColIdx,
-						plannode->sortOperators, plannode->nullsFirst,
-						PlanStateOperatorMemKB((PlanState *) node),
-						node->randomAccess);
+			tuplesortstate = tuplesort_begin_heap(&node->ss, tupDesc,
+												  plannode->numCols,
+												  plannode->sortColIdx,
+												  plannode->sortOperators, plannode->nullsFirst,
+												  PlanStateOperatorMemKB((PlanState *) node),
+												  node->randomAccess);
 		}
 
-		if(gp_enable_mk_sort)
-		{
-			if (node->bounded)
-				tuplesort_set_bound_mk(tuplesortstate_mk, node->bound);
-			node->tuplesortstate->sortstore_mk = tuplesortstate_mk;
-		}
-		else
-		{
-			if (node->bounded)
-				tuplesort_set_bound(tuplesortstate, node->bound);
-			node->tuplesortstate->sortstore = tuplesortstate;
-		}
+		if (node->bounded)
+			tuplesort_set_bound(tuplesortstate, node->bound);
+		node->tuplesortstate->sortstore = tuplesortstate;
 
 		/* CDB */
 		{
@@ -188,35 +148,17 @@ ExecSort(SortState *node)
 			if (node->noduplicates)
 				unique = 1;
 			
-			if(gp_enable_mk_sort)
-				cdb_tuplesort_init_mk(tuplesortstate_mk, unique, sort_flags, maxdistinct);
-			else
-				cdb_tuplesort_init(tuplesortstate, unique, sort_flags, maxdistinct);
+			cdb_tuplesort_init(tuplesortstate, unique, sort_flags, maxdistinct);
 		}
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
-		if(gp_enable_mk_sort)
-		{
-			if (node->ss.ps.instrument)
-				tuplesort_set_instrument_mk(tuplesortstate_mk,
-						node->ss.ps.instrument,
-						node->ss.ps.cdbexplainbuf);
+		if (node->ss.ps.instrument)
+			tuplesort_set_instrument(tuplesortstate,
+									 node->ss.ps.instrument,
+									 node->ss.ps.cdbexplainbuf);
 
-			tuplesort_set_gpmon_mk(tuplesortstate_mk, &node->ss.ps.gpmon_pkt, 
-					&node->ss.ps.gpmon_plan_tick);
-		}
-		else
-		{
-			if (node->ss.ps.instrument)
-				tuplesort_set_instrument(tuplesortstate,
-						node->ss.ps.instrument,
-						node->ss.ps.cdbexplainbuf);
-
-			tuplesort_set_gpmon(tuplesortstate, &node->ss.ps.gpmon_pkt, 
-					&node->ss.ps.gpmon_plan_tick);
-		}
-
-
+		tuplesort_set_gpmon(tuplesortstate, &node->ss.ps.gpmon_pkt,
+							&node->ss.ps.gpmon_plan_tick);
 	}
 
 	/*
@@ -238,15 +180,9 @@ ExecSort(SortState *node)
 			slot = ExecProcNode(outerNode);
 
 			if (TupIsNull(slot))
-			{
 				break;
-			}
 
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-			if(gp_enable_mk_sort)
-				tuplesort_puttupleslot_mk(tuplesortstate_mk, slot);
-			else
-				tuplesort_puttupleslot(tuplesortstate, slot);
+			tuplesort_puttupleslot(tuplesortstate, slot);
 		}
 
 		SIMPLE_FAULT_INJECTOR(ExecSortBeforeSorting);
@@ -254,14 +190,7 @@ ExecSort(SortState *node)
 		/*
 		 * Complete the sort.
 		 */
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_performsort_mk(tuplesortstate_mk);
-		}
-		else
-		{
-			tuplesort_performsort(tuplesortstate);
-		}
+		tuplesort_performsort(tuplesortstate);
 
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		/*
@@ -286,10 +215,7 @@ ExecSort(SortState *node)
 			{
 				if(plannode->driver_slice == currentSliceId)
 				{
-					if(gp_enable_mk_sort)
-						tuplesort_flush_mk(tuplesortstate_mk);
-					else
-						tuplesort_flush(tuplesortstate);
+					tuplesort_flush(tuplesortstate);
 
 					node->share_lk_ctxt = shareinput_writer_notifyready(plannode->share_id, plannode->nsharer_xslice,
 							estate->es_plannedstmt->planGen);
@@ -312,14 +238,9 @@ ExecSort(SortState *node)
 	 * tuples.
 	 */
 	slot = node->ss.ps.ps_ResultTupleSlot;
-	if(gp_enable_mk_sort)
-		(void) tuplesort_gettupleslot_mk(tuplesortstate_mk,
-				ScanDirectionIsForward(dir),
-				slot);
-	else
-		(void) tuplesort_gettupleslot(tuplesortstate,
-				ScanDirectionIsForward(dir),
-				slot);
+	(void) tuplesort_gettupleslot(tuplesortstate,
+								  ScanDirectionIsForward(dir),
+								  slot);
 
 	if (TupIsNull(slot) && !node->ss.ps.delayEagerFree)
 	{
@@ -468,8 +389,6 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	SO1_printf("ExecInitSort: %s\n",
 			   "sort node initialized");
 
-	initGpmonPktForSort((Plan *)node, &sortstate->ss.ps.gpmon_pkt, estate);
-
 	return sortstate;
 }
 
@@ -519,14 +438,7 @@ ExecSortMarkPos(SortState *node)
 	if (!node->sort_Done)
 		return;
 
-	if(gp_enable_mk_sort)
-	{
-		tuplesort_markpos_mk(node->tuplesortstate->sortstore_mk);
-	}
-	else
-	{
-		tuplesort_markpos(node->tuplesortstate->sortstore);
-	}
+	tuplesort_markpos(node->tuplesortstate->sortstore);
 }
 
 /* ----------------------------------------------------------------
@@ -547,14 +459,7 @@ ExecSortRestrPos(SortState *node)
 	/*
 	 * restore the scan to the previously marked position
 	 */
-	if(gp_enable_mk_sort)
-	{
-		tuplesort_restorepos_mk(node->tuplesortstate->sortstore_mk);
-	}
-	else
-	{
-		tuplesort_restorepos(node->tuplesortstate->sortstore);
-	}
+	tuplesort_restorepos(node->tuplesortstate->sortstore);
 }
 
 void
@@ -582,16 +487,11 @@ ExecReScanSort(SortState *node, ExprContext *exprCtxt)
 		node->bounded != node->bounded_Done ||
 		node->bound != node->bound_Done ||
 		!node->randomAccess ||
-		(NULL == node->tuplesortstate->sortstore_mk && NULL == node->tuplesortstate->sortstore))
+		(NULL == node->tuplesortstate->sortstore))
 	{
 		node->sort_Done = false;
 
-		if (gp_enable_mk_sort && NULL != node->tuplesortstate->sortstore_mk)
-		{
-			tuplesort_end_mk(node->tuplesortstate->sortstore_mk);
-		}
-
-		if (!gp_enable_mk_sort && NULL != node->tuplesortstate->sortstore)
+		if (NULL != node->tuplesortstate->sortstore)
 		{
 			tuplesort_end(node->tuplesortstate->sortstore);
 		}
@@ -601,21 +501,10 @@ ExecReScanSort(SortState *node, ExprContext *exprCtxt)
 		 * first ExecProcNode.
 		 */
 		if (((PlanState *) node)->lefttree->chgParam == NULL)
-		{
 			ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-		}
 	}
 	else
-	{
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_rescan_mk(node->tuplesortstate->sortstore_mk);
-		}
-		else
-		{
-			tuplesort_rescan(node->tuplesortstate->sortstore);
-		}
-	}
+		tuplesort_rescan(node->tuplesortstate->sortstore);
 }
 
 
@@ -628,25 +517,12 @@ ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 {
 	SortState *sortstate = (SortState *)planstate;
 	
-	if (gp_enable_mk_sort && NULL != sortstate->tuplesortstate->sortstore_mk)
-	{
-		tuplesort_finalize_stats_mk(sortstate->tuplesortstate->sortstore_mk);
-	}
-
-	if (!gp_enable_mk_sort && NULL != sortstate->tuplesortstate->sortstore)
+	if (NULL != sortstate->tuplesortstate->sortstore)
 	{
 		tuplesort_finalize_stats(sortstate->tuplesortstate->sortstore);
 	}
 
 }                               /* ExecSortExplainEnd */
-
-void
-initGpmonPktForSort(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Sort));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
 
 void
 ExecEagerFreeSort(SortState *node)
@@ -680,7 +556,7 @@ ExecEagerFreeSort(SortState *node)
 	/* must drop pointer to sort result tuple */
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
-	if (NULL != node->tuplesortstate->sortstore || NULL != node->tuplesortstate->sortstore_mk)
+	if (NULL != node->tuplesortstate->sortstore)
 	{
 		Sort *sort = (Sort *) node->ss.ps.plan;
 
@@ -691,17 +567,7 @@ ExecEagerFreeSort(SortState *node)
 			shareinput_writer_waitdone(node->share_lk_ctxt, sort->share_id, sort->nsharer_xslice);
 		}
 
-		if(gp_enable_mk_sort)
-		{
-			tuplesort_end_mk(node->tuplesortstate->sortstore_mk);
-			node->tuplesortstate->sortstore_mk = NULL;
-		}
-		else
-		{
-			tuplesort_end(node->tuplesortstate->sortstore);
-			node->tuplesortstate->sortstore = NULL;
-
-		}
-
+		tuplesort_end(node->tuplesortstate->sortstore);
+		node->tuplesortstate->sortstore = NULL;
 	}
 }

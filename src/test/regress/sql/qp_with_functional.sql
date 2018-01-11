@@ -16,7 +16,7 @@
 -- # The error message you get when you have a UDF that tries to do SQL access
 -- # depends on the plan, and when the error is caught. Mask out that
 -- # difference.
--- m/.*ERROR:.*function cannot execute on segment because it accesses relation.*/
+-- m/.*ERROR:.*function cannot execute on a QE slice because it accesses relation.*/
 -- s/.*ERROR:.*/ERROR: error message might be different for CTE/
 --
 -- m/.*ERROR:  query plan with multiple segworker groups is not supported.*/
@@ -225,6 +225,40 @@ SELECT v1.a, v2.b
 FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 
+-- @description test15d: CTE with a user-defined function [STABLE MODIFIES SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE MODIFIES SQL DATA
+AS $$
+BEGIN
+UPDATE foobar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$;
+
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+
+-- @description test15e: CTE with a user-defined function [STABLE READS SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE READS SQL DATA
+AS $$
+DECLARE
+    r int;
+BEGIN
+    SELECT d FROM foobar WHERE c = $1 LIMIT 1 INTO r;
+    RETURN r;
+END
+$$;
+
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+
 -- @description test15g: CTE with a user-defined function [VOLATILE NO SQL]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int 
 LANGUAGE plpgsql
@@ -346,7 +380,7 @@ CREATE VIEW cte_view as
     SELECT a FROM foo limit 10
 )SELECT * FROM CTE);
 
-\d cte_view
+\d+ cte_view
 
 SELECT * FROM cte_view ORDER BY 1;
 
@@ -358,7 +392,7 @@ CREATE VIEW cte_view as
       cte2(e,f) AS (SELECT e,d FROM bar, cte WHERE cte.e = bar.c )
 SELECT cte2.e,cte.f FROM cte,cte2 where cte.e = cte2.e
 );
-\d cte_view
+\d+ cte_view
 
 SELECT * FROM cte_view ORDER BY 1;
 

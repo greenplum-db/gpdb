@@ -295,6 +295,86 @@ SQL function "hold_memory_by_percent" statement 1
 2q: ... <quitting>
 1q: ... <quitting>
 
+-- 7) QD: concurrent transactions in same group with memory_shared_quota = 100
+
+ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
+ALTER
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.6);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT hold_memory_by_percent(1,0.3);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2q: ... <quitting>
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2: SELECT hold_memory_by_percent(1,0.2);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+1q: ... <quitting>
+
+-- 8) QE: concurrent transactions in same group with memory_shared_quota = 100
+
+ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
+ALTER
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
+count
+-----
+0    
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
+count
+-----
+0    
+(1 row)
+2q: ... <quitting>
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+0    
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 192.168.99.102:25432 pid=18476)
+DETAIL:  
+Resource group memory limit reached
+SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+1q: ... <quitting>
 
 -- cleanup
 DROP ROLE role1_memory_test;

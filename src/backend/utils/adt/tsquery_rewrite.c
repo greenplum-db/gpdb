@@ -3,21 +3,23 @@
  * tsquery_rewrite.c
  *	  Utilities for reconstructing tsquery
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.11.2.1 2009/07/28 09:32:45 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.14 2009/01/07 13:44:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include "catalog/pg_type.h"
 #include "executor/spi.h"
+#include "miscadmin.h"
 #include "tsearch/ts_type.h"
 #include "tsearch/ts_utils.h"
-#include "miscadmin.h"
+#include "utils/builtins.h"
 
 
 static int
@@ -261,7 +263,7 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 	SPIPlanPtr	plan;
 	Portal		portal;
 	bool		isnull;
-	int			i;
+	int64			i;
 
 	if (query->size == 0)
 	{
@@ -273,7 +275,7 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 	QTNTernary(tree);
 	QTNSort(tree);
 
-	buf = TextPGetCString(in);
+	buf = text_to_cstring(in);
 
 	SPI_connect();
 

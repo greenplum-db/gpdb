@@ -2,7 +2,12 @@
  *
  * cdbgang.h
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbgang.h
  *
  *-------------------------------------------------------------------------
  */
@@ -13,6 +18,7 @@
 #include "executor/execdesc.h"
 #include <pthread.h>
 #include "utils/faultinjector.h"
+#include "utils/portal.h"
 
 struct Port;
 struct QueryDesc;

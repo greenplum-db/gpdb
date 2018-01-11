@@ -51,6 +51,7 @@ extern "C" {
 #include "utils/typcache.h"
 #include "utils/numeric.h"
 #include "optimizer/tlist.h"
+#include "optimizer/planmain.h"
 #include "nodes/makefuncs.h"
 #include "catalog/pg_operator.h"
 #include "lib/stringinfo.h"
@@ -95,7 +96,7 @@ extern
 void ExecutorStart(QueryDesc *pqueryDesc, int iEFlags);
 
 extern
-TupleTableSlot *ExecutorRun(QueryDesc *pqueryDesc, ScanDirection direction, long lCount);
+void ExecutorRun(QueryDesc *pqueryDesc, ScanDirection direction, long lCount);
 
 extern
 void ExecutorEnd(QueryDesc *pqueryDesc);

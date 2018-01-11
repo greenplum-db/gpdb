@@ -34,25 +34,25 @@ INSERT INTO INTERVAL_TBL (f1) VALUES ('@ 30 eons ago');
 
 -- test interval operators
 
-SELECT '' AS ten, * FROM INTERVAL_TBL ORDER BY 2;
+SELECT '' AS ten, * FROM INTERVAL_TBL;
 
 SELECT '' AS nine, * FROM INTERVAL_TBL
-   WHERE INTERVAL_TBL.f1 <> interval '@ 10 days' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 <> interval '@ 10 days';
 
 SELECT '' AS three, * FROM INTERVAL_TBL
-   WHERE INTERVAL_TBL.f1 <= interval '@ 5 hours' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 <= interval '@ 5 hours';
 
 SELECT '' AS three, * FROM INTERVAL_TBL
-   WHERE INTERVAL_TBL.f1 < interval '@ 1 day' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 < interval '@ 1 day';
 
 SELECT '' AS one, * FROM INTERVAL_TBL
-   WHERE INTERVAL_TBL.f1 = interval '@ 34 years' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 = interval '@ 34 years';
 
 SELECT '' AS five, * FROM INTERVAL_TBL 
-   WHERE INTERVAL_TBL.f1 >= interval '@ 1 month' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 >= interval '@ 1 month';
 
 SELECT '' AS nine, * FROM INTERVAL_TBL
-   WHERE INTERVAL_TBL.f1 > interval '@ 3 seconds ago' ORDER BY 2;
+   WHERE INTERVAL_TBL.f1 > interval '@ 3 seconds ago';
 
 SELECT '' AS fortyfive, r1.*, r2.*
    FROM INTERVAL_TBL r1, INTERVAL_TBL r2
@@ -81,23 +81,23 @@ COPY INTERVAL_MULDIV_TBL FROM STDIN;
 \.
 
 SELECT span * 0.3 AS product
-FROM INTERVAL_MULDIV_TBL ORDER BY 1;
+FROM INTERVAL_MULDIV_TBL;
 
 SELECT span * 8.2 AS product
-FROM INTERVAL_MULDIV_TBL ORDER BY 1;
+FROM INTERVAL_MULDIV_TBL;
 
 SELECT span / 10 AS quotient
-FROM INTERVAL_MULDIV_TBL ORDER BY 1;
+FROM INTERVAL_MULDIV_TBL;
 
 SELECT span / 100 AS quotient
-FROM INTERVAL_MULDIV_TBL ORDER BY 1;
+FROM INTERVAL_MULDIV_TBL;
 
 DROP TABLE INTERVAL_MULDIV_TBL;
 
 SET DATESTYLE = 'postgres';
 SET IntervalStyle to postgres_verbose;
 
-SELECT '' AS ten, * FROM INTERVAL_TBL ORDER BY 2;
+SELECT '' AS ten, * FROM INTERVAL_TBL;
 
 -- test avg(interval), which is somewhat fragile since people have been
 -- known to change the allowed input syntax for type interval without
@@ -132,6 +132,126 @@ SELECT '1 second 2 seconds'::interval;              -- error
 SELECT '10 milliseconds 20 milliseconds'::interval; -- error
 SELECT '5.5 seconds 3 milliseconds'::interval;      -- error
 SELECT '1:20:05 5 microseconds'::interval;          -- error
+SELECT '1 day 1 day'::interval;                     -- error
+SELECT interval '1-2';  -- SQL year-month literal
+SELECT interval '999' second;  -- oversize leading field is ok
+SELECT interval '999' minute;
+SELECT interval '999' hour;
+SELECT interval '999' day;
+SELECT interval '999' month;
+
+-- test SQL-spec syntaxes for restricted field sets
+SELECT interval '1' year;
+SELECT interval '2' month;
+SELECT interval '3' day;
+SELECT interval '4' hour;
+SELECT interval '5' minute;
+SELECT interval '6' second;
+SELECT interval '1' year to month;
+SELECT interval '1-2' year to month;
+SELECT interval '1 2' day to hour;
+SELECT interval '1 2:03' day to hour;
+SELECT interval '1 2:03:04' day to hour;
+SELECT interval '1 2' day to minute;
+SELECT interval '1 2:03' day to minute;
+SELECT interval '1 2:03:04' day to minute;
+SELECT interval '1 2' day to second;
+SELECT interval '1 2:03' day to second;
+SELECT interval '1 2:03:04' day to second;
+SELECT interval '1 2' hour to minute;
+SELECT interval '1 2:03' hour to minute;
+SELECT interval '1 2:03:04' hour to minute;
+SELECT interval '1 2' hour to second;
+SELECT interval '1 2:03' hour to second;
+SELECT interval '1 2:03:04' hour to second;
+SELECT interval '1 2' minute to second;
+SELECT interval '1 2:03' minute to second;
+SELECT interval '1 2:03:04' minute to second;
+SELECT interval '123 11' day to hour; -- ok
+SELECT interval '123 11' day; -- not ok
+SELECT interval '123 11'; -- not ok, too ambiguous
+
+-- test syntaxes for restricted precision
+SELECT interval(0) '1 day 01:23:45.6789';
+SELECT interval(2) '1 day 01:23:45.6789';
+SELECT interval '12:34.5678' minute to second(2);  -- per SQL spec
+SELECT interval(2) '12:34.5678' minute to second;  -- historical PG
+SELECT interval(2) '12:34.5678' minute to second(2);  -- syntax error
+SELECT interval '1.234' second;
+SELECT interval '1.234' second(2);
+SELECT interval '1 2.345' day to second(2);
+SELECT interval '1 2:03' day to second(2);
+SELECT interval '1 2:03.4567' day to second(2);
+SELECT interval '1 2:03:04.5678' day to second(2);
+SELECT interval '1 2.345' hour to second(2);
+SELECT interval '1 2:03.45678' hour to second(2);
+SELECT interval '1 2:03:04.5678' hour to second(2);
+SELECT interval '1 2.3456' minute to second(2);
+SELECT interval '1 2:03.5678' minute to second(2);
+SELECT interval '1 2:03:04.5678' minute to second(2);
+
+-- test inputting and outputting SQL standard interval literals
+SET IntervalStyle TO sql_standard;
+SELECT  interval '0'                       AS "zero",
+        interval '1-2' year to month       AS "year-month",
+        interval '1 2:03:04' day to second AS "day-time",
+        - interval '1-2'                   AS "negative year-month",
+        - interval '1 2:03:04'             AS "negative day-time";
+
+-- test input of some not-quite-standard interval values in the sql style
+SET IntervalStyle TO postgres;
+SELECT  interval '+1 -1:00:00',
+        interval '-1 +1:00:00',
+        interval '+1-2 -3 +4:05:06.789',
+        interval '-1-2 +3 -4:05:06.789';
+
+-- test output of couple non-standard interval values in the sql style
+SET IntervalStyle TO sql_standard;
+SELECT  interval '1 day -1 hours',
+        interval '-1 days +1 hours',
+        interval '1 years 2 months -3 days 4 hours 5 minutes 6.789 seconds',
+        - interval '1 years 2 months -3 days 4 hours 5 minutes 6.789 seconds';
+
+-- test outputting iso8601 intervals
+SET IntervalStyle to iso_8601;
+select  interval '0'                                AS "zero",
+        interval '1-2'                              AS "a year 2 months",
+        interval '1 2:03:04'                        AS "a bit over a day",
+        interval '2:03:04.45679'                    AS "a bit over 2 hours",
+        (interval '1-2' + interval '3 4:05:06.7')   AS "all fields",
+        (interval '1-2' - interval '3 4:05:06.7')   AS "mixed sign",
+        (- interval '1-2' + interval '3 4:05:06.7') AS "negative";
+
+-- test inputting ISO 8601 4.4.2.1 "Format With Time Unit Designators"
+SET IntervalStyle to sql_standard;
+select  interval 'P0Y'                    AS "zero",
+        interval 'P1Y2M'                  AS "a year 2 months",
+        interval 'P1W'                    AS "a week",
+        interval 'P1DT2H3M4S'             AS "a bit over a day",
+        interval 'P1Y2M3DT4H5M6.7S'       AS "all fields",
+        interval 'P-1Y-2M-3DT-4H-5M-6.7S' AS "negative",
+        interval 'PT-0.1S'                AS "fractional second";
+
+-- test inputting ISO 8601 4.4.2.2 "Alternative Format"
+SET IntervalStyle to postgres;
+select  interval 'P00021015T103020'       AS "ISO8601 Basic Format",
+        interval 'P0002-10-15T10:30:20'   AS "ISO8601 Extended Format";
+
+-- Make sure optional ISO8601 alternative format fields are optional.
+select  interval 'P0002'                  AS "year only",
+        interval 'P0002-10'               AS "year month",
+        interval 'P0002-10-15'            AS "year month day",
+        interval 'P0002T1S'               AS "year only plus time",
+        interval 'P0002-10T1S'            AS "year month plus time",
+        interval 'P0002-10-15T1S'         AS "year month day plus time",
+        interval 'PT10'                   AS "hour only",
+        interval 'PT10:30'                AS "hour minute";
+
+-- test a couple rounding cases that changed since 8.3 w/ HAVE_INT64_TIMESTAMP.
+SET IntervalStyle to postgres_verbose;
+select interval '-10 mons -3 days +03:55:06.70';
+select interval '1 year 2 mons 3 days 04:05:06.699999';
+select interval '0:0:0.7', interval '@ 0.70 secs', interval '0.7 seconds'; 
 
 -- check that '30 days' equals '1 month' according to the hash function
 select '30 days'::interval = '1 month'::interval as t;

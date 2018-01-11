@@ -1248,13 +1248,7 @@ INSERT INTO num_input_test(n1) VALUES ('  -93853');
 INSERT INTO num_input_test(n1) VALUES ('555.50');
 INSERT INTO num_input_test(n1) VALUES ('-555.50');
 INSERT INTO num_input_test(n1) VALUES ('NaN ');
-ERROR:  invalid input syntax for type numeric: "NaN "
-LINE 1: INSERT INTO num_input_test(n1) VALUES ('NaN ');
-                                               ^
 INSERT INTO num_input_test(n1) VALUES ('        nan');
-ERROR:  invalid input syntax for type numeric: "        nan"
-LINE 1: INSERT INTO num_input_test(n1) VALUES ('        nan');
-                                               ^
 -- bad inputs
 INSERT INTO num_input_test(n1) VALUES ('     ');
 ERROR:  invalid input syntax for type numeric: "     "
@@ -1291,10 +1285,93 @@ LINE 1: INSERT INTO num_input_test(n1) VALUES (' N aN ');
 SELECT * FROM num_input_test;
    n1    
 ---------
-  -93853
- -555.50
      123
-  555.50
  3245874
-(5 rows)
+  -93853
+  555.50
+ -555.50
+     NaN
+     NaN
+(7 rows)
+
+--
+-- Test some corner cases for division
+--
+select 999999999999999999999::numeric/1000000000000000000000;
+        ?column?        
+------------------------
+ 1.00000000000000000000
+(1 row)
+
+select div(999999999999999999999::numeric,1000000000000000000000);
+ div 
+-----
+   0
+(1 row)
+
+select mod(999999999999999999999::numeric,1000000000000000000000);
+          mod          
+-----------------------
+ 999999999999999999999
+(1 row)
+
+select div(-9999999999999999999999::numeric,1000000000000000000000);
+ div 
+-----
+  -9
+(1 row)
+
+select mod(-9999999999999999999999::numeric,1000000000000000000000);
+          mod           
+------------------------
+ -999999999999999999999
+(1 row)
+
+select div(-9999999999999999999999::numeric,1000000000000000000000)*1000000000000000000000 + mod(-9999999999999999999999::numeric,1000000000000000000000);
+        ?column?         
+-------------------------
+ -9999999999999999999999
+(1 row)
+
+select mod (70.0,70) ;
+ mod 
+-----
+ 0.0
+(1 row)
+
+select div (70.0,70) ;
+ div 
+-----
+   1
+(1 row)
+
+select 70.0 / 70 ;
+        ?column?        
+------------------------
+ 1.00000000000000000000
+(1 row)
+
+select 12345678901234567890 % 123;
+ ?column? 
+----------
+       78
+(1 row)
+
+select 12345678901234567890 / 123;
+      ?column?      
+--------------------
+ 100371373180768845
+(1 row)
+
+select div(12345678901234567890, 123);
+        div         
+--------------------
+ 100371373180768844
+(1 row)
+
+select div(12345678901234567890, 123) * 123 + 12345678901234567890 % 123;
+       ?column?       
+----------------------
+ 12345678901234567890
+(1 row)
 

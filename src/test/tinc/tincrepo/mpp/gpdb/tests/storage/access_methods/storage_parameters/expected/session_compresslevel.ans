@@ -228,12 +228,6 @@ select attnum, attoptions from pg_attribute_encoding where attrelid='ao_ss_cl_t6
 
 Drop table ao_ss_cl_t6;
 DROP TABLE
--- Create table with invalid value compresslevel=10
-Drop table if exists ao_ss_cl_t4;
-psql:/path/sql_file:1: NOTICE:  table "ao_ss_cl_t4" does not exist, skipping
-DROP TABLE
-Create table ao_ss_cl_t4 ( i int, j int) with(compresslevel=10);
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
 -- Create table with appendonly=false
 Drop table if exists ao_ss_cl_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_cl_t4" does not exist, skipping
@@ -414,9 +408,6 @@ select attnum, attoptions from pg_attribute_encoding where attrelid='ao_ss_cl_t7
 Drop table ao_ss_cl_t7;
 DROP TABLE
 -- ========================
--- Set the session level guc to an invalid value
-SET gp_default_storage_options="appendonly=true, compresslevel=10";
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
 -- Set the sessionlevel guc to compresslevel=1 without appendonly=true
 SET gp_default_storage_options="compresslevel=1";
 SET

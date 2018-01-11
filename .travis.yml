@@ -28,15 +28,18 @@ git:
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
     - libevent-dev
+    - g++-6
 
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
 
 compiler:
-  - gcc
+  - gcc-6
 
 python:
   - "2.7"
@@ -57,18 +60,18 @@ install:
 ## ----------------------------------------------------------------------
 
 env:
-  - APR=apr-1.6.2
-    APR_UTIL=apr-util-1.6.0
-    APR_TAR=${APR}.tar.gz
-    APR_UTIL_TAR=${APR_UTIL}.tar.gz
+  - APR=apr-1.6.3
+    APR_UTIL=apr-util-1.6.1
+    CC=gcc-6
+    CXX=g++-6
 
 before_script:
   - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
   - cd ${TRAVIS_BUILD_DIR}
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL_TAR}
-  - tar xf ${APR_TAR}
-  - tar xf ${APR_UTIL_TAR}
+  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR}.tar.gz
+  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL}.tar.gz
+  - tar xf ${APR}.tar.gz
+  - tar xf ${APR_UTIL}.tar.gz
   - cd ${TRAVIS_BUILD_DIR}/${APR}
   - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools
   - make install
@@ -86,7 +89,7 @@ before_script:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud --enable-pxf
 
   - make
   - make install

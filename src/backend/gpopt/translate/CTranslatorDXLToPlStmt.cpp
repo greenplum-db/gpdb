@@ -411,613 +411,6 @@ CTranslatorDXLToPlStmt::SetParamIds(Plan* pplan)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsFile
-//
-//	@doc:
-//		Segment mapping for tables with LOCATION http:// or file://
-//		These two protocols are very similar in that they enforce a 1-URI:1-segdb
-//		relationship. The only difference between them is that file:// URI must
-//		be assigned to a segdb on a host that is local to that URI.
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsFile
-	(
-	OID oidRel,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	// extract file path and name from URI strings and assign them a primary segdb
-	
-	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
-
-	ListCell *plcLocation = NULL;
-	ForEach (plcLocation, extentry->urilocations)
-	{
-		Value* pvLocation = (Value *)lfirst(plcLocation);
-		CHAR *szUri = pvLocation->val.str;
-		
-		Uri *pUri = gpdb::PuriParseExternalTable(szUri);
-
-		BOOL fCandidateFound = false;
-		BOOL fMatchFound = false;
-
-		// try to find a segment database that can handle this uri
-		for (int i = 0; i < pcdbCompDB->total_segment_dbs && !fMatchFound; i++)
-		{
-			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-			INT iSegInd = pcdbCompDBInfo->segindex;
-			if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-			{
-				if (URI_FILE == pUri->protocol &&
-					0 != gpdb::IStrCmpIgnoreCase(pUri->hostname, pcdbCompDBInfo->hostname) &&
-					0 != gpdb::IStrCmpIgnoreCase(pUri->hostname, pcdbCompDBInfo->address))
-				{
-					continue;
-				}
-
-				fCandidateFound = true;
-				if (NULL == rgszSegFileMap[iSegInd])
-				{
-					rgszSegFileMap[iSegInd] = PStrDup(szUri);
-					fMatchFound = true;
-				}
-			}
-		}
-
-		if (!fMatchFound)
-		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-					GPOS_WSZ_LIT("Could not assign a segment database for external file"));
-		}
-	}	
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsFdist
-//
-//	@doc:
-// 		Segment mapping for tables with LOCATION gpfdist(s):// or custom protocol
-//		The user supplied gpfdist(s):// URIs are duplicated so that there is one
-//		available to every segdb. However, in some cases (as determined by
-//		gp_external_max_segs GUC) we don't want to use *all* segdbs but instead
-//		figure out how many and pick them randomly (for better performance)
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsFdist
-	(
-	OID oidRel,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB,
-	Uri *pUri,
-	const ULONG ulTotalPrimaries
-	)
-{
-	ULONG ulParticipatingSegments = ulTotalPrimaries;
-	ULONG ulMaxParticipants = ulParticipatingSegments;
-	
-	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
-
-	const ULONG ulLocations = gpdb::UlListLength(extentry->urilocations);
-	if (URI_GPFDIST == pUri->protocol || URI_GPFDISTS == pUri->protocol)
-	{
-		ulMaxParticipants = ulLocations * gp_external_max_segs;
-	}
-
-	ULONG ulSkip = 0;
-	BOOL fSkipRandomly = false;
-	if (ulParticipatingSegments > ulMaxParticipants)
-	{
-		ulSkip = ulParticipatingSegments - ulMaxParticipants;
-		ulParticipatingSegments = ulMaxParticipants;
-		fSkipRandomly = true;
-	}
-
-	if (ulLocations > ulParticipatingSegments)
-	{
-		// This should match the same error in createplan.c
-		char msgbuf[200];
-
-		snprintf(msgbuf, sizeof(msgbuf),
-				 "There are more external files (URLs) than primary segments that can read them. Found %d URLs and %d primary segments.",
-				 ulLocations, ulParticipatingSegments);
-
-		GpdbEreport(ERRCODE_INVALID_TABLE_DEFINITION, // errcode
-					   ERROR,
-					   msgbuf, // errmsg
-					   NULL);  // errhint
-	}
-
-	BOOL fDone = false;
-	List *plModifiedLocations = NIL;
-	ULONG ulModifiedLocations = 0;
-	while (!fDone)
-	{
-		ListCell *plcLocation = NULL;
-		ForEach (plcLocation, extentry->urilocations)
-		{
-			Value* pvLocation = (Value *)lfirst(plcLocation);
-			CHAR *szUri = pvLocation->val.str;
-			plModifiedLocations = gpdb::PlAppendElement(plModifiedLocations, gpdb::PvalMakeString(szUri));
-			ulModifiedLocations ++;
-
-			if (ulModifiedLocations == ulParticipatingSegments)
-			{
-				fDone = true;
-				break;
-			}
-
-			if (ulModifiedLocations > ulParticipatingSegments)
-			{
-				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-						GPOS_WSZ_LIT("External scan location list failed building distribution"));
-			}
-		}
-	}
-
-	BOOL *rgfSkipMap = NULL;
-	if (fSkipRandomly)
-	{
-		rgfSkipMap = gpdb::RgfRandomSegMap(ulTotalPrimaries, ulSkip);
-	}
-
-	// assign each URI from the new location list a primary segdb
-	ListCell *plc = NULL;
-	ForEach (plc, plModifiedLocations)
-	{
-		const CHAR *szUri = (CHAR *) strVal(lfirst(plc));
-
-		BOOL fCandidateFound = false;
-		BOOL fMatchFound = false;
-
-		for (int i = 0; i < pcdbCompDB->total_segment_dbs && !fMatchFound; i++)
-		{
-			CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-			INT iSegInd = pcdbCompDBInfo->segindex;
-
-			if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-			{
-				if (fSkipRandomly)
-				{
-					GPOS_ASSERT(iSegInd < (INT) ulTotalPrimaries);
-					if (rgfSkipMap[iSegInd])
-					{
-						continue;
-					}
-				}
-
-				fCandidateFound = true;
-				if (NULL == rgszSegFileMap[iSegInd])
-				{
-					rgszSegFileMap[iSegInd] = PStrDup(szUri);
-					fMatchFound = true;
-				}
-			}
-		}
-
-		if (!fMatchFound)
-		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-					GPOS_WSZ_LIT("Unable to assign segments for gpfdist(s)"));
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecute
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' ON.
-//		In here we don't have URI's. We have a single command string and a
-//		specification of the segdb granularity it should get executed on (the
-//		ON clause). Depending on the ON clause specification we could go many
-//		different ways, for example: assign the command to all segdb, or one
-//		command per host, or assign to 5 random segments, etc...
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecute
-	(
-	OID oidRel,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB,
-	const ULONG ulTotalPrimaries
-	)
-{
-	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
-	CHAR *szCommand = extentry->command;
-	const CHAR *szPrefix = "execute:";
-	
-	StringInfo si = gpdb::SiMakeStringInfo();
-	gpdb::AppendStringInfo(si, szPrefix, szCommand);
-	CHAR *szPrefixedCommand = PStrDup(si->data);
-
-	gpdb::GPDBFree(si->data);
-	gpdb::GPDBFree(si);
-	si = NULL;
-
-	// get the ON clause (execute location) information
-	Value *pvOnClause = (Value *) gpdb::PvListNth(extentry->execlocations, 0);
-	CHAR *szOnClause = pvOnClause->val.str;
-	
-	if (0 == gpos::clib::IStrCmp(szOnClause, "ALL_SEGMENTS"))
-	{
-		MapLocationsExecuteAllSegments(szPrefixedCommand, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (0 == gpos::clib::IStrCmp(szOnClause, "PER_HOST"))
-	{
-		MapLocationsExecutePerHost(szPrefixedCommand, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (0 == gpos::clib::IStrNCmp(szOnClause, "HOST:", gpos::clib::UlStrLen("HOST:")))
-	{
-		CHAR *szHostName = szOnClause + gpos::clib::UlStrLen("HOST:");
-		MapLocationsExecuteOneHost(szHostName, szPrefixedCommand, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (0 == gpos::clib::IStrNCmp(szOnClause, "SEGMENT_ID:", gpos::clib::UlStrLen("SEGMENT_ID:")))
-	{
-		CHAR *pcEnd = NULL;
-		INT iTargetSegInd = (INT) gpos::clib::LStrToL(szOnClause + gpos::clib::UlStrLen("SEGMENT_ID:"), &pcEnd, 10);
-		MapLocationsExecuteOneSegment(iTargetSegInd, szPrefixedCommand, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (0 == gpos::clib::IStrNCmp(szOnClause, "TOTAL_SEGS:", gpos::clib::UlStrLen("TOTAL_SEGS:")))
-	{
-		// total n segments selected randomly
-		CHAR *pcEnd = NULL;
-		ULONG ulSegsToUse = gpos::clib::LStrToL(szOnClause + gpos::clib::UlStrLen("TOTAL_SEGS:"), &pcEnd, 10);
-
-		MapLocationsExecuteRandomSegments(ulSegsToUse, ulTotalPrimaries, szPrefixedCommand, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (0 == gpos::clib::IStrCmp(szOnClause, "MASTER_ONLY"))
-	{
-		rgszSegFileMap[0] = PStrDup(szPrefixedCommand);
-	}
-	else
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-				GPOS_WSZ_LIT("Invalid ON clause"));
-	}
-
-	gpdb::GPDBFree(szPrefixedCommand);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecuteAllSegments
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' on all segments
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecuteAllSegments
-	(
-	CHAR *szPrefixedCommand,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		INT iSegInd = pcdbCompDBInfo->segindex;
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-		{
-			rgszSegFileMap[iSegInd] = PStrDup(szPrefixedCommand);
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecutePerHost
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' per host
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecutePerHost
-	(
-	CHAR *szPrefixedCommand,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	List *plVisitedHosts = NIL;
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		INT iSegInd = pcdbCompDBInfo->segindex;
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-		{
-			BOOL fHostTaken = false;
-			ListCell *plc = NULL;
-			ForEach (plc, plVisitedHosts)
-			{
-				const CHAR *szHostName = (CHAR *) strVal(lfirst(plc));
-				if (0 == gpdb::IStrCmpIgnoreCase(szHostName, pcdbCompDBInfo->hostname))
-				{
-					fHostTaken = true;
-					break;
-				}
-			}
-
-			if (!fHostTaken)
-			{
-				rgszSegFileMap[iSegInd] = PStrDup(szPrefixedCommand);
-				plVisitedHosts = gpdb::PlAppendElement
-										(
-										plVisitedHosts,
-										gpdb::PvalMakeString(PStrDup(pcdbCompDBInfo->hostname))
-										);
-			}
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecuteOneHost
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' on a given host
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecuteOneHost
-	(
-	CHAR *szHostName,
-	CHAR *szPrefixedCommand,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	BOOL fMatchFound = false;
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		INT iSegInd = pcdbCompDBInfo->segindex;
-
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo) &&
-			0 == gpdb::IStrCmpIgnoreCase(szHostName, pcdbCompDBInfo->hostname))
-		{
-			rgszSegFileMap[iSegInd] = PStrDup(szPrefixedCommand);
-			fMatchFound = true;
-		}
-	}
-
-	if (!fMatchFound)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-				GPOS_WSZ_LIT("Could not assign a segment database for given command. No valid primary segment was found in the requested host name."));
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecuteOneSegment
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' on a given segment
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecuteOneSegment
-	(
-	INT iTargetSegInd,
-	CHAR *szPrefixedCommand,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	BOOL fMatchFound = false;
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		INT iSegInd = pcdbCompDBInfo->segindex;
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo) && iSegInd == iTargetSegInd)
-		{
-			rgszSegFileMap[iSegInd] = PStrDup(szPrefixedCommand);
-			fMatchFound = true;
-		}
-	}
-
-	if(!fMatchFound)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-				GPOS_WSZ_LIT("Could not assign a segment database for given command. The requested segment id is not a valid primary segment."));
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsExecuteRandomSegments
-//
-//	@doc:
-// 		Segment mapping for tables with EXECUTE 'cmd' on N random segments
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsExecuteRandomSegments
-	(
-	ULONG ulSegments,
-	const ULONG ulTotalPrimaries,
-	CHAR *szPrefixedCommand,
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB
-	)
-{
-	if (ulSegments > ulTotalPrimaries)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-				GPOS_WSZ_LIT("More segments in table definition than valid primary segments in the database."));
-	}
-
-	ULONG ulSkip = ulTotalPrimaries - ulSegments;
-	BOOL *rgfSkipMap = gpdb::RgfRandomSegMap(ulTotalPrimaries, ulSkip);
-
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		INT iSegInd = pcdbCompDBInfo->segindex;
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-		{
-			GPOS_ASSERT(iSegInd < (INT) ulTotalPrimaries);
-			if (rgfSkipMap[iSegInd])
-			{
-				continue;
-			}
-			rgszSegFileMap[iSegInd] = PStrDup(szPrefixedCommand);
-		}
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::MapLocationsHdfs
-//
-//	@doc:
-// 		Segment mapping for tables with LOCATION gphdfs://
-//		The file chuck division and assignment will be done in the external
-//		Java program. We simply assign the location to all the segdbs.
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorDXLToPlStmt::MapLocationsHdfs
-	(
-	char **rgszSegFileMap,
-	CdbComponentDatabases *pcdbCompDB,
-	CHAR *szFirstUri
-	)
-{
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		rgszSegFileMap[pcdbCompDBInfo->segindex] = PStrDup(szFirstUri);
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::PlExternalScanUriList
-//
-//	@doc:
-//		List of URIs for external scan
-//
-//---------------------------------------------------------------------------
-List*
-CTranslatorDXLToPlStmt::PlExternalScanUriList
-	(
-	OID oidRel
-	)
-{
-	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
-	
-	if (extentry->iswritable)
-	{
-		// This should match the same error in createplan.c
-		GpdbEreport(ERRCODE_WRONG_OBJECT_TYPE, // errcode
-					   ERROR,
-					   "cannot read from a WRITABLE external table", // errmsg
-					   "Create the table as READABLE instead."); // errhint
-	}
-
-	//get the total valid primary segdb count
-	CdbComponentDatabases *pcdbCompDB = gpdb::PcdbComponentDatabases();
-	ULONG ulTotalPrimaries = 0;
-	for (int i = 0; i < pcdbCompDB->total_segment_dbs; i++)
-	{
-		CdbComponentDatabaseInfo *pcdbCompDBInfo = &pcdbCompDB->segment_db_info[i];
-		if (SEGMENT_IS_ACTIVE_PRIMARY(pcdbCompDBInfo))
-		{
-			ulTotalPrimaries++;
-		}
-	}
-
-	char **rgszSegFileMap = NULL;
-    rgszSegFileMap = (char **) gpdb::GPDBAlloc(ulTotalPrimaries * sizeof(char *));
-    gpos::clib::PvMemSet(rgszSegFileMap, 0, ulTotalPrimaries * sizeof(char *));
-
-	// is this an EXECUTE table or a LOCATION (URI) table
-	BOOL fUsingExecute = false;
-	BOOL fUsingLocation = false;
-	const CHAR *szCommand = extentry->command;
-	if (NULL != szCommand)
-	{
-		if (!gp_external_enable_exec)
-		{
-			// This should match the same error in createplan.c
-			GpdbEreport(ERRCODE_GP_FEATURE_NOT_CONFIGURED, // errcode
-						   ERROR,
-						   "Using external tables with OS level commands (EXECUTE clause) is disabled", // errmsg
-						   "To enable set gp_external_enable_exec=on"); // errhint
-		}
-		fUsingExecute = true;
-	}
-	else
-	{
-		fUsingLocation = true;
-	}
-
-	GPOS_ASSERT(0 < gpdb::UlListLength(extentry->urilocations));
-	
-	CHAR *szFirstUri = NULL;
-	Uri *pUri = NULL;
-	if (!fUsingExecute)
-	{
-		szFirstUri = ((Value *) gpdb::PvListNth(extentry->urilocations, 0))->val.str;
-		pUri = gpdb::PuriParseExternalTable(szFirstUri);
-	}
-
-	if (fUsingLocation && (URI_FILE == pUri->protocol || URI_HTTP == pUri->protocol))
-	{
-		MapLocationsFile(oidRel, rgszSegFileMap, pcdbCompDB);
-	}
-	else if (fUsingLocation && (URI_GPFDIST == pUri->protocol || URI_GPFDISTS == pUri->protocol || URI_CUSTOM == pUri->protocol))
-	{
-		MapLocationsFdist(oidRel, rgszSegFileMap, pcdbCompDB, pUri, ulTotalPrimaries);
-	}
-	else if (fUsingExecute)
-	{
-		MapLocationsExecute(oidRel, rgszSegFileMap, pcdbCompDB, ulTotalPrimaries);
-	}
-	else if (fUsingLocation && URI_GPHDFS == pUri->protocol)
-	{
-		MapLocationsHdfs(rgszSegFileMap, pcdbCompDB, szFirstUri);
-	}
-	else
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError, GPOS_WSZ_LIT("Unsupported protocol and/or file location"));
-	}
-
-    // convert array map to a list so it can be serialized as part of the plan
-	List *plFileNames = NIL;
-	for (ULONG ul = 0; ul < ulTotalPrimaries; ul++)
-	{
-		Value *pval = NULL;
-	    if (NULL != rgszSegFileMap[ul])
-	    {
-	    	pval = gpdb::PvalMakeString(rgszSegFileMap[ul]);
-	    }
-	    else
-		{
-			// no file for this segdb. add a null entry
-			pval = MakeNode(Value);
-			pval->type = T_Null;
-		}
-		plFileNames = gpdb::PlAppendElement(plFileNames, pval);
-	}
-
-	return plFileNames;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 //
 //	@doc:
@@ -1055,15 +448,17 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 		const IMDRelationExternal *pmdrelext = dynamic_cast<const IMDRelationExternal*>(pmdrel);
 		OID oidRel = CMDIdGPDB::PmdidConvert(pmdrel->Pmdid())->OidObjectId();
 		ExtTableEntry *pextentry = gpdb::Pexttable(oidRel);
+		bool isMasterOnly;
 		
 		// create external scan node
 		ExternalScan *pes = MakeNode(ExternalScan);
 		pes->scan.scanrelid = iRel;
-		pes->uriList = PlExternalScanUriList(oidRel);
+		pes->uriList = gpdb::PlExternalScanUriList(pextentry, &isMasterOnly);
 		Value *pval = gpdb::PvalMakeString(pextentry->fmtopts);
 		pes->fmtOpts = ListMake1(pval);
 		pes->fmtType = pextentry->fmtcode;
-		pes->isMasterOnly = (IMDRelation::EreldistrMasterOnly == pmdrelext->Ereldistribution());
+		pes->isMasterOnly = isMasterOnly;
+		GPOS_ASSERT((IMDRelation::EreldistrMasterOnly == pmdrelext->Ereldistribution()) == isMasterOnly);
 		pes->rejLimit = pmdrelext->IRejectLimit();
 		pes->rejLimitInRows = pmdrelext->FRejLimitInRows();
 
@@ -1316,8 +711,10 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 
 	pis->indexqual = plIndexConditions;
 	pis->indexqualorig = plIndexOrigConditions;
-	pis->indexstrategy = plIndexStratgey;
-	pis->indexsubtype = plIndexSubtype;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
 
 	return (Plan *) pis;
@@ -1469,14 +866,12 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 		// retrieve index strategy and subtype
 		INT iSN = 0;
 		OID oidIndexSubtype = InvalidOid;
-		BOOL fRecheck = false;
 		
 		OID oidCmpOperator = CTranslatorUtils::OidCmpOperator(pexprIndexCond);
 		GPOS_ASSERT(InvalidOid != oidCmpOperator);
 		OID oidOpFamily = CTranslatorUtils::OidIndexQualOpFamily(iAttno, CMDIdGPDB::PmdidConvert(pmdindex->Pmdid())->OidObjectId());
 		GPOS_ASSERT(InvalidOid != oidOpFamily);
-		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype, &fRecheck);
-		GPOS_ASSERT(!fRecheck);
+		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype);
 		
 		// create index qual
 		pdrgpindexqualinfo->Append(GPOS_NEW(m_pmp) CIndexQualInfo(iAttno, pexprIndexCond, pexprOrigIndexCond, (StrategyNumber) iSN, oidIndexSubtype));
@@ -2826,8 +2221,8 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings
 	)
 {
-	// create a window plan node
-	Window *pwindow = MakeNode(Window);
+	// create a WindowAgg plan node
+	WindowAgg *pwindow = MakeNode(WindowAgg);
 
 	Plan *pplan = &(pwindow->plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
@@ -2867,19 +2262,32 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 		pdxltrctxOut
 		);
 
+	ListCell *plc;
+
+	foreach (plc, pplan->targetlist)
+	{
+		TargetEntry *pte = (TargetEntry *) lfirst(plc);
+		if (IsA(pte->expr, WindowFunc))
+		{
+			WindowFunc *pwinfunc = (WindowFunc *) pte->expr;
+			pwindow->winref = pwinfunc->winref;
+			break;
+		}
+	}
+
 	pplan->lefttree = pplanChild;
 	pplan->nMotionNodes = pplanChild->nMotionNodes;
 
 	// translate partition columns
 	const DrgPul *pdrpulPartCols = pdxlopWindow->PrgpulPartCols();
-	pwindow->numPartCols = pdrpulPartCols->UlLength();
+	pwindow->partNumCols = pdrpulPartCols->UlLength();
 	pwindow->partColIdx = NULL;
 	pwindow->partOperators = NULL;
 
-	if (pwindow->numPartCols > 0)
+	if (pwindow->partNumCols > 0)
 	{
-		pwindow->partColIdx = (AttrNumber *) gpdb::GPDBAlloc(pwindow->numPartCols * sizeof(AttrNumber));
-		pwindow->partOperators = (Oid *) gpdb::GPDBAlloc(pwindow->numPartCols * sizeof(Oid));
+		pwindow->partColIdx = (AttrNumber *) gpdb::GPDBAlloc(pwindow->partNumCols * sizeof(AttrNumber));
+		pwindow->partOperators = (Oid *) gpdb::GPDBAlloc(pwindow->partNumCols * sizeof(Oid));
 	}
 
 	const ULONG ulPartCols = pdrpulPartCols->UlLength();
@@ -2900,30 +2308,137 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	}
 
 	// translate window keys
-	pwindow->windowKeys = NIL;
 	const ULONG ulSize = pdxlopWindow->UlWindowKeys();
-	for (ULONG ul = 0; ul < ulSize; ul++)
-	{
-		WindowKey *pwindowkey = MakeNode(WindowKey);
+	if (ulSize > 1)
+	  {
+	    GpdbEreport(ERRCODE_INTERNAL_ERROR,
+			ERROR,
+			"ORCA produced a plan with more than one window key",
+			NULL);
+	  }
+	GPOS_ASSERT(ulSize <= 1 && "cannot have more than one window key");
 
+	if (ulSize == 1)
+	{
 		// translate the sorting columns used in the window key
-		const CDXLWindowKey *pdxlwindowkey = pdxlopWindow->PdxlWindowKey(ul);
+		const CDXLWindowKey *pdxlwindowkey = pdxlopWindow->PdxlWindowKey(0);
+		const CDXLWindowFrame *pdxlwf = pdxlwindowkey->Pdxlwf();
 		const CDXLNode *pdxlnSortColList = pdxlwindowkey->PdxlnSortColList();
 
 		const ULONG ulNumCols = pdxlnSortColList->UlArity();
-		pwindowkey->numSortCols = ulNumCols;
-		pwindowkey->sortColIdx = (AttrNumber *) gpdb::GPDBAlloc(ulNumCols * sizeof(AttrNumber));
-		pwindowkey->sortOperators = (Oid *) gpdb::GPDBAlloc(ulNumCols * sizeof(Oid));
-		pwindowkey->nullsFirst = (bool *) gpdb::GPDBAlloc(ulNumCols * sizeof(bool));
-		TranslateSortCols(pdxlnSortColList, &dxltrctxChild, pwindowkey->sortColIdx, pwindowkey->sortOperators, pwindowkey->nullsFirst);
+
+		pwindow->ordNumCols = ulNumCols;
+		pwindow->ordColIdx = (AttrNumber *) gpdb::GPDBAlloc(ulNumCols * sizeof(AttrNumber));
+		pwindow->ordOperators = (Oid *) gpdb::GPDBAlloc(ulNumCols * sizeof(Oid));
+		bool *pNullsFirst = (bool *) gpdb::GPDBAlloc(ulNumCols * sizeof(bool));
+		TranslateSortCols(pdxlnSortColList, &dxltrctxChild, pwindow->ordColIdx, pwindow->ordOperators, pNullsFirst);
+
+		// The firstOrder* fields are separate from just picking the first of ordCol*,
+		// because the Postgres planner might omit columns that are redundant with the
+		// PARTITION BY from ordCol*. But ORCA doesn't do that, so we can just copy
+		// the first entry of ordColIdx/ordOperators into firstOrder* fields.
+		if (ulNumCols > 0)
+		{
+			pwindow->firstOrderCol = pwindow->ordColIdx[0];
+			pwindow->firstOrderCmpOperator = pwindow->ordOperators[0];
+			pwindow->firstOrderNullsFirst = pNullsFirst[0];
+		}
+		gpdb::GPDBFree(pNullsFirst);
+
+		// The ordOperators array is actually supposed to contain equality operators,
+		// not ordering operators (< or >). So look up the corresponding equality
+		// operator for each ordering operator.
+		for (ULONG i = 0; i < ulNumCols; i++)
+		{
+			pwindow->ordOperators[i] = gpdb::OidEqualityOpForOrderingOp(pwindow->ordOperators[i], NULL);
+		}
 
 		// translate the window frame specified in the window key
-		pwindowkey->frame = NULL;
 		if (NULL != pdxlwindowkey->Pdxlwf())
 		{
-			pwindowkey->frame = Pwindowframe(pdxlwindowkey->Pdxlwf(), &dxltrctxChild, pdxltrctxOut, pplan);
+			pwindow->frameOptions = FRAMEOPTION_NONDEFAULT;
+			if (EdxlfsRow == pdxlwf->Edxlfs())
+			{
+				pwindow->frameOptions |= FRAMEOPTION_ROWS;
+			}
+			else
+			{
+				pwindow->frameOptions |= FRAMEOPTION_RANGE;
+			}
+
+			if (pdxlwf->Edxlfes() != EdxlfesNulls)
+			{
+				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
+			}
+
+			// translate the CDXLNodes representing the leading and trailing edge
+			DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
+			pdrgpdxltrctx->Append(&dxltrctxChild);
+
+			CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
+			(
+			 m_pmp,
+			 NULL,
+			 pdrgpdxltrctx,
+			 pdxltrctxOut,
+			 m_pctxdxltoplstmt
+			);
+
+			// Translate lead boundary
+			//
+			// Note that we don't distinguish between the delayed and undelayed
+			// versions beoynd this point. Executor will make that decision
+			// without our help.
+			//
+			CDXLNode *pdxlnLead = pdxlwf->PdxlnLeading();
+			EdxlFrameBoundary leadBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnLead->Pdxlop())->Edxlfb();
+			if (leadBoundary == EdxlfbUnboundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
+			if (leadBoundary == EdxlfbBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
+			if (leadBoundary == EdxlfbCurrentRow)
+				pwindow->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
+			if (leadBoundary == EdxlfbBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
+			if (leadBoundary == EdxlfbUnboundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
+			if (leadBoundary == EdxlfbDelayedBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
+			if (leadBoundary == EdxlfbDelayedBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
+			if (0 != pdxlnLead->UlArity())
+			{
+				pwindow->endOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnLead)[0], &mapcidvarplstmt);
+			}
+
+			// And the same for the trail boundary
+			CDXLNode *pdxlnTrail = pdxlwf->PdxlnTrailing();
+			EdxlFrameBoundary trailBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnTrail->Pdxlop())->Edxlfb();
+			if (trailBoundary == EdxlfbUnboundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
+			if (trailBoundary == EdxlfbBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
+			if (trailBoundary == EdxlfbCurrentRow)
+				pwindow->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
+			if (trailBoundary == EdxlfbBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
+			if (trailBoundary == EdxlfbUnboundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
+			if (trailBoundary == EdxlfbDelayedBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
+			if (trailBoundary == EdxlfbDelayedBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
+			if (0 != pdxlnTrail->UlArity())
+			{
+				pwindow->startOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnTrail)[0], &mapcidvarplstmt);
+			}
+
+			// cleanup
+			pdrgpdxltrctx->Release();
 		}
-		pwindow->windowKeys = gpdb::PlAppendElement(pwindow->windowKeys, pwindowkey);
+		else
+			pwindow->frameOptions = FRAMEOPTION_DEFAULTS;
 	}
 
 	SetParamIds(pplan);
@@ -2932,75 +2447,6 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	pdrgpdxltrctx->Release();
 
 	return (Plan *) pwindow;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::Pwindowframe
-//
-//	@doc:
-//		Translate the DXL window frame into GPDB Window frame node
-//
-//---------------------------------------------------------------------------
-WindowFrame *
-CTranslatorDXLToPlStmt::Pwindowframe
-	(
-	const CDXLWindowFrame *pdxlwf,
-	const CDXLTranslateContext *pdxltrctxChild,
-	CDXLTranslateContext *pdxltrctxOut,
-	Plan *pplan
-	)
-{
-	WindowFrame *pwindowframe = MakeNode(WindowFrame);
-
-	if (EdxlfsRow == pdxlwf->Edxlfs())
-	{
-		pwindowframe->is_rows = true;
-	}
-	else
-	{
-		pwindowframe->is_rows = false;
-	}
-	pwindowframe->is_between = true;
-
-	pwindowframe->exclude = CTranslatorUtils::Windowexclusion(pdxlwf->Edxlfes());
-
-	// translate the CDXLNodes representing the leading and trailing edge
-	DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
-	pdrgpdxltrctx->Append(pdxltrctxChild);
-
-	CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
-												(
-												m_pmp,
-												NULL,
-												pdrgpdxltrctx,
-												pdxltrctxOut,
-												m_pctxdxltoplstmt
-												);
-
-	CDXLNode *pdxlnLead = pdxlwf->PdxlnLeading();
-	pwindowframe->lead = MakeNode(WindowFrameEdge);
-	pwindowframe->lead->kind = CTranslatorUtils::Windowboundkind(CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnLead->Pdxlop())->Edxlfb());
-	pwindowframe->lead->val = NULL;
-	if (0 != pdxlnLead->UlArity())
-	{
-		pwindowframe->lead->val = (Node*) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnLead)[0], &mapcidvarplstmt);
-	}
-
-
-	CDXLNode *pdxlnTrail = pdxlwf->PdxlnTrailing();
-	pwindowframe->trail = MakeNode(WindowFrameEdge);
-	pwindowframe->trail->kind = CTranslatorUtils::Windowboundkind(CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnTrail->Pdxlop())->Edxlfb());
-	pwindowframe->trail->val = NULL;
-	if (0 != pdxlnTrail->UlArity())
-	{
-		pwindowframe->trail->val = (Node*) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnTrail)[0], &mapcidvarplstmt);
-	}
-
-	// cleanup
-	pdrgpdxltrctx->Release();
-
-	return pwindowframe;
 }
 
 //---------------------------------------------------------------------------
@@ -4143,19 +3589,19 @@ CTranslatorDXLToPlStmt::PplanDIS
 
 	DynamicIndexScan *pdis = MakeNode(DynamicIndexScan);
 
-	pdis->scan.scanrelid = iRel;
-	pdis->scan.partIndex = pdxlop->UlPartIndexId();
-	pdis->scan.partIndexPrintable = pdxlop->UlPartIndexIdPrintable();
+	pdis->indexscan.scan.scanrelid = iRel;
+	pdis->indexscan.scan.partIndex = pdxlop->UlPartIndexId();
+	pdis->indexscan.scan.partIndexPrintable = pdxlop->UlPartIndexIdPrintable();
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::PmdidConvert(pdxlop->Pdxlid()->Pmdid());
 	const IMDIndex *pmdindex = m_pmda->Pmdindex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
-	pdis->indexid = oidIndex;
+	pdis->indexscan.indexid = oidIndex;
 	pdis->logicalIndexInfo = gpdb::Plgidxinfo(prte->relid, oidIndex);
 
-	Plan *pplan = &(pdis->scan.plan);
+	Plan *pplan = &(pdis->indexscan.scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->nMotionNodes = 0;
 
@@ -4189,7 +3635,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 					pdrgpdxltrctxPrevSiblings
 					);
 
-	pdis->indexorderdir = CTranslatorUtils::Scandirection(pdxlop->EdxlScanDirection());
+	pdis->indexscan.indexorderdir = CTranslatorUtils::Scandirection(pdxlop->EdxlScanDirection());
 
 	// translate index condition list
 	List *plIndexConditions = NIL;
@@ -4214,10 +3660,12 @@ CTranslatorDXLToPlStmt::PplanDIS
 		);
 
 
-	pdis->indexqual = plIndexConditions;
-	pdis->indexqualorig = plIndexOrigConditions;
-	pdis->indexstrategy = plIndexStratgey;
-	pdis->indexsubtype = plIndexSubtype;
+	pdis->indexscan.indexqual = plIndexConditions;
+	pdis->indexscan.indexqualorig = plIndexOrigConditions;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
 
 	return (Plan *) pdis;
@@ -5457,10 +4905,10 @@ CTranslatorDXLToPlStmt::JtFromEdxljt
 			jt = JOIN_RIGHT;
 			break;
 		case EdxljtIn:
-			jt = JOIN_IN;
+			jt = JOIN_SEMI;
 			break;
 		case EdxljtLeftAntiSemijoin:
-			jt = JOIN_LASJ;
+			jt = JOIN_ANTI;
 			break;
 		case EdxljtLeftAntiSemijoinNotIn:
 			jt = JOIN_LASJ_NOTIN;
@@ -5979,7 +5427,8 @@ CTranslatorDXLToPlStmt::PplanBitmapBoolOp
 //		CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 //
 //	@doc:
-//		Translate CDXLScalarBitmapIndexProbe into BitmapIndexScan
+//		Translate CDXLScalarBitmapIndexProbe into a BitmapIndexScan
+//		or a DynamicBitmapIndexScan
 //
 //---------------------------------------------------------------------------
 Plan *
@@ -5997,7 +5446,20 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	CDXLScalarBitmapIndexProbe *pdxlopScalar =
 			CDXLScalarBitmapIndexProbe::PdxlopConvert(pdxlnBitmapIndexProbe->Pdxlop());
 
-	BitmapIndexScan *pbis = MakeNode(BitmapIndexScan);
+	BitmapIndexScan *pbis;
+	DynamicBitmapIndexScan *pdbis;
+
+	if (pdbts->scan.partIndex)
+	{
+		/* It's a Dynamic Bitmap Index Scan */
+		pdbis = MakeNode(DynamicBitmapIndexScan);
+		pbis = &(pdbis->biscan);
+	}
+	else
+	{
+		pdbis = NULL;
+		pbis = MakeNode(BitmapIndexScan);
+	}
 	pbis->scan.scanrelid = pdbts->scan.scanrelid;
 	pbis->scan.partIndex = pdbts->scan.partIndex;
 
@@ -6008,7 +5470,6 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	GPOS_ASSERT(InvalidOid != oidIndex);
 	pbis->indexid = oidIndex;
 	OID oidRel = CMDIdGPDB::PmdidConvert(pdxltabdesc->Pmdid())->OidObjectId();
-	pbis->logicalIndexInfo = gpdb::Plgidxinfo(oidRel, oidIndex);
 	Plan *pplan = &(pbis->scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->nMotionNodes = 0;
@@ -6038,9 +5499,20 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 
 	pbis->indexqual = plIndexConditions;
 	pbis->indexqualorig = plIndexOrigConditions;
-	pbis->indexstrategy = plIndexStratgey;
-	pbis->indexsubtype = plIndexSubtype;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
+
+	/*
+	 * If it's a Dynamic Bitmap Index Scan, also fill in the information
+	 * about the indexes on the partitions.
+	 */
+	if (pdbis)
+	{
+		pdbis->logicalIndexInfo = gpdb::Plgidxinfo(oidRel, oidIndex);
+	}
 
 	return pplan;
 }

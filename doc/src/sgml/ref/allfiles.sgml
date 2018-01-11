@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/allfiles.sgml,v 1.72 2007/08/21 21:08:47 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/allfiles.sgml,v 1.74 2008/12/19 16:25:16 petere Exp $
 PostgreSQL documentation
 Complete list of usable sgml source files in this directory.
 -->
@@ -21,6 +21,7 @@ Complete list of usable sgml source files in this directory.
 <!entity alterResQueue      system "alter_resource_queue.sgml">
 <!entity alterRole          system "alter_role.sgml">
 <!entity alterSchema        system "alter_schema.sgml">
+<!entity alterServer        system "alter_server.sgml">
 <!entity alterSequence      system "alter_sequence.sgml">
 <!entity alterTable         system "alter_table.sgml">
 <!entity alterTableSpace    system "alter_tablespace.sgml">
@@ -31,6 +32,7 @@ Complete list of usable sgml source files in this directory.
 <!entity alterTrigger       system "alter_trigger.sgml">
 <!entity alterType          system "alter_type.sgml">
 <!entity alterUser          system "alter_user.sgml">
+<!entity alterUserMapping   system "alter_user_mapping.sgml">
 <!entity alterView          system "alter_view.sgml">
 <!entity analyze            system "analyze.sgml">
 <!entity begin              system "begin.sgml">

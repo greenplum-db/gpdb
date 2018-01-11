@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dump.sgml,v 1.98.2.2 2008/08/26 00:03:24 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dump.sgml,v 1.113 2009/03/22 16:44:26 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -176,46 +176,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-d</option></term>
-      <term><option>--inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands (rather
-        than <command>COPY</command>).  This will make restoration very slow;
-        it is mainly useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.
-        Also, since this option generates a separate command for each row,
-        an error in reloading a row causes only that row to be lost rather
-        than the entire table contents.
-        Note that
-        the restore might fail altogether if you have rearranged column order.
-        The <option>-D</option> option is safe against column order changes,
-        though even slower.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-D</option></term>
-      <term><option>--column-inserts</option></term>
-      <term><option>--attribute-inserts</option></term>
-      <listitem>
-       <para>
-        Dump data as <command>INSERT</command> commands with explicit
-        column names (<literal>INSERT INTO
-        <replaceable>table</replaceable>
-        (<replaceable>column</replaceable>, ...) VALUES
-        ...</literal>).  This will make restoration very slow; it is mainly
-        useful for making dumps that can be loaded into
-        non-<productname>PostgreSQL</productname> databases.
-        Also, since this option generates a separate command for each row,
-        an error in reloading a row causes only that row to be lost rather
-        than the entire table contents.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>-E <replaceable class="parameter">encoding</replaceable></option></term>
       <term><option>--encoding=<replaceable class="parameter">encoding</replaceable></option></term>
       <listitem>
@@ -296,9 +256,8 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-        This option has been deprecated.
+        A deprecated option that is now ignored.
        </para>
-
       </listitem>
      </varlistentry>
 
@@ -526,14 +485,81 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>-Z <replaceable class="parameter">0..9</replaceable></option></term>
+      <term><option>--compress=<replaceable class="parameter">0..9</replaceable></option></term>
+      <listitem>
+       <para>
+        Specify the compression level to use.  Zero means no compression.
+        For the custom archive format, this specifies compression of
+        individual table-data segments, and the default is to compress
+        at a moderate level.
+        For plain text output, setting a nonzero compression level causes
+        the entire output file to be compressed, as though it had been
+        fed through <application>gzip</>; but the default is not to compress.
+        The tar archive format currently does not support compression at all.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--binary-upgrade</option></term>
+      <listitem>
+       <para>
+        This option is for use by in-place upgrade utilities.  Its use
+        for other purposes is not recommended or supported.  The
+        behavior of the option may change in future releases without
+        notice.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands (rather
+        than <command>COPY</command>).  This will make restoration very slow;
+        it is mainly useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.
+        Also, since this option generates a separate command for each row,
+        an error in reloading a row causes only that row to be lost rather
+        than the entire table contents.
+        Note that
+        the restore might fail altogether if you have rearranged column order.
+        The <option>--column-inserts</option> option is safe against column
+        order changes, though even slower.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--column-inserts</option></term>
+      <term><option>--attribute-inserts</option></term>
+      <listitem>
+       <para>
+        Dump data as <command>INSERT</command> commands with explicit
+        column names (<literal>INSERT INTO
+        <replaceable>table</replaceable>
+        (<replaceable>column</replaceable>, ...) VALUES
+        ...</literal>).  This will make restoration very slow; it is mainly
+        useful for making dumps that can be loaded into
+        non-<productname>PostgreSQL</productname> databases.
+        Also, since this option generates a separate command for each row,
+        an error in reloading a row causes only that row to be lost rather
+        than the entire table contents.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--disable-dollar-quoting</></term>
       <listitem>
        <para>
         This option disables the use of dollar quoting for function bodies,
         and forces them to be quoted using SQL standard string syntax.
        </para>
-     </listitem>
-    </varlistentry>
+      </listitem>
+     </varlistentry>
 
      <varlistentry>
       <term><option>--disable-triggers</></term>
@@ -552,6 +578,39 @@ PostgreSQL documentation
         must be done as superuser.  So, you should also specify
         a superuser name with <option>-S</>, or preferably be careful to
         start the resulting script as a superuser.
+       </para>
+
+       <para>
+        This option is only meaningful for the plain-text format.  For
+        the archive formats, you can specify the option when you
+        call <command>pg_restore</command>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--lock-wait-timeout=<replaceable class="parameter">timeout</replaceable></option></term>
+      <listitem>
+       <para>
+        Do not wait forever to acquire shared table locks at the beginning of
+        the dump. Instead fail if unable to lock a table within the specified
+        <replaceable class="parameter">timeout</>. The timeout may be
+        specified in any of the formats accepted by <command>SET
+        statement_timeout</>.  (Allowed values vary depending on the server
+        version you are dumping from, but an integer number of milliseconds
+        is accepted by all versions since 7.3.  This option is ignored when
+        dumping from a pre-7.3 server.)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--no-tablespaces</option></term>
+      <listitem>
+       <para>
+        Do not output commands to select tablespaces.
+        With this option, all objects will be created in whichever
+        tablespace is the default during restore.
        </para>
 
        <para>
@@ -638,12 +697,27 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>-w</></term>
+      <term><option>--no-password</></term>
+      <listitem>
+       <para>
+        Never issue a password prompt.  If the server requires
+        password authentication and a password is not available by
+        other means such as a <filename>.pgpass</filename> file, the
+        connection attempt will fail.  This option can be useful in
+        batch jobs and scripts where no user is present to enter a
+        password.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>-W</option></term>
       <term><option>--password</option></term>
       <listitem>
        <para>
         Force <application>pg_dump</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>
@@ -654,6 +728,23 @@ PostgreSQL documentation
         connection attempt finding out that the server wants a password.
         In some cases it is worth typing <option>-W</> to avoid the extra
         connection attempt.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--role=<replaceable class="parameter">rolename</replaceable></option></term>
+      <listitem>
+       <para>
+        Specifies a role name to be used to create the dump.
+        This option causes <application>pg_dump</> to issue a
+        <command>SET ROLE</> <replaceable class="parameter">rolename</>
+        command after connecting to the database. It is useful when the
+        authenticated user (specified by <option>-U</>) lacks privileges
+        needed by <application>pg_dump</>, but can switch to a role with
+        the required rights.  Some installations have a policy against
+        logging in directly as a superuser, and use of this option allows
+        dumps to be made without violating the policy.
        </para>
       </listitem>
      </varlistentry>
@@ -668,14 +759,16 @@ PostgreSQL documentation
    <varlistentry>
     <term><envar>PGDATABASE</envar></term>
     <term><envar>PGHOST</envar></term>
+    <term><envar>PGOPTIONS</envar></term>
     <term><envar>PGPORT</envar></term>
-    <term><envar>PGUSER</envar></term>
 
+    <term><envar>PGUSER</envar></term>
     <listitem>
      <para>
       Default connection parameters.
      </para>
     </listitem>
+
    </varlistentry>
   </variablelist>
 
@@ -699,6 +792,15 @@ PostgreSQL documentation
    variables used by the <application>libpq</application> front-end
    library will apply.
   </para>
+
+  <para>
+   The database activity of <application>pg_dump</application> is
+   normally collected by the statistics collector.  If this is
+   undesirable, you can set parameter <literal>track_counts</literal>
+   to false via <envar>PGOPTIONS</envar> or the <literal>ALTER
+   USER</literal> command.
+  </para>
+
  </refsect1>
 
 
@@ -718,11 +820,10 @@ CREATE DATABASE foo WITH TEMPLATE template0;
   </para>
 
   <para>
-   <application>pg_dump</application> has a limitation; when a
-   data-only dump is chosen and the option <option>--disable-triggers</>
+   When a data-only dump is chosen and the option <option>--disable-triggers</>
    is used, <application>pg_dump</application> emits commands
-   to disable triggers on user tables before inserting the data
-   and commands to re-enable them after the data has been
+   to disable triggers on user tables before inserting the data,
+   and then commands to re-enable them after the data has been
    inserted.  If the restore is stopped in the middle, the system
    catalogs might be left in the wrong state.
   </para>
@@ -750,12 +851,19 @@ CREATE DATABASE foo WITH TEMPLATE template0;
   <para>
    Because <application>pg_dump</application> is used to transfer data
    to newer versions of <productname>PostgreSQL</>, the output of
-   <application>pg_dump</application> can be loaded into
-   newer <productname>PostgreSQL</> databases.  It also can read older
-   <productname>PostgreSQL</> databases.  However, it usually cannot
-   read newer <productname>PostgreSQL</> databases or produce dump output
-   that can be loaded into older database versions.  To do this, manual
-   editing of the dump file might be required.
+   <application>pg_dump</application> can be expected to load into
+   <productname>PostgreSQL</> server versions newer than
+   <application>pg_dump</>'s version.  <application>pg_dump</> can also
+   dump from <productname>PostgreSQL</> servers older than its own version.
+   (Currently, servers back to version 7.0 are supported.)
+   However, <application>pg_dump</> cannot dump from
+   <productname>PostgreSQL</> servers newer than its own major version;
+   it will refuse to even try, rather than risk making an invalid dump.
+   Also, it is not guaranteed that <application>pg_dump</>'s output can
+   be loaded into a server of an older major version &mdash; not even if the
+   dump was taken from a server of that version.  Loading a dump file
+   into an older server may require manual editing of the dump file
+   to remove syntax not understood by the older server.
   </para>
 
   <para>

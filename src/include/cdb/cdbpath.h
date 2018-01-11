@@ -3,7 +3,12 @@
  * cdbpath.h
  *
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbpath.h
  *
  *-------------------------------------------------------------------------
  */
@@ -35,6 +40,9 @@ cdbpath_motion_for_join(PlannerInfo    *root,
 
 void 
 cdbpath_dedup_fixup(PlannerInfo *root, Path *path);
+
+bool
+cdbpath_contains_wts(Path *path);
 
 /*
  * cdbpath_rows

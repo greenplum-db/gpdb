@@ -19,6 +19,7 @@
 
 #include "miscadmin.h"
 #include "access/genam.h"
+#include "access/xact.h"
 #include "access/xlog_internal.h"		/* for pg_start/stop_backup */
 #include "cdb/cdbvars.h"
 #include "catalog/catalog.h"
@@ -37,6 +38,7 @@
 #include "replication/walsender_private.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
@@ -44,6 +46,7 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
+#include "utils/snapmgr.h"
 
 typedef struct
 {

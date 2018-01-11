@@ -3,7 +3,12 @@
  * nodeDML.c
  *	  Implementation of nodeDML.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeDML.c
  *
  *-------------------------------------------------------------------------
  */
@@ -192,8 +197,6 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	        dmlstate->ps.cdbexplainfun = ExecDMLExplainEnd;
 	}
 
-	initGpmonPktForDML((Plan *)node, &dmlstate->ps.gpmon_pkt, estate);
-	
 	return dmlstate;
 }
 
@@ -216,15 +219,6 @@ int
 ExecCountSlotsDML(DML *node)
 {
 	return ExecCountSlotsNode(outerPlan(node)) + DML_NSLOTS;
-}
-
-/* Tracing execution for GP Monitor. */
-void
-initGpmonPktForDML(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, DML));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /* EOF */

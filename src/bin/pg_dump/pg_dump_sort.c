@@ -4,12 +4,12 @@
  *	  Sort the items of a dump into a safe order for dumping
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.20.2.1 2009/01/18 20:44:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.25 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,8 +23,8 @@ static const char *modulename = gettext_noop("sorter");
  * Objects are sorted by priority levels, and within an equal priority level
  * by OID.	(This is a relatively crude hack to provide semi-reasonable
  * behavior for old databases without full dependency info.)  Note: text
- * search objects can't really happen here, so the rather bogus priorities
- * for them don't matter.
+ * search and foreign-data objects can't really happen here, so the rather
+ * bogus priorities for them don't matter.
  */
 static const int oldObjectTypePriority[] =
 {
@@ -53,9 +53,12 @@ static const int oldObjectTypePriority[] =
 	4,							/* DO_TSDICT */
 	3,							/* DO_TSTEMPLATE */
 	5,							/* DO_TSCONFIG */
+	3,							/* DO_FDW */
+	4,							/* DO_FOREIGN_SERVER */
 	10,							/* DO_BLOBS */
 	11,							/* DO_BLOB_COMMENTS */
 	3,							/* DO_EXTPROTOCOL */
+	/* GPDB_84_MERGE_FIXME: missing DO_TYPE_STORAGE_OPTIONS? */
 };
 
 /*
@@ -74,25 +77,28 @@ static const int newObjectTypePriority[] =
 	7,							/* DO_OPCLASS */
 	7,							/* DO_OPFAMILY */
 	9,							/* DO_CONVERSION */
-	14,							/* DO_TABLE */
-	16,							/* DO_ATTRDEF */
-	21,							/* DO_INDEX */
-	22,							/* DO_RULE */
-	23,							/* DO_TRIGGER */
-	20,							/* DO_CONSTRAINT */
-	24,							/* DO_FK_CONSTRAINT */
+	16,							/* DO_TABLE */
+	18,							/* DO_ATTRDEF */
+	23,							/* DO_INDEX */
+	24,							/* DO_RULE */
+	25,							/* DO_TRIGGER */
+	22,							/* DO_CONSTRAINT */
+	26,							/* DO_FK_CONSTRAINT */
 	2,							/* DO_PROCLANG */
 	8,							/* DO_CAST */
-	8,							/* DO_EXTPROTOCOL */
-	17,							/* DO_TABLE_DATA */
-	15,							/* DO_DUMMY_TYPE */
+	19,							/* DO_TABLE_DATA */
+	17,							/* DO_DUMMY_TYPE */
 	10,							/* DO_TSPARSER */
 	12,							/* DO_TSDICT */
 	11,							/* DO_TSTEMPLATE */
 	13,							/* DO_TSCONFIG */
-	18,							/* DO_BLOBS */
-	19,							/* DO_BLOB_COMMENTS */
-	19							/* DO_TYPE_STORAGE_OPTIONS */
+	14,							/* DO_FDW */
+	15,							/* DO_FOREIGN_SERVER */
+	20,							/* DO_BLOBS */
+	21,							/* DO_BLOB_COMMENTS */
+	/* GPDB_84_MERGE_FIXME: Are these priorities sensible? */
+	8,							/* DO_EXTPROTOCOL */
+	22							/* DO_TYPE_STORAGE_OPTIONS */
 };
 
 
@@ -953,6 +959,30 @@ repairDependencyLoop(DumpableObject **loop,
 	}
 
 	/*
+	 * If all the objects are TABLE_DATA items, what we must have is a
+	 * circular set of foreign key constraints (or a single self-referential
+	 * table).	Print an appropriate complaint and break the loop arbitrarily.
+	 */
+	for (i = 0; i < nLoop; i++)
+	{
+		if (loop[i]->objType != DO_TABLE_DATA)
+			break;
+	}
+	if (i >= nLoop)
+	{
+		write_msg(NULL, "NOTICE: there are circular foreign-key constraints among these table(s):\n");
+		for (i = 0; i < nLoop; i++)
+			write_msg(NULL, "  %s\n", loop[i]->name);
+		write_msg(NULL, "You may not be able to restore the dump without using --disable-triggers or temporarily dropping the constraints.\n");
+		write_msg(NULL, "Consider using a full dump instead of a --data-only dump to avoid this problem.\n");
+		if (nLoop > 1)
+			removeObjectDependency(loop[0], loop[1]->dumpId);
+		else	/* must be a self-dependency */
+			removeObjectDependency(loop[0], loop[0]->dumpId);
+		return;
+	}
+
+	/*
 	 * If we can't find a principled way to break the loop, complain and break
 	 * it in an arbitrary fashion.
 	 */
@@ -964,7 +994,11 @@ repairDependencyLoop(DumpableObject **loop,
 		describeDumpableObject(loop[i], buf, sizeof(buf));
 		write_msg(modulename, "  %s\n", buf);
 	}
-	removeObjectDependency(loop[0], loop[1]->dumpId);
+
+	if (nLoop > 1)
+		removeObjectDependency(loop[0], loop[1]->dumpId);
+	else	/* must be a self-dependency */
+		removeObjectDependency(loop[0], loop[0]->dumpId);
 }
 
 /*
@@ -1116,6 +1150,16 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 					 "TEXT SEARCH CONFIGURATION %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
+		case DO_FDW:
+			snprintf(buf, bufsize,
+					 "FOREIGN DATA WRAPPER %s  (ID %d OID %u)",
+					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
+		case DO_FOREIGN_SERVER:
+			snprintf(buf, bufsize,
+					 "FOREIGN SERVER %s  (ID %d OID %u)",
+					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
 		case DO_BLOBS:
 			snprintf(buf, bufsize,
 					 "BLOBS  (ID %d)",
@@ -1125,8 +1169,6 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 			snprintf(buf, bufsize,
 					 "BLOB COMMENTS  (ID %d)",
 					 obj->dumpId);
-			return;
-		case DO_TYPE_CACHE:
 			return;
 	}
 	/* shouldn't get here */

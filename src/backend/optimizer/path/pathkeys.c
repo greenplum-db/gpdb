@@ -8,11 +8,12 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/pathkeys.c,v 1.93.2.1 2009/07/17 23:20:15 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/pathkeys.c,v 1.97 2009/02/28 03:51:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +22,7 @@
 #include "access/skey.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "nodes/plannodes.h"
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
@@ -30,8 +32,7 @@
 #include "optimizer/var.h"
 #include "optimizer/restrictinfo.h"
 #include "parser/parsetree.h"
-#include "parser/parse_expr.h"
-#include "parser/parse_oper.h"	/* for compatible_oper_opid() */
+#include "parser/parse_oper.h" /* for compatible_oper_opid() */
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbpullup.h"		/* cdbpullup_expr(), cdbpullup_make_var() */
@@ -185,6 +186,8 @@ gen_implied_qual(PlannerInfo *root,
 								  required_relids,
 								  old_rinfo->nullable_relids,
 								  old_rinfo->ojscope_relids);
+	check_mergejoinable(new_rinfo);
+	check_hashjoinable(new_rinfo);
 
 	/*
 	 * If it's a join clause (either naturally, or because delayed by
@@ -194,7 +197,9 @@ gen_implied_qual(PlannerInfo *root,
 	 */
 	if (bms_membership(new_qualscope) == BMS_MULTIPLE)
 	{
-		List	   *vars = pull_var_clause(new_clause, false);
+		List	   *vars = pull_var_clause(new_clause,
+										   PVC_RECURSE_AGGREGATES,
+										   PVC_INCLUDE_PLACEHOLDERS);
 
 		add_vars_to_targetlist(root, vars, required_relids);
 		list_free(vars);
@@ -468,8 +473,8 @@ canonicalize_pathkeys(PlannerInfo *root, List *pathkeys)
  *	  a PathKey.  If canonicalize = true, the result is a "canonical"
  *	  PathKey, otherwise not.  (But note it might be redundant anyway.)
  *
- * If the PathKey is being generated from a SortClause, sortref should be
- * the SortClause's SortGroupRef; otherwise zero.
+ * If the PathKey is being generated from a SortGroupClause, sortref should be
+ * the SortGroupClause's SortGroupRef; otherwise zero.
  *
  * canonicalize should always be TRUE after EquivalenceClass merging has
  * been performed, but FALSE if we haven't done EquivalenceClass merging yet.
@@ -573,6 +578,14 @@ compare_pathkeys(List *keys1, List *keys2)
 	ListCell   *key1,
 			   *key2;
 
+	/*
+	 * Fall out quickly if we are passed two identical lists.  This mostly
+	 * catches the case where both are NIL, but that's common enough to
+	 * warrant the test.
+	 */
+	if (keys1 == keys2)
+		return PATHKEYS_EQUAL;
+
 	forboth(key1, keys1, key2, keys2)
 	{
 		PathKey    *pathkey1 = (PathKey *) lfirst(key1);
@@ -595,11 +608,11 @@ compare_pathkeys(List *keys1, List *keys2)
 	 * If we reached the end of only one list, the other is longer and
 	 * therefore not a subset.
 	 */
-	if (key1 == NULL && key2 == NULL)
-		return PATHKEYS_EQUAL;
 	if (key1 != NULL)
 		return PATHKEYS_BETTER1;	/* key1 is longer */
-	return PATHKEYS_BETTER2;	/* key2 is longer */
+	if (key2 != NULL)
+		return PATHKEYS_BETTER2;	/* key2 is longer */
+	return PATHKEYS_EQUAL;
 }
 
 /*
@@ -1233,7 +1246,7 @@ cdb_pull_up_pathkey(PlannerInfo *root,
 /*
  * make_pathkeys_for_sortclauses
  *		Generate a pathkeys list that represents the sort order specified
- *		by a list of SortClauses (GroupClauses will work too!)
+ *		by a list of SortGroupClauses
  *
  * If canonicalize is TRUE, the resulting PathKeys are all in canonical form;
  * otherwise not.  canonicalize should always be TRUE after EquivalenceClass
@@ -1242,7 +1255,7 @@ cdb_pull_up_pathkey(PlannerInfo *root,
  * be able to represent requested pathkeys before the equivalence classes have
  * been created for the query.)
  *
- * 'sortclauses' is a list of SortClause or GroupClause nodes
+ * 'sortclauses' is a list of SortGroupClause nodes
  * 'tlist' is the targetlist to find the referenced tlist entries in
  */
 List *
@@ -1256,11 +1269,12 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
 
 	foreach(l, sortclauses)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(l);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(l);
 		Expr	   *sortkey;
 		PathKey    *pathkey;
 
 		sortkey = (Expr *) get_sortgroupclause_expr(sortcl, tlist);
+		Assert(OidIsValid(sortcl->sortop));
 		pathkey = make_pathkey_from_sortinfo(root,
 											 sortkey,
 											 sortcl->sortop,
@@ -1312,17 +1326,16 @@ make_pathkeys_for_groupclause(PlannerInfo *root,
 		if (node == NULL)
 			continue;
 
-		if (IsA(node, GroupClause))
+		if (IsA(node, SortGroupClause))
 		{
-			GroupClause *gc = (GroupClause *) node;
+			SortGroupClause *gc = (SortGroupClause *) node;
 
 			sortkey = (Expr *) get_sortgroupclause_expr(gc, tlist);
 			pathkey = make_pathkey_from_sortinfo(root, sortkey, gc->sortop, gc->nulls_first, false, 0);
 
 			/*
-			 * Similar to SortClauses, the pathkey becomes a one-elment
-			 * sublist. canonicalize_pathkeys() might replace it with a longer
-			 * sublist later.
+			 * The pathkey becomes a one-element sublist. canonicalize_pathkeys() might
+			 * replace it with a longer sublist later.
 			 */
 			pathkeys = lappend(pathkeys, pathkey);
 		}

@@ -1,9 +1,0 @@
-platform: linux
-image_resource:
-  type: docker-image
-inputs:
-  - name: gpdb_src
-run:
-  path: gpdb_src/concourse/scripts/validate_pipeline_release_jobs.py
-params:
-  PIPELINE_FILE: gpdb_src/concourse/pipelines/pipeline.yml

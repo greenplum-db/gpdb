@@ -1,3 +1,10 @@
+/*
+ * $PostgreSQL: pgsql/contrib/intarray/_int_tool.c,v 1.12 2009/06/11 14:48:51 momjian Exp $
+ */
+#include "postgres.h"
+
+#include "catalog/pg_type.h"
+
 #include "_int.h"
 
 

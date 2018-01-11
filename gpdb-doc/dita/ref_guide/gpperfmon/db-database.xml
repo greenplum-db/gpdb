@@ -61,7 +61,8 @@
                      <codeph>queries_queued</codeph>
                   </entry>
                   <entry>int</entry>
-                  <entry>The number of queries waiting in a resource queue at data collection
+                  <entry>The number of queries waiting in a resource group or resource queue,
+                     depending upon which resource management scheme is active, at data collection
                      time.</entry>
                </row>
             </tbody>

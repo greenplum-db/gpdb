@@ -1605,7 +1605,6 @@ If you want to review or change any of your installation settings, click Back. C
                       <File Id="date.h" Name="date.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\date.h" />
                       <File Id="datetime.h_1" Name="datetime.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\datetime.h" />
                       <File Id="datum.h" Name="datum.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\datum.h" />
-                      <File Id="debugbreak.h" Name="debugbreak.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\debugbreak.h" />
                       <File Id="debugutils.h" Name="debugutils.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\debugutils.h" />
                       <File Id="dynahash.h" Name="dynahash.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\dynahash.h" />
                       <File Id="dynamic_loader.h" Name="dynamic_loader.h" Source="$(var.SRCDIR)\include\postgresql\server\utils\dynamic_loader.h" />

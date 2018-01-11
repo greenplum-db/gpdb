@@ -1,14 +1,16 @@
 /*-------------------------------------------------------------------------
  *
  * appendonlywriter.h
- *	  Definitions for appendonlywriter.h
+ *	  Definitions for appendonlywriter.c
  *
- *
- * Copyright (c) 2006-2008, Greenplum inc.
+ * Portions Copyright (c) 2006-2008, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL$
+ *
+ * IDENTIFICATION
+ *	    src/include/access/appendonlywriter.h
  *
  *-------------------------------------------------------------------------
  */
@@ -31,11 +33,11 @@
  * This segfile number may only be used for special case write operations.
  * These include operations that bypass the qd -OR- that need not worry about
  * concurrency. Currently these are:
- * 
+ *
  *   - UTILITY mode operations, for example, gp_restore.
  *   - Table rewrites that are sometimes done as a part of ALTER TABLE.
  *   - CTAS, which runs on an exclusively locked destination table.
- *   
+ *
  * Note that in some cases (such as CTAS) the aoseg table on the QD will not
  * be updated for segment entry 0 after the operation completes. This is ok
  * as the concurrency module never cares about the RESERVED segno anyway. When
@@ -55,7 +57,7 @@ extern int	MaxAppendOnlyTables;	/* Max # of concurrently used AO rels */
  * ---------------------------------------------------------------------
  *   |     |        |          | Default initial state
  * ---------------------------------------------------------------------
- *   |     |        |    x     | Initial state if the last compaction drop 
+ *   |     |        |    x     | Initial state if the last compaction drop
  *   |     |        |          | transaction on the segment file was aborted.
  *   |     |        |          | The segment file should not be used for inserts.
  * ---------------------------------------------------------------------
@@ -77,7 +79,7 @@ extern int	MaxAppendOnlyTables;	/* Max # of concurrently used AO rels */
  * ---------------------------------------------------------------------
  *   |     |    x   |          | INVALID STATE
  * ---------------------------------------------------------------------
- *  
+ *
  * Awaiting drop means: if true - the segment file is awaiting
  * drop in at least one of the segment
  * nodes. The segment file should not
@@ -116,16 +118,16 @@ typedef enum AOSegfileState
 
 /*
  * Describes the status of a particular file segment number accross an entire
- * AO relation. 
+ * AO relation.
  *
  * This information is kept in a hash table and kept up to date. It represents
  * the global status of this segment number accross the whole array, for example
  * 'tupcount' for segno #4 will show the total rows in all file segments with
- * number 4 for this specific table. 
- * 
- * This data structure is accessible by the master node and it is used to make 
- * decisions regarding file segment allocations for data writes. Note that it 
- * is not used for reads. Durind reads each segdb scanner reads its local 
+ * number 4 for this specific table.
+ *
+ * This data structure is accessible by the master node and it is used to make
+ * decisions regarding file segment allocations for data writes. Note that it
+ * is not used for reads. Durind reads each segdb scanner reads its local
  * catalog.
  *
  * Note that 'isfull' tries to guess if any of the file segments is full. Since
@@ -136,71 +138,71 @@ typedef enum AOSegfileState
  */
 typedef struct AOSegfileStatus
 {
-	/* 
-	 * Total tupcount for this segno across 
-	 * all segdbs. This includes invisible tuples
+	/*
+	 * Total tupcount for this segno across all segdbs. This includes
+	 * invisible tuples
 	 */
-	int64			total_tupcount; 
-	
-	/* 
-	 * Num tuples added in this segno across  
-	 * all segdbs in the current transaction
+	int64		total_tupcount;
+
+	/*
+	 * Num tuples added in this segno across  all segdbs in the current
+	 * transaction
 	 */
-	int64			tupsadded;		
-	
-	/* 
-	 * the inserting transaction id 		  
+	int64		tupsadded;
+
+	/*
+	 * the inserting transaction id
 	 */
-	TransactionId	xid;	   	
-	
-	/* 
-	 * the latest committed inserting
-	 * transaction id
+	TransactionId xid;
+
+	/*
+	 * the latest committed inserting transaction id
 	 */
 	DistributedTransactionId latestWriteXid;
 
 	AOSegfileState state;
 
-	int16			formatversion;
+	int16		formatversion;
 
-	/* if true - never insert into this segno anymore */ 	
-	bool			isfull;	   	
-	
+	/* if true - never insert into this segno anymore */
+	bool		isfull;
+
 
 	/*
-	 * Flag to indicate if the current transaction has been aborted.
-	 * It is set by AtAbort_AppendOnly to ensure the correct state
-	 * transition in AtEOXact_AppendOnly_Relation. Outside
-	 * this transition, the value is false.
+	 * Flag to indicate if the current transaction has been aborted. It is set
+	 * by AtAbort_AppendOnly to ensure the correct state transition in
+	 * AtEOXact_AppendOnly_Relation. Outside this transition, the value is
+	 * false.
 	 */
-	bool            aborted;
+	bool		aborted;
 } AOSegfileStatus;
 
 /*
  * Describes the status of all file segments of an AO relation in the system.
- * This data structure is kept in a hash table on the master and kept up to 
+ * This data structure is kept in a hash table on the master and kept up to
  * date.
- * 
+ *
  * 'relid' stands for the AO relation this entry serves.
  * 'txns_using_rel' stands for the number of transactions that are currently
- * inserting into this relation. if equals zero it is safe to remove this 
+ * inserting into this relation. if equals zero it is safe to remove this
  * entry from the hash table (when needed).
  */
 typedef struct AORelHashEntryData
 {
-	Oid				relid;
-	int				txns_using_rel;
+	Oid			relid;
+	int			txns_using_rel;
 	AOSegfileStatus relsegfiles[MAX_AOREL_CONCURRENCY];
-	
+
 } AORelHashEntryData;
-typedef AORelHashEntryData	*AORelHashEntry;
+typedef AORelHashEntryData *AORelHashEntry;
 
 
 typedef struct AppendOnlyWriterData
 {
-	int		num_existing_aorels; /* Current # of recorded entries for AO relations */
+	int			num_existing_aorels;	/* Current # of recorded entries for
+										 * AO relations */
 } AppendOnlyWriterData;
-extern AppendOnlyWriterData	*AppendOnlyWriter;
+extern AppendOnlyWriterData *AppendOnlyWriter;
 
 /*
  * functions in appendonlywriter.c
@@ -208,28 +210,25 @@ extern AppendOnlyWriterData	*AppendOnlyWriter;
 extern Size AppendOnlyWriterShmemSize(void);
 extern void InitAppendOnlyWriter(void);
 extern Size AppendOnlyWriterShmemSize(void);
-extern int  SetSegnoForWrite(Relation rel, int existingsegno);
+extern int	SetSegnoForWrite(Relation rel, int existingsegno);
 extern void RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList);
 extern void DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList);
 extern List *SetSegnoForCompaction(Relation rel, List *compactedSegmentFileList,
-		List *insertedSegmentFileList, bool *isdrop);
+					  List *insertedSegmentFileList, bool *isdrop);
 extern int SetSegnoForCompactionInsert(Relation rel, List *compacted_segno,
-		List *compactedSegmentFileList,
-		List *insertedSegmentFileList);
+							List *compactedSegmentFileList,
+							List *insertedSegmentFileList);
 extern List *assignPerRelSegno(List *all_rels);
 extern void UpdateMasterAosegTotals(Relation parentrel,
-									int segno, 
-									int64 tupcount,
+						int segno,
+						int64 tupcount,
+						int64 modcount_added);
+extern void UpdateMasterAosegTotalsFromSegments(Relation parentrel,
+									Snapshot appendOnlyMetaDataSnapshot, List *segmentNumList,
 									int64 modcount_added);
-extern void UpdateMasterAosegTotalsFromSegments(Relation parentrel, 
-		Snapshot appendOnlyMetaDataSnapshot, List *segmentNumList,
-		int64 modcount_added);
 extern bool AORelRemoveHashEntry(Oid relid);
 extern void AtCommit_AppendOnly(void);
 extern void AtAbort_AppendOnly(void);
 extern void AtEOXact_AppendOnly(void);
 
-extern void ValidateAppendOnlyMetaDataSnapshot(
-	Snapshot *appendOnlyMetaDataSnapshot);
-
-#endif  /* APPENDONLYWRITER_H */
+#endif							/* APPENDONLYWRITER_H */

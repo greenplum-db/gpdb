@@ -5,9 +5,10 @@
   <title id="fp141670">gp_resgroup_config</title>
   <body>
     <p>The <codeph>gp_toolkit.gp_resgroup_config</codeph> view allows administrators to see the
-      current CPU, memory, and concurrency limits for a workload management resource group. The
+      current CPU, memory, and concurrency limits for a resource group. The
       view also displays proposed limit settings. A proposed limit will differ from a current
       limit when the limit has been altered, but the new value could not be immediately applied.</p>
+      <note>The <codeph>gp_resgroup_config</codeph> view is valid only when resource group-based resource management is active.</note>
     <table id="fp141982">
       <title>gp_toolkit.gp_resgroup_config</title>
       <tgroup cols="4">
@@ -63,14 +64,6 @@
             <entry colname="col2">text</entry>
             <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 2</entry>
             <entry colname="col4">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>proposed_cpu_rate_limit</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype = 2</entry>
-            <entry colname="col4">The pending CPU limit value for the resource group.</entry>
           </row>
           <row>
             <entry colname="col1">

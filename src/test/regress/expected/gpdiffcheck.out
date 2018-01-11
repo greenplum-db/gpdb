@@ -146,7 +146,7 @@ explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c
          Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 15 ms to end, start offset by 14 ms.
          ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.17..2.39 rows=7 width=0)
                Rows out:  Avg 2.0 rows x 2 workers at destination.  Max 2 rows (seg0) with 14 ms to end, start offset by 14 ms.
-               ->  Hash EXISTS Join  (cost=1.17..2.22 rows=2 width=0)
+               ->  Hash Semi Join  (cost=1.17..2.22 rows=2 width=0)
                      Hash Cond: b.c1 = "IN_subquery".max
                      Rows out:  2 rows (seg1) with 9.727 ms to first row, 11 ms to end, start offset by 18 ms.
                      Executor memory:  1K bytes.
@@ -191,7 +191,7 @@ explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from 
  Gather Motion 2:1  (slice4; segments: 2)  (cost=2.18..3.66 rows=4 width=16)
    ->  Nested Loop  (cost=2.18..3.66 rows=2 width=16)
          ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.17..2.39 rows=7 width=0)
-               ->  Hash EXISTS Join  (cost=1.17..2.22 rows=2 width=0)
+               ->  Hash Semi Join  (cost=1.17..2.22 rows=2 width=0)
                      Hash Cond: b.c1 = "IN_subquery".max
                      ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
                      ->  Hash  (cost=1.16..1.16 rows=1 width=32)
@@ -236,7 +236,7 @@ explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from 
  Gather Motion 2:1  (slice4; segments: 2)  (cost=2.90..7.97 rows=4 width=16)
    ->  Nested Loop  (cost=2.90..7.97 rows=2 width=16)
          ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.89..4.30 rows=67 width=0)
-               ->  Hash EXISTS Join  (cost=1.89..2.94 rows=2 width=0)
+               ->  Hash Semi Join  (cost=1.89..2.94 rows=2 width=0)
                      Hash Cond: b.c1 = "IN_subquery".max
                      ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
                      ->  Hash  (cost=1.88..1.88 rows=1 width=32)
@@ -281,7 +281,7 @@ explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c
          Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 12 ms to end, start offset by 1.342 ms.
          ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.89..4.30 rows=67 width=0)
                Rows out:  Avg 2.0 rows x 2 workers at destination.  Max 2 rows (seg0) with 11 ms to end, start offset by 1.343 ms.
-               ->  Hash EXISTS Join  (cost=1.89..2.94 rows=2 width=0)
+               ->  Hash Semi Join  (cost=1.89..2.94 rows=2 width=0)
                      Hash Cond: b.c1 = "IN_subquery".max
                      Rows out:  2 rows (seg1) with 5.473 ms to first row, 6.345 ms to end, start offset by 6.331 ms.
                      Executor memory:  1K bytes.

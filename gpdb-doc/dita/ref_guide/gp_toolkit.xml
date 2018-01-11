@@ -172,7 +172,7 @@
         the type of lock acquired, subsequent transactions may have to wait before they can access
         the same relation. For more information on the types of locks, see "Managing Data" in the
           <i>Greenplum Database Administrator Guide</i>. Greenplum Database resource queues (used
-        for workload management) also use locks to control the admission of queries into the
+        for resource management) also use locks to control the admission of queries into the
         system.</p>
       <p>The <codeph class="+ topic/ph pr-d/codeph ">gp_locks_*</codeph> family of views can help
         diagnose queries and sessions that are waiting to access an object due to a lock. </p>
@@ -269,6 +269,7 @@
       class="- topic/topic ">
       <title id="ie179843" class="- topic/title ">gp_locks_on_resqueue </title>
       <body class="- topic/body ">
+        <note>The <codeph>gp_locks_on_resqueue</codeph> view is valid only when resource queue-based resource management is active.</note>
         <p>This view shows any locks currently being held on a resource queue, and the associated
           session information about the query associated with the lock. This view is accessible to
           all users, however non-superusers will only be able to see the locks associated with their
@@ -1532,11 +1533,192 @@
       </body>
     </topic>
   </topic>
+  <topic id="topic26x">
+    <title class="- topic/title ">Checking Resource Group Activity and Status</title>
+    <body class="- topic/body ">
+      <note>The resource group activity and status views described in this section are valid only when resource group-based resource management is active.</note>
+      <p>Resource groups manage transactions to avoid exhausting system CPU and
+        memory resources. Every database user is assigned a resource group.
+        Greenplum Database evaluates every transaction submitted by a user
+        against the limits configured for the user's resource group before
+        running the transaction.</p>
+      <p>You can use the <codeph>gp_resgroup_config</codeph> view to check the
+        configuration of each resource group. You can use the
+        <codeph>gp_resgroup_status</codeph> view to display the current 
+        transaction status and resource usage of each resource group.</p>
+      <ul class="- topic/ul ">
+        <li id="ie193806" class="- topic/li ">
+          <xref href="#topic27x" type="topic" format="dita"/>
+        </li>
+        <li id="ie193833" class="- topic/li ">
+          <xref href="#topic31x" type="topic" format="dita"/>
+        </li>
+      </ul>
+    </body>
+    <topic id="topic27x" xml:lang="en" ditaarch:DITAArchVersion="1.1"
+      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+      class="- topic/topic ">
+      <title id="ie193152x" class="- topic/title ">gp_resgroup_config</title>
+      <body class="- topic/body ">
+        <p>The <codeph>gp_resgroup_config</codeph> view allows administrators to
+         see the current CPU, memory, and concurrency limits for a resource group.
+         The view also displays proposed limit settings. A proposed limit will
+         differ from the current limit when the limit has been altered, but the
+         new value could not be immediately applied.</p>
+        <p>This view is accessible to all users.</p>
+        <table id="ie177971x" class="- topic/table ">
+          <title class="- topic/title ">gp_resgroup_config</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="85pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="291pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Column</entry>
+                <entry colname="col2" class="- topic/entry ">Description</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">groupid</entry>
+                <entry colname="col2" class="- topic/entry ">The ID of the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">groupname</entry>
+                <entry colname="col2" class="- topic/entry ">The name of the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">concurrency</entry>
+                <entry colname="col2" class="- topic/entry ">The concurrency (<codeph>CONCURRENCY</codeph>) value specified for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">proposed_concurrency</entry>
+                <entry colname="col2" class="- topic/entry ">The pending concurrency value for the resource group.</entry>
+              </row>
+
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">cpu_rate_limit</entry>
+                <entry colname="col2" class="- topic/entry ">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">memory_limit</entry>
+                <entry colname="col2" class="- topic/entry ">The memory limit (<codeph>MEMORY_LIMIT</codeph>) value specified for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">proposed_memory_limit</entry>
+                <entry colname="col2" class="- topic/entry ">The pending memory limit value for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">memory_shared_quota</entry>
+                <entry colname="col2" class="- topic/entry ">The shared memory quota (<codeph>MEMORY_SHARED_QUOTA</codeph>) value specified for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">proposed_memory_shared_quota</entry>
+                <entry colname="col2" class="- topic/entry ">The pending shared memory quota value for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">memory_spill_ratio</entry>
+                <entry colname="col2" class="- topic/entry ">The memory spill ratio (<codeph>MEMORY_SPILL_RATIO</codeph>) value specified for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">proposed_memory_spill_ratio</entry>
+                <entry colname="col2" class="- topic/entry ">The pending memory spill ratio value for the resource group.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+    <topic id="topic31x" xml:lang="en" ditaarch:DITAArchVersion="1.1"
+      domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
+      class="- topic/topic ">
+      <title id="ie196285" class="- topic/title ">gp_resgroup_status</title>
+      <body class="- topic/body ">
+        <p>The <codeph>gp_resgroup_status</codeph> view allows administrators to
+          see status and activity for a resource group. It shows how many queries
+          are waiting to run and how many queries are currently active in the
+          system for each resource group. The view also displays current memory
+          and CPU usage for the resource group.</p>
+        <p>This view is accessible to all users.</p>
+        <table id="ie196287x" class="- topic/table ">
+          <title class="- topic/title ">gp_resgroup_status view</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="178pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="198pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Column</entry>
+                <entry colname="col2" class="- topic/entry ">Description</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">rsgname</entry>
+                <entry colname="col2" class="- topic/entry ">The name of the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">groupid</entry>
+                <entry colname="col2" class="- topic/entry ">The ID of the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">num_running</entry>
+                <entry colname="col2" class="- topic/entry ">The number of transactions currently executing in the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">num_queueing</entry>
+                <entry colname="col2" class="- topic/entry ">The number of currently queued transactions for the resource group.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">num_queued</entry>
+                <entry colname="col2" class="- topic/entry ">The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num_queueing.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">num_executed</entry>
+                <entry colname="col2" class="- topic/entry ">The total number of executed transactions in the resource group since the Greenplum Database cluster was last started, excluding the num_running.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">total_queue_duration</entry>
+                <entry colname="col2" class="- topic/entry ">The total time any transaction was queued since the Greenplum Database cluster was last started.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">cpu_usage</entry>
+                <entry colname="col2" class="- topic/entry ">The real-time CPU usage of the resource group on each Greenplum Database segment's host.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">memory_usage</entry>
+                <entry colname="col2" class="- topic/entry ">The real-time memory usage of the resource group on each Greenplum Database segment's host.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p> </p>
+        <p>The <codeph>cpu_usage</codeph> field is a JSON-formatted, key:value
+          string that identifies, for each resource group, the per-segment CPU
+          usage percentage. The key is segment id, the value is the percentage
+          of CPU usage by the resource group on the segment host. The total
+          CPU usage of all segments running on a segment host should not exceed
+          the <codeph>gp_resource_group_cpu_limit</codeph>. Example
+          <codeph>cpu_usage</codeph> column output:<codeblock>
+{"-1":0.01, "0":0.31, "1":0.31}</codeblock></p>
+        <p>In this example, segment <codeph>0</codeph> and segment 
+          <codeph>1</codeph> are running on the same host; their CPU usage
+          is the same.</p> 
+        <p>The <codeph>memory_usage</codeph> field is also a JSON-formatted,
+          key:value string. This string identifies, for each resource group, the
+          used, available, granted, and proposed fixed and shared memory quota 
+          allocations on each segment. The key is segment id. The values are 
+          memory values displayed in MB units. Example
+          <codeph>memory_usage</codeph> column output for a
+          single segment:<codeblock>
+"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "quota_granted":60, "quota_proposed":60, "shared_used":0, "shared_available":16, "shared_granted":16, "shared_proposed":16}</codeblock></p>
+      </body>
+    </topic>
+  </topic>
   <topic id="topic26" xml:lang="en" ditaarch:DITAArchVersion="1.1"
     domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
     class="- topic/topic ">
     <title class="- topic/title ">Checking Resource Queue Activity and Status</title>
     <body class="- topic/body ">
+      <note>The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.</note>
       <p>The purpose of resource queues is to limit the number of active queries in the system at
         any given time in order to avoid exhausting system resources such as memory, CPU, and disk
         I/O. All database users are assigned to a resource queue, and every statement submitted by a
@@ -1759,7 +1941,7 @@
       class="- topic/topic ">
       <title id="ie196285" class="- topic/title ">gp_resqueue_status</title>
       <body class="- topic/body ">
-        <p>This view allows administrators to see status and activity for a workload management
+        <p>This view allows administrators to see status and activity for a
           resource queue. It shows how many queries are waiting to run and how many queries are
           currently active in the system from a particular resource queue.</p>
         <table id="ie196287" class="- topic/table ">

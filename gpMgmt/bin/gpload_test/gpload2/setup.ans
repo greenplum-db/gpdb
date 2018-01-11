@@ -3,6 +3,8 @@ DROP DATABASE
 CREATE DATABASE reuse_gptest;
 CREATE DATABASE
 You are now connected to database "reuse_gptest" as user "gpadmin".
+CREATE SCHEMA test;
+CREATE SCHEMA
 DROP TABLE IF EXISTS texttable;
 NOTICE:  table "texttable" does not exist, skipping
 DROP TABLE

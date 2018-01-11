@@ -117,12 +117,6 @@ select compresslevel, compresstype, blocksize, checksum, columnstore from pg_app
 Drop table ao_db_cl_t6;
 
 
--- Create table with invalid value compresslevel=10
-
-Drop table if exists ao_db_cl_t4;
-Create table ao_db_cl_t4 ( i int, j int) with(compresslevel=10);
-
-
 -- Create table with appendonly=false
 
 Drop table if exists ao_db_cl_t4;
@@ -185,11 +179,6 @@ Drop table ao_db_cl_t7;
 
 
 -- ========================
-
--- Set the database level guc to an invalid value
-
-Alter database dsp_db2 set gp_default_storage_options="appendonly=true, compresslevel=10";
-Select datconfig from pg_database where datname='dsp_db2';
 
 -- Set database level Guc to 2, and create compresstype=quicklz
 

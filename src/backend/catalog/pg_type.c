@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.115.2.2 2009/08/16 18:14:46 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.126 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,6 +23,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_type_encoding.h"
+#include "catalog/pg_type_fn.h"
 #include "commands/typecmds.h"
 #include "miscadmin.h"
 #include "parser/scansup.h"
@@ -30,6 +31,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -106,7 +108,7 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 	for (i = 0; i < Natts_pg_type; ++i)
 	{
 		nulls[i] = false;
-		values[i] = (Datum) 0;		/* redundant, but safe */
+		values[i] = (Datum) NULL;		/* redundant, but safe */
 	}
 
 	/*
@@ -125,6 +127,8 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 	values[i++] = Int16GetDatum(sizeof(int4));	/* typlen */
 	values[i++] = BoolGetDatum(true);	/* typbyval */
 	values[i++] = CharGetDatum(TYPTYPE_PSEUDO); /* typtype */
+	values[i++] = CharGetDatum(TYPCATEGORY_PSEUDOTYPE); /* typcategory */
+	values[i++] = BoolGetDatum(false);	/* typispreferred */
 	values[i++] = BoolGetDatum(false);	/* typisdefined */
 	values[i++] = CharGetDatum(DEFAULT_TYPDELIM);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typrelid */
@@ -208,6 +212,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -245,8 +251,7 @@ TypeCreateWithOptions(Oid newTypeOid,
 	 * not check for bad combinations.
 	 *
 	 * Validate size specifications: either positive (fixed-length) or -1
-	 * (varlena) or -2 (cstring).  Pass-by-value types must have a fixed
-	 * length not more than sizeof(Datum).
+	 * (varlena) or -2 (cstring).
 	 */
 	if (!(internalSize > 0 ||
 		  internalSize == -1 ||
@@ -255,12 +260,70 @@ TypeCreateWithOptions(Oid newTypeOid,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("invalid type internal size %d",
 						internalSize)));
-	if (passedByValue &&
-		(internalSize <= 0 || internalSize > (int16) sizeof(Datum)))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+
+	if (passedByValue)
+	{
+		/*
+		 * Pass-by-value types must have a fixed length that is one of the
+		 * values supported by fetch_att() and store_att_byval(); and the
+		 * alignment had better agree, too.  All this code must match
+		 * access/tupmacs.h!
+		 */
+		if (internalSize == (int16) sizeof(char))
+		{
+			if (alignment != 'c')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+		else if (internalSize == (int16) sizeof(int16))
+		{
+			if (alignment != 's')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+		else if (internalSize == (int16) sizeof(int32))
+		{
+			if (alignment != 'i')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+#if SIZEOF_DATUM == 8
+		else if (internalSize == (int16) sizeof(Datum))
+		{
+			if (alignment != 'd')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+#endif
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 			   errmsg("internal size %d is invalid for passed-by-value type",
 					  internalSize)));
+	}
+	else
+	{
+		/* varlena types must have int align or better */
+		if (internalSize == -1 && !(alignment == 'i' || alignment == 'd'))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+			   errmsg("alignment \"%c\" is invalid for variable-length type",
+					  alignment)));
+		/* cstring must have char alignment */
+		if (internalSize == -2 && !(alignment == 'c'))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+			   errmsg("alignment \"%c\" is invalid for variable-length type",
+					  alignment)));
+	}
 
 	/* Only varlena types can be toasted */
 	if (storage != 'p' && internalSize != -1)
@@ -289,6 +352,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 	values[i++] = Int16GetDatum(internalSize);	/* typlen */
 	values[i++] = BoolGetDatum(passedByValue);	/* typbyval */
 	values[i++] = CharGetDatum(typeType);		/* typtype */
+	values[i++] = CharGetDatum(typeCategory);	/* typcategory */
+	values[i++] = BoolGetDatum(typePreferred);	/* typispreferred */
 	values[i++] = BoolGetDatum(true);	/* typisdefined */
 	values[i++] = CharGetDatum(typDelim);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(relationOid);		/* typrelid */
@@ -365,10 +430,11 @@ TypeCreateWithOptions(Oid newTypeOid,
 		 * Okay to update existing shell type tuple
 		 */
 		tup = heap_modify_tuple(tup,
-							   RelationGetDescr(pg_type_desc),
-							   values,
-							   nulls,
-							   replaces);
+								RelationGetDescr(pg_type_desc),
+								values,
+								nulls,
+								replaces);
+
 		simple_heap_update(pg_type_desc, &tup->t_self, tup);
 
 		typeObjectId = HeapTupleGetOid(tup);
@@ -378,8 +444,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 	else
 	{
 		tup = heap_form_tuple(RelationGetDescr(pg_type_desc),
-							 values,
-							 nulls);
+							  values,
+							  nulls);
 
 		/* Force the OID if requested by caller, else heap_insert does it */
 		if (OidIsValid(newTypeOid))
@@ -436,6 +502,8 @@ TypeCreate(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -465,6 +533,8 @@ TypeCreate(Oid newTypeOid,
 		   ownerId,
 		   internalSize,
 		   typeType,
+		   typeCategory,
+		   typePreferred,
 		   typDelim,
 		   inputProcedure,
 		   outputProcedure,
@@ -520,7 +590,7 @@ GenerateTypeDependencies(Oid typeNamespace,
 	if (rebuild)
 	{
 		deleteDependencyRecordsFor(TypeRelationId, typeObjectId, true);
-		deleteSharedDependencyRecordsFor(TypeRelationId, typeObjectId);
+		deleteSharedDependencyRecordsFor(TypeRelationId, typeObjectId, 0);
 	}
 
 	myself.classId = TypeRelationId;
@@ -655,15 +725,16 @@ GenerateTypeDependencies(Oid typeNamespace,
 }
 
 /*
- * TypeRename
+ * RenameTypeInternal
  *		This renames a type, as well as any associated array type.
  *
- * Note: this isn't intended to be a user-exposed function; it doesn't check
- * permissions etc.  (Perhaps TypeRenameInternal would be a better name.)
- * Currently this is only used for renaming table rowtypes.
+ * Caller must have already checked privileges.
+ *
+ * Currently this is used for renaming table rowtypes and for
+ * ALTER TYPE RENAME TO command.
  */
 void
-TypeRename(Oid typeOid, const char *newTypeName, Oid typeNamespace)
+RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
 {
 	Relation	pg_type_desc;
 	HeapTuple	tuple;
@@ -709,7 +780,7 @@ TypeRename(Oid typeOid, const char *newTypeName, Oid typeNamespace)
 	{
 		char	   *arrname = makeArrayTypeName(newTypeName, typeNamespace);
 
-		TypeRename(arrayOid, arrname, typeNamespace);
+		RenameTypeInternal(arrayOid, arrname, typeNamespace);
 		pfree(arrname);
 	}
 }
@@ -813,7 +884,7 @@ moveArrayTypeName(Oid typeOid, const char *typeName, Oid typeNamespace)
 	newname = makeArrayTypeName(typeName, typeNamespace);
 
 	/* Apply the rename */
-	TypeRename(typeOid, newname, typeNamespace);
+	RenameTypeInternal(typeOid, newname, typeNamespace);
 
 	/*
 	 * We must bump the command counter so that any subsequent use of

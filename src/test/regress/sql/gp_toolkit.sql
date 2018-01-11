@@ -301,11 +301,6 @@ select pg.relname,
 from pg_class pg,gp_toolkit.gp_size_of_partition_and_indexes_disk gsopai
 where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
 
--- Test __gp_localid and __gp_masterid functions. The output of __gp_localid
--- depends on the number of segments, so just check that it returns something.
-select count(*) > 0 from gp_toolkit.__gp_localid;
-select * from gp_toolkit.__gp_masterid;
-
 -- This also depends on the number of segments
 select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
 
@@ -373,3 +368,15 @@ reset session authorization;
 drop database toolkit_testdb;
 drop role toolkit_user1;
 drop role toolkit_admin;
+
+create database gptoolkit;
+\c gptoolkit
+drop table if exists test;
+create table test as select * from pg_attribute;
+set allow_system_table_mods=dml ;
+update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
+
+select * from gp_toolkit.gp_bloat_diag;
+
+\c regression
+drop database gptoolkit

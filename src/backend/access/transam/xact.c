@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.257.2.8 2010/07/23 00:43:26 rhaas Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.274 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,13 +25,13 @@
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/twophase.h"
-#include "cdb/cdblocaldistribxact.h"
-#include "cdb/cdbdistributedsnapshot.h"
-#include "cdb/cdbtm.h"
+#include "access/xact.h"
 #include "access/xlogutils.h"
 #include "access/fileam.h"
+#include "catalog/catalog.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
+#include "catalog/storage.h"
 #include "commands/async.h"
 #include "commands/resgroupcmds.h"
 #include "commands/tablecmds.h"
@@ -43,6 +43,7 @@
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
@@ -58,14 +59,18 @@
 #include "utils/relcache.h"
 #include "utils/resource_manager.h"
 #include "utils/sharedsnapshot.h"
-#include "access/distributedlog.h"
 #include "access/clog.h"
-#include "utils/vmem_tracker.h"
+#include "utils/snapmgr.h"
+#include "pg_trace.h"
 
+#include "access/distributedlog.h"
+#include "cdb/cdbdistributedsnapshot.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
-
+#include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbpersistentstore.h"
+#include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
+#include "utils/vmem_tracker.h"
 
 /*
  *	User-tweakable parameters
@@ -80,14 +85,16 @@ bool		XactSyncCommit = true;
 
 int			CommitDelay = 0;	/* precommit delay in microseconds */
 int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
-#if 0 /* Upstream code not applicable to GPDB */
+
 /*
  * MyXactAccessedTempRel is set when a temporary relation is accessed.
  * We don't allow PREPARE TRANSACTION in that case.  (This is global
  * so that it can be set from heapam.c.)
+ *
+ * Not used in GPDB, see comments in PrepareTransaction()
  */
 bool		MyXactAccessedTempRel = false;
-#endif
+
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
 
 /* gp-specific
@@ -148,7 +155,6 @@ typedef enum TBlockState
  */
 typedef struct TransactionStateData
 {
-	DistributedTransactionId distribXid;	/* My distributed transaction id, or Invalid if none. */
 	TransactionId transactionId;	/* my XID, or Invalid if none */
 	SubTransactionId subTransactionId;	/* my subxact ID */
 	char	   *name;			/* savepoint name, if any */
@@ -183,7 +189,6 @@ static TransactionState previousFastLink;
  * transaction at all, or when in a top-level transaction.
  */
 static TransactionStateData TopTransactionStateData = {
-	0,							/* distributed transaction id */
 	0,							/* transaction id */
 	0,							/* subtransaction id */
 	NULL,						/* savepoint name */
@@ -207,6 +212,9 @@ static TransactionStateData TopTransactionStateData = {
 };
 
 static TransactionState CurrentTransactionState = &TopTransactionStateData;
+
+/* distributed transaction id of current transaction, if any. */
+static DistributedTransactionId currentDistribXid;
 
 /*
  * The subtransaction ID and command ID assignment counters are global
@@ -285,6 +293,7 @@ File subxip_file = 0;
 
 /* local function prototypes */
 static void AssignTransactionId(TransactionState s);
+static void AbortTransaction(void);
 static void AtAbort_Memory(void);
 static void AtCleanup_Memory(void);
 static void AtAbort_ResourceOwner(void);
@@ -299,9 +308,10 @@ static void CallSubXactCallbacks(SubXactEvent event,
 					 SubTransactionId mySubid,
 					 SubTransactionId parentSubid);
 static void CleanupTransaction(void);
+static void CommitTransaction(void);
 static TransactionId RecordTransactionAbort(bool isSubXact);
+static void StartTransaction(void);
 
-static void RecordSubTransactionCommit(void);
 static void StartSubTransaction(void);
 static void CommitSubTransaction(void);
 static void AbortSubTransaction(void);
@@ -325,14 +335,6 @@ static void DispatchRollbackToSavepoint(char *name);
 static bool IsCurrentTransactionIdForReader(TransactionId xid);
 
 extern void FtsCondSetTxnReadOnly(bool *);
-
-/*
- * Make the following three functions external because old dtrace
- * cannot reference static symbol.
- */
-extern void StartTransaction(void);
-extern void CommitTransaction(void);
-extern void AbortTransaction(void);
 
 char *
 XactInfoKind_Name(const XactInfoKind		kind)
@@ -415,7 +417,7 @@ GetAllTransactionXids(
 {
 	TransactionState s = CurrentTransactionState;
 
-	*distribXid = s->distribXid;
+	*distribXid = currentDistribXid;
 	*localXid = s->transactionId;
 	*subXid = s->subTransactionId;
 }
@@ -590,7 +592,7 @@ GetCurrentSubTransactionId(void)
  *
  * "used" must be TRUE if the caller intends to use the command ID to mark
  * inserted/updated/deleted tuples.  FALSE means the ID is being fetched
- * for read-only purposes (ie, as a snapshot validity cutoff).  See
+ * for read-only purposes (ie, as a snapshot validity cutoff).	See
  * CommandCounterIncrement() for discussion.
  */
 CommandId
@@ -688,7 +690,8 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 		if ((s->state != TRANS_ABORT) &&
 				(TransactionIdIsValid(s->transactionId)))
 		{
-			int low, high;
+			int			low,
+						high;
 
 			if (TransactionIdEquals(xid, s->transactionId))
 				return true;
@@ -870,36 +873,31 @@ void
 CommandCounterIncrement(void)
 {
 	/*
-	 * If the current value of the command counter hasn't been "used" to
-	 * mark tuples, we need not increment it, since there's no need to
-	 * distinguish a read-only command from others.  This helps postpone
-	 * command counter overflow, and keeps no-op CommandCounterIncrement
-	 * operations cheap.
+	 * If the current value of the command counter hasn't been "used" to mark
+	 * tuples, we need not increment it, since there's no need to distinguish
+	 * a read-only command from others.  This helps postpone command counter
+	 * overflow, and keeps no-op CommandCounterIncrement operations cheap.
 	 */
 	if (currentCommandIdUsed)
 	{
 		currentCommandId += 1;
-		if (currentCommandId == FirstCommandId)	/* check for overflow */
+		if (currentCommandId == FirstCommandId) /* check for overflow */
 		{
 			currentCommandId -= 1;
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-		  errmsg("cannot have more than 2^32-1 commands in a transaction")));
+					 errmsg("cannot have more than 2^32-1 commands in a transaction")));
 		}
 		currentCommandIdUsed = false;
 
-		/* Propagate new command ID into static snapshots, if set */
-		if (SerializableSnapshot)
-			SerializableSnapshot->curcid = currentCommandId;
-		if (LatestSnapshot)
-			LatestSnapshot->curcid = currentCommandId;
+		/* Propagate new command ID into static snapshots */
+		SnapshotSetCommandId(currentCommandId);
 
 		/*
-		 * Make any catalog changes done by the just-completed command
-		 * visible in the local syscache.  We obviously don't need to do
-		 * this after a read-only command.  (But see hacks in inval.c
-		 * to make real sure we don't think a command that queued inval
-		 * messages was read-only.)
+		 * Make any catalog changes done by the just-completed command visible
+		 * in the local syscache.  We obviously don't need to do this after a
+		 * read-only command.  (But see hacks in inval.c to make real sure we
+		 * don't think a command that queued inval messages was read-only.)
 		 */
 		AtCommit_LocalCache();
 	}
@@ -907,11 +905,11 @@ CommandCounterIncrement(void)
 	/*
 	 * Make any other backends' catalog changes visible to me.
 	 *
-	 * XXX this is probably in the wrong place: CommandCounterIncrement
-	 * should be purely a local operation, most likely.  However fooling
-	 * with this will affect asynchronous cross-backend interactions,
-	 * which doesn't seem like a wise thing to do in late beta, so save
-	 * improving this for another day - tgl 2007-11-30
+	 * XXX this is probably in the wrong place: CommandCounterIncrement should
+	 * be purely a local operation, most likely.  However fooling with this
+	 * will affect asynchronous cross-backend interactions, which doesn't seem
+	 * like a wise thing to do in late beta, so save improving this for
+	 * another day - tgl 2007-11-30
 	 */
 	AtStart_Cache();
 }
@@ -1387,15 +1385,12 @@ RecordTransactionCommit(void)
 			 */
 			/* UNDONE: What are the locking issues here? */
 			if (isDtxPrepared)
-				DistributedLog_SetCommitted(
-										xid,
-										getDtxStartTime(),
-										getDistributedTransactionId(),
-										/* isRedo */ false);
+				DistributedLog_SetCommittedTree(xid, nchildren, children,
+												getDtxStartTime(),
+												getDistributedTransactionId(),
+												/* isRedo */ false);
 
-			TransactionIdCommit(xid);
-			/* to avoid race conditions, the parent must commit first */
-			TransactionIdCommitTree(nchildren, children);
+			TransactionIdCommitTree(xid, nchildren, children);
 		}
 	}
 #ifdef IMPLEMENT_ASYNC_COMMIT
@@ -1415,11 +1410,7 @@ RecordTransactionCommit(void)
 		 * flushed before the CLOG may be updated.
 		 */
 		if (markXidCommitted)
-		{
-			TransactionIdAsyncCommit(xid, XactLastRecEnd);
-			/* to avoid race conditions, the parent must commit first */
-			TransactionIdAsyncCommitTree(nchildren, children, XactLastRecEnd);
-		}
+			TransactionIdAsyncCommitTree(xid, nchildren, children, XactLastRecEnd);
 	}
 #endif
 
@@ -1470,8 +1461,6 @@ cleanup:
 
 	if (persistentCommitBuffer != NULL)
 		pfree(persistentCommitBuffer);
-	if (children)
-		pfree(children);
 
 	return latestXid;
 }
@@ -1583,14 +1572,14 @@ AtSubCommit_childXids(void)
 	/* Allocate or enlarge the parent array if necessary */
 	if (s->parent->maxChildXids < new_nChildXids)
 	{
-		int				new_maxChildXids;
-		TransactionId  *new_childXids;
+		int			new_maxChildXids;
+		TransactionId *new_childXids;
 
 		/*
 		 * Make it 2x what's needed right now, to avoid having to enlarge it
-		 * repeatedly. But we can't go above MaxAllocSize.  (The latter
-		 * limit is what ensures that we don't need to worry about integer
-		 * overflow here or in the calculation of new_nChildXids.)
+		 * repeatedly. But we can't go above MaxAllocSize.  (The latter limit
+		 * is what ensures that we don't need to worry about integer overflow
+		 * here or in the calculation of new_nChildXids.)
 		 */
 		new_maxChildXids = Min(new_nChildXids * 2,
 							   (int) (MaxAllocSize / sizeof(TransactionId)));
@@ -1608,13 +1597,13 @@ AtSubCommit_childXids(void)
 		 */
 		if (s->parent->childXids == NULL)
 			new_childXids =
-				MemoryContextAlloc(TopTransactionContext, 
+				MemoryContextAlloc(TopTransactionContext,
 								   new_maxChildXids * sizeof(TransactionId));
 		else
-			new_childXids = repalloc(s->parent->childXids, 
-									 new_maxChildXids * sizeof(TransactionId));
+			new_childXids = repalloc(s->parent->childXids,
+								   new_maxChildXids * sizeof(TransactionId));
 
-		s->parent->childXids  = new_childXids;
+		s->parent->childXids = new_childXids;
 		s->parent->maxChildXids = new_maxChildXids;
 	}
 
@@ -1623,9 +1612,9 @@ AtSubCommit_childXids(void)
 	 *
 	 * Note: We rely on the fact that the XID of a child always follows that
 	 * of its parent.  By copying the XID of this subtransaction before the
-	 * XIDs of its children, we ensure that the array stays ordered.  Likewise,
-	 * all XIDs already in the array belong to subtransactions started and
-	 * subcommitted before us, so their XIDs must precede ours.
+	 * XIDs of its children, we ensure that the array stays ordered.
+	 * Likewise, all XIDs already in the array belong to subtransactions
+	 * started and subcommitted before us, so their XIDs must precede ours.
 	 */
 	s->parent->childXids[s->parent->nChildXids] = s->transactionId;
 
@@ -1643,71 +1632,6 @@ AtSubCommit_childXids(void)
 	s->childXids = NULL;
 	s->nChildXids = 0;
 	s->maxChildXids = 0;
-}
-
-/*
- * RecordSubTransactionCommit
- */
-static void
-RecordSubTransactionCommit(void)
-{
-	TransactionId xid = GetCurrentTransactionIdIfAny();
-
-	/*
-	 * We do not log the subcommit in XLOG; it doesn't matter until the
-	 * top-level transaction commits.
-	 *
-	 * We must mark the subtransaction subcommitted in the CLOG if it had a
-	 * valid XID assigned.	If it did not, nobody else will ever know about
-	 * the existence of this subxact.  We don't have to deal with deletions
-	 * scheduled for on-commit here, since they'll be reassigned to our parent
-	 * (who might still abort).
-	 */
-	if (TransactionIdIsValid(xid))
-	{
-		/* XXX does this really need to be a critical section? */
-		START_CRIT_SECTION();
-
-		/* Record subtransaction subcommit */
-		TransactionIdSubCommit(xid);
-
-		/*
-		 * Write the distributed commit entry for the subtransaction so when
-		 * we are researching a transaction in the distributed snapshot logic,
-		 * we can see this subtransaction was part of a distributed transaction.
-		 */
-		switch (DistributedTransactionContext)
-		{
-			case DTX_CONTEXT_LOCAL_ONLY:
-				break;		// Ignore.
-
-			case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-			case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
-			case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
-			case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
-				DistributedLog_SetCommitted(xid,
-											MyProc->localDistribXactData.distribTimeStamp,
-											MyProc->localDistribXactData.distribXid,
-											/* isRedo */ false);
-				break;
-
-			case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-			case DTX_CONTEXT_QE_READER:
-			case DTX_CONTEXT_QD_RETRY_PHASE_2:
-			case DTX_CONTEXT_QE_FINISH_PREPARED:
-			case DTX_CONTEXT_QE_PREPARED:
-				elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
-					 DtxContextToString(DistributedTransactionContext));
-				break;
-
-			default:
-				elog(PANIC, "Unrecognized DTX transaction context: %d",
-					 (int) DistributedTransactionContext);
-				break;
-		}
-
-		END_CRIT_SECTION();
-	}
 }
 
 /* ----------------------------------------------------------------
@@ -1852,14 +1776,8 @@ RecordTransactionAbort(bool isSubXact)
 	 * waiting for already-aborted subtransactions.  It is OK to do it without
 	 * having flushed the ABORT record to disk, because in event of a crash
 	 * we'd be assumed to have aborted anyway.
-	 *
-	 * The ordering here isn't critical but it seems best to mark the parent
-	 * first.  This assures an atomic transition of all the subtransactions to
-	 * aborted state from the point of view of concurrent
-	 * TransactionIdDidAbort calls.
 	 */
-	TransactionIdAbort(xid);
-	TransactionIdAbortTree(nchildren, children);
+	TransactionIdAbortTree(xid, nchildren, children);
 
 	END_CRIT_SECTION();
 
@@ -1904,6 +1822,8 @@ bool RecordCrashTransactionAbortRecord(
 	XLogRecPtr	recptr;
 	XidStatus status;
 	bool           validStatus;
+	int			nchildren;
+	TransactionId *children;
 
 	/* Fix for MPP-12614. The call to TransactionIdGetStatus() has been removed since    */
 	/* The clog many not have the the referenced transaction as of crash recovery        */
@@ -2012,7 +1932,11 @@ bool RecordCrashTransactionAbortRecord(
 	/* value for TransactionIdGetStatus() was good.                                    */
 
 	if (validStatus == true)
-	  TransactionIdAbort(xid);
+	{
+		nchildren = xactGetCommittedChildren(&children);
+
+		TransactionIdAbortTree(xid, nchildren, children);
+	}
 
 	END_CRIT_SECTION();
 
@@ -2225,7 +2149,7 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 /*
  *	StartTransaction
  */
-void
+static void
 StartTransaction(void)
 {
 	TransactionState s;
@@ -2248,11 +2172,6 @@ StartTransaction(void)
 	if (s->state != TRANS_DEFAULT)
 		elog(WARNING, "StartTransaction while in %s state",
 			 TransStateAsString(s->state));
-
-	/* Acquire a resource group slot at the beginning of a transaction */
-	if (ShouldAssignResGroupOnMaster())
-		AssignResGroupOnMaster();
-
 	/*
 	 * set the current transaction state information appropriately during
 	 * start processing
@@ -2261,15 +2180,12 @@ StartTransaction(void)
 	s->transactionId = InvalidTransactionId;	/* until assigned */
 
 	/*
-	 * Make sure we've freed any old snapshot, and reset xact state variables
+	 * Make sure we've reset xact state variables
 	 */
-	FreeXactSnapshot();
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
 	forceSyncCommit = false;
-#if 0 /* Upstream code not applicable to GPDB */
 	MyXactAccessedTempRel = false;
-#endif
 	seqXlogWrite = false;
 
 	/* set read only by fts, if any fts action is read only */
@@ -2322,7 +2238,7 @@ StartTransaction(void)
 			 * distributed transaction to a local transaction id for the
 			 * master database.
 			 */
-			createDtx(&s->distribXid);
+			createDtx(&currentDistribXid);
 
 			if (SharedLocalSnapshotSlot != NULL)
 			{
@@ -2373,7 +2289,7 @@ StartTransaction(void)
 			if (DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
 				DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
 			{
-				s->distribXid = QEDtxContextInfo.distributedXid;
+				currentDistribXid = QEDtxContextInfo.distributedXid;
 
 				Assert(QEDtxContextInfo.distributedTimeStamp != 0);
 				Assert(QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId);
@@ -2419,7 +2335,7 @@ StartTransaction(void)
 			 * MPP: we're a QE Reader.
 			 */
 			Assert (SharedLocalSnapshotSlot != NULL);
-			s->distribXid = QEDtxContextInfo.distributedXid;
+			currentDistribXid = QEDtxContextInfo.distributedXid;
 
 			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
 					(errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
@@ -2444,8 +2360,8 @@ StartTransaction(void)
 
 	ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 			(errmsg("[Distributed Snapshot #%u] *StartTransaction* (gxid = %u, xid = %u, '%s')",
-					(SerializableSnapshot == NULL ? 0 :
-					 SerializableSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
+					(!FirstSnapshotSet ? 0 :
+					 GetTransactionSnapshot()->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
 					getDistributedTransactionId(),
 					s->transactionId,
 					DtxContextToString(DistributedTransactionContext))));
@@ -2469,7 +2385,7 @@ StartTransaction(void)
 	Assert(MyProc->backendId == vxid.backendId);
 	MyProc->lxid = vxid.localTransactionId;
 
-	PG_TRACE1(transaction__start, vxid.localTransactionId);
+	TRACE_POSTGRESQL_TRANSACTION_START(vxid.localTransactionId);
 
 	/*
 	 * set transaction_timestamp() (a/k/a now()).  We want this to be the same
@@ -2509,6 +2425,25 @@ StartTransaction(void)
 	 */
 	s->state = TRANS_INPROGRESS;
 
+	/*
+	 * Acquire a resource group slot.
+	 *
+	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned.
+	 * This slot will be released when the transaction is committed or aborted.
+	 *
+	 * Note that AssignResGroupOnMaster() can throw a PG exception. Since we
+	 * have set the transaction state to TRANS_INPROGRESS by this point, any
+	 * exceptions thrown will trigger AbortTransaction() and free the slot.
+	 *
+	 * It's important that we acquire the resource group *after* starting the
+	 * transaction (i.e. setting up the per-transaction memory context).
+	 * As part of determining the resource group that the transaction should be
+	 * assigned to, AssignResGroupOnMaster() accesses pg_authid, and a
+	 * transaction should be in progress when it does so.
+	 */
+	if (ShouldAssignResGroupOnMaster())
+		AssignResGroupOnMaster();
+
 	ShowTransactionState("StartTransaction");
 
 	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
@@ -2522,7 +2457,7 @@ StartTransaction(void)
  *
  * NB: if you change this routine, better look at PrepareTransaction too!
  */
-void
+static void
 CommitTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
@@ -2680,7 +2615,7 @@ CommitTransaction(void)
 	 */
 	latestXid = RecordTransactionCommit();
 
-	PG_TRACE1(transaction__commit, MyProc->lxid);
+	TRACE_POSTGRESQL_TRANSACTION_COMMIT(MyProc->lxid);
 
 	/*
 	 * Let others know about no transaction in progress by me. Note that this
@@ -2738,17 +2673,14 @@ CommitTransaction(void)
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
 
-	/* All relations that are in the vacuum process are being commited now. */
-	ResetVacuumRels();
-
-	/* Process resource group related callbacks */
-	AtEOXact_ResGroup(true);
-
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
 
 	/* Clean up the relation cache */
 	AtEOXact_RelationCache(true);
+
+	/* Clean up the snapshot manager */
+	AtEarlyCommit_Snapshot();
 
 	/*
 	 * Make catalog changes visible to all backends.  This has to happen after
@@ -2800,6 +2732,7 @@ CommitTransaction(void)
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
 	AtEOXact_PgStat(true);
+	AtEOXact_Snapshot(true);
 	pgstat_report_xact_timestamp(0);
 
 	CurrentResourceOwner = NULL;
@@ -2817,7 +2750,7 @@ CommitTransaction(void)
 		LocalDistribXactCache_ShowStats("CommitTransaction");
 	}
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -2839,8 +2772,8 @@ CommitTransaction(void)
 	freeGangsForPortal(NULL);
 
 	/* Release resource group slot at the end of a transaction */
-	if (ShouldAssignResGroupOnMaster())
-		UnassignResGroupOnMaster();
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 
@@ -2929,15 +2862,15 @@ PrepareTransaction(void)
 	 */
 #if 0 /* Upstream code not applicable to GPDB */
 	/*
-	 * Don't allow PREPARE TRANSACTION if we've accessed a temporary table
-	 * in this transaction.  Having the prepared xact hold locks on another
+	 * Don't allow PREPARE TRANSACTION if we've accessed a temporary table in
+	 * this transaction.  Having the prepared xact hold locks on another
 	 * backend's temp table seems a bad idea --- for instance it would prevent
-	 * the backend from exiting.  There are other problems too, such as how
-	 * to clean up the source backend's local buffers and ON COMMIT state
-	 * if the prepared xact includes a DROP of a temp table.
+	 * the backend from exiting.  There are other problems too, such as how to
+	 * clean up the source backend's local buffers and ON COMMIT state if the
+	 * prepared xact includes a DROP of a temp table.
 	 *
-	 * We must check this after executing any ON COMMIT actions, because
-	 * they might still access a temp relation.
+	 * We must check this after executing any ON COMMIT actions, because they
+	 * might still access a temp relation.
 	 *
 	 * XXX In principle this could be relaxed to allow some useful special
 	 * cases, such as a temp table created and dropped all within the
@@ -3046,14 +2979,14 @@ PrepareTransaction(void)
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
 
-	/* Process resource group related callbacks */
-	AtEOXact_ResGroup(true);
-
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
 
 	/* Clean up the relation cache */
 	AtEOXact_RelationCache(true);
+
+	/* Clean up the snapshot manager */
+	AtEarlyCommit_Snapshot();
 
 	/* notify and flatfiles don't need a postprepare call */
 
@@ -3094,6 +3027,7 @@ PrepareTransaction(void)
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
 	/* don't call AtEOXact_PgStat here */
+	AtEOXact_Snapshot(true);
 
 	CurrentResourceOwner = NULL;
 	ResourceOwnerDelete(TopTransactionResourceOwner);
@@ -3108,7 +3042,7 @@ PrepareTransaction(void)
 		LocalDistribXactCache_ShowStats("PrepareTransaction");
 	}
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -3125,13 +3059,17 @@ PrepareTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	RESUME_INTERRUPTS();
+
+	/* Release resource group slot at the end of prepare transaction on segment */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 
 /*
  *	AbortTransaction
  */
-void
+static void
 AbortTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
@@ -3186,20 +3124,14 @@ AbortTransaction(void)
 	/*
 	 * Reset user ID which might have been changed transiently.  We need this
 	 * to clean up in case control escaped out of a SECURITY DEFINER function
-	 * or other local change of CurrentUserId; therefore, the prior value
-	 * of SecurityRestrictionContext also needs to be restored.
+	 * or other local change of CurrentUserId; therefore, the prior value of
+	 * SecurityDefinerContext also needs to be restored.
 	 *
 	 * (Note: it is not necessary to restore session authorization or role
 	 * settings here because those can only be changed via GUC, and GUC will
 	 * take care of rolling them back if need be.)
 	 */
 	SetUserIdAndSecContext(s->prevUser, s->prevSecContext);
-
-	/*
-	 * Clear the freespace map entries for any relations that
-	 * are in the vacuum process.
-	 */
-	ClearFreeSpaceForVacuumRels();
 
 	/*
 	 * do abort processing
@@ -3250,7 +3182,7 @@ AbortTransaction(void)
 	 */
 	latestXid = RecordTransactionAbort(false);
 
-	PG_TRACE1(transaction__abort, MyProc->lxid);
+	TRACE_POSTGRESQL_TRANSACTION_ABORT(MyProc->lxid);
 
 	/*
 	 * Let others know about no transaction in progress by me. Note that this
@@ -3272,7 +3204,6 @@ AbortTransaction(void)
 		ResourceOwnerRelease(TopTransactionResourceOwner,
 							 RESOURCE_RELEASE_BEFORE_LOCKS,
 							 false, true);
-		AtEOXact_ResGroup(false);
 		AtEOXact_Buffers(false);
 		AtEOXact_RelationCache(false);
 		AtEOXact_Inval(false);
@@ -3298,11 +3229,11 @@ AbortTransaction(void)
 		AtEOXact_SPI(false);
 		AtEOXact_on_commit_actions(false);
 		AtEOXact_Namespace(false);
-		smgrabort();
 		AtEOXact_Files();
 		AtEOXact_ComboCid();
 		AtEOXact_HashTables(false);
 		AtEOXact_PgStat(false);
+		AtEOXact_Snapshot(false);
 		pgstat_report_xact_timestamp(0);
 	}
 
@@ -3337,11 +3268,16 @@ AbortTransaction(void)
 		disconnectAndDestroyIdleReaderGangs();
 	}
 
-	/* If memprot decides to kill process, make sure we destroy all processes
+	/*
+	 * If memprot decides to kill process, make sure we destroy all processes
 	 * so that all mem/resource will be freed
 	 */
-	if(elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
+	if (elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
 		DisconnectAndDestroyAllGangs(true);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 /*
@@ -3373,7 +3309,7 @@ CleanupTransaction(void)
 
 	AtCleanup_Memory();			/* and transaction memory */
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -3392,8 +3328,8 @@ CleanupTransaction(void)
 	finishDistributedTransactionContext("CleanupTransaction", true);
 
 	/* Release resource group slot at the end of a transaction */
-	if (ShouldAssignResGroupOnMaster())
-		UnassignResGroupOnMaster();
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 /*
@@ -3402,6 +3338,9 @@ CleanupTransaction(void)
 void
 StartTransactionCommand(void)
 {
+	if (Gp_role == GP_ROLE_DISPATCH)
+		setupRegularDtxContext();
+
 	TransactionState s = CurrentTransactionState;
 
 	switch (s->blockState)
@@ -4546,35 +4485,18 @@ DefineDispatchSavepoint(char *name)
 	/* First we attempt to create on the QEs */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		char	   *cmd = NULL;
-		bool		freecmd;
+		char	   *cmd;
 
-		if (name != NULL)
-		{
-			cmd = palloc(sizeof("SAVEPOINT ") + strlen(name));
-			Assert(cmd != NULL);
-			if (cmd == NULL)
-				elog(ERROR, "Can't define savepoint name too long (%s)", name);
-			sprintf(cmd, "SAVEPOINT %s", name);
-			freecmd = true;
-		}
-		else
-		{
-			cmd = "SAVEPOINT";
-			freecmd = false;
-		}
+		cmd = psprintf("SAVEPOINT %s", name);
 
 		/*
 		 * dispatch a DTX command, in the event of an error, this call
 		 * will either exit via elog()/ereport() or return false
 		 */
 		if (!dispatchDtxCommand(cmd))
-		{
 			elog(ERROR, "Could not create a new savepoint (%s)", cmd);
-		}
 
-		if (freecmd)
-			pfree(cmd);
+		pfree(cmd);
 	}
 
 	DefineSavepoint(name);
@@ -4694,35 +4616,18 @@ ReleaseSavepoint(List *options)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		char	   *cmd = NULL;
-		bool		freecmd;
+		char	   *cmd;
 
-		if (name != NULL)
-		{
-			cmd = palloc(sizeof("RELEASE SAVEPOINT ") + strlen(name));
-			Assert(cmd != NULL);
-			if (cmd == NULL)
-				elog(ERROR, "Can't release savepoint name too long (%s)", name);
-			sprintf(cmd, "RELEASE SAVEPOINT %s", name);
-			freecmd = true;
-		}
-		else
-		{
-			cmd = "RELEASE SAVEPOINT";
-			freecmd = false;
-		}
+		cmd = psprintf("RELEASE SAVEPOINT %s", name);
 
 		/*
 		 * dispatch a DTX command, in the event of an error, this call will
 		 * either exit via elog()/ereport() or return false
 		 */
 		if (!dispatchDtxCommand(cmd))
-		{
 			elog(ERROR, "Could not release savepoint (%s)", cmd);
-		}
 
-		if (freecmd)
-			pfree(cmd);
+		pfree(cmd);
 	}
 
 	for (target = s; PointerIsValid(target); target = target->parent)
@@ -4875,34 +4780,20 @@ static void
 DispatchRollbackToSavepoint(char *name)
 {
 	char	   *cmd;
-	bool		freecmd;
 
-	if (name != NULL)
-	{
-		cmd = palloc(sizeof("ROLLBACK TO SAVEPOINT ") + strlen(name));
-		Assert(cmd != NULL);
-		if (cmd == NULL)
-			elog(ERROR, "Can't rollback to savepoint, name too long (%s)", name);
-		sprintf(cmd, "ROLLBACK TO SAVEPOINT %s", name);
-		freecmd = true;
-	}
-	else
-	{
-		cmd = "ROLLBACK TO SAVEPOINT";
-		freecmd = false;
-	}
+	if (!name)
+		elog(ERROR, "could not find savepoint name for ROLLBACK TO SAVEPOINT");
+
+	cmd = psprintf("ROLLBACK TO SAVEPOINT %s", name);
 
 	/*
 	 * dispatch a DTX command, in the event of an error, this call will
 	 * either exit via elog()/ereport() or return false
 	 */
 	if (!dispatchDtxCommand(cmd))
-	{
 		elog(ERROR, "Could not rollback to savepoint (%s)", cmd);
-	}
 
-	if (freecmd)
-		pfree(cmd);
+	pfree(cmd);
 }
 
 /*
@@ -5252,6 +5143,9 @@ TransactionBlockStatusCode(void)
 	return 0;					/* keep compiler quiet */
 }
 
+/*
+ * IsSubTransaction
+ */
 bool
 IsSubTransaction(void)
 {
@@ -5332,8 +5226,11 @@ CommitSubTransaction(void)
 	/* Must CCI to ensure commands of subtransaction are seen as done */
 	CommandCounterIncrement();
 
-	/* Mark subtransaction as subcommitted */
-	RecordSubTransactionCommit();
+	/*
+	 * Prior to 8.4 we marked subcommit in clog at this point.	We now only
+	 * perform that step, if required, as part of the atomic update of the
+	 * whole transaction tree at top level commit or abort.
+	 */
 
 	/* Post-commit cleanup */
 	if (TransactionIdIsValid(s->transactionId))
@@ -5384,6 +5281,7 @@ CommitSubTransaction(void)
 					  s->parent->subTransactionId);
 	AtEOSubXact_HashTables(true, s->nestingLevel);
 	AtEOSubXact_PgStat(true, s->nestingLevel);
+	AtSubCommit_Snapshot(s->nestingLevel);
 
 	/*
 	 * We need to restore the upper transaction's read-only state, in case the
@@ -5447,8 +5345,8 @@ AbortSubTransaction(void)
 	s->state = TRANS_ABORT;
 
 	/*
-	 * Reset user ID which might have been changed transiently.  (See notes
-	 * in AbortTransaction.)
+	 * Reset user ID which might have been changed transiently.  (See notes in
+	 * AbortTransaction.)
 	 */
 	SetUserIdAndSecContext(s->prevUser, s->prevSecContext);
 
@@ -5503,6 +5401,7 @@ AbortSubTransaction(void)
 						  s->parent->subTransactionId);
 		AtEOSubXact_HashTables(false, s->nestingLevel);
 		AtEOSubXact_PgStat(false, s->nestingLevel);
+		AtSubAbort_Snapshot(s->nestingLevel);
 	}
 
 	/*
@@ -5595,7 +5494,6 @@ PushTransaction(void)
 	 * We can now stack a minimally valid subtransaction without fear of
 	 * failure.
 	 */
-	s->distribXid = p->distribXid;
 	s->transactionId = InvalidTransactionId;	/* until assigned */
 	s->subTransactionId = currentSubTransactionId;
 	s->parent = p;
@@ -5704,7 +5602,7 @@ ShowTransactionStateRec(TransactionState s)
 
 	if (s->nChildXids > 0)
 	{
-		int i;
+		int			i;
 
 		appendStringInfo(&buf, "%u", s->childXids[0]);
 		for (i = 1; i < s->nChildXids; i++)
@@ -5878,17 +5776,6 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 	TransactionId max_xid;
 	int			i;
 
-	if (distribXid != 0 && distribTimeStamp != 0)
-	{
-		DistributedLog_SetCommitted(
-			xid,
-			distribTimeStamp,
-			distribXid,
-			/* isRedo */ true);
-	}
-
-	TransactionIdCommit(xid);
-
 	data = xlrec->data;
 	PersistentEndXactRec_Deserialize(
 								data,
@@ -5899,10 +5786,16 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 	if (Debug_persistent_print)
 		PersistentEndXactRec_Print("xact_redo_commit", &persistentCommitObjects);
 
-	sub_xids = (TransactionId *)data; 
+	/* Mark the transaction committed in pg_clog */
+	sub_xids = (TransactionId *) data;
 
-	/* Mark committed subtransactions as committed */
-	TransactionIdCommitTree(xlrec->nsubxacts, sub_xids);
+	if (distribXid != 0 && distribTimeStamp != 0)
+	{
+		DistributedLog_SetCommittedTree(xid, xlrec->nsubxacts, sub_xids,
+										distribTimeStamp, distribXid,
+										/* isRedo */ true);
+	}
+	TransactionIdCommitTree(xid, xlrec->nsubxacts, sub_xids);
 
 	/* Make sure nextXid is beyond any XID mentioned in the record */
 	max_xid = xid;
@@ -5917,6 +5810,24 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 		ShmemVariableCache->nextXid = max_xid;
 		TransactionIdAdvance(ShmemVariableCache->nextXid);
 	}
+
+	/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
+	 * had been removed from this function GPDB. Where does this belong now? */
+#if 0
+		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
+		ForkNumber fork;
+
+		for (fork = 0; fork <= MAX_FORKNUM; fork++)
+		{
+			if (smgrexists(srel, fork))
+			{
+				XLogDropRelation(xlrec->xnodes[i], fork);
+				smgrdounlink(srel, fork, false, true);
+			}
+		}
+		smgrclose(srel);
+	}
+#endif
 }
 
 static void
@@ -5967,12 +5878,6 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 			TransactionIdAdvance(ShmemVariableCache->nextXid);
 		}
 
-		DistributedLog_SetCommitted(
-			xid,
-			distribTimeStamp,
-			gxact_log->gxid,
-			/* isRedo */ true);
-
 		/*
 		 * Now update the CLOG and do local commit actions.
 		 *
@@ -5980,8 +5885,6 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 		 * only addition being redo of DistributeLog updates to subtransaction
 		 * log.
 		 */
-		TransactionIdCommit(xid);
-
 		data = xlrec->data;
 		PersistentEndXactRec_Deserialize(
 			data,
@@ -5992,24 +5895,21 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 		if (Debug_persistent_print)
 			PersistentEndXactRec_Print("xact_redo_distributed_commit", &persistentCommitObjects);
 
-		sub_xids = (TransactionId *)data;
+		/* Mark the transaction committed in pg_clog */
+		sub_xids = (TransactionId *) data;
 
-		/* Mark committed subtransactions as committed */
-		TransactionIdCommitTree(xlrec->nsubxacts, sub_xids);
+		/* Add the committed subtransactions to the DistributedLog, too. */
+		DistributedLog_SetCommittedTree(xid, xlrec->nsubxacts, sub_xids,
+										distribTimeStamp,
+										gxact_log->gxid,
+										/* isRedo */ true);
+
+		TransactionIdCommitTree(xid, xlrec->nsubxacts, sub_xids);
 
 		/* Make sure nextXid is beyond any XID mentioned in the record */
 		max_xid = xid;
 		for (i = 0; i < xlrec->nsubxacts; i++)
 		{
-			/*
-			 * Add the committed subtransactions to the DistributedLog, too.
-			 */
-			DistributedLog_SetCommitted(
-				sub_xids[i],
-				distribTimeStamp,
-				gxact_log->gxid,
-				/* isRedo */ true);
-		
 			if (TransactionIdPrecedes(max_xid, sub_xids[i]))
 				max_xid = sub_xids[i];
 		}
@@ -6019,6 +5919,23 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 			ShmemVariableCache->nextXid = max_xid;
 			TransactionIdAdvance(ShmemVariableCache->nextXid);
 		}
+
+		/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
+		 * had been removed from this function GPDB. Where does this belong now? */
+#if 0
+		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
+		ForkNumber	fork;
+
+		for (fork = 0; fork <= MAX_FORKNUM; fork++)
+		{
+			if (smgrexists(srel, fork))
+			{
+				XLogDropRelation(xlrec->xnodes[i], fork);
+				smgrdounlink(srel, fork, false, true);
+			}
+		}
+		smgrclose(srel);
+#endif
 	}
 
 	/*
@@ -6036,8 +5953,6 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 	TransactionId max_xid;
 	int			i;
 
-	TransactionIdAbort(xid);
-
 	data = xlrec->data;
 	PersistentEndXactRec_Deserialize(
 								data,
@@ -6048,10 +5963,9 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 	if (Debug_persistent_print)
 		PersistentEndXactRec_Print("xact_redo_abort", &persistentAbortObjects);
 
-	sub_xids = (TransactionId *) data; 
-
-	/* Mark subtransactions as aborted */
-	TransactionIdAbortTree(xlrec->nsubxacts, sub_xids);
+	/* Mark the transaction aborted in pg_clog */
+	sub_xids = (TransactionId *) data;
+	TransactionIdAbortTree(xid, xlrec->nsubxacts, sub_xids);
 
 	/* Make sure nextXid is beyond any XID mentioned in the record */
 	max_xid = xid;
@@ -6066,6 +5980,27 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 		ShmemVariableCache->nextXid = max_xid;
 		TransactionIdAdvance(ShmemVariableCache->nextXid);
 	}
+
+	/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
+	 * had been removed from this function GPDB. Where does this belong now? */
+#if 0
+	/* Make sure files supposed to be dropped are dropped */
+	for (i = 0; i < xlrec->nrels; i++)
+	{
+		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
+		ForkNumber	fork;
+
+		for (fork = 0; fork <= MAX_FORKNUM; fork++)
+		{
+			if (smgrexists(srel, fork))
+			{
+				XLogDropRelation(xlrec->xnodes[i], fork);
+				smgrdounlink(srel, fork, false, true);
+			}
+		}
+		smgrclose(srel);
+	}
+#endif
 }
 
 static void
@@ -6079,6 +6014,9 @@ void
 xact_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+
+	/* Backup blocks are not used in xact records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	if (info == XLOG_XACT_COMMIT)
 	{

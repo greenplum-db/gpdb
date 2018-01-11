@@ -8,7 +8,7 @@
  *
  *  Alignment:
  *      The first item will be aligned on an eight-byte (64 bit) boundary.
- *      If all items are a multiple or 8, 4, 2 in length – then they will
+ *      If all items are a multiple or 8, 4, 2 in length then they will
  *      be aligned on those multiples.  If the items are any length, then
  *      the alignment is 1 byte.
  *
@@ -78,7 +78,12 @@
  *		    }
  *       }
  *        
- * Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbvarblock.h
  *
  *-------------------------------------------------------------------------
  */

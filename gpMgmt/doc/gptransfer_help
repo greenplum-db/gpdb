@@ -747,10 +747,13 @@ OPTIONS
  Perform data validation on table data. These are the supported types of 
  validation. 
 
-  count - Specify this value to compare row counts between source and 
+  count - Specify this value to compare row counts between source and
      destination table data. 
 
-  MD5 - Specify this value to compare MD5 values between source and 
+  md5 - Specify this value to compare MD5 values between source and
+     destination table data.
+
+  sha256 - Specify this value to compare SHA-256 values between source and
      destination table data. 
 
  If validation for a table fails, gptransfer displays the name of the 

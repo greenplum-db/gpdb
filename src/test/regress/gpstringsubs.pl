@@ -1,8 +1,9 @@
 #!/usr/bin/env perl
 #
-# Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
-# Author: Jeffrey I Cohen
+# Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 #
+# Author: Jeffrey I Cohen
 #
 use Pod::Usage;
 use Getopt::Long;
@@ -12,6 +13,10 @@ use POSIX;
 use File::Spec;
 use Env;
 use Data::Dumper;
+
+use FindBin;
+use lib "$FindBin::Bin";
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -92,7 +97,8 @@ The tokens are:
 
 Jeffrey I Cohen
 
-Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 
@@ -110,7 +116,8 @@ BEGIN {
 
     GetOptions(
                'help|?' => \$help, man => \$man,
-               "connect=s" => \$conn
+               "connect=s" => \$conn,
+               'version|v' => \&print_version
                )
         or pod2usage(2);
 

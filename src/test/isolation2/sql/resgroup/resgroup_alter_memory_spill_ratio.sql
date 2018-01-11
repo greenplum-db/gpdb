@@ -17,21 +17,21 @@ SELECT * FROM rg_spill_status;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20;
 SELECT * FROM rg_spill_status;
 
+-- positive, memory_spill_ratio range is [0, 100]
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
+SELECT * FROM rg_spill_status;
+
+-- positive: no limit on the sum of shared and spill
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 81;
+SELECT * FROM rg_spill_status;
+
 -- negative: memory_spill_ratio is invalid
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20.0;
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO a;
 SELECT * FROM rg_spill_status;
 
--- negative: memory_spill_ratio is less than RESGROUP_MIN_MEMORY_SPILL_RATIO
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
-SELECT * FROM rg_spill_status;
-
 -- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
-SELECT * FROM rg_spill_status;
-
--- negative: sum of shared and spill exceeds RESGROUP_MAX_MEMORY_LIMIT
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 81;
 SELECT * FROM rg_spill_status;
 
 -- cleanup

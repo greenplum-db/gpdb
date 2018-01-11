@@ -5,7 +5,12 @@
  *	  Functions for multi-thread implementation of dispatching
  *	  commands to QExecutors.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/dispatcher/cdbdisp_thread.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,16 +26,17 @@
 #include <sys/poll.h>
 #endif
 
-#include "storage/ipc.h" /* For proc_exit_inprogress */
+#include "storage/ipc.h"		/* For proc_exit_inprogress */
 #include "tcop/tcopprot.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_thread.h"
 #include "cdb/cdbdispatchresult.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpq.h"
 #include "miscadmin.h"
 #include "port/atomics.h"
 
@@ -50,48 +56,49 @@
 typedef struct DispatchCommandParms
 {
 	/*
-	 * Text information to dispatch:
-	 * The format is type(1 byte) + length(size of int) + content(n bytes)
+	 * Text information to dispatch: The format is type(1 byte) + length(size
+	 * of int) + content(n bytes)
 	 *
-	 * For DTX command, type is 'T', it's built by function buildGpDtxProtocolCommand.
-	 * For query, type is 'M', it's built by function buildGpQueryString.
+	 * For DTX command, type is 'T', it's built by function
+	 * buildGpDtxProtocolCommand. For query, type is 'M', it's built by
+	 * function buildGpQueryString.
 	 */
-	char *query_text;
-	int	query_text_len;
+	char	   *query_text;
+	int			query_text_len;
 
 	/*
-	 * db_count: The number of segdbs that this thread is responsible
-	 * for dispatching the command to.
-	 * Equals the count of segdbDescPtrArray below.
+	 * db_count: The number of segdbs that this thread is responsible for
+	 * dispatching the command to. Equals the count of segdbDescPtrArray
+	 * below.
 	 */
-	int	db_count;
+	int			db_count;
 
 
 	/*
-	 * dispatchResultPtrArray: Array[0..db_count-1] of CdbDispatchResult*
-	 * Each CdbDispatchResult object points to a SegmentDatabaseDescriptor
-	 * that this thread is responsible for dispatching the command to.
+	 * dispatchResultPtrArray: Array[0..db_count-1] of CdbDispatchResult* Each
+	 * CdbDispatchResult object points to a SegmentDatabaseDescriptor that
+	 * this thread is responsible for dispatching the command to.
 	 */
 	struct CdbDispatchResult **dispatchResultPtrArray;
 
 	/*
 	 * Depending on this mode, we may send query cancel or query finish
-	 * message to QE while we are waiting it to complete.  NONE means
-	 * we expect QE to complete without any instruction.
+	 * message to QE while we are waiting it to complete.  NONE means we
+	 * expect QE to complete without any instruction.
 	 */
 	volatile DispatchWaitMode waitMode;
 
 	/*
 	 * pollfd supports for libpq
 	 */
-	int	nfds;
+	int			nfds;
 	struct pollfd *fds;
 
 	/*
 	 * The pthread_t thread handle.
 	 */
-	pthread_t thread;
-	bool thread_valid;
+	pthread_t	thread;
+	bool		thread_valid;
 
 } DispatchCommandParms;
 
@@ -101,9 +108,9 @@ typedef struct DispatchCommandParms
 typedef struct CdbDispatchCmdThreads
 {
 	struct DispatchCommandParms *dispatchCommandParmsAr;
-	int	dispatchCommandParmsArSize;
-	int	threadCount;
-}   CdbDispatchCmdThreads;
+	int			dispatchCommandParmsArSize;
+	int			threadCount;
+} CdbDispatchCmdThreads;
 
 /*
  * Counter to indicate there are some dispatch threads running. This will
@@ -114,12 +121,10 @@ static volatile int32 RunningThreadCount = 0;
 
 static int	getMaxThreadsPerGang(void);
 
-static bool
-shouldStillDispatchCommand(DispatchCommandParms *pParms,
+static bool shouldStillDispatchCommand(DispatchCommandParms *pParms,
 						   CdbDispatchResult *dispatchResult);
 
-static bool
-dispatchCommand(CdbDispatchResult *dispatchResult,
+static bool dispatchCommand(CdbDispatchResult *dispatchResult,
 				const char *query_text, int query_text_len);
 
 /* returns true if command complete */
@@ -129,36 +134,34 @@ static void *thread_DispatchCommand(void *arg);
 static void thread_DispatchOut(DispatchCommandParms *pParms);
 static void thread_DispatchWait(DispatchCommandParms *pParms);
 
-static void cdbdisp_checkCancel(DispatchCommandParms* pParms);
-static void cdbdisp_checkSegmentDBAlive(DispatchCommandParms * pParms);
-static void handlePollSuccess(DispatchCommandParms* pParms);
+static void cdbdisp_checkCancel(DispatchCommandParms *pParms);
+static void cdbdisp_checkSegmentDBAlive(DispatchCommandParms *pParms);
+static void handlePollSuccess(DispatchCommandParms *pParms);
 
 static void
-DecrementRunningCount(void *arg);
+			DecrementRunningCount(void *arg);
 
 static void
-cdbdisp_waitThreads(void);
+			cdbdisp_waitThreads(void);
 
 static bool
-cdbdisp_shouldCancel(struct CdbDispatcherState *ds);
+			cdbdisp_shouldCancel(struct CdbDispatcherState *ds);
 
-static void *
-cdbdisp_makeDispatchThreads(int maxSlices, char *queryText, int queryTextLen);
+static void *cdbdisp_makeDispatchThreads(int maxSlices, char *queryText, int queryTextLen);
 
-static void
-CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
+static void CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 								DispatchWaitMode waitMode);
 
-static void
-cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
+static void cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 								struct Gang *gp,
 								int sliceIndex,
-								CdbDispatchDirectDesc * dispDirect);
+								CdbDispatchDirectDesc *dispDirect);
 
 DispatcherInternalFuncs DispatcherSyncFuncs =
 {
-    cdbdisp_waitThreads,
+	cdbdisp_waitThreads,
 	cdbdisp_shouldCancel,
+	NULL,
 	cdbdisp_makeDispatchThreads,
 	CdbCheckDispatchResult_internal,
 	cdbdisp_dispatchToGang_internal,
@@ -171,31 +174,33 @@ DispatcherInternalFuncs DispatcherSyncFuncs =
  * return the number of threads needed for this gang.
  */
 static int
-cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState* ds,
-								 struct Gang* gp,
+cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState *ds,
+								 struct Gang *gp,
 								 int sliceIndex,
-								 CdbDispatchDirectDesc* disp_direct)
+								 CdbDispatchDirectDesc *disp_direct)
 {
 	CdbDispatchCmdThreads *pThreads = NULL;
-	int segdbsToDispatch = 0;
-	int i = 0;
+	int			segdbsToDispatch = 0;
+	int			i = 0;
 
 
 	Assert(ds->dispatchParams != NULL);
-	pThreads = (CdbDispatchCmdThreads*)ds->dispatchParams;
-    /*
-     * Create the thread parms structures based targetSet parameter.
-     * This will add the segdbDesc pointers appropriate to the
-     * targetSet into the thread Parms structures, making sure that each thread
-     * handles gp_connections_per_thread segdbs.
-     */
+	pThreads = (CdbDispatchCmdThreads *) ds->dispatchParams;
+
+	/*
+	 * Create the thread parms structures based targetSet parameter. This will
+	 * add the segdbDesc pointers appropriate to the targetSet into the thread
+	 * Parms structures, making sure that each thread handles
+	 * gp_connections_per_thread segdbs.
+	 */
 	for (i = 0; i < gp->size; i++)
 	{
-        CdbDispatchResult* qeResult = NULL;
-        DispatchCommandParms *pParms = NULL;
-        int parmsIndex = 0;
-        SegmentDatabaseDescriptor *segdbDesc = &gp->db_descriptors[i];
-        Assert(segdbDesc != NULL);
+		CdbDispatchResult *qeResult = NULL;
+		DispatchCommandParms *pParms = NULL;
+		int			parmsIndex = 0;
+		SegmentDatabaseDescriptor *segdbDesc = &gp->db_descriptors[i];
+
+		Assert(segdbDesc != NULL);
 
 		if (disp_direct->directed_dispatch)
 		{
@@ -204,6 +209,7 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState* ds,
 			if (disp_direct->content[0] != segdbDesc->segindex)
 				continue;
 		}
+
 		/*
 		 * Initialize the QE's CdbDispatchResult object.
 		 */
@@ -222,6 +228,7 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState* ds,
 		parmsIndex = segdbsToDispatch / gp_connections_per_thread;
 		pParms = pThreads->dispatchCommandParmsAr + pThreads->threadCount + parmsIndex;
 		pParms->dispatchResultPtrArray[pParms->db_count++] = qeResult;
+
 		/*
 		 * This CdbDispatchResult/SegmentDatabaseDescriptor pair will be
 		 * dispatched and monitored by a thread to be started below. Only that
@@ -232,6 +239,7 @@ cdbdisp_initDispatchParmsForGang(struct CdbDispatcherState* ds,
 		qeResult->stillRunning = true;
 		segdbsToDispatch++;
 	}
+
 	/*
 	 * Compute the thread count based on how many segdbs were added into the
 	 * thread pool, knowing that each thread handles gp_connections_per_thread
@@ -245,20 +253,21 @@ void
 cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 								struct Gang *gp,
 								int sliceIndex,
-								CdbDispatchDirectDesc * disp_direct)
+								CdbDispatchDirectDesc *disp_direct)
 {
-	int	i = 0;
-	CdbDispatchCmdThreads *pThreads = (CdbDispatchCmdThreads*)ds->dispatchParams;
-	int threadStartIndex = pThreads->threadCount;
-	int newThreads = cdbdisp_initDispatchParmsForGang(ds, gp, sliceIndex, disp_direct);
+	int			i = 0;
+	CdbDispatchCmdThreads *pThreads = (CdbDispatchCmdThreads *) ds->dispatchParams;
+	int			threadStartIndex = pThreads->threadCount;
+	int			newThreads = cdbdisp_initDispatchParmsForGang(ds, gp, sliceIndex, disp_direct);
 
 	/*
 	 * Create the threads. (which also starts the dispatching).
 	 */
 	for (i = 0; i < newThreads; i++)
 	{
-		int pthread_err = 0;
+		int			pthread_err = 0;
 		DispatchCommandParms *pParms = pThreads->dispatchCommandParmsAr + threadStartIndex + i;
+
 		Assert(pParms != NULL);
 
 		pParms->thread_valid = true;
@@ -266,15 +275,15 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 		pthread_err = gp_pthread_create(&pParms->thread, thread_DispatchCommand, pParms, "dispatchToGang");
 		if (pthread_err != 0)
 		{
-			int j;
+			int			j;
 
 			pParms->thread_valid = false;
 
 			/*
-			 * Error during thread create (this should be caused by
-			 * resource constraints). If we leave the threads running,
-			 * they'll immediately have some problems -- so we need to
-			 * join them, and *then* we can issue our FATAL error
+			 * Error during thread create (this should be caused by resource
+			 * constraints). If we leave the threads running, they'll
+			 * immediately have some problems -- so we need to join them, and
+			 * *then* we can issue our FATAL error
 			 */
 			pParms->waitMode = DISPATCH_WAIT_CANCEL;
 
@@ -290,8 +299,8 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 			}
 
 			ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR),
-						    errmsg("could not create thread %d of %d", i + 1, newThreads),
-							errdetail ("pthread_create() failed with err %d", pthread_err)));
+							errmsg("could not create thread %d of %d", i + 1, newThreads),
+							errdetail("pthread_create() failed with err %d", pthread_err)));
 		}
 		pThreads->threadCount++;
 	}
@@ -304,12 +313,13 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 								DispatchWaitMode waitMode)
 {
 	CdbDispatchCmdThreads *pThreads = NULL;
-	int	i;
-	int	j;
-	int threadCount;
+	int			i;
+	int			j;
+	int			threadCount;
 
 	Assert(ds != NULL);
-	pThreads = (CdbDispatchCmdThreads*)ds->dispatchParams;
+	pThreads = (CdbDispatchCmdThreads *) ds->dispatchParams;
+
 	/*
 	 * No-op if no work was dispatched since the last time we were called.
 	 */
@@ -327,9 +337,13 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 	for (i = 0; i < threadCount; i++)
 	{
 		DispatchCommandParms *pParms = &pThreads->dispatchCommandParmsAr[i];
+
 		Assert(pParms != NULL);
 
-		/* Don't overwrite DISPATCH_WAIT_CANCEL or DISPATCH_WAIT_FINISH with DISPATCH_WAIT_NONE */
+		/*
+		 * Don't overwrite DISPATCH_WAIT_CANCEL or DISPATCH_WAIT_FINISH with
+		 * DISPATCH_WAIT_NONE
+		 */
 		if (waitMode != DISPATCH_WAIT_NONE)
 			pParms->waitMode = waitMode;
 
@@ -337,20 +351,20 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 
 		if (pParms->thread_valid)
 		{
-			int pthread_err = 0;
+			int			pthread_err = 0;
 
 			pthread_err = pthread_join(pParms->thread, NULL);
 			if (pthread_err != 0)
 				elog(FATAL,
-					"CheckDispatchResult: pthread_join failed on thread %d (%lu) of %d (returned %d attempting to join to %lu)",
-					i + 1,
+					 "CheckDispatchResult: pthread_join failed on thread %d (%lu) of %d (returned %d attempting to join to %lu)",
+					 i + 1,
 #ifndef _WIN32
-					(unsigned long) pParms->thread,
+					 (unsigned long) pParms->thread,
 #else
-					(unsigned long) pParms->thread.p,
+					 (unsigned long) pParms->thread.p,
 #endif
-					pThreads->threadCount, pthread_err,
-					(unsigned long) mythread());
+					 pThreads->threadCount, pthread_err,
+					 (unsigned long) mythread());
 		}
 
 		HOLD_INTERRUPTS();
@@ -359,14 +373,15 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 		RESUME_INTERRUPTS();
 
 		/*
-		 * Examine the CdbDispatchResult objects containing the results
-		 * from this thread's QEs.
+		 * Examine the CdbDispatchResult objects containing the results from
+		 * this thread's QEs.
 		 */
 		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 		{
 			for (j = 0; j < pParms->db_count; j++)
 			{
 				CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[j];
+
 				cdbdisp_debugDispatchResult(dispatchResult);
 			}
 		}
@@ -377,8 +392,8 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 	Assert(pThreads->threadCount == 0);
 
 	/*
-	 * It looks like everything went fine, make sure we don't miss a
-	 * user cancellation?
+	 * It looks like everything went fine, make sure we don't miss a user
+	 * cancellation?
 	 *
 	 * The waitMode argument is NONE when we are doing "normal work".
 	 */
@@ -396,16 +411,16 @@ CdbCheckDispatchResult_internal(struct CdbDispatcherState *ds,
 void
 cdbdisp_waitThreads(void)
 {
-	int	i,
-		max_retry;
-	long interval = 10 * 1000;	/* 10 msec */
+	int			i,
+				max_retry;
+	long		interval = 10 * 1000;	/* 10 msec */
 
 	/*
 	 * Just in case to avoid to be stuck in the final stage of process
 	 * lifecycle, insure by setting time limit. If it exceeds, it probably
-	 * means some threads are stuck and not progressing, in which case
-	 * we can go ahead and cleanup things anyway. The duration should be
-	 * longer than the select timeout in thread_DispatchWait.
+	 * means some threads are stuck and not progressing, in which case we can
+	 * go ahead and cleanup things anyway. The duration should be longer than
+	 * the select timeout in thread_DispatchWait.
 	 */
 	max_retry = (DISPATCH_WAIT_TIMEOUT_SEC + 10) * 1000000L / interval;
 
@@ -432,12 +447,12 @@ cdbdisp_waitThreads(void)
 void *
 cdbdisp_makeDispatchThreads(int maxSlices, char *queryText, int queryTextLen)
 {
-	int	maxThreadsPerGang = getMaxThreadsPerGang();
-	int	maxThreads = maxThreadsPerGang * maxSlices;
+	int			maxThreadsPerGang = getMaxThreadsPerGang();
+	int			maxThreads = maxThreadsPerGang * maxSlices;
 
-	int	maxConn = gp_connections_per_thread;
-	int	size = 0;
-	int	i = 0;
+	int			maxConn = gp_connections_per_thread;
+	int			size = 0;
+	int			i = 0;
 	CdbDispatchCmdThreads *dThreads = palloc0(sizeof(*dThreads));
 
 	size = maxThreads * sizeof(DispatchCommandParms);
@@ -461,7 +476,7 @@ cdbdisp_makeDispatchThreads(int maxSlices, char *queryText, int queryTextLen)
 		pParms->query_text_len = queryTextLen;
 	}
 
-	return (void*)dThreads;
+	return (void *) dThreads;
 }
 
 /*
@@ -471,12 +486,12 @@ static void
 thread_DispatchOut(DispatchCommandParms *pParms)
 {
 	CdbDispatchResult *dispatchResult;
-	int	i,
-		db_count = pParms->db_count;
+	int			i,
+				db_count = pParms->db_count;
 
 	/*
-	 * The pParms contains an array of SegmentDatabaseDescriptors
-	 * to send commands through to.
+	 * The pParms contains an array of SegmentDatabaseDescriptors to send
+	 * commands through to.
 	 */
 	for (i = 0; i < db_count; i++)
 	{
@@ -485,7 +500,7 @@ thread_DispatchOut(DispatchCommandParms *pParms)
 		Assert(dispatchResult->segdbDesc != NULL &&
 			   dispatchResult->segdbDesc->conn != NULL);
 		WRITE_LOG_DISPATCHER_DEBUG("thread_DispatchOut working on %d of %d commands. asyncStatus %d",
-							i + 1, db_count, dispatchResult->segdbDesc->conn->asyncStatus);
+								   i + 1, db_count, dispatchResult->segdbDesc->conn->asyncStatus);
 
 		dispatchResult->hasDispatched = false;
 		dispatchResult->sentSignal = DISPATCH_WAIT_NONE;
@@ -504,25 +519,26 @@ thread_DispatchOut(DispatchCommandParms *pParms)
 		}
 
 		/*
-		 * Kick off the command over the libpq connection.
-		 * If unsuccessful, proceed anyway, and check for lost connection below.
+		 * Kick off the command over the libpq connection. If unsuccessful,
+		 * proceed anyway, and check for lost connection below.
 		 */
 		if (dispatchCommand(dispatchResult, pParms->query_text, pParms->query_text_len))
 		{
 			dispatchResult->hasDispatched = true;
+
 			/*
-			 * We'll keep monitoring this QE -- whether or not the command
-			 * was dispatched -- in order to check for a lost connection
-			 * or any other errors that libpq might have in store for us.
+			 * We'll keep monitoring this QE -- whether or not the command was
+			 * dispatched -- in order to check for a lost connection or any
+			 * other errors that libpq might have in store for us.
 			 */
 			WRITE_LOG_DISPATCHER_DEBUG("Command dispatched to segment db (%s)",
-					dispatchResult->segdbDesc->whoami);
+									   dispatchResult->segdbDesc->whoami);
 		}
 		else
 		{
 			dispatchResult->stillRunning = false;
 			write_log("Command could not be sent to segment db (%s)",
-					dispatchResult->segdbDesc->whoami);
+					  dispatchResult->segdbDesc->whoami);
 		}
 	}
 }
@@ -535,18 +551,18 @@ thread_DispatchOut(DispatchCommandParms *pParms)
  *       thread_DispatchCommand absolutely no elog'ing.
  */
 static void
-handlePollSuccess(DispatchCommandParms* pParms)
+handlePollSuccess(DispatchCommandParms *pParms)
 {
-	int cur_fds_num = 0;
-	int i = 0;
+	int			cur_fds_num = 0;
+	int			i = 0;
 
 	/*
 	 * We have data waiting on one or more of the connections.
 	 */
 	for (i = 0; i < pParms->db_count; i++)
 	{
-		bool finished;
-		int sock;
+		bool		finished;
+		int			sock;
 		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
 		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 
@@ -557,7 +573,7 @@ handlePollSuccess(DispatchCommandParms* pParms)
 			continue;
 
 		WRITE_LOG_DISPATCHER_DEBUG("looking for results from %d of %d (%s)",
-							 i + 1, pParms->db_count, segdbDesc->whoami);
+								   i + 1, pParms->db_count, segdbDesc->whoami);
 
 		sock = PQsocket(segdbDesc->conn);
 		Assert(sock >= 0);
@@ -570,12 +586,13 @@ handlePollSuccess(DispatchCommandParms* pParms)
 			continue;
 
 		WRITE_LOG_DISPATCHER_DEBUG("PQsocket says there are results from  %d of %d (%s)",
-							i + 1, pParms->db_count, segdbDesc->whoami);
+								   i + 1, pParms->db_count, segdbDesc->whoami);
 
 		/*
 		 * Receive and process results from this QE.
 		 */
 		finished = processResults(dispatchResult);
+
 		/*
 		 * Are we through with this QE now?
 		 */
@@ -584,11 +601,12 @@ handlePollSuccess(DispatchCommandParms* pParms)
 			dispatchResult->stillRunning = false;
 
 			WRITE_LOG_DISPATCHER_DEBUG("processResults says we are finished with %d of %d (%s)",
-							i + 1, pParms->db_count, segdbDesc->whoami);
+									   i + 1, pParms->db_count, segdbDesc->whoami);
 
 			if (DEBUG1 >= log_min_messages)
 			{
-				char msec_str[32];
+				char		msec_str[32];
+
 				switch (check_log_duration(msec_str, false))
 				{
 					case 1:
@@ -605,7 +623,7 @@ handlePollSuccess(DispatchCommandParms* pParms)
 		else
 		{
 			WRITE_LOG_DISPATCHER_DEBUG("processResults says we have more to do with %d of %d (%s)",
-							i + 1, pParms->db_count, segdbDesc->whoami);
+									   i + 1, pParms->db_count, segdbDesc->whoami);
 		}
 	}
 }
@@ -613,24 +631,25 @@ handlePollSuccess(DispatchCommandParms* pParms)
 static void
 thread_DispatchWait(DispatchCommandParms *pParms)
 {
-	int	timeoutCounter = 0;
+	int			timeoutCounter = 0;
 
 	/*
-	 * OK, we are finished submitting the command to the segdbs.
-	 * Now, we have to wait for them to finish.
+	 * OK, we are finished submitting the command to the segdbs. Now, we have
+	 * to wait for them to finish.
 	 */
 	for (;;)
 	{
-		int	i;
-		int n = 0;
-		int	nfds = 0;
-		int db_count = pParms->db_count;
+		int			i;
+		int			n = 0;
+		int			nfds = 0;
+		int			db_count = pParms->db_count;
+
 		/*
 		 * Which QEs are still running and could send results to us?
 		 */
 		for (i = 0; i < db_count; i++)
 		{
-			int	sock;
+			int			sock;
 			CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
 			SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 
@@ -642,10 +661,11 @@ thread_DispatchWait(DispatchCommandParms *pParms)
 
 			if (cdbconn_isBadConnection(segdbDesc))
 			{
-				char *msg = PQerrorMessage(segdbDesc->conn);
+				char	   *msg = PQerrorMessage(segdbDesc->conn);
+
 				cdbdisp_appendMessage(dispatchResult, LOG,
 									  "Lost connection to %s: %s.",
-									  segdbDesc->whoami, msg ?  msg : "unknown error");
+									  segdbDesc->whoami, msg ? msg : "unknown error");
 				dispatchResult->stillRunning = false;
 				continue;
 			}
@@ -668,9 +688,9 @@ thread_DispatchWait(DispatchCommandParms *pParms)
 			break;
 
 		/*
-		 * bail-out if we are dying. We should not do much of cleanup
-		 * as the main thread is waiting on this thread to finish.	Once
-		 * QD dies, QE will recognize it shortly anyway.
+		 * bail-out if we are dying. We should not do much of cleanup as the
+		 * main thread is waiting on this thread to finish.	Once QD dies, QE
+		 * will recognize it shortly anyway.
 		 */
 		if (proc_exit_inprogress)
 			break;
@@ -680,10 +700,14 @@ thread_DispatchWait(DispatchCommandParms *pParms)
 		 */
 		n = poll(pParms->fds, nfds, DISPATCH_WAIT_TIMEOUT_SEC * 1000);
 
-		/* poll returns with an error, including one due to an interrupted call */
+		/*
+		 * poll returns with an error, including one due to an interrupted
+		 * call
+		 */
 		if (n < 0)
 		{
-			int	sock_errno = SOCK_ERRNO;
+			int			sock_errno = SOCK_ERRNO;
+
 			if (sock_errno == EINTR)
 				continue;
 
@@ -734,11 +758,11 @@ thread_DispatchCommand(void *arg)
 	gp_set_thread_sigmasks();
 
 	/*
-	 * Mark that we are runnig a new thread. The main thread will check
-	 * it to see if there is still alive one. Let's do this after we block
-	 * signals so that nobody will intervent and mess up the value.
-	 * (should we actually block signals before spawning a thread, as much
-	 * like we do in fork??)
+	 * Mark that we are runnig a new thread. The main thread will check it to
+	 * see if there is still alive one. Let's do this after we block signals
+	 * so that nobody will intervent and mess up the value. (should we
+	 * actually block signals before spawning a thread, as much like we do in
+	 * fork??)
 	 */
 	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &RunningThreadCount, 1);
 
@@ -767,12 +791,12 @@ thread_DispatchCommand(void *arg)
  *		 thread_DispatchCommand absolutely no elog'ing.
  */
 static bool
-dispatchCommand(CdbDispatchResult * dispatchResult,
+dispatchCommand(CdbDispatchResult *dispatchResult,
 				const char *query_text, int query_text_len)
 {
 	TimestampTz beforeSend = 0;
-	long secs;
-	int	usecs;
+	long		secs;
+	int			usecs;
 
 	if (DEBUG1 >= log_min_messages)
 		beforeSend = GetCurrentTimestamp();
@@ -805,9 +829,9 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
  *       thread_DispatchCommand absolutely no elog'ing.
  */
 static void
-cdbdisp_checkCancel(DispatchCommandParms * pParms)
+cdbdisp_checkCancel(DispatchCommandParms *pParms)
 {
-	int i;
+	int			i;
 
 	/*
 	 * Are there any QEs that should be canceled?
@@ -816,6 +840,7 @@ cdbdisp_checkCancel(DispatchCommandParms * pParms)
 	{
 		DispatchWaitMode waitMode;
 		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
+
 		Assert(dispatchResult != NULL);
 		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 		CdbDispatchResults *meleeResults = dispatchResult->meleeResults;
@@ -835,28 +860,25 @@ cdbdisp_checkCancel(DispatchCommandParms * pParms)
 			waitMode = DISPATCH_WAIT_FINISH;
 
 		/*
-		 * However, escalate it to cancel if:
-		 *	 - user interrupt has occurred,
-		 *	 - or I'm told to send cancel,
-		 *	 - or an error has been reported by another QE,
-		 *	 - in case the caller wants cancelOnError and it was not canceled
+		 * However, escalate it to cancel if: - user interrupt has occurred, -
+		 * or I'm told to send cancel, - or an error has been reported by
+		 * another QE, - in case the caller wants cancelOnError and it was not
+		 * canceled
 		 */
 		if ((InterruptPending || pParms->waitMode == DISPATCH_WAIT_CANCEL || meleeResults->errcode) &&
 			(meleeResults->cancelOnError && !dispatchResult->wasCanceled))
 			waitMode = DISPATCH_WAIT_CANCEL;
 
 		/*
-		 * Finally, don't send the signal if
-		 *	 - no action needed (NONE)
-		 *	 - the signal was already sent
-		 *	 - connection is dead
+		 * Finally, don't send the signal if - no action needed (NONE) - the
+		 * signal was already sent - connection is dead
 		 */
 		if (waitMode != DISPATCH_WAIT_NONE &&
 			waitMode != dispatchResult->sentSignal &&
 			!cdbconn_isBadConnection(segdbDesc))
 		{
-			char errbuf[256];
-			bool sent;
+			char		errbuf[256];
+			bool		sent;
 
 			memset(errbuf, 0, sizeof(errbuf));
 
@@ -883,13 +905,13 @@ cdbdisp_checkCancel(DispatchCommandParms * pParms)
  *       thread_DispatchCommand absolutely no elog'ing.
  */
 static void
-cdbdisp_checkSegmentDBAlive(DispatchCommandParms * pParms)
+cdbdisp_checkSegmentDBAlive(DispatchCommandParms *pParms)
 {
-	int i;
+	int			i;
 
 	/*
-	 * check the connection still valid, set 1 min time interval
-	 * this may affect performance, should turn it off if required.
+	 * check the connection still valid, set 1 min time interval this may
+	 * affect performance, should turn it off if required.
 	 */
 	for (i = 0; i < pParms->db_count; i++)
 	{
@@ -897,7 +919,7 @@ cdbdisp_checkSegmentDBAlive(DispatchCommandParms * pParms)
 		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 
 		WRITE_LOG_DISPATCHER_DEBUG("checking status %d of %d %s stillRunning %d",
-				i + 1, pParms->db_count, segdbDesc->whoami, dispatchResult->stillRunning);
+								   i + 1, pParms->db_count, segdbDesc->whoami, dispatchResult->stillRunning);
 
 		/*
 		 * Skip if already finished or didn't dispatch.
@@ -912,7 +934,7 @@ cdbdisp_checkSegmentDBAlive(DispatchCommandParms * pParms)
 			continue;
 
 		WRITE_LOG_DISPATCHER_DEBUG("testing connection %d of %d %s stillRunning %d",
-				i + 1, pParms->db_count, segdbDesc->whoami, dispatchResult->stillRunning);
+								   i + 1, pParms->db_count, segdbDesc->whoami, dispatchResult->stillRunning);
 
 		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
 		{
@@ -950,7 +972,7 @@ shouldStillDispatchCommand(DispatchCommandParms *pParms,
 
 	if (cdbconn_isBadConnection(segdbDesc))
 	{
-		char *msg = PQerrorMessage(segdbDesc->conn);
+		char	   *msg = PQerrorMessage(segdbDesc->conn);
 
 		/*
 		 * Save error info for later.
@@ -972,7 +994,7 @@ shouldStillDispatchCommand(DispatchCommandParms *pParms,
 		dispatchResult->wasCanceled = true;
 		if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 			write_log("Error cleanup in progress; command not sent to %s",
-					segdbDesc->whoami);
+					  segdbDesc->whoami);
 		return false;
 	}
 
@@ -1001,8 +1023,8 @@ static bool
 processResults(CdbDispatchResult *dispatchResult)
 {
 	SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
-	char *msg;
-	int	rc;
+	char	   *msg;
+	int			rc;
 
 	/*
 	 * PQisBusy() has side-effects
@@ -1040,17 +1062,17 @@ processResults(CdbDispatchResult *dispatchResult)
 	while (!PQisBusy(segdbDesc->conn))
 	{
 		/* loop to call PQgetResult; won't block */
-		PGresult *pRes;
+		PGresult   *pRes;
 		ExecStatusType resultStatus;
-		int	resultIndex;
+		int			resultIndex;
 
 		/*
-		 * PQisBusy() does some error handling, which can
-		 * cause the connection to die -- we can't just continue on as
-		 * if the connection is happy without checking first.
+		 * PQisBusy() does some error handling, which can cause the connection
+		 * to die -- we can't just continue on as if the connection is happy
+		 * without checking first.
 		 *
-		 * For example, cdbdisp_numPGresult() will return a completely
-		 * bogus value!
+		 * For example, cdbdisp_numPGresult() will return a completely bogus
+		 * value!
 		 */
 		if (PQstatus(segdbDesc->conn) == CONNECTION_BAD
 			|| segdbDesc->conn->sock == -1)
@@ -1080,7 +1102,7 @@ processResults(CdbDispatchResult *dispatchResult)
 
 			/* this is normal end of command */
 			return true;
-		} /* end of results */
+		}						/* end of results */
 
 
 		/*
@@ -1104,7 +1126,8 @@ processResults(CdbDispatchResult *dispatchResult)
 			dispatchResult->okindex = resultIndex;
 
 			WRITE_LOG_DISPATCHER_DEBUG("%s -> ok %s", segdbDesc->whoami,
-						PQcmdStatus(pRes) ? PQcmdStatus(pRes) : "(no cmdStatus)");
+									   PQcmdStatus(pRes) ? PQcmdStatus(pRes) : "(no cmdStatus)");
+
 			/*
 			 * SREH - get number of rows rejected from QE if any
 			 */
@@ -1112,7 +1135,8 @@ processResults(CdbDispatchResult *dispatchResult)
 				dispatchResult->numrowsrejected += pRes->numRejected;
 
 			/*
-			 * COPY FROM ON SEGMENT - get number of rows completed by QE if any
+			 * COPY FROM ON SEGMENT - get number of rows completed by QE if
+			 * any
 			 */
 			if (pRes->numCompleted > 0)
 				dispatchResult->numrowscompleted += pRes->numCompleted;
@@ -1128,15 +1152,16 @@ processResults(CdbDispatchResult *dispatchResult)
 		else
 		{
 			/* QE reported an error */
-			char *sqlstate = PQresultErrorField(pRes, PG_DIAG_SQLSTATE);
-			int errcode = 0;
+			char	   *sqlstate = PQresultErrorField(pRes, PG_DIAG_SQLSTATE);
+			int			errcode = 0;
 
 			msg = PQresultErrorMessage(pRes);
 
 			WRITE_LOG_DISPATCHER_DEBUG("%s -> %s %s  %s",
-					segdbDesc->whoami,
-					PQresStatus(resultStatus),
-					sqlstate ? sqlstate : "(no SQLSTATE)", msg ? msg : "");
+									   segdbDesc->whoami,
+									   PQresStatus(resultStatus),
+									   sqlstate ? sqlstate : "(no SQLSTATE)", msg ? msg : "");
+
 			/*
 			 * Convert SQLSTATE to an error code (ERRCODE_xxx). Use a generic
 			 * nonzero error code if no SQLSTATE.
@@ -1152,7 +1177,7 @@ processResults(CdbDispatchResult *dispatchResult)
 		}
 	}
 
-	return false; /* we must keep on monitoring this socket */
+	return false;				/* we must keep on monitoring this socket */
 
 connection_error:
 	msg = PQerrorMessage(segdbDesc->conn);
@@ -1164,7 +1189,7 @@ connection_error:
 						  "Error on receive from %s: %s",
 						  segdbDesc->whoami, msg ? msg : "unknown error");
 
-	return true; /* connection is gone! */
+	return true;				/* connection is gone! */
 }
 
 static bool

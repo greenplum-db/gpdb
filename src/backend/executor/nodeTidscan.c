@@ -3,12 +3,12 @@
  * nodeTidscan.c
  *	  Routines to support direct tid scans of relations
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.58.2.1 2008/04/30 23:28:37 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.62 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,11 +25,13 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
 #include "executor/execdebug.h"
 #include "executor/nodeTidscan.h"
 #include "optimizer/clauses.h"
+#include "storage/bufmgr.h"
 #include "utils/array.h"
 #include "parser/parsetree.h"
 
@@ -63,10 +65,10 @@ TidListCreate(TidScanState *tidstate)
 	ListCell   *l;
 
 	/*
-	 * We silently discard any TIDs that are out of range at the time of
-	 * scan start.  (Since we hold at least AccessShareLock on the table,
-	 * it won't be possible for someone to truncate away the blocks we
-	 * intend to visit.)
+	 * We silently discard any TIDs that are out of range at the time of scan
+	 * start.  (Since we hold at least AccessShareLock on the table, it won't
+	 * be possible for someone to truncate away the blocks we intend to
+	 * visit.)
 	 */
 	nblocks = RelationGetNumberOfBlocks(tidstate->ss.ss_currentRelation);
 
@@ -293,15 +295,11 @@ TidNext(TidScanState *node)
 		 * CURRENT OF case it might not match anyway ...
 		 */
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1],
+					   slot, InvalidBuffer, false);
 
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
-          	if (!TupIsNull(slot))
-                {
-          		Gpmon_Incr_Rows_Out(GpmonPktFromTidScanState(node));
-                        CheckSendPlanStateGpmonPkt(&node->ss.ps);
-                }
 		return slot;
 	}
 
@@ -588,8 +586,6 @@ ExecInitTidScan(TidScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&tidstate->ss.ps);
 	ExecAssignScanProjectionInfo(&tidstate->ss);
 
-	initGpmonPktForTidScan((Plan *)node, &tidstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -601,12 +597,4 @@ ExecCountSlotsTidScan(TidScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + TIDSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForTidScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, TidScan));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

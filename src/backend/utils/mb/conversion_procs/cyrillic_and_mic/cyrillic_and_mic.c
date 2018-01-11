@@ -278,8 +278,8 @@ win866_to_win1251(PG_FUNCTION_ARGS)
 	/*
 	 * Note: There are a few characters like the "Numero" sign that exist in
 	 * all the other cyrillic encodings (win1251, ISO_8859-5 and cp866), but
-	 * not in KOI8R. As we use MULE_INTERNAL/KOI8R as an intermediary, we
-	 * will fail to convert those characters.
+	 * not in KOI8R. As we use MULE_INTERNAL/KOI8R as an intermediary, we will
+	 * fail to convert those characters.
 	 */
 	buf = palloc(len * ENCODING_GROWTH_RATE + 1);
 	win8662mic(src, buf, len);

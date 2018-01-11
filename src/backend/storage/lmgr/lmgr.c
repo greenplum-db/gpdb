@@ -4,12 +4,13 @@
  *	  POSTGRES lock manager code
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lmgr.c,v 1.96.2.1 2008/03/04 19:54:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lmgr.c,v 1.99 2009/01/01 17:23:47 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,13 +21,14 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/gp_policy.h"     /* CDB: POLICYTYPE_PARTiITIONED */
 #include "catalog/namespace.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"        /* CDB: get_rel_name() */
+
+#include "catalog/gp_policy.h"     /* CDB: POLICYTYPE_PARTiITIONED */
 #include "cdb/cdbvars.h"
 
 
@@ -780,6 +782,45 @@ UnlockSharedObject(Oid classid, Oid objid, uint16 objsubid,
 					   objsubid);
 
 	LockRelease(&tag, lockmode, false);
+}
+
+/*
+ *		LockSharedObjectForSession
+ *
+ * Obtain a session-level lock on a shared-across-databases object.
+ * See LockRelationIdForSession for notes about session-level locks.
+ */
+void
+LockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid,
+						   LOCKMODE lockmode)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_OBJECT(tag,
+					   InvalidOid,
+					   classid,
+					   objid,
+					   objsubid);
+
+	(void) LockAcquire(&tag, lockmode, true, false);
+}
+
+/*
+ *		UnlockSharedObjectForSession
+ */
+void
+UnlockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid,
+							 LOCKMODE lockmode)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_OBJECT(tag,
+					   InvalidOid,
+					   classid,
+					   objid,
+					   objsubid);
+
+	LockRelease(&tag, lockmode, true);
 }
 
 

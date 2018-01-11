@@ -3,7 +3,12 @@
  * cdbdispatchresult.h
  * routines for processing dispatch results.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbdispatchresult.h
  *
  *-------------------------------------------------------------------------
  */
@@ -14,7 +19,7 @@
 #include "commands/tablecmds.h"
 #include "utils/hsearch.h"
 
-struct pg_result;                   /* PGresult ... #include "gp-libpq-fe.h" */
+struct pg_result;                   /* PGresult ... #include "libpq-fe.h" */
 struct SegmentDatabaseDescriptor;   /* #include "cdb/cdbconn.h" */
 struct StringInfoData;              /* #include "lib/stringinfo.h" */
 struct PQExpBufferData;             /* #include "libpq-int.h" */
@@ -336,5 +341,9 @@ cdbdisp_makeDispatchResults(int sliceCapacity,
 
 void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
+
+extern struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts);
 
 #endif   /* CDBDISPATCHRESULT_H */

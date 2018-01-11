@@ -68,13 +68,9 @@ FOREIGN_KEY(resqueueid REFERENCES pg_resqueue(oid));
 FOREIGN_KEY(restypid REFERENCES pg_resourcetype(restypid));
 
 If you modify any foreign key declarations, you must re-generate
-gpMgmt/bin/gppylib/data/<version>.json file. There is a script for that
-in src/backend/catalog:
-
-  cd src/backend/catalog
-  make 5.0.json
-  cp 5.0.json ../../../gpMgmt/bin/gppylib/data
-
+gpMgmt/bin/gppylib/data/<version>.json file. The src/backend/catalog
+Makefile contains a target to automatically regenerate the file on
+"make all".
 
 If you add a column to an existing PostgreSQL catalog, you can use
 the GPDB_COLUMN_DEFAULT(col, default) macro to specify a default

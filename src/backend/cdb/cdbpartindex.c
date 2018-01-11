@@ -4,7 +4,12 @@
  *	Provides utility routines to support indexes over partitioned tables
  *	within Greenplum Database.
  *
- * Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbpartindex.c
  *
  *--------------------------------------------------------------------------
  */
@@ -28,11 +33,11 @@
 /* initial estimate for number of logical indexes */
 #define INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE 100
 
-static int logicalIndexId = 1;
-static int numLogicalIndexes = 0;
-static int numIndexesOnDefaultParts = 0;
+static int	logicalIndexId = 1;
+static int	numLogicalIndexes = 0;
+static int	numIndexesOnDefaultParts = 0;
 
-/* 
+/*
  * hash table to identify distinct "logical indexes". Each index with the same
  * index key, index pred, index expr is considered equivalent.
  */
@@ -41,14 +46,14 @@ static HTAB *PartitionIndexHash;
 /* hash table to hold information about distinct logical indexes. */
 static HTAB *LogicalIndexInfoHash;
 
-/* 
- * Hash entry for PartionIndexHash
+/*
+ * Hash entry for PartitionIndexHash
  * hashkey is (indexkey + indexpred + indexexprs)
  */
-typedef struct 
-{ 
-	char 		*key;
-	int 		logicalIndexId;
+typedef struct
+{
+	char	   *key;
+	int			logicalIndexId;
 } PartitionIndexHashEntry;
 
 /*
@@ -57,13 +62,13 @@ typedef struct
  */
 typedef struct
 {
-	char 		*key;
-	int 		logicalIndexId;
-	Oid		logicalIndexOid;
-	struct 		IndexInfo *ii;
+	char	   *key;
+	int			logicalIndexId;
+	Oid			logicalIndexOid;
+	struct IndexInfo *ii;
 	LogicalIndexType indType;
-	List		*partList;
-	List		*defaultPartList;
+	List	   *partList;
+	List	   *defaultPartList;
 } LogicalIndexInfoHashEntry;
 
 /*
@@ -72,27 +77,27 @@ typedef struct
  */
 typedef struct PartitionIndexNode
 {
-	Oid		paroid;		/* OID of row in pg_partition */
-	Oid		parparentrule;	/* OID of row in pg_partition_rule */
-	Oid 		parchildrelid;	/* table oid of the part */
-	Oid		parrelid;	/* needed to map attnums */
-	bool		isDefault;	/* is this a default part */
-	Bitmapset	*index; 	/* logical indexes for this part */
-	List		*children;	/* child parts */
-	List		*defaultLevels; /* the level at which the part key is default */
+	Oid			paroid;			/* OID of row in pg_partition */
+	Oid			parparentrule;	/* OID of row in pg_partition_rule */
+	Oid			parchildrelid;	/* table oid of the part */
+	Oid			parrelid;		/* needed to map attnums */
+	bool		isDefault;		/* is this a default part */
+	Bitmapset  *index;			/* logical indexes for this part */
+	List	   *children;		/* child parts */
+	List	   *defaultLevels;	/* the level at which the part key is default */
 } PartitionIndexNode;
 
 static void recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
-					Oid partOid, Oid rootOid);
+						Oid partOid, Oid rootOid);
 static void recordIndexes(PartitionIndexNode **partIndexTree);
 static void getPartitionIndexNode(Oid rootOid, int2 level,
-					Oid parent, PartitionIndexNode **n,
-					bool isDefault, List *defaultLevels);
+					  Oid parent, PartitionIndexNode **n,
+					  bool isDefault, List *defaultLevels);
 static void indexParts(PartitionIndexNode **np, bool isDefault);
 static void dumpPartsIndexInfo(PartitionIndexNode *n, int level);
-static LogicalIndexes * createPartsIndexResult(Oid root);
+static LogicalIndexes *createPartsIndexResult(Oid root);
 static bool collapseIndexes(PartitionIndexNode **partitionIndexNode,
-					LogicalIndexInfoHashEntry **entry);
+				LogicalIndexInfoHashEntry **entry);
 static void createIndexHashTables(void);
 static IndexInfo *populateIndexInfo(Relation indRel);
 static Node *mergeIntervals(Node *intervalFst, Node *intervalSnd);
@@ -108,8 +113,8 @@ static uint32
 key_string_hash(const void *key, Size keysize)
 {
 	Size		s_len = strlen((const char *) key);
-	
-	Assert(keysize == sizeof(char*));
+
+	Assert(keysize == sizeof(char *));
 	return DatumGetUInt32(hash_any((const unsigned char *) key, (int) s_len));
 }
 
@@ -117,21 +122,21 @@ key_string_hash(const void *key, Size keysize)
 static int
 key_string_compare(const void *key1, const void *key2, Size keysize)
 {
-	Assert(keysize == sizeof(char*));
-	return strcmp(((PartitionIndexHashEntry*)key1)->key, key2);
+	Assert(keysize == sizeof(char *));
+	return strcmp(((PartitionIndexHashEntry *) key1)->key, key2);
 }
 
 /* Copy string by copying pointer. */
 static void *
 key_string_copy(void *dest, const void *src, Size keysize)
 {
-	Assert(keysize == sizeof(char*));
-	
-	*((char**)dest) = (char*)src; /* trust caller re allocation */
-	return NULL; /* not used */
+	Assert(keysize == sizeof(char *));
+
+	*((char **) dest) = (char *) src;	/* trust caller re allocation */
+	return NULL;				/* not used */
 }
 
-/*
+/*-------------------------------------------------------------------------
  * BuildLogicalIndexInfo
  *   Returns an array of "logical indexes" on partitioned
  *   tables.
@@ -140,8 +145,8 @@ key_string_copy(void *dest, const void *src, Size keysize)
  *
  *   If input relid does not represent a partitioned table, the function
  *   returns NULL.
- * 
- *   This function does the following
+ *
+ *  This function does the following
  *	1) Builds a PartitionIndexNode tree representing the partitioned
  *	   table hierarchy.
  * 	2) Builds 2 hash tables -
@@ -164,13 +169,13 @@ key_string_copy(void *dest, const void *src, Size keysize)
  * 	   each logical index on a default part is represented as a separate
  *	   logical index in the output. Some additional information is
  *	   included so the specific default partition may be identified.
- * 
+ *
  *	Example of a partitioning hierarchy, and the output generated.
  *	I1..In are logical index ids.
  *
  *	After Step 3 (leaves annotated with logical index ids)
  *
- *				Root 
+ *				Root
  *		  / 		|		\
  *		 /		|		 \
  *		/		|		  \
@@ -185,8 +190,8 @@ key_string_copy(void *dest, const void *src, Size keysize)
  *
  *			      Root (I2)
  *		 / 		| 	       \
- *		/		|		\ 
- * 	       /             	|		 \ 
+ *		/		|		\
+ * 	       /             	|		 \
  *   	    A1 (I1)		A2		default	(I1)
  *	 /      \            /      \            /     \
  *	/        \          /        \	 	/       \
@@ -194,33 +199,34 @@ key_string_copy(void *dest, const void *src, Size keysize)
  *    B1         def   B1(I1)         def   B1(I4)    def(I3)
  *
  * The output returned from BuildLogicalIndexInfo will be
- * 
+ *
  * logicalIndexOid 	nColumns  indexKeys  indPred indExprs  indIsUnique  partCons   				defaultLevels
  * 	I2		..	  ..	     ..	     ..	       ..           -						-
- * 	I1		..	  ..	     ..	     ..	       ..           pk1=A1 OR (pk1=A2 AND pk2=B1)		- 
+ * 	I1		..	  ..	     ..	     ..	       ..           pk1=A1 OR (pk1=A2 AND pk2=B1)		-
  * 	I1'		..	  ..	     ..	     ..	       ..           -						0
  * 	I3		..	  ..	     ..	     ..	       ..           -						0,1
  * 	I4		..	  ..	     ..	     ..	       ..           pk2=B1	 				0
+ *-------------------------------------------------------------------------
  */
 LogicalIndexes *
 BuildLogicalIndexInfo(Oid relid)
 {
-	MemoryContext   callerContext = NULL;
-	MemoryContext   partContext = NULL;
+	MemoryContext callerContext = NULL;
+	MemoryContext partContext = NULL;
 	LogicalIndexes *partsLogicalIndexes = NULL;
 	HASH_SEQ_STATUS hash_seq;
 	LogicalIndexInfoHashEntry *entry;
 	PartitionIndexNode *n = NULL;
 
 	/*
-	 * create a memory context to hold allocations, so we can get rid of
-	 * at the end of this function.
+	 * create a memory context to hold allocations, so we can get rid of at
+	 * the end of this function.
 	 */
 	partContext = AllocSetContextCreate(CurrentMemoryContext,
-					"Partitioned Logical Index Context",
-					ALLOCSET_DEFAULT_MINSIZE,
-					ALLOCSET_DEFAULT_INITSIZE,
-					ALLOCSET_DEFAULT_MAXSIZE);
+										"Partitioned Logical Index Context",
+										ALLOCSET_DEFAULT_MINSIZE,
+										ALLOCSET_DEFAULT_INITSIZE,
+										ALLOCSET_DEFAULT_MAXSIZE);
 
 	/* switch to the new context */
 	callerContext = MemoryContextSwitchTo(partContext);
@@ -238,16 +244,19 @@ BuildLogicalIndexInfo(Oid relid)
 
 	/* create the hash tables to hold the logical index info */
 	createIndexHashTables();
-	
+
 
 	/* now walk the tree and annotate with logical index id at each leaf */
 	recordIndexes(&n);
 
 	hash_freeze(LogicalIndexInfoHash);
 
-	/* get rid of first hash table here as we have identified all logical indexes */
+	/*
+	 * get rid of first hash table here as we have identified all logical
+	 * indexes
+	 */
 	hash_destroy(PartitionIndexHash);
-	
+
 	/* walk the tree and pull-up indexes for each logical index */
 	hash_seq_init(&hash_seq, LogicalIndexInfoHash);
 	while ((entry = hash_seq_search(&hash_seq)))
@@ -265,29 +274,29 @@ BuildLogicalIndexInfo(Oid relid)
 	MemoryContextSwitchTo(callerContext);
 
 	/* generate output rows */
-	if ((numLogicalIndexes+numIndexesOnDefaultParts) > 0)
+	if ((numLogicalIndexes + numIndexesOnDefaultParts) > 0)
 		partsLogicalIndexes = createPartsIndexResult(relid);
 
 	hash_destroy(LogicalIndexInfoHash);
 
 	/* all information has been copied into caller context */
 	MemoryContextDelete(partContext);
-	
+
 	return partsLogicalIndexes;
 }
 
-/* 
+/*
  * getPartitionIndexNode
  *   Construct a PartitionIndexNode tree for the given part.
- *   Recurs to construct branches. 
+ *   Recurs to construct branches.
  */
 static void
 getPartitionIndexNode(Oid rootOid,
-			int2 level,
-			Oid parent,
-			PartitionIndexNode **n,
-			bool isDefault,
-			List *defaultLevels)
+					  int2 level,
+					  Oid parent,
+					  PartitionIndexNode **n,
+					  bool isDefault,
+					  List *defaultLevels)
 {
 	HeapTuple	tuple;
 	ScanKeyData scankey[3];
@@ -295,18 +304,15 @@ getPartitionIndexNode(Oid rootOid,
 	Relation	partRel;
 	Relation	partRuleRel;
 	Form_pg_partition partDesc;
-	Oid		parOid;
-	bool 		inctemplate = false;
+	Oid			parOid;
+	bool		inctemplate = false;
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
-	
-	/* select oid as partid, *
-	 * from pg_partition
-	 * where 
-   	 * 	parrelid = :relid and
-	 * 	parlevel = :level and
-	 *	paristemplate = false;
+
+	/*
+	 * select oid as partid, * from pg_partition where parrelid = :relid and
+	 * parlevel = :level and paristemplate = false;
 	 */
 	partRel = heap_open(PartitionRelationId, AccessShareLock);
 
@@ -355,7 +361,10 @@ getPartitionIndexNode(Oid rootOid,
 	/* recurse to fill the children */
 	partRuleRel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-	/* SELECT * FROM pg_partition_rule WHERE paroid = :1 AND parparentrule = :2 */
+	/*
+	 * SELECT * FROM pg_partition_rule WHERE paroid = :1 AND parparentrule =
+	 * :2
+	 */
 	ScanKeyInit(&scankey[0],
 				Anum_pg_partition_rule_paroid,
 				BTEqualStrategyNumber, F_OIDEQ,
@@ -369,15 +378,18 @@ getPartitionIndexNode(Oid rootOid,
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		PartitionIndexNode *child;
-		Form_pg_partition_rule rule_desc = (Form_pg_partition_rule)GETSTRUCT(tuple);
-	
+		Form_pg_partition_rule rule_desc = (Form_pg_partition_rule) GETSTRUCT(tuple);
+
 		child = palloc(sizeof(PartitionIndexNode));
 		memset(child, 0, sizeof(PartitionIndexNode));
 		child->paroid = HeapTupleGetOid(tuple);
 		child->parrelid = partDesc->parrelid;
 		child->parchildrelid = rule_desc->parchildrelid;
 
-		/* For every node, we keep track of every level at which this node has default partitioning */
+		/*
+		 * For every node, we keep track of every level at which this node has
+		 * default partitioning
+		 */
 		child->isDefault = isDefault;
 		child->defaultLevels = defaultLevels;
 
@@ -392,32 +404,32 @@ getPartitionIndexNode(Oid rootOid,
 		(*n)->children = lappend((*n)->children, child);
 
 		getPartitionIndexNode(rootOid, level + 1, HeapTupleGetOid(tuple),
-					&child, child->isDefault, child->defaultLevels);
+							  &child, child->isDefault, child->defaultLevels);
 	}
 
 	systable_endscan(sscan);
 	heap_close(partRuleRel, AccessShareLock);
 }
 
-/* 
+/*
  * constructIndexHashKey
  *   The index hash key is a string representing the index key,
  *   index predicate, and index exprs
  *
  *   Note, all attnums are mapped to the root.
- */ 
+ */
 static char *
 constructIndexHashKey(Oid partOid,
-			Oid rootOid,
-			HeapTuple tup,
-			AttrNumber *attMap,
-			IndexInfo *ii,
-			LogicalIndexType indType)
+					  Oid rootOid,
+					  HeapTuple tup,
+					  AttrNumber *attMap,
+					  IndexInfo *ii,
+					  LogicalIndexType indType)
 {
-	StringInfoData  buf;
-	Expr 		*predExpr = NULL;
-	Expr 		*exprsExpr = NULL;
-	
+	StringInfoData buf;
+	Expr	   *predExpr = NULL;
+	Expr	   *exprsExpr = NULL;
+
 	initStringInfo(&buf);
 
 	/* map the attrnos in the indKey to root part */
@@ -428,44 +440,45 @@ constructIndexHashKey(Oid partOid,
 			ii->ii_KeyAttrNumbers[i] = attMap[(ii->ii_KeyAttrNumbers[i]) - 1];
 		}
 		appendStringInfo(&buf, "%d", ii->ii_KeyAttrNumbers[i]);
-	}	
+	}
 
 	/* map the attrnos in indPred */
-	predExpr = (Expr *)ii->ii_Predicate;
-	
-	change_varattnos_of_a_node((Node *)predExpr, attMap);
+	predExpr = (Expr *) ii->ii_Predicate;
+
+	change_varattnos_of_a_node((Node *) predExpr, attMap);
 
 	appendStringInfo(&buf, "%s", nodeToString(predExpr));
 
 	/* remember mapped predicate */
-	ii->ii_Predicate = (List *)predExpr;
+	ii->ii_Predicate = (List *) predExpr;
 
-	exprsExpr = (Expr *)ii->ii_Expressions;
+	exprsExpr = (Expr *) ii->ii_Expressions;
 
-	change_varattnos_of_a_node((Node *)exprsExpr, attMap);
+	change_varattnos_of_a_node((Node *) exprsExpr, attMap);
 
 	appendStringInfo(&buf, "%s", nodeToString(exprsExpr));
 	appendStringInfo(&buf, "%d", (int) indType);
 
 	/* remember mapped exprsList */
-	ii->ii_Expressions = (List *)exprsExpr;
+	ii->ii_Expressions = (List *) exprsExpr;
 
 	return buf.data;
-} 
+}
 
-/* 
+/*
  * createIndexHashTables
- *  create the hash tables to hold logical indexes 
+ *  create the hash tables to hold logical indexes
  */
 static void
 createIndexHashTables()
 {
-	MemoryContext	context = NULL;
+	MemoryContext context = NULL;
 	HASHCTL		hash_ctl;
 
-	/* 
-	 * this hash is to identify the logical indexes. 1 logical index corresponds to
-	 * multiple physical indexes which have the same indkey + indpred + indexprs
+	/*
+	 * this hash is to identify the logical indexes. 1 logical index
+	 * corresponds to multiple physical indexes which have the same indkey +
+	 * indpred + indexprs
 	 */
 	memset(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(char *);
@@ -475,24 +488,24 @@ createIndexHashTables()
 	hash_ctl.keycopy = key_string_copy;
 	hash_ctl.hcxt = context;
 	PartitionIndexHash = hash_create("Partition Index Hash",
-				INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
-				&hash_ctl,
-				HASH_ELEM | HASH_FUNCTION |
-				HASH_COMPARE | HASH_KEYCOPY |
-				HASH_CONTEXT);
+									 INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
+									 &hash_ctl,
+									 HASH_ELEM | HASH_FUNCTION |
+									 HASH_COMPARE | HASH_KEYCOPY |
+									 HASH_CONTEXT);
 
 	Assert(PartitionIndexHash != NULL);
 
-	/*  this hash is used to hold the logical indexes for easy lookup */
+	/* this hash is used to hold the logical indexes for easy lookup */
 	memset(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(uint32);
 	hash_ctl.entrysize = sizeof(LogicalIndexInfoHashEntry);
 	hash_ctl.hash = tag_hash;
 	hash_ctl.hcxt = context;
 	LogicalIndexInfoHash = hash_create("Logical Index Info Hash",
-				INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
-				&hash_ctl,
-				HASH_ELEM | HASH_FUNCTION );
+									   INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE,
+									   &hash_ctl,
+									   HASH_ELEM | HASH_FUNCTION);
 	Assert(LogicalIndexInfoHash != NULL);
 }
 
@@ -503,26 +516,27 @@ createIndexHashTables()
 static void
 recordIndexes(PartitionIndexNode **partIndexTree)
 {
-	ListCell *lc; 
+	ListCell   *lc;
 	PartitionIndexNode *partIndexNode = *partIndexTree;
 
 	if (partIndexNode->children)
 	{
-		foreach (lc, partIndexNode->children)
+		foreach(lc, partIndexNode->children)
 		{
 			PartitionIndexNode *child = (PartitionIndexNode *) lfirst(lc);
+
 			recordIndexes(&child);
 		}
 	}
-	else 
+	else
 		/* at a leaf */
-		recordIndexesOnLeafPart(partIndexTree, 
-					partIndexNode->parchildrelid, 
-					partIndexNode->parrelid);
+		recordIndexesOnLeafPart(partIndexTree,
+								partIndexNode->parchildrelid,
+								partIndexNode->parrelid);
 }
 
 /*
- * recordIndexesOnLeafPart 
+ * recordIndexesOnLeafPart
  *   Given a part
  * 	- fetch each index on the part from pg_index
  *	- map attnums in index key, index expr, index pred to the root attnums
@@ -534,23 +548,23 @@ recordIndexes(PartitionIndexNode **partIndexTree)
  */
 static void
 recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
-			Oid partOid,
-			Oid rootOid)
+						Oid partOid,
+						Oid rootOid)
 {
-	char 				*partIndexHashKey;
-	bool 				foundPartIndexHash;
-	bool 				foundLogicalIndexHash;
-	AttrNumber 			*attmap = NULL;
-	struct IndexInfo 		*ii = NULL;
-	PartitionIndexHashEntry 	*partIndexHashEntry;
-	LogicalIndexInfoHashEntry	*logicalIndexInfoHashEntry;
-	PartitionIndexNode		*pNode = *pNodePtr;
-	List		   *indexoidlist;
-	ListCell	   *lc;
+	char	   *partIndexHashKey;
+	bool		foundPartIndexHash;
+	bool		foundLogicalIndexHash;
+	AttrNumber *attmap = NULL;
+	struct IndexInfo *ii = NULL;
+	PartitionIndexHashEntry *partIndexHashEntry;
+	LogicalIndexInfoHashEntry *logicalIndexInfoHashEntry;
+	PartitionIndexNode *pNode = *pNodePtr;
+	List	   *indexoidlist;
+	ListCell   *lc;
 
-	Relation partRel = heap_open(partOid, AccessShareLock);
+	Relation	partRel = heap_open(partOid, AccessShareLock);
 
-	char relstorage = partRel->rd_rel->relstorage;
+	char		relstorage = partRel->rd_rel->relstorage;
 
 	heap_close(partRel, AccessShareLock);
 
@@ -560,7 +574,7 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 	{
 		Oid			indexoid = lfirst_oid(lc);
 		LogicalIndexType indType = INDTYPE_BITMAP;
-		Relation indRel;
+		Relation	indRel;
 
 		/*
 		 * We're holding a lock on the table. We assume that's enough to
@@ -568,8 +582,9 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		 */
 		indRel = index_open(indexoid, NoLock);
 
-		/* for AO and AOCO tables we assume the index is bitmap, for heap partitions
-		 * look up the access method from the catalog
+		/*
+		 * for AO and AOCO tables we assume the index is bitmap, for heap
+		 * partitions look up the access method from the catalog
 		 */
 		if (RELSTORAGE_HEAP == relstorage)
 		{
@@ -579,20 +594,20 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			}
 		}
 
-		/* 
+		/*
 		 * when constructing hash key, we need to map attnums in part indexes
 		 * to root attnums. Get the attMap needed for mapping.
 		 */
 		if (!attmap)
 		{
-			Relation partRel = heap_open(partOid, AccessShareLock);
-			Relation rootRel = heap_open(rootOid, AccessShareLock);
+			Relation	partRel = heap_open(partOid, AccessShareLock);
+			Relation	rootRel = heap_open(rootOid, AccessShareLock);
 
-			TupleDesc rootTupDesc = rootRel->rd_att;
-			TupleDesc partTupDesc = partRel->rd_att;
-		
+			TupleDesc	rootTupDesc = rootRel->rd_att;
+			TupleDesc	partTupDesc = partRel->rd_att;
+
 			attmap = varattnos_map(partTupDesc, rootTupDesc);
-			
+
 			/* can we close here ? */
 			heap_close(partRel, AccessShareLock);
 			heap_close(rootRel, AccessShareLock);
@@ -607,10 +622,10 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		partIndexHashKey = constructIndexHashKey(partOid, rootOid, indRel->rd_indextuple, attmap, ii, indType);
 
 		/* lookup PartitionIndexHash table */
-		partIndexHashEntry = (PartitionIndexHashEntry *)hash_search(PartitionIndexHash,
-							(void *)partIndexHashKey,
-							HASH_ENTER,
-							&foundPartIndexHash);
+		partIndexHashEntry = (PartitionIndexHashEntry *) hash_search(PartitionIndexHash,
+																	 (void *) partIndexHashKey,
+																	 HASH_ENTER,
+																	 &foundPartIndexHash);
 
 		if (!foundPartIndexHash)
 		{
@@ -619,25 +634,28 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 
 			/* assign a logical index id */
 			partIndexHashEntry->logicalIndexId = logicalIndexId++;
-		
-			/* insert the entry into LogicalIndexInfoHash to keep track of logical indexes */
-			logicalIndexInfoHashEntry = (LogicalIndexInfoHashEntry *)hash_search(LogicalIndexInfoHash,
-								  (void *)&(partIndexHashEntry->logicalIndexId),
-								  HASH_ENTER,
-							 	  &foundLogicalIndexHash);
+
+			/*
+			 * insert the entry into LogicalIndexInfoHash to keep track of
+			 * logical indexes
+			 */
+			logicalIndexInfoHashEntry = (LogicalIndexInfoHashEntry *) hash_search(LogicalIndexInfoHash,
+																				  (void *) &(partIndexHashEntry->logicalIndexId),
+																				  HASH_ENTER,
+																				  &foundLogicalIndexHash);
 
 
 			if (foundLogicalIndexHash)
 			{
-				/* 
-				 * we should not find the entry in the logical index hash as this is the first
-				 * time we are seeing it
+				/*
+				 * we should not find the entry in the logical index hash as
+				 * this is the first time we are seeing it
 				 */
 				ereport(ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
 								indexoid
-							 )));
+								)));
 			}
 
 			logicalIndexInfoHashEntry->logicalIndexId = partIndexHashEntry->logicalIndexId;
@@ -649,7 +667,10 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		}
 		else
 		{
-			/* we can release IndexInfo as we already have the information in the hash */
+			/*
+			 * we can release IndexInfo as we already have the information in
+			 * the hash
+			 */
 			if (ii->ii_Expressions)
 				pfree(ii->ii_Expressions);
 			if (ii->ii_Predicate)
@@ -665,21 +686,22 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 
 /*
  * collapseIndexes
- *   Walk the PartitionNode tree 
- *	- For every node 
+ *   Walk the PartitionNode tree
+ *	- For every node
  *		- If a logical index exists on all the children of the node, record the index
  *	  	  on the node and wipeout the index from the children
  *	- recurse up the tree to the root.
  */
 static bool
 collapseIndexes(PartitionIndexNode **partitionIndexNode,
-			LogicalIndexInfoHashEntry **entry)
+				LogicalIndexInfoHashEntry **entry)
 {
-	ListCell *lc, *lc1;
+	ListCell   *lc,
+			   *lc1;
 	PartitionIndexNode *pn = *partitionIndexNode;
-	bool exists = TRUE;
-	int lid= (*entry)->logicalIndexId;
-	int childStatus = TRUE;
+	bool		exists = TRUE;
+	int			lid = (*entry)->logicalIndexId;
+	int			childStatus = TRUE;
 
 	if (pn->children)
 	{
@@ -702,11 +724,12 @@ collapseIndexes(PartitionIndexNode **partitionIndexNode,
 		{
 			/* if index exists on every child, record in the parent */
 			pn->index = bms_add_member(pn->index, lid);
-			
+
 			/* remove the index from the children */
-			foreach (lc1, pn->children)
+			foreach(lc1, pn->children)
 			{
 				PartitionIndexNode *child = (PartitionIndexNode *) lfirst(lc1);
+
 				bms_del_member(child->index, lid);
 			}
 		}
@@ -736,41 +759,42 @@ collapseIndexes(PartitionIndexNode **partitionIndexNode,
 static void
 indexParts(PartitionIndexNode **np, bool isDefault)
 {
-	LogicalIndexInfoHashEntry  *entry;
-	PartitionIndexNode		   *n = *np;
-	bool						found;
-	int							x;
+	LogicalIndexInfoHashEntry *entry;
+	PartitionIndexNode *n = *np;
+	bool		found;
+	int			x;
 
 	if (!n)
 		return;
-	
+
 	x = bms_first_from(n->index, 0);
 	while (x >= 0)
 	{
 		entry = (LogicalIndexInfoHashEntry *) hash_search(LogicalIndexInfoHash,
-							  (void *)&x, HASH_FIND, &found);
+														  (void *) &x, HASH_FIND, &found);
 		if (!found)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
-					errmsg("error during BuildLogicalIndexInfo. Index not found \"%d\" in hash",
-						   x)));
+					 errmsg("error during BuildLogicalIndexInfo. Index not found \"%d\" in hash",
+							x)));
 		}
 
 		if (n->isDefault || isDefault)
 		{
 			/*
 			 * We keep track of the default node in the PartitionIndexNode
-			 * tree, since we need to output the defaultLevels information
-			 * to the caller.
+			 * tree, since we need to output the defaultLevels information to
+			 * the caller.
 			 */
 			entry->defaultPartList = lappend(entry->defaultPartList, n);
 			numIndexesOnDefaultParts++;
 		}
 		else
+
 			/*
-			 * For regular non-default parts we just track the part oid
-			 * which will be used to get the part constraint.
+			 * For regular non-default parts we just track the part oid which
+			 * will be used to get the part constraint.
 			 */
 			entry->partList = lappend_oid(entry->partList, n->parchildrelid);
 
@@ -779,10 +803,12 @@ indexParts(PartitionIndexNode **np, bool isDefault)
 
 	if (n->children)
 	{
-		ListCell *lc;
-		foreach (lc, n->children)
+		ListCell   *lc;
+
+		foreach(lc, n->children)
 		{
 			PartitionIndexNode *child = (PartitionIndexNode *) lfirst(lc);
+
 			indexParts(&child, n->isDefault);
 		}
 	}
@@ -799,22 +825,22 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 {
 	ScanKeyData scankey;
 	SysScanDesc sscan;
-	Relation        conRel;
-	HeapTuple       conTup;
-	Node            *conExpr;
-	Node            *result = NULL;
-	Datum           conBinDatum;
-	Datum			conKeyDatum;
-	char            *conBin;
-	bool            conbinIsNull = false;
-	bool			conKeyIsNull = false;
-	AttrMap		*map;
+	Relation	conRel;
+	HeapTuple	conTup;
+	Node	   *conExpr;
+	Node	   *result = NULL;
+	Datum		conBinDatum;
+	Datum		conKeyDatum;
+	char	   *conBin;
+	bool		conbinIsNull = false;
+	bool		conKeyIsNull = false;
+	AttrMap    *map;
 
 	/* create the map needed for mapping attnums */
-	Relation rootRel = heap_open(rootOid, AccessShareLock);
-	Relation partRel = heap_open(partOid, AccessShareLock);
+	Relation	rootRel = heap_open(rootOid, AccessShareLock);
+	Relation	partRel = heap_open(partOid, AccessShareLock);
 
-	map_part_attrs(partRel, rootRel, &map, false); 
+	map_part_attrs(partRel, rootRel, &map, false);
 
 	heap_close(rootRel, AccessShareLock);
 	heap_close(partRel, AccessShareLock);
@@ -829,44 +855,48 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
 							   SnapshotNow, 1, &scankey);
 
-	// list of keys referenced in the found constraints
-	List *keys = NIL;
+	/* list of keys referenced in the found constraints */
+	List	   *keys = NIL;
 
 	while (HeapTupleIsValid(conTup = systable_getnext(sscan)))
 	{
-		/* we defer the filter on contype to here in order to take advantage of
-		 * the index on conrelid */
+		/*
+		 * we defer the filter on contype to here in order to take advantage
+		 * of the index on conrelid
+		 */
 		Form_pg_constraint conEntry = (Form_pg_constraint) GETSTRUCT(conTup);
+
 		if (conEntry->contype != 'c')
 		{
 			continue;
 		}
 		/* Fetch the constraint expression in parsetree form */
 		conBinDatum = heap_getattr(conTup, Anum_pg_constraint_conbin,
-				RelationGetDescr(conRel), &conbinIsNull);
+								   RelationGetDescr(conRel), &conbinIsNull);
 
-		Assert (!conbinIsNull);
+		Assert(!conbinIsNull);
 		/* map the attnums in constraint expression to root attnums */
 		conBin = TextDatumGetCString(conBinDatum);
 		conExpr = stringToNode(conBin);
 		conExpr = attrMapExpr(map, conExpr);
 
 		if (result)
-			result = (Node *)make_andclause(list_make2(result, conExpr));
+			result = (Node *) make_andclause(list_make2(result, conExpr));
 		else
 			result = conExpr;
 
-		// fetch the key associated with this constraint
+		/* fetch the key associated with this constraint */
 		conKeyDatum = heap_getattr(conTup, Anum_pg_constraint_conkey,
-				RelationGetDescr(conRel), &conKeyIsNull);
-		Datum *dats = NULL;
-		int numKeys = 0;
+								   RelationGetDescr(conRel), &conKeyIsNull);
+		Datum	   *dats = NULL;
+		int			numKeys = 0;
 
-		// extract key elements
+		/* extract key elements */
 		deconstruct_array(DatumGetArrayTypeP(conKeyDatum), INT2OID, 2, true, 's', &dats, NULL, &numKeys);
 		for (int i = 0; i < numKeys; i++)
 		{
-			int16 key_elem =  DatumGetInt16(dats[i]);
+			int16		key_elem = DatumGetInt16(dats[i]);
+
 			keys = lappend_int(keys, key_elem);
 		}
 	}
@@ -874,14 +904,15 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	systable_endscan(sscan);
 	heap_close(conRel, AccessShareLock);
 
-	ListCell *lc = NULL;
-	foreach (lc, partKey)
+	ListCell   *lc = NULL;
+
+	foreach(lc, partKey)
 	{
-		int partKeyCol = lfirst_int(lc);
+		int			partKeyCol = lfirst_int(lc);
 
 		if (!list_member_int(keys, partKeyCol))
 		{
-			// passed in key is not found in the constraint. return NULL
+			/* passed in key is not found in the constraint. return NULL */
 			if (NULL != result)
 			{
 				pfree(result);
@@ -912,36 +943,39 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
 		return NULL;
 	}
 
-	// get number of partitioning levels
-	List *partkeys = rel_partition_keys_ordered(rootOid);
-	int nLevels = list_length(partkeys);
+	/* get number of partitioning levels */
+	List	   *partkeys = rel_partition_keys_ordered(rootOid);
+	int			nLevels = list_length(partkeys);
 
-	Node *allCons = NULL;
+	Node	   *allCons = NULL;
+
 	for (int level = 0; level < nLevels; level++)
 	{
-		List *partKey = (List *) list_nth(partkeys, level);
+		List	   *partKey = (List *) list_nth(partkeys, level);
 
-		PartitionNode *pn = get_parts(rootOid, level, 0 /*parent*/, false /* inctemplate */, false /*includesubparts*/);
+		PartitionNode *pn = get_parts(rootOid, level, 0 /* parent */ , false /* inctemplate */ , false /* includesubparts */ );
 
 		Assert(NULL != pn);
-		List *partOids = all_partition_relids(pn);
+		List	   *partOids = all_partition_relids(pn);
 
-		Node *partCons = NULL;
-		ListCell *lc = NULL;
+		Node	   *partCons = NULL;
+		ListCell   *lc = NULL;
+
 		foreach(lc, partOids)
 		{
-			Oid partOid = lfirst_oid(lc);
-			// fetch part constraint mapped to root
+			Oid			partOid = lfirst_oid(lc);
+
+			/* fetch part constraint mapped to root */
 			partCons = getPartConstraints(partOid, rootOid, partKey);
 
 			if (NULL == partCons)
 			{
-				// default partition has NULL constriant in GPDB's catalog
+				/* default partition has NULL constriant in GPDB's catalog */
 				*defaultLevels = lappend_int(*defaultLevels, level);
 				continue;
 			}
 
-			// OR them to current constraints
+			/* OR them to current constraints */
 			if (NULL == allCons)
 			{
 				allCons = partCons;
@@ -955,7 +989,7 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
 
 	if (NULL == allCons)
 	{
-		allCons = makeBoolConst(false /*value*/, false /*isnull*/);
+		allCons = makeBoolConst(false /* value */ , false /* isnull */ );
 	}
 
 	list_free(partkeys);
@@ -964,17 +998,18 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
 
 /*
  * populateIndexInfo
- *  Populate the IndexInfo structure with the information from pg_index tuple. 
+ *  Populate the IndexInfo structure with the information from pg_index tuple.
  */
 static IndexInfo *
 populateIndexInfo(Relation indRel)
 {
-	IndexInfo 	*ii;
+	IndexInfo  *ii;
 
- 	/*  
-	 * We could just call existing BuildIndexInfo here. But BuildIndexInfo needs to open each index, 
- 	 * and populate the relcache entry for the index relation. We can get the information by 
-	 * just looking into pg_index tuple.
+	/*
+	 * We could just call existing BuildIndexInfo here. But BuildIndexInfo
+	 * needs to open each index, and populate the relcache entry for the index
+	 * relation. We can get the information by just looking into pg_index
+	 * tuple.
 	 */
 	ii = makeNode(IndexInfo);
 
@@ -992,7 +1027,7 @@ populateIndexInfo(Relation indRel)
 	return ii;
 }
 
-/* 
+/*
  * generateLogicalIndexPred
  *  generate the partial index predicate associated with each logical index.
  *  The predicate is generated by OR'ing the constraints of all parts on which the logical
@@ -1000,14 +1035,14 @@ populateIndexInfo(Relation indRel)
  */
 static void
 generateLogicalIndexPred(LogicalIndexes *li,
-				int *curIdx,
-				LogicalIndexInfoHashEntry *entry,
-				Oid root,
-				int *numLogicalIndexes)
+						 int *curIdx,
+						 LogicalIndexInfoHashEntry *entry,
+						 Oid root,
+						 int *numLogicalIndexes)
 {
-	Node            *conList;
-	ListCell *lc; 
-	AttrNumber	*indexKeys;
+	Node	   *conList;
+	ListCell   *lc;
+	AttrNumber *indexKeys;
 
 	if (list_length(entry->partList) > 0)
 	{
@@ -1016,28 +1051,28 @@ generateLogicalIndexPred(LogicalIndexes *li,
 		li->logicalIndexInfo[*curIdx]->logicalIndexOid = entry->logicalIndexOid;
 		li->logicalIndexInfo[*curIdx]->nColumns = entry->ii->ii_NumIndexAttrs;
 		indexKeys = palloc(sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
-		memcpy((char *)indexKeys,
-				&(entry->ii->ii_KeyAttrNumbers), sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
-		li->logicalIndexInfo[*curIdx]->indexKeys = indexKeys; 
-		li->logicalIndexInfo[*curIdx]->indExprs = (List *)copyObject(entry->ii->ii_Expressions);
-		li->logicalIndexInfo[*curIdx]->indPred = (List *)copyObject(entry->ii->ii_Predicate);
+		memcpy((char *) indexKeys,
+			   &(entry->ii->ii_KeyAttrNumbers), sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
+		li->logicalIndexInfo[*curIdx]->indexKeys = indexKeys;
+		li->logicalIndexInfo[*curIdx]->indExprs = (List *) copyObject(entry->ii->ii_Expressions);
+		li->logicalIndexInfo[*curIdx]->indPred = (List *) copyObject(entry->ii->ii_Predicate);
 		li->logicalIndexInfo[*curIdx]->indIsUnique = entry->ii->ii_Unique;
 		li->logicalIndexInfo[*curIdx]->indType = entry->indType;
 
 		/* fetch the partList from the logical index hash entry */
 		foreach(lc, entry->partList)
 		{
-			Oid partOid = lfirst_oid(lc);
-	
+			Oid			partOid = lfirst_oid(lc);
+
 			if (partOid != root)
-			{	 
+			{
 				/* fetch part constraint mapped to root */
-				conList = getPartConstraints(partOid, root, NIL /*partKey*/);
-	
+				conList = getPartConstraints(partOid, root, NIL /* partKey */ );
+
 				/* OR them to current constraints */
 				if (li->logicalIndexInfo[*curIdx]->partCons)
 				{
-					li->logicalIndexInfo[*curIdx]->partCons = mergeIntervals(li->logicalIndexInfo[*curIdx]->partCons, conList);						
+					li->logicalIndexInfo[*curIdx]->partCons = mergeIntervals(li->logicalIndexInfo[*curIdx]->partCons, conList);
 				}
 				else
 				{
@@ -1053,31 +1088,31 @@ generateLogicalIndexPred(LogicalIndexes *li,
 	/* from the hash entry, fetch the defaultPartList */
 	foreach(lc, entry->defaultPartList)
 	{
-		PartitionIndexNode *node = (PartitionIndexNode *)lfirst(lc);
+		PartitionIndexNode *node = (PartitionIndexNode *) lfirst(lc);
 		AttrNumber *indexKeys;
 
 		li->logicalIndexInfo[*curIdx]->partCons = NULL;
 		li->logicalIndexInfo[*curIdx]->logicalIndexOid = entry->logicalIndexOid;
 		li->logicalIndexInfo[*curIdx]->nColumns = entry->ii->ii_NumIndexAttrs;
 		indexKeys = palloc(sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
-		memcpy((char *)indexKeys,
-			&(entry->ii->ii_KeyAttrNumbers), sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
+		memcpy((char *) indexKeys,
+			   &(entry->ii->ii_KeyAttrNumbers), sizeof(AttrNumber) * entry->ii->ii_NumIndexAttrs);
 		li->logicalIndexInfo[*curIdx]->indexKeys = indexKeys;
-		li->logicalIndexInfo[*curIdx]->indExprs = (List *)copyObject(entry->ii->ii_Expressions);
-		li->logicalIndexInfo[*curIdx]->indPred = (List *)copyObject(entry->ii->ii_Predicate);
+		li->logicalIndexInfo[*curIdx]->indExprs = (List *) copyObject(entry->ii->ii_Expressions);
+		li->logicalIndexInfo[*curIdx]->indPred = (List *) copyObject(entry->ii->ii_Predicate);
 		li->logicalIndexInfo[*curIdx]->indIsUnique = entry->ii->ii_Unique;
 		li->logicalIndexInfo[*curIdx]->indType = entry->indType;
 
-		/* 
+		/*
 		 * Default parts don't have constraints, so they cannot be represented
-		 * as part of the partial index predicate.  
-		 * 
-		 * Instead each index on a default part is represented as a different logical
-		 * index. Since we need a way to identify the specific default part, we include
-		 * the defaultLevels information, in addition to ANY constraint on the default
-		 * part.
+		 * as part of the partial index predicate.
+		 *
+		 * Instead each index on a default part is represented as a different
+		 * logical index. Since we need a way to identify the specific default
+		 * part, we include the defaultLevels information, in addition to ANY
+		 * constraint on the default part.
 		 */
-		li->logicalIndexInfo[*curIdx]->partCons = getPartConstraints(node->parchildrelid, root, NIL /*partKey*/);
+		li->logicalIndexInfo[*curIdx]->partCons = getPartConstraints(node->parchildrelid, root, NIL /* partKey */ );
 
 		/* get the level on which partitioning key is default */
 		li->logicalIndexInfo[*curIdx]->defaultLevels = list_copy(node->defaultLevels);
@@ -1088,7 +1123,7 @@ generateLogicalIndexPred(LogicalIndexes *li,
 
 /*
  * createPartsIndexResult
- *  Populate the result array of logical indexes. Most of the information needed 
+ *  Populate the result array of logical indexes. Most of the information needed
  *  is in the IndexInfoHash. The partial index predicate needs to be generated
  *  by a call to generateLogicalIndexPred.
  */
@@ -1096,16 +1131,16 @@ static LogicalIndexes *
 createPartsIndexResult(Oid root)
 {
 	HASH_SEQ_STATUS hash_seq;
-	int numResultRows = 0;
+	int			numResultRows = 0;
 	LogicalIndexes *li;
 	LogicalIndexInfoHashEntry *entry;
 
 	hash_seq_init(&hash_seq, LogicalIndexInfoHash);
 
-	/* 
-	 * we allocate space for twice the number of logical indexes.
-	 * this is because, every index on a default part will be
-	 * returned as a separate index.
+	/*
+	 * we allocate space for twice the number of logical indexes. this is
+	 * because, every index on a default part will be returned as a separate
+	 * index.
 	 */
 	numResultRows = numLogicalIndexes + numIndexesOnDefaultParts;
 
@@ -1114,15 +1149,18 @@ createPartsIndexResult(Oid root)
 	li->numLogicalIndexes = 0;
 	li->logicalIndexInfo = NULL;
 
-	li->logicalIndexInfo = (LogicalIndexInfo **)palloc0(numResultRows * sizeof(LogicalIndexInfo *));
+	li->logicalIndexInfo = (LogicalIndexInfo **) palloc0(numResultRows * sizeof(LogicalIndexInfo *));
 
 	/* should we limit the amount of memory being allocated here ? */
-	for (int i=0; i < numResultRows; i++)
-		li->logicalIndexInfo[i] = (LogicalIndexInfo *)palloc0(sizeof(LogicalIndexInfo));
+	for (int i = 0; i < numResultRows; i++)
+		li->logicalIndexInfo[i] = (LogicalIndexInfo *) palloc0(sizeof(LogicalIndexInfo));
 
-	int curIdx = 0;
+	int			curIdx = 0;
 
-	/* for each logical index, get the part constraints as partial index predicates */
+	/*
+	 * for each logical index, get the part constraints as partial index
+	 * predicates
+	 */
 	while ((entry = hash_seq_search(&hash_seq)))
 	{
 		generateLogicalIndexPred(li, &curIdx, entry, root, &li->numLogicalIndexes);
@@ -1137,14 +1175,14 @@ createPartsIndexResult(Oid root)
  *   to the index described by the logicalIndexInfo input structure
  *   in the relation identified by the partOid.
  *   The 1st matching index is returned.
- * 
+ *
  * NOTE: index attnums in the provided logicalIndexInfo input structure
  * have to be mapped to the root.
  */
 Oid
 getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 {
-	Oid             resultOid = InvalidOid;
+	Oid			resultOid = InvalidOid;
 	bool		indKeyEqual;
 	List	   *indexoidlist;
 	ListCell   *lc;
@@ -1189,13 +1227,15 @@ getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 			continue;
 
 		/* compare indPred */
-		List *indPred = RelationGetIndexPredicate(indRel);
+		List	   *indPred = RelationGetIndexPredicate(indRel);
+
 		if (!equal(iInfo->indPred, indPred))
 			continue;
 		list_free(indPred);
 
 		/* compare indExprs */
-		List *indExprs = RelationGetIndexExpressions(indRel);
+		List	   *indExprs = RelationGetIndexExpressions(indRel);
+
 		if (equal(iInfo->indExprs, indExprs))
 		{
 			/* found matching index */
@@ -1203,8 +1243,8 @@ getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 			break;
 		}
 		list_free(indExprs);
-		
-		// TODO: antova - Mar 28, 2014; compare if this is a bitmap index
+
+		/* TODO: antova - Mar 28, 2014; compare if this is a bitmap index */
 	}
 
 	if (indRel)
@@ -1220,9 +1260,9 @@ getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 static void
 dumpPartsIndexInfo(PartitionIndexNode *n, int level)
 {
-	ListCell 	   *lc;
-	StringInfoData	logicalIndexes;
-	int				x;
+	ListCell   *lc;
+	StringInfoData logicalIndexes;
+	int			x;
 
 	initStringInfo(&logicalIndexes);
 
@@ -1249,10 +1289,11 @@ dumpPartsIndexInfo(PartitionIndexNode *n, int level)
 
 	if (n->children)
 	{
-		foreach (lc, n->children)
+		foreach(lc, n->children)
 		{
 			PartitionIndexNode *child = (PartitionIndexNode *) lfirst(lc);
-			dumpPartsIndexInfo(child, level+1);
+
+			dumpPartsIndexInfo(child, level + 1);
 			appendStringInfo(&logicalIndexes, "     ");
 		}
 	}
@@ -1262,39 +1303,42 @@ dumpPartsIndexInfo(PartitionIndexNode *n, int level)
  * 	mergeIntervals
  *   merge the two intervals by creating a disjunction of the given intervals, or collapsing
  *   them into one interval when possible
- *   
+ *
  *   This function's arguments represent two range constraints, which the function attempts
- *   to collapse into one if they share a common boundary. If no collapse is possible, 
+ *   to collapse into one if they share a common boundary. If no collapse is possible,
  *   the function returns a disjunction of the two intervals.
  */
 static Node *
 mergeIntervals(Node *intervalFst, Node *intervalSnd)
 {
-	Node *pnodeStart1 = NULL;
-	Node *pnodeEnd1 = NULL;
-	Node *pnodeStart2 = NULL;
-	Node *pnodeEnd2 = NULL;
-	
+	Node	   *pnodeStart1 = NULL;
+	Node	   *pnodeEnd1 = NULL;
+	Node	   *pnodeStart2 = NULL;
+	Node	   *pnodeEnd2 = NULL;
+
 	extractStartEndRange(intervalFst, &pnodeStart1, &pnodeEnd1);
 	extractStartEndRange(intervalSnd, &pnodeStart2, &pnodeEnd2);
-	
+
 	if (NULL != pnodeEnd1 && NULL != pnodeStart2)
 	{
-		OpExpr *opexprEnd1 = (OpExpr *) pnodeEnd1;
-		OpExpr *opexprStart2 = (OpExpr *) pnodeStart2;
-		Var *pvarEnd1 = NULL;
-		Var *pvarStart2 = NULL;
-		Const *pconstEnd1 = NULL;
-		Const *pconstStart2 = NULL;
-		Oid opnoEnd1 = InvalidOid;
-		Oid opnoStart2 = InvalidOid;
-		
+		OpExpr	   *opexprEnd1 = (OpExpr *) pnodeEnd1;
+		OpExpr	   *opexprStart2 = (OpExpr *) pnodeStart2;
+		Var		   *pvarEnd1 = NULL;
+		Var		   *pvarStart2 = NULL;
+		Const	   *pconstEnd1 = NULL;
+		Const	   *pconstStart2 = NULL;
+		Oid			opnoEnd1 = InvalidOid;
+		Oid			opnoStart2 = InvalidOid;
+
 		/* extract boundaries of the two intervals */
 		extractOpExprComponents(opexprEnd1, &pvarEnd1, &pconstEnd1, &opnoEnd1);
 		extractOpExprComponents(opexprStart2, &pvarStart2, &pconstStart2, &opnoStart2);
-		if (InvalidOid != opnoEnd1 && InvalidOid != opnoStart2 && 
-			equal(pvarEnd1, pvarStart2) && equal(pconstEnd1, pconstStart2) && /* middle point is the same */
-			opnoEnd1 == get_negator(opnoStart2) /* this guaranteed that the middle point is included in exactly 1 of the intervals */
+		if (InvalidOid != opnoEnd1 && InvalidOid != opnoStart2 &&
+			equal(pvarEnd1, pvarStart2) && equal(pconstEnd1, pconstStart2) &&	/* middle point is the
+																				 * same */
+			opnoEnd1 == get_negator(opnoStart2) /* this guaranteed that the
+												 * middle point is included in
+												 * exactly 1 of the intervals */
 			)
 		{
 			if (NULL != pnodeStart1 && NULL != pnodeEnd2)
@@ -1302,37 +1346,38 @@ mergeIntervals(Node *intervalFst, Node *intervalSnd)
 				/* merge intervals of the form (x,y), [y, z) into (x,z) */
 				return (Node *) make_andclause(list_make2(pnodeStart1, pnodeEnd2));
 			}
-			
+
 			if (NULL != pnodeStart1)
 			{
 				/* merge intervals of the form (x,y), [y, inf) into (x, inf) */
-				Var *pvarStart1 = NULL;
-				Const *pconstStart1 = NULL;
-				Oid opnoStart1 = InvalidOid;
-				OpExpr *opexprStart1 = (OpExpr *) pnodeStart1;
+				Var		   *pvarStart1 = NULL;
+				Const	   *pconstStart1 = NULL;
+				Oid			opnoStart1 = InvalidOid;
+				OpExpr	   *opexprStart1 = (OpExpr *) pnodeStart1;
+
 				extractOpExprComponents(opexprStart1, &pvarStart1, &pconstStart1, &opnoStart1);
-				
+
 				return (Node *) make_opclause(opnoStart1, opexprStart1->opresulttype, opexprStart1->opretset, (Expr *) pvarStart1, (Expr *) pconstStart1);
 			}
-			
+
 			if (NULL != pnodeEnd2)
 			{
 				/* merge intervals of the form (-inf,x), [x, y) into (-inf, y) */
-				Var *pvarEnd2 = NULL;
-				Const *pconstEnd2 = NULL;
-				Oid opnoEnd2 = InvalidOid;
-				OpExpr *opexprEnd2 = (OpExpr *) pnodeEnd2;
+				Var		   *pvarEnd2 = NULL;
+				Const	   *pconstEnd2 = NULL;
+				Oid			opnoEnd2 = InvalidOid;
+				OpExpr	   *opexprEnd2 = (OpExpr *) pnodeEnd2;
 
 				extractOpExprComponents(opexprEnd2, &pvarEnd2, &pconstEnd2, &opnoEnd2);
-				
+
 				return (Node *) make_opclause(opnoEnd2, opexprEnd2->opresulttype, opexprEnd2->opretset, (Expr *) pvarEnd2, (Expr *) pconstEnd2);
 			}
-			
+
 			Assert(NULL == pnodeStart1 && NULL == pnodeEnd2);
-			
+
 			/* merge (-inf, x), [x,inf) into true */
-			
-			return (Node *) makeBoolConst(true /*value*/, false /*isnull*/);
+
+			return (Node *) makeBoolConst(true /* value */ , false /* isnull */ );
 		}
 	}
 	return (Node *) make_orclause(list_make2(intervalFst, intervalSnd));
@@ -1340,23 +1385,24 @@ mergeIntervals(Node *intervalFst, Node *intervalSnd)
 
 /*
  * extractStartEndRange
- *   Given an expression representing an interval constraint, extract the expressions defining the interval's start and end 
+ *   Given an expression representing an interval constraint, extract the expressions defining the interval's start and end
  */
-static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd)
+static void
+extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd)
 {
 	if (IsA(clause, OpExpr))
 	{
-		OpExpr *opexpr = (OpExpr *) clause;
-		Expr *pexprLeft = list_nth(opexpr->args, 0);
-		Expr *pexprRight = list_nth(opexpr->args, 1);
-		CmpType cmptype = get_comparison_type(opexpr->opno, exprType((Node *) pexprLeft), exprType((Node *) pexprRight));
+		OpExpr	   *opexpr = (OpExpr *) clause;
+		Expr	   *pexprLeft = list_nth(opexpr->args, 0);
+		Expr	   *pexprRight = list_nth(opexpr->args, 1);
+		CmpType		cmptype = get_comparison_type(opexpr->opno, exprType((Node *) pexprLeft), exprType((Node *) pexprRight));
 
 		if (CmptEq == cmptype)
 		{
 			*ppnodeStart = *ppnodeEnd = clause;
 			return;
 		}
-		
+
 		if ((CmptLEq == cmptype || CmptLT == cmptype) && IsA(pexprRight, Const))
 		{
 			/* op expr of the form pk <= Const or pk < Const */
@@ -1364,7 +1410,7 @@ static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnode
 			*ppnodeEnd = clause;
 			return;
 		}
-		
+
 		if ((CmptGEq == cmptype || CmptGT == cmptype) && IsA(pexprRight, Const))
 		{
 			/* op expr of the form pk >= Const or pk > Const */
@@ -1373,37 +1419,40 @@ static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnode
 			return;
 		}
 	}
-	
-	/* only expressions of the form x > C1 and x < C2 supported: ignore all other expression types */
 
-	if (!IsA(clause, BoolExpr) || 
-			AND_EXPR != ((BoolExpr *) clause)->boolop || 
-			2 < list_length(((BoolExpr *) clause)->args))
+	/*
+	 * only expressions of the form x > C1 and x < C2 supported: ignore all
+	 * other expression types
+	 */
+
+	if (!IsA(clause, BoolExpr) ||
+		AND_EXPR != ((BoolExpr *) clause)->boolop ||
+		2 < list_length(((BoolExpr *) clause)->args))
 	{
 		return;
 	}
-	
-	BoolExpr *bool_expr = (BoolExpr *) clause;
-	
-	Node *nodeStart = list_nth(bool_expr->args, 0);
-	Node *nodeEnd = list_nth(bool_expr->args, 1);
-	
-	if (!IsA(nodeStart, OpExpr) || !IsA(nodeEnd, OpExpr))
+
+	BoolExpr   *bool_expr = (BoolExpr *) clause;
+
+	Node	   *nodeStart = list_nth(bool_expr->args, 0);
+	Node	   *nodeEnd = list_nth(bool_expr->args, 1);
+
+	if (!IsA(nodeStart, OpExpr) ||!IsA(nodeEnd, OpExpr))
 	{
 		return;
 	}
-	
-	OpExpr *opexprStart = (OpExpr *) nodeStart;
-	OpExpr *opexprEnd = (OpExpr *) nodeEnd;
-	
-	CmpType cmptLeft = get_comparison_type(opexprStart->opno, exprType(list_nth(opexprStart->args, 0)), exprType(list_nth(opexprStart->args, 1)));
-	CmpType cmptRight = get_comparison_type(opexprEnd->opno, exprType(list_nth(opexprEnd->args, 0)), exprType(list_nth(opexprEnd->args, 1)));
-	
+
+	OpExpr	   *opexprStart = (OpExpr *) nodeStart;
+	OpExpr	   *opexprEnd = (OpExpr *) nodeEnd;
+
+	CmpType		cmptLeft = get_comparison_type(opexprStart->opno, exprType(list_nth(opexprStart->args, 0)), exprType(list_nth(opexprStart->args, 1)));
+	CmpType		cmptRight = get_comparison_type(opexprEnd->opno, exprType(list_nth(opexprEnd->args, 0)), exprType(list_nth(opexprEnd->args, 1)));
+
 	if ((CmptGT != cmptLeft && CmptGEq != cmptLeft) || (CmptLT != cmptRight && CmptLEq != cmptRight))
 	{
 		return;
 	}
-	
+
 	*ppnodeStart = nodeStart;
 	*ppnodeEnd = nodeEnd;
 }
@@ -1412,17 +1461,19 @@ static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnode
  * extractOpExprComponents
  *   for an opexpr of type Var op Const, extract its components
  */
-static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst, Oid *opno)
+static void
+extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst, Oid *opno)
 {
-	Node *pnodeLeft = list_nth(opexpr->args, 0);
-	Node *pnodeRight = list_nth(opexpr->args, 1);
-	if (IsA(pnodeLeft, Var) && IsA(pnodeRight, Const))
+	Node	   *pnodeLeft = list_nth(opexpr->args, 0);
+	Node	   *pnodeRight = list_nth(opexpr->args, 1);
+
+	if (IsA(pnodeLeft, Var) &&IsA(pnodeRight, Const))
 	{
 		*ppvar = (Var *) pnodeLeft;
 		*ppconst = (Const *) pnodeRight;
 		*opno = opexpr->opno;
 	}
-	else if (IsA(pnodeLeft, Const) && IsA(pnodeRight, Var) && InvalidOid != get_commutator(opexpr->opno))
+	else if (IsA(pnodeLeft, Const) &&IsA(pnodeRight, Var) &&InvalidOid != get_commutator(opexpr->opno))
 	{
 		*ppvar = (Var *) pnodeRight;
 		*ppconst = (Const *) pnodeLeft;
@@ -1442,34 +1493,37 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 
 	indRel = index_open(indexOid, AccessShareLock);
 
-	IndexInfo *pindexInfo = populateIndexInfo(indRel);
-	Oid partOid = indRel->rd_index->indrelid;
+	IndexInfo  *pindexInfo = populateIndexInfo(indRel);
+	Oid			partOid = indRel->rd_index->indrelid;
 
-	// remap attributes
-	Relation rootRel = heap_open(rootOid, AccessShareLock);
-	Relation partRel = heap_open(partOid, AccessShareLock);
+	/* remap attributes */
+	Relation	rootRel = heap_open(rootOid, AccessShareLock);
+	Relation	partRel = heap_open(partOid, AccessShareLock);
 
-	TupleDesc rootTupDesc = rootRel->rd_att;
-	TupleDesc partTupDesc = partRel->rd_att;
+	TupleDesc	rootTupDesc = rootRel->rd_att;
+	TupleDesc	partTupDesc = partRel->rd_att;
 
-	char relstorage = partRel->rd_rel->relstorage;
-	AttrNumber	*attMap = varattnos_map(rootTupDesc, partTupDesc);
+	char		relstorage = partRel->rd_rel->relstorage;
+	AttrNumber *attMap = varattnos_map(rootTupDesc, partTupDesc);
+
 	heap_close(rootRel, AccessShareLock);
 	heap_close(partRel, AccessShareLock);
-	
-	// populate the index information
+
+	/* populate the index information */
 	LogicalIndexInfo *plogicalIndexInfo = (LogicalIndexInfo *) palloc0(sizeof(LogicalIndexInfo));
+
 	plogicalIndexInfo->nColumns = pindexInfo->ii_NumIndexAttrs;
 	plogicalIndexInfo->indIsUnique = pindexInfo->ii_Unique;
 	plogicalIndexInfo->logicalIndexOid = indexOid;
-	
-	int numIndexKeys = pindexInfo->ii_NumIndexAttrs;
+
+	int			numIndexKeys = pindexInfo->ii_NumIndexAttrs;
+
 	plogicalIndexInfo->indexKeys = palloc(sizeof(AttrNumber) * numIndexKeys);
-	memcpy((char *)plogicalIndexInfo->indexKeys, &(pindexInfo->ii_KeyAttrNumbers), sizeof(AttrNumber) * numIndexKeys);
+	memcpy((char *) plogicalIndexInfo->indexKeys, &(pindexInfo->ii_KeyAttrNumbers), sizeof(AttrNumber) * numIndexKeys);
 
 	plogicalIndexInfo->indExprs = copyObject(pindexInfo->ii_Expressions);
 	plogicalIndexInfo->indPred = copyObject(pindexInfo->ii_Predicate);
-	
+
 	/* remap expression fields */
 	/* map the attrnos if necessary */
 	if (attMap)
@@ -1484,7 +1538,7 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 		change_varattnos_of_a_node((Node *) plogicalIndexInfo->indExprs, attMap);
 		change_varattnos_of_a_node((Node *) plogicalIndexInfo->indPred, attMap);
 	}
-	
+
 	plogicalIndexInfo->indType = INDTYPE_BITMAP;
 	if (RELSTORAGE_HEAP == relstorage)
 	{

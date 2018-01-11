@@ -6,13 +6,10 @@
 #
 from gppylib.mainUtils import SimpleMainLock, ExceptionNoStackTraceNeeded
 
-import copy
-import datetime
 import os
 import sys
-import socket
 import signal
-from time import strftime, sleep
+from time import strftime
 
 try:
     from gppylib.commands.unix import *
@@ -49,7 +46,7 @@ Moves mirror segments in a pre-existing GPDB Array.
 EXECNAME = os.path.split(__file__)[-1]
 
 _help = ["""
-The input file should be be a plain text file with the format:
+The input file should be a plain text file with the format:
 
   filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
   <old_address>:<port>:<system_filespace_location> <new_address:port>:<replication_port>:<system_filespace_location>[:<fselocation>:...]
@@ -171,7 +168,7 @@ def sig_handler(sig, arg):
 def lookupGpdb(address, port, dataDirectory):
     """ Look up the segment gpdb by address, port, and dataDirectory """
 
-    gpdbList = gparray.getDbList()
+    gpdbList = gpArrayInstance.getDbList()
     for gpdb in gpdbList:
         if address == str(gpdb.getSegmentAddress()) and port == str(gpdb.getSegmentPort()) and dataDirectory == str(
                 gpdb.getSegmentDataDirectory()):
@@ -195,13 +192,12 @@ def lookupFilespaces(gpdb):
     """ Look up the segment's filespaces, and return map of filespace name : location. """
 
     retValue = {}
-    gpFilespaceObjList = gparray.getFilespaces(includeSystemFilespace=False)
     gpdbFilespaceDict = gpdb.getSegmentFilespaces()
 
     for oid in gpdbFilespaceDict:
         if oid == SYSTEM_FILESPACE:
             continue
-        name = gparray.getFileSpaceName(oid)
+        name = gpArrayInstance.getFileSpaceName(oid)
         location = gpdbFilespaceDict[oid]
         retValue[name] = location
     return retValue
@@ -329,13 +325,13 @@ pidfilepid = None  # pid of the process which has the lock
 locktorelease = None
 sml = None  # sml (simple main lock)
 
+logger = get_default_logger()
+
 try:
 
     # setup signal handlers so we can clean up correctly
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGHUP, sig_handler)
-
-    logger = get_default_logger()
 
     options, args = parseargs()
 
@@ -361,7 +357,7 @@ try:
 
     # Get array configuration
     try:
-        gparray = GpArray.initFromCatalog(dburl, utility=True)
+        gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
     except DatabaseError, ex:
         logger.error('Failed to connect to database.  Make sure the')
         logger.error('Greenplum instance is running, and that')
@@ -402,28 +398,22 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    try:
-        fileSpacesObjList = gparray.getFilespaces(includeSystemFilespace=False)
-        totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
-        numberOfWorkers = min(totalDirsToDelete, options.batch_size)
+    fileSpacesObjList = gpArrayInstance.getFilespaces(includeSystemFilespace=False)
+    totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
+    numberOfWorkers = min(totalDirsToDelete, options.batch_size)
+    if numberOfWorkers > 1:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in newConfig.oldMirrorList:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
-            cmd = RemoveFiles("remove old mirror segment directories"
-                              , mirror.dataDirectory
-                              , ctxt=REMOTE
-                              , remoteHost=mirror.address
-                              )
+            cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
+                                  remoteHost=mirror.address)
             pool.addCommand(cmd)
             for filespaceName in mirror.filespaces.keys():
                 logger.info(
                     "About to remove old mirror filespace directory: " + filespaceName + " : " + mirror.filespaces[
                         filespaceName])
-                cmd = RemoveFiles("remove old mirror segment directories"
-                                  , mirror.filespaces[filespaceName]
-                                  , ctxt=REMOTE
-                                  , remoteHost=mirror.address
-                                  )
+                cmd = RemoveDirectory("remove old mirror segment directories", mirror.filespaces[filespaceName],
+                                      ctxt=REMOTE, remoteHost=mirror.address)
                 pool.addCommand(cmd)
 
         # Wait for the segments to finish
@@ -447,9 +437,6 @@ try:
             logging.error("Although the system is in the process of recovering the mirrors to their new location,")
             logging.error("There was an issue removing the old mirror segment directories.")
             raise Exception("Unable to complete removal of old mirror segment directories.")
-
-    except Exception, e:
-        raise e
 
 except Exception, e:
     if options is not None and options.verbose:

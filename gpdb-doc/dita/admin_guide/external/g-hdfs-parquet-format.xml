@@ -1,0 +1,616 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_fstrm">
+    <title>Support for Parquet Files</title>
+    <body>
+      <p>You can use the Greenplum Database <codeph>gphdfs</codeph> protocol to access Parquet files
+        on a Hadoop file system (HDFS).</p>
+    </body>
+    <topic id="topic_hjl_qzv_vs">
+      <title>About the Parquet File Format</title>
+      <body>
+        <p>The Parquet file format is designed to take advantage of compressed, efficient columnar
+          data representation available to projects in the Hadoop ecosystem. Parquet supports
+          complex nested data structures and uses Dremel record shredding and assembly algorithms.
+          Parquet supports very efficient compression and encoding schemes. Parquet allows
+          compression schemes to be specified on a per-column level, and supports adding more
+          encodings as they are invented and implemented.</p>
+        <p>For information about the Parquet file format, see the Parquet documentation <xref
+            href="http://parquet.apache.org/documentation/latest/" format="html" scope="external"
+            >http://parquet.apache.org/documentation/latest/</xref>.</p>
+        <p>For an overview of columnar data storage and the Parquet file format, see <xref
+            href="https://blog.twitter.com/2013/dremel-made-simple-with-parquet" format="html"
+            scope="external"
+          >https://blog.twitter.com/2013/dremel-made-simple-with-parquet</xref>.</p>
+      </body>
+    </topic>
+    <topic id="topic_fdj_2sh_rt">
+      <title>Required Parquet Jar Files</title>
+      <body>
+        <p>Support for the Parquet file format requires these jar files:<sl>
+            <sli>parquet-hadoop-1.7.0.jar</sli>
+            <sli>parquet-common-1.7.0.jar</sli>
+            <sli>parquet-encoding-1.7.0.jar</sli>
+            <sli>parquet-column-1.7.0.jar</sli>
+            <sli>parquet-generator-1.7.0.jar</sli>
+            <sli>parquet-format-2.3.0-incubating.jar</sli>
+          </sl></p>
+        <note>The Cloudera 5.4.x Hadoop distribution includes some Parquet jar files. However, the
+          Java class names in the jar files are <codeph>parquet.<varname>xxx</varname></codeph>. The
+            <codeph>gphdfs</codeph> protocol uses the Java class names
+              <codeph>org.apache.parquet.<varname>xxx</varname></codeph>. The jar files with the
+          class name <codeph>org.apache.parquet</codeph> can be downloaded and installed on the
+          Greenplum Database hosts. </note>
+        <p>The <codeph>gphdfs</codeph> protocol also supports using
+            <codeph>parquet-hadoop-bundle-1.7.0.jar</codeph> that contains the classes required to
+          use Parquet within a Hadoop environment. These versions of
+            <codeph>parquet-hadoop-bundle</codeph> are not supported:<ul id="ul_e1z_4xr_zt">
+            <li>Version 1.6 and earlier. The versions do not use the Java class names
+                <codeph>org.apache.parquet</codeph></li>
+            <li>Version 1.8 and later. The versions contain the class <codeph>VersionParser</codeph>
+              that is not supported by <codeph>gphdfs</codeph>.</li>
+          </ul></p>
+        <p>For information about downloading the Parquet jar files, see <xref
+            href="http://parquet.apache.org/downloads/" format="html" scope="external"
+            >http://parquet.apache.org/downloads/</xref></p>
+        <p>On all the Greenplum Database hosts, ensure that the jar files are installed and are on
+          the <codeph>classpath</codeph> used by the <codeph>gphdfs</codeph> protocol. The
+            <codeph>classpath</codeph> is specified by the shell script
+            <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph>. As a Hadoop 2 example, you can
+          install the jar files in <codeph>$HADOOP_HOME/share/hadoop/common/lib</codeph>. The
+            <codeph>hadoop_env.sh</codeph> script file adds the jar files to the
+            <codeph>classpath</codeph>.</p>
+        <p>As an example, if the directory <codeph>$HADOOP_HOME/share/hadoop/common/lib</codeph>
+          does not exist, create it on all Greenplum Database hosts as the <codeph>gpadmin</codeph>
+          user. Then, add the add the jar files to the directory on all hosts. </p>
+        <p>The <codeph>hadoop_env.sh</codeph> script file adds the jar files to
+            <codeph>classpath</codeph> for the <codeph>gphdfs</codeph> protocol. This fragment in
+          the script file adds the jar files to the <codeph>classpath</codeph>.
+          <codeblock>if [ -d "${HADOOP_HOME}/share/hadoop/common/lib" ]; then
+for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
+            CLASSPATH=${CLASSPATH}:$f;
+done</codeblock></p>
+      </body>
+    </topic>
+    <topic id="topic_parquet">
+      <title>Parquet File Format Support</title>
+      <body>
+        <p>The Greenplum Database <codeph>gphdfs</codeph> protocol supports the Parquet file format
+          version 1 or 2. Parquet takes advantage of compressed, columnar data representation on
+          HDFS. In a Parquet file, the metadata (Parquet schema definition) contains data structure
+          information is written after the data to allow for single pass writing. </p>
+        <p>This is an example of the Parquet schema definition format:</p>
+        <codeblock>message test {
+    repeated byte_array binary_field;
+    required int32 int32_field;
+    optional int64 int64_field;
+    required boolean boolean_field;
+    required fixed_len_byte_array(3) flba_field;
+    required byte_array someDay (utf8);
+    };</codeblock>
+        <p>The definition for last field <codeph>someDay</codeph> specifies the
+            <codeph>binary</codeph> data type with the <codeph>utf8</codeph> annotation. The data
+          type and annotation defines the data as a UTF-8 encoded character string.</p>
+      </body>
+      <topic id="topic_kss_4mm_2s">
+        <title>Reading from and Writing to Parquet Files</title>
+        <body>
+          <p>To read from or write to a Parquet file, you create an external table and specify the
+            location of the parquet file in the <codeph>LOCATION</codeph> clause and
+              <codeph>'PARQUET'</codeph> in the <codeph>FORMAT</codeph> clause. For example, this is
+            the syntax for a readable external table.
+            <codeblock>CREATE EXTERNAL TABLE <varname>tablename</varname> (<varname>column_spec</varname>) LOCATION ( 'gphdfs://<varname>location</varname>') FORMAT 'PARQUET' </codeblock></p>
+          <p>The <varname>location</varname> can be an Parquet file or a directory containing a set
+            of Parquet files. For the file name you can specify the wildcard character * to match
+            any number of characters. If the location specifies multiple files when reading Parquet
+            files, Greenplum Database uses the schema in the first file that is read as the schema
+            for the other files. </p>
+        </body>
+      </topic>
+      <topic id="topic_f3f_124_hs">
+        <title>Reading a Parquet File</title>
+        <body>
+          <p>The following table identifies how Greenplum database converts the Parquet data type if the
+            Parquet schema definition does not contain an annotation.</p>
+          <table id="table_wm5_1x4_hs">
+            <title>Data Type Conversion when Reading a Parquet File</title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1"/>
+              <colspec colnum="2" colname="col2"/>
+              <thead>
+                <row>
+                  <entry>Parquet Data Type</entry>
+                  <entry>Greenplum Database Data Type </entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>boolean </entry>
+                  <entry>boolean </entry>
+                </row>
+                <row>
+                  <entry>int32 </entry>
+                  <entry>int or smallint </entry>
+                </row>
+                <row>
+                  <entry>int64 </entry>
+                  <entry>long </entry>
+                </row>
+                <row>
+                  <entry>int96 </entry>
+                  <entry>bytea </entry>
+                </row>
+                <row>
+                  <entry>float </entry>
+                  <entry>real </entry>
+                </row>
+                <row>
+                  <entry>double </entry>
+                  <entry>double </entry>
+                </row>
+                <row>
+                  <entry>byte_array</entry>
+                  <entry>bytea </entry>
+                </row>
+                <row>
+                  <entry>fixed_len_byte_array</entry>
+                  <entry>bytea </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <note>When reading the Parquet <codeph>int</codeph> data type as Greenplum Database
+              <codeph>smallint</codeph> data type, you must ensure that the Parquet
+              <codeph>int</codeph> values do not exceed the Greenplum Database maximum
+              <codeph>smallint</codeph> value. If the value is too large, the Greenplum Database
+            value will be incorrect.</note>
+          <p>The <codeph>gphdfs</codeph> protocol considers Parquet schema annotations for these
+            cases. Otherwise, data conversion is based on the parquet schema primitive type:</p>
+          <table id="table_oc3_ysw_dt">
+            <title>Data Type (with Annotation) Conversion when Reading Parquet File</title>
+            <tgroup cols="2">
+              <colspec colname="col1" colnum="1" colwidth="1*"/>
+              <colspec colname="newCol1" colnum="2" colwidth="1*"/>
+              <thead>
+                <row>
+                  <entry>Parquet Schema Data Type and Annotation</entry>
+                  <entry>Greenplum Database Data Type </entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>binary with <codeph>json</codeph> or <codeph>utf8</codeph>
+                    annotation</entry>
+                  <entry>text</entry>
+                </row>
+                <row>
+                  <entry>binary and the Greenplum Database column data type is text </entry>
+                  <entry>text</entry>
+                </row>
+                <row>
+                  <entry>int32 with <codeph>int_16</codeph> annotation</entry>
+                  <entry>smallint</entry>
+                </row>
+                <row>
+                  <entry>int32, int64, fixed_len_byte_array, or binary with
+                      <codeph>decimal</codeph> annotation</entry>
+                  <entry>decimal</entry>
+                </row>
+                <row>
+                  <entry>
+                    <codeph>repeated</codeph>
+                  </entry>
+                  <entry>array column - The data type is converted according to <xref
+                      href="#topic_f3f_124_hs/table_wm5_1x4_hs" format="dita"/></entry>
+                </row>
+                <row>
+                  <entry>
+                    <codeph>optional</codeph>, <codeph>required</codeph></entry>
+                  <entry>Data type is converted according to <xref
+                      href="#topic_f3f_124_hs/table_wm5_1x4_hs" format="dita"/></entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <note>See <xref href="#topic_tt4_zxz_zr" format="dita"/> and the Parquet documentation
+            when specifying <codeph>decimal</codeph>, <codeph>date</codeph>,
+              <codeph>interval</codeph>, or<codeph> time*</codeph> annotations.<p>The
+                <codeph>gphdfs</codeph> protocol converts the field data to text if the Parquet
+              field type is binary without any annotation, and the data type is defined as text for
+              the corresponding Greenplum Database external table column.</p></note>
+          <p>When reading Parquet type <codeph>group</codeph>, the <codeph>gphdfs</codeph> protocol
+            converts the <codeph>group</codeph> data into an XML document.</p>
+          <p>This schema contains a required group with the name <codeph>inner</codeph>.</p>
+          <codeblock>message test {
+    required byte_array binary_field;
+    required int64 int64_field;
+<b>    required group inner {
+       int32 age;
+       required boolean test;
+       required byte_array name (UTF8);
+       } </b>
+    };</codeblock>
+          <p>This how a single row of the group data would be converted to XML. </p>
+          <codeblock>&lt;inner type="group">
+  &lt;age type="int">50&lt;/age>
+  &lt;test type="boolean">true&lt;/test>
+  &lt;name type="string">fred&lt;/name>
+&lt;/inner></codeblock>
+          <p>This example schema contains a repeated group with the name <codeph>inner</codeph>.</p>
+          <codeblock>message test {
+    required byte_array binary_field;
+    required int64 int64_field;
+<b>    repeated group inner {
+       int32 age;
+       required boolean test;
+       required byte_array name (UTF8);
+       } </b>
+    };</codeblock>
+          <p>For a repeated <codeph>group</codeph>, the Parquet file can contain multiple sets of
+            the group data in a single row. For the example schema, the data for the
+              <codeph>inner</codeph> group is converted into XML data.</p>
+          <p>This is sample output if the data in the Parquet file contained two sets of data for
+            the <codeph>inner</codeph> group.</p>
+          <codeblock>&lt;inner type="repeated">
+  &lt;inner type="group">
+    &lt;age type="int">50&lt;/age>
+    &lt;test type="boolean">true&lt;/test>
+    &lt;name type="string">fred&lt;/name>
+  &lt;/inner>
+  &lt;inner>
+    &lt;age type="int">23&lt;/age>
+    &lt;test type="boolean">false&lt;/test>
+    &lt;name type="string">sam&lt;/name>
+  &lt;/inner>
+&lt;/inner></codeblock>
+        </body>
+      </topic>
+      <topic id="topic_yqy_5gx_wt">
+        <title>Reading a Hive Generated Parquet File</title>
+        <body>
+          <p>The Apache Hive data warehouse software can manage and query large datasets that reside
+            in distributed storage. Apache Hive 0.13.0 and later can store data in Parquet format
+            files. For information about Parquet used by Apache Hive, see <xref
+              href="https://cwiki.apache.org/confluence/display/Hive/Parquet" format="html"
+              scope="external">https://cwiki.apache.org/confluence/display/Hive/Parquet</xref>.</p>
+          <p>For Hive 1.1 data stored in Parquet files, this table lists how Greenplum database
+            converts the data. The conversion is based on the Parquet schema that is generated by
+            Hive. For information about the Parquet schema generated by Hive, see <xref
+              href="#topic_yqy_5gx_wt/hive_parquet" format="dita"/>.</p>
+          <table id="table_rdq_sjx_wt">
+            <title>Data Type Conversion when Reading a Hive Generated Parquet File</title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1"/>
+              <colspec colnum="2" colname="col2"/>
+              <thead>
+                <row>
+                  <entry>Hive Data Type</entry>
+                  <entry>Greenplum Database Data Type </entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>tinyint</entry>
+                  <entry>int</entry>
+                </row>
+                <row>
+                  <entry>smallint</entry>
+                  <entry>int</entry>
+                </row>
+                <row>
+                  <entry>int</entry>
+                  <entry>int</entry>
+                </row>
+                <row>
+                  <entry>bigint</entry>
+                  <entry>bigint</entry>
+                </row>
+                <row>
+                  <entry>decimal</entry>
+                  <entry>numeric</entry>
+                </row>
+                <row>
+                  <entry>float</entry>
+                  <entry>real</entry>
+                </row>
+                <row>
+                  <entry>double</entry>
+                  <entry>float</entry>
+                </row>
+                <row>
+                  <entry>boolean</entry>
+                  <entry>boolean</entry>
+                </row>
+                <row>
+                  <entry>string</entry>
+                  <entry>text</entry>
+                </row>
+                <row>
+                  <entry>char</entry>
+                  <entry>text or char</entry>
+                </row>
+                <row>
+                  <entry>varchar</entry>
+                  <entry>text or varchar</entry>
+                </row>
+                <row>
+                  <entry>timestamp</entry>
+                  <entry>bytea</entry>
+                </row>
+                <row>
+                  <entry>binary</entry>
+                  <entry>bytea</entry>
+                </row>
+                <row>
+                  <entry>array</entry>
+                  <entry>xml</entry>
+                </row>
+                <row>
+                  <entry>map</entry>
+                  <entry>xml</entry>
+                </row>
+                <row>
+                  <entry>struct</entry>
+                  <entry>xml</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <section id="hive_parquet">
+            <title>Notes on the Hive Generated Parquet Schema</title>
+            <ul id="ul_fbn_gwl_xt">
+              <li>When writing data to Parquet files, Hive treats all integer data types
+                  <codeph>tinyint</codeph>, <codeph>smallint</codeph>, <codeph>int</codeph> as
+                  <codeph>int32</codeph>. When you create an external table in Greenplum Database
+                for a Hive generated Parquet file, specify the column data type as
+                  <codeph>int</codeph>. For example, this Hive <codeph>CREATE TABLE</codeph> command
+                stores data in Parquet files.<p>
+                  <codeblock>CREATE TABLE hpSimple(c1 tinyint, c2 smallint, c3 int, c4 bigint, 
+    c5 float, c6 double, c7 boolean, c8 string)
+  STORED AS PARQUET;</codeblock>
+                </p><p>This is the Hive generated Parquet schema for the <codeph>hpSimple</codeph>
+                  table data.
+                  </p><codeblock>message hive_schema {
+  optional int32 c1;
+  optional int32 c2;
+  optional int32 c3;
+  optional int64 c4;
+  optional float c5;
+  optional double c6;
+  optional boolean c7;
+  optional binary c8 (UTF8);
+}</codeblock><p>The
+                    <codeph>gphdfs</codeph> protocol converts the Parquet integer data types to the
+                  Greenplum Database data type <codeph>int</codeph>.</p></li>
+              <li>For the Hive <codeph>char</codeph> data type, the Greenplum Database column data
+                types can be either <codeph>text</codeph> or <codeph>char</codeph>. For the Hive
+                  <codeph>varchar</codeph> data type, the Greenplum Database column data type can be
+                either <codeph>text</codeph> or <codeph>varchar</codeph>.</li>
+              <li>Based on the Hive generated Parquet schema, some Hive data is converted to
+                Greenplum Database XML data. For example, Hive array column data that is stored in a
+                Parquet file is converted to XML data. As an example, this the Hive generated
+                Parquet schema for a Hive column <codeph>col1</codeph> of data type
+                  <codeph>array[int]</codeph>.<codeblock>optional group col1 (LIST) {
+  repeated group bag {
+    optional int32 array_element;
+  }
+}</codeblock><p>The
+                    <codeph>gphdfs</codeph> protocol converts the Parquet <codeph>group</codeph>
+                  data to the Greenplum Database data type <codeph>XML</codeph>. </p></li>
+              <li>For the Hive <codeph>timestamp</codeph> data type, the Hive generated Parquet
+                schema for the data type specifies that the data is stored as data type
+                  <codeph>int96</codeph>. The <codeph>gphdfs</codeph> protocol converts the
+                  <codeph>int96</codeph> data type to the Greenplum Database <codeph>bytea</codeph>
+                data type.</li>
+            </ul>
+          </section>
+        </body>
+      </topic>
+      <topic id="topic_hmd_wd4_hs">
+        <title>Writing a Parquet File</title>
+        <body>
+          <p>For writable external tables, you can add parameters after the file specified in the
+              <varname>location</varname>. You add parameters with the http query string syntax that
+            starts with <codeph>?</codeph> and <codeph>&amp;</codeph> between field and value
+            pairs.</p>
+          <table id="table_jpk_1j5_hs">
+            <title>Parquet Format External Table location Parameters</title>
+            <tgroup cols="4">
+              <colspec colnum="1" colname="col1" colwidth="1*"/>
+              <colspec colnum="2" colname="col2" colwidth="1*"/>
+              <colspec colname="newCol3" colnum="3" colwidth="1*"/>
+              <colspec colnum="4" colname="col3" colwidth="2*"/>
+              <thead>
+                <row>
+                  <entry colname="col1">Option</entry>
+                  <entry colname="col2">Values</entry>
+                  <entry>Readable/Writable</entry>
+                  <entry colname="col3">Default Value</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry colname="col1">schema</entry>
+                  <entry colname="col2">
+                    <varname>URL_to_schema</varname>
+                  </entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">None.<p>If not specified, the <codeph>gphdfs</codeph>
+                      protocol creates a schema according to the external table definition.
+                    </p></entry>
+                </row>
+                <row>
+                  <entry colname="col1">pagesize</entry>
+                  <entry colname="col2"> > 1024 Bytes</entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3"> 1 MB</entry>
+                </row>
+                <row>
+                  <entry colname="col1">rowgroupsize</entry>
+                  <entry colname="col2"> > 1024 Bytes</entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3"> 8 MB</entry>
+                </row>
+                <row>
+                  <entry colname="col1">version</entry>
+                  <entry colname="col2">
+                    <codeph>v1</codeph>, <codeph>v2</codeph></entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>v1</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry colname="col1">codec</entry>
+                  <entry colname="col2"><codeph>UNCOMPRESSED</codeph>, <codeph>GZIP</codeph>,
+                      <codeph>LZO</codeph>, <codeph>snappy</codeph></entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">
+                    <codeph>UNCOMPRESSED</codeph>
+                  </entry>
+                </row>
+                <row>
+                  <entry colname="col1">dictionaryenable<sup>1</sup></entry>
+                  <entry><codeph>true</codeph>, <codeph>false</codeph></entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3"> false</entry>
+                </row>
+                <row>
+                  <entry colname="col1">dictionarypagesize<sup>1</sup></entry>
+                  <entry colname="col2"> > 1024 Bytes</entry>
+                  <entry>Write only</entry>
+                  <entry colname="col3">512 KB</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <note>
+            <ol id="ol_dsg_bnw_dt">
+              <li>Creates an internal dictionary. Enabling a dictionary can improve Parquet file
+                compression if text columns contain similar or duplicate data. </li>
+            </ol>
+          </note>
+          <p>When writing a Parquet file, the <codeph>gphdfs</codeph> protocol can generate a
+            Parquet schema based on the table definition.<ul id="ul_a2q_jft_ls">
+              <li>The table name is used as the Parquet <codeph>message</codeph> name. </li>
+              <li>The column name is uses as the Parquet <codeph>field</codeph> name.</li>
+            </ul></p>
+          <p>When creating the Parquet schema from a Greenplum Database table definition, the schema
+            is generated based on the column data type. </p>
+          <table id="table_n2s_wd4_hs">
+            <title>Schema Data Type Conversion when Writing a Parquet File</title>
+            <tgroup cols="2">
+              <colspec colnum="1" colname="col1"/>
+              <colspec colnum="2" colname="col2"/>
+              <thead>
+                <row>
+                  <entry>Greenplum Database Data Type</entry>
+                  <entry>Parquet Schema Data Type</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>boolean </entry>
+                  <entry>optional boolean </entry>
+                </row>
+                <row>
+                  <entry>smallint</entry>
+                  <entry>optional int32 with annotation <codeph>int_16</codeph></entry>
+                </row>
+                <row>
+                  <entry>int </entry>
+                  <entry>optional int32 </entry>
+                </row>
+                <row>
+                  <entry>bigint </entry>
+                  <entry>optional int64 </entry>
+                </row>
+                <row>
+                  <entry>real </entry>
+                  <entry>optional float </entry>
+                </row>
+                <row>
+                  <entry>double</entry>
+                  <entry>optional double </entry>
+                </row>
+                <row>
+                  <entry>numeric or decimal</entry>
+                  <entry>binary with annotation <codeph>decimal</codeph></entry>
+                </row>
+                <row>
+                  <entry>bytea</entry>
+                  <entry>optional binary</entry>
+                </row>
+                <row>
+                  <entry>array column</entry>
+                  <entry>repeated field - The data type is the same data type as the Greenplum
+                    Database the array. For example, <codeph>array[int]</codeph> is converted to
+                      <codeph>repeated int</codeph></entry>
+                </row>
+                <row>
+                  <entry>Others </entry>
+                  <entry>binary with annotation <codeph>utf8</codeph></entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+          <note>To support <codeph>Null</codeph> data, <codeph>gphdfs</codeph> protocol specifies
+            the Parquet <codeph>optional</codeph> schema annotation when creating a Parquet schema. </note>
+          <p>A simple example of a Greenplum Database table definition and the Parquet schema
+            generated by the <codeph>gphdfs</codeph> protocol.</p>
+          <p>An example external table definition for a Parquet file.</p>
+          <codeblock>CREATE WRITABLE EXTERNAL TABLE films (
+   code char(5), 
+   title varchar(40),
+   id integer,
+   date_prod date, 
+   subtitle boolean
+) LOCATION ( 'gphdfs://my-films') FORMAT 'PARQUET' ;</codeblock>
+          <p>This is the Parquet schema for the Parquet file <codeph>my-films</codeph> generated by
+            the <codeph>gphdfs</codeph> protocol.</p>
+          <codeblock>message films {
+    optional byte_array code;
+    optional byte_array title (utf8);
+    optional int32 id;
+    optional binary date_prod (utf8);
+    optional boolean subtitle;
+    };</codeblock>
+        </body>
+      </topic>
+      <topic id="topic_tt4_zxz_zr">
+        <title>Limitations and Notes</title>
+        <body>
+          <ul id="ol_qnx_vxn_hs">
+            <li>For writable external tables, column definitions in Greenplum Database external
+              table cannot specify <codeph>NOT NULL</codeph> to support automatically generating a
+              Parquet schema. When the <codeph>gphdfs</codeph> protocol automatically generates a
+              Parquet schema, the <codeph>gphdfs</codeph> protocol specifies the field attribute
+                <codeph>optional</codeph> to support <codeph>null</codeph> in the Parquet schema.
+              Repeated fields can be <codeph>null</codeph> in Parquet.</li>
+            <li>The <codeph>gphdfs</codeph> protocol supports Parquet nested <codeph>group</codeph>
+              structures only for readable external files. The nested structures are converted to an
+              XML document.</li>
+            <li>Greenplum Database does not have an unsigned <codeph>int</codeph> data type.
+              Greenplum Database converts the Parquet unsigned <codeph>int</codeph> data type to the
+              next largest Greenplum Database <codeph>int</codeph> type. For example, Parquet
+                <codeph>uint_8</codeph> is converted to Greenplum Database <codeph>int</codeph> (32
+              bit).</li>
+            <li>Greenplum Database supports any UDT data type or UDT array data type. Greenplum
+              Database attempts to convert the UDT to a sting. If the UDT cannot be converted to a
+              sting, Greenplum Database returns an error.</li>
+            <li>The definition of the <codeph>Interval</codeph> data type in Parquet is
+              significantly different than the <codeph>Interval</codeph> definition in Greenplum
+              Database and cannot be converted. The Parquet <codeph>Interval</codeph> data is
+              formatted as <codeph>bytea</codeph>.</li>
+            <li>The <codeph>Date</codeph> data type in Parquet is starts from 1970.1.1, while
+                <codeph>Date</codeph> in Greenplum Database starts from 4173 BC, Greenplum Database
+              cannot convert <codeph>date</codeph> data types because largest values are different.
+              A similar situation occurs between <codeph>Timestamp_millis</codeph> in Parquet and
+                <codeph>Timestamp</codeph> in Greenplum Database.</li>
+          </ul>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+</dita>

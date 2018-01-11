@@ -2,7 +2,12 @@
  *
  * cdbdatabaseinfo.c
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbdatabaseinfo.c
  *
  *-------------------------------------------------------------------------
  */
@@ -37,8 +42,8 @@
 /* hash table entry for relation ids */
 typedef struct RelationIdEntry
 {
-	Oid			 relationId;  	/* key */
-	DbInfoRel 	*dbInfoRel;   	/* pointer */
+	Oid			relationId;		/* key */
+	DbInfoRel  *dbInfoRel;		/* pointer */
 } RelationIdEntry;
 
 /*-------------------------------------------------------------------------
@@ -51,10 +56,11 @@ typedef struct RelationIdEntry
  * DatabaseInfo_Check()
  *   Validate that the DatabaseInfo returned is consistent.
  */
-void DatabaseInfo_Check(DatabaseInfo *info)
+void
+DatabaseInfo_Check(DatabaseInfo *info)
 {
-	int sr;
-	int rsf;
+	int			sr;
+	int			rsf;
 
 	/*
 	 * Compare Stored Relations to Relation Segment Files.
@@ -63,21 +69,21 @@ void DatabaseInfo_Check(DatabaseInfo *info)
 	rsf = 0;
 	while (true)
 	{
-		int cmp;
+		int			cmp;
 
 		cmp = TablespaceRelFile_Compare(
-						&info->pgClassStoredRelations[sr].tablespaceRelFile,
-						&info->relSegFiles[rsf].tablespaceRelFile);
+										&info->pgClassStoredRelations[sr].tablespaceRelFile,
+										&info->relSegFiles[rsf].tablespaceRelFile);
 		if (cmp != 0)
 		{
 			elog(WARNING, "In database %u, stored relation doesn't match relation file on disk "
-						"(stored tablespace %u, disk file tablespace %u, "
-						"stored relation %u, disk file relation %u)",
-						info->database,
-						info->pgClassStoredRelations[sr].tablespaceRelFile.tablespace,
-						info->relSegFiles[rsf].tablespaceRelFile.tablespace,
-						info->pgClassStoredRelations[sr].tablespaceRelFile.relation,
-						info->relSegFiles[rsf].tablespaceRelFile.relation);
+				 "(stored tablespace %u, disk file tablespace %u, "
+				 "stored relation %u, disk file relation %u)",
+				 info->database,
+				 info->pgClassStoredRelations[sr].tablespaceRelFile.tablespace,
+				 info->relSegFiles[rsf].tablespaceRelFile.tablespace,
+				 info->pgClassStoredRelations[sr].tablespaceRelFile.relation,
+				 info->relSegFiles[rsf].tablespaceRelFile.relation);
 			return;
 		}
 
@@ -90,8 +96,8 @@ void DatabaseInfo_Check(DatabaseInfo *info)
 			if (rsf >= info->relSegFilesCount)
 				break;
 			if (TablespaceRelFile_Compare(
-						&info->pgClassStoredRelations[sr].tablespaceRelFile,
-						&info->relSegFiles[rsf].tablespaceRelFile) != 0)
+										  &info->pgClassStoredRelations[sr].tablespaceRelFile,
+										  &info->relSegFiles[rsf].tablespaceRelFile) != 0)
 				break;
 		}
 
@@ -103,7 +109,7 @@ void DatabaseInfo_Check(DatabaseInfo *info)
 			if (sr < info->pgClassStoredRelationsCount)
 			{
 				elog(WARNING, "In database %u, extra stored relation (tablespace %u, relation %u)",
-				     info->database,
+					 info->database,
 					 info->pgClassStoredRelations[sr].tablespaceRelFile.tablespace,
 					 info->pgClassStoredRelations[sr].tablespaceRelFile.relation);
 				return;
@@ -112,7 +118,7 @@ void DatabaseInfo_Check(DatabaseInfo *info)
 			if (rsf < info->relSegFilesCount)
 			{
 				elog(WARNING, "In database %u, extra relation file on disk (tablespace %u, relation %u)",
-				     info->database,
+					 info->database,
 					 info->relSegFiles[rsf].tablespaceRelFile.tablespace,
 					 info->relSegFiles[rsf].tablespaceRelFile.relation);
 				return;
@@ -126,13 +132,14 @@ void DatabaseInfo_Check(DatabaseInfo *info)
  * DatabaseInfo_Trace()
  *   Output debugging information about the DatabaseInfo
  */
-void DatabaseInfo_Trace(DatabaseInfo *info)
+void
+DatabaseInfo_Trace(DatabaseInfo *info)
 {
-	int t;
-	int sr;
-	int rsf;
-	int grn;
-	int m;
+	int			t;
+	int			sr;
+	int			rsf;
+	int			grn;
+	int			m;
 
 	for (t = 0; t < info->tablespacesCount; t++)
 		elog(WARNING, "Database Info: Tablespace #%d is %u",
@@ -140,27 +147,27 @@ void DatabaseInfo_Trace(DatabaseInfo *info)
 
 	for (sr = 0; sr < info->pgClassStoredRelationsCount; sr++)
 		elog(WARNING, "Database Info: Stored relation (tablespace %u, relation %u, isBufferPoolRealtion %s, TID %s)",
-			 info->pgClassStoredRelations[sr].tablespaceRelFile.tablespace, 
+			 info->pgClassStoredRelations[sr].tablespaceRelFile.tablespace,
 			 info->pgClassStoredRelations[sr].tablespaceRelFile.relation,
 			 (info->pgClassStoredRelations[sr].isBufferPoolRelation ? "true" : "false"),
 			 ItemPointerToString(&info->pgClassStoredRelations[sr].pgClassTid));
 
 	for (rsf = 0; rsf < info->relSegFilesCount; rsf++)
 		elog(WARNING, "Database Info: Relation segment file (tablespace %u, relation %u, segment file num %d)",
-			 info->relSegFiles[rsf].tablespaceRelFile.tablespace, 
-			 info->relSegFiles[rsf].tablespaceRelFile.relation, 
+			 info->relSegFiles[rsf].tablespaceRelFile.tablespace,
+			 info->relSegFiles[rsf].tablespaceRelFile.relation,
 			 info->relSegFiles[rsf].segmentFileNum);
 
 	for (grn = 0; grn < info->gpRelationNodesCount; grn++)
 		elog(WARNING, "Database Info: Tablespace %u, relation %u node information (persistent TID %s, perstent serial number " INT64_FORMAT ")",
-			 info->gpRelationNodes[grn].tablespaceRelFile.tablespace, 
-			 info->gpRelationNodes[grn].tablespaceRelFile.relation, 
+			 info->gpRelationNodes[grn].tablespaceRelFile.tablespace,
+			 info->gpRelationNodes[grn].tablespaceRelFile.relation,
 			 ItemPointerToString(&info->gpRelationNodes[grn].persistentTid),
 			 info->gpRelationNodes[grn].persistentSerialNum);
 
 	for (m = 0; m < info->miscEntriesCount; m++)
 		elog(WARNING, "Database Info: Misc entry #%d (tablespace %u, directory = %s, name '%s')",
-			 m, 
+			 m,
 			 info->miscEntries[m].tablespace,
 			 (info->miscEntries[m].isDir ? "true" : "false"),
 			 info->miscEntries[m].name);
@@ -170,30 +177,31 @@ void DatabaseInfo_Trace(DatabaseInfo *info)
 /*
  * DatabaseInfo_FindDbInfoRel()
  *   Lookup an entry in the info hash table.
- *   
+ *
  * Note: called nowhere in the source, purely available for debugging.
  */
-static DbInfoRel *DatabaseInfo_FindDbInfoRel(
-	HTAB 				*dbInfoRelHashTable,
-	Oid					reltablespaceOid,
-	Oid					relfilenodeOid)
+static DbInfoRel *
+DatabaseInfo_FindDbInfoRel(
+						   HTAB *dbInfoRelHashTable,
+						   Oid reltablespaceOid,
+						   Oid relfilenodeOid)
 {
-	DbInfoRel *dbInfoRel;
+	DbInfoRel  *dbInfoRel;
 	DbInfoRelKeyPair *dbInfoRelKey;
-	bool found;
+	bool		found;
 
 	Assert(reltablespaceOid != 0);
 
-	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey = (DbInfoRelKeyPair *) palloc0(sizeof(DbInfoRelKeyPair));
 	dbInfoRelKey->reltablespace = reltablespaceOid;
 	dbInfoRelKey->relfilenode = relfilenodeOid;
 
-	dbInfoRel = 
-			(DbInfoRel*) 
-					hash_search(dbInfoRelHashTable,
-								dbInfoRelKey,
-								HASH_FIND,
-								&found);
+	dbInfoRel =
+		(DbInfoRel *)
+		hash_search(dbInfoRelHashTable,
+					dbInfoRelKey,
+					HASH_FIND,
+					&found);
 	if (!found)
 	{
 		elog(ERROR, "pg_class entry (tablespace %u, relfilenode %u) not found",
@@ -217,20 +225,21 @@ static DbInfoRel *DatabaseInfo_FindDbInfoRel(
  *
  * XXX - Why not just use repalloc?
  */
-static void DatabaseInfo_Grow(
-	void 	**array,
-	int32	arrayCount,
-	int32	*arrayMaxCount,
-	int32	elementLen)
+static void
+DatabaseInfo_Grow(
+				  void **array,
+				  int32 arrayCount,
+				  int32 *arrayMaxCount,
+				  int32 elementLen)
 {
-	void *newArray;
-	
+	void	   *newArray;
+
 	(*arrayMaxCount) *= 2;
-	newArray = palloc((*arrayMaxCount)*elementLen);
+	newArray = palloc((*arrayMaxCount) * elementLen);
 	memcpy(
-		newArray, 
-		(*array), 
-		arrayCount*elementLen);
+		   newArray,
+		   (*array),
+		   arrayCount * elementLen);
 	pfree(*array);
 	*array = newArray;
 }
@@ -239,11 +248,11 @@ static void DatabaseInfo_Grow(
  * DatabaseInfo_DbInfoRelHashTableInit()
  *    Construct a hash table of DbInfoRel
  */
-static HTAB*
+static HTAB *
 DatabaseInfo_DbInfoRelHashTableInit()
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -260,11 +269,11 @@ DatabaseInfo_DbInfoRelHashTableInit()
  * DatabaseInfo_RelationIdHashTableInit()
  *    Construct a hash table of RelationIdEntry
  */
-static HTAB*
+static HTAB *
 DatabaseInfo_RelationIdHashTableInit()
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -285,8 +294,8 @@ DatabaseInfo_RelationIdHashTableInit()
 static HTAB *
 DatabaseInfo_PgAppendOnlyHashTableInit()
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -304,20 +313,21 @@ DatabaseInfo_PgAppendOnlyHashTableInit()
  * DatabaseInfo_AddRelationId()
  *   Add an entry to a dbInfoRel hash table
  */
-static void DatabaseInfo_AddRelationId(
-	HTAB 		*relationIdHashTable,
-	DbInfoRel 	*dbInfoRel)
+static void
+DatabaseInfo_AddRelationId(
+						   HTAB *relationIdHashTable,
+						   DbInfoRel *dbInfoRel)
 {
 	RelationIdEntry *relationIdEntry;
 
-	bool found;
-	
-	relationIdEntry = 
-			(RelationIdEntry*) 
-					hash_search(relationIdHashTable,
-								(void *) &dbInfoRel->relationOid,
-								HASH_ENTER,
-								&found);
+	bool		found;
+
+	relationIdEntry =
+		(RelationIdEntry *)
+		hash_search(relationIdHashTable,
+					(void *) &dbInfoRel->relationOid,
+					HASH_ENTER,
+					&found);
 	if (found)
 	{
 		elog(ERROR, "Duplicate pg_class entry (relation id %u)",
@@ -331,20 +341,21 @@ static void DatabaseInfo_AddRelationId(
  * DatabaseInfo_FindRelationId()
  *   Lookup an entry to a RelationIdEntry hash table
  */
-static DbInfoRel *DatabaseInfo_FindRelationId(
-	HTAB 		*relationIdHashTable,
-	Oid			 relationId)
+static DbInfoRel *
+DatabaseInfo_FindRelationId(
+							HTAB *relationIdHashTable,
+							Oid relationId)
 {
 	RelationIdEntry *relationIdEntry;
 
-	bool found;
-	
-	relationIdEntry = 
-			(RelationIdEntry*) 
-					hash_search(relationIdHashTable,
-								(void *) &relationId,
-								HASH_FIND,
-								&found);
+	bool		found;
+
+	relationIdEntry =
+		(RelationIdEntry *)
+		hash_search(relationIdHashTable,
+					(void *) &relationId,
+					HASH_FIND,
+					&found);
 	if (!found)
 	{
 		elog(ERROR, "pg_class entry (relation id %u) not found",
@@ -359,21 +370,22 @@ static DbInfoRel *DatabaseInfo_FindRelationId(
  * DatabaseInfo_AddPgAppendOnly()
  *   Add an entry to a pgAppendOnly hash table.
  */
-static void DatabaseInfo_AddPgAppendOnly(
-	HTAB 				*pgAppendOnlyHashTable,	
-	Oid					 relationId,
-	Form_pg_appendonly 	 aoEntry)
+static void
+DatabaseInfo_AddPgAppendOnly(
+							 HTAB *pgAppendOnlyHashTable,
+							 Oid relationId,
+							 Form_pg_appendonly aoEntry)
 {
 	PgAppendOnlyHashEntry *pgAppendOnlyHashEntry;
 
-	bool found;
-	
-	pgAppendOnlyHashEntry = 
-			(PgAppendOnlyHashEntry*) 
-					hash_search(pgAppendOnlyHashTable,
-								(void *) &relationId,
-								HASH_ENTER,
-								&found);
+	bool		found;
+
+	pgAppendOnlyHashEntry =
+		(PgAppendOnlyHashEntry *)
+		hash_search(pgAppendOnlyHashTable,
+					(void *) &relationId,
+					HASH_ENTER,
+					&found);
 	if (found)
 		elog(ERROR, "More than one pg_appendonly entry (relation id %u)",
 			 relationId);
@@ -388,19 +400,19 @@ static void DatabaseInfo_AddPgAppendOnly(
  */
 static Form_pg_appendonly
 DatabaseInfo_FindPgAppendOnly(
-	HTAB 				*pgAppendOnlyHashTable,
-	Oid					relationId)
+							  HTAB *pgAppendOnlyHashTable,
+							  Oid relationId)
 {
 	PgAppendOnlyHashEntry *pgAppendOnlyHashEntry;
 
-	bool found;
-	
-	pgAppendOnlyHashEntry = 
-			(PgAppendOnlyHashEntry*) 
-					hash_search(pgAppendOnlyHashTable,
-								(void *) &relationId,
-								HASH_FIND,
-								&found);
+	bool		found;
+
+	pgAppendOnlyHashEntry =
+		(PgAppendOnlyHashEntry *)
+		hash_search(pgAppendOnlyHashTable,
+					(void *) &relationId,
+					HASH_FIND,
+					&found);
 	if (!found)
 	{
 		elog(ERROR, "pg_appendonly entry (relation id %u) not found",
@@ -416,11 +428,12 @@ DatabaseInfo_FindPgAppendOnly(
  * DatabaseInfo_AddTablespace()
  *   Add a tablespace to the DatabaseInfo
  */
-static void DatabaseInfo_AddTablespace(
-	DatabaseInfo 		*info,
-	Oid 				tablespace)
+static void
+DatabaseInfo_AddTablespace(
+						   DatabaseInfo *info,
+						   Oid tablespace)
 {
-	int t;
+	int			t;
 
 	t = 0;
 	while (true)
@@ -431,74 +444,76 @@ static void DatabaseInfo_AddTablespace(
 			if (t >= info->tablespacesMaxCount)
 			{
 				DatabaseInfo_Grow(
-								(void**)&info->tablespaces,
-								info->tablespacesCount,
-								&info->tablespacesMaxCount,
-								sizeof(Oid));
+								  (void **) &info->tablespaces,
+								  info->tablespacesCount,
+								  &info->tablespacesMaxCount,
+								  sizeof(Oid));
 			}
 			info->tablespaces[info->tablespacesCount++] = tablespace;
 			break;
 		}
-		
+
 		if (info->tablespaces[t] == tablespace)
 			break;
-	
+
 		t++;
 	}
 }
 
-static void DatabaseInfo_AddExtraSegmentFile(
-	DatabaseInfo 		*info,
-	Oid 				tablespace,
-	Oid					relfilenode,
-	int32				segmentFileNum,
-	int64				eof)
+static void
+DatabaseInfo_AddExtraSegmentFile(
+								 DatabaseInfo *info,
+								 Oid tablespace,
+								 Oid relfilenode,
+								 int32 segmentFileNum,
+								 int64 eof)
 {
-	DbInfoExtraSegmentFile	*dbInfoExtraSegmentFile;
+	DbInfoExtraSegmentFile *dbInfoExtraSegmentFile;
 
-	if (info->extraSegmentFilesCount>= info->extraSegmentFilesMaxCount)
+	if (info->extraSegmentFilesCount >= info->extraSegmentFilesMaxCount)
 	{
 		DatabaseInfo_Grow(
-						(void**)&info->extraSegmentFiles,
-						info->extraSegmentFilesCount,
-						&info->extraSegmentFilesMaxCount,
-						sizeof(DbInfoExtraSegmentFile));
+						  (void **) &info->extraSegmentFiles,
+						  info->extraSegmentFilesCount,
+						  &info->extraSegmentFilesMaxCount,
+						  sizeof(DbInfoExtraSegmentFile));
 	}
 
-	dbInfoExtraSegmentFile = 
-					&info->extraSegmentFiles[info->extraSegmentFilesCount];
+	dbInfoExtraSegmentFile =
+		&info->extraSegmentFiles[info->extraSegmentFilesCount];
 	info->extraSegmentFilesCount++;
-	
+
 	dbInfoExtraSegmentFile->relfilenode = relfilenode;
 	dbInfoExtraSegmentFile->segmentFileNum = segmentFileNum;
 	dbInfoExtraSegmentFile->tablespaceOid = tablespace;
 	dbInfoExtraSegmentFile->eof = eof;
 }
 
-static void DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
-	DbInfoRel 				*dbInfoRel,
-	int32 					segmentFileNum,
-	int64					logicalEof)
+static void
+DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
+											 DbInfoRel *dbInfoRel,
+											 int32 segmentFileNum,
+											 int64 logicalEof)
 {
-	DbInfoAppendOnlyCatalogSegmentInfo 	*appendOnlyCatalogSegmentInfo;
+	DbInfoAppendOnlyCatalogSegmentInfo *appendOnlyCatalogSegmentInfo;
 
 	if (dbInfoRel->appendOnlyCatalogSegmentInfoCount >= dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount)
 	{
 		DatabaseInfo_Grow(
-						(void**)&dbInfoRel->appendOnlyCatalogSegmentInfo,
-						dbInfoRel->appendOnlyCatalogSegmentInfoCount,
-						&dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount,
-						sizeof(DbInfoAppendOnlyCatalogSegmentInfo));
+						  (void **) &dbInfoRel->appendOnlyCatalogSegmentInfo,
+						  dbInfoRel->appendOnlyCatalogSegmentInfoCount,
+						  &dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount,
+						  sizeof(DbInfoAppendOnlyCatalogSegmentInfo));
 	}
 
 	appendOnlyCatalogSegmentInfo = &dbInfoRel->appendOnlyCatalogSegmentInfo[dbInfoRel->appendOnlyCatalogSegmentInfoCount];
 	dbInfoRel->appendOnlyCatalogSegmentInfoCount++;
-	
+
 	appendOnlyCatalogSegmentInfo->segmentFileNum = segmentFileNum;
 	appendOnlyCatalogSegmentInfo->logicalEof = logicalEof;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
+		elog(Persistent_DebugPrintLevel(),
 			 "DatabaseInfo_AddAppendOnlyCatalogSegmentInfo: relation id %u, relation name %s, tablespace %u, relfilenode %u, segment file #%d, EOF " INT64_FORMAT,
 			 dbInfoRel->relationOid,
 			 dbInfoRel->relname,
@@ -510,36 +525,37 @@ static void DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
 }
 
 
-static void DatabaseInfo_AddPgClassStoredRelation(
-	DatabaseInfo 		*info,
-	HTAB 				*dbInfoRelHashTable,
-	HTAB				*relationIdHashTable,
-	Oid 				relfilenode,
-	ItemPointer			pgClassTid,
-	Oid					relationOid,
-	char				*relname,
-	Oid					reltablespace,
-	char				relkind,
-	char				relstorage,
-	Oid					relam,
-	int					relnatts)
+static void
+DatabaseInfo_AddPgClassStoredRelation(
+									  DatabaseInfo *info,
+									  HTAB *dbInfoRelHashTable,
+									  HTAB *relationIdHashTable,
+									  Oid relfilenode,
+									  ItemPointer pgClassTid,
+									  Oid relationOid,
+									  char *relname,
+									  Oid reltablespace,
+									  char relkind,
+									  char relstorage,
+									  Oid relam,
+									  int relnatts)
 {
-	DbInfoRel	*dbInfoRel;
-	bool		 found;
+	DbInfoRel  *dbInfoRel;
+	bool		found;
 	DbInfoRelKeyPair *dbInfoRelKey;
 
 	Assert(reltablespace != 0);
 
-	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey = (DbInfoRelKeyPair *) palloc0(sizeof(DbInfoRelKeyPair));
 	dbInfoRelKey->reltablespace = reltablespace;
 	dbInfoRelKey->relfilenode = relfilenode;
 
-	dbInfoRel = 
-			(DbInfoRel*) 
-					hash_search(dbInfoRelHashTable,
-								dbInfoRelKey,
-								HASH_ENTER,
-								&found);
+	dbInfoRel =
+		(DbInfoRel *)
+		hash_search(dbInfoRelHashTable,
+					dbInfoRelKey,
+					HASH_ENTER,
+					&found);
 	if (found)
 		elog(ERROR, "More than one pg_class entry ('%s' %u and '%s' %u) references the same tablespace %u and relfilenode %u",
 			 dbInfoRel->relname,
@@ -559,47 +575,47 @@ static void DatabaseInfo_AddPgClassStoredRelation(
 	dbInfoRel->relnatts = relnatts;
 
 	dbInfoRel->gpRelationNodesMaxCount = 1;
-	dbInfoRel->gpRelationNodes = 
-			palloc0(dbInfoRel->gpRelationNodesMaxCount * sizeof(DbInfoGpRelationNode));
+	dbInfoRel->gpRelationNodes =
+		palloc0(dbInfoRel->gpRelationNodesMaxCount * sizeof(DbInfoGpRelationNode));
 	dbInfoRel->gpRelationNodesCount = 0;
-	
-	dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount= 1;
-	dbInfoRel->appendOnlyCatalogSegmentInfo = 
-			palloc0(dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount * sizeof(DbInfoAppendOnlyCatalogSegmentInfo));
+
+	dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount = 1;
+	dbInfoRel->appendOnlyCatalogSegmentInfo =
+		palloc0(dbInfoRel->appendOnlyCatalogSegmentInfoMaxCount * sizeof(DbInfoAppendOnlyCatalogSegmentInfo));
 	dbInfoRel->appendOnlyCatalogSegmentInfoCount = 0;
-	
+
 	dbInfoRel->physicalSegmentFilesMaxCount = 1;
-	dbInfoRel->physicalSegmentFiles = 
-			palloc0(dbInfoRel->physicalSegmentFilesMaxCount * sizeof(DbInfoSegmentFile));
+	dbInfoRel->physicalSegmentFiles =
+		palloc0(dbInfoRel->physicalSegmentFilesMaxCount * sizeof(DbInfoSegmentFile));
 	dbInfoRel->physicalSegmentFilesCount = 0;
 
 	DatabaseInfo_AddRelationId(
-						relationIdHashTable,
-						dbInfoRel);
+							   relationIdHashTable,
+							   dbInfoRel);
 }
 
-static bool DatabaseInfo_AddGpRelationNode(
-	DatabaseInfo		*info,
-	HTAB 				*dbInfoRelHashTable,
-	Oid					reltablespace,
-	Oid					relfilenode,
-	int32				segmentFileNum,
-	ItemPointer			persistentTid,
-	int64				persistentSerialNum,
-	ItemPointer			gpRelationNodeTid)
+static bool
+DatabaseInfo_AddGpRelationNode(
+							   DatabaseInfo *info,
+							   HTAB *dbInfoRelHashTable,
+							   Oid reltablespace,
+							   Oid relfilenode,
+							   int32 segmentFileNum,
+							   ItemPointer persistentTid,
+							   int64 persistentSerialNum,
+							   ItemPointer gpRelationNodeTid)
 {
-	DbInfoRel *dbInfoRel;
-	bool found;
+	DbInfoRel  *dbInfoRel;
+	bool		found;
 
 	DbInfoGpRelationNode *dbInfoGpRelationNode;
 	DbInfoRelKeyPair *dbInfoRelKey;
 
-	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey = (DbInfoRelKeyPair *) palloc0(sizeof(DbInfoRelKeyPair));
 
 	/*
-	 * pg_class and gp_relation_node stores 0 for tablespace if
-	 * relation uses default tablespace so get the value of the
-	 * default tablespace here
+	 * pg_class and gp_relation_node stores 0 for tablespace if relation uses
+	 * default tablespace so get the value of the default tablespace here
 	 */
 	if (reltablespace == 0)
 		dbInfoRelKey->reltablespace = info->defaultTablespace;
@@ -607,30 +623,30 @@ static bool DatabaseInfo_AddGpRelationNode(
 		dbInfoRelKey->reltablespace = reltablespace;
 	dbInfoRelKey->relfilenode = relfilenode;
 
-	dbInfoRel = 
-			(DbInfoRel*) 
-					hash_search(dbInfoRelHashTable,
-								dbInfoRelKey,
-								HASH_FIND,
-								&found);
+	dbInfoRel =
+		(DbInfoRel *)
+		hash_search(dbInfoRelHashTable,
+					dbInfoRelKey,
+					HASH_FIND,
+					&found);
 
-	//Changes to solve MPP-16346
-	if(!dbInfoRel)
-			return found;
+	/* Changes to solve MPP-16346 */
+	if (!dbInfoRel)
+		return found;
 
 	if (found)
 	{
 		if (dbInfoRel->gpRelationNodesCount >= dbInfoRel->gpRelationNodesMaxCount)
 		{
 			DatabaseInfo_Grow(
-							(void**)&dbInfoRel->gpRelationNodes,
-							dbInfoRel->gpRelationNodesCount,
-							&dbInfoRel->gpRelationNodesMaxCount,
-							sizeof(DbInfoGpRelationNode));
+							  (void **) &dbInfoRel->gpRelationNodes,
+							  dbInfoRel->gpRelationNodesCount,
+							  &dbInfoRel->gpRelationNodesMaxCount,
+							  sizeof(DbInfoGpRelationNode));
 		}
 
-		dbInfoGpRelationNode = 
-						&dbInfoRel->gpRelationNodes[dbInfoRel->gpRelationNodesCount];
+		dbInfoGpRelationNode =
+			&dbInfoRel->gpRelationNodes[dbInfoRel->gpRelationNodesCount];
 		dbInfoRel->gpRelationNodesCount++;
 	}
 	else
@@ -638,121 +654,125 @@ static bool DatabaseInfo_AddGpRelationNode(
 		if (info->parentlessGpRelationNodesCount >= dbInfoRel->physicalSegmentFilesMaxCount)
 		{
 			DatabaseInfo_Grow(
-							(void**)&info->parentlessGpRelationNodes,
-							info->parentlessGpRelationNodesCount,
-							&info->parentlessGpRelationNodesMaxCount,
-							sizeof(DbInfoGpRelationNode));
+							  (void **) &info->parentlessGpRelationNodes,
+							  info->parentlessGpRelationNodesCount,
+							  &info->parentlessGpRelationNodesMaxCount,
+							  sizeof(DbInfoGpRelationNode));
 		}
 
-		dbInfoGpRelationNode = 
-						&info->parentlessGpRelationNodes[info->parentlessGpRelationNodesCount];
+		dbInfoGpRelationNode =
+			&info->parentlessGpRelationNodes[info->parentlessGpRelationNodesCount];
 		info->parentlessGpRelationNodesCount++;
 	}
-	
+
 	dbInfoGpRelationNode->gpRelationNodeTid = *gpRelationNodeTid;
 	dbInfoGpRelationNode->relfilenodeOid = relfilenode;
 	dbInfoGpRelationNode->segmentFileNum = segmentFileNum;
 	dbInfoGpRelationNode->persistentTid = *persistentTid;
 	dbInfoGpRelationNode->persistentSerialNum = persistentSerialNum;
-	dbInfoGpRelationNode->logicalEof = 0;	// This will obtained from the other sources later (e.g. aoseg / aocsseg).
+	dbInfoGpRelationNode->logicalEof = 0;
+	//This will obtained from the other sources later(e.g.aoseg / aocsseg).
 
-	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
+		if (Debug_persistent_print)
+		elog(Persistent_DebugPrintLevel(),
 			 "DatabaseInfo_AddGpRelationNode: gp_relation_node TID %s, relfilenode %u, segment file #%d, persistent serial number " INT64_FORMAT ", persistent TID %s",
 			 ItemPointerToString(gpRelationNodeTid),
 			 relfilenode,
 			 segmentFileNum,
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid));
-	
+
 	return found;
 }
 
-static void DatabaseInfo_AddMiscEntry(
-	DatabaseInfo		 	*info,
-	Oid 					tablespace,
-	bool					isDir,
-	char					*name)
+static void
+DatabaseInfo_AddMiscEntry(
+						  DatabaseInfo *info,
+						  Oid tablespace,
+						  bool isDir,
+						  char *name)
 {
-	MiscEntry 	*miscEntry;
+	MiscEntry  *miscEntry;
 
 	if (info->miscEntriesCount >= info->miscEntriesMaxCount)
 	{
 		DatabaseInfo_Grow(
-						(void**)&info->miscEntries,
-						info->miscEntriesCount,
-						&info->miscEntriesMaxCount,
-						sizeof(MiscEntry));
+						  (void **) &info->miscEntries,
+						  info->miscEntriesCount,
+						  &info->miscEntriesMaxCount,
+						  sizeof(MiscEntry));
 	}
 
 	miscEntry = &info->miscEntries[info->miscEntriesCount];
 	info->miscEntriesCount++;
-	
+
 	miscEntry->tablespace = tablespace;
 	miscEntry->isDir = isDir;
 	miscEntry->name = pstrdup(name);
 
 }
 
-static void DatabaseInfo_AddPhysicalSegmentFile(
-	DbInfoRel 				*dbInfoRel,
-	int32 					segmentFileNum,
-	int64					eof)
+static void
+DatabaseInfo_AddPhysicalSegmentFile(
+									DbInfoRel *dbInfoRel,
+									int32 segmentFileNum,
+									int64 eof)
 {
-	DbInfoSegmentFile 	*dbInfoSegmentFile;
+	DbInfoSegmentFile *dbInfoSegmentFile;
 
 	if (dbInfoRel->physicalSegmentFilesCount >= dbInfoRel->physicalSegmentFilesMaxCount)
 	{
 		DatabaseInfo_Grow(
-						(void**)&dbInfoRel->physicalSegmentFiles,
-						dbInfoRel->physicalSegmentFilesCount,
-						&dbInfoRel->physicalSegmentFilesMaxCount,
-						sizeof(DbInfoSegmentFile));
+						  (void **) &dbInfoRel->physicalSegmentFiles,
+						  dbInfoRel->physicalSegmentFilesCount,
+						  &dbInfoRel->physicalSegmentFilesMaxCount,
+						  sizeof(DbInfoSegmentFile));
 	}
 
 	dbInfoSegmentFile = &dbInfoRel->physicalSegmentFiles[dbInfoRel->physicalSegmentFilesCount];
 	dbInfoRel->physicalSegmentFilesCount++;
-	
+
 	dbInfoSegmentFile->segmentFileNum = segmentFileNum;
 	dbInfoSegmentFile->eof = eof;
 
 }
 
-static void DatabaseInfo_AddRelSegFile(
-	DatabaseInfo 			*info,
-	HTAB 					*dbInfoRelHashTable,
-	Oid 					tablespace,
-	Oid						relfilenode,
-	int32					segmentFileNum,
-	int64					eof)
+static void
+DatabaseInfo_AddRelSegFile(
+						   DatabaseInfo *info,
+						   HTAB *dbInfoRelHashTable,
+						   Oid tablespace,
+						   Oid relfilenode,
+						   int32 segmentFileNum,
+						   int64 eof)
 {
-	DbInfoRel	*dbInfoRel;
-	bool		 found;
+	DbInfoRel  *dbInfoRel;
+	bool		found;
 	DbInfoRelKeyPair *dbInfoRelKey;
 
-	dbInfoRelKey = (DbInfoRelKeyPair *)palloc0(sizeof(DbInfoRelKeyPair));
+	dbInfoRelKey = (DbInfoRelKeyPair *) palloc0(sizeof(DbInfoRelKeyPair));
 	dbInfoRelKey->reltablespace = tablespace;
 	dbInfoRelKey->relfilenode = relfilenode;
 
 	/* Lookup the relfilenode in our catalog cache */
-	dbInfoRel = (DbInfoRel*) \
-		hash_search(dbInfoRelHashTable, 
+	dbInfoRel = (DbInfoRel *) \
+		hash_search(dbInfoRelHashTable,
 					dbInfoRelKey,
 					HASH_FIND,
 					&found);
 
-	/* 
+	/*
 	 * If the relfilenode doesn't exist in the catalog then add it to the list
 	 * of orphaned relfilenodes.
 	 */
 	if (!found || dbInfoRel->dbInfoRelKey.reltablespace != tablespace)
 	{
 		DatabaseInfo_AddExtraSegmentFile(
-									info,
-									tablespace,
-									relfilenode,
-									segmentFileNum,
-									eof);
+										 info,
+										 tablespace,
+										 relfilenode,
+										 segmentFileNum,
+										 eof);
 		return;
 	}
 
@@ -762,38 +782,41 @@ static void DatabaseInfo_AddRelSegFile(
 										eof);
 }
 
-static void DatabaseInfo_AddFile(
-	DatabaseInfo		 	*info,
-	HTAB 					*dbInfoRelHashTable,
-	Oid 					tablespace,
-	char					*dbDirPath,
-	char					*name)
+static void
+DatabaseInfo_AddFile(
+					 DatabaseInfo *info,
+					 HTAB *dbInfoRelHashTable,
+					 Oid tablespace,
+					 char *dbDirPath,
+					 char *name)
 {
-	int64 eof;
-	int itemCount;
-	Oid relfilenode;
-	uint32 segmentFileNum;
-	char path[MAXPGPATH];
-	int	fileFlags = O_RDONLY | PG_BINARY;
-	int	fileMode = 0400;
-						/* File mode is S_IRUSR 00400 user has read permission */
-	File file;
+	int64		eof;
+	int			itemCount;
+	Oid			relfilenode;
+	uint32		segmentFileNum;
+	char		path[MAXPGPATH];
+	int			fileFlags = O_RDONLY | PG_BINARY;
+	int			fileMode = 0400;
+
+	/* File mode is S_IRUSR 00400 user has read permission */
+	File		file;
 
 	sprintf(path, "%s/%s", dbDirPath, name);
-	
+
 	/*
 	 * Open the file for read.
-	 */	
+	 */
 	file = PathNameOpenFile(path, fileFlags, fileMode);
-	if(file < 0)
+	if (file < 0)
 	{
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("Could not open segment file '%s'", 
+				 errmsg("Could not open segment file '%s'",
 						path)));
 	}
 	eof = FileSeek(file, 0L, SEEK_END);
-	if (eof < 0) {
+	if (eof < 0)
+	{
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("Could not seek to end of file \"%s\" : %m",
@@ -803,8 +826,10 @@ static void DatabaseInfo_AddFile(
 
 	itemCount = sscanf(name, "%u.%u", &relfilenode, &segmentFileNum);
 
-	// UNDONE: sscanf is a rather poor scanner.
-	// UNDONE: For right now, just assume properly named files....
+	/*
+	 * UNDONE: sscanf is a rather poor scanner. For right now, just assume
+	 * properly named files.
+	 */
 	if (itemCount == 0)
 	{
 		DatabaseInfo_AddMiscEntry(info, tablespace, false, name);
@@ -824,23 +849,23 @@ static void DatabaseInfo_AddFile(
  *     - miscEntry             : non-relation database files
  *     - physicalSegmentFiles  : relation segment files
  */
-static void 
+static void
 DatabaseInfo_Scan(
-	DatabaseInfo 		*info,
-	HTAB 				*dbInfoRelHashTable,
-	Oid 				 tablespace,
-	Oid 				 database)
+				  DatabaseInfo *info,
+				  HTAB *dbInfoRelHashTable,
+				  Oid tablespace,
+				  Oid database)
 {
-	char				*dbDirPath;
-	DIR					*xldir;
-	struct dirent		*xlde;
-	char				 fromfile[MAXPGPATH];
+	char	   *dbDirPath;
+	DIR		   *xldir;
+	struct dirent *xlde;
+	char		fromfile[MAXPGPATH];
 
 	/* Lookup the database path and allocate a directory scan structure */
 	dbDirPath = GetDatabasePath(
-						(tablespace == GLOBALTABLESPACE_OID ? 0 : database), 
-						tablespace);
-	
+								(tablespace == GLOBALTABLESPACE_OID ? 0 : database),
+								tablespace);
+
 	xldir = AllocateDir(dbDirPath);
 	if (xldir == NULL)
 		ereport(ERROR,
@@ -856,7 +881,10 @@ DatabaseInfo_Scan(
 			strcmp(xlde->d_name, "..") == 0)
 			continue;
 
-		/* Odd... On snow leopard, we get back "/" as a subdir, which is wrong. Ingore it */
+		/*
+		 * Odd... On snow leopard, we get back "/" as a subdir, which is
+		 * wrong. Ingore it
+		 */
 		if (xlde->d_name[0] == '/' && xlde->d_name[1] == '\0')
 			continue;
 
@@ -868,10 +896,11 @@ DatabaseInfo_Scan(
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not stat file \"%s\": %m", fromfile)));
+
 			/*
-			 * If the file went away while scanning, it's no error.
-			 * This could happen especillay with shared relcache init file
-			 * that is stored in global tablespace.
+			 * If the file went away while scanning, it's no error. This could
+			 * happen especillay with shared relcache init file that is stored
+			 * in global tablespace.
 			 */
 			elog(LOG, "skipping missing file %s", fromfile);
 			continue;
@@ -880,19 +909,19 @@ DatabaseInfo_Scan(
 		if (S_ISDIR(fst.st_mode))
 		{
 			DatabaseInfo_AddMiscEntry(
-									info, 
-									tablespace,
-									/* isDir */ true, 
-									xlde->d_name);
+									  info,
+									  tablespace,
+									   /* isDir */ true,
+									  xlde->d_name);
 		}
 		else if (S_ISREG(fst.st_mode))
 		{
 			DatabaseInfo_AddFile(
-								info,
-								dbInfoRelHashTable,
-								tablespace,
-								dbDirPath,
-								xlde->d_name);
+								 info,
+								 dbInfoRelHashTable,
+								 tablespace,
+								 dbDirPath,
+								 xlde->d_name);
 		}
 	}
 
@@ -905,10 +934,11 @@ DatabaseInfo_Scan(
 static int
 DbInfoRelPtrArray_Compare(const void *entry1, const void *entry2)
 {
-	const DbInfoRel *dbInfoRel1 = *((DbInfoRel**)entry1);
-	const DbInfoRel *dbInfoRel2 = *((DbInfoRel**)entry2);
+	const DbInfoRel *dbInfoRel1 = *((DbInfoRel **) entry1);
+	const DbInfoRel *dbInfoRel2 = *((DbInfoRel **) entry2);
 
-	int compresult;
+	int			compresult;
+
 	compresult = memcmp(&dbInfoRel1->dbInfoRelKey,
 						&dbInfoRel2->dbInfoRelKey,
 						sizeof(DbInfoRelKeyPair));
@@ -923,8 +953,8 @@ DbInfoRelPtrArray_Compare(const void *entry1, const void *entry2)
 static int
 DbInfoGpRelationNode_Compare(const void *entry1, const void *entry2)
 {
-	const DbInfoGpRelationNode *info1 = (DbInfoGpRelationNode*) entry1;
-	const DbInfoGpRelationNode *info2 = (DbInfoGpRelationNode*) entry2;
+	const DbInfoGpRelationNode *info1 = (DbInfoGpRelationNode *) entry1;
+	const DbInfoGpRelationNode *info2 = (DbInfoGpRelationNode *) entry2;
 
 	if (info1->relfilenodeOid == info2->relfilenodeOid)
 	{
@@ -958,10 +988,10 @@ DbInfoSegmentFile_Compare(const void *entry1, const void *entry2)
 static int
 DbInfoAppendOnlyCatalogSegmentInfo_Compare(const void *entry1, const void *entry2)
 {
-	const DbInfoAppendOnlyCatalogSegmentInfo *info1 = 
-		(DbInfoAppendOnlyCatalogSegmentInfo *) entry1;
-	const DbInfoAppendOnlyCatalogSegmentInfo *info2 = 
-		(DbInfoAppendOnlyCatalogSegmentInfo *) entry2;
+	const DbInfoAppendOnlyCatalogSegmentInfo *info1 =
+	(DbInfoAppendOnlyCatalogSegmentInfo *) entry1;
+	const DbInfoAppendOnlyCatalogSegmentInfo *info2 =
+	(DbInfoAppendOnlyCatalogSegmentInfo *) entry2;
 
 	if (info1->segmentFileNum == info2->segmentFileNum)
 		return 0;
@@ -973,50 +1003,50 @@ DbInfoAppendOnlyCatalogSegmentInfo_Compare(const void *entry1, const void *entry
 
 static void
 DatabaseInfo_CollectGpRelationNode(
-	DatabaseInfo 		*info,
-	HTAB				*dbInfoRelHashTable)
+								   DatabaseInfo *info,
+								   HTAB *dbInfoRelHashTable)
 {
-	HeapScanDesc		scan;
-	Relation			gp_relation_node_rel;
-	HeapTuple			tuple;
+	HeapScanDesc scan;
+	Relation	gp_relation_node_rel;
+	HeapTuple	tuple;
 
-	gp_relation_node_rel = 
-			DirectOpen_GpRelationNodeOpen(
-							info->defaultTablespace, 
-							info->database);
+	gp_relation_node_rel =
+		DirectOpen_GpRelationNodeOpen(
+									  info->defaultTablespace,
+									  info->database);
 	scan = heap_beginscan(gp_relation_node_rel, SnapshotNow, 0, NULL);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
-		bool			nulls[Natts_gp_relation_node];
-		Datum			values[Natts_gp_relation_node];
+		bool		nulls[Natts_gp_relation_node];
+		Datum		values[Natts_gp_relation_node];
 
-		Oid				reltablespace;
-		Oid				relfilenode;
-		int32			segmentFileNum;
-		int64			createMirrorDataLossTrackingSessionNum;
-		ItemPointerData	persistentTid;
-		int64			persistentSerialNum;
-		
+		Oid			reltablespace;
+		Oid			relfilenode;
+		int32		segmentFileNum;
+		int64		createMirrorDataLossTrackingSessionNum;
+		ItemPointerData persistentTid;
+		int64		persistentSerialNum;
+
 		heap_deform_tuple(tuple, RelationGetDescr(gp_relation_node_rel), values, nulls);
 
 		GpRelationNode_GetValues(
-							values,
-							&reltablespace,
-							&relfilenode,
-							&segmentFileNum,
-							&createMirrorDataLossTrackingSessionNum,
-							&persistentTid,
-							&persistentSerialNum);
-		
+								 values,
+								 &reltablespace,
+								 &relfilenode,
+								 &segmentFileNum,
+								 &createMirrorDataLossTrackingSessionNum,
+								 &persistentTid,
+								 &persistentSerialNum);
+
 		if (!DatabaseInfo_AddGpRelationNode(
-									info,
-									dbInfoRelHashTable,
-									reltablespace,
-									relfilenode,
-									segmentFileNum,
-									&persistentTid,
-									persistentSerialNum,
-									&tuple->t_self))
+											info,
+											dbInfoRelHashTable,
+											reltablespace,
+											relfilenode,
+											segmentFileNum,
+											&persistentTid,
+											persistentSerialNum,
+											&tuple->t_self))
 		{
 			elog(WARNING, "Did not find matching pg_class entry for gp_relation_node entry relfilenode %u (parentless!!!)",
 				 relfilenode);
@@ -1029,10 +1059,10 @@ DatabaseInfo_CollectGpRelationNode(
 
 static void
 DatabaseInfo_HandleAppendOnly(
-	DatabaseInfo		*info,
-	HTAB				*dbInfoRelHashTable,
-	HTAB				*relationIdHashTable,
-	HTAB				*pgAppendOnlyHashTable)
+							  DatabaseInfo *info,
+							  HTAB *dbInfoRelHashTable,
+							  HTAB *relationIdHashTable,
+							  HTAB *pgAppendOnlyHashTable)
 {
 	HASH_SEQ_STATUS iterateStatus;
 
@@ -1040,24 +1070,24 @@ DatabaseInfo_HandleAppendOnly(
 
 	while (true)
 	{
-		DbInfoRel *dbInfoRel;
+		DbInfoRel  *dbInfoRel;
 
-		dbInfoRel = 
-				(DbInfoRel*)
-						hash_seq_search(&iterateStatus);
+		dbInfoRel =
+			(DbInfoRel *)
+			hash_seq_search(&iterateStatus);
 		if (dbInfoRel == NULL)
 			break;
-	
+
 		if (dbInfoRel->relstorage == RELSTORAGE_AOROWS ||
 			dbInfoRel->relstorage == RELSTORAGE_AOCOLS)
 		{
-			Form_pg_appendonly 	 aoEntry;
-			DbInfoRel 			*aosegDbInfoRel;
-			int i;
-				
+			Form_pg_appendonly aoEntry;
+			DbInfoRel  *aosegDbInfoRel;
+			int			i;
+
 			aoEntry = DatabaseInfo_FindPgAppendOnly(
-											pgAppendOnlyHashTable,
-											dbInfoRel->relationOid);
+													pgAppendOnlyHashTable,
+													dbInfoRel->relationOid);
 
 			if ((aoEntry->segrelid == 0) || (aoEntry->visimaprelid == 0) ||
 				(aoEntry->visimapidxid == 0))
@@ -1068,13 +1098,13 @@ DatabaseInfo_HandleAppendOnly(
 					 aoEntry->visimaprelid, aoEntry->visimapidxid);
 
 			if (Debug_persistent_print)
-				elog(Persistent_DebugPrintLevel(), 
+				elog(Persistent_DebugPrintLevel(),
 					 "DatabaseInfo_AddPgClassStoredRelation: Append-Only entry for relation id %u, relation name %s, "
-				     "blocksize %d, safefswritesize %d, compresslevel %d, "
-				     " checksum %s, compresstype %s, columnstore %s, segrelid %u, blkdirrelid %u, blkdiridxid %u, "
+					 "blocksize %d, safefswritesize %d, compresslevel %d, "
+					 " checksum %s, compresstype %s, columnstore %s, segrelid %u, blkdirrelid %u, blkdiridxid %u, "
 					 " visimaprelid %u, visimapidxid %u",
-				     dbInfoRel->relationOid,
-				     dbInfoRel->relname,
+					 dbInfoRel->relationOid,
+					 dbInfoRel->relname,
 					 aoEntry->blocksize,
 					 aoEntry->safefswritesize,
 					 aoEntry->compresslevel,
@@ -1092,36 +1122,36 @@ DatabaseInfo_HandleAppendOnly(
 			 */
 
 			aosegDbInfoRel = DatabaseInfo_FindRelationId(
-												relationIdHashTable,
-												aoEntry->segrelid);
+														 relationIdHashTable,
+														 aoEntry->segrelid);
 			Assert(aosegDbInfoRel != NULL);
 
 			if (dbInfoRel->relstorage == RELSTORAGE_AOROWS)
 			{
 				FileSegInfo **aoSegfileArray;
-				int totalAoSegFiles;
+				int			totalAoSegFiles;
 
-				Relation pg_aoseg_rel;
+				Relation	pg_aoseg_rel;
 
-				pg_aoseg_rel = 
-						DirectOpen_PgAoSegOpenDynamic(
-											aoEntry->segrelid,
-											dbInfoRel->dbInfoRelKey.reltablespace,
-											info->database,
-											aosegDbInfoRel->dbInfoRelKey.relfilenode);
-				
-				aoSegfileArray = 
-						GetAllFileSegInfo_pg_aoseg_rel(
-												dbInfoRel->relname, 
-												pg_aoseg_rel,
-												SnapshotNow, 
-												&totalAoSegFiles);
+				pg_aoseg_rel =
+					DirectOpen_PgAoSegOpenDynamic(
+												  aoEntry->segrelid,
+												  dbInfoRel->dbInfoRelKey.reltablespace,
+												  info->database,
+												  aosegDbInfoRel->dbInfoRelKey.relfilenode);
+
+				aoSegfileArray =
+					GetAllFileSegInfo_pg_aoseg_rel(
+												   dbInfoRel->relname,
+												   pg_aoseg_rel,
+												   SnapshotNow,
+												   &totalAoSegFiles);
 				for (i = 0; i < totalAoSegFiles; i++)
 				{
 					DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
-															dbInfoRel,
-															aoSegfileArray[i]->segno,
-															aoSegfileArray[i]->eof);
+																 dbInfoRel,
+																 aoSegfileArray[i]->segno,
+																 aoSegfileArray[i]->eof);
 				}
 
 				DirectOpen_PgAoSegClose(pg_aoseg_rel);
@@ -1129,40 +1159,40 @@ DatabaseInfo_HandleAppendOnly(
 			else if (dbInfoRel->relstorage == RELSTORAGE_AOCOLS)
 			{
 				struct AOCSFileSegInfo **aocsSegfileArray;
-				int totalAocsSegFiles;
+				int			totalAocsSegFiles;
 
-				Relation pg_aocsseg_rel;
+				Relation	pg_aocsseg_rel;
 
 				pg_aocsseg_rel =
-						DirectOpen_PgAoCsSegOpenDynamic(
-											aoEntry->segrelid,
-											dbInfoRel->dbInfoRelKey.reltablespace,
-											info->database,
-											aosegDbInfoRel->dbInfoRelKey.relfilenode);
-				
+					DirectOpen_PgAoCsSegOpenDynamic(
+													aoEntry->segrelid,
+													dbInfoRel->dbInfoRelKey.reltablespace,
+													info->database,
+													aosegDbInfoRel->dbInfoRelKey.relfilenode);
+
 				aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-																dbInfoRel->relnatts,
-																dbInfoRel->relname, 
-																pg_aocsseg_rel,
-																SnapshotNow, 
-																&totalAocsSegFiles);
+																		dbInfoRel->relnatts,
+																		dbInfoRel->relname,
+																		pg_aocsseg_rel,
+																		SnapshotNow,
+																		&totalAocsSegFiles);
 				for (i = 0; i < totalAocsSegFiles; i++)
 				{
-					int32 segmentFileNum;
-					int columnNum;
+					int32		segmentFileNum;
+					int			columnNum;
 
 					segmentFileNum = aocsSegfileArray[i]->segno;
 
 					for (columnNum = 0; columnNum < dbInfoRel->relnatts; columnNum++)
 					{
-	                    AOCSVPInfoEntry *entry;
+						AOCSVPInfoEntry *entry;
 
 						entry = getAOCSVPEntry(aocsSegfileArray[i], columnNum);
-						
+
 						DatabaseInfo_AddAppendOnlyCatalogSegmentInfo(
-																dbInfoRel,
-																columnNum * AOTupleId_MultiplierSegmentFileNum + segmentFileNum,
-																entry->eof);
+																	 dbInfoRel,
+																	 columnNum * AOTupleId_MultiplierSegmentFileNum + segmentFileNum,
+																	 entry->eof);
 					}
 				}
 
@@ -1174,17 +1204,17 @@ DatabaseInfo_HandleAppendOnly(
 
 static void
 DatabaseInfo_CollectPgAppendOnly(
-	DatabaseInfo 		*info,
-	HTAB				*pgAppendOnlyHashTable)
+								 DatabaseInfo *info,
+								 HTAB *pgAppendOnlyHashTable)
 {
 	Relation	pg_appendonly_rel;
 
 	HeapScanDesc scan;
 	HeapTuple	tuple;
 
-	pg_appendonly_rel = 
-				DirectOpen_PgAppendOnlyOpen(
-									info->defaultTablespace, 
+	pg_appendonly_rel =
+		DirectOpen_PgAppendOnlyOpen(
+									info->defaultTablespace,
 									info->database);
 	scan = heap_beginscan(pg_appendonly_rel, SnapshotNow, 0, NULL);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
@@ -1200,7 +1230,7 @@ DatabaseInfo_CollectPgAppendOnly(
 				 aoEntry->relid);
 
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "DatabaseInfo_Collect: Append-Only entry for relation id %u, "
 				 "blocksize %d, safefswritesize %d, compresslevel %d, "
 				 " checksum %s, compresstype %s, columnstore %s, segrelid %u, blkdirrelid %u, blkdiridxid %u",
@@ -1216,23 +1246,23 @@ DatabaseInfo_CollectPgAppendOnly(
 				 aoEntry->blkdiridxid);
 
 		DatabaseInfo_AddPgAppendOnly(
-								pgAppendOnlyHashTable,
-								aoEntry->relid,
-								aoEntry);
+									 pgAppendOnlyHashTable,
+									 aoEntry->relid,
+									 aoEntry);
 	}
 	heap_endscan(scan);
 
 	DirectOpen_PgAppendOnlyClose(pg_appendonly_rel);
-	
+
 }
 
 static void
 DatabaseInfo_CollectPgClass(
-	DatabaseInfo 		*info,
-	HTAB				*dbInfoRelHashTable,
-	HTAB				*relationIdHashTable,
-	Snapshot			 snapshot,
-	int					*count)
+							DatabaseInfo *info,
+							HTAB *dbInfoRelHashTable,
+							HTAB *relationIdHashTable,
+							Snapshot snapshot,
+							int *count)
 {
 	Relation	pg_class_rel;
 
@@ -1251,23 +1281,23 @@ DatabaseInfo_CollectPgClass(
 	 * database directories are active.  I.e. Fill up the tablespaces array.
 	 */
 	*count = 0;
-	pg_class_rel = 
-			DirectOpen_PgClassOpen(
-							info->defaultTablespace, 
-							info->database);
+	pg_class_rel =
+		DirectOpen_PgClassOpen(
+							   info->defaultTablespace,
+							   info->database);
 	scan = heap_beginscan(pg_class_rel, snapshot, 0, NULL);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
-		Oid 			relationOid;
+		Oid			relationOid;
 
-		Form_pg_class	form_pg_class;
+		Form_pg_class form_pg_class;
 
-		Oid 			reltablespace;
+		Oid			reltablespace;
 
-		char			relkind;
-		char			relstorage;
+		char		relkind;
+		char		relstorage;
 
-		int 			relnatts;
+		int			relnatts;
 
 		relationOid = HeapTupleGetOid(tuple);
 
@@ -1279,7 +1309,7 @@ DatabaseInfo_CollectPgClass(
 			reltablespace = info->defaultTablespace;
 
 		/*
-		 *	Skip non-storage relations.
+		 * Skip non-storage relations.
 		 */
 		relkind = form_pg_class->relkind;
 
@@ -1295,22 +1325,22 @@ DatabaseInfo_CollectPgClass(
 		relnatts = form_pg_class->relnatts;
 
 		DatabaseInfo_AddTablespace(
-									info, 
-									reltablespace);
+								   info,
+								   reltablespace);
 
 		DatabaseInfo_AddPgClassStoredRelation(
-											info,
-											dbInfoRelHashTable,
-											relationIdHashTable,
-											form_pg_class->relfilenode,
-											&tuple->t_self,
-											relationOid,
-											form_pg_class->relname.data,
-											reltablespace,
-											relkind,
-											relstorage,
-											form_pg_class->relam,
-											relnatts);
+											  info,
+											  dbInfoRelHashTable,
+											  relationIdHashTable,
+											  form_pg_class->relfilenode,
+											  &tuple->t_self,
+											  relationOid,
+											  form_pg_class->relname.data,
+											  reltablespace,
+											  relkind,
+											  relstorage,
+											  form_pg_class->relam,
+											  relnatts);
 
 		(*count)++;
 	}
@@ -1325,23 +1355,23 @@ DatabaseInfo_CollectPgClass(
  */
 static void
 DatabaseInfo_SortRelArray(
-	DatabaseInfo		*info, 
-	HTAB				*dbInfoRelHashTable,
-	int					 count)
+						  DatabaseInfo *info,
+						  HTAB *dbInfoRelHashTable,
+						  int count)
 {
-	HASH_SEQ_STATUS		  iterateStatus;
-	DbInfoRel			**dbInfoRelPtrArray;
-	int					  d;
+	HASH_SEQ_STATUS iterateStatus;
+	DbInfoRel **dbInfoRelPtrArray;
+	int			d;
 
 	/* This function will populate the dbInfoRelArray */
 	Assert(info->dbInfoRelArray == NULL);
 
 	/* Construct an array of pointers by scanning through the hash table */
-	dbInfoRelPtrArray = (DbInfoRel**) palloc(sizeof(DbInfoRel*) * count);
+	dbInfoRelPtrArray = (DbInfoRel **) palloc(sizeof(DbInfoRel *) * count);
 	hash_seq_init(&iterateStatus, dbInfoRelHashTable);
 	for (d = 0; d < count; d++)
 	{
-		dbInfoRelPtrArray[d] = (DbInfoRel*) hash_seq_search(&iterateStatus);
+		dbInfoRelPtrArray[d] = (DbInfoRel *) hash_seq_search(&iterateStatus);
 
 		/* should have as many entries in the hash scan as "count" */
 		if (dbInfoRelPtrArray[d] == NULL)
@@ -1351,35 +1381,33 @@ DatabaseInfo_SortRelArray(
 	/* double check that the hash contained the right number of elements */
 	if (hash_seq_search(&iterateStatus) != NULL)
 		elog(ERROR, "too many entries in dbInfoRelHashTable");
-	
+
 	/* sort the pointer array */
 	qsort(dbInfoRelPtrArray,
-		  count, 
-		  sizeof(DbInfoRel*),
+		  count,
+		  sizeof(DbInfoRel *),
 		  DbInfoRelPtrArray_Compare);
-		   
+
 	/*
 	 * Finally convert the sorted pointer array into a sorted record array.
 	 */
-	info->dbInfoRelArray = (DbInfoRel*) palloc(sizeof(DbInfoRel)*count);
+	info->dbInfoRelArray = (DbInfoRel *) palloc(sizeof(DbInfoRel) * count);
 	for (d = 0; d < count; d++)
 	{
 		info->dbInfoRelArray[d] = *(dbInfoRelPtrArray[d]);
-		
+
 		/*
-		 * For each record in the array we have three lists:
-		 *   - gpRelationNodes
-		 *   - appendOnlyCatalogSegmentInfo
-		 *   - physicalSegmentFiles 
+		 * For each record in the array we have three lists: - gpRelationNodes
+		 * - appendOnlyCatalogSegmentInfo - physicalSegmentFiles
 		 *
-		 * All three of which need to be sorted on segmentFileNum otherwise
-		 * we will not be able to merge the lists correctly.
+		 * All three of which need to be sorted on segmentFileNum otherwise we
+		 * will not be able to merge the lists correctly.
 		 *
 		 * XXX - this seems like a bad design, it seems like we have three
-		 * sources of information on the same thing, which should be able
-		 * to be satisfied with a single Hash rather than trying to keep 
-		 * around three different lists and have code spread throughout the
-		 * source trying to deal with merging the lists.
+		 * sources of information on the same thing, which should be able to
+		 * be satisfied with a single Hash rather than trying to keep around
+		 * three different lists and have code spread throughout the source
+		 * trying to deal with merging the lists.
 		 */
 		if (info->dbInfoRelArray[d].gpRelationNodes)
 			qsort(info->dbInfoRelArray[d].gpRelationNodes,
@@ -1411,59 +1439,53 @@ DatabaseInfo_SortRelArray(
  *------------------------------------------------------------------------- */
 DatabaseInfo *
 DatabaseInfo_Collect(
-	Oid			database,
-	Oid 		defaultTablespace,
-	Snapshot	snapshot,
-	bool        collectGpRelationNodeInfo,
-	bool		collectAppendOnlyCatalogSegmentInfo,
-	bool		scanFileSystem)
+					 Oid database,
+					 Oid defaultTablespace,
+					 Snapshot snapshot,
+					 bool collectGpRelationNodeInfo,
+					 bool collectAppendOnlyCatalogSegmentInfo,
+					 bool scanFileSystem)
 {
-	DatabaseInfo		 *info;	
-	HTAB				 *dbInfoRelHashTable;
-	HTAB				 *relationIdHashTable;
-	HTAB				 *pgAppendOnlyHashTable;
-	int					  count;
-	int					  t;
+	DatabaseInfo *info;
+	HTAB	   *dbInfoRelHashTable;
+	HTAB	   *relationIdHashTable;
+	HTAB	   *pgAppendOnlyHashTable;
+	int			count;
+	int			t;
 
 	/* Create local hash tables */
-	dbInfoRelHashTable	  = DatabaseInfo_DbInfoRelHashTableInit();
-	relationIdHashTable	  = DatabaseInfo_RelationIdHashTableInit();
+	dbInfoRelHashTable = DatabaseInfo_DbInfoRelHashTableInit();
+	relationIdHashTable = DatabaseInfo_RelationIdHashTableInit();
 	pgAppendOnlyHashTable = DatabaseInfo_PgAppendOnlyHashTableInit();
 
 	/* Setup an initial empty DatabaseInfo */
-	info = (DatabaseInfo*)palloc0(sizeof(DatabaseInfo));
-	info->database							  = database;
-	info->defaultTablespace					  = defaultTablespace;
-	info->collectGpRelationNodeInfo           = collectGpRelationNodeInfo;
+	info = (DatabaseInfo *) palloc0(sizeof(DatabaseInfo));
+	info->database = database;
+	info->defaultTablespace = defaultTablespace;
+	info->collectGpRelationNodeInfo = collectGpRelationNodeInfo;
 	info->collectAppendOnlyCatalogSegmentInfo = collectAppendOnlyCatalogSegmentInfo;
 
-	/* 
-	 * Allocate the extensible arrays:
-	 *   - tablespaces
-	 *   - miscEntries
-	 *   - extraSegmentFiles
-	 *   - parentlessGpRelationNodes
+	/*
+	 * Allocate the extensible arrays: - tablespaces - miscEntries -
+	 * extraSegmentFiles - parentlessGpRelationNodes
 	 */
 	info->tablespacesMaxCount = 10;
-	info->tablespaces		  = palloc0(info->tablespacesMaxCount*sizeof(Oid));
+	info->tablespaces = palloc0(info->tablespacesMaxCount * sizeof(Oid));
 
 	info->miscEntriesMaxCount = 50;
-	info->miscEntries		  = palloc0(info->miscEntriesMaxCount*sizeof(MiscEntry));
+	info->miscEntries = palloc0(info->miscEntriesMaxCount * sizeof(MiscEntry));
 
 	info->extraSegmentFilesMaxCount = 10;
-	info->extraSegmentFiles	  = \
-		palloc0(info->extraSegmentFilesMaxCount*sizeof(DbInfoExtraSegmentFile));
+	info->extraSegmentFiles = \
+		palloc0(info->extraSegmentFilesMaxCount * sizeof(DbInfoExtraSegmentFile));
 
 	info->parentlessGpRelationNodesMaxCount = 10;
-	info->parentlessGpRelationNodes =  \
-		palloc0(info->parentlessGpRelationNodesMaxCount*sizeof(DbInfoGpRelationNode));
+	info->parentlessGpRelationNodes = \
+		palloc0(info->parentlessGpRelationNodesMaxCount * sizeof(DbInfoGpRelationNode));
 
-	/* 
-	 * Start Collecting information: 
-	 *   - from pg_class
-	 *   - from pg_appendonly [if specified]
-	 *   - from gp_relation_node [if specified]
-	 *   - from file system
+	/*
+	 * Start Collecting information: - from pg_class - from pg_appendonly [if
+	 * specified] - from gp_relation_node [if specified] - from file system
 	 */
 	DatabaseInfo_CollectPgClass(info, dbInfoRelHashTable, relationIdHashTable, NULL, &count);
 	DatabaseInfo_CollectPgAppendOnly(info, pgAppendOnlyHashTable);
@@ -1471,12 +1493,12 @@ DatabaseInfo_Collect(
 	if (info->collectAppendOnlyCatalogSegmentInfo)
 	{
 		/*
-		 * We need the dbInfoRel hash table to translate pg_appendonly.segrelid
-		 * to the ao[cs]seg relfilenode.
+		 * We need the dbInfoRel hash table to translate
+		 * pg_appendonly.segrelid to the ao[cs]seg relfilenode.
 		 */
-		DatabaseInfo_HandleAppendOnly(info, 
-									  dbInfoRelHashTable, 
-									  relationIdHashTable, 
+		DatabaseInfo_HandleAppendOnly(info,
+									  dbInfoRelHashTable,
+									  relationIdHashTable,
 									  pgAppendOnlyHashTable);
 	}
 
@@ -1493,9 +1515,10 @@ DatabaseInfo_Collect(
 
 	/*
 	 * Scan each used directory for its relation segment files and misc
-	 * files/dirs as found within the filesystem.  This /may/ contain some files
-	 * not referenced in gp_relation_node that are from crashed backends, but
-	 * in general should agree with the set of entries in gp_relation_node.
+	 * files/dirs as found within the filesystem.  This /may/ contain some
+	 * files not referenced in gp_relation_node that are from crashed
+	 * backends, but in general should agree with the set of entries in
+	 * gp_relation_node.
 	 *
 	 * Files not present in gp_relation_node will not be mirrored and probably
 	 * require removal to maintain database/filesystem consistency.
@@ -1510,7 +1533,7 @@ DatabaseInfo_Collect(
 
 	/* Convert the dbInfoRelHash into array and sort it. */
 	DatabaseInfo_SortRelArray(info, dbInfoRelHashTable, count);
-	
+
 	/* Cleanup memory */
 	hash_destroy(dbInfoRelHashTable);
 	hash_destroy(relationIdHashTable);
@@ -1520,14 +1543,14 @@ DatabaseInfo_Collect(
 	return info;
 }
 
-void 
+void
 DatabaseInfo_AlignAppendOnly(
-	DatabaseInfo 			*info,
+							 DatabaseInfo *info,
 
-	DbInfoRel 				*dbInfoRel)
+							 DbInfoRel *dbInfoRel)
 {
-	int a;
-	int g;
+	int			a;
+	int			g;
 
 	/*
 	 * Process the ao[cs]seg entries against the gp_relation_node entries.
@@ -1535,8 +1558,8 @@ DatabaseInfo_AlignAppendOnly(
 	g = 0;
 	for (a = 0; a < dbInfoRel->appendOnlyCatalogSegmentInfoCount; a++)
 	{
-		DbInfoAppendOnlyCatalogSegmentInfo	*appendOnlyCatalogSegmentInfo =
-									&dbInfoRel->appendOnlyCatalogSegmentInfo[a];
+		DbInfoAppendOnlyCatalogSegmentInfo *appendOnlyCatalogSegmentInfo =
+		&dbInfoRel->appendOnlyCatalogSegmentInfo[a];
 
 		while (true)
 		{
@@ -1548,7 +1571,10 @@ DatabaseInfo_AlignAppendOnly(
 						 appendOnlyCatalogSegmentInfo->segmentFileNum,
 						 appendOnlyCatalogSegmentInfo->logicalEof);
 
-				// Otherwise, ignore ao[cs]seg entries with EOF == 0 and no gp_relation_node entry.
+				/*
+				 * Otherwise, ignore ao[cs]seg entries with EOF == 0 and no
+				 * gp_relation_node entry.
+				 */
 				break;
 			}
 
@@ -1557,12 +1583,13 @@ DatabaseInfo_AlignAppendOnly(
 				if (dbInfoRel->gpRelationNodes[g].segmentFileNum == 0)
 				{
 					/*
-					 * Segment file #0 with always have a gp_relation_node entry, but often doesn't have an aoseg entry.
+					 * Segment file #0 with always have a gp_relation_node
+					 * entry, but often doesn't have an aoseg entry.
 					 */
 					g++;
 					continue;
 				}
-				
+
 				elog(ERROR, "Append-Only relation '%s' gp_relation_node entry for segment file #%d without an aoseg /aocsseg entry (case #1)",
 					 dbInfoRel->relname,
 					 dbInfoRel->gpRelationNodes[g].segmentFileNum);
@@ -1575,12 +1602,13 @@ DatabaseInfo_AlignAppendOnly(
 			}
 			else
 			{
-				Assert (dbInfoRel->gpRelationNodes[g].segmentFileNum > appendOnlyCatalogSegmentInfo->segmentFileNum);
+				Assert(dbInfoRel->gpRelationNodes[g].segmentFileNum > appendOnlyCatalogSegmentInfo->segmentFileNum);
 				elog(ERROR, "Append-Only relation '%s' gp_relation_node entry for segment file #%d without an aoseg /aocsseg entry",
 					 dbInfoRel->relname,
 					 dbInfoRel->gpRelationNodes[g].segmentFileNum);
 			}
-			g++;	// Not reached.  Protect against overly smart compilers looking at exit conditions...
+			g++;
+			//Not reached.Protect against overly smart compilers looking at exit conditions...
 		}
 	}
 

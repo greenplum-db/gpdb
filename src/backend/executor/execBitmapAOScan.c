@@ -1,25 +1,32 @@
-/*
- * execBitmapAOScan.c
- *   Support routines for scanning AO and AOCO tables using bitmaps.
+/*-------------------------------------------------------------------------
  *
+ * execBitmapAOScan.c
+ *	  Support routines for scanning AO and AOCO tables using bitmaps.
+ *
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * Copyright (c) 2014 Pivotal, Inc.
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execBitmapAOScan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/heapam.h"
-#include "executor/execdebug.h"
-#include "executor/nodeBitmapAppendOnlyscan.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
+#include "cdb/cdbvars.h" /* gp_select_invisible */
+#include "executor/execdebug.h"
+#include "executor/nodeBitmapAppendOnlyscan.h"
+#include "miscadmin.h"
+#include "nodes/tidbitmap.h"
+#include "parser/parsetree.h"
 #include "pgstat.h"
 #include "utils/memutils.h"
-#include "miscadmin.h"
-#include "parser/parsetree.h"
-#include "cdb/cdbvars.h" /* gp_select_invisible */
-#include "nodes/tidbitmap.h"
+#include "utils/snapmgr.h"
 
 typedef struct
 {

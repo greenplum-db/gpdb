@@ -18,7 +18,7 @@ INSERT INTO TIME_TBL VALUES ('15:36:39 America/New_York');
 ERROR:  invalid input syntax for type time: "15:36:39 America/New_York"
 LINE 1: INSERT INTO TIME_TBL VALUES ('15:36:39 America/New_York');
                                      ^
-SELECT f1 AS "Time" FROM TIME_TBL ORDER BY 1;
+SELECT f1 AS "Time" FROM TIME_TBL;
     Time     
 -------------
  00:00:00
@@ -27,13 +27,13 @@ SELECT f1 AS "Time" FROM TIME_TBL ORDER BY 1;
  11:59:00
  12:00:00
  12:01:00
- 15:36:39
- 15:36:39
  23:59:00
  23:59:59.99
+ 15:36:39
+ 15:36:39
 (10 rows)
 
-SELECT f1 AS "Three" FROM TIME_TBL WHERE f1 < '05:06:07' ORDER BY 1;
+SELECT f1 AS "Three" FROM TIME_TBL WHERE f1 < '05:06:07';
   Three   
 ----------
  00:00:00
@@ -41,24 +41,24 @@ SELECT f1 AS "Three" FROM TIME_TBL WHERE f1 < '05:06:07' ORDER BY 1;
  02:03:00
 (3 rows)
 
-SELECT f1 AS "Five" FROM TIME_TBL WHERE f1 > '05:06:07' ORDER BY 1;
+SELECT f1 AS "Five" FROM TIME_TBL WHERE f1 > '05:06:07';
     Five     
 -------------
  11:59:00
  12:00:00
  12:01:00
- 15:36:39
- 15:36:39
  23:59:00
  23:59:59.99
+ 15:36:39
+ 15:36:39
 (7 rows)
 
-SELECT f1 AS "None" FROM TIME_TBL WHERE f1 < '00:00' ORDER BY 1;
+SELECT f1 AS "None" FROM TIME_TBL WHERE f1 < '00:00';
  None 
 ------
 (0 rows)
 
-SELECT f1 AS "Eight" FROM TIME_TBL WHERE f1 >= '00:00' ORDER BY 1;
+SELECT f1 AS "Eight" FROM TIME_TBL WHERE f1 >= '00:00';
     Eight    
 -------------
  00:00:00
@@ -67,10 +67,10 @@ SELECT f1 AS "Eight" FROM TIME_TBL WHERE f1 >= '00:00' ORDER BY 1;
  11:59:00
  12:00:00
  12:01:00
- 15:36:39
- 15:36:39
  23:59:00
  23:59:59.99
+ 15:36:39
+ 15:36:39
 (10 rows)
 
 --

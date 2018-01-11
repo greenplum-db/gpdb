@@ -3,11 +3,11 @@
  * tsvector.c
  *	  I/O functions for tsvector
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector.c,v 1.16 2009/05/21 12:54:27 meskes Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector.c,v 1.18 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,14 +85,9 @@ compareentry(const void *va, const void *vb, void *arg)
 	const WordEntryIN *b = (const WordEntryIN *) vb;
 	char	   *BufferStr = (char *) arg;
 
-	if (a->entry.len == b->entry.len)
-	{
-		return strncmp(&BufferStr[a->entry.pos],
-					   &BufferStr[b->entry.pos],
-					   a->entry.len);
-	}
-
-	return (a->entry.len > b->entry.len) ? 1 : -1;
+	return tsCompareString(&BufferStr[a->entry.pos], a->entry.len,
+						   &BufferStr[b->entry.pos], b->entry.len,
+						   false);
 }
 
 /*
@@ -224,7 +219,8 @@ tsvectorin(PG_FUNCTION_ARGS)
 		if (cur - tmpbuf > MAXSTRPOS)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-					 errmsg("string is too long for tsvector")));
+					 errmsg("string is too long for tsvector (%ld bytes, max %ld bytes)",
+							(long) (cur - tmpbuf), (long) MAXSTRPOS)));
 
 		/*
 		 * Enlarge buffers if needed
@@ -273,7 +269,7 @@ tsvectorin(PG_FUNCTION_ARGS)
 	if (buflen > MAXSTRPOS)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("string is too long for tsvector")));
+				 errmsg("string is too long for tsvector (%d bytes, max %d bytes)", buflen, MAXSTRPOS)));
 
 	totallen = CALCDATASIZE(len, buflen);
 	in = (TSVector) palloc0(totallen);
@@ -455,6 +451,7 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 								 * WordEntries */
 	Size		hdrlen;
 	Size		len;			/* allocated size of vec */
+	bool		needSort = false;
 
 	nentries = pq_getmsgint(buf, sizeof(int32));
 	if (nentries < 0 || nentries > (MaxAllocSize / sizeof(WordEntry)))
@@ -511,7 +508,7 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 		if (i > 0 && WordEntryCMP(&vec->entries[i],
 								  &vec->entries[i - 1],
 								  STRPTR(vec)) <= 0)
-			elog(ERROR, "lexemes are misordered");
+			needSort = true;
 
 		/* Receive positions */
 		if (npos > 0)
@@ -545,6 +542,10 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 	}
 
 	SET_VARSIZE(vec, hdrlen + datalen);
+
+	if (needSort)
+		qsort_arg((void *) ARRPTR(vec), vec->size, sizeof(WordEntry),
+				  compareentry, (void *) STRPTR(vec));
 
 	PG_RETURN_TSVECTOR(vec);
 }

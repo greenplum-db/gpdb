@@ -447,7 +447,8 @@ alter table ccddl add column j int encoding(compresstype=yawn);
 ERROR:  unknown compresstype "yawn"
 alter table ccddl add column j int encoding(compresstype=zlib,
 compresslevel=100000);
-ERROR:  compresslevel=100000 is out of range (should be between 0 and 9)
+ERROR:  value 100000 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
 alter table ccddl add column j int encoding(a=b);
 ERROR:  unrecognized parameter "a"
 drop table ccddl;
@@ -470,7 +471,7 @@ ERROR:  DEFAULT COLUMN ENCODING clause cannot override values set in WITH clause
 -- Invalid encoding clauses
 create table t1 (i int encoding (compresstype=zlib, compresslevel=19))
 with (appendonly=true, orientation=column);
-ERROR:  compresslevel=19 is out of range (should be between 0 and 9)
+ERROR:  compresslevel=19 is out of range for zlib (should be in the range 1 to 9)
 create table t1 (i int encoding (compresstype=zlib, ahhhh=boooooo))
 with (appendonly=true, orientation=column);
 ERROR:  unrecognized parameter "ahhhh"
@@ -1768,9 +1769,13 @@ execute ccddlcheck;
 (1 row)
 
 drop table ccddl;
--- Ensure that we can handle the SQL types that are recognized by the parser
--- but are not represented in the catalog.
+-- We used to accept SQL standard aliases for the built-in types,
+-- like "character varying", "integer", before GPDB 6, but not anymore.
 alter type character varying set default encoding (compresstype=zlib);
+ERROR:  syntax error at or near "varying"
+LINE 1: alter type character varying set default encoding (compresst...
+                             ^
+alter type varchar set default encoding (compresstype=zlib);
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'varchar' and t.oid = e.typid;
                      typoptions                      
@@ -1779,6 +1784,8 @@ select typoptions from pg_type t, pg_type_encoding e where
 (1 row)
 
 alter type character set default encoding (compresstype=zlib);
+ERROR:  type "character" does not exist
+alter type bpchar set default encoding (compresstype=zlib);
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'bpchar' and t.oid = e.typid;
                      typoptions                      
@@ -1787,6 +1794,10 @@ select typoptions from pg_type t, pg_type_encoding e where
 (1 row)
 
 alter type timestamp with time zone set default encoding(compresstype=zlib);
+ERROR:  syntax error at or near "time"
+LINE 1: alter type timestamp with time zone set default encoding(com...
+                                  ^
+alter type timestamptz set default encoding (compresstype=zlib);
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'timestamptz' and t.oid = e.typid;
                      typoptions                      
@@ -1809,7 +1820,9 @@ select typoptions from pg_type t, pg_type_encoding e where
 -----------------------------------------------------------------------
 -- We should reject any extraneous type information during alter type
 alter type numeric(10, 2) set default encoding(compresstype=zlib);
-ERROR:  type precision cannot be specified when setting DEFAULT ENCODING
+ERROR:  syntax error at or near "("
+LINE 1: alter type numeric(10, 2) set default encoding(compresstype=...
+                          ^
 alter type int[2][3] set default encoding(compresstype=RLE_TYPE);
 ERROR:  syntax error at or near "["
 LINE 1: alter type int[2][3] set default encoding(compresstype=RLE_T...
@@ -1828,11 +1841,13 @@ ERROR:  unrecognized parameter "a"
 alter type text set default encoding (compresstype=10);
 ERROR:  unknown compresstype "10"
 alter type text set default encoding (compresstype=zlib, compresslevel=100);
-ERROR:  compresslevel=100 is out of range (should be between 0 and 9)
+ERROR:  value 100 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
 -- dependency check on drop type
 drop type int42 cascade;
-NOTICE:  drop cascades to function int42_out(int42)
-NOTICE:  drop cascades to function int42_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function int42_in(cstring)
+drop cascades to function int42_out(int42)
 select * from pg_type_encoding;
  typid |                     typoptions                      
 -------+-----------------------------------------------------

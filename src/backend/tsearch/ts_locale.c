@@ -3,11 +3,11 @@
  * ts_locale.c
  *		locale compatibility layer for tsearch
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_locale.c,v 1.7.2.2 2009/03/02 15:11:25 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_locale.c,v 1.13 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,7 @@
 static void tsearch_readline_callback(void *arg);
 
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 
 int
 t_isdigit(const char *ptr)
@@ -77,11 +77,11 @@ t_isprint(const char *ptr)
 
 	return iswprint((wint_t) character[0]);
 }
-#endif   /* TS_USE_WIDE */
+#endif   /* USE_WIDE_UPPER_LOWER */
 
 
 /*
- * Set up to read a file using tsearch_readline().  This facility is
+ * Set up to read a file using tsearch_readline().	This facility is
  * better than just reading the file directly because it provides error
  * context pointing to the specific line where a problem is detected.
  *
@@ -159,10 +159,10 @@ tsearch_readline_callback(void *arg)
 
 	/*
 	 * We can't include the text of the config line for errors that occur
-	 * during t_readline() itself.  This is only partly a consequence of
-	 * our arms-length use of that routine: the major cause of such
-	 * errors is encoding violations, and we daren't try to print error
-	 * messages containing badly-encoded data.
+	 * during t_readline() itself.	This is only partly a consequence of our
+	 * arms-length use of that routine: the major cause of such errors is
+	 * encoding violations, and we daren't try to print error messages
+	 * containing badly-encoded data.
 	 */
 	if (stp->curline)
 		errcontext("line %d of configuration file \"%s\": \"%s\"",
@@ -204,10 +204,6 @@ t_readline(FILE *fp)
 												 len,
 												 PG_UTF8,
 												 GetDatabaseEncoding());
-
-	if (recoded == NULL)		/* should not happen */
-		elog(ERROR, "encoding conversion failed");
-
 	if (recoded == buf)
 	{
 		/*
@@ -246,7 +242,7 @@ lowerstr_with_len(const char *str, int len)
 	if (len == 0)
 		return pstrdup("");
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 
 	/*
 	 * Use wide char code only when max encoding length > 1 and ctype != C.
@@ -289,11 +285,11 @@ lowerstr_with_len(const char *str, int len)
 		if (wlen < 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_CHARACTER_NOT_IN_REPERTOIRE),
-					 errmsg("conversion from wchar_t to server encoding failed: %m")));
+			errmsg("conversion from wchar_t to server encoding failed: %m")));
 		Assert(wlen < len);
 	}
 	else
-#endif   /* TS_USE_WIDE */
+#endif   /* USE_WIDE_UPPER_LOWER */
 	{
 		const char *ptr = str;
 		char	   *outptr;

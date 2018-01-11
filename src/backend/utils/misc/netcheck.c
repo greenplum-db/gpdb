@@ -3,7 +3,12 @@
  * netcheck.c
  *	  Implementation of network checking utilities
  *
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/netcheck.c
  *
  *-------------------------------------------------------------------------
  */
@@ -23,7 +28,6 @@
 
 #include "postgres.h"
 #include "utils/netcheck.h"
-#include "utils/simex.h"
 #include "utils/timestamp.h"
 
 #if defined(__darwin__) || defined(sun)

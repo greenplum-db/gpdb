@@ -4,10 +4,10 @@
  *	  prototypes for nodeAgg.c
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeAgg.h,v 1.29 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeAgg.h,v 1.30 2009/01/01 17:23:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,20 +45,35 @@ typedef struct AggStatePerAggData
 	AggrefExprState *aggrefstate;
 	Aggref	   *aggref;
 
-	/* Links to PercentileExpr expr and state nodes this working state is for */
-	PercentileExprState *percstate;
-	PercentileExpr	   *perc;
-
 	/*
-	 * number of input arguments for aggregate.  It's usually length of
-	 * the argument list supplied in SQL, but in case of PercentileExpr,
-	 * it includes sort list, pcExpr and tcExpr.
+	 * Nominal number of arguments for aggregate function.  For plain aggs,
+	 * this excludes any ORDER BY expressions.  For ordered-set aggs, this
+	 * counts both the direct and aggregated (ORDER BY) arguments.
 	 */
 	int			numArguments;
-	
-	/* number of inputs including ORDER BY expressions */
+
+	/*
+	 * Number of aggregated input columns.  This includes ORDER BY expressions
+	 * in both the plain-agg and ordered-set cases.  Ordered-set direct args
+	 * are not counted, though.
+	 */
 	int			numInputs;
-	
+
+	/*
+	 * Number of aggregated input columns to pass to the transfn.  This
+	 * includes the ORDER BY columns for ordered-set aggs, but not for plain
+	 * aggs.  (This doesn't count the transition state value!)
+	 */
+	int			numTransInputs;
+
+	/*
+	 * Number of arguments to pass to the finalfn.  This is always at least 1
+	 * (the transition state value) plus any ordered-set direct args. If the
+	 * finalfn wants extra args then we pass nulls corresponding to the
+	 * aggregated input columns.
+	 */
+	int			numFinalArgs;
+
 	/* Oids of transfer functions */
 	Oid			transfn_oid;
 	Oid         prelimfn_oid;
@@ -72,23 +87,25 @@ typedef struct AggStatePerAggData
 	FmgrInfo	transfn;
 	FmgrInfo    prelimfn;
 	FmgrInfo	finalfn;
-	
-	/* --- Ordered Aggregate Additions ( --- */
-	
+
 	/* number of sorting columns */
 	int			numSortCols;
-	
+
+	/* number of sorting columns to consider in DISTINCT comparisons */
+	/* (this is either zero or the same as numSortCols) */
+	int			numDistinctCols;
+
 	/* deconstructed sorting information (arrays of length numSortCols) */
 	AttrNumber *sortColIdx;
 	Oid		   *sortOperators;
-
-	/* --- Ordered Aggregate Additions ) --- */
+	bool	   *sortNullsFirst;
 
 	/*
-	 * fmgr lookup data for input type's equality operator --- only set/used
-	 * when aggregate has DISTINCT flag. (In PG 9, equalfns is a vector.)
+	 * fmgr lookup data for input columns' equality operators --- only
+	 * set/used when aggregate has DISTINCT flag.  Note that these are in
+	 * order of sort column index, not parameter index.
 	 */
-	FmgrInfo	equalfn;
+	FmgrInfo   *equalfns;		/* array of length numDistinctCols */
 
 	/*
 	 * initial value from pg_aggregate entry
@@ -99,6 +116,9 @@ typedef struct AggStatePerAggData
 	/*
 	 * We need the len and byval info for the agg's input, result, and
 	 * transition data types in order to know how to copy/delete values.
+	 *
+	 * Note that the info for the input type is used only when handling
+	 * DISTINCT aggs with just one argument, so there is only one input type.
 	 */
 	int16		inputtypeLen,
 				resulttypeLen,
@@ -121,16 +141,18 @@ typedef struct AggStatePerAggData
 	 * during ExecInitAgg() and then used for each input row.
 	 */
 	TupleTableSlot *evalslot;	/* current input tuple */
-	
+	TupleTableSlot *uniqslot;	/* used for multi-column DISTINCT */
+
 	/*
 	 * These values are working state that is initialized at the start of an
 	 * input tuple group and updated for each input tuple.
 	 *
-	 * For a simple (non DISTINCT) aggregate, we just feed the input values
-	 * straight to the transition function.  If it's DISTINCT, we pass the
-	 * input values into a Tuplesort object; then at completion of the input
-	 * tuple group, we scan the sorted values, eliminate duplicates, and run
-	 * the transition function on the rest.
+	 * For a simple (non DISTINCT/ORDER BY) aggregate, we just feed the input
+	 * values straight to the transition function.  If it's DISTINCT or
+	 * requires ORDER BY, we pass the input values into a Tuplesort object;
+	 * then at completion of the input tuple group, we scan the sorted values,
+	 * eliminate duplicates if needed, and run the transition function on the
+	 * rest.
 	 */
 
 	void *sortstate;	/* sort object, if DISTINCT or ORDER BY */
@@ -182,7 +204,9 @@ extern Oid resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 
 extern Datum GetAggInitVal(Datum textInitVal, Oid transtype);
 
-extern Datum invoke_agg_trans_func(FmgrInfo *transfn, int numargs, 
+extern Datum invoke_agg_trans_func(AggState *aggstate,
+								   AggStatePerAgg peraggstate,
+								   FmgrInfo *transfn, int numargs, 
 								   Datum transValue, bool *noTransvalue, 
 								   bool *transValueIsNull, bool transtypeByVal,
 								   int16 transtypeLen,
@@ -194,12 +218,6 @@ extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal,
 									 MemoryManagerContainer *mem_manager);
 extern void ExecEagerFreeAgg(AggState *aggstate);
 
-static inline gpmon_packet_t * GpmonPktFromAggState(AggState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 extern List *combineAggrefArgs(Aggref *aggref, List **sort_clauses);
-extern List *combinePercentileArgs(PercentileExpr *p);
 
 #endif   /* NODEAGG_H */

@@ -23888,7 +23888,7 @@ select cn,vn,ntile(qty) over(partition by cn order by vn) from ow_sale;
 select cn,vn,ntile(cn) over(partition by cn+vn order by vn) from ow_sale;
 select cn,vn,ntile(cn+vn) over(partition by cn+vn order by vn) from ow_sale; --mvd 1,2->3
 
-select ow_count_operator('select * from ow_sale order by first_value(NULL) over (partition by cn order by case when 1=1 then pn else vn end);', 'Window') > 0;
+select ow_count_operator('select * from ow_sale order by first_value(NULL::text) over (partition by cn order by case when 1=1 then pn else vn end);', 'Window') > 0;
 
 drop table if exists tab12773_test;
 
@@ -24037,9 +24037,6 @@ SELECT a,color,sum(a) over (partition by member_id,color) FROM tab12773_test ord
 SELECT member_id,a,color,sum(a) over (partition by member_id,color) FROM tab12773_test order by member_id,name;
 
 -- This is a test for a bug in parallel window planning in the GPDB postgres planner
-SET gp_enable_sequential_window_plans = off;
-SELECT avg(vn) OVER (PARTITION BY cn) FROM ow_sale;
-SET gp_enable_sequential_window_plans = on;
 SELECT avg(vn) OVER (PARTITION BY cn) FROM ow_sale;
 
 -- start_ignore

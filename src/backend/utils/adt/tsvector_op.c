@@ -3,11 +3,11 @@
  * tsvector_op.c
  *	  operations over tsvector
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.12.2.1 2008/04/08 18:20:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.23 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "catalog/namespace.h"
+#include "catalog/pg_type.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "funcapi.h"
@@ -34,34 +35,33 @@ typedef struct
 	char	   *operand;
 } CHKVAL;
 
-typedef struct
-{
-	uint32		cur;
-	TSVector	stat;
-} StatStorage;
 
-typedef struct
+typedef struct StatEntry
 {
-	uint32		len;
-	uint32		pos;
-	uint32		ndoc;
+	uint32		ndoc;			/* zero indicates that we already was here
+								 * while walking throug the tree */
 	uint32		nentry;
+	struct StatEntry *left;
+	struct StatEntry *right;
+	uint32		lenlexeme;
+	char		lexeme[1];
 } StatEntry;
 
+#define STATENTRYHDRSZ	(offsetof(StatEntry, lexeme))
+
 typedef struct
 {
-	int32		vl_len_;		/* varlena header (do not touch directly!) */
-	int4		size;
 	int4		weight;
-	char		data[1];
-} tsstat;
 
-#define STATHDRSIZE (sizeof(int4) * 4)
-#define CALCSTATSIZE(x, lenstr) ( (x) * sizeof(StatEntry) + STATHDRSIZE + (lenstr) )
-#define STATPTR(x)	( (StatEntry*) ( (char*)(x) + STATHDRSIZE ) )
-#define STATSTRPTR(x)	( (char*)(x) + STATHDRSIZE + ( sizeof(StatEntry) * ((TSVector)(x))->size ) )
-#define STATSTRSIZE(x)	( VARSIZE((TSVector)(x)) - STATHDRSIZE - ( sizeof(StatEntry) * ((TSVector)(x))->size ) )
+	uint32		maxdepth;
 
+	StatEntry **stack;
+	uint32		stackpos;
+
+	StatEntry  *root;
+} TSVectorStat;
+
+#define STATHDRSIZE (offsetof(TSVectorStat, data))
 
 static Datum tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column);
 
@@ -127,11 +127,7 @@ silly_cmp_tsvector(const TSVector a, const TSVector b)
 			{
 				return (aptr->haspos > bptr->haspos) ? -1 : 1;
 			}
-			else if (aptr->len != bptr->len)
-			{
-				return (aptr->len > bptr->len) ? -1 : 1;
-			}
-			else if ((res = strncmp(STRPTR(a) + aptr->pos, STRPTR(b) + bptr->pos, bptr->len)) != 0)
+			else if ((res = tsCompareString(STRPTR(a) + aptr->pos, aptr->len, STRPTR(b) + bptr->pos, bptr->len, false)) != 0)
 			{
 				return res;
 			}
@@ -176,7 +172,9 @@ tsvector_##type(PG_FUNCTION_ARGS)						\
 	PG_FREE_IF_COPY(a,0);								\
 	PG_FREE_IF_COPY(b,1);								\
 	PG_RETURN_##ret( res action 0 );					\
-}
+}	\
+/* keep compiler quiet - no extra ; */					\
+extern int no_such_variable
 
 TSVECTORCMPFUNC(lt, <, BOOL);
 TSVECTORCMPFUNC(le, <=, BOOL);
@@ -286,18 +284,10 @@ tsvector_setweight(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(out);
 }
 
-static int
-compareEntry(char *ptra, WordEntry *a, char *ptrb, WordEntry *b)
-{
-	if (a->len == b->len)
-	{
-		return strncmp(
-					   ptra + a->pos,
-					   ptrb + b->pos,
-					   a->len);
-	}
-	return (a->len > b->len) ? 1 : -1;
-}
+#define compareEntry(pa, a, pb, b) \
+	tsCompareString((pa) + (a)->pos, (a)->len,	\
+					(pb) + (b)->pos, (b)->len,	\
+					false)
 
 /*
  * Add positions from src to dest after offsetting them by maxpos.
@@ -537,7 +527,7 @@ tsvector_concat(PG_FUNCTION_ARGS)
 	if (dataoff > MAXSTRPOS)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("string is too long for tsvector")));
+				 errmsg("string is too long for tsvector (%d bytes, max %d bytes)", dataoff, MAXSTRPOS)));
 
 	/*
 	 * Adjust sizes (asserting that we didn't overrun the original estimates)
@@ -558,18 +548,47 @@ tsvector_concat(PG_FUNCTION_ARGS)
 }
 
 /*
- * compare 2 string values
+ * Compare two strings by tsvector rules.
+ * if isPrefix = true then it returns not-zero value if b has prefix a
  */
-static int4
-ValCompare(CHKVAL *chkval, WordEntry *ptr, QueryOperand *item)
+int4
+tsCompareString(char *a, int lena, char *b, int lenb, bool prefix)
 {
-	if (ptr->len == item->length)
-		return strncmp(
-					   &(chkval->values[ptr->pos]),
-					   &(chkval->operand[item->distance]),
-					   item->length);
+	int			cmp;
 
-	return (ptr->len > item->length) ? 1 : -1;
+	if (lena == 0)
+	{
+		if (prefix)
+			cmp = 0;			/* emtry string is equal to any if a prefix
+								 * match */
+		else
+			cmp = (lenb > 0) ? -1 : 0;
+	}
+	else if (lenb == 0)
+	{
+		cmp = (lena > 0) ? 1 : 0;
+	}
+	else
+	{
+		cmp = memcmp(a, b, Min(lena, lenb));
+
+		if (prefix)
+		{
+			if (cmp == 0 && lena > lenb)
+			{
+				/*
+				 * b argument is not beginning with argument a
+				 */
+				cmp = 1;
+			}
+		}
+		else if ((cmp == 0) && (lena != lenb))
+		{
+			cmp = (lena < lenb) ? -1 : 1;
+		}
+	}
+
+	return cmp;
 }
 
 /*
@@ -606,25 +625,52 @@ checkcondition_str(void *checkval, QueryOperand *val)
 	CHKVAL	   *chkval = (CHKVAL *) checkval;
 	WordEntry  *StopLow = chkval->arrb;
 	WordEntry  *StopHigh = chkval->arre;
-	WordEntry  *StopMiddle;
-	int			difference;
+	WordEntry  *StopMiddle = StopHigh;
+	int			difference = -1;
+	bool		res = false;
 
 	/* Loop invariant: StopLow <= val < StopHigh */
-
 	while (StopLow < StopHigh)
 	{
 		StopMiddle = StopLow + (StopHigh - StopLow) / 2;
-		difference = ValCompare(chkval, StopMiddle, val);
+		difference = tsCompareString(chkval->operand + val->distance, val->length,
+						   chkval->values + StopMiddle->pos, StopMiddle->len,
+									 false);
+
 		if (difference == 0)
-			return (val->weight && StopMiddle->haspos) ?
+		{
+			res = (val->weight && StopMiddle->haspos) ?
 				checkclass_str(chkval, StopMiddle, val) : true;
-		else if (difference < 0)
+			break;
+		}
+		else if (difference > 0)
 			StopLow = StopMiddle + 1;
 		else
 			StopHigh = StopMiddle;
 	}
 
-	return (false);
+	if (res == false && val->prefix == true)
+	{
+		/*
+		 * there was a failed exact search, so we should scan further to find
+		 * a prefix match.
+		 */
+		if (StopLow >= StopHigh)
+			StopMiddle = StopHigh;
+
+		while (res == false && StopMiddle < chkval->arre &&
+			   tsCompareString(chkval->operand + val->distance, val->length,
+						   chkval->values + StopMiddle->pos, StopMiddle->len,
+							   true) == 0)
+		{
+			res = (val->weight && StopMiddle->haspos) ?
+				checkclass_str(chkval, StopMiddle, val) : true;
+
+			StopMiddle++;
+		}
+	}
+
+	return res;
 }
 
 /*
@@ -782,136 +828,95 @@ check_weight(TSVector txt, WordEntry *wptr, int8 weight)
 	return num;
 }
 
-static WordEntry **
-SEI_realloc(WordEntry **in, uint32 *len)
+#define compareStatWord(a,e,t)							\
+	tsCompareString((a)->lexeme, (a)->lenlexeme,		\
+					STRPTR(t) + (e)->pos, (e)->len,		\
+					false)
+
+static void
+insertStatEntry(MemoryContext persistentContext, TSVectorStat *stat, TSVector txt, uint32 off)
 {
-	if (*len == 0 || in == NULL)
-	{
-		*len = 8;
-		in = palloc(sizeof(WordEntry *) * (*len));
-	}
+	WordEntry  *we = ARRPTR(txt) + off;
+	StatEntry  *node = stat->root,
+			   *pnode = NULL;
+	int			n,
+				res = 0;
+	uint32		depth = 1;
+
+	if (stat->weight == 0)
+		n = (we->haspos) ? POSDATALEN(txt, we) : 1;
 	else
+		n = (we->haspos) ? check_weight(txt, we, stat->weight) : 0;
+
+	if (n == 0)
+		return;					/* nothing to insert */
+
+	while (node)
 	{
-		*len *= 2;
-		in = repalloc(in, sizeof(WordEntry *) * (*len));
-	}
-	return in;
-}
+		res = compareStatWord(node, we, txt);
 
-static int
-compareStatWord(StatEntry *a, WordEntry *b, tsstat *stat, TSVector txt)
-{
-	if (a->len == b->len)
-		return strncmp(
-					   STATSTRPTR(stat) + a->pos,
-					   STRPTR(txt) + b->pos,
-					   a->len
-			);
-	return (a->len > b->len) ? 1 : -1;
-}
-
-static tsstat *
-formstat(tsstat *stat, TSVector txt, WordEntry **entry, uint32 len)
-{
-	tsstat	   *newstat;
-	uint32		totallen,
-				nentry;
-	uint32		slen = 0;
-	WordEntry **ptr = entry;
-	char	   *curptr;
-	StatEntry  *sptr,
-			   *nptr;
-
-	while (ptr - entry < len)
-	{
-		slen += (*ptr)->len;
-		ptr++;
-	}
-
-	nentry = stat->size + len;
-	slen += STATSTRSIZE(stat);
-	totallen = CALCSTATSIZE(nentry, slen);
-	newstat = palloc(totallen);
-	SET_VARSIZE(newstat, totallen);
-	newstat->weight = stat->weight;
-	newstat->size = nentry;
-
-	memcpy(STATSTRPTR(newstat), STATSTRPTR(stat), STATSTRSIZE(stat));
-	curptr = STATSTRPTR(newstat) + STATSTRSIZE(stat);
-
-	ptr = entry;
-	sptr = STATPTR(stat);
-	nptr = STATPTR(newstat);
-
-	if (len == 1)
-	{
-		StatEntry  *StopLow = STATPTR(stat);
-		StatEntry  *StopHigh = (StatEntry *) STATSTRPTR(stat);
-
-		while (StopLow < StopHigh)
+		if (res == 0)
 		{
-			sptr = StopLow + (StopHigh - StopLow) / 2;
-			if (compareStatWord(sptr, *ptr, stat, txt) < 0)
-				StopLow = sptr + 1;
-			else
-				StopHigh = sptr;
+			break;
 		}
-		nptr = STATPTR(newstat) + (StopLow - STATPTR(stat));
-		memcpy(STATPTR(newstat), STATPTR(stat), sizeof(StatEntry) * (StopLow - STATPTR(stat)));
-		if ((*ptr)->haspos)
-			nptr->nentry = (stat->weight) ? check_weight(txt, *ptr, stat->weight) : POSDATALEN(txt, *ptr);
 		else
-			nptr->nentry = 1;
-		nptr->ndoc = 1;
-		nptr->len = (*ptr)->len;
-		memcpy(curptr, STRPTR(txt) + (*ptr)->pos, nptr->len);
-		nptr->pos = curptr - STATSTRPTR(newstat);
-		memcpy(nptr + 1, StopLow, sizeof(StatEntry) * (((StatEntry *) STATSTRPTR(stat)) - StopLow));
+		{
+			pnode = node;
+			node = (res < 0) ? node->left : node->right;
+		}
+		depth++;
+	}
+
+	if (depth > stat->maxdepth)
+		stat->maxdepth = depth;
+
+	if (node == NULL)
+	{
+		node = MemoryContextAlloc(persistentContext, STATENTRYHDRSZ + we->len);
+		node->left = node->right = NULL;
+		node->ndoc = 1;
+		node->nentry = n;
+		node->lenlexeme = we->len;
+		memcpy(node->lexeme, STRPTR(txt) + we->pos, node->lenlexeme);
+
+		if (pnode == NULL)
+		{
+			stat->root = node;
+		}
+		else
+		{
+			if (res < 0)
+				pnode->left = node;
+			else
+				pnode->right = node;
+		}
+
 	}
 	else
 	{
-		while (sptr - STATPTR(stat) < stat->size && ptr - entry < len)
-		{
-			if (compareStatWord(sptr, *ptr, stat, txt) < 0)
-			{
-				memcpy(nptr, sptr, sizeof(StatEntry));
-				sptr++;
-			}
-			else
-			{
-				if ((*ptr)->haspos)
-					nptr->nentry = (stat->weight) ? check_weight(txt, *ptr, stat->weight) : POSDATALEN(txt, *ptr);
-				else
-					nptr->nentry = 1;
-				nptr->ndoc = 1;
-				nptr->len = (*ptr)->len;
-				memcpy(curptr, STRPTR(txt) + (*ptr)->pos, nptr->len);
-				nptr->pos = curptr - STATSTRPTR(newstat);
-				curptr += nptr->len;
-				ptr++;
-			}
-			nptr++;
-		}
-
-		memcpy(nptr, sptr, sizeof(StatEntry) * (stat->size - (sptr - STATPTR(stat))));
-
-		while (ptr - entry < len)
-		{
-			if ((*ptr)->haspos)
-				nptr->nentry = (stat->weight) ? check_weight(txt, *ptr, stat->weight) : POSDATALEN(txt, *ptr);
-			else
-				nptr->nentry = 1;
-			nptr->ndoc = 1;
-			nptr->len = (*ptr)->len;
-			memcpy(curptr, STRPTR(txt) + (*ptr)->pos, nptr->len);
-			nptr->pos = curptr - STATSTRPTR(newstat);
-			curptr += nptr->len;
-			ptr++;
-			nptr++;
-		}
+		node->ndoc++;
+		node->nentry += n;
 	}
+}
 
-	return newstat;
+static void
+chooseNextStatEntry(MemoryContext persistentContext, TSVectorStat *stat, TSVector txt,
+					uint32 low, uint32 high, uint32 offset)
+{
+	uint32		pos;
+	uint32		middle = (low + high) >> 1;
+
+	pos = (low + middle) >> 1;
+	if (low != middle && pos >= offset && pos - offset < txt->size)
+		insertStatEntry(persistentContext, stat, txt, pos - offset);
+	pos = (high + middle + 1) >> 1;
+	if (middle + 1 != high && pos >= offset && pos - offset < txt->size)
+		insertStatEntry(persistentContext, stat, txt, pos - offset);
+
+	if (low != middle)
+		chooseNextStatEntry(persistentContext, stat, txt, low, middle, offset);
+	if (high != middle + 1)
+		chooseNextStatEntry(persistentContext, stat, txt, middle + 1, high, offset);
 }
 
 /*
@@ -926,161 +931,69 @@ formstat(tsstat *stat, TSVector txt, WordEntry **entry, uint32 len)
  *	where vector_column is a tsvector-type column in vector_table.
  */
 
-static tsstat *
-ts_accum(tsstat *stat, Datum data)
+static TSVectorStat *
+ts_accum(MemoryContext persistentContext, TSVectorStat *stat, Datum data)
 {
-	tsstat	   *newstat;
 	TSVector	txt = DatumGetTSVector(data);
-	WordEntry **newentry = NULL;
-	uint32		len = 0,
-				cur = 0;
-	StatEntry  *sptr;
-	WordEntry  *wptr;
-	int			n = 0;
+	uint32		i,
+				nbit = 0,
+				offset;
 
 	if (stat == NULL)
 	{							/* Init in first */
-		stat = palloc(STATHDRSIZE);
-		SET_VARSIZE(stat, STATHDRSIZE);
-		stat->size = 0;
-		stat->weight = 0;
+		stat = MemoryContextAllocZero(persistentContext, sizeof(TSVectorStat));
+		stat->maxdepth = 1;
 	}
 
 	/* simple check of correctness */
 	if (txt == NULL || txt->size == 0)
 	{
-		if (txt != (TSVector) DatumGetPointer(data))
+		if (txt && txt != (TSVector) DatumGetPointer(data))
 			pfree(txt);
 		return stat;
 	}
 
-	sptr = STATPTR(stat);
-	wptr = ARRPTR(txt);
+	i = txt->size - 1;
+	for (; i > 0; i >>= 1)
+		nbit++;
 
-	if (stat->size < 100 * txt->size)
-	{							/* merge */
-		while (sptr - STATPTR(stat) < stat->size && wptr - ARRPTR(txt) < txt->size)
-		{
-			int			cmp = compareStatWord(sptr, wptr, stat, txt);
+	nbit = 1 << nbit;
+	offset = (nbit - txt->size) / 2;
 
-			if (cmp < 0)
-				sptr++;
-			else if (cmp == 0)
-			{
-				if (stat->weight == 0)
-				{
-					sptr->ndoc++;
-					sptr->nentry += (wptr->haspos) ? POSDATALEN(txt, wptr) : 1;
-				}
-				else if (wptr->haspos && (n = check_weight(txt, wptr, stat->weight)) != 0)
-				{
-					sptr->ndoc++;
-					sptr->nentry += n;
-				}
-				sptr++;
-				wptr++;
-			}
-			else
-			{
-				if (stat->weight == 0 || check_weight(txt, wptr, stat->weight) != 0)
-				{
-					if (cur == len)
-						newentry = SEI_realloc(newentry, &len);
-					newentry[cur] = wptr;
-					cur++;
-				}
-				wptr++;
-			}
-		}
+	insertStatEntry(persistentContext, stat, txt, (nbit >> 1) - offset);
+	chooseNextStatEntry(persistentContext, stat, txt, 0, nbit, offset);
 
-		while (wptr - ARRPTR(txt) < txt->size)
-		{
-			if (stat->weight == 0 || check_weight(txt, wptr, stat->weight) != 0)
-			{
-				if (cur == len)
-					newentry = SEI_realloc(newentry, &len);
-				newentry[cur] = wptr;
-				cur++;
-			}
-			wptr++;
-		}
-	}
-	else
-	{							/* search */
-		while (wptr - ARRPTR(txt) < txt->size)
-		{
-			StatEntry  *StopLow = STATPTR(stat);
-			StatEntry  *StopHigh = (StatEntry *) STATSTRPTR(stat);
-			int			cmp;
-
-			while (StopLow < StopHigh)
-			{
-				sptr = StopLow + (StopHigh - StopLow) / 2;
-				cmp = compareStatWord(sptr, wptr, stat, txt);
-				if (cmp == 0)
-				{
-					if (stat->weight == 0)
-					{
-						sptr->ndoc++;
-						sptr->nentry += (wptr->haspos) ? POSDATALEN(txt, wptr) : 1;
-					}
-					else if (wptr->haspos && (n = check_weight(txt, wptr, stat->weight)) != 0)
-					{
-						sptr->ndoc++;
-						sptr->nentry += n;
-					}
-					break;
-				}
-				else if (cmp < 0)
-					StopLow = sptr + 1;
-				else
-					StopHigh = sptr;
-			}
-
-			if (StopLow >= StopHigh)
-			{					/* not found */
-				if (stat->weight == 0 || check_weight(txt, wptr, stat->weight) != 0)
-				{
-					if (cur == len)
-						newentry = SEI_realloc(newentry, &len);
-					newentry[cur] = wptr;
-					cur++;
-				}
-			}
-			wptr++;
-		}
-	}
-
-
-	if (cur == 0)
-	{							/* no new words */
-		if (txt != (TSVector) DatumGetPointer(data))
-			pfree(txt);
-		return stat;
-	}
-
-	newstat = formstat(stat, txt, newentry, cur);
-	pfree(newentry);
-
-	if (txt != (TSVector) DatumGetPointer(data))
-		pfree(txt);
-	return newstat;
+	return stat;
 }
 
 static void
 ts_setup_firstcall(FunctionCallInfo fcinfo, FuncCallContext *funcctx,
-				   tsstat *stat)
+				   TSVectorStat *stat)
 {
 	TupleDesc	tupdesc;
 	MemoryContext oldcontext;
-	StatStorage *st;
+	StatEntry  *node;
+
+	funcctx->user_fctx = (void *) stat;
 
 	oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-	st = palloc(sizeof(StatStorage));
-	st->cur = 0;
-	st->stat = palloc(VARSIZE(stat));
-	memcpy(st->stat, stat, VARSIZE(stat));
-	funcctx->user_fctx = (void *) st;
+
+	stat->stack = palloc0(sizeof(StatEntry *) * (stat->maxdepth + 1));
+	stat->stackpos = 0;
+
+	node = stat->root;
+	/* find leftmost value */
+	for (;;)
+	{
+		stat->stack[stat->stackpos] = node;
+		if (node->left)
+		{
+			stat->stackpos++;
+			node = node->left;
+		}
+		else
+			break;
+	}
 
 	tupdesc = CreateTemplateTupleDesc(3, false);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "word",
@@ -1095,26 +1008,72 @@ ts_setup_firstcall(FunctionCallInfo fcinfo, FuncCallContext *funcctx,
 	MemoryContextSwitchTo(oldcontext);
 }
 
+static StatEntry *
+walkStatEntryTree(TSVectorStat *stat)
+{
+	StatEntry  *node = stat->stack[stat->stackpos];
+
+	if (node == NULL)
+		return NULL;
+
+	if (node->ndoc != 0)
+	{
+		/* return entry itself: we already was at left sublink */
+		return node;
+	}
+	else if (node->right && node->right != stat->stack[stat->stackpos + 1])
+	{
+		/* go on right sublink */
+		stat->stackpos++;
+		node = node->right;
+
+		/* find most-left value */
+		for (;;)
+		{
+			stat->stack[stat->stackpos] = node;
+			if (node->left)
+			{
+				stat->stackpos++;
+				node = node->left;
+			}
+			else
+				break;
+		}
+	}
+	else
+	{
+		/* we already return all left subtree, itself and  right subtree */
+		if (stat->stackpos == 0)
+			return NULL;
+
+		stat->stackpos--;
+		return walkStatEntryTree(stat);
+	}
+
+	return node;
+}
 
 static Datum
 ts_process_call(FuncCallContext *funcctx)
 {
-	StatStorage *st;
+	TSVectorStat *st;
+	StatEntry  *entry;
 
-	st = (StatStorage *) funcctx->user_fctx;
+	st = (TSVectorStat *) funcctx->user_fctx;
 
-	if (st->cur < st->stat->size)
+	entry = walkStatEntryTree(st);
+
+	if (entry != NULL)
 	{
 		Datum		result;
 		char	   *values[3];
 		char		ndoc[16];
 		char		nentry[16];
-		StatEntry  *entry = STATPTR(st->stat) + st->cur;
 		HeapTuple	tuple;
 
-		values[0] = palloc(entry->len + 1);
-		memcpy(values[0], STATSTRPTR(st->stat) + entry->pos, entry->len);
-		(values[0])[entry->len] = '\0';
+		values[0] = palloc(entry->lenlexeme + 1);
+		memcpy(values[0], entry->lexeme, entry->lenlexeme);
+		(values[0])[entry->lenlexeme] = '\0';
 		sprintf(ndoc, "%d", entry->ndoc);
 		values[1] = ndoc;
 		sprintf(nentry, "%d", entry->nentry);
@@ -1124,25 +1083,22 @@ ts_process_call(FuncCallContext *funcctx)
 		result = HeapTupleGetDatum(tuple);
 
 		pfree(values[0]);
-		st->cur++;
+
+		/* mark entry as already visited */
+		entry->ndoc = 0;
+
 		return result;
-	}
-	else
-	{
-		pfree(st->stat);
-		pfree(st);
 	}
 
 	return (Datum) 0;
 }
 
-static tsstat *
-ts_stat_sql(text *txt, text *ws)
+static TSVectorStat *
+ts_stat_sql(MemoryContext persistentContext, text *txt, text *ws)
 {
-	char	   *query = TextPGetCString(txt);
-	int			i;
-	tsstat	   *newstat,
-			   *stat;
+	char	   *query = text_to_cstring(txt);
+	int64			i;
+	TSVectorStat *stat;
 	bool		isnull;
 	Portal		portal;
 	SPIPlanPtr	plan;
@@ -1165,10 +1121,8 @@ ts_stat_sql(text *txt, text *ws)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("ts_stat query must return one tsvector column")));
 
-	stat = palloc(STATHDRSIZE);
-	SET_VARSIZE(stat, STATHDRSIZE);
-	stat->size = 0;
-	stat->weight = 0;
+	stat = MemoryContextAllocZero(persistentContext, sizeof(TSVectorStat));
+	stat->maxdepth = 1;
 
 	if (ws)
 	{
@@ -1212,12 +1166,7 @@ ts_stat_sql(text *txt, text *ws)
 			Datum		data = SPI_getbinval(SPI_tuptable->vals[i], SPI_tuptable->tupdesc, 1, &isnull);
 
 			if (!isnull)
-			{
-				newstat = ts_accum(stat, data);
-				if (stat != newstat && stat)
-					pfree(stat);
-				stat = newstat;
-			}
+				stat = ts_accum(persistentContext, stat, data);
 		}
 
 		SPI_freetuptable(SPI_tuptable);
@@ -1240,12 +1189,12 @@ ts_stat1(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		tsstat	   *stat;
+		TSVectorStat *stat;
 		text	   *txt = PG_GETARG_TEXT_P(0);
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		SPI_connect();
-		stat = ts_stat_sql(txt, NULL);
+		stat = ts_stat_sql(funcctx->multi_call_memory_ctx, txt, NULL);
 		PG_FREE_IF_COPY(txt, 0);
 		ts_setup_firstcall(fcinfo, funcctx, stat);
 		SPI_finish();
@@ -1265,13 +1214,13 @@ ts_stat2(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		tsstat	   *stat;
+		TSVectorStat *stat;
 		text	   *txt = PG_GETARG_TEXT_P(0);
 		text	   *ws = PG_GETARG_TEXT_P(1);
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		SPI_connect();
-		stat = ts_stat_sql(txt, ws);
+		stat = ts_stat_sql(funcctx->multi_call_memory_ctx, txt, ws);
 		PG_FREE_IF_COPY(txt, 0);
 		PG_FREE_IF_COPY(ws, 1);
 		ts_setup_firstcall(fcinfo, funcctx, stat);
@@ -1419,7 +1368,7 @@ tsvector_update_trigger(PG_FUNCTION_ARGS, bool config_column)
 		if (!is_text_type(SPI_gettypeid(rel->rd_att, numattr)))
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("column \"%s\" is not of character type",
+					 errmsg("column \"%s\" is not of a character type",
 							trigger->tgargs[i])));
 
 		datum = SPI_getbinval(rettuple, rel->rd_att, numattr, &isnull);

@@ -82,18 +82,9 @@ ffunc( internal-state ) ---&gt; aggregate-value</codeblock><p>You
           <codeph>MIN</codeph>, and <codeph>&gt;</codeph> is the proper sort operator for
           <codeph>MAX</codeph>. Note that the optimization will never actually take effect unless
         the specified operator is the "less than" or "greater than" strategy member of a B-tree
-        index operator class.</p><sectiondiv id="section4"><b>Ordered Aggregates</b><p>If the optional qualification
-            <codeph>ORDERED</codeph> appears, the created aggregate function is an <i>ordered
-            aggregate</i>. In this case, the preliminary aggregation function,
-            <codeph>prefunc</codeph> cannot be specified. </p><p>An ordered aggregate is called with
-          the following
-          syntax.</p><codeblock>name ( arg [ , ... ] [ORDER BY sortspec [ , ...]] )</codeblock><p>If
-          the optional <codeph>ORDER BY</codeph> is omitted, a system-defined ordering is used. The
-          transition function <codeph>sfunc</codeph> of an ordered aggregate function is called on
-          its input arguments in the specified order and on a single segment. There is a new column
-            <codeph>aggordered</codeph> in the <codeph><xref
-              href="../system_catalogs/pg_aggregate.xml" type="topic" format="dita"/></codeph> table
-          to indicate the aggregate function is defined as an ordered aggregate.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the aggregate function
+        index operator class.</p>
+
+</section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the aggregate function
 to create.</pd></plentry><plentry><pt><varname>input_data_type</varname></pt><pd>An input data type on which this aggregate function operates. To
 create a zero-argument aggregate function, write * in place of the list
 of input data types. An example of such an aggregate is count(*).</pd></plentry><plentry><pt><varname>sfunc</varname></pt><pd>The name of the state transition function to be called for each input
@@ -122,16 +113,34 @@ consider defining preliminary function whenever possible.</pd></plentry><plentry
               <codeph>NULL</codeph>. </pd></plentry><plentry><pt><varname>sort_operator</varname></pt><pd>The associated sort operator for a MIN- or MAX-like aggregate function.
 This is just an operator name (possibly schema-qualified). The operator
 is assumed to have the same input data types as the aggregate function
-(which must be a single-argument aggregate function). </pd></plentry></parml></section><section id="section6"><title>Notes</title><p>The ordinary functions used to define a new aggregate function must
+(which must be a single-argument aggregate function). </pd></plentry></parml></section>
+
+<section id="section6"><title>Notes</title>
+
+<p>The ordinary functions used to define a new aggregate function must
 be defined first. Note that in this release of Greenplum Database, it
 is required that the <varname>sfunc</varname>, <varname>ffunc</varname>, and <varname>prefunc</varname> functions
-used to create the aggregate are defined as <codeph>IMMUTABLE</codeph>.</p><p>If a user-defined aggregate is used in a window expression, a <codeph>prefunc</codeph>
-function must be defined for the aggregate. </p><p>If the value of the Greenplum Database server configuration parameter
+used to create the aggregate are defined as <codeph>IMMUTABLE</codeph>.</p>
+
+<p>If the value of the Greenplum Database server configuration parameter
 <codeph>gp_enable_multiphase_agg</codeph> is <codeph>off</codeph>, only
-single-level aggregation is performed. </p><p>Any compiled code (shared library files) for custom functions must
+single-level aggregation is performed. </p>
+
+<p>Any compiled code (shared library files) for custom functions must
 be placed in the same location on every host in your Greenplum Database
 array (master and all segments). This location must also be in the <codeph>LD_LIBRARY_PATH</codeph>
-so that the server can locate the files.</p></section><section id="section7"><title>Example</title><p>The following simple example creates an aggregate function that computes
+so that the server can locate the files.</p>
+
+<p>In previous versions of Greenplum Database, there was a concept of
+ordered aggregates. Since version 6, any aggregate can be called as an
+ordered aggregate, using the syntax:
+
+<codeblock>name ( arg [ , ... ] [ORDER BY sortspec [ , ...]] )</codeblock></p>
+
+<p>The <codeph>ORDERED</codeph> keyword is accepted for backwards compatibility, but
+  is ignored.</p>
+
+</section><section id="section7"><title>Example</title><p>The following simple example creates an aggregate function that computes
 the sum of two columns. </p><p>Before creating the aggregate function, create two functions that
 are used as the <codeph>SFUNC</codeph> and <codeph>PREFUNC</codeph> functions
 of the aggregate function. </p><p>This function is specified as the <codeph>SFUNC</codeph> function

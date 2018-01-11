@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -549,16 +549,31 @@ class PSQL(Command):
         return False
 
     @staticmethod
-    def wait_for_database_up():
+    def wait_for_database_up(dbname = None, host = None, port = None, username = None, password = None):
         '''
         Wait till the system is up, as master may take some time
         to come back after FI crash.
         '''
         down = True
         results = {'rc':0, 'stdout':'', 'stderr':''}
+        # FIXME: Temporary work-around to let postmaster complete
+        # shutdown sequence.  In some cases, upon a PANIC, the
+        # postmaster may not receive a signal notifying child's death
+        # until several seconds after the child died.  If we try to
+        # run the following SQL before postmaster receives the signal,
+        # we will incorrectly interpret that the database is up and
+        # running.  Options for proper fix: (1) distributed XID is
+        # reset to 0 upon restart/PANIC.  gp_distributed_xacts view
+        # can be queried to check that.  But it will not work if we
+        # are being called after a segment PANIC. (2) Checkpoint
+        # information in pg_control can be used to ascertain that a
+        # segment (master/primary/mirror) has performed startup.
+        time.sleep(30)
         for i in range(60):
             time.sleep(1)
-            res = PSQL.run_sql_command('select count(*) from gp_dist_random(\'gp_id\');', results=results)
+            res = PSQL.run_sql_command('select count(*) from gp_dist_random(\'gp_id\');',
+                                dbname=dbname, host=host, port=port, username = username,
+                                password=password, results=results)
             if results['rc'] == 0:
                 down = False
                 break

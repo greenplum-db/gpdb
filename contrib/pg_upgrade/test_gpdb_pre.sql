@@ -14,7 +14,7 @@ DROP TABLE IF EXISTS contest_inherit CASCADE;
 -- The indexes on mpp3033a partitions don't have their default names,
 -- presumably because the default names are taken when the tests
 -- are run. That's a problem, because in QD, pg_dump and restore will
--- create them with new, defalt, names, as part of the CREATE INDEX
+-- create them with new, default, names, as part of the CREATE INDEX
 -- command on the parent table. But when we do pg_dump and restore
 -- on a QE node, it doesn't have the partition hierarchy available,
 -- and will dump restore each index separately, with the original name.
@@ -32,7 +32,7 @@ DROP TABLE IF EXISTS dcl_messaging_test CASCADE;
 DROP TABLE IF EXISTS my_tq_agg_opt_part CASCADE;
 DROP TABLE IF EXISTS pt_indx_tab CASCADE;
 
--- Thes partitioned tables have a SERIAL column. That's also not
+-- These partitioned tables have a SERIAL column. That's also not
 -- not reconstructed by pg_dump + restore correctly.
 DROP TABLE IF EXISTS ao_wt_sub_partzlib8192_5_2_uncompr CASCADE;
 DROP TABLE IF EXISTS ao_wt_sub_partzlib8192_5_uncompr CASCADE;

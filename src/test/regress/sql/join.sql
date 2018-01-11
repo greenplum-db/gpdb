@@ -206,13 +206,13 @@ CREATE TABLE t1 (name TEXT, n INTEGER);
 CREATE TABLE t2 (name TEXT, n INTEGER);
 CREATE TABLE t3 (name TEXT, n INTEGER);
 
-INSERT INTO t1 VALUES ( 'aa', 11 );
-INSERT INTO t2 VALUES ( 'aa', 12 );
-INSERT INTO t2 VALUES ( 'bb', 22 );
-INSERT INTO t2 VALUES ( 'dd', 42 );
-INSERT INTO t3 VALUES ( 'aa', 13 );
-INSERT INTO t3 VALUES ( 'bb', 23 );
-INSERT INTO t3 VALUES ( 'cc', 33 );
+INSERT INTO t1 VALUES ( 'bb', 11 );
+INSERT INTO t2 VALUES ( 'bb', 12 );
+INSERT INTO t2 VALUES ( 'cc', 22 );
+INSERT INTO t2 VALUES ( 'ee', 42 );
+INSERT INTO t3 VALUES ( 'bb', 13 );
+INSERT INTO t3 VALUES ( 'cc', 23 );
+INSERT INTO t3 VALUES ( 'dd', 33 );
 
 SELECT * FROM t1 FULL JOIN t2 USING (name) FULL JOIN t3 USING (name);
 
@@ -501,6 +501,16 @@ where a.unique1 = 42 and
       ((b.unique2 is null and a.ten = 2) or b.hundred = 3);
 
 --
+-- test proper positioning of one-time quals in EXISTS (8.4devel bug)
+--
+prepare foo(bool) as
+  select count(*) from tenk1 a left join tenk1 b
+    on (a.unique2 = b.unique1 and exists
+        (select 1 from tenk1 c where c.thousand = b.unique2 and $1));
+execute foo(true);
+execute foo(false);
+
+--
 -- test for sane behavior with noncanonical merge clauses, per bug #4926
 --
 
@@ -528,3 +538,36 @@ select q1, unique2, thousand, hundred
 select f1, unique2, case when unique2 is null then f1 else 0 end
   from int4_tbl a left join tenk1 b on f1 = unique2
   where (case when unique2 is null then f1 else 0 end) = 0;
+
+
+--
+-- test NULL behavior of whole-row Vars, per bug #5025
+--
+select t1.q2, count(t2.*)
+from int8_tbl t1 left join int8_tbl t2 on (t1.q2 = t2.q1)
+group by t1.q2 order by 1;
+
+select t1.q2, count(t2.*)
+from int8_tbl t1 left join (select * from int8_tbl) t2 on (t1.q2 = t2.q1)
+group by t1.q2 order by 1;
+
+select t1.q2, count(t2.*)
+from int8_tbl t1 left join (select * from int8_tbl offset 0) t2 on (t1.q2 = t2.q1)
+group by t1.q2 order by 1;
+
+select t1.q2, count(t2.*)
+from int8_tbl t1 left join
+  (select q1, case when q2=1 then 1 else q2 end as q2 from int8_tbl) t2
+  on (t1.q2 = t2.q1)
+group by t1.q2 order by 1;
+
+--
+-- test case where a PlaceHolderVar is propagated into a subquery
+--
+select * from
+  int8_tbl t1 left join
+  (select q1 as x, 42 as y from int8_tbl t2) ss
+  on t1.q2 = ss.x
+where
+  1 = (select 1 from int8_tbl t3 where ss.y is not null limit 1)
+order by 1,2;

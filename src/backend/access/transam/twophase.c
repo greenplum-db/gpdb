@@ -3,11 +3,11 @@
  * twophase.c
  *		Two-phase commit support functions.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.39.2.3 2009/11/23 09:59:00 heikki Exp $
+ *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.54 2009/06/25 19:05:52 heikki Exp $
  *
  * NOTES
  *		Each global transaction is associated with a global transaction
@@ -42,19 +42,25 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "access/distributedlog.h"
 #include "access/heapam.h"
-#include "access/xlogmm.h"
+#include "access/htup.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlogmm.h"
+#include "access/xlogutils.h"
 #include "catalog/pg_type.h"
+#include "catalog/storage.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "pg_trace.h"
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
+#include "storage/backendid.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
@@ -63,8 +69,6 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "access/distributedlog.h"
-#include "storage/backendid.h"
 
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
@@ -76,7 +80,7 @@
 #include "cdb/cdbpersistentfilesysobj.h"
 
 /* GUC variable, can't be changed after startup */
-int			max_prepared_xacts = 5;
+int			max_prepared_xacts = 0;
 
 /*
  * This struct describes one global transaction that is in prepared state
@@ -141,7 +145,7 @@ typedef struct GlobalTransactionData
 typedef struct TwoPhaseStateData
 {
 	/* Head of linked list of free GlobalTransactionData structs */
-	SHMEM_OFFSET freeGXacts;
+	GlobalTransaction freeGXacts;
 
 	/* Number of valid prepXacts entries. */
 	int			numPrepXacts;
@@ -408,7 +412,7 @@ TwoPhaseShmemInit(void)
 		int			i;
 
 		Assert(!found);
-		TwoPhaseState->freeGXacts = INVALID_OFFSET;
+		TwoPhaseState->freeGXacts = NULL;
 		TwoPhaseState->numPrepXacts = 0;
 
 		/*
@@ -420,8 +424,8 @@ TwoPhaseShmemInit(void)
 					  sizeof(GlobalTransaction) * max_prepared_xacts));
 		for (i = 0; i < max_prepared_xacts; i++)
 		{
-			gxacts[i].proc.links.next = TwoPhaseState->freeGXacts;
-			TwoPhaseState->freeGXacts = MAKE_OFFSET(&gxacts[i]);
+			gxacts[i].proc.links.next = (SHM_QUEUE *) TwoPhaseState->freeGXacts;
+			TwoPhaseState->freeGXacts = &gxacts[i];
 
 			/*
 			 * Assign a unique ID for each dummy proc, so that the range of
@@ -545,6 +549,13 @@ MarkAsPreparing(TransactionId xid,
 				 errmsg("transaction identifier \"%s\" is too long (%d > %d max)",
 					 gid, idlen, GIDSIZE)));
 
+	/* fail immediately if feature is disabled */
+	if (max_prepared_xacts == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("prepared transactions are disabled"),
+			  errhint("Set max_prepared_transactions to a nonzero value.")));
+
 	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
 
 	/* Check for conflicting GID */
@@ -561,14 +572,14 @@ MarkAsPreparing(TransactionId xid,
 	}
 
 	/* Get a free gxact from the freelist */
-	if (TwoPhaseState->freeGXacts == INVALID_OFFSET)
+	if (TwoPhaseState->freeGXacts == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("maximum number of prepared transactions reached"),
 				 errhint("Increase max_prepared_transactions (currently %d).",
-					 max_prepared_xacts)));
-	gxact = (GlobalTransaction) MAKE_PTR(TwoPhaseState->freeGXacts);
-	TwoPhaseState->freeGXacts = gxact->proc.links.next;
+						 max_prepared_xacts)));
+	gxact = TwoPhaseState->freeGXacts;
+	TwoPhaseState->freeGXacts = (GlobalTransaction) gxact->proc.links.next;
 
 	/* Initialize it */
 	MemSet(&gxact->proc, 0, sizeof(PGPROC));
@@ -849,8 +860,8 @@ RemoveGXact(GlobalTransaction gxact)
 			TwoPhaseState->prepXacts[i] = TwoPhaseState->prepXacts[TwoPhaseState->numPrepXacts];
 
 			/* and put it back in the freelist */
-			gxact->proc.links.next = TwoPhaseState->freeGXacts;
-			TwoPhaseState->freeGXacts = MAKE_OFFSET(gxact);
+			gxact->proc.links.next = (SHM_QUEUE *) TwoPhaseState->freeGXacts;
+			TwoPhaseState->freeGXacts = gxact;
 
 			LWLockRelease(TwoPhaseStateLock);
 
@@ -990,7 +1001,7 @@ pg_prepared_xact(PG_FUNCTION_ARGS)
 		MemSet(nulls, 0, sizeof(nulls));
 
 		values[0] = TransactionIdGetDatum(gxact->proc.xid);
-		values[1] = DirectFunctionCall1(textin, CStringGetDatum(gxact->gid));
+		values[1] = CStringGetTextDatum(gxact->gid);
 		values[2] = TimestampTzGetDatum(gxact->prepared_at);
 		values[3] = ObjectIdGetDatum(gxact->owner);
 		values[4] = ObjectIdGetDatum(gxact->proc.databaseId);
@@ -2134,17 +2145,13 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	/*
 	 * Mark the distributed transaction committed.
 	 */
-	DistributedLog_SetCommitted(
-		xid,
-		distribTimeStamp,
-		distribXid,
-		/* isRedo */ false);
+	DistributedLog_SetCommittedTree(xid, nchildren, children,
+									distribTimeStamp,
+									distribXid,
+									/* isRedo */ false);
 
 	/* Mark the transaction committed in pg_clog */
-	TransactionIdCommit(xid);
-
-	/* to avoid race conditions, the parent must commit first */
-	TransactionIdCommitTree(nchildren, children);
+	TransactionIdCommitTree(xid, nchildren, children);
 
 	/*
 	 * Wait for synchronous replication, if required.
@@ -2265,8 +2272,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 	 * Mark the transaction aborted in clog.  This is not absolutely necessary
 	 * but we may as well do it while we are here.
 	 */
-	TransactionIdAbort(xid);
-	TransactionIdAbortTree(nchildren, children);
+	TransactionIdAbortTree(xid, nchildren, children);
 
 	/*
 	 * Wait for synchronous replication, if required.

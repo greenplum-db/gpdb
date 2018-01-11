@@ -76,11 +76,11 @@
  *	simplicity we keep the controlling list-of-lists in TopTransactionContext.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.83.2.1 2008/03/13 18:00:39 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.89 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,8 +96,8 @@
 #include "storage/smgr.h"
 #include "utils/inval.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/relcache.h"
-#include "utils/simex.h"
 #include "utils/syscache.h"
 
 
@@ -169,6 +169,7 @@ static TransInvalidationInfo *transInvalInfo = NULL;
 #define MAX_SYSCACHE_CALLBACKS 40
 #define MAX_RELCACHE_CALLBACKS 5
 
+
 static struct SYSCACHECALLBACK
 {
 	int16		id;				/* cache number */
@@ -218,7 +219,7 @@ AddInvalidationMessage(InvalidationChunk **listHdr,
 	if (chunk == NULL)
 	{
 		/* First time through; create initial chunk */
-#define FIRSTCHUNKSIZE 16
+#define FIRSTCHUNKSIZE 32
 		chunk = (InvalidationChunk *)
 			MemoryContextAlloc(CurTransactionContext,
 							   sizeof(InvalidationChunk) +
@@ -408,7 +409,7 @@ ProcessInvalidationMessages(InvalidationListHeader *hdr,
  * rather than just one at a time.
  */
 static void
-ProcessInvalidationMessageMulti(InvalidationListHeader *hdr,
+ProcessInvalidationMessagesMulti(InvalidationListHeader *hdr,
 				 void (*func) (const SharedInvalidationMessage *msgs, int n))
 {
 	ProcessMessageListMulti(hdr->cclist, func(msgs, n));
@@ -448,9 +449,9 @@ RegisterRelcacheInvalidation(Oid dbId, Oid relId)
 
 	/*
 	 * Most of the time, relcache invalidation is associated with system
-	 * catalog updates, but there are a few cases where it isn't.  Quick
-	 * hack to ensure that the next CommandCounterIncrement() will think
-	 * that we need to do CommandEndInvalidationMessages().
+	 * catalog updates, but there are a few cases where it isn't.  Quick hack
+	 * to ensure that the next CommandCounterIncrement() will think that we
+	 * need to do CommandEndInvalidationMessages().
 	 */
 	(void) GetCurrentCommandId(true);
 
@@ -749,60 +750,6 @@ AcceptInvalidationMessages(void)
 								 InvalidateSystemCaches);
 
 	Assert(SysCacheFlushForce_IsValid(gp_test_system_cache_flush_force));
-
-#ifdef USE_TEST_UTILS
-	/*
-	 * Test code to force cache flushes anytime a flush could happen.
-	 *
-	 * If used with CLOBBER_FREED_MEMORY, gp_test_system_cache_flush_force provides
-	 * a fairly thorough test that the system contains no cache-flush hazards.
-	 * However, it also makes the system unbelievably slow --- the regression
-	 * tests take about 100 times longer than normal.
-	 *
-	 * gp_test_system_cache_flush_force_recursive slows things by
-	 * at least a factor of 10000, so I wouldn't suggest
-	 * trying to run the entire regression tests that way.	It's useful to try
-	 * a few simple tests, to make sure that cache reload isn't subject to
-	 * internal cache-flush hazards, but after you've done a few thousand
-	 * recursive reloads it's unlikely you'll learn more.
-	 */
-	if (SysCacheFlushForce_Recursive == gp_test_system_cache_flush_force)
-	{
-		/* potentially recursive cache invalidation */
-		InvalidateSystemCaches();
-	}
-	else
-	{
-		static bool in_recursion = false;
-
-		if (!in_recursion)
-		{
-			bool invalidate = (SysCacheFlushForce_NonRecursive == gp_test_system_cache_flush_force);
-
-			if (!invalidate &&
-				gp_simex_init &&
-				gp_simex_run && 
-				gp_simex_class == SimExESClass_CacheInvalidation)
-			{
-				/*
-				 * Same basic idea as above, except using the SimEx facility, the main
-				 * advantage of this approach is that it only triggers the invalidation
-				 * once per unique call stack, which should make testing significantly
-				 * faster.
-				 */
-				invalidate = (SimExESSubClass_CacheInvalidation == SimEx_CheckInject());
-			}
-
-			if (invalidate)
-			{
-				/* avoid recursive cache invalidation */
-				in_recursion = true;
-				InvalidateSystemCaches();
-				in_recursion = false;
-			}
-		}
-	}
-#endif
 }
 
 /*
@@ -971,8 +918,8 @@ AtEOXact_Inval(bool isCommit)
 		AppendInvalidationMessages(&transInvalInfo->PriorCmdInvalidMsgs,
 								   &transInvalInfo->CurrentCmdInvalidMsgs);
 
-		ProcessInvalidationMessageMulti(&transInvalInfo->PriorCmdInvalidMsgs,
-										SendSharedInvalidMessages);
+		ProcessInvalidationMessagesMulti(&transInvalInfo->PriorCmdInvalidMsgs,
+										 SendSharedInvalidMessages);
 
 		if (transInvalInfo->RelcacheInitFileInval)
 			RelationCacheInitFilePostInvalidate();
@@ -1091,7 +1038,7 @@ CommandEndInvalidationMessages(void)
  *		Prepare for invalidation messages for nontransactional updates.
  *
  * A nontransactional invalidation is one that must be sent whether or not
- * the current transaction eventually commits.  We arrange for all invals
+ * the current transaction eventually commits.	We arrange for all invals
  * queued between this call and EndNonTransactionalInvalidation() to be sent
  * immediately when the latter is called.
  *
@@ -1154,17 +1101,17 @@ EndNonTransactionalInvalidation(void)
 	Assert(transInvalInfo->PriorCmdInvalidMsgs.rclist == NULL);
 
 	/*
-	 * At present, this function is only used for CTID-changing updates;
-	 * since the relcache init file doesn't store any tuple CTIDs, we
-	 * don't have to invalidate it.  That might not be true forever
-	 * though, in which case we'd need code similar to AtEOXact_Inval.
+	 * At present, this function is only used for CTID-changing updates; since
+	 * the relcache init file doesn't store any tuple CTIDs, we don't have to
+	 * invalidate it.  That might not be true forever though, in which case
+	 * we'd need code similar to AtEOXact_Inval.
 	 */
 
 	/* Send out the invals */
 	ProcessInvalidationMessages(&transInvalInfo->CurrentCmdInvalidMsgs,
 								LocalExecuteInvalidationMessage);
-	ProcessInvalidationMessageMulti(&transInvalInfo->CurrentCmdInvalidMsgs,
-									SendSharedInvalidMessages);
+	ProcessInvalidationMessagesMulti(&transInvalInfo->CurrentCmdInvalidMsgs,
+									 SendSharedInvalidMessages);
 
 	/* Clean up and release memory */
 	for (chunk = transInvalInfo->CurrentCmdInvalidMsgs.cclist;

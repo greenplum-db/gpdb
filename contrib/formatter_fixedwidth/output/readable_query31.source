@@ -11,19 +11,19 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
 -- and field "col_empty" only contains blanks, 
 -- then a NULL will be loaded into the table,
 -- even with preseve_blanks = on
-select * from tbl_ext_fixedwidth where col_empty is null order by s1;
- s1     |     s2     |     s3     | col_empty | col_null 
+select * from tbl_ext_fixedwidth where col_empty is null;
+ s1       |     s2     |     s3     | col_empty | col_null 
 ------------+------------+------------+-----------+----------
- cha    | vara       | texta      |           | null 
-  chb   |  varb      |  textb     |           | NULL 
-   chc  |   varc     |   textc    |           | Null 
-chd     |    vard    |    textd   |           | NULLL
- che    |     vare   |     texte  |           | 
-  chf   |      varf  |      textf |           | null 
- chg    |     varg   |     textg  |           | NULLa
-chh     |    varh    |    texth   |           | NULL_
-   chi  |   vari     |   texti    |           | null 
-  chj       |  varj      |  textj     |           | aNULL
+ cha      | vara       | texta      |           | null 
+  chb     |  varb      |  textb     |           | NULL 
+   chc    |   varc     |   textc    |           | Null 
+    chd   |    vard    |    textd   |           | NULLL
+     che  |     vare   |     texte  |           | 
+      chf |      varf  |      textf |           | null 
+     chg  |     varg   |     textg  |           | NULLa
+    chh   |    varh    |    texth   |           | NULL_
+   chi    |   vari     |   texti    |           | null 
+  chj     |  varj      |  textj     |           | aNULL
 (10 rows)
 
  -- 2. Define null = 'vara'
@@ -38,19 +38,19 @@ chh     |    varh    |    texth   |           | NULL_
 -- and field "col_empty" only contains blanks, 
 -- then an empty string will be loaded into the table
 -- only word 'vara' will be replaced as null
-select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
- s1     |     s2     |     s3     | col_empty | col_null 
+select * from tbl_ext_fixedwidth where col_empty is not null;
+ s1       |     s2     |     s3     | col_empty | col_null 
 ------------+------------+------------+-----------+----------
- cha    |            | texta      |           | null 
-  chb   |  varb      |  textb     |           | NULL 
-   chc  |   varc     |   textc    |           | Null 
-chd     |    vard    |    textd   |           | NULLL
- che    |     vare   |     texte  |           |      
-  chf   |      varf  |      textf |           | null 
- chg    |     varg   |     textg  |           | NULLa
-chh     |    varh    |    texth   |           | NULL_
-   chi  |   vari     |   texti    |           | null 
-  chj   |  varj      |  textj     |           | aNULL
+ cha      |            | texta      |           | null 
+  chb     |  varb      |  textb     |           | NULL 
+   chc    |   varc     |   textc    |           | Null 
+    chd   |    vard    |    textd   |           | NULLL
+     che  |     vare   |     texte  |           |      
+      chf |      varf  |      textf |           | null 
+     chg  |     varg   |     textg  |           | NULLa
+    chh   |    varh    |    texth   |           | NULL_
+   chi    |   vari     |   texti    |           | null 
+  chj     |  varj      |  textj     |           | aNULL
 (10 rows)
 
 select * from tbl_ext_fixedwidth where s2 is null and col_empty is not null;
@@ -71,17 +71,17 @@ select * from tbl_ext_fixedwidth where s2 is null and col_empty is not null;
 -- and field "col_empty" only contains blanks, 
 -- then an empty string will be loaded into the table
 -- only word 'NULL' will be replaced as null
-select * from tbl_ext_fixedwidth where col_empty is not null order by s1;
+select * from tbl_ext_fixedwidth where col_empty is not null;
      s1     |    s2     |     s3     | col_empty | col_null 
 ------------+-----------+------------+-----------+----------
  cha        | vara      | texta      |           | null
   chb       |  varb     |  textb     |           | 
    chc      |   varc    |   textc    |           | Null
-chd         |    vard   |    textd   |           | NULLL
- che        |     vare  |     texte  |           | 
-  chf       |      varf |      textf |           | null
- chg        |     varg  |     textg  |           | NULLa
-chh         |    varh   |    texth   |           | NULL_
+    chd     |    vard   |    textd   |           | NULLL
+     che    |     vare  |     texte  |           | 
+      chf   |      varf |      textf |           | null
+     chg    |     varg  |     textg  |           | NULLa
+    chh     |    varh   |    texth   |           | NULL_
    chi      |   vari    |   texti    |           | null
   chj       |  varj     |  textj     |           | aNULL
 (10 rows)

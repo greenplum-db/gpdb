@@ -38,7 +38,7 @@ function gen_env(){
 	cd "\${1}/gpdb_src/gpAux"
 	source gpdemo/gpdemo-env.sh
 
-	wget -P /tmp http://www-us.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz
+	wget -P /tmp http://archive.apache.org/dist/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz
 	tar zxf /tmp/hadoop-2.7.3.tar.gz -C /tmp
 	export HADOOP_HOME=/tmp/hadoop-2.7.3
 
@@ -59,12 +59,11 @@ function gen_env(){
 	HADOOP_HOST=localhost HADOOP_PORT=9000 ./generate_gphdfs_data.sh
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gphdfs/regression"
-	GP_HADOOP_TARGET_VERSION=cdh4.1 HADOOP_HOST=localhost HADOOP_PORT=9000 ./run_gphdfs_regression.sh
+	GP_HADOOP_TARGET_VERSION=hadoop HADOOP_HOST=localhost HADOOP_PORT=9000 ./run_gphdfs_regression.sh
 
 	exit 0
 	EOF
 
-	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
 }

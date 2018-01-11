@@ -61,7 +61,8 @@ CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orien
 ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
 -- block size must be between 8KB and 2MB w/ 8KB multiple
 CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
-ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 100
+ERROR:  value 100 out of bounds for option "blocksize"
+DETAIL:  Valid values are between "8192" and "2097152".
 -- cannot have compresslevel 0
 CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
 ERROR:  compresstype can't be used with compresslevel 0

@@ -3,12 +3,12 @@
  * analyze.c
  *	  the Postgres statistics generator
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.129 2008/12/13 19:13:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.139 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -33,11 +33,12 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "miscadmin.h"
-#include "parser/parse_expr.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_relation.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "storage/bufmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
@@ -49,7 +50,7 @@
 #include "utils/pg_rusage.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
-#include "utils/tuplesort_mk.h"
+#include "utils/tqual.h"
 
 /*
  * To avoid consuming too much memory during analysis and/or too much space
@@ -84,7 +85,7 @@ typedef struct AnlIndexData
 
 /*
  * Maintain the row index for large datums which must not be considered for
- * samples while calculating statistcs. The sample value at the row index for 
+ * samples while calculating statistcs. The sample value at the row index for
  * a column are masked as NULL.
  */
 typedef struct RowIndexes
@@ -131,14 +132,13 @@ static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples,
 static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPages);
 
 static void analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
-			BufferAccessStrategy bstrategy);
+					 BufferAccessStrategy bstrategy);
 
 /*
  *	analyze_rel() -- analyze one relation
  */
 void
-analyze_rel(Oid relid, VacuumStmt *vacstmt,
-			BufferAccessStrategy bstrategy)
+analyze_rel(Oid relid, VacuumStmt *vacstmt, BufferAccessStrategy bstrategy)
 {
 	bool		optimizerBackup;
 
@@ -169,7 +169,7 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt,
 
 static void
 analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
-			BufferAccessStrategy bstrategy)
+					 BufferAccessStrategy bstrategy)
 {
 	Relation	onerel;
 	int			attr_cnt,
@@ -179,7 +179,6 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	Relation   *Irel;
 	int			nindexes;
 	bool		hasindex;
-	bool		analyzableindex;
 	VacAttrStats **vacattrstats;
 	AnlIndexData *indexdata;
 	int			targrows,
@@ -234,9 +233,20 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	{
 		/* No need for a WARNING if we already complained during VACUUM */
 		if (!vacstmt->vacuum)
-			ereport(WARNING,
-					(errmsg("skipping \"%s\" --- only table or database owner can analyze it",
-							RelationGetRelationName(onerel))));
+		{
+			if (onerel->rd_rel->relisshared)
+				ereport(WARNING,
+				 (errmsg("skipping \"%s\" --- only superuser can analyze it",
+						 RelationGetRelationName(onerel))));
+			else if (onerel->rd_rel->relnamespace == PG_CATALOG_NAMESPACE)
+				ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only superuser or database owner can analyze it",
+								RelationGetRelationName(onerel))));
+			else
+				ereport(WARNING,
+						(errmsg("skipping \"%s\" --- only table or database owner can analyze it",
+								RelationGetRelationName(onerel))));
+		}
 		relation_close(onerel, ShareUpdateExclusiveLock);
 		return;
 	}
@@ -262,7 +272,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * probably not up-to-date on disk.  (We don't throw a warning here; it
 	 * would just lead to chatter during a database-wide ANALYZE.)
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(onerel)))
+	if (RELATION_IS_OTHER_TEMP(onerel))
 	{
 		relation_close(onerel, ShareUpdateExclusiveLock);
 		return;
@@ -356,7 +366,6 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	vac_open_indexes(onerel, AccessShareLock, &nindexes, &Irel);
 	hasindex = (nindexes > 0);
 	indexdata = NULL;
-	analyzableindex = false;
 	if (hasindex)
 	{
 		indexdata = (AnlIndexData *) palloc0(nindexes * sizeof(AnlIndexData));
@@ -403,10 +412,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 						thisdata->vacattrstats[tcnt] =
 							examine_attribute(Irel[ind], i + 1);
 						if (thisdata->vacattrstats[tcnt] != NULL)
-						{
 							tcnt++;
-							analyzableindex = true;
-						}
 					}
 				}
 				thisdata->attr_cnt = tcnt;
@@ -415,15 +421,10 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	}
 
 	/*
-	 * Quit if no analyzable columns and no pg_class update needed.
-	 */
-	if (attr_cnt <= 0 && !analyzableindex && vacstmt->vacuum)
-		goto cleanup;
-
-	/*
 	 * Determine how many rows we need to sample, using the worst case from
 	 * all analyzable columns.	We use a lower bound of 100 rows to avoid
-	 * possible overflow in Vitter's algorithm.
+	 * possible overflow in Vitter's algorithm.  (Note: that will also be
+	 * the target in the corner case where there are no analyzable columns.)
 	 */
 	targrows = 100;
 	for (i = 0; i < attr_cnt; i++)
@@ -482,7 +483,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			 * from the sample being sent for stats collection
 			 */
 			if (rowIndexes->toowide_cnt > 0)
-				{
+			{
 				int validRowsIdx = 0;
 				for (int rownum=0; rownum < numrows; rownum++)
 				{
@@ -501,10 +502,24 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			}
 
 			stats->tupDesc = onerel->rd_att;
-			(*stats->compute_stats) (stats,
-									 std_fetch_func,
-									 validRowsLength, // numbers of rows in sample excluding toowide if any.
-									 totalrows);
+
+			if (validRowsLength > 0)
+			{
+				(*stats->compute_stats) (stats,
+										 std_fetch_func,
+										 validRowsLength, // numbers of rows in sample excluding toowide if any.
+										 totalrows);
+			}
+			else
+			{
+				// All the rows were too wide to be included in the sample. We cannot
+				// do much in that case, but at least we know there were no NULLs, and
+				// that every item was >= WIDTH_THRESHOLD in width.
+				stats->stats_valid = true;
+				stats->stanullfrac = 0.0;
+				stats->stawidth = WIDTH_THRESHOLD;
+				stats->stadistinct = 0.0;		/* "unknown" */
+			}
 			stats->rows = rows; // Reset to original rows
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
@@ -540,19 +555,21 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	}
 
 	/*
-	 * If we are running a standalone ANALYZE, update pages/tuples stats in
-	 * pg_class.  We know the accurate page count from the smgr, but only an
-	 * approximate number of tuples; therefore, if we are part of VACUUM
-	 * ANALYZE do *not* overwrite the accurate count already inserted by
-	 * VACUUM.	The same consideration applies to indexes.
+	 * Update pages/tuples stats in pg_class.
+	 */
+	vac_update_relstats(onerel,
+						totalpages,
+						totalrows, hasindex, InvalidTransactionId);
+	/* report results to the stats collector, too */
+	pgstat_report_analyze(onerel, totalrows, totaldeadrows);
+
+	/*
+	 * Same for indexes. Vacuum always scans all indexes, so if we're part of
+	 * VACUUM ANALYZE, don't overwrite the accurate count already inserted by
+	 * VACUUM.
 	 */
 	if (!vacstmt->vacuum)
 	{
-		vac_update_relstats(RelationGetRelid(onerel),
-							totalpages,
-							totalrows, hasindex,
-							InvalidTransactionId);
-
 		for (ind = 0; ind < nindexes; ind++)
 		{
 			AnlIndexData *thisdata = &indexdata[ind];
@@ -569,7 +586,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 					 RelationGetRelationName(Irel[ind]), RelationGetRelationName(onerel));
 				estimatedIndexPages = 1.0;
 			}
-			else 
+			else
 			{
 				/**
 				 * NOTE: we don't attempt to estimate the number of tuples in an index.
@@ -583,14 +600,10 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			}
 
 			totalindexrows = ceil(thisdata->tupleFract * totalrows);
-			vac_update_relstats(RelationGetRelid(Irel[ind]),
+			vac_update_relstats(Irel[ind],
 								estimatedIndexPages,
-								totalindexrows, false,
-								InvalidTransactionId);
+								totalindexrows, false, InvalidTransactionId);
 		}
-
-		/* report results to the stats collector, too */
-		pgstat_report_analyze(onerel, totalrows, totaldeadrows);
 	}
 
 	/* MPP-6929: metadata tracking */
@@ -609,8 +622,28 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			);
 	}
 
-	/* We skip to here if there were no analyzable columns */
-cleanup:
+	/* If this isn't part of VACUUM ANALYZE, let index AMs do cleanup */
+	if (!vacstmt->vacuum)
+	{
+		for (ind = 0; ind < nindexes; ind++)
+		{
+			IndexBulkDeleteResult *stats;
+			IndexVacuumInfo ivinfo;
+
+			ivinfo.index = Irel[ind];
+			ivinfo.vacuum_full = false;
+			ivinfo.analyze_only = true;
+			ivinfo.estimated_count = true;
+			ivinfo.message_level = elevel;
+			ivinfo.num_heap_tuples = onerel->rd_rel->reltuples;
+			ivinfo.strategy = vac_strategy;
+
+			stats = index_vacuum_cleanup(&ivinfo, NULL);
+
+			if (stats)
+				pfree(stats);
+		}
+	}
 
 	/* Done with indexes */
 	vac_close_indexes(nindexes, Irel, NoLock);
@@ -729,7 +762,7 @@ compute_index_stats(Relation onerel, double totalrows,
 			ResetExprContext(econtext);
 
 			/* Set up for predicate or expression evaluation */
-			ExecStoreGenericTuple(heapTuple, slot, false);
+			ExecStoreHeapTuple(heapTuple, slot, InvalidBuffer, false);
 
 			/* If index is partial, check predicate */
 			if (predicate != NIL)
@@ -829,6 +862,7 @@ examine_attribute(Relation onerel, int attnum)
 	Form_pg_attribute attr = onerel->rd_att->attrs[attnum - 1];
 	HeapTuple	typtuple;
 	VacAttrStats *stats;
+	int			i;
 	bool		ok;
 
 	/* Never analyze dropped columns */
@@ -840,20 +874,34 @@ examine_attribute(Relation onerel, int attnum)
 		return NULL;
 
 	/*
-	 * Create the VacAttrStats struct.
+	 * Create the VacAttrStats struct.	Note that we only have a copy of the
+	 * fixed fields of the pg_attribute tuple.
 	 */
 	stats = (VacAttrStats *) palloc0(sizeof(VacAttrStats));
-	stats->attr = (Form_pg_attribute) palloc(ATTRIBUTE_TUPLE_SIZE);
-	memcpy(stats->attr, attr, ATTRIBUTE_TUPLE_SIZE);
+	stats->attr = (Form_pg_attribute) palloc(ATTRIBUTE_FIXED_PART_SIZE);
+	memcpy(stats->attr, attr, ATTRIBUTE_FIXED_PART_SIZE);
 	typtuple = SearchSysCacheCopy(TYPEOID,
-								  ObjectIdGetDatum(attr->atttypid),
-								  0, 0, 0);
+							  ObjectIdGetDatum(attr->atttypid),
+							  0, 0, 0);
 	if (!HeapTupleIsValid(typtuple))
 		elog(ERROR, "cache lookup failed for type %u", attr->atttypid);
 	stats->attrtype = (Form_pg_type) GETSTRUCT(typtuple);
 	stats->relstorage = RelationGetForm(onerel)->relstorage;
 	stats->anl_context = anl_context;
 	stats->tupattnum = attnum;
+
+	/*
+	 * The fields describing the stats->stavalues[n] element types default to
+	 * the type of the field being analyzed, but the type-specific typanalyze
+	 * function can change them if it wants to store something else.
+	 */
+	for (i = 0; i < STATISTIC_NUM_SLOTS; i++)
+	{
+		stats->statypid[i] = stats->attr->atttypid;
+		stats->statyplen[i] = stats->attrtype->typlen;
+		stats->statypbyval[i] = stats->attrtype->typbyval;
+		stats->statypalign[i] = stats->attrtype->typalign;
+	}
 
 	/*
 	 * Call the type-specific typanalyze function.	If none is specified, use
@@ -1002,7 +1050,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					double *totalrows, double *totaldeadrows)
 {
 	int			numrows = 0;	/* # rows now in reservoir */
-	double		samplerows = 0;	/* total # rows collected */
+	double		samplerows = 0; /* total # rows collected */
 	double		liverows = 0;	/* # live rows seen */
 	double		deadrows = 0;	/* # dead rows seen */
 	double		rowstoskip = -1;	/* -1 means not set yet */
@@ -1039,11 +1087,12 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 		 * the maxoffset value stays good (else concurrent VACUUM might delete
 		 * tuples out from under us).  Hence, pin the page until we are done
 		 * looking at it.  We also choose to hold sharelock on the buffer
-		 * throughout --- we could release and re-acquire sharelock for
-		 * each tuple, but since we aren't doing much work per tuple, the
-		 * extra lock traffic is probably better avoided.
+		 * throughout --- we could release and re-acquire sharelock for each
+		 * tuple, but since we aren't doing much work per tuple, the extra
+		 * lock traffic is probably better avoided.
 		 */
-		targbuffer = ReadBufferWithStrategy(onerel, targblock, vac_strategy);
+		targbuffer = ReadBufferExtended(onerel, MAIN_FORKNUM, targblock,
+										RBM_NORMAL, vac_strategy);
 		LockBuffer(targbuffer, BUFFER_LOCK_SHARE);
 		targpage = BufferGetPage(targbuffer);
 		maxoffset = PageGetMaxOffsetNumber(targpage);
@@ -1059,24 +1108,9 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 
 			/*
 			 * We ignore unused and redirect line pointers.  DEAD line
-			 * pointers should be counted as dead, because we need vacuum
-			 * to run to get rid of them.  Note that this rule agrees with
-			 * the way that heap_page_prune() counts things.
-			 */
-			if (!ItemIdIsNormal(itemid))
-			{
-				if (ItemIdIsDead(itemid))
-					deadrows += 1;
-				continue;
-			}
-
-			itemid = PageGetItemId(targpage, targoffset);
-
-			/*
-			 * We ignore unused and redirect line pointers.  DEAD line
-			 * pointers should be counted as dead, because we need vacuum
-			 * to run to get rid of them.  Note that this rule agrees with
-			 * the way that heap_page_prune() counts things.
+			 * pointers should be counted as dead, because we need vacuum to
+			 * run to get rid of them.	Note that this rule agrees with the
+			 * way that heap_page_prune() counts things.
 			 */
 			if (!ItemIdIsNormal(itemid))
 			{
@@ -1107,6 +1141,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					break;
 
 				case HEAPTUPLE_INSERT_IN_PROGRESS:
+
 					/*
 					 * Insert-in-progress rows are not counted.  We assume
 					 * that when the inserting transaction commits or aborts,
@@ -1114,17 +1149,17 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					 * count.  This works right only if that transaction ends
 					 * after we finish analyzing the table; if things happen
 					 * in the other order, its stats update will be
-					 * overwritten by ours.  However, the error will be
-					 * large only if the other transaction runs long enough
-					 * to insert many tuples, so assuming it will finish
-					 * after us is the safer option.
+					 * overwritten by ours.  However, the error will be large
+					 * only if the other transaction runs long enough to
+					 * insert many tuples, so assuming it will finish after us
+					 * is the safer option.
 					 *
 					 * A special case is that the inserting transaction might
-					 * be our own.  In this case we should count and sample
+					 * be our own.	In this case we should count and sample
 					 * the row, to accommodate users who load a table and
 					 * analyze it in one transaction.  (pgstat_report_analyze
-					 * has to adjust the numbers we send to the stats collector
-					 * to make this come out right.)
+					 * has to adjust the numbers we send to the stats
+					 * collector to make this come out right.)
 					 */
 					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(targtuple.t_data)))
 					{
@@ -1134,6 +1169,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					break;
 
 				case HEAPTUPLE_DELETE_IN_PROGRESS:
+
 					/*
 					 * We count delete-in-progress rows as still live, using
 					 * the same reasoning given above; but we don't bother to
@@ -1142,8 +1178,8 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					 * If the delete was done by our own transaction, however,
 					 * we must count the row as dead to make
 					 * pgstat_report_analyze's stats adjustments come out
-					 * right.  (Note: this works out properly when the row
-					 * was both inserted and deleted in our xact.)
+					 * right.  (Note: this works out properly when the row was
+					 * both inserted and deleted in our xact.)
 					 */
 					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(targtuple.t_data)))
 						deadrows += 1;
@@ -1177,8 +1213,8 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					/*
 					 * t in Vitter's paper is the number of records already
 					 * processed.  If we need to compute a new S value, we
-					 * must use the not-yet-incremented value of samplerows
-					 * as t.
+					 * must use the not-yet-incremented value of samplerows as
+					 * t.
 					 */
 					if (rowstoskip < 0)
 						rowstoskip = get_next_S(samplerows, targrows, &rstate);
@@ -1219,18 +1255,19 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 		qsort((void *) rows, numrows, sizeof(HeapTuple), compare_rows);
 
 	/*
-	 * Estimate total numbers of rows in relation.
+	 * Estimate total numbers of rows in relation.  For live rows, use
+	 * vac_estimate_reltuples; for dead rows, we have no source of old
+	 * information, so we have to assume the density is the same in unseen
+	 * pages as in the pages we scanned.
 	 */
+	*totalrows = vac_estimate_reltuples(onerel, true,
+										totalblocks,
+										bs.m,
+										liverows);
 	if (bs.m > 0)
-	{
-		*totalrows = floor((liverows * totalblocks) / bs.m + 0.5);
 		*totaldeadrows = floor((deadrows * totalblocks) / bs.m + 0.5);
-	}
 	else
-	{
-		*totalrows = 0.0;
 		*totaldeadrows = 0.0;
-	}
 
 	/*
 	 * Emit some interesting relation info
@@ -1410,7 +1447,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	float4		relTuples;
 	float4		relPages;
 	int			ret;
-	int			sampleTuples;
+	int			sampleTuples;	/* 32 bit - assume that number of tuples will not > 2B */
 	Datum	   *vals;
 	bool	   *nulls;
 	MemoryContext oldcxt;
@@ -1539,7 +1576,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	oldcxt = CurrentMemoryContext;
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("Unable to connect to execute internal query.")));
 
 	elog(elevel, "Executing SQL: %s", str.data);
@@ -1550,7 +1587,12 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	 */
 	ret = SPI_execute(str.data, false, 0);
 	Assert(ret > 0);
-	sampleTuples = SPI_processed;
+	/*
+	 * targrows in analyze_rel_internal() is an int,
+	 * it's unlikely that this query will return more rows
+	 */
+	Assert(SPI_processed < INT_MAX);
+	sampleTuples = (int) SPI_processed;
 
 	/* Ok, read in the tuples to *rows */
 	MemoryContextSwitchTo(oldcxt);
@@ -1596,7 +1638,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 												  SPI_tuptable->tupdesc,
 												  &dummyNull);
 
-					/* 
+					/*
 					 * If Datum is too large, mark the index position as true
 					 * and increase the too wide count
 					 */
@@ -1643,9 +1685,9 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 static void
 analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly)
 {
-	*relPages = 0.0;		
-	*relTuples = 0.0;			
-	
+	*relPages = 0.0;
+	*relTuples = 0.0;
+
 	List *allRelOids = NIL;
 
 	/* if GUC optimizer_analyze_root_partition is off, we do not analyze root partitions, unless
@@ -1690,7 +1732,7 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 		}
 
 		if (SPI_OK_CONNECT != SPI_connect())
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to connect to execute internal query.")));
 
 		elog(elevel, "Executing SQL: %s", sqlstmt.data);
@@ -1754,7 +1796,7 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 	}
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("Unable to connect to execute internal query.")));
 	elog(elevel, "Executing SQL: %s", sqlstmt.data);
 
@@ -1829,7 +1871,7 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 					n;
 		Datum		values[Natts_pg_statistic];
 		bool		nulls[Natts_pg_statistic];
-		char		replaces[Natts_pg_statistic];
+		bool		replaces[Natts_pg_statistic];
 
 		/* Ignore attr if we weren't able to collect stats */
 		if (!stats->stats_valid)
@@ -1841,7 +1883,7 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 		for (i = 0; i < Natts_pg_statistic; ++i)
 		{
 			nulls[i] = false;
-			replaces[i] = 'r';
+			replaces[i] = true;
 		}
 
 		i = 0;
@@ -1872,7 +1914,7 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 				/* XXX knows more than it should about type float4: */
 				arry = construct_array(numdatums, nnum,
 									   FLOAT4OID,
-									   sizeof(float4), true, 'i');
+									   sizeof(float4), FLOAT4PASSBYVAL, 'i');
 				values[i++] = PointerGetDatum(arry);	/* stanumbersN */
 			}
 			else
@@ -1889,10 +1931,10 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 
 				arry = construct_array(stats->stavalues[k],
 									   stats->numvalues[k],
-									   stats->attr->atttypid,
-									   stats->attrtype->typlen,
-									   stats->attrtype->typbyval,
-									   stats->attrtype->typalign);
+									   stats->statypid[k],
+									   stats->statyplen[k],
+									   stats->statypbyval[k],
+									   stats->statypalign[k]);
 				values[i++] = PointerGetDatum(arry);	/* stavaluesN */
 			}
 			else
@@ -2034,10 +2076,8 @@ static bool
 std_typanalyze(VacAttrStats *stats)
 {
 	Form_pg_attribute attr = stats->attr;
-	Operator	func_operator;
-	Oid			eqopr = InvalidOid;
-	Oid			eqfunc = InvalidOid;
-	Oid			ltopr = InvalidOid;
+	Oid			ltopr;
+	Oid			eqopr;
 	StdAnalyzeData *mystats;
 
 	/* If the attstattarget column is negative, use the default value */
@@ -2045,42 +2085,22 @@ std_typanalyze(VacAttrStats *stats)
 	if (attr->attstattarget < 0)
 		attr->attstattarget = default_statistics_target;
 
-	/* If column has no "=" operator, we can't do much of anything */
-	func_operator = equality_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		eqopr = oprid(func_operator);
-		eqfunc = oprfuncid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
-	if (!OidIsValid(eqfunc))
-	{
-		/* Can't do much but the minimal stuff */
-		stats->compute_stats = compute_very_minimal_stats;
-		/* Might as well use the same minrows as below */
-		stats->minrows = 300 * attr->attstattarget;
-		return true;
-	}
-
-	/* Is there a "<" operator with suitable semantics? */
-	func_operator = ordering_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		ltopr = oprid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
+	/* Look for default "<" and "=" operators for column's type */
+	get_sort_group_operators(attr->atttypid,
+							 false, false, false,
+							 &ltopr, &eqopr, NULL);
 
 	/* Save the operator info for compute_stats routines */
 	mystats = (StdAnalyzeData *) palloc(sizeof(StdAnalyzeData));
 	mystats->eqopr = eqopr;
-	mystats->eqfunc = eqfunc;
+	mystats->eqfunc = get_opcode(eqopr);
 	mystats->ltopr = ltopr;
 	stats->extra_data = mystats;
 
 	/*
 	 * Determine which standard statistics algorithm to use
 	 */
-	if (OidIsValid(ltopr))
+	if (OidIsValid(ltopr) && OidIsValid(eqopr))
 	{
 		/* Seems to be a scalar datatype */
 		stats->compute_stats = compute_scalar_stats;
@@ -2105,10 +2125,17 @@ std_typanalyze(VacAttrStats *stats)
 		 */
 		stats->minrows = 300 * attr->attstattarget;
 	}
-	else
+	else if (OidIsValid(eqopr))
 	{
 		/* Can't do much but the minimal stuff */
 		stats->compute_stats = compute_minimal_stats;
+		/* Might as well use the same minrows as above */
+		stats->minrows = 300 * attr->attstattarget;
+	}
+	else
+	{
+		/* Can't do much but the minimal stuff */
+		stats->compute_stats = compute_very_minimal_stats;
 		/* Might as well use the same minrows as above */
 		stats->minrows = 300 * attr->attstattarget;
 	}
@@ -2420,6 +2447,11 @@ compute_minimal_stats(VacAttrStatsP stats,
 			stats->numnumbers[0] = num_mcv;
 			stats->stavalues[0] = mcv_values;
 			stats->numvalues[0] = num_mcv;
+
+			/*
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
+			 */
 		}
 	}
 	else if (null_cnt > 0)
@@ -2785,7 +2817,9 @@ compute_scalar_stats(VacAttrStatsP stats,
 		 * least 2 instances in the sample.  Also, we won't suppress values
 		 * that have a frequency of at least 1/K where K is the intended
 		 * number of histogram bins; such values might otherwise cause us to
-		 * emit duplicate histogram bin boundaries.
+		 * emit duplicate histogram bin boundaries.  (We might end up with
+		 * duplicate histogram entries anyway, if the distribution is skewed;
+		 * but we prefer to treat such values as MCVs if at all possible.)
 		 */
 		if (track_cnt == ndistinct && toowide_cnt == 0 &&
 			stats->stadistinct > 0 &&
@@ -2851,6 +2885,11 @@ compute_scalar_stats(VacAttrStatsP stats,
 			stats->numnumbers[slot_idx] = num_mcv;
 			stats->stavalues[slot_idx] = mcv_values;
 			stats->numvalues[slot_idx] = num_mcv;
+
+			/*
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
+			 */
 			slot_idx++;
 		}
 
@@ -2867,6 +2906,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 			MemoryContext old_context;
 			Datum	   *hist_values;
 			int			nvals;
+			int			pos,
+						posfrac,
+						delta,
+						deltafrac;
 
 			/* Sort the MCV items into position order to speed next loop */
 			qsort((void *) track, num_mcv,
@@ -2920,21 +2963,46 @@ compute_scalar_stats(VacAttrStatsP stats,
 			/* Must copy the target values into anl_context */
 			old_context = MemoryContextSwitchTo(stats->anl_context);
 			hist_values = (Datum *) palloc(num_hist * sizeof(Datum));
+
+			/*
+			 * The object of this loop is to copy the first and last values[]
+			 * entries along with evenly-spaced values in between.	So the
+			 * i'th value is values[(i * (nvals - 1)) / (num_hist - 1)].  But
+			 * computing that subscript directly risks integer overflow when
+			 * the stats target is more than a couple thousand.  Instead we
+			 * add (nvals - 1) / (num_hist - 1) to pos at each step, tracking
+			 * the integral and fractional parts of the sum separately.
+			 */
+			delta = (nvals - 1) / (num_hist - 1);
+			deltafrac = (nvals - 1) % (num_hist - 1);
+			pos = posfrac = 0;
+
 			for (i = 0; i < num_hist; i++)
 			{
-				int			pos;
-
-				pos = (i * (nvals - 1)) / (num_hist - 1);
 				hist_values[i] = datumCopy(values[pos].value,
 										   stats->attr->attbyval,
 										   stats->attr->attlen);
+				pos += delta;
+				posfrac += deltafrac;
+				if (posfrac >= (num_hist - 1))
+				{
+					/* fractional part exceeds 1, carry to integer part */
+					pos++;
+					posfrac -= (num_hist - 1);
+				}
 			}
+
 			MemoryContextSwitchTo(old_context);
 
 			stats->stakind[slot_idx] = STATISTIC_KIND_HISTOGRAM;
 			stats->staop[slot_idx] = mystats->ltopr;
 			stats->stavalues[slot_idx] = hist_values;
 			stats->numvalues[slot_idx] = num_hist;
+
+			/*
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
+			 */
 			slot_idx++;
 		}
 

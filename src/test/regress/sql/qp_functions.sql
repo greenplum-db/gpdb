@@ -1,10 +1,13 @@
-
--- start_ignore
-create schema qp_functions_schema;
-set search_path to qp_function_schema;
-
 SET datestyle = "ISO, DMY";
 
+-- Test heuristic to resolve unknown-type literals when there are ambiguous
+-- functions, added in PostgreSQL commit 1a8b9fb549.
+create function ambigargfunc(a int4, b int4) returns text as $$ select 'int variant chosen'::text $$ language sql;
+create function ambigargfunc(a int4, b timestamp) returns text as $$ select 'timestamp variant chosen'::text $$ language sql;
+
+select ambigargfunc(1,'2');
+
+-- start_ignore
 drop table if exists test;
 create table test (a integer, b integer);
 
@@ -631,7 +634,6 @@ create aggregate numeric_sum_plus_fifty(
                         
 select '' as sixty, numeric_sum_plus_fifty(num) from agg_numeric_tbl;
 
--- start-ignore
 drop aggregate numeric_sum_plus_fifty(char);
 drop aggregate numeric_sum_plus_fifty(numeric);
 drop table stress_source;
@@ -641,6 +643,3 @@ drop aggregate agg_point_add1(point);
 drop table agg_point_tbl;
 drop aggregate agg_point_add2(point);
 drop table agg_numeric_tbl;
-
-drop schema qp_functions_schema;
--- end-ignore

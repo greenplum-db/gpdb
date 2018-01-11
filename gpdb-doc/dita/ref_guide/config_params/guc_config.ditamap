@@ -92,7 +92,7 @@
             <topicref href="guc-list.xml#gp_enable_predicate_propagation"/>
             <topicref href="guc-list.xml#gp_enable_preunique"/>
             <topicref href="guc-list.xml#gp_enable_relsize_collection"/>
-            <topicref href="guc-list.xml#gp_enable_sequential_window_plans"/>
+            <topicref href="guc-list.xml#gp_enable_segment_copy_checking"/>
             <topicref href="guc-list.xml#gp_enable_sort_distinct"/>
             <topicref href="guc-list.xml#gp_enable_sort_limit"/>
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
@@ -109,8 +109,8 @@
             <topicref href="guc-list.xml#gp_hadoop_home"/>
             <topicref href="guc-list.xml#gp_hadoop_target_version"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
-            <topicref href="guc-list.xml#gp_idf_deduplicate"/>
             <topicref href="guc-list.xml#topic_lvm_ttc_3p"/>
+            <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
             <topicref href="guc-list.xml#gp_interconnect_hash_multiplier"/>
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
@@ -120,6 +120,7 @@
             <topicref href="guc-list.xml#gp_log_format"/>
             <topicref href="guc-list.xml#gp_log_fts"/>
             <topicref href="guc-list.xml#gp_log_gang"/>
+            <topicref href="guc-list.xml#gp_log_interconnect"/>
             <topicref href="guc-list.xml#gp_max_csv_line_length"/>
             <topicref href="guc-list.xml#gp_max_databases"/>
             <topicref href="guc-list.xml#gp_max_filespaces"/>
@@ -129,6 +130,7 @@
             <topicref href="guc-list.xml#gp_max_tablespaces"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
             <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
+            <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>
             <topicref href="guc-list.xml#gp_resqueue_memory_policy"/>
@@ -216,6 +218,8 @@
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
             <topicref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa"/>
+            <topicref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"/>
+            <topicref href="guc-list.xml#optimizer_join_order"/>
             <topicref href="guc-list.xml#optimizer_join_order_threshold"/>
             <topicref href="guc-list.xml#optimizer_mdcache_size"/>
             <topicref href="guc-list.xml#optimizer_metadata_caching"/>

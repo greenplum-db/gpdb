@@ -188,10 +188,9 @@ INSERT INTO qp_misc_jiras.tbl1544 VALUES(2,'2001-01-01','xxx');
 delete from qp_misc_jiras.tbl1544 where pdate='2000-01-01';
 update qp_misc_jiras.tbl1544 set pval='yyy' where pdate='2000-01-01';
 drop table qp_misc_jiras.tbl1544 cascade;
-NOTICE:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
-NOTICE:  drop cascades to constraint tbl1544_child_depth_1_y_2001_year_pdate_check on table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
-NOTICE:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
-NOTICE:  drop cascades to constraint tbl1544_child_depth_1_y_2000_year_pdate_check on table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
+drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
 CREATE TYPE qp_misc_jiras.tbl4009_mediageoitem AS ( loctn_type character varying,
 loctn_nm character varying,
 loctn_desc character varying,
@@ -415,7 +414,6 @@ NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "satelliteupda
 CREATE INDEX fki_satelliteupdatelog_idadvertiser_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idadvertiser);
 CREATE INDEX fki_satelliteupdatelog_idaffiliate_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idaffiliate);
 CREATE INDEX fki_satelliteupdatelog_idrep_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idrep);
-------------------------
 CREATE TABLE qp_misc_jiras.satelliteupdatelogkey (
     idsatelliteupdatelog integer NOT NULL,
     columnname character varying NOT NULL,
@@ -427,7 +425,6 @@ ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupd
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "satelliteupdatelogkey_pkey" for table "satelliteupdatelogkey"
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupdatelogkey_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
 WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
-------------
 CREATE TABLE qp_misc_jiras.satellite (
     id integer NOT NULL,
     name character varying NOT NULL,
@@ -445,7 +442,6 @@ CREATE SEQUENCE qp_misc_jiras.satellite_id_seq
     CACHE 1;
 ALTER SEQUENCE qp_misc_jiras.satellite_id_seq OWNED BY qp_misc_jiras.satellite.id;
 ALTER TABLE qp_misc_jiras.satellite ALTER COLUMN id SET DEFAULT nextval('qp_misc_jiras.satellite_id_seq'::regclass);
---------
 CREATE TABLE qp_misc_jiras.satelliteupdatelogserver (
     idsatelliteupdatelog integer NOT NULL,
     idsatellite integer NOT NULL,
@@ -462,7 +458,6 @@ ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satellite
 ERROR:  there is no unique constraint matching given keys for referenced table "satellite"
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satelliteupdatelogserver_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
 WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
--------------
 SELECT /* gptest */ s.id, s.action, s.type, sk.columnName AS "columnName", sk.value
 FROM qp_misc_jiras.satelliteUpdateLog AS s
 LEFT JOIN qp_misc_jiras.satelliteUpdateLogKey AS sk ON s.id = sk.idSatelliteUpdateLog
@@ -478,8 +473,9 @@ ORDER BY s.scheduled;
 (0 rows)
 
 drop table qp_misc_jiras.satelliteupdatelog cascade;
-NOTICE:  drop cascades to constraint satelliteupdatelogserver_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogserver
-NOTICE:  drop cascades to constraint satelliteupdatelogkey_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogkey
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint satelliteupdatelogkey_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogkey
+drop cascades to constraint satelliteupdatelogserver_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogserver
 drop table qp_misc_jiras.satelliteupdatelogkey cascade;
 drop table qp_misc_jiras.satellite cascade;
 drop table qp_misc_jiras.satelliteupdatelogserver cascade;
@@ -644,20 +640,20 @@ partition p1 start('0') end('25') every (12)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c_custkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1" for table "tbl5151_customer"
-NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2" for table "tbl5151_customer"
-NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3" for table "tbl5151_customer"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_1" for table "tbl5151_customer_1_prt_p1_1"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_2" for table "tbl5151_customer_1_prt_p1_1"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_3" for table "tbl5151_customer_1_prt_p1_1"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_4" for table "tbl5151_customer_1_prt_p1_1"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_5" for table "tbl5151_customer_1_prt_p1_1"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_1_2_prt_6" for table "tbl5151_customer_1_prt_p1_1"
+NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2" for table "tbl5151_customer"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_1" for table "tbl5151_customer_1_prt_p1_2"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_2" for table "tbl5151_customer_1_prt_p1_2"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_3" for table "tbl5151_customer_1_prt_p1_2"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_4" for table "tbl5151_customer_1_prt_p1_2"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_5" for table "tbl5151_customer_1_prt_p1_2"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_2_2_prt_6" for table "tbl5151_customer_1_prt_p1_2"
+NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3" for table "tbl5151_customer"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_1" for table "tbl5151_customer_1_prt_p1_3"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_2" for table "tbl5151_customer_1_prt_p1_3"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_3" for table "tbl5151_customer_1_prt_p1_3"
@@ -1204,10 +1200,21 @@ insert into qp_misc_jiras.tbl5246_sale values
   ( 3, 30, 600, '1401-6-1', 12, 5),
   ( 4, 40, 700, '1401-6-1', 1, 1),
   ( 4, 40, 800, '1401-6-1', 1, 1);
---The following query shouldn't crash and error out
 explain select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.tbl5246_sale;
-ERROR:  can't coerce leading frame bound to type of trailing frame bound
-HINT:  specify the leading and trailing frame bounds as the same type
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.00 rows=4 width=12)
+   ->  WindowAgg  (cost=0.00..431.00 rows=4 width=12)
+         Order By: dt
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=12 width=8)
+               Merge Key: dt
+               ->  Sort  (cost=0.00..431.00 rows=4 width=8)
+                     Sort Key: dt
+                     ->  Table Scan on tbl5246_sale  (cost=0.00..431.00 rows=4 width=8)
+ Settings:  enable_nestloop=on
+ Optimizer status: PQO version 2.50.1
+(10 rows)
+
 drop table qp_misc_jiras.tbl5246_sale;
 create table qp_misc_jiras.tbl4896_customer
 (
@@ -2377,8 +2384,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into qp_misc_jiras.tbl7553_test values(1,2);
 explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
-                                                                      QUERY PLAN                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                            QUERY PLAN                                                                                             
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=4)
    ->  Sequence  (cost=0.00..1293.00 rows=1 width=4)
          ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=1)
@@ -2386,17 +2393,17 @@ explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping 
                      ->  Table Scan on tbl7553_test  (cost=0.00..431.00 rows=1 width=4)
          ->  Append  (cost=0.00..862.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: i
+                     Group By: share0_ref2.i
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                           Sort Key: i
+                           Sort Key: share0_ref2.i
                            ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: i, i
+                     Group By: share0_ref3.i, share0_ref3.i
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                           Sort Key: i, i
+                           Sort Key: share0_ref3.i, share0_ref3.i
                            ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on; optimizer_force_three_stage_scalar_dqa=off
+ Optimizer status: PQO version 2.51.0
 (18 rows)
 
 select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -2407,8 +2414,8 @@ select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a
 (2 rows)
 
 explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
-                                                                      QUERY PLAN                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                            QUERY PLAN                                                                                             
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.00 rows=1 width=4)
    ->  Sequence  (cost=0.00..1293.00 rows=1 width=4)
          ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=1 width=1)
@@ -2416,29 +2423,29 @@ explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping 
                      ->  Table Scan on tbl7553_test  (cost=0.00..431.00 rows=1 width=4)
          ->  Append  (cost=0.00..862.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: j
+                     Group By: share0_ref2.j
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                           Sort Key: j
+                           Sort Key: share0_ref2.j
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 Hash Key: j
+                                 Hash Key: share0_ref2.j
                                  ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                       Group By: j
+                                       Group By: share0_ref2.j
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                             Sort Key: j
+                                             Sort Key: share0_ref2.j
                                              ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                     Group By: j, j
+                     Group By: share0_ref3.j, share0_ref3.j
                      ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                           Sort Key: j, j
+                           Sort Key: share0_ref3.j, share0_ref3.j
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 Hash Key: j, j
+                                 Hash Key: share0_ref3.j, share0_ref3.j
                                  ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                       Group By: j, j
+                                       Group By: share0_ref3.j, share0_ref3.j
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                             Sort Key: j, j
+                                             Sort Key: share0_ref3.j, share0_ref3.j
                                              ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on; optimizer_force_three_stage_scalar_dqa=off
+ Optimizer status: PQO version 2.51.0
 (30 rows)
 
 select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -2585,7 +2592,7 @@ end;
 $$
 language plpgsql;
 select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
-ERROR:  function cannot execute on segment because it accesses relation "qp_misc_jiras.pg_foo"  (seg1 slice1 nikos-mac:25433 pid=95127)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_misc_jiras.pg_foo"  (seg1 slice1 nikos-mac:25433 pid=95127)
 DETAIL:  
 SQL statement "select count(*) from qp_misc_jiras.pg_foo"
 PL/pgSQL function "func2" line 4 at EXECUTE statement
@@ -2798,9 +2805,9 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 (0 rows)
 
 INSERT INTO qp_misc_jiras.inet_ip_pairs (saddr) SELECT (i%201 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet FROM generate_series(1,1000000) i;
--- --------------------------------------------------------
+--
 -- MPP-6870: CREATE INDEX caused Out-Of-Memory problem
--- --------------------------------------------------------
+--
 CREATE INDEX  inet_ip_pairs_idx1 ON  qp_misc_jiras.inet_ip_pairs (saddr);
 SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
   schemaname   |   tablename   |     indexname      | tablespace |                                      indexdef                                      
@@ -2808,9 +2815,9 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
  qp_misc_jiras | inet_ip_pairs | inet_ip_pairs_idx1 |            | CREATE INDEX inet_ip_pairs_idx1 ON qp_misc_jiras.inet_ip_pairs USING btree (saddr)
 (1 row)
 
--- --------------------------------------------------------
+--
 -- Data should be evenly distributed to multiple segments?
--- --------------------------------------------------------
+--
 SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
  gp_segment_id | count  
 ---------------+--------
@@ -2969,7 +2976,7 @@ CREATE OR REPLACE FUNCTION mustan.f7( in_d text ) RETURNS DATE AS $$
 DECLARE
 	out_dt date;
 BEGIN
-	---SELECT d INTO out_dt FROM mustan.test WHERE d=cast( in_d as date );
+	-- SELECT d INTO out_dt FROM mustan.test WHERE d=cast( in_d as date );
 	SELECT d INTO out_dt FROM mustan.test WHERE d=in_d::date;
 	return out_dt;
 END;
@@ -3058,8 +3065,8 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Settings:  enable_groupagg=off; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
+ Optimizer status: PQO version 2.51.1
 (22 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3084,8 +3091,8 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Settings:  enable_groupagg=off; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
+ Optimizer status: PQO version 2.51.1
 (21 rows)
 
 set enable_groupagg=on;
@@ -3113,8 +3120,8 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=on; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Settings:  enable_groupagg=on; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
+ Optimizer status: PQO version 2.51.1
 (22 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3139,8 +3146,8 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Table Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
- Settings:  enable_groupagg=on; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Settings:  enable_groupagg=on; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
+ Optimizer status: PQO version 2.51.1
 (21 rows)
 
 drop table qp_misc_jiras.tbl5994_test;
@@ -3165,7 +3172,7 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
  Index Scan using pg_class_oid_index on pg_class  (cost=200.27..400.54 rows=1 width=4)
    Index Cond: oid = $0
    Rows out:  1 rows with 0.037 ms to first row, 0.038 ms to end, start offset by 0.047 ms.
-   InitPlan
+   InitPlan 1 (returns $0)
      ->  Index Scan using pg_class_relname_nsp_index on pg_class  (cost=0.00..200.27 rows=1 width=4)
            Index Cond: relname = 'tbl_8205'::name
            Rows out:  1 rows with 0.021 ms to first row, 0.023 ms to end of 2 scans, start offset by 0.049 ms.
@@ -3369,14 +3376,11 @@ CREATE TABLE qp_misc_jiras.tbl8860_1 (
      id INTEGER NOT NULL,
      key TEXT NOT NULL
 ) distributed by (id);
--- -----------------------------------------
 CREATE TABLE qp_misc_jiras.tbl8860_2 (
      id INTEGER NOT NULL,
      key CHARACTER VARYING(50) NOT NULL
 ) distributed by (id);
--- -----------------------------------------
 INSERT INTO qp_misc_jiras.tbl8860_1 SELECT 1, key FROM qp_misc_jiras.tbl8860_2;
--- -----------------------------------------
 -- start_ignore
 drop table if exists qp_misc_jiras.tbl8860_1;
 drop table if exists qp_misc_jiras.tbl8860_2;
@@ -3503,7 +3507,7 @@ explain select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this shou
 (8 rows)
 
 select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this should be disallowed
-ERROR:  function cannot execute on segment because it accesses relation "qp_misc_jiras.tbl9613"  (seg0 slice1 nikos-mac:25432 pid=95126)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_misc_jiras.tbl9613"  (seg0 slice1 nikos-mac:25432 pid=95126)
 DETAIL:  SQL function "_final_median2" during startup
 -- start_ignore
 drop table qp_misc_jiras.tbl9613;
@@ -3576,9 +3580,6 @@ drop index qp_misc_jiras.badbitmapindex1;
 drop index qp_misc_jiras.bmap2_index;
 drop table qp_misc_jiras.badbitmapindex;
 drop table qp_misc_jiras.bmap2;
--- temporally ignore and will be sovled by
---   https://www.pivotaltracker.com/story/show/116312671
--- start_ignore
 CREATE TABLE qp_misc_jiras.ir_voice_sms_and_data (
     imsi_number character varying(35),
     ir_call_country_name character varying(35),
@@ -3622,7 +3623,6 @@ else 'Unidentify' end
 (16 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
--- end_ignore
 create table qp_misc_jiras.x (a int, b int) distributed by (a);
 --create index xi on x(a);
 insert into qp_misc_jiras.x values (1,2), (2,3), (3,4);
@@ -3998,19 +3998,12 @@ select schemaname, tablename, partitionschemaname,
 (0 rows)
 
 drop schema schema1 cascade;
-NOTICE:  drop cascades to table schema1.foo1_1_prt_1
-NOTICE:  drop cascades to constraint foo1_1_prt_1_check on table schema1.foo1_1_prt_1
 NOTICE:  drop cascades to table schema1.foo1
 drop schema schema2 cascade;
-NOTICE:  drop cascades to table schema2.foo3_1_prt_1
-NOTICE:  drop cascades to constraint foo3_1_prt_1_check on table schema2.foo3_1_prt_1
-NOTICE:  drop cascades to table schema2.foo3
-NOTICE:  drop cascades to table schema2.foo2_1_prt_1
-NOTICE:  drop cascades to constraint foo2_1_prt_1_check on table schema2.foo2_1_prt_1
-NOTICE:  drop cascades to table schema2.foo2
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table schema2.foo2
+drop cascades to table schema2.foo3
 drop schema schema3 cascade;
-NOTICE:  drop cascades to table schema3.foo4_1_prt_1
-NOTICE:  drop cascades to constraint foo4_1_prt_1_check on table schema3.foo4_1_prt_1
 NOTICE:  drop cascades to table schema3.foo4
 -- This is the to verify MPP-9167:
 --	Gather Motion shows wrong row estimate compared to 3.3
@@ -4321,195 +4314,195 @@ insert into qp_misc_jiras.esc176_1 values (1,9,0.3, CURRENT_TIMESTAMP);
 insert into qp_misc_jiras.esc176_1 values (1,10,0.4,CURRENT_TIMESTAMP);
 insert into qp_misc_jiras.esc176_1 values (1,11,0.6,CURRENT_TIMESTAMP);
 select id, seq, sum (val) over (partition by id order by clickdate range between interval '0 seconds' following and interval '1000 seconds' following) from qp_misc_jiras.esc176_1;
- id | seq |        sum        
-----+-----+-------------------
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |   9 |               1.3
-  1 |  10 |                 1
-  1 |  11 | 0.600000000000001
+ id | seq | sum  
+----+-----+------
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |   9 |  1.3
+  1 |  10 |    1
+  1 |  11 |  0.6
 (59 rows)
 
 select id, seq, sum (val) over (partition by id order by clickdate range between interval '0 seconds' preceding and interval '1000 seconds' following) from qp_misc_jiras.esc176_1;
- id | seq |        sum        
-----+-----+-------------------
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   1 |              23.7
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   2 |              22.1
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   3 |              21.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   4 |              17.3
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |   9 |              11.7
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  10 |  9.30000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |  11 |  6.10000000000001
-  1 |   9 |               1.3
-  1 |  10 |                 1
-  1 |  11 | 0.600000000000001
+ id | seq | sum  
+----+-----+------
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   1 | 23.7
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   2 | 22.1
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   3 | 21.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   4 | 17.3
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |   9 | 11.7
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  10 |  9.3
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |  11 |  6.1
+  1 |   9 |  1.3
+  1 |  10 |    1
+  1 |  11 |  0.6
 (59 rows)
 
 select id, seq, sum(val) over (partition by id order by seq::numeric range between 0 following and 10 following), val from qp_misc_jiras.esc176_1;
- id | seq |       sum        | val 
-----+-----+------------------+-----
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   1 |             23.7 | 0.2
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   2 |             22.1 | 0.1
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   3 |             21.3 | 0.5
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   4 |             17.3 | 0.7
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |   9 |             11.7 | 0.3
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  10 | 9.00000000000001 | 0.4
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
-  1 |  11 | 5.40000000000001 | 0.6
+ id | seq | sum  | val 
+----+-----+------+-----
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   1 | 23.7 | 0.2
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   2 | 22.1 | 0.1
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   3 | 21.3 | 0.5
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   4 | 17.3 | 0.7
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |   9 | 11.7 | 0.3
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  10 |    9 | 0.4
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
+  1 |  11 |  5.4 | 0.6
 (59 rows)
 
 select id, seq, sum(val) over (partition by id order by seq::numeric range between 10 preceding and 0 preceding), val from qp_misc_jiras.esc176_1;

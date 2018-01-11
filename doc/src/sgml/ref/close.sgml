@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/close.sgml,v 1.26 2007/05/15 19:13:55 neilc Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/close.sgml,v 1.28 2008/11/14 10:22:45 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CLOSE">
  <refmeta>
   <refentrytitle id="SQL-CLOSE-TITLE">CLOSE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -90,6 +91,12 @@ CLOSE { <replaceable class="PARAMETER">name</replaceable> | ALL }
   <para>
    You can see all available cursors by querying the <link
    linkend="view-pg-cursors"><structname>pg_cursors</></> system view.
+  </para>
+
+  <para>
+   If a cursor is closed after a savepoint which is later rolled back,
+   the <command>CLOSE</command> is not rolled back; that is, the cursor
+   remains closed.
   </para>
  </refsect1>
 

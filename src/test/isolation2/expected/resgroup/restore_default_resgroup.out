@@ -1,46 +1,49 @@
 -- enable resource group and restart cluster.
 -- start_ignore
 ! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
-20170816:22:31:43:177045 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully
+20170830:00:35:08:440358 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_group_cpu_limit -v 0.9'
 
 ! gpconfig -c gp_resource_group_memory_limit -v 0.9;
-20170816:22:31:44:177128 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully
+20170830:00:35:09:440440 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_group_memory_limit -v 0.9'
 
-! gpconfig -c max_connections -v 600 -m 150;
-20170816:22:31:45:177210 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully
+! gpconfig -c gp_resource_manager -v group;
+20170830:00:35:10:440522 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_manager -v group'
+
+! gpconfig -c max_connections -v 100 -m 40;
+20170830:00:35:11:440726 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully with parameters '-c max_connections -v 100 -m 40'
 
 ! gpstop -rai;
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Gathering information and validating the environment...
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Obtaining Segment details from master...
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.0.0-beta.7+dev.71.gb28abc3 build dev'
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-There are 0 connections to the database
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Master host=sdw6
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
-20170816:22:31:45:177292 gpstop:sdw6:gpadmin-[INFO]:-Master segment instance directory=/data1/tpz/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20170816:22:31:46:177292 gpstop:sdw6:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20170816:22:31:46:177292 gpstop:sdw6:gpadmin-[INFO]:-Terminating processes for segment /data1/tpz/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20170816:22:31:46:177292 gpstop:sdw6:gpadmin-[INFO]:-No standby master host configured
-20170816:22:31:46:177292 gpstop:sdw6:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
-20170816:22:31:46:177292 gpstop:sdw6:gpadmin-[INFO]:-0.00% of jobs completed
-20170816:22:31:56:177292 gpstop:sdw6:gpadmin-[INFO]:-100.00% of jobs completed
-20170816:22:31:56:177292 gpstop:sdw6:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
-20170816:22:31:56:177292 gpstop:sdw6:gpadmin-[INFO]:-0.00% of jobs completed
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-100.00% of jobs completed
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-----------------------------------------------------
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-   Segments stopped successfully      = 6
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-----------------------------------------------------
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpmmon process found
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20170816:22:32:06:177292 gpstop:sdw6:gpadmin-[INFO]:-Restarting System...
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Gathering information and validating the environment...
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Obtaining Segment details from master...
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.0.0-beta.9+dev.45.g52ba809 build dev'
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-There are 0 connections to the database
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Master host=sdw6
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20170830:00:35:12:440808 gpstop:sdw6:gpadmin-[INFO]:-Master segment instance directory=/data1/tpz/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20170830:00:35:13:440808 gpstop:sdw6:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20170830:00:35:13:440808 gpstop:sdw6:gpadmin-[INFO]:-Terminating processes for segment /data1/tpz/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20170830:00:35:13:440808 gpstop:sdw6:gpadmin-[INFO]:-No standby master host configured
+20170830:00:35:13:440808 gpstop:sdw6:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20170830:00:35:13:440808 gpstop:sdw6:gpadmin-[INFO]:-0.00% of jobs completed
+20170830:00:35:23:440808 gpstop:sdw6:gpadmin-[INFO]:-100.00% of jobs completed
+20170830:00:35:23:440808 gpstop:sdw6:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20170830:00:35:23:440808 gpstop:sdw6:gpadmin-[INFO]:-0.00% of jobs completed
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-100.00% of jobs completed
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-----------------------------------------------------
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-----------------------------------------------------
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpmmon process found
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20170830:00:35:33:440808 gpstop:sdw6:gpadmin-[INFO]:-Restarting System...
 
 -- end_ignore
 
@@ -62,10 +65,10 @@ gp_resource_group_memory_limit
 show max_connections;
 max_connections
 ---------------
-150            
+40             
 (1 row)
 
 -- by default admin_group has concurrency set to -1 which leads to
 -- very small memory quota for each resgroup slot, correct it.
-ALTER RESOURCE GROUP admin_group SET concurrency 150;
+ALTER RESOURCE GROUP admin_group SET concurrency 40;
 ALTER

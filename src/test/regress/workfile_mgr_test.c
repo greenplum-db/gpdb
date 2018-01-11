@@ -3,7 +3,12 @@
  * workfile_mgr_test.c
  *	 Unit tests for workfile manager and cache.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/test/regress/workfile_mgr_test.c
  *
  *-------------------------------------------------------------------------
  */
@@ -12,6 +17,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "executor/execWorkfile.h"

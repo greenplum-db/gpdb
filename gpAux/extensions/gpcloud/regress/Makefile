@@ -18,7 +18,7 @@ installcheck:
 	@perl -p -i -e 's/\@config_file\@/$(config_file)/;s/\@read_prefix\@/$(read_prefix)/;s/\@write_prefix\@/$(write_prefix)/;s/\@write_encrypt_prefix\@/$(write_encrypt_prefix)/' source_replaced/input/*.source source_replaced/output/*.source
 	@cp $(top_builddir)/src/test/regress/init_file source_replaced/init_file
 	@perl -p -i -e 's/-- end_matchsubs/\nm\/\\(\.\*\\.cpp:\\d\+\\)\/\ns\/\\(\.\*\\.cpp:\\d\+\\)\/\/\n-- end_matchsubs/' source_replaced/init_file
-	-$(pgxs_dir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=regress_schedule --init-file=source_replaced/init_file --srcdir=source_replaced --inputdir=source_replaced --outputdir=.
+	-$(pgxs_dir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=regress_schedule --init-file=source_replaced/init_file --inputdir=source_replaced --outputdir=.
 	@pkill -xf "ssh -CfNqT -D 1080 localhost"
 	@echo "Regression ends:" `date` ]
 

@@ -1,8 +1,62 @@
+-- Tests for old bugs related to OLAP queries.
+-- First create a schema to contain the test tables, and few common test
+-- tables that are shared by several test queries.
+create schema bfv_olap;
+set search_path=bfv_olap;
+create table customer
+(
+  cn int not null,
+  cname text not null,
+  cloc text,
+  primary key (cn)
+) distributed by (cn);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "customer_pkey" for table "customer"
+insert into customer values
+  ( 1, 'Macbeth', 'Inverness'),
+  ( 2, 'Duncan', 'Forres'),
+  ( 3, 'Lady Macbeth', 'Inverness'),
+  ( 4, 'Witches, Inc', 'Lonely Heath');
+create table vendor
+(
+  vn int not null,
+  vname text not null,
+  vloc text,
+  primary key (vn)
+) distributed by (vn);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "vendor_pkey" for table "vendor"
+insert into vendor values
+  ( 10, 'Witches, Inc', 'Lonely Heath'),
+  ( 20, 'Lady Macbeth', 'Inverness'),
+  ( 30, 'Duncan', 'Forres'),
+  ( 40, 'Macbeth', 'Inverness'),
+  ( 50, 'Macduff', 'Fife');
+create table sale
+(
+  cn int not null,
+  vn int not null,
+  pn int not null,
+  dt date not null,
+  qty int not null,
+  prc float not null,
+  primary key (cn, vn, pn)
+) distributed by (cn,vn,pn);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sale_pkey" for table "sale"
+insert into sale values
+  ( 2, 40, 100, '1401-1-1', 1100, 2400),
+  ( 1, 10, 200, '1401-3-1', 1, 0),
+  ( 3, 40, 200, '1401-4-1', 1, 0),
+  ( 1, 20, 100, '1401-5-1', 1, 0),
+  ( 1, 30, 300, '1401-5-2', 1, 0),
+  ( 1, 50, 400, '1401-6-1', 1, 0),
+  ( 2, 50, 400, '1401-6-1', 1, 0),
+  ( 1, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 600, '1401-6-1', 12, 5),
+  ( 4, 40, 700, '1401-6-1', 1, 1),
+  ( 4, 40, 800, '1401-6-1', 1, 1);
 --
 -- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
 --
-create schema bfv_olap;
-set search_path=bfv_olap;
 -- SETUP
 -- start_ignore
 drop table if exists toy;
@@ -19,7 +73,15 @@ create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
 -- TEST
 select id, val, sum(val) over (w), mysum1(val) over (w), mysum2(val) over (w) from toy window w as (order by id rows 2 preceding);
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ id | val | sum | mysum1 | mysum2 
+----+-----+-----+--------+--------
+  1 |   1 |   1 |      1 |      1
+  2 |   2 |   3 |      3 |      3
+  3 |   3 |   6 |      6 |      6
+  4 |   4 |   9 |      9 |      9
+  5 |   5 |  12 |     12 |     12
+(5 rows)
+
 -- CLEANUP
 -- start_ignore
 drop aggregate if exists mysum1(int4);
@@ -72,68 +134,58 @@ create aggregate ema(float, float) (
     finalfunc = ema_fin,
     initcond = '(,)');
 create table ema_test (k int, v float ) distributed by (k);
-insert into ema_test select i, 4*random() + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
--- TEST
-select k, v, ema(v, 0.9) over (order by k rows between unbounded preceding and current row) from ema_test order by k;
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
--- CLEANUP
--- start_ignore
-drop table if exists ema_test cascade;
-drop aggregate if exists ema(float, float);
-drop function if exists ema_fin(t ema_type) cascade;
-drop function if exists ema_adv(t ema_type, v float, x float) cascade;
-drop type if exists ema_type cascade;
--- end_ignore
---
--- Test case errors out when we define aggregates without preliminary functions and use it as an aggregate derived window function.
---
--- SETUP
--- start_ignore
-drop type if exists ema_type cascade;
-NOTICE:  type "ema_type" does not exist, skipping
-drop function if exists ema_adv(t ema_type, v float, x float) cascade;
-ERROR:  type "ema_type" does not exist
-drop function if exists ema_fin(t ema_type) cascade;
-ERROR:  type "ema_type" does not exist
-drop aggregate if exists ema(float, float);
-NOTICE:  aggregate ema(pg_catalog.float8,pg_catalog.float8) does not exist, skipping
-drop table if exists ema_test cascade;
-NOTICE:  table "ema_test" does not exist, skipping
--- end_ignore
-create type ema_type as (x float, e float);
-create function ema_adv(t ema_type, v float, x float)
-    returns ema_type
-    as $$
-        begin
-            if t.e is null then
-                t.e = v;
-                t.x = x;
-            else
-                if t.x != x then
-                    raise exception 'ema smoothing x may not vary';
-                end if;
-                t.e = t.e + (v - t.e) * t.x;
-            end if;
-            return t;
-        end;
-    $$ language plpgsql;
-create function ema_fin(t ema_type)
-    returns float
-    as $$
-       begin
-           return t.e;
-       end;
-    $$ language plpgsql;
-create aggregate ema(float, float) (
-    sfunc = ema_adv,
-    stype = ema_type,
-    finalfunc = ema_fin,
-    initcond = '(,)');
-create table ema_test (k int, v float ) distributed by (k);
-insert into ema_test select i, 4*random() + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
+insert into ema_test select i, 4*(i::float/20) + 10.0*(1+cos(radians(i*5))) from generate_series(0,19) i(i);
 -- TEST
 select k, v, ema(v, 0.9) over (order by k) from ema_test order by k;
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ k  |        v         |       ema        
+----+------------------+------------------
+  0 |               20 |               20
+  1 | 20.1619469809175 | 20.1457522828257
+  2 | 20.2480775301221 | 20.2378450053924
+  3 | 20.2592582628907 | 20.2571169371409
+  4 | 20.1969262078591 | 20.2029452807873
+  5 | 20.0630778703665 | 20.0770646114086
+  6 | 19.8602540378444 | 19.8819350952008
+  7 | 19.5915204428899 |  19.620561908121
+  8 | 19.2604444311898 | 19.2964561788829
+  9 | 18.8710678118655 | 18.9136066485672
+ 10 | 18.4278760968654 | 18.4764491520356
+ 11 | 17.9357643635105 |  17.989832842363
+ 12 |             17.4 | 17.4589832842363
+ 13 |  16.826182617407 | 16.8894626840899
+ 14 | 16.2202014332567 |   16.28712755834
+ 15 | 15.5881904510252 | 15.6580841617567
+ 16 | 14.9364817766693 |  15.008642015178
+ 17 | 14.2715574274766 | 14.3452658862467
+ 18 |             13.6 | 13.6745265886247
+ 19 | 12.9284425725234 | 13.0030509741335
+(20 rows)
+
+select k, v, ema(v, 0.9) over (order by k rows between unbounded preceding and current row) from ema_test order by k;
+ k  |        v         |       ema        
+----+------------------+------------------
+  0 |               20 |               20
+  1 | 20.1619469809175 | 20.1457522828257
+  2 | 20.2480775301221 | 20.2378450053924
+  3 | 20.2592582628907 | 20.2571169371409
+  4 | 20.1969262078591 | 20.2029452807873
+  5 | 20.0630778703665 | 20.0770646114086
+  6 | 19.8602540378444 | 19.8819350952008
+  7 | 19.5915204428899 |  19.620561908121
+  8 | 19.2604444311898 | 19.2964561788829
+  9 | 18.8710678118655 | 18.9136066485672
+ 10 | 18.4278760968654 | 18.4764491520356
+ 11 | 17.9357643635105 |  17.989832842363
+ 12 |             17.4 | 17.4589832842363
+ 13 |  16.826182617407 | 16.8894626840899
+ 14 | 16.2202014332567 |   16.28712755834
+ 15 | 15.5881904510252 | 15.6580841617567
+ 16 | 14.9364817766693 |  15.008642015178
+ 17 | 14.2715574274766 | 14.3452658862467
+ 18 |             13.6 | 13.6745265886247
+ 19 | 12.9284425725234 | 13.0030509741335
+(20 rows)
+
 -- CLEANUP
 -- start_ignore
 drop table if exists ema_test cascade;
@@ -177,31 +229,7 @@ SELECT MAX(a) AS m FROM r GROUP BY b;
 ---
 (0 rows)
 
- 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
---
 -- ORDER BY clause includes some grouping column or not
---
--- SETUP
--- start_ignore
-DROP TABLE IF EXISTS r;
-NOTICE:  table "r" does not exist, skipping
--- end_ignore
-CREATE TABLE r
-(
-    a INT NOT NULL, 
-    b INT, 
-    c CHARACTER VARYING(200),  
-    d NUMERIC(10,0), 
-    e DATE
-) DISTRIBUTED BY (a,b);
-ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-NOTICE:  updating distribution policy to match new primary key
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "r_pkey" for table "r"
---TEST
 SELECT MAX(a) AS m FROM R GROUP BY b ORDER BY m,b;
  m 
 ---
@@ -217,30 +245,7 @@ SELECT MAX(a) AS m FROM R GROUP BY b,e ORDER BY m;
 ---
 (0 rows)
 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS r;
--- end_ignore
---
 -- ORDER BY 1 or more columns
---
--- SETUP
--- start_ignore
-DROP TABLE IF EXISTS r;
-NOTICE:  table "r" does not exist, skipping
--- end_ignore
-CREATE TABLE r
-(
-    a INT NOT NULL, 
-    b INT, 
-    c CHARACTER VARYING(200),  
-    d NUMERIC(10,0), 
-    e DATE
-) DISTRIBUTED BY (a,b);
-ALTER TABLE r ADD CONSTRAINT PKEY PRIMARY KEY (b);
-NOTICE:  updating distribution policy to match new primary key
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "r_pkey" for table "r"
---TEST
 SELECT MAX(a),d,e AS m FROM r GROUP BY b,d,e ORDER BY m,e,d;
  max | d | m 
 -----+---+---
@@ -355,50 +360,6 @@ drop table if exists t;
 --
 -- Passing through distribution matching type in default implementation
 --
--- SETUP
--- start_ignore
-drop table if exists customer;
-NOTICE:  table "customer" does not exist, skipping
-drop table if exists sale;
-NOTICE:  table "sale" does not exist, skipping
--- end_ignore
-create table customer
-(
-	cn int not null,
-	cname text not null,
-	cloc text,
-	primary key (cn)
-) distributed by (cn);
-NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "customer_pkey" for table "customer"
-insert into customer values
-  ( 1, 'Macbeth', 'Inverness'),
-  ( 2, 'Duncan', 'Forres'),
-  ( 3, 'Lady Macbeth', 'Inverness'),
-  ( 4, 'Witches, Inc', 'Lonely Heath');
-create table sale
-(
-	cn int not null,
-	vn int not null,
-	pn int not null,
-	dt date not null,
-	qty int not null,
-	prc float not null,
-	primary key (cn, vn, pn)
-) distributed by (cn,vn,pn);
-NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sale_pkey" for table "sale"
-insert into sale values
-  ( 2, 40, 100, '1401-1-1', 1100, 2400),
-  ( 1, 10, 200, '1401-3-1', 1, 0),
-  ( 3, 40, 200, '1401-4-1', 1, 0),
-  ( 1, 20, 100, '1401-5-1', 1, 0),
-  ( 1, 30, 300, '1401-5-2', 1, 0),
-  ( 1, 50, 400, '1401-6-1', 1, 0),
-  ( 2, 50, 400, '1401-6-1', 1, 0),
-  ( 1, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 600, '1401-6-1', 12, 5),
-  ( 4, 40, 700, '1401-6-1', 1, 1),
-  ( 4, 40, 800, '1401-6-1', 1, 1);
   
 -- TEST
 select cname,
@@ -422,13 +383,8 @@ order by 1, 2;
  Witches, Inc |    1
 (12 rows)
 
--- CLEANUP
--- start_ignore
-drop table if exists customer;
-drop table if exists sale;
--- end_ignore
 --
--- Optimzier query crashing for logical window with no window functions
+-- Optimizer query crashing for logical window with no window functions
 --
 -- SETUP
 create table mpp23240(a int, b int, c int, d int, e int, f int);
@@ -452,9 +408,10 @@ from (select * from mpp23240 where f > 10) x;
 -- CLEANUP
 -- start_ignore
 drop table mpp23240;
-drop schema if exists bfv_olap;
 -- end_ignore
+--
 -- Test for the bug reported at https://github.com/greenplum-db/gpdb/issues/2236
+--
 create table test1 (x int, y int, z double precision);
 insert into test1 select a, b, a*10 + b from generate_series(1, 5) a, generate_series(1, 5) b;
 select sum(z) over (partition by x) as sumx, sum(z) over (partition by y) as sumy from test1;
@@ -488,6 +445,101 @@ select sum(z) over (partition by x) as sumx, sum(z) over (partition by y) as sum
 (25 rows)
 
 drop table test1;
+--
+-- This failed at one point because of an over-zealous syntax check, with
+-- "window functions not allowed in WHERE clause" error.
+--
+select sum(g) from generate_series(1, 5) g
+where g in (
+  select rank() over (order by x) from generate_series(1,5) x
+);
+ sum 
+-----
+  15
+(1 row)
+
+--
+-- This caused a crash in ROLLUP planning at one point.
+--
+SELECT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+ vn 
+----
+ 40
+   
+   
+ 20
+   
+   
+ 30
+   
+   
+   
+ 10
+ 40
+   
+   
+ 50
+   
+   
+ 30
+   
+   
+ 40
+   
+   
+   
+   
+   
+   
+ 30
+   
+ 50
+   
+ 30
+ 40
+   
+(34 rows)
+
+SELECT DISTINCT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+ vn 
+----
+ 10
+ 20
+ 30
+ 40
+ 50
+   
+(6 rows)
+
+--
+-- Test window function with constant PARTITION BY
+--
+CREATE TABLE testtab (a int4);
+insert into testtab values (1), (2);
+SELECT count(*) OVER (PARTITION BY 1) AS count FROM testtab;
+ count 
+-------
+     2
+     2
+(2 rows)
+
+-- Another variant, where the PARTITION BY is not a literal, but the
+-- planner can deduce that it's a constant through equivalence classes.
+SELECT 1
+FROM (
+  SELECT a, count(*) OVER (PARTITION BY a) FROM (VALUES (1,1)) AS foo(a)
+) AS sup(c, d)
+WHERE c = 87 ;
+ ?column? 
+----------
+(0 rows)
+
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

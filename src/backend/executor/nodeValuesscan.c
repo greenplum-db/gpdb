@@ -5,12 +5,13 @@
  *	  ("VALUES (...), (...), ..." in rangetable).
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeValuesscan.c,v 1.8 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeValuesscan.c,v 1.9 2009/01/01 17:23:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -277,8 +278,6 @@ ExecInitValuesScan(ValuesScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
 	ExecAssignScanProjectionInfo(&scanstate->ss);
 
-	initGpmonPktForValuesScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
-	
 	return scanstate;
 }
 
@@ -352,15 +351,4 @@ ExecValuesReScan(ValuesScanState *node, ExprContext *exprCtxt)
 	/*node->ss.ps.ps_TupFromTlist = false;*/
 
 	node->curr_idx = -1;
-}
-
-void
-initGpmonPktForValuesScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	RangeTblEntry *rte;
-	Assert(planNode != NULL && gpmon_pkt != NULL);
-
-	rte = rt_fetch(((ValuesScan *)planNode)->scan.scanrelid, estate->es_range_table);
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

@@ -3,7 +3,7 @@
  * cdb_lockbox.h
  *	  Definitions for cdb_lockbox.c
  *
- * Portions Copyright (c) 2016, Pivotal Software Inc
+ * Portions Copyright (c) 2016-Present Pivotal Software, Inc.
  *
  * src/bin/pg_dump/cdb/cdb_lockbox.h
  *

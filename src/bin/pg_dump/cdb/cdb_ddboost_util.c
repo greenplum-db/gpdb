@@ -48,8 +48,8 @@
 #define DDWRITE(p, s, n, fh, compress) (((compress) == 1)? (GZWRITE(p, s, n, fh)) : (fwrite(p, s, n, fh)))
 #define DDCLOSE(fh, compress) (((compress) == 1) ? (GZCLOSE(fh)) : (fclose(fh)))
 #define DDGETS(p, n, fh, compress) (((compress) == 1) ? (GZGETS(p, n, fh)) : (fgets(p, n, fh)))
-#define DDOPEN(path, mode, compress) (((compress) == 1) ? (GZOPEN(path, mode)) : (fopen(path, mode)))
-#define DDDOPEN(path, mode, compress) (((compress) == 1) ? (GZDOPEN(path, mode)) : (fdopen(path, mode)))
+#define DDOPEN(path, mode, compress) (((compress) == 1) ? ((void *)GZOPEN(path, mode)) : ((void *)fopen(path, mode)))
+#define DDDOPEN(path, mode, compress) (((compress) == 1) ? ((void *)GZDOPEN(path, mode)) : ((void *)fdopen(path, mode)))
 
 #ifdef USE_DDBOOST
 #include "ddp_api.h"

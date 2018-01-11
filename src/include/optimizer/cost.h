@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.93 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.97 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,6 +30,13 @@
 #define DEFAULT_CPU_OPERATOR_COST  0.0025
 
 #define DEFAULT_EFFECTIVE_CACHE_SIZE  16384		/* measured in pages */
+
+typedef enum
+{
+	CONSTRAINT_EXCLUSION_OFF,	/* do not use c_e */
+	CONSTRAINT_EXCLUSION_ON,	/* apply c_e to all rels */
+	CONSTRAINT_EXCLUSION_PARTITION		/* apply c_e to otherrels only */
+} ConstraintExclusionType;
 
 
 /*
@@ -70,7 +78,7 @@ extern bool enable_groupagg;
 extern bool enable_nestloop;
 extern bool enable_mergejoin;
 extern bool enable_hashjoin;
-extern bool constraint_exclusion;
+extern int	constraint_exclusion;
 
 extern Cost disable_cost;
 
@@ -118,32 +126,36 @@ extern void cost_agg(Path *path, PlannerInfo *root,
 					 Cost input_startup_cost, Cost input_total_cost,
 					 double input_tuples, double input_width, double hash_batches,
 					 double hashentry_width, bool hash_streaming);
+extern void cost_windowagg(Path *path, PlannerInfo *root,
+			   int numWindowFuncs, int numPartCols, int numOrderCols,
+			   Cost input_startup_cost, Cost input_total_cost,
+			   double input_tuples);
 extern void cost_group(Path *path, PlannerInfo *root,
 		   int numGroupCols, double numGroups,
 		   Cost input_startup_cost, Cost input_total_cost,
 		   double input_tuples);
-extern void cost_window(Path *path, PlannerInfo *root,
-		   int numOrderCols,
-		   Cost input_startup_cost, Cost input_total_cost,
-		   double input_tuples);
 extern void cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost, double ntuples, int width);
-extern void cost_nestloop(NestPath *path, PlannerInfo *root);
-extern void cost_mergejoin(MergePath *path, PlannerInfo *root);
-extern void cost_hashjoin(HashPath *path, PlannerInfo *root);
+extern void cost_nestloop(NestPath *path, PlannerInfo *root,
+			  SpecialJoinInfo *sjinfo);
+extern void cost_mergejoin(MergePath *path, PlannerInfo *root,
+			   SpecialJoinInfo *sjinfo);
+extern void cost_hashjoin(HashPath *path, PlannerInfo *root,
+			  SpecialJoinInfo *sjinfo);
+extern void cost_subplan(PlannerInfo *root, SubPlan *subplan, Plan *plan);
 extern void cost_qual_eval(QualCost *cost, List *quals, PlannerInfo *root);
 extern void cost_qual_eval_node(QualCost *cost, Node *qual, PlannerInfo *root);
-extern Cost get_initplan_cost(PlannerInfo *root, SubPlan *subplan);
 extern void set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 						   RelOptInfo *outer_rel,
 						   RelOptInfo *inner_rel,
-						   JoinType jointype,
+						   SpecialJoinInfo *sjinfo,
 						   List *restrictlist);
 extern void set_function_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_table_function_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_rel_width(PlannerInfo *root, RelOptInfo *rel);
 extern void set_values_size_estimates(PlannerInfo *root, RelOptInfo *rel);
-extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel, Plan *cteplan);
+extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel,
+					   Plan *cteplan);
 
 /* Additional costsize.c prototypes for CDB incremental cost functions. */
 extern Cost incremental_hashjoin_cost(double rows, 
@@ -160,12 +172,15 @@ extern Selectivity clauselist_selectivity(PlannerInfo *root,
 					   List *clauses,
 					   int varRelid,
 					   JoinType jointype,
+					   SpecialJoinInfo *sjinfo,
 					   bool use_damping);
 extern Selectivity clause_selectivity(PlannerInfo *root,
 				   Node *clause,
 				   int varRelid,
 				   JoinType jointype,
+				   SpecialJoinInfo *sjinfo,
 				   bool use_damping);
 extern int planner_segment_count(void);
 extern double global_work_mem(PlannerInfo *root);
+
 #endif   /* COST_H */

@@ -23,7 +23,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.40.2.2 2009/07/29 15:57:23 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.50 2009/06/11 14:49:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -39,16 +39,17 @@
 #include "miscadmin.h"
 #include "storage/procarray.h"
 #include "utils/combocid.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
-#include "cdb/cdbtm.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "utils/faultinjector.h"
-#include "utils/sharedsnapshot.h"
 
 #include "access/xact.h"		/* setting the shared xid */
 
+#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "utils/faultinjector.h"
+#include "utils/sharedsnapshot.h"
 
 /* Our shared memory area */
 typedef struct ProcArrayStruct
@@ -70,6 +71,7 @@ static ProcArrayStruct *procArray;
 
 /* counters for XidCache measurement */
 static long xc_by_recent_xmin = 0;
+static long xc_by_known_xact = 0;
 static long xc_by_my_xact = 0;
 static long xc_by_latest_xid = 0;
 static long xc_by_main_xid = 0;
@@ -78,6 +80,7 @@ static long xc_no_overflow = 0;
 static long xc_slow_answer = 0;
 
 #define xc_by_recent_xmin_inc()		(xc_by_recent_xmin++)
+#define xc_by_known_xact_inc()		(xc_by_known_xact++)
 #define xc_by_my_xact_inc()			(xc_by_my_xact++)
 #define xc_by_latest_xid_inc()		(xc_by_latest_xid++)
 #define xc_by_main_xid_inc()		(xc_by_main_xid++)
@@ -89,6 +92,7 @@ static void DisplayXidCache(void);
 #else							/* !XIDCACHE_DEBUG */
 
 #define xc_by_recent_xmin_inc()		((void) 0)
+#define xc_by_known_xact_inc()		((void) 0)
 #define xc_by_my_xact_inc()			((void) 0)
 #define xc_by_latest_xid_inc()		((void) 0)
 #define xc_by_main_xid_inc()		((void) 0)
@@ -460,6 +464,17 @@ TransactionIdIsInProgress(TransactionId xid)
 	}
 
 	/*
+	 * We may have just checked the status of this transaction, so if it is
+	 * already known to be completed, we can fall out without any access to
+	 * shared memory.
+	 */
+	if (TransactionIdIsKnownCompleted(xid))
+	{
+		xc_by_known_xact_inc();
+		return false;
+	}
+
+	/*
 	 * Also, we can handle our own transaction (and subtransactions) without
 	 * any access to shared memory.
 	 */
@@ -745,6 +760,18 @@ HasSerializableBackends(bool allDbs)
  *
  * GPDB: ignoreVacuum is ignored.
  *
+ * Note: it's possible for the calculated value to move backwards on repeated
+ * calls. The calculated value is conservative, so that anything older is
+ * definitely not considered as running by anyone anymore, but the exact
+ * value calculated depends on a number of things. For example, if allDbs is
+ * TRUE and there are no transactions running in the current database,
+ * GetOldestXmin() returns latestCompletedXid. If a transaction begins after
+ * that, its xmin will include in-progress transactions in other databases
+ * that started earlier, so another call will return an lower value. The
+ * return value is also adjusted with vacuum_defer_cleanup_age, so increasing
+ * that setting on the fly is an easy way to have GetOldestXmin() move
+ * backwards.
+ *
  * Note: we include all currently running xids in the set of considered xids.
  * This ensures that if a just-started xact has not yet set its snapshot,
  * when it does set the snapshot it cannot set xmin less than what we compute.
@@ -918,6 +945,10 @@ GetDistributedSnapshotMaxCount(void)
 	return 0;
 }
 
+/*
+ * Fill in the array of in-progress distributed XIDS in 'snapshot' from the
+ * information that the QE sent us (if any).
+ */
 static void
 FillInDistributedSnapshot(Snapshot snapshot)
 {
@@ -939,14 +970,11 @@ FillInDistributedSnapshot(Snapshot snapshot)
 
 	case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
 		/*
-		 * Create distributed snapshot since we are the master (QD).
+		 * GetSnapshotData() should've acquired the distributed snapshot
+		 * while holding ProcArrayLock, not here.
 		 */
-		Assert(snapshot->distribSnapshotWithLocalMapping.ds.inProgressXidArray != NULL);
-		snapshot->haveDistribSnapshot = createDtxSnapshot(&snapshot->distribSnapshotWithLocalMapping);
-		
-		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-				(errmsg("Got distributed snapshot from DistributedSnapshotWithLocalXids_Create = %s",
-						(snapshot->haveDistribSnapshot ? "true" : "false"))));
+		elog(ERROR, "FillInDistributedSnapshot called in context '%s'",
+			 DtxContextToString(DistributedTransactionContext));
 		break;
 
 	case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
@@ -967,7 +995,6 @@ FillInDistributedSnapshot(Snapshot snapshot)
 				Assert(ds->xminAllDistributedSnapshots);
 				Assert(ds->xminAllDistributedSnapshots <= ds->xmin);
 
-				Assert(snapshot->distribSnapshotWithLocalMapping.ds.maxCount > 0);
 				DistributedSnapshot_Copy(&snapshot->distribSnapshotWithLocalMapping.ds, ds);
 			}
 			else
@@ -977,12 +1004,12 @@ FillInDistributedSnapshot(Snapshot snapshot)
 			}
 		}
 		break;
-	
+
 	case DTX_CONTEXT_QE_PREPARED:
 		elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
 			 DtxContextToString(DistributedTransactionContext));
 		break;
-	
+
 	default:
 		elog(FATAL, "Unrecognized DTX transaction context: %d",
 			(int) DistributedTransactionContext);
@@ -993,9 +1020,7 @@ FillInDistributedSnapshot(Snapshot snapshot)
 	 * Nice that we may have collected it, but turn it off...
 	 */
 	if (Debug_disable_distributed_snapshot)
-	{
 		snapshot->haveDistribSnapshot = false;
-	}
 }
 
 /*
@@ -1042,16 +1067,18 @@ QEwriterSnapshotUpToDate(void)
  *
  * We also update the following backend-global variables:
  *		TransactionXmin: the oldest xmin of any snapshot in use in the
- *			current transaction (this is the same as MyProc->xmin).  This
- *			is just the xmin computed for the first, serializable snapshot.
+ *			current transaction (this is the same as MyProc->xmin).
  *		RecentXmin: the xmin computed for the most recent snapshot.  XIDs
  *			older than this are known not running any more.
  *		RecentGlobalXmin: the global xmin (oldest TransactionXmin across all
  *			running transactions, except those running LAZY VACUUM).  This is
  *			the same computation done by GetOldestXmin(true, true).
+ *
+ * Note: this function should probably not be called with an argument that's
+ * not statically allocated (see xip allocation below).
  */
 Snapshot
-GetSnapshotData(Snapshot snapshot, bool serializable)
+GetSnapshotData(Snapshot snapshot)
 {
 	ProcArrayStruct *arrayP = procArray;
 	TransactionId xmin;
@@ -1222,6 +1249,8 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 
 				snapshot->curcid = SharedLocalSnapshotSlot->snapshot.curcid;
 
+				snapshot->subxcnt = -1;
+
 				/* combocid */
 				if (usedComboCids != SharedLocalSnapshotSlot->combocidcnt)
 				{
@@ -1335,15 +1364,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_READER);
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
-	/* Serializable snapshot must be computed before any other... */
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("GetSnapshotData serializable %s, xmin %u",
-					(serializable ? "true" : "false"),
-					MyProc->xmin)));
-	Assert(serializable ?
-		   !TransactionIdIsValid(MyProc->xmin) :
-		   TransactionIdIsValid(MyProc->xmin));
-
 	/*
 	 * It is sufficient to get shared lock on ProcArrayLock, even if we are
 	 * going to set MyProc->xmin.
@@ -1398,7 +1418,18 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	 * including distributed transactions in the local snapshot via their
 	 * local xids.
 	 */
-	FillInDistributedSnapshot(snapshot);
+	if (DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
+	{
+		snapshot->haveDistribSnapshot = CreateDistributedSnapshot(&snapshot->distribSnapshotWithLocalMapping);
+
+		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+				(errmsg("Got distributed snapshot from DistributedSnapshotWithLocalXids_Create = %s",
+						(snapshot->haveDistribSnapshot ? "true" : "false"))));
+
+		/* Nice that we may have collected it, but turn it off... */
+		if (Debug_disable_distributed_snapshot)
+			snapshot->haveDistribSnapshot = false;
+	}
 
 	/*
 	 * Spin over procArray checking xid, xmin, and subxids.  The goal is to
@@ -1477,7 +1508,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		}
 	}
 
-	if (serializable)
+	if (!TransactionIdIsValid(MyProc->xmin))
 	{
 		/* Not that these values are not set atomically. However,
 		 * each of these assignments is itself assumed to be atomic. */
@@ -1493,6 +1524,16 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	}
 
 	LWLockRelease(ProcArrayLock);
+
+	/*
+	 * Fill in the distributed snapshot information we received from the the QD.
+	 * Unless we are the QD, in which case we already created a new distributed
+	 * snapshot above.
+	 *
+	 * (We do this after releasing ProcArrayLock, reduce contention.)
+	 */
+	if (DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
+		FillInDistributedSnapshot(snapshot);
 
 	/*
 	 * Update globalxmin to include actual process xids.  This is a slightly
@@ -1512,6 +1553,14 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	snapshot->subxcnt = subcount;
 
 	snapshot->curcid = GetCurrentCommandId(false);
+
+	/*
+	 * This is a new snapshot, so set both refcounts are zero, and mark it as
+	 * not copied in persistent memory.
+	 */
+	snapshot->active_count = 0;
+	snapshot->regd_count = 0;
+	snapshot->copied = false;
 
 	/*
 	 * MPP Addition. If we are the chief then we'll save our local snapshot
@@ -1637,12 +1686,13 @@ HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
  * MPP: Special code to update the command id in the SharedLocalSnapshot
  * when we are in SERIALIZABLE isolation mode.
  */
-void UpdateSerializableCommandId(void)
+void
+UpdateSerializableCommandId(CommandId curcid)
 {
 	if ((DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
 		 DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER) &&
 		 SharedLocalSnapshotSlot != NULL &&
-		 SerializableSnapshot != NULL)
+		 FirstSnapshotSet)
 	{
 		int combocidSize;
 
@@ -1661,11 +1711,11 @@ void UpdateSerializableCommandId(void)
 		}
 
 		ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				(errmsg("[Distributed Snapshot #%u] *Update Serializable Command Id* segment currcid = %d, QDcid = %d, SerializableSnapshot currcid = %d, Shared currcid = %d (gxid = %u, '%s')",
+				(errmsg("[Distributed Snapshot #%u] *Update Serializable Command Id* segment currcid = %d, QDcid = %d, TransactionSnapshot currcid = %d, Shared currcid = %d (gxid = %u, '%s')",
 						QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
 						QEDtxContextInfo.curcid,
 						SharedLocalSnapshotSlot->QDcid,
-						SerializableSnapshot->curcid,
+						curcid,
 						SharedLocalSnapshotSlot->snapshot.curcid,
 						getDistributedTransactionId(),
 						DtxContextToString(DistributedTransactionContext))));
@@ -1680,7 +1730,7 @@ void UpdateSerializableCommandId(void)
 		memcpy((void *)SharedLocalSnapshotSlot->combocids, comboCids,
 			   combocidSize * sizeof(ComboCidKeyData));
 
-		SharedLocalSnapshotSlot->snapshot.curcid = SerializableSnapshot->curcid;
+		SharedLocalSnapshotSlot->snapshot.curcid = curcid;
 		SharedLocalSnapshotSlot->QDcid = QEDtxContextInfo.curcid;
 		SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
 
@@ -1777,25 +1827,42 @@ IsBackendPid(int pid)
 /*
  * GetCurrentVirtualXIDs -- returns an array of currently active VXIDs.
  *
- * The array is palloc'd and is terminated with an invalid VXID.
+ * The array is palloc'd. The number of valid entries is returned into *nvxids.
  *
- * If limitXmin is not InvalidTransactionId, we skip any backends
- * with xmin >= limitXmin.	If allDbs is false, we skip backends attached
- * to other databases.  If excludeVacuum isn't zero, we skip processes for
- * which (excludeVacuum & vacuumFlags) is not zero.  Also, our own process
- * is always skipped.
+ * The arguments allow filtering the set of VXIDs returned.  Our own process
+ * is always skipped.  In addition:
+ *	If limitXmin is not InvalidTransactionId, skip processes with
+ *		xmin > limitXmin.
+ *	If excludeXmin0 is true, skip processes with xmin = 0.
+ *	If allDbs is false, skip processes attached to other databases.
+ *	If excludeVacuum isn't zero, skip processes for which
+ *		(vacuumFlags & excludeVacuum) is not zero.
+ *
+ * Note: the purpose of the limitXmin and excludeXmin0 parameters is to
+ * allow skipping backends whose oldest live snapshot is no older than
+ * some snapshot we have.  Since we examine the procarray with only shared
+ * lock, there are race conditions: a backend could set its xmin just after
+ * we look.  Indeed, on multiprocessors with weak memory ordering, the
+ * other backend could have set its xmin *before* we look.	We know however
+ * that such a backend must have held shared ProcArrayLock overlapping our
+ * own hold of ProcArrayLock, else we would see its xmin update.  Therefore,
+ * any snapshot the other backend is taking concurrently with our scan cannot
+ * consider any transactions as still running that we think are committed
+ * (since backends must hold ProcArrayLock exclusive to commit).
  */
 VirtualTransactionId *
-GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
+GetCurrentVirtualXIDs(TransactionId limitXmin, bool excludeXmin0,
+					  bool allDbs, int excludeVacuum,
+					  int *nvxids)
 {
 	VirtualTransactionId *vxids;
 	ProcArrayStruct *arrayP = procArray;
 	int			count = 0;
 	int			index;
 
-	/* allocate result space with room for a terminator */
+	/* allocate what's certainly enough result space */
 	vxids = (VirtualTransactionId *)
-		palloc(sizeof(VirtualTransactionId) * (arrayP->maxProcs + 1));
+		palloc(sizeof(VirtualTransactionId) * arrayP->maxProcs);
 
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 
@@ -1811,15 +1878,18 @@ GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
 
 		if (allDbs || proc->databaseId == MyDatabaseId)
 		{
-			/* Fetch xmin just once - might change on us? */
+			/* Fetch xmin just once - might change on us */
 			TransactionId pxmin = proc->xmin;
 
+			if (excludeXmin0 && !TransactionIdIsValid(pxmin))
+				continue;
+
 			/*
-			 * Note that InvalidTransactionId precedes all other XIDs, so a
-			 * proc that hasn't set xmin yet will always be included.
+			 * InvalidTransactionId precedes all other XIDs, so a proc that
+			 * hasn't set xmin yet will not be rejected by this test.
 			 */
 			if (!TransactionIdIsValid(limitXmin) ||
-				TransactionIdPrecedes(pxmin, limitXmin))
+				TransactionIdPrecedesOrEquals(pxmin, limitXmin))
 			{
 				VirtualTransactionId vxid;
 
@@ -1832,10 +1902,7 @@ GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
 
 	LWLockRelease(ProcArrayLock);
 
-	/* add the terminator */
-	vxids[count].backendId = InvalidBackendId;
-	vxids[count].localTransactionId = InvalidLocalTransactionId;
-
+	*nvxids = count;
 	return vxids;
 }
 
@@ -1871,9 +1938,9 @@ CountActiveBackends(void)
 		 *
 		 * If someone just decremented numProcs, 'proc' could also point to a
 		 * PGPROC entry that's no longer in the array. It still points to a
-		 * PGPROC struct, though, because freed PGPPROC entries just go to
-		 * the free list and are recycled. Its contents are nonsense in that
-		 * case, but that's acceptable for this function.
+		 * PGPROC struct, though, because freed PGPPROC entries just go to the
+		 * free list and are recycled. Its contents are nonsense in that case,
+		 * but that's acceptable for this function.
 		 */
 		if (proc == NULL)
 			continue;
@@ -1947,7 +2014,7 @@ CountUserBackends(Oid roleid)
 }
 
 /*
- * CheckOtherDBBackends -- check for other backends running in the given DB
+ * CountOtherDBBackends -- check for other backends running in the given DB
  *
  * If there are other backends in the DB, we will wait a maximum of 5 seconds
  * for them to exit.  Autovacuum backends are encouraged to exit early by
@@ -1957,6 +2024,8 @@ CountUserBackends(Oid roleid)
  * check whether the current backend uses the given DB, if it's important.
  *
  * Returns TRUE if there are (still) other backends in the DB, FALSE if not.
+ * Also, *nbackends and *nprepared are set to the number of other backends
+ * and prepared transactions in the DB, respectively.
  *
  * This function is used to interlock DROP DATABASE and related commands
  * against there being any active backends in the target DB --- dropping the
@@ -1968,18 +2037,24 @@ CountUserBackends(Oid roleid)
  * indefinitely.
  */
 bool
-CheckOtherDBBackends(Oid databaseId)
+CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
 {
 	ProcArrayStruct *arrayP = procArray;
+
+#define MAXAUTOVACPIDS	10		/* max autovacs to SIGTERM per iteration */
+	int			autovac_pids[MAXAUTOVACPIDS];
 	int			tries;
 
 	/* 50 tries with 100ms sleep between tries makes 5 sec total wait */
 	for (tries = 0; tries < 50; tries++)
 	{
+		int			nautovacs = 0;
 		bool		found = false;
 		int			index;
 
 		CHECK_FOR_INTERRUPTS();
+
+		*nbackends = *nprepared = 0;
 
 		LWLockAcquire(ProcArrayLock, LW_SHARED);
 
@@ -1994,38 +2069,32 @@ CheckOtherDBBackends(Oid databaseId)
 
 			found = true;
 
-			if (proc->vacuumFlags & PROC_IS_AUTOVACUUM)
-			{
-				/* an autovacuum --- send it SIGTERM before sleeping */
-				int			autopid = proc->pid;
-
-				/*
-				 * It's a bit awkward to release ProcArrayLock within the
-				 * loop, but we'd probably better do so before issuing kill().
-				 * We have no idea what might block kill() inside the
-				 * kernel...
-				 */
-				LWLockRelease(ProcArrayLock);
-
-				(void) kill(autopid, SIGTERM);	/* ignore any error */
-
-				break;
-			}
+			if (proc->pid == 0)
+				(*nprepared)++;
 			else
 			{
-				LWLockRelease(ProcArrayLock);
-				break;
+				(*nbackends)++;
+				if ((proc->vacuumFlags & PROC_IS_AUTOVACUUM) &&
+					nautovacs < MAXAUTOVACPIDS)
+					autovac_pids[nautovacs++] = proc->pid;
 			}
 		}
 
-		/* if found is set, we released the lock within the loop body */
-		if (!found)
-		{
-			LWLockRelease(ProcArrayLock);
-			return false;		/* no conflicting backends, so done */
-		}
+		LWLockRelease(ProcArrayLock);
 
-		/* else sleep and try again */
+		if (!found)
+			return false;		/* no conflicting backends, so done */
+
+		/*
+		 * Send SIGTERM to any conflicting autovacuums before sleeping. We
+		 * postpone this step until after the loop because we don't want to
+		 * hold ProcArrayLock while issuing kill(). We have no idea what might
+		 * block kill() inside the kernel...
+		 */
+		for (index = 0; index < nautovacs; index++)
+			(void) kill(autovac_pids[index], SIGTERM);	/* ignore any error */
+
+		/* sleep, then try again */
 		pg_usleep(100 * 1000L); /* 100ms */
 	}
 
@@ -2124,8 +2193,9 @@ static void
 DisplayXidCache(void)
 {
 	fprintf(stderr,
-			"XidCache: xmin: %ld, myxact: %ld, latest: %ld, mainxid: %ld, childxid: %ld, nooflo: %ld, slow: %ld\n",
+			"XidCache: xmin: %ld, known: %ld, myxact: %ld, latest: %ld, mainxid: %ld, childxid: %ld, nooflo: %ld, slow: %ld\n",
 			xc_by_recent_xmin,
+			xc_by_known_xact,
 			xc_by_my_xact,
 			xc_by_latest_xid,
 			xc_by_main_xid,

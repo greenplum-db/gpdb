@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.198.2.3 2010/03/08 12:39:42 mha Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.225 2009/04/21 17:23:05 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -576,8 +576,8 @@ PostgreSQL documentation
 
     <para>
      An alternative way to specify connection parameters is in a
-     <parameter>conninfo</parameter> string, which is used instead of a 
-     database name. This mechanism give you very wide control over the 
+     <parameter>conninfo</parameter> string, which is used instead of a
+     database name. This mechanism give you very wide control over the
      connection. For example:
 <programlisting>
 $ <userinput>psql "service=myservice sslmode=require"</userinput>
@@ -806,7 +806,7 @@ testdb=&gt;
       <varlistentry>
         <term><literal>\copy { <replaceable class="parameter">table</replaceable> [ ( <replaceable class="parameter">column_list</replaceable> ) ] | ( <replaceable class="parameter">query</replaceable> ) }
         { <literal>from</literal> | <literal>to</literal> }
-        { <replaceable class="parameter">filename</replaceable> | stdin | stdout | pstdin | pstdout }
+        { <replaceable class="parameter">filename</replaceable> | program <replaceable class="parameter">'command'</replaceable> | stdin | stdout | pstdin | pstdout }
         [ with ]
             [ binary ]
             [ oids ]
@@ -834,12 +834,14 @@ testdb=&gt;
         </para>
 
         <para>
-        The syntax of the command is similar to that of the
-        <acronym>SQL</acronym> <xref linkend="sql-copy"
-        endterm="sql-copy-title"> command.  Note that, because of this,
-        special parsing rules apply to the <command>\copy</command>
-        command. In particular, the variable substitution rules and
-        backslash escapes do not apply.
+        When <literal>program</> is specified,
+        <replaceable class="parameter">command</replaceable> is
+        executed by <application>psql</application> and the data from
+        or to <replaceable class="parameter">command</replaceable> is
+        routed between the server and the client.
+        This means that the execution privileges are those of
+        the local user, not the server, and no SQL superuser
+        privileges are required.
         </para>
 
         <para>
@@ -852,6 +854,19 @@ testdb=&gt;
         <application>psql</application>'s standard input or output, use
         <literal>pstdin</> or <literal>pstdout</>. This option is useful
         for populating tables in-line within a SQL script file.
+        </para>
+
+        <para>
+        The syntax of the command is similar to that of the
+        <acronym>SQL</acronym> <xref linkend="sql-copy">
+        command, and
+        <replaceable class="parameter">option</replaceable>
+        must indicate one of the options of the
+        <acronym>SQL</acronym> <xref linkend="sql-copy"> command.
+        Note that, because of this,
+        special parsing rules apply to the <command>\copy</command>
+        command. In particular, the variable substitution rules and
+        backslash escapes do not apply.
         </para>
 
         <tip>
@@ -897,6 +912,12 @@ testdb=&gt;
         more information is displayed: any comments associated with the
         columns of the table are shown, as is the presence of OIDs in the
         table, and the view definition if the relation is a view.
+        </para>
+
+        <para>
+        By default, only user-created objects are shown;  supply a
+        pattern or the <literal>S</literal> modifier to include system
+        objects.
         </para>
 
         <para>
@@ -1120,7 +1141,7 @@ testdb=&gt;
         form <literal>\df+</literal> is used, additional information
         about each function, including volatility, language, source
         code and description, is shown.  By default, only user-created
-        objects are shown; supply a pattern or the <literal>S</literal>
+        objects are shown;  supply a pattern or the <literal>S</literal>
         modifier to include system objects.
         </para>
 
@@ -1211,9 +1232,9 @@ testdb=&gt;
         <term><literal>\ds[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dt[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dv[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dP[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dx[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dr[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dP[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dx[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dr[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
 
         <listitem>
         <para>
@@ -1228,6 +1249,12 @@ testdb=&gt;
         and tables.  If <literal>+</literal> is
         appended to the command name, each object is listed with its
         physical size on disk and its associated description, if any.
+        By default, only user-created objects are shown;  supply a
+        pattern or the <literal>S</literal> modifier to include system
+        objects.
+        </para>
+
+        <para>
         If <replaceable class="parameter">pattern</replaceable> is
         specified, only objects whose names match the pattern are listed.
         By default, only user-created objects are shown; supply a
@@ -1436,6 +1463,34 @@ testdb=&gt;
         This feature requires the <varname>EDITOR_LINENUMBER_SWITCH</varname>
         variable to be set, so that <application>psql</application> knows how
         to specify the line number to the editor.
+        </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <term><literal>\ef <optional> <replaceable class="parameter">function_description</replaceable> </optional></literal></term>
+
+        <listitem>
+        <para>
+         This command fetches and edits the definition of the named function,
+         in the form of a <command>CREATE OR REPLACE FUNCTION</> command.
+         Editing is done in the same way as for <literal>\e</>.
+         After the editor exits, the updated command waits in the query buffer;
+         type semicolon or <literal>\g</> to send it, or <literal>\r</>
+         to cancel.
+        </para>
+
+        <para>
+         The target function can be specified by name alone, or by name
+         and arguments, for example <literal>foo(integer, text)</>.
+         The argument types must be given if there is more
+         than one function of the same name.
+        </para>
+
+        <para>
+         If no function is specified, a blank <command>CREATE FUNCTION</>
+         template is presented for editing.
         </para>
         </listitem>
       </varlistentry>

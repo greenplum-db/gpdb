@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="an20941">ALTER FUNCTION</title><body><p id="sql_command_desc">Changes the definition of a function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] ] ) 
+<topic id="topic1">
+  <title id="an20941">ALTER FUNCTION</title>
+  <body>
+    <p id="sql_command_desc">Changes the definition of a function.</p>
+    <section id="section2"
+        ><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] ] ) 
    <varname>action</varname> [, ... ] [RESTRICT]
 
 ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] ] )
@@ -11,44 +16,116 @@ ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varnam
    OWNER TO <varname>new_owner</varname>
 
 ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] ] ) 
-   SET SCHEMA <varname>new_schema</varname></codeblock><p>where <varname>action</varname> is one of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
+   SET SCHEMA <varname>new_schema</varname></codeblock><p>where
+          <varname>action</varname> is one
+      of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
 {IMMUTABLE | STABLE | VOLATILE}
 {[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
+EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
 COST <varname>execution_cost</varname>
 SET <varname>configuration_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
 SET <varname>configuration_parameter</varname> FROM CURRENT
 RESET <varname>configuration_parameter</varname>
-RESET ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER FUNCTION</codeph> changes the definition of a function.
-</p><p>You must own the function to use <codeph>ALTER FUNCTION</codeph>.
-To change a function's schema, you must also have <codeph>CREATE</codeph>
-privilege on the new schema. To alter the owner, you must also be a direct
-or indirect member of the new owning role, and that role must have <codeph>CREATE</codeph>
-privilege on the function's schema. (These restrictions enforce that
-altering the owner does not do anything you could not do by dropping
-and recreating the function. However, a superuser can alter ownership
-of any function anyway.) </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing function. </pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>, <codeph>INOUT</codeph>, 
-or <codeph>VARIADIC</codeph>. If omitted, the default is <codeph>IN</codeph>.
-Note that <codeph>ALTER FUNCTION</codeph> does not actually pay any attention
-to <codeph>OUT</codeph> arguments, since only the input arguments are
-needed to determine the function's identity. So it is sufficient to
-list the <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> arguments.</pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Note that <codeph>ALTER FUNCTION</codeph>
-does not actually pay any attention to argument names, since only the
-argument data types are needed to determine the function's identity.
-</pd></plentry><plentry><pt><varname>argtype</varname></pt><pd>The data type(s) of the function's arguments (optionally schema-qualified),
-if any. </pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>The new name of the function. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the function. Note that if the function is marked
-<codeph>SECURITY DEFINER</codeph>, it will subsequently execute as the
-new owner. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the function. </pd></plentry><plentry><pt>CALLED ON NULL INPUT</pt><pt>RETURNS NULL ON NULL INPUT</pt><pt>STRICT</pt><pd><codeph>CALLED ON NULL INPUT</codeph> changes the function so that
-it will be invoked when some or all of its arguments are null. <codeph>RETURNS
-NULL ON NULL INPUT</codeph> or <codeph>STRICT</codeph> changes the function
-so that it is not invoked if any of its arguments are null; instead,
-a null result is assumed automatically. See <codeph>CREATE FUNCTION</codeph>
-for more information.</pd></plentry><plentry><pt>IMMUTABLE</pt><pt>STABLE</pt><pt>VOLATILE</pt><pd>Change the volatility of the function to the specified setting. See
-<codeph>CREATE FUNCTION</codeph> for details. </pd></plentry><plentry><pt>[ EXTERNAL ] SECURITY INVOKER</pt><pt>[ EXTERNAL ] SECURITY DEFINER</pt><pd>Change whether the function is a security definer or not. The key
-word <codeph>EXTERNAL</codeph> is ignored for SQL conformance. See <codeph>CREATE
-FUNCTION</codeph> for more information about this capability.</pd></plentry>
-        <plentry><pt>COST <varname>execution_cost</varname></pt>
-        <pd>Change the estimated execution cost of the function. See <codeph>CREATE
-FUNCTION</codeph> for more information.</pd></plentry>
+RESET ALL</codeblock></section>
+    <section id="section3"><title>Description</title><p><codeph>ALTER FUNCTION</codeph> changes the
+        definition of a function. </p><p>You must own the function to use <codeph>ALTER
+          FUNCTION</codeph>. To change a function's schema, you must also have
+          <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you must also be
+        a direct or indirect member of the new owning role, and that role must have
+          <codeph>CREATE</codeph> privilege on the function's schema. (These restrictions enforce
+        that altering the owner does not do anything you could not do by dropping and recreating the
+        function. However, a superuser can alter ownership of any function anyway.) </p></section>
+    <section id="section4"><title>Parameters</title><parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name (optionally schema-qualified) of an existing function. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argmode</varname></pt>
+          <pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
+              <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the default is
+              <codeph>IN</codeph>. Note that <codeph>ALTER FUNCTION</codeph> does not actually pay
+            any attention to <codeph>OUT</codeph> arguments, since only the input arguments are
+            needed to determine the function's identity. So it is sufficient to list the
+              <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph>
+            arguments.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argname</varname></pt>
+          <pd>The name of an argument. Note that <codeph>ALTER FUNCTION</codeph> does not actually
+            pay any attention to argument names, since only the argument data types are needed to
+            determine the function's identity. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argtype</varname></pt>
+          <pd>The data type(s) of the function's arguments (optionally schema-qualified), if any.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_name</varname></pt>
+          <pd>The new name of the function. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_owner</varname></pt>
+          <pd>The new owner of the function. Note that if the function is marked <codeph>SECURITY
+              DEFINER</codeph>, it will subsequently execute as the new owner. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_schema</varname></pt>
+          <pd>The new schema for the function. </pd>
+        </plentry>
+        <plentry>
+          <pt>CALLED ON NULL INPUT</pt>
+          <pt>RETURNS NULL ON NULL INPUT</pt>
+          <pt>STRICT</pt>
+          <pd><codeph>CALLED ON NULL INPUT</codeph> changes the function so that it will be invoked
+            when some or all of its arguments are null. <codeph>RETURNS NULL ON NULL INPUT</codeph>
+            or <codeph>STRICT</codeph> changes the function so that it is not invoked if any of its
+            arguments are null; instead, a null result is assumed automatically. See <codeph><xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for more
+            information.</pd>
+        </plentry>
+        <plentry>
+          <pt>IMMUTABLE</pt>
+          <pt>STABLE</pt>
+          <pt>VOLATILE</pt>
+          <pd>Change the volatility of the function to the specified setting. See <codeph><xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for details. </pd>
+        </plentry>
+        <plentry>
+          <pt>[ EXTERNAL ] SECURITY INVOKER</pt>
+          <pt>[ EXTERNAL ] SECURITY DEFINER</pt>
+          <pd>Change whether the function is a security definer or not. The key word
+              <codeph>EXTERNAL</codeph> is ignored for SQL conformance. See <codeph>CREATE
+              FUNCTION</codeph> for more information about this capability.</pd>
+        </plentry>
+        <plentry>
+          <pt>EXECUTE ON ANY</pt>
+          <pt>EXECUTE ON MASTER</pt>
+          <pt>EXECUTE ON ALL SEGMENTS</pt>
+          <pd>The <codeph>EXECUTE ON</codeph> attributes specify where (master or segment instance)
+            a function executes when it is invoked during the query execution process.</pd>
+          <pd><codeph>EXECUTE ON ANY</codeph> (the default) indicates that the function can be
+            executed on the master, or any segment instance, and it returns the same result
+            regardless of where it is executed. Greenplum Database determines where the function
+            executes.</pd>
+          <pd><codeph>EXECUTE ON MASTER</codeph> indicates that the function must execute only on
+            the master instance. </pd>
+          <pd><codeph>EXECUTE ON ALL SEGMENTS</codeph> indicates that the function must execute on
+            all primary segment instances, but not the master, for each invocation. The overall
+            result of the function is the <codeph>UNION ALL</codeph> of the results from all segment
+            instances. </pd>
+          <pd>For more information about the <codeph>EXECUTE ON</codeph> attributes, see
+                <codeph><xref href="CREATE_FUNCTION.xml#topic1">CREATE
+            FUNCTION</xref></codeph>.</pd>
+        </plentry>
+
+        <plentry>
+          <pt>COST <varname>execution_cost</varname></pt>
+          <pd>Change the estimated execution cost of the function. See <codeph><xref
+                href="CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> for more
+            information.</pd>
+        </plentry>
         <plentry>
           <pt><varname>configuration_parameter</varname></pt>
           <pt><varname>value</varname></pt>
@@ -58,18 +135,33 @@ FUNCTION</codeph> for more information.</pd></plentry>
             function executes with the value present in its environment. Use <codeph>RESET
               ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>
             applies the session's current value of the parameter when the function is entered.</pd>
-        </plentry><plentry><pt>RESTRICT</pt><pd>Ignored for conformance with the SQL standard. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of functions defined as <codeph>STABLE</codeph> or
-          <codeph>VOLATILE</codeph>. See <codeph><xref href="./CREATE_FUNCTION.xml#topic1"
-            type="topic" format="dita"/></codeph> for more information.</p></section><section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
-          <codeph>square_root</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) RENAME TO square_root;</codeblock><p>To change the owner of the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
-          <codeph>joe</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) OWNER TO joe;</codeblock><p>To change the <varname>schema</varname> of the function <codeph>sqrt</codeph> for type
+        </plentry>
+        <plentry>
+          <pt>RESTRICT</pt>
+          <pd>Ignored for conformance with the SQL standard. </pd>
+        </plentry>
+      </parml></section>
+    <section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of
+        functions defined as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph>. See <codeph><xref
+            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
+        information.</p></section>
+    <section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph>
+        for type <codeph>integer</codeph> to
+        <codeph>square_root</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) RENAME TO square_root;</codeblock><p>To
+        change the owner of the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
+          <codeph>joe</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) OWNER TO joe;</codeblock><p>To
+        change the <varname>schema</varname> of the function <codeph>sqrt</codeph> for type
           <codeph>integer</codeph> to <codeph>math</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) SET SCHEMA math;</codeblock>
       <p>To adjust the search path that is automatically set for a function:</p>
-      <codeblock>ALTER FUNCTION check_password(text) RESET search_path;</codeblock></section><section id="section7"><title>Compatibility</title><p>This statement is partially compatible with the <codeph>ALTER FUNCTION</codeph>
-statement in the SQL standard. The standard allows more properties of
-a function to be modified, but does not provide the ability to rename
-a function, make a function a security definer, or change the owner,
-schema, or volatility of a function. The standard also requires the <codeph>RESTRICT</codeph>
-key word, which is optional in Greenplum Database. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+      <codeblock>ALTER FUNCTION check_password(text) RESET search_path;</codeblock></section>
+    <section id="section7"><title>Compatibility</title><p>This statement is partially compatible
+        with the <codeph>ALTER FUNCTION</codeph> statement in the SQL standard. The standard allows
+        more properties of a function to be modified, but does not provide the ability to rename a
+        function, make a function a security definer, or change the owner, schema, or volatility of
+        a function. The standard also requires the <codeph>RESTRICT</codeph> key word, which is
+        optional in Greenplum Database. </p></section>
+    <section id="section8"><title>See Also</title><p><codeph><xref
+            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph></p></section>
+  </body>
+</topic>

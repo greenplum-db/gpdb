@@ -6,8 +6,13 @@
  *	  largely extracted from pg_dump.c.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/bin/pg_dump/cdb/cdb_dump_include.c
  *
  *-------------------------------------------------------------------------
  */
@@ -83,6 +88,11 @@ bool		g_gp_supportsLanOwner = false;
  * When true, indicates that only the MPP schema is being dumped.
  */
 bool		g_gp_catalog_only = false;
+
+/*
+ * Indicate whether or not the GPDB cluster supports Foreign Data Wrappers
+ */
+bool		g_gp_fdw = false;
 
 const CatalogId nilCatalogId = {0, 0};
 
@@ -821,7 +831,7 @@ getDomainConstraints(TypeInfo *tinfo)
 		constrinfo[i].contype = 'c';
 		constrinfo[i].condef = strdup(PQgetvalue(res, i, i_consrc));
 		constrinfo[i].conindex = 0;
-		constrinfo[i].coninherited = false;
+		constrinfo[i].conislocal = true;
 		constrinfo[i].separate = false;
 
 		/*
@@ -2065,7 +2075,7 @@ getTables(int *numTables)
 	int			i_relacl;
 	int			i_rolname;
 	int			i_relchecks;
-	int			i_reltriggers;
+	bool		i_relhastriggers;
 	int			i_relhasindex;
 	int			i_relhasrules;
 	int			i_relhasoids;
@@ -2106,7 +2116,7 @@ getTables(int *numTables)
 					  "SELECT c.tableoid, c.oid, relname, "
 					  "relacl, relkind, relstorage, relnamespace, "
 					  "(%s relowner) as rolname, "
-					  "relchecks, reltriggers, "
+					  "relchecks, relhastriggers, "
 					  "relhasindex, relhasrules, relhasoids, "
 					  "d.refobjid as owning_tab, "
 					  "d.refobjsubid as owning_col, "
@@ -2157,7 +2167,7 @@ getTables(int *numTables)
 	i_relstorage = PQfnumber(res, "relstorage");
 	i_rolname = PQfnumber(res, "rolname");
 	i_relchecks = PQfnumber(res, "relchecks");
-	i_reltriggers = PQfnumber(res, "reltriggers");
+	i_relhastriggers = PQfnumber(res, "relhastriggers");
 	i_relhasindex = PQfnumber(res, "relhasindex");
 	i_relhasrules = PQfnumber(res, "relhasrules");
 	i_relhasoids = PQfnumber(res, "relhasoids");
@@ -2183,8 +2193,8 @@ getTables(int *numTables)
 		tblinfo[i].hasindex = (strcmp(PQgetvalue(res, i, i_relhasindex), "t") == 0);
 		tblinfo[i].hasrules = (strcmp(PQgetvalue(res, i, i_relhasrules), "t") == 0);
 		tblinfo[i].hasoids = (strcmp(PQgetvalue(res, i, i_relhasoids), "t") == 0);
+		tblinfo[i].hastriggers = (strcmp(PQgetvalue(res, i, i_relhastriggers), "t") == 0);
 		tblinfo[i].ncheck = atoi(PQgetvalue(res, i, i_relchecks));
-		tblinfo[i].ntrig = atoi(PQgetvalue(res, i, i_reltriggers));
 		if (PQgetisnull(res, i, i_owning_tab))
 		{
 			tblinfo[i].owning_tab = InvalidOid;
@@ -2489,7 +2499,7 @@ getIndexes(TableInfo tblinfo[], int numTables)
 				constrinfo[j].contype = contype;
 				constrinfo[j].condef = NULL;
 				constrinfo[j].conindex = indxinfo[j].dobj.dumpId;
-				constrinfo[j].coninherited = false;
+				constrinfo[j].conislocal = true;
 				constrinfo[j].separate = true;
 
 				indxinfo[j].indexconstraint = constrinfo[j].dobj.dumpId;
@@ -2542,7 +2552,7 @@ getConstraints(TableInfo tblinfo[], int numTables)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
 
-		if (tbinfo->ntrig == 0 || !tbinfo->dobj.dump)
+		if (!tbinfo->hastriggers || !tbinfo->dobj.dump)
 			continue;
 
 		if (g_verbose)
@@ -2588,7 +2598,7 @@ getConstraints(TableInfo tblinfo[], int numTables)
 			constrinfo[j].contype = 'f';
 			constrinfo[j].condef = strdup(PQgetvalue(res, j, i_condef));
 			constrinfo[j].conindex = 0;
-			constrinfo[j].coninherited = false;
+			constrinfo[j].conislocal = true;
 			constrinfo[j].separate = true;
 		}
 
@@ -2737,7 +2747,7 @@ getTriggers(TableInfo tblinfo[], int numTables)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
 
-		if (tbinfo->ntrig == 0 || !tbinfo->dobj.dump)
+		if (!tbinfo->hastriggers || !tbinfo->dobj.dump)
 			continue;
 
 		if (g_verbose)
@@ -2775,16 +2785,6 @@ getTriggers(TableInfo tblinfo[], int numTables)
 
 		ntups = PQntuples(res);
 
-		/*
-		 * We may have less triggers than recorded due to having ignored
-		 * foreign-key triggers
-		 */
-		if (ntups > tbinfo->ntrig)
-		{
-			mpp_err_msg(logError, progname, "expected %d triggers on table \"%s\" but found %d\n",
-						tbinfo->ntrig, tbinfo->dobj.name, ntups);
-			exit_nicely();
-		}
 		i_tableoid = PQfnumber(res, "tableoid");
 		i_oid = PQfnumber(res, "oid");
 		i_tgname = PQfnumber(res, "tgname");
@@ -3340,7 +3340,8 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 
 			resetPQExpBuffer(q);
 			appendPQExpBuffer(q, "SELECT tableoid, oid, conname, "
-							"pg_catalog.pg_get_constraintdef(oid) AS consrc "
+							  "pg_catalog.pg_get_constraintdef(oid) AS consrc, "
+							  "conislocal "
 							  "FROM pg_catalog.pg_constraint "
 							  "WHERE conrelid = '%u'::pg_catalog.oid "
 							  "   AND contype = 'c' "
@@ -3374,7 +3375,7 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 				constrs[j].contype = 'c';
 				constrs[j].condef = strdup(PQgetvalue(res, j, 3));
 				constrs[j].conindex = 0;
-				constrs[j].coninherited = false;
+				constrs[j].conislocal = (PQgetvalue(res, j, 4)[0] == 't');
 				constrs[j].separate = false;
 
 				constrs[j].dobj.dump = tbinfo->dobj.dump;
@@ -3755,6 +3756,164 @@ getTSConfigurations(int *numTSConfigs)
 	destroyPQExpBuffer(query);
 
 	return cfginfo;
+}
+
+/*
+ * getForeignDataWrappers:
+ *	  read all foreign-data wrappers in the system catalogs and return
+ *	  them in the FdwInfo* structure
+ *
+ *	numForeignDataWrappers is set to the number of fdws read in
+ */
+FdwInfo *
+getForeignDataWrappers(int *numForeignDataWrappers)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	FdwInfo	   *fdwinfo;
+	int			i_oid;
+	int			i_fdwname;
+	int			i_rolname;
+	int			i_fdwvalidator;
+	int			i_fdwacl;
+	int			i_fdwoptions;
+
+	if  (!g_gp_fdw)
+	{
+		destroyPQExpBuffer(query);
+		return NULL;
+	}
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT oid, fdwname, "
+					  "(%s fdwowner) as rolname, fdwvalidator::pg_catalog.regproc, fdwacl,"
+					  "array_to_string(ARRAY(select option_name || ' ' || quote_literal(option_value) from pg_options_to_table(fdwoptions)), ', ') AS fdwoptions "
+					  "FROM pg_foreign_data_wrapper",
+					  username_subquery);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numForeignDataWrappers = ntups;
+
+	fdwinfo = (FdwInfo *) malloc(ntups * sizeof(FdwInfo));
+
+	i_oid = PQfnumber(res, "oid");
+	i_fdwname = PQfnumber(res, "fdwname");
+	i_rolname = PQfnumber(res, "rolname");
+	i_fdwvalidator = PQfnumber(res, "fdwvalidator");
+	i_fdwacl = PQfnumber(res, "fdwacl");
+	i_fdwoptions = PQfnumber(res, "fdwoptions");
+
+	for (i = 0; i < ntups; i++)
+	{
+		fdwinfo[i].dobj.objType = DO_FDW;
+		fdwinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&fdwinfo[i].dobj);
+		fdwinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_fdwname));
+		fdwinfo[i].dobj.namespace = NULL;
+		fdwinfo[i].rolname = strdup(PQgetvalue(res, i, i_rolname));
+		fdwinfo[i].fdwvalidator = strdup(PQgetvalue(res, i, i_fdwvalidator));
+		fdwinfo[i].fdwoptions = strdup(PQgetvalue(res, i, i_fdwoptions));
+		fdwinfo[i].fdwacl = strdup(PQgetvalue(res, i, i_fdwacl));
+
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(fdwinfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return fdwinfo;
+}
+
+/*
+ * getForeignServers:
+ *	  read all foreign servers in the system catalogs and return
+ *	  them in the ForeignServerInfo * structure
+ *
+ *	numForeignServers is set to the number of servers read in
+ */
+ForeignServerInfo *
+getForeignServers(int *numForeignServers)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	ForeignServerInfo *srvinfo;
+	int			i_oid;
+	int			i_srvname;
+	int			i_rolname;
+	int			i_srvfdw;
+	int			i_srvtype;
+	int			i_srvversion;
+	int			i_srvacl;
+	int			i_srvoptions;
+
+	if  (!g_gp_fdw)
+	{
+		destroyPQExpBuffer(query);
+		return NULL;
+	}
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT oid, srvname, "
+					  "(%s srvowner) as rolname, "
+					  "srvfdw, srvtype, srvversion, srvacl,"
+					  "array_to_string(ARRAY(select option_name || ' ' || quote_literal(option_value) from pg_options_to_table(srvoptions)), ', ') as srvoptions "
+					  "FROM pg_foreign_server",
+					  username_subquery);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numForeignServers = ntups;
+
+	srvinfo = (ForeignServerInfo *) malloc(ntups * sizeof(ForeignServerInfo));
+
+	i_oid = PQfnumber(res, "oid");
+	i_srvname = PQfnumber(res, "srvname");
+	i_rolname = PQfnumber(res, "rolname");
+	i_srvfdw = PQfnumber(res, "srvfdw");
+	i_srvtype = PQfnumber(res, "srvtype");
+	i_srvversion = PQfnumber(res, "srvversion");
+	i_srvacl = PQfnumber(res, "srvacl");
+	i_srvoptions = PQfnumber(res, "srvoptions");
+
+	for (i = 0; i < ntups; i++)
+	{
+		srvinfo[i].dobj.objType = DO_FOREIGN_SERVER;
+		srvinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&srvinfo[i].dobj);
+		srvinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_srvname));
+		srvinfo[i].dobj.namespace = NULL;
+		srvinfo[i].rolname = strdup(PQgetvalue(res, i, i_rolname));
+		srvinfo[i].srvfdw = atooid(PQgetvalue(res, i, i_srvfdw));
+		srvinfo[i].srvtype = strdup(PQgetvalue(res, i, i_srvtype));
+		srvinfo[i].srvversion = strdup(PQgetvalue(res, i, i_srvversion));
+		srvinfo[i].srvoptions = strdup(PQgetvalue(res, i, i_srvoptions));
+		srvinfo[i].srvacl = strdup(PQgetvalue(res, i, i_srvacl));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(srvinfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return srvinfo;
 }
 
 bool

@@ -64,7 +64,7 @@ select dtype, sum(sales)
 over (partition by dtype = notsegonly())
 from aotest
 order by 1;
-psql:/path/sql_file:1: ERROR:  function cannot execute on segment because it accesses relation "public.aotest" (functions.c:151)  (seg3 slice1 rh55-qavm50:40001 pid=28879) (cdbdisp.c:1475)
+psql:/path/sql_file:1: ERROR:  function cannot execute on a QE slice because it accesses relation "public.aotest" (functions.c:151)  (seg3 slice1 rh55-qavm50:40001 pid=28879) (cdbdisp.c:1475)
 DETAIL:  
 	 SQL statement "select dtype from aotest order by dtype desc limit 1"
 PL/pgSQL function "notsegonly" line 4 at SQL statement

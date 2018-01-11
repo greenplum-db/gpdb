@@ -275,6 +275,13 @@
               triggers.</note></pd>
           </plentry>
           <plentry>
+            <pt>--no-tablespaces</pt>
+            <pd>Do not output commands to select tablespaces. With this option, all objects will be
+              created in whichever tablespace is the default during restore.</pd>
+            <pd>This option is only meaningful for the plain-text format. For the archive formats,
+              you can specify the option when you call <codeph>pg_restore</codeph>.</pd>
+          </plentry>
+          <plentry>
             <pt>--use-set-session-authorization</pt>
             <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands instead of
                 <codeph>ALTER OWNER</codeph> commands to determine object ownership. This makes the

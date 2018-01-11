@@ -58,7 +58,8 @@ class CFile(object):
         """
         content = CFile.m_comment_pat.sub('', content)
         # backend/libpq/be-secure.c contains private key with '//'
-        if 'be-secure' not in self.path and 'guc.c' not in self.path:
+        # backend/utils/misc/guc_gp.c gp_hadoop_connector_jardir has value with '//'
+        if 'be-secure' not in self.path and 'guc_gp.c' not in self.path:
             content = CFile.s_comment_pat.sub('', content)
         content = CFile.attribute_pat.sub('', content)
         return content

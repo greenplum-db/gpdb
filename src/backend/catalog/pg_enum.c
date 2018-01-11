@@ -3,11 +3,11 @@
  * pg_enum.c
  *	  routines to support manipulation of the pg_enum relation
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2006-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_enum.c,v 1.5 2008/01/20 17:50:41 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_enum.c,v 1.9 2009/01/01 17:23:37 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,6 +24,8 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/rel.h"
+#include "utils/tqual.h"
 
 static int	oid_cmp(const void *p1, const void *p2);
 

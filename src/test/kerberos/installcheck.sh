@@ -37,7 +37,8 @@ cp ${MASTER_DATA_DIRECTORY}/postgresql.conf ./postgresql.conf.orig
 ###
 # Check that krb5kdc is in $PATH.
 if ! command -v krb5kdc > /dev/null; then
-    echo "Kerberos utility 'krb5kdc' not found. Is /usr/sbin or /usr/local/sbin in your PATH?"
+    echo "Kerberos utility 'krb5kdc' not found in \$PATH:"
+    echo "$PATH"
     exit 1
 fi
 
@@ -49,7 +50,7 @@ bash setup-kdc.sh
 ###
 # Launch KDC daemon. (Note that -P requires an absolute path)
 #
-# We use the -n option to prevent it from detaching, but we put  it to
+# We use the -n option to prevent it from detaching, but we put it to
 # background with &. This way, it gets killed if the terminal session is
 # closed.
 LD_LIBRARY_PATH= krb5kdc -p 7500 -r GPDB.EXAMPLE -P "$(pwd)/krb5kdc.pid" -n &
@@ -62,6 +63,9 @@ wait %1
 }
 
 trap kill_kdc_pid EXIT
+
+# Sleep a little, to give krb5kdc time to start up.
+sleep 2
 
 ###
 # test KDC without exiting make, to ensure that server is stopped

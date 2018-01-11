@@ -34,8 +34,6 @@
 #include "utils/memutils.h"
 
 #include "cdb/cdbvars.h"
-#include "utils/debugbreak.h"
-#include "utils/simex.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
 #include "utils/gp_alloc.h"
@@ -385,18 +383,6 @@ static void *gp_malloc_internal(int64 requested_size)
 		usable_pointer = malloc_and_store_metadata(requested_size);
 		Assert(usable_pointer == NULL || VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(usable_pointer)) == requested_size);
 
-#ifdef USE_TEST_UTILS
-		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
-		{
-			SimExESSubClass subclass = SimEx_CheckInject();
-			if (subclass == SimExESSubClass_OOM_ReturnNull)
-			{
-				free(UserPtr_GetVmemPtr(usable_pointer));
-				usable_pointer = NULL;
-			}
-		}
-#endif
-
 		if(!usable_pointer)
 		{
 			VmemTracker_ReleaseVmem(size_with_overhead);
@@ -452,18 +438,6 @@ void *gp_realloc(void *ptr, int64 new_size)
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
 	{
 		ret = realloc_and_store_metadata(ptr, new_size);
-
-#ifdef USE_TEST_UTILS
-		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
-		{
-			SimExESSubClass subclass = SimEx_CheckInject();
-			if (subclass == SimExESSubClass_OOM_ReturnNull)
-			{
-				free(UserPtr_GetVmemPtr(ret));
-				ret = NULL;
-			}
-		}
-#endif
 
 		if(!ret)
 		{

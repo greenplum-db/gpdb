@@ -8,7 +8,10 @@ Find more information about the architecture on [the wiki page](https://github.c
 
 ### libsigar:
 	https://github.com/hyperic/sigar
-	For macOS:
+	For CentOS 6:
+		yum install sigar-devel
+	For macOS and CentOS 7 (and others):
+	    Use this updated fork: https://github.com/boundary/sigar
 		to build:
 	    `mkdir build && cd build && cmake .. && make && make install`
 

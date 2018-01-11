@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.122 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.126 2009/06/11 14:48:53 momjian Exp $
  *
  * NOTES
  *	  some of the executor utility code such as "ExecTypeFromTL" should be
@@ -213,6 +213,47 @@ CreateTupleDescCopyConstr(TupleDesc tupdesc)
 }
 
 /*
+ * TupleDescCopyEntry
+ *		This function copies a single attribute structure from one tuple
+ *		descriptor to another.
+ *
+ * !!! Constraints and defaults are not copied !!!
+ */
+void
+TupleDescCopyEntry(TupleDesc dst, AttrNumber dstAttno,
+				   TupleDesc src, AttrNumber srcAttno)
+{
+	/*
+	 * sanity checks
+	 */
+	AssertArg(PointerIsValid(src));
+	AssertArg(PointerIsValid(dst));
+	AssertArg(srcAttno >= 1);
+	AssertArg(srcAttno <= src->natts);
+	AssertArg(dstAttno >= 1);
+	AssertArg(dstAttno <= dst->natts);
+
+	memcpy(dst->attrs[dstAttno - 1], src->attrs[srcAttno - 1],
+		   ATTRIBUTE_FIXED_PART_SIZE);
+
+	/*
+	 * Aside from updating the attno, we'd better reset attcacheoff.
+	 *
+	 * XXX Actually, to be entirely safe we'd need to reset the attcacheoff of
+	 * all following columns in dst as well.  Current usage scenarios don't
+	 * require that though, because all following columns will get initialized
+	 * by other uses of this function or TupleDescInitEntry.  So we cheat a
+	 * bit to avoid a useless O(N^2) penalty.
+	 */
+	dst->attrs[dstAttno - 1]->attnum = dstAttno;
+	dst->attrs[dstAttno - 1]->attcacheoff = -1;
+
+	/* since we're not copying constraints or defaults, clear these */
+	dst->attrs[dstAttno - 1]->attnotnull = false;
+	dst->attrs[dstAttno - 1]->atthasdef = false;
+}
+
+/*
  * Free a TupleDesc including all substructure
  */
 void
@@ -363,6 +404,7 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict)
 				return false;
 			if (attr1->attinhcount != attr2->attinhcount)
 				return false;
+			/* attacl is ignored, since it's not even present... */
 		}
 	}
 
@@ -488,6 +530,7 @@ TupleDescInitEntry(TupleDesc desc,
 	att->attisdropped = false;
 	att->attislocal = true;
 	att->attinhcount = 0;
+	/* attacl is not set because it's not present in tupledescs */
 
 	tuple = SearchSysCache(TYPEOID,
 						   ObjectIdGetDatum(oidtypeid),

@@ -4,7 +4,12 @@
  *	  Provides hashing routines to support consistant data distribution/location
  *    within Greenplum Database.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbhash.c
  *
  *--------------------------------------------------------------------------
  */
@@ -45,7 +50,7 @@
 #define NAN_VAL ((uint32)0XE0E0E0E1)
 
 /* Constant used for hashing an invalid value  */
-#define INVALID_VAL ((uint32)0XD0D0D0D1) 
+#define INVALID_VAL ((uint32)0XD0D0D0D1)
 
 /* Constant used to help defining upper limit for random generator */
 #define UPPER_VAL ((uint32)0XA0B0C0D1)
@@ -109,18 +114,18 @@ makeCdbHash(int numsegs)
 	}
 
 	/*
-	 * if we distribute into a relation with an empty partitioning policy, 
-	 * we will round robin the tuples starting off from this index. Note that 
-	 * the random number is created one per makeCdbHash. This means that commands 
-	 * that create a cdbhash object only once for all tuples (like COPY, 
-	 * INSERT-INTO-SELECT) behave more like a round-robin distribution, while 
-	 * commands that create a cdbhash per row (like INSERT) behave more like a 
+	 * if we distribute into a relation with an empty partitioning policy, we
+	 * will round robin the tuples starting off from this index. Note that the
+	 * random number is created one per makeCdbHash. This means that commands
+	 * that create a cdbhash object only once for all tuples (like COPY,
+	 * INSERT-INTO-SELECT) behave more like a round-robin distribution, while
+	 * commands that create a cdbhash per row (like INSERT) behave more like a
 	 * random distribution.
 	 */
 	h->rrindex = cdb_randint(0, UPPER_VAL);
-		
+
 	ereport(DEBUG4,
-		(errmsg("CDBHASH hashing into %d segment databases", h->numsegs)));
+			(errmsg("CDBHASH hashing into %d segment databases", h->numsegs)));
 
 	return h;
 }
@@ -142,7 +147,8 @@ cdbhashinit(CdbHash *h)
 static void
 addToCdbHash(void *cdbHash, void *buf, size_t len)
 {
-	CdbHash *h = (CdbHash*)cdbHash;
+	CdbHash    *h = (CdbHash *) cdbHash;
+
 	h->hash = fnv1_32_buf(buf, len, h->hash);
 }
 
@@ -152,7 +158,7 @@ addToCdbHash(void *cdbHash, void *buf, size_t len)
 void
 cdbhash(CdbHash *h, Datum datum, Oid type)
 {
-	hashDatum(datum, type, addToCdbHash, (void*)h);
+	hashDatum(datum, type, addToCdbHash, (void *) h);
 }
 
 /*
@@ -173,9 +179,9 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 {
 	void	   *buf = NULL;		/* pointer to the data */
 	size_t		len = 0;		/* length for the data buffer */
-	
+
 	int64		intbuf;			/* an 8 byte buffer for all integer sizes */
-		
+
 	float4		buf_f4;
 	float8		buf_f8;
 	Timestamp	tsbuf;			/* timestamp data dype is either a double or
@@ -189,25 +195,25 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	RelativeTime reltime_buf;
 	TimeInterval tinterval;
 	AbsoluteTime tinterval_len;
-	
+
 	Numeric		num;
 	bool		bool_buf;
-	char        char_buf;
+	char		char_buf;
 	Name		namebuf;
-	
+
 	ArrayType  *arrbuf;
-	inet		 *inetptr; /* inet/cidr */
+	inet	   *inetptr;		/* inet/cidr */
 	unsigned char inet_hkey[sizeof(inet_struct)];
-	macaddr		*macptr; /* MAC address */
-	
-	VarBit		*vbitptr;
-	
+	macaddr    *macptr;			/* MAC address */
+
+	VarBit	   *vbitptr;
+
 	oidvector  *oidvec_buf;
-	Complex		*complex_ptr;
+	Complex    *complex_ptr;
 	Complex		complex_buf;
 	double		complex_real;
 	double		complex_imag;
-	
+
 	Cash		cash_buf;
 	pg_uuid_t  *uuid_buf;
 
@@ -217,43 +223,42 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	uint32		nanbuf;
 	uint32		invalidbuf;
 
-	void *tofree = NULL;
+	void	   *tofree = NULL;
 
 	if (typeIsEnumType(type))
 		type = ANYENUMOID;
 
 	/*
-	 * Select the hash to be performed according to the field type we are adding to the
-	 * hash.
+	 * Select the hash to be performed according to the field type we are
+	 * adding to the hash.
 	 */
 	switch (type)
 	{
-		/*
-		 * ======= NUMERIC TYPES ========
-		 */
+			/*
+			 * ======= NUMERIC TYPES ========
+			 */
 		case INT2OID:			/* -32 thousand to 32 thousand, 2-byte storage */
-			intbuf = (int64) DatumGetInt16(datum);		/* cast to 8 byte before
-														 * hashing */
+			intbuf = (int64) DatumGetInt16(datum);	/* cast to 8 byte before
+													 * hashing */
 			buf = &intbuf;
 			len = sizeof(intbuf);
 			break;
 
 		case INT4OID:			/* -2 billion to 2 billion integer, 4-byte
 								 * storage */
-			intbuf = (int64) DatumGetInt32(datum);		/* cast to 8 byte before
-														 * hashing */
-			buf = &intbuf;
-			len = sizeof(intbuf);
-			break;
-			
-		case INT8OID:			/* ~18 digit integer, 8-byte storage */
-			intbuf = DatumGetInt64(datum);		/* cast to 8 byte before
-												 * hashing */
+			intbuf = (int64) DatumGetInt32(datum);	/* cast to 8 byte before
+													 * hashing */
 			buf = &intbuf;
 			len = sizeof(intbuf);
 			break;
 
-		case FLOAT4OID: /* single-precision floating point number,
+		case INT8OID:			/* ~18 digit integer, 8-byte storage */
+			intbuf = DatumGetInt64(datum);	/* cast to 8 byte before hashing */
+			buf = &intbuf;
+			len = sizeof(intbuf);
+			break;
+
+		case FLOAT4OID:			/* single-precision floating point number,
 								 * 4-byte storage */
 			buf_f4 = DatumGetFloat4(datum);
 
@@ -269,7 +274,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			len = sizeof(buf_f4);
 			break;
 
-		case FLOAT8OID: /* double-precision floating point number,
+		case FLOAT8OID:			/* double-precision floating point number,
 								 * 8-byte storage */
 			buf_f8 = DatumGetFloat8(datum);
 
@@ -302,30 +307,32 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 				len = (VARSIZE(num) - NUMERIC_HDRSZ);
 			}
 
-            /* 
-             * If we did a pg_detoast_datum, we need to remember to pfree, 
-             * or we will leak memory.  Because of the 1-byte varlena header stuff.
-             */
-            if (num != DatumGetPointer(datum)) 
-                tofree = num;
+			/*
+			 * If we did a pg_detoast_datum, we need to remember to pfree, or
+			 * we will leak memory.  Because of the 1-byte varlena header
+			 * stuff.
+			 */
+			if (num != (Numeric) DatumGetPointer(datum))
+				tofree = num;
 
 			break;
-		
-		/*
-		 * ====== CHARACTER TYPES =======
-		 */
+
+			/*
+			 * ====== CHARACTER TYPES =======
+			 */
 		case CHAROID:			/* char(1), single character */
 			char_buf = DatumGetChar(datum);
 			buf = &char_buf;
 			len = 1;
 			break;
 
-		case BPCHAROID: /* char(n), blank-padded string, fixed storage */
-		case TEXTOID:   /* text */
-		case VARCHAROID: /* varchar */ 
-		case BYTEAOID:   /* bytea */
+		case BPCHAROID:			/* char(n), blank-padded string, fixed storage */
+		case TEXTOID:			/* text */
+		case VARCHAROID:		/* varchar */
+		case BYTEAOID:			/* bytea */
 			{
-				int tmplen;
+				int			tmplen;
+
 				varattrib_untoast_ptr_len(datum, (char **) &buf, &tmplen, &tofree);
 				/* adjust length to not include trailing blanks */
 				if (type != BYTEAOID && tmplen > 1)
@@ -344,31 +351,32 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			if (len > 1)
 				len = ignoreblanks((char *) buf, len);
 			break;
-		
-		/*
-		 * ====== OBJECT IDENTIFIER TYPES ======
-		 */
-		case OIDOID:				/* object identifier(oid), maximum 4 billion */
-		case REGPROCOID:			/* function name */
-		case REGPROCEDUREOID:		/* function name with argument types */
-		case REGOPEROID:			/* operator name */
-		case REGOPERATOROID:		/* operator with argument types */
-		case REGCLASSOID:			/* relation name */
-		case REGTYPEOID:			/* data type name */
-		case ANYENUMOID:			/* enum type name */
-			intbuf = (int64) DatumGetUInt32(datum);	/* cast to 8 byte before hashing */
+
+			/*
+			 * ====== OBJECT IDENTIFIER TYPES ======
+			 */
+		case OIDOID:			/* object identifier(oid), maximum 4 billion */
+		case REGPROCOID:		/* function name */
+		case REGPROCEDUREOID:	/* function name with argument types */
+		case REGOPEROID:		/* operator name */
+		case REGOPERATOROID:	/* operator with argument types */
+		case REGCLASSOID:		/* relation name */
+		case REGTYPEOID:		/* data type name */
+		case ANYENUMOID:		/* enum type name */
+			intbuf = (int64) DatumGetUInt32(datum); /* cast to 8 byte before
+													 * hashing */
 			buf = &intbuf;
 			len = sizeof(intbuf);
 			break;
 
-        case TIDOID:                /* tuple id (6 bytes) */
-            buf = DatumGetPointer(datum);
-            len = SizeOfIptrData;
-            break;
-			
-		/*
-		 * ====== DATE/TIME TYPES ======
-		 */
+		case TIDOID:			/* tuple id (6 bytes) */
+			buf = DatumGetPointer(datum);
+			len = SizeOfIptrData;
+			break;
+
+			/*
+			 * ====== DATE/TIME TYPES ======
+			 */
 		case TIMESTAMPOID:		/* date and time */
 			tsbuf = DatumGetTimestamp(datum);
 			buf = &tsbuf;
@@ -393,19 +401,19 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			len = sizeof(timebuf);
 			break;
 
-		case TIMETZOID: /* time with time zone */
-			
+		case TIMETZOID:			/* time with time zone */
+
 			/*
-			 * will not compare to TIMEOID on equal values.
-			 * Postgres never attempts to compare the two as well.
+			 * will not compare to TIMEOID on equal values. Postgres never
+			 * attempts to compare the two as well.
 			 */
 			timetzptr = DatumGetTimeTzADTP(datum);
 			buf = (unsigned char *) timetzptr;
-			
+
 			/*
 			 * Specify hash length as sizeof(double) + sizeof(int4), not as
-			 * sizeof(TimeTzADT), so that any garbage pad bytes in the structure
-			 * won't be included in the hash!
+			 * sizeof(TimeTzADT), so that any garbage pad bytes in the
+			 * structure won't be included in the hash!
 			 */
 			len = sizeof(timetzptr->time) + sizeof(timetzptr->zone);
 			break;
@@ -413,17 +421,18 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		case INTERVALOID:		/* @ <number> <units>, time interval */
 			intervalptr = DatumGetIntervalP(datum);
 			buf = (unsigned char *) intervalptr;
+
 			/*
 			 * Specify hash length as sizeof(double) + sizeof(int4), not as
-			 * sizeof(Interval), so that any garbage pad bytes in the structure
-			 * won't be included in the hash!
+			 * sizeof(Interval), so that any garbage pad bytes in the
+			 * structure won't be included in the hash!
 			 */
 			len = sizeof(intervalptr->time) + sizeof(intervalptr->month);
 			break;
-			
+
 		case ABSTIMEOID:
 			abstime_buf = DatumGetAbsoluteTime(datum);
-			
+
 			if (abstime_buf == INVALID_ABSTIME)
 			{
 				/* hash to a constant value */
@@ -436,12 +445,12 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 				len = sizeof(abstime_buf);
 				buf = &abstime_buf;
 			}
-					
+
 			break;
 
 		case RELTIMEOID:
 			reltime_buf = DatumGetRelativeTime(datum);
-			
+
 			if (reltime_buf == INVALID_RELTIME)
 			{
 				/* hash to a constant value */
@@ -454,65 +463,64 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 				len = sizeof(reltime_buf);
 				buf = &reltime_buf;
 			}
-				
+
 			break;
-			
+
 		case TINTERVALOID:
 			tinterval = DatumGetTimeInterval(datum);
-			
+
 			/*
-			 * check if a valid interval. the '0' status code
-			 * stands for T_INTERVAL_INVAL which is defined in
-			 * nabstime.c. We use the actual value instead
-			 * of defining it again here.
+			 * check if a valid interval. the '0' status code stands for
+			 * T_INTERVAL_INVAL which is defined in nabstime.c. We use the
+			 * actual value instead of defining it again here.
 			 */
 			if (tinterval->status == 0 ||
-			   tinterval->data[0] == INVALID_ABSTIME ||
-			   tinterval->data[1] == INVALID_ABSTIME)
+				tinterval->data[0] == INVALID_ABSTIME ||
+				tinterval->data[1] == INVALID_ABSTIME)
 			{
 				/* hash to a constant value */
 				invalidbuf = INVALID_VAL;
 				len = sizeof(invalidbuf);
-				buf = &invalidbuf;				
+				buf = &invalidbuf;
 			}
 			else
 			{
 				/* normalize on length of the time interval */
-				tinterval_len = tinterval->data[1] -  tinterval->data[0];
+				tinterval_len = tinterval->data[1] - tinterval->data[0];
 				len = sizeof(tinterval_len);
-				buf = &tinterval_len;	
+				buf = &tinterval_len;
 			}
 
 			break;
-			
-		/*
-		 * ======= NETWORK TYPES ========
-		 */
+
+			/*
+			 * ======= NETWORK TYPES ========
+			 */
 		case INETOID:
 		case CIDROID:
-			
+
 			inetptr = DatumGetInetP(datum);
-			len = inet_getkey(inetptr, inet_hkey, sizeof(inet_hkey)); /* fill-in inet_key & get len */
+			len = inet_getkey(inetptr, inet_hkey, sizeof(inet_hkey));	/* fill-in inet_key &
+																		 * get len */
 			buf = inet_hkey;
 			break;
-		
+
 		case MACADDROID:
-			
+
 			macptr = DatumGetMacaddrP(datum);
 			len = sizeof(macaddr);
 			buf = (unsigned char *) macptr;
 			break;
-			
-		/*
-		 * ======== BIT STRINGS ========
-		 */
+
+			/*
+			 * ======== BIT STRINGS ========
+			 */
 		case BITOID:
 		case VARBITOID:
-			
+
 			/*
-			 * Note that these are essentially strings.
-			 * we don't need to worry about '10' and '010'
-			 * to compare, b/c they will not, by design.
+			 * Note that these are essentially strings. we don't need to worry
+			 * about '10' and '010' to compare, b/c they will not, by design.
 			 * (see SQL standard, and varbit.c)
 			 */
 			vbitptr = DatumGetVarBitP(datum);
@@ -520,56 +528,57 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			buf = (char *) VARBITS(vbitptr);
 			break;
 
-		/*
-		 * ======= other types =======
-		 */
+			/*
+			 * ======= other types =======
+			 */
 		case BOOLOID:			/* boolean, 'true'/'false' */
 			bool_buf = DatumGetBool(datum);
 			buf = &bool_buf;
 			len = sizeof(bool_buf);
 			break;
-			
-		/*
-		 * ANYARRAY is a pseudo-type. We use it to include
-		 * any of the array types (OIDs 1007-1033 in pg_type.h).
-		 * caller needs to be sure the type is ANYARRAYOID
-		 * before calling cdbhash on an array (INSERT and COPY do so).
-		 */
-		case ANYARRAYOID:	
-					
+
+			/*
+			 * ANYARRAY is a pseudo-type. We use it to include any of the
+			 * array types (OIDs 1007-1033 in pg_type.h). caller needs to be
+			 * sure the type is ANYARRAYOID before calling cdbhash on an array
+			 * (INSERT and COPY do so).
+			 */
+		case ANYARRAYOID:
+
 			arrbuf = DatumGetArrayTypeP(datum);
 			len = VARSIZE(arrbuf) - VARHDRSZ;
 			buf = VARDATA(arrbuf);
 			break;
-			
-		case OIDVECTOROID:	
+
+		case OIDVECTOROID:
 			oidvec_buf = (oidvector *) DatumGetPointer(datum);
 			len = oidvec_buf->dim1 * sizeof(Oid);
 			buf = oidvec_buf->values;
 			break;
-			
-		case CASHOID: /* cash is stored in int64 internally */
-			cash_buf = (* (Cash *)DatumGetPointer(datum));
+
+		case CASHOID:			/* cash is stored in int64 internally */
+			cash_buf = DatumGetCash(datum);
 			len = sizeof(Cash);
 			buf = &cash_buf;
 			break;
 
-		/* pg_uuid_t is defined as a char array of size UUID_LEN in uuid.c */
+			/* pg_uuid_t is defined as a char array of size UUID_LEN in uuid.c */
 		case UUIDOID:
 			uuid_buf = DatumGetUUIDP(datum);
 			len = UUID_LEN;
-			buf = (char *)uuid_buf;
+			buf = (char *) uuid_buf;
 			break;
-				
-		case COMPLEXOID:		
-			complex_ptr  = DatumGetComplexP(datum);
+
+		case COMPLEXOID:
+			complex_ptr = DatumGetComplexP(datum);
 			complex_real = re(complex_ptr);
 			complex_imag = im(complex_ptr);
+
 			/*
-			* On IEEE-float machines, minus zero and zero have different bit
-			* patterns but should compare as equal.  We must ensure that they
-			* have the same hash value, which is most easily done this way:
-			*/
+			 * On IEEE-float machines, minus zero and zero have different bit
+			 * patterns but should compare as equal.  We must ensure that they
+			 * have the same hash value, which is most easily done this way:
+			 */
 			if (complex_real == (float8) 0)
 			{
 				complex_real = 0.0;
@@ -578,7 +587,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			{
 				complex_imag = 0.0;
 			}
-				
+
 			INIT_COMPLEX(&complex_buf, complex_real, complex_imag);
 			len = sizeof(Complex);
 			buf = (unsigned char *) &complex_buf;
@@ -586,7 +595,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 					 errmsg("Type %u is not hashable.", type)));
 
 	}							/* switch(type) */
@@ -603,7 +612,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 void
 cdbhashnull(CdbHash *h)
 {
-	hashNullDatum(addToCdbHash, (void*)h);
+	hashNullDatum(addToCdbHash, (void *) h);
 }
 
 /*
@@ -615,8 +624,8 @@ cdbhashnull(CdbHash *h)
 void
 hashNullDatum(datumHashFunction hashFn, void *clientData)
 {
-	uint32		nullbuf = NULL_VAL;		/* stores the constant value that
-										 * represents a NULL */
+	uint32		nullbuf = NULL_VAL; /* stores the constant value that
+									 * represents a NULL */
 	void	   *buf = &nullbuf; /* stores the address of the buffer					*/
 	size_t		len = sizeof(nullbuf);	/* length of the value								*/
 
@@ -624,20 +633,20 @@ hashNullDatum(datumHashFunction hashFn, void *clientData)
 }
 
 /*
- * Hash a tuple of a relation with an empty policy (no hash 
+ * Hash a tuple of a relation with an empty policy (no hash
  * key exists) via round robin with a random initial value.
  */
 void
 cdbhashnokey(CdbHash *h)
 {
-	uint32		rrbuf = h->rrindex;			
+	uint32		rrbuf = h->rrindex;
 	void	   *buf = &rrbuf;
 	size_t		len = sizeof(rrbuf);
-	
+
 	/* compute the hash */
 	h->hash = fnv1_32_buf(buf, len, h->hash);
-	
-	h->rrindex++; /* increment for next time around */
+
+	h->rrindex++;				/* increment for next time around */
 }
 
 
@@ -650,9 +659,9 @@ cdbhashreduce(CdbHash *h)
 
 	int			result = 0;		/* TODO: what is a good initialization value?
 								 * could we guarantee at this point that there
-								 * will not be a negative segid in Greenplum Database and
-								 * therefore initialize to this value for
-								 * error checking? */
+								 * will not be a negative segid in Greenplum
+								 * Database and therefore initialize to this
+								 * value for error checking? */
 
 	Assert(h->reducealg == REDUCE_BITMASK || h->reducealg == REDUCE_LAZYMOD);
 
@@ -662,7 +671,7 @@ cdbhashreduce(CdbHash *h)
 	switch (h->reducealg)
 	{
 		case REDUCE_BITMASK:
-			result = FASTMOD(h->hash, (uint32) h->numsegs);		/* fast mod (bitmask) */
+			result = FASTMOD(h->hash, (uint32) h->numsegs); /* fast mod (bitmask) */
 			break;
 
 		case REDUCE_LAZYMOD:
@@ -676,12 +685,12 @@ cdbhashreduce(CdbHash *h)
 bool
 typeIsArrayType(Oid typeoid)
 {
-	Type tup = typeidType(typeoid);
+	Type		tup = typeidType(typeoid);
 	Form_pg_type typeform;
-	bool res = false;
+	bool		res = false;
 
-	typeform = (Form_pg_type)GETSTRUCT(tup);
-	
+	typeform = (Form_pg_type) GETSTRUCT(tup);
+
 	if (typeform->typelem != InvalidOid &&
 		typeform->typtype != 'd' &&
 		NameStr(typeform->typname)[0] == '_' &&
@@ -695,9 +704,9 @@ typeIsArrayType(Oid typeoid)
 bool
 typeIsEnumType(Oid typeoid)
 {
-	Type tup = typeidType(typeoid);
+	Type		tup = typeidType(typeoid);
 	Form_pg_type typeform;
-	bool res = false;
+	bool		res = false;
 
 	typeform = (Form_pg_type) GETSTRUCT(tup);
 
@@ -718,45 +727,45 @@ isGreenplumDbHashable(Oid typid)
 	/* if this type is a domain type, get its base type */
 	if (get_typtype(typid) == 'd')
 		typid = getBaseType(typid);
-	
+
 	/* we can hash all enums */
 	if (typeIsEnumType(typid))
 		return true;
 
 	/*
-	 * NB: Every GPDB-hashable datatype must also be mergejoinable, i.e.
-	 * must have a B-tree operator family. There is a sanity check for
-	 * that in the opr_sanity_gp regression test. If you modify the list
-	 * below, please also update the list in opr_sanity_gp!
+	 * NB: Every GPDB-hashable datatype must also be mergejoinable, i.e. must
+	 * have a B-tree operator family. There is a sanity check for that in the
+	 * opr_sanity_gp regression test. If you modify the list below, please
+	 * also update the list in opr_sanity_gp!
 	 */
-	switch(typid)
+	switch (typid)
 	{
-		case INT2OID:		
-		case INT4OID:		
-		case INT8OID:		
+		case INT2OID:
+		case INT4OID:
+		case INT8OID:
 		case FLOAT4OID:
 		case FLOAT8OID:
 		case NUMERICOID:
-		case CHAROID:			
-		case BPCHAROID: 
-		case TEXTOID:	
+		case CHAROID:
+		case BPCHAROID:
+		case TEXTOID:
 		case VARCHAROID:
 		case BYTEAOID:
 		case NAMEOID:
 		case OIDOID:
-        case TIDOID:
-		case REGPROCOID:		
-		case REGPROCEDUREOID:		
-		case REGOPEROID:		
-		case REGOPERATOROID:		
-		case REGCLASSOID:			
-		case REGTYPEOID:		
-		case TIMESTAMPOID:		
-		case TIMESTAMPTZOID:	
-		case DATEOID:			
-		case TIMEOID:			
-		case TIMETZOID: 
-		case INTERVALOID:		
+		case TIDOID:
+		case REGPROCOID:
+		case REGPROCEDUREOID:
+		case REGOPEROID:
+		case REGOPERATOROID:
+		case REGCLASSOID:
+		case REGTYPEOID:
+		case TIMESTAMPOID:
+		case TIMESTAMPTZOID:
+		case DATEOID:
+		case TIMEOID:
+		case TIMETZOID:
+		case INTERVALOID:
 		case ABSTIMEOID:
 		case RELTIMEOID:
 		case TINTERVALOID:
@@ -765,10 +774,10 @@ isGreenplumDbHashable(Oid typid)
 		case MACADDROID:
 		case BITOID:
 		case VARBITOID:
-		case BOOLOID:			
-		case ANYARRAYOID:	
-		case OIDVECTOROID:	
-		case CASHOID: 
+		case BOOLOID:
+		case ANYARRAYOID:
+		case OIDVECTOROID:
+		case CASHOID:
 		case UUIDOID:
 		case COMPLEXOID:
 			return true;
@@ -792,7 +801,7 @@ static uint32
 fnv1_32_buf(void *buf, size_t len, uint32 hval)
 {
 	unsigned char *bp = (unsigned char *) buf;	/* start of buffer */
-	unsigned char *be = bp + len;		/* beyond end of buffer */
+	unsigned char *be = bp + len;	/* beyond end of buffer */
 
 	/*
 	 * FNV-1 hash each octet in the buffer
@@ -824,8 +833,8 @@ static int
 inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 {
 	int			addrsize;
-	
-	switch (((inet_struct *)VARDATA_ANY(addr))->family)
+
+	switch (((inet_struct *) VARDATA_ANY(addr))->family)
 	{
 		case PGSQL_AF_INET:
 			addrsize = 4;
@@ -836,12 +845,12 @@ inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 		default:
 			addrsize = 0;
 	}
-	
+
 	Assert(addrsize + 2 <= key_size);
-	inet_key[0] = ((inet_struct *)VARDATA_ANY(addr))->family;
-	inet_key[1] = ((inet_struct *)VARDATA_ANY(addr))->bits;
-	memcpy(inet_key + 2, ((inet_struct *)VARDATA_ANY(addr))->ipaddr, addrsize);
-	
+	inet_key[0] = ((inet_struct *) VARDATA_ANY(addr))->family;
+	inet_key[1] = ((inet_struct *) VARDATA_ANY(addr))->bits;
+	memcpy(inet_key + 2, ((inet_struct *) VARDATA_ANY(addr))->ipaddr, addrsize);
+
 	return (addrsize + 2);
 }
 
@@ -864,6 +873,7 @@ ignoreblanks(char *data, int len)
 	while (data[len - 1] == ' ')
 	{
 		len--;
+
 		/*
 		 * If only 1 char is left, leave it alone! The string is either empty
 		 * or has 1 char

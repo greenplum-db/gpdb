@@ -4,11 +4,11 @@
  *	  interface routines for the postgres GiST index access method.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.149.2.1 2008/11/13 17:42:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.156 2009/01/01 17:23:34 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,8 @@
 #include "access/gist_private.h"
 #include "catalog/index.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
+#include "storage/indexfsm.h"
 #include "utils/memutils.h"
 
 /* Working state for gistbuild and its callback */
@@ -351,7 +353,7 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 			 * we must create temporary page to operate
 			 */
 			dist->buffer = state->stack->buffer;
-			dist->page = PageGetTempPage(BufferGetPage(dist->buffer), sizeof(GISTPageOpaqueData));
+			dist->page = PageGetTempPageCopySpecial(BufferGetPage(dist->buffer));
 
 			/* clean all flags except F_LEAF */
 			GistPageGetOpaque(dist->page)->flags = (is_leaf) ? F_LEAF : 0;
@@ -473,7 +475,7 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 
 		if (!is_leaf)
 			PageIndexTupleDelete(state->stack->page, state->stack->childoffnum);
-		gistfillbuffer(state->r, state->stack->page, state->itup, state->ituplen, InvalidOffsetNumber);
+		gistfillbuffer(state->stack->page, state->itup, state->ituplen, InvalidOffsetNumber);
 
 		MarkBufferDirty(state->stack->buffer);
 
@@ -562,7 +564,7 @@ gistfindleaf(GISTInsertState *state, GISTSTATE *giststate)
 		state->stack->page = (Page) BufferGetPage(state->stack->buffer);
 		opaque = GistPageGetOpaque(state->stack->page);
 
-		state->stack->lsn = PageGetLSN(state->stack->page);
+		state->stack->lsn = BufferGetLSNAtomic(state->stack->buffer);
 		Assert(state->r->rd_istemp || !XLogRecPtrIsInvalid(state->stack->lsn));
 
 		if (state->stack->blkno != GIST_ROOT_BLKNO &&
@@ -699,7 +701,7 @@ gistFindPath(Relation r, BlockNumber child)
 			break;
 		}
 
-		top->lsn = PageGetLSN(page);
+		top->lsn = BufferGetLSNAtomic(buffer);
 
 		if (top->parent && XLByteLT(top->parent->lsn, GistPageGetOpaque(page)->nsn) &&
 			GistPageGetOpaque(page)->rightlink != InvalidBlockNumber /* sanity check */ )
@@ -1041,7 +1043,7 @@ gistnewroot(Relation r, Buffer buffer, IndexTuple *itup, int len, ItemPointer ke
 	START_CRIT_SECTION();
 
 	GISTInitBuffer(buffer, 0);
-	gistfillbuffer(r, page, itup, len, FirstOffsetNumber);
+	gistfillbuffer(page, itup, len, FirstOffsetNumber);
 
 	MarkBufferDirty(buffer);
 

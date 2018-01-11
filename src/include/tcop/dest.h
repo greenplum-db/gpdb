@@ -35,6 +35,12 @@
  * The same receiver object may be re-used multiple times; eventually it is
  * destroyed by calling its rDestroy method.
  *
+ * In some cases, receiver objects require additional parameters that must
+ * be passed to them after calling CreateDestReceiver.	Since the set of
+ * parameters varies for different receiver types, this is not handled by
+ * this module, but by direct calls from the calling code to receiver type
+ * specific functions.
+ *
  * The DestReceiver object returned by CreateDestReceiver may be a statically
  * allocated object (for destination types that require no local state),
  * in which case rDestroy is a no-op.  Alternatively it can be a palloc'd
@@ -51,10 +57,10 @@
  * calls in portal and cursor manipulations.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/tcop/dest.h,v 1.54 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tcop/dest.h,v 1.58 2009/06/11 14:49:12 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -86,7 +92,8 @@ typedef enum
 	DestSPI,					/* results sent to SPI manager */
 	DestTuplestore,				/* results sent to Tuplestore */
 	DestIntoRel,				/* results sent to relation (SELECT INTO) */
-	DestCopyOut					/* results sent to COPY TO code */
+	DestCopyOut,				/* results sent to COPY TO code */
+	DestSQLFunction				/* results sent to SQL-language func mgr */
 } CommandDest;
 
 /* ----------------
@@ -119,14 +126,10 @@ struct _DestReceiver
 
 extern DestReceiver *None_Receiver;		/* permanent receiver for DestNone */
 
-/* This is a forward reference to utils/portal.h */
-
-typedef struct PortalData *Portal;
-
 /* The primary destination management functions */
 
 extern void BeginCommand(const char *commandTag, CommandDest dest);
-extern DestReceiver *CreateDestReceiver(CommandDest dest, Portal portal);
+extern DestReceiver *CreateDestReceiver(CommandDest dest);
 extern void EndCommand(const char *commandTag, CommandDest dest);
 
 /* Additional functions that go with destination management, more or less. */

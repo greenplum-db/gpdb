@@ -10,12 +10,13 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.69.2.2 2008/12/01 17:06:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.79 2009/06/11 14:48:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,14 +31,13 @@
 #include "executor/tstoreReceiver.h"
 #include "tcop/pquery.h"
 #include "utils/memutils.h"
-#include "utils/resscheduler.h"
+#include "utils/snapmgr.h"
 
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
+#include "utils/resscheduler.h"
 
-extern char *savedSeqServerHost;
-extern int savedSeqServerPort;
 
 /*
  * PerformCursorOpen
@@ -96,7 +96,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	Assert(!(cstmt->options & CURSOR_OPT_SCROLL && cstmt->options & CURSOR_OPT_NO_SCROLL));
 
 	/*
-	 * Create a portal and copy the plan into its memory context.
+	 * Create a portal and copy the plan and queryString into its memory.
 	 */
 	portal = CreatePortal(cstmt->portalname, false, false);
 
@@ -105,8 +105,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	stmt = copyObject(stmt);
 	stmt->utilityStmt = NULL;	/* make it look like plain SELECT */
 
-	if (queryString)			/* copy the source text too for safety */
-		queryString = pstrdup(queryString);
+	queryString = pstrdup(queryString);
 
 	PortalDefineQuery(portal,
 					  NULL,
@@ -117,14 +116,6 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 					  NULL);
 
 	portal->is_extended_query = true; /* cursors run in extended query mode */
-
-	/* 
-	 * DeclareCursorStmt is a hybrid utility/select statement. Above, we've nullified
-	 * the utilityStmt within PlannedStmt so this appears like plain SELECT. As a consequence,
-	 * we lose access to the DeclareCursorStmt. To cope, we simply cover over the 
-	 * is_simply_updatable calculation for consumption by CURRENT OF constant folding.
-	 */
-	portal->is_simply_updatable = cstmt->is_simply_updatable;
 
 	/*----------
 	 * Also copy the outer portal's parameter list into the inner portal's
@@ -168,8 +159,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	/*
 	 * Start execution, inserting parameters if any.
 	 */
-	PortalStart(portal, params, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort, NULL);
+	PortalStart(portal, params, GetActiveSnapshot(), NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
@@ -196,7 +186,7 @@ PerformPortalFetch(FetchStmt *stmt,
 				   char *completionTag)
 {
 	Portal		portal;
-	long		nprocessed;
+	uint64		nprocessed;
 
 	/*
 	 * Disallow empty-string cursor name (conflicts with protocol-level
@@ -229,7 +219,7 @@ PerformPortalFetch(FetchStmt *stmt,
 
 	/* Return command status if wanted */
 	if (completionTag)
-		snprintf(completionTag, COMPLETION_TAG_BUFSIZE, "%s %ld",
+		snprintf(completionTag, COMPLETION_TAG_BUFSIZE, "%s " UINT64_FORMAT,
 				 stmt->ismove ? "MOVE" : "FETCH",
 				 nprocessed);
 }
@@ -320,6 +310,7 @@ PortalCleanup(Portal portal)
 
 				/* we do not need AfterTriggerEndQuery() here */
 				ExecutorEnd(queryDesc);
+				FreeQueryDesc(queryDesc);
 			}
 			PG_CATCH();
 			{
@@ -385,7 +376,6 @@ PersistHoldablePortal(Portal portal)
 {
 	QueryDesc  *queryDesc = PortalGetQueryDesc(portal);
 	Portal		saveActivePortal;
-	Snapshot	saveActiveSnapshot;
 	ResourceOwner saveResourceOwner;
 	MemoryContext savePortalContext;
 	MemoryContext oldcxt;
@@ -426,18 +416,18 @@ PersistHoldablePortal(Portal portal)
 	 * Set up global portal context pointers.
 	 */
 	saveActivePortal = ActivePortal;
-	saveActiveSnapshot = ActiveSnapshot;
 	saveResourceOwner = CurrentResourceOwner;
 	savePortalContext = PortalContext;
 	PG_TRY();
 	{
 		ActivePortal = portal;
-		ActiveSnapshot = queryDesc->snapshot;
 		if (portal->resowner)
 			CurrentResourceOwner = portal->resowner;
 		PortalContext = PortalGetHeapMemory(portal);
 
 		MemoryContextSwitchTo(PortalContext);
+
+		PushActiveSnapshot(queryDesc->snapshot);
 
 		/*
 		 * Rewind the executor: we need to store the entire result set in the
@@ -447,18 +437,21 @@ PersistHoldablePortal(Portal portal)
 		 * We don't allow scanning backwards in MPP! skip this call and 
 		 * skip the reset position call few lines down.
 		 */
-		if(Gp_role == GP_ROLE_UTILITY)
+		if (Gp_role == GP_ROLE_UTILITY)
 			ExecutorRewind(queryDesc);
 
 		/*
-		 * Change the destination to output to the tuplestore.  Note we
-		 * tell the tuplestore receiver to detoast all data passed through it.
+		 * Change the destination to output to the tuplestore.	Note we tell
+		 * the tuplestore receiver to detoast all data passed through it.
 		 */
-		queryDesc->dest = CreateDestReceiver(DestTuplestore, portal);
-		SetTuplestoreDestReceiverDeToast(queryDesc->dest, true);
+		queryDesc->dest = CreateDestReceiver(DestTuplestore);
+		SetTuplestoreDestReceiverParams(queryDesc->dest,
+										portal->holdStore,
+										portal->holdContext,
+										true);
 
 		/* Fetch the result set into the tuplestore */
-		ExecutorRun(queryDesc, ForwardScanDirection, 0L);
+		ExecutorRun(queryDesc, ForwardScanDirection, 0);
 
 		(*queryDesc->dest->rDestroy) (queryDesc->dest);
 		queryDesc->dest = NULL;
@@ -469,6 +462,7 @@ PersistHoldablePortal(Portal portal)
 		portal->queryDesc = NULL;		/* prevent double shutdown */
 		/* we do not need AfterTriggerEndQuery() here */
 		ExecutorEnd(queryDesc);
+		FreeQueryDesc(queryDesc);
 
 		/*
 		 * Set the position in the result set: ideally, this could be
@@ -491,18 +485,16 @@ PersistHoldablePortal(Portal portal)
 		{
 			if (portal->atEnd)
 			{
-				/* we can handle this case even if posOverflow */
+				/*
+				 * Just force the tuplestore forward to its end.  The size of the
+				 * skip request here is arbitrary.
+				 */
 				while (tuplestore_advance(portal->holdStore, true))
 					/* continue */ ;
 			}
 			else
 			{
 				int64		store_pos;
-	
-				if (portal->posOverflow)	/* oops, cannot trust portalPos */
-					ereport(ERROR,
-							(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-							 errmsg("could not reposition held cursor")));
 	
 				tuplestore_rescan(portal->holdStore);
 	
@@ -525,7 +517,6 @@ PersistHoldablePortal(Portal portal)
 
 		/* Restore global vars and propagate error */
 		ActivePortal = saveActivePortal;
-		ActiveSnapshot = saveActiveSnapshot;
 		CurrentResourceOwner = saveResourceOwner;
 		PortalContext = savePortalContext;
 
@@ -539,9 +530,10 @@ PersistHoldablePortal(Portal portal)
 	portal->status = PORTAL_READY;
 
 	ActivePortal = saveActivePortal;
-	ActiveSnapshot = saveActiveSnapshot;
 	CurrentResourceOwner = saveResourceOwner;
 	PortalContext = savePortalContext;
+
+	PopActiveSnapshot();
 
 	/*
 	 * We can now release any subsidiary memory of the portal's heap context;

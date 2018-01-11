@@ -5,8 +5,6 @@ set optimizer_print_missing_stats = off;
 --
 DROP TABLE IF EXISTS tmp;
 CREATE TABLE tmp (initial int4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'initial' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 COMMENT ON TABLE tmp_wrong IS 'table comment';
 ERROR:  relation "tmp_wrong" does not exist
 COMMENT ON TABLE tmp IS 'table comment';
@@ -56,8 +54,6 @@ DROP TABLE tmp;
 CREATE TABLE tmp (
 	initial 	int4
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'initial' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE tmp ADD COLUMN a int4;
 ALTER TABLE tmp ADD COLUMN b name;
 ALTER TABLE tmp ADD COLUMN c text;
@@ -103,11 +99,7 @@ DROP TABLE tmp;
 -- rename - check on both non-temp and temp tables
 --
 CREATE TABLE tmp (regtable int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'regtable' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TEMP TABLE tmp (tmptable int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'tmptable' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE tmp RENAME TO tmp_new;
 SELECT * FROM tmp;
  regtable 
@@ -208,8 +200,6 @@ CREATE TEMP TABLE PKTABLE (ptest1 int PRIMARY KEY) distributed by (ptest1);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "pktable_pkey" for table "pktable"
 INSERT INTO PKTABLE VALUES(42);
 CREATE TEMP TABLE FKTABLE (ftest1 inet);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- This next should fail, because int=inet does not exist
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
@@ -223,8 +213,6 @@ DROP TABLE FKTABLE;
 -- This should succeed, even though they are different types,
 -- because int=int8 exists and is a member of the integer opfamily
 CREATE TEMP TABLE FKTABLE (ftest1 int8);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
 WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
 -- Check it actually works
@@ -259,16 +247,12 @@ CREATE TEMP TABLE PKTABLE (ptest1 int, ptest2 inet,
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "pktable_pkey" for table "pktable"
 -- This should fail, because we just chose really odd types
 CREATE TEMP TABLE FKTABLE (ftest1 cidr, ftest2 timestamp);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1, ftest2) references pktable;
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
 DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: cidr and integer.
 DROP TABLE FKTABLE;
 -- Again, so should this...
 CREATE TEMP TABLE FKTABLE (ftest1 cidr, ftest2 timestamp);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1, ftest2)
      references pktable(ptest1, ptest2);
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
@@ -276,8 +260,6 @@ DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: cidr and i
 DROP TABLE FKTABLE;
 -- This fails because we mixed up the column ordering
 CREATE TEMP TABLE FKTABLE (ftest1 int, ftest2 inet);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1, ftest2)
      references pktable(ptest2, ptest1);
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
@@ -290,84 +272,66 @@ DETAIL:  Key columns "ftest2" and "ptest1" are of incompatible types: inet and i
 -- temp tables should go away by themselves, need not drop them.
 -- test check constraint adding
 create table atacc1 ( test int );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- add a check constraint
 alter table atacc1 add constraint atacc_test1 check (test>3);
 -- should fail
 insert into atacc1 (test) values (2);
-ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"  (seg0 rh55-qavm63:18506 pid=26645)
+ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"
 -- should succeed
 insert into atacc1 (test) values (4);
 drop table atacc1;
 -- let's do one where the check fails when added
 create table atacc1 ( test int );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- insert a soon to be failing row
 insert into atacc1 (test) values (2);
 -- add a check constraint (fails)
 alter table atacc1 add constraint atacc_test1 check (test>3);
-ERROR:  check constraint "atacc_test1" is violated by some row  (seg0 rh55-qavm63:18506 pid=26645)
+ERROR:  check constraint "atacc_test1" is violated by some row
 insert into atacc1 (test) values (4);
 drop table atacc1;
 -- let's do one where the check fails because the column doesn't exist
 create table atacc1 ( test int );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- add a check constraint (fails)
 alter table atacc1 add constraint atacc_test1 check (test1>3);
 ERROR:  column "test1" does not exist
 drop table atacc1;
 -- something a little more complicated
 create table atacc1 ( test int, test2 int, test3 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- add a check constraint (fails)
 alter table atacc1 add constraint atacc_test1 check (test+test2<test3*4);
 -- should fail
 insert into atacc1 (test,test2,test3) values (4,4,2);
-ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  new row for relation "atacc1" violates check constraint "atacc_test1"
 -- should succeed
 insert into atacc1 (test,test2,test3) values (4,4,5);
 drop table atacc1;
 -- lets do some naming tests
 create table atacc1 (test int check (test>3), test2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table atacc1 add check (test2>test);
 -- should fail for $2
 insert into atacc1 (test2, test) values (3, 4);
-ERROR:  new row for relation "atacc1" violates check constraint "atacc1_check"  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  new row for relation "atacc1" violates check constraint "atacc1_check"
 drop table atacc1;
 -- inheritance related tests
 create table atacc1 (test int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table atacc2 (test2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test2' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table atacc3 (test3 int) inherits (atacc1, atacc2);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 alter table atacc2 add constraint foo check (test2>0);
 -- fail and then succeed on atacc2
 insert into atacc2 (test2) values (-3);
-ERROR:  new row for relation "atacc2" violates check constraint "foo"  (seg2 rh55-qavm63:18508 pid=26649)
+ERROR:  new row for relation "atacc2" violates check constraint "foo"
 insert into atacc2 (test2) values (3);
 -- fail and then succeed on atacc3
 insert into atacc3 (test2) values (-3);
-ERROR:  new row for relation "atacc3" violates check constraint "foo"  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  new row for relation "atacc3" violates check constraint "foo"
 insert into atacc3 (test2) values (3);
 drop table atacc3;
 drop table atacc2;
 drop table atacc1;
 -- same things with one created with INHERIT
 create table atacc1 (test int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table atacc2 (test2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test2' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table atacc3 (test3 int) inherits (atacc1, atacc2);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 alter table atacc3 no inherit atacc2;
@@ -391,7 +355,8 @@ alter table atacc3 inherit atacc2;
 ERROR:  child table is missing column "test2"
 -- fail due to mismatched data type
 alter table atacc3 add test2 bool;
-alter table atacc3 add inherit atacc2;
+alter table atacc3 inherit atacc2;
+ERROR:  child table "atacc3" has different type for column "test2"
 alter table atacc3 drop test2;
 -- succeed
 alter table atacc3 add test2 int;
@@ -416,26 +381,22 @@ select test2 from atacc2;
 
 drop table atacc2 cascade;
 NOTICE:  drop cascades to table atacc3
-NOTICE:  drop cascades to constraint foo on table atacc3
 drop table atacc1;
--- let's try only to add only to the parent
+-- adding only to a parent is disallowed as of 8.4
 create table atacc1 (test int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table atacc2 (test2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test2' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table atacc3 (test3 int) inherits (atacc1, atacc2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
-alter table only atacc2 add constraint foo check (test2>0);
--- fail and then succeed on atacc2
-insert into atacc2 (test2) values (-3);
-ERROR:  new row for relation "atacc2" violates check constraint "foo"  (seg2 rh55-qavm63:18508 pid=26649)
-insert into atacc2 (test2) values (3);
--- both succeed on atacc3
-insert into atacc3 (test2) values (-3);
-insert into atacc3 (test2) values (3);
-drop table atacc3;
+create table atacc2 (test2 int) inherits (atacc1);
+-- fail:
+alter table only atacc1 add constraint foo check (test>0);
+ERROR:  constraint must be added to child tables too
+-- ok:
+alter table only atacc2 add constraint foo check (test>0);
+-- check constraint not there on parent
+insert into atacc1 (test) values (-3);
+insert into atacc1 (test) values (3);
+-- check constraint is there on child
+insert into atacc2 (test) values (-3);
+ERROR:  new row for relation "atacc2" violates check constraint "foo"
+insert into atacc2 (test) values (3);
 drop table atacc2;
 drop table atacc1;
 -- test unique constraint adding
@@ -518,7 +479,7 @@ DETAIL:  Key (test)=(2) already exists.
 insert into atacc1 (test) values (4);
 -- inserting NULL should fail
 insert into atacc1 (test) values(NULL);
-ERROR:  null value in column "test" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "test" violates not-null constraint
 -- try adding a second primary key (should fail)
 alter table atacc1 add constraint atacc_oid1 primary key(oid);
 ERROR:  multiple primary keys for table "atacc1" are not allowed
@@ -547,7 +508,7 @@ insert into atacc1 (test) values (NULL);
 -- add a primary key (fails)
 alter table atacc1 add constraint atacc_test1 primary key (test);
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "atacc1_pkey" for table "atacc1"
-ERROR:  column "test" contains null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  column "test" contains null values
 insert into atacc1 (test) values (3);
 drop table atacc1;
 -- let's do one where the primary key constraint fails
@@ -583,11 +544,11 @@ insert into atacc1 (test,test2) values (4,4);
 ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
 DETAIL:  Key (test, test2)=(4, 4) already exists.
 insert into atacc1 (test,test2) values (NULL,3);
-ERROR:  null value in column "test" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "test" violates not-null constraint
 insert into atacc1 (test,test2) values (3, NULL);
-ERROR:  null value in column "test2" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "test2" violates not-null constraint
 insert into atacc1 (test,test2) values (NULL,NULL);
-ERROR:  null value in column "test" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "test" violates not-null constraint
 -- should all succeed
 insert into atacc1 (test,test2) values (4,5);
 insert into atacc1 (test,test2) values (5,4);
@@ -602,7 +563,7 @@ insert into atacc1 (test2, test) values (2, 3);
 ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
 DETAIL:  Key (test)=(3) already exists.
 insert into atacc1 (test2, test) values (1, NULL);
-ERROR:  null value in column "test" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "test" violates not-null constraint
 drop table atacc1;
 -- alter table / alter column [set/drop] not null tests
 -- try altering system catalogs, should fail
@@ -618,8 +579,6 @@ ERROR:  relation "non_existent" does not exist
 -- test setting columns to null and not null and vice versa
 -- test checking for null values and primary key
 create table atacc1 (test int not null) with oids distributed by (test);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 alter table atacc1 add constraint "atacc1_pkey" primary key (test);
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "atacc1_pkey" for table "atacc1"
@@ -629,7 +588,7 @@ alter table atacc1 drop constraint "atacc1_pkey";
 alter table atacc1 alter column test drop not null;
 insert into atacc1 values (null);
 alter table atacc1 alter test set not null;
-ERROR:  column "test" contains null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  column "test" contains null values
 delete from atacc1;
 alter table atacc1 alter test set not null;
 -- try altering a non-existent column, should fail
@@ -652,33 +611,31 @@ drop view myview;
 drop table atacc1;
 -- test inheritance
 create table parent (a int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table child (b varchar(255)) inherits (parent);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 alter table parent alter a set not null;
 insert into parent values (NULL);
-ERROR:  null value in column "a" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "a" violates not-null constraint
 insert into child (a, b) values (NULL, 'foo');
-ERROR:  null value in column "a" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "a" violates not-null constraint
 alter table parent alter a drop not null;
 insert into parent values (NULL);
 insert into child (a, b) values (NULL, 'foo');
 alter table only parent alter a set not null;
-ERROR:  column "a" contains null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  column "a" contains null values
 alter table child alter a set not null;
-ERROR:  column "a" contains null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  column "a" contains null values
 delete from parent;
 alter table only parent alter a set not null;
 insert into parent values (NULL);
-ERROR:  null value in column "a" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "a" violates not-null constraint
 alter table child alter a set not null;
 insert into child (a, b) values (NULL, 'foo');
-ERROR:  null value in column "a" violates not-null constraint  (seg0 antova-mbp.local:40090 pid=75639)
+ERROR:  null value in column "a" violates not-null constraint
 delete from child;
 alter table child alter a set not null;
 insert into child (a, b) values (NULL, 'foo');
-ERROR:  null value in column "a" violates not-null constraint  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  null value in column "a" violates not-null constraint
 drop table child;
 drop table parent;
 -- test setting and removing default values
@@ -686,8 +643,6 @@ create table def_test (
 	c1	int4 default 5,
 	c2	text default 'initial_default'
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into def_test default values;
 alter table def_test alter column c1 drop default;
 insert into def_test default values;
@@ -696,13 +651,13 @@ insert into def_test default values;
 alter table def_test alter column c1 set default 10;
 alter table def_test alter column c2 set default 'new_default';
 insert into def_test default values;
-select * from def_test order by 1,2;
+select * from def_test;
  c1 |       c2        
 ----+-----------------
   5 | initial_default
- 10 | new_default
     | initial_default
     | 
+ 10 | new_default
 (4 rows)
 
 -- set defaults to an incorrect type: this should fail
@@ -724,16 +679,16 @@ alter table def_view_test alter column c1 set default 45;
 insert into def_view_test default values;
 alter table def_view_test alter column c2 set default 'view_default';
 insert into def_view_test default values;
-select * from def_view_test order by 1,2;
+select * from def_view_test;
  c1 |       c2        
 ----+-----------------
   5 | initial_default
- 10 | new_default
- 45 | view_default
- 45 | 
     | initial_default
     | 
+ 10 | new_default
     | 
+ 45 | 
+ 45 | view_default
 (7 rows)
 
 drop rule def_view_test_ins on def_view_test;
@@ -842,8 +797,12 @@ LINE 1: update atacc1 set b = 2 where "........pg.dropped.1........"...
 -- INSERTs
 insert into atacc1 values (10, 11, 12, 13);
 ERROR:  INSERT has more expressions than target columns
+LINE 1: insert into atacc1 values (10, 11, 12, 13);
+                                               ^
 insert into atacc1 values (default, 11, 12, 13);
 ERROR:  INSERT has more expressions than target columns
+LINE 1: insert into atacc1 values (default, 11, 12, 13);
+                                                    ^
 insert into atacc1 values (11, 12, 13);
 insert into atacc1 (a) values (10);
 ERROR:  column "a" of relation "atacc1" does not exist
@@ -898,7 +857,7 @@ alter table atacc1 drop xmin;
 ERROR:  cannot drop system column "xmin"
 -- try creating a view and altering that, should fail
 create view myview as select * from atacc1;
-select * from myview order by 1,2,3;
+select * from myview;
  b | c | d 
 ---+---+---
 (0 rows)
@@ -977,9 +936,7 @@ ERROR:  column "........pg.dropped.1........" does not exist
 -- test create as and select into
 insert into atacc1 values (21, 22, 23);
 create table alter_table_test1 as select * from atacc1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'b' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from alter_table_test1 order by 1,2;
+select * from alter_table_test1;
  b  | c  | d  
 ----+----+----
  21 | 22 | 23
@@ -987,9 +944,7 @@ select * from alter_table_test1 order by 1,2;
 
 drop table alter_table_test1;
 select * into alter_table_test2 from atacc1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'b' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from alter_table_test2 order by 1,2;
+select * from alter_table_test2;
  b  | c  | d  
 ----+----+----
  21 | 22 | 23
@@ -1007,18 +962,19 @@ select * from atacc1;
 drop table atacc1;
 -- test inheritance
 create table parent (a int, b int, c int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into parent values (1, 2, 3);
 alter table parent drop a;
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 create table child (d varchar(255)) inherits (parent);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 insert into child values (12, 13, 'testing');
-select * from parent order by 1,2,3;
-ERROR:  ORDER BY position 3 is not in select list
-LINE 1: select * from parent order by 1,2,3;
-                                          ^
+select * from parent;
+ b  | c  
+----+----
+  2 |  3
+ 12 | 13
+(2 rows)
+
 select * from child;
  b  | c  |    d    
 ----+----+---------
@@ -1026,10 +982,13 @@ select * from child;
 (1 row)
 
 alter table parent drop c;
-select * from parent order by 1,2;
-ERROR:  ORDER BY position 2 is not in select list
-LINE 1: select * from parent order by 1,2;
-                                        ^
+select * from parent;
+ b  
+----
+  2
+ 12
+(2 rows)
+
 select * from child;
  b  |    d    
 ----+---------
@@ -1040,8 +999,6 @@ drop table child;
 drop table parent;
 -- test copy in/out
 create table alter_table_test (a int4, b int4, c int4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into alter_table_test values (1,2,3);
 alter table alter_table_test drop a;
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
@@ -1084,8 +1041,6 @@ select * from alter_table_test order by 1;
 drop table alter_table_test;
 -- test inheritance
 create table dropColumn (a int, b int, e int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table dropColumnChild (c int) inherits (dropColumn);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 create table dropColumnAnother (d int) inherits (dropColumnChild);
@@ -1103,8 +1058,6 @@ NOTICE:  Dropping a column that is part of the distribution policy forces a NULL
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 create table renameColumn (a int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table renameColumnChild (b int) inherits (renameColumn);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 create table renameColumnAnother (c int) inherits (renameColumnChild);
@@ -1126,8 +1079,6 @@ alter table only renameColumn add column x int;
 ERROR:  column must be added to child tables too
 -- Test corner cases in dropping of inherited columns
 create table p1 (f1 int, f2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1 (f1 int not null) inherits(p1);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "f1" with inherited definition
@@ -1138,7 +1089,7 @@ ERROR:  cannot drop inherited column "f1"
 alter table p1 drop column f1;
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- c1.f1 is still there, but no longer inherited
-select f1 from c1 order by 1;
+select f1 from c1;
  f1 
 ----
 (0 rows)
@@ -1152,8 +1103,6 @@ LINE 1: select f1 from c1;
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1 () inherits(p1);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 -- should be rejected since c1.f1 is inherited
@@ -1170,8 +1119,6 @@ LINE 1: select f1 from c1;
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1 () inherits(p1);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 -- should be rejected since c1.f1 is inherited
@@ -1185,8 +1132,6 @@ NOTICE:  Dropping a column that is part of the distribution policy forces a NULL
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1 (f1 int not null) inherits(p1);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "f1" with inherited definition
@@ -1201,11 +1146,7 @@ NOTICE:  Dropping a column that is part of the distribution policy forces a NULL
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1(id int, name text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table p2(id2 int, name text, height int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id2' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1(age int) inherits(p1,p2);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "name"
@@ -1265,14 +1206,13 @@ order by relname, attnum;
 (8 rows)
 
 drop table p1, p2 cascade;
-NOTICE:  drop cascades to table c1
-NOTICE:  drop cascades to table gc1
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table c1
+drop cascades to table gc1
 --
--- Test the ALTER TABLE WITHOUT OIDS command
+-- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
 create table altstartwith (col integer) with oids;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 insert into altstartwith values (1);
 select oid > 0, * from altstartwith;
@@ -1292,30 +1232,36 @@ select * from altstartwith;
    1
 (1 row)
 
--- Run inheritance tests
-create table altwithoid (col integer) with oids;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+alter table altstartwith set with oids;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
--- Inherits parents oid column
-create table altinhoid () inherits (altwithoid) without oids;
-NOTICE:  Table has parent, setting distribution columns to match parent table
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
-insert into altinhoid values (1);
-select oid > 0, * from altwithoid order by col;
+select oid > 0, * from altstartwith;
  ?column? | col 
 ----------+-----
  t        |   1
 (1 row)
 
-select oid > 0, * from altinhoid order by col;
+drop table altstartwith;
+-- Check inheritance cases
+create table altwithoid (col integer) with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+-- Inherits parents oid column anyway
+create table altinhoid () inherits (altwithoid) without oids;
+NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into altinhoid values (1);
+select oid > 0, * from altwithoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+select oid > 0, * from altinhoid;
  ?column? | col 
 ----------+-----
  t        |   1
 (1 row)
 
 alter table altwithoid set without oids;
-alter table altinhoid set without oids;
 select oid > 0, * from altwithoid; -- fails
 ERROR:  column "oid" does not exist
 LINE 1: select oid > 0, * from altwithoid;
@@ -1336,10 +1282,69 @@ select * from altinhoid;
    1
 (1 row)
 
+alter table altwithoid set with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+select oid > 0, * from altwithoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+drop table altwithoid cascade;
+NOTICE:  drop cascades to table altinhoid
+create table altwithoid (col integer) without oids;
+-- child can have local oid column
+create table altinhoid () inherits (altwithoid) with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into altinhoid values (1);
+select oid > 0, * from altwithoid; -- fails
+ERROR:  column "oid" does not exist
+LINE 1: select oid > 0, * from altwithoid;
+               ^
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+alter table altwithoid set with oids;
+NOTICE:  merging definition of column "oid" for child "altinhoid"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+select oid > 0, * from altwithoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+-- the child's local definition should remain
+alter table altwithoid set without oids;
+select oid > 0, * from altwithoid; -- fails
+ERROR:  column "oid" does not exist
+LINE 1: select oid > 0, * from altwithoid;
+               ^
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+drop table altwithoid cascade;
+NOTICE:  drop cascades to table altinhoid
 -- test renumbering of child-table columns in inherited operations
 create table p1 (f1 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table c1 (f2 text, f3 int) inherits (p1);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 alter table p1 add column a1 int check (a1 > 0);
@@ -1347,9 +1352,9 @@ alter table p1 add column f2 text;
 NOTICE:  merging definition of column "f2" for child "c1"
 insert into p1 values (1,2,'abc');
 insert into c1 values(11,'xyz',33,0); -- should fail
-ERROR:  new row for relation "c1" violates check constraint "c1_a1_check"  (seg2 rh55-qavm63:18508 pid=26649)
+ERROR:  new row for relation "c1" violates check constraint "p1_a1_check"
 insert into c1 values(11,'xyz',33,22);
-select * from p1 order by 1,2,3;
+select * from p1;
  f1 | a1 | f2  
 ----+----+-----
   1 |  2 | abc
@@ -1357,7 +1362,7 @@ select * from p1 order by 1,2,3;
 (2 rows)
 
 update p1 set a1 = a1 + 1, f2 = upper(f2);
-select * from p1 order by 1,2,3;
+select * from p1;
  f1 | a1 | f2  
 ----+----+-----
   1 |  3 | ABC
@@ -1366,18 +1371,15 @@ select * from p1 order by 1,2,3;
 
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
-NOTICE:  drop cascades to constraint c1_a1_check on table c1
 -- test that operations with a dropped column do not try to reference
 -- its datatype
 create domain mytype as text;
 create temp table foo (f1 text, f2 mytype, f3 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into foo values('aa','bb','cc');
+insert into foo values('bb','cc','dd');
 select * from foo;
  f1 | f2 | f3 
 ----+----+----
- aa | bb | cc
+ bb | cc | dd
 (1 row)
 
 drop domain mytype cascade;
@@ -1385,26 +1387,26 @@ NOTICE:  drop cascades to table foo column f2
 select * from foo;
  f1 | f3 
 ----+----
- aa | cc
+ bb | dd
 (1 row)
 
 insert into foo values('qq','rr');
-select * from foo order by 1,2;
+select * from foo;
  f1 | f3 
 ----+----
- aa | cc
+ bb | dd
  qq | rr
 (2 rows)
 
 update foo set f3 = 'zz';
-select * from foo order by 1,2;
+select * from foo;
  f1 | f3 
 ----+----
- aa | zz
+ bb | zz
  qq | zz
 (2 rows)
 
-select f3,max(f1) from foo group by f3 order by f3;
+select f3,max(f1) from foo group by f3;
  f3 | max 
 ----+-----
  zz | qq
@@ -1412,16 +1414,15 @@ select f3,max(f1) from foo group by f3 order by f3;
 
 -- Simple tests for alter table column type
 alter table foo alter f1 TYPE integer; -- fails
-ERROR:  column "f1" cannot be cast to type "pg_catalog.int4"
+ERROR:  column "f1" cannot be cast to type integer
 alter table foo alter f1 TYPE varchar(10);
 create table anothertab (atcol1 serial8, atcol2 boolean,
 	constraint anothertab_chk check (atcol1 <= 3))
 	distributed by (atcol1);
 NOTICE:  CREATE TABLE will create implicit sequence "anothertab_atcol1_seq" for serial column "anothertab.atcol1"
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into anothertab (atcol1, atcol2) values (default, true);
 insert into anothertab (atcol1, atcol2) values (default, false);
-select * from anothertab order by 1,2;
+select * from anothertab;
  atcol1 | atcol2 
 --------+--------
       1 | t
@@ -1429,9 +1430,9 @@ select * from anothertab order by 1,2;
 (2 rows)
 
 alter table anothertab alter column atcol1 type boolean; -- fails
-ERROR:  column "atcol1" cannot be cast to type "pg_catalog.bool"
+ERROR:  column "atcol1" cannot be cast to type boolean
 alter table anothertab alter column atcol1 type integer;
-select * from anothertab order by 1,2;
+select * from anothertab;
  atcol1 | atcol2 
 --------+--------
       1 | t
@@ -1439,9 +1440,9 @@ select * from anothertab order by 1,2;
 (2 rows)
 
 insert into anothertab (atcol1, atcol2) values (45, null); -- fails
-ERROR:  new row for relation "anothertab" violates check constraint "anothertab_chk"  (seg2 rh55-qavm63:18508 pid=26649)
+ERROR:  new row for relation "anothertab" violates check constraint "anothertab_chk"
 insert into anothertab (atcol1, atcol2) values (default, null);
-select * from anothertab order by 1,2;
+select * from anothertab;
  atcol1 | atcol2 
 --------+--------
       1 | t
@@ -1453,7 +1454,7 @@ alter table anothertab alter column atcol2 type text
       using case when atcol2 is true then 'IT WAS TRUE' 
                  when atcol2 is false then 'IT WAS FALSE'
                  else 'IT WAS NULL!' end;
-select * from anothertab order by 1,2;
+select * from anothertab;
  atcol1 |    atcol2    
 --------+--------------
       1 | IT WAS TRUE
@@ -1463,7 +1464,7 @@ select * from anothertab order by 1,2;
 
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
-ERROR:  default for column "atcol1" cannot be cast to type "pg_catalog.bool"
+ERROR:  default for column "atcol1" cannot be cast to type boolean
 alter table anothertab alter column atcol1 drop default;
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
@@ -1472,7 +1473,7 @@ alter table anothertab drop constraint anothertab_chk;
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end;
 ERROR:  cannot alter type of a column used in a distribution policy
-select * from anothertab order by 1,2;
+select * from anothertab;
  atcol1 |    atcol2    
 --------+--------------
       1 | IT WAS TRUE
@@ -1485,7 +1486,7 @@ create table another (f1 int, f2 text) distributed by (f1);
 insert into another values(1, 'one');
 insert into another values(2, 'two');
 insert into another values(3, 'three');
-select * from another order by 1,2;
+select * from another;
  f1 |  f2   
 ----+-------
   1 | one
@@ -1497,7 +1498,7 @@ alter table another
   alter f1 type text using f2 || ' more',
   alter f2 type bigint using f1 * 10;
 ERROR:  cannot alter type of a column used in a distribution policy
-select * from another order by 1,2;
+select * from another;
  f1 |  f2   
 ----+-------
   1 | one
@@ -1576,7 +1577,7 @@ alter type alter1.ctype set schema alter2;
 drop schema alter1;
 insert into alter2.t1(f2) values(13);
 insert into alter2.t1(f2) values(14);
-select * from alter2.t1 order by 1;
+select * from alter2.t1;
  f1 | f2 
 ----+----
   1 | 11
@@ -1585,7 +1586,7 @@ select * from alter2.t1 order by 1;
   4 | 14
 (4 rows)
 
-select * from alter2.v1 order by 1;
+select * from alter2.v1;
  f1 | f2 
 ----+----
   1 | 11
@@ -1602,12 +1603,9 @@ select alter2.plus1(41);
 
 -- clean up
 drop schema alter2 cascade;
-NOTICE:  drop cascades to type alter2.ctype
-NOTICE:  drop cascades to type alter2.posint
-NOTICE:  drop cascades to function alter2.plus1(integer)
-NOTICE:  drop cascades to view alter2.v1
-NOTICE:  drop cascades to rule _RETURN on view alter2.v1
-NOTICE:  drop cascades to sequence alter2.t1_f1_seq
-NOTICE:  drop cascades to default for table alter2.t1 column f1
-NOTICE:  drop cascades to table alter2.t1
-NOTICE:  drop cascades to constraint t1_f2_check on table alter2.t1
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to table alter2.t1
+drop cascades to view alter2.v1
+drop cascades to function alter2.plus1(integer)
+drop cascades to type alter2.posint
+drop cascades to type alter2.ctype

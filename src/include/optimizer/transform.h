@@ -4,6 +4,11 @@
  * 	Query transformation routines
  *
  * Portions Copyright (c) 2011-2013, EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/optimizer/transform.h
  * Author: Siva
  *-------------------------------------------------------------------------
  */

@@ -9,6 +9,11 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2008-2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeBitmapAppendOnlyscan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -23,16 +28,17 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
-#include "executor/execdebug.h"
-#include "executor/nodeBitmapAppendOnlyscan.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
+#include "cdb/cdbvars.h" /* gp_select_invisible */
+#include "executor/execdebug.h"
+#include "executor/nodeBitmapAppendOnlyscan.h"
+#include "miscadmin.h"
+#include "nodes/tidbitmap.h"
+#include "parser/parsetree.h"
 #include "pgstat.h"
 #include "utils/memutils.h"
-#include "miscadmin.h"
-#include "parser/parsetree.h"
-#include "cdb/cdbvars.h" /* gp_select_invisible */
-#include "nodes/tidbitmap.h"
+#include "utils/snapmgr.h"
 
 static TupleTableSlot *BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node);
 
@@ -173,33 +179,16 @@ freeFetchDesc(BitmapAppendOnlyScanState *scanstate)
 }
 
 /*
- * Initialize the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapAppendOnlyScanState *scanstate)
-{
-	if (scanstate->baos_tbmres == NULL)
-	{
-		scanstate->baos_tbmres =
-			palloc(sizeof(TBMIterateResult) +
-					MAX_TUPLES_PER_PAGE * sizeof(OffsetNumber));
-
-		/* initialize result header */
-		MemSetAligned(scanstate->baos_tbmres, 0, sizeof(TBMIterateResult));
-	}
-}
-
-/*
  * Free the state relevant to bitmaps
  */
 static inline void
 freeBitmapState(BitmapAppendOnlyScanState *scanstate)
 {
-	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
-	scanstate->baos_tbm = NULL;
-	if (scanstate->baos_tbmres != NULL)
+	if (scanstate->baos_iterator)
 	{
-		pfree(scanstate->baos_tbmres);
+		tbm_generic_end_iterate(scanstate->baos_iterator);
+		scanstate->baos_iterator = NULL;
+		/* baos_tbmres is owned by the iterator and freed during end_iterate. */
 		scanstate->baos_tbmres = NULL;
 	}
 }
@@ -219,8 +208,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	AOCSFetchDesc aocsFetchDesc;
 	AOCSFetchDesc aocsLossyFetchDesc;
 	Index		scanrelid;
-	Node  		*tbm;
-	TBMIterateResult *tbmres;
+	GenericBMIterator *iterator;
 	OffsetNumber psuedoHeapOffset;
 	ItemPointerData psudeoHeapTid;
 	AOTupleId aoTid;
@@ -233,16 +221,13 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	econtext = node->ss.ps.ps_ExprContext;
 	slot = node->ss.ss_ScanTupleSlot;
 
-	initBitmapState(node);
 	initFetchDesc(node);
 
 	aoFetchDesc = node->baos_currentAOFetchDesc;
 	aocsFetchDesc = node->baos_currentAOCSFetchDesc;
 	aocsLossyFetchDesc = node->baos_currentAOCSLossyFetchDesc;
 	scanrelid = ((BitmapAppendOnlyScan *) node->ss.ps.plan)->scan.scanrelid;
-	tbm = node->baos_tbm;
-	tbmres = (TBMIterateResult *) node->baos_tbmres;
-	Assert(tbmres != NULL);
+	iterator = node->baos_iterator;
 
 	/*
 	 * Check if we are evaluating PlanQual for tuple of this relation.
@@ -261,8 +246,8 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 			return ExecClearTuple(slot);
 		}
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1],
-					   slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1],
+						   slot, InvalidBuffer, false);
 
 		/* Does the tuple meet the original qual conditions? */
 		econtext->ecxt_scantuple = slot;
@@ -279,11 +264,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -292,29 +272,36 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	 * we have used up the bitmaps from the previous scan, do the next scan,
 	 * and prepare the bitmap to be iterated over.
  	 */
-	if (tbm == NULL)
+	if (iterator == NULL)
 	{
-		tbm = (Node *) MultiExecProcNode(outerPlanState(node));
+		Node *tbm = (Node *) MultiExecProcNode(outerPlanState(node));
 
-		if (tbm != NULL && (!(IsA(tbm, HashBitmap) ||
-							  IsA(tbm, StreamBitmap))))
+		if (!tbm || !(IsA(tbm, TIDBitmap) || IsA(tbm, StreamBitmap)))
 			elog(ERROR, "unrecognized result from subplan");
 
-		node->baos_tbm = tbm;
+		if (tbm == NULL)
+		{
+			ExecEagerFreeBitmapAppendOnlyScan(node);
+
+			return ExecClearTuple(slot);
+		}
+
+		/*
+		 * BitmapIndexScan is the owner of the bitmap memory. We don't take
+		 * ownership here; just begin iteration.
+		 */
+		node->baos_iterator = iterator = tbm_generic_begin_iterate(tbm);
 	}
 
-	if (tbm == NULL)
-	{
-		ExecEagerFreeBitmapAppendOnlyScan(node);
-
-		return ExecClearTuple(slot);
-	}
-
-	Assert(tbm != NULL);
-	Assert(tbmres != NULL);
+	Assert(iterator != NULL);
 
 	for (;;)
 	{
+		/* GPDB_84_MERGE_FIXME: can the baos_tbmres state be removed from
+		 * BitmapAppendOnlyScanState, or is it possible for it to be carried
+		 * through multiple calls to BitmapAppendOnlyScanNext()? */
+		TBMIterateResult *tbmres = node->baos_tbmres;
+
 		CHECK_FOR_INTERRUPTS();
 
 		if (QueryFinishPending)
@@ -327,11 +314,14 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 			 * convert the (psuedo) heap block number and item number to an
 			 * Append-Only TID.
 			 */
-			if (!tbm_iterate(tbm, tbmres))
+			tbmres = tbm_generic_iterate(iterator);
+			if (!tbmres)
 			{
 				/* no more entries in the bitmap */
 				break;
 			}
+
+			node->baos_tbmres = tbmres;
 
 			/* If tbmres contains no tuples, continue. */
 			if (tbmres->ntuples == 0)
@@ -364,6 +354,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 			/*
 			 * Continuing in previously obtained page; advance cindex
 			 */
+			Assert(tbmres);
 			node->baos_cindex++;
 		}
 
@@ -447,12 +438,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		}
 
 		/* OK to return this tuple */
-      	if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
-
 		return slot;
 	}
 
@@ -521,8 +506,6 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
-
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 
@@ -604,7 +587,7 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 	scanstate->ss.ps.plan = (Plan *) node;
 	scanstate->ss.ps.state = estate;
 
-	scanstate->baos_tbm = NULL;
+	scanstate->baos_iterator = NULL;
 	scanstate->baos_tbmres = NULL;
 	scanstate->baos_gotpage = false;
 	scanstate->baos_lossy = false;
@@ -672,8 +655,6 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 	 */
 	outerPlanState(scanstate) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapAppendOnlyScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -685,14 +666,6 @@ ExecCountSlotsBitmapAppendOnlyScan(BitmapAppendOnlyScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPAPPENDONLYSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForBitmapAppendOnlyScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapAppendOnlyScan));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

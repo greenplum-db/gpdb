@@ -2,7 +2,12 @@
  *
  * cdbmirroredbufferpool.h
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbmirroredbufferpool.h
  *
  *-------------------------------------------------------------------------
  */

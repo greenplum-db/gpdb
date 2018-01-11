@@ -97,10 +97,6 @@ main(int argc, char *argv[])
 			case 't':
 				table = optarg;
 				break;
-			/*
-			 * -v accepted for PostgreSQL compatability, although GPDB
-			 * doesn't actually handle CLUSTER VERBOSE.
-			 */
 			case 'v':
 				verbose = true;
 				break;
@@ -245,7 +241,7 @@ help(const char *progname)
 	printf(_("  -e, --echo                show the commands being sent to the server\n"));
 	printf(_("  -q, --quiet               don't write any messages\n"));
 	printf(_("  -t, --table=TABLE         cluster specific table only\n"));
-	//printf(_("  -v, --verbose             write a lot of output\n"));
+	printf(_("  -v, --verbose             write a lot of output\n"));
 	printf(_("  --help                    show this help, then exit\n"));
 	printf(_("  --version                 output version information, then exit\n"));
 	printf(_("\nConnection options:\n"));

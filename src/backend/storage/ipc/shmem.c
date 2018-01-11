@@ -3,12 +3,12 @@
  * shmem.c
  *	  create shared memory and initialize shared memory data structures.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/shmem.c,v 1.100 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/shmem.c,v 1.102 2009/01/01 17:23:47 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -78,9 +78,9 @@
 
 static PGShmemHeader *ShmemSegHdr;		/* shared mem segment header */
 
-SHMEM_OFFSET ShmemBase;			/* start address of shared memory */
+static void *ShmemBase;			/* start address of shared memory */
 
-static SHMEM_OFFSET ShmemEnd;	/* end+1 address of shared memory */
+static void *ShmemEnd;			/* end+1 address of shared memory */
 
 slock_t    *ShmemLock;			/* spinlock for shared memory and LWLock
 								 * allocation */
@@ -101,8 +101,8 @@ InitShmemAccess(void *seghdr)
 	PGShmemHeader *shmhdr = (PGShmemHeader *) seghdr;
 
 	ShmemSegHdr = shmhdr;
-	ShmemBase = (SHMEM_OFFSET) shmhdr;
-	ShmemEnd = ShmemBase + shmhdr->totalsize;
+	ShmemBase = (void *) shmhdr;
+	ShmemEnd = (char *) ShmemBase + shmhdr->totalsize;
 }
 
 /*
@@ -141,7 +141,7 @@ InitShmemAllocation(void)
 	SpinLockInit(ShmemLock);
 
 	/* ShmemIndex can't be set up yet (need LWLocks first) */
-	shmhdr->indexoffset = 0;
+	shmhdr->index = NULL;
 	ShmemIndex = (HTAB *) NULL;
 
 	/*
@@ -192,7 +192,7 @@ ShmemAlloc(Size size)
 	newFree = newStart + size;
 	if (newFree <= shmemseghdr->totalsize)
 	{
-		newSpace = (void *) MAKE_PTR(newStart);
+		newSpace = (void *) ((char *) ShmemBase + newStart);
 		shmemseghdr->freeoffset = newFree;
 	}
 	else
@@ -209,14 +209,14 @@ ShmemAlloc(Size size)
 }
 
 /*
- * ShmemIsValid -- test if an offset refers to valid shared memory
+ * ShmemAddrIsValid -- test if an address refers to shared memory
  *
- * Returns TRUE if the pointer is valid.
+ * Returns TRUE if the pointer points within the shared memory segment.
  */
 bool
-ShmemIsValid(unsigned long addr)
+ShmemAddrIsValid(void *addr)
 {
-	return (addr < ShmemEnd) && (addr >= ShmemBase);
+	return (addr >= ShmemBase) && (addr < ShmemEnd);
 }
 
 /*
@@ -340,8 +340,8 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 		if (IsUnderPostmaster)
 		{
 			/* Must be initializing a (non-standalone) backend */
-			Assert(shmemseghdr->indexoffset != 0);
-			structPtr = (void *) MAKE_PTR(shmemseghdr->indexoffset);
+			Assert(shmemseghdr->index != NULL);
+			structPtr = shmemseghdr->index;
 			*foundPtr = TRUE;
 		}
 		else
@@ -354,9 +354,9 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 			 * index has been initialized.	This should be OK because no other
 			 * process can be accessing shared memory yet.
 			 */
-			Assert(shmemseghdr->indexoffset == 0);
+			Assert(shmemseghdr->index == NULL);
 			structPtr = ShmemAlloc(size);
-			shmemseghdr->indexoffset = MAKE_OFFSET(structPtr);
+			shmemseghdr->index = structPtr;
 			*foundPtr = FALSE;
 		}
 		LWLockRelease(ShmemIndexLock);
@@ -390,7 +390,7 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 			/* let caller print its message too */
 			return NULL;
 		}
-		structPtr = (void *) MAKE_PTR(result->location);
+		structPtr = result->location;
 	}
 	else
 	{
@@ -411,9 +411,9 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 			return NULL;
 		}
 		result->size = size;
-		result->location = MAKE_OFFSET(structPtr);
+		result->location = structPtr;
 	}
-	Assert(ShmemIsValid((unsigned long) structPtr));
+	Assert(ShmemAddrIsValid(structPtr));
 
 	LWLockRelease(ShmemIndexLock);
 	return structPtr;

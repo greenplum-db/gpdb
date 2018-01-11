@@ -5,7 +5,12 @@
  *	  Functions to dispatch commands to QExecutors.
  *
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/dispatcher/cdbdisp.c
  *
  *-------------------------------------------------------------------------
  */
@@ -19,8 +24,8 @@
 #include "cdb/cdbdisp_thread.h"
 #include "cdb/cdbdisp_async.h"
 #include "cdb/cdbdispatchresult.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbsreh.h"
@@ -29,7 +34,7 @@
 /*
  * default directed-dispatch parameters: don't direct anything.
  */
-CdbDispatchDirectDesc default_dispatch_direct_desc = { false, 0, {0}};
+CdbDispatchDirectDesc default_dispatch_direct_desc = {false, 0, {0}};
 
 static void cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds);
 
@@ -96,10 +101,11 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 	}
 
 	/*
-	 * WIP: will use a function pointer for implementation later, currently just use an internal function to move dispatch
-	 * thread related code into a separate file.
+	 * WIP: will use a function pointer for implementation later, currently
+	 * just use an internal function to move dispatch thread related code into
+	 * a separate file.
 	 */
-	(pDispatchFuncs->dispatchToGang)(ds, gp, sliceIndex, disp_direct);
+	(pDispatchFuncs->dispatchToGang) (ds, gp, sliceIndex, disp_direct);
 }
 
 /*
@@ -111,7 +117,7 @@ void
 cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
 {
 	if (pDispatchFuncs->waitDispatchFinish != NULL)
-		(pDispatchFuncs->waitDispatchFinish)(ds);
+		(pDispatchFuncs->waitDispatchFinish) (ds);
 }
 
 /*
@@ -128,7 +134,7 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
 {
 	PG_TRY();
 	{
-		(pDispatchFuncs->checkResults)(ds, waitMode);
+		(pDispatchFuncs->checkResults) (ds, waitMode);
 	}
 	PG_CATCH();
 	{
@@ -144,7 +150,7 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
 
 	if (DEBUG1 >= log_min_messages)
 	{
-		char msec_str[32];
+		char		msec_str[32];
 
 		switch (check_log_duration(msec_str, false))
 		{
@@ -169,24 +175,24 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
 struct CdbDispatchResults *
 cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErrorMsg)
 {
-    int errorcode;
+	int			errorcode;
 
-    if (!ds || !ds->primaryResults)
-        return NULL;
+	if (!ds || !ds->primaryResults)
+		return NULL;
 
-    /* wait QEs to return results or report errors*/
-    CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
+	/* wait QEs to return results or report errors */
+	CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
 
-    /* check if any error reported */
-    errorcode = ds->primaryResults->errcode;
+	/* check if any error reported */
+	errorcode = ds->primaryResults->errcode;
 
-    if (errorcode)
-    {
-        cdbdisp_dumpDispatchResults(ds->primaryResults, qeErrorMsg);
-        return NULL;
-    }
+	if (errorcode)
+	{
+		cdbdisp_dumpDispatchResults(ds->primaryResults, qeErrorMsg);
+		return NULL;
+	}
 
-    return ds->primaryResults;
+	return ds->primaryResults;
 }
 
 /*
@@ -202,6 +208,7 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 {
 	StringInfoData qeErrorMsg = {NULL, 0, 0, 0};
 	CdbDispatchResults *pr = NULL;
+
 	/*
 	 * If cdbdisp_dispatchToGang() wasn't called, don't wait.
 	 */
@@ -211,11 +218,11 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 	/*
 	 * If we are called in the dying sequence, don't touch QE connections.
 	 * Anything below could cause ERROR in which case we would miss a chance
-	 * to clean up shared memory as this is from AbortTransaction.
-	 * QE may stay a bit longer, but since we can consider QD as libpq
-	 * client to QE, they will notice that we as a client do not
-	 * appear anymore and will finish soon. Also ERROR report doesn't
-	 * go to the client anyway since we are in proc_exit.
+	 * to clean up shared memory as this is from AbortTransaction. QE may stay
+	 * a bit longer, but since we can consider QD as libpq client to QE, they
+	 * will notice that we as a client do not appear anymore and will finish
+	 * soon. Also ERROR report doesn't go to the client anyway since we are in
+	 * proc_exit.
 	 */
 	if (proc_exit_inprogress)
 		return;
@@ -228,7 +235,7 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 		initStringInfo(&qeErrorMsg);
 
 		pr = cdbdisp_getDispatchResults(ds, &qeErrorMsg);
-	
+
 		if (!pr)
 		{
 			/*
@@ -287,25 +294,24 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 		return;
 
 	/*
-	 * Request any remaining commands executing on qExecs to stop.
-	 * We need to wait for the threads to finish. This allows for proper
-	 * cleanup of the results from the async command executions.
-	 * Cancel any QEs still running.
+	 * Request any remaining commands executing on qExecs to stop. We need to
+	 * wait for the threads to finish. This allows for proper cleanup of the
+	 * results from the async command executions. Cancel any QEs still
+	 * running.
 	 */
 	CdbCheckDispatchResult(ds, DISPATCH_WAIT_CANCEL);
 
 	/*
-	 * When a QE stops executing a command due to an error, as a
-	 * consequence there can be a cascade of interconnect errors
-	 * (usually "sender closed connection prematurely") thrown in
-	 * downstream processes (QEs and QD). So if we are handling
-	 * an interconnect error, and a QE hit a more interesting error,
-	 * we'll let the QE's error report take precedence.
+	 * When a QE stops executing a command due to an error, as a consequence
+	 * there can be a cascade of interconnect errors (usually "sender closed
+	 * connection prematurely") thrown in downstream processes (QEs and QD).
+	 * So if we are handling an interconnect error, and a QE hit a more
+	 * interesting error, we'll let the QE's error report take precedence.
 	 */
 	if (qderrcode == ERRCODE_GP_INTERCONNECTION_ERROR)
 	{
-		bool qd_lost_flag = false;
-		char *qderrtext = elog_message();
+		bool		qd_lost_flag = false;
+		char	   *qderrtext = elog_message();
 
 		if (qderrtext
 			&& strcmp(qderrtext, CDB_MOTION_LOST_CONTACT_STRING) == 0)
@@ -324,9 +330,9 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 	if (useQeError)
 	{
 		/*
-		 * Throw the QE's error, catch it, and fall thru to return
-		 * normally so caller can finish cleaning up. Afterwards
-		 * caller must exit via PG_RE_THROW().
+		 * Throw the QE's error, catch it, and fall thru to return normally so
+		 * caller can finish cleaning up. Afterwards caller must exit via
+		 * PG_RE_THROW().
 		 */
 		PG_TRY();
 		{
@@ -380,7 +386,7 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
 
 	oldContext = MemoryContextSwitchTo(ds->dispatchStateContext);
 	ds->primaryResults = cdbdisp_makeDispatchResults(maxSlices, cancelOnError);
-	ds->dispatchParams = (pDispatchFuncs->makeDispatchParams)(maxSlices, queryText, queryTextLen);
+	ds->dispatchParams = (pDispatchFuncs->makeDispatchParams) (maxSlices, queryText, queryTextLen);
 
 	MemoryContextSwitchTo(oldContext);
 }
@@ -400,7 +406,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 
 	if (results != NULL && results->resultArray != NULL)
 	{
-		int i;
+		int			i;
 
 		for (i = 0; i < results->resultCount; i++)
 		{
@@ -420,10 +426,12 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	ds->primaryResults = NULL;
 }
 
-void cdbdisp_cancelDispatch(CdbDispatcherState *ds)
+void
+cdbdisp_cancelDispatch(CdbDispatcherState *ds)
 {
-    CdbCheckDispatchResult(ds, DISPATCH_WAIT_CANCEL);
+	CdbCheckDispatchResult(ds, DISPATCH_WAIT_CANCEL);
 }
+
 /*
  * Clear our "active" flags; so that we know that the writer gangs are busy -- and don't stomp on
  * internal dispatcher structures.
@@ -437,20 +445,45 @@ cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds)
 	}
 }
 
-bool cdbdisp_checkForCancel(CdbDispatcherState * ds)
+bool
+cdbdisp_checkForCancel(CdbDispatcherState *ds)
 {
 	if (pDispatchFuncs == NULL || pDispatchFuncs->checkForCancel == NULL)
 		return false;
-	return (pDispatchFuncs->checkForCancel)(ds);
+	return (pDispatchFuncs->checkForCancel) (ds);
 }
 
-void cdbdisp_onProcExit(void)
+/*
+ * Return a file descriptor to wait for events from the QEs after dispatching
+ * a query.
+ *
+ * This is intended for use with cdbdisp_checkForCancel(). First call
+ * cdbdisp_getWaitSocketFd(), and wait on that socket to become readable
+ * e.g. with select() or poll(). When it becomes readable, call
+ * cdbdisp_checkForCancel() to process the incoming data, and repeat.
+ *
+ * XXX: This returns only one fd, but we might be waiting for results from
+ * multiple QEs. In that case, this returns arbitrarily one of them. You
+ * should still have a timeout, and call cdbdisp_checkForCancel()
+ * periodically, to process results from the other QEs.
+ */
+int
+cdbdisp_getWaitSocketFd(CdbDispatcherState *ds)
+{
+	if (pDispatchFuncs == NULL || pDispatchFuncs->getWaitSocketFd == NULL)
+		return -1;
+	return (pDispatchFuncs->getWaitSocketFd) (ds);
+}
+
+void
+cdbdisp_onProcExit(void)
 {
 	if (pDispatchFuncs != NULL && pDispatchFuncs->procExitCallBack != NULL)
-		(pDispatchFuncs->procExitCallBack)();
+		(pDispatchFuncs->procExitCallBack) ();
 }
 
-void cdbdisp_setAsync(bool async)
+void
+cdbdisp_setAsync(bool async)
 {
 	if (async)
 		pDispatchFuncs = &DispatcherAsyncFuncs;

@@ -1,16 +1,19 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.102.2.1 2009/01/22 22:56:54 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.122 2009/05/03 20:45:43 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-SELECT">
  <refmeta>
   <refentrytitle id="sql-select-title">SELECT</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
  <refnamediv>
   <refname>SELECT</refname>
+  <refname>TABLE</refname>
+  <refname>WITH</refname>
   <refpurpose>retrieve rows from a table or view</refpurpose>
  </refnamediv>
 
@@ -18,11 +21,20 @@ PostgreSQL documentation
   <primary>SELECT</primary>
  </indexterm>
 
+ <indexterm zone="sql-select">
+  <primary>TABLE command</primary>
+ </indexterm>
+
+ <indexterm zone="sql-select">
+  <primary>WITH</primary>
+  <secondary>in SELECT</secondary>
+ </indexterm>
+
  <refsynopsisdiv>
 <synopsis>
 [ WITH [ RECURSIVE ] <replaceable class="parameter">with_query</replaceable> [, ...] ]
 SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replaceable> [, ...] ) ] ]
-    * | <replaceable class="parameter">expression</replaceable> [ [AS] <replaceable class="parameter">output_name</replaceable> ] [, ...]
+    * | <replaceable class="parameter">expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...]
     [ FROM <replaceable class="parameter">from_item</replaceable> [, ...] ]
     [ WHERE <replaceable class="parameter">condition</replaceable> ]
     [ GROUP BY <replaceable class="parameter">grouping_element</replaceable> [, ...] ]
@@ -31,7 +43,8 @@ SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replac
     [ { UNION | INTERSECT | EXCEPT } [ ALL ] <replaceable class="parameter">select</replaceable> ]
     [ ORDER BY <replaceable class="parameter">expression</replaceable> [ ASC | DESC | USING <replaceable class="parameter">operator</replaceable> ] [ NULLS { FIRST | LAST } ] [, ...] ]
     [ LIMIT { <replaceable class="parameter">count</replaceable> | ALL } ]
-    [ OFFSET <replaceable class="parameter">start</replaceable> ]
+    [ OFFSET <replaceable class="parameter">start</replaceable> [ ROW | ROWS ] ]
+    [ FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { ROW | ROWS } ONLY ]
     [ FOR { UPDATE | SHARE } [ OF <replaceable class="parameter">table_name</replaceable> [, ...] ] [ NOWAIT ] [...] ]
 	
 where <replaceable class="parameter">grouping_element</replaceable> can be one of:
@@ -182,7 +195,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
 
     <listitem>
      <para>
-      If the <literal>LIMIT</literal> or <literal>OFFSET</literal>
+      If the <literal>LIMIT</literal> (or <literal>FETCH FIRST</literal>) or <literal>OFFSET</literal>
       clause is specified, the <command>SELECT</command> statement
       only returns a subset of the result rows. (See <xref
       linkend="sql-limit" endterm="sql-limit-title"> below.)
@@ -202,10 +215,11 @@ and <replaceable class="parameter">with_query</replaceable> is:
   </para>
 
   <para>
-   You must have <literal>SELECT</literal> privilege on a table to
-   read its values.  The use of <literal>FOR UPDATE</literal> or
-   <literal>FOR SHARE</literal> requires
-   <literal>UPDATE</literal> privilege as well.
+   You must have <literal>SELECT</literal> privilege on each column used
+   in a <command>SELECT</> command.  The use of <literal>FOR UPDATE</literal>
+   or <literal>FOR SHARE</literal> requires
+   <literal>UPDATE</literal> privilege as well (for at least one column
+   of each table so selected).
   </para>
  </refsect1>
 
@@ -292,7 +306,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
        </para>
       </listitem>
      </varlistentry>
-     
+
      <varlistentry>
       <term><replaceable class="parameter">alias</replaceable></term>
       <listitem>
@@ -310,7 +324,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
        </para>
       </listitem>
      </varlistentry>
-     
+
      <varlistentry>
       <term><replaceable class="parameter">select</replaceable></term>
       <listitem>
@@ -366,7 +380,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
        </para>
       </listitem>
      </varlistentry>
-     
+
      <varlistentry>
       <term><replaceable class="parameter">join_type</replaceable></term>
       <listitem>
@@ -449,7 +463,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
        </para>
       </listitem>
      </varlistentry>
-     
+
      <varlistentry>
       <term><literal>ON <replaceable class="parameter">join_condition</replaceable></literal></term>
       <listitem>
@@ -462,7 +476,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
        </para>
       </listitem>
      </varlistentry>
-     
+
      <varlistentry>
       <term><literal>USING ( <replaceable class="parameter">join_column</replaceable> [, ...] )</literal></term>
       <listitem>
@@ -490,7 +504,7 @@ and <replaceable class="parameter">with_query</replaceable> is:
     </variablelist>
    </para>
   </refsect2>
-   
+
   <refsect2 id="SQL-WHERE">
    <title id="sql-where-title"><literal>WHERE</literal> Clause</title>
 
@@ -507,7 +521,7 @@ WHERE <replaceable class="parameter">condition</replaceable>
     substituted for any variable references.
    </para>
   </refsect2>
-  
+
   <refsect2 id="SQL-GROUPBY">
    <title id="sql-groupby-title"><literal>GROUP BY</literal> Clause</title>
 
@@ -535,6 +549,11 @@ GROUP BY <replaceable class="parameter">expression</replaceable> [, ...]
     making up each group, producing a separate value for each group
     (whereas without <literal>GROUP BY</literal>, an aggregate
     produces a single value computed across all the selected rows).
+    The set of rows fed to the aggregate function can be further filtered by
+    attaching a <literal>FILTER</literal> clause to the aggregate function
+    call; see <xref linkend="syntax-aggregates"> for more information.  When
+    a <literal>FILTER</literal> clause is present, only those rows matching it
+    are included.
     When <literal>GROUP BY</literal> is present, it is not valid for
     the <command>SELECT</command> list expressions to refer to
     ungrouped columns except within aggregate functions, since there
@@ -554,7 +573,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     where <replaceable class="parameter">condition</replaceable> is
     the same as specified for the <literal>WHERE</literal> clause.
    </para>
-    
+
    <para>
     <literal>HAVING</literal> eliminates group rows that do not
     satisfy the condition.  <literal>HAVING</literal> is different
@@ -566,7 +585,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     unambiguously reference a grouping column, unless the reference
     appears within an aggregate function.
    </para>
-    
+
    <para>
     The presence of <literal>HAVING</literal> turns a query into a grouped
     query even if there is no <literal>GROUP BY</> clause.  This is the
@@ -579,6 +598,100 @@ HAVING <replaceable class="parameter">condition</replaceable>
    </para>
   </refsect2>
 
+  <refsect2 id="SQL-WINDOW">
+   <title id="sql-window-title"><literal>WINDOW</literal> Clause</title>
+
+   <para>
+    The optional <literal>WINDOW</literal> clause has the general form
+<synopsis>
+WINDOW <replaceable class="parameter">window_name</replaceable> AS ( <replaceable class="parameter">window_definition</replaceable> ) [, ...]
+</synopsis>
+    where <replaceable class="parameter">window_name</replaceable> is
+    a name that can be referenced from subsequent window definitions or
+    <literal>OVER</> clauses, and
+    <replaceable class="parameter">window_definition</replaceable> is
+<synopsis>
+[ <replaceable class="parameter">existing_window_name</replaceable> ]
+[ PARTITION BY <replaceable class="parameter">expression</replaceable> [, ...] ]
+[ ORDER BY <replaceable class="parameter">expression</replaceable> [ ASC | DESC | USING <replaceable class="parameter">operator</replaceable> ] [ NULLS { FIRST | LAST } ] [, ...] ]
+[ <replaceable class="parameter">frame_clause</replaceable> ]
+</synopsis>
+   </para>
+
+   <para>
+    If an <replaceable class="parameter">existing_window_name</replaceable>
+    is specified it must refer to an earlier entry in the <literal>WINDOW</>
+    list; the new window copies its partitioning clause from that entry,
+    as well as its ordering clause if any.  In this case the new window cannot
+    specify its own <literal>PARTITION BY</> clause, and it can specify
+    <literal>ORDER BY</> only if the copied window does not have one.
+    The new window always uses its own frame clause; the copied window
+    must not specify a frame clause.
+   </para>
+
+   <para>
+    The elements of the <literal>PARTITION BY</> list are interpreted in
+    the same fashion as elements of a
+    <xref linkend="sql-groupby" endterm="sql-groupby-title">, and
+    the elements of the <literal>ORDER BY</> list are interpreted in the
+    same fashion as elements of an
+    <xref linkend="sql-orderby" endterm="sql-orderby-title">.
+    The only difference is that these expressions can contain aggregate
+    function calls, which are not allowed in a regular <literal>GROUP BY</>
+    clause.  They are allowed here because windowing occurs after grouping
+    and aggregation.
+   </para>
+
+   <para>
+    The optional <replaceable class="parameter">frame_clause</> defines
+    the <firstterm>window frame</> for window functions that depend on the
+    frame (not all do).  It can be one of
+<synopsis>
+RANGE UNBOUNDED PRECEDING
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+ROWS UNBOUNDED PRECEDING
+ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+</synopsis>
+    The first two are equivalent and are also the default: they set the
+    frame to be all rows from the partition start up through the current row's
+    last peer in the <literal>ORDER BY</> ordering (which means all rows if
+    there is no <literal>ORDER BY</>).  The options
+    <literal>RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</> and
+    <literal>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</>
+    are also equivalent: they always select all rows in the partition.
+    Lastly, <literal>ROWS UNBOUNDED PRECEDING</> or its verbose equivalent
+    <literal>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</> select
+    all rows up through the current row (regardless of duplicates).
+    Beware that this option can produce implementation-dependent results
+    if the <literal>ORDER BY</> ordering does not order the rows uniquely.
+   </para>
+
+   <para>
+    The purpose of a <literal>WINDOW</literal> clause is to specify the
+    behavior of <firstterm>window functions</> appearing in the query's
+    <xref linkend="sql-select-list" endterm="sql-select-list-title"> or
+    <xref linkend="sql-orderby" endterm="sql-orderby-title">.  These functions
+    can reference the <literal>WINDOW</literal> clause entries by name
+    in their <literal>OVER</> clauses.  A <literal>WINDOW</literal> clause
+    entry does not have to be referenced anywhere, however; if it is not
+    used in the query it is simply ignored.  It is possible to use window
+    functions without any <literal>WINDOW</literal> clause at all, since
+    a window function call can specify its window definition directly in
+    its <literal>OVER</> clause.  However, the <literal>WINDOW</literal>
+    clause saves typing when the same window definition is needed for more
+    than one window function.
+   </para>
+
+   <para>
+    Window functions are described in detail in
+    <xref linkend="tutorial-window">,
+    <xref linkend="syntax-window-functions">, and
+    <xref linkend="queries-window">.
+   </para>
+  </refsect2>
+
   <refsect2 id="sql-select-list">
    <title id="sql-select-list-title"><command>SELECT</command> List</title>
 
@@ -587,26 +700,48 @@ HAVING <replaceable class="parameter">condition</replaceable>
     <literal>SELECT</> and <literal>FROM</>) specifies expressions
     that form the output rows of the <command>SELECT</command>
     statement.  The expressions can (and usually do) refer to columns
-    computed in the <literal>FROM</> clause.  Using the clause
-    <literal>AS <replaceable
-    class="parameter">output_name</replaceable></literal>, another
-    name can be specified for an output column.  This name is
-    primarily used to label the column for display.  It can also be
-    used to refer to the column's value in <literal>ORDER BY</> and
-    <literal>GROUP BY</> clauses, but not in the <literal>WHERE</> or
-    <literal>HAVING</> clauses; there you must write out the
-    expression instead.
+    computed in the <literal>FROM</> clause.
+   </para>
+
+   <para>
+    Just as in a table, every output column of a <command>SELECT</command>
+    has a name.  In a simple <command>SELECT</command> this name is just
+    used to label the column for display, but when the <command>SELECT</>
+    is a sub-query of a larger query, the name is seen by the larger query
+    as the column name of the virtual table produced by the sub-query.
+    To specify the name to use for an output column, write
+    <literal>AS</> <replaceable class="parameter">output_name</replaceable>
+    after the column's expression.  (You can omit <literal>AS</literal>,
+    but only if the desired output name does not match any
+    <productname>PostgreSQL</productname> keyword (see <xref
+    linkend="sql-keywords-appendix">).  For protection against possible
+    future keyword additions, it is recommended that you always either
+    write <literal>AS</literal> or double-quote the output name.)
+    If you do not specify a column name, a name is chosen automatically
+    by <productname>PostgreSQL</productname>.  If the column's expression
+    is a simple column reference then the chosen name is the same as that
+    column's name; in more complex cases a generated name looking like
+    <literal>?column<replaceable>N</>?</literal> is usually chosen.
+   </para>
+
+   <para>
+    An output column's name can be used to refer to the column's value in
+    <literal>ORDER BY</> and <literal>GROUP BY</> clauses, but not in the
+    <literal>WHERE</> or <literal>HAVING</> clauses; there you must write
+    out the expression instead.
    </para>
 
    <para>
     Instead of an expression, <literal>*</literal> can be written in
     the output list as a shorthand for all the columns of the selected
-    rows.  Also, one can write <literal><replaceable
+    rows.  Also, you can write <literal><replaceable
     class="parameter">table_name</replaceable>.*</literal> as a
-    shorthand for the columns coming from just that table.
+    shorthand for the columns coming from just that table.  In these
+    cases it is not possible to specify new names with <literal>AS</>;
+    the output column names will be the same as the table columns' names.
    </para>
   </refsect2>
-  
+
   <refsect2 id="SQL-UNION">
    <title id="sql-union-title"><literal>UNION</literal> Clause</title>
 
@@ -625,7 +760,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     the <literal>UNION</literal>, not to its right-hand input
     expression.)
    </para>
-    
+
    <para>
     The <literal>UNION</literal> operator computes the set union of
     the rows returned by the involved <command>SELECT</command>
@@ -636,7 +771,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     number of columns, and corresponding columns must be of compatible
     data types.
    </para>
-    
+
    <para>
     The result of <literal>UNION</> does not contain any duplicate
     rows unless the <literal>ALL</> option is specified.
@@ -644,13 +779,13 @@ HAVING <replaceable class="parameter">condition</replaceable>
     <literal>UNION ALL</> is usually significantly quicker than
     <literal>UNION</>; use <literal>ALL</> when you can.)
    </para>
-    
+
    <para>
     Multiple <literal>UNION</> operators in the same
     <command>SELECT</command> statement are evaluated left to right,
     unless otherwise indicated by parentheses.
    </para>
-    
+
    <para>
     Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for a <literal>UNION</> result or for any input of a
@@ -678,7 +813,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     <command>SELECT</command> statements.  A row is in the
     intersection of two result sets if it appears in both result sets.
    </para>
-    
+
    <para>
     The result of <literal>INTERSECT</literal> does not contain any
     duplicate rows unless the <literal>ALL</> option is specified.
@@ -686,7 +821,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     left table and <replaceable>n</> duplicates in the right table will appear
     min(<replaceable>m</>,<replaceable>n</>) times in the result set.
    </para>
-    
+
    <para>
     Multiple <literal>INTERSECT</literal> operators in the same
     <command>SELECT</command> statement are evaluated left to right,
@@ -696,7 +831,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     C</literal> will be read as <literal>A UNION (B INTERSECT
     C)</literal>.
    </para>
-    
+
    <para>
     Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for an <literal>INTERSECT</> result or for any input of
@@ -723,7 +858,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
     that are in the result of the left <command>SELECT</command>
     statement but not in the result of the right one.
    </para>
-    
+
    <para>
     The result of <literal>EXCEPT</literal> does not contain any
     duplicate rows unless the <literal>ALL</> option is specified.
@@ -731,14 +866,14 @@ HAVING <replaceable class="parameter">condition</replaceable>
     left table and <replaceable>n</> duplicates in the right table will appear
     max(<replaceable>m</>-<replaceable>n</>,0) times in the result set.
    </para>
-    
+
    <para>
     Multiple <literal>EXCEPT</literal> operators in the same
     <command>SELECT</command> statement are evaluated left to right,
     unless parentheses dictate otherwise.  <literal>EXCEPT</> binds at
     the same level as <literal>UNION</>.
    </para>
-    
+
    <para>
     Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for an <literal>EXCEPT</> result or for any input of
@@ -771,17 +906,17 @@ ORDER BY <replaceable class="parameter">expression</replaceable> [ ASC | DESC | 
 
    <para>
     The ordinal number refers to the ordinal (left-to-right) position
-    of the result column. This feature makes it possible to define an
+    of the output column. This feature makes it possible to define an
     ordering on the basis of a column that does not have a unique
     name.  This is never absolutely necessary because it is always
-    possible to assign a name to a result column using the
+    possible to assign a name to an output column using the
     <literal>AS</> clause.
    </para>
-    
+
    <para>
     It is also possible to use arbitrary expressions in the
     <literal>ORDER BY</literal> clause, including columns that do not
-    appear in the <command>SELECT</command> result list.  Thus the
+    appear in the <command>SELECT</command> output list.  Thus the
     following statement is valid:
 <programlisting>
 SELECT name FROM distributors ORDER BY code;
@@ -794,13 +929,13 @@ SELECT name FROM distributors ORDER BY code;
 
    <para>
     If an <literal>ORDER BY</> expression is a simple name that
-    matches both a result column name and an input column name,
-    <literal>ORDER BY</> will interpret it as the result column name.
+    matches both an output column name and an input column name,
+    <literal>ORDER BY</> will interpret it as the output column name.
     This is the opposite of the choice that <literal>GROUP BY</> will
     make in the same situation.  This inconsistency is made to be
     compatible with the SQL standard.
    </para>
-    
+
    <para>
     Optionally one can add the key word <literal>ASC</> (ascending) or
     <literal>DESC</> (descending) after any expression in the
@@ -835,8 +970,7 @@ SELECT name FROM distributors ORDER BY code;
 
    <para>
     Character-string data is sorted according to the locale-specific
-    collation order that was established when the database cluster
-    was initialized.
+    collation order that was established when the database was created.
    </para>
   </refsect2>
 
@@ -878,7 +1012,7 @@ SELECT DISTINCT ON (location) location, time, report
     desired precedence of rows within each <literal>DISTINCT ON</> group.
    </para>
   </refsect2>
-  
+
   <refsect2 id="SQL-LIMIT">
    <title id="sql-limit-title"><literal>LIMIT</literal> Clause</title>
 
@@ -896,6 +1030,32 @@ OFFSET <replaceable class="parameter">start</replaceable>
     <replaceable class="parameter">start</replaceable> rows are skipped
     before starting to count the <replaceable
     class="parameter">count</replaceable> rows to be returned.
+   </para>
+
+   <para>
+    If the <replaceable class="parameter">count</replaceable> expression
+    evaluates to NULL, it is treated as <literal>LIMIT ALL</>, i.e., no
+    limit.  If <replaceable class="parameter">start</replaceable> evaluates
+    to NULL, it is treated the same as <literal>OFFSET 0</>.
+   </para>
+
+   <para>
+    SQL:2008 introduced a different syntax to achieve the same thing,
+    which PostgreSQL also supports.  It is:
+<synopsis>
+OFFSET <replaceable class="parameter">start</replaceable> { ROW | ROWS }
+FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { ROW | ROWS } ONLY
+</synopsis>
+    Both clauses are optional, but if present
+    the <literal>OFFSET</literal> clause must come before
+    the <literal>FETCH</literal> clause.  <literal>ROW</literal>
+    and <literal>ROWS</literal> as well as <literal>FIRST</literal>
+    and <literal>NEXT</literal> are noise words that don't influence
+    the effects of these clauses.  In this syntax, when using expressions
+    other than simple constants for <replaceable class="parameter">start</>
+    or <replaceable class="parameter">count</replaceable>, parentheses will be
+    necessary in most cases.  If <replaceable class="parameter">count</> is
+    omitted in <literal>FETCH</>, it defaults to 1.
    </para>
 
    <para>
@@ -1041,11 +1201,11 @@ ROLLBACK TO s;
   <caution>
    <para>
     It is possible for a <command>SELECT</> command using both
-    <literal>LIMIT</literal> and  <literal>FOR UPDATE/SHARE</literal>
+    <literal>LIMIT</literal> and <literal>FOR UPDATE/SHARE</literal>
     clauses to return fewer rows than specified by <literal>LIMIT</literal>.
     This is because <literal>LIMIT</> is applied first.  The command
     selects the specified number of rows,
-    but might then block trying to obtain lock on one or more of them.
+    but might then block trying to obtain a lock on one or more of them.
     Once the <literal>SELECT</> unblocks, the row might have been deleted
     or updated so that it does not meet the query <literal>WHERE</> condition
     anymore, in which case it will not be returned.
@@ -1066,7 +1226,23 @@ ROLLBACK TO s;
     ... ORDER BY</>.
    </para>
   </caution>
+  </refsect2>
 
+  <refsect2 id="SQL-TABLE">
+   <title><literal>TABLE</literal> Command</title>
+
+   <para>
+    The command
+<programlisting>
+TABLE <replaceable class="parameter">name</replaceable>
+</programlisting>
+    is completely equivalent to
+<programlisting>
+SELECT * FROM <replaceable class="parameter">name</replaceable>
+</programlisting>
+    It can be used as a top-level command or as a space-saving syntax
+    variant in parts of complex queries.
+   </para>
   </refsect2>
  </refsect1>
 
@@ -1264,7 +1440,7 @@ SELECT distance, employee_name FROM employee_recursive;
    for more examples.)
   </para>
  </refsect1>
- 
+
  <refsect1>
   <title>Compatibility</title>
 
@@ -1273,7 +1449,7 @@ SELECT distance, employee_name FROM employee_recursive;
    with the SQL standard.  But there are some extensions and some
    missing features.
   </para>
-  
+
   <refsect2>
    <title>Omitted <literal>FROM</literal> Clauses</title>
 
@@ -1313,16 +1489,38 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
   </refsect2>
 
   <refsect2>
-   <title>The <literal>AS</literal> Key Word</title>
+   <title>Omitting the <literal>AS</literal> Key Word</title>
 
    <para>
-    In the SQL standard, the optional key word <literal>AS</> is just
-    noise and can be omitted without affecting the meaning.  The
-    <productname>PostgreSQL</productname> parser requires this key
-    word when renaming output columns because the type extensibility
-    features lead to parsing ambiguities without it.
-    <literal>AS</literal> is optional in <literal>FROM</literal>
-    items, however.
+    In the SQL standard, the optional key word <literal>AS</> can be
+    omitted before an output column name whenever the new column name
+    is a valid column name (that is, not the same as any reserved
+    keyword).  <productname>PostgreSQL</productname> is slightly more
+    restrictive: <literal>AS</> is required if the new column name
+    matches any keyword at all, reserved or not.  Recommended practice is
+    to use <literal>AS</> or double-quote output column names, to prevent
+    any possible conflict against future keyword additions.
+   </para>
+
+   <para>
+    In <literal>FROM</literal> items, both the standard and
+    <productname>PostgreSQL</productname> allow <literal>AS</> to
+    be omitted before an alias that is an unreserved keyword.  But
+    this is impractical for output column names, because of syntactic
+    ambiguities.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>ONLY</literal> and Parentheses</title>
+
+   <para>
+    The SQL standard requires parentheses around the table name
+    after <literal>ONLY</literal>, as in <literal>SELECT * FROM ONLY
+    (tab1), ONLY (tab2) WHERE ...</literal>.  PostgreSQL supports that
+    as well, but the parentheses are optional.  (This point applies
+    equally to all SQL commands supporting the <literal>ONLY</literal>
+    option.)
    </para>
   </refsect2>
 
@@ -1331,7 +1529,7 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
 
    <para>
     In the SQL-92 standard, an <literal>ORDER BY</literal> clause can
-    only use result column names or numbers, while a <literal>GROUP
+    only use output column names or numbers, while a <literal>GROUP
     BY</literal> clause can only use expressions based on input column
     names.  <productname>PostgreSQL</productname> extends each of
     these clauses to allow the other choice as well (but it uses the
@@ -1339,7 +1537,7 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
     <productname>PostgreSQL</productname> also allows both clauses to
     specify arbitrary expressions.  Note that names appearing in an
     expression will always be taken as input-column names, not as
-    result-column names.
+    output-column names.
    </para>
 
    <para>
@@ -1352,12 +1550,40 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
   </refsect2>
 
   <refsect2>
+   <title><literal>WINDOW</literal> Clause Restrictions</title>
+
+   <para>
+    The SQL standard provides additional options for the window
+    <replaceable class="parameter">frame_clause</>.
+    <productname>PostgreSQL</productname> currently supports only the
+    options listed above.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>LIMIT</literal> and <literal>OFFSET</literal></title>
+
+   <para>
+    The clauses <literal>LIMIT</literal> and <literal>OFFSET</literal>
+    are <productname>PostgreSQL</productname>-specific syntax, also
+    used by <productname>MySQL</productname>.  The SQL:2008 standard
+    has introduced the clauses <literal>OFFSET ... FETCH {FIRST|NEXT}
+    ...</literal> for the same functionality, as shown above
+    in <xref linkend="sql-limit" endterm="sql-limit-title">, and this
+    syntax is also used by <productname>IBM DB2</productname>.
+    (Applications written for <productname>Oracle</productname>
+    frequently use a workaround involving the automatically
+    generated <literal>rownum</literal> column, not available in
+    PostgreSQL, to implement the effects of these clauses.)
+   </para>
+  </refsect2>
+
+  <refsect2>
    <title>Nonstandard Clauses</title>
 
    <para>
-    The clauses <literal>DISTINCT ON</literal>,
-    <literal>LIMIT</literal>, and <literal>OFFSET</literal> are not
-    defined in the SQL standard.
+    The clause <literal>DISTINCT ON</literal> is not defined in the
+    SQL standard.
    </para>
   </refsect2>
  </refsect1>

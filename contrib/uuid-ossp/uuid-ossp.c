@@ -2,9 +2,9 @@
  *
  * UUID generation functions using the OSSP UUID library
  *
- * Copyright (c) 2007-2008 PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/contrib/uuid-ossp/uuid-ossp.c,v 1.7 2008/01/01 20:31:21 tgl Exp $
+ * $PostgreSQL: pgsql/contrib/uuid-ossp/uuid-ossp.c,v 1.11 2009/06/11 14:48:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,7 +67,7 @@ PG_FUNCTION_INFO_V1(uuid_generate_v5);
 static void
 pguuid_complain(uuid_rc_t rc)
 {
-	char	*err = uuid_error(rc);
+	char	   *err = uuid_error(rc);
 
 	if (err != NULL)
 		ereport(ERROR,
@@ -80,7 +80,7 @@ pguuid_complain(uuid_rc_t rc)
 }
 
 static char *
-uuid_to_string(const uuid_t * uuid)
+uuid_to_string(const uuid_t *uuid)
 {
 	char	   *buf = palloc(UUID_LEN_STR + 1);
 	void	   *ptr = buf;
@@ -96,7 +96,7 @@ uuid_to_string(const uuid_t * uuid)
 
 
 static void
-string_to_uuid(const char *str, uuid_t * uuid)
+string_to_uuid(const char *str, uuid_t *uuid)
 {
 	uuid_rc_t	rc;
 
@@ -164,7 +164,7 @@ uuid_ns_x500(PG_FUNCTION_ARGS)
 
 
 static Datum
-uuid_generate_internal(int mode, const uuid_t * ns, const char *name)
+uuid_generate_internal(int mode, const uuid_t *ns, const char *name)
 {
 	uuid_t	   *uuid;
 	char	   *str;
@@ -214,7 +214,7 @@ uuid_generate_v35_internal(int mode, pg_uuid_t *ns, text *name)
 
 	result = uuid_generate_internal(mode,
 									ns_uuid,
-	   DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(name))));
+									text_to_cstring(name));
 
 	rc = uuid_destroy(ns_uuid);
 	if (rc != UUID_RC_OK)

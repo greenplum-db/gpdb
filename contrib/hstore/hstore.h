@@ -30,11 +30,6 @@ typedef struct
 #define HSTORE_MAX_KEY_LEN 65535
 #define HSTORE_MAX_VALUE_LEN 65535
 
-/* these are determined by the sizes of the keylen and vallen fields */
-/* in struct HEntry and struct Pairs */
-#define HSTORE_MAX_KEY_LEN 65535
-#define HSTORE_MAX_VALUE_LEN 65535
-
 
 typedef struct
 {

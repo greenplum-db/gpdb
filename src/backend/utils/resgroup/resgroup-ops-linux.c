@@ -3,12 +3,15 @@
  * resgroup-ops-cgroup.c
  *	  OS dependent resource group operations - cgroup implementation
  *
+ * Copyright (c) 2017 Pivotal Software, Inc.
  *
- * Copyright (c) 2017, Pivotal Software Inc.
  *
+ * IDENTIFICATION
+ *	    src/backend/utils/resgroup/resgroup-ops-cgroup.c
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "cdb/cdbvars.h"
@@ -20,6 +23,7 @@
 #error  cgroup is only available on linux
 #endif
 
+#include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
 #include <sys/file.h>
@@ -45,7 +49,6 @@
 
 #define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
-#define MAX_PATH_LEN 256
 
 static char * buildPath(Oid group, const char *base, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
@@ -63,13 +66,13 @@ static void getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw);
 static int getOvercommitRatio(void);
 static void detectCgroupMountPoint(void);
 
-static int cpucores = 0;
-static char cgdir[MAX_PATH_LEN];
+static Oid currentGroupIdInCGroup = InvalidOid;
+static char cgdir[MAXPGPATH];
 
 /*
  * Build path string with parameters.
  * - if base is NULL, use default value "gpdb"
- * - if group is 0 then the path is for the gpdb toplevel cgroup;
+ * - if group is RESGROUP_ROOT_ID then the path is for the gpdb toplevel cgroup;
  * - if prop is "" then the path is for the cgroup dir;
  */
 static char *
@@ -85,7 +88,7 @@ buildPath(Oid group,
 	if (!base)
 		base = "gpdb";
 
-	if (group)
+	if (group != RESGROUP_ROOT_ID)
 		snprintf(path, pathsize, "%s/%s/%s/%d/%s", cgdir, comp, base, group, prop);
 	else
 		snprintf(path, pathsize, "%s/%s/%s/%s", cgdir, comp, base, prop);
@@ -105,7 +108,7 @@ buildPath(Oid group,
 static void
 unassignGroup(Oid group, const char *comp, int fddir)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	char *buf;
 	size_t bufsize;
@@ -163,7 +166,7 @@ unassignGroup(Oid group, const char *comp, int fddir)
 	if (buflen == 0)
 		return;
 
-	buildPath(0, NULL, comp, "cgroup.procs", path, pathsize);
+	buildPath(RESGROUP_ROOT_ID, NULL, comp, "cgroup.procs", path, pathsize);
 
 	fdw = open(path, O_WRONLY);
 	__CHECK(fdw >= 0, ( close(fddir) ), "can't open file for write");
@@ -222,7 +225,7 @@ lockDir(const char *path, bool block)
 {
 	int fddir;
 
-	fddir = open(path, O_RDONLY | O_DIRECTORY);
+	fddir = open(path, O_RDONLY);
 	if (fddir < 0)
 	{
 		if (errno == ENOENT)
@@ -316,7 +319,7 @@ createDir(Oid group, const char *comp)
 static bool
 removeDir(Oid group, const char *comp, bool unassign)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	int fddir;
 
@@ -369,24 +372,26 @@ removeDir(Oid group, const char *comp, bool unassign)
 static int
 getCpuCores(void)
 {
-	if (cpucores == 0)
+	static int cpucores = 0;
+
+	/*
+	 * cpuset ops requires _GNU_SOURCE to be defined,
+	 * and _GNU_SOURCE is forced on in src/template/linux,
+	 * so we assume these ops are always available on linux.
+	 */
+	cpu_set_t cpuset;
+	int i;
+
+	if (cpucores != 0)
+		return cpucores;
+
+	if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0)
+		CGROUP_ERROR("can't get cpu cores: %s", strerror(errno));
+
+	for (i = 0; i < CPU_SETSIZE; i++)
 	{
-		/*
-		 * cpuset ops requires _GNU_SOURCE to be defined,
-		 * and _GNU_SOURCE is forced on in src/template/linux,
-		 * so we assume these ops are always available on linux.
-		 */
-		cpu_set_t cpuset;
-		int i;
-
-		if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0)
-			CGROUP_ERROR("can't get cpu cores: %s", strerror(errno));
-
-		for (i = 0; i < CPU_SETSIZE; i++)
-		{
-			if (CPU_ISSET(i, &cpuset))
-				cpucores++;
-		}
+		if (CPU_ISSET(i, &cpuset))
+			cpucores++;
 	}
 
 	if (cpucores == 0)
@@ -448,7 +453,7 @@ readInt64(Oid group, const char *base, const char *comp, const char *prop)
 	int64 x;
 	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 
 	buildPath(group, base, comp, prop, path, pathsize);
@@ -469,7 +474,7 @@ writeInt64(Oid group, const char *base, const char *comp, const char *prop, int6
 {
 	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 
 	buildPath(group, base, comp, prop, path, pathsize);
@@ -487,7 +492,7 @@ writeInt64(Oid group, const char *base, const char *comp, const char *prop, int6
 static bool
 checkPermission(Oid group, bool report)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	const char *comp;
 
@@ -546,8 +551,8 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 static void
 getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
 {
-	*cgram = readInt64(0, "", "memory", "memory.limit_in_bytes");
-	*cgmemsw = readInt64(0, "", "memory", "memory.memsw.limit_in_bytes");
+	*cgram = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.limit_in_bytes");
+	*cgmemsw = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.memsw.limit_in_bytes");
 }
 
 /* get vm.overcommit_ratio */
@@ -616,25 +621,51 @@ ResGroupOps_Name(void)
 void
 ResGroupOps_Bless(void)
 {
+	/*
+	 * We only have to do these checks and initialization once on each host,
+	 * so only let postmaster do the job.
+	 */
+	if (IsUnderPostmaster)
+		return;
+
 	detectCgroupMountPoint();
-	checkPermission(0, true);
+	checkPermission(RESGROUP_ROOT_ID, true);
+
+	/*
+	 * Put postmaster and all the children processes into the gpdb cgroup,
+	 * otherwise auxiliary processes might get too low priority when
+	 * gp_resource_group_cpu_priority is set to a large value
+	 */
+	ResGroupOps_AssignGroup(RESGROUP_ROOT_ID, PostmasterPid);
 }
 
 /* Initialize the OS group */
 void
 ResGroupOps_Init(void)
 {
-	/* cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit */
-	/* shares := 1024 * 256 (max possible value) */
+	/*
+	 * cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
+	 * shares := 1024 * gp_resource_group_cpu_priority
+	 *
+	 * We used to set a large shares (like 1024 * 256, the maximum possible
+	 * value), it has very bad effect on overall system performance,
+	 * especially on 1-core or 2-core low-end systems.
+	 * Processes in a cold cgroup get launched and scheduled with large
+	 * latency (a simple `cat a.txt` may executes for more than 100s).
+	 * Here a cold cgroup is a cgroup that doesn't have active running
+	 * processes, this includes not only the toplevel system cgroup,
+	 * but also the inactive gpdb resgroups.
+	 */
 
 	int64 cfs_period_us;
 	int ncores = getCpuCores();
 	const char *comp = "cpu";
 
-	cfs_period_us = readInt64(0, NULL, comp, "cpu.cfs_period_us");
-	writeInt64(0, NULL, comp, "cpu.cfs_quota_us",
+	cfs_period_us = readInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.cfs_period_us");
+	writeInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.cfs_quota_us",
 			   cfs_period_us * ncores * gp_resource_group_cpu_limit);
-	writeInt64(0, NULL, comp, "cpu.shares", 1024 * 256);
+	writeInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.shares",
+			   1024LL * gp_resource_group_cpu_priority);
 }
 
 /* Adjust GUCs for this OS group implementation */
@@ -648,13 +679,7 @@ ResGroupOps_AdjustGUCs(void)
 	 *
 	 * this function should be called before GUCs are dispatched to segments.
 	 */
-	/* TODO: when cgroup is enabled we should move postmaster and maybe
-	 *       also other processes to a separate group or gpdb toplevel */
-	if (gp_segworker_relative_priority != 0)
-	{
-		/* TODO: produce a warning */
-		gp_segworker_relative_priority = 0;
-	}
+	gp_segworker_relative_priority = 0;
 }
 
 /*
@@ -713,8 +738,13 @@ ResGroupOps_DestroyGroup(Oid group)
 void
 ResGroupOps_AssignGroup(Oid group, int pid)
 {
+	if (IsUnderPostmaster && group == currentGroupIdInCGroup)
+		return;
+
 	writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
 	writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
+
+	currentGroupIdInCGroup = group;
 }
 
 /*
@@ -762,7 +792,7 @@ ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit)
 
 	/* SUB/shares := TOP/shares * cpu_rate_limit */
 
-	int64 shares = readInt64(0, NULL, comp, "cpu.shares");
+	int64 shares = readInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.shares");
 	writeInt64(group, NULL, comp, "cpu.shares", shares * cpu_rate_limit / 100);
 }
 
@@ -788,7 +818,7 @@ ResGroupOps_GetCpuCores(void)
 }
 
 /*
- * Get the total memory on the system.
+ * Get the total memory on the system in MB.
  * Read from sysinfo and cgroup to get correct ram and swap.
  * (total RAM * overcommit_ratio + total Swap)
  */
@@ -820,5 +850,5 @@ ResGroupOps_GetTotalMemory(void)
 	 * memoery outside and the memsw of the container.
 	 */
 	total = Min(outTotal, swap + ram); 
-	return total >> VmemTracker_GetChunkSizeInBits();
+	return total >> BITS_IN_MB;
 }

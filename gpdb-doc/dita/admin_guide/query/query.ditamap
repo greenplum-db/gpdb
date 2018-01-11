@@ -7,6 +7,7 @@
         <topicref href="topics/query-piv-optimizer.xml">
             <topicref href="topics/query-piv-opt-overview.xml"/>
             <topicref href="topics/query-piv-opt-enable.xml"/>
+            <topicref href="topics/query-piv-opt-root-partition.xml"/>
             <topicref href="topics/query-piv-opt-notes.xml"/>
             <topicref href="topics/query-piv-opt-features.xml"/>
             <topicref href="topics/query-piv-opt-changed.xml"/>
@@ -15,6 +16,7 @@
             <topicref href="topics/query-piv-uniform-part-tbl.xml"/>
         </topicref>
         <topicref href="topics/defining-queries.xml"/>
+        <topicref href="topics/CTE-query.xml"/>
         <topicref href="topics/functions-operators.xml"/>
         <topicref href="topics/json-data.xml"/>
         <topicref href="topics/xml-data.xml"/>

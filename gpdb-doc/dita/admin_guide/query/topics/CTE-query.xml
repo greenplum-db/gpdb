@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic_zhs_r1s_w1b">
+  <title>WITH Queries (Common Table Expressions)</title>
+  <shortdesc>The <codeph>WITH</codeph> clause of the <codeph>SELECT</codeph> command provides a way
+    to write subqueries for use in a larger <codeph>SELECT</codeph> query. </shortdesc>
+  <body>
+    <p>The subqueries, which are often referred to as Common Table Expressions or CTEs, can be
+      thought of as defining temporary tables that exist just for the query. One use of this feature
+      is to break down complicated queries into simpler parts. This example query displays
+      per-product sales totals in only the top sales regions:</p>
+    <codeblock>WITH regional_sales AS (
+     SELECT region, SUM(amount) AS total_sales
+     FROM orders
+     GROUP BY region
+  ), top_regions AS (
+     SELECT region
+     FROM regional_sales
+     WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)
+  )
+SELECT region,
+    product,
+    SUM(quantity) AS product_units,
+    SUM(amount) AS product_sales
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product;
+</codeblock>
+    <p>The query could have been written without the <codeph>WITH</codeph> clause, but would have
+      required two levels of nested sub-SELECTs. It is easier to follow with the
+        <codeph>WITH</codeph> clause.</p>
+    <p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server configuration
+      parameter <codeph>gp_recursive_cte_prototype</codeph> to <codeph>on</codeph>.<note
+        type="warning">The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
+        intended for use in a production environment. Experimental features are subject to change
+        without notice in future releases.</note></p>
+    <p>The optional <codeph>RECURSIVE</codeph> keyword changes <codeph>WITH</codeph> accomplishes
+      things not otherwise possible in standard SQL. Using <codeph>RECURSIVE</codeph>, a query in
+      the <codeph>WITH</codeph> clause can refer to its own output. This is a simple example that
+      computes the sum the integers from 1 through 100:</p>
+    <codeblock>WITH RECURSIVE t(n) AS (
+    VALUES (1)
+  UNION ALL
+    SELECT n+1 FROM t WHERE n &lt; 100
+)
+SELECT sum(n) FROM t;
+</codeblock>
+    <p>The required form of a recursive <codeph>WITH</codeph> clause is a <i>non-recursive term</i>,
+      followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a <i>recursive
+        term</i>, where only the <i>recursive term</i> can contain a reference to the query output.
+      <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
+    <p>A recursive <codeph>WITH</codeph> query is executed as follows:</p>
+    <ol id="ol_a3s_r1s_w1b">
+      <li>Evaluate the non-recursive term. For <codeph>UNION</codeph> (but not <codeph>UNION
+          ALL</codeph>), discard duplicate rows. Include all remaining rows in the result of the
+        recursive query, and also place them in a temporary <i>working table</i>.</li>
+      <li>As long as the working table is not empty, repeat these steps:<ol id="ol_b3s_r1s_w1b">
+          <li>Evaluate the recursive term, substituting the current contents of the working table
+            for the recursive self-reference. For <codeph>UNION</codeph> (but not <codeph>UNION
+              ALL</codeph>), discard duplicate rows and rows that duplicate any previous result row.
+            Include all remaining rows in the result of the recursive query, and also place them in
+            a temporary <i>intermediate table</i>.</li>
+          <li>Replace the contents of the <i>working table</i> with the contents of the
+              <i>intermediate table</i>, then empty the <i>intermediate table</i>.</li>
+        </ol></li>
+    </ol>
+    <note>Strictly speaking, the process is iteration not recursion, but <codeph>RECURSIVE</codeph>
+      is the terminology chosen by the SQL standards committee.</note>
+    <p>Recursive <codeph>WITH</codeph> queries are typically used to deal with hierarchical or
+      tree-structured data. An example is this query to find all the direct and indirect sub-parts
+      of a product, given only a table that shows immediate inclusions:</p>
+    <codeblock>WITH RECURSIVE included_parts(sub_part, part, quantity) AS (
+    SELECT sub_part, part, quantity FROM parts WHERE part = 'our_product'
+  UNION ALL
+    SELECT p.sub_part, p.part, p.quantity
+    FROM included_parts pr, parts p
+    WHERE p.part = pr.sub_part
+  )
+SELECT sub_part, SUM(quantity) as total_quantity
+FROM included_parts
+GROUP BY sub_part
+</codeblock>
+    <p>When working with recursive <codeph>WITH</codeph> queries, you must ensure that the recursive
+      part of the query eventually returns no tuples, or else the query loops indefinitely. In the
+      example that computes the sum the integers, the working table contains a single row in each
+      step, and it takes on the values from 1 through 100 in successive steps. In the 100th step,
+      there is no output because of the <codeph>WHERE</codeph> clause, and the query terminates.</p>
+    <p>For some queries, using <codeph>UNION</codeph> instead of <codeph>UNION ALL</codeph> can
+      ensure that the recursive part of the query eventually returns no tuples by discarding rows
+      that duplicate previous output rows. However, often a cycle does not involve output rows that
+      are complete duplicates: it might sufficient to check just one or a few fields to see if the
+      same point has been reached before. The standard method for handling such situations is to
+      compute an array of the visited values. For example, consider the following query that
+      searches a table graph using a link field:</p>
+    <codeblock>WITH RECURSIVE search_graph(id, link, data, depth) AS (
+        SELECT g.id, g.link, g.data, 1
+        FROM graph g
+      UNION ALL
+        SELECT g.id, g.link, g.data, sg.depth + 1
+        FROM graph g, search_graph sg
+        WHERE g.id = sg.link
+)
+SELECT * FROM search_graph;
+</codeblock>
+    <p>This query loops if the link relationships contain cycles. Because the query requires a
+        <codeph>depth</codeph> output, changing <codeph>UNION ALL</codeph> to <codeph>UNION</codeph>
+      does not eliminate the looping. Instead the query needs to recognize whether it has reached
+      the same row again while following a particular path of links. This modified query adds two
+      columns <codeph>path</codeph> and <codeph>cycle</codeph> to the loop-prone query:</p>
+    <codeblock>WITH RECURSIVE search_graph(id, link, data, depth, path, cycle) AS (
+        SELECT g.id, g.link, g.data, 1,
+          ARRAY[g.id],
+          false
+        FROM graph g
+      UNION ALL
+        SELECT g.id, g.link, g.data, sg.depth + 1,
+          path || g.id,
+          g.id = ANY(path)
+        FROM graph g, search_graph sg
+        WHERE g.id = sg.link AND NOT cycle
+)
+SELECT * FROM search_graph;
+</codeblock>
+    <p>Aside from detecting cycles, the array value of <codeph>path</codeph> is useful in its own
+      right since it represents the path taken to reach any particular row.</p>
+    <p>In the general case where more than one field needs to be checked to recognize a cycle, an
+      array of rows can be used. For example, if we needed to compare fields <codeph>f1</codeph> and
+        <codeph>f2</codeph>:</p>
+    <codeblock>WITH RECURSIVE search_graph(id, link, data, depth, path, cycle) AS (
+        SELECT g.id, g.link, g.data, 1,
+          ARRAY[ROW(g.f1, g.f2)],
+          false
+        FROM graph g
+      UNION ALL
+        SELECT g.id, g.link, g.data, sg.depth + 1,
+          path || ROW(g.f1, g.f2),
+          ROW(g.f1, g.f2) = ANY(path)
+        FROM graph g, search_graph sg
+        WHERE g.id = sg.link AND NOT cycle
+)
+SELECT * FROM search_graph;
+</codeblock>
+    <note type="tip">Omit the <codeph>ROW()</codeph> syntax in the case where only one field needs
+      to be checked to recognize a cycle. This uses a simple array rather than a composite-type
+      array to be used, gaining efficiency.</note>
+    <note type="tip">The recursive query evaluation algorithm produces its output in breadth-first
+      search order. You can display the results in depth-first search order by making the outer
+      query <codeph>ORDER BY</codeph> a path column constructed in this way.</note>
+    <p>A helpful technique for testing a query when you are not certain if it might loop
+      indefinitely is to place a <codeph>LIMIT</codeph> in the parent query. For example, this query
+      would loop forever without the <codeph>LIMIT</codeph> clause:</p>
+    <codeblock>WITH RECURSIVE t(n) AS (
+    SELECT 1
+  UNION ALL
+    SELECT n+1 FROM t
+)
+SELECT n FROM t LIMIT 100;</codeblock>
+    <p>The technique works because the recursvie <codeph>WITH</codeph> implementation evaluates only
+      as many rows of a <codeph>WITH</codeph> query as are actually fetched by the parent query.
+      Using this technique in production is not recommended, because other systems might work
+      differently. Also, the technique might not work if the outer query sorts the recursive
+        <codeph>WITH</codeph> results or join the results to another table.</p>
+  </body>
+</topic>

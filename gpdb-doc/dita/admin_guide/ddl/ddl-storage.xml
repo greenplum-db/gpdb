@@ -173,13 +173,13 @@
             <row>
               <entry colname="col1">Row</entry>
               <entry colname="col2">Table</entry>
-              <entry colname="col3"><codeph>ZLIB</codeph> and
+              <entry colname="col3"><codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
                 <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
             <row>
               <entry colname="col1">Column</entry>
               <entry colname="col2">Column and Table</entry>
-              <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, and
+              <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
                   <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
           </tbody>
@@ -204,7 +204,8 @@
               (<codeph>compresslevel=1</codeph>), QuickLZ and zlib have comparable compression
             ratios, though at different speeds. Using zlib with <codeph>compresslevel=6</codeph> can
             significantly increase the compression ratio compared to QuickLZ, though with lower
-            compression speed.</p></li>
+            compression speed. ZStandard compression can provide for either good compression ratio or
+	    speed, depending on compression level, or a good compromise on both.  </p></li>
         <li id="im201783">Speed of decompression/scan rate. Performance with compressed
           append-optimized tables depends on hardware, query tuning settings, and other factors.
           Perform comparison testing to determine the actual performance in your
@@ -216,12 +217,13 @@
       <p>Performance with compressed append-optimized tables depends on hardware, query tuning
         settings, and other factors. You should perform comparison testing to determine
         the actual performance in your environment.</p>
-      <note type="note">QuickLZ compression level can only be set to level 1; no other options are
-        available. Compression level with zlib can be set at values from 1 - 9. Compression level
-        with RLE can be set at values from 1 - 4.<p>An <codeph>ENCODING</codeph> clause specifies
-          compression type and level for individual columns. When an <codeph>ENCODING</codeph>
-          clause conflicts with a <codeph>WITH</codeph> clause, the <codeph>ENCODING</codeph> clause
-          has higher precedence than the <codeph>WITH</codeph> clause.</p></note>
+	<note type="note">Zstd compression level can be set to values between 1 and 19.
+	QuickLZ compression level can only be set to level 1; no other values are
+        available. Compression level with zlib can be set to values from 1 - 9. Compression level
+        with RLE can be set to values from 1 - 4.<p>An <codeph>ENCODING</codeph> clause specifies
+        compression type and level for individual columns. When an <codeph>ENCODING</codeph>
+        clause conflicts with a <codeph>WITH</codeph> clause, the <codeph>ENCODING</codeph> clause
+        has higher precedence than the <codeph>WITH</codeph> clause.</p></note>
       <section id="im159764">
         <title>To create a compressed table</title>
         <p>The <codeph>WITH</codeph> clause of the <codeph>CREATE TABLE</codeph> command declares
@@ -355,21 +357,29 @@
                 <codeph>COMPRESSTYPE</codeph>
               </entry>
               <entry colname="col2">Type of compression.</entry>
-              <entry colname="col3"><codeph>zlib: </codeph>deflate
-                    algorithm<p><codeph>quicklz</codeph>: fast
+              <entry colname="col3"><codeph>zstd: </codeph>ZStandard
+                    algorithm<p><codeph>zlib: </codeph>deflate
+                      algorithm</p><p><codeph>quicklz</codeph>: fast
                     compression</p><p><codeph>RLE_TYPE</codeph>: run-length encoding
                     </p><p><codeph>none</codeph>: no compression</p></entry>
               <entry colname="col4">Values are not case-sensitive.</entry>
             </row>
             <row>
-              <entry colname="col1" morerows="2">
+              <entry colname="col1" morerows="3">
                 <codeph>COMPRESSLEVEL</codeph>
               </entry>
-              <entry colname="col2" morerows="2">Compression level.</entry>
+              <entry colname="col2" morerows="3">Compression level.</entry>
               <entry colname="col3"><codeph>zlib</codeph> compression:
                   <codeph>1</codeph>-<codeph>9</codeph></entry>
               <entry colname="col4"><codeph>1</codeph> is the fastest method with the least
                 compression. <codeph>1</codeph> is the default.<p><codeph>9</codeph> is the slowest
+                  method with the most compression.</p></entry>
+            </row>
+            <row>
+              <entry colname="col3"><codeph>zstd</codeph> compression:
+                  <codeph>1</codeph>-<codeph>19</codeph></entry>
+              <entry colname="col4"><codeph>1</codeph> is the fastest method with the least
+                compression. <codeph>1</codeph> is the default.<p><codeph>19</codeph> is the slowest
                   method with the most compression.</p></entry>
             </row>
             <row>
@@ -447,9 +457,11 @@
         <b>Precedence of Compression Settings</b>
       </title>
       <body>
-        <p>Column compression settings are inherited from the table level to the partition level to
+        <p>Column compression settings are inherited from the type level to the table level to the partition level to
           the subpartition level. The lowest-level settings have priority. </p>
         <ul id="ul_j3h_1wy_sp">
+          <li id="im1963152">Column compression settings defined at the table level override any
+            compression settings for the type.</li>
           <li id="im196315">Column compression settings specified at the table level override any
             compression settings for the entire table.</li>
           <li id="im196314">Column compression settings specified for partitions override any
@@ -488,14 +500,14 @@
       <topic id="topic48" xml:lang="en">
         <title>Example 1 </title>
         <body>
-          <p>In this example, column <codeph>c1</codeph> is compressed using <codeph>zlib</codeph>
+          <p>In this example, column <codeph>c1</codeph> is compressed using <codeph>zstd</codeph>
             and uses the block size defined by the system. Column <codeph>c2</codeph> is compressed
             with <codeph>quicklz</codeph>, and uses a block size of <codeph>65536</codeph>. Column
               <codeph>c3</codeph> is not compressed and uses the block size defined by the
             system.</p>
-          <codeblock>CREATE TABLE T1 (c1 int ENCODING (compresstype=zlib),
+          <codeblock>CREATE TABLE T1 (c1 int ENCODING (compresstype=zstd),
                   c2 char ENCODING (compresstype=quicklz, blocksize=65536),
-                  c3 char     WITH (appendonly=true, orientation=column);</codeblock>
+                  c3 char)    WITH (appendonly=true, orientation=column);</codeblock>
         </body>
       </topic>
       <topic id="topic49" xml:lang="en">
@@ -511,7 +523,7 @@
                   c3 char,
                   COLUMN c3 ENCODING (compresstype=RLE_TYPE)
                   )
-    WITH (appendonly=true, orientation=column)</codeblock>
+    WITH (appendonly=true, orientation=column);</codeblock>
         </body>
       </topic>
       <topic id="topic50" xml:lang="en">
@@ -527,28 +539,29 @@
             the table.</p>
           <codeblock>CREATE TABLE T3 (c1 int ENCODING (compresstype=zlib),
                   c2 char ENCODING (compresstype=quicklz, blocksize=65536),
-                  c3 char, COLUMN c3 ENCODING (compresstype=RLE_TYPE) )
+                  c3 text, COLUMN c3 ENCODING (compresstype=RLE_TYPE) )
     WITH (appendonly=true, orientation=column)
     PARTITION BY RANGE (c3) (START ('1900-01-01'::DATE)          
                              END ('2100-12-31'::DATE),
-                             COLUMN c3 ENCODING (zlib));</codeblock>
+                             COLUMN c3 ENCODING (compresstype=zlib));</codeblock>
         </body>
       </topic>
       <topic id="topic51" xml:lang="en">
         <title>Example 4</title>
         <body>
-          <p>In this example, <codeph>CREATE TABLE</codeph> assigns the zlib compresstype storage
+          <p>In this example, <codeph>CREATE TABLE</codeph> assigns the <codeph>zlib</codeph> compresstype storage
             directive to <codeph>c1</codeph>. Column <codeph>c2</codeph> has no storage directive
             and inherits the compression type (<codeph>quicklz</codeph>) and block size
               (<codeph>65536</codeph>) from the <codeph>DEFAULT COLUMN ENCODING</codeph> clause.</p>
           <p>Column <codeph>c3</codeph>'s <codeph>ENCODING</codeph> clause defines its compression
-            type, <codeph>RLE_TYPE</codeph>. The <codeph>DEFAULT COLUMN ENCODING</codeph> clause
-            defines <codeph>c3</codeph>'s block size, <codeph>65536</codeph>. </p>
-          <p>The <codeph>ENCODING</codeph> clause defined for a specific column overrides the
-              <codeph>DEFAULT ENCODING</codeph> clause, so column <codeph>c4</codeph> has a compress
-            type of <codeph>none</codeph> and the default block size.</p>
+            type, <codeph>RLE_TYPE</codeph>. The <codeph>ENCODING</codeph> clause defined for a
+            specific column overrides the <codeph>DEFAULT ENCODING</codeph> clause, so column
+            <codeph>c3</codeph> uses the default block size, <codeph>32768</codeph>.</p>
+          <p>Column <codeph>c4</codeph> has a compress
+            type of <codeph>none</codeph> and uses the default block size.</p>
           <codeblock>CREATE TABLE T4 (c1 int ENCODING (compresstype=zlib),
                   c2 char,
+                  c3 text,
                   c4 smallint ENCODING (compresstype=none),
                   DEFAULT COLUMN ENCODING (compresstype=quicklz,
                                              blocksize=65536),
@@ -577,7 +590,7 @@
     WITH (appendonly=true, orientation=column)
     PARTITION BY range(i) SUBPARTITION BY range(j)
     (
-       p1 start(1) end(2)
+       partition p1 start(1) end(2)
        ( subpartition sp1 start(1) end(2) 
          column i encoding(compresstype=zlib, blocksize=65536)
        ), 
@@ -599,14 +612,13 @@
         <b>Adding Compression in a TYPE Command</b>
       </title>
       <body>
-        <p>You can define a compression type to simplify column compression statements. For example,
-          the following <codeph>CREATE TYPE</codeph> command defines a compression type,
-            <codeph>comptype</codeph>, that specifies <codeph>quicklz</codeph> compression. </p>
-        <p>where <codeph>comptype</codeph> is defined as:</p>
-        <codeblock>CREATE TYPE comptype (
+        <p>When you create a new type, you can define default compression attributes for the type. For example,
+          the following <codeph>CREATE TYPE</codeph> command defines a type named <codeph>int33</codeph>
+          that specifies <codeph>quicklz</codeph> compression: </p>
+        <codeblock>CREATE TYPE int33 (
    internallength = 4,
-   input = comptype_in,
-   output = comptype_out,
+   input = int33_in,
+   output = int33_out,
    alignment = int4,
    default = 123,
    passedbyvalue,
@@ -614,13 +626,15 @@
    blocksize=65536,
    compresslevel=1
    );</codeblock>
-        <p>You can then use <codeph>comptype</codeph> in a <codeph>CREATE TABLE</codeph> command to
-          specify <codeph>quicklz</codeph> compression for a column:</p>
-        <codeblock>CREATE TABLE t2 (c1 comptype)
+        <p>When you specify <codeph>int33</codeph> as a column type in a <codeph>CREATE TABLE</codeph>
+          command, the column is created with the storage directives you specified for the type:</p>
+        <codeblock>CREATE TABLE t2 (c1 int33)
     WITH (APPENDONLY=true, ORIENTATION=column);</codeblock>
-        <p>For information about creating and adding compression parameters to a type, see
-            <codeph>CREATE TYPE</codeph>. For information about changing compression specifications
-          in a type, see <codeph>ALTER TYPE</codeph>.</p>
+        <p>Table- or column- level storage attributes that you specify in a table definition override
+           type-level storage attributes. For information about creating and adding compression
+           attributes to a type, see
+           <xref href="../../ref_guide/sql_commands/CREATE_TYPE.xml#topic1"/>. For information about changing compression specifications
+          in a type, see <xref href="../../ref_guide/sql_commands/ALTER_TYPE.xml#topic1"/>.</p>
       </body>
       <topic id="topic54" xml:lang="en">
         <title>Choosing Block Size</title>
@@ -738,7 +752,7 @@ GRANT SELECT ON sales TO guest;
           <b>Inheritance of Compression Settings</b>
         </title>
         <body>
-          <p>A partition that is added to a table that has subpartitions with compression settings
+          <p>A partition added to a table that has subpartitions defined with compression settings
             inherits the compression settings from the subpartition. The following example shows how
             to create a table with subpartition encodings, then alter it to add a partition.</p>
           <p>

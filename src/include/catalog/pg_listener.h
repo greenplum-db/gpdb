@@ -4,10 +4,10 @@
  *	  Asynchronous notification
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_listener.h,v 1.23 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_listener.h,v 1.25 2009/01/01 17:23:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -20,10 +20,11 @@
 
 #include "catalog/genbki.h"
 
-/* ----------------
- *		pg_listener definition.  cpp turns this into
- *		typedef struct FormData_pg_listener
- * ----------------
+/* ----------------------------------------------------------------
+ *		pg_listener definition.
+ *
+ *		cpp turns this into typedef struct FormData_pg_listener
+ * ----------------------------------------------------------------
  */
 #define ListenerRelationId	2614
 
@@ -51,7 +52,7 @@ typedef FormData_pg_listener *Form_pg_listener;
 #define Natts_pg_listener						3
 #define Anum_pg_listener_relname				1
 #define Anum_pg_listener_listenerpid			2
-#define Anum_pg_listener_notification			3
+#define Anum_pg_listener_notify					3
 
 /* ----------------
  *		initial contents of pg_listener are NOTHING.

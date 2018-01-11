@@ -3,8 +3,10 @@
 
 /*#include "c.h"*/
 #include <sys/types.h>
-#ifndef WIN32
+#ifdef HAVE_LIBBZ2
 #include <bzlib.h>
+#endif
+#ifdef HAVE_LIBZ
 #include <zlib.h>
 #endif
 
@@ -61,8 +63,10 @@ typedef struct gfile_t
 	union
 	{
 		int txt;
-#ifndef WIN32
+#ifdef HAVE_LIBZ
 		struct zlib_stuff*z;
+#endif
+#ifdef HAVE_LIBBZ2
 		struct bzlib_stuff*bz;
 #endif
 	}u;

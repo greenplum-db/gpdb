@@ -7,7 +7,11 @@
  *	 are used to provide a temporal ordering of runaway events and cleanup events,
  *	 as well as the idle and the activation events of different processes.
  *
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/mmgr/event_version.c
  *
  *-------------------------------------------------------------------------
  */

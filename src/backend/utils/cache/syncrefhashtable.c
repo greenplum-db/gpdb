@@ -4,7 +4,12 @@
  *  A synchronized, ref-counted hashtable in shared memory,
  *  built on top of dynahash.c
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/cache/syncrefhashtable.c
  *
  *-------------------------------------------------------------------------
  */

@@ -1,9 +1,9 @@
 -- start_matchsubs
-m/HINT:  To avoid a database shutdown, execute a full-database VACUUM in ".+"./
-s/HINT:  To avoid a database shutdown, execute a full-database VACUUM in ".+"./HINT:  To avoid a database shutdown, execute a full-database VACUUM in "XXX"./
+m/HINT:  To avoid a database shutdown, execute a database-wide VACUUM in ".+"./
+s/HINT:  To avoid a database shutdown, execute a database-wide VACUUM in ".+"./HINT:  To avoid a database shutdown, execute a database-wide VACUUM in "XXX"./
 
-m/HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in ".+". Reset the xid_stop_limit GUC./
-s/HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in ".+". Reset the xid_stop_limit GUC./HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in "xxx". Reset the xid_stop_limit GUC./
+m/HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a database-wide VACUUM in ".+". Reset the xid_stop_limit GUC./
+s/HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a database-wide VACUUM in ".+". Reset the xid_stop_limit GUC./HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a database-wide VACUUM in "xxx". Reset the xid_stop_limit GUC./
 
 m/database ".+"/
 s/database ".+"//

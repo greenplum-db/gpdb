@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_constraint.c,v 1.38 2008/01/17 18:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_constraint.c,v 1.45 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,6 +31,7 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 
 /*
@@ -63,7 +64,9 @@ CreateConstraintEntry(const char *constraintName,
 					  Oid indexRelId,
 					  Node *conExpr,
 					  const char *conBin,
-					  const char *conSrc)
+					  const char *conSrc,
+					  bool conIsLocal,
+					  int conInhCount)
 {
 	Relation	conDesc;
 	Oid			conOid;
@@ -134,7 +137,7 @@ CreateConstraintEntry(const char *constraintName,
 	for (i = 0; i < Natts_pg_constraint; i++)
 	{
 		nulls[i] = false;
-		values[i] = (Datum) 0;
+		values[i] = (Datum) NULL;
 	}
 
 	values[Anum_pg_constraint_conname - 1] = NameGetDatum(&cname);
@@ -148,6 +151,8 @@ CreateConstraintEntry(const char *constraintName,
 	values[Anum_pg_constraint_confupdtype - 1] = CharGetDatum(foreignUpdateType);
 	values[Anum_pg_constraint_confdeltype - 1] = CharGetDatum(foreignDeleteType);
 	values[Anum_pg_constraint_confmatchtype - 1] = CharGetDatum(foreignMatchType);
+	values[Anum_pg_constraint_conislocal - 1] = BoolGetDatum(conIsLocal);
+	values[Anum_pg_constraint_coninhcount - 1] = Int32GetDatum(conInhCount);
 
 	if (conkeyArray)
 		values[Anum_pg_constraint_conkey - 1] = PointerGetDatum(conkeyArray);
@@ -162,24 +167,23 @@ CreateConstraintEntry(const char *constraintName,
 	if (conpfeqopArray)
 		values[Anum_pg_constraint_conpfeqop - 1] = PointerGetDatum(conpfeqopArray);
 	else
-		nulls[Anum_pg_constraint_conpfeqop - 1] = 'n';
+		nulls[Anum_pg_constraint_conpfeqop - 1] = true;
 
 	if (conppeqopArray)
 		values[Anum_pg_constraint_conppeqop - 1] = PointerGetDatum(conppeqopArray);
 	else
-		nulls[Anum_pg_constraint_conppeqop - 1] = 'n';
+		nulls[Anum_pg_constraint_conppeqop - 1] = true;
 
 	if (conffeqopArray)
 		values[Anum_pg_constraint_conffeqop - 1] = PointerGetDatum(conffeqopArray);
 	else
-		nulls[Anum_pg_constraint_conffeqop - 1] = 'n';
+		nulls[Anum_pg_constraint_conffeqop - 1] = true;
 
 	/*
 	 * initialize the binary form of the check constraint.
 	 */
 	if (conBin)
-		values[Anum_pg_constraint_conbin - 1] = DirectFunctionCall1(textin,
-													CStringGetDatum((char *) conBin));
+		values[Anum_pg_constraint_conbin - 1] = CStringGetTextDatum(conBin);
 	else
 		nulls[Anum_pg_constraint_conbin - 1] = true;
 
@@ -187,8 +191,7 @@ CreateConstraintEntry(const char *constraintName,
 	 * initialize the text form of the check constraint
 	 */
 	if (conSrc)
-		values[Anum_pg_constraint_consrc - 1] = DirectFunctionCall1(textin,
-													CStringGetDatum((char *) conSrc));
+		values[Anum_pg_constraint_consrc - 1] = CStringGetTextDatum(conSrc);
 	else
 		nulls[Anum_pg_constraint_consrc - 1] = true;
 
@@ -623,8 +626,8 @@ RenameConstraintById(Oid conId, const char *newname)
 	con = (Form_pg_constraint) GETSTRUCT(tuple);
 
 	/*
-	 * We need to check whether the name is already in use --- note that
-	 * there currently is not a unique index that would catch this.
+	 * We need to check whether the name is already in use --- note that there
+	 * currently is not a unique index that would catch this.
 	 */
 	if (OidIsValid(con->conrelid) &&
 		ConstraintNameIsUsed(CONSTRAINT_RELATION,
@@ -633,8 +636,8 @@ RenameConstraintById(Oid conId, const char *newname)
 							 newname))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("constraint \"%s\" for relation \"%s\" already exists",
-						newname, get_rel_name(con->conrelid))));
+			   errmsg("constraint \"%s\" for relation \"%s\" already exists",
+					  newname, get_rel_name(con->conrelid))));
 	if (OidIsValid(con->contypid) &&
 		ConstraintNameIsUsed(CONSTRAINT_DOMAIN,
 							 con->contypid,
@@ -669,7 +672,7 @@ AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 						  Oid newNspId, bool isType, ObjectAddresses *objsMoved)
 {
 	Relation	conRel;
-	ScanKeyData	key[1];
+	ScanKeyData key[1];
 	SysScanDesc scan;
 	HeapTuple	tup;
 
@@ -699,7 +702,7 @@ AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 	while (HeapTupleIsValid((tup = systable_getnext(scan))))
 	{
 		Form_pg_constraint conform = (Form_pg_constraint) GETSTRUCT(tup);
-		ObjectAddress thisobj;
+		ObjectAddress	thisobj;
 
 		thisobj.classId = ConstraintRelationId;
 		thisobj.objectId = HeapTupleGetOid(tup);

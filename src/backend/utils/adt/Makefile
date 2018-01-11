@@ -1,13 +1,13 @@
 #
 # Makefile for utils/adt
 #
-# $PostgreSQL: pgsql/src/backend/utils/adt/Makefile,v 1.68 2007/10/13 23:06:26 tgl Exp $
+# $PostgreSQL: pgsql/src/backend/utils/adt/Makefile,v 1.70 2008/11/03 20:17:20 adunstan Exp $
 #
 
 subdir = src/backend/utils/adt
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe  $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 # seems to be required for some date/time stuff 1999/07/22 bjm
 ifeq "$(findstring alpha,$(host_cpu))" "alpha"
@@ -22,14 +22,14 @@ OBJS = acl.o array_userfuncs.o arrayfuncs.o arrayutils.o ascii.o \
 	geo_ops.o geo_selfuncs.o gp_dump_oids.o gp_optimizer_functions.o \
 	gp_partition_functions.o inet_cidr_ntop.o inet_net_pton.o int.o \
 	int8.o interpolate.o like.o lockfuncs.o mac.o matrix.o misc.o nabstime.o name.o \
-	network.o numeric.o numutils.o oid.o oracle_compat.o \
-	percentile.o pg_locale.o pg_lzcompress.o pgstatfuncs.o pivot.o \
+	network.o numeric.o numutils.o oid.o oracle_compat.o orderedsetaggs.o \
+	pg_locale.o pg_lzcompress.o pgstatfuncs.o pivot.o \
 	pseudotypes.o quote.o regexp.o regproc.o ri_triggers.o rowtypes.o \
-	ruleutils.o selfuncs.o tid.o timestamp.o varbit.o varchar.o varlena.o version.o \
+	ruleutils.o selfuncs.o tid.o timestamp.o trigfuncs.o varbit.o varchar.o varlena.o version.o \
 	tsginidx.o tsgistidx.o tsquery.o tsquery_cleanup.o tsquery_gist.o \
 	tsquery_op.o tsquery_rewrite.o tsquery_util.o tsrank.o \
 	tsvector.o tsvector_op.o tsvector_parser.o \
-	txid.o uuid.o xid.o xml.o json.o jsonfuncs.o
+	txid.o uuid.o xid.o windowfuncs.o xml.o json.o jsonfuncs.o
 
 like.o: like.c like_match.c
 

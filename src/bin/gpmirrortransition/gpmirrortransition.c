@@ -1,8 +1,16 @@
-/**
- * Utility to contact a segment and issue a primary/mirror mode transition
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2009 Greenplum, Inc.
+ * gpmirrortransition.c
+ *	  Utility to contact a segment and issue a primary/mirror mode transition
  *
+ * Portions Copyright (c) 2009 Greenplum, Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/bin/gpmirrortransition/gpmirrortransition.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postmaster/primary_mirror_mode.h"

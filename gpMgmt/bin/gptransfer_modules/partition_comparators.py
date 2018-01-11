@@ -1,9 +1,12 @@
 import re
 
 PARTITION_METADATA_PATTERN = re.compile('.*CONST (:.*) \[')
-KEY_WITH_METADATA_43X_TO_5X = ["parrangestart", "parrangeend", "parrangeevery", "parlistvalues"]
-KEY_WITH_METADATA_5X_TO_5X = ["version", "parrangestartincl"] + KEY_WITH_METADATA_43X_TO_5X
+KEY_WITH_METADATA_43_TO_5 = ["parrangestart", "parrangeend", "parrangeevery", "parlistvalues"]
+KEY_WITH_METADATA = ["version", "parrangestartincl"] + KEY_WITH_METADATA_43_TO_5
 
+# These columns contain CONST or other nodes that may contain :location fields.
+# The :location fields will be stripped out before the comparison.
+KEYS_WITH_LOCATIONS = ["parrangestart", "parrangeend", "parrangeevery", "parlistvalues"]
 
 class PartitionComparator(object):
     def _parse_value(self, partition_info_dict, column_list):
@@ -16,6 +19,12 @@ class PartitionComparator(object):
         :returns a list of all text chunks split by a space
         """
         result = dict(partition_info_dict)
+
+        # Strip out any :location fields, they are not relevant for the comparison.
+        for column_key in KEYS_WITH_LOCATIONS:
+            if isinstance(result[column_key], str):
+                result[column_key] = re.sub(' :location -?[0-9]+', '', result[column_key])
+
         for column_key in column_list:
             value = result[column_key]
             # removing enclosing parenthesis and curly braces '(({' and '}))'
@@ -28,11 +37,11 @@ class PartitionComparator(object):
         return result
 
 
-class Version4to5PartitionComparator(PartitionComparator):
+class Version4toXPartitionComparator(PartitionComparator):
 
     def _parse_value(self, partition_info_dict):
-        return super(Version4to5PartitionComparator, self)._parse_value(partition_info_dict,
-                                                                        KEY_WITH_METADATA_43X_TO_5X)
+        return super(Version4toXPartitionComparator, self)._parse_value(partition_info_dict,
+                                                                        KEY_WITH_METADATA_43_TO_5)
 
     def _remove_key_and_value(self, list_info, key_to_remove):
         while key_to_remove in list_info:
@@ -47,11 +56,11 @@ class Version4to5PartitionComparator(PartitionComparator):
         src_dict = self._parse_value(source_partition_info)
         dest_dict = self._parse_value(dest_partition_info)
 
-        for key in KEY_WITH_METADATA_43X_TO_5X:
-            version5_info = dest_dict[key]
+        for key in KEY_WITH_METADATA_43_TO_5:
+            version_info = dest_dict[key]
             # greenplum 5 added a 'consttypmod' attribute.
             # remove it so as to compare all other attributes
-            self._remove_key_and_value(version5_info, ':consttypmod')
+            self._remove_key_and_value(version_info, ':consttypmod')
             if src_dict[key] != dest_dict[key]:
                 return False
         return True
@@ -69,7 +78,7 @@ class SameVersionPartitionComparator(PartitionComparator):
         src_dict = self._parse_value(source_partition_info)
         dest_dict = self._parse_value(dest_partition_info)
 
-        for key in KEY_WITH_METADATA_5X_TO_5X:
+        for key in KEY_WITH_METADATA:
             if src_dict[key] != dest_dict[key]:
                 return False
         return True
@@ -81,8 +90,8 @@ class PartitionComparatorFactory:
         dest_ver = dest['version']
         if source_ver == dest_ver:
             return SameVersionPartitionComparator()
-        elif source_ver == '4.3' and dest_ver[0] == '5':
-            return Version4to5PartitionComparator()
+        elif source_ver == '4.3' and dest_ver != '4.3':
+            return Version4toXPartitionComparator()
 
         raise Exception("No comparator defined for source "
                         "and dest versions\n: %s \n\n %s" % (source, dest))

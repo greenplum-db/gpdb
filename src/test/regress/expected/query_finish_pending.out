@@ -51,6 +51,10 @@ insert into testsisc select i, i % 1000, i % 100000, i % 75 from
 set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 set gp_enable_mk_sort=off;
+-- ORCA does not generate SharedInputScan with a Sort node underneath it. For
+-- the following query, ORCA disregards the order by inside the cte definition;
+-- planner on the other hand does not.
+set optimizer=off;
 select gp_inject_fault('execshare_input_next', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
@@ -67,13 +71,12 @@ NOTICE:  Success:
  t
 (1 row)
 
-select COUNT(i2) over(partition by i1)
-from testsisc
-LIMIT 2;
- count 
--------
-     1
-     1
+with cte as (select i2 from testsisc order by i2)
+select * from cte c1, cte c2 limit 2;
+ i2 | i2 
+----+----
+  0 |  0
+  0 |  0
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
@@ -102,13 +105,12 @@ NOTICE:  Success:
  t
 (1 row)
 
-select COUNT(i2) over(partition by i1)
-from testsisc
-LIMIT 2;
- count 
--------
-     1
-     1
+with cte as (select i2 from testsisc order by i2)
+select * from cte c1, cte c2 limit 2;
+ i2 | i2 
+----+----
+  0 |  0
+  0 |  0
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
@@ -134,3 +136,31 @@ NOTICE:  Success:
  t
 (1 row)
 
+-- test if a query can be canceled when cancel signal arrives fast than the query dispatched.
+create table _tmp_table1 as select i as c1, i as c2 from generate_series(1, 10) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table _tmp_table2 as select i as c1, 0 as c2 from generate_series(0, 10) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- make one QE sleep before reading command
+select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 50, 2::smallint);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+begin;
+select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
+ERROR:  division by zero  (seg0 slice1 172.17.0.2:25433 pid=31180)
+end;
+select gp_inject_fault('before_read_command', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+drop table _tmp_table1;
+drop table _tmp_table2;

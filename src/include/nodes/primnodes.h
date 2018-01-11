@@ -8,10 +8,11 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.142 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.149 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -227,33 +228,44 @@ typedef enum AggStage
 } AggStage;
 
 
-
-/*
- * AggOrder describes ordering information for ordered aggregates
- */
-typedef struct AggOrder
-{
-    Expr        xpr;
-    bool        sortImplicit;   /* Implict or explicit ordering? */
-    List       *sortTargets;    /* Targetlist for order by clause */
-    List       *sortClause;     /* Sort clause for the aggregate */
-} AggOrder;
-
-
 /*
  * Aggref
+ *
+ * The aggregate's args list is a targetlist, ie, a list of TargetEntry nodes.
+ *
+ * For a normal (non-ordered-set) aggregate, the non-resjunk TargetEntries
+ * represent the aggregate's regular arguments (if any) and resjunk TLEs can
+ * be added at the end to represent ORDER BY expressions that are not also
+ * arguments.  As in a top-level Query, the TLEs can be marked with
+ * ressortgroupref indexes to let them be referenced by SortGroupClause
+ * entries in the aggorder and/or aggdistinct lists.  This represents ORDER BY
+ * and DISTINCT operations to be applied to the aggregate input rows before
+ * they are passed to the transition function.  The grammar only allows a
+ * simple "DISTINCT" specifier for the arguments, but we use the full
+ * query-level representation to allow more code sharing.
+ *
+ * For an ordered-set aggregate, the args list represents the WITHIN GROUP
+ * (aggregated) arguments, all of which will be listed in the aggorder list.
+ * DISTINCT is not supported in this case, so aggdistinct will be NIL.
+ * The direct arguments appear in aggdirectargs (as a list of plain
+ * expressions, not TargetEntry nodes).
  */
 typedef struct Aggref
 {
 	Expr		xpr;
 	Oid			aggfnoid;		/* pg_proc Oid of the aggregate */
 	Oid			aggtype;		/* type Oid of result of the aggregate */
-	List	   *args;			/* arguments to the aggregate */
-	Index		agglevelsup;	/* > 0 if agg belongs to outer query */
+	List	   *aggdirectargs;	/* direct arguments, if an ordered-set agg */
+	List	   *args;			/* aggregated arguments and sort expressions */
+	List	   *aggorder;		/* ORDER BY (list of SortGroupClause) */
+	List	   *aggdistinct;	/* DISTINCT (list of SortGroupClause) */
+	Expr	   *aggfilter;		/* FILTER expression, if any */
 	bool		aggstar;		/* TRUE if argument list was really '*' */
-	bool		aggdistinct;	/* TRUE if it's agg(DISTINCT ...) */
+	bool		aggvariadic;	/* true if variadic arguments have been
+								 * combined into an array last argument */
+	char		aggkind;		/* aggregate kind (see pg_aggregate.h) */
+	Index		agglevelsup;	/* > 0 if agg belongs to outer query */
 	AggStage	aggstage;		/* MPP: 2-stage? If so, which stage */
-    AggOrder   *aggorder;       /* Ordered aggregate definition */
 	int			location;		/* token location, or -1 if unknown */
 } Aggref;
 
@@ -279,7 +291,7 @@ typedef struct Grouping
  * Defined to make it easy to distinguish this column from others.
  *
  * This is used to determine whether output tuples are coming from
- * duplicate grouping sets. For example, a table 
+ * duplicate grouping sets. For example, a table
  *
  *    test (a integer, b integer)
  *
@@ -321,32 +333,31 @@ typedef enum WinStage
 	WINSTAGE_PRELIMINARY, /* Evaluate preliminary function. */
 	WINSTAGE_ROWKEY /* WINSTAGE_IMMEDIATE for row key generation. */
 } WinStage;
- 
+
 /*
- * WindowRef: describes a window function call
+ * WindowFunc: describes a window function call
  *
- * In a query tree, a WindowRef corresponds to a SQL window function
+ * In a query tree, a WindowFunc corresponds to a SQL window function
  * call.  In a plan tree, a WindowRef is an expression the corresponds
  * to some or all of the calculation of the window function result.
- * 
+ *
  */
-typedef struct WindowRef
+typedef struct WindowFunc
 {
 	Expr		xpr;
-	Oid			winfnoid;		/* pg_proc Oid of the window function */
-	Oid			restype;		/* type Oid of result of the window function */
-	List	   *args;			/* arguments */	
-	Index		winlevelsup;	/* FIXME: unused, but we cannot remove it right now because that would require a catalog change */
+	Oid			winfnoid;		/* pg_proc Oid of the function */
+	Oid			wintype;		/* type Oid of result of the window function */
+	List	   *args;			/* arguments to the window function */
+	Expr	   *aggfilter;		/* FILTER expression, if any */
+	Index		winref;			/* index of associated WindowClause */
+	bool		winstar;		/* TRUE if argument list was really '*' */
+	bool		winagg;			/* is function a simple aggregate? */
 	bool		windistinct;	/* TRUE if it's agg(DISTINCT ...) */
-	Index		winspec;		/* index into Query window clause */
-	
 	/* Following fields are significant only in a Plan tree. */
 	Index		winindex;		/* RefInfo index during planning. */
 	WinStage	winstage;		/* Stage of execution. */
-	Index		winlevel;		/* Position of corresponding WindowKey in
-								 * the Window node. */
 	int			location;		/* token location, or -1 if unknown */
-} WindowRef;
+} WindowFunc;
 
 
 /* ----------------
@@ -420,12 +431,13 @@ typedef struct FuncExpr
 	Oid			funcid;			/* PG_PROC OID of the function */
 	Oid			funcresulttype; /* PG_TYPE OID of result value */
 	bool		funcretset;		/* true if function returns set */
+	bool		funcvariadic;	/* true if variadic arguments have been
+								 * combined into an array last argument */
 	CoercionForm funcformat;	/* how to display this function call */
 	List	   *args;			/* arguments to the function */
 	int			location;		/* token location, or -1 if unknown */
 	bool        is_tablefunc;   /* Is a TableFunction reference */
 } FuncExpr;
-
 
 /*
  * OpExpr - expression node for an operator invocation
@@ -505,11 +517,11 @@ typedef struct BoolExpr
 
 /*
  * TableValueExpr - a "TABLE( <subquery> )" expression indicating a subquery
- * expression that is passed as a value to a function.  
+ * expression that is passed as a value to a function.
  *
  * This is <table value constructor by query> within the SQL Standard
  */
-typedef struct TableValueExpr  
+typedef struct TableValueExpr
 {
 	NodeTag     type;
 	Node       *subquery;
@@ -568,8 +580,8 @@ typedef enum SubLinkType
 	ROWCOMPARE_SUBLINK,
 	EXPR_SUBLINK,
 	ARRAY_SUBLINK,
-	CTE_SUBLINK,
-	NOT_EXISTS_SUBLINK
+	CTE_SUBLINK,				/* for SubPlans only */
+	NOT_EXISTS_SUBLINK   /* GPDB_84_MERGE_FIXME: Does ORCA really need this? */
 } SubLinkType;
 
 
@@ -603,7 +615,8 @@ typedef struct SubLink
  *
  * If the sub-select becomes an initplan rather than a subplan, the executable
  * expression is part of the outer plan's expression tree (and the SubPlan
- * node itself is not).  In this case testexpr is NULL to avoid duplication.
+ * node itself is not, but rather is found in the outer plan's initPlan
+ * list).  In this case testexpr is NULL to avoid duplication.
  *
  * The planner also derives lists of the values that need to be passed into
  * and out of the subplan.	Input values are represented as a list "args" of
@@ -615,6 +628,10 @@ typedef struct SubLink
  * is an initplan; they are listed in order by sub-select output column
  * position.  (parParam and setParam are integer Lists, not Bitmapsets,
  * because their ordering is significant.)
+ *
+ * Also, the planner computes startup and per-call costs for use of the
+ * SubPlan.  Note that these include the cost of the subquery proper,
+ * evaluation of the testexpr if any, and any hashtable management overhead.
  */
 typedef struct SubPlan
 {
@@ -629,14 +646,11 @@ typedef struct SubPlan
 
 	/* Identification of the Plan tree to use: */
 	int			plan_id;		/* Index (from 1) in PlannedStmt.subplans */
-
 	/* Identification of the SubPlan for EXPLAIN and debugging purposes: */
 	char	   *plan_name;		/* A name assigned during planning */
-
 	/* Extra data useful for determining subplan's output type: */
 	Oid			firstColType;	/* Type of first column of subplan result */
-	int32		firstColTypmod;	/* Typmod of first column of subplan result */
-
+	int32		firstColTypmod; /* Typmod of first column of subplan result */
 	/* Information about execution strategy: */
 	bool		useHashTable;	/* TRUE to store subselect output in a hash
 								 * table (implies we are doing "IN") */
@@ -655,7 +669,24 @@ typedef struct SubPlan
 	List	   *parParam;		/* indices of input Params from parent plan */
 	List	   *args;			/* exprs to pass as parParam values */
 	List	   *extParam;		/* indices of input Params from ancestor plan */
+	/* Estimated execution costs: */
+	Cost		startup_cost;	/* one-time setup cost */
+	Cost		per_call_cost;	/* cost for each subplan evaluation */
 } SubPlan;
+
+/*
+ * AlternativeSubPlan - expression node for a choice among SubPlans
+ *
+ * The subplans are given as a List so that the node definition need not
+ * change if there's ever more than two alternatives.  For the moment,
+ * though, there are always exactly two; and the first one is the fast-start
+ * plan.
+ */
+typedef struct AlternativeSubPlan
+{
+	Expr		xpr;
+	List	   *subplans;		/* SubPlan(s) with equivalent results */
+} AlternativeSubPlan;
 
 /* ----------------
  * FieldSelect
@@ -966,6 +997,50 @@ typedef struct MinMaxExpr
 } MinMaxExpr;
 
 /*
+ * XmlExpr - various SQL/XML functions requiring special grammar productions
+ *
+ * 'name' carries the "NAME foo" argument (already XML-escaped).
+ * 'named_args' and 'arg_names' represent an xml_attribute list.
+ * 'args' carries all other arguments.
+ *
+ * Note: result type/typmod/collation are not stored, but can be deduced
+ * from the XmlExprOp.  The type/typmod fields are just used for display
+ * purposes, and are NOT necessarily the true result type of the node.
+ * (We also use type == InvalidOid to mark a not-yet-parse-analyzed XmlExpr.)
+ */
+typedef enum XmlExprOp
+{
+	IS_XMLCONCAT,				/* XMLCONCAT(args) */
+	IS_XMLELEMENT,				/* XMLELEMENT(name, xml_attributes, args) */
+	IS_XMLFOREST,				/* XMLFOREST(xml_attributes) */
+	IS_XMLPARSE,				/* XMLPARSE(text, is_doc, preserve_ws) */
+	IS_XMLPI,					/* XMLPI(name [, args]) */
+	IS_XMLROOT,					/* XMLROOT(xml, version, standalone) */
+	IS_XMLSERIALIZE,			/* XMLSERIALIZE(is_document, xmlval) */
+	IS_DOCUMENT					/* xmlval IS DOCUMENT */
+} XmlExprOp;
+
+typedef enum
+{
+	XMLOPTION_DOCUMENT,
+	XMLOPTION_CONTENT
+} XmlOptionType;
+
+typedef struct XmlExpr
+{
+	Expr		xpr;
+	XmlExprOp	op;				/* xml function ID */
+	char	   *name;			/* name in xml(NAME foo ...) syntaxes */
+	List	   *named_args;		/* non-XML expressions for xml_attributes */
+	List	   *arg_names;		/* parallel list of Value strings */
+	List	   *args;			/* list of expressions */
+	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
+	Oid			type;			/* target type/typmod for XMLSERIALIZE */
+	int32		typmod;
+	int			location;		/* token location, or -1 if unknown */
+} XmlExpr;
+
+/*
  * NullIfExpr - a NULLIF expression
  *
  * Like DistinctExpr, this is represented the same as an OpExpr referencing
@@ -1018,50 +1093,6 @@ typedef struct BooleanTest
 	Expr	   *arg;			/* input expression */
 	BoolTestType booltesttype;	/* test type */
 } BooleanTest;
-
-/*
- * XmlExpr - various SQL/XML functions requiring special grammar productions
- *
- * 'name' carries the "NAME foo" argument (already XML-escaped).
- * 'named_args' and 'arg_names' represent an xml_attribute list.
- * 'args' carries all other arguments.
- *
- * Note: result type/typmod/collation are not stored, but can be deduced
- * from the XmlExprOp.  The type/typmod fields are just used for display
- * purposes, and are NOT necessarily the true result type of the node.
- * (We also use type == InvalidOid to mark a not-yet-parse-analyzed XmlExpr.)
- */
-typedef enum XmlExprOp
-{
-	IS_XMLCONCAT,				/* XMLCONCAT(args) */
-	IS_XMLELEMENT,				/* XMLELEMENT(name, xml_attributes, args) */
-	IS_XMLFOREST,				/* XMLFOREST(xml_attributes) */
-	IS_XMLPARSE,				/* XMLPARSE(text, is_doc, preserve_ws) */
-	IS_XMLPI,					/* XMLPI(name [, args]) */
-	IS_XMLROOT,					/* XMLROOT(xml, version, standalone) */
-	IS_XMLSERIALIZE,			/* XMLSERIALIZE(is_document, xmlval) */
-	IS_DOCUMENT					/* xmlval IS DOCUMENT */
-} XmlExprOp;
-
-typedef enum
-{
-	XMLOPTION_DOCUMENT,
-	XMLOPTION_CONTENT
-} XmlOptionType;
-
-typedef struct XmlExpr
-{
-	Expr		xpr;
-	XmlExprOp	op;				/* xml function ID */
-	char	   *name;			/* name in xml(NAME foo ...) syntaxes */
-	List	   *named_args;		/* non-XML expressions for xml_attributes */
-	List	   *arg_names;		/* parallel list of Value strings */
-	List	   *args;			/* list of expressions */
-	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
-	Oid			type;			/* target type/typmod for XMLSERIALIZE */
-	int32		typmod;
-	int			location;		/* token location, or -1 if unknown */
-} XmlExpr;
 
 /*
  * CoerceToDomain
@@ -1137,7 +1168,7 @@ typedef struct CurrentOfExpr
 	/* for planning */
 	Index		cvarno;			/* RT index of target relation */
 	/* for validation */
-	Oid			target_relid;	/* OID of original target relation, 
+	Oid			target_relid;	/* OID of original target relation,
 								 * before any inheritance expansion */
 } CurrentOfExpr;
 
@@ -1274,10 +1305,6 @@ typedef struct RangeTblRef
  * be created that refer to the outputs of the join.  The planner sometimes
  * generates JoinExprs internally; these can have rtindex = 0 if there are
  * no join alias variables referencing such joins.
- *
- * CDB: When the planner flattens sublinks in the JOIN...ON clause, it may
- * attach a list of RangeTblRef nodes ('subqfromlist') which are to be
- * included in the cross product along with 'larg' and 'rarg'.
  *----------
  */
 typedef struct JoinExpr
@@ -1290,9 +1317,7 @@ typedef struct JoinExpr
 	List	   *usingClause;	/* USING clause, if any (list of String) */
 	Node	   *quals;			/* qualifiers on join, if any */
 	Alias	   *alias;			/* user-written alias clause, if any */
-	int			rtindex;		/* RT index assigned for join */
-    List       *subqfromlist;   /* CDB: List of join subtrees resulting from
-                                 *  flattening of sublinks */
+	int			rtindex;		/* RT index assigned for join, or 0 */
 } JoinExpr;
 
 /*----------
@@ -1336,41 +1361,33 @@ typedef struct Flow
 {
 	NodeTag		type;			/* T_Flow */
 	FlowType	flotype;		/* Type of flow produced by the plan. */
-	
+
 	/* What motion (including none) should be applied to this Plan's output. */
 	Movement	req_move;
-	
+
 	/* Locus type (optimizer flow characterization).
 	 */
 	CdbLocusType	locustype;
-	
+
 	/* If flotype is FLOW_SINGLETON, then this is the segment (-1 for entry)
 	 * on which tuples occur.  If req_move is MOVEMENT_FOCUS, then this is
 	 * the desired segment for the resulting singleton flow.
 	 */
 	int			segindex;		/* Segment index of singleton flow. */
-	
-	/* Sort specifications. */
-	int			numSortCols;		/* number of sort key columns */
-	AttrNumber	*sortColIdx;		/* their indexes in target list */
-	Oid			*sortOperators;		/* OID of operators to sort them by */
-	bool		*nullsFirst;
 
-	int			numOrderbyCols;		/* number of explicit order-by columns */
-	
-	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
+	/* If req_move is MOVEMENT_REPARTITION, these express the desired
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
-     * this is the partitioning key.  Otherwise NIL. 
+     * this is the partitioning key.  Otherwise NIL.
 	 * otherwise, they are NIL. */
 	List       *hashExpr;			/* list of hash expressions */
 
 	/* If req_move is MOVEMENT_EXPLICIT, this contains the index of the segid column
 	 * to use in the motion	 */
 	AttrNumber segidColIdx;
-	
+
     /* The original Flow ptr is saved here upon setting req_move. */
     struct Flow    *flow_before_req_move;
-	
+
 } Flow;
 
 typedef enum GroupingType
@@ -1379,106 +1396,6 @@ typedef enum GroupingType
 	GROUPINGTYPE_CUBE,           /* CUBE grouping extension */
 	GROUPINGTYPE_GROUPING_SETS   /* GROUPING SETS grouping extension */
 } GroupingType;
-
-typedef enum WindowExclusion
-{
-	WINDOW_EXCLUSION_NULL = 0,
-	WINDOW_EXCLUSION_CUR_ROW, /* exclude current row */
-	WINDOW_EXCLUSION_GROUP, /* exclude rows matching us */
-	WINDOW_EXCLUSION_TIES, /* exclude rows matching us, and current row */
-	WINDOW_EXCLUSION_NO_OTHERS /* don't exclude -- distinct from EMPTY so
-								* that we may dump */
-} WindowExclusion;
-
-typedef enum WindowBoundingKind
-{
-	WINDOW_UNBOUND_PRECEDING,
-	WINDOW_BOUND_PRECEDING,
-	WINDOW_CURRENT_ROW,
-	WINDOW_BOUND_FOLLOWING,
-	WINDOW_UNBOUND_FOLLOWING,
-	WINDOW_DELAYED_BOUND_PRECEDING,
-    WINDOW_DELAYED_BOUND_FOLLOWING
-} WindowBoundingKind;
-
-typedef struct WindowFrameEdge
-{
-	NodeTag type;
-	WindowBoundingKind kind;
-	/* XXX: need to restrict to certain datatypes in order by */
-	Node *val; /* an actual value, if provided */
-} WindowFrameEdge;
-
-typedef struct WindowFrame
-{
-	NodeTag type;
-	bool is_rows;	/* true if ROWS was specificied, false if RANGE */
-	bool is_between; /* user specified BETWEEN */
-	
-	/*
-	 * XXX: determine if trail and lead must be mentioned in that order
-	 */
-	WindowFrameEdge *trail; /* trailing edge of the frame */
-	WindowFrameEdge *lead; /* leading edge of the frame */
-	WindowExclusion exclude; /* exclusion clause */
-	bool system_generated; /* frame was generated by the parser */
-} WindowFrame;
-
-
-/* ---------------
- * WindowKey is an auxiliary node of the Window node (a Plan node).  It 
- * represents one level of the potentially multi-level ordering key of 
- * the Window node.  The ORDER BY key of the Nth WindowKey of a Window
- * is the concatenation of the sort keys from WindowKeys 0 thru N.
- *
- * Note that, since a window key represents partial sort key, it may be 
- * empty.  For example (ORDER BY a,b ROWS x) and (ORDER BY a,b ROWS y) 
- * would be represented by partial key (a,b) with framing ROWS x followed
- * by partial key () with framing ROWS y.
- * ---------------
- */
-typedef struct WindowKey
-{
-	NodeTag			type;
-	int				numSortCols; /* may be zero, see note */
-	AttrNumber	   *sortColIdx;
-	Oid			   *sortOperators;
-	bool		   *nullsFirst;
-	WindowFrame	   *frame;		/* NULL or framing for WindowKey */
-} WindowKey;
-
-/*
- * PercKind
- * Represent function type of PercentileExpr
- */
-typedef enum PercKind
-{
-	PERC_MEDIAN,
-	PERC_CONT,
-	PERC_DISC
-} PercKind;
-
-/*
- * PercentileExpr
- *
- * This represents expressions for percentile_cont, percentile_disc and median.
- * They could be expressed as normal Aggref, but at present we are not able
- * to change the catalog, so we introduce this dedicated node.  As such, the node
- * is treated as Aggref in any cases.  Since we don't support Var in its
- * argument, we don't need var-level field here.
- */
-typedef struct PercentileExpr
-{
-	NodeTag			type;
-	Oid				perctype;		/* result type */
-	List		   *args;			/* list of argument expression */
-	PercKind		perckind;		/* type of percentile function */
-	List		   *sortClause;		/* ORDER BY clause */
-	List		   *sortTargets;	/* target list for ORDER BY clause */
-	Expr		   *pcExpr;			/* peer count expression */
-	Expr		   *tcExpr;			/* total count expression */
-	int				location;		/* token location, or -1 if unknown */
-} PercentileExpr;
 
 
 /*

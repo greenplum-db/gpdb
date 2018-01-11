@@ -933,9 +933,8 @@ each_worker(PG_FUNCTION_ARGS, bool as_text)
 
 	state->ret_tdesc = CreateTupleDescCopy(tupdesc);
 	BlessTupleDesc(state->ret_tdesc);
-	/* GPDB_84_MERGE_FIXME: Use SFRM_Materialize_Random here */
 	state->tuple_store =
-		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize,
+		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize_Random,
 							  false, work_mem);
 
 	MemoryContextSwitchTo(old_cxt);
@@ -1106,9 +1105,8 @@ json_array_elements(PG_FUNCTION_ARGS)
 
 	state->ret_tdesc = CreateTupleDescCopy(tupdesc);
 	BlessTupleDesc(state->ret_tdesc);
-	/* GPDB_84_MERGE_FIXME: Use SFRM_Materialize_Random here */
 	state->tuple_store =
-		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize,
+		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize_Random,
 							  false, work_mem);
 
 	MemoryContextSwitchTo(old_cxt);
@@ -1619,9 +1617,8 @@ json_populate_recordset(PG_FUNCTION_ARGS)
 
 	state->ret_tdesc = CreateTupleDescCopy(tupdesc);
 	BlessTupleDesc(state->ret_tdesc);
-	/* GPDB_84_MERGE_FIXME: Use SFRM_Materialize_Random here */
 	state->tuple_store =
-		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize,
+		tuplestore_begin_heap(rsi->allowedModes & SFRM_Materialize_Random,
 							  false, work_mem);
 
 	MemoryContextSwitchTo(old_cxt);

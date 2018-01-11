@@ -186,7 +186,7 @@ Drop table ao_ss_ct_t1;
 
 Drop table if exists ao_ss_ct_t11;
 
-ALTER TYPE char SET DEFAULT ENCODING (compresstype=zlib);
+ALTER TYPE bpchar SET DEFAULT ENCODING (compresstype=zlib);
 Create table ao_ss_ct_t11 ( i int, j char(20)) with(orientation=column);
 
 Insert into ao_ss_ct_t11 values (generate_series(1,10) , 'guc with quicklz');
@@ -199,7 +199,7 @@ select relkind, relstorage, reloptions from pg_class where relname='ao_ss_ct_t11
 
 select attnum, attoptions from pg_attribute_encoding where attrelid='ao_ss_ct_t11'::regclass order by attnum;
 
-ALTER TYPE char SET DEFAULT ENCODING (compresstype=none);
+ALTER TYPE bpchar SET DEFAULT ENCODING (compresstype=none);
 
 Drop table ao_ss_ct_t11;
 

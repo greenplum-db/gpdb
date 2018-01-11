@@ -22,18 +22,17 @@
 #include "pxfutils.h"
 #include "utils/formatting.h"
 
-static const char* PTC_SEP = "://";
-static const char* OPTION_SEP = "&";
-static const int   EMPTY_VALUE_LEN = 2;
+static const char *PTC_SEP = "://";
+static const char *OPTION_SEP = "&";
+static const int EMPTY_VALUE_LEN = 2;
 
 /* helper function declarations */
-static void  GPHDUri_parse_protocol(GPHDUri *uri, char **cursor);
-static void  GPHDUri_parse_cluster(GPHDUri *uri, char **cursor);
-static void  GPHDUri_parse_data(GPHDUri *uri, char **cursor);
-static void  GPHDUri_parse_options(GPHDUri *uri, char **cursor);
-static List* GPHDUri_parse_option(char* pair, GPHDUri *uri);
-static void  GPHDUri_free_options(GPHDUri *uri);
-static void  GPHDUri_free_fragments(GPHDUri *uri);
+static void GPHDUri_parse_protocol(GPHDUri *uri, char **cursor);
+static void GPHDUri_parse_data(GPHDUri *uri, char **cursor);
+static void GPHDUri_parse_options(GPHDUri *uri, char **cursor);
+static List *GPHDUri_parse_option(char *pair, GPHDUri *uri);
+static void GPHDUri_free_options(GPHDUri *uri);
+static void GPHDUri_free_fragments(GPHDUri *uri);
 
 /* parseGPHDUri
  *
@@ -41,12 +40,11 @@ static void  GPHDUri_free_fragments(GPHDUri *uri);
  * verifying valid structure given a specific target protocol.
  *
  * URI format:
- *     <protocol name>://<cluster>/<data>?<option>&<option>&<...>
+ *     <protocol name>://<data resource>?<option>&<option>&<...>
  *
  *
  * protocol name    - must be 'pxf'
- * cluster          - cluster name
- * data             - data path (directory name/table name/etc., depending on target)
+ * data resource    - data resource (directory name/table name/etc., depending on target)
  * options          - valid options are dependent on the protocol. Each
  *                    option is a key value pair.
  *
@@ -56,31 +54,31 @@ static void  GPHDUri_free_fragments(GPHDUri *uri);
  * returns:
  *         a parsed uri as a GPHDUri structure, or reports a format error.
  */
-GPHDUri*
+GPHDUri *
 parseGPHDUri(const char *uri_str)
 {
-    return parseGPHDUriHostPort(uri_str, PxfDefaultHost, PxfDefaultPort);
+	return parseGPHDUriHostPort(uri_str, PxfDefaultHost, PxfDefaultPort);
 }
 
-GPHDUri*
+GPHDUri *
 parseGPHDUriHostPort(const char *uri_str, const char *host, const int port)
 {
-    GPHDUri *uri = (GPHDUri *)palloc0(sizeof(GPHDUri));
+	GPHDUri    *uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
 
-    uri->host = pstrdup(host);
-    StringInfoData portstr;
-    initStringInfo(&portstr);
-    appendStringInfo(&portstr, "%d", port);
-    uri->port = portstr.data;
-    uri->uri = pstrdup(uri_str);
-    char *cursor = uri->uri;
+	uri->host = pstrdup(host);
+	StringInfoData portstr;
 
-    GPHDUri_parse_protocol(uri, &cursor);
-    GPHDUri_parse_cluster(uri, &cursor);
-    GPHDUri_parse_data(uri, &cursor);
-    GPHDUri_parse_options(uri, &cursor);
+	initStringInfo(&portstr);
+	appendStringInfo(&portstr, "%d", port);
+	uri->port = portstr.data;
+	uri->uri = pstrdup(uri_str);
+	char	   *cursor = uri->uri;
 
-    return uri;
+	GPHDUri_parse_protocol(uri, &cursor);
+	GPHDUri_parse_data(uri, &cursor);
+	GPHDUri_parse_options(uri, &cursor);
+
+	return uri;
 }
 
 /*
@@ -89,22 +87,20 @@ parseGPHDUriHostPort(const char *uri_str, const char *host, const int port)
 void
 freeGPHDUri(GPHDUri *uri)
 {
-    if (uri->protocol)
-        pfree(uri->protocol);
-    if (uri->cluster)
-        pfree(uri->cluster);
-    if (uri->host)
-        pfree(uri->host);
-    if (uri->port)
-        pfree(uri->port);
-    if (uri->data)
-        pfree(uri->data);
-    if (uri->profile)
-        pfree(uri->profile);
+	if (uri->protocol)
+		pfree(uri->protocol);
+	if (uri->host)
+		pfree(uri->host);
+	if (uri->port)
+		pfree(uri->port);
+	if (uri->data)
+		pfree(uri->data);
+	if (uri->profile)
+		pfree(uri->profile);
 
-    GPHDUri_free_fragments(uri);
-    GPHDUri_free_options(uri);
-    pfree(uri);
+	GPHDUri_free_fragments(uri);
+	GPHDUri_free_options(uri);
+	pfree(uri);
 }
 
 /*
@@ -119,45 +115,22 @@ freeGPHDUri(GPHDUri *uri)
 static void
 GPHDUri_parse_protocol(GPHDUri *uri, char **cursor)
 {
-    char *start = *cursor;
-    char *post_ptc = strstr(start, PTC_SEP);
-    if (!post_ptc)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s", uri->uri)));
+	char	   *start = *cursor;
+	char	   *post_ptc = strstr(start, PTC_SEP);
 
-    uri->protocol = pnstrdup(start, post_ptc - start);
-    if (!IS_PXF_URI(uri->uri))
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: unsupported protocol '%s'", uri->uri, uri->protocol)));
+	if (!post_ptc)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s", uri->uri)));
 
-    /* set cursor to new position and return */
-    *cursor = post_ptc + strlen(PTC_SEP);
-}
+	uri->protocol = pnstrdup(start, post_ptc - start);
+	if (!IS_PXF_URI(uri->uri))
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: unsupported protocol '%s'", uri->uri, uri->protocol)));
 
-/*
- * GPHDUri_parse_cluster
- *
- * Parse the cluster section of the URI which is passed down
- * in 'cursor', having 'cursor' point at the current string
- * location.
- *
- * See parseGPHDUri header for URI structure description.
- */
-static void
-GPHDUri_parse_cluster(GPHDUri *uri, char **cursor)
-{
-    char *start = *cursor;
-    char *end = strchr(start, '/');
-
-    if (*start == '/' || !end)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: missing cluster section", uri->uri)));
-
-    uri->cluster = pnstrdup(start, end - start);
-    *cursor = ++end;
+	/* set cursor to new position and return */
+	*cursor = post_ptc + strlen(PTC_SEP);
 }
 
 /*
@@ -172,20 +145,21 @@ GPHDUri_parse_cluster(GPHDUri *uri, char **cursor)
 static void
 GPHDUri_parse_data(GPHDUri *uri, char **cursor)
 {
-    char *start = *cursor;
-    size_t data_len = strlen(start);
+	char	   *start = *cursor;
+	size_t		data_len = strlen(start);
 
-    /*
-     * If there exists an 'options' section, the data section length
-     * is from start point to options section point. Otherwise, the
-     * data section length is the remaining string length from start.
-     */
-    char *options_section = strrchr(start, '?');
-    if (options_section)
-        data_len = options_section - start;
+	/*
+	 * If there exists an 'options' section, the data section length is from
+	 * start point to options section point. Otherwise, the data section
+	 * length is the remaining string length from start.
+	 */
+	char	   *options_section = strrchr(start, '?');
 
-    uri->data = pnstrdup(start, data_len);
-    *cursor += data_len;
+	if (options_section)
+		data_len = options_section - start;
+
+	uri->data = pnstrdup(start, data_len);
+	*cursor += data_len;
 }
 
 /*
@@ -200,30 +174,31 @@ GPHDUri_parse_data(GPHDUri *uri, char **cursor)
 static void
 GPHDUri_parse_options(GPHDUri *uri, char **cursor)
 {
-    char *dup = pstrdup(*cursor);
-    char *start = dup;
+	char	   *dup = pstrdup(*cursor);
+	char	   *start = dup;
 
-    /* option section must start with '?'. if absent, there are no options */
-    if (!start || start[0] != '?')
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: missing options section", uri->uri)));
+	/* option section must start with '?'. if absent, there are no options */
+	if (!start || start[0] != '?')
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: missing options section", uri->uri)));
 
-    /* skip '?' */
-    start++;
+	/* skip '?' */
+	start++;
 
-    /* sanity check */
-    if (strlen(start) < 2)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: invalid option after '?'", uri->uri)));
+	/* sanity check */
+	if (strlen(start) < 2)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: invalid option after '?'", uri->uri)));
 
-    /* ok, parse the options now */
-    char *ctx;
-    for (char *pair = strtok_r(start, OPTION_SEP, &ctx); pair; pair = strtok_r(NULL, OPTION_SEP, &ctx))
-        uri->options = GPHDUri_parse_option(pair, uri);
+	/* ok, parse the options now */
+	char	   *ctx;
 
-    pfree(dup);
+	for (char *pair = strtok_r(start, OPTION_SEP, &ctx); pair; pair = strtok_r(NULL, OPTION_SEP, &ctx))
+		uri->options = GPHDUri_parse_option(pair, uri);
+
+	pfree(dup);
 }
 
 /*
@@ -231,42 +206,46 @@ GPHDUri_parse_options(GPHDUri *uri, char **cursor)
  * <key>=<value>
  * to OptionData object (key and value).
  */
-static List*
-GPHDUri_parse_option(char* pair, GPHDUri *uri)
+static List *
+GPHDUri_parse_option(char *pair, GPHDUri *uri)
 {
-    OptionData* option_data = palloc0(sizeof(OptionData));
-    char *sep = strchr(pair, '=');
-    if (sep == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: option '%s' missing '='", uri->uri, pair)));
+	OptionData *option_data = palloc0(sizeof(OptionData));
+	char	   *sep = strchr(pair, '=');
 
-    if (strchr(sep + 1, '=') != NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: option '%s' contains duplicate '='", uri->uri, pair)));
+	if (sep == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: option '%s' missing '='", uri->uri, pair)));
 
-    int key_len = sep - pair;
-    if (key_len == 0)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: option '%s' missing key before '='", uri->uri, pair)));
+	if (strchr(sep + 1, '=') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: option '%s' contains duplicate '='", uri->uri, pair)));
 
-    int value_len = strlen(pair) - key_len + 1;
-    if (value_len == EMPTY_VALUE_LEN)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: option '%s' missing value after '='", uri->uri, pair)));
+	int			key_len = sep - pair;
 
-    option_data->key = pnstrdup(pair, key_len);
-    option_data->value = pnstrdup(sep + 1, value_len);
+	if (key_len == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: option '%s' missing key before '='", uri->uri, pair)));
 
-    char *x_gp_key = normalize_key_name(option_data->key);
-    if (strcmp(x_gp_key, "X-GP-PROFILE") == 0)
-        uri->profile = pstrdup(option_data->value);
-    pfree(x_gp_key);
+	int			value_len = strlen(pair) - key_len + 1;
 
-    return lappend(uri->options, option_data);
+	if (value_len == EMPTY_VALUE_LEN)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: option '%s' missing value after '='", uri->uri, pair)));
+
+	option_data->key = pnstrdup(pair, key_len);
+	option_data->value = pnstrdup(sep + 1, value_len);
+
+	char	   *x_gp_key = normalize_key_name(option_data->key);
+
+	if (strcmp(x_gp_key, "X-GP-PROFILE") == 0)
+		uri->profile = pstrdup(option_data->value);
+	pfree(x_gp_key);
+
+	return lappend(uri->options, option_data);
 }
 
 /*
@@ -275,16 +254,18 @@ GPHDUri_parse_option(char* pair, GPHDUri *uri)
 static void
 GPHDUri_free_options(GPHDUri *uri)
 {
-    ListCell *option = NULL;
-    foreach(option, uri->options)
-    {
-        OptionData *data = (OptionData*)lfirst(option);
-        pfree(data->key);
-        pfree(data->value);
-        pfree(data);
-    }
-    list_free(uri->options);
-    uri->options = NIL;
+	ListCell   *option = NULL;
+
+	foreach(option, uri->options)
+	{
+		OptionData *data = (OptionData *) lfirst(option);
+
+		pfree(data->key);
+		pfree(data->value);
+		pfree(data);
+	}
+	list_free(uri->options);
+	uri->options = NIL;
 }
 
 /*
@@ -293,15 +274,16 @@ GPHDUri_free_options(GPHDUri *uri)
 static void
 GPHDUri_free_fragments(GPHDUri *uri)
 {
-    ListCell *fragment = NULL;
+	ListCell   *fragment = NULL;
 
-    foreach(fragment, uri->fragments)
-    {
-        FragmentData *data = (FragmentData*)lfirst(fragment);
-        free_fragment(data);
-    }
-    list_free(uri->fragments);
-    uri->fragments = NIL;
+	foreach(fragment, uri->fragments)
+	{
+		FragmentData *data = (FragmentData *) lfirst(fragment);
+
+		free_fragment(data);
+	}
+	list_free(uri->fragments);
+	uri->fragments = NIL;
 }
 
 /*
@@ -312,14 +294,16 @@ GPHDUri_free_fragments(GPHDUri *uri)
 bool
 GPHDUri_opt_exists(GPHDUri *uri, char *key)
 {
-    ListCell *item;
-    foreach(item, uri->options)
-    {
-        OptionData *data = (OptionData*)lfirst(item);
-        if (data != NULL && pg_strcasecmp(data->key, key) == 0 && strlen(data->value) > 0)
-            return true;
-    }
-    return false;
+	ListCell   *item;
+
+	foreach(item, uri->options)
+	{
+		OptionData *data = (OptionData *) lfirst(item);
+
+		if (data != NULL && pg_strcasecmp(data->key, key) == 0 && strlen(data->value) > 0)
+			return true;
+	}
+	return false;
 }
 
 /*
@@ -329,37 +313,39 @@ GPHDUri_opt_exists(GPHDUri *uri, char *key)
 void
 GPHDUri_verify_no_duplicate_options(GPHDUri *uri)
 {
-    ListCell *option = NULL;
-    List *duplicateKeys = NIL;
-    List *previousKeys = NIL;
+	ListCell   *option = NULL;
+	List	   *duplicateKeys = NIL;
+	List	   *previousKeys = NIL;
 
-    foreach(option, uri->options)
-    {
-        OptionData *data = (OptionData*)lfirst(option);
-        Value *key = makeString(str_toupper(data->key, strlen(data->key)));
-        if (!list_member(previousKeys, key))
-            previousKeys = lappend(previousKeys, key);
-        else if (!list_member(duplicateKeys, key))
-            duplicateKeys = lappend(duplicateKeys, key);
-    }
+	foreach(option, uri->options)
+	{
+		OptionData *data = (OptionData *) lfirst(option);
+		Value	   *key = makeString(str_toupper(data->key, strlen(data->key)));
 
-    if (duplicateKeys && duplicateKeys->length > 0)
-    {
-        ListCell *key = NULL;
-        StringInfoData duplicates;
-        initStringInfo(&duplicates);
-        foreach(key, duplicateKeys)
-            appendStringInfo(&duplicates, "%s, ", strVal((Value*)lfirst(key)));
-        //omit trailing ', '
-        truncateStringInfo(&duplicates, duplicates.len - strlen(", "));
+		if (!list_member(previousKeys, key))
+			previousKeys = lappend(previousKeys, key);
+		else if (!list_member(duplicateKeys, key))
+			duplicateKeys = lappend(duplicateKeys, key);
+	}
 
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: Duplicate option(s): %s", uri->uri, duplicates.data)));
-        pfree(duplicates.data);
-    }
-    list_free_deep(duplicateKeys);
-    list_free_deep(previousKeys);
+	if (duplicateKeys && duplicateKeys->length > 0)
+	{
+		ListCell   *key = NULL;
+		StringInfoData duplicates;
+
+		initStringInfo(&duplicates);
+		foreach(key, duplicateKeys)
+			appendStringInfo(&duplicates, "%s, ", strVal((Value *) lfirst(key)));
+		/* omit trailing ', ' */
+		truncateStringInfo(&duplicates, duplicates.len - strlen(", "));
+
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: Duplicate option(s): %s", uri->uri, duplicates.data)));
+		pfree(duplicates.data);
+	}
+	list_free_deep(duplicateKeys);
+	list_free_deep(previousKeys);
 }
 
 /*
@@ -369,46 +355,37 @@ GPHDUri_verify_no_duplicate_options(GPHDUri *uri)
 void
 GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreOptions)
 {
-    ListCell *coreOption = NULL;
-    StringInfoData missing;
-    initStringInfo(&missing);
+	ListCell   *coreOption = NULL;
+	StringInfoData missing;
 
-    foreach(coreOption, coreOptions)
-    {
-        bool optExist = false;
-        ListCell *option = NULL;
-        foreach(option, uri->options)
-        {
-            char *key = ((OptionData*)lfirst(option))->key;
-            if (pg_strcasecmp(key, lfirst(coreOption)) == 0)
-            {
-                optExist = true;
-                break;
-            }
-        }
-        if (!optExist)
-        appendStringInfo(&missing, "%s and ", (char*)lfirst(coreOption));
-    }
+	initStringInfo(&missing);
 
-    if (missing.len > 0)
-    {
-        truncateStringInfo(&missing, missing.len - strlen(" and ")); //omit trailing ' and '
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: %s option(s) missing", uri->uri, missing.data)));
-    }
-    pfree(missing.data);
-}
+	foreach(coreOption, coreOptions)
+	{
+		bool		optExist = false;
+		ListCell   *option = NULL;
 
-/*
- * GPHDUri_verify_cluster_exist
- * This function is given the name of the cluster to verify their existence.
- */
-void
-GPHDUri_verify_cluster_exists(GPHDUri *uri, char* cluster)
-{
-    if (pg_strcasecmp(uri->cluster, cluster) != 0)
-        ereport(ERROR,
-                (errcode(ERRCODE_SYNTAX_ERROR),
-                 errmsg("Invalid URI %s: CLUSTER NAME %s not found", uri->uri, cluster)));
+		foreach(option, uri->options)
+		{
+			char	   *key = ((OptionData *) lfirst(option))->key;
+
+			if (pg_strcasecmp(key, lfirst(coreOption)) == 0)
+			{
+				optExist = true;
+				break;
+			}
+		}
+		if (!optExist)
+			appendStringInfo(&missing, "%s and ", (char *) lfirst(coreOption));
+	}
+
+	if (missing.len > 0)
+	{
+		/* omit trailing ' and ' */
+		truncateStringInfo(&missing, missing.len - strlen(" and "));
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("Invalid URI %s: %s option(s) missing", uri->uri, missing.data)));
+	}
+	pfree(missing.data);
 }

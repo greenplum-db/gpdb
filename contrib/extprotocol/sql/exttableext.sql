@@ -1078,10 +1078,10 @@ select max(cnt) - min(cnt)  > 20 from t;
     LOCATION ('demoprot://format_long_test13') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_s');
 
-    -- Drop colum value1 from source table formatsource
+    -- Drop column value1 from source table formatsource
     ALTER TABLE formatsource DROP COLUMN value1;
 
-    -- Drop colum value1 from RET and WET
+    -- Drop column value1 from RET and WET
     ALTER EXTERNAL TABLE format_r DROP COLUMN value1;
     ALTER EXTERNAL TABLE format_w DROP COLUMN value1;
 

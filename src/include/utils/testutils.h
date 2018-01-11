@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * testutils.h
  *		Collection of testing utilities.
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/testutils.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef TESTUTILS_H_

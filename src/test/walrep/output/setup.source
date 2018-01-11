@@ -8,6 +8,33 @@ create or replace function test_send() RETURNS bool AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 create or replace function test_receive_and_verify(text, text) RETURNS bool AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
-create or replace function test_xlog_ao(text, text, oid, oid, oid, bigint[], bool)
- RETURNS int AS
+create or replace function test_xlog_ao(IN text, IN text, OUT xrecoff INT, OUT record_type TEXT, 
+                                        OUT recordlen INT, OUT spcNode OID, OUT dbNode OID, 
+                                        OUT relNode OID, OUT segment_filenum INT, OUT file_offset BIGINT)
+ RETURNS SETOF record AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+CREATE OR REPLACE FUNCTION test_xlog_ao_wrapper(IN startpoints TEXT[])
+RETURNS TABLE (gp_segment_id INT, oid OID, relname name, 
+	       xrecoff TEXT, record_type TEXT, recordlen INT,
+	              spcNode OID, dbNode OID, relNode OID, segment_filenum INT,
+		             file_offset BIGINT) 
+EXECUTE ON ALL SEGMENTS AS
+$func$
+DECLARE
+port TEXT;
+startpoint TEXT;
+myseg INT;
+BEGIN
+	myseg := gp_execution_segment();
+	startpoint := startpoints[myseg + 1];
+	select 'port=' || setting INTO port from pg_settings where name = 'port';
+	RAISE DEBUG 'port %, startpoint % current_xlog_location %',
+	port, startpoint, pg_current_xlog_location();
+
+	RETURN QUERY
+	SELECT gp_execution_segment(), pg.oid, pg.relname, upper('0/' || to_hex(t.xrecoff)), t.record_type, 
+	  t.recordlen, t.spcNode, t.dbNode, t.relNode, t.segment_filenum, t.file_offset 
+        FROM test_xlog_ao(port, startpoint) t
+	LEFT JOIN pg_class pg ON t.relnode = pg.relfilenode;
+END;
+$func$ LANGUAGE plpgsql;

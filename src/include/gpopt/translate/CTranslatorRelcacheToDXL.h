@@ -293,9 +293,9 @@ namespace gpdxl
 			static
 			BOOL FIndexSupported(Relation relIndex);
 			
-			// collect oids of indexes on partitioned table
+			// retrieve index info list of partitioned table
 			static
-			List *PlIndexOidsPartTable(Relation rel);
+			List *PlIndexInfoPartTable(Relation rel);
 			 
 			// compute the array of included columns
 			static
@@ -319,7 +319,7 @@ namespace gpdxl
 
 			// retrieve part constraint for relation
 			static
-			CMDPartConstraintGPDB *PmdpartcnstrRelation(IMemoryPool *pmp, CMDAccessor *pmda, OID oidRel, DrgPmdcol *pdrgpmdcol);
+			CMDPartConstraintGPDB *PmdpartcnstrRelation(IMemoryPool *pmp, CMDAccessor *pmda, OID oidRel, DrgPmdcol *pdrgpmdcol, BOOL fhasIndex);
 
 			// retrieve part constraint from a GPDB node
 			static
@@ -337,10 +337,18 @@ namespace gpdxl
 			static
 			CMDName *PmdnameRel(IMemoryPool *pmp, Relation rel);
 
-			// return the indexes defined on the given relation
+			// return the index info list defined on the given relation
 			static
-			DrgPmdid *PdrgpmdidRelIndexes(IMemoryPool *pmp, Relation rel);
-			
+			DrgPmdIndexInfo *PdrgpmdRelIndexInfo(IMemoryPool *pmp, Relation rel);
+
+			// return index info list of indexes defined on a partitoned table
+			static
+			DrgPmdIndexInfo *PdrgpmdRelIndexInfoPartTable(IMemoryPool *pmp, Relation relRoot);
+
+			// return index info list of indexes defined on regular, external tables or leaf partitions
+			static
+			DrgPmdIndexInfo *PdrgpmdRelIndexInfoNonPartTable(IMemoryPool *pmp, Relation rel);
+
 			// retrieve an index over a partitioned table from the relcache
 			static
 			IMDIndex *PmdindexPartTable(IMemoryPool *pmp, CMDAccessor *pmda, IMDId *pmdidIndex, const IMDRelation *pmdrel, LogicalIndexes *plind);

@@ -4750,11 +4750,9 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 
 /*
  * UNNEST
- *    function name array_unnest() in Postgres.  Different in GP because we
- * added the function before we merged in the postgres function.
  */
 Datum
-unnest(PG_FUNCTION_ARGS)
+array_unnest(PG_FUNCTION_ARGS)
 {
 	typedef struct
 	{

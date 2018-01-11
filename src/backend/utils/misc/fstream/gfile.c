@@ -128,7 +128,7 @@ writewinpipe(gfile_t* fd, void* ptr, size_t size)
 	return i;
 }
 
-#ifndef WIN32
+#ifdef HAVE_LIBBZ2
 static void *
 bz_alloc(void *a, int b, int c)
 {
@@ -240,7 +240,7 @@ static int bz_file_open(gfile_t *fd)
 }
 #endif
 
-#ifndef WIN32
+#ifdef HAVE_LIBZ
 /* GZ */
 struct zlib_stuff
 {
@@ -953,7 +953,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 #endif
 	if (s && strcasecmp(s,".gz")==0)
 	{
-#ifdef WIN32
+#ifndef HAVE_LIBZ
 		gfile_printf_then_putc_newline(".gz not supported");
 #else
 		/*
@@ -971,7 +971,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 	}
 	else if (s && strcasecmp(s,".bz2")==0)
 	{
-#ifdef WIN32
+#ifndef HAVE_LIBBZ2
 		gfile_printf_then_putc_newline(".bz2 not supported");
 #else
 		fd->compression = BZ_COMPRESSION;

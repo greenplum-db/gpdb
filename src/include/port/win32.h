@@ -52,17 +52,6 @@
 
 #define USES_WINSOCK
 
-/*
- * Ensure that anyone building an extension is using a 32 bit time_t.
- * On Mingw/Msys, that should always be the case, but MSVC++ defaults
- * to 64 bits. We set that for our own build in the project files
- */
-#if defined(WIN32_ONLY_COMPILER) && !defined(FRONTEND)
-#ifndef _USE_32BIT_TIME_T
-#error "Postgres uses 32 bit time_t - add #define _USE_32BIT_TIME_T on Windows"
-#endif
-#endif
-
 /* defines for dynamic linking on Win32 platform */
 #if defined(WIN32) || defined(__CYGWIN__)
 
@@ -341,7 +330,7 @@ extern void _dosmaperr(unsigned long);
 #endif
 
 /* in port/win32env.c */
-extern int pgwin32_putenv(const char *);
+extern int	pgwin32_putenv(const char *);
 extern void pgwin32_unsetenv(const char *);
 
 #define putenv(x) pgwin32_putenv(x)
@@ -401,11 +390,10 @@ typedef unsigned short mode_t;
 #ifndef O_RANDOM
 #define O_RANDOM		0x0010	/* File access is primarily random */
 #define O_SEQUENTIAL	0x0020	/* File access is primarily sequential */
-#define O_TEMPORARY	0x0040	/* Temporary file bit */
+#define O_TEMPORARY 0x0040		/* Temporary file bit */
 #define O_SHORT_LIVED	0x1000	/* Temporary storage file, try not to flush */
 #define _O_SHORT_LIVED	O_SHORT_LIVED
-#endif /* ifndef O_RANDOM */
-
-#endif /* __BORLANDC__ */
+#endif   /* ifndef O_RANDOM */
+#endif   /* __BORLANDC__ */
 
 #endif

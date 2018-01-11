@@ -2,9 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_ivr_cs2_jr">
   <title>Configuring Database Authorization</title>
-  <body>
-    <p>Authorization governs access to Greenplum Database database objects. </p>
-  </body>
+  <shortdesc>Describes how to restrict authorization access to database data at the user level by
+    using roles and permissions.</shortdesc>
   <topic id="topic_k35_qtx_kr">
     <title>Access Permissions and Roles</title>
     <body>

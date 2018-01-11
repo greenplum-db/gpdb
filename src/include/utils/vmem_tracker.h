@@ -3,12 +3,20 @@
  * vmem_tracker.h
  *	  This file contains declarations for vmem tracking functions.
  *
- * Copyright (c) 2014, Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/vmem_tracker.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef VMEMTRACKER_H
 #define VMEMTRACKER_H
 
 #include "nodes/nodes.h"
+
+#define BITS_IN_MB 20
 
 /*
  * The cleanupCountdown in the SessionState determines how many
@@ -66,5 +74,6 @@ extern void RedZoneHandler_LogVmemUsageOfAllSessions(void);
 
 extern void IdleTracker_ActivateProcess(void);
 extern void IdleTracker_DeactivateProcess(void);
+extern bool VmemTrackerIsActivated(void);
 
 #endif   /* VMEMTRACKER_H */

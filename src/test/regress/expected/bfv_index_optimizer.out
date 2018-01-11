@@ -162,20 +162,18 @@ AND ft.id = dt1.id;
                      ->  Hash  (cost=431.16..431.16 rows=3 width=2)
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.16 rows=3 width=2)
                                  Hash Key: bfv_tab2_facttable1.wk_id
-                                 ->  Nested Loop  (cost=0.00..431.16 rows=3 width=2)
-                                       Join Filter: true
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
+                                 ->  Hash Join  (cost=0.00..862.00 rows=3 width=2)
+                                       Hash Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=6)
+                                             Hash Key: bfv_tab2_facttable1.id
+                                             ->  Sequence  (cost=0.00..431.00 rows=7 width=6)
+                                                   ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                                         Partitions selected: 20 (out of 20)
+                                                   ->  Dynamic Table Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=7 width=6)
+                                       ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                                              ->  Table Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
-                                       ->  Sequence  (cost=0.00..0.16 rows=1 width=2)
-                                             ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                                                   Partitions selected:  20 (out of 20)
-                                             ->  Bitmap Table Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..0.16 rows=1 width=2)
-                                                   Recheck Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
-                                                   ->  Bitmap Index Scan on idx_bfv_tab2_facttable1_1_prt_dflt  (cost=0.00..0.00 rows=0 width=0)
-                                                         Index Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
- Settings:  optimizer=on
- Optimizer status: PQO version 1.621
-(22 rows)
+ Optimizer status: PQO version 2.48.9
+(20 rows)
 
 -- start_ignore
 create language plpythonu;
@@ -455,3 +453,100 @@ explain select * from tbl_ab where b::oid=1;
 
 drop table tbl_ab;
 drop function count_index_scans(text);
+-- start_ignore
+select enable_xform('CXformGet2TableScan');
+          enable_xform          
+--------------------------------
+ CXformGet2TableScan is enabled
+(1 row)
+
+-- end_ignore
+--
+-- Check that ORCA can use an index for joins on quals like:
+--
+-- indexkey CMP expr
+-- expr CMP indexkey
+--
+-- where expr is a scalar expression free of index keys and may have outer
+-- references.
+--
+create table nestloop_x (i int, j int) distributed by (i);
+create table nestloop_y (i int, j int) distributed by (i);
+insert into nestloop_x select g, g from generate_series(1, 20) g;
+insert into nestloop_y select g, g from generate_series(1, 7) g;
+create index nestloop_y_idx on nestloop_y (j);
+-- Coerce the Postgres planner to produce a similar plan. Nested loop joins
+-- are not enabled by default. And to dissuade it from choosing a sequential
+-- scan, bump up the cost. enable_seqscan=off  won't help, because there is
+-- no other way to scan table 'x', and once the planner chooses a seqscan for
+-- one table, it will happily use a seqscan for other tables as well, despite
+-- enable_seqscan=off. (On PostgreSQL, enable_seqscan works differently, and
+-- just bumps up the cost of a seqscan, so it would work there.)
+set seq_page_cost=10000000;
+set enable_indexscan=on;
+set enable_nestloop=on;
+explain select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..543.01 rows=56 width=16)
+   ->  Nested Loop  (cost=0.00..543.01 rows=19 width=16)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=20 width=8)
+               ->  Table Scan on nestloop_x  (cost=0.00..431.00 rows=7 width=8)
+         ->  Index Scan using nestloop_y_idx on nestloop_y  (cost=0.00..112.01 rows=1 width=8)
+               Index Cond: nestloop_y.j > (nestloop_x.i + nestloop_x.j)
+ Settings:  enable_indexscan=on; enable_nestloop=on; optimizer=on; seq_page_cost=1e+07
+ Optimizer status: PQO version 2.48.0
+(9 rows)
+
+select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+ i | j | i | j 
+---+---+---+---
+ 3 | 3 | 7 | 7
+ 1 | 1 | 3 | 3
+ 1 | 1 | 4 | 4
+ 1 | 1 | 5 | 5
+ 1 | 1 | 6 | 6
+ 1 | 1 | 7 | 7
+ 2 | 2 | 5 | 5
+ 2 | 2 | 6 | 6
+ 2 | 2 | 7 | 7
+(9 rows)
+
+explain select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..543.01 rows=56 width=16)
+   ->  Nested Loop  (cost=0.00..543.01 rows=19 width=16)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=20 width=8)
+               ->  Table Scan on nestloop_x  (cost=0.00..431.00 rows=7 width=8)
+         ->  Index Scan using nestloop_y_idx on nestloop_y  (cost=0.00..112.01 rows=1 width=8)
+               Index Cond: nestloop_y.j > (nestloop_x.i + nestloop_x.j + 2)
+ Settings:  enable_indexscan=on; enable_nestloop=on; optimizer=on; seq_page_cost=1e+07
+ Optimizer status: PQO version 2.48.0
+(9 rows)
+
+select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+ i | j | i | j 
+---+---+---+---
+ 1 | 1 | 5 | 5
+ 1 | 1 | 6 | 6
+ 1 | 1 | 7 | 7
+ 2 | 2 | 7 | 7
+(4 rows)
+
+drop table nestloop_x, nestloop_y;
+SET enable_seqscan = OFF;
+SET enable_indexscan = ON;
+DROP TABLE IF EXISTS bpchar_ops;
+CREATE TABLE bpchar_ops(id INT8, v char(10)) DISTRIBUTED BY(id);
+CREATE INDEX bpchar_ops_btree_idx ON bpchar_ops USING btree(v bpchar_pattern_ops);
+INSERT INTO bpchar_ops VALUES (0, 'row');
+SELECT * FROM bpchar_ops WHERE v = 'row '::char(20);
+ id |     v
+----+------------
+  0 | row
+(1 row)
+
+DROP TABLE bpchar_ops;

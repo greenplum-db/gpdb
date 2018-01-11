@@ -16,12 +16,12 @@
  * index qual conditions.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.22.2.1 2008/09/11 14:01:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.35 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,6 +48,8 @@
 #include "cdb/cdbvars.h" /* gp_select_invisible */
 #include "cdb/cdbfilerepprimary.h"
 #include "nodes/tidbitmap.h"
+#include "utils/snapmgr.h"
+#include "utils/tqual.h"
 
 
 static TupleTableSlot *BitmapHeapNext(BitmapHeapScanState *node);
@@ -60,7 +62,7 @@ initScanDesc(BitmapHeapScanState *scanstate)
 {
 	Relation currentRelation = scanstate->ss.ss_currentRelation;
 	EState *estate = scanstate->ss.ps.state;
-	
+
 	if (scanstate->ss_currentScanDesc == NULL)
 	{
 		/*
@@ -88,18 +90,6 @@ freeScanDesc(BitmapHeapScanState *scanstate)
 }
 
 /*
- * Initialize the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapHeapScanState *scanstate)
-{
-	if (scanstate->tbmres == NULL)
-		scanstate->tbmres =
-			palloc0(sizeof(TBMIterateResult) +
-					MAX_TUPLES_PER_PAGE * sizeof(OffsetNumber));
-}
-
-/*
  * Free the state relevant to bitmaps
  */
 static inline void
@@ -107,11 +97,15 @@ freeBitmapState(BitmapHeapScanState *scanstate)
 {
 	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
 	scanstate->tbm = NULL;
-	if (scanstate->tbmres != NULL)
-	{
-		pfree(scanstate->tbmres);
-		scanstate->tbmres = NULL;
-	}
+	/* Likewise, the tbmres member is owned by the iterator. It'll be freed
+	 * during end_iterate. */
+	scanstate->tbmres = NULL;
+	if (scanstate->tbmiterator)
+		tbm_generic_end_iterate(scanstate->tbmiterator);
+	scanstate->tbmiterator = NULL;
+	if (scanstate->prefetch_iterator)
+		tbm_generic_end_iterate(scanstate->prefetch_iterator);
+	scanstate->prefetch_iterator = NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -128,7 +122,9 @@ BitmapHeapNext(BitmapHeapScanState *node)
 	HeapScanDesc scan;
 	Index		scanrelid;
 	Node  		*tbm;
+	GenericBMIterator *tbmiterator;
 	TBMIterateResult *tbmres;
+	GenericBMIterator *prefetch_iterator;
 	OffsetNumber targoffset;
 	TupleTableSlot *slot;
 	bool		more = true;
@@ -141,12 +137,13 @@ BitmapHeapNext(BitmapHeapScanState *node)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	initScanDesc(node);
-	initBitmapState(node);
 
 	scan = node->ss_currentScanDesc;
 	scanrelid = ((BitmapHeapScan *) node->ss.ps.plan)->scan.scanrelid;
 	tbm = node->tbm;
-	tbmres = (TBMIterateResult *) node->tbmres;
+	tbmiterator = node->tbmiterator;
+	tbmres = node->tbmres;
+	prefetch_iterator = node->prefetch_iterator;
 
 	/*
 	 * Check if we are evaluating PlanQual for tuple of this relation.
@@ -160,13 +157,13 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		if (estate->es_evTupleNull[scanrelid - 1])
 		{
 			ExecEagerFreeBitmapHeapScan(node);
-			
+
 			return ExecClearTuple(slot);
 		}
-		
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1],
-					   slot, false);
+
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1],
+						   slot, InvalidBuffer, false);
 
 		/* Does the tuple meet the original qual conditions? */
 		econtext->ecxt_scantuple = slot;
@@ -183,28 +180,41 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
 	/*
-	 * If we haven't yet performed the underlying index scan, or
-	 * we have used up the bitmaps from the previous scan, do the next scan,
-	 * and prepare the bitmap to be iterated over.
- 	 */
+	 * If we haven't yet performed the underlying index scan, do it, and begin
+	 * the iteration over the bitmap.
+	 *
+	 * For prefetching, we use *two* iterators, one for the pages we are
+	 * actually scanning and another that runs ahead of the first for
+	 * prefetching.  node->prefetch_pages tracks exactly how many pages ahead
+	 * the prefetch iterator is.  Also, node->prefetch_target tracks the
+	 * desired prefetch distance, which starts small and increases up to the
+	 * GUC-controlled maximum, target_prefetch_pages.  This is to avoid doing
+	 * a lot of prefetching in a scan that stops after a few tuples because of
+	 * a LIMIT.
+	 */
 	if (tbm == NULL)
 	{
 		tbm = (Node *) MultiExecProcNode(outerPlanState(node));
 
-		if (tbm != NULL && (!(IsA(tbm, HashBitmap) ||
-							  IsA(tbm, StreamBitmap))))
+		if (!tbm || !(IsA(tbm, TIDBitmap) || IsA(tbm, StreamBitmap)))
 			elog(ERROR, "unrecognized result from subplan");
 
 		node->tbm = tbm;
+		node->tbmiterator = tbmiterator = tbm_generic_begin_iterate(tbm);
+		node->tbmres = tbmres = NULL;
+
+#ifdef USE_PREFETCH
+		if (target_prefetch_pages > 0)
+		{
+			node->prefetch_iterator = prefetch_iterator = tbm_generic_begin_iterate(tbm);
+			node->prefetch_pages = 0;
+			node->prefetch_target = -1;
+		}
+#endif   /* USE_PREFETCH */
 	}
 
 	for (;;)
@@ -219,16 +229,30 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			if (QueryFinishPending)
 				return NULL;
 
-			if (tbm == NULL)
-				more = false;
-			else
-				more = tbm_iterate(tbm, tbmres);
+			node->tbmres = tbmres = tbm_generic_iterate(tbmiterator);
+			more = (tbmres != NULL);
 
 			if (!more)
 			{
 				/* no more entries in the bitmap */
 				break;
 			}
+
+#ifdef USE_PREFETCH
+			if (node->prefetch_pages > 0)
+			{
+				/* The main iterator has closed the distance by one page */
+				node->prefetch_pages--;
+			}
+			else if (prefetch_iterator)
+			{
+				/* Do not let the prefetch iterator get behind the main one */
+				TBMIterateResult *tbmpre = tbm_generic_iterate(prefetch_iterator);
+
+				if (tbmpre == NULL || tbmpre->blockno != tbmres->blockno)
+					elog(ERROR, "prefetch and main iterators are out of sync");
+			}
+#endif   /* USE_PREFETCH */
 
 			/*
 			 * Ignore any claimed entries past what we think is the end of
@@ -255,9 +279,27 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
 			/*
-		 	* Set rs_cindex to first slot to examine
-		 	*/
+			 * Set rs_cindex to first slot to examine
+			 */
 			scan->rs_cindex = 0;
+
+#ifdef USE_PREFETCH
+
+			/*
+			 * Increase prefetch target if it's not yet at the max.  Note that
+			 * we will increase it to zero after fetching the very first
+			 * page/tuple, then to one after the second tuple is fetched, then
+			 * it doubles as later pages are fetched.
+			 */
+			if (node->prefetch_target >= target_prefetch_pages)
+				 /* don't increase any further */ ;
+			else if (node->prefetch_target >= target_prefetch_pages / 2)
+				node->prefetch_target = target_prefetch_pages;
+			else if (node->prefetch_target > 0)
+				node->prefetch_target *= 2;
+			else
+				node->prefetch_target++;
+#endif   /* USE_PREFETCH */
 		}
 		else
 		{
@@ -266,6 +308,16 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			 */
 			scan->rs_cindex++;
 			tbmres->ntuples--;
+
+#ifdef USE_PREFETCH
+
+			/*
+			 * Try to prefetch at least a few pages even before we get to the
+			 * second page if we don't stop reading after the first tuple.
+			 */
+			if (node->prefetch_target < target_prefetch_pages)
+				node->prefetch_target++;
+#endif   /* USE_PREFETCH */
 		}
 
 		/*
@@ -277,6 +329,34 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			tbmres->ntuples = 0;
 			continue;
 		}
+
+#ifdef USE_PREFETCH
+
+		/*
+		 * We issue prefetch requests *after* fetching the current page to try
+		 * to avoid having prefetching interfere with the main I/O. Also, this
+		 * should happen only when we have determined there is still something
+		 * to do on the current page, else we may uselessly prefetch the same
+		 * page we are just about to request for real.
+		 */
+		if (prefetch_iterator)
+		{
+			while (node->prefetch_pages < node->prefetch_target)
+			{
+				TBMIterateResult *tbmpre = tbm_generic_iterate(prefetch_iterator);
+
+				if (tbmpre == NULL)
+				{
+					/* No more pages to prefetch */
+					tbm_generic_end_iterate(prefetch_iterator);
+					node->prefetch_iterator = prefetch_iterator = NULL;
+					break;
+				}
+				node->prefetch_pages++;
+				PrefetchBuffer(scan->rs_rd, MAIN_FORKNUM, tbmpre->blockno);
+			}
+		}
+#endif   /* USE_PREFETCH */
 
 		/*
 		 * Okay to fetch the tuple
@@ -316,11 +396,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		}
 
 		/* OK to return this tuple */
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -353,14 +428,13 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	 * Acquire pin on the target heap page, trading in any pin we held before.
 	 */
 	Assert(page < scan->rs_nblocks);
-	
+
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
+
 	scan->rs_cbuf = ReleaseAndReadBuffer(scan->rs_cbuf,
 										 scan->rs_rd,
 										 page);
-
 	buffer = scan->rs_cbuf;
 	snapshot = scan->rs_snapshot;
 
@@ -411,7 +485,7 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 		OffsetNumber maxoff = PageGetMaxOffsetNumber(dp);
 		OffsetNumber offnum;
 
-		for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum++)
+		for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum = OffsetNumberNext(offnum))
 		{
 			ItemId		lp;
 			HeapTupleData loctup;
@@ -427,10 +501,10 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	}
 
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
-	
+
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
-	
+
 	Assert(ntup <= MaxHeapTuplesPerPage);
 	scan->rs_ntuples = ntup;
 }
@@ -493,7 +567,6 @@ ExecBitmapHeapReScan(BitmapHeapScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 
@@ -571,7 +644,11 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.state = estate;
 
 	scanstate->tbm = NULL;
+	scanstate->tbmiterator = NULL;
 	scanstate->tbmres = NULL;
+	scanstate->prefetch_iterator = NULL;
+	scanstate->prefetch_pages = 0;
+	scanstate->prefetch_target = 0;
 
 	/*
 	 * Miscellaneous initialization
@@ -630,8 +707,6 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 	 */
 	outerPlanState(scanstate) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapHeapScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -643,14 +718,6 @@ ExecCountSlotsBitmapHeapScan(BitmapHeapScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPHEAPSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForBitmapHeapScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapHeapScan));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

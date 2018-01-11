@@ -18,7 +18,10 @@ CREATE TYPE <varname>name</varname> (
     [, STORAGE = <varname>storage</varname>]
     [, DEFAULT = <varname>default</varname>]
     [, ELEMENT = <varname>element</varname>]
-    [, DELIMITER = <varname>delimiter</varname>] )
+    [, DELIMITER = <varname>delimiter</varname>]
+    [, COMPRESSTYPE = <varname>compression_type</varname>]
+    [, COMPRESSLEVEL = <varname>compression_level</varname>]
+    [, BLOCKSIZE = <varname>blocksize</varname>] )
 
 CREATE TYPE <varname>name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TYPE</codeph> registers a new data type for use in the
 current database. The user who defines a type becomes its owner. </p><p>If a schema name is given then the type is created in the specified
@@ -207,11 +210,27 @@ or <codeph>double</codeph>. The default is <codeph>int4</codeph>. </pd></plentry
 The default is <codeph>plain</codeph>. </pd></plentry><plentry><pt><varname>default</varname></pt><pd>The default value for the data type. If this is omitted, the default
 is null. </pd></plentry><plentry><pt><varname>element</varname></pt><pd>The type being created is an array; this specifies the type of the
 array elements. </pd></plentry><plentry><pt><varname>delimiter</varname></pt><pd>The delimiter character to be used between values in arrays made
-of this type.</pd></plentry></parml></section><section id="section8"><title>Notes</title><p>User-defined type names cannot begin with the underscore character (_)
+of this type.</pd></plentry><plentry><pt><varname>compression_type</varname></pt><pd>Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
+              <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
+              of compression used in columns of this type.<note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
+                release of Pivotal Greenplum Database.</note>
+</pd></plentry><plentry><pt><varname>compression_level</varname></pt><pd>
+For Zstd compression, set to an
+              integer value from 1 (fastest compression) to 19 (highest compression ratio).
+              For zlib compression, the valid range is from 1 to 9. The QuickLZ
+            compression level can only be set to 1. For
+              <codeph>RLE_TYPE</codeph>, the compression level can be set to an integer value from 1
+            (fastest compression) to 4 (highest compression ratio). The default compression level is 1.</pd></plentry><plentry><pt><varname>blocksize</varname></pt><pd>
+Set to the size, in bytes, for each block in the column. The
+              <codeph>BLOCKSIZE</codeph> must be between 8192 and 2097152 bytes, and be a multiple
+            of 8192. The default block size is 32768.</pd></plentry></parml></section><section id="section8"><title>Notes</title><p>User-defined type names cannot begin with the underscore character (_)
 and can only be 62 characters long (or in general <codeph>NAMEDATALEN
 - 2</codeph>, rather than the <codeph>NAMEDATALEN - 1</codeph> characters
 allowed for other names). Type names beginning with underscore are reserved
-for internally-created array type names.</p><p>Because there are no restrictions on use of a data type once it's
+for internally-created array type names.</p>
+<p>Greenplum Database does not support adding storage options for row or composite types.</p>
+<p>Storage options defined at the table- and column- level override the default storage options defined for a scalar type.</p>
+<p>Because there are no restrictions on use of a data type once it's
 been created, creating a base type is tantamount to granting public execute
 permission on the functions mentioned in the type definition. (The creator
 of the type is therefore required to own these functions.) This is usually

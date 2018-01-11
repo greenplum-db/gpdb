@@ -12,6 +12,7 @@
  */
 #define MASTER_MIRROR_SYNC
 
+#include "access/persistentfilesysobjname.h"
 #include "access/xlog.h"
 #include "access/xlogdefs.h"
 #include "lib/stringinfo.h"
@@ -19,7 +20,8 @@
 #define MMXLOG_CREATE_DIR 0x00
 #define MMXLOG_CREATE_FILE 0x10
 #define MMXLOG_REMOVE_DIR 0x20
-#define MMXLOG_REMOVE_FILE 0x30
+#define MMXLOG_REMOVE_HEAP_FILE 0x30
+#define MMXLOG_REMOVE_APPENDONLY_FILE 0x40
 
 typedef enum mm_fs_obj_type
 {
@@ -130,7 +132,8 @@ extern void mmxlog_log_remove_filespace(Oid filespace);
 extern void mmxlog_log_remove_tablespace(Oid tablespace);
 extern void mmxlog_log_remove_database(Oid tablespace, Oid database);
 extern void mmxlog_log_remove_relfilenode( Oid tablespace, Oid database,
-										  Oid relfilenode, uint32 segnum);
+										  Oid relfilenode, uint32 segnum,
+										  PersistentFileSysRelStorageMgr relStorageMgr);
 
 /*
  * Functions to generate WAL records to add file system objects on the

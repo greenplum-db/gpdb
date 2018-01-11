@@ -205,25 +205,25 @@ select 'aa=>"NuLl"'::hstore;
  "aa"=>"NuLl"
 (1 row)
 
-select '\\=a=>q=w'::hstore;
+select e'\\=a=>q=w'::hstore;
    hstore    
 -------------
  "=a"=>"q=w"
 (1 row)
 
-select '"=a"=>q\\=w'::hstore;
+select e'"=a"=>q\\=w'::hstore;
    hstore    
 -------------
  "=a"=>"q=w"
 (1 row)
 
-select '"\\"a"=>q>w'::hstore;
+select e'"\\"a"=>q>w'::hstore;
     hstore    
 --------------
  "\"a"=>"q>w"
 (1 row)
 
-select '\\"a=>q"w'::hstore;
+select e'\\"a=>q"w'::hstore;
     hstore     
 ---------------
  "\"a"=>"q\"w"
@@ -558,6 +558,7 @@ select 'a=>b, b=>1, c=>NULL'::hstore @> 'a=>b, c=>q';
 (1 row)
 
 CREATE TABLE testhstore (h hstore);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 \copy testhstore from 'data/hstore.data'
 select count(*) from testhstore where h @> 'wait=>NULL';
  count 
@@ -611,6 +612,7 @@ select count(*) from testhstore where h ? 'public';
 
 drop index hidx;
 create index hidx on testhstore using gin (h);
+ERROR:  GIN indexes are not supported
 set enable_seqscan=off;
 select count(*) from testhstore where h @> 'wait=>NULL';
  count 

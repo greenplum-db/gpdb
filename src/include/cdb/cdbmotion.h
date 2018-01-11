@@ -2,9 +2,12 @@
  *
  * cdbmotion.h
  *
+ * Portions Copyright (c) 2004-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  *
- * Copyright (c) 2004-2008, Greenplum inc
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbmotion.h
  *
  *-------------------------------------------------------------------------
  */
@@ -102,7 +105,7 @@ extern void CheckAndSendRecordCache(MotionLayerState *mlStates,
 extern SendReturnCode SendTuple(MotionLayerState *mlStates,
 								ChunkTransportState *transportStates,
 								int16 motNodeID,
-								HeapTuple tuple,
+								GenericTuple tuple,
 								int16 targetRoute);
 
 
@@ -131,7 +134,7 @@ SendEndOfStream(MotionLayerState       *mlStates,
 extern ReceiveReturnCode RecvTupleFrom(MotionLayerState *mlStates,
 									   ChunkTransportState *transportStates,
 									   int16 motNodeID,
-									   HeapTuple *tup_i,
+									   GenericTuple *tup_i,
 									   int16 srcRoute);
 
 extern void SendStopMessage(MotionLayerState *mlStates,

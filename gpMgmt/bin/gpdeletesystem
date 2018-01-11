@@ -242,8 +242,8 @@ def delete_cluster(options):
         for (oid, filespace) in filespaces:
             logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
                                                                   filespace))
-            cmd = unix.RemoveFiles('remove fs dir', filespace, ctxt=base.REMOTE,
-                                   remoteHost=segdb.getSegmentHostName())
+            cmd = unix.RemoveDirectory('remove fs dir', filespace, ctxt=base.REMOTE,
+                                       remoteHost=segdb.getSegmentHostName())
             pool.addCommand(cmd)
 
     logger.info('Waiting for worker threads to complete...')

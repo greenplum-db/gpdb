@@ -3,10 +3,10 @@
  * execAmi.c
  *	  miscellaneous executor access method routines
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.99 2008/10/04 21:56:53 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.103 2009/01/01 17:23:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +19,9 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
+#include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
+#include "executor/nodeCtescan.h"
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
 #include "executor/nodeHashjoin.h"
@@ -37,7 +39,7 @@
 #include "executor/nodeTidscan.h"
 #include "executor/nodeUnique.h"
 #include "executor/nodeValuesscan.h"
-#include "executor/nodeCtescan.h"
+#include "executor/nodeWindowAgg.h"
 #include "executor/nodeWorktablescan.h"
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeTableScan.h"
@@ -50,8 +52,14 @@
 #include "executor/nodeTableFunction.h"
 #include "executor/nodePartitionSelector.h"
 #include "executor/nodeBitmapAppendOnlyscan.h"
-#include "executor/nodeWindow.h"
 #include "executor/nodeShareInputScan.h"
+#include "nodes/nodeFuncs.h"
+#include "utils/syscache.h"
+
+
+static bool TargetListSupportsBackwardScan(List *targetlist);
+static bool IndexSupportsBackwardScan(Oid indexid);
+
 
 /*
  * ExecReScan
@@ -183,6 +191,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			ExecBitmapIndexReScan((BitmapIndexScanState *) node, exprCtxt);
 			break;
 
+		case T_DynamicBitmapIndexScanState:
+			ExecDynamicBitmapIndexReScan((DynamicBitmapIndexScanState *) node, exprCtxt);
+			break;
+
 		case T_BitmapHeapScanState:
 			ExecBitmapHeapReScan((BitmapHeapScanState *) node, exprCtxt);
 			break;
@@ -243,6 +255,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			ExecReScanAgg((AggState *) node, exprCtxt);
 			break;
 
+		case T_WindowAggState:
+			ExecReScanWindowAgg((WindowAggState *) node, exprCtxt);
+			break;
+
 		case T_UniqueState:
 			ExecReScanUnique((UniqueState *) node, exprCtxt);
 			break;
@@ -267,10 +283,6 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			ExecReScanTableFunction((TableFunctionState *) node, exprCtxt);
 			break;
 
-		case T_WindowState:
-			ExecReScanWindow((WindowState *) node, exprCtxt);
-			break;
-
 		case T_ShareInputScanState:
 			ExecShareInputScanReScan((ShareInputScanState *) node, exprCtxt);
 			break;
@@ -288,6 +300,9 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 		bms_free(node->chgParam);
 		node->chgParam = NULL;
 	}
+
+	/* Now would be a good time to also send an update to gpmon */
+	CheckSendPlanStateGpmonPkt(node);
 }
 
 /*
@@ -344,7 +359,7 @@ ExecMarkPos(PlanState *node)
 
 		case T_MotionState:
 			ereport(ERROR, (
-				errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to mark position of Motion operator")
 				));
 			break;
@@ -418,7 +433,7 @@ ExecRestrPos(PlanState *node)
 
 		case T_MotionState:
 			ereport(ERROR, (
-				errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to restore position of Motion operator")
 				));
 			break;
@@ -427,6 +442,9 @@ ExecRestrPos(PlanState *node)
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
 	}
+
+	/* Now would be a good time to also send an update to gpmon */
+	CheckSendPlanStateGpmonPkt(node);
 }
 
 /*
@@ -491,7 +509,8 @@ ExecSupportsBackwardScan(Plan *node)
 	{
 		case T_Result:
 			if (outerPlan(node) != NULL)
-				return ExecSupportsBackwardScan(outerPlan(node));
+				return ExecSupportsBackwardScan(outerPlan(node)) &&
+					TargetListSupportsBackwardScan(node->targetlist);
 			else
 				return false;
 
@@ -504,108 +523,41 @@ ExecSupportsBackwardScan(Plan *node)
 					if (!ExecSupportsBackwardScan((Plan *) lfirst(l)))
 						return false;
 				}
+				/* need not check tlist because Append doesn't evaluate it */
 				return true;
 			}
 
 		case T_SeqScan:
-		case T_IndexScan:
 		case T_TidScan:
 		case T_FunctionScan:
 		case T_ValuesScan:
 		case T_CteScan:
 		case T_WorkTableScan:
-			return true;
+			return TargetListSupportsBackwardScan(node->targetlist);
+
+		case T_IndexScan:
+			return IndexSupportsBackwardScan(((IndexScan *) node)->indexid) &&
+				TargetListSupportsBackwardScan(node->targetlist);
 
 		case T_SubqueryScan:
-			return ExecSupportsBackwardScan(((SubqueryScan *) node)->subplan);
+			return ExecSupportsBackwardScan(((SubqueryScan *) node)->subplan) &&
+				TargetListSupportsBackwardScan(node->targetlist);
 
 		case T_ShareInputScan:
 			return true;
 
 		case T_Material:
 		case T_Sort:
+			/* these don't evaluate tlist */
 			return true;
 
 		case T_Limit:
+			/* doesn't evaluate tlist */
 			return ExecSupportsBackwardScan(outerPlan(node));
 
 		default:
 			return false;
 	}
-}
-
-/*
- * ExecMayReturnRawTuples
- *		Check whether a plan tree may return "raw" disk tuples (that is,
- *		pointers to original data in disk buffers, as opposed to temporary
- *		tuples constructed by projection steps).  In the case of Append,
- *		some subplans may return raw tuples and others projected tuples;
- *		we return "true" if any of the returned tuples could be raw.
- *
- * This must be passed an already-initialized planstate tree, because we
- * need to look at the results of ExecAssignScanProjectionInfo().
- */
-bool
-ExecMayReturnRawTuples(PlanState *node)
-{
-	/*
-	 * At a table scan node, we check whether ExecAssignScanProjectionInfo
-	 * decided to do projection or not.  Most non-scan nodes always project
-	 * and so we can return "false" immediately.  For nodes that don't project
-	 * but just pass up input tuples, we have to recursively examine the input
-	 * plan node.
-	 *
-	 * Note: Hash and Material are listed here because they sometimes return
-	 * an original input tuple, not a copy.  But Sort and SetOp never return
-	 * an original tuple, so they can be treated like projecting nodes.
-	 */
-	switch (nodeTag(node))
-	{
-			/* Table scan nodes */
-		case T_TableScanState:
-		case T_DynamicTableScanState:
-		case T_DynamicIndexScanState:
-		case T_IndexScanState:
-		case T_BitmapHeapScanState:
-		case T_TidScanState:
-			if (node->ps_ProjInfo == NULL)
-				return true;
-			break;
-
-		case T_SeqScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
-			break;
-
-		case T_SubqueryScanState:
-			/* If not projecting, look at input plan */
-			if (node->ps_ProjInfo == NULL)
-				return ExecMayReturnRawTuples(((SubqueryScanState *) node)->subplan);
-			break;
-
-			/* Non-projecting nodes */
-		case T_MotionState:
-			if (node->lefttree == NULL)
-				return false;
-		case T_HashState:
-		case T_MaterialState:
-		case T_UniqueState:
-		case T_LimitState:
-			return ExecMayReturnRawTuples(node->lefttree);
-
-		case T_AppendState:
-			{
-				/*
-				 * Always return true since we don't initialize the subplan
-				 * nodes, so we don't know.
-				 */
-				return true;
-			}
-
-			/* All projecting node types come here */
-		default:
-			break;
-	}
-	return false;
 }
 
 /*
@@ -623,6 +575,7 @@ ExecEagerFree(PlanState *node)
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_BitmapIndexScanState:
+		case T_DynamicBitmapIndexScanState:
 		case T_LimitState:
 		case T_MotionState:
 		case T_NestLoopState:
@@ -639,6 +592,7 @@ ExecEagerFree(PlanState *node)
 		case T_DynamicIndexScanState:
 		case T_SequenceState:
 		case T_PartitionSelectorState:
+		case T_WorkTableScanState:
 			break;
 
 		case T_TableScanState:
@@ -695,12 +649,16 @@ ExecEagerFree(PlanState *node)
 			ExecEagerFreeAgg((AggState*)node);
 			break;
 
-		case T_WindowState:
-			ExecEagerFreeWindow((WindowState *)node);
+		case T_WindowAggState:
+			ExecEagerFreeWindowAgg((WindowAggState *)node);
 			break;
 
 		case T_ShareInputScanState:
 			ExecEagerFreeShareInputScan((ShareInputScanState *)node);
+			break;
+
+		case T_RecursiveUnionState:
+			ExecEagerFreeRecursiveUnion((RecursiveUnionState *)node);
 			break;
 
 		default:
@@ -815,7 +773,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		case T_MaterialState:
 		case T_SortState:
 		case T_AggState:
-		case T_WindowState:
+		case T_WindowAggState:
 		{
 			planstate_walk_node(outerPlanState(node), EagerFreeWalker, &ctx);
 			break;
@@ -832,6 +790,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_HashJoinState:
+		case T_RecursiveUnionState:
 		{
 			planstate_walk_node(innerPlanState(node), EagerFreeWalker, &ctx);
 			planstate_walk_node(outerPlanState(node), EagerFreeWalker, &ctx);
@@ -861,4 +820,53 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 			break;
 		}
 	}
+}
+
+/*
+ * If the tlist contains set-returning functions, we can't support backward
+ * scan, because the TupFromTlist code is direction-ignorant.
+ */
+static bool
+TargetListSupportsBackwardScan(List *targetlist)
+{
+	if (expression_returns_set((Node *) targetlist))
+		return false;
+	return true;
+}
+
+/*
+ * An IndexScan node supports backward scan only if the index's AM does.
+ */
+static bool
+IndexSupportsBackwardScan(Oid indexid)
+{
+	bool		result;
+	HeapTuple	ht_idxrel;
+	HeapTuple	ht_am;
+	Form_pg_class idxrelrec;
+	Form_pg_am	amrec;
+
+	/* Fetch the pg_class tuple of the index relation */
+	ht_idxrel = SearchSysCache(RELOID,
+							   ObjectIdGetDatum(indexid),
+							   0, 0, 0);
+	if (!HeapTupleIsValid(ht_idxrel))
+		elog(ERROR, "cache lookup failed for relation %u", indexid);
+	idxrelrec = (Form_pg_class) GETSTRUCT(ht_idxrel);
+
+	/* Fetch the pg_am tuple of the index' access method */
+	ht_am = SearchSysCache(AMOID,
+						   ObjectIdGetDatum(idxrelrec->relam),
+						   0, 0, 0);
+	if (!HeapTupleIsValid(ht_am))
+		elog(ERROR, "cache lookup failed for access method %u",
+			 idxrelrec->relam);
+	amrec = (Form_pg_am) GETSTRUCT(ht_am);
+
+	result = amrec->amcanbackward;
+
+	ReleaseSysCache(ht_idxrel);
+	ReleaseSysCache(ht_am);
+
+	return result;
 }

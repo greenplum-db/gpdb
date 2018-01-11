@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* pg_exttable.h
-*	  definitions for system wide external relations
-*
-* Copyright (c) 2007-2010, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * pg_exttable.h
+ *	  definitions for system wide external relations
+ *
+ * Portions Copyright (c) 2007-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_exttable.h
+ *
+ *-------------------------------------------------------------------------
+ */
 
 #ifndef PG_EXTTABLE_H
 #define PG_EXTTABLE_H

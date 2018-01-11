@@ -5,7 +5,12 @@
  * 		QEs.
  *
  *
- * Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/seqserver.c
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +27,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
+#include "access/xact.h"
 #include "miscadmin.h"
 #include "libpq/pqsignal.h"
 #include "cdb/cdbvars.h"
@@ -41,6 +47,8 @@
 #include "tcop/tcopprot.h"
 #include "utils/ps_status.h"
 #include "storage/backendid.h"
+#include "utils/resowner.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 #include "tcop/tcopprot.h"
@@ -214,7 +222,7 @@ sendSequenceRequest(int     sockfd,
 		{
 			if (saved_err != EINTR && saved_err != EWOULDBLOCK)
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("Error: Could not write()  message to seqserver: %s",
 									   strerror(errno)),
 								errdetail("error during write() call (error:%d) to seqserver on sockfd: %d ",
@@ -242,7 +250,7 @@ sendSequenceRequest(int     sockfd,
 					{
 						saved_err = errno;
 
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("Error: Could not write()  message to seqserver: %s",
 											   strerror(errno)),
 										errdetail("error during write() call (error:%d) to seqserver on sockfd: %d ",
@@ -305,7 +313,7 @@ sendSequenceRequest(int     sockfd,
 					{
 						saved_err = errno;
 
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 									    errmsg("Error: Could not read() message from seqserver"),
 										errdetail("error during read() call (error:%d) from remote"
 												  "sockfd = %d", errno, sockfd)));
@@ -522,6 +530,14 @@ SeqServerMain(int argc, char *argv[])
 	RelationCacheInitializePhase2();
 
 	/*
+	 * Start a new transaction here before first access to db, and get a
+	 * snapshot.  We don't have a use for the snapshot itself, but we're
+	 * interested in the secondary effect that it sets RecentGlobalXmin.
+	 */
+	StartTransactionCommand();
+	(void) GetTransactionSnapshot();
+
+	/*
 	 * In order to access the catalog, we need a database, and a
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
@@ -540,6 +556,9 @@ SeqServerMain(int argc, char *argv[])
 	SetDatabasePath(fullpath);
 
 	RelationCacheInitializePhase3();
+
+	/* close the transaction we started above */
+	CommitTransactionCommand();
 
 	SeqServerLoop();
 
@@ -812,6 +831,13 @@ processSequenceRequest(int sockfd )
 	 */
 	PG_TRY();
 	{
+		/*
+		 * Processing the request might need to do catalog lookups, which requires
+		 * a transaction. Updating the sequence itself is not transactional, so this
+		 * transaction should be read-only.
+		 */
+		StartTransactionCommand();
+
 		cdb_sequence_nextval_server(nextValRequest.tablespaceid,
 									nextValRequest.dbid,
 									nextValRequest.seq_oid,
@@ -820,6 +846,8 @@ processSequenceRequest(int sockfd )
 									&pcached,
 									&pincrement,
 									&poverflow);
+
+		CommitTransactionCommand();
 	}
 	PG_CATCH();
 	{
@@ -1000,7 +1028,7 @@ listenerSetup(void)
 
 	if (rp == NULL)
 	{               /* No address succeeded */
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 			   errmsg("SeqServer Error: Could not setup listener socket: %m"),
 				  errdetail("error during bind() call (error:%d).", errno)));
 		
@@ -1008,7 +1036,7 @@ listenerSetup(void)
 
 	if (listen(listenerFd, LISTEN_BACKLOG) < 0)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("SeqServer Error: Could not setup listener socket: %s", strerror(errno)),
 				errdetail("error during listen() call (error:%d).", errno)));
 	}
@@ -1018,7 +1046,7 @@ listenerSetup(void)
 
 	if (getsockname(listenerFd, (struct sockaddr *) & addr, &addrlen) < 0)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("SeqServer Error: Could not setup listener socket: %s", strerror(errno)),
 		   errdetail("error during getsockname() call (error:%d).", errno)));
 	}

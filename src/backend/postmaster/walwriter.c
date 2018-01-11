@@ -30,11 +30,11 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/walwriter.c,v 1.4 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/walwriter.c,v 1.7 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -288,14 +288,22 @@ wal_quickdie(SIGNAL_ARGS)
 	PG_SETMASK(&BlockSig);
 
 	/*
-	 * DO NOT proc_exit() -- we're here because shared memory may be
-	 * corrupted, so we don't want to try to clean up our transaction. Just
-	 * nail the windows shut and get out of town.
-	 *
+	 * We DO NOT want to run proc_exit() callbacks -- we're here because
+	 * shared memory may be corrupted, so we don't want to try to clean up our
+	 * transaction.  Just nail the windows shut and get out of town.  Now that
+	 * there's an atexit callback to prevent third-party code from breaking
+	 * things by calling exit() directly, we have to reset the callbacks
+	 * explicitly to make this work as intended.
+	 */
+	on_exit_reset();
+
+	/*
 	 * Note we do exit(2) not exit(0).	This is to force the postmaster into a
 	 * system reset cycle if some idiot DBA sends a manual SIGQUIT to a random
 	 * backend.  This is necessary precisely because we don't clean up our
-	 * shared memory state.
+	 * shared memory state.  (The "dead man switch" mechanism in pmsignal.c
+	 * should ensure the postmaster sees this as a crash, too, but no harm in
+	 * being doubly sure.)
 	 */
 	exit(2);
 }

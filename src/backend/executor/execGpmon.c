@@ -1,8 +1,15 @@
-/*
+/*-------------------------------------------------------------------------
  * execGpmon.c
- *   Gpmon related functions inside executor.
+ *	  Gpmon related functions inside executor.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execGpmon.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

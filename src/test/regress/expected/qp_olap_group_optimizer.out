@@ -6015,26 +6015,35 @@ SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, CASE WHEN (vn = 0) THEN
 SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (f > 1);
  cn_r | f  | g 
 ------+----+---
+    1 | 21 | 1
+    2 | 31 | 1
+    3 | 41 | 1
+    1 | 11 |  
     1 | 11 | 1
     2 | 31 |  
     2 | 51 |  
     2 | 51 | 1
     1 | 21 |  
     3 | 41 |  
-    1 | 21 | 1
-    2 | 31 | 1
-    3 | 41 | 1
-    1 | 11 |  
 (10 rows)
 
 PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
 EXECUTE p(2);
  cn_r | f  | g 
 ------+----+---
-    1 | 22 | 2
     2 | 32 | 2
     1 | 12 | 2
     3 | 42 | 2
     2 | 52 | 2
+    1 | 22 | 2
 (5 rows)
+
+-- ###### Queries involving CUBE with HAVING CLAUSE ###### --
+WITH src AS (SELECT 1 AS a, 1 AS b)
+SELECT 1 FROM src GROUP BY CUBE(a, b) HAVING a IS NOT NULL;
+ ?column? 
+----------
+        1
+        1
+(2 rows)
 

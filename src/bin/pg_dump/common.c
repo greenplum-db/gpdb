@@ -6,25 +6,24 @@
  * Since pg4_dump is long-dead code, there is no longer any useful distinction
  * between this file and pg_dump.c.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.102 2008/01/01 19:45:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.107 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres_fe.h"
 
 #include <ctype.h>
-#include <time.h>
-#include "dumputils.h"
-#include "postgres.h"
+
 #include "catalog/pg_class.h"
 
 #include "pg_backup_archiver.h"
 
+#include "dumputils.h"
 
 /*
  * Variables for mapping DumpId to DumpableObject
@@ -70,17 +69,16 @@ bool is_gpdump = false; /* determines whether to print extra logging messages in
 
 static void flagInhTables(TableInfo *tbinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits);
-static void flagInhAttrs(TableInfo *tbinfo, int numTables,
-			 InhInfo *inhinfo, int numInherits);
+static void flagInhAttrs(TableInfo *tblinfo, int numTables);
+static DumpableObject **buildIndexArray(void *objArray, int numObjs,
+				Size objSize);
 static int	DOCatalogIdCompare(const void *p1, const void *p2);
 static int	ExtensionMemberIdCompare(const void *p1, const void *p2);
 static void findParentsByOid(TableInfo *self,
 				 InhInfo *inhinfo, int numInherits);
 static int	strInArray(const char *pattern, char **arr, int arr_size);
 
-void status_log_msg(const char *loglevel, const char *prog, const char *fmt,...);
 
-void		reset(void);
 /*
  * getSchemaData
  *	  Collect information about all potentially dumpable objects
@@ -108,7 +106,8 @@ getSchemaData(int *numTablesPtr, int g_role)
 	int			numTSTemplates;
 	int			numTSDicts;
 	int			numTSConfigs;
-	const char *LOGGER_INFO = "INFO";
+	int			numForeignDataWrappers;
+	int			numForeignServers;
 
 	/*
 	 * We must read extensions and extension membership info first, because
@@ -124,8 +123,8 @@ getSchemaData(int *numTablesPtr, int g_role)
 		write_msg(NULL, "identifying extension members\n");
 	getExtensionMembership(extinfo, numExtensions);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading schemas\n");
+	if (g_verbose)
+		write_msg(NULL, "reading schemas\n");
 	nspinfo = getNamespaces(&numNamespaces);
 	nspinfoindex = buildIndexArray(nspinfo, numNamespaces, sizeof(NamespaceInfo));
 
@@ -135,7 +134,7 @@ getSchemaData(int *numTablesPtr, int g_role)
 	 * However, we have to do getNamespaces first because the tables get
 	 * linked to their containing namespaces during getTables.
 	 */
-	if (is_gpdump || g_verbose)
+	if (g_verbose)
 		write_msg(NULL, "reading user-defined tables\n");
 	tblinfo = getTables(&numTables);
 	tblinfoindex = buildIndexArray(tblinfo, numTables, sizeof(TableInfo));
@@ -145,78 +144,86 @@ getSchemaData(int *numTablesPtr, int g_role)
 	 */
 	if (g_role == 1)
 	{
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined functions\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined functions\n");
 		funinfo = getFuncs(&numFuncs);
 		funinfoindex = buildIndexArray(funinfo, numFuncs, sizeof(FuncInfo));
 
 		/* this must be after getFuncs */
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined types\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined types\n");
 		typinfo = getTypes(&numTypes);
 		typinfoindex = buildIndexArray(typinfo, numTypes, sizeof(TypeInfo));
 
 		/* this must be after getFuncs */
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading type storage options\n");
+		if (g_verbose)
+			write_msg(NULL, "reading type storage options\n");
 		getTypeStorageOptions(&numTypeStorageOptions);
 
 		/* this must be after getFuncs, too */
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading procedural languages\n");
+		if (g_verbose)
+			write_msg(NULL, "reading procedural languages\n");
 		getProcLangs(&numProcLangs);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined aggregate functions\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined aggregate functions\n");
 		getAggregates(&numAggregates);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined operators\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined operators\n");
 		oprinfo = getOperators(&numOperators);
 		oprinfoindex = buildIndexArray(oprinfo, numOperators, sizeof(OprInfo));
 
 		if (testExtProtocolSupport())
 		{
-			if (is_gpdump || g_verbose)
-				status_log_msg(LOGGER_INFO, progname, "reading user-defined external protocols\n");
+			if (g_verbose)
+				write_msg(NULL, "reading user-defined external protocols\n");
 			getExtProtocols(&numExtProtocols);
 		}
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined operator classes\n");
 		getOpclasses(&numOpclasses);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator families\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined operator families\n");
 		getOpfamilies(&numOpfamilies);
 
-		if (is_gpdump || g_verbose)
+		if (g_verbose)
 			write_msg(NULL, "reading user-defined text search parsers\n");
 		getTSParsers(&numTSParsers);
 
-		if (is_gpdump || g_verbose)
+		if (g_verbose)
 			write_msg(NULL, "reading user-defined text search templates\n");
 		getTSTemplates(&numTSTemplates);
 
-		if (is_gpdump || g_verbose)
+		if (g_verbose)
 			write_msg(NULL, "reading user-defined text search dictionaries\n");
 		getTSDictionaries(&numTSDicts);
 
-		if (is_gpdump || g_verbose)
+		if (g_verbose)
 			write_msg(NULL, "reading user-defined text search configurations\n");
 		getTSConfigurations(&numTSConfigs);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined foreign-data wrappers\n");
+		getForeignDataWrappers(&numForeignDataWrappers);
+
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined foreign servers\n");
+		getForeignServers(&numForeignServers);
+
+		if (g_verbose)
+			write_msg(NULL, "reading user-defined conversions\n");
 		getConversions(&numConversions);
 	}
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading type casts\n");
+	if (g_verbose)
+		write_msg(NULL, "reading type casts\n");
 	getCasts(&numCasts);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading table inheritance information\n");
+	if (g_verbose)
+		write_msg(NULL, "reading table inheritance information\n");
 	inhinfo = getInherits(&numInherits);
 
 	/* Identify extension configuration tables that should be dumped */
@@ -224,38 +231,38 @@ getSchemaData(int *numTablesPtr, int g_role)
 		write_msg(NULL, "finding extension tables\n");
 	processExtensionTables(extinfo, numExtensions);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading rewrite rules\n");
+	if (g_verbose)
+		write_msg(NULL, "reading rewrite rules\n");
 	getRules(&numRules);
 
 	/* Link tables to parents, mark parents of target tables interesting */
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "finding inheritance relationships\n");
+	if (g_verbose)
+		write_msg(NULL, "finding inheritance relationships\n");
 	flagInhTables(tblinfo, numTables, inhinfo, numInherits);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading column info for interesting tables\n");
+	if (g_verbose)
+		write_msg(NULL, "reading column info for interesting tables\n");
 	getTableAttrs(tblinfo, numTables);
 
-	if (is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "flagging inherited columns in subtables\n");
-	flagInhAttrs(tblinfo, numTables, inhinfo, numInherits);
+	if (g_verbose)
+		write_msg(NULL, "flagging inherited columns in subtables\n");
+	flagInhAttrs(tblinfo, numTables);
 
 	/*
 	 * ROLE_MASTER
 	 */
 	if (g_role == 1)
 	{
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading indexes\n");
+		if (g_verbose)
+			write_msg(NULL, "reading indexes\n");
 		getIndexes(tblinfo, numTables);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading constraints\n");
+		if (g_verbose)
+			write_msg(NULL, "reading constraints\n");
 		getConstraints(tblinfo, numTables);
 
-		if (is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading triggers\n");
+		if (g_verbose)
+			write_msg(NULL, "reading triggers\n");
 		getTriggers(tblinfo, numTables);
 	}
 
@@ -319,8 +326,7 @@ flagInhTables(TableInfo *tblinfo, int numTables,
  * modifies tblinfo
  */
 static void
-flagInhAttrs(TableInfo *tblinfo, int numTables,
-			 InhInfo *inhinfo, int numInherits)
+flagInhAttrs(TableInfo *tblinfo, int numTables)
 {
 	int			i,
 				j,
@@ -413,43 +419,6 @@ flagInhAttrs(TableInfo *tblinfo, int numTables,
 				}
 
 				tbinfo->attrdefs[j] = attrDef;
-			}
-		}
-
-		/*
-		 * Check for inherited CHECK constraints.  We assume a constraint is
-		 * inherited if its name matches the name of any constraint in the
-		 * parent.	Originally this code tried to compare the expression
-		 * texts, but that can fail if the parent and child tables are in
-		 * different schemas, because reverse-listing of function calls may
-		 * produce different text (schema-qualified or not) depending on
-		 * search path.  We really need a more bulletproof way of detecting
-		 * inherited constraints --- pg_constraint should record this
-		 * explicitly!
-		 */
-		for (j = 0; j < tbinfo->ncheck; j++)
-		{
-			ConstraintInfo *constr;
-
-			constr = &(tbinfo->checkexprs[j]);
-
-			for (k = 0; k < numParents; k++)
-			{
-				TableInfo  *parent = parents[k];
-				int			l;
-
-				for (l = 0; l < parent->ncheck; l++)
-				{
-					ConstraintInfo *pconstr = &(parent->checkexprs[l]);
-
-					if (strcmp(pconstr->dobj.name, constr->dobj.name) == 0)
-					{
-						constr->coninherited = true;
-						break;
-					}
-				}
-				if (constr->coninherited)
-					break;
 			}
 		}
 	}
@@ -700,7 +669,7 @@ findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs)
 /*
  * Build an index array of DumpableObject pointers, sorted by OID
  */
-DumpableObject **
+static DumpableObject **
 buildIndexArray(void *objArray, int numObjs, Size objSize)
 {
 	DumpableObject **ptrs;
@@ -1076,32 +1045,6 @@ strInArray(const char *pattern, char **arr, int arr_size)
 }
 
 
-/* cdb addition */
-void
-reset(void)
-{
-	free(dumpIdMap);
-	dumpIdMap = NULL;
-	allocedDumpIds = 0;
-	lastDumpId = 0;
-
-/*
- * Variables for mapping CatalogId to DumpableObject
- */
-	catalogIdMapValid = false;
-	free(catalogIdMap);
-	catalogIdMap = NULL;
-	numCatalogIds = 0;
-
-	numTables = 0;
-	numTypes = 0;
-	numFuncs = 0;
-	numOperators = 0;
-}
-
-/* end cdb_addition */
-
-
 /*
  * Support for simple list operations
  */
@@ -1263,22 +1206,4 @@ pg_realloc(void *ptr, size_t size)
 	if (!tmp)
 		exit_horribly(NULL, NULL, "out of memory\n");
 	return tmp;
-}
-
-void
-status_log_msg(const char *loglevel, const char *prog, const char *fmt,...)
-{
-    va_list     ap;  
-    char        szTimeNow[18];
-    struct tm   pNow;
-    time_t      tNow = time(NULL);
-    char       *format = "%Y%m%d:%H:%M:%S";
-
-    localtime_r(&tNow, &pNow);
-    strftime(szTimeNow, 18, format, &pNow);
-
-    va_start(ap, fmt);
-    fprintf(stderr, "%s|%s-[%s]:-", szTimeNow, prog, loglevel);
-    vfprintf(stderr, gettext(fmt), ap); 
-    va_end(ap);
 }

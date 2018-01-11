@@ -3,11 +3,14 @@
  * bitmapinsert.c
  *	  Tuple insertion in the on-disk bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  src/backend/access/bitmap/bitmapinsert.c
  *
  *-------------------------------------------------------------------------
  */
@@ -24,6 +27,8 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
+#include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer
@@ -2553,10 +2558,15 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 
 	for (attno = 0; attno < tupDesc->natts; attno++)
 	{
-		RegProcedure	opfuncid;
-		ScanKey			scanKey;
+		Oid			eq_opr;
+		RegProcedure opfuncid;
+		ScanKey		scanKey;
 
-		opfuncid = equality_oper_funcid(tupDesc->attrs[attno]->atttypid);
+		get_sort_group_operators(tupDesc->attrs[attno]->atttypid,
+								 false, true, false,
+								 NULL, &eq_opr, NULL);
+		opfuncid = get_opcode(eq_opr);
+
 		scanKey = (ScanKey) (((char *)scanKeys) + attno * sizeof(ScanKeyData));
 
 		ScanKeyEntryInitialize(scanKey, SK_ISNULL, attno + 1, 
@@ -2574,7 +2584,7 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 		}
 	}
 
-	scanDesc = index_beginscan(lovHeap, lovIndex, ActiveSnapshot,
+	scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
 							   tupDesc->natts, scanKeys);
 
 	/* insert this new tuple into the bitmap index. */

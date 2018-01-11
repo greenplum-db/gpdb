@@ -385,7 +385,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 
 		bufcat(&buffer,
 			   "FROM   pg_proc\n"
-			   "WHERE  not proisagg and not proiswin\n"
+			   "WHERE  not proisagg and not proiswindow\n"
 			   "  AND  proname = lower('");
 		bufcat(&buffer, obj->name);
 		bufcat(&buffer, "')\n");
@@ -3576,10 +3576,6 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					 * Note that unlike the columns set by the mapper or the
 					 * input this is a list that must be de-allocated.
 					 */
-					columns = mapred_malloc(sizeof(mapred_plist_t));
-					columns->name = "value";  /* FIXME */
-					columns->type = "text";   /* FIXME */
-					columns->next = grouping;
 					columns = last;
 
 					/*

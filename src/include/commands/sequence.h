@@ -4,10 +4,11 @@
  *	  prototypes for sequence.c.
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/sequence.h,v 1.39 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/sequence.h,v 1.42 2009/01/01 17:23:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,6 +33,7 @@ typedef struct FormData_pg_sequence
 	NameData	sequence_name;
 #ifndef INT64_IS_BUSTED
 	int64		last_value;
+	int64		start_value;
 	int64		increment_by;
 	int64		max_value;
 	int64		min_value;
@@ -40,16 +42,18 @@ typedef struct FormData_pg_sequence
 #else
 	int32		last_value;
 	int32		pad1;
-	int32		increment_by;
+	int32		start_value;
 	int32		pad2;
-	int32		max_value;
+	int32		increment_by;
 	int32		pad3;
-	int32		min_value;
+	int32		max_value;
 	int32		pad4;
-	int32		cache_value;
+	int32		min_value;
 	int32		pad5;
-	int32		log_cnt;
+	int32		cache_value;
 	int32		pad6;
+	int32		log_cnt;
+	int32		pad7;
 #endif
 	bool		is_cycled;
 	bool		is_called;
@@ -63,13 +67,14 @@ typedef FormData_pg_sequence *Form_pg_sequence;
 
 #define SEQ_COL_NAME			1
 #define SEQ_COL_LASTVAL			2
-#define SEQ_COL_INCBY			3
-#define SEQ_COL_MAXVALUE		4
-#define SEQ_COL_MINVALUE		5
-#define SEQ_COL_CACHE			6
-#define SEQ_COL_LOG				7
-#define SEQ_COL_CYCLE			8
-#define SEQ_COL_CALLED			9
+#define SEQ_COL_STARTVAL		3
+#define SEQ_COL_INCBY			4
+#define SEQ_COL_MAXVALUE		5
+#define SEQ_COL_MINVALUE		6
+#define SEQ_COL_CACHE			7
+#define SEQ_COL_LOG				8
+#define SEQ_COL_CYCLE			9
+#define SEQ_COL_CALLED			10
 
 #define SEQ_COL_FIRSTCOL		SEQ_COL_NAME
 #define SEQ_COL_LASTCOL			SEQ_COL_CALLED
@@ -95,18 +100,10 @@ extern Datum lastval(PG_FUNCTION_ARGS);
 
 extern void DefineSequence(CreateSeqStmt *stmt);
 extern void AlterSequence(AlterSeqStmt *stmt);
+extern void AlterSequenceInternal(Oid relid, List *options);
 
 extern void seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
 extern void seq_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
-
-/* Set the upper and lower bounds of a sequence */
-#ifndef INT64_IS_BUSTED
-#define SEQ_MAXVALUE	INT64CONST(0x7FFFFFFFFFFFFFFF)
-#else							/* INT64_IS_BUSTED */
-#define SEQ_MAXVALUE	((int64) 0x7FFFFFFF)
-#endif   /* INT64_IS_BUSTED */
-
-#define SEQ_MINVALUE	(-SEQ_MAXVALUE)
 
 /*
  * CDB: nextval entry point called by sequence server
@@ -121,5 +118,6 @@ cdb_sequence_nextval_server(Oid    tablespaceid,
                             int64 *pincrement,
                             bool  *poverflow);
 
+extern void seq_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* SEQUENCE_H */

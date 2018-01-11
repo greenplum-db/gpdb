@@ -1,15 +1,21 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * cdbfilerepconnclient.c
- *  
  *
- *  Copyright 2009-2010 Greenplum Inc. All rights reserved.
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbfilerepconnclient.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 /*
  *
  * Responsibilities of this module.
- *		*) 
+ *		*)
  *
  */
 #include "postgres.h"
@@ -19,20 +25,20 @@
 #include "cdb/cdbvars.h"
 
 #include "cdb/cdbfilerepconnclient.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfilerepservice.h"
 
-static PGconn	*filerep_conn = NULL;
+static PGconn *filerep_conn = NULL;
 
 /*
  *
  */
-int 
+int
 FileRepConnClient_EstablishConnection(
-	char	*hostAddress,
-	int		port,
-	bool	reportError)
+									  char *hostAddress,
+									  int port,
+									  bool reportError)
 {
 	int			status = STATUS_OK;
 	char		portbuf[11];
@@ -61,7 +67,7 @@ FileRepConnClient_EstablishConnection(
 	if (PQstatus(filerep_conn) != CONNECTION_OK)
 	{
 		if (reportError || Debug_filerep_print)
-			ereport(WARNING, 
+			ereport(WARNING,
 					(errcode_for_socket_access(),
 					 errmsg("could not establish connection with server, host:'%s' port:'%d' err:'%s' : %m",
 							hostAddress,
@@ -81,7 +87,7 @@ FileRepConnClient_EstablishConnection(
 
 	/* NOTE Handle error message see ftsprobe.c */
 
-	return status;	
+	return status;
 }
 
 /*
@@ -112,19 +118,19 @@ FileRepConnClient_CloseConnection(void)
  */
 bool
 FileRepConnClient_SendMessage(
-	FileRepConsumerProcIndex_e	messageType, 
-	bool	messageSynchronous,
-	char*	message, 
-	uint32	messageLength)
+							  FileRepConsumerProcIndex_e messageType,
+							  bool messageSynchronous,
+							  char *message,
+							  uint32 messageLength)
 {
-	char msgType = 0;
-	int status = STATUS_OK;
+	char		msgType = 0;
+	int			status = STATUS_OK;
 
 #ifdef USE_ASSERT_CHECKING
-	int prevOutCount = filerep_conn->outCount;
-#endif // USE_ASSERT_CHECKING
+	int			prevOutCount = filerep_conn->outCount;
+#endif							/* // USE_ASSERT_CHECKING */
 
-	switch(messageType)
+	switch (messageType)
 	{
 		case FileRepMessageTypeXLog:
 			msgType = '1';
@@ -146,31 +152,35 @@ FileRepConnClient_SendMessage(
 	 * Note that pqPutMsgStart and pqPutnchar both may grow the connection's internal buffer, and do not
 	 *   flush data
 	 */
-	if (pqPutMsgStart(msgType, true, filerep_conn) < 0 )
+	if (pqPutMsgStart(msgType, true, filerep_conn) < 0)
 	{
 		return false;
 	}
 
-	if ( pqPutnchar(message, messageLength, filerep_conn) < 0 )
+	if (pqPutnchar(message, messageLength, filerep_conn) < 0)
 	{
 		return false;
 	}
 
-	/* Server side needs complete messages for mode-transitions so disable auto-flush since it flushes
-	 *  partial messages
+	/*
+	 * Server side needs complete messages for mode-transitions so disable
+	 * auto-flush since it flushes partial messages
 	 */
 	pqPutMsgEndNoAutoFlush(filerep_conn);
 
 	/* assert that a flush did not occur */
-	Assert( prevOutCount + messageLength + 5 == filerep_conn->outCount ); /* the +5 is the amount added by pgPutMsgStart */
+	Assert(prevOutCount + messageLength + 5 == filerep_conn->outCount); /* the +5 is the amount
+																		 * added by
+																		 * pgPutMsgStart */
 
 	/*
-	 *                note also that we could do a flush beforehand to avoid
-	 *                having pqPutMsgStart and pqPutnchar growing the buffer
+	 * note also that we could do a flush beforehand to avoid having
+	 * pqPutMsgStart and pqPutnchar growing the buffer
 	 */
-	 if (messageSynchronous || filerep_conn->outCount >= file_rep_min_data_before_flush )
+	if (messageSynchronous || filerep_conn->outCount >= file_rep_min_data_before_flush)
 	{
-		int result = 0;
+		int			result = 0;
+
 		/* wait and timeout will be handled by pqWaitTimeout */
 		while ((status = pqFlushNonBlocking(filerep_conn)) > 0)
 		{
@@ -184,12 +194,12 @@ FileRepConnClient_SendMessage(
 					break;
 				}
 			}
-			
+
 			if (result < 0)
 			{
 				ereport(WARNING,
 						(errcode_for_socket_access(),
-					 	 errmsg("could not write data to socket, failure detected : %m")));
+						 errmsg("could not write data to socket, failure detected : %m")));
 				status = -1;
 				break;
 			}
@@ -204,7 +214,7 @@ FileRepConnClient_SendMessage(
 		{
 			return false;
 		}
-		Assert( status == 0 );
+		Assert(status == 0);
 		return true;
 	}
 

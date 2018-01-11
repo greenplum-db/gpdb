@@ -4,13 +4,39 @@
  *	  GPDB resource group management code.
  *
  *
- * Copyright (c) 2006-2017, Greenplum inc.
+ * TERMS:
  *
+ * - FIXED QUOTA: the minimal memory quota reserved for a slot. This quota
+ *   is promised to be available during the lifecycle of the slot.
+ *
+ * - SHARED QUOTA: the preemptive memory quota shared by all the slots
+ *   in a resource group. When a slot want to use more memory than its
+ *   FIXED QUOTA it can attempt to allocate from this SHARED QUOTA, however
+ *   this allocation is possible to fail depending on the actual usage.
+ *
+ * - MEM POOL: the global memory quota pool shared by all the resource groups.
+ *   Overuse in this pool is strictly forbidden. A resource group must
+ *   acquire from this pool to have enough memory quota for its slots'
+ *   FIXED QUOTA and SHARED QUOTA, and should release overused quota to
+ *   this pool as soon as possible.
+ *
+ * - SLOT POOL: the global slot pool shared by all the resource groups.
+ *   A resource group must acquire a free slot in this pool for a new
+ *   transaction to run in it.
+ *
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/resgroup/resgroup.c
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
+#include "tcop/tcopprot.h"
 #include "access/genam.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
@@ -31,7 +57,6 @@
 #include "storage/proc.h"
 #include "storage/procsignal.h"
 #include "utils/builtins.h"
-#include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/resgroup-ops.h"
 #include "utils/resgroup.h"
@@ -41,7 +66,7 @@
 #include "utils/vmem_tracker.h"
 
 #define InvalidSlotId	(-1)
-#define RESGROUP_MAX_SLOTS	300
+#define RESGROUP_MAX_SLOTS	(MaxConnections)
 
 /*
  * GUC variables.
@@ -52,31 +77,53 @@ bool						gp_log_resgroup_memory = false;
 int							gp_resgroup_memory_policy_auto_fixed_mem;
 bool						gp_resgroup_print_operator_memory_limits = false;
 int							memory_spill_ratio=20;
+
 /*
  * Data structures
  */
 
-typedef struct ResGroupHashEntry
+typedef struct ResGroupInfo				ResGroupInfo;
+typedef struct ResGroupHashEntry		ResGroupHashEntry;
+typedef struct ResGroupProcData			ResGroupProcData;
+typedef struct ResGroupSlotData			ResGroupSlotData;
+typedef struct ResGroupData				ResGroupData;
+typedef struct ResGroupControl			ResGroupControl;
+
+/*
+ * Resource group info.
+ *
+ * This records the group and groupId for a transaction.
+ * When group->groupId != groupId, it means the group
+ * has been dropped.
+ */
+struct ResGroupInfo
+{
+	ResGroupData	*group;
+	Oid				groupId;
+};
+
+struct ResGroupHashEntry
 {
 	Oid		groupId;
 	int		index;
-} ResGroupHashEntry;
+};
 
 /*
  * Per proc resource group information.
  *
  * Config snapshot and runtime accounting information in current proc.
  */
-typedef struct ResGroupProcData
+struct ResGroupProcData
 {
 	Oid		groupId;
-	int		slotId;
+
+	ResGroupData		*group;
+	ResGroupSlotData	*slot;
 
 	ResGroupCaps	caps;
 
-	uint32	memUsage;			/* memory usage of current proc */
-	bool	doMemCheck;			/* whether to do memory limit check */
-} ResGroupProcData;
+	int32	memUsage;			/* memory usage of current proc */
+};
 
 /*
  * Per slot resource group information.
@@ -86,27 +133,28 @@ typedef struct ResGroupProcData
  * The information shared by QE processes on each segments are stored
  * in this structure.
  */
-typedef struct ResGroupSlotData
+struct ResGroupSlotData
 {
-	int				sessionId;
+	Oid				groupId;
 
 	ResGroupCaps	caps;
 
 	int32			memQuota;	/* memory quota of current slot */
 	int32			memUsage;	/* total memory usage of procs belongs to this slot */
 	int				nProcs;		/* number of procs in this slot */
-	bool			inUse;
-} ResGroupSlotData;
+
+	ResGroupSlotData	*next;
+};
 
 /*
  * Resource group information.
  */
-typedef struct ResGroupData
+struct ResGroupData
 {
 	Oid			groupId;		/* Id for this group */
-	ResGroupCaps	caps;
+	ResGroupCaps	caps;		/* capabilities of this group */
 	int			nRunning;		/* number of running trans */
-	PROC_QUEUE	waitProcs;
+	PROC_QUEUE	waitProcs;		/* list of PGPROC objects waiting on this group */
 	int			totalExecuted;	/* total number of executed trans */
 	int			totalQueued;	/* total number of queued trans	*/
 	Interval	totalQueuedTime;/* total queue time */
@@ -126,11 +174,9 @@ typedef struct ResGroupData
 	 */
 	int32		memUsage;
 	int32		memSharedUsage;
+};
 
-	ResGroupSlotData slots[RESGROUP_MAX_SLOTS];
-} ResGroupData;
-
-typedef struct ResGroupControl
+struct ResGroupControl
 {
 	HTAB			*htbl;
 	int 			segmentsOnMaster;
@@ -141,75 +187,123 @@ typedef struct ResGroupControl
 	 */
 	bool			loaded;
 
-	int32			totalChunks;	/* total memory chuncks on this segment */
-	int32			freeChunks;		/* memory chuncks not allocated to any group */
+	int32			totalChunks;	/* total memory chunks on this segment */
+	int32			freeChunks;		/* memory chunks not allocated to any group */
+
+	int32			chunkSizeInBits;
+
+	ResGroupSlotData	*slots;		/* slot pool shared by all resource groups */
+	ResGroupSlotData	*freeSlot;	/* head of the free list */
 
 	int				nGroups;
 	ResGroupData	groups[1];
-} ResGroupControl;
+};
 
-/* GUC */
-int		MaxResourceGroups;
+/* hooks */
+resgroup_assign_hook_type resgroup_assign_hook = NULL;
 
 /* static variables */
 
-static ResGroupData	*MyResGroupSharedInfo = NULL;
-
 static ResGroupControl *pResGroupControl = NULL;
 
-static ResGroupProcData _MyResGroupProcInfo =
+static ResGroupProcData __self =
 {
-	InvalidOid, InvalidSlotId,
+	InvalidOid,
 };
-static ResGroupProcData *MyResGroupProcInfo = &_MyResGroupProcInfo;
+static ResGroupProcData *self = &__self;
 
-static bool localResWaiting = false;
+/* If we are waiting on a group, this points to the associated group */
+static ResGroupData *groupAwaited = NULL;
 
 /* static functions */
 
-static bool groupApplyMemCaps(ResGroupData *group, const ResGroupCaps *caps);
-static int32 getChunksFromPool(Oid groupId, int32 chunks);
-static void returnChunksToPool(Oid groupId, int32 chunks);
-static void groupAssginChunks(ResGroupData *group,
-							  int32 chunks,
-							  const ResGroupCaps *caps);
-static int32 getSegmentChunks(void);
+static bool groupApplyMemCaps(ResGroupData *group);
+static int32 mempoolReserve(Oid groupId, int32 chunks);
+static void mempoolRelease(Oid groupId, int32 chunks);
+static void groupRebalanceQuota(ResGroupData *group,
+								int32 chunks,
+								const ResGroupCaps *caps);
+static void decideTotalChunks(int32 *totalChunks, int32 *chunkSizeInBits);
 static int32 groupGetMemExpected(const ResGroupCaps *caps);
 static int32 groupGetMemQuotaExpected(const ResGroupCaps *caps);
 static int32 groupGetMemSharedExpected(const ResGroupCaps *caps);
 static int32 groupGetMemSpillTotal(const ResGroupCaps *caps);
 static int32 slotGetMemQuotaExpected(const ResGroupCaps *caps);
+static int32 slotGetMemQuotaOnQE(const ResGroupCaps *caps, ResGroupData *group);
 static int32 slotGetMemSpill(const ResGroupCaps *caps);
-static void wakeupSlots(ResGroupData *group);
+static void wakeupSlots(ResGroupData *group, bool grant);
 static void wakeupGroups(Oid skipGroupId);
-static bool groupReleaseMemQuota(ResGroupData *group,
-								ResGroupSlotData *slot,
-								const ResGroupCaps *caps);
-static void groupAcquireMemQuota(ResGroupData *group, const ResGroupCaps *caps);
-static ResGroupData *ResGroupHashNew(Oid groupId);
-static ResGroupData *ResGroupHashFind(Oid groupId);
-static bool ResGroupHashRemove(Oid groupId);
-static void ResGroupWait(ResGroupData *group, bool isLocked);
-static ResGroupData *ResGroupCreate(Oid groupId, const ResGroupCaps *caps);
+static int32 mempoolAutoRelease(ResGroupData *group);
+static int32 mempoolAutoReserve(ResGroupData *group, const ResGroupCaps *caps);
+static ResGroupData *groupHashNew(Oid groupId);
+static ResGroupData *groupHashFind(Oid groupId, bool raise);
+static void groupHashRemove(Oid groupId);
+static void waitOnGroup(ResGroupData *group);
+static ResGroupData *createGroup(Oid groupId, const ResGroupCaps *caps);
 static void AtProcExit_ResGroup(int code, Datum arg);
-static void ResGroupWaitCancel(void);
-static void groupAssginChunks(ResGroupData *group,
-							  int32 chunks,
-							  const ResGroupCaps *caps);
-static void attachToSlot(ResGroupData *group,
-						 ResGroupSlotData *slot,
-						 ResGroupProcData *self);
-static void detachFromSlot(ResGroupData *group,
-						   ResGroupSlotData *slot,
-						   ResGroupProcData *self);
-static int getFreeSlot(ResGroupData *group);
-static int getSlot(ResGroupData *group);
-static void putSlot(ResGroupData *group, int slotId);
-static int ResGroupSlotAcquire(void);
+static void groupWaitCancel(void);
+static int32 groupReserveMemQuota(ResGroupData *group);
+static void groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot);
+static int32 groupIncMemUsage(ResGroupData *group,
+							  ResGroupSlotData *slot,
+							  int32 chunks);
+static void groupDecMemUsage(ResGroupData *group,
+							 ResGroupSlotData *slot,
+							 int32 chunks);
+static void initSlot(ResGroupSlotData *slot, ResGroupData *group,
+					 int32 slotMemQuota);
+static void selfAttachResGroup(ResGroupData *group, ResGroupSlotData *slot);
+static void selfDetachResGroup(ResGroupData *group, ResGroupSlotData *slot);
+static bool slotpoolInit(void);
+static ResGroupSlotData *slotpoolAllocSlot(void);
+static void slotpoolFreeSlot(ResGroupSlotData *slot);
+static ResGroupSlotData *groupGetSlot(ResGroupData *group);
+static void groupPutSlot(ResGroupData *group, ResGroupSlotData *slot);
+static Oid decideResGroupId(void);
+static void decideResGroup(ResGroupInfo *pGroupInfo);
+static ResGroupSlotData *groupAcquireSlot(ResGroupInfo *pGroupInfo);
+static void groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot);
 static void addTotalQueueDuration(ResGroupData *group);
-static void ResGroupSlotRelease(void);
-static void ResGroupSetMemorySpillRatio(const ResGroupCaps *caps);
-static void ResGroupCheckMemorySpillRatio(const ResGroupCaps *caps);
+static void groupSetMemorySpillRatio(const ResGroupCaps *caps);
+static char *groupDumpMemUsage(ResGroupData *group);
+static void selfValidateResGroupInfo(void);
+static bool selfIsAssigned(void);
+static void selfSetGroup(ResGroupData *group);
+static void selfUnsetGroup(void);
+static void selfSetSlot(ResGroupSlotData *slot);
+static void selfUnsetSlot(void);
+static bool procIsWaiting(const PGPROC *proc);
+static void procWakeup(PGPROC *proc);
+static int slotGetId(const ResGroupSlotData *slot);
+static void groupWaitQueueValidate(const ResGroupData *group);
+static void groupWaitQueuePush(ResGroupData *group, PGPROC *proc);
+static PGPROC *groupWaitQueuePop(ResGroupData *group);
+static void groupWaitQueueErase(ResGroupData *group, PGPROC *proc);
+static bool groupWaitQueueIsEmpty(const ResGroupData *group);
+static bool shouldBypassQuery(const char *query_string);
+static void lockResGroupForDrop(ResGroupData *group);
+static void unlockResGroupForDrop(ResGroupData *group);
+static bool groupIsDropped(ResGroupInfo *pGroupInfo);
+
+static void resgroupDumpGroup(StringInfo str, ResGroupData *group);
+static void resgroupDumpWaitQueue(StringInfo str, PROC_QUEUE *queue);
+static void resgroupDumpCaps(StringInfo str, ResGroupCap *caps);
+static void resgroupDumpSlots(StringInfo str);
+static void resgroupDumpFreeSlots(StringInfo str);
+
+static void sessionSetSlot(ResGroupSlotData *slot);
+static ResGroupSlotData *sessionGetSlot(void);
+static void sessionResetSlot(void);
+
+#ifdef USE_ASSERT_CHECKING
+static bool selfHasGroup(void);
+static bool selfHasSlot(void);
+static void slotValidate(const ResGroupSlotData *slot);
+static bool slotIsInFreelist(const ResGroupSlotData *slot);
+static bool slotIsInUse(const ResGroupSlotData *slot);
+static bool groupIsNotDropped(const ResGroupData *group);
+static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
+#endif /* USE_ASSERT_CHECKING */
 
 /*
  * Estimate size the resource group structures will need in
@@ -228,6 +322,9 @@ ResGroupShmemSize(void)
 
 	/* The control structure. */
 	size = add_size(size, mul_size(MaxResourceGroups, sizeof(ResGroupData)));
+
+	/* The slot pool. */
+	size = add_size(size, mul_size(RESGROUP_MAX_SLOTS, sizeof(ResGroupSlotData)));
 
 	/* Add a safety margin */
 	size = add_size(size, size / 10);
@@ -265,7 +362,7 @@ ResGroupControlInit(void)
 
     hash_flags = (HASH_ELEM | HASH_FUNCTION);
 
-    LOG_RESGROUP_DEBUG(LOG, "Creating hash table for %d resource groups", MaxResourceGroups);
+    LOG_RESGROUP_DEBUG(LOG, "creating hash table for %d resource groups", MaxResourceGroups);
 
     pResGroupControl->htbl = ShmemInitHash("Resource Group Hash Table",
                                            MaxResourceGroups,
@@ -283,9 +380,13 @@ ResGroupControlInit(void)
     pResGroupControl->nGroups = MaxResourceGroups;
 	pResGroupControl->totalChunks = 0;
 	pResGroupControl->freeChunks = 0;
+	pResGroupControl->chunkSizeInBits = BITS_IN_MB;
 
 	for (i = 0; i < MaxResourceGroups; i++)
 		pResGroupControl->groups[i].groupId = InvalidOid;
+
+	if (!slotpoolInit())
+		goto error_out;
 
     return;
 
@@ -299,40 +400,14 @@ error_out:
  * Allocate a resource group entry from a hash table
  */
 void
-AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts)
+AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 {
 	ResGroupData	*group;
-	ResGroupCaps	caps;
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	ResGroupOptsToCaps(opts, &caps);
-	group = ResGroupCreate(groupId, &caps);
-	if (!group)
-	{
-		LWLockRelease(ResGroupLock);
-
-		ereport(PANIC,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				errmsg("not enough shared memory for resource groups")));
-	}
-
-	LWLockRelease(ResGroupLock);
-}
-
-/*
- * Remove a resource group entry from the hash table
- */
-void
-FreeResGroupEntry(Oid groupId)
-{
-	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-
-#ifdef USE_ASSERT_CHECKING
-	bool groupOK = 
-#endif
-		ResGroupHashRemove(groupId);
-	Assert(groupOK);
+	group = createGroup(groupId, caps);
+	Assert(group != NULL);
 
 	LWLockRelease(ResGroupLock);
 }
@@ -354,14 +429,11 @@ InitResGroups(void)
 	Relation			relResGroup;
 	Relation			relResGroupCapability;
 
-	/*
-	 * On master, the postmaster does the initializtion
-	 * On segments, the first QE does the initializtion
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH && GpIdentity.segindex != MASTER_CONTENT_ID)
-		return;
-
 	on_shmem_exit(AtProcExit_ResGroup, 0);
+
+	/*
+	 * On master and segments, the first backend does the initialization.
+	 */
 	if (pResGroupControl->loaded)
 		return;
 	/*
@@ -393,9 +465,14 @@ InitResGroups(void)
 	if (pResGroupControl->loaded)
 		goto exit;
 
-	/* These initialization must be done before ResGroupCreate() */
-	pResGroupControl->totalChunks = getSegmentChunks();
+	/* These initialization must be done before createGroup() */
+	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pResGroupControl->freeChunks = pResGroupControl->totalChunks;
+	if (pResGroupControl->totalChunks == 0)
+		ereport(PANIC,
+				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
+				 errmsg("insufficient memory available"),
+				 errhint("Increase gp_resource_group_memory_limit")));
 
 	ResGroupOps_Init();
 
@@ -407,14 +484,11 @@ InitResGroups(void)
 		int cpuRateLimit;
 		Oid groupId = HeapTupleGetOid(tuple);
 
-		GetResGroupCapabilities(groupId, &caps);
-		cpuRateLimit = caps.cpuRateLimit.value;
+		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
+		cpuRateLimit = caps.cpuRateLimit;
 
-		group = ResGroupCreate(groupId, &caps);
-		if (!group)
-			ereport(PANIC,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-			 		errmsg("not enough shared memory for resource groups")));
+		group = createGroup(groupId, &caps);
+		Assert(group != NULL);
 
 		ResGroupOps_CreateGroup(groupId);
 		ResGroupOps_SetCpuRateLimit(groupId, cpuRateLimit);
@@ -429,6 +503,11 @@ InitResGroups(void)
 
 exit:
 	LWLockRelease(ResGroupLock);
+
+	/*
+	 * release lock here to guarantee we have no lock held when acquiring
+	 * resource group slot
+	 */
 	heap_close(relResGroup, AccessShareLock);
 	heap_close(relResGroupCapability, AccessShareLock);
 	CurrentResourceOwner = NULL;
@@ -446,93 +525,116 @@ ResGroupCheckForDrop(Oid groupId, char *name)
 {
 	ResGroupData	*group;
 
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
-	{
-		LWLockRelease(ResGroupLock);
-
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
-	}
+	group = groupHashFind(groupId, true);
 
 	if (group->nRunning > 0)
 	{
 		int nQuery = group->nRunning + group->waitProcs.size;
-		LWLockRelease(ResGroupLock);
 
 		Assert(name != NULL);
 		ereport(ERROR,
 				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-				 errmsg("Cannot drop resource group \"%s\"", name),
+				 errmsg("cannot drop resource group \"%s\"", name),
 				 errhint(" The resource group is currently managing %d query(ies) and cannot be dropped.\n"
 						 "\tTerminate the queries first or try dropping the group later.\n"
 						 "\tThe view pg_stat_activity tracks the queries managed by resource groups.", nQuery)));
 	}
-	group->lockedForDrop = true;
+
+	lockResGroupForDrop(group);
 
 	LWLockRelease(ResGroupLock);
 }
 
 /*
+ * Drop resource group call back function
+ *
  * Wake up the backends in the wait queue when DROP RESOURCE GROUP finishes.
- * Unlock the resource group if the transaction is abortted.
+ * Unlock the resource group if the transaction is aborted.
  * Remove the resource group entry in shared memory if the transaction is committed.
  *
  * This function is called in the callback function of DROP RESOURCE GROUP.
  */
 void
-ResGroupDropCheckForWakeup(Oid groupId, bool isCommit)
+ResGroupDropFinish(Oid groupId, bool isCommit)
 {
-	int wakeNum;
-	PROC_QUEUE	*waitQueue;
 	ResGroupData	*group;
+	volatile int	savedInterruptHoldoffCount;
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
+	PG_TRY();
 	{
-		LWLockRelease(ResGroupLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				errmsg("Cannot find resource group %d in shared memory", groupId)));
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			group = groupHashFind(groupId, true);
+			wakeupSlots(group, false);
+			unlockResGroupForDrop(group);
+		}
+
+		if (isCommit)
+		{
+			groupHashRemove(groupId);
+			ResGroupOps_DestroyGroup(groupId);
+		}
 	}
-
-	Assert(group->lockedForDrop);
-
-	waitQueue = &(group->waitProcs);
-	wakeNum = waitQueue->size;
-
-	while (wakeNum > 0)
+	PG_CATCH();
 	{
-		PGPROC *waitProc;
-
-		/* wake up one process in the wait queue */
-		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
-		SHMQueueDelete(&(waitProc->links));
-		waitQueue->size--;
-
-		waitProc->resWaiting = false;
-		waitProc->resGranted = false;
-		waitProc->resSlotId = InvalidSlotId;
-		SetLatch(&waitProc->procLatch);
-		wakeNum--;
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
+		if (elog_demote(WARNING))
+		{
+			EmitErrorReport();
+			FlushErrorState();
+		}
+		else
+		{
+			elog(LOG, "unable to demote error");
+		}
 	}
+	PG_END_TRY();
 
-	if (isCommit)
+	LWLockRelease(ResGroupLock);
+}
+
+
+/*
+ * Remove the resource group entry in shared memory if the transaction is aborted.
+ *
+ * This function is called in the callback function of CREATE RESOURCE GROUP.
+ */
+void
+ResGroupCreateOnAbort(Oid groupId)
+{
+	volatile int savedInterruptHoldoffCount;
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+	PG_TRY();
 	{
-#ifdef USE_ASSERT_CHECKING
-		bool groupOK = 
-#endif
-			ResGroupHashRemove(groupId);
-		Assert(groupOK);
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+		groupHashRemove(groupId);
+		/* remove the os dependent part for this resource group */
+		ResGroupOps_DestroyGroup(groupId);
 	}
-
-	group->lockedForDrop = false;
-
+	PG_CATCH();
+	{
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
+		if (elog_demote(WARNING))
+		{
+			EmitErrorReport();
+			FlushErrorState();
+		}
+		else
+		{
+			elog(LOG, "unable to demote error");
+		}
+	}
+	PG_END_TRY();
 	LWLockRelease(ResGroupLock);
 }
 
@@ -546,47 +648,71 @@ ResGroupAlterOnCommit(Oid groupId,
 {
 	ResGroupData	*group;
 	bool			shouldWakeUp;
+	volatile int	savedInterruptHoldoffCount;
+
+	Assert(caps != NULL);
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
+	PG_TRY();
 	{
-		LWLockRelease(ResGroupLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				errmsg("Cannot find resource group %d in shared memory", groupId)));
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+		group = groupHashFind(groupId, true);
+
+		group->caps = *caps;
+
+		if (limittype == RESGROUP_LIMIT_TYPE_CPU)
+		{
+			ResGroupOps_SetCpuRateLimit(groupId, caps->cpuRateLimit);
+		}
+		else if (limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
+		{
+			shouldWakeUp = groupApplyMemCaps(group);
+
+			wakeupSlots(group, true);
+			if (shouldWakeUp)
+				wakeupGroups(groupId);
+		}
 	}
-
-	group->caps = *caps;
-
-	if (limittype == RESGROUP_LIMIT_TYPE_CPU)
+	PG_CATCH();
 	{
-		volatile int savedInterruptHoldoffCount;
-
-		PG_TRY();
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
+		if (elog_demote(WARNING))
 		{
-			savedInterruptHoldoffCount = InterruptHoldoffCount;
-			ResGroupOps_SetCpuRateLimit(groupId, caps->cpuRateLimit.proposed);
+			EmitErrorReport();
+			FlushErrorState();
 		}
-		PG_CATCH();
+		else
 		{
-			InterruptHoldoffCount = savedInterruptHoldoffCount;
-			elog(LOG, "Fail to set cpu_rate_limit for resource group %d", groupId);
+			elog(LOG, "unable to demote error");
 		}
-		PG_END_TRY();
-
-		LWLockRelease(ResGroupLock);
-		return;
 	}
-
-	shouldWakeUp = groupApplyMemCaps(group, caps);
-
-	wakeupSlots(group);
-	if (shouldWakeUp)
-		wakeupGroups(groupId);
+	PG_END_TRY();
 
 	LWLockRelease(ResGroupLock);
+}
+
+int32
+ResGroupGetVmemLimitChunks(void)
+{
+	Assert(IsResGroupEnabled());
+
+	return pResGroupControl->totalChunks;
+}
+
+int32
+ResGroupGetVmemChunkSizeInBits(void)
+{
+	Assert(IsResGroupEnabled());
+
+	return pResGroupControl->chunkSizeInBits;
+}
+
+int32
+ResGroupGetMaxChunksPerQuery(void)
+{
+	return ceil(gp_vmem_limit_per_query /
+				(1024.0 * (1 << (pResGroupControl->chunkSizeInBits - BITS_IN_MB))));
 }
 
 /*
@@ -602,15 +728,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
 
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
-	{
-		LWLockRelease(ResGroupLock);
-
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
-	}
+	group = groupHashFind(groupId, true);
 
 	switch (type)
 	{
@@ -630,17 +748,55 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 			result = IntervalPGetDatum(&group->totalQueuedTime);
 			break;
 		case RES_GROUP_STAT_MEM_USAGE:
-			result = Int32GetDatum(VmemTracker_ConvertVmemChunksToMB(group->memUsage));
+			result = CStringGetDatum(groupDumpMemUsage(group));
 			break;
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("Invalid stat type %d", type)));
+					 errmsg("invalid stat type %d", type)));
 	}
 
 	LWLockRelease(ResGroupLock);
 
 	return result;
+}
+
+static char *
+groupDumpMemUsage(ResGroupData *group)
+{
+	StringInfoData memUsage;
+
+	initStringInfo(&memUsage);
+
+	appendStringInfo(&memUsage, "{");
+	appendStringInfo(&memUsage, "\"used\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(group->memUsage));
+	appendStringInfo(&memUsage, "\"available\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(
+						group->memQuotaGranted + group->memSharedGranted - group->memUsage));
+	appendStringInfo(&memUsage, "\"quota_used\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(group->memQuotaUsed));
+	appendStringInfo(&memUsage, "\"quota_available\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(
+						group->memQuotaGranted - group->memQuotaUsed));
+	appendStringInfo(&memUsage, "\"quota_granted\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(group->memQuotaGranted));
+	appendStringInfo(&memUsage, "\"quota_proposed\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(
+						groupGetMemQuotaExpected(&group->caps)));
+	appendStringInfo(&memUsage, "\"shared_used\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(group->memSharedUsage));
+	appendStringInfo(&memUsage, "\"shared_available\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(
+						group->memSharedGranted - group->memSharedUsage));
+	appendStringInfo(&memUsage, "\"shared_granted\":%d, ",
+					 VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted));
+	appendStringInfo(&memUsage, "\"shared_proposed\":%d",
+					 VmemTracker_ConvertVmemChunksToMB(
+						groupGetMemSharedExpected(&group->caps)));
+	appendStringInfo(&memUsage, "}");
+
+	return memUsage.data;
 }
 
 /*
@@ -649,35 +805,48 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 void
 ResGroupDumpMemoryInfo(void)
 {
-	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo = MyResGroupProcInfo;
-	ResGroupData		*sharedInfo = MyResGroupSharedInfo;
+	ResGroupSlotData	*slot = self->slot;
+	ResGroupData		*group = self->group;
 
-	if (sharedInfo)
+	if (group)
 	{
-		Assert(procInfo->slotId != InvalidSlotId);
-
-		slot = &sharedInfo->slots[procInfo->slotId];
+		Assert(selfIsAssigned());
 
 		write_log("Resource group memory information: "
-				  "group memory limit is %d MB, "
-				  "shared quota in current resource group is %d MB, "
-				  "memory usage in current resource group is %d MB, "
+				  "current group id is %u, "
+				  "memLimit cap is %d, "
+				  "memSharedQuota cap is %d, "
+				  "memSpillRatio cap is %d, "
+				  "group expected memory limit is %d MB, "
+				  "memory quota granted in currenct group is %d MB, "
+				  "shared quota granted in current group is %d MB, "
+				  "memory assigned to all running slots is %d MB, "
+				  "memory usage in current group is %d MB, "
+				  "memory shared usage in current group is %d MB, "
 				  "memory quota in current slot is %d MB, "
 				  "memory usage in current slot is %d MB, "
 				  "memory usage in current proc is %d MB",
-				  VmemTracker_ConvertVmemChunksToMB(sharedInfo->memExpected),
-				  VmemTracker_ConvertVmemChunksToMB(sharedInfo->memSharedGranted),
-				  VmemTracker_ConvertVmemChunksToMB(sharedInfo->memUsage),
+				  group->groupId,
+				  group->caps.memLimit,
+				  group->caps.memSharedQuota,
+				  group->caps.memSpillRatio,
+				  VmemTracker_ConvertVmemChunksToMB(group->memExpected),
+				  VmemTracker_ConvertVmemChunksToMB(group->memQuotaGranted),
+				  VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
+				  VmemTracker_ConvertVmemChunksToMB(group->memQuotaUsed),
+				  VmemTracker_ConvertVmemChunksToMB(group->memUsage),
+				  VmemTracker_ConvertVmemChunksToMB(group->memSharedUsage),
 				  VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
 				  VmemTracker_ConvertVmemChunksToMB(slot->memUsage),
-				  VmemTracker_ConvertVmemChunksToMB(procInfo->memUsage));
+				  VmemTracker_ConvertVmemChunksToMB(self->memUsage));
 	}
 	else
 	{
+		Assert(!selfIsAssigned());
+
 		write_log("Resource group memory information: "
 				  "memory usage in current proc is %d MB",
-				  VmemTracker_ConvertVmemChunksToMB(procInfo->memUsage));
+				  VmemTracker_ConvertVmemChunksToMB(self->memUsage));
 	}
 }
 
@@ -693,11 +862,9 @@ ResGroupDumpMemoryInfo(void)
 bool
 ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 {
-	int32				slotMemUsage;
-	int32				slotMemSharedNeeded;
-	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo = MyResGroupProcInfo;
-	ResGroupData		*sharedInfo = MyResGroupSharedInfo;
+	int32				overuseMem;
+	ResGroupSlotData	*slot = self->slot;
+	ResGroupData		*group = self->group;
 
 	/*
 	 * Memories may be allocated before resource group is initialized,
@@ -715,73 +882,37 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 	 * But will update the memory usage of this proc, and it will be added up
 	 * when this proc is assigned to a valid resource group.
 	 */
-	procInfo->memUsage += memoryChunks;
-	if (!procInfo->doMemCheck)
+	self->memUsage += memoryChunks;
+	if (!selfIsAssigned())
 		return true;
 
-	if (sharedInfo->groupId != procInfo->groupId)
+	Assert(slotIsInUse(slot));
+	Assert(group->memUsage >= 0);
+	Assert(self->memUsage >= 0);
+
+	/* add memoryChunks into group & slot memory usage */
+	overuseMem = groupIncMemUsage(group, slot, memoryChunks);
+
+	/* then check whether there is over usage */
+	if (CritSectionCount == 0 && overuseMem > overuseChunks)
 	{
-		if (Debug_resource_group)
-			write_log("Resource group is concurrently dropped while reserving memory: "
-					  "dropped group=%d, my group=%d",
-					  sharedInfo->groupId, procInfo->groupId);
-		MyResGroupSharedInfo = NULL;
-		procInfo->doMemCheck = false;
-		return true;
+		/* if the over usage is larger than allowed then revert the change */
+		groupDecMemUsage(group, slot, memoryChunks);
+
+		/* also revert in proc */
+		self->memUsage -= memoryChunks;
+		Assert(self->memUsage >= 0);
+
+		if (overuseChunks == 0)
+			ResGroupDumpMemoryInfo();
+
+		return false;
 	}
-
-	Assert(sharedInfo != NULL);
-	Assert(sharedInfo->groupId != InvalidOid);
-	Assert(procInfo->slotId != InvalidSlotId);
-	Assert(sharedInfo->memUsage >= 0);
-	Assert(procInfo->memUsage >= 0);
-
-	slot = &sharedInfo->slots[procInfo->slotId];
-
-	/* reserve from slot memory */
-	slotMemUsage = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&slot->memUsage, memoryChunks);
-	slotMemSharedNeeded = slotMemUsage - slot->memQuota;
-
-	if (slotMemSharedNeeded > 0)
+	else if (CritSectionCount == 0 && overuseMem > 0)
 	{
-		int32 total;
-
-		slotMemSharedNeeded = Min(slotMemSharedNeeded, memoryChunks);
-
-		/* reserve from shared zone */
-		total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&sharedInfo->memSharedUsage,
-										slotMemSharedNeeded);
-
-		if (CritSectionCount == 0 &&
-			total > sharedInfo->memSharedGranted + overuseChunks)
-		{
-			int32		oldUsage;
-
-			oldUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&sharedInfo->memSharedUsage,
-										slotMemSharedNeeded);
-			Assert(oldUsage >= slotMemSharedNeeded);
-
-			oldUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&slot->memUsage,
-										memoryChunks);
-			Assert(oldUsage >= memoryChunks);
-
-			Assert(procInfo->memUsage >= memoryChunks);
-			procInfo->memUsage -= memoryChunks;
-
-			if (overuseChunks == 0)
-				ResGroupDumpMemoryInfo();
-
-			return false;
-		}
-		else if (CritSectionCount == 0 && total > sharedInfo->memSharedGranted)
-		{
-			*waiverUsed = true;
-		}
+		/* the over usage is within the allowed threshold */
+		*waiverUsed = true;
 	}
-
-	/* update memory usage of current resource group */
-	pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&sharedInfo->memUsage,
-							memoryChunks);
 
 	return true;
 }
@@ -792,180 +923,31 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 void
 ResGroupReleaseMemory(int32 memoryChunks)
 {
-	int32				sharedMemoryUsage;
-	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo = MyResGroupProcInfo;
-	ResGroupData		*sharedInfo = MyResGroupSharedInfo;
-	int32				oldUsage;
+	ResGroupSlotData	*slot = self->slot;
+	ResGroupData		*group = self->group;
 
-	if (!IsResGroupActivated())
+	if (!IsResGroupEnabled())
 		return;
 
 	Assert(memoryChunks >= 0);
-	Assert(memoryChunks <= procInfo->memUsage);
+	Assert(memoryChunks <= self->memUsage);
 
-	procInfo->memUsage -= memoryChunks;
-	if (!procInfo->doMemCheck)
+	self->memUsage -= memoryChunks;
+	if (!selfIsAssigned())
 		return;
 
-	if (sharedInfo->groupId != procInfo->groupId)
-	{
-		if (Debug_resource_group)
-			write_log("Resource group is concurrently dropped while releasing memory: "
-					  "dropped group=%d, my group=%d",
-					  sharedInfo->groupId, procInfo->groupId);
-		MyResGroupSharedInfo = NULL;
-		procInfo->doMemCheck = false;
-		return;
-	}
+	Assert(slotIsInUse(slot));
 
-	Assert(sharedInfo != NULL);
-	Assert(sharedInfo->groupId != InvalidOid);
-	Assert(procInfo->slotId != InvalidSlotId);
-
-	slot = &sharedInfo->slots[procInfo->slotId];
-	sharedMemoryUsage = slot->memUsage - slot->memQuota;
-	if (sharedMemoryUsage > 0)
-	{
-		int32 returnSize = Min(memoryChunks, sharedMemoryUsage);
-
-		oldUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&sharedInfo->memSharedUsage,
-										   returnSize);
-		Assert(oldUsage >= returnSize);
-	}
-
-	oldUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&slot->memUsage, memoryChunks);
-	Assert(oldUsage >= memoryChunks);
-
-	oldUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&sharedInfo->memUsage,
-								memoryChunks);
-	Assert(oldUsage >= memoryChunks);
-}
-
-/*
- * Decide the new resource group concurrency capabilities
- * of pg_resgroupcapability.
- *
- * The decision is based on current runtime information:
- * - 'proposed' will always be set to the latest setting;
- * - 'value' will be set to the most recent version of concurrency
- *   with which current nRunning doesn't exceed the limit;
- */
-void
-ResGroupDecideConcurrencyCaps(Oid groupId,
-							  ResGroupCaps *caps,
-							  const ResGroupOpts *opts)
-{
-	ResGroupData	*group;
-
-	/* If resource group is not in use we can always pick the new settings. */
-	if (!IsResGroupActivated())
-	{
-		caps->concurrency.value = opts->concurrency;
-		caps->concurrency.proposed = opts->concurrency;
-		return;
-	}
-
-	LWLockAcquire(ResGroupLock, LW_SHARED);
-
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
-	{
-		LWLockRelease(ResGroupLock);
-
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("Cannot find resource group with Oid %d in shared memory", groupId)));
-	}
-
-	/*
-	 * If the runtime usage information doesn't exceed the new setting
-	 * then we can pick this setting as the new 'value'.
-	 */
-	if (group->nRunning <= opts->concurrency)
-		caps->concurrency.value = opts->concurrency;
-
-	/* 'proposed' is always set with latest setting */
-	caps->concurrency.proposed = opts->concurrency;
-
-	LWLockRelease(ResGroupLock);
-}
-
-/*
- * Decide the new resource group memory capabilities
- * of pg_resgroupcapability.
- *
- * The decision is based on current runtime information:
- * - 'proposed' will always be set to the latest setting;
- * - 'value' will be set to the most recent version of memory settings
- *   with which current memory quota usage and memory shared usage
- *   doesn't exceed the limit;
- */
-void
-ResGroupDecideMemoryCaps(int groupId,
-						 ResGroupCaps *caps,
-						 const ResGroupOpts *opts)
-{
-	ResGroupData	*group;
-	ResGroupCaps	capsNew;
-
-	/* If resource group is not in use we can always pick the new settings. */
-	if (!IsResGroupActivated())
-	{
-		caps->memLimit.value = opts->memLimit;
-		caps->memLimit.proposed = opts->memLimit;
-
-		caps->memSharedQuota.value = opts->memSharedQuota;
-		caps->memSharedQuota.proposed = opts->memSharedQuota;
-
-		return;
-	}
-
-	LWLockAcquire(ResGroupLock, LW_SHARED);
-
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
-	{
-		LWLockRelease(ResGroupLock);
-
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("Cannot find resource group with Oid %d in shared memory",
-						groupId)));
-	}
-
-	ResGroupOptsToCaps(opts, &capsNew);
-	/*
-	 * If the runtime usage information doesn't exceed the new settings
-	 * then we can pick these settings as the new 'value's.
-	 */
-	if (opts->memLimit <= caps->memLimit.proposed &&
-		group->memQuotaUsed <= groupGetMemQuotaExpected(&capsNew) &&
-		group->memSharedUsage <= groupGetMemSharedExpected(&capsNew))
-	{
-		caps->memLimit.value = opts->memLimit;
-		caps->memSharedQuota.value = opts->memSharedQuota;
-	}
-
-	/* 'proposed' is always set with latest setting */
-	caps->memSharedQuota.proposed = opts->memSharedQuota;
-	caps->memLimit.proposed = opts->memLimit;
-
-	LWLockRelease(ResGroupLock);
+	groupDecMemUsage(group, slot, memoryChunks);
 }
 
 int64
 ResourceGroupGetQueryMemoryLimit(void)
 {
-	ResGroupSlotData	*slot;
+	ResGroupSlotData	*slot = self->slot;
 	int64				memSpill;
 
-	Assert(MyResGroupSharedInfo != NULL);
-	Assert(MyResGroupProcInfo != NULL);
-	Assert(MyResGroupProcInfo->slotId != InvalidSlotId);
-
-	slot = &MyResGroupSharedInfo->slots[MyResGroupProcInfo->slotId];
-	ResGroupCheckMemorySpillRatio(&slot->caps);
+	Assert(selfIsAssigned());
 
 	if (IsResManagerMemoryPolicyNone())
 		return 0;
@@ -976,14 +958,14 @@ ResourceGroupGetQueryMemoryLimit(void)
 }
 
 /*
- * ResGroupCreate -- initialize the elements for a resource group.
+ * createGroup -- initialize the elements for a resource group.
  *
  * Notes:
  *	It is expected that the appropriate lightweight lock is held before
  *	calling this - unless we are the startup process.
  */
 static ResGroupData *
-ResGroupCreate(Oid groupId, const ResGroupCaps *caps)
+createGroup(Oid groupId, const ResGroupCaps *caps)
 {
 	ResGroupData	*group;
 	int32			chunks;
@@ -991,9 +973,8 @@ ResGroupCreate(Oid groupId, const ResGroupCaps *caps)
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(OidIsValid(groupId));
 
-	group = ResGroupHashNew(groupId);
-	if (group == NULL)
-		return NULL;
+	group = groupHashNew(groupId);
+	Assert(group != NULL);
 
 	group->groupId = groupId;
 	group->caps = *caps;
@@ -1006,115 +987,204 @@ ResGroupCreate(Oid groupId, const ResGroupCaps *caps)
 	group->memQuotaUsed = 0;
 	memset(&group->totalQueuedTime, 0, sizeof(group->totalQueuedTime));
 	group->lockedForDrop = false;
-	memset(group->slots, 0, sizeof(group->slots));
 
 	group->memQuotaGranted = 0;
 	group->memSharedGranted = 0;
 	group->memExpected = groupGetMemExpected(caps);
 
-	chunks = getChunksFromPool(groupId, group->memExpected);
-	groupAssginChunks(group, chunks, caps);
+	chunks = mempoolReserve(groupId, group->memExpected);
+	groupRebalanceQuota(group, chunks, caps);
 
 	return group;
 }
 
 /*
- * Attach current proc to a resource group & slot.
+ * Add chunks into group and slot memory usage.
  *
- * Current proc's memory usage will be added to the group & slot.
+ * Return the over used chunks.
  */
-static void
-attachToSlot(ResGroupData *group,
-			 ResGroupSlotData *slot,
-			 ResGroupProcData *self)
+static int32
+groupIncMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 {
 	int32			slotMemUsage;
 	int32			sharedMemUsage;
+	int32			overuseMem = 0;
 
-	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &slot->nProcs, 1);
-
-	/* Add proc memory accounting info to memUsage in slot */
+	/* Add the chunks to memUsage in slot */
 	slotMemUsage = pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &slot->memUsage,
-										   self->memUsage);
+										   chunks);
 
-	/* Add proc memory accounting info to memSharedUsage in group */
+	/* Check whether shared memory should be added */
 	sharedMemUsage = slotMemUsage - slot->memQuota;
 	if (sharedMemUsage > 0)
 	{
-		/* Decide how many shared memory is in use by proc */
-		sharedMemUsage = Min(sharedMemUsage, self->memUsage);
-		pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->memSharedUsage,
-								sharedMemUsage);
+		int32			total;
+
+		/* Decide how many chunks should be counted as shared memory */
+		sharedMemUsage = Min(sharedMemUsage, chunks);
+
+		/* Add these chunks to memSharedUsage in group */
+		total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->memSharedUsage,
+										sharedMemUsage);
+
+		/* Calculate the over used chunks */
+		overuseMem = Max(0, total - group->memSharedGranted);
 	}
 
-	/* Add proc memory accounting info to memUsage in group */
+	/* Add the chunks to memUsage in group */
 	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &group->memUsage,
-							self->memUsage);
+							chunks);
+
+	return overuseMem;
 }
 
 /*
- * Detach current proc from a resource group & slot.
- *
- * Current proc's memory usage will be substracted from the group & slot.
+ * Sub chunks from group and slot memory usage.
  */
 static void
-detachFromSlot(ResGroupData *group,
-			   ResGroupSlotData *slot,
-			   ResGroupProcData *self)
+groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 {
 	int32			value;
 	int32			slotMemUsage;
 	int32			sharedMemUsage;
 
-	/* Sub proc memory accounting info from memUsage in group */
+	/* Sub chunks from memUsage in group */
 	value = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &group->memUsage,
-									self->memUsage);
+									chunks);
 	Assert(value >= 0);
 
-	/* Sub proc memory accounting info from memUsage in slot */
+	/* Sub chunks from memUsage in slot */
 	slotMemUsage = pg_atomic_fetch_sub_u32((pg_atomic_uint32 *) &slot->memUsage,
-										   self->memUsage);
-	Assert(slotMemUsage >= self->memUsage);
+										   chunks);
+	Assert(slotMemUsage >= chunks);
 
-	/* Sub proc memory accounting info from memSharedUsage in group */
+	/* Check whether shared memory should be subed */
 	sharedMemUsage = slotMemUsage - slot->memQuota;
 	if (sharedMemUsage > 0)
 	{
-		/* Decide how many shared memory is in use by proc */
-		int32 returnSize = Min(self->memUsage, sharedMemUsage);
+		/* Decide how many chunks should be counted as shared memory */
+		sharedMemUsage = Min(sharedMemUsage, chunks);
 
+		/* Sub chunks from memSharedUsage in group */
 		value = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &group->memSharedUsage,
-										returnSize);
+										sharedMemUsage);
 		Assert(value >= 0);
 	}
-
-	value = pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
-	Assert(value >= 0);
 }
 
 /*
- * Get a free resource group slot.
- *
- * A free resource group slot has inUse == false, no other information is checked.
+ * Attach a process (QD or QE) to a slot.
  */
-static int
-getFreeSlot(ResGroupData *group)
+static void
+selfAttachResGroup(ResGroupData *group, ResGroupSlotData *slot)
 {
+	selfSetGroup(group);
+	selfSetSlot(slot);
+	groupIncMemUsage(group, slot, self->memUsage);
+	pg_atomic_add_fetch_u32((pg_atomic_uint32*) &slot->nProcs, 1);
+}
+
+/*
+ * Detach a process (QD or QE) from a slot.
+ */
+static void
+selfDetachResGroup(ResGroupData *group, ResGroupSlotData *slot)
+{
+	groupDecMemUsage(group, slot, self->memUsage);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32*) &slot->nProcs, 1);
+	selfUnsetSlot();
+	selfUnsetGroup();
+}
+
+/*
+ * Initialize the members of a slot
+ */
+static void
+initSlot(ResGroupSlotData *slot, ResGroupData *group, int32 slotMemQuota)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!slotIsInUse(slot));
+	Assert(group->groupId != InvalidOid);
+
+	slot->groupId = group->groupId;
+	slot->caps = group->caps;
+	slot->memQuota = slotMemQuota;
+	slot->memUsage = 0;
+}
+
+/*
+ * Alloc and initialize slot pool
+ */
+static bool
+slotpoolInit(void)
+{
+	ResGroupSlotData *slot;
+	ResGroupSlotData *next;
+	int numSlots;
+	int memSize;
 	int i;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	numSlots = RESGROUP_MAX_SLOTS;
+	memSize = mul_size(numSlots, sizeof(ResGroupSlotData));
 
-	for (i = 0; i < RESGROUP_MAX_SLOTS; i++)
+	pResGroupControl->slots = ShmemAlloc(memSize);
+	if (!pResGroupControl->slots)
+		return false;
+
+	MemSet(pResGroupControl->slots, 0, memSize);
+
+	/* push all the slots into the list */
+	next = NULL;
+	for (i = numSlots - 1; i >= 0; i--)
 	{
-		if (group->slots[i].inUse)
-			continue;
+		slot = &pResGroupControl->slots[i];
 
-		group->slots[i].inUse = true;
-		return i;
+		slot->groupId = InvalidOid;
+		slot->memQuota = -1;
+		slot->memUsage = 0;
+
+		slot->next = next;
+		next = slot;
 	}
+	pResGroupControl->freeSlot = next;
 
-	Assert(false && "No free slot available");
-	return InvalidSlotId;
+	return true;
+}
+
+/*
+ * Alloc a slot from shared slot pool
+ */
+static ResGroupSlotData *
+slotpoolAllocSlot(void)
+{
+	ResGroupSlotData *slot;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(pResGroupControl->freeSlot != NULL);
+
+	slot = pResGroupControl->freeSlot;
+	pResGroupControl->freeSlot = slot->next;
+	slot->next = NULL;
+
+	return slot;
+}
+
+/*
+ * Free a slot back to shared slot pool
+ */
+static void
+slotpoolFreeSlot(ResGroupSlotData *slot)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(slotIsInUse(slot));
+	Assert(slot->nProcs == 0);
+
+	slot->groupId = InvalidOid;
+	slot->memQuota = -1;
+	slot->memUsage = 0;
+
+	slot->next = pResGroupControl->freeSlot;
+	pResGroupControl->freeSlot = slot;
 }
 
 /*
@@ -1124,222 +1194,566 @@ getFreeSlot(ResGroupData *group)
  * available and the concurrency limit is not reached.
  *
  * On success the memory quota is marked as granted, nRunning is increased
- * and the slot's inUse flag is also set, the slot id is returned.
+ * and the slot's groupId is also set accordingly, the slot id is returned.
  *
  * On failure nothing is changed and InvalidSlotId is returned.
  */
-static int
-getSlot(ResGroupData *group)
+static ResGroupSlotData *
+groupGetSlot(ResGroupData *group)
 {
 	ResGroupSlotData	*slot;
-	int32				slotMemQuota;
-	int32				memQuotaUsed;
-	int					slotId;
 	ResGroupCaps		*caps;
+	int32				slotMemQuota;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-
-	Assert(group != NULL);
-	Assert(group->groupId != InvalidOid);
+	Assert(groupIsNotDropped(group));
 
 	caps = &group->caps;
 
 	/* First check if the concurrency limit is reached */
-	Assert(caps->concurrency.proposed > 0);
+	if (group->nRunning >= caps->concurrency)
+		return NULL;
 
-	if (group->nRunning >= caps->concurrency.proposed)
-		return InvalidSlotId;
-
-	groupAcquireMemQuota(group, caps);
-
-	/* Then check for memory stocks */
-	Assert(pResGroupControl->segmentsOnMaster > 0);
-
-	/* Calculate the expected per slot quota */
-	slotMemQuota = slotGetMemQuotaExpected(caps);
-
-	Assert(slotMemQuota > 0);
-	Assert(group->memQuotaUsed >= 0);
-	Assert(group->memQuotaUsed <= group->memQuotaGranted);
-
-	memQuotaUsed = pg_atomic_add_fetch_u32((pg_atomic_uint32*) &group->memQuotaUsed,
-										   slotMemQuota);
-
-	if (memQuotaUsed > group->memQuotaGranted)
-	{
-		/* No enough memory quota available, give up */
-		memQuotaUsed = pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&group->memQuotaUsed,
-											   slotMemQuota);
-		Assert(memQuotaUsed >= 0);
-		return InvalidSlotId;
-	}
+	slotMemQuota = groupReserveMemQuota(group);
+	if (slotMemQuota < 0)
+		return NULL;
 
 	/* Now actually get a free slot */
-	slotId = getFreeSlot(group);
-	Assert(slotId != InvalidSlotId);
+	slot = slotpoolAllocSlot();
+	Assert(!slotIsInUse(slot));
 
-	slot = &group->slots[slotId];
-	Assert(slot->inUse);
+	initSlot(slot, group, slotMemQuota);
 
-	/* Grant the memory quota to it */
-	slot->memQuota = slotMemQuota;
+	group->nRunning++;
 
-	/* Store the config snapshot to it */
-	slot->caps = *caps;
-
-	/* And finally increase nRunning */
-	pg_atomic_add_fetch_u32((pg_atomic_uint32*)&group->nRunning, 1);
-
-	return slotId;
+	return slot;
 }
 
 /*
- * Put back a slot.
+ * Put back the slot assigned to self.
  *
  * This will release a slot, its memory quota will be freed and
  * nRunning will be decreased.
  */
 static void
-putSlot(ResGroupData *group, int slotId)
+groupPutSlot(ResGroupData *group, ResGroupSlotData *slot)
 {
-	ResGroupSlotData	*slot;
-	bool				shouldWakeUp;
-#ifdef USE_ASSERT_CHECKING
-	int32				memQuotaUsed;
-#endif
+	int32		released;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-	Assert(group != NULL);
 	Assert(group->memQuotaUsed >= 0);
-	Assert(group->nRunning > 0);
-	Assert(slotId != InvalidSlotId);
-
-	slot = &group->slots[slotId];
-
-	Assert(slot->inUse);
-	Assert(slot->memQuota > 0);
+	Assert(slotIsInUse(slot));
 
 	/* Return the memory quota granted to this slot */
-#ifdef USE_ASSERT_CHECKING
-	memQuotaUsed =
-#endif
-		pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&group->memQuotaUsed,
-								slot->memQuota);
-	Assert(memQuotaUsed >= 0);
+	groupReleaseMemQuota(group, slot);
 
-	shouldWakeUp = groupReleaseMemQuota(group, slot, &group->caps);
-	if (shouldWakeUp)
+	/* Return the slot back to free list */
+	slotpoolFreeSlot(slot);
+	group->nRunning--;
+
+	/* And finally release the overused memory quota */
+	released = mempoolAutoRelease(group);
+	if (released > 0)
 		wakeupGroups(group->groupId);
 
-	/* Mark the slot as free */
-	slot->inUse = false;
+	/*
+	 * Once we have waken up other groups then the slot we just released
+	 * might be reused, so we should not touch it anymore since now.
+	 */
+}
 
-	/* And finally decrease nRunning */
-	pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&group->nRunning, 1);
+/*
+ * Reserve memory quota for a slot in group.
+ *
+ * If there is not enough free memory quota then return -1 and nothing
+ * is changed; otherwise return the reserved quota size.
+ */
+static int32
+groupReserveMemQuota(ResGroupData *group)
+{
+	ResGroupCaps	*caps;
+	int32			slotMemQuota;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(pResGroupControl->segmentsOnMaster > 0);
+
+	caps = &group->caps;
+	mempoolAutoReserve(group, caps);
+
+	/* Calculate the expected per slot quota */
+	slotMemQuota = slotGetMemQuotaExpected(caps);
+	Assert(slotMemQuota >= 0);
+
+	Assert(group->memQuotaUsed >= 0);
+	Assert(group->memQuotaUsed <= group->memQuotaGranted);
+
+	if (group->memQuotaUsed + slotMemQuota > group->memQuotaGranted)
+	{
+		/* No enough memory quota available, give up */
+		return -1;
+	}
+
+	group->memQuotaUsed += slotMemQuota;
+
+	return slotMemQuota;
+}
+
+/*
+ * Release a slot's memory quota to group.
+ */
+static void
+groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	group->memQuotaUsed -= slot->memQuota;
+	Assert(group->memQuotaUsed >= 0);
+}
+
+/*
+ * Pick a resource group for the current transaction.
+ */
+static Oid
+decideResGroupId(void)
+{
+	Oid groupId = InvalidOid;
+
+	if (resgroup_assign_hook)
+		groupId = resgroup_assign_hook();
+
+	if (groupId == InvalidOid)
+		groupId = GetResGroupIdForRole(GetUserId());
+
+	return groupId;
+}
+
+/*
+ * Decide the proper resource group for current role.
+ *
+ * An exception is thrown if current role is invalid.
+ */
+static void
+decideResGroup(ResGroupInfo *pGroupInfo)
+{
+	ResGroupData	*group;
+	Oid				 groupId;
+
+	Assert(pResGroupControl != NULL);
+	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(!selfIsAssigned());
+
+	/* always find out the up-to-date resgroup id */
+	groupId = decideResGroupId();
+
+	LWLockAcquire(ResGroupLock, LW_SHARED);
+	group = groupHashFind(groupId, false);
+
+	if (!group)
+	{
+		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
+		group = groupHashFind(groupId, false);
+	}
+
+	Assert(group != NULL);
+
+	LWLockRelease(ResGroupLock);
+
+	pGroupInfo->group = group;
+	pGroupInfo->groupId = groupId;
 }
 
 /*
  * Acquire a resource group slot
  *
  * Call this function at the start of the transaction.
+ * This function set current resource group in MyResGroupSharedInfo,
+ * and current slot in MyProc->resSlot.
  */
-static int
-ResGroupSlotAcquire(void)
+static ResGroupSlotData *
+groupAcquireSlot(ResGroupInfo *pGroupInfo)
 {
-	ResGroupData	*group;
-	Oid			groupId;
-	bool		retried = false;
+	ResGroupSlotData *slot;
+	ResGroupData	 *group;
 
-	Assert(MyResGroupProcInfo->groupId == InvalidOid);
+	Assert(!selfIsAssigned());
+	group = pGroupInfo->group;
 
-	groupId = GetResGroupIdForRole(GetUserId());
-	if (groupId == InvalidOid)
-		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
-
-retry:
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	group = ResGroupHashFind(groupId);
-	if (group == NULL)
+	/* Has the group been dropped? */
+	if (groupIsDropped(pGroupInfo))
 	{
 		LWLockRelease(ResGroupLock);
-
-		MyResGroupProcInfo->groupId = InvalidOid;
-		MyResGroupSharedInfo = NULL;
-
-		if (retried)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("Resource group %d was concurrently dropped", groupId)));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("Cannot find resource group %d in shared memory", groupId)));
-	}
-
-	MyResGroupSharedInfo = group;
-
-	/* wait on the queue if the group is locked for drop */
-	if (group->lockedForDrop)
-	{
-		Assert(group->nRunning == 0);
-		ResGroupWait(group, true);
-
-		/* retry if the drop resource group transaction is finished */
-		retried = true;
-		goto retry;
+		return NULL;
 	}
 
 	/* acquire a slot */
-	if (group->nRunning < group->caps.concurrency.proposed)
+	if (!group->lockedForDrop)
 	{
-		/* should not been granted a slot yet */
-		Assert(MyProc->resSlotId == InvalidSlotId);
+		/* try to get a slot directly */
+		slot = groupGetSlot(group);
 
-		/* so try to get one directly */
-		MyProc->resSlotId = getSlot(group);
-
-		/* if can't get one */
-		if (MyProc->resSlotId == InvalidSlotId)
+		if (slot != NULL)
 		{
-			/* then wait one from some others */
-			ResGroupWait(group, true);
-			LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-
-			Assert(MyProc->resSlotId != InvalidSlotId);
+			/* got one, lucky */
+			group->totalExecuted++;
+			LWLockRelease(ResGroupLock);
+			pgstat_report_resgroup(0, group->groupId);
+			return slot;
 		}
-
-		group->totalExecuted++;
-		LWLockRelease(ResGroupLock);
-		pgstat_report_resgroup(0, group->groupId);
-		Assert(MyProc->resSlotId != InvalidSlotId);
-		return MyProc->resSlotId;
 	}
 
-	/* We have to wait for the slot */
-	ResGroupWait(group, false);
+	/* add into group wait queue */
+	groupWaitQueuePush(group, MyProc);
+
+	if (!group->lockedForDrop)
+		group->totalQueued++;
+	LWLockRelease(ResGroupLock);
 
 	/*
-	 * The waking process has granted us the slot.
+	 * wait on the queue
+	 * slot will be assigned by the proc wakes me up
+	 * if i am waken up by DROP RESOURCE GROUP statement, the
+	 * resSlot will be NULL.
+	 */
+	waitOnGroup(group);
+
+	if (MyProc->resSlot == NULL)
+		return NULL;
+
+	/*
+	 * The waking process has granted us a valid slot.
 	 * Update the statistic information of the resource group.
 	 */
+	slot = (ResGroupSlotData *) MyProc->resSlot;
+	MyProc->resSlot = NULL;
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-	group->totalExecuted++;
 	addTotalQueueDuration(group);
+	group->totalExecuted++;
 	LWLockRelease(ResGroupLock);
-	Assert(MyProc->resSlotId != InvalidSlotId);
-	return MyProc->resSlotId;
+
+	pgstat_report_resgroup(0, group->groupId);
+	return slot;
 }
 
-/* Update the total queued time of this group */
 /*
  * Wake up the backends in the wait queue when 'concurrency' is increased.
  * This function is called in the callback function of ALTER RESOURCE GROUP.
+ *
+ * Return TRUE if any memory quota or shared quota is returned to MEM POOL.
  */
+static bool
+groupApplyMemCaps(ResGroupData *group)
+{
+	int32				reserved;
+	int32				released;
+	const ResGroupCaps	*caps = &group->caps;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	group->memExpected = groupGetMemExpected(caps);
+
+	released = mempoolAutoRelease(group);
+	Assert(released >= 0);
+
+	/*
+	 * suppose rg1 has memory_limit=10, memory_shared_quota=40,
+	 * and session1 is running in rg1.
+	 *
+	 * now we alter rg1 memory_limit to 40 in another session,
+	 * apparently both memory quota and shared quota are expected to increase,
+	 * however as our design is to let them increase on new queries,
+	 * then for session1 it won't see memory shared quota being increased
+	 * until new queries being executed in rg1.
+	 *
+	 * so we should try to acquire the new quota immediately.
+	 */
+	reserved = mempoolAutoReserve(group, caps);
+	Assert(reserved >= 0);
+
+	return released > reserved;
+}
+
 /*
- * XXX
+ * Get quota from MEM POOL.
+ *
+ * chunks is the expected amount to get.
+ *
+ * return the actual got chunks, might be smaller than expectation.
+ */
+static int32
+mempoolReserve(Oid groupId, int32 chunks)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	LOG_RESGROUP_DEBUG(LOG, "allocate %u out of %u chunks to group %d",
+					   chunks, pResGroupControl->freeChunks, groupId);
+
+	chunks = Min(pResGroupControl->freeChunks, chunks);
+	pResGroupControl->freeChunks -= chunks;
+
+	Assert(pResGroupControl->freeChunks >= 0);
+	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
+
+	return chunks;
+}
+
+/*
+ * Return chunks to MEM POOL.
+ */
+static void
+mempoolRelease(Oid groupId, int32 chunks)
+{
+	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
+					   chunks, pResGroupControl->freeChunks, groupId);
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(chunks >= 0);
+
+	pResGroupControl->freeChunks += chunks;
+
+	Assert(pResGroupControl->freeChunks >= 0);
+	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
+}
+
+/*
+ * Assign the chunks we get from the MEM POOL to group and rebalance
+ * them into the 'quota' and 'shared' part of the group, the amount
+ * is calculated from caps.
+ */
+static void
+groupRebalanceQuota(ResGroupData *group, int32 chunks, const ResGroupCaps *caps)
+{
+	int32 delta;
+	int32 memQuotaGranted = groupGetMemQuotaExpected(caps);
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	delta = memQuotaGranted - group->memQuotaGranted;
+	if (delta >= 0)
+	{
+		delta = Min(chunks, delta);
+
+		group->memQuotaGranted += delta;
+		chunks -= delta;
+	}
+
+	group->memSharedGranted += chunks;
+}
+
+/*
+ * Calculate the total memory chunks of the segment
+ */
+static void
+decideTotalChunks(int32 *totalChunks, int32 *chunkSizeInBits)
+{
+	int32 nsegments;
+	int32 tmptotalChunks;
+	int32 tmpchunkSizeInBits;
+
+	nsegments = Gp_role == GP_ROLE_EXECUTE ? host_segments : pResGroupControl->segmentsOnMaster;
+	Assert(nsegments > 0);
+
+	tmptotalChunks = ResGroupOps_GetTotalMemory() * gp_resource_group_memory_limit / nsegments;
+
+	/*
+	 * If vmem is larger than 16GB (i.e., 16K MB), we make the chunks bigger
+	 * so that the vmem limit in chunks unit is not larger than 16K.
+	 */
+	tmpchunkSizeInBits = BITS_IN_MB;
+	while(tmptotalChunks > (16 * 1024))
+	{
+		tmpchunkSizeInBits++;
+		tmptotalChunks >>= 1;
+	}
+
+	*totalChunks = tmptotalChunks;
+	*chunkSizeInBits = tmpchunkSizeInBits;
+}
+
+/*
+ * Get total expected memory quota of a group in chunks
+ */
+static int32
+groupGetMemExpected(const ResGroupCaps *caps)
+{
+	Assert(pResGroupControl->totalChunks > 0);
+	return pResGroupControl->totalChunks * caps->memLimit / 100;
+}
+
+/*
+ * Get per-group expected memory quota in chunks
+ */
+static int32
+groupGetMemQuotaExpected(const ResGroupCaps *caps)
+{
+	if (caps->concurrency > 0)
+		return slotGetMemQuotaExpected(caps) * caps->concurrency;
+	else
+		return groupGetMemExpected(caps) *
+			(100 - caps->memSharedQuota) / 100;
+}
+
+/*
+ * Get per-group expected memory shared quota in chunks
+ */
+static int32
+groupGetMemSharedExpected(const ResGroupCaps *caps)
+{
+	return groupGetMemExpected(caps) - groupGetMemQuotaExpected(caps);
+}
+
+/*
+ * Get per-group expected memory spill in chunks
+ */
+static int32
+groupGetMemSpillTotal(const ResGroupCaps *caps)
+{
+	return groupGetMemExpected(caps) * memory_spill_ratio / 100;
+}
+
+/*
+ * Get per-slot expected memory quota in chunks
+ */
+static int32
+slotGetMemQuotaExpected(const ResGroupCaps *caps)
+{
+	Assert(caps->concurrency != 0);
+	return groupGetMemExpected(caps) *
+		(100 - caps->memSharedQuota) / 100 /
+		caps->concurrency;
+}
+
+/*
+ * Get per-slot expected memory quota in chunks on QE.
+ */
+static int32
+slotGetMemQuotaOnQE(const ResGroupCaps *caps, ResGroupData *group)
+{
+	int nFreeSlots = caps->concurrency - group->nRunning;
+
+	/*
+	 * On QE the runtime status must also be considered as it might have
+	 * different caps with QD.
+	 */
+	if (nFreeSlots <= 0)
+		return Min(slotGetMemQuotaExpected(caps),
+			   (group->memQuotaGranted - group->memQuotaUsed) / caps->concurrency);
+	else
+		return Min(slotGetMemQuotaExpected(caps),
+				(group->memQuotaGranted - group->memQuotaUsed) / nFreeSlots);
+}
+
+/*
+ * Get per-slot expected memory spill in chunks
+ */
+static int32
+slotGetMemSpill(const ResGroupCaps *caps)
+{
+	Assert(caps->concurrency != 0);
+	return groupGetMemSpillTotal(caps) / caps->concurrency;
+}
+
+/*
+ * Attempt to wake up pending slots in the group.
+ *
+ * - grant indicates whether to grant the proc a slot;
+ * - release indicates whether to wake up the proc with the LWLock
+ *   temporarily released;
+ *
+ * When grant is true we'll give up once no slot can be get,
+ * e.g. due to lack of free slot or enough memory quota.
+ *
+ * When grant is false all the pending procs will be woken up.
+ */
+static void
+wakeupSlots(ResGroupData *group, bool grant)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	while (!groupWaitQueueIsEmpty(group))
+	{
+		PGPROC		*waitProc;
+		ResGroupSlotData *slot = NULL;
+
+		if (grant)
+		{
+			/* try to get a slot for that proc */
+			slot = groupGetSlot(group);
+			if (slot == NULL)
+				/* if can't get one then give up */
+				break;
+		}
+
+		/* wake up one process in the wait queue */
+		waitProc = groupWaitQueuePop(group);
+
+		waitProc->resSlot = slot;
+
+		procWakeup(waitProc);
+	}
+}
+
+/*
+ * When a group returns chunks to MEM POOL, we need to wake up
+ * the transactions waiting on other groups for memory quota.
+ */
+static void
+wakeupGroups(Oid skipGroupId)
+{
+	int				i;
+
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	for (i = 0; i < MaxResourceGroups; i++)
+	{
+		ResGroupData	*group = &pResGroupControl->groups[i];
+		int32			delta;
+
+		if (group->groupId == InvalidOid)
+			continue;
+
+		if (group->groupId == skipGroupId)
+			continue;
+
+		if (group->lockedForDrop)
+			continue;
+
+		if (groupWaitQueueIsEmpty(group))
+			continue;
+
+		delta = group->memExpected - group->memQuotaGranted - group->memSharedGranted;
+		if (delta <= 0)
+			continue;
+
+		wakeupSlots(group, true);
+
+		if (!pResGroupControl->freeChunks)
+			break;
+	}
+}
+
+/*
+ * Release overused memory quota to MEM POOL.
+ *
+ * Both overused shared and non-shared memory quota will be released.
+ *
+ * If there was enough non-shared memory quota for free slots,
+ * then after this call there will still be enough non-shared memory quota.
+ *
+ * If this function is called after a slot is released, make sure that
+ * group->nRunning is updated before this function.
+ *
+ * Return the total released quota in chunks, can be 0.
+ *
+ * XXX: Some examples.
  *
  * Suppose concurrency is 10, running is 4,
  * memory limit is 0.5, memory shared is 0.4
@@ -1379,357 +1793,72 @@ retry:
  *       new memStocksFree is 0.128 - 0.064 = 0.064
  *   for memShared we could free currentSharedStocks - Max(currentSharedUsage, 0.2*0.6) = -0.04
  */
-static bool
-groupApplyMemCaps(ResGroupData *group, const ResGroupCaps *caps)
+static int32
+mempoolAutoRelease(ResGroupData *group)
 {
-	int32 memStocksAvailable;
-	int32 memStocksNeeded;
-	int32 memStocksToFree;
-	int32 memSharedNeeded;
-	int32 memSharedToFree;
+	int32		memQuotaNeeded;
+	int32		memQuotaToFree;
+	int32		memSharedNeeded;
+	int32		memSharedToFree;
+	int32		nfreeSlots;
+	ResGroupCaps *caps = &group->caps;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
-	group->memExpected = groupGetMemExpected(caps);
+	/* nfreeSlots is the number of free slots */
+	nfreeSlots = caps->concurrency - group->nRunning;
 
-	/* memStocksAvailable is the total free non-shared quota */
-	memStocksAvailable = group->memQuotaGranted - group->memQuotaUsed;
+	/* the in use non-shared quota must be reserved */
+	memQuotaNeeded = group->memQuotaUsed;
 
-	if (caps->concurrency.proposed > group->nRunning)
+	/* also should reserve enough non-shared quota for free slots */
+	memQuotaNeeded +=
+		nfreeSlots > 0 ? slotGetMemQuotaExpected(caps) * nfreeSlots : 0;
+
+	memQuotaToFree = group->memQuotaGranted - memQuotaNeeded;
+	if (memQuotaToFree > 0)
 	{
-		/*
-		 * memStocksNeeded is the total non-shared quota needed
-		 * by all the free slots
-		 */
-		memStocksNeeded = slotGetMemQuotaExpected(caps) *
-			(caps->concurrency.proposed - group->nRunning);
-
-		/*
-		 * if memStocksToFree > 0 then we can safely release these
-		 * non-shared quota and still have enough quota to run
-		 * all the free slots.
-		 */
-		memStocksToFree = memStocksAvailable - memStocksNeeded;
-	}
-	else
-	{
-		memStocksToFree = Min(memStocksAvailable,
-							  group->memQuotaGranted - groupGetMemQuotaExpected(caps));
-	}
-
-	/* TODO: optimize the free logic */
-	if (memStocksToFree > 0)
-	{
-		returnChunksToPool(group->groupId, memStocksToFree);
-		group->memQuotaGranted -= memStocksToFree;
+		/* release the over used non-shared quota to MEM POOL */
+		mempoolRelease(group->groupId, memQuotaToFree); 
+		group->memQuotaGranted -= memQuotaToFree; 
 	}
 
 	memSharedNeeded = Max(group->memSharedUsage,
 						  groupGetMemSharedExpected(caps));
 	memSharedToFree = group->memSharedGranted - memSharedNeeded;
-
 	if (memSharedToFree > 0)
 	{
-		returnChunksToPool(group->groupId, memSharedToFree);
+		/* release the over used shared quota to MEM POOL */
+		mempoolRelease(group->groupId, memSharedToFree);
 		group->memSharedGranted -= memSharedToFree;
 	}
-#if 1
-	/*
-	 * FIXME: why we need this?
-	 *
-	 * suppose rg1 has memory_limit=10, memory_shared_quota=40,
-	 * and session1 is running in rg1.
-	 *
-	 * now we alter rg1 memory_limit to 40 in another session,
-	 * apparently both memory quota and shared quota are expected to increase,
-	 * our as our design is to let them increase on new queries,
-	 * then for session1 it won't see memory shared quota being increased
-	 * until new queries being executed in rg1.
-	 */
-	groupAcquireMemQuota(group, caps);
-#endif
-	return (memStocksToFree > 0 || memSharedToFree > 0);
+
+	return Max(memQuotaToFree, 0) + Max(memSharedToFree, 0);
 }
 
 /*
- * Get quota from sys pool.
+ * Try to acquire enough quota & shared quota for current group from MEM POOL,
+ * the actual acquired quota depends on system loads.
  *
- * chunks is the expected amount to get.
- *
- * return the actual got chunks, might be smaller than expectation.
+ * Return the reserved quota in chunks, can be 0.
  */
 static int32
-getChunksFromPool(Oid groupId, int32 chunks)
+mempoolAutoReserve(ResGroupData *group, const ResGroupCaps *caps)
 {
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	int32 currentMemStocks = group->memSharedGranted + group->memQuotaGranted;
+	int32 neededMemStocks = group->memExpected - currentMemStocks;
+	int32 chunks = 0;
 
-	LOG_RESGROUP_DEBUG(LOG, "Allocate %u out of %u chunks to group %d",
-					   chunks, pResGroupControl->freeChunks, groupId);
-
-	chunks = Min(pResGroupControl->freeChunks, chunks);
-	pResGroupControl->freeChunks -= chunks;
-
-	Assert(pResGroupControl->freeChunks >= 0);
-	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
+	if (neededMemStocks > 0)
+	{
+		chunks = mempoolReserve(group->groupId, neededMemStocks);
+		groupRebalanceQuota(group, chunks, caps);
+	}
 
 	return chunks;
 }
 
-/*
- * Return chunks to sys pool.
- */
-static void
-returnChunksToPool(Oid groupId, int32 chunks)
-{
-	LOG_RESGROUP_DEBUG(LOG, "Free %u to pool(%u) chunks from group %d",
-					   chunks, pResGroupControl->freeChunks, groupId);
-
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
-	Assert(chunks > 0);
-
-	pResGroupControl->freeChunks += chunks;
-
-	Assert(pResGroupControl->freeChunks >= 0);
-	Assert(pResGroupControl->freeChunks <= pResGroupControl->totalChunks);
-}
-
-/*
- * Assign the chunks we get from the sys pool to the 'quota' and 'shared'
- * part of the group, the amount is calculated from caps.
- */
-static void
-groupAssginChunks(ResGroupData *group, int32 chunks, const ResGroupCaps *caps)
-{
-	int32 delta;
-	int32 memQuotaGranted = groupGetMemQuotaExpected(caps);
-
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
-
-	delta = memQuotaGranted - group->memQuotaGranted;
-	if (delta >= 0)
-	{
-		delta = Min(chunks, delta);
-
-		group->memQuotaGranted += delta;
-		chunks -= delta;
-	}
-
-	group->memSharedGranted += chunks;
-}
-
-/*
- * Calculate the total memory chunks of the segment
- */
-static int32
-getSegmentChunks(void)
-{
-	int nsegments = Gp_role == GP_ROLE_EXECUTE ? host_segments : pResGroupControl->segmentsOnMaster;
-
-	Assert(nsegments > 0);
-
-	return ResGroupOps_GetTotalMemory() * gp_resource_group_memory_limit / nsegments;
-}
-
-/*
- * Get total expected memory quota of a group in chunks
- */
-static int32
-groupGetMemExpected(const ResGroupCaps *caps)
-{
-	Assert(pResGroupControl->totalChunks > 0);
-	return pResGroupControl->totalChunks * caps->memLimit.proposed / 100;
-}
-
-/*
- * Get per-group expected memory quota in chunks
- */
-static int32
-groupGetMemQuotaExpected(const ResGroupCaps *caps)
-{
-	return groupGetMemExpected(caps) *
-		(100 - caps->memSharedQuota.proposed) / 100;
-}
-
-/*
- * Get per-group expected memory shared quota in chunks
- */
-static int32
-groupGetMemSharedExpected(const ResGroupCaps *caps)
-{
-	return groupGetMemExpected(caps) - groupGetMemQuotaExpected(caps);
-}
-
-/*
- * Get per-group expected memory spill in chunks
- */
-static int32
-groupGetMemSpillTotal(const ResGroupCaps *caps)
-{
-	return groupGetMemExpected(caps) * memory_spill_ratio / 100;
-}
-
-/*
- * Get per-slot expected memory quota in chunks
- */
-static int32
-slotGetMemQuotaExpected(const ResGroupCaps *caps)
-{
-	return groupGetMemQuotaExpected(caps) / caps->concurrency.proposed;
-}
-
-/*
- * Get per-slot expected memory spill in chunks
- */
-static int32
-slotGetMemSpill(const ResGroupCaps *caps)
-{
-	return groupGetMemSpillTotal(caps) / caps->concurrency.proposed;
-}
-
-/*
- * Attempt to wake up pending slots in the group as long as there are free
- * slots and enough memory quota.
- */
-static void
-wakeupSlots(ResGroupData *group)
-{
-	PROC_QUEUE		*waitQueue;
-
-	waitQueue = &group->waitProcs;
-
-	while (waitQueue->size > 0)
-	{
-		PGPROC		*waitProc;
-		int			slotId;
-
-		slotId = getSlot(group);
-		if (slotId == InvalidSlotId)
-			break;
-
-		/* wake up one process in the wait queue */
-		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
-		SHMQueueDelete(&waitProc->links);
-		waitQueue->size--;
-
-		waitProc->resWaiting = false;
-		waitProc->resGranted = true; /* TODO: retire resGranted */
-		waitProc->resSlotId = slotId;
-		SetLatch(&waitProc->procLatch);
-	}
-}
-
-/*
- * When a group returns chunks to sys pool, we need to wake up
- * the transactions waiting on other groups for memory quota.
- */
-static void
-wakeupGroups(Oid skipGroupId)
-{
-	int				i;
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-		return;
-
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
-
-	for (i = 0; i < MaxResourceGroups; i++)
-	{
-		ResGroupData	*group = &pResGroupControl->groups[i];
-		int32			delta;
-
-		if (group->groupId == InvalidOid)
-			continue;
-
-		if (group->groupId == skipGroupId)
-			continue;
-
-		if (group->lockedForDrop)
-			continue;
-
-		if (group->waitProcs.size == 0)
-			continue;
-
-		delta = group->memExpected - group->memQuotaGranted - group->memSharedGranted;
-		if (delta <= 0)
-			continue;
-
-		wakeupSlots(group);
-
-		if (!pResGroupControl->freeChunks)
-			break;
-	}
-}
-
-/*
- * Release memory quota when a slot gets freed and the caps has been changed,
- * the released memory quota includes:
- * * the slot over-used quota
- * * the group over-used shared quota
- */
-static bool 
-groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot, const ResGroupCaps *caps)
-{
-	int32		memQuotaNeedFree;
-	int32		memSharedNeeded;
-	int32		memQuotaToFree;
-	int32		memSharedToFree;
-	int32       memQuotaExpected;
-
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
-
-	/* Return the over used memory quota to sys */
-	memQuotaNeedFree = group->memQuotaGranted - groupGetMemQuotaExpected(caps);
-	memQuotaToFree = memQuotaNeedFree > 0 ? Min(memQuotaNeedFree, slot->memQuota) : 0;
-
-	if (caps->concurrency.proposed >= group->nRunning)
-	{
-		/*
-		 * Under this situation, when this slot is released,
-		 * others will not be blocked by concurrency limit if
-		 * they come to acquire this slot. So we could decide
-		 * not to give all the memory to syspool even if we could.
-		 */
-		memQuotaExpected = slotGetMemQuotaExpected(caps);
-		if (memQuotaToFree > memQuotaExpected)
-			memQuotaToFree -= memQuotaExpected;
-	}
-
-	if (memQuotaToFree > 0)
-	{
-		returnChunksToPool(group->groupId, memQuotaToFree); 
-		group->memQuotaGranted -= memQuotaToFree; 
-	}
-
-	/* Return the over used shared quota to sys */
-	memSharedNeeded = Max(group->memSharedUsage,
-						  groupGetMemSharedExpected(caps));
-	memSharedToFree = group->memSharedGranted - memSharedNeeded;
-	if (memSharedToFree > 0)
-	{
-		returnChunksToPool(group->groupId, memSharedToFree);
-		pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &group->memSharedGranted,
-								memSharedToFree);
-	}
-	return (memQuotaToFree > 0 || memSharedToFree > 0);
-}
-
-/*
- * Try to acquire enough quota & shared quota for current group,
- * the actual acquired quota depends on system loads.
- */
-static void
-groupAcquireMemQuota(ResGroupData *group, const ResGroupCaps *caps)
-{
-	int32 currentMemStocks = group->memSharedGranted + group->memQuotaGranted;
-	int32 neededMemStocks = group->memExpected - currentMemStocks;
-
-	if (neededMemStocks > 0)
-	{
-		int32 chunks = getChunksFromPool(group->groupId, neededMemStocks);
-		groupAssginChunks(group, chunks, caps);
-	}
-}
-
+/* Update the total queued time of this group */
 static void
 addTotalQueueDuration(ResGroupData *group)
 {
@@ -1739,8 +1868,12 @@ addTotalQueueDuration(ResGroupData *group)
 
 	TimestampTz start = pgstat_fetch_resgroup_queue_timestamp();
 	TimestampTz now = GetCurrentTimestamp();
-	Datum durationDatum = DirectFunctionCall2(timestamptz_age, TimestampTzGetDatum(now), TimestampTzGetDatum(start));
-	Datum sumDatum = DirectFunctionCall2(interval_pl, IntervalPGetDatum(&group->totalQueuedTime), durationDatum);
+	Datum durationDatum = DirectFunctionCall2(timestamptz_age,
+											  TimestampTzGetDatum(now),
+											  TimestampTzGetDatum(start));
+	Datum sumDatum = DirectFunctionCall2(interval_pl,
+										 IntervalPGetDatum(&group->totalQueuedTime),
+										 durationDatum);
 	memcpy(&group->totalQueuedTime, DatumGetIntervalP(sumDatum), sizeof(Interval));
 }
 
@@ -1750,56 +1883,20 @@ addTotalQueueDuration(ResGroupData *group)
  * Call this function at the end of the transaction.
  */
 static void
-ResGroupSlotRelease(void)
+groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot)
 {
-	ResGroupData	*group;
-	PROC_QUEUE	*waitQueue;
-	PGPROC		*waitProc;
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(!selfIsAssigned());
 
-	group = MyResGroupSharedInfo;
-	Assert(group != NULL);
-
-	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-
-	waitQueue = &group->waitProcs;
-
-	Assert(MyProc->resSlotId != InvalidSlotId);
-	putSlot(group, MyProc->resSlotId);
-	MyProc->resSlotId = InvalidSlotId;
+	groupPutSlot(group, slot);
 
 	/*
-	 * My slot is put back, then how many queueing queries should I wake up?
+	 * My slot is put back, then how many queuing queries should I wake up?
 	 * Maybe zero, maybe one, maybe more, depends on how the resgroup's
 	 * configuration were changed during our execution.
 	 */
-	while (waitQueue->size > 0)
-	{
-		int			slotId;
-
-		slotId = getSlot(group);
-		if (slotId == InvalidSlotId)
-			break;
-
-		/* wake up one process in the wait queue */
-		waitProc = (PGPROC *) MAKE_PTR(waitQueue->links.next);
-		SHMQueueDelete(&waitProc->links);
-		waitQueue->size--;
-		waitProc->resGranted = true;
-		waitProc->resSlotId = slotId;	/* pass the slot to new query */
-		/* TODO: why we need to release the lock here? */
-		LWLockRelease(ResGroupLock);
-
-		waitProc->resWaiting = false;
-		SetLatch(&waitProc->procLatch);
-
-		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-	}
-
-	AssertImply(waitQueue->size == 0,
-				waitQueue->links.next == MAKE_OFFSET(&waitQueue->links) &&
-				waitQueue->links.prev == MAKE_OFFSET(&waitQueue->links));
-
-	LWLockRelease(ResGroupLock);
+	wakeupSlots(group, true);
 }
 
 /*
@@ -1812,29 +1909,22 @@ SerializeResGroupInfo(StringInfo str)
 	int tmp;
 	ResGroupCaps caps0;
 	ResGroupCap *caps;
-	ResGroupProcData *procInfo = MyResGroupProcInfo;
 
-	if (procInfo->groupId != InvalidOid)
-		caps = (ResGroupCap *) &procInfo->caps;
+	if (selfIsAssigned())
+		caps = (ResGroupCap *) &self->caps;
 	else
 	{
 		MemSet(&caps0, 0, sizeof(caps0));
 		caps = (ResGroupCap *) &caps0;
 	}
 
-	tmp = htonl(procInfo->groupId);
-	appendBinaryStringInfo(str, (char *) &tmp, sizeof(procInfo->groupId));
-
-	tmp = htonl(procInfo->slotId);
-	appendBinaryStringInfo(str, (char *) &tmp, sizeof(procInfo->slotId));
+	tmp = htonl(self->groupId);
+	appendBinaryStringInfo(str, (char *) &tmp, sizeof(self->groupId));
 
 	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
 	{
-		tmp = htonl(caps[i].value);
-		appendBinaryStringInfo(str, (char *) &tmp, sizeof(caps[i].value));
-
-		tmp = htonl(caps[i].proposed);
-		appendBinaryStringInfo(str, (char *) &tmp, sizeof(caps[i].proposed));
+		tmp = htonl(caps[i]);
+		appendBinaryStringInfo(str, (char *) &tmp, sizeof(caps[i]));
 	}
 }
 
@@ -1843,40 +1933,43 @@ SerializeResGroupInfo(StringInfo str)
  */
 void
 DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
-						const char *buf, int len)
+						Oid *groupId,
+						const char *buf,
+						int len)
 {
 	int			i;
 	int			tmp;
 	const char	*ptr = buf;
-	ResGroupProcData	*procInfo = MyResGroupProcInfo;
 	ResGroupCap *caps = (ResGroupCap *) capsOut;
 
 	Assert(len > 0);
 
-	memcpy(&tmp, ptr, sizeof(procInfo->groupId));
-	procInfo->groupId = ntohl(tmp);
-	ptr += sizeof(procInfo->groupId);
-
-	memcpy(&tmp, ptr, sizeof(procInfo->slotId));
-	procInfo->slotId = ntohl(tmp);
-	ptr += sizeof(procInfo->slotId);
+	memcpy(&tmp, ptr, sizeof(*groupId));
+	*groupId = ntohl(tmp);
+	ptr += sizeof(*groupId);
 
 	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
 	{
-		memcpy(&tmp, ptr, sizeof(caps[i].value));
-		caps[i].value = ntohl(tmp);
-		ptr += sizeof(caps[i].value);
-
-		memcpy(&tmp, ptr, sizeof(caps[i].proposed));
-		caps[i].proposed = ntohl(tmp);
-		ptr += sizeof(caps[i].proposed);
+		memcpy(&tmp, ptr, sizeof(caps[i]));
+		caps[i] = ntohl(tmp);
+		ptr += sizeof(caps[i]);
 	}
 
 	Assert(len == ptr - buf);
 }
 
 /*
- * Check whether should assign resource group on master.
+ * Check whether resource group should be assigned on master.
+ *
+ * Resource group will not be assigned if we are in SIGUSR1 handler.
+ * This is to avoid the deadlock situation cased by the following scenario:
+ *
+ * Suppose backend A starts a transaction and acquires the LAST slot in resource
+ * group G. Then backend A signals other backends who need a catchup interrupt.
+ * Suppose backend B receives the signal and wants to respond to catchup event.
+ * If backend B is assigned the same resource group G and tries to acquire a slot,
+ * it will hang. Backend A will also hang because it is waiting for backend B to
+ * catch up and free its space in the global SI message queue.
  */
 bool
 ShouldAssignResGroupOnMaster(void)
@@ -1884,6 +1977,19 @@ ShouldAssignResGroupOnMaster(void)
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
 		Gp_role == GP_ROLE_DISPATCH &&
+		!AmIInSIGUSR1Handler();
+}
+
+/*
+ * Check whether resource group should be un-assigned.
+ * This will be called on both master and segments.
+ */
+bool
+ShouldUnassignResGroup(void)
+{
+	return IsResGroupActivated() &&
+		IsNormalProcessingMode() &&
+		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
 		!AmIInSIGUSR1Handler();
 }
 
@@ -1896,94 +2002,103 @@ ShouldAssignResGroupOnMaster(void)
 void
 AssignResGroupOnMaster(void)
 {
-	ResGroupData		*sharedInfo;
 	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo;
-	int		slotId;
-	Oid		groupId;
+	ResGroupInfo		groupInfo;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	/* Acquire slot */
-	slotId = ResGroupSlotAcquire();
-	Assert(slotId != InvalidSlotId);
-	Assert(MyResGroupSharedInfo != NULL);
-	sharedInfo = MyResGroupSharedInfo;
-	groupId = sharedInfo->groupId;
-	Assert(groupId != InvalidOid);
-	Assert(!MyResGroupProcInfo->doMemCheck);
+	/*
+	 * if query should be bypassed, do not assign a
+	 * resource group, leave self unassigned
+	 */
+	if (shouldBypassQuery(debug_query_string))
+		return;
 
-	/* Init slot */
-	slot = &sharedInfo->slots[slotId];
-	Assert(slot->memQuota > 0);
-	slot->sessionId = gp_session_id;
-	ResGroupSetMemorySpillRatio(&slot->caps);
-	pg_atomic_add_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
-	Assert(slot->memQuota > 0);
+	PG_TRY();
+	{
+		do {
+			decideResGroup(&groupInfo);
 
-	/* Init MyResGroupProcInfo */
-	procInfo = MyResGroupProcInfo;
-	procInfo->groupId = groupId;
-	procInfo->slotId = slotId;
-	procInfo->caps = slot->caps;
-	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+			/* Acquire slot */
+			slot = groupAcquireSlot(&groupInfo);
+		} while (slot == NULL);
 
-	attachToSlot(sharedInfo, slot, procInfo);
+		/* Set resource group slot for current session */
+		sessionSetSlot(slot);
 
-	/* Start memory limit checking */
-	Assert(procInfo->groupId != InvalidOid);
-	Assert(procInfo->slotId != InvalidSlotId);
-	procInfo->doMemCheck = true;
+		/* Add proc memory accounting info into group and slot */
+		selfAttachResGroup(groupInfo.group, slot);
 
-	/* Add into cgroup */
-	ResGroupOps_AssignGroup(sharedInfo->groupId, MyProcPid);
+		/* Init self */
+		self->caps = slot->caps;
+
+		/* Don't error out before this line in this function */
+		SIMPLE_FAULT_INJECTOR(ResGroupAssignedOnMaster);
+
+		/* Add into cgroup */
+		ResGroupOps_AssignGroup(self->groupId, MyProcPid);
+
+		/* Set spill guc */
+		groupSetMemorySpillRatio(&slot->caps);
+	}
+	PG_CATCH();
+	{
+		UnassignResGroup();
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 }
 
 /*
  * Detach from a resource group at the end of the transaction.
  */
 void
-UnassignResGroupOnMaster(void)
+UnassignResGroup(void)
 {
-	ResGroupData		*sharedInfo;
-	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo;
+	ResGroupData		*group = self->group;
+	ResGroupSlotData	*slot = self->slot;
 
-	if (MyResGroupSharedInfo == NULL)
-	{
-		Assert(MyResGroupProcInfo->doMemCheck == false);
+	if (!selfIsAssigned())
 		return;
+
+	/* Cleanup self */
+	if (self->memUsage > 10)
+		LOG_RESGROUP_DEBUG(LOG, "idle proc memory usage: %d", self->memUsage);
+
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+
+	/* Sub proc memory accounting info from group and slot */
+	selfDetachResGroup(group, slot);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* Release the slot */
+		groupReleaseSlot(group, slot);
+
+		sessionResetSlot();
+	}
+	else if (slot->nProcs == 0)
+	{
+		Assert(Gp_role == GP_ROLE_EXECUTE);
+
+		group->memQuotaUsed -= slot->memQuota;
+
+		/* Release this slot back to slot pool */
+		slotpoolFreeSlot(slot);
+
+		/* Reset resource group slot for current session */
+		sessionResetSlot();
+
+		/* Decrease nRunning */
+		group->nRunning--;
+
+		/* And finally release the overused memory quota */
+		mempoolAutoRelease(group);
 	}
 
-	procInfo = MyResGroupProcInfo;
-	sharedInfo = MyResGroupSharedInfo;
+	LWLockRelease(ResGroupLock);
 
-	Assert(sharedInfo->groupId != InvalidOid);
-	Assert(procInfo->groupId == sharedInfo->groupId);
-	Assert(procInfo->slotId != InvalidSlotId);
-
-	/* Stop memory limit checking */
-	procInfo->doMemCheck = false;
-
-	slot = &sharedInfo->slots[procInfo->slotId];
-
-	detachFromSlot(sharedInfo, slot, procInfo);
-
-	/* Cleanup procInfo */
-	if (procInfo->memUsage > 10)
-		LOG_RESGROUP_DEBUG(LOG, "Idle proc memory usage: %d", procInfo->memUsage);
-	procInfo->groupId = InvalidOid;
-	procInfo->slotId = InvalidSlotId;
-
-	/* Cleanup slotInfo */
-	pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
-
-	/* Relesase the slot */
-	ResGroupSlotRelease();
-
-	/* Cleanup sharedInfo */
-	MyResGroupSharedInfo = NULL;
+	pgstat_report_resgroup(0, InvalidOid);
 }
 
 /*
@@ -1994,146 +2109,87 @@ UnassignResGroupOnMaster(void)
 void
 SwitchResGroupOnSegment(const char *buf, int len)
 {
-	Oid		prevGroupId;
-	int		prevSlotId;
+	Oid		newGroupId;
 	ResGroupCaps		caps;
-	ResGroupData		*sharedInfo;
+	ResGroupData		*group;
 	ResGroupSlotData	*slot;
-	ResGroupProcData	*procInfo;
-	ResGroupData		*prevSharedInfo = NULL;
-	ResGroupSlotData	*prevSlot = NULL;
 
-	procInfo = MyResGroupProcInfo;
-	prevGroupId = procInfo->groupId;
-	prevSlotId = procInfo->slotId;
+	DeserializeResGroupInfo(&caps, &newGroupId, buf, len);
 
-	/* Stop memory limit checking */
-	procInfo->doMemCheck = false;
-
-	DeserializeResGroupInfo(&caps, buf, len);
-
-	AssertImply(procInfo->groupId != InvalidOid,
-				procInfo->slotId != InvalidSlotId);
-	AssertImply(prevGroupId != InvalidOid,
-				prevSlotId != InvalidSlotId);
-
-	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-
-	if (procInfo->groupId == InvalidOid)
+	if (newGroupId == InvalidOid)
 	{
-		prevSharedInfo = MyResGroupSharedInfo;
-		MyResGroupSharedInfo = NULL;
-
-		if (prevSharedInfo)
-		{
-			Assert(prevSharedInfo->groupId == prevGroupId);
-			prevSlot = &prevSharedInfo->slots[prevSlotId];
-			detachFromSlot(prevSharedInfo, prevSlot, procInfo);
-
-			groupReleaseMemQuota(prevSharedInfo, prevSlot, &caps);
-		}
-		else
-		{
-			Assert(prevGroupId == InvalidOid);
-			Assert(prevSlotId == InvalidSlotId);
-			Assert(MyResGroupSharedInfo == NULL);
-		}
-
-		LWLockRelease(ResGroupLock);
+		UnassignResGroup();
 		return;
 	}
 
-	if (MyResGroupSharedInfo != NULL && MyResGroupSharedInfo->groupId != InvalidOid)
+	if (self->groupId != InvalidOid)
 	{
-		prevSharedInfo = MyResGroupSharedInfo;
-		if (prevSharedInfo->groupId == prevGroupId)
-		{
-			/* previous resource group is valid and not dropped yet */
-			prevSlot = &prevSharedInfo->slots[prevSlotId];
-		}
-		else
-		{
-			/* previous resource group is already dropped */
-			prevSharedInfo = NULL;
-			prevSlot = NULL;
-			prevGroupId = InvalidOid;
-			prevSlotId = InvalidSlotId;
-		}
+		/* it's not the first dispatch in the same transaction */
+		Assert(self->groupId == newGroupId);
+		Assert(!memcmp((void*)&self->caps, (void*)&caps, sizeof(caps)));
+		return;
 	}
 
-	sharedInfo = ResGroupHashFind(procInfo->groupId);
-	Assert(sharedInfo != NULL);
+	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+	group = groupHashFind(newGroupId, true);
+	Assert(group != NULL);
+
+	/* Init self */
+	Assert(host_segments > 0);
+	Assert(caps.concurrency > 0);
+	self->caps = caps;
+
+	/* Init slot */
+	slot = sessionGetSlot();
+	if (slot != NULL)
+	{
+		Assert(slotIsInUse(slot));
+		Assert(slot->groupId == newGroupId);
+	}
+	else
+	{
+		/* This is the first QE of this session, allocate a slot from slot pool */
+		slot = slotpoolAllocSlot();
+		Assert(!slotIsInUse(slot));
+		sessionSetSlot(slot);
+		mempoolAutoReserve(group, &caps);
+		initSlot(slot, group,
+				 slotGetMemQuotaOnQE(&caps, group));
+		group->memQuotaUsed += slot->memQuota;
+		Assert(group->memQuotaUsed <= group->memQuotaGranted);
+		group->nRunning++;
+	}
+
+	selfAttachResGroup(group, slot);
 
 	LWLockRelease(ResGroupLock);
 
-	/* Init MyResGroupProcInfo */
-	Assert(host_segments > 0);
-	Assert(caps.concurrency.proposed > 0);
-	Assert(procInfo->slotId != InvalidSlotId);
-	procInfo->caps = caps;
-
-	/* Init slot */
-	slot = &sharedInfo->slots[procInfo->slotId];
-	slot->sessionId = gp_session_id;
-	slot->caps = caps;
-	slot->memQuota = slotGetMemQuotaExpected(&caps);
-	ResGroupSetMemorySpillRatio(&caps);
-	Assert(slot->memQuota > 0);
-
-	if (prevSharedInfo != sharedInfo || prevSlot != slot)
-	{
-		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-		if (prevSharedInfo)
-		{
-			Assert(prevSlot != NULL);
-			detachFromSlot(prevSharedInfo, prevSlot, procInfo);
-			groupReleaseMemQuota(prevSharedInfo, prevSlot, &prevSharedInfo->caps);
-		}
-
-		groupAcquireMemQuota(sharedInfo, &slot->caps);
-		LWLockRelease(ResGroupLock);
-
-		attachToSlot(sharedInfo, slot, procInfo);
-	}
-
-	MyResGroupSharedInfo = sharedInfo;
-
-	/* Start memory limit checking */
-	Assert(procInfo->groupId != InvalidOid);
-	Assert(procInfo->slotId != InvalidSlotId);
-	procInfo->doMemCheck = true;
+	/* finally we can say we are in a valid resgroup */
+	Assert(selfIsAssigned());
 
 	/* Add into cgroup */
-	ResGroupOps_AssignGroup(procInfo->groupId, MyProcPid);
+	ResGroupOps_AssignGroup(self->groupId, MyProcPid);
 }
 
 /*
  * Wait on the queue of resource group
  */
 static void
-ResGroupWait(ResGroupData *group, bool isLocked)
+waitOnGroup(ResGroupData *group)
 {
-	PGPROC *proc = MyProc, *headProc;
-	PROC_QUEUE *waitQueue;
+	PGPROC *proc = MyProc;
 
-	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!selfIsAssigned());
 
-	proc->resWaiting = true;
-
-	waitQueue = &(group->waitProcs);
-
-	headProc = (PGPROC *) &(waitQueue->links);
-	SHMQueueInsertBefore(&(headProc->links), &(proc->links));
-	waitQueue->size++;
-
-	if (!isLocked)
-		group->totalQueued++;
-
-	LWLockRelease(ResGroupLock);
 	pgstat_report_resgroup(GetCurrentTimestamp(), group->groupId);
 
-	/* similar to lockAwaited in ProcSleep for interrupt cleanup */
-	localResWaiting = true;
+	/*
+	 * Mark that we are waiting on resource group
+	 *
+	 * This is used for interrupt cleanup, similar to lockAwaited in ProcSleep
+	 */
+	groupAwaited = group;
 
 	/*
 	 * Make sure we have released all locks before going to sleep, to eliminate
@@ -2147,41 +2203,39 @@ ResGroupWait(ResGroupData *group, bool isLocked)
 
 			CHECK_FOR_INTERRUPTS();
 
-			if (!proc->resWaiting)
+			if (!procIsWaiting(proc))
 				break;
 			WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_POSTMASTER_DEATH, -1);
 		}
 	}
 	PG_CATCH();
 	{
-		ResGroupWaitCancel();
+		groupWaitCancel();
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
-	localResWaiting = false;
+	groupAwaited = NULL;
 
 	pgstat_report_waiting(PGBE_WAITING_NONE);
 }
 
 /*
- * ResGroupHashNew -- return a new (empty) group object to initialize.
+ * groupHashNew -- return a new (empty) group object to initialize.
  *
  * Notes
  *	The resource group lightweight lock (ResGroupLock) *must* be held for
  *	this operation.
  */
 static ResGroupData *
-ResGroupHashNew(Oid groupId)
+groupHashNew(Oid groupId)
 {
 	int			i;
 	bool		found;
 	ResGroupHashEntry *entry;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
-
-	if (groupId == InvalidOid)
-		return NULL;
+	Assert(groupId != InvalidOid);
 
 	for (i = 0; i < pResGroupControl->nGroups; i++)
 	{
@@ -2200,14 +2254,17 @@ ResGroupHashNew(Oid groupId)
 }
 
 /*
- * ResGroupHashFind -- return the group for a given oid.
+ * groupHashFind -- return the group for a given oid.
+ *
+ * If the group cannot be found, then NULL is returned if 'raise' is false,
+ * otherwise an exception is thrown.
  *
  * Notes
  *	The resource group lightweight lock (ResGroupLock) *must* be held for
  *	this operation.
  */
 static ResGroupData *
-ResGroupHashFind(Oid groupId)
+groupHashFind(Oid groupId, bool raise)
 {
 	bool				found;
 	ResGroupHashEntry	*entry;
@@ -2216,8 +2273,15 @@ ResGroupHashFind(Oid groupId)
 
 	entry = (ResGroupHashEntry *)
 		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_FIND, &found);
+
 	if (!found)
+	{
+		ereport(raise ? ERROR : LOG,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				 errmsg("cannot find resource group with Oid %d in shared memory",
+						groupId)));
 		return NULL;
+	}
 
 	Assert(entry->index < pResGroupControl->nGroups);
 	return &pResGroupControl->groups[entry->index];
@@ -2225,14 +2289,16 @@ ResGroupHashFind(Oid groupId)
 
 
 /*
- * ResGroupHashRemove -- remove the group for a given oid.
+ * groupHashRemove -- remove the group for a given oid.
+ *
+ * If the group cannot be found then an exception is thrown.
  *
  * Notes
  *	The resource group lightweight lock (ResGroupLock) *must* be held for
  *	this operation.
  */
-static bool
-ResGroupHashRemove(Oid groupId)
+static void
+groupHashRemove(Oid groupId)
 {
 	bool		found;
 	ResGroupHashEntry	*entry;
@@ -2240,27 +2306,30 @@ ResGroupHashRemove(Oid groupId)
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
-	entry = (ResGroupHashEntry*)hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_FIND, &found);
+	entry = (ResGroupHashEntry*)hash_search(pResGroupControl->htbl,
+											(void *) &groupId,
+											HASH_REMOVE,
+											&found);
 	if (!found)
-		return false;
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				 errmsg("cannot find resource group with Oid %d in shared memory to remove",
+						groupId)));
 
 	group = &pResGroupControl->groups[entry->index];
-	returnChunksToPool(groupId, group->memQuotaGranted + group->memSharedGranted);
+	mempoolRelease(groupId, group->memQuotaGranted + group->memSharedGranted);
 	group->memQuotaGranted = 0;
 	group->memSharedGranted = 0;
 	group->groupId = InvalidOid;
 
-	hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_REMOVE, &found);
-
 	wakeupGroups(groupId);
-	return true;
 }
 
 /* Process exit without waiting for slot or received SIGTERM */
 static void
 AtProcExit_ResGroup(int code, Datum arg)
 {
-	ResGroupWaitCancel();
+	groupWaitCancel();
 }
 
 /*
@@ -2269,134 +2338,776 @@ AtProcExit_ResGroup(int code, Datum arg)
  * The proc may wait on the queue for a slot, or wait for the
  * DROP transaction to finish. In the first case, at the same time
  * we get interrupted (SIGINT or SIGTERM), we could have been
- * grantted a slot or not. In the second case, there's no running
+ * granted a slot or not. In the second case, there's no running
  * transaction in the group. If the DROP transaction is finished
  * (commit or abort) at the same time as we get interrupted,
  * MyProc should have been removed from the wait queue, and the
  * ResGroupData entry may have been removed if the DROP is committed.
  */
 static void
-ResGroupWaitCancel(void)
+groupWaitCancel(void)
 {
-	ResGroupData	*group;
-	PROC_QUEUE	*waitQueue;
+	ResGroupData		*group;
+	ResGroupSlotData	*slot;
 
-	/* Process exit without waiting for slot */
-	group = MyResGroupSharedInfo;
-	if (group == NULL || !localResWaiting)
+	/* Nothing to do if we weren't waiting on a group */
+	if (groupAwaited == NULL)
 		return;
 
-	/* We are sure to be interrupted in the for loop of ResGroupWait now */
+	Assert(!selfIsAssigned());
+
+	group = groupAwaited;
+
+	/* We are sure to be interrupted in the for loop of waitOnGroup now */
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
-	waitQueue = &group->waitProcs;
+	AssertImply(procIsWaiting(MyProc),
+				groupWaitQueueFind(group, MyProc));
 
-	if (MyProc->links.next != INVALID_OFFSET)
+	if (procIsWaiting(MyProc))
 	{
-		/* Still waiting on the queue when get interrupted, remove myself from the queue */
+		/*
+		 * Still waiting on the queue when get interrupted, remove
+		 * myself from the queue
+		 */
 
-		Assert(waitQueue->size > 0);
-		Assert(MyProc->resWaiting);
-		Assert(MyProc->resSlotId == InvalidSlotId);
+		Assert(!groupWaitQueueIsEmpty(group));
+
+		groupWaitQueueErase(group, MyProc);
 
 		addTotalQueueDuration(group);
-
-		SHMQueueDelete(&(MyProc->links));
-		waitQueue->size--;
 	}
-	else if (MyProc->links.next == INVALID_OFFSET && MyProc->resGranted)
+	else if (MyProc->resSlot != NULL)
 	{
 		/* Woken up by a slot holder */
 
-		Assert(MyProc->resSlotId != InvalidSlotId);
-		putSlot(group, MyProc->resSlotId);
-		MyProc->resSlotId = InvalidSlotId;
+		Assert(!procIsWaiting(MyProc));
 
-		group->totalExecuted++;
-		addTotalQueueDuration(group);
+		/* First complete the slot's transfer from MyProc to self */
+		slot = MyProc->resSlot;
+		MyProc->resSlot = NULL;
 
 		/*
-		 * Similar as ResGroupSlotRelease(), how many pending queries to
+		 * Similar as groupReleaseSlot(), how many pending queries to
 		 * wake up depends on how many slots we can get.
 		 */
-		wakeupSlots(group);
+		groupReleaseSlot(group, slot);
+		Assert(sessionGetSlot() == NULL);
 
-		AssertImply(waitQueue->size == 0,
-					waitQueue->links.next == MAKE_OFFSET(&waitQueue->links) &&
-					waitQueue->links.prev == MAKE_OFFSET(&waitQueue->links));
+		group->totalExecuted++;
+
+		addTotalQueueDuration(group);
 	}
 	else
 	{
 		/*
 		 * The transaction of DROP RESOURCE GROUP is finished,
-		 * ResGroupSlotAcquire will do the retry.
+		 * groupAcquireSlot will do the retry.
+		 *
+		 * The resource group pointed by self->group may have
+		 * already been removed by here.
 		 */
+
+		Assert(!procIsWaiting(MyProc));
 	}
 
 	LWLockRelease(ResGroupLock);
-	localResWaiting = false;
+
+	groupAwaited = NULL;
 	pgstat_report_waiting(PGBE_WAITING_NONE);
-	MyResGroupSharedInfo = NULL;
 }
 
 static void
-ResGroupSetMemorySpillRatio(const ResGroupCaps *caps)
+groupSetMemorySpillRatio(const ResGroupCaps *caps)
 {
 	char value[64];
 
-	snprintf(value, sizeof(value), "%d", caps->memSpillRatio.proposed);
-	set_config_option("memory_spill_ratio", value, PGC_USERSET, PGC_S_RESGROUP, GUC_ACTION_SET, true);
-}
-
-static void
-ResGroupCheckMemorySpillRatio(const ResGroupCaps *caps)
-{
-	if (caps->memSharedQuota.proposed + memory_spill_ratio > RESGROUP_MAX_MEMORY_LIMIT)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("The sum of memory_shared_quota (%d) and memory_spill_ratio (%d) exceeds %d",
-						caps->memSharedQuota.proposed, memory_spill_ratio,
-						RESGROUP_MAX_MEMORY_LIMIT)));
+	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
+	set_config_option("memory_spill_ratio", value, PGC_USERSET, PGC_S_RESGROUP,
+			GUC_ACTION_SET, true);
 }
 
 void
 ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota)
 {
-	ResGroupProcData *procInfo = MyResGroupProcInfo;
-	const ResGroupCaps *caps = &procInfo->caps;
+	const ResGroupCaps *caps = &self->caps;
 
 	*memLimit = groupGetMemExpected(caps);
-	*slotQuota = slotGetMemQuotaExpected(caps);
+	*slotQuota = caps->concurrency ? slotGetMemQuotaExpected(caps) : -1;
 	*sharedQuota = groupGetMemSharedExpected(caps);
 }
 
 /*
- * Convert ResGroupOpts to ResGroupCaps
+ * Validate the consistency of the resgroup information in self.
+ *
+ * This function checks the consistency of (group & groupId).
  */
-void
-ResGroupOptsToCaps(const ResGroupOpts *optsIn, ResGroupCaps *capsOut)
+static void
+selfValidateResGroupInfo(void)
 {
-	int i;
-	ResGroupCap		*caps = (ResGroupCap *) capsOut;
-	const int32		*opts = (int32 *) optsIn;
+	Assert(self->memUsage >= 0);
 
-	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
+	AssertImply(self->groupId != InvalidOid,
+				self->group != NULL);
+}
+
+/*
+ * Check whether self is assigned.
+ *
+ * This is mostly equal to (selfHasSlot() && selfHasGroup()),
+ * however this function requires the slot and group to be in
+ * a consistent status, they must both be set or unset,
+ * so calling this function during the assign/unassign/switch process
+ * might cause an error, use with caution.
+ *
+ * Even selfIsAssigned() is true it doesn't mean the assign/switch
+ * process is completely done, for example the memory accounting
+ * information might not been updated yet.
+ *
+ * This function doesn't check whether the assigned resgroup
+ * is valid or dropped.
+ */
+static bool
+selfIsAssigned(void)
+{
+	selfValidateResGroupInfo();
+	AssertImply(self->group == NULL,
+			self->slot == NULL);
+	AssertImply(self->group != NULL,
+			self->slot != NULL);
+
+	return self->groupId != InvalidOid;
+}
+
+#ifdef USE_ASSERT_CHECKING
+/*
+ * Check whether self has been set a slot.
+ *
+ * We don't check whether a resgroup is set or not.
+ */
+static bool
+selfHasSlot(void)
+{
+	return self->slot != NULL;
+}
+
+/*
+ * Check whether self has been set a resgroup.
+ *
+ * Consistency will be checked on the groupId and group pointer.
+ *
+ * We don't check whether the resgroup is valid or dropped.
+ *
+ * We don't check whether a slot is set or not.
+ */
+static bool
+selfHasGroup(void)
+{
+	AssertImply(self->groupId != InvalidOid,
+				self->group != NULL);
+
+	return self->groupId != InvalidOid;
+}
+#endif /* USE_ASSERT_CHECKING */
+
+/*
+ * Set both the groupId and the group pointer in self.
+ *
+ * The group must not be dropped.
+ *
+ * Some over limitations are put to force the caller understand
+ * what it's doing and what it wants:
+ * - self must has not been set a resgroup;
+ */
+static void
+selfSetGroup(ResGroupData *group)
+{
+	Assert(!selfIsAssigned());
+	Assert(groupIsNotDropped(group));
+
+	self->group = group;
+	self->groupId = group->groupId;
+}
+
+/*
+ * Unset both the groupId and the resgroup pointer in self.
+ *
+ * Some over limitations are put to force the caller understand
+ * what it's doing and what it wants:
+ * - self must has been set a resgroup;
+ */
+static void
+selfUnsetGroup(void)
+{
+	Assert(selfHasGroup());
+	Assert(!selfHasSlot());
+
+	self->groupId = InvalidOid;
+	self->group = NULL;
+}
+
+/*
+ * Set the slot pointer in self.
+ *
+ * Some over limitations are put to force the caller understand
+ * what it's doing and what it wants:
+ * - self must has been set a resgroup;
+ * - self must has not been set a slot before set;
+ */
+static void
+selfSetSlot(ResGroupSlotData *slot)
+{
+	Assert(selfHasGroup());
+	Assert(!selfHasSlot());
+	Assert(slotIsInUse(slot));
+
+	self->slot = slot;
+}
+
+/*
+ * Unset the slot pointer in self.
+ *
+ * Some over limitations are put to force the caller understand
+ * what it's doing and what it wants:
+ * - self must has been set a resgroup;
+ * - self must has been set a slot before unset;
+ */
+static void
+selfUnsetSlot(void)
+{
+	Assert(selfHasGroup());
+	Assert(selfHasSlot());
+
+	self->slot = NULL;
+}
+
+/*
+ * Check whether proc is in some resgroup's wait queue.
+ *
+ * The LWLock is not required.
+ *
+ * This function does not check whether proc is in a specific resgroup's
+ * wait queue. To make this check use groupWaitQueueFind().
+ */
+static bool
+procIsWaiting(const PGPROC *proc)
+{
+	/*------
+	 * The typical asm instructions fow below C operation can be like this:
+	 * ( gcc 4.8.5-11, x86_64-redhat-linux, -O0 )
+	 *
+     *     mov    -0x8(%rbp),%rax           ; load proc
+     *     mov    0x8(%rax),%rax            ; load proc->links.next
+     *     cmp    $0,%rax                   ; compare with NULL
+     *     setne  %al                       ; store the result
+	 *
+	 * The operation is atomic, so a lock is not required here.
+	 *------
+	 */
+	return proc->links.next != NULL;
+}
+
+/*
+ * Notify a proc it's woken up.
+ */
+static void
+procWakeup(PGPROC *proc)
+{
+	Assert(!procIsWaiting(proc));
+
+	SetLatch(&proc->procLatch);
+}
+
+#ifdef USE_ASSERT_CHECKING
+/*
+ * Validate a slot's attributes.
+ */
+static void
+slotValidate(const ResGroupSlotData *slot)
+{
+	Assert(slot != NULL);
+
+	/* further checks whether the slot is freed or idle */
+	if (slot->groupId == InvalidOid)
 	{
-		caps[i].value = opts[i];
-		caps[i].proposed = opts[i];
+		Assert(slot->nProcs == 0);
+		Assert(slot->memQuota < 0);
+		Assert(slot->memUsage == 0);
+	}
+	else
+	{
+		Assert(!slotIsInFreelist(slot));
+		AssertImply(Gp_role == GP_ROLE_EXECUTE, slot == sessionGetSlot());
 	}
 }
 
 /*
- * Convert ResGroupCaps to ResGroupOpts
+ * A slot is in use if it has a valid groupId.
+ */
+static bool
+slotIsInUse(const ResGroupSlotData *slot)
+{
+	slotValidate(slot);
+
+	return slot->groupId != InvalidOid;
+}
+
+static bool
+slotIsInFreelist(const ResGroupSlotData *slot)
+{
+	ResGroupSlotData *current;
+
+	current = pResGroupControl->freeSlot;
+
+	for ( ; current != NULL; current = current->next)
+	{
+		if (current == slot)
+			return true;
+	}
+
+	return false;
+}
+#endif /* USE_ASSERT_CHECKING */
+
+/*
+ * Get the slot id of the given slot.
+ *
+ * Return InvalidSlotId if slot is NULL.
+ */
+static int
+slotGetId(const ResGroupSlotData *slot)
+{
+	int			slotId;
+
+	if (slot == NULL)
+		return InvalidSlotId;
+
+	slotId = slot - pResGroupControl->slots;
+
+	Assert(slotId >= 0);
+	Assert(slotId < RESGROUP_MAX_SLOTS);
+
+	return slotId;
+}
+
+static void
+lockResGroupForDrop(ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(group->nRunning == 0);
+	group->lockedForDrop = true;
+}
+
+static void
+unlockResGroupForDrop(ResGroupData *group)
+{
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(group->nRunning == 0);
+	group->lockedForDrop = false;
+}
+
+#ifdef USE_ASSERT_CHECKING
+/*
+ * Check whether a resgroup is dropped.
+ *
+ * A dropped resgroup has groupId == InvalidOid,
+ * however there is also the case that the resgroup is first dropped
+ * then the shm struct is reused by another newly created resgroup,
+ * in such a case the groupId is not InvalidOid but the original
+ * resgroup does is dropped.
+ *
+ * So this function is not always reliable, use with caution.
+ */
+static bool
+groupIsNotDropped(const ResGroupData *group)
+{
+	return group
+		&& group->groupId != InvalidOid;
+}
+#endif /* USE_ASSERT_CHECKING */
+
+/*
+ * Validate the consistency of the resgroup wait queue.
+ */
+static void
+groupWaitQueueValidate(const ResGroupData *group)
+{
+	const PROC_QUEUE	*waitQueue;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	waitQueue = &group->waitProcs;
+
+	AssertImply(waitQueue->size == 0,
+				waitQueue->links.next == &waitQueue->links &&
+				waitQueue->links.prev == &waitQueue->links);
+}
+
+/*
+ * Push a proc to the resgroup wait queue.
+ */
+static void
+groupWaitQueuePush(ResGroupData *group, PGPROC *proc)
+{
+	PROC_QUEUE			*waitQueue;
+	PGPROC				*headProc;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!procIsWaiting(proc));
+	Assert(proc->resSlot == NULL);
+
+	groupWaitQueueValidate(group);
+
+	waitQueue = &group->waitProcs;
+	headProc = (PGPROC *) &waitQueue->links;
+
+	SHMQueueInsertBefore(&headProc->links, &proc->links);
+
+	waitQueue->size++;
+
+	Assert(groupWaitQueueFind(group, proc));
+}
+
+/*
+ * Pop the top proc from the resgroup wait queue and return it.
+ */
+static PGPROC *
+groupWaitQueuePop(ResGroupData *group)
+{
+	PROC_QUEUE			*waitQueue;
+	PGPROC				*proc;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!groupWaitQueueIsEmpty(group));
+
+	groupWaitQueueValidate(group);
+
+	waitQueue = &group->waitProcs;
+
+	proc = (PGPROC *) waitQueue->links.next;
+	Assert(groupWaitQueueFind(group, proc));
+	Assert(proc->resSlot == NULL);
+
+	SHMQueueDelete(&proc->links);
+
+	waitQueue->size--;
+
+	return proc;
+}
+
+/*
+ * Erase proc from the resgroup wait queue.
+ */
+static void
+groupWaitQueueErase(ResGroupData *group, PGPROC *proc)
+{
+	PROC_QUEUE			*waitQueue;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+	Assert(!groupWaitQueueIsEmpty(group));
+	Assert(groupWaitQueueFind(group, proc));
+	Assert(proc->resSlot == NULL);
+
+	groupWaitQueueValidate(group);
+
+	waitQueue = &group->waitProcs;
+
+	SHMQueueDelete(&proc->links);
+
+	waitQueue->size--;
+}
+
+/*
+ * Check whether the resgroup wait queue is empty.
+ */
+static bool
+groupWaitQueueIsEmpty(const ResGroupData *group)
+{
+	const PROC_QUEUE	*waitQueue;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	groupWaitQueueValidate(group);
+
+	waitQueue = &group->waitProcs;
+
+	return waitQueue->size == 0;
+}
+
+#ifdef USE_ASSERT_CHECKING
+/*
+ * Find proc in group's wait queue.
+ *
+ * Return true if found or false if not found.
+ *
+ * This functions is expensive so should only be used in debugging logic,
+ * in most cases procIsWaiting() shall be used.
+ */
+static bool
+groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
+{
+	PROC_QUEUE			*waitQueue;
+	SHM_QUEUE			*head;
+	PGPROC				*iter;
+	Size				offset;
+
+	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
+
+	groupWaitQueueValidate(group);
+
+	waitQueue = &group->waitProcs;
+	head = &waitQueue->links;
+	offset = offsetof(PGPROC, links);
+
+	for (iter = (PGPROC *) SHMQueueNext(head, head, offset); iter;
+		 iter = (PGPROC *) SHMQueueNext(head, &iter->links, offset))
+	{
+		if (iter == proc)
+		{
+			Assert(procIsWaiting(proc));
+			return true;
+		}
+	}
+
+	return false;
+}
+#endif/* USE_ASSERT_CHECKING */
+
+/*
+ * Parse the query and check if this query should
+ * bypass the management of resource group.
+ *
+ * Currently, only SET/RESET/SHOW command can be bypassed
+ */
+static bool
+shouldBypassQuery(const char *query_string)
+{
+	MemoryContext oldcontext;
+	List *parsetree_list; 
+	ListCell *parsetree_item;
+	Node *parsetree;
+
+	if (!query_string)
+		return false;
+
+	/*
+	 * Switch to appropriate context for constructing parsetrees.
+	 */
+	oldcontext = MemoryContextSwitchTo(MessageContext);
+
+	parsetree_list = pg_parse_query(query_string);
+
+	MemoryContextSwitchTo(oldcontext);
+
+	if (parsetree_list == NULL)
+		return false;
+
+	/* Only bypass SET/RESET/SHOW command for now */
+	foreach(parsetree_item, parsetree_list)
+	{
+		parsetree = (Node *) lfirst(parsetree_item);
+
+		if (nodeTag(parsetree) != T_VariableSetStmt &&
+			nodeTag(parsetree) != T_VariableShowStmt)
+			return false;
+	}
+
+	return true;
+}
+
+/*
+ * Check whether the resource group has been dropped.
+ */
+static bool
+groupIsDropped(ResGroupInfo *pGroupInfo)
+{
+	Assert(pGroupInfo != NULL);
+	Assert(pGroupInfo->group != NULL);
+
+	return pGroupInfo->group->groupId != pGroupInfo->groupId;
+}
+
+/*
+ * Debug helper functions
  */
 void
-ResGroupCapsToOpts(const ResGroupCaps *capsIn, ResGroupOpts *optsOut)
+ResGroupDumpInfo(StringInfo str)
+{
+	int				i;
+
+	if (!IsResGroupEnabled())
+		return;
+
+	verifyGpIdentityIsSet();
+
+	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
+	/* dump fields in pResGroupControl. */
+	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
+	appendStringInfo(str, "\"loaded\":%s,", pResGroupControl->loaded ? "true" : "false");
+	appendStringInfo(str, "\"totalChunks\":%d,", pResGroupControl->totalChunks);
+	appendStringInfo(str, "\"freeChunks\":%d,", pResGroupControl->freeChunks);
+	appendStringInfo(str, "\"chunkSizeInBits\":%d,", pResGroupControl->chunkSizeInBits);
+	
+	/* dump each group */
+	appendStringInfo(str, "\"groups\":[");
+	for (i = 0; i < pResGroupControl->nGroups; i++)
+	{
+		resgroupDumpGroup(str, &pResGroupControl->groups[i]);
+		if (i < pResGroupControl->nGroups - 1)
+			appendStringInfo(str, ","); 
+	}
+	appendStringInfo(str, "],"); 
+	/* dump slots */
+	resgroupDumpSlots(str);
+
+	appendStringInfo(str, ",");
+
+	/* dump freeslot links */
+	resgroupDumpFreeSlots(str);
+
+	appendStringInfo(str, "}"); 
+}
+
+static void
+resgroupDumpGroup(StringInfo str, ResGroupData *group)
+{
+	appendStringInfo(str, "{");
+	appendStringInfo(str, "\"group_id\":%u,", group->groupId);
+	appendStringInfo(str, "\"nRunning\":%d,", group->nRunning);
+	appendStringInfo(str, "\"locked_for_drop\":%d,", group->lockedForDrop);
+	appendStringInfo(str, "\"memExpected\":%d,", group->memExpected);
+	appendStringInfo(str, "\"memQuotaGranted\":%d,", group->memQuotaGranted);
+	appendStringInfo(str, "\"memSharedGranted\":%d,", group->memSharedGranted);
+	appendStringInfo(str, "\"memQuotaUsed\":%d,", group->memQuotaUsed);
+	appendStringInfo(str, "\"memUsage\":%d,", group->memUsage);
+	appendStringInfo(str, "\"memSharedUsage\":%d,", group->memSharedUsage);
+
+	resgroupDumpWaitQueue(str, &group->waitProcs);
+	resgroupDumpCaps(str, (ResGroupCap*)(&group->caps));
+	
+	appendStringInfo(str, "}");
+}
+
+static void
+resgroupDumpWaitQueue(StringInfo str, PROC_QUEUE *queue)
+{
+	PGPROC *proc;
+
+	appendStringInfo(str, "\"wait_queue\":{");
+	appendStringInfo(str, "\"wait_queue_size\":%d,", queue->size);
+	appendStringInfo(str, "\"wait_queue_content\":[");
+
+	proc = (PGPROC *)SHMQueueNext(&queue->links,
+								  &queue->links, 
+								  offsetof(PGPROC, links));
+
+	if (!ShmemAddrIsValid(&proc->links))
+	{
+		appendStringInfo(str, "]},");
+		return;
+	}
+
+	while (proc)
+	{
+		appendStringInfo(str, "{");
+		appendStringInfo(str, "\"pid\":%d,", proc->pid);
+		appendStringInfo(str, "\"resWaiting\":%s,",
+						 procIsWaiting(proc) ? "true" : "false");
+		appendStringInfo(str, "\"resSlot\":%d", slotGetId(proc->resSlot));
+		appendStringInfo(str, "}");
+		proc = (PGPROC *)SHMQueueNext(&queue->links,
+							&proc->links, 
+							offsetof(PGPROC, links));
+		if (proc)
+			appendStringInfo(str, ",");
+	}
+	appendStringInfo(str, "]},");
+}
+
+static void
+resgroupDumpCaps(StringInfo str, ResGroupCap *caps)
 {
 	int i;
-	const ResGroupCap	*caps = (ResGroupCap *) capsIn;
-	int32				*opts = (int32 *) optsOut;
+	appendStringInfo(str, "\"caps\":[");
+	for (i = 1; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
+	{
+		appendStringInfo(str, "{\"%d\":%d}", i, caps[i]);
+		if (i < RESGROUP_LIMIT_TYPE_COUNT - 1)
+			appendStringInfo(str, ",");
+	}
+	appendStringInfo(str, "]");
+}
 
-	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
-		opts[i] = caps[i].proposed;
+static void
+resgroupDumpSlots(StringInfo str)
+{
+	int               i;
+	ResGroupSlotData* slot;
+
+	appendStringInfo(str, "\"slots\":[");
+
+	for (i = 0; i < RESGROUP_MAX_SLOTS; i++)
+	{
+		slot = &(pResGroupControl->slots[i]);
+
+		appendStringInfo(str, "{");
+		appendStringInfo(str, "\"slotId\":%d,", i);
+		appendStringInfo(str, "\"groupId\":%u,", slot->groupId);
+		appendStringInfo(str, "\"memQuota\":%d,", slot->memQuota);
+		appendStringInfo(str, "\"memUsage\":%d,", slot->memUsage);
+		appendStringInfo(str, "\"nProcs\":%d,", slot->nProcs);
+		appendStringInfo(str, "\"next\":%d,", slotGetId(slot->next));
+		resgroupDumpCaps(str, (ResGroupCap*)(&slot->caps));
+		appendStringInfo(str, "}");
+		if (i < RESGROUP_MAX_SLOTS - 1)
+			appendStringInfo(str, ",");
+	}
+	
+	appendStringInfo(str, "]");
+}
+
+static void
+resgroupDumpFreeSlots(StringInfo str)
+{
+	ResGroupSlotData* head;
+	
+	head = pResGroupControl->freeSlot;
+	
+	appendStringInfo(str, "\"free_slot_list\":{");
+	appendStringInfo(str, "\"head\":%d", slotGetId(head));
+	appendStringInfo(str, "}");
+}
+
+/*
+ * Set resource group slot for current session.
+ */
+static void
+sessionSetSlot(ResGroupSlotData *slot)
+{
+	Assert(slot != NULL);
+	Assert(MySessionState->resGroupSlot == NULL);
+
+	MySessionState->resGroupSlot = (void *) slot;
+}
+
+/*
+ * Get resource group slot of current session.
+ */
+static ResGroupSlotData *
+sessionGetSlot(void)
+{
+	return (ResGroupSlotData *) MySessionState->resGroupSlot;
+}
+
+/*
+ * Reset resource group slot to NULL for current session.
+ */
+static void
+sessionResetSlot(void)
+{
+	Assert(MySessionState->resGroupSlot != NULL);
+
+	MySessionState->resGroupSlot = NULL;
 }

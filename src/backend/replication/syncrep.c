@@ -45,6 +45,12 @@
 #include "utils/builtins.h"
 #include "utils/ps_status.h"
 #include "pgstat.h"
+#include "cdb/cdbvars.h"
+/* User-settable parameters for sync rep */
+char	   *SyncRepStandbyNames;
+
+#define SyncStandbysDefined() \
+	(SyncRepStandbyNames != NULL && SyncRepStandbyNames[0] != '\0')
 
 static bool announce_next_takeover = true;
 
@@ -124,52 +130,66 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		return;
 	}
 
+	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+	{
+		/* Fast exit if user has not requested sync replication. */
+		if (!SyncRepRequested())
+			return;
+	}
+
 	Assert(SHMQueueIsDetached(&(MyProc->syncRepLinks)));
 	Assert(WalSndCtl != NULL);
 
 	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
 	Assert(MyProc->syncRepState == SYNC_REP_NOT_WAITING);
 
-	/*
-	 * There could be a better way to figure out if there is any active
-	 * standby.  But currently, let's move ahead by looking at the per WAL
-	 * sender structure to see if anyone is really active, streaming (or
-	 * still catching up within limits) and wants to be synchronous.
-	 */
-	for (i = 0; i < max_wal_senders; i++)
+	if (GpIdentity.segindex == MASTER_CONTENT_ID)
 	{
-		/* use volatile pointer to prevent code rearrangement */
-		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
+		/*
+		 * There could be a better way to figure out if there is any active
+		 * standby.  But currently, let's move ahead by looking at the per WAL
+		 * sender structure to see if anyone is really active, streaming (or
+		 * still catching up within limits) and wants to be synchronous.
+		 */
+		for (i = 0; i < max_wal_senders; i++)
+		{
+			/* use volatile pointer to prevent code rearrangement */
+			volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
-		SpinLockAcquire(&walsnd->mutex);
-		syncStandbyPresent = (walsnd->pid != 0)
-							 && (walsnd->synchronous)
-							 && ((walsnd->state == WALSNDSTATE_STREAMING)
-								  || (walsnd->state == WALSNDSTATE_CATCHUP &&
-									  walsnd->caughtup_within_range));
-		SpinLockRelease(&walsnd->mutex);
+			SpinLockAcquire(&walsnd->mutex);
+			syncStandbyPresent = (walsnd->pid != 0)
+				&& (walsnd->synchronous)
+				&& ((walsnd->state == WALSNDSTATE_STREAMING)
+					|| (walsnd->state == WALSNDSTATE_CATCHUP &&
+						walsnd->caughtup_within_range));
+			SpinLockRelease(&walsnd->mutex);
 
-		if (syncStandbyPresent)
-			break;
+			if (syncStandbyPresent)
+				break;
+		}
+
+		/* See if we found any active standby connected. If NO, no need to wait.*/
+		if (!syncStandbyPresent)
+		{
+			elogif(debug_walrepl_syncrep, LOG,
+					"syncrep wait -- Not waiting for syncrep because no active and synchronous "
+					"standby (walsender) was found.");
+
+			LWLockRelease(SyncRepLock);
+			return;
+		}
 	}
 
-	/* See if we found any active standby connected. If NO, no need to wait.*/
-	if (!syncStandbyPresent)
-	{
-		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep because no active and synchronous "
-				"standby (walsender) was found.");
-
-		LWLockRelease(SyncRepLock);
-		return;
-	}
-
 	/*
-	 * Check that the standby hasn't already replied. Unlikely race
+	 * We don't wait for sync rep if WalSndCtl->sync_standbys_defined is not
+	 * set.  See SyncRepUpdateSyncStandbysDefined.
+	 *
+	 * Also check that the standby hasn't already replied. Unlikely race
 	 * condition but we'll be fetching that cache line anyway so its likely to
 	 * be a low cost check.
 	 */
-	if (XLByteLE(XactCommitLSN, WalSndCtl->lsn[mode]))
+	if (((GpIdentity.segindex != MASTER_CONTENT_ID) && !WalSndCtl->sync_standbys_defined) ||
+		XLByteLE(XactCommitLSN, WalSndCtl->lsn[mode]))
 	{
 		elogif(debug_walrepl_syncrep, LOG,
 				"syncrep wait -- Not waiting for syncrep because xlog upto LSN (%X/%X) which is "
@@ -433,7 +453,7 @@ SyncRepInitConfig(void)
  * Update the LSNs on each queue based upon our latest state. This
  * implements a simple policy of first-valid-standby-releases-waiter.
  *
- * Other policies are possible, which would change what we do here and what
+ * Other policies are possible, which would change what we do here and
  * perhaps also which information we store as well.
  */
 void
@@ -552,7 +572,7 @@ SyncRepGetStandbyPriority(void)
 }
 
 /*
- * Walk the specified queue from head.	Set the state of any backends that
+ * Walk the specified queue from head.  Set the state of any backends that
  * need to be woken, remove them from the queue, and then wake them.
  * Pass all = true to wake whole queue; otherwise, just wake up to
  * the walsender's LSN.
@@ -592,15 +612,15 @@ SyncRepWakeQueue(bool all, int mode)
 									   offsetof(PGPROC, syncRepLinks));
 
 		/*
+		 * Remove thisproc from queue.
+		 */
+		SHMQueueDelete(&(thisproc->syncRepLinks));
+
+		/*
 		 * Set state to complete; see SyncRepWaitForLSN() for discussion of
 		 * the various states.
 		 */
 		thisproc->syncRepState = SYNC_REP_WAIT_COMPLETE;
-
-		/*
-		 * Remove thisproc from queue.
-		 */
-		SHMQueueDelete(&(thisproc->syncRepLinks));
 
 		/*
 		 * Wake only when we have set state and removed from queue.
@@ -617,6 +637,53 @@ SyncRepWakeQueue(bool all, int mode)
 	}
 
 	return numprocs;
+}
+
+/*
+ * The checkpointer calls this as needed to update the shared
+ * sync_standbys_defined flag, so that backends don't remain permanently wedged
+ * if synchronous_standby_names is unset.  It's safe to check the current value
+ * without the lock, because it's only ever updated by one process.  But we
+ * must take the lock to change it.
+ *
+ * In Postgres, the SyncRepLock is taken inside this function since only the
+ * Checkpointer process calls this function.
+ *
+ * In GPDB, the SyncRepLock is taken outside this function because FTS probe
+ * handler will also call this function to bypass sending a SIGHUP to
+ * Checkpointer process for configuration reload.
+ */
+void
+SyncRepUpdateSyncStandbysDefined(void)
+{
+	bool		sync_standbys_defined = SyncStandbysDefined();
+
+	Assert(LWLockHeldByMe(SyncRepLock));
+
+	if (sync_standbys_defined != WalSndCtl->sync_standbys_defined)
+	{
+		/*
+		 * If synchronous_standby_names has been reset to empty, it's futile
+		 * for backends to continue to waiting.  Since the user no longer
+		 * wants synchronous replication, we'd better wake them up.
+		 */
+		if (!sync_standbys_defined)
+		{
+			int			i;
+
+			for (i = 0; i < NUM_SYNC_REP_WAIT_MODE; i++)
+				SyncRepWakeQueue(true, i);
+		}
+
+		/*
+		 * Only allow people to join the queue when there are synchronous
+		 * standbys defined.  Without this interlock, there's a race
+		 * condition: we might wake up all the current waiters; then, some
+		 * backend that hasn't yet reloaded its config might go to sleep on
+		 * the queue (and never wake up).  This prevents that.
+		 */
+		WalSndCtl->sync_standbys_defined = sync_standbys_defined;
+	}
 }
 
 #ifdef USE_ASSERT_CHECKING
@@ -654,3 +721,46 @@ SyncRepQueueIsOrderedByLSN(int mode)
 	return true;
 }
 #endif
+
+const char *
+check_synchronous_standby_names(const char *newval, bool doit, GucSource source)
+{
+	char	   *rawstring;
+	List	   *elemlist;
+
+	/* Need a modifiable copy of string */
+	rawstring = strdup(newval);
+	if (rawstring == NULL)
+	{
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+		return NULL;
+	}
+
+	/* Parse string into list of identifiers */
+	if (!SplitIdentifierString(rawstring, ',', &elemlist))
+	{
+		free(rawstring);
+		list_free(elemlist);
+
+		/* syntax error in list */
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid list syntax for parameter \"synchronous_standby_names\"")));
+
+		return NULL;
+	}
+
+	/*
+	 * Any additional validation of standby names should go here.
+	 *
+	 * Don't attempt to set WALSender priority because this is executed by
+	 * postmaster at startup, not WALSender, so the application_name is not
+	 * yet correctly set.
+	 */
+	free(rawstring);
+	list_free(elemlist);
+
+	return newval;
+}

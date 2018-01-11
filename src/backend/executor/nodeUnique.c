@@ -4,19 +4,19 @@
  *	  Routines to handle unique'ing of queries where appropriate
  *
  * Unique is a very simple node type that just filters out duplicate
- * tuples from a stream of sorted tuples from its subplan.  It's essentially
+ * tuples from a stream of sorted tuples from its subplan.	It's essentially
  * a dumbed-down form of Group: the duplicate-removal functionality is
  * identical.  However, Unique doesn't do projection nor qual checking,
  * so it's marginally more efficient for cases where neither is needed.
  * (It's debatable whether the savings justifies carrying two plan node
  * types, though.)
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.56.2.1 2008/08/05 21:28:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.61 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -59,8 +59,8 @@ ExecUnique(UniqueState *node)
 
 	/*
 	 * now loop, returning only non-duplicate tuples. We assume that the
-	 * tuples arrive in sorted order so we can detect duplicates easily.
-	 * The first tuple of each group is returned.
+	 * tuples arrive in sorted order so we can detect duplicates easily. The
+	 * first tuple of each group is returned.
 	 */
 	for (;;)
 	{
@@ -74,8 +74,6 @@ ExecUnique(UniqueState *node)
 			ExecClearTuple(resultTupleSlot);
 			return NULL;
 		}
-
-		Gpmon_Incr_Rows_In(GpmonPktFromUniqueState(node));
 
 		/*
 		 * Always return the first tuple from the subplan.
@@ -101,12 +99,6 @@ ExecUnique(UniqueState *node)
 	 * won't guarantee that this source tuple is still accessible after
 	 * fetching the next source tuple.
 	 */
-   	if (!TupIsNull(slot))
-    	{
-  		Gpmon_Incr_Rows_Out(GpmonPktFromUniqueState(node));
-   		CheckSendPlanStateGpmonPkt(&node->ps);
-    	}
-
 	return ExecCopySlot(resultTupleSlot, slot);
 }
 
@@ -172,8 +164,6 @@ ExecInitUnique(Unique *node, EState *estate, int eflags)
 		execTuplesMatchPrepare(node->numCols,
 							   node->uniqOperators);
 
-	initGpmonPktForUnique((Plan *)node, &uniquestate->ps.gpmon_pkt, estate);
-	
 	return uniquestate;
 }
 
@@ -218,12 +208,4 @@ ExecReScanUnique(UniqueState *node, ExprContext *exprCtxt)
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-}
-
-void
-initGpmonPktForUnique(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Unique));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

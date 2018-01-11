@@ -1,4 +1,7 @@
 /*
+ * $PostgreSQL: pgsql/contrib/pageinspect/btreefuncs.c,v 1.10 2009/06/11 14:48:51 momjian Exp $
+ *
+ *
  * btreefuncs.c
  *
  * Copyright (c) 2006 Satoshi Nagayasu <nagayasus@nttdata.co.jp>
@@ -30,6 +33,7 @@
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "utils/builtins.h"
 
 
@@ -79,7 +83,7 @@ typedef struct BTPageStat
 	}			btpo;
 	uint16		btpo_flags;
 	BTCycleId	btpo_cycleid;
-}	BTPageStat;
+} BTPageStat;
 
 
 /* -------------------------------------------------
@@ -89,7 +93,7 @@ typedef struct BTPageStat
  * -------------------------------------------------
  */
 static void
-GetBTPageStatistics(BlockNumber blkno, Buffer buffer, BTPageStat * stat)
+GetBTPageStatistics(BlockNumber blkno, Buffer buffer, BTPageStat *stat)
 {
 	Page		page = BufferGetPage(buffer);
 	PageHeader	phdr = (PageHeader) page;
@@ -187,11 +191,11 @@ bt_page_stats(PG_FUNCTION_ARGS)
 			 RelationGetRelationName(rel));
 
 	/*
-	 * Reject attempts to read non-local temporary relations; we would
-	 * be likely to get wrong data since we have no visibility into the
-	 * owning session's local buffers.
+	 * Reject attempts to read non-local temporary relations; we would be
+	 * likely to get wrong data since we have no visibility into the owning
+	 * session's local buffers.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(rel)))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot access temporary tables of other sessions")));
@@ -305,14 +309,14 @@ bt_page_items(PG_FUNCTION_ARGS)
 				 RelationGetRelationName(rel));
 
 		/*
-		 * Reject attempts to read non-local temporary relations; we would
-		 * be likely to get wrong data since we have no visibility into the
+		 * Reject attempts to read non-local temporary relations; we would be
+		 * likely to get wrong data since we have no visibility into the
 		 * owning session's local buffers.
 		 */
-		if (isOtherTempNamespace(RelationGetNamespace(rel)))
+		if (RELATION_IS_OTHER_TEMP(rel))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cannot access temporary tables of other sessions")));
+				errmsg("cannot access temporary tables of other sessions")));
 
 		if (blkno == 0)
 			elog(ERROR, "block 0 is a meta page");
@@ -455,11 +459,11 @@ bt_metap(PG_FUNCTION_ARGS)
 			 RelationGetRelationName(rel));
 
 	/*
-	 * Reject attempts to read non-local temporary relations; we would
-	 * be likely to get wrong data since we have no visibility into the
-	 * owning session's local buffers.
+	 * Reject attempts to read non-local temporary relations; we would be
+	 * likely to get wrong data since we have no visibility into the owning
+	 * session's local buffers.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(rel)))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot access temporary tables of other sessions")));

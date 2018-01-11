@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * gp_resgroup_helper.c
+ * Gp_resgroup_helper.c
  *	  Helper functions for resource group.
  *
  * Copyright (c) 2017-Present Pivotal Software, Inc.
@@ -11,7 +11,7 @@
 #include "postgres.h"
 
 #include "funcapi.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "miscadmin.h"
 #include "access/genam.h"
 #include "catalog/pg_resgroup.h"
@@ -42,6 +42,7 @@ static void calcCpuUsage(StringInfoData *str, int ncores,
 						 int64 usageBegin, TimestampTz timestampBegin,
 						 int64 usageEnd, TimestampTz timestampEnd);
 static void getResUsage(ResGroupStatCtx *ctx, Oid inGroupId);
+static void dumpResGroupInfo(StringInfo str);
 
 static void
 calcCpuUsage(StringInfoData *str, int ncores,
@@ -151,8 +152,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 					Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
 
 					row->groupId = groupId;
-					appendStringInfo(row->memUsage, "{\"%d\":%d",
-									 GpIdentity.segindex, DatumGetInt32(d));
+					appendStringInfo(row->memUsage, "{\"%d\":%s",
+									 GpIdentity.segindex, DatumGetCString(d));
 
 					appendStringInfo(row->cpuUsage, "{");
 					calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
@@ -186,8 +187,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 			Oid groupId = DatumGetObjectId(row->groupId);
 			Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
 
-			appendStringInfo(row->memUsage, "\"%d\":%d",
-							 GpIdentity.segindex, DatumGetInt32(d));
+			appendStringInfo(row->memUsage, "\"%d\":%s",
+							 GpIdentity.segindex, DatumGetCString(d));
 
 			calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
 						 ResGroupOps_GetCpuUsage(groupId),
@@ -251,7 +252,12 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 			funcctx->user_fctx = palloc(ctxsize);
 			ctx = (ResGroupStatCtx *) funcctx->user_fctx;
 
-			pg_resgroup_rel = heap_open(ResGroupRelationId, AccessShareLock);
+			/*
+			 * others may be creating/dropping resource group concurrently,
+			 * block until creating/dropping finish to avoid inconsistent
+			 * resource group metadata
+			 */
+			pg_resgroup_rel = heap_open(ResGroupRelationId, ExclusiveLock);
 
 			sscan = systable_beginscan(pg_resgroup_rel, InvalidOid, false,
 									   SnapshotNow, 0, NULL);
@@ -271,13 +277,14 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 				}
 			}
 			systable_endscan(sscan);
-			heap_close(pg_resgroup_rel, AccessShareLock);
 
 			ctx->nGroups = funcctx->max_calls;
 			qsort(ctx->groups, ctx->nGroups, sizeof(ctx->groups[0]), compareRow);
 
 			if (ctx->nGroups > 0)
 				getResUsage(ctx, inGroupId);
+
+			heap_close(pg_resgroup_rel, ExclusiveLock);
 		}
 
 		MemoryContextSwitchTo(oldcontext);
@@ -342,6 +349,25 @@ Datum
 pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
+	StringInfoData   str;
+	bool             do_dump;
+
+	do_dump = (strncmp(text_to_cstring(PG_GETARG_TEXT_P(0)), "dump", 4) == 0);
+	
+	if (do_dump)
+	{
+		/* Only super user can call this function with para=dump. */
+		if (!superuser())
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("Only superusers can call this function.")));
+		}
+		
+		initStringInfo(&str);
+		/* dump info in QD and collect info from QEs to form str.*/
+		dumpResGroupInfo(&str);
+	}
 
 	if (SRF_IS_FIRSTCALL())
 	{
@@ -359,7 +385,7 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "value", TEXTOID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
-		funcctx->max_calls = 0;
+		funcctx->max_calls = do_dump ? 1 : 0;
 
 		MemoryContextSwitchTo(oldcontext);
 	}
@@ -369,7 +395,26 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 
 	if (funcctx->call_cntr < funcctx->max_calls)
 	{
-		SRF_RETURN_DONE(funcctx);
+		if (do_dump)
+		{
+			Datum		values[3];
+			bool		nulls[3];
+			HeapTuple	tuple;
+
+			MemSet(values, 0, sizeof(values));
+			MemSet(nulls, 0, sizeof(nulls));
+
+			nulls[0] = nulls[1] = true;
+			values[2] = CStringGetTextDatum(str.data);
+			
+			tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		
+			SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
+		}
+		else
+		{
+			SRF_RETURN_DONE(funcctx);
+		}
 	}
 	else
 	{
@@ -378,3 +423,53 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 	}
 }
 
+static void
+dumpResGroupInfo(StringInfo str)
+{
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		int               i;
+		StringInfoData    str_qd;
+		StringInfoData    buffer;
+		CdbPgResults      cdb_pgresults = {NULL, 0};
+		struct pg_result *pg_result;
+
+		initStringInfo(&str_qd);
+		initStringInfo(&buffer);
+		appendStringInfo(&buffer,
+						 "select * from pg_resgroup_get_status_kv('dump');");
+		
+		CdbDispatchCommand(buffer.data, 0, &cdb_pgresults);
+		
+		if (cdb_pgresults.numResults == 0)
+			elog(ERROR, "dumpResGroupInfo didn't get back any results from the segDBs");
+		
+		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+		ResGroupDumpInfo(&str_qd);
+		LWLockRelease(ResGroupLock);
+
+		/* append all qes and qd together to form str */
+		appendStringInfo(str, "{\"info\":[%s,", str_qd.data);
+		for (i = 0; i < cdb_pgresults.numResults; i++)
+		{
+			pg_result = cdb_pgresults.pg_results[i];
+			if (PQresultStatus(pg_result) != PGRES_TUPLES_OK)
+			{
+				cdbdisp_clearCdbPgResults(&cdb_pgresults);
+				elog(ERROR, "pg_resgroup_get_status_kv(): resultStatus not tuples_Ok");
+			}
+			Assert(PQntuples(pg_result) == 1);
+			appendStringInfo(str, "%s", PQgetvalue(pg_result, 0, 2));
+			if (i < cdb_pgresults.numResults - 1)
+				appendStringInfo(str, ",");
+		}
+		appendStringInfo(str, "]}");
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
+	}
+	else
+	{
+		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+		ResGroupDumpInfo(str);
+		LWLockRelease(ResGroupLock);
+	}
+}

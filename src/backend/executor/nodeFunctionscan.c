@@ -4,12 +4,13 @@
  *	  Support routines for scanning RangeFunctions (functions in rangetable).
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.47 2008/10/01 19:51:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.52 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,12 +69,11 @@ FunctionNext(FunctionScanState *node)
 	 */
 	if (tuplestorestate == NULL)
 	{
-		ExprContext *econtext = node->ss.ps.ps_ExprContext;
-
 		node->tuplestorestate = tuplestorestate =
 			ExecMakeTableFunctionResult(node->funcexpr,
-										econtext,
+										node->ss.ps.ps_ExprContext,
 										node->tupdesc,
+										node->eflags & EXEC_FLAG_BACKWARD,
 										PlanStateOperatorMemKB( (PlanState *) node));
 
 		/* CDB: Offer extra info for EXPLAIN ANALYZE. */
@@ -111,17 +111,11 @@ FunctionNext(FunctionScanState *node)
 		}
 	}
 
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromFuncScanState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-	}
-
-	else if (!node->ss.ps.delayEagerFree)
+	if (TupIsNull(slot) && !node->ss.ps.delayEagerFree)
 	{
 		ExecEagerFreeFunctionScan((FunctionScanState *)(&node->ss.ps));
 	}
-	
+
 	return slot;
 }
 
@@ -171,6 +165,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	scanstate = makeNode(FunctionScanState);
 	scanstate->ss.ps.plan = (Plan *) node;
 	scanstate->ss.ps.state = estate;
+	scanstate->eflags = eflags;
 
 	/*
 	 * Miscellaneous initialization
@@ -265,8 +260,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	 */
 	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
 	ExecAssignScanProjectionInfo(&scanstate->ss);
-
-	initGpmonPktForFunctionScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
 	
 	if (!IsResManagerMemoryPolicyNone())
 	{
@@ -347,7 +340,7 @@ ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 	/*
 	 * Here we have a choice whether to drop the tuplestore (and recompute the
 	 * function outputs) or just rescan it.  We must recompute if the
-	 * expression contains parameters, else we rescan.  XXX maybe we should
+	 * expression contains parameters, else we rescan.	XXX maybe we should
 	 * recompute if the function is volatile?
 	 */
 	if (node->ss.ps.chgParam != NULL)
@@ -356,14 +349,6 @@ ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 	}
 	else
 		tuplestore_rescan(node->tuplestorestate);
-}
-
-void
-initGpmonPktForFunctionScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, FunctionScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

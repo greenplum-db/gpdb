@@ -16,3 +16,4 @@ fi
 # 	AIX 5.1 and 5.2, XLC 6.0 (IBM's cc)
 # 	AIX 5.3 ML3, gcc 4.0.1
 MEMSET_LOOP_LIMIT=0
+EXTRA_LDAP_LIBS="-llber -lssl -lcrypto"

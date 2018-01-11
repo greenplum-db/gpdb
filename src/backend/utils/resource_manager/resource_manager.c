@@ -3,20 +3,25 @@
  * resource_manager.c
  *	  GPDB resource manager code.
  *
+ * Portions Copyright (c) 2006-2017, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2006-2017, Greenplum inc.
  *
+ * IDENTIFICATION
+ *	    src/backend/utils/resource_manager/resource_manager.c
  *
- -------------------------------------------------------------------------
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
+#include "executor/spi.h"
+#include "postmaster/fts.h"
+#include "replication/walsender.h"
 #include "utils/guc.h"
 #include "utils/resource_manager.h"
 #include "utils/resgroup-ops.h"
-#include "replication/walsender.h"
 
 /*
  * GUC variables.
@@ -83,7 +88,7 @@ InitResManager(void)
 	else if  (IsResGroupEnabled() &&
 			 (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
 			 IsUnderPostmaster &&
-			 !am_walsender)
+			 !am_walsender && !am_ftshandler)
 	{
 		/*
 		 * InitResManager() is called under PostgresMain(), so resource group is not
@@ -107,5 +112,10 @@ InitResManager(void)
 		gp_log_resmanager_memory = &gp_log_resmanager_memory_default;
 		gp_resmanager_memory_policy_auto_fixed_mem = &gp_resmanager_memory_policy_auto_fixed_mem_default;
 		gp_resmanager_print_operator_memory_limits = &gp_resmanager_print_operator_memory_limits_default;
+	}
+
+	if (!IsResManagerMemoryPolicyNone())
+	{
+		SPI_InitMemoryReservation();
 	}
 }

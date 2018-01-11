@@ -1,0 +1,29 @@
+-- Check how many WAL replication mirrors are up
+SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and status='u';
+ count
+-------
+     3
+(1 row)
+
+-- Check how many WAL replication mirrors are up and in-sync
+SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode='s';
+ count 
+-------
+     3
+(1 row)
+
+-- Check pg_stat_replication view (this assumes standby master has not been created)
+SELECT * FROM pg_stat_replication;
+ procpid | usesysid | usename | application_name | client_addr | client_port | backend_start | state | sent_location | write_location | flush_location | replay_location | sync_priority | sync_state 
+---------+----------+---------+------------------+-------------+-------------+---------------+-------+---------------+----------------+----------------+-----------------+---------------+------------
+(0 rows)
+
+-- Check pg_stat_replication view of master and primary segments
+SELECT gp_segment_id, application_name, state, sync_state FROM gp_stat_replication;
+ gp_segment_id | application_name |   state   | sync_state 
+---------------+------------------+-----------+------------
+             0 | walreceiver      | streaming | sync
+             1 | walreceiver      | streaming | sync
+             2 | walreceiver      | streaming | sync
+(3 rows)
+

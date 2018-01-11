@@ -1770,9 +1770,6 @@ int _run_test(
 #endif // !_WIN32
 	}
 
-	if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-		print_message(COLOR_DEFAULT, "[ RUN         ] %s\n", function_name);
-	}
 	initialize_testing(function_name);
 	global_running_test = 1;
 	if (setjmp(global_run_test_env) == 0) {

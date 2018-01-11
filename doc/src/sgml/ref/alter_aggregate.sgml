@@ -21,9 +21,15 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>type</replaceable> [ , ... ] ) RENAME TO <replaceable>new_name</replaceable>
-ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>type</replaceable> [ , ... ] ) OWNER TO <replaceable>new_owner</replaceable>
-ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>type</replaceable> [ , ... ] ) SET SCHEMA <replaceable>new_schema</replaceable>
+ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) RENAME TO <replaceable>new_name</replaceable>
+ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) OWNER TO <replaceable>new_owner</replaceable>
+ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) SET SCHEMA <replaceable>new_schema</replaceable>
+
+<phrase>where <replaceable>aggregate_signature</replaceable> is:</phrase>
+
+* |
+[ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] |
+[ [ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] ] ORDER BY [ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ]
 </synopsis>
  </refsynopsisdiv>
   
@@ -62,12 +68,26 @@ ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>type</replaceable
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">type</replaceable></term>
+    <term><replaceable class="parameter">argmode</replaceable></term>
+
+    <listitem>
+     <para>
+      The mode of an argument: <literal>IN</> or <literal>VARIADIC</>.
+      If omitted, the default is <literal>IN</>.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">argtype</replaceable></term>
     <listitem>
      <para>
       An input data type on which the aggregate function operates.
       To reference a zero-argument aggregate function, write <literal>*</>
-      in place of the list of input data types.
+      in place of the list of argument specifications.
+      To reference an ordered-set aggregate function, write
+      <literal>ORDER BY</> between the direct and aggregated argument
+      specifications.
      </para>
     </listitem>
    </varlistentry>
@@ -102,6 +122,21 @@ ALTER AGGREGATE <replaceable>name</replaceable> ( <replaceable>type</replaceable
  </refsect1>
 
  <refsect1>
+  <title>Notes</title>
+
+   <para>
+    The recommended syntax for referencing an ordered-set aggregate
+    is to write <literal>ORDER BY</> between the direct and aggregated
+    argument specifications, in the same style as in
+    <xref linkend="sql-createaggregate">.  However, it will also work to
+    omit <literal>ORDER BY</> and just run the direct and aggregated
+    argument specifications into a single list.  In this abbreviated form,
+    if <literal>VARIADIC "any"</> was used in both the direct and
+    aggregated argument lists, write <literal>VARIADIC "any"</> only once.
+   </para>
+ </refsect1>
+
+ <refsect1>
   <title>Examples</title>
 
   <para>
@@ -121,10 +156,15 @@ ALTER AGGREGATE myavg(integer) OWNER TO joe;
   </para>
 
   <para>
-   To move the aggregate function <literal>myavg</literal> for type
-   <type>integer</type> into schema <literal>myschema</literal>:
+   To move the ordered-set aggregate <literal>mypercentile</literal> with
+   direct argument of type <type>float8</type> and aggregated argument
+   of type <type>integer</type> into schema <literal>myschema</literal>:
 <programlisting>
-ALTER AGGREGATE myavg(integer) SET SCHEMA myschema;
+ALTER AGGREGATE mypercentile(float8 ORDER BY integer) SET SCHEMA myschema;
+</programlisting>
+   This will work too:
+<programlisting>
+ALTER AGGREGATE mypercentile(float8, integer) SET SCHEMA myschema;
 </programlisting>
   </para>
  </refsect1>

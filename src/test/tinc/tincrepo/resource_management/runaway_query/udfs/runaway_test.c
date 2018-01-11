@@ -102,7 +102,7 @@ gp_allocate_palloc_test(PG_FUNCTION_ARGS)
 		/*
 		 * This doesn't check for interrupts during sleep.
 		 * Alternatively, we can use a loop with CHECK_FOR_INTERRUPTS
-		 * if we want to check for interrupts (see debug_break_timed)
+		 * if we want to check for interrupts.
 		 */
 		if (sleep_sec > 0)
 		{
@@ -144,7 +144,7 @@ gp_allocate_top_memory_ctxt_test(PG_FUNCTION_ARGS)
 		/*
 		 * This doesn't check for interrupts during sleep.
 		 * Alternatively, we can use a loop with CHECK_FOR_INTERRUPTS
-		 * if we want to check for interrupts (see debug_break_timed)
+		 * if we want to check for interrupts.
 		 */
 		if (sleep_sec > 0)
 		{
@@ -202,7 +202,7 @@ gp_allocate_palloc_gradual_test(PG_FUNCTION_ARGS)
 		/*
 		 * This doesn't check for interrupts during sleep.
 		 * Alternatively, we can use a loop with CHECK_FOR_INTERRUPTS
-		 * if we want to check for interrupts (see debug_break_timed)
+		 * if we want to check for interrupts.
 		 */
 		if (sleep_sec > 0)
 		{

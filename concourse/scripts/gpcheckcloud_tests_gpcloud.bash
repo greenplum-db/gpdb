@@ -12,17 +12,10 @@ function gen_env(){
 	source /opt/gcc_env.sh
 	source /usr/local/greenplum-db-devel/greenplum_path.sh
 
-	if [ "$overwrite_gpcloud" = "true" ]
-	then
-		cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
-		make install -C bin/gpcheckcloud USE_PGXS=1
-	fi
-
 	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud/regress"
 	bash gpcheckcloud_regress.sh
 	EOF
 
-	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_gpcheckcloud.sh
 	chmod a+x /home/gpadmin/run_regression_gpcheckcloud.sh
 }

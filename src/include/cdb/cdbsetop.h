@@ -2,7 +2,12 @@
  *
  *  cdbsetop.h
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbsetop.h
  *
  *-------------------------------------------------------------------------
  */
@@ -57,7 +62,7 @@ extern
 GpSetOpType choose_setop_type(List *planlist); 
 
 extern
-void adjust_setop_arguments(List *planlist, GpSetOpType setop_type);
+void adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type);
 
 
 extern
@@ -67,19 +72,13 @@ extern
 Motion* make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashexprs);
 
 extern
-Motion* make_motion_multiplex(PlannerInfo *root, Plan *subplan);
+Motion* make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys);
 
 extern
-Motion* make_motion_gather_to_QD(Plan *subplan, bool keep_ordering);
+Motion* make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys);
 
 extern
-Motion* make_motion_gather_to_QE(Plan *subplan, bool keep_ordering);
-
-extern
-Motion* make_motion_cull_to_QE(Plan *subplan);
-
-extern
-Motion* make_motion_gather(Plan *subplan, int segindex, bool keep_ordering);
+Motion* make_motion_gather(PlannerInfo *root, Plan *subplan, int segindex, List *sortPathKeys);
 
 extern
 void mark_append_locus(Plan *plan, GpSetOpType optype);

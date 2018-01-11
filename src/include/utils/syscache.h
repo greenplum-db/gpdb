@@ -6,10 +6,10 @@
  * See also lsyscache.h, which provides convenience routines for
  * common cache-lookup operations.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/syscache.h,v 1.79 2010/02/14 18:42:18 rhaas Exp $
+ * $PostgreSQL: pgsql/src/include/utils/syscache.h,v 1.74 2009/01/01 17:24:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,6 +51,10 @@ enum SysCacheIdentifier
 	DATABASEOID,
 	ENUMOID,
 	ENUMTYPOIDNAME,
+	FOREIGNDATAWRAPPERNAME,
+	FOREIGNDATAWRAPPEROID,
+	FOREIGNSERVERNAME,
+	FOREIGNSERVEROID,
 	INDEXRELID,
 	LANGNAME,
 	LANGOID,
@@ -79,6 +83,8 @@ enum SysCacheIdentifier
 	TSTEMPLATEOID,
 	TYPENAMENSP,
 	TYPEOID,
+	USERMAPPINGOID,
+	USERMAPPINGUSERSERVER,
 	WINFNOID
 };
 

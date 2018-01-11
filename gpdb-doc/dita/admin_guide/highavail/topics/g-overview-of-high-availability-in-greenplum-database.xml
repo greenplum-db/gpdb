@@ -4,9 +4,9 @@
 <topic id="topic2">
    <title>Overview of Greenplum Database High Availability</title>
    <shortdesc>A Greenplum Database cluster can be made highly available by providing a
-      fault-tolerant hardware platform, by enabling Greenplum Database
-      high-availability features, and by performing regular monitoring and maintenance procedures to
-      ensure the health of all system components. </shortdesc>
+      fault-tolerant hardware platform, by enabling Greenplum Database high-availability features,
+      and by performing regular monitoring and maintenance procedures to ensure the health of all
+      system components. </shortdesc>
    <body>
       <p>Hardware components will eventually fail, whether due to normal wear or an unexpected
          circumstance. Loss of power can lead to temporarily unavailable components. A system can be
@@ -15,32 +15,95 @@
          redundancy is higher than users' tolerance for interruption in service. When this is the
          case, the goal is to ensure that full service is able to be restored, and can be restored
          within an expected timeframe.</p>
-      <p>With Greenplum Database, fault tolerance and data availability is achieved
-            with:<ul id="ul_lft_kpv_tp">
-            <li><xref href="#topic2/raid" format="dita">Hardware level RAID
-                  storage protection</xref></li>
-            <li><xref href="#topic2/segment_mirroring" format="dita">Greenplum
-                  segment mirroring</xref></li>
+      <p>With Greenplum Database, fault tolerance and data availability is achieved with:<ul
+            id="ul_lft_kpv_tp">
+            <li><xref href="#topic2/raid" format="dita">Hardware level RAID storage
+                  protection</xref></li>
+            <li><xref href="#topic2/checksums" format="dita"/></li>
+            <li><xref href="#topic2/segment_mirroring" format="dita">Greenplum segment
+                  mirroring</xref></li>
             <li><xref href="#topic2/master_mirroring" format="dita">Master mirroring</xref></li>
             <li><xref href="#topic2/dual_clusters" format="dita">Dual clusters</xref></li>
             <li><xref href="#topic2/backup_restore" format="dita">Database backup and
                restore</xref></li>
          </ul></p>
       <section id="raid">
-         <title>Hardware Level RAID</title>
-         <p>A best practice Greenplum Database deployment uses hardware level RAID to
-            provide high performance redundancy for single disk failure without having to go into
-            the database level fault tolerance. This provides a lower level of redundancy at the
-            disk level.</p>
+         <title>Hardware level RAID</title>
+         <p>A best practice Greenplum Database deployment uses hardware level RAID to provide high
+            performance redundancy for single disk failure without having to go into the database
+            level fault tolerance. This provides a lower level of redundancy at the disk level.</p>
+      </section>
+      <section id="checksums">
+         <title>Data storage checksums</title>
+         <p>Greenplum Database uses checksums to verify that data loaded from disk to memory has not
+            been corrupted on the file system. </p>
+         <p>Greenplum Database has two kinds of storage for user data: heap and append-optimized.
+            Both storage models use checksums to verify data read from the file system and, with the
+            default settings, they handle checksum verification errors in a similar way.</p>
+         <p>Greenplum Database primary and segment database processes update data on pages in the
+            memory they manage. When a memory page is updated and flushed to disk, checksums are
+            computed and saved with the page. When a page is later retrieved from disk, the
+            checksums are verified and the page is only permitted to enter managed memory if the
+            verification succeeds. A failed checksum verification is an indication of corruption in
+            the file system and causes Greenplum Database to generate an error, aborting the
+            transaction.</p>
+         <p>The default checksum settings provide the best level of protection from undetected disk
+            corruption propagating into the database and to mirror segments.</p>
+         <p>Heap checksum support is enabled by default when the Greenplum Database cluster is
+            initialized with the <codeph>gpinitsystem</codeph> management utility. Although it is
+            strongly discouraged, a cluster can be initialized without heap checksum support by
+            setting the <codeph>HEAP_CHECKSUM</codeph> parameter to off in the
+               <codeph>gpinitsystem</codeph> cluster configuration file. See <xref
+               href="../../../utility_guide/admin_utilities/gpinitsystem.xml#topic1"/>. </p>
+         <p>Once initialized, it is not possible to change heap checksum support for a cluster
+            without reinitializing the system and reloading databases.</p>
+         <p>You can check the read-only server configuration parameter <xref
+               href="../../../ref_guide/config_params/guc-list.xml#data_checksums"/> to see if heap
+            checksums are enabled in a cluster:</p>
+         <codeblock>$ gpconfig -s data_checksums</codeblock>
+         <p>When a Greenplum Database cluster starts up, the <codeph>gpstart</codeph> utility checks
+            that heap checksums are consistently enabled or disabled on the master and all segments.
+            If there are any differences, the cluster fails to start. See <xref
+               href="../../../utility_guide/admin_utilities/gpstart.xml#topic1"
+            />.</p>
+         <p>In cases where it is necessary to ignore heap checksum verification errors so that data
+            can be recovered, setting the <xref
+               href="../../../ref_guide/config_params/guc-list.xml#ignore_checksum_failure"/> system
+            configuration parameter to on causes Greenplum Database to issue a warning when a heap
+            checksum verification fails, but the page is then permitted to load into managed memory.
+            If the page is updated and saved to disk, the corrupted data could be replicated to the
+            mirror segment. Because this can lead to data loss, setting
+               <codeph>ignore_checksum_failure</codeph> to on should only be done to enable data
+            recovery. </p>
+         <p>For append-optimized storage, checksum support is one of several storage options set at
+            the time an append-optimized table is created with the <codeph>CREATE TABLE</codeph>
+            statement. The default storage options are specified in the
+               <codeph>gp_default_storage_options</codeph> server configuration parameter. The
+               <codeph>checksum</codeph> storage option is enabled by default and disabling it is
+            strongly discouraged. </p>
+         <p>If you choose to disable checksums for an append-optimized table, you can either</p>
+         <ul id="ul_qyt_cwg_z1b">
+            <li>change the <codeph>gp_default_storage_options</codeph> configuration parameter to
+               include <codeph>checksum=false</codeph> before creating the table, or </li>
+            <li>add the <codeph>checksum=false</codeph> option to the <codeph>WITH
+                     <varname>storage_options</varname></codeph> clause of the <codeph>CREATE
+                  TABLE</codeph> statement. </li>
+         </ul>
+         <p>Note that the <codeph>CREATE TABLE</codeph> statement allows you to set storage options,
+            including checksums, for individual partition files.</p>
+         <p>See the <xref href="../../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"/> command
+            reference and the <xref
+               href="../../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"/>
+            configuration parameter reference for syntax and examples.</p>
       </section>
       <section id="segment_mirroring">
          <title>Segment Mirroring</title>
-         <p>Greenplum Database stores data in multiple segments, each of which is a
-               Greenplum Database Postgres instance. The data for each table is spread
-            between the segments based on the distribution policy that is defined for the table in
-            the DDL at the time the table is created. When segment mirroring is enabled, for each
-            segment there is a <i>primary</i> and <i>mirror</i> pair. The primary and mirror perform
-            the same IO operations and store copies of the same data. </p>
+         <p>Greenplum Database stores data in multiple segments, each of which is a Greenplum
+            Database Postgres instance. The data for each table is spread between the segments based
+            on the distribution policy that is defined for the table in the DDL at the time the
+            table is created. When segment mirroring is enabled, for each segment there is a
+               <i>primary</i> and <i>mirror</i> pair. The primary and mirror perform the same IO
+            operations and store copies of the same data. </p>
          <p>The mirror instance for each segment is usually initialized with the
                <codeph>gpinitsystem</codeph> utility or the <codeph>gpexpand</codeph> utility. The
             mirror runs on a different host than the primary instance to protect from a single
@@ -61,11 +124,13 @@
             utility to have the standby master take over as the new primary master. You can
             configure a virtual IP address for the master and standby so that client programs do not
             have to switch to a different network address when the current master changes. If the
-            master host fails, the virtual IP address can be swapped to the actual acting master. </p>
+            master host fails, the virtual IP address can be swapped to the actual acting master.
+         </p>
       </section>
       <section id="dual_clusters">
          <title>Dual Clusters</title>
-         <p>An additional level of redundancy can be provided by maintaining two Greenplum Database clusters, both storing the same data. </p>
+         <p>An additional level of redundancy can be provided by maintaining two Greenplum Database
+            clusters, both storing the same data. </p>
          <p>Two methods for keeping data synchronized on dual clusters are "dual ETL" and
             "backup/restore."</p>
          <p>Dual ETL provides a complete standby cluster with the same data as the primary cluster.
@@ -86,9 +151,9 @@
          <p>Making regular backups of the databases is recommended except in cases where the
             database can be easily regenerated from the source data. Backups should be taken to
             protect from operational, software, and hardware errors. </p>
-         <p>Use the <codeph>gpcrondump</codeph> utility to backup Greenplum databases. <codeph>gpcrondomp</codeph> performs the
-            backup in parallel across segments, so backup performance scales up as hardware is added
-            to the cluster. </p>
+         <p>Use the <codeph>gpcrondump</codeph> utility to backup Greenplum databases.
+               <codeph>gpcrondomp</codeph> performs the backup in parallel across segments, so
+            backup performance scales up as hardware is added to the cluster. </p>
          <p>When designing a backup strategy, a primary concern is where to store the backup data.
             The data each segment manages can be backed up on the segment's local storage, but
             should not be stored there permanently—the backup reduces disk space available to the
@@ -110,18 +175,18 @@
             </plentry>
             <plentry>
                <pt>NFS</pt>
-               <pd>If an NFS mount is created on each Greenplum Database host in the
-                  cluster, backups can be written directly to the NFS mount. A scale out NFS
-                  solution is recommended to ensure that backups do not bottleneck on IO throughput
-                  of the NFS device. Dell EMC Isilon is an example that can scale out along side the
-                     Greenplum cluster.</pd>
+               <pd>If an NFS mount is created on each Greenplum Database host in the cluster,
+                  backups can be written directly to the NFS mount. A scale out NFS solution is
+                  recommended to ensure that backups do not bottleneck on IO throughput of the NFS
+                  device. Dell EMC Isilon is an example that can scale out along side the Greenplum
+                  cluster.</pd>
             </plentry>
          </parml>
       </section>
       <section>
          <title>Incremental Backups</title>
-         <p>Greenplum Database allows <i>incremental backup</i> at the partition level
-            for append-optimized and column-oriented tables. When you perform an incremental backup,
+         <p>Greenplum Database allows <i>incremental backup</i> at the partition level for
+            append-optimized and column-oriented tables. When you perform an incremental backup,
             only the partitions for append-optimized and column-oriented tables that have changed
             since the previous backup are backed up. (Heap tables are <i>always</i> backed up.)
             Restoring an incremental backup requires restoring the previous full backup and

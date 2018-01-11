@@ -416,7 +416,6 @@ extern size_t wchar2char(char *to, const wchar_t *from, size_t tolen);
 extern size_t char2wchar(wchar_t *to, size_t tolen, const char *from, size_t fromlen);
 #endif
 
-extern void SetDefaultClientEncoding(void); /* Obsolete? */
 extern int	SetClientEncoding(int encoding, bool doit);
 extern void InitializeClientEncoding(void);
 extern int	pg_get_client_encoding(void);

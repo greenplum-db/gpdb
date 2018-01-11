@@ -3,7 +3,11 @@
  * appendonly_visimap
  *   maintain a visibility bitmap entry
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonly_visimap_entry.c
  *
  *------------------------------------------------------------------------------
 */
@@ -17,13 +21,13 @@
 
 /*
  * Frees the data allocated by the visimap entry.
- * 
+ *
  * No other function should be called on the visibility map entry
  * after this function has been called.
- */ 
+ */
 void
 AppendOnlyVisimapEntry_Finish(
-		AppendOnlyVisimapEntry *visiMapEntry)
+							  AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 
@@ -41,14 +45,14 @@ AppendOnlyVisimapEntry_Finish(
  ;
  * Assumes a zero-allocated visimap entry data structure.
  *
- * Until appendonly_visimap_copyout or appendonly_visimap_clear is called, 
+ * Until appendonly_visimap_copyout or appendonly_visimap_clear is called,
  * the data structure
  * is not usable for visibility checks or updates.
- */ 
+ */
 void
 AppendOnlyVisimapEntry_Init(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		MemoryContext memoryContext)
+							AppendOnlyVisimapEntry *visiMapEntry,
+							MemoryContext memoryContext)
 {
 	Assert(visiMapEntry);
 
@@ -64,12 +68,12 @@ AppendOnlyVisimapEntry_Init(
 /*
  * Resets the visibility map data structure.
  *
- * It puts the entry into the identical state as after a 
+ * It puts the entry into the identical state as after a
  * call to AppendOnlyVisimapEntry_Init.
- */ 
+ */
 void
 AppendOnlyVisimapEntry_Reset(
-		AppendOnlyVisimapEntry *visiMapEntry)
+							 AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 
@@ -85,12 +89,12 @@ AppendOnlyVisimapEntry_Reset(
  * Initializes a previously unused entry that covers the given tuple id.
  * The tuple is not marked as updated as no state has been changed yet.
  *
- * Note that the firstRowNum is not the rowNum of the tuple id. 
- */ 
+ * Note that the firstRowNum is not the rowNum of the tuple id.
+ */
 void
 AppendOnlyVisimapEntry_New(
-	AppendOnlyVisimapEntry* visiMapEntry,
-	AOTupleId *tupleId)
+						   AppendOnlyVisimapEntry *visiMapEntry,
+						   AOTupleId *tupleId)
 {
 	Assert(visiMapEntry);
 	Assert(tupleId);
@@ -101,22 +105,22 @@ AppendOnlyVisimapEntry_New(
 
 	visiMapEntry->segmentFileNum = AOTupleIdGet_segmentFileNum(tupleId);
 	visiMapEntry->firstRowNum = AppendOnlyVisimapEntry_GetFirstRowNum(visiMapEntry,
-			tupleId);
+																	  tupleId);
 
-	ItemPointerSetInvalid(&visiMapEntry->tupleTid);	
+	ItemPointerSetInvalid(&visiMapEntry->tupleTid);
 
-	elogif(Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: New entry "
-				"(segNum, firstRowNum) = (%u, " INT64_FORMAT ")", 
-				visiMapEntry->segmentFileNum,
-				visiMapEntry->firstRowNum);
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: New entry "
+		   "(segNum, firstRowNum) = (%u, " INT64_FORMAT ")",
+		   visiMapEntry->segmentFileNum,
+		   visiMapEntry->firstRowNum);
 }
 
 static Datum
 AppendOnlyVisimap_GetAttrNotNull(HeapTuple t, TupleDesc td, int attr)
 {
-	Datum d;
-	bool isNull;
+	Datum		d;
+	bool		isNull;
 
 	d = fastgetattr(t, attr, td, &isNull);
 	if (isNull)
@@ -128,17 +132,18 @@ AppendOnlyVisimap_GetAttrNotNull(HeapTuple t, TupleDesc td, int attr)
 
 void
 AppendOnlyVisiMapEnty_ReadData(
-	AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize)
+							   AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize)
 {
-	int newWordCount;
+	int			newWordCount;
 
 	Assert(visiMapEntry);
 	Assert(CurrentMemoryContext == visiMapEntry->memoryContext);
 
 	BitmapDecompressState decompressState;
+
 	BitmapDecompress_Init(&decompressState,
-			visiMapEntry->data->data,
-			dataSize);
+						  visiMapEntry->data->data,
+						  dataSize);
 
 	if (BitmapDecompress_HasError(&decompressState))
 	{
@@ -147,17 +152,17 @@ AppendOnlyVisiMapEnty_ReadData(
 
 	bms_free(visiMapEntry->bitmap);
 
-	newWordCount = 
+	newWordCount =
 		BitmapDecompress_GetBlockCount(&decompressState);
 	if (newWordCount > 0)
 	{
 		visiMapEntry->bitmap = palloc0(
-				offsetof(Bitmapset, words) + (newWordCount * sizeof(bitmapword)));
+									   offsetof(Bitmapset, words) + (newWordCount * sizeof(bitmapword)));
 		visiMapEntry->bitmap->nwords = newWordCount;
 		BitmapDecompress_Decompress(
-				&decompressState,
-				visiMapEntry->bitmap->words,
-				newWordCount);
+									&decompressState,
+									visiMapEntry->bitmap->words,
+									newWordCount);
 	}
 	else if (newWordCount == 0)
 	{
@@ -165,8 +170,8 @@ AppendOnlyVisiMapEnty_ReadData(
 	}
 	else
 	{
-		elog(ERROR, 
-			"illegal visimap block count: visimap block count %d", newWordCount);
+		elog(ERROR,
+			 "illegal visimap block count: visimap block count %d", newWordCount);
 	}
 
 }
@@ -177,37 +182,37 @@ AppendOnlyVisiMapEnty_ReadData(
  * Should only be called with values and nulls provides
  * by a successful read from the aovisimap table using
  * an AppendOnlyVisimapIndex data structure.
- */ 
+ */
 void
 AppendOnlyVisimapEntry_Copyout(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		HeapTuple tuple,
-		TupleDesc tupleDesc)
+							   AppendOnlyVisimapEntry *visiMapEntry,
+							   HeapTuple tuple,
+							   TupleDesc tupleDesc)
 {
 	struct varlena *value;
 	struct varlena *detoast_value;
-	MemoryContext oldContext; 
-	size_t dataSize;
-	Datum d;
-	bool isNull;
+	MemoryContext oldContext;
+	size_t		dataSize;
+	Datum		d;
+	bool		isNull;
 
 	Assert(visiMapEntry);
 	Assert(!visiMapEntry->dirty);
 	Assert(tuple);
 	Assert(tupleDesc);
-	Assert(!visiMapEntry->dirty); /* entry should not contain dirty data */
+	Assert(!visiMapEntry->dirty);	/* entry should not contain dirty data */
 
 	d = AppendOnlyVisimap_GetAttrNotNull(tuple, tupleDesc, Anum_pg_aovisimap_segno);
 	visiMapEntry->segmentFileNum = DatumGetInt64(d);
-	
+
 	d = AppendOnlyVisimap_GetAttrNotNull(tuple, tupleDesc, Anum_pg_aovisimap_firstrownum);
 	visiMapEntry->firstRowNum = DatumGetInt64(d);
 
-	elogif (Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: copy out: "
-				"segNo %u firstRowNum " INT64_FORMAT, 
-				visiMapEntry->segmentFileNum,
-				visiMapEntry->firstRowNum);
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: copy out: "
+		   "segNo %u firstRowNum " INT64_FORMAT,
+		   visiMapEntry->segmentFileNum,
+		   visiMapEntry->firstRowNum);
 
 	d = fastgetattr(tuple, Anum_pg_aovisimap_visimap, tupleDesc, &isNull);
 	if (isNull)
@@ -220,7 +225,7 @@ AppendOnlyVisimapEntry_Copyout(
 	}
 	else
 	{
-		value = (struct varlena*)DatumGetPointer(d);
+		value = (struct varlena *) DatumGetPointer(d);
 		detoast_value = pg_detoast_datum(value);
 
 		oldContext = MemoryContextSwitchTo(visiMapEntry->memoryContext);
@@ -229,14 +234,15 @@ AppendOnlyVisimapEntry_Copyout(
 		Assert(visiMapEntry->data);
 		Assert(APPENDONLY_VISIMAP_DATA_BUFFER_SIZE >= VARSIZE(detoast_value));
 		memcpy(visiMapEntry->data, detoast_value, VARSIZE(detoast_value));
-		
-		dataSize = VARSIZE(detoast_value) - 
+
+		dataSize = VARSIZE(detoast_value) -
 			offsetof(AppendOnlyVisimapData, data);
 		AppendOnlyVisiMapEnty_ReadData(visiMapEntry, dataSize);
 
 		MemoryContextSwitchTo(oldContext);
 
-		if (detoast_value != value) {
+		if (detoast_value != value)
+		{
 			pfree(detoast_value);
 			detoast_value = NULL;
 		}
@@ -246,10 +252,10 @@ AppendOnlyVisimapEntry_Copyout(
 /*
  * Returns the hidden tuple count value from a visimap entry heap tuple.
  *
- */ 
+ */
 int64
 AppendOnlyVisimapEntry_GetHiddenTupleCount(
-	AppendOnlyVisimapEntry *visiMapEntry)
+										   AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 
@@ -258,15 +264,16 @@ AppendOnlyVisimapEntry_GetHiddenTupleCount(
 
 void
 AppendOnlyVisimapEntry_WriteData(
-		AppendOnlyVisimapEntry *visiMapEntry)
+								 AppendOnlyVisimapEntry *visiMapEntry)
 {
-	int bitmapSize, compressedBitmapSize;
+	int			bitmapSize,
+				compressedBitmapSize;
 
 	Assert(visiMapEntry);
 	Assert(CurrentMemoryContext == visiMapEntry->memoryContext);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 
-	bitmapSize = (visiMapEntry->bitmap ? (visiMapEntry->bitmap->nwords * sizeof(uint32)): 0);
+	bitmapSize = (visiMapEntry->bitmap ? (visiMapEntry->bitmap->nwords * sizeof(uint32)) : 0);
 	bitmapSize += BITMAP_COMPRESSION_HEADER_SIZE;
 
 	Assert(visiMapEntry->data);
@@ -274,16 +281,17 @@ AppendOnlyVisimapEntry_WriteData(
 	visiMapEntry->data->version = 1;
 
 	compressedBitmapSize = Bitmap_Compress(
-			BITMAP_COMPRESSION_TYPE_DEFAULT,
-			(visiMapEntry->bitmap ? visiMapEntry->bitmap->words : NULL),
-			(visiMapEntry->bitmap ? visiMapEntry->bitmap->nwords : 0),
-			visiMapEntry->data->data, 
-			bitmapSize);
+										   BITMAP_COMPRESSION_TYPE_DEFAULT,
+										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->words : NULL),
+										   (visiMapEntry->bitmap ? visiMapEntry->bitmap->nwords : 0),
+										   visiMapEntry->data->data,
+										   bitmapSize);
 	Assert(compressedBitmapSize >= BITMAP_COMPRESSION_HEADER_SIZE);
 	SET_VARSIZE(visiMapEntry->data,
-			offsetof(AppendOnlyVisimapData, data) + compressedBitmapSize);
+				offsetof(AppendOnlyVisimapData, data) + compressedBitmapSize);
 
 }
+
 /**
  * Persist the entry information to heap tuple value/nulls.
  * Should only be called after a call to AppendOnlyVisimapEntry_copyout
@@ -291,12 +299,12 @@ AppendOnlyVisimapEntry_WriteData(
  *
  * May be called when visimap entry is not updated. However, that is usually
  * wasteful.
- */ 
+ */
 void
 AppendOnlyVisimapEntry_Write(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		Datum* values,
-		bool* nulls)
+							 AppendOnlyVisimapEntry *visiMapEntry,
+							 Datum *values,
+							 bool *nulls)
 {
 	MemoryContext oldContext;
 
@@ -305,10 +313,10 @@ AppendOnlyVisimapEntry_Write(
 	Assert(nulls);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 
-	elogif (Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: write (segno, firstRowNum) = "
-			"(%d, " INT64_FORMAT ")", 
-			visiMapEntry->segmentFileNum, visiMapEntry->firstRowNum);
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: write (segno, firstRowNum) = "
+		   "(%d, " INT64_FORMAT ")",
+		   visiMapEntry->segmentFileNum, visiMapEntry->firstRowNum);
 
 	values[Anum_pg_aovisimap_segno - 1] = Int32GetDatum(visiMapEntry->segmentFileNum);
 	nulls[Anum_pg_aovisimap_segno - 1] = false;
@@ -335,10 +343,10 @@ AppendOnlyVisimapEntry_Write(
 
 /*
  * Returns true iff all entries in the visimap entry are visible.
- */ 
+ */
 static bool
 AppendOnlyVisimapEntry_AreAllVisible(
-	AppendOnlyVisimapEntry *visiMapEntry)
+									 AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
@@ -351,12 +359,12 @@ AppendOnlyVisimapEntry_AreAllVisible(
  * visibility map entry).
  *
  * Assumes that the current visibility map entry covers the row number.
- */ 
+ */
 static void
 AppendOnlyVisimapEntry_GetRownumOffset(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		int64 rowNum,
-		int64* rowNumOffset)
+									   AppendOnlyVisimapEntry *visiMapEntry,
+									   int64 rowNum,
+									   int64 *rowNumOffset)
 {
 	Assert(visiMapEntry);
 	Assert(rowNum >= 0);
@@ -379,10 +387,10 @@ AppendOnlyVisimapEntry_GetRownumOffset(
  */
 bool
 AppendOnlyVisimapEntry_CoversTuple(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		AOTupleId *tupleId)
+								   AppendOnlyVisimapEntry *visiMapEntry,
+								   AOTupleId *tupleId)
 {
-	int rowNum;
+	int			rowNum;
 
 	Assert(visiMapEntry);
 	Assert(tupleId);
@@ -391,27 +399,27 @@ AppendOnlyVisimapEntry_CoversTuple(
 	{
 		return false;
 	}
-	if (visiMapEntry->segmentFileNum != 
-			AOTupleIdGet_segmentFileNum(tupleId))
+	if (visiMapEntry->segmentFileNum !=
+		AOTupleIdGet_segmentFileNum(tupleId))
 	{
 		return false;
 	}
 	rowNum = AOTupleIdGet_rowNum(tupleId);
 	return (visiMapEntry->firstRowNum <= rowNum)
-				&& ((visiMapEntry->firstRowNum + APPENDONLY_VISIMAP_MAX_RANGE) > rowNum);
+		&& ((visiMapEntry->firstRowNum + APPENDONLY_VISIMAP_MAX_RANGE) > rowNum);
 }
 
 /*
  * Returns the matching first row number of a given
  * AO tuple id.
- */ 
+ */
 int64
 AppendOnlyVisimapEntry_GetFirstRowNum(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		AOTupleId *tupleId)
+									  AppendOnlyVisimapEntry *visiMapEntry,
+									  AOTupleId *tupleId)
 {
-	(void)visiMapEntry;
-	int rowNum;
+	(void) visiMapEntry;
+	int			rowNum;
 
 	rowNum = AOTupleIdGet_rowNum(tupleId);
 	return (rowNum / APPENDONLY_VISIMAP_MAX_RANGE) * APPENDONLY_VISIMAP_MAX_RANGE;
@@ -427,14 +435,15 @@ AppendOnlyVisimapEntry_GetFirstRowNum(
  * The final visibility also depends on other information, e.g. if the
  * original transaction has been aborted. Such information is
  * not stored in the visimap.
- */ 
+ */
 bool
 AppendOnlyVisimapEntry_IsVisible(
-        AppendOnlyVisimapEntry *visiMapEntry,
-        AOTupleId *tupleId)
+								 AppendOnlyVisimapEntry *visiMapEntry,
+								 AOTupleId *tupleId)
 {
-	int64 rowNum, rowNumOffset;
-	bool visibilityBit;
+	int64		rowNum,
+				rowNumOffset;
+	bool		visibilityBit;
 
 	Assert(visiMapEntry);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
@@ -442,44 +451,44 @@ AppendOnlyVisimapEntry_IsVisible(
 
 	rowNum = AOTupleIdGet_rowNum(tupleId);
 
-	elogif(Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: Check row visibility: "
-			"firstRowNum " INT64_FORMAT ", rowNum " INT64_FORMAT, 
-			visiMapEntry->firstRowNum, rowNum); 
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: Check row visibility: "
+		   "firstRowNum " INT64_FORMAT ", rowNum " INT64_FORMAT,
+		   visiMapEntry->firstRowNum, rowNum);
 
 	if (AppendOnlyVisimapEntry_AreAllVisible(visiMapEntry))
 	{
-		elogif(Debug_appendonly_print_visimap, LOG, 
-				"Append-only visi map entry: All entries are visibile: "
-				"(firstRowNum, rowNum) = (" INT64_FORMAT ", " INT64_FORMAT ")", 
-				visiMapEntry->firstRowNum, rowNum); 
+		elogif(Debug_appendonly_print_visimap, LOG,
+			   "Append-only visi map entry: All entries are visibile: "
+			   "(firstRowNum, rowNum) = (" INT64_FORMAT ", " INT64_FORMAT ")",
+			   visiMapEntry->firstRowNum, rowNum);
 		return true;
 	}
 	Assert(rowNum >= visiMapEntry->firstRowNum);
-	
+
 	rowNumOffset = 0;
 	AppendOnlyVisimapEntry_GetRownumOffset(visiMapEntry,
-			rowNum, &rowNumOffset);
+										   rowNum, &rowNumOffset);
 
 	visibilityBit = !bms_is_member(rowNumOffset,
-			visiMapEntry->bitmap);
+								   visiMapEntry->bitmap);
 
-	elogif(Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: (firstRowNum, rowNum, visible) = "
-			"(" INT64_FORMAT ", " INT64_FORMAT ", %d)", 
-			visiMapEntry->firstRowNum, rowNum, (int)visibilityBit); 
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: (firstRowNum, rowNum, visible) = "
+		   "(" INT64_FORMAT ", " INT64_FORMAT ", %d)",
+		   visiMapEntry->firstRowNum, rowNum, (int) visibilityBit);
 
-    return visibilityBit;
+	return visibilityBit;
 }
 
 /*
  * The minimal size (in uint32's elements) the entry array needs to have to
  * cover the given offset
- */ 
+ */
 static uint32
 AppendOnlyVisimapEntry_GetMinimalSizeToCover(int64 offset)
 {
-	uint32 minSize;
+	uint32		minSize;
 
 	Assert(offset >= 0);
 
@@ -503,13 +512,14 @@ AppendOnlyVisimapEntry_GetMinimalSizeToCover(int64 offset)
  *
  * This function is only modifying the bitmap. The caller needs to take
  * care that change is persisted.
- */ 
-HTSU_Result 
+ */
+HTSU_Result
 AppendOnlyVisimapEntry_HideTuple(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		AOTupleId *tupleId)
+								 AppendOnlyVisimapEntry *visiMapEntry,
+								 AOTupleId *tupleId)
 {
-	int64 rowNum, rowNumOffset;
+	int64		rowNum,
+				rowNumOffset;
 	MemoryContext oldContext;
 	HTSU_Result result;
 
@@ -517,33 +527,35 @@ AppendOnlyVisimapEntry_HideTuple(
 	Assert(tupleId);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 	Assert(AppendOnlyVisimapEntry_CoversTuple(visiMapEntry, tupleId));
-	
+
 	rowNum = AOTupleIdGet_rowNum(tupleId);
 
-	elogif (Debug_appendonly_print_visimap, LOG, 
-			"Append-only visi map entry: Hide tuple: "
-			"firstRowNum " INT64_FORMAT ", rowNum " INT64_FORMAT, 
-			visiMapEntry->firstRowNum, rowNum); 
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map entry: Hide tuple: "
+		   "firstRowNum " INT64_FORMAT ", rowNum " INT64_FORMAT,
+		   visiMapEntry->firstRowNum, rowNum);
 
 	rowNumOffset = 0;
 	AppendOnlyVisimapEntry_GetRownumOffset(visiMapEntry,
-				rowNum,
-				&rowNumOffset);
+										   rowNum,
+										   &rowNumOffset);
 
 	oldContext = MemoryContextSwitchTo(visiMapEntry->memoryContext);
 
-	/* enlarge the bitmap by a power of two.
-	 * this avoids the O(n*n) resizing policy of the original bitmap set */
+	/*
+	 * enlarge the bitmap by a power of two. this avoids the O(n*n) resizing
+	 * policy of the original bitmap set
+	 */
 	if (!bms_covers_member(visiMapEntry->bitmap, rowNumOffset))
-			visiMapEntry->bitmap = 
-			bms_resize(visiMapEntry->bitmap, 
-				AppendOnlyVisimapEntry_GetMinimalSizeToCover(rowNumOffset));
+		visiMapEntry->bitmap =
+			bms_resize(visiMapEntry->bitmap,
+					   AppendOnlyVisimapEntry_GetMinimalSizeToCover(rowNumOffset));
 
 	if (!bms_is_member(rowNumOffset, visiMapEntry->bitmap))
 	{
 		visiMapEntry->bitmap = bms_add_member(visiMapEntry->bitmap, rowNumOffset);
 		result = HeapTupleMayBeUpdated;
-	} 
+	}
 	else if (visiMapEntry->dirty)
 	{
 		/* The bit was already set and it was this command */
@@ -563,10 +575,10 @@ AppendOnlyVisimapEntry_HideTuple(
 
 /**
  * Returns true iff the visi map entry needs to be persisted.
- */ 
-bool 
+ */
+bool
 AppendOnlyVisimapEntry_HasChanged(
-		AppendOnlyVisimapEntry *visiMapEntry)
+								  AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 	return visiMapEntry->dirty;
@@ -576,9 +588,9 @@ AppendOnlyVisimapEntry_HasChanged(
  * Returns true iff the entry contains valid data.
  * That is either CopyOut or New has been called.
  */
-bool 
+bool
 AppendOnlyVisimapEntry_IsValid(
-		AppendOnlyVisimapEntry *visiMapEntry)
+							   AppendOnlyVisimapEntry *visiMapEntry)
 {
 	Assert(visiMapEntry);
 	return (visiMapEntry->segmentFileNum >= 0 &&
@@ -587,42 +599,43 @@ AppendOnlyVisimapEntry_IsValid(
 
 /*
  * Return the next invisible tuple id in the given visibility map.
- */ 
+ */
 bool
 AppendOnlyVisimapEntry_GetNextInvisible(
-		AppendOnlyVisimapEntry *visiMapEntry,
-		AOTupleId *tupleId)
+										AppendOnlyVisimapEntry *visiMapEntry,
+										AOTupleId *tupleId)
 {
-	int64 currentBitmapOffset, rowNum;
-	int offset;
+	int64		currentBitmapOffset,
+				rowNum;
+	int			offset;
 
 	Assert(visiMapEntry);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 	Assert(tupleId);
 
-	currentBitmapOffset = -1; /* before the first */
+	currentBitmapOffset = -1;	/* before the first */
 	if (AppendOnlyVisimapEntry_CoversTuple(
-				visiMapEntry, tupleId))
+										   visiMapEntry, tupleId))
 	{
 		AppendOnlyVisimapEntry_GetRownumOffset(
-			visiMapEntry,
-			AOTupleIdGet_rowNum(tupleId),
-			&currentBitmapOffset);
+											   visiMapEntry,
+											   AOTupleIdGet_rowNum(tupleId),
+											   &currentBitmapOffset);
 	}
 	currentBitmapOffset++;
 
 	offset = bms_first_from(visiMapEntry->bitmap,
-			currentBitmapOffset);
+							currentBitmapOffset);
 	if (offset >= 0)
 	{
 		rowNum = visiMapEntry->firstRowNum + offset;
 		AOTupleIdInit_Init(tupleId);
 		AOTupleIdInit_segmentFileNum(
-				tupleId,
-				visiMapEntry->segmentFileNum);
+									 tupleId,
+									 visiMapEntry->segmentFileNum);
 		AOTupleIdInit_rowNum(
-				tupleId,
-				rowNum);
+							 tupleId,
+							 rowNum);
 		return true;
 	}
 	else
@@ -630,4 +643,3 @@ AppendOnlyVisimapEntry_GetNextInvisible(
 		return false;
 	}
 }
-

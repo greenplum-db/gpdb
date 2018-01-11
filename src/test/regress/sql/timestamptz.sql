@@ -51,6 +51,7 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('infinity');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('epoch');
 -- Obsolete special values
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('invalid');
+INSERT INTO TIMESTAMPTZ_TBL VALUES ('undefined');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('current');
 
 -- Postgres v6.0 standard output format
@@ -102,6 +103,13 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('19970710 173201 America/New_York');
 SELECT '19970710 173201' AT TIME ZONE 'America/New_York';
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('19970710 173201 America/Does_not_exist');
 SELECT '19970710 173201' AT TIME ZONE 'America/Does_not_exist';
+
+-- Daylight saving time for timestamps beyond 32-bit time_t range.
+SELECT '20500710 173201 Europe/Helsinki'::timestamptz; -- DST
+SELECT '20500110 173201 Europe/Helsinki'::timestamptz; -- non-DST
+
+SELECT '205000-07-10 17:32:01 Europe/Helsinki'::timestamptz; -- DST
+SELECT '205000-01-10 17:32:01 Europe/Helsinki'::timestamptz; -- non-DST
 
 -- Check date conversion and date arithmetic
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('1997-06-10 18:32:01 PDT');

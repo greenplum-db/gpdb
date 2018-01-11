@@ -166,23 +166,24 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=1.9);
 ERROR:  invalid input syntax for integer: "1.9"
 -- negative: concurrency should be in [1, max_connections]
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=-1, cpu_rate_limit=10, memory_limit=10);
-ERROR:  concurrency range is [1, 'max_connections']
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10);
-ERROR:  concurrency range is [1, 'max_connections']
+ERROR:  concurrency range is [0, 'max_connections']
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_rate_limit=10, memory_limit=10);
-ERROR:  concurrency range is [1, 'max_connections']
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_rate_limit=10, memory_limit=10);
-ERROR:  concurrency range is [1, 'max_connections']
--- negative: (memory_shared_quota + memory_spill_ratio) should be in [1, 100]
---           memory_spill_ratio > 0
+ERROR:  concurrency range is [0, 'max_connections']
+
+-- memory_spill_ratio range is [0, 100]
+-- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=10, memory_spill_ratio=0);
-ERROR:  memory_spill_ratio range is [1, 100]
+CREATE
+DROP RESOURCE GROUP rg_test_group;
+DROP
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=50, memory_spill_ratio=51);
+CREATE
+DROP RESOURCE GROUP rg_test_group;
+DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=10, memory_spill_ratio=-1);
-ERROR:  memory_spill_ratio range is [1, 100]
+ERROR:  memory_spill_ratio range is [0, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=-1, memory_spill_ratio=10);
 ERROR:  memory_shared_quota range is [0, 100]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=50, memory_spill_ratio=51);
-ERROR:  The sum of memory_shared_quota (50) and memory_spill_ratio (51) exceeds 100
 
 -- positive: cpu_rate_limit & memory_limit should be in [1, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=60, memory_limit=10);
@@ -201,7 +202,11 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=1);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
--- positive: concurrency should be in [1, max_connections]
+-- positive: concurrency should be in [0, max_connections]
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_rate_limit=10, memory_limit=10);
+CREATE
+DROP RESOURCE GROUP rg_test_group;
+DROP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=10, memory_limit=10);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
@@ -234,8 +239,9 @@ DROP RESOURCE GROUP rg1_test_group;
 DROP
 DROP RESOURCE GROUP rg2_test_group;
 DROP
--- positive: (memory_shared_quota + memory_spill_ratio) should be in [1, 100]
---           memory_spill_ratio > 0
+
+-- memory_spill_ratio range is [0, 100]
+-- no limit on the sum of memory_shared_quota and memory_spill_ratio
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=0, memory_spill_ratio=1);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
@@ -261,12 +267,12 @@ CREATE
 
 -- ALTER RESOURCE GROUP SET CONCURRENCY N
 -- negative: concurrency should be in [1, max_connections]
-ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 0;
-ERROR:  concurrency limit cannot be less than 1
+ALTER RESOURCE GROUP admin_group SET CONCURRENCY 0;
+ERROR:  admin_group must have at least one concurrency
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -1;
-ERROR:  concurrency limit cannot be less than 1
+ERROR:  concurrency range is [0, 'max_connections']
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 26;
-ERROR:  concurrency limit cannot be greater than 'max_connections'
+ERROR:  concurrency range is [0, 'max_connections']
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -0.5;
 ERROR:  syntax error at or near "0.5"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -0.5;
@@ -288,6 +294,8 @@ ERROR:  syntax error at or near "'1'"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY '1';
                                                            ^
 -- positive: concurrency should be in [1, max_connections]
+ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 0;
+ALTER
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 1;
 ALTER
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 2;
@@ -302,9 +310,9 @@ ERROR:  syntax error at or near "0.1"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT -0.1;
                                                                ^
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT -1;
-ERROR:  cpu rate limit must be greater than 1
+ERROR:  cpu_rate_limit range is [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0;
-ERROR:  cpu rate limit must be greater than 1
+ERROR:  cpu_rate_limit range is [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0.7;
 ERROR:  syntax error at or near "0.7"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0.7;

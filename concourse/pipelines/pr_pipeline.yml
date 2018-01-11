@@ -3,23 +3,40 @@
 ## ======================================================================
 
 resource_types:
-  - name: pull_request_with_submodule
+  - name: pull_request
     type: docker-image
     source:
       repository: jtarchie/pr
 
 resources:
   - name: gpdb_pr
-    type: pull_request_with_submodule
+    type: pull_request
     source:
       repo: greenplum-db/gpdb
       access_token: {{gpdb-git-access-token}}
+      ignore_paths:
+      - gpdb-doc/*
+      - README*
+
+  - name: ubuntu-gpdb-dev-16
+    type: docker-image
+    source:
+      repository: pivotaldata/ubuntu-gpdb-dev
+      tag: '16.04_gcc_6_3'
 
   - name: centos-gpdb-dev-6
     type: docker-image
     source:
       repository: pivotaldata/centos-gpdb-dev
       tag: '6-gcc6.2-llvm3.7'
+
+  - name: pxf_src
+    type: git
+    source:
+      branch: {{pxf-git-branch}}
+      tag_filter: {{pxf-git-filter}}
+      private_key: {{pxf-git-key}}
+      uri: {{pxf-git-remote}}
 
   - name: gpaddon_src
     type: git
@@ -31,14 +48,16 @@ resources:
 jobs:
   - name: compile_and_test_gpdb
     public: true
-    max_in_flight: 4
+    max_in_flight: 10
     plan:
     - aggregate:
       - get: gpdb_pr
         trigger: true
         version: every
+      - get: ubuntu-gpdb-dev-16
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
+      - get: pxf_src
 
     - put: gpdb_pr
       params:
@@ -47,7 +66,7 @@ jobs:
 
     - aggregate:
       - task: compile_gpdb_open_source_centos6
-        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source.yml
+        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_centos.yml
         image: centos-gpdb-dev-6
         input_mapping:
           gpdb_src: gpdb_pr
@@ -76,12 +95,16 @@ jobs:
           TARGET_OS_VERSION: 6
           BLD_TARGETS: "clients loaders"
 
-      - task: validate_pipeline
-        file: gpdb_pr/concourse/tasks/validate_pipeline.yml
-        image: centos-gpdb-dev-6
+      - task: compile_gpdb_ubuntu16
+        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
+        image: ubuntu-gpdb-dev-16
         input_mapping:
           gpdb_src: gpdb_pr
         on_failure: *pr_failure
+        timeout: 30m
+        params:
+          BINTRAY_REMOTE: {{bintray_remote}}
+          BINTRAY_REMOTE_URL: {{bintray_remote_url}}
 
     - aggregate:
       - task: icw_planner_centos6
@@ -92,10 +115,9 @@ jobs:
           bin_gpdb: gpdb_artifacts
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-          BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
-        timeout: 1h
+        timeout: 2h
         on_failure: *pr_failure
 
       - task: icw_gporca_orca_centos6
@@ -106,9 +128,19 @@ jobs:
           bin_gpdb: gpdb_artifacts
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-          BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
+        timeout: 5h
+        on_failure: *pr_failure
+
+      - task: icw_gporca_ubuntu16
+        image: ubuntu-gpdb-dev-16
+        file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
+        input_mapping:
+          gpdb_src: gpdb_pr
+          bin_gpdb: compiled_bits_ubuntu16
+        params:
+          TEST_SUITE: "icw"
         timeout: 2h30m
         on_failure: *pr_failure
 
@@ -120,7 +152,7 @@ jobs:
           bin_gpdb: gpdb_artifacts
         params:
           TEST_OS: centos
-        timeout: 10m
+        timeout: 20m
         on_failure: *pr_failure
 
     - task: separate_qautils_files_for_rc

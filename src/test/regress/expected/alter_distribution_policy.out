@@ -597,13 +597,49 @@ select * from atsdb;
 
 -- validate parameters
 alter table atsdb set with (appendonly = ff);
-ERROR:  invalid parameter value for "appendonly": "ff"
+ERROR:  invalid value for boolean option "appendonly": ff
 alter table atsdb set with (reorganize = true);
 alter table atsdb set with (fgdfgef = asds);
 ERROR:  unrecognized parameter "fgdfgef"
 alter table atsdb set with(reorganize = true, reorganize = false) distributed
 randomly;
 ERROR:  "reorganize" specified more than once
+drop table atsdb;
+-- check distribution after dropping distribution key column.
+create table atsdb (i int, j int, t text, n numeric) distributed by (i, j);
+insert into atsdb select i, i+1, i+2, i+3 from generate_series(1, 20) i;
+alter table atsdb drop column i;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+select * from atsdb;
+ j  | t  | n  
+----+----+----
+  2 | 3  |  4
+  3 | 4  |  5
+  4 | 5  |  6
+  5 | 6  |  7
+  6 | 7  |  8
+  7 | 8  |  9
+  8 | 9  | 10
+  9 | 10 | 11
+ 10 | 11 | 12
+ 11 | 12 | 13
+ 12 | 13 | 14
+ 13 | 14 | 15
+ 14 | 15 | 16
+ 15 | 16 | 17
+ 16 | 17 | 18
+ 17 | 18 | 19
+ 18 | 19 | 20
+ 19 | 20 | 21
+ 20 | 21 | 22
+ 21 | 22 | 23
+(20 rows)
+
+select * from distcheck where rel = 'atsdb';
+ rel | attname 
+-----+---------
+(0 rows)
+
 drop table atsdb;
 -- Check that we correctly cascade for partitioned tables
 create table atsdb (i int, j int, k int) distributed by (i) partition by range(k)
@@ -1365,3 +1401,30 @@ HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQU
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+-- Altering distribution policy for subpartitioned tables
+CREATE TABLE mpp6489
+(
+	id int,
+	rank int,
+	year date,
+	gender char(1)
+)
+DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+subpartition by range (year)
+subpartition template
+(
+	start (date '2001-01-01'),
+	start (date '2002-01-01'),
+	start (date '2003-01-01'),
+	start (date '2004-01-01'),
+	start (date '2005-01-01')
+)
+(
+	values ('M'),
+	values ('F')
+);
+ALTER TABLE mpp6489_1_prt_1_2_prt_5 set distributed randomly;
+ALTER TABLE "mpp6489" ALTER PARTITION FOR('M'::bpchar) alter PARTITION
+FOR(RANK(5)) set distributed by (id, gender, year);
+NOTICE:  altering table "mpp6489_1_prt_1_2_prt_5" (partition for rank 5 of partition for value ('M'::bpchar) of relation "mpp6489")

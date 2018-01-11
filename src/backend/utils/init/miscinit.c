@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.166.2.2 2010/08/16 17:33:07 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.175 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -406,7 +406,7 @@ GetAuthenticatedUserId(void)
  * ever throw any kind of error.  This is because they are used by
  * StartTransaction and AbortTransaction to save/restore the settings,
  * and during the first transaction within a backend, the value to be saved
- * and perhaps restored is indeed invalid.  We have to be able to get
+ * and perhaps restored is indeed invalid.	We have to be able to get
  * through AbortTransaction without asserting in case InitPostgres fails.
  */
 void
@@ -977,8 +977,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 										id1, id2),
 								 errhint("If you're sure there are no old "
 									"server processes still running, remove "
-										 "the shared memory block with "
-									  "the command \"ipcclean\", \"ipcrm\", "
+										 "the shared memory block "
 										 "or just delete the file \"%s\".",
 										 filename)));
 				}

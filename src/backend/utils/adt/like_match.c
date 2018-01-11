@@ -16,10 +16,10 @@
  * do_like_escape - name of function if wanted - needs CHAREQ and CopyAdvChar
  * MATCH_LOWER - define for case (4), using to_lower on single-byte chars
  *
- * Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	$PostgreSQL: pgsql/src/backend/utils/adt/like_match.c,v 1.20.2.4 2010/05/28 17:35:36 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/utils/adt/like_match.c,v 1.26 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,7 +96,12 @@ MatchText(char *t, int tlen, char *p, int plen)
 		{
 			/* Next pattern byte must match literally, whatever it is */
 			NextByte(p, plen);
-			if (plen <= 0 || GETCHAR(*p) != GETCHAR(*t))
+			/* ... and there had better be one, per SQL standard */
+			if (plen <= 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_ESCAPE_SEQUENCE),
+				 errmsg("LIKE pattern must not end with escape character")));
+			if (GETCHAR(*p) != GETCHAR(*t))
 				return LIKE_FALSE;
 		}
 		else if (*p == '%')

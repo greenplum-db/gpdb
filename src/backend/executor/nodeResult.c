@@ -35,11 +35,12 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.42 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.43 2009/01/01 17:23:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -93,7 +94,6 @@ static TupleTableSlot *NextInputSlot(ResultState *node)
 		 */
 		ResetExprContext(econtext);
 
-		node->ps.ps_OuterTupleSlot = candidateInputSlot;
 		econtext->ecxt_outertuple = candidateInputSlot;
 
 		/**
@@ -191,7 +191,6 @@ ExecResult(ResultState *node)
 			 */
 			ResetExprContext(econtext);
 
-			node->ps.ps_OuterTupleSlot = inputSlot;
 			econtext->ecxt_outertuple = inputSlot;
 
 			ExprDoneCond isDone;
@@ -265,8 +264,6 @@ static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlo
 	{
 		Assert(resultNode->hashFilter);
 		ListCell	*cell = NULL;
-
-		Assert(list_length(resultNode->hashList) <= resultSlot->tts_tupleDescriptor->natts);
 
 		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
 		cdbhashinit(hash);
@@ -350,7 +347,6 @@ ExecResultRestrPos(ResultState *node)
 		elog(ERROR, "Result nodes do not support mark/restore");
 }
 
-
 /* ----------------------------------------------------------------
  *		ExecInitResult
  *
@@ -430,8 +426,6 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 		SPI_ReserveMemory(((Plan *)node)->operatorMemKB * 1024L);
 	}
 
-	initGpmonPktForResult((Plan *)node, &resstate->ps.gpmon_pkt, estate);
-
 	return resstate;
 }
 
@@ -485,12 +479,4 @@ ExecReScanResult(ResultState *node, ExprContext *exprCtxt)
 	if (node->ps.lefttree &&
 		(node->ps.lefttree->chgParam == NULL || exprCtxt != NULL))
 		ExecReScan(node->ps.lefttree, exprCtxt);
-}
-
-void
-initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Result));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

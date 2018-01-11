@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import os
 import subprocess
 import re
 import multiprocessing
+import tempfile
 import time
 import sys
 import socket
@@ -56,7 +57,7 @@ class SQLIsolationExecutor(object):
 
         def session_process(self, pipe):
             sp = SQLIsolationExecutor.SQLSessionProcess(self.name, 
-                self.utility_mode, self.out_file.name, pipe, self.dbname)
+                self.utility_mode, pipe, self.dbname)
             sp.do()
 
         def query(self, command):
@@ -80,12 +81,15 @@ class SQLIsolationExecutor(object):
             if blocking:
                 time.sleep(0.5)
                 if self.pipe.poll(0):
-                    raise Exception("Forked command is not blocking")
+                    p = self.pipe.recv()
+                    raise Exception("Forked command is not blocking; got output: %s" % p.strip())
             self.has_open = True
 
         def join(self):
+            r = None
             print >>self.out_file, " <... completed>"
-            r = self.pipe.recv()
+            if self.has_open:
+                r = self.pipe.recv()
             if r is None:
                 raise Exception("Execution failed")
             print >>self.out_file, r.strip()
@@ -106,7 +110,7 @@ class SQLIsolationExecutor(object):
             self.p.terminate()
 
     class SQLSessionProcess(object):
-        def __init__(self, name, utility_mode, output_file, pipe, dbname):
+        def __init__(self, name, utility_mode, pipe, dbname):
             """
                 Constructor
             """
@@ -122,7 +126,6 @@ class SQLIsolationExecutor(object):
                     dbname=self.dbname)
             else:
                 self.con = pygresql.pg.connect(dbname=self.dbname)
-            self.filename = "%s.%s" % (output_file, os.getpid())
 
         def get_utility_mode_port(self, name):
             """
@@ -144,12 +147,15 @@ class SQLIsolationExecutor(object):
                 The reason is that for some python internal reason  
                 print(r) calls the correct function while neighter str(r)
                 nor repr(r) output something useful. 
-            """
-            with open(self.filename, "w") as f:
-                print >>f, r,
-                f.flush()   
 
-            with open(self.filename, "r") as f:
+                FIXME: once we upgrade to a modern pygresql this can probably go
+                away entirely; it looks like 5.0 may have consolidated the
+                internal print/str code.
+            """
+            with tempfile.TemporaryFile() as f:
+                print >>f, r
+
+                f.seek(0) # rewind
                 ppr = f.read()
                 return ppr.strip() + "\n"
 
@@ -185,9 +191,6 @@ class SQLIsolationExecutor(object):
 
                 (c, wait) = self.pipe.recv()
 
-            if os.path.exists(self.filename):
-                os.unlink(self.filename)
-
     def get_process(self, out_file, name, utility_mode=False, dbname=""):
         """
             Gets or creates the process by the given name
@@ -216,7 +219,7 @@ class SQLIsolationExecutor(object):
             raise Exception("Sessions not started cannot be quit")
 
         self.processes[(name, utility_mode)].quit()
-        del self.processes[(name, False)]
+        del self.processes[(name, utility_mode)]
 
     def process_command(self, command, output_file):
         """
@@ -263,6 +266,10 @@ class SQLIsolationExecutor(object):
             if len(sql) > 0:
                 raise Exception("No query should be given on join")
             self.get_process(output_file, process_name, dbname=dbname).join()
+        elif flag == "q":
+            if len(sql) > 0:
+                raise Exception("No query should be given on quit")
+            self.quit_process(output_file, process_name, dbname=dbname)
         elif flag == "U":
             self.get_process(output_file, process_name, utility_mode=True, dbname=dbname).query(sql.strip())
         elif flag == "U&":
@@ -271,10 +278,10 @@ class SQLIsolationExecutor(object):
             if len(sql) > 0:
                 raise Exception("No query should be given on join")
             self.get_process(output_file, process_name, utility_mode=True, dbname=dbname).join()
-        elif flag == "q":
+        elif flag == "Uq":
             if len(sql) > 0:
                 raise Exception("No query should be given on quit")
-            self.quit_process(output_file, process_name, dbname=dbname)
+            self.quit_process(output_file, process_name, utility_mode=True, dbname=dbname)
         else:
             raise Exception("Invalid isolation flag")
 
@@ -288,10 +295,13 @@ class SQLIsolationExecutor(object):
             for line in sql_file:
                 #tinctest.logger.info("re.match: %s" %re.match(r"^\d+[q\\<]:$", line))
                 print >>output_file, line.strip(),
-                (command_part, dummy, comment) = line.partition("--")
+                if line[0] == "!":
+                    command_part = line # shell commands can use -- for multichar options like --include
+                else:
+                    command_part = line.partition("--")[0] # remove comment from line
                 if command_part == "" or command_part == "\n":
                     print >>output_file 
-                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^\d+U[\\<]:$", line):
+                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^\d+U[q\\<]:$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file)

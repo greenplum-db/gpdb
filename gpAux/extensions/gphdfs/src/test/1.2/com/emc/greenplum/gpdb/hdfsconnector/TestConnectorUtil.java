@@ -90,7 +90,8 @@ public class TestConnectorUtil  {
 	 */
 	@AfterClass
 	public static void teardownAfterClass() throws Exception {
-		cluster.shutdown();
+		if (cluster != null)
+			cluster.shutdown();
 	}
 
 	/*

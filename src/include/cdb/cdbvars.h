@@ -3,7 +3,12 @@
  * cdbvars.h
  *	  definitions for Greenplum-specific global variables
  *
- * Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbvars.h
  *
  * NOTES
  *	  See src/backend/utils/misc/guc_gp.c for variable external specification.
@@ -313,9 +318,6 @@ extern bool gp_fts_probe_pause;
 
 extern int gp_fts_transition_retries;
 extern int gp_fts_transition_timeout;
-
-extern bool gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source);
-
 
 /*
  * Parameter gp_connections_per_thread
@@ -646,13 +648,6 @@ extern int gp_hashjoin_tuples_per_bucket;
 extern int gp_hashagg_groups_per_bucket;
 
 /*
- * Capping the amount of memory used for metadata (buckets and batches pointers)
- * for spilling HashJoins. This is in addition to the operator memory quota,
- * which is used only for storing tuples (MPP-22417)
- */
-extern int gp_hashjoin_metadata_memory_percent;
-
-/*
  * Damping of selectivities of clauses which pertain to the same base
  * relation; compensates for undetected correlation
  */
@@ -776,14 +771,6 @@ extern bool gp_enable_preunique;
  */
 extern bool gp_eager_preunique;
 
-/* May Greenplum use sequential window plans instead of parallel window
- * plans? (OLAP Experimental.)
- *
- * The code does not currently use planner estimates for this.  If enabled,
- * the tactic is used whenever possible.
- */
-extern bool gp_enable_sequential_window_plans;
-
 /* May Greenplum dump statistics for all segments as a huge ugly string
  * during EXPLAIN ANALYZE?
  *
@@ -829,10 +816,6 @@ extern int gp_sort_flags;
  */
 extern int gp_sort_max_distinct;
 
-/* turn the hash partitioned tables on */
-
-extern bool	gp_enable_hash_partitioned_tables;
-
 /**
  * Enable dynamic pruning of partitions based on join condition.
  */
@@ -872,9 +855,6 @@ extern bool gp_hashagg_streambottom;
  */
 extern int gp_hashagg_default_nbatches;
 
-/* Hashjoin use bloom filter */
-extern int gp_hashjoin_bloomfilter;
-
 /* Get statistics for partitioned parent from a child */
 extern bool 	gp_statistics_pullup_from_child_partition;
 
@@ -888,9 +868,6 @@ extern double	gp_statistics_sampling_threshold;
 
 /* Analyze tools */
 extern int gp_motion_slice_noop;
-#ifdef ENABLE_LTRACE
-extern int gp_ltrace_flag;
-#endif
 
 /* Disable setting of hint-bits while reading db pages */
 extern bool gp_disable_tuple_hints;
@@ -1046,8 +1023,6 @@ extern const char *gpvars_assign_gp_resource_manager_policy(const char *newval, 
 
 extern const char *gpvars_show_gp_resource_manager_policy(void);
 
-extern bool gpvars_assign_max_resource_groups(int newval, bool doit, GucSource source __attribute__((unused)));
-
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
@@ -1059,11 +1034,6 @@ extern const char *gpvars_show_gp_resgroup_memory_policy(void);
 extern bool gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern void increment_command_count(void);
-
-/*
- * switch to control inverse distribution function strategy.
- */
-extern char *gp_idf_deduplicate_str;
 
 /* default to RANDOM distribution for CREATE TABLE without DISTRIBUTED BY */
 extern bool gp_create_table_random_default_distribution;

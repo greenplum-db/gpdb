@@ -4,32 +4,31 @@
 <topic id="topic43">
    <title>Using a Custom Protocol</title>
    <body>
-      <p>Greenplum provides protocols such as
-            <cmdname>gpfdist</cmdname>, <codeph>http</codeph>, and <codeph>file</codeph> for
-         accessing data over a network, or you can author a custom protocol. You can use the
-         standard data formats, <codeph>TEXT</codeph> and <codeph>CSV</codeph>, or a custom data
-         format with custom protocols.</p>
+      <p>Greenplum Database provides protocols such as <cmdname>gpfdist</cmdname>,
+            <codeph>http</codeph>, and <codeph>file</codeph> for accessing data over a network, or
+         you can author a custom protocol. You can use the standard data formats,
+            <codeph>TEXT</codeph> and <codeph>CSV</codeph>, or a custom data format with custom
+         protocols.</p>
       <p>You can create a custom protocol whenever the available built-in protocols do not suffice
-         for a particular need. For example, if you need to connect Greenplum Database
-         in parallel to another system directly, and stream data from one to the other without the
-         need to materialize the system data on disk or use an intermdiate process such as
-            <cmdname>gpfdist</cmdname>. </p>
+         for a particular need. For example, you could connect Greenplum Database in parallel to another
+         system directly, and stream data from one to the other without the need to materialize the
+         data on disk or use an intermediate process such as <cmdname>gpfdist</cmdname>. </p>
       <ol>
          <li id="du226058">Author the send, receive, and (optionally) validator functions in C, with
-            a predefined API. These functions are compiled and registered with the Greenplum Database. For an example custom protocol, see <xref
+            a predefined API. These functions are compiled and registered with the Greenplum
+            Database. For an example custom protocol, see <xref
                href="g-example-custom-data-access-protocol.xml#topic103"/>. </li>
          <li id="du226065">After writing and compiling the read and write functions into a shared
             object (.so), declare a database function that points to the .so file and function
-            names. <p>The following examples use the compiled import and export code.</p>
-            <codeblock>CREATE FUNCTION myread() RETURNS integer
+            names. <p>The following examples use the compiled import and export
+               code.</p><codeblock>CREATE FUNCTION myread() RETURNS integer
 as '$libdir/gpextprotocol.so', 'myprot_import'
 LANGUAGE C STABLE;
 CREATE FUNCTION mywrite() RETURNS integer
 as '$libdir/gpextprotocol.so', 'myprot_export'
 LANGUAGE C STABLE;
-</codeblock>
-            <p>The format of the optional function is:</p>
-            <p>
+</codeblock><p>The
+               format of the optional validator function is:</p><p>
                <codeblock>CREATE OR REPLACE FUNCTION myvalidate() RETURNS void 
 AS '$libdir/gpextprotocol.so', 'myprot_validate' 
 LANGUAGE C STABLE; 
@@ -44,7 +43,7 @@ readfunc='myread',
 validatorfunc='myvalidate');</codeblock>
          </li>
          <li id="du226083">Grant access to any other users, as
-            necessary.<codeblock>GRANT ALL ON PROTOCOL myprot TO otheruser
+            necessary.<codeblock>GRANT ALL ON PROTOCOL myprot TO otheruser;
 </codeblock>
          </li>
          <li id="du226085">Use the protocol in readable or writable external tables.<p>
@@ -58,25 +57,18 @@ FORMAT 'TEXT';
             </p>
          </li>
       </ol>
-      <p>Declare custom protocols with the SQL command <codeph>CREATE TRUSTED PROTOCOL,</codeph>
+      <p>Declare custom protocols with the SQL command <codeph>CREATE TRUSTED PROTOCOL</codeph>,
          then use the <codeph>GRANT</codeph> command to grant access to your users. For example:</p>
       <ul>
-         <li id="du201414">Allow a user to create a readable external table with a trusted protocol<p>
-               <codeblock>GRANT SELECT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>
-               </codeblock>
-            </p>
+         <li id="du201414">Allow a user to create a readable external table with a trusted
+            protocol<codeblock>GRANT SELECT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
          </li>
-         <li id="du201461">Allow a user to create a writable external table with a trusted protocol<p>
-               <codeblock>GRANT INSERT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO<i> &lt;user name&gt;</i>
-               </codeblock>
-            </p>
+         <li id="du201461">Allow a user to create a writable external table with a trusted
+            protocol<codeblock>GRANT INSERT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
          </li>
          <li id="du201474">Allow a user to create readable and writable external tables with a
-            trusted protocol<p>
-               <codeblock>GRANT ALL ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;
-</i>
-               </codeblock>
-            </p>
+            trusted
+            protocol<codeblock>GRANT ALL ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
          </li>
       </ul>
    </body>

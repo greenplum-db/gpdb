@@ -49,12 +49,14 @@ CREATE OR REPLACE VIEW viewtest AS
 CREATE OR REPLACE VIEW viewtest AS
 	SELECT * FROM viewtest_tbl WHERE a > 10;
 
-SELECT * FROM viewtest ORDER BY 1;
+SELECT * FROM viewtest;
 
 CREATE OR REPLACE VIEW viewtest AS
 	SELECT a, b FROM viewtest_tbl WHERE a > 5 ORDER BY b DESC;
 
-SELECT * FROM viewtest ORDER BY 1,2;
+-- GPDB_84_MERGE_FIXME: If the rows come out in wrong order from the
+-- view, does gpdiff mask that problem?
+SELECT * FROM viewtest;
 
 -- should fail
 CREATE OR REPLACE VIEW viewtest AS
@@ -67,6 +69,10 @@ CREATE OR REPLACE VIEW viewtest AS
 -- should fail
 CREATE OR REPLACE VIEW viewtest AS
 	SELECT a, b::numeric FROM viewtest_tbl;
+
+-- should work 
+CREATE OR REPLACE VIEW viewtest AS
+	SELECT a, b, 0 AS c FROM viewtest_tbl;
 
 DROP VIEW viewtest;
 DROP TABLE viewtest_tbl;

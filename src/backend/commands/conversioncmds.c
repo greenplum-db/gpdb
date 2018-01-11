@@ -3,12 +3,12 @@
  * conversioncmds.c
  *	  conversion creation command support code
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/conversioncmds.c,v 1.32.2.1 2009/02/27 16:35:31 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/conversioncmds.c,v 1.39 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "catalog/indexing.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_conversion.h"
+#include "catalog/pg_conversion_fn.h"
 #include "catalog/pg_type.h"
 #include "commands/alter.h"
 #include "commands/conversioncmds.h"
@@ -28,6 +29,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -90,8 +92,8 @@ CreateConversionCommand(CreateConversionStmt *stmt)
 	if (get_func_rettype(funcoid) != VOIDOID)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("encoding conversion function %s must return type \"void\"",
-						NameListToString(func_name))));
+		  errmsg("encoding conversion function %s must return type \"void\"",
+				 NameListToString(func_name))));
 
 	/* Check we have EXECUTE rights for the function */
 	aclresult = pg_proc_aclcheck(funcoid, GetUserId(), ACL_EXECUTE);
@@ -100,10 +102,10 @@ CreateConversionCommand(CreateConversionStmt *stmt)
 					   NameListToString(func_name));
 
 	/*
-	 * Check that the conversion function is suitable for the requested
-	 * source and target encodings. We do that by calling the function with
-	 * an empty string; the conversion function should throw an error if it
-	 * can't perform the requested conversion.
+	 * Check that the conversion function is suitable for the requested source
+	 * and target encodings. We do that by calling the function with an empty
+	 * string; the conversion function should throw an error if it can't
+	 * perform the requested conversion.
 	 */
 	OidFunctionCall5(funcoid,
 					 Int32GetDatum(from_encoding),
@@ -134,33 +136,74 @@ CreateConversionCommand(CreateConversionStmt *stmt)
  * DROP CONVERSION
  */
 void
-DropConversionCommand(List *name, DropBehavior behavior, bool missing_ok)
+DropConversionsCommand(DropStmt *drop)
 {
-	Oid			conversionOid;
+	ObjectAddresses *objects;
+	ListCell   *cell;
 
-	conversionOid = get_conversion_oid(name, missing_ok);
-	if (!OidIsValid(conversionOid))
+	/*
+	 * First we identify all the conversions, then we delete them in a single
+	 * performMultipleDeletions() call.  This is to avoid unwanted DROP
+	 * RESTRICT errors if one of the conversions depends on another. (Not that
+	 * that is very likely, but we may as well do this consistently.)
+	 */
+	objects = new_object_addresses();
+
+	foreach(cell, drop->objects)
 	{
-		if (!missing_ok)
+		List	   *name = (List *) lfirst(cell);
+		Oid			conversionOid;
+		HeapTuple	tuple;
+		Form_pg_conversion con;
+		ObjectAddress object;
+
+		conversionOid = get_conversion_oid(name, drop->missing_ok);
+
+		if (!OidIsValid(conversionOid))
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("conversion \"%s\" does not exist",
-							NameListToString(name))));
-		}
-		else
-		{
-			if (Gp_role != GP_ROLE_EXECUTE)
-			ereport(NOTICE,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("conversion \"%s\" does not exist, skipping",
-							NameListToString(name))));
+			if (!drop->missing_ok)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("conversion \"%s\" does not exist",
+								NameListToString(name))));
+			}
+			else
+			{
+				if (Gp_role != GP_ROLE_EXECUTE)
+					ereport(NOTICE,
+							(errmsg("conversion \"%s\" does not exist, skipping",
+									NameListToString(name))));
+			}
+			continue;
 		}
 
-		return;
+		tuple = SearchSysCache(CONVOID,
+							   ObjectIdGetDatum(conversionOid),
+							   0, 0, 0);
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for conversion %u",
+				 conversionOid);
+		con = (Form_pg_conversion) GETSTRUCT(tuple);
+
+		/* Permission check: must own conversion or its namespace */
+		if (!pg_conversion_ownercheck(conversionOid, GetUserId()) &&
+			!pg_namespace_ownercheck(con->connamespace, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CONVERSION,
+						   NameStr(con->conname));
+
+		object.classId = ConversionRelationId;
+		object.objectId = conversionOid;
+		object.objectSubId = 0;
+
+		add_exact_object_address(&object, objects);
+
+		ReleaseSysCache(tuple);
 	}
 
-	ConversionDrop(conversionOid, behavior);
+	performMultipleDeletions(objects, drop->behavior);
+
+	free_object_addresses(objects);
 }
 
 /*

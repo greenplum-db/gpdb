@@ -8,11 +8,11 @@
  *	  This file contains only the public interface routines.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtree.c,v 1.156.2.2 2008/11/13 17:42:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtree.c,v 1.171 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,10 +20,14 @@
 
 #include "access/genam.h"
 #include "access/nbtree.h"
+#include "access/relscan.h"
 #include "catalog/index.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/storage.h"
 #include "commands/vacuum.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/indexfsm.h"
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
@@ -55,9 +59,7 @@ typedef struct
 	IndexBulkDeleteCallback callback;
 	void	   *callback_state;
 	BTCycleId	cycleid;
-	BlockNumber *freePages;
-	int			nFreePages;		/* number of entries in freePages[] */
-	int			maxFreePages;	/* allocated size of freePages[] */
+	BlockNumber lastUsedPage;
 	BlockNumber totFreePages;	/* true total # of free pages */
 	MemoryContext pagedelcontext;
 } BTVacState;
@@ -123,7 +125,7 @@ btbuild(PG_FUNCTION_ARGS)
 		buildstate.spool2 = _bt_spoolinit(index, false, true);
 
 	/* do the heap scan */
-	reltuples = IndexBuildScan(heap, index, indexInfo, false,
+	reltuples = IndexBuildScan(heap, index, indexInfo, true,
 								   btbuildCallback, (void *) &buildstate);
 
 	/* okay, all heap tuples are indexed */
@@ -274,8 +276,27 @@ _bt_validate_vacuum(Relation irel, Relation hrel, TransactionId oldest_xmin)
 				 * also allow validating if a heap tid appears twice
 				 * in a unique index.
 				 */
-				if (!heap_release_fetch(hrel, SnapshotAny, &htup,
-										&hbuf, true, NULL))
+				/* GPDB_84_MERGE_FIXME:
+				 * This used to use the heap_release_fetch() function, but it
+				 * was removed in the upstream, as there were no remaining
+				 * calls to it in the upstream. I replaced it with
+				 * ReleaseBuffer() + heap_fetch(). That's functionally the
+				 * same, but it loses the performance advantage of the
+				 * combined heap_release_fetch() call. If you're running with
+				 * gp_indexcheck_vacuum, I hope you're not in a hurry!
+				 *
+				 * But it might be prudent to check how significant the
+				 * performance hit is in practice, and refactor if needed.
+				 * I wonder if we really need to use heap_fetch() here.
+				 * I think a simple ReadBuffer() + PageGetItem() would be
+				 * appropriate here.
+				 *
+				 * Or we could do the TID bitmap thing mentioned in above TODO
+				 * comment.
+				 */
+				if (hbuf != InvalidBuffer)
+					ReleaseBuffer(hbuf);
+				if (!heap_fetch(hrel, SnapshotAny, &htup, &hbuf, true, NULL))
 				{
 					elog(ERROR, "btvalidatevacuum: tid (%d,%d) from index %s "
 						 "not found in heap %s",
@@ -501,6 +522,8 @@ btgettuple(PG_FUNCTION_ARGS)
 	bool		res;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
+	/* btree indexes are never lossy */
+	scan->xs_recheck = false;
 
 	/*
 	 * If we've already initialized this scan, we can just advance it in the
@@ -543,69 +566,77 @@ btgettuple(PG_FUNCTION_ARGS)
 }
 
 /*
- * btgetmulti() -- construct a HashBitmap.
+ * btgetbitmap() -- construct a TIDBitmap.
  */
 Datum
-btgetmulti(PG_FUNCTION_ARGS)
+btgetbitmap(PG_FUNCTION_ARGS)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node *n = (Node *)PG_GETARG_POINTER(1);
-	HashBitmap	*hashBitmap;
-
+	Node	   *n = (Node *) PG_GETARG_POINTER(1);
+	TIDBitmap  *tbm;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
-	bool		res = true;
+	int64		ntids = 0;
+	ItemPointer heapTid;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
 	if (n == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
-		hashBitmap = tbm_create(work_mem * 1024L);
+		tbm = tbm_create(work_mem * 1024L);
 	}
-	else if (!IsA(n, HashBitmap))
+	else if (!IsA(n, TIDBitmap))
 	{
 		elog(ERROR, "non hash bitmap");
 	}
 	else
 	{
-		hashBitmap = (HashBitmap *)n;
+		tbm = (TIDBitmap *)n;
 	}
+
 	/* If we haven't started the scan yet, fetch the first page & tuple. */
 	if (!BTScanPosIsValid(so->currPos))
 	{
-		res = _bt_first(scan, ForwardScanDirection);
-		if (res)
+		/* Fetch the first page & tuple. */
+		if (_bt_first(scan, ForwardScanDirection))
 		{
 			/* Save tuple ID, and continue scanning */
-			tbm_add_tuples(hashBitmap, &(scan->xs_ctup.t_self), 1);
+			heapTid = &scan->xs_ctup.t_self;
+			tbm_add_tuples(tbm, heapTid, 1, false);
+			ntids++;
+		}
+		else
+		{
+			MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
+
+			PG_RETURN_POINTER(tbm);
 		}
 	}
 
-	while (res)
+	for (;;)
 	{
 		/*
-		 * Advance to next tuple within page.  This is the same as the
-		 * easy case in _bt_next().
+		 * Advance to next tuple within page.  This is the same as the easy
+		 * case in _bt_next().
 		 */
 		if (++so->currPos.itemIndex > so->currPos.lastItem)
 		{
 			/* let _bt_next do the heavy lifting */
-			res = _bt_next(scan, ForwardScanDirection);
-			if (!res)
+			if (!_bt_next(scan, ForwardScanDirection))
 				break;
 		}
 
 		/* Save tuple ID, and continue scanning */
-		tbm_add_tuples(hashBitmap,
-					   &(so->currPos.items[so->currPos.itemIndex].heapTid),
-					   1);
+		heapTid = &so->currPos.items[so->currPos.itemIndex].heapTid;
+		tbm_add_tuples(tbm, heapTid, 1, false);
+		ntids++;
 	}
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
 
-	PG_RETURN_POINTER(hashBitmap);
+	PG_RETURN_POINTER(tbm);
 }
 
 /*
@@ -877,6 +908,10 @@ btvacuumcleanup(PG_FUNCTION_ARGS)
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
+	/* No-op in ANALYZE ONLY mode */
+	if (info->analyze_only)
+		PG_RETURN_POINTER(stats);
+
 	/*
 	 * If btbulkdelete was called, we need not do anything, just return the
 	 * stats from the latest btbulkdelete call.  If it wasn't called, we must
@@ -892,13 +927,16 @@ btvacuumcleanup(PG_FUNCTION_ARGS)
 		btvacuumscan(info, stats, NULL, NULL, 0);
 	}
 
+	/* Finally, vacuum the FSM */
+	IndexFreeSpaceMapVacuum(info->index);
+
 	/*
 	 * During a non-FULL vacuum it's quite possible for us to be fooled by
 	 * concurrent page splits into double-counting some index tuples, so
-	 * disbelieve any total that exceeds the underlying heap's count. (We
-	 * can't check this during btbulkdelete.)
+	 * disbelieve any total that exceeds the underlying heap's count ... if we
+	 * know that accurately.  Otherwise this might just make matters worse.
 	 */
-	if (!info->vacuum_full)
+	if (!info->vacuum_full && !info->estimated_count)
 	{
 		if (stats->num_index_tuples > info->num_heap_tuples)
 			stats->num_index_tuples = info->num_heap_tuples;
@@ -940,6 +978,7 @@ btvacuumscan(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 	 * Reset counts that will be incremented during the scan; needed in case
 	 * of multiple scans during a single VACUUM command
 	 */
+	stats->estimated_count = false;
 	stats->num_index_tuples = 0;
 	stats->pages_deleted = 0;
 
@@ -949,9 +988,7 @@ btvacuumscan(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 	vstate.callback = callback;
 	vstate.callback_state = callback_state;
 	vstate.cycleid = cycleid;
-	vstate.freePages = NULL;	/* temporarily */
-	vstate.nFreePages = 0;
-	vstate.maxFreePages = 0;
+	vstate.lastUsedPage = BTREE_METAPAGE;
 	vstate.totFreePages = 0;
 
 	/* Create a temporary memory context to run _bt_pagedel in */
@@ -996,17 +1033,6 @@ btvacuumscan(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 		if (needLock)
 			UnlockRelationForExtension(rel, ExclusiveLock);
 
-		/* Allocate freePages after we read num_pages the first time */
-		if (vstate.freePages == NULL)
-		{
-			/* No point in remembering more than MaxFSMPages pages */
-			vstate.maxFreePages = MaxFSMPages;
-			if ((BlockNumber) vstate.maxFreePages > num_pages)
-				vstate.maxFreePages = (int) num_pages;
-			vstate.freePages = (BlockNumber *)
-				palloc(vstate.maxFreePages * sizeof(BlockNumber));
-		}
-
 		/* Quit if we've scanned the whole relation */
 		if (blkno >= num_pages)
 			break;
@@ -1023,42 +1049,21 @@ btvacuumscan(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 	 * acquiring exclusive lock on the index and then rechecking all the
 	 * pages; doesn't seem worth it.
 	 */
-	if (info->vacuum_full && vstate.nFreePages > 0)
+	if (info->vacuum_full && vstate.lastUsedPage < num_pages - 1)
 	{
-		BlockNumber new_pages = num_pages;
+		BlockNumber new_pages = vstate.lastUsedPage + 1;
 
-		while (vstate.nFreePages > 0 &&
-			   vstate.freePages[vstate.nFreePages - 1] == new_pages - 1)
-		{
-			new_pages--;
-			stats->pages_deleted--;
-			vstate.nFreePages--;
-			vstate.totFreePages = vstate.nFreePages;	/* can't be more */
-		}
-		if (new_pages != num_pages)
-		{
-			/*
-			 * Okay to truncate.
-			 */
-			RelationTruncate(rel, new_pages,
-							 /* markPersistentAsPhysicallyTruncated */ true);
+		/*
+		 * Okay to truncate.
+		 */
+		RelationTruncate(rel, new_pages,
+						 /* markPersistentAsPhysicallyTruncated */ true);
 
-			/* update statistics */
-			stats->pages_removed += num_pages - new_pages;
-
-			num_pages = new_pages;
-		}
+		/* update statistics */
+		stats->pages_removed += num_pages - new_pages;
+		vstate.totFreePages -= (num_pages - new_pages);
+		num_pages = new_pages;
 	}
-
-	/*
-	 * Update the shared Free Space Map with the info we now have about free
-	 * pages in the index, discarding any old info the map may have. We do not
-	 * need to sort the page numbers; they're in order already.
-	 */
-	RecordIndexFreeSpace(&rel->rd_node, vstate.totFreePages,
-						 vstate.nFreePages, vstate.freePages);
-
-	pfree(vstate.freePages);
 
 	MemoryContextDelete(vstate.pagedelcontext);
 
@@ -1113,7 +1118,8 @@ restart:
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buf = ReadBufferWithStrategy(rel, blkno, info->strategy);
+	buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_NORMAL,
+							 info->strategy);
 	LockBuffer(buf, BT_READ);
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -1123,8 +1129,7 @@ restart:
 	/*
 	 * If we are recursing, the only case we want to do anything with is a
 	 * live leaf page having the current vacuum cycle ID.  Any other state
-	 * implies we already saw the page (eg, deleted it as being empty). In
-	 * particular, we don't want to risk adding it to freePages twice.
+	 * implies we already saw the page (eg, deleted it as being empty).
 	 */
 	if (blkno != orig_blkno)
 	{
@@ -1142,12 +1147,15 @@ restart:
 		}
 	}
 
+	/* If the page is in use, update lastUsedPage */
+	if (!_bt_page_recyclable(page) && vstate->lastUsedPage < blkno)
+		vstate->lastUsedPage = blkno;
+
 	/* Page is valid, see what to do with it */
 	if (_bt_page_recyclable(page))
 	{
 		/* Okay to recycle this page */
-		if (vstate->nFreePages < vstate->maxFreePages)
-			vstate->freePages[vstate->nFreePages++] = blkno;
+		RecordFreeIndexPage(rel, blkno);
 		vstate->totFreePages++;
 		stats->pages_deleted++;
 	}
@@ -1283,8 +1291,7 @@ restart:
 		 */
 		if (ndel && info->vacuum_full)
 		{
-			if (vstate->nFreePages < vstate->maxFreePages)
-				vstate->freePages[vstate->nFreePages++] = blkno;
+			RecordFreeIndexPage(rel, blkno);
 			vstate->totFreePages++;
 		}
 

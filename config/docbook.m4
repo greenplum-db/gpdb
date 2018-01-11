@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/config/docbook.m4,v 1.8 2007/08/09 02:33:58 tgl Exp $
+# $PostgreSQL: pgsql/config/docbook.m4,v 1.10 2008/11/26 11:26:54 petere Exp $
 
 # PGAC_PROG_JADE
 # --------------
@@ -55,7 +55,7 @@ AC_CACHE_VAL([pgac_cv_path_stylesheets],
 [if test -n "$DOCBOOKSTYLE"; then
   pgac_cv_path_stylesheets=$DOCBOOKSTYLE
 else
-  for pgac_prefix in /usr /usr/local /opt; do
+  for pgac_prefix in /usr /usr/local /opt /sw; do
     for pgac_infix in share lib; do
       for pgac_postfix in \
         sgml/stylesheets/nwalsh-modular \
@@ -64,7 +64,8 @@ else
         sgml/docbook-dsssl \
         sgml/docbook/dsssl/modular \
         sgml/docbook/stylesheet/dsssl/modular \
-        sgml/docbook/dsssl-stylesheets
+        sgml/docbook/dsssl-stylesheets \
+        sgml/dsssl/docbook-dsssl-nwalsh
       do
         pgac_candidate=$pgac_prefix/$pgac_infix/$pgac_postfix
         if test -r "$pgac_candidate/html/docbook.dsl" \
@@ -96,3 +97,32 @@ if test -n "$DOCBOOKSTYLE"; then
 else
   AC_PATH_PROGS(COLLATEINDEX, collateindex.pl)
 fi])# PGAC_PATH_COLLATEINDEX
+
+
+# PGAC_PATH_DOCBOOK2MAN
+# ---------------------
+# Find docbook2man program from the docbook2X package.  Upstream calls
+# this program docbook2man, but there is also a different docbook2man
+# out there from the docbook-utils package.  Thus, the program we want
+# is called docbook2x-man on Debian and db2x_docbook2man on Fedora.
+#
+# (Consider rewriting this macro using AC_PATH_PROGS_FEATURE_CHECK
+# when switching to Autoconf 2.62+.)
+AC_DEFUN([PGAC_PATH_DOCBOOK2MAN],
+[AC_CACHE_CHECK([for docbook2man], [ac_cv_path_DOCBOOK2MAN],
+[if test -z "$DOCBOOK2MAN"; then
+  _AS_PATH_WALK([],
+  [for ac_prog in docbook2x-man db2x_docbook2man docbook2man; do
+    ac_path="$as_dir/$ac_prog"
+    AS_EXECUTABLE_P(["$ac_path"]) || continue
+    if "$ac_path" --version 2>/dev/null | $GREP docbook2x >/dev/null 2>&1; then
+      ac_cv_path_DOCBOOK2MAN=$ac_path
+      break
+    fi
+  done])
+else
+  ac_cv_path_DOCBOOK2MAN=$DOCBOOK2MAN
+fi])
+DOCBOOK2MAN=$ac_cv_path_DOCBOOK2MAN
+AC_SUBST(DOCBOOK2MAN)
+])# PGAC_PATH_DOCBOOK2MAN

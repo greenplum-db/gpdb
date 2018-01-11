@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $PostgreSQL: pgsql/configure.in,v 1.546.2.16 2010/05/14 03:27:07 scrappy Exp $
+dnl $PostgreSQL: pgsql/configure.in,v 1.602 2009/06/27 00:14:47 scrappy Exp $
 dnl
 dnl Developers, please strive to achieve this order:
 dnl
@@ -20,8 +20,8 @@ m4_pattern_forbid(^PGAC_)dnl to catch undefined macros
 dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
-AC_INIT([Greenplum Database], [5.0.0-beta.6], [support@greenplum.org])
-[PG_PACKAGE_VERSION=8.3.23]
+AC_INIT([Greenplum Database], [6.0.0-alpha.0], [support@greenplum.org])
+[PG_PACKAGE_VERSION=8.4.0]
 AC_SUBST(PG_PACKAGE_VERSION)
 
 dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.63], [], [m4_fatal([Autoconf version 2.63 is required.
@@ -34,17 +34,21 @@ AC_CONFIG_AUX_DIR(config)
 AC_PREFIX_DEFAULT(/usr/local/gpdb)
 AC_SUBST(configure_args, [$ac_configure_args])
 
-AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 [PG_MAJORVERSION=`expr "$PG_PACKAGE_VERSION" : '\([0-9][0-9]*\.[0-9][0-9]*\)'`]
 AC_SUBST(PG_MAJORVERSION)
 AC_DEFINE_UNQUOTED(PG_MAJORVERSION, "$PG_MAJORVERSION", [PostgreSQL major version as a string])
+
+[PG_VERSION="$PG_PACKAGE_VERSION"]
+dnl Greenplum co-opts the --with-extra-version value to append to Only the Greenplum version
+PGAC_ARG_REQ(with, extra-version, [STRING], [append STRING to version], [], [])
+AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 
 AC_CANONICAL_HOST
 
 template=
 AC_MSG_CHECKING([which template to use])
 
-PGAC_ARG_REQ(with, template, [],
+PGAC_ARG_REQ(with, template, [NAME], [override operating system template],
 [
   case $withval in
     list)   echo; ls "$srcdir/src/template"; exit;;
@@ -121,30 +125,18 @@ tas_file=dummy.s
 ##
 
 #
-# Installation directory for documentation
-#
-PGAC_ARG(with, docdir, [  --with-docdir=DIR       install the documentation in DIR [[PREFIX/doc]]
-  --without-docdir        do not install the documentation],
-         [AC_MSG_ERROR([option --with-docdir requires an argument])],
-         [docdir=],
-         [docdir=$withval],
-         [docdir='${prefix}/doc'])
-AC_SUBST(docdir)
-
-
-#
 # Add non-standard directories to the include path
 #
-PGAC_ARG_REQ(with, includes, [  --with-includes=DIRS    look for additional header files in DIRS])
+PGAC_ARG_REQ(with, includes, [DIRS], [look for additional header files in DIRS])
 
 
 #
 # Add non-standard directories to the library search path
 #
-PGAC_ARG_REQ(with, libraries, [  --with-libraries=DIRS   look for additional libraries in DIRS],
+PGAC_ARG_REQ(with, libraries, [DIRS], [look for additional libraries in DIRS],
              [LIBRARY_DIRS=$withval])
 
-PGAC_ARG_REQ(with, libs,      [  --with-libs=DIRS        alternative spelling of --with-libraries],
+PGAC_ARG_REQ(with, libs,      [DIRS], [alternative spelling of --with-libraries],
              [LIBRARY_DIRS=$withval])
 
 
@@ -152,7 +144,7 @@ PGAC_ARG_REQ(with, libs,      [  --with-libs=DIRS        alternative spelling of
 # 64-bit integer date/time storage: enabled by default.
 #
 AC_MSG_CHECKING([whether to build with 64-bit integer date/time support])
-PGAC_ARG_BOOL(enable, integer-datetimes, yes, [  --disable-integer-datetimes disable 64-bit integer date/time support],
+PGAC_ARG_BOOL(enable, integer-datetimes, yes, [disable 64-bit integer date/time support],
               [AC_DEFINE([USE_INTEGER_DATETIMES], 1,
                          [Define to 1 if you want 64-bit integer timestamp and interval support. (--enable-integer-datetimes)])])
 AC_MSG_RESULT([$enable_integer_datetimes])
@@ -171,7 +163,7 @@ AC_MSG_RESULT([$enable_integer_datetimes])
 # to the users to let them build with very incomplete translations.
 #AC_MSG_CHECKING([whether NLS is wanted])
 #PGAC_ARG_OPTARG(enable, nls,
-#                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
+#                [LANGUAGES], [enable Native Language Support],
 #                [],
 #                [WANTED_LANGUAGES=$enableval],
 #                [AC_DEFINE(ENABLE_NLS, 1,
@@ -184,7 +176,7 @@ AC_MSG_RESULT([$enable_integer_datetimes])
 # Default port number (--with-pgport), default 5432
 #
 AC_MSG_CHECKING([for default port number])
-PGAC_ARG_REQ(with, pgport, [  --with-pgport=PORTNUM   change default port number [[5432]]],
+PGAC_ARG_REQ(with, pgport, [PORTNUM], [set default port number [5432]],
              [default_port=$withval],
              [default_port=5432])
 AC_MSG_RESULT([$default_port])
@@ -202,61 +194,75 @@ AC_SUBST(default_port)
 # Option to disable shared libraries
 #
 PGAC_ARG_BOOL(enable, shared, yes,
-              [  --disable-shared        do not build shared libraries])
+              [do not build shared libraries])
 AC_SUBST(enable_shared)
 
 #
 # '-rpath'-like feature can be disabled
 #
 PGAC_ARG_BOOL(enable, rpath, yes,
-              [  --disable-rpath         do not embed shared library search path in executables])
+              [do not embed shared library search path in executables])
 AC_SUBST(enable_rpath)
 
 #
 # Spinlocks
 #
 PGAC_ARG_BOOL(enable, spinlocks, yes,
-              [  --disable-spinlocks     do not use spinlocks])
+              [do not use spinlocks])
 
 #
 # Atomic operations
 #
 PGAC_ARG_BOOL(enable, atomics, yes,
-              [  --disable-atomics       do not use atomic operations])
+              [do not use atomic operations])
 
 #
 # gpfdist
 #
 PGAC_ARG_BOOL(enable, gpfdist, yes,
-             [  --disable-gpfdist       do not use gpfdist])
+             [do not use gpfdist])
 AC_SUBST(enable_gpfdist)
+
+#
+# pxf
+#
+PGAC_ARG_BOOL(enable, pxf, yes,
+             [do not build pxf])
+AC_SUBST(enable_pxf)
+
+#
+# gphdfs
+#
+PGAC_ARG_BOOL(enable, gphdfs, no,
+             [do not build gphdfs])
+AC_SUBST(enable_gphdfs)
 
 #
 # --enable-gpperfmon
 #
 PGAC_ARG_BOOL(enable, gpperfmon, no,
-              [  --enable-gpperfmon      build with gpperfmon])
+              [build with gpperfmon])
 AC_SUBST(enable_gpperfmon)
 
 #
 # --enable-debug adds -g to compiler flags
 #
 PGAC_ARG_BOOL(enable, debug, no,
-              [  --enable-debug          build with debugging symbols (-g)])
+              [build with debugging symbols (-g)])
 AC_SUBST(enable_debug)
 
 #
 # --enable-profiling enables gcc profiling
 #
 PGAC_ARG_BOOL(enable, profiling, no,
-              [  --enable-profiling      build with profiling enabled ])
+              [build with profiling enabled ])
 AC_SUBST(enable_profiling)
 
 #
 # --enable-coverage enables generation of code coverage metrics with gcov
 #
 PGAC_ARG_BOOL(enable, coverage, no,
-              [  --enable-coverage       build with coverage testing instrumentation],
+              [build with coverage testing instrumentation],
 [AC_CHECK_PROGS(GCOV, gcov)
 if test -z "$GCOV"; then
   AC_MSG_ERROR([gcov not found])
@@ -275,7 +281,7 @@ AC_SUBST(enable_coverage)
 # DTrace
 #
 PGAC_ARG_BOOL(enable, dtrace, no,
-              [  --enable-dtrace         build with DTrace support],
+              [build with DTrace support],
 [AC_DEFINE([ENABLE_DTRACE], 1,
            [Define to 1 to enable DTrace support. (--enable-dtrace)])
 AC_CHECK_PROGS(DTRACE, dtrace)
@@ -289,8 +295,127 @@ AC_SUBST(enable_dtrace)
 # TAP tests
 #
 PGAC_ARG_BOOL(enable, tap-tests, no,
-              [  --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)])
+              [enable TAP tests (requires Perl and IPC::Run)])
 AC_SUBST(enable_tap_tests)
+
+#
+# Block size
+#
+AC_MSG_CHECKING([for block size])
+PGAC_ARG_REQ(with, blocksize, [BLOCKSIZE], [set table block size in kB [8]],
+             [blocksize=$withval],
+             [blocksize=32])
+case ${blocksize} in
+  1) BLCKSZ=1024;;
+  2) BLCKSZ=2048;;
+  4) BLCKSZ=4096;;
+  8) BLCKSZ=8192;;
+ 16) BLCKSZ=16384;;
+ 32) BLCKSZ=32768;;
+  *) AC_MSG_ERROR([Invalid block size. Allowed values are 1,2,4,8,16,32.])
+esac
+AC_MSG_RESULT([${blocksize}kB])
+
+AC_DEFINE_UNQUOTED([BLCKSZ], ${BLCKSZ}, [
+ Size of a disk block --- this also limits the size of a tuple.  You
+ can set it bigger if you need bigger tuples (although TOAST should
+ reduce the need to have large tuples, since fields can be spread
+ across multiple tuples).
+
+ BLCKSZ must be a power of 2.  The maximum possible value of BLCKSZ
+ is currently 2^15 (32768).  This is determined by the 15-bit widths
+ of the lp_off and lp_len fields in ItemIdData (see
+ include/storage/itemid.h).
+
+ Changing BLCKSZ requires an initdb.
+])
+
+#
+# Relation segment size
+#
+AC_MSG_CHECKING([for segment size])
+PGAC_ARG_REQ(with, segsize, [SEGSIZE], [set table segment size in GB [1]],
+             [segsize=$withval],
+             [segsize=1])
+# this expression is set up to avoid unnecessary integer overflow
+# blocksize is already guaranteed to be a factor of 1024
+RELSEG_SIZE=`expr '(' 1024 / ${blocksize} ')' '*' ${segsize} '*' 1024`
+test $? -eq 0 || exit 1
+AC_MSG_RESULT([${segsize}GB])
+
+AC_DEFINE_UNQUOTED([RELSEG_SIZE], ${RELSEG_SIZE}, [
+ RELSEG_SIZE is the maximum number of blocks allowed in one disk file.
+ Thus, the maximum size of a single file is RELSEG_SIZE * BLCKSZ;
+ relations bigger than that are divided into multiple files.
+
+ RELSEG_SIZE * BLCKSZ must be less than your OS' limit on file size.
+ This is often 2 GB or 4GB in a 32-bit operating system, unless you
+ have large file support enabled.  By default, we make the limit 1 GB
+ to avoid any possible integer-overflow problems within the OS.
+ A limit smaller than necessary only means we divide a large
+ relation into more chunks than necessary, so it seems best to err
+ in the direction of a small limit.
+
+ A power-of-2 value is recommended to save a few cycles in md.c,
+ but is not absolutely required.
+
+ Changing RELSEG_SIZE requires an initdb.
+])
+
+#
+# WAL block size
+#
+AC_MSG_CHECKING([for WAL block size])
+PGAC_ARG_REQ(with, wal-blocksize, [BLOCKSIZE], [set WAL block size in kB [8]],
+             [wal_blocksize=$withval],
+             [wal_blocksize=32])
+case ${wal_blocksize} in
+  1) XLOG_BLCKSZ=1024;;
+  2) XLOG_BLCKSZ=2048;;
+  4) XLOG_BLCKSZ=4096;;
+  8) XLOG_BLCKSZ=8192;;
+ 16) XLOG_BLCKSZ=16384;;
+ 32) XLOG_BLCKSZ=32768;;
+ 64) XLOG_BLCKSZ=65536;;
+  *) AC_MSG_ERROR([Invalid WAL block size. Allowed values are 1,2,4,8,16,32,64.])
+esac
+AC_MSG_RESULT([${wal_blocksize}kB])
+
+AC_DEFINE_UNQUOTED([XLOG_BLCKSZ], ${XLOG_BLCKSZ}, [
+ Size of a WAL file block.  This need have no particular relation to BLCKSZ.
+ XLOG_BLCKSZ must be a power of 2, and if your system supports O_DIRECT I/O,
+ XLOG_BLCKSZ must be a multiple of the alignment requirement for direct-I/O
+ buffers, else direct I/O may fail.
+
+ Changing XLOG_BLCKSZ requires an initdb.
+])
+
+#
+# WAL segment size
+#
+AC_MSG_CHECKING([for WAL segment size])
+PGAC_ARG_REQ(with, wal-segsize, [SEGSIZE], [set WAL segment size in MB [16]],
+             [wal_segsize=$withval],
+             [wal_segsize=64])
+case ${wal_segsize} in
+  1) ;;
+  2) ;;
+  4) ;;
+  8) ;;
+ 16) ;;
+ 32) ;;
+ 64) ;;
+  *) AC_MSG_ERROR([Invalid WAL segment size. Allowed values are 1,2,4,8,16,32,64.])
+esac
+AC_MSG_RESULT([${wal_segsize}MB])
+
+AC_DEFINE_UNQUOTED([XLOG_SEG_SIZE], [(${wal_segsize} * 1024 * 1024)], [
+ XLOG_SEG_SIZE is the size of a single WAL file.  This must be a power of 2
+ and larger than XLOG_BLCKSZ (preferably, a great deal larger than
+ XLOG_BLCKSZ).
+
+ Changing XLOG_SEG_SIZE requires an initdb.
+])
 
 #
 # C compiler
@@ -299,7 +424,7 @@ AC_SUBST(enable_tap_tests)
 # For historical reasons you can also use --with-CC to specify the C compiler
 # to use, although the standard way to do this is to set the CC environment
 # variable.
-PGAC_ARG_REQ(with, CC, [], [CC=$with_CC])
+PGAC_ARG_REQ(with, CC, [CMD], [set compiler (deprecated)], [CC=$with_CC])
 
 case $template in
   aix) pgac_cc_list="gcc xlc";;
@@ -328,6 +453,14 @@ CXXFLAGS=$ac_save_CXXFLAGS
 AC_TRY_COMPILE([], [@%:@ifndef __INTEL_COMPILER
 choke me
 @%:@endif], [ICC=[yes]], [ICC=[no]])
+
+# Check if it's Sun Studio compiler. We assume that
+# __SUNPRO_C will be defined for Sun Studio compilers
+AC_TRY_COMPILE([], [@%:@ifndef __SUNPRO_C
+choke me
+@%:@endif], [SUN_STUDIO_CC=yes], [SUN_STUDIO_CC=no])
+
+AC_SUBST(SUN_STUDIO_CC)
 
 unset CFLAGS
 
@@ -466,7 +599,8 @@ fi
 
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
-# ICC pretends to be GCC but it's lying; it doesn't support these options.
+# ICC pretends to be GCC but it's lying; it doesn't support these flags,
+# but has its own.  Also check other compiler-specific flags here.
 
 if test "$GCC" = yes -a "$ICC" = no; then
   CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
@@ -504,8 +638,8 @@ elif test "$ICC" = yes; then
   PGAC_PROG_CC_CFLAGS_OPT([-mp1])
   # Make sure strict aliasing is off (though this is said to be the default)
   PGAC_PROG_CC_CFLAGS_OPT([-fno-strict-aliasing])
-elif test x"${CC}" = x"xlc"; then
-  # AIX xlc has to have strict aliasing turned off too
+elif test "$PORTNAME" = "aix"; then
+  # AIX's xlc has to have strict aliasing turned off too
   PGAC_PROG_CC_CFLAGS_OPT([-qnoansialias])
 fi
 
@@ -529,10 +663,19 @@ if test "$enable_coverage" = yes; then
   fi
 fi
 
+# enable code coverage if --enable-coverage
+if test "$enable_coverage" = yes; then
+  if test "$GCC" = yes; then
+    CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+  else
+    AC_MSG_ERROR([--enable-coverage is supported only when using GCC])
+  fi
+fi
+
 # enable profiling if --enable-profiling
 if test "$enable_profiling" = yes && test "$ac_cv_prog_cc_g" = yes; then
   if test "$GCC" = yes; then
-    AC_DEFINE([PROFILE_PID_DIR], 1, 
+    AC_DEFINE([PROFILE_PID_DIR], 1,
            [Define to 1 to allow profiling output to be saved separately for each process.])
     CFLAGS="$CFLAGS -pg $PLATFORM_PROFILE_FLAGS"
   else
@@ -585,47 +728,6 @@ done
 AC_PROG_CPP
 AC_SUBST(GCC)
 
-[BLD_ARCH=`echo $BLD_ARCH`]
-AC_SUBST(BLD_ARCH)
-
-# Get the Greenplum version string from VERSION
-bash getversion > VERSION
-GP_VERSION=`cat VERSION`
-
-GP_VERSION_SHORT=`bash ./getversion --short`
-AC_SUBST(GP_VERSION_SHORT)
-
-GP_VERSION_IN="src/include/catalog/gp_version.in"
-GP_VERSION_HEADER="src/include/catalog/gp_version.h"
-if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
-fi
-
-GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
-GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
-if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
-fi
-
-# Create compiler version string
-if test x"$GCC" = x"yes" ; then
-  cc_string="GCC `${CC} --version | sed q`"
-else
-  cc_string=$CC
-fi
-AC_DEFINE_UNQUOTED(PG_VERSION_STR,
-                   ["PostgreSQL $PG_PACKAGE_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string"],
-                   [A string containing the version number, platform, and C compiler])
-
-AC_DEFINE_UNQUOTED(GP_VERSION,
-                   ["$GP_VERSION"],
-                   [A string containing the Greenplum version number])
-
-[GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`]
-AC_SUBST(GP_MAJORVERSION)
-AC_DEFINE_UNQUOTED(GP_MAJORVERSION, "$GP_MAJORVERSION", [Greenplum major version as a string])
-
-
 #
 # Set up TAS assembly code if needed; the template file has now had its
 # chance to request this.
@@ -643,7 +745,7 @@ AC_SUBST(TAS)
 #
 # Automatic dependency tracking
 #
-PGAC_ARG_BOOL(enable, depend, no, [  --enable-depend         turn on automatic dependency tracking],
+PGAC_ARG_BOOL(enable, depend, no, [turn on automatic dependency tracking],
               [autodepend=yes])
 AC_SUBST(autodepend)
 
@@ -651,33 +753,26 @@ AC_SUBST(autodepend)
 #
 # Enable assert checks
 #
-PGAC_ARG_BOOL(enable, cassert, no, [  --enable-cassert        enable assertion checks (for debugging)],
+PGAC_ARG_BOOL(enable, cassert, no, [enable assertion checks (for debugging)],
               [AC_DEFINE([USE_ASSERT_CHECKING], 1,
                          [Define to 1 to build with assertion checks. (--enable-cassert)])])
 
-#
-# Enable debug_break
-#
-PGAC_ARG_BOOL(enable, debugbreak, no, [  --enable-debugbreak     enable debug_break and debug_break_n (for debugging)],
-              [AC_DEFINE([USE_DEBUG_BREAK], 1,
-                         [Define to 1 to build with debug_break capabilities. (--enable-debugbreak)])])
-
 # Enable debug ntuplestore
-PGAC_ARG_BOOL(enable, debugntuplestore, no, [  --enable-ntuplestore    enable debug_ntuplestore (for debugging)],
+PGAC_ARG_BOOL(enable, debugntuplestore, no, [enable debug_ntuplestore (for debugging)],
               [AC_DEFINE([USE_DEBUG_NTUPLESTORE], 1,
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
 # Enable testing utilities
 #
-PGAC_ARG_BOOL(enable, testutils, no, [  --enable-testutils      enable testing utilities],
+PGAC_ARG_BOOL(enable, testutils, no, [enable testing utilities],
               [AC_DEFINE([USE_TEST_UTILS], 1,
                          [Define to 1 to build with testing utilities. (--enable-testutils)])])
 
 #
 # Enable Greenplum ORCA optimizer
 #
-PGAC_ARG_BOOL(enable, orca, yes, [  --disable-orca          disable ORCA optimizer],
+PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],
               [AC_DEFINE([USE_ORCA], 1,
                          [Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca)])])
 AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
@@ -686,14 +781,14 @@ AC_SUBST(enable_orca)
 #
 # Enable code generation
 #
-PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen        enable code generation],
+PGAC_ARG_BOOL(enable, codegen, no, [enable code generation],
               [AC_DEFINE([USE_CODEGEN], 1,
                          [Define to 1 to enable code generation. (--enable-codegen)])])
 AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
 AC_SUBST(enable_codegen)
 
 PGAC_ARG_REQ(with, codegen-prefix,
-             [  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang],
+             [["PATH;PATH"]], [semicolon separated prefix search path for LLVM and Clang],
              [AS_IF([test "${enable_codegen}" = no],
 					[AC_MSG_WARN([--with-codegen-prefix used without --enable-codegen])])])
 
@@ -714,7 +809,7 @@ AS_IF([test "$enable_codegen" = yes],
 #
 # --enable-snmp enables snmp mib and trap/inform
 #
-PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM],
+PGAC_ARG_BOOL(enable, snmp, no, [enable snmp for MIB and alerts via TRAP/INFORM],
               [AC_DEFINE([USE_SNMP], 1,
                          [Define to 1 to build with snmp capabilities. (--enable-snmp)])])
 AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
@@ -723,7 +818,7 @@ AC_SUBST(enable_snmp)
 #
 # --enable-ddboost enables DD Boost support
 #
-PGAC_ARG_BOOL(enable, ddboost, no,  [  --enable-ddboost        enable DD Boost support],
+PGAC_ARG_BOOL(enable, ddboost, no, [enable DD Boost support],
               [AC_DEFINE([USE_DDBOOST], 1,
                          [Define to 1 to build with DD Boost capabilities. (--enable-ddboost)])])
 AC_MSG_RESULT([checking whether to build with DD Boost support... $enable_ddboost])
@@ -732,7 +827,7 @@ AC_SUBST(enable_ddboost)
 #
 # --enable-netbackup enables NetBackup support
 #
-PGAC_ARG_BOOL(enable, netbackup, no,  [  --enable-netbackup      enable NetBackup support],
+PGAC_ARG_BOOL(enable, netbackup, no, [enable NetBackup support],
               [AC_DEFINE([USE_NETBACKUP], 1,
                          [Define to 1 to build with NetBackup capabilities. (--enable-netbackup)])])
 AC_MSG_RESULT([checking whether to build with NetBackup support... $enable_netbackup])
@@ -741,7 +836,7 @@ AC_SUBST(enable_netbackup)
 #
 # --enable-mapreduce enables GPMapreduce support
 #
-PGAC_ARG_BOOL(enable, mapreduce, no, [  --enable-mapreduce      enable Greenplum Mapreduce support],
+PGAC_ARG_BOOL(enable, mapreduce, no, [enable Greenplum Mapreduce support],
               [AC_DEFINE([USE_MAPREDUCE], 1,
 			             [Define to 1 to build with Mapreduce capabilities (--enable-mapreduce)])])
 AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_mapreduce])
@@ -750,7 +845,7 @@ AC_SUBST(enable_mapreduce)
 #
 # gpcloud, enabled by default
 #
-PGAC_ARG_BOOL(enable, gpcloud, yes, [  --disable-gpcloud       disable gpcloud support],
+PGAC_ARG_BOOL(enable, gpcloud, yes, [disable gpcloud support],
               [AC_DEFINE([USE_GPCLOUD], 1,
 			             [Define to 1 to build with gpcloud (--enable-gpcloud)])])
 AC_MSG_RESULT([checking whether to build with gpcloud... $enable_gpcloud])
@@ -764,7 +859,7 @@ AS_IF([test "$enable_gpcloud" = yes],
 #
 # Enable segment WAL replication
 #
-PGAC_ARG_BOOL(enable, segwalrep, no, [  --enable-segwalrep      enable segment WAL replication ],
+PGAC_ARG_BOOL(enable, segwalrep, no, [enable segment WAL replication],
               [AC_DEFINE([USE_SEGWALREP], 1,
                          [Define to 1 to enable segment WAL replication. (--enable-segwalrep)])])
 AC_MSG_RESULT([checking whether to build with segment WAL replication... $enable_segwalrep])
@@ -808,9 +903,9 @@ IFS=$ac_save_IFS
 AC_MSG_CHECKING([allow thread-safe client libraries])
 # GPDB wants the default here to be "yes", unlike PostgreSQL.
 # it's also required for Win32 client builds.
-PGAC_ARG_BOOL(enable, thread-safety, yes, [  --disable-thread-safety  Do not make client libraries thread-safe])
+PGAC_ARG_BOOL(enable, thread-safety, yes, [do not make client libraries thread-safe])
 
-PGAC_ARG_BOOL(enable, thread-safety-force, no, [  --enable-thread-safety-force  force thread-safety despite thread test failure])
+PGAC_ARG_BOOL(enable, thread-safety-force, no, [force thread-safety despite thread test failure])
 if test "$enable_thread_safety" = yes -o \
         "$enable_thread_safety_force" = yes; then
   enable_thread_safety="yes"	# for 'force'
@@ -824,20 +919,20 @@ AC_SUBST(enable_thread_safety)
 # Optionally build Tcl modules (PL/Tcl)
 #
 AC_MSG_CHECKING([whether to build with Tcl])
-PGAC_ARG_BOOL(with, tcl, no, [  --with-tcl              build Tcl modules (PL/Tcl)])
+PGAC_ARG_BOOL(with, tcl, no, [build Tcl modules (PL/Tcl)])
 AC_MSG_RESULT([$with_tcl])
 AC_SUBST([with_tcl])
 
 # We see if the path to the Tcl/Tk configuration scripts is specified.
 # This will override the use of tclsh to find the paths to search.
 
-PGAC_ARG_REQ(with, tclconfig, [  --with-tclconfig=DIR    tclConfig.sh is in DIR])
+PGAC_ARG_REQ(with, tclconfig, [DIR], [tclConfig.sh is in DIR])
 
 #
 # Optionally build Perl modules (PL/Perl)
 #
 AC_MSG_CHECKING([whether to build Perl modules])
-PGAC_ARG_BOOL(with, perl, no, [  --with-perl             build Perl modules (PL/Perl)])
+PGAC_ARG_BOOL(with, perl, no, [build Perl modules (PL/Perl)])
 AC_MSG_RESULT([$with_perl])
 AC_SUBST(with_perl)
 
@@ -845,23 +940,15 @@ AC_SUBST(with_perl)
 # Optionally build Python modules (PL/Python)
 #
 AC_MSG_CHECKING([whether to build Python modules])
-PGAC_ARG_BOOL(with, python, no, [  --with-python           build Python modules (PL/Python)])
+PGAC_ARG_BOOL(with, python, no, [build Python modules (PL/Python)])
 AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
-
-#
-# Optionally build PXF support
-#
-AC_MSG_CHECKING([whether to build PXF modules])
-PGAC_ARG_BOOL(with, pxf, no, [  --with-pxf              build Greenplum PXF support])
-AC_MSG_RESULT([$with_pxf])
-AC_SUBST(with_pxf)
 
 #
 # GSSAPI
 #
 AC_MSG_CHECKING([whether to build with GSSAPI support])
-PGAC_ARG_BOOL(with, gssapi, no, [  --with-gssapi           build with GSSAPI support],
+PGAC_ARG_BOOL(with, gssapi, no, [build with GSSAPI support],
 [
   AC_DEFINE(ENABLE_GSS, 1, [Define to build with GSSAPI support. (--with-gssapi)])
   krb_srvtab="FILE:\$(sysconfdir)/krb5.keytab"
@@ -873,7 +960,7 @@ AC_SUBST(with_gssapi)
 # Kerberos 5
 #
 AC_MSG_CHECKING([whether to build with Kerberos 5 support])
-PGAC_ARG_BOOL(with, krb5, no, [  --with-krb5             build with Kerberos 5 support],
+PGAC_ARG_BOOL(with, krb5, no, [build with Kerberos 5 support],
 [
   AC_DEFINE(KRB5, 1, [Define to build with Kerberos 5 support. (--with-krb5)])
   krb_srvtab="FILE:\$(sysconfdir)/krb5.keytab"
@@ -889,7 +976,7 @@ AC_SUBST(krb_srvtab)
 # Kerberos configuration parameters
 #
 PGAC_ARG_REQ(with, krb-srvnam,
-             [  --with-krb-srvnam=NAME  default service principal name in Kerberos [[postgres]]],
+             [NAME], [default service principal name in Kerberos [postgres]],
              [],
              [with_krb_srvnam="postgres"])
 AC_DEFINE_UNQUOTED([PG_KRB_SRVNAM], ["$with_krb_srvnam"],
@@ -901,7 +988,7 @@ AC_DEFINE_UNQUOTED([PG_KRB_SRVNAM], ["$with_krb_srvnam"],
 #
 AC_MSG_CHECKING([whether to build with PAM support])
 PGAC_ARG_BOOL(with, pam, no,
-              [  --with-pam              build with PAM support],
+              [build with PAM support],
               [AC_DEFINE([USE_PAM], 1, [Define to 1 to build with PAM support. (--with-pam)])])
 AC_MSG_RESULT([$with_pam])
 AC_SUBST(with_pam)
@@ -912,7 +999,7 @@ AC_SUBST(with_pam)
 #
 AC_MSG_CHECKING([whether to build with LDAP support])
 PGAC_ARG_BOOL(with, ldap, no,
-              [  --with-ldap             build with LDAP support],
+              [build with LDAP support],
               [AC_DEFINE([USE_LDAP], 1, [Define to 1 to build with LDAP support. (--with-ldap)])])
 AC_MSG_RESULT([$with_ldap])
 AC_SUBST(with_ldap)
@@ -923,7 +1010,7 @@ AC_SUBST(with_ldap)
 #
 AC_MSG_CHECKING([whether to build with Bonjour support])
 PGAC_ARG_BOOL(with, bonjour, no,
-              [  --with-bonjour          build with Bonjour support],
+              [build with Bonjour support],
               [AC_DEFINE([USE_BONJOUR], 1, [Define to 1 to build with Bonjour support. (--with-bonjour)])])
 AC_MSG_RESULT([$with_bonjour])
 AC_SUBST(with_bonjour)
@@ -933,7 +1020,7 @@ AC_SUBST(with_bonjour)
 # OpenSSL
 #
 AC_MSG_CHECKING([whether to build with OpenSSL support])
-PGAC_ARG_BOOL(with, openssl, no, [  --with-openssl          build with OpenSSL support],
+PGAC_ARG_BOOL(with, openssl, no, [build with OpenSSL support],
               [AC_DEFINE([USE_SSL], 1, [Define to build with (Open)SSL support. (--with-openssl)])])
 AC_MSG_RESULT([$with_openssl])
 AC_SUBST(with_openssl)
@@ -943,7 +1030,7 @@ AC_SUBST(with_openssl)
 # Readline
 #
 PGAC_ARG_BOOL(with, readline, yes,
-              [  --without-readline      do not use GNU Readline nor BSD Libedit for editing])
+              [do not use GNU Readline nor BSD Libedit for editing])
 # readline on MinGW has problems with backslashes in psql and other bugs.
 # This is particularly a problem with non-US code pages.
 # Therefore disable its use until we understand the cause. 2004-07-20
@@ -961,20 +1048,20 @@ fi
 # In GPDB we want the default to be yes, because we don't want to link with GPL code.
 #
 PGAC_ARG_BOOL(with, libedit-preferred, yes,
-              [  --without-libedit-preferred  Don't prefer BSD Libedit over GNU Readline])
+              [do not prefer BSD Libedit over GNU Readline])
 
 
 #
 # OSSP UUID library
 #
-PGAC_ARG_BOOL(with, ossp-uuid, no, [  --with-ossp-uuid        use OSSP UUID library when building contrib/uuid-ossp])
+PGAC_ARG_BOOL(with, ossp-uuid, no, [use OSSP UUID library when building contrib/uuid-ossp])
 AC_SUBST(with_ossp_uuid)
 
 
 #
 # XML
 #
-PGAC_ARG_BOOL(with, libxml, no, [  --with-libxml           build with XML support],
+PGAC_ARG_BOOL(with, libxml, no, [build with XML support],
               [AC_DEFINE([USE_LIBXML], 1, [Define to 1 to build with XML support. (--with-libxml)])])
 
 if test "$with_libxml" = yes ; then
@@ -998,7 +1085,7 @@ AC_SUBST(with_libxml)
 #
 # XSLT
 #
-PGAC_ARG_BOOL(with, libxslt, no, [  --with-libxslt          use XSLT support when building contrib/xml2],
+PGAC_ARG_BOOL(with, libxslt, no, [use XSLT support when building contrib/xml2],
               [AC_DEFINE([USE_LIBXSLT], 1, [Define to 1 to use XSLT support when building contrib/xml2. (--with-libxslt)])])
 
 
@@ -1008,42 +1095,60 @@ AC_SUBST(with_libxslt)
 # tzdata
 #
 PGAC_ARG_REQ(with, system-tzdata,
-             [  --with-system-tzdata=DIR  use system time zone data in DIR])
+             [DIR], [use system time zone data in DIR])
 AC_SUBST(with_system_tzdata)
 
 #
 # Zlib
 #
 PGAC_ARG_BOOL(with, zlib, yes,
-              [  --without-zlib          do not use Zlib])
+              [do not use Zlib])
 AC_SUBST(with_zlib)
+
+#
+# bzip2
+#
+PGAC_ARG_BOOL(with, libbz2, yes,
+              [do not use bzip2])
+AC_SUBST(with_libbz2)
+
+#
+# zstd
+#
+PGAC_ARG_BOOL(with, zstd, no,
+              [build with Zstandard support (requires zstd library)])
+AC_SUBST(with_zstd)
 
 #
 # Realtime library
 #
 PGAC_ARG_BOOL(with, rt, yes,
-              [  --without-rt            do not use Realtime Library])
+              [do not use Realtime Library])
 AC_SUBST(with_rt)
 
 #
-# libcurl. Used for external table support
+# libcurl. Used for external table support and the PXF extension
 #
 PGAC_ARG_BOOL(with, libcurl, yes,
-              [  --without-libcurl       do not use libcurl])
+              [do not use libcurl])
 AC_SUBST(with_libcurl)
+
+if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
+  AC_MSG_ERROR([libcurl is required by PXF])
+fi
 
 #
 # libapr. Used for gpfdist and gpperfmon
 #
 PGAC_ARG_REQ(with, apr-config,
-             [  --with-apr-config=PATH  path to apr-1-config utility])
+             [PATH], [path to apr-1-config utility])
 AC_SUBST(with_apr_config)
 
 #
 # libapu. Used for gpperfmon.
 #
 PGAC_ARG_REQ(with, apu-config,
-             [  --with-apu-config=PATH  path to apu-1-config utility])
+             [PATH], [path to apu-1-config utility])
 AC_SUBST(with_apu_config)
 
 #
@@ -1082,8 +1187,6 @@ AC_ARG_VAR(LDFLAGS_SL, [extra linker flags for linking shared libraries only])
 
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
-
-AC_ARG_VAR(LDFLAGS_SL)
 
 PGAC_PROG_LD
 AC_SUBST(LD)
@@ -1135,7 +1238,6 @@ if test "$with_python" = yes; then
   PGAC_CHECK_PYTHON_EMBED_SETUP
 fi
 
-ZIC=
 if test "$cross_compiling" = yes && test -z "$with_system_tzdata"; then
   AC_PATH_PROG(ZIC, zic)
   if test -z "$ZIC"; then
@@ -1147,19 +1249,6 @@ program to use during the build.])
 fi
 
 AC_SUBST(ADDON_DIR)
-
-# Supply a numeric version string for use by 3rd party add-ons
-# awk -F is a regex on some platforms, and not on others, so make "." a tab
-[PG_VERSION_NUM="`echo "$PG_PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
-tr '.' '	' |
-$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
-AC_DEFINE_UNQUOTED(PG_VERSION_NUM, $PG_VERSION_NUM, [PostgreSQL version as a number])
-
-#
-[GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
-tr '.' '	' |
-$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
-AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
 ##
 ## Libraries
@@ -1207,6 +1296,11 @@ if test "$with_zlib" = yes; then
 If you have zlib already installed, see config.log for details on the
 failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
+fi
+
+if test "$with_zstd" = yes; then
+  AC_CHECK_LIB(zstd, ZSTD_compressCCtx, [],
+               [AC_MSG_ERROR([zstd library not found.])])
 fi
 
 if test "$enable_spinlocks" = yes; then
@@ -1313,7 +1407,9 @@ if test "$with_libcurl" = yes ; then
 fi
 
 # Check for bzip2
-AC_SEARCH_LIBS(BZ2_bzDecompress, bz2)
+if test "$with_libbz2" = yes ; then
+  AC_CHECK_LIB(bz2, BZ2_bzDecompress, [], [AC_MSG_ERROR([library 'bz2' is required for bzip2 support])])
+fi
 
 # Check for net-snmp
 if test "$enable_snmp" = yes ; then
@@ -1341,29 +1437,18 @@ if test "$enable_ddboost" = yes ; then
   LIBS="$_LIBS"
 fi
 
+# Check for Greenplum Query Optimizer (orca) libraries.
+if test "$enable_orca" = yes; then
+  PGAC_CHECK_ORCA_XERCES
+  PGAC_CHECK_ORCA_LIBS
+fi
+
 ##
 ## Header files
 ##
 
-AC_INCLUDES_DEFAULT
-
-# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
-if test "$enable_orca" = yes; then
-  PGAC_CHECK_ORCA_HEADERS
-  PGAC_CHECK_ORCA_XERCES
-  PGAC_CHECK_ORCA_LIBS
-  PGAC_CHECK_ORCA_VERSION
-fi
-
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
 AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
-
-# Check for bzlib.h
-if test "$PORTNAME" = "win32"; then
-  AC_MSG_WARN([*** bzip2 not required for windows partial build --- disabling.])
-else
-  AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
-fi
 
 # On BSD, cpp test for net/if.h will fail unless sys/socket.h
 # is included first.
@@ -1444,6 +1529,16 @@ failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
 fi
 
+# Check for bzlib.h
+if test "$with_libbz2" = yes ; then
+  AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
+fi
+
+# Check for zstd.h
+if test "$with_zstd" = yes; then
+  AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
+fi
+
 if test "$with_gssapi" = yes ; then
   AC_CHECK_HEADERS(gssapi/gssapi.h, [],
 	[AC_CHECK_HEADERS(gssapi.h, [], [AC_MSG_ERROR([gssapi.h header file is required for GSSAPI])])])
@@ -1508,7 +1603,7 @@ esac
 # net-snmp
 if test "$enable_snmp" = yes; then
 	AC_CHECK_HEADERS([net-snmp/net-snmp-config.h], [],
-					[AC_MSG_ERROR([header file <<net-snmp/net-snmp-config.h> is required for snmp support])])
+					[AC_MSG_ERROR([header file <net-snmp/net-snmp-config.h> is required for snmp support])])
 fi
 
 
@@ -1522,14 +1617,14 @@ if test "$enable_mapreduce" = yes; then
   if test "$with_perl" = no; then
     AC_MSG_ERROR([Greenplum Mapreduce requires Perl, reconfigure with --with-perl])
   fi
-  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([YAML includes required for Greenplum Mapreduce])])
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for Greenplum Mapreduce])])
 fi
 
-# json-c
-AC_CHECK_HEADERS(json-c/json.h, [], [AC_MSG_ERROR([header file <json-c/json.h> is required.
-Check config.log for details. It is possible the compiler isn't looking in the proper directory.])])
-AC_SEARCH_LIBS(json_tokener_parse, json-c json, [], [AC_MSG_ERROR([library 'json-c' is required.
-Check config.log for details. It is possible the compiler isn't looking in the proper directory.])], [])
+# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+if test "$enable_orca" = yes; then
+  PGAC_CHECK_ORCA_HEADERS
+  PGAC_CHECK_ORCA_VERSION
+fi
 
 ##
 ## Types, structures, compiler characteristics
@@ -1538,6 +1633,7 @@ Check config.log for details. It is possible the compiler isn't looking in the p
 m4_defun([AC_PROG_CC_STDC], []) dnl We don't want that.
 AC_C_BIGENDIAN
 PGAC_C_INLINE
+PGAC_PRINTF_ARCHETYPE
 AC_C_CONST
 AC_C_STRINGIZE
 PGAC_C_SIGNED
@@ -1596,7 +1692,7 @@ if test "$with_krb5" = yes; then
   AC_MSG_CHECKING(for krb5_free_unparsed_name)
   AC_TRY_LINK([#include <krb5.h>],
               [krb5_free_unparsed_name(NULL,NULL);],
-              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name]) 
+              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name])
 AC_MSG_RESULT(yes)],
               [AC_MSG_RESULT(no)])
 fi
@@ -1728,7 +1824,7 @@ LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 # net-snmp has the same problem..
 LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
-AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul unsetenv])
+AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul])
 
 case $host_os in
 
@@ -1753,12 +1849,7 @@ else
 fi
 
 # Similarly, use system's getopt_long() only if system provides struct option.
-# Solaris' getopt() doesn't do what we want for long options, so always use
-# our versions on that platform.
-if test "$PORTNAME" = "solaris"; then
-  AC_LIBOBJ(getopt)
-  AC_LIBOBJ(getopt_long)
-elif test x"$ac_cv_type_struct_option" = xyes ; then
+if test x"$ac_cv_type_struct_option" = xyes ; then
   AC_REPLACE_FUNCS([getopt_long])
 else
   AC_LIBOBJ(getopt_long)
@@ -1841,7 +1932,6 @@ case $host_os in
 	*)
 		AC_FUNC_FSEEKO;;
 esac
-
 
 AC_CACHE_CHECK([for builtin locking functions], pgac_cv_gcc_int_atomics,
 [AC_TRY_LINK([],
@@ -2070,26 +2160,38 @@ AC_CHECK_SIZEOF([unsigned long])
 AC_CHECK_SIZEOF([void *])
 AC_CHECK_SIZEOF([size_t])
 
+# In GPDB, float4 and float8 are always passed by value. There is
+# GPDB-specific code that assumes that in various places, so it's not
+# configurable.
+float4passbyval=true
+AC_DEFINE([USE_FLOAT4_BYVAL], 1, [Define to 1 if you want float4 values to be passed by value. (Always defined in GPDB)])
+AC_DEFINE_UNQUOTED([FLOAT4PASSBYVAL], [$float4passbyval], [float4 values are passed by value if 'true', by reference if 'false' (always true in GPDB)])
+
+# Note: this setting also controls int8 and related types such as timestamp.
+float8passbyval=true
+AC_DEFINE([USE_FLOAT8_BYVAL], 1, [Define to 1 if you want float8, int8, etc values to be passed by value. (Always defined in GPDB)])
+AC_DEFINE_UNQUOTED([FLOAT8PASSBYVAL], [$float8passbyval], [float8, int8, and related values are passed by value if 'true', by reference if 'false' (always true in GPDB)])
+
 # Determine memory alignment requirements for the basic C data types.
 
-PGAC_CHECK_ALIGNOF(short)
-PGAC_CHECK_ALIGNOF(int)
-PGAC_CHECK_ALIGNOF(long)
+AC_CHECK_ALIGNOF(short)
+AC_CHECK_ALIGNOF(int)
+AC_CHECK_ALIGNOF(long)
 if test x"$HAVE_LONG_LONG_INT_64" = x"yes" ; then
-  PGAC_CHECK_ALIGNOF(long long int)
+  AC_CHECK_ALIGNOF(long long int)
 fi
-PGAC_CHECK_ALIGNOF(double)
+AC_CHECK_ALIGNOF(double)
 
 # Compute maximum alignment of any basic type.
 # We assume long's alignment is at least as strong as char, short, or int;
 # but we must check long long (if it exists) and double.
 
-MAX_ALIGNOF=$pgac_cv_alignof_long
-if test $MAX_ALIGNOF -lt $pgac_cv_alignof_double ; then
-  MAX_ALIGNOF=$pgac_cv_alignof_double
+MAX_ALIGNOF=$ac_cv_alignof_long
+if test $MAX_ALIGNOF -lt $ac_cv_alignof_double ; then
+  MAX_ALIGNOF=$ac_cv_alignof_double
 fi
-if test x"$HAVE_LONG_LONG_INT_64" = xyes && test $MAX_ALIGNOF -lt $pgac_cv_alignof_long_long_int ; then
-  MAX_ALIGNOF="$pgac_cv_alignof_long_long_int"
+if test x"$HAVE_LONG_LONG_INT_64" = xyes && test $MAX_ALIGNOF -lt $ac_cv_alignof_long_long_int ; then
+  MAX_ALIGNOF="$ac_cv_alignof_long_long_int"
 fi
 AC_DEFINE_UNQUOTED(MAXIMUM_ALIGNOF, $MAX_ALIGNOF, [Define as the maximum alignment requirement of any C data type.])
 
@@ -2232,6 +2334,7 @@ PGAC_CHECK_DOCBOOK(4.2)
 PGAC_PATH_DOCBOOK_STYLESHEETS
 PGAC_PATH_COLLATEINDEX
 AC_CHECK_PROGS(SGMLSPL, sgmlspl)
+PGAC_PATH_DOCBOOK2MAN
 
 #
 # Check for test tools
@@ -2309,10 +2412,20 @@ else
   link_test_func=exit
 fi
 
-if test "$PORTNAME" = "openbsd"; then
+if test "$PORTNAME" = "darwin"; then
+  PGAC_PROG_CC_LDFLAGS_OPT([-Wl,-dead_strip_dylibs], $link_test_func)
+elif test "$PORTNAME" = "openbsd"; then
   PGAC_PROG_CC_LDFLAGS_OPT([-Wl,-Bdynamic], $link_test_func)
 else
   PGAC_PROG_CC_LDFLAGS_OPT([-Wl,--as-needed], $link_test_func)
+fi
+
+# Many of the autoconf tests produce warnings, or even compiler errors, on
+# purpose as they run through the conftest programs. So, treating warning as
+# error should be last step after all autoconf checks are performed, otherwise
+# false side-effects happens.
+if test "$GCC" = yes -a "$ICC" = no; then
+  PGAC_PROG_CC_CFLAGS_OPT([-Werror=uninitialized])
 fi
 
 # Begin output steps
@@ -2321,6 +2434,76 @@ AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
 AC_MSG_NOTICE([using LIBS=$LIBS])
+
+[BLD_ARCH=`echo $BLD_ARCH`]
+AC_SUBST(BLD_ARCH)
+
+# Get the Greenplum version string from VERSION
+
+GP_VERSION_LONG=`bash ./getversion`
+
+if test "$with_extra_version" = "" ; then
+  with_extra_version="-oss"
+fi
+
+GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
+
+echo $GP_VERSION_LONG > VERSION
+GP_VERSION=`cat VERSION`
+
+GP_VERSION_SHORT=`bash ./getversion --short`
+GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
+AC_SUBST(GP_VERSION_SHORT)
+
+GP_VERSION_IN="src/include/catalog/gp_version.in"
+GP_VERSION_HEADER="src/include/catalog/gp_version.h"
+if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
+fi
+
+GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
+GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
+if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
+fi
+
+GPTEST_IN="src/test/regress/GPTest.pm.in"
+GPTEST_PM="src/test/regress/GPTest.pm"
+if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
+fi
+
+AC_DEFINE_UNQUOTED(GP_VERSION,
+                   ["$GP_VERSION"],
+                   [A string containing the Greenplum version number])
+
+[GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`]
+AC_SUBST(GP_MAJORVERSION)
+AC_DEFINE_UNQUOTED(GP_MAJORVERSION, "$GP_MAJORVERSION", [Greenplum major version as a string])
+
+# Create compiler version string
+if test x"$GCC" = x"yes" ; then
+  cc_string="GCC `${CC} --version | sed q`"
+else
+  cc_string=$CC
+fi
+
+AC_DEFINE_UNQUOTED(PG_VERSION_STR,
+                   ["PostgreSQL $PG_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string, `expr $ac_cv_sizeof_void_p \* 8`-bit"],
+                   [A string containing the version number, platform, and C compiler])
+
+# Supply a numeric version string for use by 3rd party add-ons
+# awk -F is a regex on some platforms, and not on others, so make "." a tab
+[PG_VERSION_NUM="`echo "$PG_PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
+tr '.' '	' |
+$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
+AC_DEFINE_UNQUOTED(PG_VERSION_NUM, $PG_VERSION_NUM, [PostgreSQL version as a number])
+
+#
+[GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
+tr '.' '	' |
+$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
+AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
 
 # prepare build tree if outside source tree

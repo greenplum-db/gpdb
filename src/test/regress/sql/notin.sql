@@ -337,6 +337,7 @@ select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
 
 --
 --q38
+-- GPDB_90_MERGE_FIXME: We should generate c2 IS NOT NULL derived filter.
 --
 explain select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
 select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
@@ -349,6 +350,7 @@ select c1 from t1 where not exists (select c2 from t2 where c2 not in (select c3
 
 --
 --q40
+-- GPDB_90_MERGE_FIXME: We should be able to push down join filter on param $0 to a result node on top of LASJ (Not in)
 --
 explain select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);
 select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);

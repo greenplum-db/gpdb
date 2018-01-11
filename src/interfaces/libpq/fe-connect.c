@@ -3,6 +3,7 @@
  * fe-connect.c
  *	  functions related to setting up a connection to the backend
  *
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -13,7 +14,18 @@
  *-------------------------------------------------------------------------
  */
 
-#include "postgres_fe.h"
+/*
+ * This file is compiled with both frontend and backend codes, symlinked by
+ * src/backend/Makefile, and use macro FRONTEND to switch.
+ *
+ * Include "c.h" to adopt Greenplum C types. Don't include "postgres_fe.h",
+ * which only defines FRONTEND besides including "c.h"
+ */
+#include "c.h"
+
+#ifndef WIN32
+#include <poll.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -94,6 +106,9 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
  */
 #define ERRCODE_APPNAME_UNKNOWN "42704"
 
+#undef ERRCODE_INVALID_PASSWORD
+#undef ERRCODE_CANNOT_CONNECT_NOW
+#undef ERRCODE_MIRROR_OR_QUIESCENT
 /* This is part of the protocol so just define it */
 #define ERRCODE_INVALID_PASSWORD "28P01"
 /* This too */
@@ -158,8 +173,8 @@ typedef struct _internalPQconninfoOption
 	int			dispsize;		/* Field size in characters for dialog	*/
 	/* ---
 	 * Anything above this comment must be synchronized with
-	 * PQconninfoOption in libpq-fe.h, since we memcpy() data
-	 * between them!
+	 * PQconninfoOption in libpq-fe.h with defining FRONTEND, since we FE
+	 * memcpy() data between them!
 	 * ---
 	 */
 	off_t		connofs;		/* Offset into PGconn struct, -1 if not there */
@@ -193,6 +208,10 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 		"Database-Name", "", 20,
 	offsetof(struct pg_conn, dbName)},
 
+	/*
+	 * For GPDB internal usage, don't honour PGHOST, as this will always lead to
+	 * unexpected behaviour.
+	 */
 	{"host", "PGHOST", NULL, NULL,
 		"Database-Host", "", 40,
 	offsetof(struct pg_conn, pghost)},
@@ -251,9 +270,16 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	 * parameters have no effect on non-SSL connections, so there is no reason
 	 * to exclude them since none of them are mandatory.
 	 */
+#ifndef FRONTEND
+	/* Internal QD to QE communications don't use SSL */
+	{"sslmode", "PGSSLMODE", "disable", NULL,
+		"SSL-Mode", "", 8,		/* sizeof("disable") == 8 */
+	offsetof(struct pg_conn, sslmode)},
+#else
 	{"sslmode", "PGSSLMODE", DefaultSSLMode, NULL,
 		"SSL-Mode", "", 8,		/* sizeof("disable") == 8 */
 	offsetof(struct pg_conn, sslmode)},
+#endif
 
 	{"sslcompression", "PGSSLCOMPRESSION", "1", NULL,
 		"SSL-Compression", "", 1,
@@ -297,9 +323,19 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	offsetof(struct pg_conn, gsslib)},
 #endif
 
+
+    /* CDB: qExec wants some info from qDisp before GUCs are processed */
+	{"gpqeid", NULL, "", NULL,
+		"gp-debug-qeid", "D", 40,
+	offsetof(struct pg_conn, gpqeid)},
+
 	{"replication", NULL, NULL, NULL,
 		"Replication", "D", 5,
 	offsetof(struct pg_conn, replication)},
+
+	{GPCONN_TYPE, NULL, NULL, NULL,
+		"connection type", "D", 10,
+	offsetof(struct pg_conn, gpconntype)},
 
 	/* Terminating entry --- MUST BE LAST */
 	{NULL, NULL, NULL, NULL,
@@ -308,6 +344,12 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 
 static const PQEnvironmentOption EnvironmentOptions[] =
 {
+#ifdef FRONTEND
+	/*
+	 * For QD-QE connections, we should ignore these environment variables,
+	 * since env variable of QD should not effect the GUCs of QE, otherwise, the SET
+	 * command would not work in the newly created Gang then
+	 */
 	/* common user-interface settings */
 	{
 		"PGDATESTYLE", "datestyle"
@@ -319,6 +361,7 @@ static const PQEnvironmentOption EnvironmentOptions[] =
 	{
 		"PGGEQO", "geqo"
 	},
+#endif
 	{
 		NULL, NULL
 	}
@@ -1479,7 +1522,12 @@ connectDBStart(PGconn *conn)
 	conn->addrlist = addrs;
 	conn->addr_cur = addrs;
 	conn->addrlist_family = hint.ai_family;
+#ifndef FRONTEND
+	// GPDB uses the high bits of the major version to indicate special internal communications
+	conn->pversion = PG_PROTOCOL(3 + 0x7000, 0);
+#else
 	conn->pversion = PG_PROTOCOL(3, 0);
+#endif
 	conn->send_appname = true;
 	conn->status = CONNECTION_NEEDED;
 
@@ -2554,6 +2602,9 @@ keep_going:						/* We will come back to here until there is
 							/* Must drop the old connection */
 							pqDropConnection(conn);
 							conn->status = CONNECTION_NEEDED;
+							/* Discard any unread/unsent data */
+							conn->inStart = conn->inCursor = conn->inEnd = 0;
+							conn->outCount = 0;
 							goto keep_going;
 						}
 					}
@@ -2823,6 +2874,17 @@ static void
 freePGconn(PGconn *conn)
 {
 	int			i;
+	pgParameterStatus *pstatus;
+
+	if (!conn)
+		return;
+
+	pqClearAsyncResult(conn);	/* deallocate result and curTuple */
+	if (conn->sock >= 0)
+	{
+		//pqsecure_close(conn);
+		closesocket(conn->sock);
+	}
 
 	/* let any event procs clean up their state data */
 	for (i = 0; i < conn->nEvents; i++)
@@ -2895,12 +2957,27 @@ freePGconn(PGconn *conn)
 	if (conn->gsslib)
 		free(conn->gsslib);
 #endif
+	if (conn->gpqeid)			/* CDB */
+		free(conn->gpqeid);
 	/* Note that conn->Pfdebug is not ours to close or free */
 	if (conn->last_query)
 		free(conn->last_query);
+	pg_freeaddrinfo_all(conn->addrlist_family, conn->addrlist);
+
+	pstatus = conn->pstatus;
+	while (pstatus != NULL)
+	{
+		pgParameterStatus *prev = pstatus;
+
+		pstatus = pstatus->next;
+		free(prev);
+	}
+
+	if (conn->lobjfuncs)
+		free(conn->lobjfuncs);
 	if (conn->inBuffer)
 		free(conn->inBuffer);
-	if (conn->outBuffer)
+	if (conn->outBuffer && !conn->outBuffer_shared)
 		free(conn->outBuffer);
 	if (conn->rowBuf)
 		free(conn->rowBuf);
@@ -3198,7 +3275,7 @@ PQfreeCancel(PGcancel *cancel)
  */
 static int
 internal_cancel(SockAddr *raddr, int be_pid, int be_key,
-				char *errbuf, int errbufsize)
+				char *errbuf, int errbufsize, bool requestFinish)
 {
 	int			save_errno = SOCK_ERRNO;
 	int			tmpsock = -1;
@@ -3210,6 +3287,12 @@ internal_cancel(SockAddr *raddr, int be_pid, int be_key,
 		CancelRequestPacket cp;
 	}			crp;
 
+#ifndef WIN32
+	struct pollfd	pollFds[1];
+	int				pollRet;
+
+retry2:
+#endif
 	/*
 	 * We need to open a temporary connection to the postmaster. Do this with
 	 * only kernel calls.
@@ -3237,7 +3320,10 @@ retry3:
 	/* Create and send the cancel request packet. */
 
 	crp.packetlen = htonl((uint32) sizeof(crp));
-	crp.cp.cancelRequestCode = (MsgType) htonl(CANCEL_REQUEST_CODE);
+	if (requestFinish)
+		crp.cp.cancelRequestCode = (MsgType) htonl(FINISH_REQUEST_CODE);
+	else
+		crp.cp.cancelRequestCode = (MsgType) htonl(CANCEL_REQUEST_CODE);
 	crp.cp.backendPID = htonl(be_pid);
 	crp.cp.cancelAuthCode = htonl(be_key);
 
@@ -3258,12 +3344,44 @@ retry4:
 	 * one we thought we were canceling.  Note we don't actually expect this
 	 * read to obtain any data, we are just waiting for EOF to be signaled.
 	 */
+#ifndef WIN32
 retry5:
+	pollFds[0].fd = tmpsock;
+	pollFds[0].events = POLLIN;
+	pollFds[0].revents = 0;
+
+	/*
+	 * Wait for at most 660 seconds, which is the sum of max values of
+	 * authentication_timeout and pre_auth_delay. Most likely, it's long enough
+	 * to make sure the process forked by the postmaster on segment is finished.
+	 */
+	pollRet = poll(pollFds, 1, 660 * 1000);
+	if (pollRet == 0)
+	{
+		/* timeout */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+	else if (pollRet < 0)
+	{
+		int olderrno = errno;
+		if (olderrno == EAGAIN || olderrno == EINTR)
+			goto retry5;
+
+		/* error */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+#endif
+
+retry6:
 	if (recv(tmpsock, (char *) &crp, 1, 0) < 0)
 	{
 		if (SOCK_ERRNO == EINTR)
 			/* Interrupted system call - we'll just try again */
-			goto retry5;
+			goto retry6;
 		/* we ignore other error conditions */
 	}
 
@@ -3310,7 +3428,26 @@ PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize);
+						   errbuf, errbufsize, false);
+}
+
+/*
+ * PQrequestFinish: request query finish
+ *
+ * Same as PQcancel, except it sends a finish request.
+ */
+int
+PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize)
+{
+	if (!cancel)
+	{
+		strlcpy(errbuf, "PQrequestFinish() -- no cancel object supplied",
+				errbufsize);
+		return FALSE;
+	}
+
+	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
+						   errbuf, errbufsize, true);
 }
 
 /*
@@ -3345,7 +3482,8 @@ PQrequestCancel(PGconn *conn)
 	}
 
 	r = internal_cancel(&conn->raddr, conn->be_pid, conn->be_key,
-						conn->errorMessage.data, conn->errorMessage.maxlen);
+						conn->errorMessage.data, conn->errorMessage.maxlen,
+						false);
 
 	if (!r)
 		conn->errorMessage.len = strlen(conn->errorMessage.data);

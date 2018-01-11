@@ -20,8 +20,10 @@
 #include "naucrates/init.h"
 #include "gpopt/init.h"
 #include "gpos/_api.h"
+#include "gpopt/gpdbwrappers.h"
 
 #include "naucrates/exception.h"
+#include "utils/guc.h"
 
 extern MemoryContext MessageContext;
 
@@ -126,7 +128,15 @@ void
 CGPOptimizer::InitGPOPT ()
 {
   // Use GPORCA's default allocators
-  struct gpos_init_params params = { NULL, NULL };
+  void *(*gpos_alloc)(size_t) = NULL;
+  void (*gpos_free)(void *) = NULL;
+  if (optimizer_use_gpdb_allocators)
+  {
+	gpos_alloc = gpdb::OptimizerAlloc;
+	gpos_free = gpdb::OptimizerFree;
+  }
+  struct gpos_init_params params =
+	{gpos_alloc, gpos_free, gpdb::FAbortRequested};
   gpos_init(&params);
   gpdxl_init();
   gpopt_init();

@@ -90,10 +90,10 @@
         <li id="io141965">A number of <xref href="#topic4" type="topic" format="dita"/> are provided
           with your Greenplum installation. The <codeph>psql</codeph> client application provides an
           interactive command-line interface to Greenplum Database. </li>
-        <li id="io155276"><xref href="#topic6" type="topic" format="dita"/> is an enhanced version
-          of the popular management tool pgAdmin III. Since version 1.10.0, the pgAdmin III client
-          available from PostgreSQL Tools includes support for Greenplum-specific features.
-          Installation packages are available for download from the <xref
+        <li id="io155276"><xref href="#topic6" type="topic" format="dita"/> is an  updated version
+          of the popular management tool pgAdmin. Since version 1.10.0, the pgAdmin client available
+          from PostgreSQL Tools includes support for  some Greenplum-specific features. Installation
+          packages are available for download from the <xref
             href="https://www.pgadmin.org/download/" scope="external" format="html"><ph>pgAdmin
               download site</ph></xref>.</li>
         <li id="io141985">Using standard <xref href="#topic12" type="topic" format="dita"/>, such as
@@ -231,118 +231,41 @@
       </topic>
     </topic>
     <topic id="topic6" xml:lang="en">
-      <title id="io140208">pgAdmin III for Greenplum Database</title>
+      <title id="io140208">pgAdmin 4</title>
       <body>
-        <p>If you prefer a graphic interface, use pgAdmin III for Greenplum Database. This GUI
-          client supports PostgreSQL databases with all standard pgAdmin III features, while adding
-          support for Greenplum-specific features. </p>
-        <p>pgAdmin III for Greenplum Database supports the following Greenplum-specific
-          features:</p>
-        <ul>
-          <li id="io147510">External tables</li>
-          <li id="io147522">Append-optimized tables, including compressed append-optimized
-            tables</li>
-          <li id="io147523">Table partitioning</li>
-          <li id="io147524">Resource queues</li>
-          <li id="io147525">Graphical <codeph>EXPLAIN ANALYZE</codeph></li>
-          <li id="io149928">Greenplum server configuration parameters</li>
+        <p>If you prefer a graphic interface, use pgAdmin 4. This GUI client supports PostgreSQL
+          databases with all standard pgAdmin 4 features, while adding support for some
+          Greenplum-specific features. </p>
+        <p>pgAdmin 4 supports the following Greenplum-specific features:</p>
+        <ul id="ul_dc4_g15_3bb">
+          <li>Viewing Greenplum table DDL.</li>
+          <li id="io147522">Append-optimized tables, including compressed append-optimized tables.
+              <note>Only limited functionality for Greenplum partitioned tables is available with
+              pgAdmin 4.</note></li>
         </ul>
-        <fig id="io149932">
-          <title>Greenplum Options in pgAdmin III</title>
-          <image href="../../graphics/pg_admin_III_callout.png" placement="break" width="499px"
-            height="444px" id="image_b3v_t5k_jp"/>
-        </fig>
       </body>
       <topic id="topic7" xml:lang="en">
-        <title>Installing pgAdmin III for Greenplum Database</title>
+        <title>Installing pgAdmin 4</title>
         <body>
-          <p>The installation package for pgAdmin III for Greenplum Database is available for
-            download from the official pgAdmin III download site (<xref
-              href="https://www.pgadmin.org" scope="external" format="html"/>). Installation
-            instructions are included in the installation package.</p>
+          <p>The installation package for pgAdmin 4 is available for download from the official
+            pgAdmin 4 download site (<xref href="https://www.pgadmin.org" scope="external"
+              format="html"/>). Installation instructions are included in the installation
+            package.</p>
         </body>
       </topic>
       <topic id="topic8" xml:lang="en">
-        <title>Documentation for pgAdmin III for Greenplum Database</title>
+        <title>Documentation for pgAdmin 4</title>
         <body>
-          <p>For general help on the features of the graphical interface, select <b>Help
-              contents</b> from the <b>Help</b> menu.</p>
-          <p>For help with Greenplum-specific SQL support, select <b>Greenplum Database Help</b>
-            from the <b>Help</b> menu. If you have an active internet connection, you will be
-            directed to online Greenplum SQL reference documentation. Alternately, you can install
-            the Greenplum Client Tools package. This package contains SQL reference documentation
-            that is accessible to the help links in pgAdmin III.</p>
+          <p>For general help on the features of the pgAdmin graphical interface or PostgreSQL,
+            select one of the entries from the <b>Help</b> dropdown menu.</p>
         </body>
       </topic>
       <topic id="topic9" xml:lang="en">
-        <title>Performing Administrative Tasks with pgAdmin III</title>
+        <title>Viewing DDL Data with pgAdmin 4</title>
         <body>
-          <p>This topic highlights two of the many Greenplum Database administrative tasks you can
-            perform with pgAdmin III: editing the server configuration, and viewing a graphical
-            representation of a query plan.</p>
+          <p>This topic highlights a Greenplum Database task you can perform with pgAdmin 4: viewing
+            Greenplum Database table DDL.</p>
         </body>
-        <topic id="topic10" xml:lang="en">
-          <title>Editing Server Configuration</title>
-          <body>
-            <p>The pgAdmin III interface provides two ways to update the server configuration in
-                <codeph>postgresql.conf</codeph>: locally, through the <b>File</b> menu, and
-              remotely on the server through the <b>Tools</b> menu. Editing the server configuration
-              remotely may be more convenient in many cases, because it does not require you to
-              upload or copy <codeph>postgresql.conf.</codeph></p>
-            <section id="io148818">
-              <title>To edit server configuration remotely</title>
-              <ol>
-                <li id="io148828">Connect to the server whose configuration you want to edit. If you
-                  are connected to multiple servers, make sure that the correct server is
-                  highlighted in the object browser in the left pane.</li>
-                <li id="io148829">Select <b>Tools &gt; Server Configuration &gt;
-                  postgresql.conf</b>. The Backend Configuration Editor opens, displaying the list
-                  of available and enabled server configuration parameters.</li>
-                <li id="io148835">Locate the parameter you want to edit, and double click on the
-                  entry to open the Configuration settings dialog.</li>
-                <li id="io148845">Enter the new value for the parameter, or select/deselect
-                    <b>Enabled</b> as desired and click <b>OK</b>. </li>
-                <li id="io148851">If the parameter can be enabled by reloading server configuration,
-                  click the green reload icon, or select <b>File &gt; Reload</b> server. Many
-                  parameters require a full restart of the server. </li>
-              </ol>
-            </section>
-          </body>
-        </topic>
-        <topic id="topic11" xml:lang="en">
-          <title>Viewing a Graphical Query Plan</title>
-          <body>
-            <p>Using the pgAdmin III query tool, you can run a query with EXPLAIN to view the
-              details of the query plan. The output includes details about operations unique to
-              Greenplum distributed query processing such as plan slices and motions between
-              segments. You can view a graphical depiction of the plan as well as the text-based
-              data output.</p>
-            <section id="io148973">
-              <title>To view a graphical query plan</title>
-              <ol>
-                <li id="io148977">With the correct database highlighted in the object browser in the
-                  left pane, select <b>Tools &gt; Query</b> tool. </li>
-                <li id="io148989">Enter the query by typing in the SQL Editor, dragging objects into
-                  the Graphical Query Builder, or opening a file. </li>
-                <li id="io148990">Select <b>Query &gt; Explain</b> options and verify the following
-                    options:<ul id="ul_wcf_pyp_g4">
-                    <li id="io148991">Verbose — this must be deselected if you want to view a
-                      graphical depiction of the query plan</li>
-                    <li id="io149000">Analyze — select this option if you want to run the query in
-                      addition to viewing the plan</li>
-                  </ul></li>
-                <li id="io149004">Trigger the operation by clicking the Explain query option at the
-                  top of the pane, or by selecting <b>Query &gt; Explain</b>. <p>The query plan
-                    displays in the Output pane at the bottom of the screen. Select the Explain tab
-                    to view the graphical output. For example:</p><fig id="io149084">
-                    <title>Graphical Query Plan in pgAdmin III</title>
-                    <image href="../../graphics/pg3_queryplan.png" placement="break" width="499px"
-                      height="379px" id="image_e2n_pyp_g4"/>
-                  </fig></li>
-              </ol>
-            </section>
-          </body>
-        </topic>
       </topic>
     </topic>
     <topic id="topic12" xml:lang="en">

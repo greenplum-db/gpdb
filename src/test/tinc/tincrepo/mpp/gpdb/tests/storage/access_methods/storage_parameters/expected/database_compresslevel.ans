@@ -320,12 +320,6 @@ select compresslevel, compresstype, blocksize, checksum, columnstore from pg_app
 
 Drop table ao_db_cl_t6;
 DROP TABLE
--- Create table with invalid value compresslevel=10
-Drop table if exists ao_db_cl_t4;
-psql:/path/sql_file:1: NOTICE:  table "ao_db_cl_t4" does not exist, skipping
-DROP TABLE
-Create table ao_db_cl_t4 ( i int, j int) with(compresslevel=10);
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
 -- Create table with appendonly=false
 Drop table if exists ao_db_cl_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_cl_t4" does not exist, skipping
@@ -486,15 +480,6 @@ select attnum, attoptions from pg_attribute_encoding where attrelid='ao_db_cl_t7
 Drop table ao_db_cl_t7;
 DROP TABLE
 -- ========================
--- Set the database level guc to an invalid value
-Alter database dsp_db2 set gp_default_storage_options="appendonly=true, compresslevel=10";
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
-Select datconfig from pg_database where datname='dsp_db2';
- datconfig 
------------
- 
-(1 row)
-
 -- Set database level Guc to 2, and create compresstype=quicklz
 Alter database dsp_db2 set gp_default_storage_options="appendonly=true, compresslevel=2";
 ALTER DATABASE

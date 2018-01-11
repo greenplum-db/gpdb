@@ -3,20 +3,18 @@
  * pl_handler.c		- Handler for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_handler.c,v 1.38 2008/01/01 19:46:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_handler.c,v 1.44 2009/02/18 11:33:04 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "plpgsql.h"
-#include "pl_gram.h"
 
-#include "access/heapam.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
@@ -43,6 +41,8 @@ _PG_init(void)
 
 	if (inited)
 		return;
+
+	pg_bindtextdomain(TEXTDOMAIN);
 
 	plpgsql_HashTableInit();
 	RegisterXactCallback(plpgsql_xact_cb, NULL);

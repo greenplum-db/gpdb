@@ -33,6 +33,7 @@ Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeade
                                                     uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
             return this->restfulService->get(url, headers);
@@ -52,6 +53,7 @@ Response S3InterfaceService::putResponseWithRetries(const string &url, HTTPHeade
                                                     S3VectorUInt8 &data, uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
             return this->restfulService->put(url, headers, data);
@@ -72,6 +74,7 @@ Response S3InterfaceService::postResponseWithRetries(const string &url, HTTPHead
                                                      uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
             return this->restfulService->post(url, headers, data);
@@ -95,6 +98,7 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
                                                          uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
             return this->restfulService->head(url, headers);
@@ -110,10 +114,12 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
 
     S3_DIE(S3FailedAfterRetry, url, retries, message);
 }
+
 Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHeaders &headers,
                                                       uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
             return this->restfulService->deleteRequest(url, headers);
@@ -132,7 +138,7 @@ Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHea
 xmlParserCtxtPtr S3InterfaceService::getXMLContext(Response &response) {
     xmlParserCtxtPtr xmlptr =
         xmlCreatePushParserCtxt(NULL, NULL, (const char *)(response.getRawData().data()),
-                                response.getRawData().size(), "resp.xml");
+                                response.getRawData().size(), "getXMLContext.xml");
     if (xmlptr != NULL) {
         xmlParseChunk(xmlptr, "", 0, 1);
     } else {
@@ -548,54 +554,4 @@ bool S3InterfaceService::abortUpload(const S3Url &s3Url, const string &uploadId)
     } else {
         S3_DIE(S3RuntimeError, "unexpected response status");
     }
-}
-
-S3MessageParser::S3MessageParser(const Response &resp) : xmlptr(NULL) {
-    // Compatible S3 services don't always return XML
-    if (resp.getRawData().data() == NULL) {
-        message = "Unknown error";
-        code = "Unknown error code";
-
-        return;
-    }
-
-    xmlptr = xmlCreatePushParserCtxt(NULL, NULL, (const char *)(resp.getRawData().data()),
-                                     resp.getRawData().size(), "resp.xml");
-    if (xmlptr != NULL) {
-        xmlParseChunk(xmlptr, "", 0, 1);
-        message = parseS3Tag("Message");
-        code = parseS3Tag("Code");
-    }
-}
-
-S3MessageParser::~S3MessageParser() {
-    if (xmlptr != NULL) {
-        xmlFreeDoc(xmlptr->myDoc);
-        xmlFreeParserCtxt(xmlptr);
-    }
-}
-
-string S3MessageParser::parseS3Tag(const string &tag) {
-    string contentStr;
-
-    xmlNode *rootElement = xmlDocGetRootElement(xmlptr->myDoc);
-    if (rootElement == NULL) {
-        S3ERROR("Failed to parse returned xml of bucket list");
-        return contentStr;
-    }
-
-    xmlNodePtr curNode = rootElement->xmlChildrenNode;
-    while (curNode != NULL) {
-        if (xmlStrcmp(curNode->name, (const xmlChar *)tag.c_str()) == 0) {
-            char *content = (char *)xmlNodeGetContent(curNode);
-            if (content != NULL) {
-                contentStr = content;
-                xmlFree(content);
-            }
-            return contentStr;
-        }
-
-        curNode = curNode->next;
-    }
-    return contentStr;
 }

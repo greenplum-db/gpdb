@@ -493,6 +493,15 @@ SELECT pg_total_relation_size('aosizetest_1') < pg_total_relation_size('aosizete
 DROP TABLE aosizetest_1;
 DROP TABLE aosizetest_2;
 
+
+-- Check that pg_total_relation_size() returns a sane value for an AO table.
+-- (As of this writing, 1468872 bytes, but leave some slack for minor changes
+-- to indexes etc.)
+CREATE TABLE aosizetest_3(a text) WITH (appendonly=true);
+insert into aosizetest_3 select repeat('x', 100) from generate_series(1, 10000);
+SELECT pg_total_relation_size('aosizetest_3') between 1400000 and 1500000;
+
+
 -- These tests validate current segfile selection algorithm
 DROP TABLE IF EXISTS ao_selection;
 CREATE TABLE ao_selection (a INT, b INT) WITH (appendonly=true);
@@ -625,6 +634,48 @@ RESET enable_indexscan;
 RESET enable_bitmapscan;
 DROP OWNED BY appendony_test_user2 CASCADE;
 DROP ROLE IF EXISTS appendony_test_user2;
+
+---------------------------------------------------------------
+-- Triggers
+---------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION ao_trigger_func() RETURNS trigger LANGUAGE plpgsql AS $$
+begin
+  raise notice 'new: %', NEW;
+  return new;
+end;
+$$;
+create table trigger_ao_test (id int4, t text) with (appendonly=true, orientation=row);
+create table trigger_aocs_test (id int4, t text) with (appendonly=true, orientation=column);
+
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+
+-- UPDATE or DELETE triggers are not supporeted on AO tables
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+
+INSERT INTO trigger_ao_test VALUES (1, 'foo');
+INSERT INTO trigger_aocs_test VALUES (1, 'bar');
+
+COPY trigger_ao_test FROM STDIN;
+2	foocopy
+\.
+
+COPY trigger_aocs_test FROM STDIN;
+2	barcopy
+\.
+
+SELECT * FROM trigger_ao_test;
+SELECT * FROM trigger_aocs_test;
 
 --------------------------------------------------------------------------------
 -- Finally check to detect if any dangling gp_fastsequence entries are left

@@ -4,12 +4,13 @@
  *	  POSTGRES define and remove index code.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.171 2008/02/07 17:09:51 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.185 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,7 +23,6 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
@@ -34,12 +34,14 @@
 #include "commands/tablespace.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
-#include "parser/parse_agg.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parsetree.h"
+#include "rewrite/rewriteManip.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
@@ -50,9 +52,11 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "utils/faultinjector.h"
+#include "utils/tqual.h"
 
+#include "catalog/pg_inherits_fn.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
@@ -60,7 +64,8 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
+#include "utils/faultinjector.h"
 
 /* non-export function prototypes */
 static void CheckPredicate(Expr *predicate);
@@ -235,6 +240,7 @@ DefineIndex(RangeVar *heapRelation,
 	int			numberOfAttributes;
 	VirtualTransactionId *old_lockholders;
 	VirtualTransactionId *old_snapshots;
+	int			n_old_snapshots;
 	LockRelId	heaprelid;
 	LOCKTAG		heaplocktag;
 	Snapshot	snapshot;
@@ -243,6 +249,7 @@ DefineIndex(RangeVar *heapRelation,
 	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode();
 	List	   *dispatch_oids;
 	char	   *altconname = stmt ? stmt->altconname : NULL;
+	int			i;
 
 	/*
 	 * count attributes in index
@@ -287,7 +294,7 @@ DefineIndex(RangeVar *heapRelation,
 	/*
 	 * Don't try to CREATE INDEX on temp tables of other backends.
 	 */
-	if (isOtherTempNamespace(namespaceId))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot create indexes on temporary tables of other sessions")));
@@ -535,7 +542,7 @@ DefineIndex(RangeVar *heapRelation,
 	/*
 	 * Parse AM-specific options, convert to text array form, validate.
 	 */
-	reloptions = transformRelOptions((Datum) 0, options, false, false);
+	reloptions = transformRelOptions((Datum) 0, options, NULL, NULL, false, false);
 
 	(void) index_reloptions(amoptions, reloptions, true);
 
@@ -705,6 +712,7 @@ DefineIndex(RangeVar *heapRelation,
 		MemoryContextSwitchTo(old_context);
 	}
 
+	PopActiveSnapshot();
 	CommitTransactionCommand();
 
 	/*
@@ -718,10 +726,14 @@ DefineIndex(RangeVar *heapRelation,
 	 */
 	if (shouldDispatch)
 	{
-
+		/*
+		 * Note: We don't use a snapshot. Each QE will create their own
+		 * transactions and take their own snapshots. We will wait later
+		 * later for all the current distributed transactions to finish, so
+		 * it's not important what exact snapshot is used here.
+		 */
 		CdbDispatchUtilityStatement((Node *)stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT,
+									DF_CANCEL_ON_ERROR,
 									dispatch_oids,
 									NULL);
 	}
@@ -783,7 +795,7 @@ DefineIndex(RangeVar *heapRelation,
 	indexRelation = index_open(indexRelationId, RowExclusiveLock);
 
 	/* Set ActiveSnapshot since functions in the indexes may need it */
-	ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+	PushActiveSnapshot(GetTransactionSnapshot());
 
 	/* We have to re-build the IndexInfo struct, since it was lost in commit */
 	indexInfo = BuildIndexInfo(indexRelation);
@@ -804,6 +816,9 @@ DefineIndex(RangeVar *heapRelation,
 	 * insert new entries into the index for insertions and non-HOT updates.
 	 */
 	index_set_state_flags(indexRelationId, INDEX_CREATE_SET_READY);
+
+	/* we can do away with our snapshot */
+	PopActiveSnapshot();
 
 	/*
 	 * Commit this transaction to make the indisready update visible.
@@ -832,7 +847,7 @@ DefineIndex(RangeVar *heapRelation,
 	 * snapshot treats as committed.  If such a recently-committed transaction
 	 * deleted tuples in the table, we will not include them in the index; yet
 	 * those transactions which see the deleting one as still-in-progress will
-	 * expect them to be there once we mark the index as valid.
+	 * expect such tuples to be there once we mark the index as valid.
 	 *
 	 * We solve this by waiting for all endangered transactions to exit before
 	 * we mark the index as valid.
@@ -840,8 +855,8 @@ DefineIndex(RangeVar *heapRelation,
 	 * We also set ActiveSnapshot to this snap, since functions in indexes may
 	 * need a snapshot.
 	 */
-	snapshot = CopySnapshot(GetTransactionSnapshot());
-	ActiveSnapshot = snapshot;
+	snapshot = RegisterSnapshot(GetTransactionSnapshot());
+	PushActiveSnapshot(snapshot);
 
 	/*
 	 * Scan the index and the heap, insert any missing index entries.
@@ -855,31 +870,70 @@ DefineIndex(RangeVar *heapRelation,
 	 * transactions that might have older snapshots.  Obtain a list of VXIDs
 	 * of such transactions, and wait for them individually.
 	 *
-	 * We can exclude any running transactions that have xmin >= the xmax of
-	 * our reference snapshot, since they are clearly not interested in any
-	 * missing older tuples.  Transactions in other DBs aren't a problem
-	 * either, since they'll never even be able to see this index.
+	 * We can exclude any running transactions that have xmin > the xmin of
+	 * our reference snapshot; their oldest snapshot must be newer than ours.
+	 * We can also exclude any transactions that have xmin = zero, since they
+	 * evidently have no live snapshot at all (and any one they might be in
+	 * process of taking is certainly newer than ours).  Transactions in other
+	 * DBs can be ignored too, since they'll never even be able to see this
+	 * index.
 	 *
 	 * We can also exclude autovacuum processes and processes running manual
 	 * lazy VACUUMs, because they won't be fazed by missing index entries
-	 * either.  (Manual ANALYZEs, however, can't be excluded because they
+	 * either.	(Manual ANALYZEs, however, can't be excluded because they
 	 * might be within transactions that are going to do arbitrary operations
 	 * later.)
 	 *
 	 * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
 	 * check for that.
+	 *
+	 * If a process goes idle-in-transaction with xmin zero, we do not need to
+	 * wait for it anymore, per the above argument.  We do not have the
+	 * infrastructure right now to stop waiting if that happens, but we can at
+	 * least avoid the folly of waiting when it is idle at the time we would
+	 * begin to wait.  We do this by repeatedly rechecking the output of
+	 * GetCurrentVirtualXIDs.  If, during any iteration, a particular vxid
+	 * doesn't show up in the output, we know we can forget about it.
 	 */
-#if 0  /* Upstream code not applicable to GPDB */
-	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
-										  PROC_IS_AUTOVACUUM | PROC_IN_VACUUM);
-#else
-	old_snapshots = GetCurrentVirtualXIDs(ActiveSnapshot->xmax, false,
-										  PROC_IS_AUTOVACUUM);
-#endif
-	while (VirtualTransactionIdIsValid(*old_snapshots))
+	old_snapshots = GetCurrentVirtualXIDs(snapshot->xmin, true, false,
+										  PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
+										  &n_old_snapshots);
+
+	for (i = 0; i < n_old_snapshots; i++)
 	{
-		VirtualXactLockTableWait(*old_snapshots);
-		old_snapshots++;
+		if (!VirtualTransactionIdIsValid(old_snapshots[i]))
+			continue;			/* found uninteresting in previous cycle */
+
+		if (i > 0)
+		{
+			/* see if anything's changed ... */
+			VirtualTransactionId *newer_snapshots;
+			int			n_newer_snapshots;
+			int			j;
+			int			k;
+
+			newer_snapshots = GetCurrentVirtualXIDs(snapshot->xmin,
+													true, false,
+													PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
+													&n_newer_snapshots);
+			for (j = i; j < n_old_snapshots; j++)
+			{
+				if (!VirtualTransactionIdIsValid(old_snapshots[j]))
+					continue;	/* found uninteresting in previous cycle */
+				for (k = 0; k < n_newer_snapshots; k++)
+				{
+					if (VirtualTransactionIdEquals(old_snapshots[j],
+												   newer_snapshots[k]))
+						break;
+				}
+				if (k >= n_newer_snapshots)		/* not there anymore */
+					SetInvalidVirtualTransactionId(old_snapshots[j]);
+			}
+			pfree(newer_snapshots);
+		}
+
+		if (VirtualTransactionIdIsValid(old_snapshots[i]))
+			VirtualXactLockTableWait(old_snapshots[i]);
 	}
 
 	/*
@@ -896,6 +950,12 @@ DefineIndex(RangeVar *heapRelation,
 	 * to replan; so relcache flush on the index itself was sufficient.)
 	 */
 	CacheInvalidateRelcacheByRelid(heaprelid.relId);
+
+	/* we can now do away with our active snapshot */
+	PopActiveSnapshot();
+
+	/* And we can remove the validating snapshot too */
+	UnregisterSnapshot(snapshot);
 
 	/*
 	 * Last thing to do is release the session-level lock on the parent table.
@@ -919,21 +979,9 @@ static void
 CheckPredicate(Expr *predicate)
 {
 	/*
-	 * We don't currently support generation of an actual query plan for a
-	 * predicate, only simple scalar expressions; hence these restrictions.
+	 * transformExpr() should have already rejected subqueries, aggregates,
+	 * and window functions, based on the EXPR_KIND_ for a predicate.
 	 */
-	if (contain_subplans((Node *) predicate))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot use subquery in index predicate")));
-	if (contain_agg_clause((Node *) predicate))
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-				 errmsg("cannot use aggregate in index predicate")));
-	if (checkExprHasWindFuncs((Node *)predicate))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot use window function in index predicate")));
 
 	/*
 	 * A predicate using mutable functions is probably wrong, for the same
@@ -1020,23 +1068,10 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 			atttype = exprType(attribute->expr);
 
 			/*
-			 * We don't currently support generation of an actual query plan
-			 * for an index expression, only simple scalar expressions; hence
-			 * these restrictions.
+			 * transformExpr() should have already rejected subqueries,
+			 * aggregates, and window functions, based on the EXPR_KIND_
+			 * for an index expression.
 			 */
-			if (contain_subplans(attribute->expr))
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot use subquery in index expression")));
-			if (contain_agg_clause(attribute->expr))
-				ereport(ERROR,
-						(errcode(ERRCODE_GROUPING_ERROR),
-				errmsg("cannot use aggregate function in index expression")));
-			if (checkExprHasWindFuncs(attribute->expr))
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use window function in index expression")));
-
 
 			/*
 			 * A expression using mutable functions is probably wrong, since
@@ -1224,7 +1259,7 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 	ScanKeyData skey[1];
 	SysScanDesc scan;
 	HeapTuple	tup;
-	CATEGORY	tcategory;
+	TYPCATEGORY tcategory;
 
 	/* If it's a domain, look at the base type instead */
 	type_id = getBaseType(type_id);
@@ -1489,11 +1524,10 @@ relationHasPrimaryKey(Relation rel)
 	return result;
 }
 
-
 /*
- * relationHasPrimaryKey -
+ * relationHasUniqueIndex -
  *
- *	See whether an existing relation has a primary key.
+ *	See whether an existing relation has a unique index.
  */
 static bool
 relationHasUniqueIndex(Relation rel)
@@ -1527,61 +1561,6 @@ relationHasUniqueIndex(Relation rel)
 	list_free(indexoidlist);
 
 	return result;
-}
-
-/*
- * RemoveIndex
- *		Deletes an index.
- */
-void
-RemoveIndex(RangeVar *relation, DropBehavior behavior)
-{
-	Oid			indOid;
-	char		relkind;
-	ObjectAddress object;
-	HeapTuple tuple;
-	PartStatus pstat;
-
-	indOid = RangeVarGetRelid(relation, false);
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		LockRelationOid(RelationRelationId, RowExclusiveLock);
-	}
-
-	/* Lock the relation to be dropped */
-	LockRelationOid(indOid, AccessExclusiveLock);
-
-	/* XXX: just an existence (count(*)) check? */
-
-	tuple = SearchSysCache1(RELOID,
-							ObjectIdGetDatum(indOid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "index \"%s\" does not exist", relation->relname);
-
-	relkind = get_rel_relkind(indOid);
-	if (relkind != RELKIND_INDEX)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is not an index",
-						relation->relname)));
-
-	object.classId = RelationRelationId;
-	object.objectId = indOid;
-	object.objectSubId = 0;
-	
-	pstat = rel_part_status(IndexGetRelation(indOid));
-
-	ReleaseSysCache(tuple);
-
-	performDeletion(&object, behavior);
-	
-	if ( pstat == PART_STATUS_ROOT || pstat == PART_STATUS_INTERIOR )
-	{
-		ereport(WARNING,
-				(errmsg("Only dropped the index \"%s\"", relation->relname),
-				 errhint("To drop other indexes on child partitions, drop each one explicitly.")));
-	}
 }
 
 /*
@@ -1643,6 +1622,7 @@ ReindexRelationList(List *relids)
 	 * Commit ongoing transaction so that we can start a new
 	 * transaction per relation.
 	 */
+	PopActiveSnapshot();
 	CommitTransactionCommand();
 
 	SIMPLE_FAULT_INJECTOR(ReindexDB);
@@ -1652,11 +1632,9 @@ ReindexRelationList(List *relids)
 		Oid			relid = lfirst_oid(lc);
 		Relation	rel = NULL;
 
-		setupRegularDtxContext();
 		StartTransactionCommand();
-
 		/* functions in indexes may want a snapshot set */
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(GetTransactionSnapshot());
 
 		/*
 		 * Try to open the relation. If the try fails it may mean that
@@ -1693,6 +1671,7 @@ ReindexRelationList(List *relids)
 			heap_close(rel, NoLock);
 		}
 
+		PopActiveSnapshot();
 		CommitTransactionCommand();
 	}
 
@@ -1700,7 +1679,6 @@ ReindexRelationList(List *relids)
 	 * We committed the transaction above, so start a new one before
 	 * returning.
 	 */
-	setupRegularDtxContext();
 	StartTransactionCommand();
 }
 
@@ -1739,7 +1717,7 @@ ReindexTable(ReindexStmt *stmt)
 		prels = all_partition_relids(pn);
 	}
 	else if (rel_is_child_partition(relid))
-		prels = find_all_inheritors(relid);
+		prels = find_all_inheritors(relid, NoLock);
 
 	/*
 	 * Create a memory context that will survive forced transaction commits we
@@ -1873,7 +1851,8 @@ ReindexDatabase(ReindexStmt *stmt)
 			continue;
 
 		/* Skip temp tables of other backends; we can't reindex them at all */
-		if (isOtherTempNamespace(classtuple->relnamespace))
+		if (classtuple->relistemp &&
+			!isTempNamespace(classtuple->relnamespace))
 			continue;
 
 		/* Check user/system classification, and optionally skip */

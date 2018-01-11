@@ -490,20 +490,20 @@ WITH v(a, b) AS (SELECT func1_sql_setint_imm(a), b FROM foo WHERE b < 5) SELECT 
 
 -- @description function_in_with_11.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_12.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_15.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -511,7 +511,7 @@ rollback;
 -- @description function_in_with_16.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3452,80 +3452,80 @@ WITH v(a, b) AS (SELECT func1_sql_setint_imm(func2_sql_int_imm(a)), b FROM foo W
 
 -- @description function_in_with_withfunc2_110.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_111.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_112.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_113.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_114.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_115.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_vol" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_120.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_121.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_122.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_123.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_124.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_125.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on segment because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement " SELECT d FROM bar WHERE c <>  $1 "
 PL/pgSQL function "func1_read_setint_sql_stb" line 4 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_150.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3533,7 +3533,7 @@ rollback;
 -- @description function_in_with_withfunc2_151.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3541,7 +3541,7 @@ rollback;
 -- @description function_in_with_withfunc2_152.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3549,7 +3549,7 @@ rollback;
 -- @description function_in_with_withfunc2_153.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3557,7 +3557,7 @@ rollback;
 -- @description function_in_with_withfunc2_154.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3565,7 +3565,7 @@ rollback;
 -- @description function_in_with_withfunc2_155.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_vol(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_vol" line 4 at SQL statement
@@ -3573,7 +3573,7 @@ rollback;
 -- @description function_in_with_withfunc2_160.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3581,7 +3581,7 @@ rollback;
 -- @description function_in_with_withfunc2_161.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3589,7 +3589,7 @@ rollback;
 -- @description function_in_with_withfunc2_162.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3597,7 +3597,7 @@ rollback;
 -- @description function_in_with_withfunc2_163.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3605,7 +3605,7 @@ rollback;
 -- @description function_in_with_withfunc2_164.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
@@ -3613,7 +3613,7 @@ rollback;
 -- @description function_in_with_withfunc2_165.sql
 begin;
 WITH v(a, b) AS (SELECT func1_mod_setint_stb(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice2 127.0.0.1:40000 pid=3234)
 DETAIL:  
 SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
 PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement

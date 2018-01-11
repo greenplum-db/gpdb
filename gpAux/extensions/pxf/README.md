@@ -1,6 +1,9 @@
-# The PXF extension client for GPDB
+# The PXF extension for GPDB
 
-At present, this extension is in development status, where only Demo PXF profile is working and no real data is yet accessible.
+PXF is an extension framework that allows GPDB or any other database to query external distributed datasets. The framework is built in Java and provides built-in connectors for accessing data of various formats(text,sequence files, avro, orc,etc) that may exist inside HDFS files, Hive tables, HBase tables and many more stores.
+PXF consists of a server side JVM based component and a C client component which serves as the means for GPDB to interact with the PXF service.
+This module only includes the PXF C client and the build instructions only builds the client.
+Using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
 
 ## Table of Contents
 
@@ -25,6 +28,14 @@ make
 ```
 
 The build will produce the pxf client shared library named `pxf.so`.
+
+### Run unit tests
+
+This will run the unit tests located in the `test` directory
+
+```
+make unittest-check
+```
  
 ### Install the PXF extension
 ```
@@ -44,7 +55,10 @@ found in the top-level [README.md](../../../README.md) ("_Build the
 database_" section).
 
 ## Create and use PXF external table
-At this time, only PXF Demo profile is working:
+If you wish to simply test GPDB and PXF without hadoop, you can use the Demo Profile.
+
+The Demo profile demonstrates how GPDB can parallely the external data via the PXF agents. The data served is 
+static data from the PXF agents themselves.
 ```
 # CREATE EXTERNAL TABLE pxf_read_test (a TEXT, b TEXT, c TEXT) \
 LOCATION ('pxf://localhost:51200/tmp/dummy1' \
@@ -54,7 +68,9 @@ LOCATION ('pxf://localhost:51200/tmp/dummy1' \
 FORMAT 'TEXT' (DELIMITER ',');
 ```
 
-Once you also install and run PXF server on the machines where GPDB segments are run, you can select data from the demo PXF profile:
+
+Please refer to [PXF Setup](https://cwiki.apache.org/confluence/display/HAWQ/PXF+Build+and+Install) for instructions to setup PXF.
+Once you install and run PXF server alongside the GPDB segments, you can select data from the demo PXF profile:
 ```
 # SELECT * from pxf_read_test order by a;
 
@@ -69,13 +85,10 @@ Once you also install and run PXF server on the machines where GPDB segments are
 (6 rows)
 ```
 
-### Run unit tests
 
-This will run the unit tests located in the `test` directory
+If you wish to use PXF with Hadoop, you will need to integrate with Hdfs or Hive, you can refer to the above doc on steps to install them.
 
-```
-make unittest-check
-```
+
 
 ## Run regression tests
 

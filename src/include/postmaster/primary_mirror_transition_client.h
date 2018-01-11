@@ -3,7 +3,12 @@
  * primary_mirror_transition_client.h
  *	  Exports from primary_mirror_transition_client.c.
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/postmaster/primary_mirror_transition_client.h
  *
  *-------------------------------------------------------------------------
  */

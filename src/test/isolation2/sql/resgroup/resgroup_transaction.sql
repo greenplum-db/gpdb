@@ -132,5 +132,17 @@ DROP FUNCTION rg_create_func();
 DROP FUNCTION rg_alter_func();
 DROP FUNCTION rg_drop_func();
 
+-- ----------------------------------------------------------------------
+-- Test: Create index concurrently under the control of resource group
+-- ----------------------------------------------------------------------
+-- GPDB will commit a transaction and restart a transaction when defining
+-- index concurrently. We need to verify resource group can handle this
+-- case.
+CREATE TABLE concur_table (f1 text, f2 text, dk text) distributed by (dk);
+SET gp_create_index_concurrently = TRUE;
+CREATE INDEX CONCURRENTLY idx_concur_table ON concur_table(f2,f1);
+DROP INDEX idx_concur_table;
+DROP TABLE concur_table;
+
 -- cleanup
 DROP VIEW rg_test_monitor;

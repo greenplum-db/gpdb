@@ -3,10 +3,10 @@
  * uuid.c
  *	  Functions for the built-in type "uuid".
  *
- * Copyright (c) 2007-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/uuid.c,v 1.7 2008/01/01 20:31:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/uuid.c,v 1.11 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,59 +74,51 @@ uuid_out(PG_FUNCTION_ARGS)
 }
 
 /*
- * We allow UUIDs in three input formats: 8x-4x-4x-4x-12x,
- * {8x-4x-4x-4x-12x}, and 32x, where "nx" means n hexadecimal digits
- * (only the first format is used for output). We convert the first
- * two formats into the latter format before further processing.
+ * We allow UUIDs as a series of 32 hexadecimal digits with an optional dash
+ * after each group of 4 hexadecimal digits, and optionally surrounded by {}.
+ * (The canonical format 8x-4x-4x-4x-12x, where "nx" means n hexadecimal
+ * digits, is the only one used for output.)
  */
 static void
 string_to_uuid(const char *source, pg_uuid_t *uuid)
 {
-	char		hex_buf[32];	/* not NUL terminated */
+	const char *src = source;
+	bool		braces = false;
 	int			i;
-	int			src_len;
 
-	src_len = strlen(source);
-	if (src_len != 32 && src_len != 36 && src_len != 38)
-		goto syntax_error;
-
-	if (src_len == 32)
-		memcpy(hex_buf, source, src_len);
-	else
+	if (src[0] == '{')
 	{
-		const char *str = source;
-
-		if (src_len == 38)
-		{
-			if (str[0] != '{' || str[37] != '}')
-				goto syntax_error;
-
-			str++;				/* skip the first character */
-		}
-
-		if (str[8] != '-' || str[13] != '-' ||
-			str[18] != '-' || str[23] != '-')
-			goto syntax_error;
-
-		memcpy(hex_buf, str, 8);
-		memcpy(hex_buf + 8, str + 9, 4);
-		memcpy(hex_buf + 12, str + 14, 4);
-		memcpy(hex_buf + 16, str + 19, 4);
-		memcpy(hex_buf + 20, str + 24, 12);
+		src++;
+		braces = true;
 	}
 
 	for (i = 0; i < UUID_LEN; i++)
 	{
 		char		str_buf[3];
 
-		memcpy(str_buf, &hex_buf[i * 2], 2);
+		if (src[0] == '\0' || src[1] == '\0')
+			goto syntax_error;
+		memcpy(str_buf, src, 2);
 		if (!isxdigit((unsigned char) str_buf[0]) ||
 			!isxdigit((unsigned char) str_buf[1]))
 			goto syntax_error;
 
 		str_buf[2] = '\0';
 		uuid->data[i] = (unsigned char) strtoul(str_buf, NULL, 16);
+		src += 2;
+		if (src[0] == '-' && (i % 2) == 1 && i < UUID_LEN - 1)
+			src++;
 	}
+
+	if (braces)
+	{
+		if (*src != '}')
+			goto syntax_error;
+		src++;
+	}
+
+	if (*src != '\0')
+		goto syntax_error;
 
 	return;
 

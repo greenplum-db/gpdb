@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="iz173472">Greenplum Database Memory Overview</title>
+    <shortdesc>Memory is a key resource for a Greenplum Database system and, when used efficiently,
+      can ensure high performance and throughput. This topic describes how segment host memory is
+      allocated between segments and the options available to administrators to configure
+      memory.</shortdesc>
+    <body id="body_bk2_fvw_wq">
+      <p>A Greenplum Database segment host runs multiple PostgreSQL instances, all sharing the
+        host's memory. The segments have an identical configuration and they consume similar amounts
+        of memory, CPU, and disk IO simultaneously, while working on queries in parallel. </p>
+      <p>For best query throughput, the memory configuration should be managed carefully. There are
+        memory configuration options at every level in Greenplum Database, from operating system
+        parameters, to managing resources with resource queues and resource groups, to setting the amount of memory
+        allocated to an individual query.</p>
+      <section>
+        <title>Segment Host Memory</title>
+        <p>On a Greenplum Database segment host, the available host memory is shared among all the
+          processes executing on the computer, including the operating system, Greenplum Database
+          segment instances, and other application processes. Administrators must determine what
+          Greenplum Database and non-Greenplum Database processes share the hosts' memory and
+          configure the system to use the memory efficiently. It is equally important to monitor
+          memory usage regularly to detect any changes in the way host memory is consumed by
+          Greenplum Database or other processes.</p>
+        <p>The following figure illustrates how memory is consumed on a Greenplum Database segment
+            host.<fig id="fig_py5_1sl_zp">
+            <title>Greenplum Database Segment Host Memory</title>
+            <image href="graphics/memory.png" id="image_iqn_dsl_zp"/>
+          </fig></p>
+        <p>Beginning at the bottom of the illustration, the line labeled <i>A</i> represents the
+          total host memory. The line directly above line <i>A</i> shows that the total host memory
+          comprises both physical RAM and swap space. </p>
+        <p>The line labelled <i>B</i> shows that the total memory available must be shared by
+          Greenplum Database and all other processes on the host. Non-Greenplum Database processes
+          include the operating system and any other applications, for example system monitoring
+          agents. Some applications may use a significant portion of memory and, as a result, you
+          may have to adjust the number of segments per Greenplum Database host or the amount of
+          memory per segment.</p>
+        <p>The segments (<i>C</i>) each get an equal share of the Greenplum Database Memory
+            (<i>B</i>). </p>
+        <p>Within a segment, the currently active resource management scheme, <i>Resource Queues</i>
+        or <i>Resource Groups</i>, governs how memory is allocated to execute a SQL statement. These
+        constructs allow you to translate business requirements into execution policies in your
+        Greenplum Database system and to guard against queries that could degrade performance. For
+        an overview of resource groups and resource queues, refer to <xref href="wlmgmt.xml#topic1"
+          type="topic" format="dita"/>.</p>
+      </section>
+      <section>
+        <title>Options for Configuring Segment Host Memory</title>
+        <p>Host memory is the total memory shared by all applications on the segment host. You
+          can configure the amount of host memory using any of the following methods:<ul
+            id="ul_y5m_xzs_zp">
+            <li>Add more RAM to the nodes to increase the physical memory.</li>
+            <li>Allocate swap space to increase the size of virtual memory.</li>
+            <li>Set the kernel parameters <varname>vm.overcommit_memory</varname> and
+                <varname>vm.overcommit_ratio</varname> to configure how the operating system handles
+              large memory allocation requests.</li>
+          </ul></p>
+        <p>The physical RAM and OS configuration are usually managed by the platform team and system
+          administrators. <ph>See the <cite>Greenplum Database Installation
+              Guide</cite> for the recommended kernel parameter settings.</ph>
+        </p>
+        <p>The amount of memory to reserve for the operating system and other processes is workload
+          dependent. The minimum recommendation for operating system memory is 32GB, but if there is
+          much concurrency in Greenplum Database, increasing to 64GB of reserved memory may be
+          required. The largest user of operating system memory is SLAB, which increases as
+          Greenplum Database concurrency and the number of sockets used increases.</p>
+        <p>The <codeph>vm.overcommit_memory</codeph> kernel parameter should always be set to 2, the
+          only safe value for Greenplum Database.</p>
+        <p>The <codeph>vm.overcommit_ratio</codeph> kernel parameter sets the percentage of RAM that
+          is used for application processes, the remainder reserved for the operating system. The
+          default for Red Hat is 50 (50%). Setting this parameter too high may result in
+          insufficient memory reserved for the operating system, which can cause segment host
+          failure or database failure. Leaving the setting at the default of 50 is generally safe,
+          but conservative. Setting the value too low reduces the amount of concurrency and the
+          complexity of queries you can run at the same time by reducing the amount of memory available to
+          Greenplum Database. When increasing <codeph>vm.overcommit_ratio</codeph>, it is important
+          to remember to always reserve some memory for operating system activities.</p>
+        <p>To calculate a safe value for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, first determine the
+          total memory available to Greenplum Database processes, called <codeph>gp_vmem_rq</codeph>,
+          with this
+          formula:<codeblock>gp_vmem_rq = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock></p>
+        <p>where <codeph>SWAP</codeph> is the swap space on the host in GB, and <codeph>RAM</codeph>
+          is the number of GB of RAM installed on the host. When resource queue-based resource management is active, use <codeph>gp_vmem_rq</codeph> to calculate the <codeph>vm.overcommit_ratio</codeph> value with this
+          formula:<codeblock>vm.overcommit_ratio = (RAM - 0.026 * gp_vmem_rq) / RAM</codeblock></p>
+        <p>When resource group-based resource management is active, the operating system <codeph>vm.overcommit_ratio</codeph> default value is a good starting point. Tune as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
+      </section>
+      <section id="section_nfn_q5r_bs">
+        <title>Configuring Greenplum Database Memory</title>
+        <p>Greenplum Database Memory is the amount of memory available to all Greenplum Database
+          segment instances. </p>
+        <p>When you set up the Greenplum Database cluster, you determine the number of primary
+          segments to run per host and the amount of memory to allocate for each segment. Depending
+          on the CPU cores, amount of physical RAM, and workload characteristics, the number of
+          segments is usually a value between 4 and 8. With segment mirroring enabled, it is
+          important to allocate memory for the maximum number of primary segments executing on a
+          host during a failure. For example, if you use the default grouping mirror configuration,
+          a segment host failure doubles the number of acting primaries on the host that has the
+          failed host's mirrors. Mirror configurations that spread each host's mirrors over multiple
+          other hosts can lower the maximum, allowing more memory to be allocated for each segment.
+          For example, if you use a block mirroring configuration with 4 hosts per block and 8
+          primary segments per host, a single host failure would cause other hosts in the block to
+          have a maximum of 11 active primaries, compared to 16 for the default grouping mirror
+          configuration.</p>
+        <p>When resource queue-based resource management is active, the <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
+          identifies the amount of memory to allocate to
+          each segment. This value is estimated by calculating the memory available for all Greenplum
+          Database processes and dividing by the maximum number of primary segments during a
+          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can
+          fail. Use the following formula to calculate a safe value for
+          <varname>gp_vmem_protect_limit</varname>; provide the <codeph>gp_vmem_rq</codeph>
+          value you calculated earlier.</p><p><codeblock>
+gp_vmem_protect_limit = gp_vmem_rq / max_acting_primary_segments</codeblock></p>
+          <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of
+          primary segments that could be running on a host when mirror segments are activated
+          due to a host or segment failure.</p>
+        <p><varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
+          resource groups for Greenplum Database resource management.</p>
+        <p>When resource group-based resource management is active, the amount of memory allocated
+          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
+          <varname>gp_resource_group_memory_limit</varname> server configuration parameter and
+          divided by the number of active primary segments on the host. Use the following
+          formula to calculate a safe value for segment memory when using resource groups for
+          resource management.</p>
+        <p><codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
+        <p>Resource queues and resource groups support additional configuration parameters that
+           enable you to further control and refine the amount of memory allocated for queries.</p>
+      </section>
+    </body>
+</topic>

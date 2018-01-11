@@ -17,7 +17,7 @@ def _set_VLIM_SLIM(vlimMB, slimMB):
 
     # Restart DB
     Command('Restart database for GUCs to take effect', 
-            'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
+            'source $GPHOME/greenplum_path.sh && gpstop -air').run(validateAfter=True)
 
 def _reset_VLIM_SLIM():
 
@@ -30,7 +30,7 @@ def _reset_VLIM_SLIM():
     
     # Restart DB
     Command('Restart database for GUCs to take effect', 
-            'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
+            'source $GPHOME/greenplum_path.sh && gpstop -air').run(validateAfter=True)
 
 
 class RQTMemoryAccountingTestCase(SQLIsolationTestCase):

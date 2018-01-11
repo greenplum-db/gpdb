@@ -1,5 +1,4 @@
 -- @Description Test vmem shown in the live view matches the amount in memory accounting
--- @skip Memory accounting failed to capture the memory allocation in UDF. Enable this test once the bug is fixed.
 -- @author Zhongxian Gu
 
 -- session1: issue the testing query

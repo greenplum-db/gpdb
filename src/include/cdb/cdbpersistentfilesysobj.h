@@ -2,7 +2,12 @@
  *
  * cdbpersistentfilesysobj.h
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbpersistentfilesysobj.h
  *
  *-------------------------------------------------------------------------
  */
@@ -133,7 +138,8 @@ typedef void (*PersistentFileSysObjVerifiedActionCallback) (
 											PersistentFileSysObjName 	*fsObjName,
 											ItemPointer 				persistentTid,
 											int64						persistentSerialNum,
-											PersistentFileSysObjVerifyExpectedResult verifyExpectedResult);
+											PersistentFileSysObjVerifyExpectedResult verifyExpectedResult,
+											PersistentFileSysRelStorageMgr relStorageMgr);
 
 /*
  * The file kinds of a persistent file-system object state-change results.

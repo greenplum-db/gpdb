@@ -180,6 +180,7 @@ class AnalyzeDb(Operation):
         self.verbose = options.verbose
         self.clean_last = options.clean_last
         self.clean_all = options.clean_all
+        self.gen_profile_only = options.gen_profile_only
 
         self.success_list = []
 
@@ -354,52 +355,18 @@ class AnalyzeDb(Operation):
 
             if not self.silent and not userinput.ask_yesno(None, "\nContinue with Analyze", 'N'):
                 raise UserAbortedException()
-
-            num_workers = min(self.parallel_level, len(ordered_candidates))
-            logger.info("Starting analyze with %d workers..." % num_workers)
-            pool = AnalyzeWorkerPool(numWorkers=num_workers)
-            for can in ordered_candidates:
-                can_schema, can_table = can[0], can[1]
-                if can in candidates:
-                    target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
-                    cmd = create_psql_command(self.dbname, ANALYZE_SQL % target)
-                else:  # can in root_partition_col_dict
-                    target = self._get_tablename_with_cols(can_schema, can_table, root_partition_col_dict)
-                    cmd = create_psql_command(self.dbname, ANALYZE_ROOT_SQL % target)
-                # Also stash the name of the target table in the object, so that it can be extracted
-                # from it later.
-                cmd.target_schema = can_schema
-                cmd.target_table = can_table
-                pool.addCommand(cmd)
-
-            wait_count = len(ordered_candidates)
-            start_time = time.time()
             try:
-                while wait_count > 0:
-                    done_cmd = pool.completed_queue.get()
-                    if done_cmd.was_successful():
-                        subject = (done_cmd.target_schema, done_cmd.target_table)
+                if self.gen_profile_only:
+                    for can in ordered_candidates:
+                        can_schema, can_table = can[0], can[1]
+                        subject = can_schema, can_table
                         self.success_list.append(subject)
-                    if wait_count % 10 == 0:
-                        logger.info("progress status: completed %d out of %d tables or partitions" %
-                                    (len(self.success_list), len(ordered_candidates)))
-                    wait_count -= 1
-
-                pool.join()
-                pool.haltWork()
-            except:
-                pool.haltWork()
-                pool.joinWorkers()
-                raise
+                else:
+                    self.run_analyze(logger, ordered_candidates, candidates, input_col_dict, root_partition_col_dict)
 
             finally:
                 self._write_report(curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
                                    root_partition_col_dict, dirty_partitions, target_list)
-
-                end_time = time.time()
-                logger.info(
-                    "Total elapsed time: %d seconds. Analyzed %d out of %d table(s) or partition(s) successfully."
-                    % (int(end_time - start_time), len(self.success_list), len(ordered_candidates)))
                 logger.info("Done.")
         except Exception, ex:
             logger.exception(ex)
@@ -410,6 +377,52 @@ class AnalyzeDb(Operation):
                 self.conn.close()
 
         return 0
+
+    def run_analyze(self, logger, ordered_candidates, candidates, input_col_dict, root_partition_col_dict):
+        logger.info("Starting analyze with %d workers..." % self.parallel_level)
+        pool = AnalyzeWorkerPool(numWorkers=self.parallel_level)
+
+        for can in ordered_candidates:
+            can_schema, can_table = can[0], can[1]
+            if can in candidates:
+                target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
+                cmd = create_psql_command(self.dbname, ANALYZE_SQL % target)
+
+            else:  # can in root_partition_col_dict
+                target = self._get_tablename_with_cols(can_schema, can_table, root_partition_col_dict)
+                cmd = create_psql_command(self.dbname, ANALYZE_ROOT_SQL % target)
+
+            # Also stash the name of the target table in the object, so that it can be extracted
+            # from it later.
+            cmd.target_schema = can_schema
+            cmd.target_table = can_table
+            pool.addCommand(cmd)
+
+        wait_count = len(ordered_candidates)
+        start_time = time.time()
+        try:
+            while wait_count > 0:
+                done_cmd = pool.completed_queue.get()
+                if done_cmd.was_successful():
+                    subject = (done_cmd.target_schema, done_cmd.target_table)
+                    self.success_list.append(subject)
+                if wait_count % 10 == 0:
+                    logger.info("progress status: completed %d out of %d tables or partitions" %
+                                (len(self.success_list), len(ordered_candidates)))
+                wait_count -= 1
+
+            pool.join()
+            pool.haltWork()
+        except:
+            pool.haltWork()
+            pool.joinWorkers()
+            raise
+
+        finally:
+            end_time = time.time()
+            logger.info(
+                        "Total elapsed time: %d seconds. Analyzed %d out of %d table(s) or partition(s) successfully."
+                        % (int(end_time - start_time), len(self.success_list), len(ordered_candidates)))
 
     def read_last_analyzedb_output(self):
         last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
@@ -1173,6 +1186,8 @@ def create_parser():
                       help="Parallel level, i.e. the number of tables to be analyzed in parallel. Valid numbers are between 1 and 10. Default value is 5.")
     parser.add_option('--skip_root_stats', action='store_false', dest='rootstats', default=True,
                       help="Skip refreshing root partition stats if any of the leaf partitions is analyzed.")
+    parser.add_option('--gen_profile_only', action='store_true', dest='gen_profile_only', default=False,
+                      help="Create cached state files to indicate specified table or all tables have been analyzed.")
     parser.add_option('--full', action='store_true', dest='full_analyze', default=False,
                       help="Analyze without using incremental. All tables requested by the user will be analyzed.")
     parser.add_option('--clean_last', action='store_true', dest='clean_last', default=False,

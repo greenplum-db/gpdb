@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/tcop/pquery.h,v 1.44 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tcop/pquery.h,v 1.45 2009/01/01 17:24:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,6 @@ extern List *FetchStatementTargetList(Node *stmt);
 
 extern void PortalStart(Portal portal, ParamListInfo params,
 						Snapshot snapshot,
-						const char *seqServerHost, int seqServerPort,
 						QueryDispatchDesc *ddesc);
 
 extern void PortalSetResultFormat(Portal portal, int nFormats,
@@ -39,7 +38,7 @@ extern bool PortalRun(Portal portal, int64 count, bool isTopLevel,
 		  DestReceiver *dest, DestReceiver *altdest,
 		  char *completionTag);
 
-extern int64 PortalRunFetch(Portal portal,
+extern uint64 PortalRunFetch(Portal portal,
 			   FetchDirection fdirection,
 			   int64 count,
 			   DestReceiver *dest);

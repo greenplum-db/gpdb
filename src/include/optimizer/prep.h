@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/prep.h,v 1.59.2.1 2008/11/11 18:13:44 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/prep.h,v 1.66 2009/05/12 00:56:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,11 +23,14 @@
 /*
  * prototypes for prepjointree.c
  */
-extern Node *pull_up_IN_clauses(PlannerInfo *root, List **rtrlist_inout, Node *node);
+extern void pull_up_sublinks(PlannerInfo *root);
+extern void inline_set_returning_functions(PlannerInfo *root);
+extern void pull_up_sublinks(PlannerInfo *root);
 extern Node *pull_up_subqueries(PlannerInfo *root, Node *jtnode,
-				   bool below_outer_join, bool append_rel_member);
+				   JoinExpr *lowest_outer_join,
+				   AppendRelInfo *containing_appendrel);
 extern void reduce_outer_joins(PlannerInfo *root);
-extern Relids get_relids_in_jointree(Node *jtnode);
+extern Relids get_relids_in_jointree(Node *jtnode, bool include_joins);
 extern Relids get_relids_for_join(PlannerInfo *root, int joinrelid);
 
 extern List *init_list_cteplaninfo(int numCtes);
@@ -46,8 +50,6 @@ extern List *preprocess_targetlist(PlannerInfo *root, List *tlist);
  */
 extern Plan *plan_set_operations(PlannerInfo *root, double tuple_fraction,
 					List **sortClauses);
-
-extern List *find_all_inheritors(Oid parentrel);
 
 extern void expand_inherited_tables(PlannerInfo *root);
 

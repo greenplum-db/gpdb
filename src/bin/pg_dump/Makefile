@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/bin/pg_dump/Makefile,v 1.65 2008/01/01 19:45:55 momjian Exp $
+# $PostgreSQL: pgsql/src/bin/pg_dump/Makefile,v 1.67 2009/03/07 00:13:58 alvherre Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ include $(top_builddir)/src/Makefile.global
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv, $(LIBS))
 # This program isn't interactive, so doesn't need these
-LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lcrypto, $(LIBS))
+LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl , $(LIBS))
 
 
 # the use of tempnam in pg_backup_tar.c causes a warning when using newer versions of GCC
@@ -45,13 +45,17 @@ pg_dumpall: pg_dumpall.o dumputils.o $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 	$(CC) $(CFLAGS) pg_dumpall.o dumputils.o $(KEYWRDOBJS) $(WIN32RES) $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
 
 submake-cdb:
+ifneq ($(PORTNAME), aix)
 	$(MAKE) -C cdb all
+endif
 
 install: all installdirs
 	$(INSTALL_PROGRAM) pg_dump$(X) '$(DESTDIR)$(bindir)'/pg_dump$(X)
 	$(INSTALL_PROGRAM) pg_restore$(X) '$(DESTDIR)$(bindir)'/pg_restore$(X)
 	$(INSTALL_PROGRAM) pg_dumpall$(X) '$(DESTDIR)$(bindir)'/pg_dumpall$(X)
+ifneq ($(PORTNAME), aix)
 	$(MAKE) -C cdb install
+endif
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)'

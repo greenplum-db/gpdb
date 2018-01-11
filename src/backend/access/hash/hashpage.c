@@ -3,12 +3,12 @@
  * hashpage.c
  *	  Hash table page management code for the Postgres hash access method
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.72 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.80 2009/06/11 14:48:53 momjian Exp $
  *
  * NOTES
  *	  Postgres hash pages look like ordinary relation pages.  The opaque
@@ -31,6 +31,7 @@
 #include "access/genam.h"
 #include "access/hash.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/lsyscache.h"
@@ -163,7 +164,7 @@ _hash_getinitbuf(Relation rel, BlockNumber blkno)
 	if (blkno == P_NEW)
 		elog(ERROR, "hash AM does not use P_NEW");
 
-	buf = ReadOrZeroBuffer(rel, blkno);
+	buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_ZERO, NULL);
 
 	LockBuffer(buf, HASH_WRITE);
 
@@ -210,7 +211,7 @@ _hash_getnewbuf(Relation rel, BlockNumber blkno)
 				 BufferGetBlockNumber(buf), blkno);
 	}
 	else
-		buf = ReadOrZeroBuffer(rel, blkno);
+		buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_ZERO, NULL);
 
 	LockBuffer(buf, HASH_WRITE);
 
@@ -238,7 +239,7 @@ _hash_getbuf_with_strategy(Relation rel, BlockNumber blkno,
 	if (blkno == P_NEW)
 		elog(ERROR, "hash AM does not use P_NEW");
 
-	buf = ReadBufferWithStrategy(rel, blkno, bstrategy);
+	buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_NORMAL, bstrategy);
 
 	if (access != HASH_NOLOCK)
 		LockBuffer(buf, access);
@@ -326,15 +327,18 @@ _hash_chgbufaccess(Relation rel __attribute__((unused)),
 
 /*
  *	_hash_metapinit() -- Initialize the metadata page of a hash index,
- *				the two buckets that we begin with and the initial
- *				bitmap page.
+ *				the initial buckets, and the initial bitmap page.
+ *
+ * The initial number of buckets is dependent on num_tuples, an estimate
+ * of the number of tuples to be loaded into the index initially.  The
+ * chosen number of buckets is returned.
  *
  * We are fairly cavalier about locking here, since we know that no one else
  * could be accessing this index.  In particular the rule about not holding
  * multiple buffer locks is ignored.
  */
-void
-_hash_metapinit(Relation rel)
+uint32
+_hash_metapinit(Relation rel, double num_tuples)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -346,7 +350,10 @@ _hash_metapinit(Relation rel)
 	int32		data_width;
 	int32		item_width;
 	int32		ffactor;
-	uint16		i;
+	double		dnumbuckets;
+	uint32		num_buckets;
+	uint32		log2_num_buckets;
+	uint32		i;
 
 	/* safety check */
 	if (RelationGetNumberOfBlocks(rel) != 0)
@@ -357,11 +364,9 @@ _hash_metapinit(Relation rel)
 	 * Determine the target fill factor (in tuples per bucket) for this index.
 	 * The idea is to make the fill factor correspond to pages about as full
 	 * as the user-settable fillfactor parameter says.	We can compute it
-	 * exactly if the index datatype is fixed-width, but for var-width there's
-	 * some guessing involved.
+	 * exactly since the index datatype (i.e. uint32 hash key) is fixed-width.
 	 */
-	data_width = get_typavgwidth(RelationGetDescr(rel)->attrs[0]->atttypid,
-								 RelationGetDescr(rel)->attrs[0]->atttypmod);
+	data_width = sizeof(uint32);
 	item_width = MAXALIGN(sizeof(IndexTupleData)) + MAXALIGN(data_width) +
 		sizeof(ItemIdData);		/* include the line pointer */
 	ffactor = RelationGetTargetPageUsage(rel, HASH_DEFAULT_FILLFACTOR) / item_width;
@@ -373,7 +378,26 @@ _hash_metapinit(Relation rel)
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
 	/*
-	 * We initialize the metapage, the first two bucket pages, and the first
+	 * Choose the number of initial bucket pages to match the fill factor
+	 * given the estimated number of tuples.  We round up the result to the
+	 * next power of 2, however, and always force at least 2 bucket pages. The
+	 * upper limit is determined by considerations explained in
+	 * _hash_expandtable().
+	 */
+	dnumbuckets = num_tuples / ffactor;
+	if (dnumbuckets <= 2.0)
+		num_buckets = 2;
+	else if (dnumbuckets >= (double) 0x40000000)
+		num_buckets = 0x40000000;
+	else
+		num_buckets = ((uint32) 1) << _hash_log2((uint32) dnumbuckets);
+
+	log2_num_buckets = _hash_log2(num_buckets);
+	Assert(num_buckets == (((uint32) 1) << log2_num_buckets));
+	Assert(log2_num_buckets < HASH_MAX_SPLITPOINTS);
+
+	/*
+	 * We initialize the metapage, the first N bucket pages, and the first
 	 * bitmap page in sequence, using _hash_getnewbuf to cause smgrextend()
 	 * calls to occur.	This ensures that the smgr level has the right idea of
 	 * the physical index length.
@@ -388,20 +412,18 @@ _hash_metapinit(Relation rel)
 	pageopaque->hasho_flag = LH_META_PAGE;
 	pageopaque->hasho_page_id = HASHO_PAGE_ID;
 
-	metap = (HashMetaPage) pg;
+	metap = HashPageGetMeta(pg);
 
 	metap->hashm_magic = HASH_MAGIC;
 	metap->hashm_version = HASH_VERSION;
 	metap->hashm_ntuples = 0;
 	metap->hashm_nmaps = 0;
 	metap->hashm_ffactor = ffactor;
-	metap->hashm_bsize = BufferGetPageSize(metabuf);
+	metap->hashm_bsize = HashGetMaxBitmapSize(pg);
 	/* find largest bitmap array size that will fit in page size */
 	for (i = _hash_log2(metap->hashm_bsize); i > 0; --i)
 	{
-		if ((1 << i) <= (metap->hashm_bsize -
-						 (MAXALIGN(sizeof(PageHeaderData)) +
-						  MAXALIGN(sizeof(HashPageOpaqueData)))))
+		if ((1 << i) <= metap->hashm_bsize)
 			break;
 	}
 	Assert(i > 0);
@@ -417,24 +439,37 @@ _hash_metapinit(Relation rel)
 	metap->hashm_procid = index_getprocid(rel, 1, HASHPROC);
 
 	/*
-	 * We initialize the index with two buckets, 0 and 1, occupying physical
-	 * blocks 1 and 2.	The first freespace bitmap page is in block 3.
+	 * We initialize the index with N buckets, 0 .. N-1, occupying physical
+	 * blocks 1 to N.  The first freespace bitmap page is in block N+1. Since
+	 * N is a power of 2, we can set the masks this way:
 	 */
-	metap->hashm_maxbucket = metap->hashm_lowmask = 1;	/* nbuckets - 1 */
-	metap->hashm_highmask = 3;	/* (nbuckets << 1) - 1 */
+	metap->hashm_maxbucket = metap->hashm_lowmask = num_buckets - 1;
+	metap->hashm_highmask = (num_buckets << 1) - 1;
 
 	MemSet(metap->hashm_spares, 0, sizeof(metap->hashm_spares));
 	MemSet(metap->hashm_mapp, 0, sizeof(metap->hashm_mapp));
 
-	metap->hashm_spares[1] = 1; /* the first bitmap page is only spare */
-	metap->hashm_ovflpoint = 1;
+	/* Set up mapping for one spare page after the initial splitpoints */
+	metap->hashm_spares[log2_num_buckets] = 1;
+	metap->hashm_ovflpoint = log2_num_buckets;
 	metap->hashm_firstfree = 0;
 
 	/*
-	 * Initialize the first two buckets
+	 * Release buffer lock on the metapage while we initialize buckets.
+	 * Otherwise, we'll be in interrupt holdoff and the CHECK_FOR_INTERRUPTS
+	 * won't accomplish anything.  It's a bad idea to hold buffer locks for
+	 * long intervals in any case, since that can block the bgwriter.
 	 */
-	for (i = 0; i <= 1; i++)
+	_hash_chgbufaccess(rel, metabuf, HASH_WRITE, HASH_NOLOCK);
+
+	/*
+	 * Initialize the first N buckets
+	 */
+	for (i = 0; i < num_buckets; i++)
 	{
+		/* Allow interrupts, in case N is huge */
+		CHECK_FOR_INTERRUPTS();
+
 		buf = _hash_getnewbuf(rel, BUCKET_TO_BLKNO(metap, i));
 		pg = BufferGetPage(buf);
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer(pg);
@@ -446,10 +481,13 @@ _hash_metapinit(Relation rel)
 		_hash_wrtbuf(rel, buf);
 	}
 
+	/* Now reacquire buffer lock on metapage */
+	_hash_chgbufaccess(rel, metabuf, HASH_NOLOCK, HASH_WRITE);
+
 	/*
 	 * Initialize first bitmap page
 	 */
-	_hash_initbitmap(rel, metap, 3);
+	_hash_initbitmap(rel, metap, num_buckets + 1);
 
 	/* all done */
 	_hash_wrtbuf(rel, metabuf);
@@ -457,6 +495,8 @@ _hash_metapinit(Relation rel)
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
 	
+
+	return num_buckets;
 }
 
 /*
@@ -516,7 +556,7 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	_hash_chgbufaccess(rel, metabuf, HASH_NOLOCK, HASH_WRITE);
 
 	_hash_checkpage(rel, metabuf, LH_META_PAGE);
-	metap = (HashMetaPage) BufferGetPage(metabuf);
+	metap = HashPageGetMeta(BufferGetPage(metabuf));
 
 	/*
 	 * Check to see if split is still needed; someone else might have already
@@ -539,6 +579,9 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	 * index with 2^32 buckets would certainly overflow BlockNumber and hence
 	 * _hash_alloc_buckets() would fail, but if we supported buckets smaller
 	 * than a disk block then this would be an independent constraint.
+	 *
+	 * If you change this, see also the maximum initial number of buckets in
+	 * _hash_metapinit().
 	 */
 	if (metap->hashm_maxbucket >= (uint32) 0x7FFFFFFE)
 		goto fail;
@@ -725,7 +768,7 @@ _hash_alloc_buckets(Relation rel, BlockNumber firstblock, uint32 nblocks)
 	MemSet(zerobuf, 0, sizeof(zerobuf));
 
 	RelationOpenSmgr(rel);
-	smgrextend(rel->rd_smgr, lastblock, zerobuf, rel->rd_istemp);
+	smgrextend(rel->rd_smgr, MAIN_FORKNUM, lastblock, zerobuf, rel->rd_istemp);
 
 	return true;
 }
@@ -762,8 +805,6 @@ _hash_splitbucket(Relation rel,
 	Buffer		nbuf;
 	BlockNumber oblkno;
 	BlockNumber nblkno;
-	bool		null;
-	Datum		datum;
 	HashPageOpaque oopaque;
 	HashPageOpaque nopaque;
 	IndexTuple	itup;
@@ -773,7 +814,6 @@ _hash_splitbucket(Relation rel,
 	OffsetNumber omaxoffnum;
 	Page		opage;
 	Page		npage;
-	TupleDesc	itupdesc = RelationGetDescr(rel);
 
 	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
@@ -836,16 +876,11 @@ _hash_splitbucket(Relation rel,
 		}
 
 		/*
-		 * Re-hash the tuple to determine which bucket it now belongs in.
-		 *
-		 * It is annoying to call the hash function while holding locks, but
-		 * releasing and relocking the page for each tuple is unappealing too.
+		 * Fetch the item's hash key (conveniently stored in the item) and
+		 * determine which bucket it now belongs in.
 		 */
 		itup = (IndexTuple) PageGetItem(opage, PageGetItemId(opage, ooffnum));
-		datum = index_getattr(itup, 1, itupdesc, &null);
-		Assert(!null);
-
-		bucket = _hash_hashkey2bucket(_hash_datum2hashkey(rel, datum),
+		bucket = _hash_hashkey2bucket(_hash_get_indextuple_hashkey(itup),
 									  maxbucket, highmask, lowmask);
 
 		if (bucket == nbucket)

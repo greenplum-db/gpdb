@@ -3,16 +3,16 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
   <title id="km135496">Management Utility Reference</title>
+  <shortdesc>Describes the command-line management utilities provided with Greenplum
+    Database.</shortdesc>
   <body>
-    <p>This reference describes the command-line management utilities provided with Greenplum
-      Database. Greenplum Database uses the standard PostgreSQL client and server programs and
-      provides additional management utilities for administering a distributed Greenplum Database
-      DBMS. Greenplum Database management utilities reside in
-        <codeph>$GPHOME/bin</codeph>.<note>When referencing IPv6 addresses in
-          <codeph>gpfdist</codeph> URLs or when using numeric IP addresses instead of hostnames in
-        any management utility, always enclose the IP address in brackets. For command prompt use,
-        the best practice is to escape any brackets or put them inside quotation marks. For example,
-        use
+    <p>Greenplum Database uses the standard PostgreSQL client and server programs and provides
+      additional management utilities for administering a distributed Greenplum Database DBMS.
+      Greenplum Database management utilities reside in <codeph>$GPHOME/bin</codeph>.<note>When
+        referencing IPv6 addresses in <codeph>gpfdist</codeph> URLs or when using numeric IP
+        addresses instead of hostnames in any management utility, always enclose the IP address in
+        brackets. For command prompt use, the best practice is to escape any brackets or put them
+        inside quotation marks. For example, use
         either:<codeblock><ph>gpdbrestore -R </ph>\[2620:0:170:610::11\]
 <ph>gpdbrestore -R </ph>'[2620:0:170:610::11]'</codeblock></note></p>
     <p>The following are the Greenplum Database management utilities.</p>
@@ -28,6 +28,8 @@
           <p>
             <xref href="gpaddmirrors.xml#topic1" type="topic" format="dita"/>
           </p>
+          <p>
+            <xref href="gpbackup.xml" type="topic" format="dita"/></p>
           <p>
             <xref href="gpcheck.xml#topic1" type="topic" format="dita"/></p>
           <p>
@@ -98,6 +100,8 @@
           <p>
             <xref href="gpreload.xml#topic1"/>
           </p>
+          <p>
+            <xref href="gprestore.xml" type="topic" format="dita"/></p>
           <p> gp_restore (deprecated)</p>
           <p>gpsizecalc (deprecated)</p>
           <p>

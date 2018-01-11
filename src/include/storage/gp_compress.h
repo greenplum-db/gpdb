@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * gp_compress.h
  *      gpdb compression utilities.
  *
- * Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/storage/gp_compress.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef GP_COMPRESS_H

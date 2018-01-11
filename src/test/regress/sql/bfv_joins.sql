@@ -156,3 +156,22 @@ SELECT count(*)
 FROM mpp25537_facttable1 ft, mpp25537_dimdate dt, mpp25537_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
+
+
+--
+-- This threw an error at one point:
+-- ERROR: FULL JOIN is only supported with merge-joinable join conditions
+--
+create table fjtest_a (aid oid);
+create table fjtest_b (bid oid);
+create table fjtest_c (cid oid);
+
+insert into fjtest_a values (0), (1), (2);
+insert into fjtest_b values (0), (2), (3);
+insert into fjtest_c values (0), (3), (4);
+
+select * from
+(
+  select * from fjtest_a a, fjtest_b b where (aid = bid)
+) s
+full outer join fjtest_c on (s.aid = cid);

@@ -47,26 +47,6 @@ struct ListBucketResult {
     vector<BucketContent> contents;
 };
 
-class S3MessageParser {
-   public:
-    S3MessageParser(const Response &resp);
-
-    ~S3MessageParser();
-
-    const string &getMessage() const {
-        return message;
-    }
-    const string &getCode() const {
-        return code;
-    }
-    string parseS3Tag(const string &tag);
-
-   private:
-    xmlParserCtxtPtr xmlptr;
-    string message;
-    string code;
-};
-
 class S3Interface {
    public:
     virtual ~S3Interface() {

@@ -48,6 +48,7 @@ SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
+SELECT count(*) FROM test_tsvector WHERE a @@ 'w:*|q:*';
 
 create index wowidx on test_tsvector using gist (a);
 
@@ -59,6 +60,7 @@ SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
+SELECT count(*) FROM test_tsvector WHERE a @@ 'w:*|q:*';
 
 RESET enable_seqscan;
 
@@ -74,6 +76,7 @@ SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
 SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
+SELECT count(*) FROM test_tsvector WHERE a @@ 'w:*|q:*';
   
 RESET enable_seqscan;
 INSERT INTO test_tsvector VALUES ('???', 'DFG:1A,2B,6C,10 FGH');
@@ -205,6 +208,58 @@ ff-bg
 </body>
 </html>',
 to_tsquery('english', 'sea&foo'), 'HighlightAll=true');
+
+--Check if headline fragments work 
+SELECT ts_headline('english', '
+Day after day, day after day,
+  We stuck, nor breath nor motion,
+As idle as a painted Ship
+  Upon a painted Ocean.
+Water, water, every where
+  And all the boards did shrink;
+Water, water, every where,
+  Nor any drop to drink.
+S. T. Coleridge (1772-1834)
+', to_tsquery('english', 'ocean'), 'MaxFragments=1');
+
+--Check if more than one fragments are displayed
+SELECT ts_headline('english', '
+Day after day, day after day,
+  We stuck, nor breath nor motion,
+As idle as a painted Ship
+  Upon a painted Ocean.
+Water, water, every where
+  And all the boards did shrink;
+Water, water, every where,
+  Nor any drop to drink.
+S. T. Coleridge (1772-1834)
+', to_tsquery('english', 'Coleridge & stuck'), 'MaxFragments=2');
+
+--Fragments when there all query words are not in the document
+SELECT ts_headline('english', '
+Day after day, day after day,
+  We stuck, nor breath nor motion,
+As idle as a painted Ship
+  Upon a painted Ocean.
+Water, water, every where
+  And all the boards did shrink;
+Water, water, every where,
+  Nor any drop to drink.
+S. T. Coleridge (1772-1834)
+', to_tsquery('english', 'ocean & seahorse'), 'MaxFragments=1');
+
+--FragmentDelimiter option
+SELECT ts_headline('english', '
+Day after day, day after day,
+  We stuck, nor breath nor motion,
+As idle as a painted Ship
+  Upon a painted Ocean.
+Water, water, every where
+  And all the boards did shrink;
+Water, water, every where,
+  Nor any drop to drink.
+S. T. Coleridge (1772-1834)
+', to_tsquery('english', 'Coleridge & stuck'), 'MaxFragments=2,FragmentDelimiter=***');
 
 --Rewrite sub system
 

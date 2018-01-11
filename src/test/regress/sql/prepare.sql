@@ -18,23 +18,23 @@ PREPARE q1 AS SELECT 2;
 EXECUTE q1;
 
 PREPARE q2 AS SELECT 2 AS b;
-SELECT name, statement, parameter_types FROM pg_prepared_statements ORDER BY 1,2,3;
+SELECT name, statement, parameter_types FROM pg_prepared_statements;
 
 -- sql92 syntax
 DEALLOCATE PREPARE q1;
 
-SELECT name, statement, parameter_types FROM pg_prepared_statements ORDER BY 1,2,3;
+SELECT name, statement, parameter_types FROM pg_prepared_statements;
 
 DEALLOCATE PREPARE q2;
 -- the view should return the empty set again
-SELECT name, statement, parameter_types FROM pg_prepared_statements ORDER BY 1,2,3;
+SELECT name, statement, parameter_types FROM pg_prepared_statements;
 
 -- parameterized queries
 PREPARE q2(text) AS
 	SELECT datname, datistemplate, datallowconn
 	FROM pg_database WHERE datname = $1;
 
-EXECUTE q2('regression');
+EXECUTE q2('postgres');
 
 PREPARE q3(text, int, float, boolean, oid, smallint) AS
 	SELECT * FROM tenk1 WHERE string4 = $1 AND (four = $2 OR
@@ -60,7 +60,7 @@ PREPARE q5(int, text) AS
 	SELECT * FROM tenk1 WHERE unique1 = $1 OR stringu1 = $2
 	ORDER BY unique1;
 CREATE TEMPORARY TABLE q5_prep_results AS EXECUTE q5(200, 'DTAAAA');
-SELECT * FROM q5_prep_results ORDER BY 1,2,3,4;
+SELECT * FROM q5_prep_results;
 
 -- unknown or unspecified parameter types: should succeed
 PREPARE q6 AS

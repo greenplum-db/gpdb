@@ -120,6 +120,11 @@
               connection, and this user will own all the created objects.</pd>
           </plentry>
           <plentry>
+            <pt>--no-tablespaces</pt>
+            <pd>Do not output commands to select tablespaces. With this option, all objects will be
+              created in whichever tablespace is the default during restore.</pd>
+          </plentry>
+          <plentry>
             <pt>-P '<varname>function-name</varname>(<varname>argtype</varname> [, ...])' |
                 --function='<varname>function-name</varname>(<varname>argtype</varname> [,
               ...])'</pt>

@@ -4,7 +4,12 @@
  *
  * Special xlog handling for master mirroring.
  *
- * Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/xlog_mm.c
  *
  *-------------------------------------------------------------------------
  */
@@ -17,6 +22,7 @@
 #include "access/twophase.h"
 #include "access/xlog.h"
 #include "access/xlogmm.h"
+#include "access/xlogutils.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_tablespace.h"
@@ -93,7 +99,7 @@ unlink_obj(char *path, uint8 info)
 			elog(LOG, "removing directory, as requested %s", path);
 		rmtree(path, true);
 	}
-	else if (info == MMXLOG_REMOVE_FILE)
+	else if (info == MMXLOG_REMOVE_HEAP_FILE || info == MMXLOG_REMOVE_APPENDONLY_FILE)
 	{
 		if (Debug_print_qd_mirroring)
 			elog(LOG, "unlinking file, as requested %s", path);
@@ -115,6 +121,10 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	xl_mm_fs_obj *xlrec = (xl_mm_fs_obj *) XLogRecGetData(record);
 	char *path = obj_get_path(xlrec);
+
+	/* mmxlog records are only used by standby */
+	if (!IsStandbyMode())
+		return;
 
 	if (path == NULL)
 	{
@@ -177,7 +187,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		 * Inform the persistent table code about the new filespace or
 		 * tablespace.
 		 */
-		if (xlrec->objtype == MM_OBJ_FILESPACE && IsStandbyMode())
+		if (xlrec->objtype == MM_OBJ_FILESPACE)
 		{
 			fspc_map m;
 
@@ -190,7 +200,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			strlcpy(m.path2, xlrec->mirror_path, MAXPGPATH);
 			add_filespace_map_entry(&m, &beginLoc, "mmxlog_redo");
 		}
-		else if (xlrec->objtype == MM_OBJ_TABLESPACE && IsStandbyMode())
+		else if (xlrec->objtype == MM_OBJ_TABLESPACE)
 		{
 			tspc_map m;
 
@@ -216,16 +226,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			 */
 			if (errno != EEXIST)
 			{
-				if (IsStandbyMode())
-				{
-					elog(ERROR, "could not create directory \"%s\": %m",
-						 path);
-				}
-				else
-				{
-					elog(LOG, "Note: unable a create directory \"%s\" from Master Mirroring redo: %m",
-						 path);
-				}
+				elog(ERROR, "could not create directory \"%s\": %m", path);
 			}
 			else
 			{
@@ -266,40 +267,33 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		/* tablespace and database should be fine */
 		unlink_obj(path, info);
 
-
-		/*
-		 * We only maintain the master mirroring hash tables on the standby.
-		 */
-		if (IsStandbyMode())
+		if (xlrec->objtype == MM_OBJ_FILESPACE)
 		{
-			if (xlrec->objtype == MM_OBJ_FILESPACE)
-			{
-				if (filespace_map_ht == NULL)
-					elog(ERROR, "Master mirroring hash table for filespaces not initialized");
+			if (filespace_map_ht == NULL)
+				elog(ERROR, "Master mirroring hash table for filespaces not initialized");
 
-				entry = hash_search(filespace_map_ht,
-									&(xlrec->filespace),
-									HASH_REMOVE,
-									&found);
-				if (entry == NULL)
-					elog(ERROR,
-						 "Master mirroring hash table entry for filespace %u not found",
-						 xlrec->filespace);
-			}
-			else if (xlrec->objtype == MM_OBJ_TABLESPACE)
-			{
-				if (tablespace_map_ht == NULL)
-					elog(ERROR, "Master mirroring hash table for tablespaces not initialized");
+			entry = hash_search(filespace_map_ht,
+								&(xlrec->filespace),
+								HASH_REMOVE,
+								&found);
+			if (entry == NULL)
+				elog(ERROR,
+					 "Master mirroring hash table entry for filespace %u not found",
+					 xlrec->filespace);
+		}
+		else if (xlrec->objtype == MM_OBJ_TABLESPACE)
+		{
+			if (tablespace_map_ht == NULL)
+				elog(ERROR, "Master mirroring hash table for tablespaces not initialized");
 
-				entry = hash_search(tablespace_map_ht,
-									&(xlrec->tablespace),
-									HASH_REMOVE,
-									&found);
-				if (entry == NULL)
-					elog(ERROR,
-						 "Master mirroring hash table entry for tablespace %u not found",
-						 xlrec->tablespace);
-			}
+			entry = hash_search(tablespace_map_ht,
+								&(xlrec->tablespace),
+								HASH_REMOVE,
+								&found);
+			if (entry == NULL)
+				elog(ERROR,
+					 "Master mirroring hash table entry for tablespace %u not found",
+					 xlrec->tablespace);
 		}
 	}
 	else if (info == MMXLOG_CREATE_FILE)
@@ -319,6 +313,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 				 xlrec->u.dbid.mirror,
 				 xlrec->mirror_path);
 		}
+
 		int fd = open(path, O_CREAT | O_RDWR | PG_BINARY, 0600);
 
 		if (fd < 0)
@@ -330,7 +325,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		else
 			gp_retry_close(fd);
 	}
-	else if (info == MMXLOG_REMOVE_FILE)
+	else if (info == MMXLOG_REMOVE_HEAP_FILE || info == MMXLOG_REMOVE_APPENDONLY_FILE)
 	{
 		RelFileNode rnode;
 		bool mirrorDataLossOccurred;
@@ -358,56 +353,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		rnode.dbNode = xlrec->database;
 		rnode.relNode = xlrec->relfilenode;
 
-		if (GpIdentity.segindex == MASTER_CONTENT_ID && !IsStandbyMode())
-		{
-			PersistentTablespaceGetFilespaces tablespaceGetFilespaces;
-
-			char *primaryFilespaceLocation;
-			char *mirrorFilespaceLocation;
-
-			Oid filespaceOid;
-
-			/*
-			 * If we are re-doing Master Mirroring work on the Master and the tablespace
-			 * doesn't exist in the shared-memory persistent hash-table, skip the unlink...
-			 */
-			tablespaceGetFilespaces =
-				PersistentTablespace_TryGetPrimaryAndMirrorFilespaces(
-															rnode.spcNode,
-															&primaryFilespaceLocation,
-															&mirrorFilespaceLocation,
-															&filespaceOid);
-			switch (tablespaceGetFilespaces)
-			{
-			case PersistentTablespaceGetFilespaces_Ok:
-				break;
-
-			case PersistentTablespaceGetFilespaces_TablespaceNotFound:
-				elog(LOG, "Note: unable find tablespace %u from Master Mirroring redo",
-					 rnode.spcNode);
-				return;
-
-			case PersistentTablespaceGetFilespaces_FilespaceNotFound:
-				elog(LOG, "Note: unable find filespace %u for tablespace %u for Master Mirroring redo",
-					 filespaceOid, rnode.spcNode);
-				return;
-
-			default:
-				elog(ERROR, "Unexpected tablespace filespace fetch result: %d",
-					 tablespaceGetFilespaces);
-			}
-		}
-
-		/*
-		 * segnum greater than 0 definitely means its for AO or CO table,
-		 * hence perform unlink for that specific file. But segnum == 0 can be
-		 * for AO or Heap table but based on current xlog record structure for
-		 * xl_mm_fs_obj, it provides no hint for the same.
-		 *
-		 * GPDB_SEGWALREP_TODO: Handle correctly the AO or CO table segnum ==
-		 * 0 deletion specific case.
-		 */
-		if (xlrec->segnum > 0)
+		if (info == MMXLOG_REMOVE_APPENDONLY_FILE)
 		{
 #ifdef USE_SEGWALREP
 			XLogAODropSegmentFile(rnode, xlrec->segnum);
@@ -421,22 +367,36 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 				&primaryError,
 				&mirrorDataLossOccurred);
 		}
-		else
+		else if (info == MMXLOG_REMOVE_HEAP_FILE)
 		{
-			XLogDropRelation(rnode);
 			/*
 			 * smgrdounlink() currently is specifically coded for dropping files
 			 * which are not for AO or CO tables because it finds and then drops
 			 * files in sequence like .1, .2, ...
 			 */
-			smgrdounlink(
-				&rnode,
-				/* isLocalBuf */ false,
-				/* relationName */ NULL,
-				/* primaryOnly */ true,
-				/* isRedo */ true,		// Don't generate Master Mirroring records...
-				/* ignoreNonExistence */ true,
-				&mirrorDataLossOccurred);
+			SMgrRelation srel = smgropen(rnode);
+			ForkNumber fork;
+
+			for (fork = 0; fork <= MAX_FORKNUM; fork++)
+			{
+				if (smgrexists(srel, fork))
+				{
+					XLogDropRelation(rnode, fork);
+
+					if (fork == MAIN_FORKNUM)
+						smgrdomirroredunlink(
+							&rnode,
+							/* isLocalBuf */ false,
+							/* relationName */ NULL,
+							/* primaryOnly */ true,
+							/* isRedo */ true,        // Don't generate Master Mirroring records...
+							/* ignoreNonExistence */ true,
+							&mirrorDataLossOccurred);
+					else
+						smgrdounlink(srel, fork, false, true);
+				}
+			}
+			smgrclose(srel);
 		}
 	}
 	else
@@ -500,7 +460,7 @@ mmxlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 		appendStringInfo(buf, "create file: path \"%s\", filespace %u",
 						 path,
 						 xlrec->filespace);
-	else if (info == MMXLOG_REMOVE_FILE)
+	else if (info == MMXLOG_REMOVE_HEAP_FILE || info == MMXLOG_REMOVE_APPENDONLY_FILE)
 		appendStringInfo(buf, "remove file: path \"%s\", filespace %u",
 						 path,
 						 xlrec->filespace);
@@ -774,7 +734,7 @@ mmxlog_log_remove_database(Oid tablespace, Oid database)
 /* External interface to relfilenode removal logging */
 void
 mmxlog_log_remove_relfilenode(Oid tablespace, Oid database, Oid relfilenode,
-							  uint32 segnum)
+							  uint32 segnum, PersistentFileSysRelStorageMgr relStorageMgr)
 {
 	bool emitted;
 	XLogRecPtr beginLoc;
@@ -790,7 +750,9 @@ mmxlog_log_remove_relfilenode(Oid tablespace, Oid database, Oid relfilenode,
 						  database,
 						  relfilenode,
 						  segnum,
-						  MMXLOG_REMOVE_FILE,
+						  relStorageMgr == PersistentFileSysRelStorageMgr_AppendOnly ?
+										   MMXLOG_REMOVE_APPENDONLY_FILE :
+										   MMXLOG_REMOVE_HEAP_FILE,
 						  &beginLoc);
 	if (Debug_persistent_recovery_print)
 	{
@@ -1397,7 +1359,7 @@ mmxlog_add_filespace(
 											/* isPrimary */ false);
 	if (filespaceLocation2 != NULL)
 	{
-		strncpy(m->path2, filespaceLocation2, MAXPGPATH);
+		strlcpy(m->path2, filespaceLocation2, MAXPGPATH);
 		pfree(filespaceLocation2);
 	}
 	else

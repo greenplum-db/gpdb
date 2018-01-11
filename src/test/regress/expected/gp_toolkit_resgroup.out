@@ -599,18 +599,18 @@ select * from gp_toolkit.gp_pgdatabase_invalid;
 -- reflected in the pg_stat_resqueues view
 set stats_queue_level=on;
 create resource queue q with (active_statements = 10);
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 create user resqueuetest with resource queue q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10507)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10508)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10509)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10507)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10508)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10509)
+HINT:  To enable set gp_resource_manager=queue
 set role resqueuetest;
 select 1;
  ?column? 
@@ -627,8 +627,8 @@ select n_queries_exec from pg_stat_resqueues where queuename = 'q';
 reset role;
 drop role resqueuetest;
 drop resource queue q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- GP Readable Data Table
 -- Check that the tables created above are present in gp_toolkit.__gp_user_data_tables_readable
 -- view.

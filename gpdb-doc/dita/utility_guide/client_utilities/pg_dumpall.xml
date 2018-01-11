@@ -179,8 +179,18 @@
                         <pd>Dump resource queue definitions.</pd>
                     </plentry>
                     <plentry>
+                        <pt>--resource-groups</pt>
+                        <pd>Dump resource group definitions.</pd>
+                    </plentry>
+                    <plentry>
                         <pt>--roles-only</pt>
                         <pd>Dump only roles, not databases, tablespaces, or filespaces.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--no-tablespaces</pt>
+                        <pd>Do not output commands to select tablespaces. With this option, all
+                            objects will be created in whichever tablespace is the default during
+                            restore.</pd>
                     </plentry>
                     <plentry>
                         <pt>--use-set-session-authorization</pt>

@@ -81,6 +81,6 @@ ERROR:  argument of LIMIT must not contain variables
 LINE 1: select * from generate_series(1,10) g limit g;
                                                     ^
 select * from generate_series(1,10) g limit count(*);
-ERROR:  argument of LIMIT must not contain aggregates
+ERROR:  aggregate functions are not allowed in LIMIT
 LINE 1: select * from generate_series(1,10) g limit count(*);
                                                     ^

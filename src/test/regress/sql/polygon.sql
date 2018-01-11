@@ -14,7 +14,7 @@
 --	0 1 2 3 4
 --
 
-CREATE TABLE POLYGON_TBL(s serial, f1 polygon);
+CREATE TABLE POLYGON_TBL(f1 polygon);
 
 
 INSERT INTO POLYGON_TBL(f1) VALUES ('(2.0,0.0),(2.0,4.0),(0.0,0.0)');
@@ -37,47 +37,48 @@ INSERT INTO POLYGON_TBL(f1) VALUES ('(0,1,2,3');
 
 INSERT INTO POLYGON_TBL(f1) VALUES ('asdf');
 
-SELECT '' AS four, * FROM POLYGON_TBL ORDER BY s;
+
+SELECT '' AS four, * FROM POLYGON_TBL;
 
 -- overlap 
 SELECT '' AS three, p.*
    FROM POLYGON_TBL p
-   WHERE p.f1 && '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 && '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- left overlap 
 SELECT '' AS four, p.* 
    FROM POLYGON_TBL p
-   WHERE p.f1 &< '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 &< '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- right overlap 
 SELECT '' AS two, p.* 
    FROM POLYGON_TBL p
-   WHERE p.f1 &> '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 &> '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- left of 
 SELECT '' AS one, p.*
    FROM POLYGON_TBL p
-   WHERE p.f1 << '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 << '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- right of 
 SELECT '' AS zero, p.*
    FROM POLYGON_TBL p
-   WHERE p.f1 >> '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 >> '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- contained 
 SELECT '' AS one, p.* 
    FROM POLYGON_TBL p
-   WHERE p.f1 <@ polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 <@ polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- same 
 SELECT '' AS one, p.*
    FROM POLYGON_TBL p
-   WHERE p.f1 ~= polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 ~= polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 -- contains 
 SELECT '' AS one, p.*
    FROM POLYGON_TBL p
-   WHERE p.f1 @> polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)' ORDER BY s;
+   WHERE p.f1 @> polygon '(3.0,1.0),(3.0,3.0),(1.0,0.0)';
 
 --
 -- polygon logic

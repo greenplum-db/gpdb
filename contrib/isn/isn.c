@@ -33,7 +33,7 @@ enum isn_type
 	INVALID, ANY, EAN13, ISBN, ISMN, ISSN, UPC
 };
 
-static const char * const isn_names[] = {"EAN13/UPC/ISxN", "EAN13/UPC/ISxN", "EAN13", "ISBN", "ISMN", "ISSN", "UPC"};
+static const char *const isn_names[] = {"EAN13/UPC/ISxN", "EAN13/UPC/ISxN", "EAN13", "ISBN", "ISMN", "ISSN", "UPC"};
 
 static bool g_weak = false;
 static bool g_initialized = false;
@@ -336,7 +336,7 @@ checkdig(char *num, unsigned size)
  * If errorOK is true, just return "false" for bad input.
  */
 static bool
-ean2isn(ean13 ean, bool errorOK, ean13 * result, enum isn_type accept)
+ean2isn(ean13 ean, bool errorOK, ean13 *result, enum isn_type accept)
 {
 	enum isn_type type = INVALID;
 
@@ -668,7 +668,7 @@ eantoobig:
  * (even if the check digit is valid)
  */
 static bool
-string2ean(const char *str, bool errorOK, ean13 * result,
+string2ean(const char *str, bool errorOK, ean13 *result,
 		   enum isn_type accept)
 {
 	bool		digit,

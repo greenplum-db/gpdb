@@ -7,6 +7,8 @@
       database using the <codeph><xref href="./gpdbrestore.xml#topic1" type="topic" format="dita"
         /></codeph> utility. The <codeph>gpcrondump</codeph> utility can be called directly or from
       a <codeph>crontab</codeph> entry.</p>
+    <note>This utility is deprecated and will not be supported after the end of Greenplum Database
+      5.x Support Life.</note>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpcrondump</b> <b>-x</b> <varname>database_name</varname> 
@@ -63,6 +65,12 @@
           <codeph>search_path</codeph>. The settings are restored when you restore the database with
         the <codeph>gpdbrestore</codeph> utility and specify the <codeph>-e</codeph> option to
         create an empty target database before performing a restore operation.</p>
+      <p>If you specify an option to back up schemas, such as <codeph>-s</codeph>, or
+          <codeph>-S</codeph>, all procedural languages that are defined in the database are also
+        backed up even though they are not schema specific. The languages are backed up to support
+        any functions that might be backed up. External items such as shared libraries that are used
+        by a language are not backed up. Also, languages are not backed up if you specify an option
+        to back up only tables, such as <codeph>-t</codeph>, <codeph>-T</codeph>. </p>
       <p>After a backup operation completes, the utility checks the <codeph>gpcrondump</codeph>
         status file for SQL execution errors and displays a warning if an error is found. The
         default location of the backup status files are in the
@@ -102,8 +110,9 @@
       <p><codeblock><varname>prefix_</varname>gp_dump_<varname>content</varname>_<varname>dbid</varname>_<varname>timestamp</varname></codeblock>The
           <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
         Database segment instances that are assigned by Greenplum Database. For information about
-        the identifiers, see the Greenplum Database system catalog table <i>gp_id</i> in the
-          <cite>Greenplum Database Reference Guide</cite>. </p>
+        the identifiers, see the Greenplum Database system catalog table
+          <i>gp_segment_configuration</i> in the <cite>Greenplum Database Reference Guide</cite>.
+      </p>
     </section>
     <section id="ddboost"><b>Using Data Domain Boost</b><p>The <codeph>gpcrondump</codeph> utility
         is used to schedule Data Domain Boost (DD Boost) backup operations. The utility is also used

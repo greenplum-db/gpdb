@@ -4,7 +4,12 @@
  *	 Implementation of workfile manager disk space accounting. This is
  *	 just a wrapper for WorkfileQueryspace and WorkfileSegspace
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_diskspace.c
  *
  *-------------------------------------------------------------------------
  */

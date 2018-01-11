@@ -3,12 +3,12 @@
  * hashinsert.c
  *	  Item insertion in hash tables for Postgres.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashinsert.c,v 1.48 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashinsert.c,v 1.52 2009/01/01 17:23:35 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,8 @@
 #include "postgres.h"
 
 #include "access/hash.h"
+#include "storage/bufmgr.h"
+#include "utils/rel.h"
 
 
 static OffsetNumber _hash_pgaddtup(Relation rel, Buffer buf,
@@ -43,18 +45,11 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 	bool		do_expand;
 	uint32		hashkey;
 	Bucket		bucket;
-	Datum		datum;
-	bool		isnull;
 
 	/*
-	 * Compute the hash key for the item.  We do this first so as not to need
-	 * to hold any locks while running the hash function.
+	 * Get the hash key for the item (it's stored in the index tuple itself).
 	 */
-	if (rel->rd_rel->relnatts != 1)
-		elog(ERROR, "hash indexes support only one index key");
-	datum = index_getattr(itup, 1, RelationGetDescr(rel), &isnull);
-	Assert(!isnull);
-	hashkey = _hash_datum2hashkey(rel, datum);
+	hashkey = _hash_get_indextuple_hashkey(itup);
 
 	/* compute item size too */
 	itemsz = IndexTupleDSize(*itup);
@@ -73,12 +68,14 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 
 	/* Read the metapage */
 	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
-	metap = (HashMetaPage) BufferGetPage(metabuf);
+	metap = HashPageGetMeta(BufferGetPage(metabuf));
 
 	/*
 	 * Check whether the item can fit on a hash page at all. (Eventually, we
 	 * ought to try to apply TOAST methods if not.)  Note that at this point,
 	 * itemsz doesn't include the ItemId.
+	 *
+	 * XXX this is useless code if we are only storing hash keys.
 	 */
 	if (itemsz > HashMaxItemSize((Page) metap))
 		ereport(ERROR,
@@ -204,11 +201,15 @@ _hash_pgaddtup(Relation rel,
 {
 	OffsetNumber itup_off;
 	Page		page;
+	uint32		hashkey;
 
 	_hash_checkpage(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
 	page = BufferGetPage(buf);
 
-	itup_off = OffsetNumberNext(PageGetMaxOffsetNumber(page));
+	/* Find where to insert the tuple (preserving page's hashkey ordering) */
+	hashkey = _hash_get_indextuple_hashkey(itup);
+	itup_off = _hash_binsearch(page, hashkey);
+
 	if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)
 		== InvalidOffsetNumber)
 		elog(ERROR, "failed to add index item to \"%s\"",

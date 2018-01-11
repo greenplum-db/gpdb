@@ -26,16 +26,11 @@
  * (At the moment, ints and Oids are the same size, but they may not
  * always be so; try to be careful to maintain the distinction.)
  *
- * There is also limited support for lists of TransactionIds; since these
- * are used in only one or two places, we don't provide a full implementation,
- * but map them onto Oid lists.  This effectively assumes that TransactionId
- * is no wider than Oid and both are unsigned types.
- *
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/pg_list.h,v 1.57 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/pg_list.h,v 1.61 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -165,12 +160,6 @@ extern int	list_length(List *l);
 #define list_make4_oid(x1,x2,x3,x4) lcons_oid(x1, list_make3_oid(x2, x3, x4))
 
 /*
- * Limited support for lists of TransactionIds, mapped onto lists of Oids
- */
-#define lfirst_xid(lc)				((TransactionId) lfirst_oid(lc))
-#define lappend_xid(list, datum)	lappend_oid(list, (Oid) (datum))
-
-/*
  * foreach -
  *	  a convenience macro which loops through the list
  */
@@ -203,6 +192,15 @@ extern int	list_length(List *l);
 	for ((cell1) = list_head(list1), (cell2) = list_head(list2);	\
 		 (cell1) != NULL && (cell2) != NULL;						\
 		 (cell1) = lnext(cell1), (cell2) = lnext(cell2))
+
+/*
+ * forthree -
+ *	  the same for three lists
+ */
+#define forthree(cell1, list1, cell2, list2, cell3, list3)			\
+	for ((cell1) = list_head(list1), (cell2) = list_head(list2), (cell3) = list_head(list3); \
+		 (cell1) != NULL && (cell2) != NULL && (cell3) != NULL;		\
+		 (cell1) = lnext(cell1), (cell2) = lnext(cell2), (cell3) = lnext(cell3))
 
 extern List *lappend(List *list, void *datum);
 extern List *lappend_int(List *list, int datum);

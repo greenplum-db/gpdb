@@ -4,22 +4,25 @@
  *	  Relation-node lookup/construction routines
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/relnode.c,v 1.91 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/relnode.c,v 1.94 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "nodes/makefuncs.h"                /* makeVar() */
+#include "nodes/nodeFuncs.h"
 #include "catalog/gp_policy.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/placeholder.h"
 #include "optimizer/plancat.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"                  /* contain_vars_of_level_or_above */
@@ -91,16 +94,7 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 	rel->tuples = 0;
 	rel->subplan = NULL;
 	rel->subrtable = NIL;
-	rel->urilocationlist = NIL;
-	rel->execlocationlist = NIL;
-	rel->execcommand = NULL;
-	rel->fmttype = '\0';
-	rel->fmtopts = NULL;
-	rel->rejectlimit = -1;
-	rel->rejectlimittype = '\0';
-	rel->fmterrtbl = InvalidOid;
-	rel->ext_encoding = -1;
-	rel->writable = false;
+	rel->extEntry = NULL;
 	rel->baserestrictinfo = NIL;
 	rel->baserestrictcost.startup = 0;
 	rel->baserestrictcost.per_tuple = 0;
@@ -307,7 +301,7 @@ find_join_rel(PlannerInfo *root, Relids relids)
  * 'joinrelids' is the Relids set that uniquely identifies the join
  * 'outer_rel' and 'inner_rel' are relation nodes for the relations to be
  *		joined
- * 'jointype': type of join (inner/outer)
+ * 'sjinfo': join context info
  * 'restrictlist_ptr': result variable.  If not NULL, *restrictlist_ptr
  *		receives the list of RestrictInfo nodes that apply to this
  *		particular pair of joinable relations.
@@ -320,7 +314,7 @@ build_join_rel(PlannerInfo *root,
 			   Relids joinrelids,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
-			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr)
 {
 	RelOptInfo *joinrel;
@@ -396,6 +390,7 @@ build_join_rel(PlannerInfo *root,
 	 */
 	build_joinrel_tlist(root, joinrel, outer_rel->reltargetlist);
 	build_joinrel_tlist(root, joinrel, inner_rel->reltargetlist);
+	add_placeholders_to_joinrel(root, joinrel);
 
 	/* cap width of output row by sum of its inputs */
 	joinrel->width = Min(joinrel->width, outer_rel->width + inner_rel->width);
@@ -414,7 +409,7 @@ build_join_rel(PlannerInfo *root,
 	/*
 	 * CDB: Attach subquery duplicate suppression info if needed.
 	 */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		joinrel->dedup_info = cdb_make_rel_dedup_info(root, joinrel);
 
 	/*
@@ -427,7 +422,7 @@ build_join_rel(PlannerInfo *root,
 	 * Set estimates of the joinrel's size.
 	 */
 	set_joinrel_size_estimates(root, joinrel, outer_rel, inner_rel,
-							   jointype, restrictlist);
+							   sjinfo, restrictlist);
 
 	/*
 	 * Add the joinrel to the query's joinrel list, and store it into the
@@ -454,7 +449,8 @@ build_join_rel(PlannerInfo *root,
 
 /*
  * build_joinrel_tlist
- *	  Builds a join relation's target list.
+ *	  Builds a join relation's target list from an input relation.
+ *	  (This is invoked twice to handle the two input relations.)
  *
  * The join's targetlist includes all Vars of its member relations that
  * will still be needed above the join.  This subroutine adds all such
@@ -472,16 +468,23 @@ build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel,
 
 	foreach(vars, input_tlist)
 	{
-		Var		   *origvar = (Var *) lfirst(vars);
+		Node	   *origvar = (Node *) lfirst(vars);
 		Var		   *var;
 		RelOptInfo *baserel;
 		int			ndx;
 
 		/*
+		 * Ignore PlaceHolderVars in the input tlists; we'll make our own
+		 * decisions about whether to copy them.
+		 */
+		if (IsA(origvar, PlaceHolderVar))
+			continue;
+
+		/*
 		 * We can't run into any child RowExprs here, but we could find a
 		 * whole-row Var with a ConvertRowtypeExpr atop it.
 		 */
-		var = origvar;
+		var = (Var *) origvar;
 		while (!IsA(var, Var))
 		{
 			if (IsA(var, ConvertRowtypeExpr))
@@ -865,7 +868,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     ListCell           *cell;
     Relids              prejoin_dedup_subqrelids;
     Relids              spent_subqrelids;
-    InClauseInfo       *join_unique_ininfo;
+    SpecialJoinInfo     *join_unique_ininfo;
     bool                partial;
     bool                try_postjoin_dedup;
     int                 subqueries_unfinished;
@@ -880,7 +883,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      *
      * When the columns of the inner rel of a join are not needed by
      * downstream operators, and all tables of the inner rel come from
-     * flattened subqueries, then the JOIN_IN jointype can be used,
+     * flattened subqueries, then the JOIN_SEMI jointype can be used,
      * telling the executor to produce only the first matching inner row
      * for each outer row.
      */
@@ -903,7 +906,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      * this rel.
      *
      * (A subquery can be identified by its set of relids: the righthand relids
-     * in its InClauseInfo.)
+     * in its SpecialJoinInfo.)
      *
      * Post-join duplicate removal can be applied to a rel that contains the
      * sublink's lefthand relids, the subquery's own tables (the sublink's
@@ -915,20 +918,22 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     join_unique_ininfo = NULL;
     partial = false;
     try_postjoin_dedup = false;
-    subqueries_unfinished = list_length(root->in_info_list);
-    foreach(cell, root->in_info_list)
+    subqueries_unfinished = list_length(root->join_info_list);
+    foreach(cell, root->join_info_list)
     {
-        InClauseInfo   *ininfo = (InClauseInfo *)lfirst(cell);
+        SpecialJoinInfo   *sjinfo = (SpecialJoinInfo *)lfirst(cell);
+        if(!sjinfo->consider_dedup)
+            continue;
 
         /* Got all of the subquery's own tables? */
-        if (bms_is_subset(ininfo->righthand, rel->relids))
+        if (bms_is_subset(sjinfo->syn_righthand, rel->relids))
         {
-            /* Early dedup (JOIN_UNIQUE, JOIN_IN) can be applied to this rel. */
+            /* Early dedup (JOIN_UNIQUE, JOIN_SEMI) can be applied to this rel. */
             prejoin_dedup_subqrelids =
-                bms_add_members(prejoin_dedup_subqrelids, ininfo->righthand);
+                bms_add_members(prejoin_dedup_subqrelids, sjinfo->syn_righthand);
 
             /* Got all the correlating and left-hand relids too? */
-            if (bms_is_subset(ininfo->righthand, spent_subqrelids))
+            if (bms_is_subset(sjinfo->syn_righthand, spent_subqrelids))
             {
                 try_postjoin_dedup = true;
                 subqueries_unfinished--;
@@ -937,11 +942,11 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
                 partial = true;
 
             /* Does rel have exactly the relids of uncorrelated "= ANY" subq? */
-            if (ininfo->try_join_unique &&
-                bms_equal(ininfo->righthand, rel->relids))
-                join_unique_ininfo = ininfo;
+            if (sjinfo->try_join_unique &&
+                bms_equal(sjinfo->syn_righthand, rel->relids))
+                join_unique_ininfo = sjinfo;
         }
-        else if (bms_overlap(ininfo->righthand, rel->relids))
+        else if (bms_overlap(sjinfo->syn_righthand, rel->relids))
             partial = true;
     }
 

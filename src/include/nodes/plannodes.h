@@ -6,10 +6,11 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.104 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.110 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -70,6 +71,9 @@ typedef struct PlannedStmt
 	bool		canSetTag;		/* do I set the command result tag? */
 
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
+	bool		oneoffPlan;		/* redo plan on every execution? */
+
+	bool		simplyUpdatable; /* can be used with CURRENT OF? */
 
 	struct Plan *planTree;		/* tree of Plan nodes */
 
@@ -383,6 +387,12 @@ typedef struct RecursiveUnion
 {
 	Plan		plan;
 	int			wtParam;		/* ID of Param representing work table */
+	/* Remaining fields are zero/null in UNION ALL case */
+	int			numCols;		/* number of columns to check for
+								 * duplicate-ness */
+	AttrNumber *dupColIdx;		/* their indexes in the target list */
+	Oid		   *dupOperators;	/* equality operators to compare with */
+	long		numGroups;		/* estimated number of groups in input */
 } RecursiveUnion;
 
 /* ----------------
@@ -488,10 +498,6 @@ typedef struct LogicalIndexInfo
  * table).	This is a bit hokey ... would be cleaner to use a special-purpose
  * node type that could not be mistaken for a regular Var.	But it will do
  * for now.
- *
- * indexstrategy and indexsubtype are lists corresponding one-to-one with
- * indexqual; they give information about the indexable operators that appear
- * at the top of each indexqual.
  * ----------------
  */
 typedef struct IndexScan
@@ -500,12 +506,7 @@ typedef struct IndexScan
 	Oid			indexid;		/* OID of index to scan */
 	List	   *indexqual;		/* list of index quals (OpExprs) */
 	List	   *indexqualorig;	/* the same in original form */
-	List	   *indexstrategy;	/* integer list of strategy numbers */
-	List	   *indexsubtype;	/* OID list of strategy subtypes */
 	ScanDirection indexorderdir;	/* forward or backward or don't care */
-
-	/* logical index to use */
-	LogicalIndexInfo *logicalIndexInfo;
 } IndexScan;
 
 /*
@@ -514,7 +515,14 @@ typedef struct IndexScan
  *   The primary application of this operator is to be used
  *   for partition tables.
 */
-typedef IndexScan DynamicIndexScan;
+typedef struct DynamicIndexScan
+{
+	/* Fields shared with a normal IndexScan. Must be first! */
+	IndexScan	indexscan;
+
+	/* logical index to use */
+	LogicalIndexInfo *logicalIndexInfo;
+} DynamicIndexScan;
 
 /* ----------------
  *		bitmap index scan node
@@ -535,7 +543,29 @@ typedef IndexScan DynamicIndexScan;
  * (such as for targeted dispatch)
  * ----------------
  */
-typedef IndexScan BitmapIndexScan;
+typedef struct BitmapIndexScan
+{
+	Scan		scan;
+	Oid			indexid;		/* OID of index to scan */
+	List	   *indexqual;		/* list of index quals (OpExprs) */
+	List	   *indexqualorig;	/* the same in original form */
+} BitmapIndexScan;
+
+
+/*
+ * DynamicBitmapIndexScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   The primary application of this operator is to be used
+ *   for partition tables.
+*/
+typedef struct DynamicBitmapIndexScan
+{
+	/* Fields shared with a normal BitmapIndexScan. Must be first! */
+	BitmapIndexScan biscan;
+
+	/* logical index to use */
+	LogicalIndexInfo *logicalIndexInfo;
+} DynamicBitmapIndexScan;
 
 /* ----------------
  *		bitmap sequential scan node
@@ -968,10 +998,10 @@ typedef struct Agg
 	bool 		streaming;
 } Agg;
 
-/* ---------------
- *		window node
+/* ----------------
+ *		window aggregate node
  *
- * A Window node implements window functions over zero or more
+ * A WindowAgg node implements window functions over zero or more
  * ordering/framing specifications within a partition specification on
  * appropriately ordered input.
  *
@@ -986,37 +1016,45 @@ typedef struct Agg
  *
  * A Window node contains no direct information about the window
  * functions it computes.  Those functions are found by scanning
- * the node's targetlist for WindowRef nodes during executor startup.
+ * the node's targetlist for WindowFunc nodes during executor startup.
  * There need not be any, but there's no good reason for the planner
- * to construct a Window node without at least one WindowRef.
+ * to construct a WindowAgg node without at least one WindowFunc.
  *
- * A WindowRef is related to its Window node by the fact that it is
- * contained by it.  It may also be related to a particular WindowKey
- * node in the windowKeys list.  The WindowRef field winlevel is the
- * position (counting from 0) of its WindowKey.  If winlevel equals
- * the length of the windowKeys list, than it has not WindowKey an
- * applied to the unordered partition as a whole.
+ * A WindowFunc is related to its WindowAgg node by the fact that it is
+ * contained by it.
  *
- * A WindowKey specifies a partial ordering key.  It may optionally
- * specify framing.  The actual ordering key at a given level is the
- * concatenation of the partial ordering keys prior to and including
- * that level.
- *
- * For example, the ordering key for the WindowKey in position 2 of
- * the windowKeys list is the concatenation of the partial keys found
- * in positions 0 through 2. *
- * ---------------
+ * ----------------
  */
-typedef struct Window
+typedef struct WindowAgg
 {
 	Plan		plan;
-	int			numPartCols;	/* number of partitioning columns */
-	AttrNumber *partColIdx;		/* their indexes in the target list
-								 * of the window's outer plan.  */
-	Oid		   *partOperators;	/* equality operators */
-	List       *windowKeys;		/* list of WindowKey nodes */
-} Window;
+	Index		winref;			/* ID referenced by window functions */
+	int			partNumCols;	/* number of columns in partition clause */
+	AttrNumber *partColIdx;		/* their indexes in the target list */
+	Oid		   *partOperators;	/* equality operators for partition columns */
+	int			ordNumCols;		/* number of columns in ordering clause */
+	AttrNumber *ordColIdx;		/* their indexes in the target list */
+	Oid		   *ordOperators;	/* equality operators for ordering columns */
 
+	/*
+	 * GPDB: Information on the first ORDER BY column. This is different from
+	 * simply taking the first element of the ordColIdx/ordOperators fields,
+	 * because those arrays don't include any columns that are also present
+	 * in the PARTITION BY. For example, in "OVER (PARTITION BY foo ORDER BY
+	 * foo, bar)", ordColIdx/ordOperators would not include column 'foo'. But
+	 * for computing with RANGE BETWEEN values correctly, we need the first
+	 * actual ORDER BY column, even if it's redundant with the PARTITION BY.
+	 * firstOrder* has that information. Also, we need a sort operator, not
+	 * equality operator, here.
+	 */
+	AttrNumber	firstOrderCol;
+	Oid			firstOrderCmpOperator; /* ordering op */
+	bool		firstOrderNullsFirst;
+
+	int			frameOptions;	/* frame_clause options, see WindowDef */
+	Node	   *startOffset;	/* expression for starting bound, if any */
+	Node	   *endOffset;		/* expression for ending bound, if any */
+} WindowAgg;
 
 /* ----------------
  *		unique node
@@ -1032,12 +1070,21 @@ typedef struct Unique
 
 /* ----------------
  *		hash build node
+ *
+ * If the executor is supposed to try to apply skew join optimization, then
+ * skewTable/skewColumn identify the outer relation's join key column, from
+ * which the relevant MCV statistics can be fetched.  Also, its type
+ * information is provided to save a lookup.
  * ----------------
  */
 typedef struct Hash
 {
 	Plan		plan;
 	bool		rescannable;            /* CDB: true => save rows for rescan */
+	Oid			skewTable;		/* outer join key's table OID, or InvalidOid */
+	AttrNumber	skewColumn;		/* outer join key's column #, or zero */
+	Oid			skewColType;	/* datatype of the outer key column */
+	int32		skewColTypmod;	/* typmod of the outer key column */
 	/* all other info is in the parent HashJoin node */
 } Hash;
 
@@ -1053,15 +1100,24 @@ typedef enum SetOpCmd
 	SETOPCMD_EXCEPT_ALL
 } SetOpCmd;
 
+typedef enum SetOpStrategy
+{
+	SETOP_SORTED,				/* input must be sorted */
+	SETOP_HASHED				/* use internal hashtable */
+} SetOpStrategy;
+
 typedef struct SetOp
 {
 	Plan		plan;
 	SetOpCmd	cmd;			/* what to do */
+	SetOpStrategy strategy;		/* how to do it */
 	int			numCols;		/* number of columns to check for
 								 * duplicate-ness */
 	AttrNumber *dupColIdx;		/* their indexes in the target list */
 	Oid		   *dupOperators;	/* equality operators to compare with */
 	AttrNumber	flagColIdx;		/* where is the flag column, if any */
+	int			firstFlag;		/* flag value for first input relation */
+	long		numGroups;		/* estimated number of groups in input */
 } SetOp;
 
 /* ----------------
@@ -1178,7 +1234,7 @@ typedef struct RowTrigger
  *
  * We track the objects on which a PlannedStmt depends in two ways:
  * relations are recorded as a simple list of OIDs, and everything else
- * is represented as a list of PlanInvalItems.  A PlanInvalItem is designed
+ * is represented as a list of PlanInvalItems.	A PlanInvalItem is designed
  * to be used with the syscache invalidation mechanism, so it identifies a
  * system catalog entry by cache ID and tuple TID.
  */

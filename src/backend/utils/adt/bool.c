@@ -3,12 +3,12 @@
  * bool.c
  *	  Functions for the built-in type "bool".
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/bool.c,v 1.42 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/bool.c,v 1.48 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -121,8 +121,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 /*
  *		boolin			- converts "t" or "f" to 1 or 0
  *
- * Check explicitly for "true/false" and TRUE/FALSE, 1/0, YES/NO.
- * Reject other values. - thomas 1997-10-05
+ * Check explicitly for "true/false" and TRUE/FALSE, 1/0, YES/NO, ON/OFF.
+ * Reject other values.
  *
  * In the switch statement, check the most-used possibilities first.
  */
@@ -132,6 +132,7 @@ boolin(PG_FUNCTION_ARGS)
 	const char *in_str = PG_GETARG_CSTRING(0);
 	const char *str;
 	size_t		len;
+	bool		result;
 
 	/*
 	 * Skip leading and trailing whitespace
@@ -144,45 +145,8 @@ boolin(PG_FUNCTION_ARGS)
 	while (len > 0 && isspace((unsigned char) str[len - 1]))
 		len--;
 
-	switch (*str)
-	{
-		case 't':
-		case 'T':
-			if (pg_strncasecmp(str, "true", len) == 0)
-				PG_RETURN_BOOL(true);
-			break;
-
-		case 'f':
-		case 'F':
-			if (pg_strncasecmp(str, "false", len) == 0)
-				PG_RETURN_BOOL(false);
-			break;
-
-		case 'y':
-		case 'Y':
-			if (pg_strncasecmp(str, "yes", len) == 0)
-				PG_RETURN_BOOL(true);
-			break;
-
-		case '1':
-			if (pg_strncasecmp(str, "1", len) == 0)
-				PG_RETURN_BOOL(true);
-			break;
-
-		case 'n':
-		case 'N':
-			if (pg_strncasecmp(str, "no", len) == 0)
-				PG_RETURN_BOOL(false);
-			break;
-
-		case '0':
-			if (pg_strncasecmp(str, "0", len) == 0)
-				PG_RETURN_BOOL(false);
-			break;
-
-		default:
-			break;
-	}
+	if (parse_bool_with_len(str, len, &result))
+		PG_RETURN_BOOL(result);
 
 	ereport(ERROR,
 			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),

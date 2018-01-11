@@ -2,8 +2,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: yolo/gpdbdev
-    tag: centos6
+    repository: pivotaldata/qp-gpdbdev
 inputs:
   - name: gpdb_src
   - name: bin_orca
@@ -12,11 +11,9 @@ inputs:
 outputs:
   - name: icg_output
 run:
-  path: gpdb_src/concourse/scripts/test_gpdb.py
+  path: gpdb_src/concourse/scripts/build_gpdb.py
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb
-    - bin_orca
-    - bin_xerces
-params:
-  BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+    - --action=test
+    - --configure-option=--disable-gpcloud

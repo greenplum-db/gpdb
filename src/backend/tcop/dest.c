@@ -4,11 +4,11 @@
  *	  support for communication destinations
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/dest.c,v 1.72.2.1 2010/01/30 20:10:05 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/dest.c,v 1.75 2009/01/01 17:23:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,6 +32,7 @@
 #include "access/xact.h"
 #include "commands/copy.h"
 #include "executor/executor.h"
+#include "executor/functions.h"
 #include "executor/tstoreReceiver.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -95,21 +96,16 @@ BeginCommand(const char *commandTag, CommandDest dest)
 
 /* ----------------
  *		CreateDestReceiver - return appropriate receiver function set for dest
- *
- * Note: a Portal must be specified for destinations DestRemote,
- * DestRemoteExecute, and DestTuplestore.  It can be NULL for the others.
  * ----------------
  */
 DestReceiver *
-CreateDestReceiver(CommandDest dest, Portal portal)
+CreateDestReceiver(CommandDest dest)
 {
 	switch (dest)
 	{
 		case DestRemote:
 		case DestRemoteExecute:
-			if (portal == NULL)
-				elog(ERROR, "no portal specified for DestRemote receiver");
-			return printtup_create_DR(dest, portal);
+			return printtup_create_DR(dest);
 
 		case DestNone:
 			return &donothingDR;
@@ -121,19 +117,16 @@ CreateDestReceiver(CommandDest dest, Portal portal)
 			return &spi_printtupDR;
 
 		case DestTuplestore:
-			if (portal == NULL)
-				elog(ERROR, "no portal specified for DestTuplestore receiver");
-			if (portal->holdStore == NULL ||
-				portal->holdContext == NULL)
-				elog(ERROR, "portal has no holdStore");
-			return CreateTuplestoreDestReceiver(portal->holdStore,
-												portal->holdContext);
+			return CreateTuplestoreDestReceiver();
 
 		case DestIntoRel:
 			return CreateIntoRelDestReceiver();
 
 		case DestCopyOut:
 			return CreateCopyDestReceiver();
+
+		case DestSQLFunction:
+			return CreateSQLFunctionDestReceiver();
 	}
 
 	/* should never get here */
@@ -164,6 +157,7 @@ EndCommand(const char *commandTag, CommandDest dest)
 		case DestTuplestore:
 		case DestIntoRel:
 		case DestCopyOut:
+		case DestSQLFunction:
 			break;
 	}
 }
@@ -204,6 +198,7 @@ NullCommand(CommandDest dest)
 		case DestTuplestore:
 		case DestIntoRel:
 		case DestCopyOut:
+		case DestSQLFunction:
 			break;
 	}
 }
@@ -253,6 +248,7 @@ ReadyForQuery(CommandDest dest)
 		case DestTuplestore:
 		case DestIntoRel:
 		case DestCopyOut:
+		case DestSQLFunction:
 			break;
 	}
 }

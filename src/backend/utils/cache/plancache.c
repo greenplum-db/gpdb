@@ -12,7 +12,7 @@
  *
  * The plan cache manager itself is principally responsible for tracking
  * whether cached plans should be invalidated because of schema changes in
- * the objects they depend on.  When (and if) the next demand for a cached
+ * the objects they depend on.	When (and if) the next demand for a cached
  * plan occurs, the query will be replanned.  Note that this could result
  * in an error, for example if a column referenced by the query is no
  * longer present.	The creator of a cached plan can specify whether it
@@ -21,7 +21,7 @@
  * caller to notice changes and cope with them.
  *
  * Currently, we track exactly the dependencies of plans on relations and
- * user-defined functions.  On relcache invalidation events or pg_proc
+ * user-defined functions.	On relcache invalidation events or pg_proc
  * syscache invalidation events, we invalidate just those plans that depend
  * on the particular object being modified.  (Note: this scheme assumes
  * that any table modification that requires replanning will generate a
@@ -31,11 +31,11 @@
  * be infrequent enough that more-detailed tracking is not worth the effort.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/plancache.c,v 1.23 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/plancache.c,v 1.27 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -47,7 +47,6 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "optimizer/planmain.h"
 #include "storage/lmgr.h"
 #include "tcop/pquery.h"
@@ -56,6 +55,7 @@
 #include "utils/inval.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 
@@ -69,6 +69,7 @@ static void ScanQueryForLocks(Query *parsetree, bool acquire);
 static bool ScanQueryWalker(Node *node, bool *acquire);
 static bool rowmark_member(List *rowMarks, int rt_index);
 static bool plan_list_is_transient(List *stmt_list);
+static bool plan_list_is_oneoff(List *stmt_list);
 static void PlanCacheRelCallback(Datum arg, Oid relid);
 static void PlanCacheFuncCallback(Datum arg, int cacheid, ItemPointer tuplePtr);
 static void PlanCacheSysCallback(Datum arg, int cacheid, ItemPointer tuplePtr);
@@ -96,8 +97,7 @@ InitPlanCache(void)
  * about all that we do here is copy it into permanent storage.
  *
  * raw_parse_tree: output of raw_parser()
- * query_string: original query text (can be NULL if not available, but
- *		that is discouraged because it degrades error message quality)
+ * query_string: original query text (as of PG 8.4, must not be NULL)
  * commandTag: compile-time-constant tag for query, or NULL if empty query
  * param_types: array of parameter type OIDs, or NULL if none
  * num_params: number of parameters
@@ -123,6 +123,8 @@ CreateCachedPlan(Node *raw_parse_tree,
 	MemoryContext source_context;
 	MemoryContext oldcxt;
 
+	Assert(query_string != NULL);		/* required as of 8.4 */
+
 	/*
 	 * Make a dedicated memory context for the CachedPlanSource and its
 	 * subsidiary data.  We expect it can be pretty small.
@@ -145,7 +147,7 @@ CreateCachedPlan(Node *raw_parse_tree,
 	oldcxt = MemoryContextSwitchTo(source_context);
 	plansource = (CachedPlanSource *) palloc(sizeof(CachedPlanSource));
 	plansource->raw_parse_tree = copyObject(raw_parse_tree);
-	plansource->query_string = query_string ? pstrdup(query_string) : NULL;
+	plansource->query_string = pstrdup(query_string);
 	plansource->sourceTag = sourceTag;
 	plansource->commandTag = commandTag;		/* no copying needed */
 	if (num_params > 0)
@@ -222,6 +224,8 @@ FastCreateCachedPlan(Node *raw_parse_tree,
 	CachedPlanSource *plansource;
 	OverrideSearchPath *search_path;
 	MemoryContext oldcxt;
+
+	Assert(query_string != NULL);		/* required as of 8.4 */
 
 	/*
 	 * Fetch current search_path into given context, but do any recalculation
@@ -320,7 +324,11 @@ StoreCachedPlan(CachedPlanSource *plansource,
 	plan->stmt_list = stmt_list;
 	plan->fully_planned = plansource->fully_planned;
 	plan->dead = false;
-	if (plansource->fully_planned && plan_list_is_transient(stmt_list))
+	if (plansource->fully_planned && plan_list_is_oneoff(stmt_list))
+	{
+		plan->saved_xmin = BootstrapTransactionId;
+	}
+	else if (plansource->fully_planned && plan_list_is_transient(stmt_list))
 	{
 		Assert(TransactionIdIsNormal(TransactionXmin));
 		plan->saved_xmin = TransactionXmin;
@@ -486,8 +494,10 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 	 */
 	if (!plan)
 	{
-		Snapshot	saveActiveSnapshot = ActiveSnapshot;
+		bool		snapshot_set = false;
 		List	   *slist;
+		TupleDesc	resultDesc;
+		Node	   *raw_parse_tree;
 
 		/*
 		 * Restore the search_path that was in use when the plan was made.
@@ -499,125 +509,106 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 
 		/*
 		 * If a snapshot is already set (the normal case), we can just use
-		 * that for parsing/planning.  But if it isn't, install one.  We must
-		 * arrange to restore ActiveSnapshot afterward, to ensure that
-		 * RevalidateCachedPlan has no caller-visible effects on the
-		 * snapshot.  Having to replan is an unusual case, and it seems a
-		 * really bad idea for RevalidateCachedPlan to affect the snapshot
-		 * only in unusual cases.  (Besides, the snap might have been created
-		 * in a short-lived context.)
+		 * that for parsing/planning.  But if it isn't, install one.  Note: no
+		 * point in checking whether parse analysis requires a snapshot;
+		 * utility commands don't have invalidatable plans, so we'd not get
+		 * here for such a command.
 		 */
-		PG_TRY();
+		if (!ActiveSnapshotSet())
 		{
-			Snapshot	mySnapshot = NULL;
-			TupleDesc	resultDesc;
-			Node	   *raw_parse_tree;
-
-			if (ActiveSnapshot == NULL)
-			{
-				mySnapshot = CopySnapshot(GetTransactionSnapshot());
-				ActiveSnapshot = mySnapshot;
-			}
-
-			/*
-			 * If this is a CREATE TABLE AS, pass information about the
-			 * target table's distribution key to the planner.
-			 */
-			if (intoClause)
-			{
-				SelectStmt *select;
-
-				if (!IsA(plansource->raw_parse_tree, SelectStmt))
-					ereport(ERROR,
-							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-							 errmsg("prepared statement is not a SELECT")));
-
-				select = (SelectStmt *) copyObject(plansource->raw_parse_tree);
-
-				select->intoClause = copyObject(intoClause);
-
-				raw_parse_tree = (Node *) select;
-			}
-			else
-				raw_parse_tree = copyObject(plansource->raw_parse_tree);
-
-			/*
-			 * Run parse analysis and rule rewriting.  The parser tends to
-			 * scribble on its input, so we must copy the raw parse tree to
-			 * prevent corruption of the cache.  Note that we do not use
-			 * parse_analyze_varparams(), assuming that the caller never wants
-			 * the parameter types to change from the original values.
-			 */
-			slist = pg_analyze_and_rewrite(raw_parse_tree,
-										   plansource->query_string,
-										   plansource->param_types,
-										   plansource->num_params);
-
-			if (plansource->fully_planned)
-			{
-				/*
-				 * Generate plans for queries.
-				 *
-				 * The planner may try to call SPI-using functions, which
-				 * causes a problem if we're already inside one.  Rather than
-				 * expect all SPI-using code to do SPI_push whenever a replan
-				 * could happen, it seems best to take care of the case here.
-				 */
-				bool	pushed;
-
-				pushed = SPI_push_conditional();
-
-				slist = pg_plan_queries(slist, plansource->cursor_options,
-										boundParams, false);
-
-				SPI_pop_conditional(pushed);
-			}
-
-			/*
-			 * Check or update the result tupdesc.	XXX should we use a weaker
-			 * condition than equalTupleDescs() here?
-			 */
-			resultDesc = PlanCacheComputeResultDesc(slist);
-			if (resultDesc == NULL && plansource->resultDesc == NULL)
-			{
-				/* OK, doesn't return tuples */
-			}
-			else if (intoClause)
-			{
-				/* OK */
-			}
-			else if (resultDesc == NULL || plansource->resultDesc == NULL ||
-					 !equalTupleDescs(resultDesc, plansource->resultDesc, true))
-			{
-				MemoryContext oldcxt;
-
-				/* can we give a better error message? */
-				if (plansource->fixed_result)
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("cached plan must not change result type")));
-				oldcxt = MemoryContextSwitchTo(plansource->context);
-				if (resultDesc)
-					resultDesc = CreateTupleDescCopy(resultDesc);
-				if (plansource->resultDesc)
-					FreeTupleDesc(plansource->resultDesc);
-				plansource->resultDesc = resultDesc;
-				MemoryContextSwitchTo(oldcxt);
-			}
-
-			/* Done with snapshot */
-			if (mySnapshot)
-				FreeSnapshot(mySnapshot);
+			PushActiveSnapshot(GetTransactionSnapshot());
+			snapshot_set = true;
 		}
-		PG_CATCH();
+
+		/*
+		 * If this is a CREATE TABLE AS, pass information about the
+		 * target table's distribution key to the planner.
+		 */
+		if (intoClause)
 		{
-			/* Restore global vars and propagate error */
-			ActiveSnapshot = saveActiveSnapshot;
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
+			SelectStmt *select;
 
-		ActiveSnapshot = saveActiveSnapshot;
+			if (!IsA(plansource->raw_parse_tree, SelectStmt))
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("prepared statement is not a SELECT")));
+
+			select = (SelectStmt *) copyObject(plansource->raw_parse_tree);
+
+			select->intoClause = copyObject(intoClause);
+
+			raw_parse_tree = (Node *) select;
+		}
+		else
+			raw_parse_tree = copyObject(plansource->raw_parse_tree);
+
+		/*
+		 * Run parse analysis and rule rewriting.  The parser tends to
+		 * scribble on its input, so we must copy the raw parse tree to
+		 * prevent corruption of the cache.  Note that we do not use
+		 * parse_analyze_varparams(), assuming that the caller never wants
+		 * the parameter types to change from the original values.
+		 */
+		slist = pg_analyze_and_rewrite(raw_parse_tree,
+									   plansource->query_string,
+									   plansource->param_types,
+									   plansource->num_params);
+
+		if (plansource->fully_planned)
+		{
+			/*
+			 * Generate plans for queries.
+			 *
+			 * The planner may try to call SPI-using functions, which
+			 * causes a problem if we're already inside one.  Rather than
+			 * expect all SPI-using code to do SPI_push whenever a replan
+			 * could happen, it seems best to take care of the case here.
+			 */
+			bool	pushed;
+
+			pushed = SPI_push_conditional();
+
+			slist = pg_plan_queries(slist, plansource->cursor_options,
+									boundParams);
+
+			SPI_pop_conditional(pushed);
+		}
+
+		/*
+		 * Check or update the result tupdesc.	XXX should we use a weaker
+		 * condition than equalTupleDescs() here?
+		 */
+		resultDesc = PlanCacheComputeResultDesc(slist);
+		if (resultDesc == NULL && plansource->resultDesc == NULL)
+		{
+			/* OK, doesn't return tuples */
+		}
+		else if (intoClause)
+		{
+			/* OK */
+		}
+		else if (resultDesc == NULL || plansource->resultDesc == NULL ||
+				 !equalTupleDescs(resultDesc, plansource->resultDesc, true))
+		{
+			MemoryContext oldcxt;
+
+			/* can we give a better error message? */
+			if (plansource->fixed_result)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cached plan must not change result type")));
+			oldcxt = MemoryContextSwitchTo(plansource->context);
+			if (resultDesc)
+				resultDesc = CreateTupleDescCopy(resultDesc);
+			if (plansource->resultDesc)
+				FreeTupleDesc(plansource->resultDesc);
+			plansource->resultDesc = resultDesc;
+			MemoryContextSwitchTo(oldcxt);
+		}
+
+		/* Release snapshot if we got one */
+		if (snapshot_set)
+			PopActiveSnapshot();
 
 		/* Now we can restore current search path */
 		PopOverrideSearchPath();
@@ -707,8 +698,8 @@ CachedPlanIsValid(CachedPlanSource *plansource)
 		Assert(plan->refcount > 0);
 
 		/*
-		 * Although we don't want to acquire locks here, it still seems
-		 * useful to check for expiration of a transient plan.
+		 * Although we don't want to acquire locks here, it still seems useful
+		 * to check for expiration of a transient plan.
 		 */
 		if (TransactionIdIsValid(plan->saved_xmin) &&
 			!TransactionIdEquals(plan->saved_xmin, TransactionXmin))
@@ -766,7 +757,9 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * replicated across cluster and don't suffer from the
 				 * deadlock.
 				 */
-				if (rte->relid > FirstNormalObjectId)
+				if (rte->relid > FirstNormalObjectId &&
+					(plannedstmt->commandType == CMD_UPDATE ||
+					 plannedstmt->commandType == CMD_DELETE))
 					lockmode = ExclusiveLock;
 				else
 					lockmode = RowExclusiveLock;
@@ -839,7 +832,9 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					 * Catalog tables are replicated across cluster and don't
 					 * suffer from the deadlock.
 					 */
-					if (rte->relid > FirstNormalObjectId)
+					if (rte->relid > FirstNormalObjectId &&
+						(parsetree->commandType == CMD_UPDATE ||
+						 parsetree->commandType == CMD_DELETE))
 						lockmode = ExclusiveLock;
 					else
 						lockmode = RowExclusiveLock;
@@ -944,6 +939,28 @@ plan_list_is_transient(List *stmt_list)
 			continue;			/* Ignore utility statements */
 
 		if (plannedstmt->transientPlan)
+			return true;
+	}
+
+	return false;
+}
+
+/*
+ * plan_list_is_oneoff: check if any of the plans in the list are one-off plans
+ */
+static bool
+plan_list_is_oneoff(List *stmt_list)
+{
+	ListCell   *lc;
+
+	foreach(lc, stmt_list)
+	{
+		PlannedStmt *plannedstmt = (PlannedStmt *) lfirst(lc);
+
+		if (!IsA(plannedstmt, PlannedStmt))
+			continue;			/* Ignore utility statements */
+
+		if (plannedstmt->oneoffPlan)
 			return true;
 	}
 
@@ -1114,7 +1131,7 @@ PlanCacheFuncCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 					{
 						/* Invalidate the plan! */
 						plan->dead = true;
-						break;		/* out of invalItems scan */
+						break;	/* out of invalItems scan */
 					}
 				}
 				if (plan->dead)

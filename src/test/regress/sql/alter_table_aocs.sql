@@ -407,6 +407,29 @@ select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::
 -- splitting top partition of a multi-level partition should not work
 alter table aocs_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
 
+-- Test case: alter table add column with FirstRowNumber > 1
+create table aocs_first_row_number (a int, b int) with (appendonly=true, orientation=column);
+create index i_aocs_first_row_number on aocs_first_row_number using btree(b);
+-- abort an insert transaction to generate a first row number > 1
+begin;
+insert into aocs_first_row_number select i,i from generate_series(1,100)i;
+abort;
+insert into aocs_first_row_number select i,i from generate_series(101, 200)i;
+alter table aocs_first_row_number add column c int default -1;
+-- At this point, block directory entry for column c starts from first row number = 1, 
+-- which is not the same as first row number for columns a and b.  
+-- correct result using base table
+set enable_seqscan=on;
+set enable_indexscan=off;
+select c from aocs_first_row_number where b = 10;
+set enable_seqscan=off;
+set enable_indexscan=on;
+-- Used to have wrong result using index: this select returns 1 tuple when no tuples should be returned.
+-- expect: same result as scanning the base table
+select c from aocs_first_row_number where b = 10;
+reset enable_seqscan;
+reset enable_indexscan;
+
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).
 set client_min_messages='WARNING';

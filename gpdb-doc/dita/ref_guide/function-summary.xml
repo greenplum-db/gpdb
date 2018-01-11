@@ -69,7 +69,7 @@
               <entry colname="col1">VOLATILE</entry>
               <entry colname="col2">Restricted</entry>
               <entry colname="col3">Function values can change within a single table scan. For
-                example: <codeph>random()</codeph>, <codeph>currval()</codeph>,
+                example: <codeph>random()</codeph>,
                   <codeph>timeofday()</codeph>.</entry>
               <entry colname="col4">Any function with side effects is volatile, even if its result
                 is predictable. For example: <codeph>setval()</codeph>.</entry>
@@ -279,7 +279,7 @@ SELECT foo();
                   <ph>Sequence Manipulation Functions</ph>
                 </xref>
               </entry>
-              <entry colname="col2">currval<p>lastval</p><p>nextval</p><p>setval</p></entry>
+              <entry colname="col2">nextval()<p>setval()</p></entry>
               <entry colname="col3"/>
               <entry colname="col4"/>
             </row>
@@ -604,6 +604,7 @@ SELECT foo();
               </row>
             </thead>
             <tbody>
+<!--
               <row>
                 <entry><codeph>to_json(anyelement)</codeph></entry>
                 <entry>Returns the value as a valid JSON object. Arrays and composites are processed
@@ -620,6 +621,7 @@ SELECT foo();
                   <codeph>"Fred said \"Hi.\""</codeph>
                 </entry>
               </row>
+ -->
               <row>
                 <entry><codeph>array_to_json(anyarray [, pretty_bool])</codeph></entry>
                 <entry>Returns the array as a JSON array. A Greenplum Database multidimensional
@@ -646,10 +648,12 @@ SELECT foo();
             </tbody>
           </tgroup>
         </table>
+<!--
         <note><codeph>array_to_json</codeph> and <codeph>row_to_json</codeph> have the same behavior
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> also applies to individual values converted by the
           other JSON creation functions.</note>
+-->
       </body>
     </topic>
     <topic id="topic_z5d_snw_2z">

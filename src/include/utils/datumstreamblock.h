@@ -1,6 +1,15 @@
-/*
- * DatumStreamBlock
- *	Copyright (c) 201, EMC Inc.
+/*-------------------------------------------------------------------------
+ *
+ * datumstreamblock.h
+ *
+ * Portions Copyright (c) 201, EMC Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/datumstreamblock.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef DATUMSTREAMBLOCK_H

@@ -3,11 +3,11 @@
  * trigger.c
  *	  PostgreSQL TRIGGERs support code.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.227.2.4 2010/01/24 21:49:39 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.248 2009/06/18 01:27:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
@@ -32,6 +33,8 @@
 #include "nodes/execnodes.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
+#include "pgstat.h"
+#include "storage/bufmgr.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -40,7 +43,10 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
+
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbfilerepprimary.h"
@@ -70,11 +76,16 @@ static void AfterTriggerSaveEvent(ResultRelInfo *relinfo, int event,
  * be made to link the trigger to that constraint.	constraintOid is zero when
  * executing a user-entered CREATE TRIGGER command.
  *
+ * If checkPermissions is true we require ACL_TRIGGER permissions on the
+ * relation.  If not, the caller already checked permissions.  (This is
+ * currently redundant with constraintOid being zero, but it's clearer to
+ * have a separate argument.)
+ *
  * Note: can return InvalidOid if we decided to not create a trigger at all,
  * but a foreign-key constraint.  This is a kluge for backwards compatibility.
  */
 Oid
-CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
+CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid, bool checkPermissions)
 {
 	int16		tgtype;
 	int2vector *tgattr;
@@ -91,8 +102,6 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 	Oid			funcoid;
 	Oid			funcrettype;
 	Oid			trigoid;
-	int			found = 0;
-	int			i;
 	char		constrtrigname[NAMEDATALEN];
 	char	   *trigname;
 	char	   *constrname;
@@ -114,36 +123,26 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 				 errmsg("permission denied: \"%s\" is a system catalog",
 						RelationGetRelationName(rel))));
 
+	if (stmt->isconstraint && stmt->constrrel != NULL)
+		constrrelid = RangeVarGetRelid(stmt->constrrel, false);
+
 	/* permission checks */
-
-	if (stmt->isconstraint)
+	if (checkPermissions)
 	{
-		/* constraint trigger */
-		aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
-									  ACL_REFERENCES);
-		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_CLASS,
-						   RelationGetRelationName(rel));
-
-		if (stmt->constrrel != NULL)
-		{
-			constrrelid = RangeVarGetRelid(stmt->constrrel, false);
-
-			aclresult = pg_class_aclcheck(constrrelid, GetUserId(),
-										  ACL_REFERENCES);
-			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_CLASS,
-							   get_rel_name(constrrelid));
-		}
-	}
-	else
-	{
-		/* regular trigger */
 		aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
 									  ACL_TRIGGER);
 		if (aclresult != ACLCHECK_OK)
 			aclcheck_error(aclresult, ACL_KIND_CLASS,
 						   RelationGetRelationName(rel));
+
+		if (OidIsValid(constrrelid))
+		{
+			aclresult = pg_class_aclcheck(constrrelid, GetUserId(),
+										  ACL_TRIGGER);
+			if (aclresult != ACLCHECK_OK)
+				aclcheck_error(aclresult, ACL_KIND_CLASS,
+							   get_rel_name(constrrelid));
+		}
 	}
 
 	/* Compute tgtype */
@@ -152,38 +151,13 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 		TRIGGER_SETT_BEFORE(tgtype);
 	if (stmt->row)
 		TRIGGER_SETT_ROW(tgtype);
+	tgtype |= stmt->events;
 
-	for (i = 0; stmt->actions[i]; i++)
-	{
-		switch (stmt->actions[i])
-		{
-			case 'i':
-				if (TRIGGER_FOR_INSERT(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple INSERT events specified")));
-				TRIGGER_SETT_INSERT(tgtype);
-				break;
-			case 'd':
-				if (TRIGGER_FOR_DELETE(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple DELETE events specified")));
-				TRIGGER_SETT_DELETE(tgtype);
-				break;
-			case 'u':
-				if (TRIGGER_FOR_UPDATE(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple UPDATE events specified")));
-				TRIGGER_SETT_UPDATE(tgtype);
-				break;
-			default:
-				elog(ERROR, "unrecognized trigger event: %d",
-					 (int) stmt->actions[i]);
-				break;
-		}
-	}
+	/* Disallow ROW-level TRUNCATE triggers */
+	if (TRIGGER_FOR_ROW(tgtype) && TRIGGER_FOR_TRUNCATE(tgtype))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("TRUNCATE FOR EACH ROW triggers are not supported")));
 
 	/*
 	 * Find and validate the trigger function.
@@ -213,6 +187,21 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("function %s must return type \"trigger\"",
 							NameListToString(stmt->funcname))));
+	}
+
+	/* Check GPDB limitations */
+	if ((RelationIsAoRows(rel) || RelationIsAoCols(rel)) &&
+		TRIGGER_FOR_ROW(tgtype) &&
+		!stmt->isconstraint)
+	{
+		if (TRIGGER_FOR_UPDATE(tgtype))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("ON UPDATE triggers are not supported on append-only tables")));
+		if (TRIGGER_FOR_DELETE(tgtype))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("ON DELETE triggers are not supported on append-only tables")));
 	}
 
 	/*
@@ -280,10 +269,9 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 	}
 
 	/*
-	 * Scan pg_trigger for existing triggers on relation.  We do this mainly
-	 * because we must count them; a secondary benefit is to give a nice error
-	 * message if there's already a trigger of the same name. (The unique
-	 * index on tgrelid/tgname would complain anyway.)
+	 * Scan pg_trigger for existing triggers on relation.  We do this only to
+	 * give a nice error message if there's already a trigger of the same
+	 * name.  (The unique index on tgrelid/tgname would complain anyway.)
 	 *
 	 * NOTE that this is cool only because we have AccessExclusiveLock on the
 	 * relation, so the trigger set won't be changing underneath us.
@@ -303,14 +291,13 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 				  errmsg("trigger \"%s\" for relation \"%s\" already exists",
 						 trigname, stmt->relation->relname)));
-		found++;
 	}
 	systable_endscan(tgscan);
 
 	/*
 	 * Build the new pg_trigger tuple.
 	 */
-	memset(nulls, false, Natts_pg_trigger * sizeof(bool));
+	memset(nulls, false, sizeof(nulls));
 
 	values[Anum_pg_trigger_tgrelid - 1] = ObjectIdGetDatum(RelationGetRelid(rel));
 	values[Anum_pg_trigger_tgname - 1] = DirectFunctionCall1(namein,
@@ -417,7 +404,7 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 		elog(ERROR, "cache lookup failed for relation %u",
 			 RelationGetRelid(rel));
 
-	((Form_pg_class) GETSTRUCT(tuple))->reltriggers = found + 1;
+	((Form_pg_class) GETSTRUCT(tuple))->relhastriggers = true;
 
 	simple_heap_update(pgrel, &tuple->t_self, tuple);
 
@@ -629,7 +616,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 		(errmsg("ignoring incomplete trigger group for constraint \"%s\" %s",
 				constr_name, buf.data),
-		 errdetail("%s", funcdescr[funcnum])));
+		 errdetail("%s", _(funcdescr[funcnum]))));
 		oldContext = MemoryContextSwitchTo(TopMemoryContext);
 		info = (OldTriggerInfo *) palloc0(sizeof(OldTriggerInfo));
 		info->args = copyObject(stmt->args);
@@ -645,7 +632,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 		(errmsg("ignoring incomplete trigger group for constraint \"%s\" %s",
 				constr_name, buf.data),
-		 errdetail("%s", funcdescr[funcnum])));
+		 errdetail("%s", _(funcdescr[funcnum]))));
 	}
 	else
 	{
@@ -657,7 +644,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 				(errmsg("converting trigger group into constraint \"%s\" %s",
 						constr_name, buf.data),
-				 errdetail("%s", funcdescr[funcnum])));
+				 errdetail("%s", _(funcdescr[funcnum]))));
 		if (funcnum == 2)
 		{
 			/* This trigger is on the FK table */
@@ -740,7 +727,8 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 
 		/* ... and execute it */
 		ProcessUtility((Node *) atstmt,
-					   NULL, NULL, false, None_Receiver, NULL);
+					   "(generated ALTER TABLE ADD FOREIGN KEY command)",
+					   NULL, false, None_Receiver, NULL);
 
 		/* Remove the matched item from the list */
 		info_list = list_delete_ptr(info_list, info);
@@ -829,9 +817,6 @@ RemoveTriggerById(Oid trigOid)
 	HeapTuple	tup;
 	Oid			relid;
 	Relation	rel;
-	Relation	pgrel;
-	HeapTuple	tuple;
-	Form_pg_class classForm;
 
 	tgrel = heap_open(TriggerRelationId, RowExclusiveLock);
 
@@ -878,33 +863,15 @@ RemoveTriggerById(Oid trigOid)
 	heap_close(tgrel, RowExclusiveLock);
 
 	/*
-	 * Update relation's pg_class entry.  Crucial side-effect: other backends
-	 * (and this one too!) are sent SI message to make them rebuild relcache
-	 * entries.
-	 *
-	 * Note this is OK only because we have AccessExclusiveLock on the rel, so
-	 * no one else is creating/deleting triggers on this rel at the same time.
+	 * We do not bother to try to determine whether any other triggers remain,
+	 * which would be needed in order to decide whether it's safe to clear the
+	 * relation's relhastriggers.  (In any case, there might be a concurrent
+	 * process adding new triggers.)  Instead, just force a relcache inval to
+	 * make other backends (and this one too!) rebuild their relcache entries.
+	 * There's no great harm in leaving relhastriggers true even if there are
+	 * no triggers left.
 	 */
-	pgrel = heap_open(RelationRelationId, RowExclusiveLock);
-	tuple = SearchSysCacheCopy(RELOID,
-							   ObjectIdGetDatum(relid),
-							   0, 0, 0);
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relid);
-	classForm = (Form_pg_class) GETSTRUCT(tuple);
-
-	if (classForm->reltriggers == 0)	/* should not happen */
-		elog(ERROR, "relation \"%s\" has reltriggers = 0",
-			 RelationGetRelationName(rel));
-	classForm->reltriggers--;
-
-	simple_heap_update(pgrel, &tuple->t_self, tuple);
-
-	CatalogUpdateIndexes(pgrel, tuple);
-
-	heap_freetuple(tuple);
-
-	heap_close(pgrel, RowExclusiveLock);
+	CacheInvalidateRelcache(rel);
 
 	/* Keep lock on trigger's rel until end of xact */
 	heap_close(rel, NoLock);
@@ -1080,12 +1047,14 @@ renametrig(Oid relid,
 /*
  * EnableDisableTrigger()
  *
- *	Called by ALTER TABLE ENABLE/DISABLE TRIGGER
+ *	Called by ALTER TABLE ENABLE/DISABLE [ REPLICA | ALWAYS ] TRIGGER
  *	to change 'tgenabled' field for the specified trigger(s)
  *
  * rel: relation to process (caller must hold suitable lock on it)
  * tgname: trigger to process, or NULL to scan all triggers
- * enable: new value for tgenabled field
+ * fires_when: new value for tgenabled field. In addition to generic
+ *			   enablement/disablement, this also defines when the trigger
+ *			   should be fired in session replication roles.
  * skip_system: if true, skip "system" triggers (constraint triggers)
  *
  * Caller should have checked permissions for the table; here we also
@@ -1198,18 +1167,23 @@ void
 RelationBuildTriggers(Relation relation)
 {
 	TriggerDesc *trigdesc;
-	int			ntrigs = relation->rd_rel->reltriggers;
+	int			numtrigs;
+	int			maxtrigs;
 	Trigger    *triggers;
-	int			found = 0;
 	Relation	tgrel;
 	ScanKeyData skey;
 	SysScanDesc tgscan;
 	HeapTuple	htup;
 	MemoryContext oldContext;
+	int			i;
 
-	Assert(ntrigs > 0);			/* else I should not have been called */
-
-	triggers = (Trigger *) palloc(ntrigs * sizeof(Trigger));
+	/*
+	 * Allocate a working array to hold the triggers (the array is extended if
+	 * necessary)
+	 */
+	maxtrigs = 16;
+	triggers = (Trigger *) palloc(maxtrigs * sizeof(Trigger));
+	numtrigs = 0;
 
 	/*
 	 * Note: since we scan the triggers using TriggerRelidNameIndexId, we will
@@ -1231,10 +1205,12 @@ RelationBuildTriggers(Relation relation)
 		Form_pg_trigger pg_trigger = (Form_pg_trigger) GETSTRUCT(htup);
 		Trigger    *build;
 
-		if (found >= ntrigs)
-			elog(ERROR, "too many trigger records found for relation \"%s\"",
-				 RelationGetRelationName(relation));
-		build = &(triggers[found]);
+		if (numtrigs >= maxtrigs)
+		{
+			maxtrigs *= 2;
+			triggers = (Trigger *) repalloc(triggers, maxtrigs * sizeof(Trigger));
+		}
+		build = &(triggers[numtrigs]);
 
 		build->tgoid = HeapTupleGetOid(htup);
 		build->tgname = DatumGetCString(DirectFunctionCall1(nameout,
@@ -1263,7 +1239,6 @@ RelationBuildTriggers(Relation relation)
 			bytea	   *val;
 			bool		isnull;
 			char	   *p;
-			int			i;
 
 			val = DatumGetByteaP(fastgetattr(htup,
 											 Anum_pg_trigger_tgargs,
@@ -1282,23 +1257,25 @@ RelationBuildTriggers(Relation relation)
 		else
 			build->tgargs = NULL;
 
-		found++;
+		numtrigs++;
 	}
 
 	systable_endscan(tgscan);
 	heap_close(tgrel, AccessShareLock);
 
-	if (found != ntrigs)
-		elog(ERROR, "%d trigger record(s) not found for relation \"%s\"",
-			 ntrigs - found,
-			 RelationGetRelationName(relation));
+	/* There might not be any triggers */
+	if (numtrigs == 0)
+	{
+		pfree(triggers);
+		return;
+	}
 
 	/* Build trigdesc */
 	trigdesc = (TriggerDesc *) palloc0(sizeof(TriggerDesc));
 	trigdesc->triggers = triggers;
-	trigdesc->numtriggers = ntrigs;
-	for (found = 0; found < ntrigs; found++)
-		InsertTrigger(trigdesc, &(triggers[found]), found);
+	trigdesc->numtriggers = numtrigs;
+	for (i = 0; i < numtrigs; i++)
+		InsertTrigger(trigdesc, &(triggers[i]), i);
 
 	/* Copy completed trigdesc into cache storage */
 	oldContext = MemoryContextSwitchTo(CacheMemoryContext);
@@ -1378,6 +1355,15 @@ InsertTrigger(TriggerDesc *trigdesc, Trigger *trigger, int indx)
 			*tp = (int *) palloc(trigdesc->numtriggers * sizeof(int));
 		(*tp)[n[TRIGGER_EVENT_UPDATE]] = indx;
 		(n[TRIGGER_EVENT_UPDATE])++;
+	}
+
+	if (TRIGGER_FOR_TRUNCATE(trigger->tgtype))
+	{
+		tp = &(t[TRIGGER_EVENT_TRUNCATE]);
+		if (*tp == NULL)
+			*tp = (int *) palloc(trigdesc->numtriggers * sizeof(int));
+		(*tp)[n[TRIGGER_EVENT_TRUNCATE]] = indx;
+		(n[TRIGGER_EVENT_TRUNCATE])++;
 	}
 }
 
@@ -1623,6 +1609,7 @@ ExecCallTriggerFunc(TriggerData *trigdata,
 					MemoryContext per_tuple_context)
 {
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	Datum		result;
 	MemoryContext oldContext;
 
@@ -1656,7 +1643,11 @@ ExecCallTriggerFunc(TriggerData *trigdata,
 	 */
 	InitFunctionCallInfoData(fcinfo, finfo, 0, (Node *) trigdata, NULL);
 
+	pgstat_init_function_usage(&fcinfo, &fcusage);
+
 	result = FunctionCallInvoke(&fcinfo);
+
+	pgstat_end_function_usage(&fcusage, true);
 
 	MemoryContextSwitchTo(oldContext);
 
@@ -1688,6 +1679,12 @@ ExecBSInsertTriggers(EState *estate, ResultRelInfo *relinfo)
 	int		   *tgindx;
 	int			i;
 	TriggerData LocTriggerData;
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		/* Don't fire statement-triggers in executor nodes. */
+		return;
+	}
 
 	trigdesc = relinfo->ri_TrigDesc;
 
@@ -1824,6 +1821,12 @@ ExecBSDeleteTriggers(EState *estate, ResultRelInfo *relinfo)
 	int		   *tgindx;
 	int			i;
 	TriggerData LocTriggerData;
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		/* Don't fire statement-triggers in executor nodes. */
+		return;
+	}
 
 	trigdesc = relinfo->ri_TrigDesc;
 
@@ -1972,6 +1975,12 @@ ExecBSUpdateTriggers(EState *estate, ResultRelInfo *relinfo)
 	int		   *tgindx;
 	int			i;
 	TriggerData LocTriggerData;
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		/* Don't fire statement-triggers in executor nodes. */
+		return;
+	}
 
 	trigdesc = relinfo->ri_TrigDesc;
 
@@ -2147,6 +2156,81 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 	}
 }
 
+void
+ExecBSTruncateTriggers(EState *estate, ResultRelInfo *relinfo)
+{
+	TriggerDesc *trigdesc;
+	int			ntrigs;
+	int		   *tgindx;
+	int			i;
+	TriggerData LocTriggerData;
+
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		/* Don't fire statement-triggers in executor nodes. */
+		return;
+	}
+
+	trigdesc = relinfo->ri_TrigDesc;
+
+	if (trigdesc == NULL)
+		return;
+
+	ntrigs = trigdesc->n_before_statement[TRIGGER_EVENT_TRUNCATE];
+	tgindx = trigdesc->tg_before_statement[TRIGGER_EVENT_TRUNCATE];
+
+	if (ntrigs == 0)
+		return;
+
+	LocTriggerData.type = T_TriggerData;
+	LocTriggerData.tg_event = TRIGGER_EVENT_TRUNCATE |
+		TRIGGER_EVENT_BEFORE;
+	LocTriggerData.tg_relation = relinfo->ri_RelationDesc;
+	LocTriggerData.tg_trigtuple = NULL;
+	LocTriggerData.tg_newtuple = NULL;
+	LocTriggerData.tg_trigtuplebuf = InvalidBuffer;
+	LocTriggerData.tg_newtuplebuf = InvalidBuffer;
+	for (i = 0; i < ntrigs; i++)
+	{
+		Trigger    *trigger = &trigdesc->triggers[tgindx[i]];
+		HeapTuple	newtuple;
+
+		if (SessionReplicationRole == SESSION_REPLICATION_ROLE_REPLICA)
+		{
+			if (trigger->tgenabled == TRIGGER_FIRES_ON_ORIGIN ||
+				trigger->tgenabled == TRIGGER_DISABLED)
+				continue;
+		}
+		else	/* ORIGIN or LOCAL role */
+		{
+			if (trigger->tgenabled == TRIGGER_FIRES_ON_REPLICA ||
+				trigger->tgenabled == TRIGGER_DISABLED)
+				continue;
+		}
+		LocTriggerData.tg_trigger = trigger;
+		newtuple = ExecCallTriggerFunc(&LocTriggerData,
+									   tgindx[i],
+									   relinfo->ri_TrigFunctions,
+									   relinfo->ri_TrigInstrument,
+									   GetPerTupleMemoryContext(estate));
+
+		if (newtuple)
+			ereport(ERROR,
+					(errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED),
+				  errmsg("BEFORE STATEMENT trigger cannot return a value")));
+	}
+}
+
+void
+ExecASTruncateTriggers(EState *estate, ResultRelInfo *relinfo)
+{
+	TriggerDesc *trigdesc = relinfo->ri_TrigDesc;
+
+	if (trigdesc && trigdesc->n_after_statement[TRIGGER_EVENT_TRUNCATE] > 0)
+		AfterTriggerSaveEvent(relinfo, TRIGGER_EVENT_TRUNCATE,
+							  false, NULL, NULL);
+}
+
 
 static HeapTuple
 GetTupleForTrigger(EState *estate, ResultRelInfo *relinfo,
@@ -2159,6 +2243,14 @@ GetTupleForTrigger(EState *estate, ResultRelInfo *relinfo,
 	HeapTupleData tuple;
 	HeapTuple	result;
 	Buffer		buffer;
+
+	/* these should be rejected when you try to create such triggers, but let's check */
+	if (RelationIsAoRows(relation) || RelationIsAoCols(relation))
+		elog(ERROR, "UPDATE and DELETE triggers are not supported on append-only tables");
+	if (RelationIsExternal(relation))
+		elog(ERROR, "UPDATE and DELETE triggers are not supported on external tables");
+
+	Assert(RelationIsHeap(relation));
 
 	if (newSlot != NULL)
 	{
@@ -2224,7 +2316,7 @@ ltrmark:;
 	}
 	else
 	{
-		PageHeader	dp;
+		Page		page;
 		ItemId		lp;
 		
 		// -------- MirroredLock ----------
@@ -2242,12 +2334,12 @@ ltrmark:;
 		 */
 		LockBuffer(buffer, BUFFER_LOCK_SHARE);
 
-		dp = (PageHeader) BufferGetPage(buffer);
-		lp = PageGetItemId(dp, ItemPointerGetOffsetNumber(tid));
+		page = BufferGetPage(buffer);
+		lp = PageGetItemId(page, ItemPointerGetOffsetNumber(tid));
 
 		Assert(ItemIdIsNormal(lp));
 
-		tuple.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
+		tuple.t_data = (HeapTupleHeader) PageGetItem(page, lp);
 		tuple.t_len = ItemIdGetLength(lp);
 		tuple.t_self = *tid;
 
@@ -2271,12 +2363,14 @@ ltrmark:;
  * during the current transaction tree.  (BEFORE triggers are fired
  * immediately so we don't need any persistent state about them.)  The struct
  * and most of its subsidiary data are kept in TopTransactionContext; however
- * the individual event records are kept in separate contexts, to make them
- * easy to delete during subtransaction abort.
+ * the individual event records are kept in a separate sub-context.  This is
+ * done mainly so that it's easy to tell from a memory context dump how much
+ * space is being eaten by trigger events.
  *
- * Because the list of pending events can grow large, we go to some effort
- * to minimize memory consumption.	We do not use the generic List mechanism
- * but thread the events manually.
+ * Because the list of pending events can grow large, we go to some
+ * considerable effort to minimize per-event memory consumption.  The event
+ * records are grouped into chunks and common data for similar events in the
+ * same chunk is only stored once.
  *
  * XXX We need to be able to save the per-event data in a file if it grows too
  * large.
@@ -2317,29 +2411,101 @@ typedef SetConstraintStateData *SetConstraintState;
 /*
  * Per-trigger-event data
  *
- * Note: ate_firing_id is meaningful when either AFTER_TRIGGER_DONE
- * or AFTER_TRIGGER_IN_PROGRESS is set.  It indicates which trigger firing
- * cycle the trigger was or will be fired in.
+ * The actual per-event data, AfterTriggerEventData, includes DONE/IN_PROGRESS
+ * status bits and one or two tuple CTIDs.	Each event record also has an
+ * associated AfterTriggerSharedData that is shared across all instances
+ * of similar events within a "chunk".
+ *
+ * We arrange not to waste storage on ate_ctid2 for non-update events.
+ * We could go further and not store either ctid for statement-level triggers,
+ * but that seems unlikely to be worth the trouble.
+ *
+ * Note: ats_firing_id is initially zero and is set to something else when
+ * AFTER_TRIGGER_IN_PROGRESS is set.  It indicates which trigger firing
+ * cycle the trigger will be fired in (or was fired in, if DONE is set).
+ * Although this is mutable state, we can keep it in AfterTriggerSharedData
+ * because all instances of the same type of event in a given event list will
+ * be fired at the same time, if they were queued between the same firing
+ * cycles.	So we need only ensure that ats_firing_id is zero when attaching
+ * a new event to an existing AfterTriggerSharedData record.
  */
+typedef uint32 TriggerFlags;
+
+#define AFTER_TRIGGER_OFFSET			0x0FFFFFFF		/* must be low-order
+														 * bits */
+#define AFTER_TRIGGER_2CTIDS			0x10000000
+#define AFTER_TRIGGER_DONE				0x20000000
+#define AFTER_TRIGGER_IN_PROGRESS		0x40000000
+
+typedef struct AfterTriggerSharedData *AfterTriggerShared;
+
+typedef struct AfterTriggerSharedData
+{
+	TriggerEvent ats_event;		/* event type indicator, see trigger.h */
+	Oid			ats_tgoid;		/* the trigger's ID */
+	Oid			ats_relid;		/* the relation it's on */
+	CommandId	ats_firing_id;	/* ID for firing cycle */
+} AfterTriggerSharedData;
+
 typedef struct AfterTriggerEventData *AfterTriggerEvent;
 
 typedef struct AfterTriggerEventData
 {
-	AfterTriggerEvent ate_next; /* list link */
-	TriggerEvent ate_event;		/* event type and status bits */
-	CommandId	ate_firing_id;	/* ID for firing cycle */
-	Oid			ate_tgoid;		/* the trigger's ID */
-	Oid			ate_relid;		/* the relation it's on */
-	ItemPointerData ate_oldctid;	/* specific tuple(s) involved */
-	ItemPointerData ate_newctid;
+	TriggerFlags ate_flags;		/* status bits and offset to shared data */
+	ItemPointerData ate_ctid1;	/* inserted, deleted, or old updated tuple */
+	ItemPointerData ate_ctid2;	/* new updated tuple */
 } AfterTriggerEventData;
+
+/* This struct must exactly match the one above except for not having ctid2 */
+typedef struct AfterTriggerEventDataOneCtid
+{
+	TriggerFlags ate_flags;		/* status bits and offset to shared data */
+	ItemPointerData ate_ctid1;	/* inserted, deleted, or old updated tuple */
+} AfterTriggerEventDataOneCtid;
+
+#define SizeofTriggerEvent(evt) \
+	(((evt)->ate_flags & AFTER_TRIGGER_2CTIDS) ? \
+	 sizeof(AfterTriggerEventData) : sizeof(AfterTriggerEventDataOneCtid))
+
+#define GetTriggerSharedData(evt) \
+	((AfterTriggerShared) ((char *) (evt) + ((evt)->ate_flags & AFTER_TRIGGER_OFFSET)))
+
+/*
+ * To avoid palloc overhead, we keep trigger events in arrays in successively-
+ * larger chunks (a slightly more sophisticated version of an expansible
+ * array).	The space between CHUNK_DATA_START and freeptr is occupied by
+ * AfterTriggerEventData records; the space between endfree and endptr is
+ * occupied by AfterTriggerSharedData records.
+ */
+typedef struct AfterTriggerEventChunk
+{
+	struct AfterTriggerEventChunk *next;		/* list link */
+	char	   *freeptr;		/* start of free space in chunk */
+	char	   *endfree;		/* end of free space in chunk */
+	char	   *endptr;			/* end of chunk */
+	/* event data follows here */
+} AfterTriggerEventChunk;
+
+#define CHUNK_DATA_START(cptr) ((char *) (cptr) + MAXALIGN(sizeof(AfterTriggerEventChunk)))
 
 /* A list of events */
 typedef struct AfterTriggerEventList
 {
-	AfterTriggerEvent head;
-	AfterTriggerEvent tail;
+	AfterTriggerEventChunk *head;
+	AfterTriggerEventChunk *tail;
+	char	   *tailfree;		/* freeptr of tail chunk */
 } AfterTriggerEventList;
+
+/* Macros to help in iterating over a list of events */
+#define for_each_chunk(cptr, evtlist) \
+	for (cptr = (evtlist).head; cptr != NULL; cptr = cptr->next)
+#define for_each_event(eptr, cptr) \
+	for (eptr = (AfterTriggerEvent) CHUNK_DATA_START(cptr); \
+		 (char *) eptr < (cptr)->freeptr; \
+		 eptr = (AfterTriggerEvent) (((char *) eptr) + SizeofTriggerEvent(eptr)))
+/* Use this if no special per-chunk processing is needed */
+#define for_each_event_chunk(eptr, cptr, evtlist) \
+	for_each_chunk(cptr, evtlist) for_each_event(eptr, cptr)
 
 
 /*
@@ -2360,9 +2526,7 @@ typedef struct AfterTriggerEventList
  * all subtransactions of the current transaction.	In a subtransaction
  * abort, we know that the events added by the subtransaction are at the
  * end of the list, so it is relatively easy to discard them.  The event
- * structs themselves are stored in event_cxt if generated by the top-level
- * transaction, else in per-subtransaction contexts identified by the
- * entries in cxt_stack.
+ * list chunks themselves are stored in event_cxt.
  *
  * query_depth is the current depth of nested AfterTriggerBeginQuery calls
  * (-1 when the stack is empty).
@@ -2404,8 +2568,7 @@ typedef struct AfterTriggersData
 	int			query_depth;	/* current query list index */
 	AfterTriggerEventList *query_stack; /* events pending from each query */
 	int			maxquerydepth;	/* allocated len of above array */
-	MemoryContext event_cxt;	/* top transaction's event context, if any */
-	MemoryContext *cxt_stack;	/* per-subtransaction event contexts */
+	MemoryContext event_cxt;	/* memory context for events, if any */
 
 	/* these fields are just for resetting at subtrans abort: */
 
@@ -2435,13 +2598,13 @@ static SetConstraintState SetConstraintStateAddItem(SetConstraintState state,
 /* ----------
  * afterTriggerCheckState()
  *
- *	Returns true if the trigger identified by tgoid is actually
- *	in state DEFERRED.
+ *	Returns true if the trigger event is actually in state DEFERRED.
  * ----------
  */
 static bool
-afterTriggerCheckState(Oid tgoid, TriggerEvent eventstate)
+afterTriggerCheckState(AfterTriggerShared evtshared)
 {
+	Oid			tgoid = evtshared->ats_tgoid;
 	SetConstraintState state = afterTriggers->state;
 	int			i;
 
@@ -2449,7 +2612,7 @@ afterTriggerCheckState(Oid tgoid, TriggerEvent eventstate)
 	 * For not-deferrable triggers (i.e. normal AFTER ROW triggers and
 	 * constraints declared NOT DEFERRABLE), the state is always false.
 	 */
-	if ((eventstate & AFTER_TRIGGER_DEFERRABLE) == 0)
+	if ((evtshared->ats_event & AFTER_TRIGGER_DEFERRABLE) == 0)
 		return false;
 
 	/*
@@ -2470,37 +2633,185 @@ afterTriggerCheckState(Oid tgoid, TriggerEvent eventstate)
 	/*
 	 * Otherwise return the default state for the trigger.
 	 */
-	return ((eventstate & AFTER_TRIGGER_INITDEFERRED) != 0);
+	return ((evtshared->ats_event & AFTER_TRIGGER_INITDEFERRED) != 0);
 }
 
 
 /* ----------
  * afterTriggerAddEvent()
  *
- *	Add a new trigger event to the current query's queue.
+ *	Add a new trigger event to the specified queue.
+ *	The passed-in event data is copied.
  * ----------
  */
 static void
-afterTriggerAddEvent(AfterTriggerEvent event)
+afterTriggerAddEvent(AfterTriggerEventList *events,
+					 AfterTriggerEvent event, AfterTriggerShared evtshared)
 {
-	AfterTriggerEventList *events;
+	Size		eventsize = SizeofTriggerEvent(event);
+	Size		needed = eventsize + sizeof(AfterTriggerSharedData);
+	AfterTriggerEventChunk *chunk;
+	AfterTriggerShared newshared;
+	AfterTriggerEvent newevent;
 
-	Assert(event->ate_next == NULL);
-
-	/* Must be inside a query */
-	Assert(afterTriggers->query_depth >= 0);
-
-	events = &afterTriggers->query_stack[afterTriggers->query_depth];
-	if (events->tail == NULL)
+	/*
+	 * If empty list or not enough room in the tail chunk, make a new chunk.
+	 * We assume here that a new shared record will always be needed.
+	 */
+	chunk = events->tail;
+	if (chunk == NULL ||
+		chunk->endfree - chunk->freeptr < needed)
 	{
-		/* first list entry */
-		events->head = event;
-		events->tail = event;
+		Size		chunksize;
+
+		/* Create event context if we didn't already */
+		if (afterTriggers->event_cxt == NULL)
+			afterTriggers->event_cxt =
+				AllocSetContextCreate(TopTransactionContext,
+									  "AfterTriggerEvents",
+									  ALLOCSET_DEFAULT_MINSIZE,
+									  ALLOCSET_DEFAULT_INITSIZE,
+									  ALLOCSET_DEFAULT_MAXSIZE);
+
+		/*
+		 * Chunk size starts at 1KB and is allowed to increase up to 1MB.
+		 * These numbers are fairly arbitrary, though there is a hard limit at
+		 * AFTER_TRIGGER_OFFSET; else we couldn't link event records to their
+		 * shared records using the available space in ate_flags.  Another
+		 * constraint is that if the chunk size gets too huge, the search loop
+		 * below would get slow given a (not too common) usage pattern with
+		 * many distinct event types in a chunk.  Therefore, we double the
+		 * preceding chunk size only if there weren't too many shared records
+		 * in the preceding chunk; otherwise we halve it.  This gives us some
+		 * ability to adapt to the actual usage pattern of the current query
+		 * while still having large chunk sizes in typical usage.  All chunk
+		 * sizes used should be MAXALIGN multiples, to ensure that the shared
+		 * records will be aligned safely.
+		 */
+#define MIN_CHUNK_SIZE 1024
+#define MAX_CHUNK_SIZE (1024*1024)
+
+#if MAX_CHUNK_SIZE > (AFTER_TRIGGER_OFFSET+1)
+#error MAX_CHUNK_SIZE must not exceed AFTER_TRIGGER_OFFSET
+#endif
+
+		if (chunk == NULL)
+			chunksize = MIN_CHUNK_SIZE;
+		else
+		{
+			/* preceding chunk size... */
+			chunksize = chunk->endptr - (char *) chunk;
+			/* check number of shared records in preceding chunk */
+			if ((chunk->endptr - chunk->endfree) <=
+				(100 * sizeof(AfterTriggerSharedData)))
+				chunksize *= 2; /* okay, double it */
+			else
+				chunksize /= 2; /* too many shared records */
+			chunksize = Min(chunksize, MAX_CHUNK_SIZE);
+		}
+		chunk = MemoryContextAlloc(afterTriggers->event_cxt, chunksize);
+		chunk->next = NULL;
+		chunk->freeptr = CHUNK_DATA_START(chunk);
+		chunk->endptr = chunk->endfree = (char *) chunk + chunksize;
+		Assert(chunk->endfree - chunk->freeptr >= needed);
+
+		if (events->head == NULL)
+			events->head = chunk;
+		else
+			events->tail->next = chunk;
+		events->tail = chunk;
+	}
+
+	/*
+	 * Try to locate a matching shared-data record already in the chunk. If
+	 * none, make a new one.
+	 */
+	for (newshared = ((AfterTriggerShared) chunk->endptr) - 1;
+		 (char *) newshared >= chunk->endfree;
+		 newshared--)
+	{
+		if (newshared->ats_tgoid == evtshared->ats_tgoid &&
+			newshared->ats_relid == evtshared->ats_relid &&
+			newshared->ats_event == evtshared->ats_event &&
+			newshared->ats_firing_id == 0)
+			break;
+	}
+	if ((char *) newshared < chunk->endfree)
+	{
+		*newshared = *evtshared;
+		newshared->ats_firing_id = 0;	/* just to be sure */
+		chunk->endfree = (char *) newshared;
+	}
+
+	/* Insert the data */
+	newevent = (AfterTriggerEvent) chunk->freeptr;
+	memcpy(newevent, event, eventsize);
+	/* ... and link the new event to its shared record */
+	newevent->ate_flags &= ~AFTER_TRIGGER_OFFSET;
+	newevent->ate_flags |= (char *) newshared - (char *) newevent;
+
+	chunk->freeptr += eventsize;
+	events->tailfree = chunk->freeptr;
+}
+
+/* ----------
+ * afterTriggerFreeEventList()
+ *
+ *	Free all the event storage in the given list.
+ * ----------
+ */
+static void
+afterTriggerFreeEventList(AfterTriggerEventList *events)
+{
+	AfterTriggerEventChunk *chunk;
+	AfterTriggerEventChunk *next_chunk;
+
+	for (chunk = events->head; chunk != NULL; chunk = next_chunk)
+	{
+		next_chunk = chunk->next;
+		pfree(chunk);
+	}
+	events->head = NULL;
+	events->tail = NULL;
+	events->tailfree = NULL;
+}
+
+/* ----------
+ * afterTriggerRestoreEventList()
+ *
+ *	Restore an event list to its prior length, removing all the events
+ *	added since it had the value old_events.
+ * ----------
+ */
+static void
+afterTriggerRestoreEventList(AfterTriggerEventList *events,
+							 const AfterTriggerEventList *old_events)
+{
+	AfterTriggerEventChunk *chunk;
+	AfterTriggerEventChunk *next_chunk;
+
+	if (old_events->tail == NULL)
+	{
+		/* restoring to a completely empty state, so free everything */
+		afterTriggerFreeEventList(events);
 	}
 	else
 	{
-		events->tail->ate_next = event;
-		events->tail = event;
+		*events = *old_events;
+		/* free any chunks after the last one we want to keep */
+		for (chunk = events->tail->next; chunk != NULL; chunk = next_chunk)
+		{
+			next_chunk = chunk->next;
+			pfree(chunk);
+		}
+		/* and clean up the tail chunk to be the right length */
+		events->tail->next = NULL;
+		events->tail->freeptr = events->tailfree;
+
+		/*
+		 * We don't make any effort to remove now-unused shared data records.
+		 * They might still be useful, anyway.
+		 */
 	}
 }
 
@@ -2531,13 +2842,14 @@ AfterTriggerExecute(AfterTriggerEvent event,
 					FmgrInfo *finfo, Instrumentation *instr,
 					MemoryContext per_tuple_context)
 {
-	Oid			tgoid = event->ate_tgoid;
+	AfterTriggerShared evtshared = GetTriggerSharedData(event);
+	Oid			tgoid = evtshared->ats_tgoid;
 	TriggerData LocTriggerData;
-	HeapTupleData oldtuple;
-	HeapTupleData newtuple;
+	HeapTupleData tuple1;
+	HeapTupleData tuple2;
 	HeapTuple	rettuple;
-	Buffer		oldbuffer = InvalidBuffer;
-	Buffer		newbuffer = InvalidBuffer;
+	Buffer		buffer1 = InvalidBuffer;
+	Buffer		buffer2 = InvalidBuffer;
 	int			tgindx;
 
 	/*
@@ -2563,37 +2875,36 @@ AfterTriggerExecute(AfterTriggerEvent event,
 		InstrStartNode(instr + tgindx);
 
 	/*
-	 * Fetch the required OLD and NEW tuples.
+	 * Fetch the required tuple(s).
 	 */
-	LocTriggerData.tg_trigtuple = NULL;
-	LocTriggerData.tg_newtuple = NULL;
-	LocTriggerData.tg_trigtuplebuf = InvalidBuffer;
-	LocTriggerData.tg_newtuplebuf = InvalidBuffer;
-
-	if (ItemPointerIsValid(&(event->ate_oldctid)))
+	if (ItemPointerIsValid(&(event->ate_ctid1)))
 	{
-		ItemPointerCopy(&(event->ate_oldctid), &(oldtuple.t_self));
-		if (!heap_fetch(rel, SnapshotAny, &oldtuple, &oldbuffer, false, NULL))
-			elog(ERROR, "failed to fetch old tuple for AFTER trigger");
-		LocTriggerData.tg_trigtuple = &oldtuple;
-		LocTriggerData.tg_trigtuplebuf = oldbuffer;
+		ItemPointerCopy(&(event->ate_ctid1), &(tuple1.t_self));
+		if (!heap_fetch(rel, SnapshotAny, &tuple1, &buffer1, false, NULL))
+			elog(ERROR, "failed to fetch tuple1 for AFTER trigger");
+		LocTriggerData.tg_trigtuple = &tuple1;
+		LocTriggerData.tg_trigtuplebuf = buffer1;
+	}
+	else
+	{
+		LocTriggerData.tg_trigtuple = NULL;
+		LocTriggerData.tg_trigtuplebuf = InvalidBuffer;
 	}
 
-	if (ItemPointerIsValid(&(event->ate_newctid)))
+	/* don't touch ctid2 if not there */
+	if ((event->ate_flags & AFTER_TRIGGER_2CTIDS) &&
+		ItemPointerIsValid(&(event->ate_ctid2)))
 	{
-		ItemPointerCopy(&(event->ate_newctid), &(newtuple.t_self));
-		if (!heap_fetch(rel, SnapshotAny, &newtuple, &newbuffer, false, NULL))
-			elog(ERROR, "failed to fetch new tuple for AFTER trigger");
-		if (LocTriggerData.tg_trigtuple != NULL)
-		{
-			LocTriggerData.tg_newtuple = &newtuple;
-			LocTriggerData.tg_newtuplebuf = newbuffer;
-		}
-		else
-		{
-			LocTriggerData.tg_trigtuple = &newtuple;
-			LocTriggerData.tg_trigtuplebuf = newbuffer;
-		}
+		ItemPointerCopy(&(event->ate_ctid2), &(tuple2.t_self));
+		if (!heap_fetch(rel, SnapshotAny, &tuple2, &buffer2, false, NULL))
+			elog(ERROR, "failed to fetch tuple2 for AFTER trigger");
+		LocTriggerData.tg_newtuple = &tuple2;
+		LocTriggerData.tg_newtuplebuf = buffer2;
+	}
+	else
+	{
+		LocTriggerData.tg_newtuple = NULL;
+		LocTriggerData.tg_newtuplebuf = InvalidBuffer;
 	}
 
 	/*
@@ -2601,7 +2912,7 @@ AfterTriggerExecute(AfterTriggerEvent event,
 	 */
 	LocTriggerData.type = T_TriggerData;
 	LocTriggerData.tg_event =
-		event->ate_event & (TRIGGER_EVENT_OPMASK | TRIGGER_EVENT_ROW);
+		evtshared->ats_event & (TRIGGER_EVENT_OPMASK | TRIGGER_EVENT_ROW);
 	LocTriggerData.tg_relation = rel;
 
 	MemoryContextReset(per_tuple_context);
@@ -2615,16 +2926,16 @@ AfterTriggerExecute(AfterTriggerEvent event,
 								   finfo,
 								   NULL,
 								   per_tuple_context);
-	if (rettuple != NULL && rettuple != &oldtuple && rettuple != &newtuple)
+	if (rettuple != NULL && rettuple != &tuple1 && rettuple != &tuple2)
 		heap_freetuple(rettuple);
 
 	/*
 	 * Release buffers
 	 */
-	if (oldbuffer != InvalidBuffer)
-		ReleaseBuffer(oldbuffer);
-	if (newbuffer != InvalidBuffer)
-		ReleaseBuffer(newbuffer);
+	if (buffer1 != InvalidBuffer)
+		ReleaseBuffer(buffer1);
+	if (buffer2 != InvalidBuffer)
+		ReleaseBuffer(buffer2);
 
 	/*
 	 * If doing EXPLAIN ANALYZE, stop charging time to this trigger, and count
@@ -2642,7 +2953,7 @@ AfterTriggerExecute(AfterTriggerEvent event,
  *	that can be invoked now with the current firing ID.
  *
  *	If move_list isn't NULL, events that are not to be invoked now are
- *	removed from the given list and appended to move_list.
+ *	transferred to move_list.
  *
  *	When immediate_only is TRUE, do not invoke currently-deferred triggers.
  *	(This will be FALSE only at main transaction exit.)
@@ -2655,26 +2966,22 @@ afterTriggerMarkEvents(AfterTriggerEventList *events,
 					   bool immediate_only)
 {
 	bool		found = false;
-	AfterTriggerEvent event,
-				prev_event;
+	AfterTriggerEvent event;
+	AfterTriggerEventChunk *chunk;
 
-	prev_event = NULL;
-	event = events->head;
-
-	while (event != NULL)
+	for_each_event_chunk(event, chunk, *events)
 	{
+		AfterTriggerShared evtshared = GetTriggerSharedData(event);
 		bool		defer_it = false;
-		AfterTriggerEvent next_event;
 
-		if (!(event->ate_event &
+		if (!(event->ate_flags &
 			  (AFTER_TRIGGER_DONE | AFTER_TRIGGER_IN_PROGRESS)))
 		{
 			/*
 			 * This trigger hasn't been called or scheduled yet. Check if we
 			 * should call it now.
 			 */
-			if (immediate_only &&
-				afterTriggerCheckState(event->ate_tgoid, event->ate_event))
+			if (immediate_only && afterTriggerCheckState(evtshared))
 			{
 				defer_it = true;
 			}
@@ -2683,8 +2990,8 @@ afterTriggerMarkEvents(AfterTriggerEventList *events,
 				/*
 				 * Mark it as to be fired in this firing cycle.
 				 */
-				event->ate_firing_id = afterTriggers->firing_counter;
-				event->ate_event |= AFTER_TRIGGER_IN_PROGRESS;
+				evtshared->ats_firing_id = afterTriggers->firing_counter;
+				event->ate_flags |= AFTER_TRIGGER_IN_PROGRESS;
 				found = true;
 			}
 		}
@@ -2692,45 +2999,19 @@ afterTriggerMarkEvents(AfterTriggerEventList *events,
 		/*
 		 * If it's deferred, move it to move_list, if requested.
 		 */
-		next_event = event->ate_next;
-
 		if (defer_it && move_list != NULL)
 		{
-			/* Delink it from input list */
-			if (prev_event)
-				prev_event->ate_next = next_event;
-			else
-				events->head = next_event;
-			/* and add it to move_list */
-			event->ate_next = NULL;
-			if (move_list->tail == NULL)
-			{
-				/* first list entry */
-				move_list->head = event;
-				move_list->tail = event;
-			}
-			else
-			{
-				move_list->tail->ate_next = event;
-				move_list->tail = event;
-			}
+			/* add it to move_list */
+			afterTriggerAddEvent(move_list, event, evtshared);
+			/* mark original copy "done" so we don't do it again */
+			event->ate_flags |= AFTER_TRIGGER_DONE;
 		}
-		else
-		{
-			/* Keep it in input list */
-			prev_event = event;
-		}
-
-		event = next_event;
 	}
-
-	/* Update list tail pointer in case we moved tail event */
-	events->tail = prev_event;
 
 	return found;
 }
 
-/* ----------
+/*
  * afterTriggerInvokeEvents()
  *
  *	Scan the given event list for events that are marked as to be fired
@@ -2743,19 +3024,24 @@ afterTriggerMarkEvents(AfterTriggerEventList *events,
  *	make one locally to cache the info in case there are multiple trigger
  *	events per rel.
  *
- *	When delete_ok is TRUE, it's okay to delete fully-processed events.
- *	The events list pointers are updated.
- * ----------
+ *	When delete_ok is TRUE, it's safe to delete fully-processed events.
+ *	(We are not very tense about that: we simply reset a chunk to be empty
+ *	if all its events got fired.  The objective here is just to avoid useless
+ *	rescanning of events when a trigger queues new events during transaction
+ *	end, so it's not necessary to worry much about the case where only
+ *	some events are fired.)
+ *
+ *	Returns TRUE if no unfired events remain in the list (this allows us
+ *	to avoid repeating afterTriggerMarkEvents).
  */
-static void
-afterTriggerInvokeEvents(int query_depth,
+static bool
+afterTriggerInvokeEvents(AfterTriggerEventList *events,
 						 CommandId firing_id,
 						 EState *estate,
 						 bool delete_ok)
 {
-	AfterTriggerEventList *events;
-	AfterTriggerEvent event,
-				prev_event;
+	bool		all_fired = true;
+	AfterTriggerEventChunk *chunk;
 	MemoryContext per_tuple_context;
 	bool		local_estate = false;
 	Relation	rel = NULL;
@@ -2778,87 +3064,67 @@ afterTriggerInvokeEvents(int query_depth,
 							  ALLOCSET_DEFAULT_INITSIZE,
 							  ALLOCSET_DEFAULT_MAXSIZE);
 
-	prev_event = NULL;
-	events = (query_depth >= 0) ? &afterTriggers->query_stack[query_depth] : &afterTriggers->events;
-	event = events->head;
-
-	while (event != NULL)
+	for_each_chunk(chunk, *events)
 	{
-		AfterTriggerEvent next_event;
+		AfterTriggerEvent event;
+		bool		all_fired_in_chunk = true;
 
-		/*
-		 * Is it one for me to fire?
-		 */
-		if ((event->ate_event & AFTER_TRIGGER_IN_PROGRESS) &&
-			event->ate_firing_id == firing_id)
+		for_each_event(event, chunk)
 		{
+			AfterTriggerShared evtshared = GetTriggerSharedData(event);
+
 			/*
-			 * So let's fire it... but first, find the correct relation if
-			 * this is not the same relation as before.
+			 * Is it one for me to fire?
 			 */
-			if (rel == NULL || RelationGetRelid(rel) != event->ate_relid)
+			if ((event->ate_flags & AFTER_TRIGGER_IN_PROGRESS) &&
+				evtshared->ats_firing_id == firing_id)
 			{
-				ResultRelInfo *rInfo;
+				/*
+				 * So let's fire it... but first, find the correct relation if
+				 * this is not the same relation as before.
+				 */
+				if (rel == NULL || RelationGetRelid(rel) != evtshared->ats_relid)
+				{
+					ResultRelInfo *rInfo;
 
-				rInfo = ExecGetTriggerResultRel(estate, event->ate_relid);
-				rel = rInfo->ri_RelationDesc;
-				trigdesc = rInfo->ri_TrigDesc;
-				finfo = rInfo->ri_TrigFunctions;
-				instr = rInfo->ri_TrigInstrument;
-				if (trigdesc == NULL)	/* should not happen */
-					elog(ERROR, "relation %u has no triggers",
-						 event->ate_relid);
+					rInfo = ExecGetTriggerResultRel(estate, evtshared->ats_relid);
+					rel = rInfo->ri_RelationDesc;
+					trigdesc = rInfo->ri_TrigDesc;
+					finfo = rInfo->ri_TrigFunctions;
+					instr = rInfo->ri_TrigInstrument;
+					if (trigdesc == NULL)		/* should not happen */
+						elog(ERROR, "relation %u has no triggers",
+							 evtshared->ats_relid);
+				}
+
+				/*
+				 * Fire it.  Note that the AFTER_TRIGGER_IN_PROGRESS flag is
+				 * still set, so recursive examinations of the event list
+				 * won't try to re-fire it.
+				 */
+				AfterTriggerExecute(event, rel, trigdesc, finfo, instr,
+									per_tuple_context);
+
+				/*
+				 * Mark the event as done.
+				 */
+				event->ate_flags &= ~AFTER_TRIGGER_IN_PROGRESS;
+				event->ate_flags |= AFTER_TRIGGER_DONE;
 			}
-
-			/*
-			 * Fire it.  Note that the AFTER_TRIGGER_IN_PROGRESS flag is still
-			 * set, so recursive examinations of the event list won't try to
-			 * re-fire it.
-			 */
-			AfterTriggerExecute(event, rel, trigdesc, finfo, instr,
-								per_tuple_context);
-
-			/*
-			 * Mark the event as done.
-			 */
-			event->ate_event &= ~AFTER_TRIGGER_IN_PROGRESS;
-			event->ate_event |= AFTER_TRIGGER_DONE;
-		}
-
-		/*
-		 * If it's now done, throw it away, if allowed.
-		 *
-		 * NB: it's possible the trigger call above added more events to the
-		 * queue, or that calls we will do later will want to add more, so we
-		 * have to be careful about maintaining list validity at all points
-		 * here.
-		 */
-		next_event = event->ate_next;
-
-		if ((event->ate_event & AFTER_TRIGGER_DONE) && delete_ok)
-		{
-			/* Delink it from list and free it */
-			if (prev_event)
-				prev_event->ate_next = next_event;
-			else
+			else if (!(event->ate_flags & AFTER_TRIGGER_DONE))
 			{
-				events = (query_depth >= 0) ? &afterTriggers->query_stack[query_depth] : &afterTriggers->events;
-				events->head = next_event;
+				/* something remains to be done */
+				all_fired = all_fired_in_chunk = false;
 			}
-			pfree(event);
-		}
-		else
-		{
-			/* Keep it in list */
-			prev_event = event;
 		}
 
-		event = next_event;
+		/* Clear the chunk if delete_ok and nothing left of interest */
+		if (delete_ok && all_fired_in_chunk)
+		{
+			chunk->freeptr = CHUNK_DATA_START(chunk);
+			chunk->endfree = chunk->endptr;
+		}
 	}
-
-	/* Update list tail pointer in case we just deleted tail event */
-	events = (query_depth >= 0) ? &afterTriggers->query_stack[query_depth] : &afterTriggers->events;
-	events->tail = prev_event;
 
 	/* Release working resources */
 	MemoryContextDelete(per_tuple_context);
@@ -2877,6 +3143,8 @@ afterTriggerInvokeEvents(int query_depth,
 		}
 		FreeExecutorState(estate);
 	}
+
+	return all_fired;
 }
 
 
@@ -2899,10 +3167,11 @@ AfterTriggerBeginXact(void)
 		MemoryContextAlloc(TopTransactionContext,
 						   sizeof(AfterTriggersData));
 
-	afterTriggers->firing_counter = FirstCommandId;
+	afterTriggers->firing_counter = (CommandId) 1;		/* mustn't be 0 */
 	afterTriggers->state = SetConstraintStateCreate(8);
 	afterTriggers->events.head = NULL;
 	afterTriggers->events.tail = NULL;
+	afterTriggers->events.tailfree = NULL;
 	afterTriggers->query_depth = -1;
 
 	/* We initialize the query stack to a reasonable size */
@@ -2915,7 +3184,6 @@ AfterTriggerBeginXact(void)
 	afterTriggers->event_cxt = NULL;
 
 	/* Subtransaction stack is empty until/unless needed */
-	afterTriggers->cxt_stack = NULL;
 	afterTriggers->state_stack = NULL;
 	afterTriggers->events_stack = NULL;
 	afterTriggers->depth_stack = NULL;
@@ -2936,6 +3204,8 @@ AfterTriggerBeginXact(void)
 void
 AfterTriggerBeginQuery(void)
 {
+	AfterTriggerEventList *events;
+
 	/* Must be inside a transaction */
 	Assert(afterTriggers != NULL);
 
@@ -2957,8 +3227,10 @@ AfterTriggerBeginQuery(void)
 	}
 
 	/* Initialize this query's list to empty */
-	afterTriggers->query_stack[afterTriggers->query_depth].head = NULL;
-	afterTriggers->query_stack[afterTriggers->query_depth].tail = NULL;
+	events = &afterTriggers->query_stack[afterTriggers->query_depth];
+	events->head = NULL;
+	events->tail = NULL;
+	events->tailfree = NULL;
 }
 
 
@@ -2977,6 +3249,8 @@ AfterTriggerBeginQuery(void)
 void
 AfterTriggerEndQuery(EState *estate)
 {
+	AfterTriggerEventList *events;
+
 	/* Must be inside a transaction */
 	Assert(afterTriggers != NULL);
 
@@ -3001,13 +3275,23 @@ AfterTriggerEndQuery(EState *estate)
 	 * If we find no firable events, we don't have to increment
 	 * firing_counter.
 	 */
-	while (afterTriggerMarkEvents(&afterTriggers->query_stack[afterTriggers->query_depth], &afterTriggers->events, true))
+	for (;;)
 	{
-		CommandId	firing_id = afterTriggers->firing_counter++;
+		events = &afterTriggers->query_stack[afterTriggers->query_depth];
+		if (afterTriggerMarkEvents(events, &afterTriggers->events, true))
+		{
+			CommandId	firing_id = afterTriggers->firing_counter++;
 
-		/* OK to delete the immediate events after processing them */
-		afterTriggerInvokeEvents(afterTriggers->query_depth, firing_id, estate, true);
+			/* OK to delete the immediate events after processing them */
+			if (afterTriggerInvokeEvents(events, firing_id, estate, true))
+				break;			/* all fired */
+		}
+		else
+			break;
 	}
+
+	/* Release query-local storage for events */
+	afterTriggerFreeEventList(&afterTriggers->query_stack[afterTriggers->query_depth]);
 
 	afterTriggers->query_depth--;
 }
@@ -3028,6 +3312,7 @@ void
 AfterTriggerFireDeferred(void)
 {
 	AfterTriggerEventList *events;
+	bool		snap_pushed = false;
 
 	/* Must be inside a transaction */
 	Assert(afterTriggers != NULL);
@@ -3042,7 +3327,10 @@ AfterTriggerFireDeferred(void)
 	 */
 	events = &afterTriggers->events;
 	if (events->head != NULL)
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+	{
+		PushActiveSnapshot(GetTransactionSnapshot());
+		snap_pushed = true;
+	}
 
 	/*
 	 * Run all the remaining triggers.	Loop until they are all gone, in case
@@ -3052,10 +3340,17 @@ AfterTriggerFireDeferred(void)
 	{
 		CommandId	firing_id = afterTriggers->firing_counter++;
 
-		afterTriggerInvokeEvents(-1, firing_id, NULL, true);
+		if (afterTriggerInvokeEvents(events, firing_id, NULL, true))
+			break;				/* all fired */
 	}
 
-	Assert(events->head == NULL);
+	/*
+	 * We don't bother freeing the event list, since it will go away anyway
+	 * (and more efficiently than via pfree) in AfterTriggerEndXact.
+	 */
+
+	if (snap_pushed)
+		PopActiveSnapshot();
 }
 
 
@@ -3083,10 +3378,6 @@ AfterTriggerEndXact(bool isCommit)
 	 * pending-events list could be large, and so it's useful to discard it as
 	 * soon as possible --- especially if we are aborting because we ran out
 	 * of memory for the list!
-	 *
-	 * (Note: any event_cxts of child subtransactions could also be deleted
-	 * here, but we have no convenient way to find them, so we leave it to
-	 * TopTransactionContext reset to clean them up.)
 	 */
 	if (afterTriggers && afterTriggers->event_cxt)
 		MemoryContextDelete(afterTriggers->event_cxt);
@@ -3125,8 +3416,6 @@ AfterTriggerBeginSubXact(void)
 			old_cxt = MemoryContextSwitchTo(TopTransactionContext);
 
 #define DEFTRIG_INITALLOC 8
-			afterTriggers->cxt_stack = (MemoryContext *)
-				palloc(DEFTRIG_INITALLOC * sizeof(MemoryContext));
 			afterTriggers->state_stack = (SetConstraintState *)
 				palloc(DEFTRIG_INITALLOC * sizeof(SetConstraintState));
 			afterTriggers->events_stack = (AfterTriggerEventList *)
@@ -3144,9 +3433,6 @@ AfterTriggerBeginSubXact(void)
 			/* repalloc will keep the stacks in the same context */
 			int			new_alloc = afterTriggers->maxtransdepth * 2;
 
-			afterTriggers->cxt_stack = (MemoryContext *)
-				repalloc(afterTriggers->cxt_stack,
-						 new_alloc * sizeof(MemoryContext));
 			afterTriggers->state_stack = (SetConstraintState *)
 				repalloc(afterTriggers->state_stack,
 						 new_alloc * sizeof(SetConstraintState));
@@ -3168,7 +3454,6 @@ AfterTriggerBeginSubXact(void)
 	 * is not saved until/unless changed.  Likewise, we don't make a
 	 * per-subtransaction event context until needed.
 	 */
-	afterTriggers->cxt_stack[my_level] = NULL;
 	afterTriggers->state_stack[my_level] = NULL;
 	afterTriggers->events_stack[my_level] = afterTriggers->events;
 	afterTriggers->depth_stack[my_level] = afterTriggers->query_depth;
@@ -3186,6 +3471,7 @@ AfterTriggerEndSubXact(bool isCommit)
 	int			my_level = GetCurrentTransactionNestLevel();
 	SetConstraintState state;
 	AfterTriggerEvent event;
+	AfterTriggerEventChunk *chunk;
 	CommandId	subxact_firing_id;
 
 	/*
@@ -3209,63 +3495,27 @@ AfterTriggerEndSubXact(bool isCommit)
 		afterTriggers->state_stack[my_level] = NULL;
 		Assert(afterTriggers->query_depth ==
 			   afterTriggers->depth_stack[my_level]);
-
-		/*
-		 * It's entirely possible that the subxact created an event_cxt but
-		 * there is not anything left in it (because all the triggers were
-		 * fired at end-of-statement).	If so, we should release the context
-		 * to prevent memory leakage in a long sequence of subtransactions. We
-		 * can detect whether there's anything of use in the context by seeing
-		 * if anything was added to the global events list since subxact
-		 * start.  (This test doesn't catch every case where the context is
-		 * deletable; for instance maybe the only additions were from a
-		 * sub-sub-xact.  But it handles the common case.)
-		 */
-		if (afterTriggers->cxt_stack[my_level] &&
-			afterTriggers->events.tail == afterTriggers->events_stack[my_level].tail)
-		{
-			MemoryContextDelete(afterTriggers->cxt_stack[my_level]);
-			/* avoid double delete if abort later */
-			afterTriggers->cxt_stack[my_level] = NULL;
-		}
 	}
 	else
 	{
 		/*
-		 * Aborting.  It is possible subxact start failed before calling
-		 * AfterTriggerBeginSubXact, in which case we mustn't risk touching
-		 * stack levels that aren't there.
+		 * Aborting.  Release any event lists from queries being aborted, and
+		 * restore query_depth to its pre-subxact value.
 		 */
-		if (my_level >= afterTriggers->maxtransdepth)
-			return;
-
-		/*
-		 * We don't really need to release the subxact's event_cxt,
-		 * since it will go away anyway when CurTransactionContext gets reset,
-		 * but doing so early in subxact abort helps free space we might need.
-		 *
-		 * (Note: any event_cxts of child subtransactions could also be
-		 * deleted here, but we have no convenient way to find them, so we
-		 * leave it to CurTransactionContext reset to clean them up.)
-		 */
-		if (afterTriggers->cxt_stack[my_level])
+		while (afterTriggers->query_depth > afterTriggers->depth_stack[my_level])
 		{
-			MemoryContextDelete(afterTriggers->cxt_stack[my_level]);
-			/* avoid double delete if repeated aborts */
-			afterTriggers->cxt_stack[my_level] = NULL;
+			afterTriggerFreeEventList(&afterTriggers->query_stack[afterTriggers->query_depth]);
+			afterTriggers->query_depth--;
 		}
+		Assert(afterTriggers->query_depth ==
+			   afterTriggers->depth_stack[my_level]);
 
 		/*
-		 * Restore the pointers from the stacks.
+		 * Restore the global deferred-event list to its former length,
+		 * discarding any events queued by the subxact.
 		 */
-		afterTriggers->events = afterTriggers->events_stack[my_level];
-		afterTriggers->query_depth = afterTriggers->depth_stack[my_level];
-
-		/*
-		 * Cleanup the tail of the list.
-		 */
-		if (afterTriggers->events.tail != NULL)
-			afterTriggers->events.tail->ate_next = NULL;
+		afterTriggerRestoreEventList(&afterTriggers->events,
+									 &afterTriggers->events_stack[my_level]);
 
 		/*
 		 * Restore the trigger state.  If the saved state is NULL, then this
@@ -3289,15 +3539,15 @@ AfterTriggerEndSubXact(bool isCommit)
 		 * subxacts started after it.)
 		 */
 		subxact_firing_id = afterTriggers->firing_stack[my_level];
-		for (event = afterTriggers->events.head;
-			 event != NULL;
-			 event = event->ate_next)
+		for_each_event_chunk(event, chunk, afterTriggers->events)
 		{
-			if (event->ate_event &
+			AfterTriggerShared evtshared = GetTriggerSharedData(event);
+
+			if (event->ate_flags &
 				(AFTER_TRIGGER_DONE | AFTER_TRIGGER_IN_PROGRESS))
 			{
-				if (event->ate_firing_id >= subxact_firing_id)
-					event->ate_event &=
+				if (evtshared->ats_firing_id >= subxact_firing_id)
+					event->ate_flags &=
 						~(AFTER_TRIGGER_DONE | AFTER_TRIGGER_IN_PROGRESS);
 			}
 		}
@@ -3614,61 +3864,51 @@ AfterTriggerSetState(ConstraintsSetStmt *stmt)
 	if (!stmt->deferred)
 	{
 		AfterTriggerEventList *events = &afterTriggers->events;
-		Snapshot	saveActiveSnapshot = ActiveSnapshot;
+		bool		snapshot_set = false;
 
-		/* PG_TRY to ensure previous ActiveSnapshot is restored on error */
-		PG_TRY();
+		while (afterTriggerMarkEvents(events, NULL, true))
 		{
-			Snapshot	mySnapshot = NULL;
+			CommandId	firing_id = afterTriggers->firing_counter++;
 
-			while (afterTriggerMarkEvents(events, NULL, true))
+			/*
+			 * Make sure a snapshot has been established in case trigger
+			 * functions need one.	Note that we avoid setting a snapshot if
+			 * we don't find at least one trigger that has to be fired now.
+			 * This is so that BEGIN; SET CONSTRAINTS ...; SET TRANSACTION
+			 * ISOLATION LEVEL SERIALIZABLE; ... works properly.  (If we are
+			 * at the start of a transaction it's not possible for any trigger
+			 * events to be queued yet.)
+			 */
+			if (!snapshot_set)
 			{
-				CommandId	firing_id = afterTriggers->firing_counter++;
-
-				/*
-				 * Make sure a snapshot has been established in case trigger
-				 * functions need one.  Note that we avoid setting a snapshot
-				 * if we don't find at least one trigger that has to be fired
-				 * now.  This is so that BEGIN; SET CONSTRAINTS ...; SET
-				 * TRANSACTION ISOLATION LEVEL SERIALIZABLE; ... works
-				 * properly.  (If we are at the start of a transaction it's
-				 * not possible for any trigger events to be queued yet.)
-				 */
-				if (mySnapshot == NULL)
-				{
-					mySnapshot = CopySnapshot(GetTransactionSnapshot());
-					ActiveSnapshot = mySnapshot;
-				}
-
-				/*
-				 * We can delete fired events if we are at top transaction level,
-				 * but we'd better not if inside a subtransaction, since the
-				 * subtransaction could later get rolled back.
-				 */
-				afterTriggerInvokeEvents(-1, firing_id, NULL,
-										 !IsSubTransaction());
+				PushActiveSnapshot(GetTransactionSnapshot());
+				snapshot_set = true;
 			}
 
-			if (mySnapshot)
-				FreeSnapshot(mySnapshot);
+			/*
+			 * We can delete fired events if we are at top transaction level,
+			 * but we'd better not if inside a subtransaction, since the
+			 * subtransaction could later get rolled back.
+			 */
+			if (afterTriggerInvokeEvents(events, firing_id, NULL,
+										 !IsSubTransaction()))
+				break;			/* all fired */
 		}
-		PG_CATCH();
-		{
-			ActiveSnapshot = saveActiveSnapshot;
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
-		ActiveSnapshot = saveActiveSnapshot;
+
+		if (snapshot_set)
+			PopActiveSnapshot();
 	}
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
+	else
 	{
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NIL,
-									NULL);
+		/* no snapshot needed */
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR|
+										DF_NEED_TWO_PHASE,
+										NIL,
+										NULL);
+		}
 	}
 }
 
@@ -3691,6 +3931,7 @@ bool
 AfterTriggerPendingOnRel(Oid relid)
 {
 	AfterTriggerEvent event;
+	AfterTriggerEventChunk *chunk;
 	int			depth;
 
 	/* No-op if we aren't in a transaction.  (Shouldn't happen?) */
@@ -3698,19 +3939,19 @@ AfterTriggerPendingOnRel(Oid relid)
 		return false;
 
 	/* Scan queued events */
-	for (event = afterTriggers->events.head;
-		 event != NULL;
-		 event = event->ate_next)
+	for_each_event_chunk(event, chunk, afterTriggers->events)
 	{
+		AfterTriggerShared evtshared = GetTriggerSharedData(event);
+
 		/*
 		 * We can ignore completed events.	(Even if a DONE flag is rolled
 		 * back by subxact abort, it's OK because the effects of the TRUNCATE
 		 * or whatever must get rolled back too.)
 		 */
-		if (event->ate_event & AFTER_TRIGGER_DONE)
+		if (event->ate_flags & AFTER_TRIGGER_DONE)
 			continue;
 
-		if (event->ate_relid == relid)
+		if (evtshared->ats_relid == relid)
 			return true;
 	}
 
@@ -3721,14 +3962,14 @@ AfterTriggerPendingOnRel(Oid relid)
 	 */
 	for (depth = 0; depth <= afterTriggers->query_depth; depth++)
 	{
-		for (event = afterTriggers->query_stack[depth].head;
-			 event != NULL;
-			 event = event->ate_next)
+		for_each_event_chunk(event, chunk, afterTriggers->query_stack[depth])
 		{
-			if (event->ate_event & AFTER_TRIGGER_DONE)
+			AfterTriggerShared evtshared = GetTriggerSharedData(event);
+
+			if (event->ate_flags & AFTER_TRIGGER_DONE)
 				continue;
 
-			if (event->ate_relid == relid)
+			if (evtshared->ats_relid == relid)
 				return true;
 		}
 	}
@@ -3752,14 +3993,11 @@ AfterTriggerSaveEvent(ResultRelInfo *relinfo, int event, bool row_trigger,
 {
 	Relation	rel = relinfo->ri_RelationDesc;
 	TriggerDesc *trigdesc = relinfo->ri_TrigDesc;
-	int			my_level = GetCurrentTransactionNestLevel();
-	MemoryContext *cxtptr;
-	AfterTriggerEvent new_event;
+	AfterTriggerEventData new_event;
+	AfterTriggerSharedData new_shared;
 	int			i;
 	int			ntriggers;
 	int		   *tgindx;
-	ItemPointerData oldctid;
-	ItemPointerData newctid;
 
 	/*
 	 * Check state.  We use normal tests not Asserts because it is possible
@@ -3768,20 +4006,81 @@ AfterTriggerSaveEvent(ResultRelInfo *relinfo, int event, bool row_trigger,
 	 */
 	if (afterTriggers == NULL)
 		elog(ERROR, "AfterTriggerSaveEvent() called outside of transaction");
-	if (afterTriggers->query_depth < 0)
-		elog(ERROR, "AfterTriggerSaveEvent() called outside of query");
+	Assert(afterTriggers->query_depth >= 0);
+
+	/* Don't fire statement-triggers in executor nodes. */
+	if (!row_trigger && Gp_role == GP_ROLE_EXECUTE)
+		return;
 
 	/*
-	 * Get the CTID's of OLD and NEW
+	 * Validate the event code and collect the associated tuple CTIDs.
+	 *
+	 * The event code will be used both as a bitmask and an array offset, so
+	 * validation is important to make sure we don't walk off the edge of our
+	 * arrays.
 	 */
-	if (oldtup != NULL)
-		ItemPointerCopy(&(oldtup->t_self), &(oldctid));
-	else
-		ItemPointerSetInvalid(&(oldctid));
-	if (newtup != NULL)
-		ItemPointerCopy(&(newtup->t_self), &(newctid));
-	else
-		ItemPointerSetInvalid(&(newctid));
+	new_event.ate_flags = 0;
+	switch (event)
+	{
+		case TRIGGER_EVENT_INSERT:
+			if (row_trigger)
+			{
+				Assert(oldtup == NULL);
+				Assert(newtup != NULL);
+				ItemPointerCopy(&(newtup->t_self), &(new_event.ate_ctid1));
+				ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			}
+			else
+			{
+				Assert(oldtup == NULL);
+				Assert(newtup == NULL);
+				ItemPointerSetInvalid(&(new_event.ate_ctid1));
+				ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			}
+			break;
+		case TRIGGER_EVENT_DELETE:
+			if (row_trigger)
+			{
+				Assert(oldtup != NULL);
+				Assert(newtup == NULL);
+				ItemPointerCopy(&(oldtup->t_self), &(new_event.ate_ctid1));
+				ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			}
+			else
+			{
+				Assert(oldtup == NULL);
+				Assert(newtup == NULL);
+				ItemPointerSetInvalid(&(new_event.ate_ctid1));
+				ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			}
+			break;
+		case TRIGGER_EVENT_UPDATE:
+			if (row_trigger)
+			{
+				Assert(oldtup != NULL);
+				Assert(newtup != NULL);
+				ItemPointerCopy(&(oldtup->t_self), &(new_event.ate_ctid1));
+				ItemPointerCopy(&(newtup->t_self), &(new_event.ate_ctid2));
+				new_event.ate_flags |= AFTER_TRIGGER_2CTIDS;
+			}
+			else
+			{
+				Assert(oldtup == NULL);
+				Assert(newtup == NULL);
+				ItemPointerSetInvalid(&(new_event.ate_ctid1));
+				ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			}
+			break;
+		case TRIGGER_EVENT_TRUNCATE:
+			Assert(oldtup == NULL);
+			Assert(newtup == NULL);
+			ItemPointerSetInvalid(&(new_event.ate_ctid1));
+			ItemPointerSetInvalid(&(new_event.ate_ctid2));
+			break;
+		default:
+			elog(ERROR, "invalid after-trigger event code: %d", event);
+			break;
+	}
 
 	/*
 	 * Scan the appropriate set of triggers
@@ -3860,44 +4159,18 @@ AfterTriggerSaveEvent(ResultRelInfo *relinfo, int event, bool row_trigger,
 		}
 
 		/*
-		 * If we don't yet have an event context for the current (sub)xact,
-		 * create one.	Make it a child of CurTransactionContext to ensure it
-		 * will go away if the subtransaction aborts.
+		 * Fill in event structure and add it to the current query's queue.
 		 */
-		if (my_level > 1)		/* subtransaction? */
-		{
-			Assert(my_level < afterTriggers->maxtransdepth);
-			cxtptr = &afterTriggers->cxt_stack[my_level];
-		}
-		else
-			cxtptr = &afterTriggers->event_cxt;
-		if (*cxtptr == NULL)
-			*cxtptr = AllocSetContextCreate(CurTransactionContext,
-											"AfterTriggerEvents",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE);
-
-		/*
-		 * Create a new event.
-		 */
-		new_event = (AfterTriggerEvent)
-			MemoryContextAlloc(*cxtptr, sizeof(AfterTriggerEventData));
-		new_event->ate_next = NULL;
-		new_event->ate_event =
+		new_shared.ats_event =
 			(event & TRIGGER_EVENT_OPMASK) |
 			(row_trigger ? TRIGGER_EVENT_ROW : 0) |
 			(trigger->tgdeferrable ? AFTER_TRIGGER_DEFERRABLE : 0) |
 			(trigger->tginitdeferred ? AFTER_TRIGGER_INITDEFERRED : 0);
-		new_event->ate_firing_id = 0;
-		new_event->ate_tgoid = trigger->tgoid;
-		new_event->ate_relid = rel->rd_id;
-		ItemPointerCopy(&oldctid, &(new_event->ate_oldctid));
-		ItemPointerCopy(&newctid, &(new_event->ate_newctid));
+		new_shared.ats_tgoid = trigger->tgoid;
+		new_shared.ats_relid = RelationGetRelid(rel);
+		new_shared.ats_firing_id = 0;
 
-		/*
-		 * Add the new event to the queue.
-		 */
-		afterTriggerAddEvent(new_event);
+		afterTriggerAddEvent(&afterTriggers->query_stack[afterTriggers->query_depth],
+							 &new_event, &new_shared);
 	}
 }

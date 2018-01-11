@@ -6,9 +6,10 @@
  * See src/backend/utils/misc/README for design notes.
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.38.2.2 2009/12/09 21:58:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.46 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,7 +26,8 @@ enum config_type
 	PGC_BOOL,
 	PGC_INT,
 	PGC_REAL,
-	PGC_STRING
+	PGC_STRING,
+	PGC_ENUM
 };
 
 union config_var_value
@@ -34,6 +36,7 @@ union config_var_value
 	int			intval;
 	double		realval;
 	char	   *stringval;
+	int			enumval;
 };
 
 /*
@@ -54,8 +57,6 @@ enum config_group
 	APPENDONLY_TABLES,                  /*CDB*/
 	RESOURCES,
 	RESOURCES_MEM,
-	RESOURCES_FSM,
-
 	RESOURCES_KERNEL,
 	RESOURCES_MGM,
 	WAL,
@@ -165,29 +166,12 @@ struct config_generic
 	GucSource	reset_source;	/* source of the reset_value */
 	GucSource	source;			/* source of the current actual value */
 	GucStack   *stack;			/* stacked prior values */
+	char	   *sourcefile;		/* file this settings is from (NULL if not
+								 * file) */
+	int			sourceline;		/* line in source file */
 };
 
-/* bit values in flags field */
-#define GUC_LIST_INPUT			0x0001	/* input can be list format */
-#define GUC_LIST_QUOTE			0x0002	/* double-quote list elements */
-#define GUC_NO_SHOW_ALL			0x0004	/* exclude from SHOW ALL */
-#define GUC_NO_RESET_ALL		0x0008	/* exclude from RESET ALL */
-#define GUC_REPORT				0x0010	/* auto-report changes to client */
-#define GUC_NOT_IN_SAMPLE		0x0020	/* not in postgresql.conf.sample */
-#define GUC_DISALLOW_IN_FILE	0x0040	/* can't set in postgresql.conf */
-#define GUC_CUSTOM_PLACEHOLDER	0x0080	/* placeholder for custom variable */
-#define GUC_SUPERUSER_ONLY		0x0100	/* show only to superusers */
-#define GUC_IS_NAME				0x0200	/* limit string to NAMEDATALEN-1 */
-
-#define GUC_UNIT_KB				0x0400	/* value is in kilobytes */
-#define GUC_UNIT_BLOCKS			0x0800	/* value is in blocks */
-#define GUC_UNIT_XBLOCKS		0x0C00	/* value is in xlog blocks */
-#define GUC_UNIT_MEMORY			0x0C00	/* mask for KB, BLOCKS, XBLOCKS */
-
-#define GUC_UNIT_MS				0x1000	/* value is in milliseconds */
-#define GUC_UNIT_S				0x2000	/* value is in seconds */
-#define GUC_UNIT_MIN			0x4000	/* value is in minutes */
-#define GUC_UNIT_TIME			0x7000	/* mask for MS, S, MIN */
+/* bit values in flags field are defined in guc.h */
 
 #define GUC_NOT_WHILE_SEC_REST	0x8000	/* can't set if security restricted */
 
@@ -263,6 +247,19 @@ struct config_string
 	char	   *reset_val;
 };
 
+struct config_enum
+{
+	struct config_generic gen;
+	/* constant fields, must be set correctly in initial value: */
+	int		   *variable;
+	int			boot_val;
+	const struct config_enum_entry *options;
+	GucEnumAssignHook assign_hook;
+	GucShowHook show_hook;
+	/* variable fields, initialized at runtime: */
+	int			reset_val;
+};
+
 /* constant tables corresponding to enums above and in guc.h */
 extern const char *const config_group_names[];
 extern const char *const config_type_names[];
@@ -275,15 +272,21 @@ extern int get_num_guc_variables(void);
 
 extern void build_guc_variables(void);
 
+/* search in enum options */
+extern const char *config_enum_lookup_by_value(struct config_enum * record, int val);
+extern bool config_enum_lookup_by_name(struct config_enum * record,
+						   const char *value, int *retval);
+
 extern bool parse_int(const char *value, int *result, int flags, const char **hintmsg);
 
 /* guc_gp.c needs this from guc.c */
-const char *assign_msglvl(int *var, const char *newval, bool doit, GucSource source);
+extern const struct config_enum_entry server_message_level_options[];
 
 /* guc_gp.c exports these for guc.c */
 extern struct config_bool ConfigureNamesBool_gp[];
 extern struct config_int ConfigureNamesInt_gp[];
 extern struct config_real ConfigureNamesReal_gp[];
 extern struct config_string ConfigureNamesString_gp[];
+extern struct config_enum ConfigureNamesEnum_gp[];
 
 #endif   /* GUC_TABLES_H */

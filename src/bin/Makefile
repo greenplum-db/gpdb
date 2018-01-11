@@ -23,7 +23,7 @@ unittest-check:
 	$(MAKE) -C pg_dump/test check
 endif
 
-DIRS = initdb ipcclean pg_basebackup pg_ctl pg_dump \
+DIRS = initdb pg_basebackup pg_ctl pg_dump \
 	psql scripts pg_config pg_controldata pg_resetxlog \
 	gpmirrortransition
 

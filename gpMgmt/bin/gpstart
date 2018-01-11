@@ -85,9 +85,6 @@ class GpStart:
         self.port = None
         self.gphome = None
         self.dburl = None
-        self.lc_collate = None
-        self.lc_monetary = None
-        self.lc_numeric = None
         self.max_connections = None
         logger.debug("Setting level of parallelism to: %d" % self.parallel)
 
@@ -397,7 +394,7 @@ class GpStart:
         logger.info("Segment instances that will be started")
         logger.info("--------------------------------------")
 
-        isFileReplication = self.gparray.getFaultStrategy() == FAULT_STRATEGY_FILE_REPLICATION
+        isFileReplication = self.gparray.hasMirrors
 
         tabLog = TableLogger().setWarnWithArrows(True)
         header = ["Host", "Datadir", "Port"]
@@ -452,16 +449,10 @@ class GpStart:
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
 
-        logger.debug("Gathering collation settings...")
-        self.conn = dbconn.connect(self.dburl, utility=True)
-        (self.lc_collate, self.lc_monetary, self.lc_numeric) = catalog.getCollationSettings(self.conn)
-
         logger.info("Setting new master era")
         e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
         e.new_era(self.gparray.master.hostname, self.port, time.strftime('%y%m%d%H%M%S'))
         self.era = e.era
-
-        self.conn.close()
 
     ######
     def _start(self, segmentsToStart, invalidSegments):
@@ -478,19 +469,15 @@ class GpStart:
             raise ExceptionNoStackTraceNeeded(
                 "Found a System Expansion Setup in progress. Please run 'gpexpand --rollback'")
 
-        strategy = self.gparray.getFaultStrategy()
-        logger.debug("Strategy in gparray is %s" % strategy)
+        logger.debug("gparray does%s have mirrors" % ("" if self.gparray.hasMirrors else " not"))
 
-        # The SAN ('s') fault strategy leaves the mirrors shutdown until they're needed.
-        # so we don't want to start them -- SAN-start works just like a mirror-less start.
-        if strategy == FAULT_STRATEGY_FILE_REPLICATION:
+        if self.gparray.hasMirrors:
             startMode = START_AS_PRIMARY_OR_MIRROR
         else:
             startMode = START_AS_MIRRORLESS
 
-        localeData = ":".join([self.lc_collate, self.lc_monetary, self.lc_numeric])
         # this will eventually start gpsegstart.py
-        segmentStartOp = StartSegmentsOperation(self.pool, self.quiet, localeData, self.gpversion,
+        segmentStartOp = StartSegmentsOperation(self.pool, self.quiet, self.gpversion,
                                                 self.gphome, self.master_datadir, self.timeout,
                                                 self.specialMode, self.wrapper, self.wrapper_args,
                                                 logfileDirectory=self.logfileDirectory)
@@ -560,8 +547,8 @@ class GpStart:
                              if f.getReasonCode() == gp.SEGSTART_ERROR_MIRRORING_FAILURE]
 
         allSegmentsByContent = GpArray.getSegmentsByContentId(gparray.getSegDbList())
-        successfulSegmentsByDbId = GpArray.getSegmentsGroupedByValue(successfulSegments, GpDB.getSegmentDbId)
-        mirroringFailuresByDbId = GpArray.getSegmentsGroupedByValue(mirroringFailures, GpDB.getSegmentDbId)
+        successfulSegmentsByDbId = GpArray.getSegmentsGroupedByValue(successfulSegments, Segment.getSegmentDbId)
+        mirroringFailuresByDbId = GpArray.getSegmentsGroupedByValue(mirroringFailures, Segment.getSegmentDbId)
 
         #
         # look at each content, see if there is a segment available (or one which can be made
@@ -684,8 +671,7 @@ class GpStart:
         tableLog.addSeparator()
         tableLog.info(["Successful segment starts", "= %d" % started])
 
-        if self.gparray.getFaultStrategy() == FAULT_STRATEGY_FILE_REPLICATION and \
-                        failedFromMirroring > 0:
+        if self.gparray.hasMirrors and failedFromMirroring > 0:
             tableLog.warn(["Failed segment starts, from mirroring connection between primary and mirror",
                            "= %d" % failedFromMirroring])
             tableLog.infoOrWarn(failedNotFromMirroring > 0,

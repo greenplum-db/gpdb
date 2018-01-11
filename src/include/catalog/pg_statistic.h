@@ -5,11 +5,12 @@
  *	  along with the relation's initial contents.
  *
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_statistic.h,v 1.34 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_statistic.h,v 1.39 2009/06/11 14:49:10 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -23,10 +24,14 @@
 #include "catalog/genbki.h"
 
 /*
- * Keep C compiler happy with anyarray, below.	This will need to go elsewhere
- * if we ever use anyarray for more than pg_statistic.
+ * The CATALOG definition has to refer to the type of stavaluesN as
+ * "anyarray" so that bootstrap mode recognizes it.  There is no real
+ * typedef for that, however.  Since the fields are potentially-null and
+ * therefore can't be accessed directly from C code, there is no particular
+ * need for the C struct definition to show a valid field type --- instead
+ * we just make it int.
  */
-typedef struct varlena anyarray;
+#define anyarray int
 
 /* ----------------
  *		pg_statistic definition.  cpp turns this into
@@ -131,6 +136,9 @@ FOREIGN_KEY(staop1 REFERENCES pg_operator(oid));
 FOREIGN_KEY(staop2 REFERENCES pg_operator(oid));
 FOREIGN_KEY(staop3 REFERENCES pg_operator(oid));
 FOREIGN_KEY(staop4 REFERENCES pg_operator(oid));
+
+#undef anyarray
+
 
 /* ----------------
  *		Form_pg_statistic corresponds to a pointer to a tuple with
@@ -238,7 +246,24 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_CORRELATION	3
 
-/* quoting pg_authid and gp_configuration: */
+/*
+ * A "most common elements" slot is similar to a "most common values" slot,
+ * except that it stores the most common non-null *elements* of the column
+ * values.	This is useful when the column datatype is an array or some other
+ * type with identifiable elements (for instance, tsvector).  staop contains
+ * the equality operator appropriate to the element type.  stavalues contains
+ * the most common element values, and stanumbers their frequencies.  Unlike
+ * MCV slots, the values are sorted into order (to support binary search
+ * for a particular value).  Since this puts the minimum and maximum
+ * frequencies at unpredictable spots in stanumbers, there are two extra
+ * members of stanumbers, holding copies of the minimum and maximum
+ * frequencies.
+ *
+ * Note: in current usage for tsvector columns, the stavalues elements are of
+ * type text, even though their representation within tsvector is not
+ * exactly text.
+ */
+#define STATISTIC_KIND_MCELEM  4
 
 /*
  * The CATALOG definition has to refer to the type of log_time as

@@ -1,9 +1,7 @@
 /*-------------------------------------------------------------------------
  *
- * Backoff.c
+ * backoff.c
  *	  Query Prioritization
- *
- * Copyright (c) 2009-2010, Greenplum inc.
  *
  * This file contains functions that implement the Query Prioritization
  * feature. Query prioritization is implemented by employing a
@@ -11,15 +9,19 @@
  * backend use the CPU. A sweeper process identifies backends that are
  * making active progress and determines what the relative CPU usage
  * should be.
- * Please see the design doc in
- * docs/design/queryprioritization/QueryPrioritization.docx for
- * details.
  *
  * BackoffBackendTick() - a CHECK_FOR_INTERRUPTS() call in a backend
  *						  leads to a backend 'tick'. If enough 'ticks'
  *						  elapse, then the backend considers a
  *						  backoff.
  * BackoffSweeper()		- workhorse for the sweeper process
+ *
+ * Portions Copyright (c) 2009-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/backoff.c
  *
  *-------------------------------------------------------------------------
  */
@@ -43,7 +45,7 @@
 #include "miscadmin.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include <unistd.h>
 
 #include <signal.h>
@@ -56,11 +58,13 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
 #include "storage/sinval.h"
+#include "utils/builtins.h"
 #include "utils/syscache.h"
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
 #include "port/atomics.h"
+#include "pg_trace.h"
 
 extern bool gp_debug_resqueue_priority;
 
@@ -218,11 +222,6 @@ const char *gpvars_assign_gp_resqueue_priority_default_value(const char *newval,
 												 bool doit,
 								   GucSource source __attribute__((unused)));
 
-
-/* Extern declarations */
-extern Datum textin(PG_FUNCTION_ARGS);
-extern Datum textout(PG_FUNCTION_ARGS);
-
 /**
  * Primitives on statement id.
  */
@@ -308,6 +307,9 @@ SwitchGroupLeader(int newLeaderIndex)
 	BackoffBackendSharedEntry *oldLeaderEntry = NULL;
 	BackoffBackendSharedEntry *newLeaderEntry = NULL;
 
+	if (backoffSingleton->sweeperInProgress == true)
+		return;
+
 	Assert(newLeaderIndex < myEntry->groupLeaderIndex);
 	Assert(newLeaderIndex >= 0 && newLeaderIndex < backoffSingleton->numEntries);
 
@@ -363,6 +365,9 @@ findBetterGroupLeader()
 
 	Assert(myEntry);
 	leadersLeaderIndex = leaderEntry->groupLeaderIndex;
+
+	if (backoffSingleton->sweeperInProgress == true)
+		return;
 
 	/* If my leader has a different leader, then jump pointer */
 	if (myEntry->groupLeaderIndex != leadersLeaderIndex)
@@ -512,7 +517,7 @@ BackoffBackend()
 	Assert(se->weight > 0);
 
 	/* Provide tracing information */
-	PG_TRACE1(backoff__localcheck, MyBackendId);
+	TRACE_POSTGRESQL_BACKOFF_LOCALCHECK(MyBackendId);
 
 	if (gettimeofday(&currentTime, NULL) < 0)
 	{
@@ -738,7 +743,7 @@ BackoffSweeper()
 
 	backoffSingleton->sweeperInProgress = true;
 
-	PG_TRACE(backoff__globalcheck);
+	TRACE_POSTGRESQL_BACKOFF_GLOBALCHECK();
 
 	/* Reset status for all the backend entries */
 	for (i = 0; i < backoffSingleton->numEntries; i++)
@@ -858,12 +863,30 @@ BackoffSweeper()
 
 					Assert(gl->numFollowersActive > 0);
 
-					if (activeWeight <= 0.0) {
+					if (activeWeight <= 0.0)
+					{
 						/*
-						 * If activeWeight <= 0.0, it should be considered unexpected
-						 * behavior. Error out here instead of risking an underflow.
+						 * There is a race condition here:
+						 * Backend A,B,C are belong to same statement and have weight of
+						 * 100000.
+						 *
+						 * Timestamp1: backend A's leader is A, backend B's leader is B
+						 * backend C's leader is also B.
+						 *
+						 * Timestamp2: Sweeper calculates the activeWeight to 200000.
+						 *
+						 * Timestamp3: backend B changes it's leader to A.
+						 *
+						 * Timestamp4: Sweeper try to find the backends who deserve maxCPU,
+						 * if backend A, B, C all deserve maxCPU, then activeWeight = 
+						 * 200000 - 100000/1 - 100000/1 - 100000/2 which is less than zero.
+						 *
+						 * We can stop sweeping for such race condition because current
+						 * backoff mechanism dose not ask for accurate control.
 						 */
-						elog(ERROR, "activeWeight underflow!");
+						backoffSingleton->sweeperInProgress = false;
+						elog(LOG, "activeWeight underflow!");
+						return;
 					}
 
 					Assert(activeWeight > 0.0);
@@ -1015,15 +1038,13 @@ gp_adjust_priority_value(PG_FUNCTION_ARGS)
 	int32		session_id = PG_GETARG_INT32(0);
 	int32		command_count = PG_GETARG_INT32(1);
 	Datum		dVal = PG_GETARG_DATUM(2);
-	char	   *priorityVal = NULL;
-	int			wt = 0;
+	char	   *priorityVal;
+	int			wt;
 
-	priorityVal = DatumGetCString(DirectFunctionCall1(textout, dVal));
+	priorityVal = TextDatumGetCString(dVal);
 
 	if (!priorityVal)
-	{
 		elog(ERROR, "Invalid priority value specified.");
-	}
 
 	wt = BackoffPriorityValueToInt(priorityVal);
 
@@ -1428,8 +1449,7 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 
 		Assert(priorityVal);
 
-		values[2] = DirectFunctionCall1(textin,
-										CStringGetDatum(priorityVal));
+		values[2] = CStringGetTextDatum(priorityVal);
 		Assert(se->weight > 0);
 		values[3] = Int32GetDatum((int32) se->weight);
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);

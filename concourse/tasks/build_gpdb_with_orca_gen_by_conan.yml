@@ -1,0 +1,22 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: gpdb/centos-gpdb-dev-conan
+    tag: 7-gcc6.2-llvm3.7
+inputs:
+  - name: bin_orca
+  - name: gpdb_src
+outputs:
+  - name: bin_gpdb
+run:
+  path: gpdb_src/concourse/scripts/build_gpdb.py
+  args:
+    - --mode=orca
+    - --output_dir=bin_gpdb/install
+    - bin_orca
+    - --action=build
+    - --configure-option=--disable-gpcloud
+params:
+  CC: /opt/gcc-6.2.0/bin/gcc
+  CXX: /opt/gcc-6.2.0/bin/g++

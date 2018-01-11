@@ -5,7 +5,11 @@
  *	  are only supposed to be used by privileged callers such a memory managers.
  *	  Other files should not include this file.
  *
- * Copyright (c) 2016, Pivotal Inc.
+ * Copyright (c) 2016-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/memaccounting_private.h
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +34,16 @@ typedef struct MemoryAccount {
 	 * check if the allocation is overshooting
 	 */
 	uint64 maxLimit;
+
+	/*
+	 * Amount of memory relinquished
+	 */
+	uint64 relinquishedMemory;
+
+	/*
+	 * Amount of memory acquired from relinquished pool
+	 */
+	uint64 acquiredMemory;
 
 	MemoryAccountIdType id;
 	MemoryAccountIdType parentId;

@@ -87,9 +87,9 @@ E081	Basic Privileges	01	SELECT privilege	YES
 E081	Basic Privileges	02	DELETE privilege	YES	
 E081	Basic Privileges	03	INSERT privilege at the table level	YES	
 E081	Basic Privileges	04	UPDATE privilege at the table level	YES	
-E081	Basic Privileges	05	UPDATE privilege at the column level	NO	
+E081	Basic Privileges	05	UPDATE privilege at the column level	YES	
 E081	Basic Privileges	06	REFERENCES privilege at the table level	YES	
-E081	Basic Privileges	07	REFERENCES privilege at the column level	NO	
+E081	Basic Privileges	07	REFERENCES privilege at the column level	YES	
 E081	Basic Privileges	08	WITH GRANT OPTION	YES	
 E081	Basic Privileges	09	USAGE privilege	NO	
 E081	Basic Privileges	10	EXECUTE privilege	YES	
@@ -111,8 +111,8 @@ E121	Basic cursor support	01	DECLARE CURSOR	YES
 E121	Basic cursor support	02	ORDER BY columns need not be in select list	YES	
 E121	Basic cursor support	03	Value expressions in ORDER BY clause	YES	
 E121	Basic cursor support	04	OPEN statement	YES	
-E121	Basic cursor support	06	Positioned UPDATE statement	NO	
-E121	Basic cursor support	07	Positioned DELETE statement	NO	
+E121	Basic cursor support	06	Positioned UPDATE statement	YES	
+E121	Basic cursor support	07	Positioned DELETE statement	YES	
 E121	Basic cursor support	08	CLOSE statement	YES	
 E121	Basic cursor support	10	FETCH statement implicit NEXT	YES	
 E121	Basic cursor support	17	WITH HOLD cursors	YES	
@@ -237,14 +237,14 @@ F381	Extended schema manipulation	02	ALTER TABLE statement: ADD CONSTRAINT claus
 F381	Extended schema manipulation	03	ALTER TABLE statement: DROP CONSTRAINT clause	YES	
 F382	Alter column data type			YES	
 F391	Long identifiers			YES	
-F392	Unicode escapes in identifiers			NO	
-F393	Unicode escapes in literals			NO	
+F392	Unicode escapes in identifiers			YES	
+F393	Unicode escapes in literals			YES	
 F394	Optional normal form specification			NO	
 F401	Extended joined table			YES	
 F401	Extended joined table	01	NATURAL JOIN	YES	
 F401	Extended joined table	02	FULL OUTER JOIN	YES	
 F401	Extended joined table	04	CROSS JOIN	YES	
-F402	Named column joins for LOBs, arrays, and multisets			NO	
+F402	Named column joins for LOBs, arrays, and multisets			YES	
 F403	Partitioned joined tables			NO	
 F411	Time zone specification			YES	differences regarding literal interpretation
 F421	National character			YES	
@@ -279,7 +279,7 @@ F591	Derived tables			YES
 F611	Indicator data types			YES	
 F641	Row and table constructors			NO	
 F651	Catalog name qualifiers			YES	
-F661	Simple tables			NO	
+F661	Simple tables			YES	
 F671	Subqueries in CHECK			NO	intentionally omitted
 F672	Retrospective check constraints			YES	
 F690	Collation support			NO	
@@ -290,12 +290,12 @@ F696	Additional translation documentation			NO
 F701	Referential update actions			NO	
 F711	ALTER domain			YES	
 F721	Deferrable constraints			NO	
-F731	INSERT column privileges			NO	
+F731	INSERT column privileges			YES	
 F741	Referential MATCH types			NO	no partial match yet
 F751	View CHECK enhancements			NO	
 F761	Session management			YES	
-F762	CURRENT_CATALOG			NO	
-F763	CURRENT_SCHEMA			NO	
+F762	CURRENT_CATALOG			YES	
+F763	CURRENT_SCHEMA			YES	
 F771	Connection management			YES	
 F781	Self-referencing operations			YES	
 F791	Insensitive cursors			YES	
@@ -314,19 +314,19 @@ F845	TRANSLATE_REGEX function			NO
 F846	Octet support in regular expression operators			NO	
 F847	Nonconstant regular expressions			NO	
 F850	Top-level <order by clause> in <query expression>			YES	
-F851	<order by clause> in subqueries			NO	
-F852	Top-level <order by clause> in views			NO	
-F855	Nested <order by clause> in <query expression>			NO	
-F856	Nested <fetch first clause> in <query expression>			NO	
-F857	Top-level <fetch first clause> in <query expression>			NO	
-F858	<fetch first clause> in subqueries			NO	
-F859	Top-level <fetch first clause> in views			NO	
-F860	<fetch first row count> in <fetch first clause>			NO	
-F861	Top-level <result offset clause> in <query expression>			NO	
-F862	<result offset clause> in subqueries			NO	
-F863	Nested <result offset clause> in <query expression>			NO	
-F864	Top-level <result offset clause> in views			NO	
-F865	<offset row count> in <result offset clause>			NO	
+F851	<order by clause> in subqueries			YES	
+F852	Top-level <order by clause> in views			YES	
+F855	Nested <order by clause> in <query expression>			YES	
+F856	Nested <fetch first clause> in <query expression>			YES	
+F857	Top-level <fetch first clause> in <query expression>			YES	
+F858	<fetch first clause> in subqueries			YES	
+F859	Top-level <fetch first clause> in views			YES	
+F860	<fetch first row count> in <fetch first clause>			YES	
+F861	Top-level <result offset clause> in <query expression>			YES	
+F862	<result offset clause> in subqueries			YES	
+F863	Nested <result offset clause> in <query expression>			YES	
+F864	Top-level <result offset clause> in views			YES	
+F865	<offset row count> in <result offset clause>			YES	
 S011	Distinct data types			NO	
 S011	Distinct data types	01	USER_DEFINED_TYPES view	NO	
 S023	Basic structured types			NO	
@@ -340,14 +340,14 @@ S043	Enhanced reference types			NO
 S051	Create table of type			NO	
 S071	SQL paths in function and type name resolution			YES	
 S081	Subtables			NO	
-S091	Basic array support			NO	
+S091	Basic array support			NO	partially supported
 S091	Basic array support	01	Arrays of built-in data types	NO	
 S091	Basic array support	02	Arrays of distinct types	NO	
 S091	Basic array support	03	Array expressions	NO	
-S092	Arrays of user-defined types			NO	
+S092	Arrays of user-defined types			YES	
 S094	Arrays of reference types			NO	
-S095	Array constructors by query			NO	
-S096	Optional array bounds			NO	
+S095	Array constructors by query			YES	
+S096	Optional array bounds			YES	
 S097	Array element assignment			NO	
 S098	ARRAY_AGG			NO	ORDER BY clause not supported
 S111	ONLY in query expressions			YES	
@@ -399,13 +399,13 @@ T061	UCS support			NO
 T071	BIGINT data type			YES	
 T101	Enhanced nullability determiniation			NO	
 T111	Updatable joins, unions, and columns			NO	
-T121	WITH (excluding RECURSIVE) in query expression			NO	
-T122	WITH (excluding RECURSIVE) in subquery			NO	
-T131	Recursive query			NO	
-T132	Recursive query in subquery			NO	
+T121	WITH (excluding RECURSIVE) in query expression			YES	
+T122	WITH (excluding RECURSIVE) in subquery			YES	
+T131	Recursive query			YES	
+T132	Recursive query in subquery			YES	
 T141	SIMILAR predicate			YES	
 T151	DISTINCT predicate			YES	
-T152	DISTINCT predicate with negation			NO	
+T152	DISTINCT predicate with negation			YES	
 T171	LIKE clause in table definition			YES	
 T172	AS subquery clause in table definition			YES	
 T173	Extended LIKE clause in table definition			YES	
@@ -433,7 +433,7 @@ T251	SET TRANSACTION statement: LOCAL option			NO
 T261	Chained transactions			NO	
 T271	Savepoints			YES	
 T272	Enhanced savepoint management			NO	
-T281	SELECT privilege with column granularity			NO	
+T281	SELECT privilege with column granularity			YES	
 T285	Enhanced derived column names			NO	
 T301	Functional dependencies			NO	
 T312	OVERLAY function			YES	
@@ -519,15 +519,17 @@ X013	Distinct types of XML type			NO
 X014	Attributes of XML type			NO	
 X015	Fields of XML type			NO	
 X016	Persistent XML values			YES	
-X020	XML concatenation			YES	
+X020	XMLConcat			YES	
+X025	XMLCast			NO	
+X030	XMLDocument			NO	
 X031	XMLElement			YES	
 X032	XMLForest			YES	
-X033	XMLRoot			YES	
 X034	XMLAgg			YES	
 X035	XMLAgg: ORDER BY option			NO	
 X036	XMLComment			YES	
 X037	XMLPI			YES	
 X038	XMLText			NO	
+X040	Basic table mapping			NO	
 X041	Basic table mapping: nulls absent			YES	
 X042	Basic table mapping: null as nil			YES	
 X043	Basic table mapping: table as forest			YES	
@@ -555,7 +557,7 @@ X068	XMLSerialize: BOM			NO
 X069	XMLSerialize: INDENT			NO	
 X070	XMLSerialize: Character string serialization and CONTENT option			YES	
 X071	XMLSerialize: Character string serialization and DOCUMENT option			YES	
-X072	XMLSerialize: Character string serialization			NO	
+X072	XMLSerialize: Character string serialization			YES	
 X073	XMLSerialize: BLOB serialization and CONTENT option			NO	
 X074	XMLSerialize: BLOB serialization and DOCUMENT option			NO	
 X075	XMLSerialize: BLOB serialization			NO	

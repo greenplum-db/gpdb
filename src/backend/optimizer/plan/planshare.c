@@ -1,7 +1,16 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * planshare.c
- * 		Plan shared plan
- * Copyright (c) 2007-2008, Greenplum inc
+ *	  Plan shared plan
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	  src/backend/optimizer/plan/planshare.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
@@ -18,7 +27,6 @@
 #include "cdb/cdbgroup.h"					/* cdbpathlocus_collocates() */
 #include "cdb/cdbpath.h"
 #include "cdb/cdbsetop.h"					/* make_motion... routines */
-#include "cdb/cdbmutate.h" 					/* add_slice_to_motion */
 #include "cdb/cdbvars.h"
 
 int get_plan_share_id(Plan *p)

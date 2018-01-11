@@ -9,7 +9,7 @@ INSERT INTO serialTest VALUES ('bar');
 INSERT INTO serialTest VALUES ('force', 100);
 INSERT INTO serialTest VALUES ('wrong', NULL);
  
-SELECT * FROM serialTest ORDER BY 2;
+SELECT * FROM serialTest;
 
 -- basic sequence operations using both text and oid references
 CREATE SEQUENCE sequence_test;
@@ -33,12 +33,15 @@ DROP SEQUENCE sequence_test;
 CREATE SEQUENCE foo_seq;
 ALTER TABLE foo_seq RENAME TO foo_seq_new;
 SELECT * FROM foo_seq_new;
+SELECT nextval('foo_seq_new');
+SELECT nextval('foo_seq_new');
+SELECT * FROM foo_seq_new;
 DROP SEQUENCE foo_seq_new;
 
 -- renaming serial sequences
 ALTER TABLE serialtest_f2_seq RENAME TO serialtest_f2_foo;
 INSERT INTO serialTest VALUES ('more');
-SELECT * FROM serialTest ORDER BY 2;
+SELECT * FROM serialTest;
 
 --
 -- Check dependencies of serial and ordinary sequences
@@ -68,8 +71,16 @@ CREATE SEQUENCE sequence_test2 START WITH 32;
 
 SELECT nextval('sequence_test2');
 
-ALTER SEQUENCE sequence_test2 RESTART WITH 16
-	 INCREMENT BY 4 MAXVALUE 22 MINVALUE 5 CYCLE;
+ALTER SEQUENCE sequence_test2 RESTART WITH 24
+	 INCREMENT BY 4 MAXVALUE 36 MINVALUE 5 CYCLE;
+SELECT nextval('sequence_test2');
+SELECT nextval('sequence_test2');
+SELECT nextval('sequence_test2');
+SELECT nextval('sequence_test2');
+SELECT nextval('sequence_test2');
+
+ALTER SEQUENCE sequence_test2 RESTART;
+
 SELECT nextval('sequence_test2');
 SELECT nextval('sequence_test2');
 SELECT nextval('sequence_test2');

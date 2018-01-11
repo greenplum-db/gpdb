@@ -3,16 +3,68 @@
  * fts.h
  *	  Interface for fault tolerance service (FTS).
  *
+ * Portions Copyright (c) 2005-2010, Greenplum Inc.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2005-2010, Greenplum Inc.
- * Copyright (c) 2011, EMC Corp.
  *
+ * IDENTIFICATION
+ *	    src/include/postmaster/fts.h
  *
  *-------------------------------------------------------------------------
  */
 #ifndef FTS_H
 #define FTS_H
 
+#include "utils/guc.h"
+#include "cdb/cdbutil.h"
+
+#ifdef USE_SEGWALREP
+
+/* Queries for FTS messages */
+#define	FTS_MSG_PROBE "PROBE"
+#define FTS_MSG_SYNCREP_OFF "SYNCREP_OFF"
+
+#define Natts_fts_message_response 3
+#define Anum_fts_message_response_is_mirror_up 0
+#define Anum_fts_message_response_is_in_sync 1
+#define Anum_fts_message_response_is_syncrep_enabled 2
+
+#define FTS_MESSAGE_RESPONSE_NTUPLES 1
+
+typedef struct
+{
+	int16 dbid;
+	bool isPrimaryAlive;
+	bool isMirrorAlive;
+	bool isInSync;
+	bool isSyncRepEnabled;
+} probe_result;
+
+typedef struct
+{
+	CdbComponentDatabaseInfo *segment_db_info;
+	probe_result result;
+	bool isScheduled;
+	const char *message;
+} probe_response_per_segment;
+
+typedef struct
+{
+	int num_primary_segments; /* total number of primary segments */
+	probe_response_per_segment *responses;
+} fts_context;
+
+typedef struct FtsResponse
+{
+	bool IsMirrorUp;
+	bool IsInSync;
+	bool IsSyncRepEnabled;
+} FtsResponse;
+
+#endif
+
+extern bool am_ftshandler;
 
 /*
  * ENUMS
@@ -62,6 +114,8 @@ enum probe_transition_e
 #define IS_VALID_TRANSITION(trans) \
 	(trans == TRANS_D_D || trans == TRANS_D_U || trans == TRANS_U_D || trans == TRANS_U_U)
 
+/* buffer size for SQL command */
+#define SQL_CMD_BUF_SIZE     1024
 
 /*
  * STRUCTURES
@@ -87,7 +141,6 @@ typedef struct
 	uint32 stateMirror;
 } FtsSegmentPairState;
 
-
 /*
  * FTS process interface
  */
@@ -102,8 +155,8 @@ extern void FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *scan_status);
  * Interface for segment state checking
  */
 extern bool FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo);
-extern CdbComponentDatabaseInfo *FtsGetPeerSegment(int content, int dbid);
-extern void FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
+												   int content, int dbid);
 extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
 
 /*
@@ -111,6 +164,14 @@ extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
  */
 extern bool FtsIsActive(void);
 
+#ifdef USE_SEGWALREP
+/*
+ * Interface for WALREP specific checking
+ */
+extern void HandleFtsMessage(const char* query_string);
+extern void FtsWalRepMessageSegments(fts_context *context);
+#else
+extern bool probePublishUpdate(CdbComponentDatabases *dbs, uint8 *probe_results);
 
 /*
  * Interface for FireRep-specific segment state machine and transitions
@@ -121,7 +182,7 @@ extern void FtsResolveStateFilerep(FtsSegmentPairState *pairState);
 
 extern void FtsPreprocessProbeResultsFilerep(CdbComponentDatabases *dbs, uint8 *probe_results);
 extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount);
-
+#endif
 
 /*
  * Interface for requesting master to shut down
@@ -129,6 +190,9 @@ extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount)
 extern void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
 extern bool FtsMasterShutdownRequested(void);
 extern void FtsRequestMasterShutdown(void);
+
+/* Interface for setting FTS GUCs */
+extern bool gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source);
 
 /*
  * If master has requested FTS to shutdown.

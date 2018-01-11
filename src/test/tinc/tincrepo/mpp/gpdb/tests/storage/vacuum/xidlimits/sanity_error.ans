@@ -1,3 +1,3 @@
 CREATE TABLE foo(a int);
 ERROR:  database is not accepting commands to avoid wraparound data loss in database "newdb"
-HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in "newdb". Reset the xid_stop_limit GUC.
+HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a database-wide VACUUM in "newdb". Reset the xid_stop_limit GUC.

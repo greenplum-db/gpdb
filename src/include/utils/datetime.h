@@ -302,10 +302,10 @@ extern int DecodeTimeOnly(char **field, int *ftype,
 extern int DecodeInterval(char **field, int *ftype, int nf, int range,
 			   int *dtype, struct pg_tm * tm, fsec_t *fsec);
 extern int DecodeISO8601Interval(char *str,
-			   int *dtype, struct pg_tm * tm, fsec_t *fsec);
+					  int *dtype, struct pg_tm * tm, fsec_t *fsec);
 
 extern void DateTimeParseError(int dterr, const char *str,
-				   const char *datatype);
+				   const char *datatype) __attribute__((noreturn));
 
 extern int	DetermineTimeZoneOffset(struct pg_tm * tm, pg_tz *tzp);
 

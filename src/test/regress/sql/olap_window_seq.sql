@@ -3,8 +3,6 @@
 --
 -- Changes here should also be made to olap_window_seq.sql
 
-set gp_enable_sequential_window_plans to true;
-
 ---- 1 -- Null window specification -- OVER () ----
 
 select row_number() over (), cn,pn,vn 
@@ -638,7 +636,6 @@ SELECT sale.pn,sale.cn,sale.prc,
 
 -- Check LEAD()
 -- sanity tests
-select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lead' order by 1,2;
 
 select lead(cn) from sale;
 
@@ -659,8 +656,6 @@ select cn, vn, pn, qty * prc,
 order by 1, 2, 3;
 
 -- Check LAG()
--- sanity tests
-select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lag' order by 1,2;
 
 -- actual LAG tests
 select cn, cname, lag(cname, 2, 'undefined') over (order by cn) from customer;
@@ -1294,7 +1289,7 @@ FROM (SELECT * FROM sale) sale; --mvd 3,4,5->6; 3,4->7
 create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
-\d v1
+\d+ v1
 drop view v1;
 
 -- MPP-2194, MPP-2236
@@ -1317,30 +1312,9 @@ select ord, pn,cn,vn,sum(vn) over (order by ord, pn rows between cn following an
 -- MPP-2323
 select ord, cn,vn,sum(vn) over (order by ord rows between 3 following and floor(cn) following ) from sale_ord;
 
--- Test use of window functions in places they shouldn't be allowed: MPP-2382
--- CHECK constraints
-CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
-
-CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
-
--- index expression and function
-CREATE TABLE wintest_for_window_seq (i int);
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
--- alter table
-ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
-alter table wintest_for_window_seq alter column i type float using count(*) over (order by
-i)::float;
-
--- update
-insert into wintest_for_window_seq values(1);
-update wintest_for_window_seq set i = count(*) over (order by i);
-
 -- domain suport
 create domain wintestd as int default count(*) over ();
 create domain wintestd as int check (value < count(*) over ());
-
-drop table wintest_for_window_seq;
 
 -- MPP-3295
 -- begin equivalent
@@ -1368,11 +1342,11 @@ select cn,vn, sum, 1+rank() over (partition by cn order by vn) as rank
 from (select cn,vn,sum(qty) as sum from sale group by cn, vn) sale order by rank; --mvd 1->3
 -- end equivalent
 
-select cn, first_value(NULL) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
-	from sale order by first_value(NULL) over (
+select cn, first_value(NULL::text) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
+	from sale order by first_value(NULL::text) over (
 	partition by cn order by case when 1=1 then (pn || ' ') else 'test'::character varying(15) end); --mvd 1->2
-select cn, first_value(NULL) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
-	from sale order by first_value(NULL) over (
+select cn, first_value(NULL::text) over (partition by cn order by case when 1=1 then pn || ' ' else 'test' end)
+	from sale order by first_value(NULL::text) over (
 	partition by cn order by case when 1=1 then (pn || ' ') else 'test' end); --mvd 1->2
 
 -- MPP-4836
@@ -1415,8 +1389,11 @@ from product
 window w as (partition by pcolor order by pname)
 order by 1,2,3;
 
--- MPP-4840
+-- Once upon a time, there was a bug in deparsing a WindowAgg node with EXPLAIN
+-- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
+
+
 -- Test for MPP-11645
 
 create table olap_window_r (a int, b int, x int,  y int,  z int ) distributed by (b);
@@ -1514,6 +1491,8 @@ group by
 select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 preceding) from sale;
 -- End MPP-12913
 -- MPP-13710
+-- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes redundant SORT operators
+-- while GPDB did generate such plans
 create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
 -- End of MPP-13710
@@ -1623,7 +1602,7 @@ from empsalary;
 --                       
 -- ----------------------------------------------------------------------------------------------------------------------
 --  Gather Motion 2:1  (slice3; segments: 2)  (cost=3.56..3.60 rows=5 width=12)
---    ->  Window  (cost=3.56..3.60 rows=3 width=12)
+--    ->  WindowAgg  (cost=3.56..3.60 rows=3 width=12)
 --          Partition By: bar.a
 --          Order By: bar.b
 --          ->  Sort  (cost=3.56..3.57 rows=3 width=12)
@@ -1665,3 +1644,21 @@ SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
 
 reset optimizer_segments;
 drop table foo, bar;
+
+
+CREATE TABLE foo (a int, b int, c int, d int);
+insert into foo select i,i,i,i from generate_series(1, 10) i;
+
+-- Check that the planner can spot ORDER BYs that are supersets of each
+-- other, and sort directly to the longest sort order. This query can
+-- be satisfied with just two Sorts.
+-- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes
+-- redundant SORT operators, while GPDB did generate such plans
+EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
+       count(*) over (PARTITION BY a ORDER BY b, c) as count2,
+       count(*) over (PARTITION BY a ORDER BY b) as count3,
+       count(*) over (PARTITION BY a ORDER BY c) as count1,
+       count(*) over (PARTITION BY a ORDER BY c, b) as count2,
+       count(*) over (PARTITION BY a ORDER BY c, b, d) as count3
+FROM foo;
+drop table foo;

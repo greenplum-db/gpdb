@@ -1,7 +1,7 @@
 #
 # PostgreSQL top level makefile
 #
-# $PostgreSQL: pgsql/GNUmakefile.in,v 1.46 2007/02/09 15:55:57 petere Exp $
+# $PostgreSQL: pgsql/GNUmakefile.in,v 1.50 2009/01/15 01:53:49 momjian Exp $
 #
 
 subdir =
@@ -28,6 +28,7 @@ all:
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
+	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
@@ -53,6 +54,7 @@ install:
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
@@ -79,6 +81,7 @@ installdirs uninstall:
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
 
 distprep:
@@ -109,6 +112,7 @@ clean:
 	$(MAKE) -C contrib/indexscan $@
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
+	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
 # leap over gpAux/Makefile into subdirectories to avoid circular dependency.
 # gpAux/Makefile is the entry point for the enterprise build, which ends up
@@ -123,14 +127,15 @@ clean:
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
 distclean maintainer-clean:
-#	-$(MAKE) -C doc $@
-	-$(MAKE) -C gpAux/extensions $@
-	-$(MAKE) -C gpAux/gpperfmon $@
-	-$(MAKE) -C gpAux/platform $@
-	-$(MAKE) -C contrib $@
-	-$(MAKE) -C config $@
-	-$(MAKE) -C src $@
-	-rm -f config.cache config.log config.status GNUmakefile
+#	$(MAKE) -C doc $@
+	$(MAKE) -C gpAux/extensions $@
+	$(MAKE) -C gpAux/gpperfmon $@
+	$(MAKE) -C gpAux/platform $@
+	$(MAKE) -C contrib $@
+	$(MAKE) -C config $@
+	$(MAKE) -C gpMgmt $@
+	$(MAKE) -C src $@
+	rm -f config.cache config.log config.status GNUmakefile
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
@@ -150,14 +155,32 @@ installcheck-world:
 	$(MAKE) -C contrib/extprotocol installcheck
 	$(MAKE) -C contrib/dblink installcheck
 	$(MAKE) -C contrib/indexscan installcheck
+	$(MAKE) -C contrib/hstore installcheck
 	$(MAKE) -C contrib/pgcrypto installcheck
 	$(MAKE) -C gpAux/extensions installcheck
 	$(MAKE) -C src/bin/gpfdist installcheck
 	$(MAKE) -C src/interfaces/gppc installcheck
 	$(MAKE) -C src/test/kerberos installcheck
 	$(MAKE) -C gpMgmt/bin installcheck
+# The mirroring_matching test of gpcheckcat fails on a walrep cluster
+# because management tools do not yet understand the fault strategy
+# 'w'. Currently gpcheckcat does not allow us to exclude a single test
+# so we need to explicitly list all the tests.
+ifeq ($(enable_segwalrep), yes)
+	for test in "unique_index_violation" "duplicate" "missing_extraneous"\
+				"inconsistent" "foreign_key" "acl" "persistent" "pgclass"\
+				"namespace" "distribution_policy" "dependency" "owner"\
+				"part_integrity" "part_constraint" "duplicate_persistent";\
+	do \
+		gpcheckcat -R $$test -A;\
+	done;
+
+	# Verify the filesystem objects are consistent between primary and mirror
+	$(MAKE) -C contrib/gp_replica_check installcheck
+else
 	gpcheckcat -A
 	$(MAKE) -C contrib/pg_upgrade check
+endif
 
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
@@ -186,6 +209,25 @@ GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 
 ##########################################################################
 
+coverage:
+	$(MAKE) -C src/backend $@
+
+.PHONY: coverage-html
+coverage-html: coverage
+	rm -rf coverage
+	mkdir coverage
+	$(GENHTML) --show-details --legend --output-directory=coverage --title=PostgreSQL --num-spaces=4 --prefix=$(abs_top_srcdir)/src `find src/backend -name lcov.info -print`
+
+ifeq ($(enable_coverage),yes)
+clean distclean maintainer-clean: clean-coverage-local
+.PHONY: clean-coverage-local
+clean-coverage-local:
+	rm -rf coverage
+endif
+
+
+##########################################################################
+
 distdir	= postgresql-$(VERSION)
 dummy	= =install=
 garbage = =*  "#"*  ."#"*  *~*  *.orig  *.rej  core  postgresql-*
@@ -195,7 +237,7 @@ ifeq ($(split-dist), yes)
 dist: postgresql-base-$(VERSION).tar.gz postgresql-docs-$(VERSION).tar.gz postgresql-opt-$(VERSION).tar.gz postgresql-test-$(VERSION).tar.gz 
 endif
 dist:
-	-rm -rf $(distdir)
+	rm -rf $(distdir)
 
 $(distdir).tar: distdir
 	$(TAR) chf $@ $(distdir)
@@ -222,7 +264,7 @@ postgresql-test-$(VERSION).tar: distdir
 	$(TAR) cf $@ $(distdir)/src/test
 
 distdir:
-	-rm -rf $(distdir)* $(dummy)
+	rm -rf $(distdir)* $(dummy)
 	for x in `cd $(top_srcdir) && find . \( -name CVS -prune \) -o \( -name .git -prune \) -o -print`; do \
 	  file=`expr X$$x : 'X\./\(.*\)'`; \
 	  if test -d "$(top_srcdir)/$$file" ; then \
@@ -241,7 +283,7 @@ distdir:
 	#rm -f $(distdir)/README.git
 
 distcheck: dist
-	-rm -rf $(dummy)
+	rm -rf $(dummy)
 	mkdir $(dummy)
 	$(GZIP) -d -c $(distdir).tar.gz | $(TAR) xf -
 	install_prefix=`cd $(dummy) && pwd`; \
@@ -256,7 +298,7 @@ distcheck: dist
 	$(MAKE) -C $(distdir) dist
 # Room for improvement: Check here whether this distribution tarball
 # is sufficiently similar to the original one.
-	-rm -rf $(distdir) $(dummy)
+	rm -rf $(distdir) $(dummy)
 	@echo "Distribution integrity checks out."
 
 .PHONY: dist distdir distcheck

@@ -3,12 +3,12 @@
  * parse_oper.c
  *		handle operator things for parser
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_oper.c,v 1.101.2.1 2010/07/30 17:57:07 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_oper.c,v 1.109 2009/06/13 15:42:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,8 +18,8 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "lib/stringinfo.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_type.h"
@@ -59,7 +59,7 @@ typedef struct OprCacheKey
 typedef struct OprCacheEntry
 {
 	/* the hash lookup key MUST BE FIRST */
-	OprCacheKey	key;
+	OprCacheKey key;
 
 	Oid			opr_oid;		/* OID of the resolved operator */
 } OprCacheEntry;
@@ -75,11 +75,8 @@ static const char *op_signature_string(List *op, char oprkind,
 static void op_error(ParseState *pstate, List *op, char oprkind,
 		 Oid arg1, Oid arg2,
 		 FuncDetailCode fdresult, int location);
-static Expr *make_op_expr(ParseState *pstate, Operator op,
-			 Node *ltree, Node *rtree,
-			 Oid ltypeId, Oid rtypeId);
 static bool make_oper_cache_key(OprCacheKey *key, List *opname,
-								Oid ltypeId, Oid rtypeId);
+					Oid ltypeId, Oid rtypeId);
 static Oid	find_oper_cache_entry(OprCacheKey *key);
 static void make_oper_cache_entry(OprCacheKey *key, Oid opr_oid);
 static void InvalidateOprCacheCallBack(Datum arg, int cacheid, ItemPointer tuplePtr);
@@ -163,255 +160,112 @@ LookupOperNameTypeNames(ParseState *pstate, List *opername,
 }
 
 /*
- * equality_oper - identify a suitable equality operator for a datatype
+ * get_sort_group_operators - get default sorting/grouping operators for type
  *
- * On failure, return NULL if noError, else report a standard error
+ * We fetch the "<", "=", and ">" operators all at once to reduce lookup
+ * overhead (knowing that most callers will be interested in at least two).
+ * However, a given datatype might have only an "=" operator, if it is
+ * hashable but not sortable.  (Other combinations of present and missing
+ * operators shouldn't happen, unless the system catalogs are messed up.)
+ *
+ * If an operator is missing and the corresponding needXX flag is true,
+ * throw a standard error message, else return InvalidOid.
+ *
+ * Callers can pass NULL pointers for any results they don't care to get.
+ *
+ * Note: the results are guaranteed to be exact or binary-compatible matches,
+ * since most callers are not prepared to cope with adding any run-time type
+ * coercion steps.
  */
-Operator
-equality_oper(Oid argtype, bool noError)
+void
+get_sort_group_operators(Oid argtype,
+						 bool needLT, bool needEQ, bool needGT,
+						 Oid *ltOpr, Oid *eqOpr, Oid *gtOpr)
 {
 	TypeCacheEntry *typentry;
-	Oid			oproid;
-	Operator	optup;
+	Oid			lt_opr;
+	Oid			eq_opr;
+	Oid			gt_opr;
 
 	/*
-	 * Look for an "=" operator for the datatype.  We require it to be an
-	 * exact or binary-compatible match, since most callers are not prepared
-	 * to cope with adding any run-time type coercion steps.
+	 * Look up the operators using the type cache.
+	 *
+	 * Note: the search algorithm used by typcache.c ensures that the results
+	 * are consistent, ie all from the same opclass.
 	 */
-	typentry = lookup_type_cache(argtype, TYPECACHE_EQ_OPR);
-	oproid = typentry->eq_opr;
+	typentry = lookup_type_cache(argtype,
+					 TYPECACHE_LT_OPR | TYPECACHE_EQ_OPR | TYPECACHE_GT_OPR);
+	lt_opr = typentry->lt_opr;
+	eq_opr = typentry->eq_opr;
+	gt_opr = typentry->gt_opr;
 
 	/*
-	 * If the datatype is an array, then we can use array_eq ... but only if
-	 * there is a suitable equality operator for the element type. (This check
-	 * is not in the raw typcache.c code ... should it be?)
+	 * If the datatype is an array, then we can use array_lt and friends ...
+	 * but only if there are suitable operators for the element type.  (This
+	 * check is not in the raw typcache.c code ... should it be?)  Testing all
+	 * three operator IDs here should be redundant, but let's do it anyway.
 	 */
-	if (oproid == ARRAY_EQ_OP)
+	if (lt_opr == ARRAY_LT_OP ||
+		eq_opr == ARRAY_EQ_OP ||
+		gt_opr == ARRAY_GT_OP)
 	{
 		Oid			elem_type = get_element_type(argtype);
 
 		if (OidIsValid(elem_type))
 		{
-			optup = equality_oper(elem_type, true);
-			if (optup != NULL)
-				ReleaseSysCache(optup);
-			else
-				oproid = InvalidOid;	/* element type has no "=" */
+			typentry = lookup_type_cache(elem_type,
+					 TYPECACHE_LT_OPR | TYPECACHE_EQ_OPR | TYPECACHE_GT_OPR);
+#ifdef NOT_USED
+			/* We should do this ... */
+			if (!OidIsValid(typentry->eq_opr))
+			{
+				/* element type is neither sortable nor hashable */
+				lt_opr = eq_opr = gt_opr = InvalidOid;
+			}
+			else if (!OidIsValid(typentry->lt_opr) ||
+					 !OidIsValid(typentry->gt_opr))
+			{
+				/* element type is hashable but not sortable */
+				lt_opr = gt_opr = InvalidOid;
+			}
+#else
+			/*
+			 * ... but for the moment we have to do this.  This is because
+			 * anyarray has sorting but not hashing support.  So, if the
+			 * element type is only hashable, there is nothing we can do
+			 * with the array type.
+			 */
+			if (!OidIsValid(typentry->lt_opr) ||
+				!OidIsValid(typentry->eq_opr) ||
+				!OidIsValid(typentry->gt_opr))
+				lt_opr = eq_opr = gt_opr = InvalidOid;	/* not sortable */
+#endif
 		}
 		else
-			oproid = InvalidOid;	/* bogus array type? */
+			lt_opr = eq_opr = gt_opr = InvalidOid;		/* bogus array type? */
 	}
 
-	if (OidIsValid(oproid))
-	{
-		optup = SearchSysCache(OPEROID,
-							   ObjectIdGetDatum(oproid),
-							   0, 0, 0);
-		if (optup == NULL)		/* should not fail */
-			elog(ERROR, "cache lookup failed for operator %u", oproid);
-		return optup;
-	}
-
-	if (!noError)
+	/* Report errors if needed */
+	if ((needLT && !OidIsValid(lt_opr)) ||
+		(needGT && !OidIsValid(gt_opr)))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("could not identify an ordering operator for type %s",
+						format_type_be(argtype)),
+		 errhint("Use an explicit ordering operator or modify the query.")));
+	if (needEQ && !OidIsValid(eq_opr))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("could not identify an equality operator for type %s",
 						format_type_be(argtype))));
-	return NULL;
-}
 
-/*
- * ordering_oper - identify a suitable sorting operator ("<") for a datatype
- *
- * On failure, return NULL if noError, else report a standard error
- */
-Operator
-ordering_oper(Oid argtype, bool noError)
-{
-	TypeCacheEntry *typentry;
-	Oid			oproid;
-	Operator	optup;
-
-	/*
-	 * Look for a "<" operator for the datatype.  We require it to be an exact
-	 * or binary-compatible match, since most callers are not prepared to cope
-	 * with adding any run-time type coercion steps.
-	 *
-	 * Note: the search algorithm used by typcache.c ensures that if a "<"
-	 * operator is returned, it will be consistent with the "=" operator
-	 * returned by equality_oper.  This is critical for sorting and grouping
-	 * purposes.
-	 */
-	typentry = lookup_type_cache(argtype, TYPECACHE_LT_OPR);
-	oproid = typentry->lt_opr;
-
-	/*
-	 * If the datatype is an array, then we can use array_lt ... but only if
-	 * there is a suitable less-than operator for the element type. (This
-	 * check is not in the raw typcache.c code ... should it be?)
-	 */
-	if (oproid == ARRAY_LT_OP)
-	{
-		Oid			elem_type = get_element_type(argtype);
-
-		if (OidIsValid(elem_type))
-		{
-			optup = ordering_oper(elem_type, true);
-			if (optup != NULL)
-				ReleaseSysCache(optup);
-			else
-				oproid = InvalidOid;	/* element type has no "<" */
-		}
-		else
-			oproid = InvalidOid;	/* bogus array type? */
-	}
-
-	if (OidIsValid(oproid))
-	{
-		optup = SearchSysCache(OPEROID,
-							   ObjectIdGetDatum(oproid),
-							   0, 0, 0);
-		if (optup == NULL)		/* should not fail */
-			elog(ERROR, "cache lookup failed for operator %u", oproid);
-		return optup;
-	}
-
-	if (!noError)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_FUNCTION),
-				 errmsg("could not identify an ordering operator for type %s",
-						format_type_be(argtype)),
-		 errhint("Use an explicit ordering operator or modify the query.")));
-	return NULL;
-}
-
-/*
- * reverse_ordering_oper - identify DESC sort operator (">") for a datatype
- *
- * On failure, return NULL if noError, else report a standard error
- */
-Operator
-reverse_ordering_oper(Oid argtype, bool noError)
-{
-	TypeCacheEntry *typentry;
-	Oid			oproid;
-	Operator	optup;
-
-	/*
-	 * Look for a ">" operator for the datatype.  We require it to be an exact
-	 * or binary-compatible match, since most callers are not prepared to cope
-	 * with adding any run-time type coercion steps.
-	 *
-	 * Note: the search algorithm used by typcache.c ensures that if a ">"
-	 * operator is returned, it will be consistent with the "=" operator
-	 * returned by equality_oper.  This is critical for sorting and grouping
-	 * purposes.
-	 */
-	typentry = lookup_type_cache(argtype, TYPECACHE_GT_OPR);
-	oproid = typentry->gt_opr;
-
-	/*
-	 * If the datatype is an array, then we can use array_gt ... but only if
-	 * there is a suitable greater-than operator for the element type. (This
-	 * check is not in the raw typcache.c code ... should it be?)
-	 */
-	if (oproid == ARRAY_GT_OP)
-	{
-		Oid			elem_type = get_element_type(argtype);
-
-		if (OidIsValid(elem_type))
-		{
-			optup = reverse_ordering_oper(elem_type, true);
-			if (optup != NULL)
-				ReleaseSysCache(optup);
-			else
-				oproid = InvalidOid;	/* element type has no ">" */
-		}
-		else
-			oproid = InvalidOid;	/* bogus array type? */
-	}
-
-	if (OidIsValid(oproid))
-	{
-		optup = SearchSysCache(OPEROID,
-							   ObjectIdGetDatum(oproid),
-							   0, 0, 0);
-		if (optup == NULL)		/* should not fail */
-			elog(ERROR, "cache lookup failed for operator %u", oproid);
-		return optup;
-	}
-
-	if (!noError)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_FUNCTION),
-				 errmsg("could not identify an ordering operator for type %s",
-						format_type_be(argtype)),
-		 errhint("Use an explicit ordering operator or modify the query.")));
-	return NULL;
-}
-
-/*
- * equality_oper_funcid - convenience routine for oprfuncid(equality_oper())
- */
-Oid
-equality_oper_funcid(Oid argtype)
-{
-	Operator	optup;
-	Oid			result;
-
-	optup = equality_oper(argtype, false);
-	result = oprfuncid(optup);
-	ReleaseSysCache(optup);
-	return result;
-}
-
-/*
- * ordering_oper_opid - convenience routine for oprid(ordering_oper())
- *
- * This was formerly called any_ordering_op()
- */
-Oid
-ordering_oper_opid(Oid argtype)
-{
-	Operator	optup;
-	Oid			result;
-
-	optup = ordering_oper(argtype, false);
-	result = oprid(optup);
-	ReleaseSysCache(optup);
-	return result;
-}
-
-
-/*
- * ordering_oper_opid - convenience routine for oprid(equality_oper())
- */
-Oid
-equality_oper_opid(Oid argtype)
-{
-	Operator	optup;
-	Oid			result;
-
-	optup = equality_oper(argtype, false);
-	result = oprid(optup);
-	ReleaseSysCache(optup);
-	return result;
-}
-
-/*
- * reverse_ordering_oper_opid - convenience routine for oprid(reverse_ordering_oper())
- */
-Oid
-reverse_ordering_oper_opid(Oid argtype)
-{
-	Operator	optup;
-	Oid			result;
-
-	optup = reverse_ordering_oper(argtype, false);
-	result = oprid(optup);
-	ReleaseSysCache(optup);
-	return result;
+	/* Return results as needed */
+	if (ltOpr)
+		*ltOpr = lt_opr;
+	if (eqOpr)
+		*eqOpr = eq_opr;
+	if (gtOpr)
+		*gtOpr = gt_opr;
 }
 
 
@@ -553,7 +407,7 @@ oper(ParseState *pstate, List *opname, Oid ltypeId, Oid rtypeId,
 	 bool noError, int location)
 {
 	Oid			operOid;
-	OprCacheKey	key;
+	OprCacheKey key;
 	bool		key_ok;
 	FuncDetailCode fdresult = FUNCDETAIL_NOTFOUND;
 	HeapTuple	tup = NULL;
@@ -703,7 +557,7 @@ Operator
 right_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 {
 	Oid			operOid;
-	OprCacheKey	key;
+	OprCacheKey key;
 	bool		key_ok;
 	FuncDetailCode fdresult = FUNCDETAIL_NOTFOUND;
 	HeapTuple	tup = NULL;
@@ -785,7 +639,7 @@ Operator
 left_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 {
 	Oid			operOid;
-	OprCacheKey	key;
+	OprCacheKey key;
 	bool		key_ok;
 	FuncDetailCode fdresult = FUNCDETAIL_NOTFOUND;
 	HeapTuple	tup = NULL;
@@ -929,7 +783,13 @@ make_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree,
 	Oid			ltypeId,
 				rtypeId;
 	Operator	tup;
-	Expr	   *result;
+	Form_pg_operator opform;
+	Oid			actual_arg_types[2];
+	Oid			declared_arg_types[2];
+	int			nargs;
+	List	   *args;
+	Oid			rettype;
+	OpExpr	   *result;
 
 	/* Select the operator */
 	if (rtree == NULL)
@@ -954,13 +814,73 @@ make_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree,
 		tup = oper(pstate, opname, ltypeId, rtypeId, false, location);
 	}
 
+	opform = (Form_pg_operator) GETSTRUCT(tup);
+
+	/* Check it's not a shell */
+	if (!RegProcedureIsValid(opform->oprcode))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("operator is only a shell: %s",
+						op_signature_string(opname,
+											opform->oprkind,
+											opform->oprleft,
+											opform->oprright)),
+				 parser_errposition(pstate, location)));
+
 	/* Do typecasting and build the expression tree */
-	result = make_op_expr(pstate, tup, ltree, rtree, ltypeId, rtypeId);
-	((OpExpr *) result)->location = location;
+	if (rtree == NULL)
+	{
+		/* right operator */
+		args = list_make1(ltree);
+		actual_arg_types[0] = ltypeId;
+		declared_arg_types[0] = opform->oprleft;
+		nargs = 1;
+	}
+	else if (ltree == NULL)
+	{
+		/* left operator */
+		args = list_make1(rtree);
+		actual_arg_types[0] = rtypeId;
+		declared_arg_types[0] = opform->oprright;
+		nargs = 1;
+	}
+	else
+	{
+		/* otherwise, binary operator */
+		args = list_make2(ltree, rtree);
+		actual_arg_types[0] = ltypeId;
+		actual_arg_types[1] = rtypeId;
+		declared_arg_types[0] = opform->oprleft;
+		declared_arg_types[1] = opform->oprright;
+		nargs = 2;
+	}
+
+	/*
+	 * enforce consistency with polymorphic argument and return types,
+	 * possibly adjusting return type or declared_arg_types (which will be
+	 * used as the cast destination by make_fn_arguments)
+	 */
+	rettype = enforce_generic_type_consistency(actual_arg_types,
+											   declared_arg_types,
+											   nargs,
+											   opform->oprresult,
+											   false);
+
+	/* perform the necessary typecasting of arguments */
+	make_fn_arguments(pstate, args, actual_arg_types, declared_arg_types);
+
+	/* and build the expression node */
+	result = makeNode(OpExpr);
+	result->opno = oprid(tup);
+	result->opfuncid = opform->oprcode;
+	result->opresulttype = rettype;
+	result->opretset = get_func_retset(opform->oprcode);
+	result->args = args;
+	result->location = location;
 
 	ReleaseSysCache(tup);
 
-	return result;
+	return (Expr *) result;
 }
 
 /*
@@ -1008,6 +928,17 @@ make_scalar_array_op(ParseState *pstate, List *opname,
 	/* Now resolve the operator */
 	tup = oper(pstate, opname, ltypeId, rtypeId, false, location);
 	opform = (Form_pg_operator) GETSTRUCT(tup);
+
+	/* Check it's not a shell */
+	if (!RegProcedureIsValid(opform->oprcode))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("operator is only a shell: %s",
+						op_signature_string(opname,
+											opform->oprkind,
+											opform->oprleft,
+											opform->oprright)),
+				 parser_errposition(pstate, location)));
 
 	args = list_make2(ltree, rtree);
 	actual_arg_types[0] = ltypeId;
@@ -1073,83 +1004,9 @@ make_scalar_array_op(ParseState *pstate, List *opname,
 	result->opfuncid = opform->oprcode;
 	result->useOr = useOr;
 	result->args = args;
+	result->location = location;
 
 	ReleaseSysCache(tup);
-
-	/* Hack to protect pg_get_expr() against misuse */
-	check_pg_get_expr_args(pstate, result->opfuncid, args);
-
-	return (Expr *) result;
-}
-
-/*
- * make_op_expr()
- *		Build operator expression using an already-looked-up operator.
- *
- * As with coerce_type, pstate may be NULL if no special unknown-Param
- * processing is wanted.
- */
-static Expr *
-make_op_expr(ParseState *pstate, Operator op,
-			 Node *ltree, Node *rtree,
-			 Oid ltypeId, Oid rtypeId)
-{
-	Form_pg_operator opform = (Form_pg_operator) GETSTRUCT(op);
-	Oid			actual_arg_types[2];
-	Oid			declared_arg_types[2];
-	int			nargs;
-	List	   *args;
-	Oid			rettype;
-	OpExpr	   *result;
-
-	if (rtree == NULL)
-	{
-		/* right operator */
-		args = list_make1(ltree);
-		actual_arg_types[0] = ltypeId;
-		declared_arg_types[0] = opform->oprleft;
-		nargs = 1;
-	}
-	else if (ltree == NULL)
-	{
-		/* left operator */
-		args = list_make1(rtree);
-		actual_arg_types[0] = rtypeId;
-		declared_arg_types[0] = opform->oprright;
-		nargs = 1;
-	}
-	else
-	{
-		/* otherwise, binary operator */
-		args = list_make2(ltree, rtree);
-		actual_arg_types[0] = ltypeId;
-		actual_arg_types[1] = rtypeId;
-		declared_arg_types[0] = opform->oprleft;
-		declared_arg_types[1] = opform->oprright;
-		nargs = 2;
-	}
-
-	/*
-	 * enforce consistency with polymorphic argument and return types,
-	 * possibly adjusting return type or declared_arg_types (which will be
-	 * used as the cast destination by make_fn_arguments)
-	 */
-	rettype = enforce_generic_type_consistency(actual_arg_types,
-											   declared_arg_types,
-											   nargs,
-											   opform->oprresult,
-											   false);
-
-	/* perform the necessary typecasting of arguments */
-	make_fn_arguments(pstate, args, actual_arg_types, declared_arg_types);
-
-	/* and build the expression node */
-	result = makeNode(OpExpr);
-	result->opno = oprid(op);
-	result->opfuncid = opform->oprcode;
-	result->opresulttype = rettype;
-	result->opretset = get_func_retset(opform->oprcode);
-	result->args = args;
 
 	/* Hack to protect pg_get_expr() against misuse */
 	check_pg_get_expr_args(pstate, result->opfuncid, args);
@@ -1168,7 +1025,7 @@ make_op_expr(ParseState *pstate, Operator op,
  * mapping is pretty expensive to compute, especially for ambiguous operators;
  * this is mainly because there are a *lot* of instances of popular operator
  * names such as "=", and we have to check each one to see which is the
- * best match.  So once we have identified the correct mapping, we save it
+ * best match.	So once we have identified the correct mapping, we save it
  * in a cache that need only be flushed on pg_operator or pg_cast change.
  * (pg_cast must be considered because changes in the set of implicit casts
  * affect the set of applicable operators for any given input datatype.)
@@ -1221,7 +1078,7 @@ make_oper_cache_key(OprCacheKey *key, List *opname, Oid ltypeId, Oid rtypeId)
 	{
 		/* get the active search path */
 		if (fetch_search_path_array(key->search_path,
-									MAX_CACHED_PATH_LEN) > MAX_CACHED_PATH_LEN)
+								  MAX_CACHED_PATH_LEN) > MAX_CACHED_PATH_LEN)
 			return false;		/* oops, didn't fit */
 	}
 
@@ -1252,7 +1109,7 @@ find_oper_cache_entry(OprCacheKey *key)
 		ctl.entrysize = sizeof(OprCacheEntry);
 		ctl.hash = tag_hash;
 		OprCacheHash = hash_create("Operator lookup cache", 256,
-									&ctl, HASH_ELEM | HASH_FUNCTION);
+								   &ctl, HASH_ELEM | HASH_FUNCTION);
 
 		/* Arrange to flush cache on pg_operator and pg_cast changes */
 		CacheRegisterSyscacheCallback(OPERNAMENSP,

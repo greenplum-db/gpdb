@@ -1,11 +1,14 @@
 /*-------------------------------------------------------------------------
  *
  * alertseverity.c
+ *	  Set the severity level of the alert based on the message
  *
- * Set the severity level of the alert based on the message
+ * Portions Copyright (c) 2010, EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2010, EMC Corporation
  *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/alertseverity.c
  *
  *-------------------------------------------------------------------------
  */

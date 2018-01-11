@@ -19,7 +19,6 @@
 #include "access/relscan.h"
 #include "access/sdir.h"
 #include "access/xlogutils.h"
-#include "nodes/tidbitmap.h"
 #include "storage/lock.h"
 #include "miscadmin.h"
 
@@ -757,7 +756,7 @@ extern Datum bmbuild(PG_FUNCTION_ARGS);
 extern Datum bminsert(PG_FUNCTION_ARGS);
 extern Datum bmbeginscan(PG_FUNCTION_ARGS);
 extern Datum bmgettuple(PG_FUNCTION_ARGS);
-extern Datum bmgetmulti(PG_FUNCTION_ARGS);
+extern Datum bmgetbitmap(PG_FUNCTION_ARGS);
 extern Datum bmrescan(PG_FUNCTION_ARGS);
 extern Datum bmendscan(PG_FUNCTION_ARGS);
 extern Datum bmmarkpos(PG_FUNCTION_ARGS);
@@ -809,10 +808,6 @@ extern uint64 _bitmap_findnexttid(BMBatchWords *words,
 								  BMIterateResult *result);
 extern void _bitmap_findnexttids(BMBatchWords *words,
 								 BMIterateResult *result, uint32 maxTids);
-extern bool _bitmap_getbitmapinpage(BMBatchWords* words,
-									BMIterateResult* result,
-									BlockNumber nextBlockNo,
-									PagetableEntry* entry);
 #ifdef NOT_USED /* we might use this later */
 extern void _bitmap_intersect(BMBatchWords **batches, uint32 numBatches,
 						   BMBatchWords *result);
@@ -870,5 +865,9 @@ extern void bitmap_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 extern void bitmap_xlog_startup(void);
 extern void bitmap_xlog_cleanup(void);
 extern bool bitmap_safe_restartpoint(void);
+
+/* reloptions.c */
+#define BITMAP_MIN_FILLFACTOR		10
+#define BITMAP_DEFAULT_FILLFACTOR	100
 
 #endif

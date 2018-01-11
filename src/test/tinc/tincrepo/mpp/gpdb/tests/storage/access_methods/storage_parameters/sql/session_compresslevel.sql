@@ -91,12 +91,6 @@ select attnum, attoptions from pg_attribute_encoding where attrelid='ao_ss_cl_t6
 Drop table ao_ss_cl_t6;
 
 
--- Create table with invalid value compresslevel=10
-
-Drop table if exists ao_ss_cl_t4;
-Create table ao_ss_cl_t4 ( i int, j int) with(compresslevel=10);
-
-
 -- Create table with appendonly=false
 
 Drop table if exists ao_ss_cl_t4;
@@ -167,10 +161,6 @@ Drop table ao_ss_cl_t7;
 
 
 -- ========================
-
--- Set the session level guc to an invalid value
-
-SET gp_default_storage_options="appendonly=true, compresslevel=10";
 
 -- Set the sessionlevel guc to compresslevel=1 without appendonly=true
 SET gp_default_storage_options="compresslevel=1";

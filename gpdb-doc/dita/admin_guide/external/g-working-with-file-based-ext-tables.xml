@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_f5l_qnh_kr">
+  <title>Working with External Data</title>
+  <shortdesc>External tables provide access to data stored in data sources outside of Greenplum
+    Database as if the data were stored in regular database tables. Data can be read from or written
+    to external tables.</shortdesc>
+  <body>
+    <p>An external table is a Greenplum database table backed with data that resides outside of the
+      database. An external table is either readable or writable. It can be used like a regular
+      database table in SQL commands such as <codeph>SELECT</codeph> and <codeph>INSERT</codeph> and
+      joined with other tables. External tables are most often used to load and unload database
+      data. </p>
+    <p>Web-based external tables provide access to data served by an HTTP server or an operating
+      system process. See <xref href="g-creating-and-using-web-external-tables.xml#topic31"/> for
+      more about web-based tables. </p>
+  </body>
+</topic>

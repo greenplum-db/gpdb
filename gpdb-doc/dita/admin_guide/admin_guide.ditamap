@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
     <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html" otherprops="pivotal"/>
+        format="html"/>
     <topicref href="admin_guide.xml" navtitle="Administration Guide">
         <topicref href="intro/partI.xml" id="partI" format="dita">
             <topicref href="intro/arch_overview.xml" id="arch_overview"/>
@@ -15,6 +15,7 @@
             <topicref href="intro/about_statistics.xml"/>
         </topicref>
         <topicref href="managing/partII.xml" id="partII">
+            <topicref href="managing/versioning.xml" navtitle="About the Greenplum Database Release Version Number"/>
             <topicref href="managing/startstop.xml" navtitle="Starting and Stopping Greenplum"/>
             <topicref href="access_db/access_db.ditamap" format="ditamap"/>
             <topicref href="configure.ditamap" format="ditamap"/>
@@ -39,18 +40,23 @@
             <topicref href="roles_privs.xml" navtitle="Managing Roles and Privileges"
                 id="roles_privs"/>
         </topicref>
-        <topicref href="partIV.xml" navtitle="Working with Databases" id="partIV">
-            <topicref href="ddl/ddl.ditamap" format="ditamap"/>
-            <topicref href="dml.xml" navtitle="Managing Data" id="dml"/>
-            <topicref href="load/load.ditamap" format="ditamap"/>
-            <topicref href="query/query.ditamap" format="ditamap"/>
-        </topicref>
+        <topicref href="ddl/ddl.ditamap" format="ditamap"/>
+        <topicref href="dml.xml" navtitle="Managing Data" id="dml"/>
+        <topicref href="query/query.ditamap" navtitle="Querying Data" format="ditamap"/>
+        <topicref href="external/external-tables.ditamap" navtitle="Working with External Data" format="ditamap"/>
+        <topicref href="load/load.ditamap" navtitle="Loading and Unloading Data" format="ditamap"/>
         <topicref href="partV.xml">
             <topicref href="perf_intro.xml" navtitle="Defining Database Performance" id="perf_intro"/>
             <topicref href="perf_issues.xml" navtitle="Common Causes of Performance Issues"
                 id="perf_issues"/>
-            <topicref href="workload_mgmt.xml" navtitle="Managing Workload and Resources"
+            <topicref href="wlmgmt_intro.xml" navtitle="Workload Management Resource Overview"
+                id="wlmgmt_intro"/>
+            <topicref href="wlmgmt.xml" navtitle="Managing Workload and Resources" id="wlmgmt">
+                <topicref href="workload_mgmt.xml" navtitle="Managing Workloads with Resource Queues"
                 id="workload_mgmt"/>
+                <topicref href="workload_mgmt_resgroups.xml" navtitle="Managing Workloads with Resource Groups"
+                id="workload_mgmt_resgroups"/>
+            </topicref>
             <topicref href="perf_troubleshoot.xml" navtitle="Investigating a Performance Problem"
                 id="perf_troubleshoot"/>
         </topicref>

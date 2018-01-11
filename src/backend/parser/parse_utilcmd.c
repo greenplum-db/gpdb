@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.20 2009/01/01 17:23:46 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.21 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,6 +35,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_type_encoding.h"
@@ -44,7 +45,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "parser/analyze.h"
 #include "parser/gramparse.h"
 #include "parser/parse_clause.h"
@@ -401,7 +401,8 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 
 	/* Check for SERIAL pseudo-types */
 	is_serial = false;
-	if (list_length(column->typeName->names) == 1)
+	if (list_length(column->typeName->names) == 1 &&
+		!column->typeName->pct_type)
 	{
 		char	   *typname = strVal(linitial(column->typeName->names));
 
@@ -419,6 +420,16 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 			column->typeName->names = NIL;
 			column->typeName->typid = INT8OID;
 		}
+
+		/*
+		 * We have to reject "serial[]" explicitly, because once we've set
+		 * typeid, LookupTypeName won't notice arrayBounds.  We don't need any
+		 * special coding for serial(typmod) though.
+		 */
+		if (is_serial && column->typeName->arrayBounds != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("array of serial is not implemented")));
 	}
 
 	/* Do necessary work on the column type declaration */
@@ -432,6 +443,7 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		char	   *sname;
 		char	   *qstring;
 		A_Const    *snamenode;
+		TypeCast   *castnode;
 		FuncCall   *funccallnode;
 		CreateSeqStmt *seqstmt;
 		AlterSeqStmt *altseqstmt;
@@ -504,11 +516,14 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		snamenode = makeNode(A_Const);
 		snamenode->val.type = T_String;
 		snamenode->val.val.str = qstring;
-		snamenode->typeName = SystemTypeName("regclass");
-		snamenode->location = -1;					/* CDB */
+		snamenode->location = -1;
+		castnode = makeNode(TypeCast);
+		castnode->typeName = SystemTypeName("regclass");
+		castnode->arg = (Node *) snamenode;
+		castnode->location = -1;
 		funccallnode = makeNode(FuncCall);
 		funccallnode->funcname = SystemFuncName("nextval");
-		funccallnode->args = list_make1(snamenode);
+		funccallnode->args = list_make1(castnode);
 		funccallnode->agg_star = false;
 		funccallnode->agg_distinct = false;
 		funccallnode->func_variadic = false;
@@ -672,7 +687,8 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	bool		including_indexes = false;
 	ListCell   *elem;
 
-	relation = heap_openrv(inhRelation->relation, AccessShareLock);
+	relation = parserOpenTable(pstate, inhRelation->relation, AccessShareLock,
+							   false, NULL);
 
 	if (relation->rd_rel->relkind != RELKIND_RELATION)
 		ereport(ERROR,
@@ -956,9 +972,9 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	index->idxname = NULL;
 
 	/*
-	 * If the index is marked PRIMARY, it's certainly from a constraint;
-	 * else, if it's not marked UNIQUE, it certainly isn't; else, we have
-	 * to search pg_depend to see if there's an associated unique constraint.
+	 * If the index is marked PRIMARY, it's certainly from a constraint; else,
+	 * if it's not marked UNIQUE, it certainly isn't; else, we have to search
+	 * pg_depend to see if there's an associated unique constraint.
 	 */
 	if (index->primary)
 		index->isconstraint = true;
@@ -1068,10 +1084,10 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 		if (amrec->amcanorder)
 		{
 			/*
-			 * If it supports sort ordering, copy DESC and NULLS opts.
-			 * Don't set non-default settings unnecessarily, though,
-			 * so as to improve the chance of recognizing equivalence
-			 * to constraint indexes.
+			 * If it supports sort ordering, copy DESC and NULLS opts. Don't
+			 * set non-default settings unnecessarily, though, so as to
+			 * improve the chance of recognizing equivalence to constraint
+			 * indexes.
 			 */
 			if (opt & INDOPTION_DESC)
 			{
@@ -2172,6 +2188,7 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 				strcmp(index->accessMethod, priorindex->accessMethod) == 0)
 			{
 				priorindex->unique |= index->unique;
+
 				/*
 				 * If the prior index is as yet unnamed, and this one is
 				 * named, then transfer the name to the prior index. This
@@ -2547,7 +2564,9 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 		nameCache = parser_get_namecache(masterpstate);
 
 		/* Loop over all partition children */
-		children = find_inheritance_children(RelationGetRelid(rel));
+		/* GPDB_84_MERGE_FIXME: do we need another lock here, or did the above
+		 * heap_openrv() take care of it? */
+		children = find_inheritance_children(RelationGetRelid(rel), NoLock);
 
 		foreach(l, children)
 		{
@@ -2659,6 +2678,7 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 	if (stmt->whereClause)
 		stmt->whereClause = transformWhereClause(pstate,
 												 stmt->whereClause,
+												 EXPR_KIND_INDEX_PREDICATE,
 												 "WHERE");
 
 	/* take care of any index expressions */
@@ -2668,12 +2688,17 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 
 		if (ielem->expr)
 		{
-			ielem->expr = transformExpr(pstate, ielem->expr);
+			ielem->expr = transformExpr(pstate, ielem->expr,
+										EXPR_KIND_INDEX_EXPRESSION);
 
 			/*
-			 * We check only that the result type is legitimate; this is for
-			 * consistency with what transformWhereClause() checks for the
-			 * predicate.  DefineIndex() will make more checks.
+			 * transformExpr() should have already rejected subqueries,
+			 * aggregates, and window functions, based on the EXPR_KIND_ for
+			 * an index expression.
+			 *
+			 * Also reject expressions returning sets; this is for consistency
+			 * with what transformWhereClause() checks for the predicate.
+			 * DefineIndex() will make more checks.
 			 */
 			if (expression_returns_set(ielem->expr))
 				ereport(ERROR,
@@ -2790,23 +2815,13 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString,
 	/* take care of the where clause */
 	*whereClause = transformWhereClause(pstate,
 									  (Node *) copyObject(stmt->whereClause),
+										EXPR_KIND_WHERE,
 										"WHERE");
 
 	if (list_length(pstate->p_rtable) != 2)		/* naughty, naughty... */
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("rule WHERE condition cannot contain references to other relations")));
-
-	/* aggregates not allowed (but subselects are okay) */
-	if (pstate->p_hasAggs)
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-		   errmsg("cannot use aggregate function in rule WHERE condition")));
-
-	if (pstate->p_hasWindFuncs)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot use window function in rule WHERE condition")));
 
 	/*
 	 * 'instead nothing' rules with a qualification need a query rangetable so
@@ -3063,10 +3078,11 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 		switch (cmd->subtype)
 		{
 			case AT_AddColumn:
+			case AT_AddColumnToView:
 				{
 					ColumnDef  *def = (ColumnDef *) cmd->def;
 
-					Assert(IsA(cmd->def, ColumnDef));
+					Assert(IsA(def, ColumnDef));
 
 					/*
 					 * Adding a column with a primary key or unique constraint
@@ -3088,33 +3104,14 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 										 errmsg("cannot add column with unique constraint")));
 						}
 					}
-					transformColumnDefinition(pstate, &cxt,
-											  (ColumnDef *) cmd->def);
+					transformColumnDefinition(pstate, &cxt, def);
 
 					/*
 					 * If the column has a non-null default, we can't skip
 					 * validation of foreign keys.
 					 */
-					if (((ColumnDef *) cmd->def)->raw_default != NULL)
+					if (def->raw_default != NULL)
 						skipValidation = false;
-
-					newcmds = lappend(newcmds, cmd);
-
-					/*
-					 * Convert an ADD COLUMN ... NOT NULL constraint to a
-					 * separate command
-					 */
-					if (def->is_not_null)
-					{
-						/* Remove NOT NULL from AddColumn */
-						def->is_not_null = false;
-
-						/* Add as a separate AlterTableCmd */
-						newcmd = makeNode(AlterTableCmd);
-						newcmd->subtype = AT_SetNotNull;
-						newcmd->name = pstrdup(def->colname);
-						newcmds = lappend(newcmds, newcmd);
-					}
 
 					/*
 					 * All constraints are processed in other ways. Remove the
@@ -3122,6 +3119,7 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 					 */
 					def->constraints = NIL;
 
+					newcmds = lappend(newcmds, cmd);
 					break;
 				}
 			case AT_AddConstraint:
@@ -3129,7 +3127,6 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				/*
 				 * The original AddConstraint cmd node doesn't go to newcmds
 				 */
-
 				if (IsA(cmd->def, Constraint))
 					transformTableConstraint(pstate, &cxt,
 											 (Constraint *) cmd->def);
@@ -3158,11 +3155,8 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				/* CDB: Partitioned Tables */
             case AT_PartAlter:			/* Alter */
             case AT_PartAdd:			/* Add */
-            case AT_PartCoalesce:		/* Coalesce */
             case AT_PartDrop:			/* Drop */
             case AT_PartExchange:		/* Exchange */
-            case AT_PartMerge:			/* Merge */
-            case AT_PartModify:			/* Modify */
             case AT_PartRename:			/* Rename */
             case AT_PartSetTemplate:	/* Set Subpartition Template */
             case AT_PartSplit:			/* Split */
@@ -3618,6 +3612,7 @@ transformStorageEncodingClause(List *options)
 	 */
 	d = transformRelOptions(PointerGetDatum(NULL),
 									  list_concat(extra, options),
+									  NULL, NULL,
 									  true, false);
 	(void)heap_reloptions(RELKIND_RELATION, d, true);
 
@@ -4184,7 +4179,8 @@ transformAlterTable_all_PartitionStmt(
 				List *vallist = (List *)pid2->partiddef;
 				pid2->partiddef =
 						(Node *)transformExpressionList(
-								pstate, vallist);
+							pstate, vallist,
+							EXPR_KIND_PARTITION_EXPRESSION);
 			}
 
 			partDepth++;
@@ -4238,11 +4234,8 @@ transformAlterTable_all_PartitionStmt(
 	{
 		case AT_PartAdd:				/* Add */
 		case AT_PartSetTemplate:		/* Set Subpartn Template */
-		case AT_PartCoalesce:			/* Coalesce */
 		case AT_PartDrop:				/* Drop */
 		case AT_PartExchange:			/* Exchange */
-		case AT_PartMerge:				/* Merge */
-		case AT_PartModify:				/* Modify */
 		case AT_PartRename:				/* Rename */
 		case AT_PartTruncate:			/* Truncate */
 		case AT_PartSplit:				/* Split */
@@ -4253,7 +4246,8 @@ transformAlterTable_all_PartitionStmt(
 				List *vallist = (List *)pid->partiddef;
 				pid->partiddef =
 						(Node *)transformExpressionList(
-								pstate, vallist);
+							pstate, vallist,
+							EXPR_KIND_PARTITION_EXPRESSION);
 			}
 	break;
 		default:

@@ -6,7 +6,7 @@
 Greenplum hostcache file facilities.
 
 This Module contains some helper functions for mapping network
-interface names used in gp_configuration to a collapsed set
+interface names used in gp_segment_configuration to a collapsed set
 of hostnames.
 
 example:  sdw1-1, sdw1-2, sdw1-3, and sdw1-4 are all located
@@ -156,9 +156,10 @@ class GpInterfaceToHostNameCache:
 
 class GpHostCache:
 
-    def __init__(self, gparray, pool, skiplist=[], withMasters=False):
+    def __init__(self, gparray, pool, skiplist=[], withMasters=False, segs=None):
         self.gparray=gparray
         self.gphost_map={}        # hostname -> GpHost
+        self.segs = segs
 
         # these are any db's that should be skipped.
         skipmap={}
@@ -184,6 +185,9 @@ class GpHostCache:
             dblist = self.gparray.getDbList()
         else:
             dblist = self.gparray.getSegDbList()
+
+        if segs:
+            dblist = segs
 
         # build the interface->host mapping
         for db in dblist:

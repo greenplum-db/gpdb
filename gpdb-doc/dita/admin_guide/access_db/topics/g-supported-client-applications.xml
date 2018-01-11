@@ -10,15 +10,6 @@
         /> are provided with your Greenplum installation. The
           <codeph>psql</codeph> client application provides an interactive command-line interface to
         Greenplum Database. </li>
-<!--
-      <li id="io155276">
-        <xref href="g-pgadmin-iii-for-greenplum-database.xml#topic6"/> is an enhanced version of the
-        popular management tool pgAdmin III. Since version 1.10.0, the pgAdmin III client available
-        from PostgreSQL Tools includes support for Greenplum-specific
-        features. Installation packages are available for download from the <xref
-          href="https://www.pgadmin.org/download/" scope="external" format="html"> pgAdmin download
-          site </xref>.</li>
--->
       <li id="io141985">Using standard <xref href="g-database-application-interfaces.xml#topic12"/>,
         such as ODBC and JDBC, users can create their own client applications that interface to
         Greenplum Database.</li>

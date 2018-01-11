@@ -2,37 +2,17 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="nk110126">Security Configuration Guide</title>
+  <title id="nk110126">Greenplum Database Security Configuration Guide</title>
   <body>
-    <p>This guide describes how to secure a Greenplum Database system. The guide consists of the
-      following sections:</p>
-    <ul id="ul_tnm_vl3_34">
-      <li id="nk169273"><xref href="SecuringGPDB.xml#topic_iqr_ym2_jr"/> introduces Greenplum
-        Database security topics. </li>
-      <li><xref href="ports_and_protocols.xml#greenplum_database_ports_and_protocols"/> lists
-        network ports and protocols used within the Greenplum cluster. </li>
-      <li id="nk169420"><xref href="Authenticate.xml#topic_n5w_gtd_jr"/> describes the available
-        methods for authenticating Greenplum Database clients. </li>
-      <li id="nk169450"><xref href="Authorization.xml#topic_ivr_cs2_jr"/> describes how to restrict
-        access to database data at the user level by using roles and permissions.</li>
-      <li id="nk169480"><xref href="Auditing.xml#topic_ufw_zn2_jr"/> describes Greenplum Database
-        events that are logged and should be monitored to detect security threats. </li>
-      <li id="nk169507"><xref href="Encryption.xml#topic_th5_5bf_jr"/> describes how to encrypt data
-        in the database or in transit over the network, to protect from evesdroppers or
-        man-in-the-middle attacks. </li>
-      <li><xref href="kerberos-hdfs.xml#topic_lhr_yrf_qr"/> provides steps for configuring Greenplum
-        Database to access external tables in a Hadoop cluster secured with Kerberos.</li>
-      <li><xref href="BestPractices.xml#topic_nyc_mdf_jr"/> provides steps for securing Greenplum
-        Database hosts and the cluster. </li>
-    </ul>
-    <p>This guide assumes knowledge of Linux/UNIX system administration and database management
-      systems. Familiarity with structured query language (SQL) is helpful.</p>
+    <p>This guide describes how to secure a Greenplum Database system. The guide assumes knowledge
+      of Linux/UNIX system administration and database management systems. Familiarity with
+      structured query language (SQL) is helpful.</p>
     <p>Because Greenplum Database is based on PostgreSQL8.3.23, this guide assumes some familiarity
       with PostgreSQL. References to <xref
         href="http://www.postgresql.org/docs/8.3/static/index.html" scope="external" format="html"
           ><ph>PostgreSQL documentation</ph></xref> are provided throughout this guide for features
       that are similar to those in Greenplum Database.</p>
-    <p>This guide provides information for system administrators responsible for administering a
+    <p>This information is intended for system administrators responsible for administering a
       Greenplum Database system.</p>
   </body>
 </topic>

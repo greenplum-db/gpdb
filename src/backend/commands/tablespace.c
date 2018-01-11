@@ -32,13 +32,14 @@
  * and munge the system catalogs of the new database.
  *
  *
- * Copyright (c) 2005-2010 Greenplum Inc
+ * Portions Copyright (c) 2005-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.53 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.61 2009/01/22 20:16:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,7 +52,6 @@
 #include <sys/stat.h>
 
 #include "access/heapam.h"
-#include "catalog/heap.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
@@ -73,12 +73,15 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
+#include "utils/tqual.h"
 
+#include "access/persistentfilesysobjname.h"
+#include "catalog/heap.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
-#include "access/persistentfilesysobjname.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"
@@ -204,17 +207,16 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	 */
 	rel = heap_open(TableSpaceRelationId, RowExclusiveLock);
 
-	MemSet(nulls, true, sizeof(nulls));
+	MemSet(nulls, false, sizeof(nulls));
 
 	values[Anum_pg_tablespace_spcname - 1] =
 		DirectFunctionCall1(namein, CStringGetDatum(stmt->tablespacename));
 	values[Anum_pg_tablespace_spcowner - 1] =
 		ObjectIdGetDatum(ownerId);
+	nulls[Anum_pg_tablespace_spclocation - 1] = true;
 	values[Anum_pg_tablespace_spcfsoid - 1] =
 		ObjectIdGetDatum(filespaceoid);
-	nulls[Anum_pg_tablespace_spcname - 1] = false;
-	nulls[Anum_pg_tablespace_spcowner - 1] = false;
-	nulls[Anum_pg_tablespace_spcfsoid - 1] = false;
+	nulls[Anum_pg_tablespace_spcacl - 1] = true;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
@@ -252,7 +254,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	 * (the emptiness check above will fail), and to label tablespace
 	 * directories by PG version.
 	 */
-	// set_short_version(sublocation);
+	/* set_short_version(sublocation); */
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -267,9 +269,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 		MetaTrackAddObject(TableSpaceRelationId,
 						   tablespaceoid,
 						   GetUserId(),
-						   "CREATE", "TABLESPACE"
-				);
-
+						   "CREATE", "TABLESPACE");
 	}
 
 	/*
@@ -287,9 +287,9 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
  * Be careful to check that the tablespace is empty.
  */
 void
-RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
+DropTableSpace(DropTableSpaceStmt *stmt)
 {
-	char	   *tablespacename;
+	char	   *tablespacename = stmt->tablespacename;
 	HeapScanDesc scandesc;
 	Relation	rel;
 	HeapTuple	tuple;
@@ -301,23 +301,6 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	PersistentFileSysState persistentState;
 	ItemPointerData persistentTid;
 	int64		persistentSerialNum;
-
-	/*
-	 * General DROP (object) syntax allows fully qualified names, but
-	 * tablespaces are global objects that do not live in schemas, so
-	 * it is a syntax error if a fully qualified name was given.
-	 */
-	if (list_length(names) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("tablespace name may not be qualified")));
-	tablespacename = strVal(linitial(names));
-
-	/* Disallow CASCADE */
-	if (behavior == DROP_CASCADE)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("syntax at or near \"cascade\"")));
 
 	/*
 	 * Find the target tuple
@@ -333,7 +316,7 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 
 	if (!HeapTupleIsValid(tuple))
 	{
-		if (!missing_ok)
+		if (!stmt->missing_ok)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -391,7 +374,7 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	 * If shared dependencies are added between filespace <=> tablespace
 	 * they will be deleted as well.
 	 */
-	deleteSharedDependencyRecordsFor(TableSpaceRelationId, tablespaceoid);
+	deleteSharedDependencyRecordsFor(TableSpaceRelationId, tablespaceoid, 0);
 
 	/* MPP-6929: metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -480,7 +463,18 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	/* We keep the lock on the row in pg_tablespace until commit */
 	heap_close(rel, NoLock);
 
-	/* Note: no need for dispatch, that is handled in utility.c */
+	/*
+	 * If we are the QD, dispatch this DROP command to all the QEs
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
+	}
 	return;
 }
 
@@ -632,9 +626,7 @@ remove_tablespace_directories(Oid tablespaceoid, bool redo, char *phys)
 	/* Now we have removed all of our linkage to the physical
 	 * location; remove the per-segment location that we built at
 	 * CreateTablespace() time */
- 	tempstr = palloc(MAXPGPATH);
-
-	sprintf(tempstr,"%s/seg%d",phys,Gp_segment);
+	tempstr = psprintf("%s/seg%d", phys, Gp_segment);
 
 	if (rmdir(tempstr) < 0)
 		ereport(ERROR,
@@ -1313,6 +1305,9 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 
+	/* Backup blocks are not used in tblspc records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
+
 	if (info == XLOG_TBLSPC_CREATE)
 	{
 		xl_tblspc_create_rec *xlrec = (xl_tblspc_create_rec *) XLogRecGetData(record);
@@ -1346,9 +1341,7 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 						 location)));
 
 		/* Create segment subdirectory. */
-	 	sublocation = palloc(MAXPGPATH);
-
-		sprintf(sublocation,"%s/seg%d",location,Gp_segment);
+		sublocation = psprintf("%s/seg%d", location, Gp_segment);
 
 		if (mkdir(sublocation, 0700) != 0)
 			ereport(ERROR,

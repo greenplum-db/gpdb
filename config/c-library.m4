@@ -1,5 +1,5 @@
 # Macros that test various C library quirks
-# config/c-library.m4
+# $PostgreSQL: pgsql/config/c-library.m4,v 1.33 2008/08/21 13:53:28 petere Exp $
 
 
 # PGAC_VAR_INT_TIMEZONE
@@ -62,8 +62,8 @@ AC_DEFUN([PGAC_FUNC_GETTIMEOFDAY_1ARG],
 [AC_CACHE_CHECK(whether gettimeofday takes only one argument,
 pgac_cv_func_gettimeofday_1arg,
 [AC_TRY_COMPILE([#include <sys/time.h>],
-[struct timeval *tp;
-struct timezone *tzp;
+[struct timeval *tp = 0;
+struct timezone *tzp = 0;
 gettimeofday(tp,tzp);],
 [pgac_cv_func_gettimeofday_1arg=no],
 [pgac_cv_func_gettimeofday_1arg=yes])])
@@ -86,11 +86,11 @@ AC_DEFUN([PGAC_FUNC_GETPWUID_R_5ARG],
 pgac_cv_func_getpwuid_r_5arg,
 [AC_TRY_COMPILE([#include <sys/types.h>
 #include <pwd.h>],
-[uid_t uid;
-struct passwd *space;
-char *buf;
-size_t bufsize;
-struct passwd **result;
+[uid_t uid = 0;
+struct passwd *space = 0;
+char *buf = 0;
+size_t bufsize = 0;
+struct passwd **result = 0;
 getpwuid_r(uid, space, buf, bufsize, result);],
 [pgac_cv_func_getpwuid_r_5arg=yes],
 [pgac_cv_func_getpwuid_r_5arg=no])])
@@ -299,30 +299,27 @@ AC_MSG_RESULT([$pgac_cv_printf_arg_control])
 ])# PGAC_FUNC_PRINTF_ARG_CONTROL
 
 
-# PGAC_TYPE_LOCALE_T
-# ------------------
-# Check for the locale_t type and find the right header file.  Mac OS
-# X needs xlocale.h; standard is locale.h, but glibc also has an
-# xlocale.h file that we should not use.
-#
-AC_DEFUN([PGAC_TYPE_LOCALE_T],
-[AC_CACHE_CHECK([for locale_t], pgac_cv_type_locale_t,
-[AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-[#include <locale.h>
-locale_t x;],
-[])],
-[pgac_cv_type_locale_t=yes],
-[AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-[#include <xlocale.h>
-locale_t x;],
-[])],
-[pgac_cv_type_locale_t='yes (in xlocale.h)'],
-[pgac_cv_type_locale_t=no])])])
-if test "$pgac_cv_type_locale_t" != no; then
-  AC_DEFINE(HAVE_LOCALE_T, 1,
-            [Define to 1 if the system has the type `locale_t'.])
+# backport from Autoconf 2.61a
+# http://git.savannah.gnu.org/gitweb/?p=autoconf.git;a=commitdiff;h=f0c325537a22105536ac8c4e88656e50f9946486
+
+# AC_FUNC_FSEEKO
+# --------------
+AN_FUNCTION([ftello], [AC_FUNC_FSEEKO])
+AN_FUNCTION([fseeko], [AC_FUNC_FSEEKO])
+AC_DEFUN([AC_FUNC_FSEEKO],
+[_AC_SYS_LARGEFILE_MACRO_VALUE(_LARGEFILE_SOURCE, 1,
+   [ac_cv_sys_largefile_source],
+   [Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2).],
+   [[#include <sys/types.h> /* for off_t */
+     #include <stdio.h>]],
+   [[int (*fp) (FILE *, off_t, int) = fseeko;
+     return fseeko (stdin, 0, 0) && fp (stdin, 0, 0);]])
+
+# We used to try defining _XOPEN_SOURCE=500 too, to work around a bug
+# in glibc 2.1.3, but that breaks too many other things.
+# If you want fseeko and ftello with glibc, upgrade to a fixed glibc.
+if test $ac_cv_sys_largefile_source != unknown; then
+  AC_DEFINE(HAVE_FSEEKO, 1,
+    [Define to 1 if fseeko (and presumably ftello) exists and is declared.])
 fi
-if test "$pgac_cv_type_locale_t" = 'yes (in xlocale.h)'; then
-  AC_DEFINE(LOCALE_T_IN_XLOCALE, 1,
-            [Define to 1 if `locale_t' requires <xlocale.h>.])
-fi])])# PGAC_HEADER_XLOCALE
+])# AC_FUNC_FSEEKO

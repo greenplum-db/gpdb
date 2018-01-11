@@ -62,14 +62,14 @@ INSERT INTO clstr_tst (b, c, d) VALUES (6, 'seis', repeat('xyzzy', 100000));
 
 CLUSTER clstr_tst_c ON clstr_tst;
 
-SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY 1,2,3,4;
+SELECT a,b,c,substring(d for 30), length(d) from clstr_tst;
 SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY a;
 SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY b;
 SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY c;
 
 -- Verify that inheritance link still works
 INSERT INTO clstr_tst_inh VALUES (0, 100, 'in child table');
-SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY 1;
+SELECT a,b,c,substring(d for 30), length(d) from clstr_tst;
 
 -- Verify that foreign key link still works
 INSERT INTO clstr_tst (b, c) VALUES (1111, 'this should fail');
@@ -127,7 +127,7 @@ CLUSTER clstr_1_pkey ON clstr_1;
 CLUSTER clstr_2 USING clstr_2_pkey;
 SELECT * FROM clstr_1 UNION ALL
   SELECT * FROM clstr_2 UNION ALL
-  SELECT * FROM clstr_3 ORDER BY 1;
+  SELECT * FROM clstr_3;
 
 -- revert to the original state
 DELETE FROM clstr_1;
@@ -146,14 +146,14 @@ SET SESSION AUTHORIZATION clstr_user;
 CLUSTER;
 SELECT * FROM clstr_1 UNION ALL
   SELECT * FROM clstr_2 UNION ALL
-  SELECT * FROM clstr_3 ORDER BY 1;
+  SELECT * FROM clstr_3;
 
 -- cluster a single table using the indisclustered bit previously set
 DELETE FROM clstr_1;
 INSERT INTO clstr_1 VALUES (2);
 INSERT INTO clstr_1 VALUES (1);
 CLUSTER clstr_1;
-SELECT * FROM clstr_1 ORDER BY 1;
+SELECT * FROM clstr_1;
 
 -- Test MVCC-safety of cluster. There isn't much we can do to verify the
 -- results with a single backend...

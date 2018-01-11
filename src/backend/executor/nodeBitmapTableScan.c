@@ -15,11 +15,13 @@
  * With SnapshotNow we might return a tuple that doesn't meet the required
  * index qual conditions.
  *
- *
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeBitmapTableScan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -80,8 +82,6 @@ ExecInitBitmapTableScan(BitmapTableScan *node, EState *estate, int eflags)
 	 */
 	outerPlanState(state) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapTableScan((Plan *)node, &state->ss.ps.gpmon_pkt, estate);
-
 	return state;
 }
 
@@ -96,12 +96,7 @@ ExecBitmapTableScan(BitmapTableScanState *node)
 	TupleTableSlot *slot = DynamicScan_GetNextTuple(scanState, BitmapTableScanBeginPartition,
 			BitmapTableScanEndPartition, BitmapTableScanReScanPartition, BitmapTableScanFetchNext);
 
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromBitmapTableScanState(node));
-		CheckSendPlanStateGpmonPkt(&scanState->ps);
-	}
-	else if (!scanState->ps.delayEagerFree)
+	if (TupIsNull(slot) && !scanState->ps.delayEagerFree)
 	{
 		ExecEagerFreeBitmapTableScan(node);
 	}
@@ -120,7 +115,6 @@ ExecBitmapTableReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 

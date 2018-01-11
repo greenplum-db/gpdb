@@ -27,7 +27,7 @@ function configure() {
       # Perl on SLES we must also skip GPMapreduce as it uses pl/perl.
       if [ "$TEST_OS" == "sles" ]; then
         ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --disable-orca ${CONFIGURE_FLAGS}
-	  else
+      else
         ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --disable-orca ${CONFIGURE_FLAGS}
       fi
   popd
@@ -40,18 +40,13 @@ function make_cluster() {
   # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
-  workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
   su gpadmin -c "make create-demo-cluster"
   popd
 }
 
-workaround_before_concourse_stops_stripping_suid_bits() {
-  chmod u+s /bin/ping
-}
-
 function run_test() {
-	# is this particular python version giving us trouble?
+  # is this particular python version giving us trouble?
   ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel6_x86_64/python-2.7.12" /opt
-  su - gpadmin -c "bash /opt/run_test.sh $(pwd)"
+  su gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }

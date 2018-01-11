@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.184.2.2 2009/04/04 04:53:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.201 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,8 +57,8 @@ typedef struct
 
 typedef struct
 {
-	TimestampTz	current;
-	TimestampTz	finish;
+	TimestampTz current;
+	TimestampTz finish;
 	Interval	step;
 	int			step_sign;
 } generate_series_timestamptz_fctx;
@@ -988,7 +988,7 @@ interval_in(PG_FUNCTION_ARGS)
 
 	/* if those functions think it's a bad format, try ISO8601 style */
 	if (dterr == DTERR_BAD_FORMAT)
-	    dterr = DecodeISO8601Interval(str,
+		dterr = DecodeISO8601Interval(str,
 									  &dtype, tm, &fsec);
 
 	if (dterr != 0)
@@ -1107,7 +1107,7 @@ intervaltypmodin(PG_FUNCTION_ARGS)
 	tl = ArrayGetIntegerTypmods(ta, &n);
 
 	/*
-	 * tl[0] - interval range (fields bitmask)  tl[1] - precision (optional)
+	 * tl[0] - interval range (fields bitmask)	tl[1] - precision (optional)
 	 *
 	 * Note we must validate tl[0] even though it's normally guaranteed
 	 * correct by the grammar --- consider SELECT 'foo'::"interval"(1000).
@@ -1333,9 +1333,9 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 		 *
 		 * Note: before PG 8.4 we interpreted a limited set of fields as
 		 * actually causing a "modulo" operation on a given value, potentially
-		 * losing high-order as well as low-order information.  But there is
+		 * losing high-order as well as low-order information.	But there is
 		 * no support for such behavior in the standard, and it seems fairly
-		 * undesirable on data consistency grounds anyway.  Now we only
+		 * undesirable on data consistency grounds anyway.	Now we only
 		 * perform truncation or rounding of low-order fields.
 		 */
 		if (range == INTERVAL_FULL_RANGE)
@@ -1494,7 +1494,7 @@ EncodeSpecialTimestamp(Timestamp dt, char *str)
 		strcpy(str, EARLY);
 	else if (TIMESTAMP_IS_NOEND(dt))
 		strcpy(str, LATE);
-	else						/* shouldn't happen */
+	else	/* shouldn't happen */
 		elog(ERROR, "invalid argument for EncodeSpecialTimestamp");
 }
 
@@ -1518,13 +1518,6 @@ clock_timestamp(PG_FUNCTION_ARGS)
 
 Datum
 pg_postmaster_start_time(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_TIMESTAMPTZ(PgStartTime);
-}
-
-/* Old version */
-Datum
-pgsql_postmaster_start_time(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_TIMESTAMPTZ(PgStartTime);
 }
@@ -2716,17 +2709,12 @@ interval_hash(PG_FUNCTION_ARGS)
 {
 	Interval   *interval = PG_GETARG_INTERVAL_P(0);
 	TimeOffset	span = interval_cmp_value(interval);
-	uint32		thash;
 
 #ifdef HAVE_INT64_TIMESTAMP
-	thash = DatumGetUInt32(DirectFunctionCall1(hashint8,
-											   Int64GetDatumFast(span)));
+	return DirectFunctionCall1(hashint8, Int64GetDatumFast(span));
 #else
-	thash = DatumGetUInt32(DirectFunctionCall1(hashfloat8,
-											   Float8GetDatumFast(span)));
+	return DirectFunctionCall1(hashfloat8, Float8GetDatumFast(span));
 #endif
-
-	PG_RETURN_UINT32(thash);
 }
 
 /* overlaps_timestamp() --- implements the SQL92 OVERLAPS operator.
@@ -3963,7 +3951,7 @@ timestamptz_li_value(float8 f, TimestampTz y0, TimestampTz y1)
 Datum
 timestamp_trunc(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	Timestamp	timestamp = PG_GETARG_TIMESTAMP(1);
 	Timestamp	result;
 	int			type,
@@ -3976,8 +3964,8 @@ timestamp_trunc(PG_FUNCTION_ARGS)
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		PG_RETURN_TIMESTAMP(timestamp);
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -4095,7 +4083,7 @@ timestamp_trunc(PG_FUNCTION_ARGS)
 Datum
 timestamptz_trunc(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	TimestampTz timestamp = PG_GETARG_TIMESTAMPTZ(1);
 	TimestampTz result;
 	int			tz = 0;
@@ -4111,8 +4099,8 @@ timestamptz_trunc(PG_FUNCTION_ARGS)
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		PG_RETURN_TIMESTAMPTZ(timestamp);
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -4253,7 +4241,7 @@ timestamptz_trunc(PG_FUNCTION_ARGS)
 Datum
 interval_trunc(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	Interval   *interval = PG_GETARG_INTERVAL_P(1);
 	Interval   *result;
 	int			type,
@@ -4265,8 +4253,8 @@ interval_trunc(PG_FUNCTION_ARGS)
 
 	result = (Interval *) palloc(sizeof(Interval));
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -4517,7 +4505,7 @@ date2isoyearday(int year, int mon, int mday)
 Datum
 timestamp_part(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	Timestamp	timestamp = PG_GETARG_TIMESTAMP(1);
 	float8		result;
 	int			type,
@@ -4533,8 +4521,8 @@ timestamp_part(PG_FUNCTION_ARGS)
 		PG_RETURN_FLOAT8(result);
 	}
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -4745,7 +4733,7 @@ timestamp_part(PG_FUNCTION_ARGS)
 Datum
 timestamptz_part(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	TimestampTz timestamp = PG_GETARG_TIMESTAMPTZ(1);
 	float8		result;
 	int			tz = 0;
@@ -4764,8 +4752,8 @@ timestamptz_part(PG_FUNCTION_ARGS)
 		PG_RETURN_FLOAT8(result);
 	}
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -4960,7 +4948,7 @@ timestamptz_part(PG_FUNCTION_ARGS)
 Datum
 interval_part(PG_FUNCTION_ARGS)
 {
-	text	   *units = PG_GETARG_TEXT_P(0);
+	text	   *units = PG_GETARG_TEXT_PP(0);
 	Interval   *interval = PG_GETARG_INTERVAL_P(1);
 	float8		result;
 	int			type,
@@ -4970,8 +4958,8 @@ interval_part(PG_FUNCTION_ARGS)
 	struct pg_tm tt,
 			   *tm = &tt;
 
-	lowunits = downcase_truncate_identifier(VARDATA(units),
-											VARSIZE(units) - VARHDRSZ,
+	lowunits = downcase_truncate_identifier(VARDATA_ANY(units),
+											VARSIZE_ANY_EXHDR(units),
 											false);
 
 	type = DecodeUnits(0, lowunits, &val);
@@ -5097,7 +5085,7 @@ interval_part(PG_FUNCTION_ARGS)
 Datum
 timestamp_zone(PG_FUNCTION_ARGS)
 {
-	text	   *zone = PG_GETARG_TEXT_P(0);
+	text	   *zone = PG_GETARG_TEXT_PP(0);
 	Timestamp	timestamp = PG_GETARG_TIMESTAMP(1);
 	TimestampTz result;
 	int			tz;
@@ -5111,7 +5099,7 @@ timestamp_zone(PG_FUNCTION_ARGS)
 		PG_RETURN_TIMESTAMPTZ(timestamp);
 
 	/*
-	 * Look up the requested timezone.  First we look in the date token table
+	 * Look up the requested timezone.	First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's
@@ -5155,7 +5143,7 @@ timestamp_zone(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("time zone \"%s\" not recognized", tzname)));
-			result = 0;				/* keep compiler quiet */
+			result = 0;			/* keep compiler quiet */
 		}
 	}
 
@@ -5271,7 +5259,7 @@ timestamptz_timestamp(PG_FUNCTION_ARGS)
 Datum
 timestamptz_zone(PG_FUNCTION_ARGS)
 {
-	text	   *zone = PG_GETARG_TEXT_P(0);
+	text	   *zone = PG_GETARG_TEXT_PP(0);
 	TimestampTz timestamp = PG_GETARG_TIMESTAMPTZ(1);
 	Timestamp	result;
 	int			tz;
@@ -5285,7 +5273,7 @@ timestamptz_zone(PG_FUNCTION_ARGS)
 		PG_RETURN_TIMESTAMP(timestamp);
 
 	/*
-	 * Look up the requested timezone.  First we look in the date token table
+	 * Look up the requested timezone.	First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's
@@ -5328,7 +5316,7 @@ timestamptz_zone(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("time zone \"%s\" not recognized", tzname)));
-			result = 0;				/* keep compiler quiet */
+			result = 0;			/* keep compiler quiet */
 		}
 	}
 
@@ -5376,16 +5364,16 @@ generate_series_timestamp(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
 	generate_series_timestamp_fctx *fctx;
-	Timestamp result;
+	Timestamp	result;
 
 	/* stuff done only on the first call of the function */
 	if (SRF_IS_FIRSTCALL())
 	{
-		Timestamp start = PG_GETARG_TIMESTAMP(0);
-		Timestamp finish = PG_GETARG_TIMESTAMP(1);
-		Interval *step = PG_GETARG_INTERVAL_P(2);
+		Timestamp	start = PG_GETARG_TIMESTAMP(0);
+		Timestamp	finish = PG_GETARG_TIMESTAMP(1);
+		Interval   *step = PG_GETARG_INTERVAL_P(2);
 		MemoryContext oldcontext;
-		Interval interval_zero;
+		Interval	interval_zero;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -5435,9 +5423,9 @@ generate_series_timestamp(PG_FUNCTION_ARGS)
 	{
 		/* increment current in preparation for next iteration */
 		fctx->current = DatumGetTimestamp(
-			DirectFunctionCall2(timestamp_pl_interval,
-								TimestampGetDatum(fctx->current),
-								PointerGetDatum(&fctx->step)));
+								   DirectFunctionCall2(timestamp_pl_interval,
+											TimestampGetDatum(fctx->current),
+											  PointerGetDatum(&fctx->step)));
 
 		/* do when there is more left to send */
 		SRF_RETURN_NEXT(funcctx, TimestampGetDatum(result));
@@ -5464,9 +5452,9 @@ generate_series_timestamptz(PG_FUNCTION_ARGS)
 	{
 		TimestampTz start = PG_GETARG_TIMESTAMPTZ(0);
 		TimestampTz finish = PG_GETARG_TIMESTAMPTZ(1);
-		Interval *step = PG_GETARG_INTERVAL_P(2);
+		Interval   *step = PG_GETARG_INTERVAL_P(2);
 		MemoryContext oldcontext;
-		Interval interval_zero;
+		Interval	interval_zero;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -5516,9 +5504,9 @@ generate_series_timestamptz(PG_FUNCTION_ARGS)
 	{
 		/* increment current in preparation for next iteration */
 		fctx->current = DatumGetTimestampTz(
-			DirectFunctionCall2(timestamptz_pl_interval,
-								TimestampTzGetDatum(fctx->current),
-								PointerGetDatum(&fctx->step)));
+								 DirectFunctionCall2(timestamptz_pl_interval,
+										  TimestampTzGetDatum(fctx->current),
+											  PointerGetDatum(&fctx->step)));
 
 		/* do when there is more left to send */
 		SRF_RETURN_NEXT(funcctx, TimestampTzGetDatum(result));

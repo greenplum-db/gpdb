@@ -18,7 +18,6 @@ OBJS = createplan.o initsplan.o planagg.o planmain.o planner.o \
 	setrefs.o subselect.o \
 	plangroupext.o \
 	planshare.o \
-	planwindow.o \
 	planpartition.o \
 	transform.o
 

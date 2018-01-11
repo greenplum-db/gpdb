@@ -171,67 +171,67 @@ insert into rtest_t3 values (5, 35);
 -- insert values
 insert into rtest_v1 values (1, 11);
 insert into rtest_v1 values (2, 12);
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 
 -- delete with constant expression
 delete from rtest_v1 where a = 1;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 insert into rtest_v1 values (1, 11);
 delete from rtest_v1 where b = 12;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 insert into rtest_v1 values (2, 12);
 insert into rtest_v1 values (2, 13);
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 ** Remember the delete rule on rtest_v1: It says
 ** DO INSTEAD DELETE FROM rtest_t1 WHERE a = old.a
 ** So this time both rows with a = 2 must get deleted
 \p
 \r
 delete from rtest_v1 where b = 12;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 delete from rtest_v1;
 
 -- insert select
 insert into rtest_v1 select * from rtest_t2;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 delete from rtest_v1;
 
 -- same with swapped targetlist
 insert into rtest_v1 (b, a) select b, a from rtest_t2;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 
 -- now with only one target attribute
 insert into rtest_v1 (a) select a from rtest_t3;
-select * from rtest_v1 ORDER BY 1,2;
-select * from rtest_v1 where b isnull ORDER BY 1,2;
+select * from rtest_v1;
+select * from rtest_v1 where b isnull;
 
 -- let attribute a differ (must be done on rtest_t1 - see above)
 update rtest_t1 set a = a + 10 where b isnull;
 delete from rtest_v1 where b isnull;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 
 -- now updates with constant expression
 update rtest_v1 set b = 42 where a = 2;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 update rtest_v1 set b = 99 where b = 42;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 update rtest_v1 set b = 88 where b < 50;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 delete from rtest_v1;
 insert into rtest_v1 select rtest_t2.a, rtest_t3.b
     from rtest_t2, rtest_t3
     where rtest_t2.a = rtest_t3.a;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 
 -- updates in a mergejoin
 update rtest_v1 set b = rtest_t2.b from rtest_t2 where rtest_v1.a = rtest_t2.a;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 insert into rtest_v1 select * from rtest_t3;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 update rtest_t1 set a = a + 10 where b > 30;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 update rtest_v1 set a = rtest_t3.a + 20 from rtest_t3 where rtest_v1.b = rtest_t3.b;
-select * from rtest_v1 ORDER BY 1,2;
+select * from rtest_v1;
 
 --
 -- Test for constraint updates/deletes
@@ -254,8 +254,8 @@ insert into rtest_admin values ('bm', 'neptun');
 
 update rtest_system set sysname = 'pluto' where sysname = 'neptun';
 
-select * from rtest_interface ORDER BY 1,2;
-select * from rtest_admin ORDER BY 1,2;
+select * from rtest_interface;
+select * from rtest_admin;
 
 update rtest_person set pname = 'jwieck' where pdesc = 'Jan Wieck';
 
@@ -267,15 +267,15 @@ select * from rtest_admin order by pname, sysname;
 
 delete from rtest_system where sysname = 'orion';
 
-select * from rtest_interface ORDER BY 1,2;
-select * from rtest_admin ORDER BY 1,2;
+select * from rtest_interface;
+select * from rtest_admin;
 
 --
 -- Rule qualification test
 --
-insert into rtest_emp values ('wiech', '5000.00');
+insert into rtest_emp values ('wiecc', '5000.00');
 insert into rtest_emp values ('gates', '80000.00');
-update rtest_emp set ename = 'wiecx' where ename = 'wiech';
+update rtest_emp set ename = 'wiecx' where ename = 'wiecc';
 update rtest_emp set ename = 'wieck', salary = '6000.00' where ename = 'wiecx';
 update rtest_emp set salary = '7000.00' where ename = 'wieck';
 delete from rtest_emp where ename = 'gates';
@@ -306,11 +306,11 @@ insert into rtest_t4 values (28, 'Record should go to rtest_t4 and t8');
 insert into rtest_t4 values (30, 'Record should go to rtest_t4');
 insert into rtest_t4 values (40, 'Record should go to rtest_t4');
 
-select * from rtest_t4 ORDER BY 1,2;
-select * from rtest_t5 ORDER BY 1,2;
-select * from rtest_t6 ORDER BY 1,2;
-select * from rtest_t7 ORDER BY 1,2;
-select * from rtest_t8 ORDER BY 1,2;
+select * from rtest_t4;
+select * from rtest_t5;
+select * from rtest_t6;
+select * from rtest_t7;
+select * from rtest_t8;
 
 delete from rtest_t4;
 delete from rtest_t5;
@@ -331,33 +331,33 @@ insert into rtest_t9 values (40, 'Record should go to rtest_t4');
 
 insert into rtest_t4 select * from rtest_t9 where a < 20;
 
-select * from rtest_t4 ORDER BY 1,2;
-select * from rtest_t5 ORDER BY 1,2;
-select * from rtest_t6 ORDER BY 1,2;
-select * from rtest_t7 ORDER BY 1,2;
-select * from rtest_t8 ORDER BY 1,2;
+select * from rtest_t4;
+select * from rtest_t5;
+select * from rtest_t6;
+select * from rtest_t7;
+select * from rtest_t8;
 
 insert into rtest_t4 select * from rtest_t9 where b ~ 'and t8';
 
-select * from rtest_t4 ORDER BY 1,2;
-select * from rtest_t5 ORDER BY 1,2;
-select * from rtest_t6 ORDER BY 1,2;
-select * from rtest_t7 ORDER BY 1,2;
-select * from rtest_t8 ORDER BY 1,2;
+select * from rtest_t4;
+select * from rtest_t5;
+select * from rtest_t6;
+select * from rtest_t7;
+select * from rtest_t8;
 
 insert into rtest_t4 select a + 1, b from rtest_t9 where a in (20, 30, 40);
 
-select * from rtest_t4 ORDER BY 1,2;
-select * from rtest_t5 ORDER BY 1,2;
-select * from rtest_t6 ORDER BY 1,2;
-select * from rtest_t7 ORDER BY 1,2;
-select * from rtest_t8 ORDER BY 1,2;
+select * from rtest_t4;
+select * from rtest_t5;
+select * from rtest_t6;
+select * from rtest_t7;
+select * from rtest_t8;
 
 --
 -- Check that the ordering of rules fired is correct
 --
 insert into rtest_order1 values (1);
-select * from rtest_order2 ORDER BY 1;
+select * from rtest_order2;
 
 --
 -- Check if instead nothing w/without qualification works
@@ -374,15 +374,15 @@ insert into rtest_nothn1 values (40, 'want this');
 insert into rtest_nothn1 values (50, 'want this');
 insert into rtest_nothn1 values (60, 'want this');
 
-select * from rtest_nothn1 ORDER BY 1,2;
+select * from rtest_nothn1;
 
 insert into rtest_nothn2 values (10, 'too small');
 insert into rtest_nothn2 values (50, 'too small');
 insert into rtest_nothn2 values (100, 'OK');
 insert into rtest_nothn2 values (200, 'OK');
 
-select * from rtest_nothn2 ORDER BY 1,2;
-select * from rtest_nothn3 ORDER BY 1,2
+select * from rtest_nothn2;
+select * from rtest_nothn3;
 
 delete from rtest_nothn1;
 delete from rtest_nothn2;
@@ -402,7 +402,7 @@ insert into rtest_nothn4 values (60, 'want this');
 
 insert into rtest_nothn1 select * from rtest_nothn4;
 
-select * from rtest_nothn1 ORDER BY 1,2;
+select * from rtest_nothn1;
 
 delete from rtest_nothn4;
 
@@ -413,8 +413,8 @@ insert into rtest_nothn4 values (200, 'OK');
 
 insert into rtest_nothn2 select * from rtest_nothn4;
 
-select * from rtest_nothn2 ORDER BY 1,2;
-select * from rtest_nothn3 ORDER BY 1,2;
+select * from rtest_nothn2;
+select * from rtest_nothn3;
 
 create table rtest_view1 (a int4, b text, v bool);
 create table rtest_view2 (a int4);
@@ -431,7 +431,7 @@ create view rtest_vview4 as select X.a, X.b, count(Y.a) as refcount
 	group by X.a, X.b;
 create function rtest_viewfunc1(int4) returns int4 as
 	'select count(*)::int4 from rtest_view2 where a = $1'
-	language sql READS SQL DATA;
+	language sql;
 create view rtest_vview5 as select a, b, rtest_viewfunc1(a) as refcount
 	from rtest_view1;
 
@@ -453,22 +453,22 @@ insert into rtest_view2 values (7);
 insert into rtest_view2 values (7);
 insert into rtest_view2 values (7);
 
-select * from rtest_vview1 ORDER BY 1,2;
+select * from rtest_vview1;
 select * from rtest_vview2 ORDER BY 1;
 select * from rtest_vview3 ORDER BY 1;
 select * from rtest_vview4 order by a, b;
-select * from rtest_vview5 ORDER BY 1,2;
+select * from rtest_vview5;
 
 insert into rtest_view3 select * from rtest_vview1 where a < 7;
-select * from rtest_view3 ORDER BY 1,2;
+select * from rtest_view3;
 delete from rtest_view3;
 
 insert into rtest_view3 select * from rtest_vview2 where a != 5 and b !~ '2';
-select * from rtest_view3 ORDER BY 1,2;
+select * from rtest_view3;
 delete from rtest_view3;
 
 insert into rtest_view3 select * from rtest_vview3;
-select * from rtest_view3 ORDER BY 1,2;
+select * from rtest_view3;
 delete from rtest_view3;
 
 insert into rtest_view4 select * from rtest_vview4 where 3 > refcount;
@@ -476,7 +476,7 @@ select * from rtest_view4 order by a, b;
 delete from rtest_view4;
 
 insert into rtest_view4 select * from rtest_vview5 where a > 2 and refcount = 0;
-select * from rtest_view4 ORDER BY 1,2;
+select * from rtest_view4;
 delete from rtest_view4;
 --
 -- Test for computations in views
@@ -617,7 +617,7 @@ SELECT * FROM shoe_ready WHERE total_avail >= 2 ORDER BY 1;
 
 UPDATE shoelace_data SET sl_avail = 6 WHERE  sl_name = 'sl7';
 
-SELECT * FROM shoelace_log ORDER BY 1,2;
+SELECT * FROM shoelace_log;
 
     CREATE RULE shoelace_ins AS ON INSERT TO shoelace
         DO INSTEAD
@@ -682,7 +682,7 @@ insert into shoelace values ('sl9', 0, 'pink', 35.0, 'inch', 0.0);
 insert into shoelace values ('sl10', 1000, 'magenta', 40.0, 'inch', 0.0);
 
 SELECT * FROM shoelace_obsolete ORDER BY sl_len_cm;
-SELECT * FROM shoelace_candelete ORDER BY 1,2;
+SELECT * FROM shoelace_candelete;
 
 DELETE FROM shoelace WHERE EXISTS
     (SELECT * FROM shoelace_candelete
@@ -705,7 +705,7 @@ do instead nothing;
 
 insert into foo values(1);
 insert into foo values(1001);
-select * from foo ORDER BY 1;
+select * from foo;
 
 drop rule foorule on foo;
 
@@ -719,8 +719,8 @@ do instead insert into foo2 values (new.f1);
 insert into foo values(2);
 insert into foo values(100);
 
-select * from foo ORDER BY 1;
-select * from foo2 ORDER BY 1;
+select * from foo;
+select * from foo2;
 
 drop rule foorule on foo;
 drop table foo;
@@ -750,14 +750,14 @@ create rule rrule as
   update cchild set descrip = new.descrip where cchild.pid = old.pid;
 );
 
-select * from vview ORDER BY 1,2;
+select * from vview;
 update vview set descrip='test1' where pid=1;
-select * from vview ORDER BY 1,2;
+select * from vview;
 update vview set descrip='test2' where pid=2;
-select * from vview ORDER BY 1,2;
+select * from vview;
 update vview set descrip='test3' where pid=3;
-select * from vview ORDER BY 1,2;
-select * from cchild ORDER BY 1,2;
+select * from vview;
+select * from cchild;
 
 drop rule rrule on vview;
 drop view vview;
@@ -790,7 +790,7 @@ CREATE OR REPLACE RULE myrule AS ON INSERT TO ruletest_tbl
 
 INSERT INTO ruletest_tbl VALUES (99, 99);
 
-SELECT * FROM ruletest_tbl2 ORDER BY 1,2;
+SELECT * FROM ruletest_tbl2;
 
 -- Check that rewrite rules splitting one INSERT into multiple
 -- conditional statements does not disable FK checking.
@@ -888,11 +888,11 @@ create view id_ordered as select * from id order by id;
 create rule update_id_ordered as on update to id_ordered
 	do instead update id set name = new.name where id = old.id;
 
-select * from id_ordered ORDER BY 1;
+select * from id_ordered;
 update id_ordered set name = 'update 2' where id = 2;
 update id_ordered set name = 'update 4' where id = 4;
 update id_ordered set name = 'update 5' where id = 5;
-select * from id_ordered ORDER BY 1;
+select * from id_ordered;
 
 set client_min_messages to warning; -- suppress cascade notices
 drop table id cascade;

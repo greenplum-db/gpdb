@@ -1,9 +1,17 @@
-/*
- * gp_compress.c
- *      Common compression utilities
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2009, Greenplum Inc.
- * Copyright (c) EMC, 2011
+ * gp_compress.c
+ *	  Common compression utilities
+ *
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/storage/file/gp_compress.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

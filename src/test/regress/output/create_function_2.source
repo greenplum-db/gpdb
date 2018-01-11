@@ -31,36 +31,36 @@ CREATE FUNCTION user_relns()
    LANGUAGE SQL READS SQL DATA;
 CREATE FUNCTION pt_in_widget(point, widget)
    RETURNS bool
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C IMMUTABLE NO SQL;
 CREATE FUNCTION overpaid(emp)
    RETURNS bool
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C READS SQL DATA;
 CREATE FUNCTION boxarea(box)
    RETURNS float8
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C READS SQL DATA;
 CREATE FUNCTION interpt_pp(path, path)
    RETURNS point
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C READS SQL DATA;
 CREATE FUNCTION reverse_name(name)
    RETURNS name
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C IMMUTABLE NO SQL;
 CREATE FUNCTION oldstyle_length(int4, text)
    RETURNS int4
-   AS '@abs_builddir@/regress@DLSUFFIX@'
+   AS '@libdir@/regress@DLSUFFIX@'
    LANGUAGE C READS SQL DATA;
 --
 -- Function dynamic loading
 --
-LOAD '@abs_builddir@/regress@DLSUFFIX@';
+LOAD '@libdir@/regress@DLSUFFIX@';
 -- Persistent table check
 -- It's not the right place, but good fit to put misc UDFs.
 CREATE FUNCTION checkRelationAfterInvalidation() RETURNS boolean
-AS '@abs_builddir@/regress@DLSUFFIX@', 'checkRelationAfterInvalidation' LANGUAGE C;
+AS '@libdir@/regress@DLSUFFIX@', 'checkRelationAfterInvalidation' LANGUAGE C;
 SELECT checkRelationAfterInvalidation();
  checkrelationafterinvalidation 
 --------------------------------

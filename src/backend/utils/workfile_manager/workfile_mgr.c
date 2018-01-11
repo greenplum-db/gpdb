@@ -3,7 +3,12 @@
  * workfile_mgr.c
  *	 Implementation of workfile manager and workfile caching.
  *
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_mgr.c
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +25,6 @@
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "postmaster/primary_mirror_mode.h"
-#include "utils/debugbreak.h"
 
 #define WORKFILE_SET_MASK  "XXXXXXXXXX"
 
@@ -65,7 +69,6 @@ workfile_set_free_callback(ResourceReleasePhase phase,
 	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
 		return;
 
-
 	next = open_workfile_sets;
 	while (next)
 	{
@@ -79,7 +82,6 @@ workfile_set_free_callback(ResourceReleasePhase phase,
 			workfile_mgr_close_set(curr);
 		}
 	}
-	AssertImply(isTopLevel, open_workfile_sets == NULL);
 }
 
 

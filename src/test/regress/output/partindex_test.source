@@ -53,9 +53,9 @@ NOTICE:  building index for child partition "part_table1_1_prt_part2"
 select indKey, indpred, partCons from gp_build_logical_index('part_table1'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indpred is NOT NULL;
- indkey |                                                                                                                                                                                                                                                                                            indpred                                                                                                                                                                                                                                                                                             | partcons 
---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
- 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 1 0 0 0 0 0 0 0 ]})} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 10 0 0 0 0 0 0 0 ]})}) | 
+ indkey |                                                                                                                                                                                                                                                                                                                                   indpred                                                                                                                                                                                                                                                                                                                                    | partcons 
+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+ 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 10 0 0 0 0 0 0 0 ]}) :location -1}) | 
 (1 row)
 
 -- add a new part - index automatically created 
@@ -72,9 +72,9 @@ as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, in
 select indKey, indpred, partCons from gp_build_logical_index('part_table1'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2) 
 where indpred is NOT NULL;
- indkey |                                                                                                                                                                                                                                                                                            indpred                                                                                                                                                                                                                                                                                             | partcons 
---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
- 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 1 0 0 0 0 0 0 0 ]})} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 10 0 0 0 0 0 0 0 ]})}) | 
+ indkey |                                                                                                                                                                                                                                                                                                                                   indpred                                                                                                                                                                                                                                                                                                                                    | partcons 
+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+ 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 10 0 0 0 0 0 0 0 ]}) :location -1}) | 
 (1 row)
 
 -- create index on just 1 part
@@ -135,9 +135,9 @@ NOTICE:  exchanged partition "part2" of relation "part_table1" with relation "ex
 select indKey, indExprs, partCons from gp_build_logical_index('part_table1'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indExprs is NOT NULL;
- indkey |                                                                                               indexprs                                                                                               |                partcons                
---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------
- 0      | ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 2 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 2}) :is_tablefunc false}) | ((part_key >= 11) AND (part_key < 20))
+ indkey |                                                                                                                      indexprs                                                                                                                      |                partcons                
+--------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------
+ 0      | ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 2 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 2 :location -1}) :is_tablefunc false :location -1}) | ((part_key >= 11) AND (part_key < 20))
 (1 row)
 
 --
@@ -373,9 +373,9 @@ NOTICE:  building index for child partition "part_table2_1_prt_13_2_prt_other_re
 select indKey, indPred, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indPred is NOT NULL;
- indkey |                                                                                                                                                                                                                                                                                              indpred                                                                                                                                                                                                                                                                                              | defaultlevels | partcons 
---------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------
- 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ -24 3 0 0 0 0 0 0 ]})} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ -48 7 0 0 0 0 0 0 ]})}) |               | 
+ indkey |                                                                                                                                                                                                                                                                                                                                     indpred                                                                                                                                                                                                                                                                                                                                     | defaultlevels | partcons 
+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------
+ 1      | ({OPEXPR :opno 525 :opfuncid 150 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ -24 3 0 0 0 0 0 0 ]}) :location -1} {OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ -48 7 0 0 0 0 0 0 ]}) :location -1}) |               | 
 (1 row)
 
 -- create index on expression on all parts
@@ -449,9 +449,9 @@ NOTICE:  building index for child partition "part_table2_1_prt_13_2_prt_other_re
 select indKey, indPred, indExprs, partCons from gp_build_logical_index('part_table2'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indExprs is NOT NULL;
- indkey | indpred |                                                                                               indexprs                                                                                               | partcons 
---------+---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
- 0      |         | ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | 
+ indkey | indpred |                                                                                                                      indexprs                                                                                                                      | partcons 
+--------+---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+ 0      |         | ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | 
 (1 row)
 
 -- create indexes on all leaf parts of a mid-level partition
@@ -512,13 +512,13 @@ select indExprs, defaultLevels, partCons from gp_build_logical_index('part_table
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where partcons is NOT NULL
 order by partcons;
-                                                                                               indexprs                                                                                               | defaultlevels |                            partcons                            
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
-                                                                                                                                                                                                      | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
-                                                                                                                                                                                                      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+                                                                                                                      indexprs                                                                                                                      | defaultlevels |                            partcons                            
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+                                                                                                                                                                                                                                                    | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
+                                                                                                                                                                                                                                                    |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
 (5 rows)
 
 create index subset_index4 on part_table2_1_prt_7_2_prt_other_regions(upper(region));
@@ -527,13 +527,13 @@ select indExprs, defaultLevels, partCons from gp_build_logical_index('part_table
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where partcons is NOT NULL
 order by partcons;
-                                                                                               indexprs                                                                                               | defaultlevels |                            partcons                            
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
-                                                                                                                                                                                                      | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
-                                                                                                                                                                                                      |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
- ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3}) :is_tablefunc false}) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+                                                                                                                      indexprs                                                                                                                      | defaultlevels |                            partcons                            
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '06-01-2008'::date) AND (date < '07-01-2008'::date))
+                                                                                                                                                                                                                                                    | (i 1)         | ((date >= '07-01-2008'::date) AND (date < '08-01-2008'::date))
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '08-01-2008'::date) AND (date < '09-01-2008'::date))
+                                                                                                                                                                                                                                                    |               | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
+ ({FUNCEXPR :funcid 871 :funcresulttype 25 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 3 :vartype 25 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 3 :location -1}) :is_tablefunc false :location -1}) | (i 1)         | ((date >= '10-01-2008'::date) AND (date < '11-01-2008'::date))
 (5 rows)
 
 --
@@ -706,9 +706,9 @@ select indExprs, partCons from gp_build_logical_index('part_table3'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
-                                                                                                   indexprs                                                                                                    |                            partcons                            
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------
- ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4}) :is_tablefunc false}) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+                                                                                                                          indexprs                                                                                                                           |                            partcons                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------
+ ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4 :location -1}) :is_tablefunc false :location -1}) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
 (1 row)
 
 -- dropped cols in the ind pred
@@ -719,9 +719,9 @@ select indPred, indExprs, defaultLevels, partCons from gp_build_logical_index('p
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
- indpred |                                                                                                   indexprs                                                                                                    | defaultlevels |                            partcons                            
----------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
-         | ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4}) :is_tablefunc false}) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+ indpred |                                                                                                                          indexprs                                                                                                                           | defaultlevels |                            partcons                            
+---------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
+         | ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4 :location -1}) :is_tablefunc false :location -1}) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
 (1 row)
 
 --
@@ -888,27 +888,27 @@ create index part_table5_i3 on part_table5_1_prt_def(abs(c1));
 select indPred, indExprs, partCons from gp_build_logical_index('part_table5'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where defaultLevels is NULL and partcons is NULL;
-                                                                                                                                             indpred                                                                                                                                              | indexprs | partcons 
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------+----------
- ({OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 100 0 0 0 0 0 0 0 ]})}) |          | 
+                                                                                                                                                                 indpred                                                                                                                                                                 | indexprs | partcons 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------+----------
+ ({OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 100 0 0 0 0 0 0 0 ]}) :location -1}) |          | 
 (1 row)
 
 -- returns 1 row with index on whole table
 select indPred from gp_build_logical_index('part_table5'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where partCons is NULL;
-                                                                                                                                             indpred                                                                                                                                              
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- ({OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 100 0 0 0 0 0 0 0 ]})})
+                                                                                                                                                                 indpred                                                                                                                                                                 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ ({OPEXPR :opno 97 :opfuncid 66 :opresulttype 16 :opretset false :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1} {CONST :consttype 23 :consttypmod -1 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 100 0 0 0 0 0 0 0 ]}) :location -1})
 (1 row)
 
 -- returns 1 row with index on default part
 select indExprs, defaultLevels from gp_build_logical_index('part_table5'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where defaultLevels is NOT NULL;
-                                                                                               indexprs                                                                                                | defaultlevels 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------
- ({FUNCEXPR :funcid 1397 :funcresulttype 23 :funcretset false :funcformat 3 :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1}) :is_tablefunc false}) | (i 0)
+                                                                                                                      indexprs                                                                                                                       | defaultlevels 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------
+ ({FUNCEXPR :funcid 1397 :funcresulttype 23 :funcretset false :funcvariadic false :funcformat 3 :args ({VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varlevelsup 0 :varnoold 1 :varoattno 1 :location -1}) :is_tablefunc false :location -1}) | (i 0)
 (1 row)
 
 -- ************************************************************
@@ -1139,6 +1139,38 @@ as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, in
  part_table13 | ((b >= 10) AND (b < 40)) |               |       1
 (2 rows)
 
+--
+-- ************************************************************
+-- * Scenario 10
+-- * 	- multi-levels partition exchange with external table
+-- *
+-- ************************************************************
+--
+create table exchange_sub_partition (a int,b int)
+distributed by (a)
+partition by range (a)
+subpartition by range (b)
+subpartition template
+(start(1) end(3) every(1))
+(start(1) end(3) every(1));
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_1" for table "exchange_sub_partition"
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_1_2_prt_1" for table "exchange_sub_partition_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_1_2_prt_2" for table "exchange_sub_partition_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_2" for table "exchange_sub_partition"
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_2_2_prt_1" for table "exchange_sub_partition_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "exchange_sub_partition_1_prt_2_2_prt_2" for table "exchange_sub_partition_1_prt_2"
+create external web table exchange_external_table(like exchange_sub_partition_1_prt_1_2_prt_1)
+execute 'printf "2,2\n1,1\n"' on host
+format 'csv';
+alter table exchange_sub_partition
+alter partition for (integer '2')
+exchange partition for (integer '2') with table exchange_external_table without validation;
+select * from exchange_sub_partition;
+ a | b 
+---+---
+ 2 | 2
+(1 row)
+
 -- cleanup
 drop function gp_build_logical_index(oid);
 drop function gp_get_physical_index_relid(oid, oid, int[], text, text, bool);
@@ -1156,3 +1188,5 @@ drop table part_table10;
 drop table part_table11;
 drop table part_table12;
 drop table part_table13;
+drop table exchange_sub_partition;
+drop table exchange_external_table;

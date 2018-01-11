@@ -121,11 +121,9 @@ gp_transaction_log(PG_FUNCTION_ARGS)
 		else
 			elog(ERROR, "Unexpected transaction status %d",
 			     status);
-		
-		values[3] = 
-			DirectFunctionCall1(textin,
-				                CStringGetDatum(statusStr));
-		
+
+		values[3] = CStringGetTextDatum(statusStr);
+
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
 		SRF_RETURN_NEXT(funcctx, result);

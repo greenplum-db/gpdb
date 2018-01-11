@@ -3,7 +3,12 @@
  * cdbdisp_query.h
  * routines for dispatching command string or plan to the qExec processes.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbdisp_query.h
  *
  *-------------------------------------------------------------------------
  */
@@ -61,7 +66,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
  * gangs, both reader and writer
  */
 void
-CdbDispatchSetCommand(const char *strCommand, bool cancelOnError, bool needTwoPhase);
+CdbDispatchSetCommand(const char *strCommand, bool cancelOnError);
 
 /*
  * CdbDispatchCommand

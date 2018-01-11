@@ -16,9 +16,9 @@ if [ ! -f "${FILE}" ]; then
     echo "WARNING: tarball does not exist (${FILE})"
     exit 2
 else
-    pushd ${ARTIFACT_DIR}/..
+    pushd ${ARTIFACT_DIR}/.. > /dev/null
     gunzip -qc ${FILE} | tar xf -
-    popd
+    popd > /dev/null
 
     if [ $? != 0 ]; then
         echo "FATAL: Problem exapanding tarball (${FILE})"

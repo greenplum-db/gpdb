@@ -2,9 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_th5_5bf_jr">
   <title>Encrypting Data and Database Connections</title>
+  <shortdesc>Describes how to encrypt data at rest in the database or in transit over the network,
+    to protect from evesdroppers or man-in-the-middle attacks.</shortdesc>
   <body>
-    <p>Encryption can be used to protect data in transit over the network between the database and
-      clients, and data at rest in the database. </p>
     <ul id="ul_wxd_dxc_lr">
       <li>Connections between clients and the master database can be encrypted with SSL. This is
         enabled with the <codeph>ssl</codeph> server configuration parameter, which is
@@ -16,7 +16,7 @@
       <li>Greenplum Database allows SSL encryption of data in transit between the Greenplum parallel
         file distribution server, <codeph>gpfdist</codeph>, and segment hosts. See <xref
           href="#gpfdist_connections" format="dita"/> for more information. </li>
-      <li>The <codeph>pgcrypto</codeph> package of encryption/decryptions functions protect data at
+      <li>The <codeph>pgcrypto</codeph> module of encryption/decryptions functions protect data at
         rest in the database. Encryption at the column level protects sensitive information, such as
         social security numbers or credit card numbers. See <xref href="#pgcrypto" format="dita"/>
         for more information. </li>
@@ -97,11 +97,13 @@ FORMAT 'TEXT' ( DELIMITER '|' NULL ' ') ;
   <topic id="pgcrypto">
     <title>Encrypting Data at Rest with pgcrypto</title>
     <body>
-      <p>The pgcrypto package for Greenplum Database provides functions for encrypting data at rest
+      <p>The pgcrypto module for Greenplum Database provides functions for encrypting data at rest
         in the database. Administrators can encrypt columns with sensitive information, such as
         social security numbers or credit card numbers, to provide an extra layer of protection.
         Database data stored in encrypted form cannot be read by users who do not have the
         encryption key, and the data cannot be read directly from disk. </p>
+      <p>pgcrypto is installed by default when you install Greenplum Database. You must
+        explicitly enable pgcrypto in each database in which you want to use the module.</p>
       <p>pgcrypto allows PGP encryption using symmetric and asymmetric encryption. Symmetric
         encryption encrypts and decrypts data using the same key and is faster than asymmetric
         encryption. It is the preferred method in an environment where exchanging secret keys is not

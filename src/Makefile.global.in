@@ -1,5 +1,5 @@
 # -*-makefile-*-
-# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.240 2007/11/13 00:13:19 tgl Exp $
+# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.254 2009/06/23 03:46:00 tgl Exp $
 
 #------------------------------------------------------------------------------
 # All PostgreSQL makefiles include this file and use the variables it sets,
@@ -154,8 +154,6 @@ includedir_server = $(pkgincludedir)/server
 includedir_internal = $(pkgincludedir)/internal
 pgxsdir = $(pkglibdir)/pgxs
 
-sqlmansect_dummy = l
-
 
 ##########################################################################
 #
@@ -172,10 +170,10 @@ with_libxml	= @with_libxml@
 with_libxslt	= @with_libxslt@
 with_system_tzdata = @with_system_tzdata@
 with_zlib	= @with_zlib@
+with_libbz2	= @with_libbz2@
 with_apr_config	= @with_apr_config@
 with_apu_config	= @with_apu_config@
 with_libsigar	= @with_libsigar@
-with_pxf        = @with_pxf@
 enable_shared	= @enable_shared@
 enable_rpath	= @enable_rpath@
 # NLS is not supported in Greenplum, see comment documenting
@@ -189,6 +187,8 @@ enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_codegen		= @enable_codegen@
 enable_gpfdist		= @enable_gpfdist@
+enable_pxf			= @enable_pxf@
+enable_gphdfs		= @enable_gphdfs@
 enable_snmp			= @enable_snmp@
 enable_ddboost	    = @enable_ddboost@
 enable_netbackup	= @enable_netbackup@
@@ -223,6 +223,7 @@ have_yaml 		= @have_yaml@
 have_docbook	= @have_docbook@
 DOCBOOKSTYLE	= @DOCBOOKSTYLE@
 COLLATEINDEX	= @COLLATEINDEX@
+DOCBOOK2MAN	= @DOCBOOK2MAN@
 
 
 ##########################################################################
@@ -586,25 +587,6 @@ TAS         = @TAS@
 %.bz2: %
 	$(BZIP2) -c $< >$@
 
-ifeq ($(PORTNAME),win32)
-# Build rules to add versioninfo resources to win32 binaries
-WIN32RES += win32ver.o
-ifeq ($(PGFILESHLIB),1)
-PGFTYPE=VFT_DLL
-else
-PGFTYPE=VFT_APP
-endif
-ifneq (,$(PGAPPICON))
-PGICOSTR=$(subst /,\/,IDI_ICON ICON \"$(top_builddir)/src/port/$(PGAPPICON).ico\")
-endif
-win32ver.rc: $(top_builddir)/src/port/win32ver.rc
-	sed -e 's;FILEDESC;$(PGFILEDESC);' -e 's;VFT_APP;$(PGFTYPE);' -e 's;_ICO_;$(PGICOSTR);' -e 's;\(VERSION.*\),0 *$$;\1,'`date '+%y%j' | sed 's/^0*//'`';' $(top_builddir)/src/port/win32ver.rc > win32ver.rc
-win32ver.o: $(top_builddir)/src/port/win32ver.rc
-	sed -e 's;FILEDESC;$(PGFILEDESC);' -e 's;VFT_APP;$(PGFTYPE);' -e 's;_ICO_;$(PGICOSTR);' -e 's;\(VERSION.*\),0 *$$;\1,'`date '+%y%j' | sed 's/^0*//'`';' $(top_builddir)/src/port/win32ver.rc > win32ver.rc
-	/usr/bin/i686-pc-mingw32-windres -i win32ver.rc -o win32ver.o --include-dir=$(top_builddir)/src/include
-	rm -f win32ver.rc
-endif
-
 ifndef PGXS
 
 # Remake Makefile.global from Makefile.global.in if the latter
@@ -629,9 +611,11 @@ $(top_builddir)/src/include/pg_config.h: $(top_builddir)/src/include/stamp-h
 $(top_builddir)/src/include/stamp-h: $(top_srcdir)/src/include/pg_config.h.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status src/include/pg_config.h
 
-# Also remake ecpg_config.h from ecpg_config.h.in if the latter changed. Values in it can
-# only change if pg_config.h has changed, so include this file to its dependencies.
-$(top_builddir)/src/interfaces/ecpg/include/ecpg_config.h: $(top_builddir)/src/include/pg_config.h $(top_builddir)/src/interfaces/ecpg/include/ecpg_config.h.in $(top_builddir)/config.status
+# Also remake ecpg_config.h from ecpg_config.h.in if the latter changed, same 
+# logic as above.
+$(top_builddir)/src/interfaces/ecpg/include/ecpg_config.h: $(top_builddir)/src/interfaces/ecpg/include/stamp-h
+
+ $(top_builddir)/src/interfaces/ecpg/include/stamp-h: $(top_builddir)/src/interfaces/ecpg/include/ecpg_config.h.in $(top_builddir)/config.status
 	cd $(top_builddir) && ./config.status src/interfaces/ecpg/include/ecpg_config.h
 
 # When configure changes, rerun configure with the same options as

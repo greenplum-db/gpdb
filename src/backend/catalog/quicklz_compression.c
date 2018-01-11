@@ -1,20 +1,22 @@
-/*
- * Copyright (c) 2011 EMC Corporation All Rights Reserved
+/*---------------------------------------------------------------------
  *
- * This software is protected, without limitation, by copyright law
- * and international treaties. Use of this software and the intellectual
- * property contained therein is expressly limited to the terms and
- * conditions of the License Agreement under which it is provided by
- * or on behalf of EMC.
+ * quicklz_compression.c
  *
- * ---------------------------------------------------------------------
- *
- * The quicklz implementation is not provided due to licensing issues.  The
- * following stub implementation is built if a proprietary implementation is
- * not provided.
+ * The quicklz implementation is not provided due to licensing issues.
+ * The following stub implementation is built if a proprietary
+ * implementation is not provided.
  *
  * Note that other compression algorithms actually work better for new
  * installations anyway.
+ *
+ * Portions Copyright (c) 2011 EMC Corporation All Rights Reserved
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/catalog/quicklz_compression.c
+ *
+ *---------------------------------------------------------------------
  */
 
 #include "postgres.h"

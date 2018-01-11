@@ -1,0 +1,162 @@
+<!--
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_server.sgml,v 1.5 2009/06/19 15:28:25 petere Exp $
+PostgreSQL documentation
+-->
+
+<refentry id="SQL-CREATESERVER">
+ <refmeta>
+  <refentrytitle id="sql-createserver-title">CREATE SERVER</refentrytitle>
+  <manvolnum>7</manvolnum>
+  <refmiscinfo>SQL - Language Statements</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>CREATE SERVER</refname>
+  <refpurpose>define a new foreign server</refpurpose>
+ </refnamediv>
+
+ <indexterm zone="sql-createserver">
+  <primary>CREATE SERVER</primary>
+ </indexterm>
+
+ <refsynopsisdiv>
+<synopsis>
+CREATE SERVER <replaceable class="parameter">servername</replaceable> [ TYPE 'servertype' ] [ VERSION 'serverversion' ]
+    FOREIGN DATA WRAPPER <replaceable class="parameter">fdwname</replaceable>
+    [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
+</synopsis>
+ </refsynopsisdiv>
+
+ <refsect1>
+  <title>Description</title>
+
+  <para>
+   <command>CREATE SERVER</command> defines a new foreign server.  The
+   user who defines the server becomes its owner.
+  </para>
+
+  <para>
+   A foreign server typically encapsulates connection information that
+   a foreign-data wrapper uses to access an external data resource.
+   Additional user-specific connection information may be specified by
+   means of user mappings.
+  </para>
+
+  <para>
+   The server name must be unique within the database.
+  </para>
+
+  <para>
+   Creating a server requires <literal>USAGE</> privilege on the
+   foreign-data wrapper being used.
+  </para>
+ </refsect1>
+
+ <refsect1>
+  <title>Parameters</title>
+
+  <variablelist>
+   <varlistentry>
+    <term><replaceable class="parameter">servername</replaceable></term>
+    <listitem>
+     <para>
+      The name of the foreign server to be created.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">servertype</replaceable></term>
+    <listitem>
+     <para>
+      Optional server type.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">serverversion</replaceable></term>
+    <listitem>
+     <para>
+      Optional server version.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">fdwname</replaceable></term>
+    <listitem>
+     <para>
+      The name of the foreign-data wrapper that manages the server.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] )</literal></term>
+    <listitem>
+     <para>
+      This clause specifies the options for the server.  The options
+      typically define the connection details of the server, but the
+      actual names and values are dependent on the server's
+      foreign-data wrapper.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1>
+  <title>Notes</title>
+
+  <para>
+   When using the <application>dblink</application> module
+   (see <xref linkend="dblink">), the foreign server name can be used
+   as an argument of the <xref linkend="contrib-dblink-connect">
+   function to indicate the connection parameters.  See also there for
+   more examples.  It is necessary to have
+   the <literal>USAGE</literal> privilege on the foreign server to be
+   able to use it in this way.
+  </para>
+ </refsect1>
+
+ <refsect1>
+  <title>Examples</title>
+
+  <para>
+   Create a server <literal>foo</> that uses the built-in foreign-data
+   wrapper <literal>default</>:
+<programlisting>
+CREATE SERVER foo FOREIGN DATA WRAPPER "default";
+</programlisting>
+  </para>
+
+  <para>
+   Create a server <literal>myserver</> that uses the
+   foreign-data wrapper <literal>pgsql</>:
+<programlisting>
+CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql OPTIONS (host 'foo', dbname 'foodb', port '5432');
+</programlisting>
+  </para>
+ </refsect1>
+
+ <refsect1>
+  <title>Compatibility</title>
+
+  <para>
+   <command>CREATE SERVER</command> conforms to ISO/IEC 9075-9 (SQL/MED).
+  </para>
+ </refsect1>
+
+ <refsect1>
+  <title>See Also</title>
+
+  <simplelist type="inline">
+   <member><xref linkend="sql-alterserver" endterm="sql-alterserver-title"></member>
+   <member><xref linkend="sql-dropserver" endterm="sql-dropserver-title"></member>
+   <member><xref linkend="sql-createforeigndatawrapper" endterm="sql-createforeigndatawrapper-title"></member>
+   <member><xref linkend="sql-createusermapping" endterm="sql-createusermapping-title"></member>
+  </simplelist>
+ </refsect1>
+
+</refentry>

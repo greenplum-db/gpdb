@@ -2,7 +2,7 @@
 
 This directory contains pipelines, task files, and scripts to run various sets
 of builds and tests on
-[our Concourse continuous integration server](http://gpdb.ci.pivotalci.info/).
+[our Concourse continuous integration server](http://gpdb.data.pivotal.ci/).
 
 [Learn more about Concourse overall](http://concourse.ci/)
 
@@ -19,17 +19,24 @@ We use Concourse because:
 The Concourse directory should contain this README and three sub-directories only:
 
 * pipelines
+  * templates
 * tasks
 * scripts
 
 #### Pipelines Directory
 There should be just a handful of pipelines in this directory:
 
-* `pipeline.yml` the pipeline that compiles, tests, and produces installers
-  from the master branch of gpdb.
+* `gpdb_master-generated.yml` the pipeline that compiles, tests, and
+  produces installers from the master branch of gpdb. This is a
+  generated and should not be edited directly.  The template
+  [pipelines/templates/gpdb-tpl.yml](pipelines/templates/gpdb-tpl.yml)
+  should be edited and the utility
+  [pipelines/gen_pipeline.py](pipelines/gen_pipeline.py) should be
+  used to generate production and developer pipeliens. Please review
+  the pipelines [README.md](pipelines/README.md) for additional
+  information.
 * `dev_generate_installer.yml` which compiles and generates an installer for
   the given source and saves it to a dev bucket.
-* `gpcloud_pipeline.yml` run gpcloud tests against developers specified branch.
 * `pr_pipeline.yml` which compiles and tests pull requests.
 * `concourse-upgrade.yml` which uses Concourse to upgrade itself.
 * `pipeline_coverity.yml` run a build with coverity flags, separate so that it
@@ -61,34 +68,19 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `cpplint.py` is being used by codegen
 * `package_tarball.bash` is being used by
   [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
-* `builds/` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
-* `test_gpdb.py` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
-* `build_gpdb.py` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 
 ### The Concourse Deployment
 There is a `gpdb` team in the
-[Concourse instance](http://gpdb.ci.pivotalci.info/).
+[Concourse instance](http://gpdb.data.pivotal.ci/).
 Use this team to create any pipelines instead of the `main` team.
 
 ### Creating Your Own Pipeline
 Many developers want to create their own copies of the master pipeline.
 
-To accommodate this without naming confusion, workload instability, nor
-artifact collision, we have the following solution:
+To accommodate this without naming confusion, workload instability,
+nor artifact collision, please follow instructions in pipelines
+[README.md](pipelines/README.md) for additional information.
 
-1. Fork or branch the gpdb git repo
-1. Create an s3 bucket for your pipeline to use
-1. Edit `concourse/pipelines/pipeline.yml` to point at your git branch and s3 bucket
-1. Commit and push your branch
-1. Set the pipeline using a unique pipeline name. Example:
-
-```bash
-fly -t gpdb login
-fly -t gpdb set-pipeline -c concourse/pipelines/pipeline.yml -p NEW_PIPELINE_NAME
-```
 #### Notes and warnings
 
 * Clean up your dev pipelines when you are finished with them. (Use `fly destroy-pipeline`)

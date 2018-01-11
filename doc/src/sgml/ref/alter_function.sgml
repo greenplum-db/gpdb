@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_function.sgml,v 1.15 2007/09/03 18:46:29 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_function.sgml,v 1.17 2008/11/14 10:22:45 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERFUNCTION">
  <refmeta>
   <refentrytitle id="SQL-ALTERFUNCTION-TITLE">ALTER FUNCTION</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -34,6 +35,7 @@ where <replaceable class="PARAMETER">action</replaceable> is one of:
     CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     IMMUTABLE | STABLE | VOLATILE
     [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
     COST <replaceable class="parameter">execution_cost</replaceable>
     ROWS <replaceable class="parameter">result_rows</replaceable>
     SET <replaceable class="parameter">configuration_parameter</replaceable> { TO | = } { <replaceable class="parameter">value</replaceable> | DEFAULT }
@@ -81,13 +83,14 @@ where <replaceable class="PARAMETER">action</replaceable> is one of:
 
     <listitem>
      <para>
-      The mode of an argument: either <literal>IN</>, <literal>OUT</>,
-      or <literal>INOUT</>.  If omitted, the default is <literal>IN</>.
+      The mode of an argument: <literal>IN</>, <literal>OUT</>,
+      <literal>INOUT</>, or <literal>VARIADIC</>.
+      If omitted, the default is <literal>IN</>.
       Note that <command>ALTER FUNCTION</command> does not actually pay
       any attention to <literal>OUT</> arguments, since only the input
       arguments are needed to determine the function's identity.
-      So it is sufficient to list the <literal>IN</> and <literal>INOUT</>
-      arguments.
+      So it is sufficient to list the <literal>IN</>, <literal>INOUT</>,
+      and <literal>VARIADIC</> arguments.
      </para>
     </listitem>
    </varlistentry>
@@ -192,7 +195,7 @@ where <replaceable class="PARAMETER">action</replaceable> is one of:
     </listitem>
    </varlistentry>
 
-    <varlistentry>
+   <varlistentry>
      <term><literal>COST</literal> <replaceable class="parameter">execution_cost</replaceable></term>
 
      <listitem>

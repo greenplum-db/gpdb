@@ -78,7 +78,7 @@ typedef struct ArrayRemapInfo
 	int16		typlen;			/* array element type's storage properties */
 	bool		typbyval;
 	char		typalign;
-	TupleRemapInfo *element_remap;		/* array element type's remap info */
+	TupleRemapInfo *element_remap;	/* array element type's remap info */
 } ArrayRemapInfo;
 
 typedef struct RangeRemapInfo
@@ -96,7 +96,7 @@ typedef struct RecordRemapInfo
 	int32		localtypmod;
 	/* If no fields of the record require remapping, these are NULL: */
 	TupleDesc	tupledesc;		/* copy of record's tupdesc */
-	TupleRemapInfo **field_remap;		/* each field's remap info */
+	TupleRemapInfo **field_remap;	/* each field's remap info */
 } RecordRemapInfo;
 
 struct TupleRemapInfo
@@ -107,7 +107,7 @@ struct TupleRemapInfo
 		ArrayRemapInfo arr;
 		RangeRemapInfo rng;
 		RecordRemapInfo rec;
-	} u;
+	}			u;
 };
 
 /*
@@ -129,10 +129,10 @@ struct TupleRemapper
 	bool		remap_needed;	/* is remap needed */
 };
 
-static HeapTuple TRRemapTuple(TupleRemapper *remapper,
+static GenericTuple TRRemapTuple(TupleRemapper *remapper,
 			 TupleDesc tupledesc,
 			 TupleRemapInfo **field_remapinfo,
-			 HeapTuple tuple);
+			 GenericTuple tuple);
 static Datum TRRemap(TupleRemapper *remapper, TupleRemapInfo *remapinfo,
 		Datum value, bool *changed);
 static Datum TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
@@ -192,8 +192,8 @@ DestroyTupleRemapper(TupleRemapper *remapper)
  *
  * Form a new tuple with all the remote typmods remapped to local typmods.
  */
-HeapTuple
-TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, HeapTuple tuple)
+GenericTuple
+TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple)
 {
 	if (!remapper->remap_needed)
 		return tuple;
@@ -217,9 +217,9 @@ TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, HeapTuple tuple)
 void
 TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 {
-	int j;
-	ListCell *cell;
-	int mapsize = remapper->typmodmapsize + list_length(typelist);
+	int			j;
+	ListCell   *cell;
+	int			mapsize = remapper->typmodmapsize + list_length(typelist);
 
 	if (remapper->typmodmap)
 		remapper->typmodmap = repalloc(remapper->typmodmap, mapsize * sizeof(int32));
@@ -233,11 +233,14 @@ TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 
 	foreach(cell, typelist)
 	{
-		int32 local_typmod;
-		TupleDescNode * descnode = (TupleDescNode *) lfirst(cell);
-		int32 remote_typmod = descnode->tuple->tdtypmod;
+		int32		local_typmod;
+		TupleDescNode *descnode = (TupleDescNode *) lfirst(cell);
+		int32		remote_typmod = descnode->tuple->tdtypmod;
 
-		/* assign_record_type_typmod() will update tdtypmod to the local typmod */
+		/*
+		 * assign_record_type_typmod() will update tdtypmod to the local
+		 * typmod
+		 */
 		assign_record_type_typmod(descnode->tuple);
 
 		local_typmod = descnode->tuple->tdtypmod;
@@ -256,11 +259,11 @@ TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 /*
  * Copy the given tuple, remapping any transient typmods contained in it.
  */
-static HeapTuple
+static GenericTuple
 TRRemapTuple(TupleRemapper *remapper,
 			 TupleDesc tupledesc,
 			 TupleRemapInfo **field_remapinfo,
-			 HeapTuple tuple)
+			 GenericTuple tuple)
 {
 	Datum	   *values;
 	bool	   *isnull;
@@ -279,14 +282,15 @@ TRRemapTuple(TupleRemapper *remapper,
 	isnull = (bool *) palloc(tupledesc->natts * sizeof(bool));
 
 	/* CDB */
-	if (is_heaptuple_memtuple(tuple))
+	if (is_memtuple(tuple))
 	{
 		MemTupleBinding *pbind = create_memtuple_binding(tupledesc);
+
 		memtuple_deform((MemTuple) tuple, pbind, values, isnull);
 	}
 	else
 	{
-		heap_deform_tuple(tuple, tupledesc, values, isnull);
+		heap_deform_tuple((HeapTuple) tuple, tupledesc, values, isnull);
 	}
 
 	/* Recursively process each interesting non-NULL attribute. */
@@ -299,7 +303,7 @@ TRRemapTuple(TupleRemapper *remapper,
 
 	/* Reconstruct the modified tuple, if anything was modified. */
 	if (changed)
-		return heap_form_tuple(tupledesc, values, isnull);
+		return (GenericTuple) heap_form_tuple(tupledesc, values, isnull);
 	else
 		return tuple;
 }
@@ -376,7 +380,7 @@ TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
 		/* Reconstruct and return the array.  */
 		*changed = true;
 		arr = construct_md_array(elem_values, elem_nulls,
-							   ARR_NDIM(arr), ARR_DIMS(arr), ARR_LBOUND(arr),
+								 ARR_NDIM(arr), ARR_DIMS(arr), ARR_LBOUND(arr),
 								 typid, remapinfo->typlen,
 								 remapinfo->typbyval, remapinfo->typalign);
 		return PointerGetDatum(arr);
@@ -530,10 +534,10 @@ TRRemapRecord(TupleRemapper *remapper, RecordRemapInfo *remapinfo,
 		ItemPointerSetInvalid(&htup.t_self);
 		htup.t_len = HeapTupleHeaderGetDatumLength(tup);
 		htup.t_data = tup;
-		atup = TRRemapTuple(remapper,
-							remapinfo->tupledesc,
-							remapinfo->field_remap,
-							&htup);
+		atup = (HeapTuple) TRRemapTuple(remapper,
+										remapinfo->tupledesc,
+										remapinfo->field_remap,
+										(GenericTuple) &htup);
 
 		/* Apply the correct labeling for a local Datum. */
 		HeapTupleHeaderSetTypeId(atup->t_data, typid);

@@ -1,7 +1,7 @@
 /*
  * conversion functions between pg_wchar and multibyte streams.
  * Tatsuo Ishii
- * $PostgreSQL: pgsql/src/backend/utils/mb/wchar.c,v 1.74 2010/01/04 20:38:31 adunstan Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/wchar.c,v 1.73 2009/06/11 14:49:05 momjian Exp $
  *
  */
 /* can be used in either frontend or backend */
@@ -1804,10 +1804,10 @@ report_untranslatable_char(int src_encoding, int dest_encoding,
 
 	ereport(ERROR,
 			(errcode(ERRCODE_UNTRANSLATABLE_CHARACTER),
-			 errmsg("character 0x%s of encoding \"%s\" has no equivalent in \"%s\"",
-					buf,
-					pg_enc2name_tbl[src_encoding].name,
-					pg_enc2name_tbl[dest_encoding].name)));
+	  errmsg("character 0x%s of encoding \"%s\" has no equivalent in \"%s\"",
+			 buf,
+			 pg_enc2name_tbl[src_encoding].name,
+			 pg_enc2name_tbl[dest_encoding].name)));
 }
 
 #endif

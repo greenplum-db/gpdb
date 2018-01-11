@@ -8,7 +8,12 @@
  *      This is a non-ideal solution, consider alternatives before
  *      adding to this file.
  *
- * Copyright (c) 2008-2008, Greenplum inc.
+ * Portions Copyright (c) 2008-2008, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbpublic.h
  *
  *-------------------------------------------------------------------------
  */

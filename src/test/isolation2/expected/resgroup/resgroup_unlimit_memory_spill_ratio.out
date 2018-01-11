@@ -1,0 +1,155 @@
+-- start_ignore
+DROP RESOURCE GROUP rg_spill_test;
+ERROR:  resource group "rg_spill_test" does not exist
+-- end_ignore
+
+-- create
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=60);
+CREATE
+DROP RESOURCE GROUP rg_spill_test;
+DROP
+
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=0);
+CREATE
+DROP RESOURCE GROUP rg_spill_test;
+DROP
+
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=100);
+CREATE
+DROP RESOURCE GROUP rg_spill_test;
+DROP
+
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=-1);
+ERROR:  memory_spill_ratio range is [0, 100]
+DROP RESOURCE GROUP rg_spill_test;
+ERROR:  resource group "rg_spill_test" does not exist
+
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=101);
+ERROR:  memory_spill_ratio range is [0, 100]
+DROP RESOURCE GROUP rg_spill_test;
+ERROR:  resource group "rg_spill_test" does not exist
+
+-- alter
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=20);
+CREATE
+
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 60;
+ALTER
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
+ALTER
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 100;
+ALTER
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
+ERROR:  memory_spill_ratio range is [0, 100]
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
+ERROR:  memory_spill_ratio range is [0, 100]
+
+DROP RESOURCE GROUP rg_spill_test;
+DROP
+
+-- set GUC
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=50, memory_spill_ratio=20);
+CREATE
+
+SET MEMORY_SPILL_RATIO TO 60;
+SET
+SHOW MEMORY_SPILL_RATIO;
+memory_spill_ratio
+------------------
+60                
+(1 row)
+SELECT 1;
+?column?
+--------
+1       
+(1 row)
+
+SET MEMORY_SPILL_RATIO TO 0;
+SET
+SHOW MEMORY_SPILL_RATIO;
+memory_spill_ratio
+------------------
+0                 
+(1 row)
+SELECT 1;
+?column?
+--------
+1       
+(1 row)
+
+SET MEMORY_SPILL_RATIO TO 100;
+SET
+SHOW MEMORY_SPILL_RATIO;
+memory_spill_ratio
+------------------
+100               
+(1 row)
+SELECT 1;
+?column?
+--------
+1       
+(1 row)
+
+SET MEMORY_SPILL_RATIO TO -1;
+ERROR:  -1 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
+SHOW MEMORY_SPILL_RATIO;
+memory_spill_ratio
+------------------
+100               
+(1 row)
+SELECT 1;
+?column?
+--------
+1       
+(1 row)
+
+SET MEMORY_SPILL_RATIO TO 101;
+ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
+SHOW MEMORY_SPILL_RATIO;
+memory_spill_ratio
+------------------
+100               
+(1 row)
+SELECT 1;
+?column?
+--------
+1       
+(1 row)
+
+DROP RESOURCE GROUP rg_spill_test;
+DROP
+
+-- test case for query_mem=0
+CREATE TABLE test_zero_workmem(c int);
+CREATE
+
+--This test intends to build a situation that query_mem = 0
+--and verify under such condition work_mem will be used.
+CREATE RESOURCE GROUP rg_zero_workmem WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=20, memory_spill_ratio=0);
+CREATE
+
+CREATE ROLE role_zero_workmem SUPERUSER RESOURCE GROUP rg_zero_workmem;
+CREATE
+SET ROLE TO role_zero_workmem;
+SET
+
+--test query that will use spi
+ANALYZE test_zero_workmem;
+ANALYZE
+
+--test normal DML
+SELECT count(*) FROM test_zero_workmem;
+count
+-----
+0    
+(1 row)
+
+--clean env
+SET ROLE to gpadmin;
+SET
+DROP TABLE test_zero_workmem;
+DROP
+DROP ROLE role_zero_workmem;
+DROP
+DROP RESOURCE GROUP rg_zero_workmem;
+DROP

@@ -8,6 +8,10 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
+ *
+ * IDENTIFICATION
+ *	    src/bin/pg_dump/cdb/cdb_dump_include.h
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -76,11 +80,9 @@ extern bool g_gp_supportsFullText;
 extern bool g_gp_supportsLanOwner;
 
 /*
- * Indicates whether or not the GPDB cluster supports SQL/MED.
- * This boolean is used in cdb_dump_include.c to ignore sql/med
- * related object if needed.
+ * Indicate whether or not the GPDB cluster supports Foreign Data Wrappers
  */
-extern bool g_gp_supportsSqlMed;
+extern bool	g_gp_fdw;
 
 /*
  * Indicates whether or not only catalogs are dumped.  True

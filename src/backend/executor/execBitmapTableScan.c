@@ -3,10 +3,13 @@
  * execBitmapTableScan.c
  *	  Support routines for nodeBitmapTableScan.c
  *
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execBitmapTableScan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -64,20 +67,6 @@ getBitmapTableScanMethod(TableType tableType)
 }
 
 /*
- * Initializes the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapTableScanState *scanstate)
-{
-	if (scanstate->tbmres == NULL)
-	{
-		scanstate->tbmres =
-			palloc0(sizeof(TBMIterateResult) +
-					MAX_TUPLES_PER_PAGE * sizeof(OffsetNumber));
-	}
-}
-
-/*
  * Frees the state relevant to bitmaps.
  */
 static inline void
@@ -86,10 +75,13 @@ freeBitmapState(BitmapTableScanState *scanstate)
 	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
 	scanstate->tbm = NULL;
 
-	/* BitmapTableScan created the iterator, so it is responsible to free its iterator */
-	if (scanstate->tbmres != NULL)
+	/* BitmapTableScan created the iterator, so it is responsible to free its
+	 * iterator. We free our GenericBMIterator here, though. It owns the tbmres
+	 * memory. */
+	if (scanstate->tbmiterator != NULL)
 	{
-		pfree(scanstate->tbmres);
+		tbm_generic_end_iterate(scanstate->tbmiterator);
+		scanstate->tbmiterator = NULL;
 		scanstate->tbmres = NULL;
 	}
 }
@@ -116,7 +108,7 @@ BitmapTableScanPlanQualTuple(BitmapTableScanState *node)
 			return ExecClearTuple(slot);
 		}
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
 
 		/* Does the tuple meet the original qual conditions? */
 		econtext->ecxt_scantuple = slot;
@@ -150,11 +142,8 @@ readBitmap(BitmapTableScanState *scanState)
 
 	Node *tbm = (Node *) MultiExecProcNode(outerPlanState(scanState));
 
-	if (tbm != NULL && (!(IsA(tbm, HashBitmap) ||
-						  IsA(tbm, StreamBitmap))))
-	{
+	if (!tbm || !(IsA(tbm, TIDBitmap) || IsA(tbm, StreamBitmap)))
 		elog(ERROR, "unrecognized result from subplan");
-	}
 
 	scanState->tbm = tbm;
 	scanState->needNewBitmapPage = true;
@@ -166,27 +155,28 @@ readBitmap(BitmapTableScanState *scanState)
 static bool
 fetchNextBitmapPage(BitmapTableScanState *scanState)
 {
+	TBMIterateResult *tbmres;
+
 	if (scanState->tbm == NULL)
 	{
 		return false;
 	}
 
-	TBMIterateResult *tbmres = (TBMIterateResult *)scanState->tbmres;
-
 	Assert(scanState->needNewBitmapPage);
 
-	bool gotBitmapPage = true;
-
-	/* Set to 0 so that we can enter the while loop */
-	tbmres->ntuples = 0;
-
-	while (gotBitmapPage && tbmres->ntuples == 0)
+	if (scanState->tbmiterator == NULL)
 	{
-		gotBitmapPage = tbm_iterate(scanState->tbm, (TBMIterateResult *)scanState->tbmres);
+		scanState->tbmiterator = tbm_generic_begin_iterate(scanState->tbm);
 	}
 
-	if (gotBitmapPage)
+	do
 	{
+		tbmres = tbm_generic_iterate(scanState->tbmiterator);
+	} while (tbmres && (tbmres->ntuples == 0));
+
+	if (tbmres)
+	{
+		scanState->tbmres = tbmres;
 		scanState->iterator = NULL;
 		scanState->needNewBitmapPage = false;
 
@@ -200,18 +190,7 @@ fetchNextBitmapPage(BitmapTableScanState *scanState)
 		}
 	}
 
-	return gotBitmapPage;
-}
-
-/*
- * Initializes perfmon details for BitmapTableScan node.
- */
-void
-initGpmonPktForBitmapTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapTableScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
+	return (tbmres != NULL);
 }
 
 /*
@@ -261,8 +240,6 @@ BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap)
 	Assert(NULL != node);
 	BitmapTableScanState *scanState = (BitmapTableScanState *)node;
 	BitmapTableScan *plan = (BitmapTableScan*)(node->ps.plan);
-
-	initBitmapState(scanState);
 
 	/* Remap the bitmapqualorig as we might have dropped column problem */
 	DynamicScan_RemapExpression(node, attMap, (Node *) plan->bitmapqualorig);
@@ -323,7 +300,6 @@ BitmapTableScanReScanPartition(ScanState *node)
 	freeBitmapState(scanState);
 	Assert(scanState->tbm == NULL);
 
-	initBitmapState(scanState);
 	scanState->needNewBitmapPage = true;
 	scanState->recheckTuples = true;
 
@@ -394,5 +370,8 @@ BitmapTableScanReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
 {
 	ScanState *scanState = &node->ss;
 	DynamicScan_ReScan(scanState, exprCtxt);
+
+	freeBitmapState(node);
+
 	ExecReScan(outerPlanState(node), exprCtxt);
 }

@@ -1,18 +1,10 @@
+/*
+ * $PostgreSQL: pgsql/contrib/intarray/_int.h,v 1.17 2009/06/11 14:48:51 momjian Exp $
+ */
 #ifndef ___INT_H__
 #define ___INT_H__
 
-#include "postgres.h"
-
-#include <float.h>
-
-#include "access/gist.h"
-#include "access/itup.h"
-#include "access/skey.h"
-#include "catalog/pg_type.h"
 #include "utils/array.h"
-#include "utils/builtins.h"
-#include "storage/bufpage.h"
-#include "lib/stringinfo.h"
 
 /* number ranges for compression */
 #define MAXNUMRANGE 100
@@ -81,7 +73,7 @@ typedef struct
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	int4		flag;
 	char		data[1];
-}	GISTTYPE;
+} GISTTYPE;
 
 #define ALLISTRUE		0x04
 
@@ -134,18 +126,18 @@ typedef struct ITEM
 	int2		type;
 	int2		left;
 	int4		val;
-}	ITEM;
+} ITEM;
 
 typedef struct QUERYTYPE
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
-	int4		size;			/* number of ITEMs */
-	ITEM		items[1];		/* variable length array */
-}	QUERYTYPE;
+	int4		size;
+	char		data[1];
+} QUERYTYPE;
 
-#define HDRSIZEQT	offsetof(QUERYTYPE, items)
+#define HDRSIZEQT   (VARHDRSZ + sizeof(int4))
 #define COMPUTESIZE(size)	( HDRSIZEQT + (size) * sizeof(ITEM) )
-#define GETQUERY(x)  ( (x)->items )
+#define GETQUERY(x)  (ITEM*)( (char*)(x)+HDRSIZEQT )
 
 /* "type" codes for ITEM */
 #define END		0
@@ -155,17 +147,11 @@ typedef struct QUERYTYPE
 #define OPEN	4
 #define CLOSE	5
 
-/* fmgr macros for QUERYTYPE objects */
-#define DatumGetQueryTypeP(X)		  ((QUERYTYPE *) PG_DETOAST_DATUM(X))
-#define DatumGetQueryTypePCopy(X)	  ((QUERYTYPE *) PG_DETOAST_DATUM_COPY(X))
-#define PG_GETARG_QUERYTYPE_P(n)	  DatumGetQueryTypeP(PG_GETARG_DATUM(n))
-#define PG_GETARG_QUERYTYPE_P_COPY(n) DatumGetQueryTypePCopy(PG_GETARG_DATUM(n))
-
-bool		signconsistent(QUERYTYPE * query, BITVEC sign, bool calcnot);
-bool		execconsistent(QUERYTYPE * query, ArrayType *array, bool calcnot);
-bool		gin_bool_consistent(QUERYTYPE *query, bool *check);
+bool		signconsistent(QUERYTYPE *query, BITVEC sign, bool calcnot);
+bool		execconsistent(QUERYTYPE *query, ArrayType *array, bool calcnot);
+bool		ginconsistent(QUERYTYPE *query, bool *check);
+int4		shorterquery(ITEM *q, int4 len);
 bool		query_has_required_values(QUERYTYPE *query);
-int4		shorterquery(ITEM * q, int4 len);
 
 int			compASC(const void *a, const void *b);
 
@@ -180,4 +166,10 @@ int			compDESC(const void *a, const void *b);
 				  (direction) ? compASC : compDESC ); \
 	} while(0)
 
-#endif
+/* fmgr macros for QUERYTYPE objects */
+#define DatumGetQueryTypeP(X)		  ((QUERYTYPE *) PG_DETOAST_DATUM(X))
+#define DatumGetQueryTypePCopy(X)	  ((QUERYTYPE *) PG_DETOAST_DATUM_COPY(X))
+#define PG_GETARG_QUERYTYPE_P(n)	  DatumGetQueryTypeP(PG_GETARG_DATUM(n))
+#define PG_GETARG_QUERYTYPE_P_COPY(n) DatumGetQueryTypePCopy(PG_GETARG_DATUM(n))
+
+#endif   /* ___INT_H__ */

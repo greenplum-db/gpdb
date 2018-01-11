@@ -24,7 +24,7 @@ our $config = {
     zlib=>'c:\zlib',			# --with-zlib=<path>  (GPDB needs zlib)
     pthread=>'c:\pthreads',  		# gpdb needs pthreads 
     curl=>'c:\zlib', 			# gpdb needs libcurl
-    bzlib=>'c:\pgbuild\bzlib'
+    bz2=>'c:\pgbuild\bzlib'
     #readline=>'c:\progra~1\GnuWin32' 	# readline for windows?
 };
 

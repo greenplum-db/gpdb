@@ -1,8 +1,0 @@
--- start_ignore
-select * from gp_id;
-       gpname       | numsegments | dbid | content 
---------------------+-------------+------+---------
- Greenplum Database |           2 |    1 |      -1
-(1 row)
-
--- end_ignore

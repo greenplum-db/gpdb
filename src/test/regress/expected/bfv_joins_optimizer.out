@@ -2999,3 +2999,26 @@ AND ft.id = dt1.id;
      4
 (1 row)
 
+--
+-- This threw an error at one point:
+-- ERROR: FULL JOIN is only supported with merge-joinable join conditions
+--
+create table fjtest_a (aid oid);
+create table fjtest_b (bid oid);
+create table fjtest_c (cid oid);
+insert into fjtest_a values (0), (1), (2);
+insert into fjtest_b values (0), (2), (3);
+insert into fjtest_c values (0), (3), (4);
+select * from
+(
+  select * from fjtest_a a, fjtest_b b where (aid = bid)
+) s
+full outer join fjtest_c on (s.aid = cid);
+ aid | bid | cid 
+-----+-----+-----
+   0 |   0 |   0
+   2 |   2 |    
+     |     |   3
+     |     |   4
+(4 rows)
+

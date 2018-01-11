@@ -4,56 +4,6 @@
 <map id="d1-d1">
    <title>Loading and Unloading Data</title>
    <topicref href="topics/g-loading-and-unloading-data.xml">
-      <topicref href="topics/g-working-with-file-based-ext-tables.xml">
-         <topicref href="topics/g-external-tables.xml"/>
-         <topicref href="topics/g-file-protocol.xml"/>
-         <topicref href="topics/g-gpfdist-protocol.xml"/>
-         <topicref href="topics/g-gpfdists-protocol.xml"/>
-         <topicref href="topics/g-gphdfs-protocol.xml"/>
-         <topicref href="topics/g-s3-protocol.xml"/>
-         <topicref href="topics/g-accessing-ext-files-custom-protocol.xml"/>
-         <topicref href="topics/g-handling-errors-ext-table-data.xml"/>
-      </topicref>
-      <topicref href="topics/g-using-the-greenplum-parallel-file-server--gpfdist-.xml">
-         <topicref href="topics/g-about-gpfdist-setup-and-performance.xml"/>
-         <topicref href="topics/g-controlling-segment-parallelism.xml"/>
-         <topicref href="topics/g-installing-gpfdist.xml"/>
-         <topicref href="topics/g-starting-and-stopping-gpfdist.xml"/>
-         <topicref href="topics/g-troubleshooting-gpfdist.xml"/>
-      </topicref>
-      <topicref href="topics/g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic"
-        >
-         <topicref href="topics/g-one-time-hdfs-protocol-installation.xml" type="topic">
-            <topicref href="topics/g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
-            <topicref href="topics/g-specify-hdfs-data-in-an-external-table-definition.xml"
-               type="topic">
-               <topicref
-                  href="topics/g-setting-compression-options-for-hadoop-writable-external-tables.xml"
-                  type="topic"/>
-            </topicref>
-            <topicref href="topics/g-hdfs-readable-and-writable-external-table-examples.xml"
-               type="topic"/>
-            <topicref href="topics/g-reading-and-writing-custom-formatted-hdfs-data.xml"
-               type="topic"/>
-            <topicref href="topics/g-example-1-read-custom-formatted-data-from-hdfs.xml"
-               type="topic"/>
-            <topicref href="topics/g-sample-mapreduce-code.xml" type="topic">
-               <topicref href="topics/g-run-create-external-table.xml" type="topic"/>
-            </topicref>
-            <topicref
-               href="topics/g-example-2-write-custom-formatted-data-from-greenplum-database-to-hdfs.xml"
-               type="topic"/>
-            <topicref href="topics/g-mapreduce-sample-code.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-gphdfs-jvm.xml"/>
-         <topicref href="topics/g-hdfs-emr-config.xml"/>
-         <topicref href="topics/g-hdfs-avro-format.xml"/>
-         <topicref href="topics/g-hdfs-parquet-format.xml"/>
-      </topicref>
-      <topicref href="topics/g-creating-and-using-web-external-tables.xml" type="topic">
-         <topicref href="topics/g-command-based-web-external-tables.xml" type="topic"/>
-         <topicref href="topics/g-url-based-web-external-tables.xml" type="topic"/>
-      </topicref>
       <topicref href="topics/g-loading-data-using-an-external-table.xml"/>
       <topicref href="topics/g-loading-and-writing-non-hdfs-custom-data.xml" type="topic">
          <topicref href="topics/g-using-a-custom-format.xml" type="topic">
@@ -61,24 +11,6 @@
             <topicref href="topics/g-examples-read-fixed-width-data.xml" type="topic"/>
          </topicref>
          <topicref href="topics/g-using-a-custom-protocol.xml" type="topic"/>
-      </topicref>
-      <topicref href="topics/g-creating-external-tables---examples.xml" type="topic">
-         <topicref href="topics/g-example-1-single-gpfdist-instance-on-single-nic-machine.xml"/>
-         <topicref href="topics/g-example-2-multiple-gpfdist-instances.xml" type="topic"/>
-         <topicref href="topics/g-example-3-multiple-gpfdists-instances.xml" type="topic"/>
-         <topicref href="topics/g-example-4-single-gpfdist-instance-with-error-logging.xml"
-            type="topic"/>
-         <topicref href="topics/g-example-5-text-format-on-a-hadoop-distributed-file-server.xml"
-            type="topic"/>
-         <topicref href="topics/g-example-6-multiple-files-in-csv-format-with-header-rows.xml"
-            type="topic"/>
-         <topicref href="topics/g-example-7-readable-web-external-table-with-script.xml"
-            type="topic"/>
-         <topicref href="topics/g-example-8-writable-external-table-with-gpfdist.xml"/>
-         <topicref href="topics/g-example-9-writable-external-web-table-with-script.xml"/>
-         <topicref
-            href="topics/g-example-10-readable-and-writable-external-tables-with-xml-transformations.xml"
-            type="topic"/>
       </topicref>
       <topicref href="topics/g-handling-load-errors.xml">
          <topicref href="topics/g-define-an-external-table-with-single-row-error-isolation.xml"/>
@@ -88,6 +20,7 @@
          <topicref href="topics/g-moving-data-between-tables.xml"/>
       </topicref>
       <topicref href="topics/g-loading-data-with-gpload.xml"/>
+      <topicref href="topics/transforming-xml-data.xml"/>
       <topicref href="topics/g-loading-data-with-copy.xml"/>
       <topicref href="topics/g-running-copy-in-single-row-error-isolation-mode.xml"/>
       <topicref href="topics/g-optimizing-data-load-and-query-performance.xml"/>
@@ -103,23 +36,6 @@
          </topicref>
          <topicref href="topics/g-unloading-data-using-a-writable-external-table.xml" type="topic"/>
          <topicref href="topics/g-unloading-data-using-copy.xml" type="topic"/>
-      </topicref>
-      <topicref href="topics/g-transforming-xml-data.xml" type="topic">
-         <topicref href="topics/g-determine-the-transformation-schema.xml" type="topic"/>
-         <topicref href="topics/g-write-a-transform.xml" type="topic"/>
-         <topicref href="topics/g-write-the-gpfdist-configuration.xml" type="topic"/>
-         <topicref href="topics/g-load-the-data.xml" type="topic"/>
-         <topicref href="topics/g-transfer-and-store-the-data.xml" type="topic">
-            <topicref href="topics/g-transforming-with-gpload.xml" type="topic"/>
-            <topicref href="topics/g-transforming-with-insert-into-select-from.xml" type="topic"/>
-            <topicref href="topics/g-configuration-file-format.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-xml-transformation-examples.xml" type="topic">
-            <topicref href="topics/g-example-1-dblp-database-publications-in-demo-directory.xml"
-               type="topic"/>
-            <topicref href="topics/g-example-2-irs-mef-xml-files-in-demo-directory.xml" type="topic"/>
-            <topicref href="topics/g-example-3-witsml-files-in-demo-directory.xml" type="topic"/>
-         </topicref>
       </topicref>
       <topicref href="topics/g-formatting-data-files.xml" type="topic">
          <topicref href="topics/g-formatting-rows.xml" type="topic"/>

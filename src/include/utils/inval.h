@@ -4,10 +4,10 @@
  *	  POSTGRES cache invalidation dispatcher definitions.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/inval.h,v 1.41.2.1 2008/03/13 18:00:39 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/inval.h,v 1.45 2009/01/01 17:24:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,7 +15,7 @@
 #define INVAL_H
 
 #include "access/htup.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 
 
 typedef void (*SyscacheCallbackFunction) (Datum arg, int cacheid, ItemPointer tuplePtr);

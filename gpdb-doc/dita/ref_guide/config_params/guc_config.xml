@@ -21,11 +21,14 @@
   <topic id="topic_vsn_22l_z4">
     <title>Parameter Types and Values</title>
     <body>
-      <p>All parameter names are case-insensitive. Every parameter takes a value of one of four
-        types: <codeph>Boolean</codeph>, <codeph>integer</codeph>, <codeph>floating point</codeph>,
-        or <codeph>string</codeph>. Boolean values may be written as <codeph>ON</codeph>,
+      <p>All parameter names are case-insensitive. Every parameter takes a value of one of the
+        following types: <codeph>Boolean</codeph>, <codeph>integer</codeph>, <codeph>floating point</codeph>,
+        <codeph>enum</codeph>, or <codeph>string</codeph>.</p>
+      <p>Boolean values may be specified as <codeph>ON</codeph>,
           <codeph>OFF</codeph>, <codeph>TRUE</codeph>, <codeph>FALSE</codeph>, <codeph>YES</codeph>,
           <codeph>NO</codeph>, <codeph>1</codeph>, <codeph>0</codeph> (all case-insensitive).</p>
+      <p>Enum-type parameters are specified in the same manner as string parameters, but are
+        restricted to a limited set of values. Enum parameter values are case-insensitive.</p> 
       <p>Some settings specify a memory size or time value. Each of these has an implicit unit,
         which is either kilobytes, blocks (typically eight kilobytes), milliseconds, seconds, or
         minutes. Valid memory size units are <codeph>kB</codeph> (kilobytes), <codeph>MB</codeph>

@@ -3,7 +3,12 @@
  * persistentendxactrec.c
  *	  Make and read persistent information in commit, abort, and prepared records.
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/persistentendxactrec.c
  *
  *-------------------------------------------------------------------------
  */
@@ -12,6 +17,7 @@
 #include "miscadmin.h"
 #include "access/persistentendxactrec.h"
 #include "storage/smgr.h"
+#include "storage/smgr_ao.h"
 #include "utils/guc.h"
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentfilesysobj.h"

@@ -1,10 +1,10 @@
 /* -----------------------------------------------------------------------
  * formatting.c
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.137.2.2 2009/07/06 19:11:53 heikki Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.158 2009/06/22 17:54:30 tgl Exp $
  *
  *
- *	 Portions Copyright (c) 1999-2008, PostgreSQL Global Development Group
+ *	 Portions Copyright (c) 1999-2009, PostgreSQL Global Development Group
  *
  *
  *	 TO_CHAR(); TO_TIMESTAMP(); TO_DATE(); TO_NUMBER();
@@ -90,10 +90,6 @@
 #include "utils/numeric.h"
 #include "utils/pg_locale.h"
 #include "mb/pg_wchar.h"
-
-#ifndef _
-#define _(x)	gettext(x)
-#endif
 
 /* ----------
  * Routines type
@@ -418,7 +414,6 @@ typedef struct
 				ddd,
 				mm,
 				ms,
-				iyear,
 				year,
 				bc,
 				ww,
@@ -3858,6 +3853,7 @@ NUM_prepare_locale(NUMProc *Np)
 		 */
 		if (lconv->decimal_point && *lconv->decimal_point)
 			Np->decimal = lconv->decimal_point;
+
 		else
 			Np->decimal = ".";
 
@@ -3874,7 +3870,7 @@ NUM_prepare_locale(NUMProc *Np)
 		if (lconv->thousands_sep && *lconv->thousands_sep)
 			Np->L_thousands_sep = lconv->thousands_sep;
 		/* Make sure thousands separator doesn't match decimal point symbol. */
-		else if (strcmp(Np->decimal, ",") != 0)
+		else if (strcmp(Np->decimal, ",") !=0)
 			Np->L_thousands_sep = ",";
 		else
 			Np->L_thousands_sep = ".";
@@ -4764,7 +4760,7 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
  */
 #define NUM_TOCHAR_prepare \
 do { \
-	len = VARSIZE_ANY_EXHDR(fmt);					\
+	len = VARSIZE_ANY_EXHDR(fmt); \
 	if (len <= 0 || len >= (INT_MAX-VARHDRSZ)/NUM_MAX_ITEM_SIZ)		\
 		PG_RETURN_TEXT_P(cstring_to_text("")); \
 	result	= (text *) palloc0((len * NUM_MAX_ITEM_SIZ) + 1 + VARHDRSZ);	\

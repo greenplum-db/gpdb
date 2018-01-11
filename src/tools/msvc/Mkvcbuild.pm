@@ -3,7 +3,7 @@ package Mkvcbuild;
 #
 # Package that generates build files for msvc build
 #
-# src/tools/msvc/Mkvcbuild.pm
+# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.40 2009/06/05 18:29:56 adunstan Exp $
 #
 use Carp;
 use Win32;
@@ -36,7 +36,7 @@ my $contrib_extrasource = {
     'cube' => ['cubescan.l','cubeparse.y'],
     'seg' => ['segscan.l','segparse.y']
 };
-my @contrib_excludes = ('pgcrypto','intagg','uuid-ossp','bufferedtest', 'varblocktest', 'hstore', 'gp_filedump', 'tsearch2', 'dblink', 'xlogdump','xlogviewer', 'changetrackingdump','gp_sparse_vector','xml2','adminpack');
+my @contrib_excludes = ('pgcrypto','intagg','uuid-ossp','bufferedtest', 'varblocktest', 'hstore', 'gp_filedump', 'tsearch2', 'dblink', 'xlogdump', 'changetrackingdump','gp_sparse_vector','xml2','adminpack');
 
 sub mkvcbuild
 {
@@ -49,7 +49,7 @@ sub mkvcbuild
 
     our @pgportfiles = qw(
       chklocale.c crypt.c fseeko.c getrusage.c inet_aton.c random.c srandom.c
-      unsetenv.c getaddrinfo.c gettimeofday.c kill.c open.c rand.c
+      getaddrinfo.c gettimeofday.c kill.c open.c rand.c
       snprintf.c strlcat.c strlcpy.c copydir.c dirmod.c exec.c noblock.c path.c pipe.c
       pgsleep.c pgstrcasecmp.c qsort.c qsort_arg.c sprompt.c thread.c
       getopt.c getopt_long.c dirent.c rint.c win32env.c win32error.c glob.c);
@@ -60,7 +60,7 @@ sub mkvcbuild
 
     $postgres = $solution->AddProject('postgres','exe','','src\backend');
     $postgres->AddIncludeDir('src\backend');
-    $postgres->AddIncludeDir('src\backend\gp_libpq_fe');
+    $postgres->AddIncludeDir('src\interface\libpq');
     $postgres->AddIncludeDir('src\port');
     $postgres->AddDir('src\backend\port\win32');
     $postgres->AddFile('src\backend\utils\fmgrtab.c');
@@ -150,10 +150,10 @@ sub mkvcbuild
         {
             $plperl->AddLibrary($perl_libs[0]);
         }
-        else
-        {
+		else
+		{
 			die "could not identify perl library version";
-        }
+		}
     }
 
     if ($solution->{options}->{python})
@@ -192,13 +192,13 @@ sub mkvcbuild
         }
         else
         {
-        $pltcl->AddLibrary($solution->{options}->{tcl} . '\lib\tcl84.lib');
+            $pltcl->AddLibrary($solution->{options}->{tcl} . '\lib\tcl84.lib');
         }
     }
 
     $libpq = $solution->AddProject('libpq','dll','interfaces','src\interfaces\libpq');
     $libpq->AddDefine('FRONTEND');
-    $libpq->AddDefine('UNSAFE_STAT_OK');
+	$libpq->AddDefine('UNSAFE_STAT_OK');
     $libpq->AddIncludeDir('src\port');
     $libpq->AddLibrary('wsock32.lib');
     $libpq->AddLibrary('secur32.lib');
@@ -408,11 +408,22 @@ sub mkvcbuild
         my @files = split /\s+/,$1;
         foreach my $f (@files)
         {
-			$f =~ s/\.o$/\.c/;
+            $f =~ s/\.o$/\.c/;
             if ($f eq 'keywords.c')
             {
-                $proj->AddFile('src\backend\parser\keywords.c');
-                $proj->AddIncludeDir('src\backend');
+                $proj->AddFile('src\bin\pg_dump\keywords.c');
+            }
+            elsif ($f eq 'kwlookup.c')
+            {
+                $proj->AddFile('src\backend\parser\kwlookup.c');
+            }
+            elsif ($f eq 'dumputils.c')
+            {
+                $proj->AddFile('src\bin\pg_dump\dumputils.c');
+            }
+            elsif ($f =~ /print\.c$/)
+            { # Also catches mbprint.c
+                $proj->AddFile('src\bin\psql\\' . $f);
             }
             elsif ($f eq '$(top_builddir)/src/backend/parser/keywords.c')
             {

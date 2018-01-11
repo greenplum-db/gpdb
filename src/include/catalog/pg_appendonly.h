@@ -1,11 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* pg_appendonly.h
-*	  internal specifications of the appendonly relation storage.
-*
-* Copyright (c) 2008-2010, Greenplum Inc.
-*-------------------------------------------------------------------------
-*/
+ *
+ * pg_appendonly.h
+ *	  internal specifications of the appendonly relation storage.
+ *
+ * Portions Copyright (c) 2008-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_appendonly.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef PG_APPENDONLY_H
 #define PG_APPENDONLY_H
 
@@ -90,8 +96,8 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
 #define Class_pg_appendonly \
   {"pg_appendonly"}, PG_CATALOG_NAMESPACE, 10293, BOOTSTRAP_SUPERUSERID, 0, \
                AppendOnlyRelationId, DEFAULTTABLESPACE_OID, \
-               25, 10000, 0, 0, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_appendonly, \
-               0, 0, 0, 0, 0, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
+               25, 10000, 0, 0, false, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_appendonly, \
+               0, false, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
 
 
 /* No initial contents. */

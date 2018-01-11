@@ -10,8 +10,6 @@ set Debug_print_plan=on;
 --
 -- Changes here should also be made to olap_window_seq.sql
 
-set gp_enable_sequential_window_plans to false;
-
 ---- 1 -- Null window specification -- OVER () ----
 
 select row_number() over (), cn,pn,vn 

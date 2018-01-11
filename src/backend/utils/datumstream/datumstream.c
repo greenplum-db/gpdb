@@ -1,7 +1,15 @@
-/*
- * Datum stream
+/*-------------------------------------------------------------------------
  *
- *	Copyright (c) 2009, Greenplum Inc.
+ * datumstream.c
+ *
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/datumstream/datumstream.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
@@ -1082,7 +1090,8 @@ datumstreamwrite_lob(DatumStreamWrite * acc,
 	 */
 	if (VARATT_IS_EXTERNAL(DatumGetPointer(d)))
 	{
-		d = PointerGetDatum(heap_tuple_fetch_attr(DatumGetPointer(d)));
+		d = PointerGetDatum(heap_tuple_fetch_attr(
+								(struct varlena *) DatumGetPointer(d)));
 	}
 
 	p = (uint8 *) DatumGetPointer(d);

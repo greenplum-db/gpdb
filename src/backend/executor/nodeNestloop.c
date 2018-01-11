@@ -4,12 +4,13 @@
  *	  routines to support nest-loop joins
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.46 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.53 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -82,21 +83,6 @@ ExecNestLoop(NestLoopState *node)
 	econtext = node->js.ps.ps_ExprContext;
 
 	/*
-	 * get the current outer tuple
-	 */
-	outerTupleSlot = node->js.ps.ps_OuterTupleSlot;
-	econtext->ecxt_outertuple = outerTupleSlot;
-
-	/*
-	 * If we're doing an IN join, we want to return at most one row per outer
-	 * tuple; so we can stop scanning the inner scan if we matched on the
-	 * previous try.
-	 */
-	if (node->js.jointype == JOIN_IN &&
-		node->nl_MatchedOuter)
-		node->nl_NeedNewOuter = true;
-
-	/*
 	 * Reset per-tuple memory context to free any expression evaluation
 	 * storage allocated in the previous tuple cycle.  Note this can't happen
 	 * until we're done projecting out tuples from a join tuple.
@@ -118,8 +104,6 @@ ExecNestLoop(NestLoopState *node)
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
-		Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
-
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
 
@@ -174,7 +158,6 @@ ExecNestLoop(NestLoopState *node)
 		{
 			ENL1_printf("getting new outer tuple");
 			outerTupleSlot = ExecProcNode(outerPlan);
-			Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
 
 			/*
 			 * if there are no more outer tuples, then the join is complete..
@@ -209,7 +192,6 @@ ExecNestLoop(NestLoopState *node)
 			}
 
 			ENL1_printf("saving new outer tuple information");
-			node->js.ps.ps_OuterTupleSlot = outerTupleSlot;
 			econtext->ecxt_outertuple = outerTupleSlot;
 			node->nl_NeedNewOuter = false;
 			node->nl_MatchedOuter = false;
@@ -237,7 +219,6 @@ ExecNestLoop(NestLoopState *node)
 		ENL1_printf("getting new inner tuple");
 
 		innerTupleSlot = ExecProcNode(innerPlan);
-		CheckSendPlanStateGpmonPkt(&node->js.ps);
 
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
@@ -256,7 +237,7 @@ ExecNestLoop(NestLoopState *node)
 
 			if (!node->nl_MatchedOuter &&
 				(node->js.jointype == JOIN_LEFT ||
-				 node->js.jointype == JOIN_LASJ ||
+				 node->js.jointype == JOIN_ANTI ||
 				 node->js.jointype == JOIN_LASJ_NOTIN))
 			{
 				/*
@@ -269,7 +250,7 @@ ExecNestLoop(NestLoopState *node)
 
 				ENL1_printf("testing qualification for outer-join tuple");
 
-				if (ExecQual(otherqual, econtext, false))
+				if (otherqual == NIL || ExecQual(otherqual, econtext, false))
 				{
 					/*
 					 * qualification was satisfied so we project and return
@@ -278,8 +259,6 @@ ExecNestLoop(NestLoopState *node)
 					 */
 					ENL1_printf("qualification succeeded, projecting tuple");
 
-					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
-                          	CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}
 			}
@@ -323,11 +302,18 @@ ExecNestLoop(NestLoopState *node)
 			node->nl_MatchedOuter = true;
 
 			/* In an antijoin, we never return a matched tuple */
-			if (node->js.jointype == JOIN_LASJ || node->js.jointype == JOIN_LASJ_NOTIN)
+			if (node->js.jointype == JOIN_LASJ_NOTIN || node->js.jointype == JOIN_ANTI)
 			{
 				node->nl_NeedNewOuter = true;
 				continue;		/* return to top of loop */
 			}
+
+			/*
+			 * In a semijoin, we'll consider returning the first match, but
+			 * after that we're done with this outer tuple.
+			 */
+			if (node->js.jointype == JOIN_SEMI)
+				node->nl_NeedNewOuter = true;
 
 			if (otherqual == NIL || ExecQual(otherqual, econtext, false))
 			{
@@ -335,16 +321,14 @@ ExecNestLoop(NestLoopState *node)
 				 * qualification was satisfied so we project and return the
 				 * slot containing the result tuple using ExecProject().
 				 */
+				TupleTableSlot *result;
+
 				ENL1_printf("qualification succeeded, projecting tuple");
 
-				Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
-                     	CheckSendPlanStateGpmonPkt(&node->js.ps);
-				return ExecProject(node->js.ps.ps_ProjInfo, NULL);
-			}
+				result = ExecProject(node->js.ps.ps_ProjInfo, NULL);
 
-			/* If we didn't return a tuple, may need to set NeedNewOuter */
-			if (node->js.jointype == JOIN_IN)
-				node->nl_NeedNewOuter = true;
+				return result;
+			}
 		}
 
 		/*
@@ -461,10 +445,10 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
-		case JOIN_IN:
+		case JOIN_SEMI:
 			break;
 		case JOIN_LEFT:
-		case JOIN_LASJ:
+		case JOIN_ANTI:
 		case JOIN_LASJ_NOTIN:
 			nlstate->nl_NullInnerTupleSlot =
 				ExecInitNullTupleSlot(estate,
@@ -484,7 +468,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	/*
 	 * finally, wipe the current outer tuple clean.
 	 */
-	nlstate->js.ps.ps_OuterTupleSlot = NULL;
 	nlstate->nl_NeedNewOuter = true;
 	nlstate->nl_MatchedOuter = false;
 	nlstate->nl_innerSquelchNeeded = true;		/*CDB*/
@@ -508,8 +491,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	NL1_printf("ExecInitNestLoop: %s\n",
 			   "node initialized");
 
-	initGpmonPktForNestLoop((Plan *)node, &nlstate->js.ps.gpmon_pkt, estate);
-	
 	return nlstate;
 }
 
@@ -574,20 +555,10 @@ ExecReScanNestLoop(NestLoopState *node, ExprContext *exprCtxt)
 	if (outerPlan->chgParam == NULL)
 		ExecReScan(outerPlan, exprCtxt);
 
-	/* let outerPlan to free its result tuple ... */
-	node->js.ps.ps_OuterTupleSlot = NULL;
 	node->nl_NeedNewOuter = true;
 	node->nl_MatchedOuter = false;
 	node->nl_innerSideScanned = false;
 	/* CDB: We intentionally leave node->nl_innerSquelchNeeded unchanged on ReScan */
-}
-
-void
-initGpmonPktForNestLoop(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, NestLoop));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /* ----------------------------------------------------------------

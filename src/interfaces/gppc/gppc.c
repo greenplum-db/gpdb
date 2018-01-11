@@ -3,7 +3,12 @@
  * gppc.c
  *	  libgppc wrapper main
  *
- * Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/interfaces/gppc/gppc.c
  *
  *-------------------------------------------------------------------------
  */
@@ -14,7 +19,7 @@
 
 #include "executor/spi.h"
 #include "mb/pg_wchar.h"
-#include "parser/parse_expr.h"
+#include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datetime.h"
@@ -513,7 +518,7 @@ GppcDatumGetTimestampTz(GppcDatum x)
 GppcAnyTable
 GppcDatumGetAnyTable(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcAnyTable) DatumGetPointer(x);
 }
 
 /*
@@ -522,7 +527,7 @@ GppcDatumGetAnyTable(GppcDatum x)
 GppcTupleDesc
 GppcDatumGetTupleDesc(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcTupleDesc) DatumGetPointer(x);
 }
 
 /*
@@ -531,7 +536,7 @@ GppcDatumGetTupleDesc(GppcDatum x)
 GppcHeapTuple
 GppcDatumGetHeapTuple(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcHeapTuple) DatumGetPointer(x);
 }
 
 /*
@@ -1483,7 +1488,7 @@ GppcTupleDescInitEntry(GppcTupleDesc desc,
 GppcHeapTuple
 GppcHeapFormTuple(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls)
 {
-	return (GppcHeapTuple) heap_form_tuple((TupleDesc) tupdesc, values, nulls);
+	return (GppcHeapTuple) heap_form_tuple((TupleDesc) tupdesc, (Datum *) values, nulls);
 }
 
 /*
@@ -1494,7 +1499,7 @@ GppcBuildHeapTupleDatum(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls)
 {
 	HeapTuple		tuple;
 
-	tuple = heap_form_tuple((TupleDesc) tupdesc, values, nulls);
+	tuple = heap_form_tuple((TupleDesc) tupdesc, (Datum *) values, nulls);
 	return (GppcDatum) HeapTupleGetDatum(tuple);
 }
 

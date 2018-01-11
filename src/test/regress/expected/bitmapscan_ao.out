@@ -149,7 +149,7 @@ WHERE foo.fid = bar.flex_value_set_id;
  54321
 (2 rows)
 
--- double free mixed bitmap indexes (StreamBitmap with HashBitmap)
+-- double free mixed bitmap indexes (StreamBitmap with TIDBitmap)
 CREATE TABLE bmcrash (
     btree_col2 date DEFAULT now(),
     bitmap_col text NOT NULL,

@@ -614,7 +614,7 @@ class GPFilespace:
         self.fspacename = None  # name for the filespace
         self.dir = options.output
         self.master = None  # [] list of master segments
-        self.segments = None  # {} dbid => GpDB resolution
+        self.segments = None  # {} dbid => Segment resolution
         self.hosts = None  # {} hostname => GPHost resolution
         self.nics = None  # {} nic => hostname resolution
         self.config = None  # {} host configuration groups
@@ -712,8 +712,8 @@ class GPFilespace:
         GPFilespace::get_configuration()
         
         Extracts gp_configuration from the database and uses it to populate:
-          self.segments = hash of segments {dbid: GpDB()}
-          self.master   = list of master segments [GpDB()]
+          self.segments = hash of segments {dbid: Segment()}
+          self.master   = list of master segments [Segment()]
 
         If any existing configuration groups or host lists are present they
         will be obliterated, but we will keep any existing nic->hostname
@@ -733,7 +733,7 @@ class GPFilespace:
         except Exception, e:
             raise GPDatabaseError(str(e))
 
-        # These have pointers to the old GpDB so they must be destroyed
+        # These have pointers to the old Segment so they must be destroyed
         # before we populate the new structures.
         self.master = []
         self.segments = {}

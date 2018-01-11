@@ -2,7 +2,12 @@
  * tupchunklist.c
  *	  The data-structures and functions for dealing with tuple chunk lists.
  *
- * Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/tupchunklist.c
  *
  * Reviewers: jzhang, ftian, tkordas
  *-------------------------------------------------------------------------
@@ -38,7 +43,7 @@ appendChunkToTCList(TupleChunkList tcList, TupleChunkListItem tcItem)
 	}
 }
 
-static int gp_interconnect_chunk_cache=10;
+static int	gp_interconnect_chunk_cache = 10;
 
 TupleChunkListItem
 getChunkFromCache(TupleChunkListCache *cache)
@@ -105,4 +110,3 @@ clearTCList(TupleChunkListCache *cache, TupleChunkList tcList)
 	tcList->num_chunks = 0;
 	tcList->serialized_data_length = 0;
 }
-

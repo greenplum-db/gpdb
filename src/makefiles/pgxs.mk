@@ -145,7 +145,7 @@ endif
 ifneq (,$(DATA_TSEARCH))
 	$(MKDIR_P) '$(DESTDIR)$(datadir)/tsearch_data'
 endif
-ifneq (,$(MODULES)$(MODULE_big))
+ifneq (,$(MODULES))
 	$(MKDIR_P) '$(DESTDIR)$(pkglibdir)'
 endif
 ifdef DOCS

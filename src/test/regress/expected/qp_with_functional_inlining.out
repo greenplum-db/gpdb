@@ -26,7 +26,7 @@ set search_path='qp_with_functional';
 -- # The error message you get when you have a UDF that tries to do SQL access
 -- # depends on the plan, and when the error is caught. Mask out that
 -- # difference.
--- m/.*ERROR:.*function cannot execute on segment because it accesses relation.*/
+-- m/.*ERROR:.*function cannot execute on a QE slice because it accesses relation.*/
 -- s/.*ERROR:.*/ERROR: error message might be different for CTE/
 --
 -- m/.*ERROR:  query plan with multiple segworker groups is not supported.*/
@@ -358,6 +358,44 @@ WHERE v1.a < v2.a ORDER BY 1,2;
  3 | 4
 (3 rows)
 
+-- @description test15d: CTE with a user-defined function [STABLE MODIFIES SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE MODIFIES SQL DATA
+AS $$
+BEGIN
+UPDATE foobar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$;
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+psql:sql/qp_with_functional.sql:242: ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 slice1 127.0.0.1:25433 pid=32057)
+DETAIL:  
+SQL statement "UPDATE foobar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "cte_func1" line 2 at SQL statement
+-- @description test15e: CTE with a user-defined function [STABLE READS SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE READS SQL DATA
+AS $$
+DECLARE
+    r int;
+BEGIN
+    SELECT d FROM foobar WHERE c = $1 LIMIT 1 INTO r;
+    RETURN r;
+END
+$$;
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+psql:sql/qp_with_functional.sql:260: ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional_inlining.foobar"  (seg0 slice1 127.0.0.1:25432 pid=53270)
+DETAIL:  
+SQL statement "SELECT d FROM foobar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "cte_func1" line 4 at SQL statement
 -- @description test15g: CTE with a user-defined function [VOLATILE NO SQL]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int 
 LANGUAGE plpgsql
@@ -417,7 +455,7 @@ WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
 SELECT v1.a, v2.b
 FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "qp_with_functional.foobar"
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional.foobar"
 DETAIL:  
 SQL statement "SELECT d FROM foobar WHERE c =  $1  LIMIT 1"
 PL/pgSQL function "cte_func1" line 4 at SQL statement
@@ -435,7 +473,7 @@ WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
 SELECT v1.a, v2.b
 FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 DETAIL:  
 SQL statement "UPDATE foobar SET d = d+1 WHERE c =  $1 "
 PL/pgSQL function "cte_func1" line 2 at SQL statement
@@ -459,7 +497,7 @@ SELECT v1.a FROM v AS v1, v as v2 WHERE v1.a = v2.b)OUTERFOO ORDER BY 1", 5)
 $$ LANGUAGE plpythonu READS SQL DATA;
 WITH v(a, b) AS (SELECT a,b FROM foo WHERE b < 5)
 SELECT * from v where b in ( select * from cte_func3()) ORDER BY 1;
-ERROR:  plpy.SPIError: function cannot execute on segment because it accesses relation "qp_with_functional.foo"
+ERROR:  plpy.SPIError: function cannot execute on a QE slice because it accesses relation "qp_with_functional.foo"
 \unset VERBOSITY
 -- @description test16b: CTE within a user-defined function
 CREATE OR REPLACE FUNCTION cte_func2()
@@ -477,7 +515,7 @@ End;
 $$ language plpgsql READS SQL DATA;
 WITH v(a, b) AS (SELECT cte_func2() as a, b FROM foo WHERE b < 5)
 SELECT * from v ORDER BY 1;
-ERROR:  function cannot execute on segment because it accesses relation "qp_with_functional.foo"
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional.foo"
 DETAIL:  
 	 SQL statement "SELECT  (SELECT COUNT(*) FROM (WITH v AS (SELECT a, b FROM foo WHERE b < 9), w AS (SELECT * FROM v WHERE a < 5) SELECT v1.a, w1.b b1, w2.b b2 FROM v AS v1, v as v2, w AS w1, w AS w2 WHERE v1.a = v2.b)foo)"
 PL/pgSQL function "cte_func2" line 4 at RETURN
@@ -491,11 +529,11 @@ CREATE VIEW cte_view as
     INTERSECT 
     SELECT a FROM foo limit 10
 )SELECT * FROM CTE);
-\d cte_view
-    View "qp_with_functional.cte_view"
- Column |  Type   | Modifiers 
---------+---------+-----------
- e      | integer | 
+\d+ cte_view
+     View "qp_with_functional_inlining.cte_view"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ e      | integer |           | plain   | 
 View definition:
  WITH cte(e) AS (
                  SELECT bar.d
@@ -531,12 +569,12 @@ CREATE VIEW cte_view as
       cte2(e,f) AS (SELECT e,d FROM bar, cte WHERE cte.e = bar.c )
 SELECT cte2.e,cte.f FROM cte,cte2 where cte.e = cte2.e
 );
-\d cte_view
-    View "qp_with_functional.cte_view"
- Column |  Type   | Modifiers 
---------+---------+-----------
- e      | integer | 
- f      | integer | 
+\d+ cte_view
+     View "qp_with_functional_inlining.cte_view"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ e      | integer |           | plain   | 
+ f      | integer |           | plain   | 
 View definition:
  WITH cte(e, f) AS (
          SELECT foo.a, bar.d

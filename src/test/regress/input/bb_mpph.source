@@ -3234,7 +3234,7 @@ insert into opperfscale
 			else lc / 6000000 / seg + 1 end as nscaleperseg
 	from
 	(
- 		select max(content)+1 as seg from gp_configuration where isprimary = 't'
+ 		select max(content)+1 as seg from gp_segment_configuration where preferred_role = 'p'
 	) S,
 	(
 	 select count(*) as lc from heap_lineitem 

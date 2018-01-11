@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/copy.h,v 1.31 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/copy.h,v 1.32 2009/01/01 17:23:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "tcop/dest.h"
 #include "executor/executor.h"
 #include "cdb/cdbhash.h"
+#include "cdb/cdbcopy.h"
 
 /*
  * Represents the different source/dest cases we need to worry about at
@@ -26,7 +27,7 @@
  */
 typedef enum CopyDest
 {
-	COPY_FILE,					/* to/from file */
+	COPY_FILE,					/* to/from file (or a piped program) */
 	COPY_OLD_FE,				/* to/from frontend (2.0 protocol) */
 	COPY_NEW_FE,				/* to/from frontend (3.0 protocol) */
 	COPY_EXTERNAL_SOURCE		/* to/from external source (RET/WET) */
@@ -90,6 +91,12 @@ typedef enum CopyErrMode
 	SREH_LOG		/* Sreh - log errors */
 } CopyErrMode;
 
+typedef struct ProgramPipes
+{
+	char *shexec;
+	int pipes[2];
+	int pid;
+} ProgramPipes;
 
 /*
  * This struct contains all the state variables used throughout a COPY
@@ -137,6 +144,7 @@ typedef struct CopyStateData
 	List	   *force_quote;	/* the raw fc column name list */
 	List	   *force_notnull;  /* the raw fnn column name list */
 	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
+	bool		is_program;		/* is 'filename' a program to popen? */
 	bool		custom;			/* custom format? */
 	bool		oids;			/* include OIDs? */
 	bool        binary;         /* binary format */
@@ -246,6 +254,7 @@ typedef struct CopyStateData
 	bool		on_segment; /* QE save data files locally */
 	bool		ignore_extra_line; /* Don't count CSV header or binary trailer in
 									  "processed" line number for on_segment mode*/
+	ProgramPipes	*program_pipes; /* COPY PROGRAM pipes for data and stderr */
 	/* end Greenplum Database specific variables */
 } CopyStateData;
 
@@ -298,6 +307,37 @@ typedef struct GpDistributionData
 	AttrNumber p_nattrs; /* num of attributes in the distribution policy */
 	Oid *p_attr_types;   /* types for each policy attribute */
 	CdbHash *cdbHash;
+	HTAB *hashmap;
 } GpDistributionData;
 
-#endif   /* COPY_H */
+typedef struct PartitionData
+{
+	/* variables for partitioning */
+	Datum *part_values ;
+	Oid *part_attr_types; /* types for partitioning */
+	Oid *part_typio ;
+	FmgrInfo *part_infuncs ;
+	AttrNumber *part_attnum ;
+	int part_attnums ;
+} PartitionData;
+
+typedef struct GetAttrContext
+{
+	TupleDesc tupDesc;
+	Form_pg_attribute *attr;
+	AttrNumber num_phys_attrs;
+	int *attr_offsets;
+	bool *nulls;
+	Datum *values;
+	CdbCopy *cdbCopy;
+	int original_lineno_for_qe;
+} GetAttrContext;
+
+typedef struct  cdbhashdata
+{
+	Oid relid;
+	CdbHash *cdbHash; /* a CdbHash API object */
+	GpPolicy *policy; /* policy for this cdb hash */
+} cdbhashdata;
+
+#endif /* COPY_H */

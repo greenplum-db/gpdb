@@ -150,6 +150,7 @@
 
 #include "access/distributedlog.h"
 #include "access/twophase.h"  /*max_prepared_xacts*/
+#include "access/xact.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "funcapi.h"
@@ -160,7 +161,9 @@
 #include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "utils/resowner.h"
 #include "utils/sharedsnapshot.h"
+#include "utils/snapmgr.h"
 
 /*
  * Distributed Snapshot that gets sent in from the QD to processes running

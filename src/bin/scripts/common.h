@@ -20,10 +20,6 @@ enum trivalue
 	TRI_YES
 };
 
-#ifndef HAVE_INT_OPTRESET
-extern int	optreset;
-#endif
-
 typedef void (*help_handler) (const char *progname);
 
 extern const char *get_user_name(const char *progname);

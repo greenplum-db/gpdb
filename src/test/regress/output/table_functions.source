@@ -1732,7 +1732,7 @@ explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example)
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Result  (cost=2.42..2.43 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.39..2.42 rows=5 width=4)
            Merge Key: a
            ->  Sort  (cost=2.39..2.42 rows=5 width=4)
@@ -1746,7 +1746,7 @@ explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example 
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Result  (cost=2.42..2.43 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.27..2.42 rows=5 width=4)
            ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=4)
                  ->  Sort  (cost=2.27..2.29 rows=5 width=16)
@@ -1759,7 +1759,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=2.58..4.76 rows=2 width=16)
-   ->  Hash EXISTS Join  (cost=2.58..4.76 rows=2 width=16)
+   ->  Hash Semi Join  (cost=2.58..4.76 rows=2 width=16)
          Hash Cond: table_function.example.a = multiset_5.a AND table_function.example.b = multiset_5.b
          ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
          ->  Hash  (cost=2.43..2.43 rows=5 width=36)
@@ -1774,7 +1774,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                                                    QUERY PLAN                                                    
 -----------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=2.58..4.76 rows=2 width=16)
-   ->  Hash EXISTS Join  (cost=2.58..4.76 rows=2 width=16)
+   ->  Hash Semi Join  (cost=2.58..4.76 rows=2 width=16)
          Hash Cond: table_function.example.a = multiset_5.a AND table_function.example.b = multiset_5.b
          ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
          ->  Hash  (cost=2.43..2.43 rows=5 width=36)
@@ -1791,7 +1791,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) i
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=2.25..4.76 rows=2 width=36)
-   ->  Hash EXISTS Join  (cost=2.25..4.76 rows=2 width=36)
+   ->  Hash Semi Join  (cost=2.25..4.76 rows=2 width=36)
          Hash Cond: multiset_5.a = table_function.example.a AND multiset_5.b = table_function.example.b
          ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.43 rows=5 width=36)
                Hash Key: multiset_5.a
@@ -1806,7 +1806,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example scatter by b)) 
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=2.25..4.76 rows=2 width=36)
-   ->  Hash EXISTS Join  (cost=2.25..4.76 rows=2 width=36)
+   ->  Hash Semi Join  (cost=2.25..4.76 rows=2 width=36)
          Hash Cond: multiset_5.a = table_function.example.a AND multiset_5.b = table_function.example.b
          ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..2.43 rows=5 width=36)
                Hash Key: multiset_5.a
@@ -1874,20 +1874,21 @@ explain SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hello'::text
 explain SELECT * FROM example_r WHERE (10, 'hello') in (SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hello'::text from example_r )));
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=2.28..4.51 rows=5 width=16)
-   ->  Nested Loop  (cost=2.28..4.51 rows=5 width=16)
-         ->  Broadcast Motion 1:2  (slice2; segments: 1)  (cost=2.28..2.31 rows=1 width=36)
-               ->  HashAggregate  (cost=2.31..2.32 rows=1 width=36)
-                     Group By: multiset_5.a, multiset_5.b
-                     ->  Table Function Scan on multiset_5  (cost=2.24..2.27 rows=8 width=36)
-                           Filter: 10 = a AND 'hello'::text = b
-                           ->  Aggregate  (cost=2.24..2.25 rows=1 width=36)
-                                 ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.13..2.23 rows=1 width=8)
-                                       ->  Aggregate  (cost=2.13..2.14 rows=1 width=8)
-                                             ->  Seq Scan on example_r  (cost=0.00..2.10 rows=5 width=0)
-         ->  Seq Scan on example_r  (cost=0.00..2.10 rows=5 width=16)
- Settings:  gp_segments_for_planner=8
-(13 rows)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=3.27..6.37 rows=10 width=16)
+   ->  Result  (cost=3.27..6.37 rows=4 width=16)
+         One-Time Filter: (hashed subplan)
+         ->  Seq Scan on example_r  (cost=3.27..6.37 rows=4 width=16)
+         SubPlan 1
+           ->  Materialize  (cost=3.27..3.28 rows=1 width=36)
+                 ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=3.24..3.27 rows=1 width=36)
+                       ->  Table Function Scan on multiset_5  (cost=3.24..3.27 rows=1 width=36)
+                             ->  Aggregate  (cost=3.24..3.25 rows=1 width=36)
+                                   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.13..3.23 rows=1 width=8)
+                                         ->  Aggregate  (cost=3.13..3.14 rows=1 width=8)
+                                               ->  Seq Scan on example_r  (cost=0.00..3.10 rows=4 width=0)
+ Settings:  gp_segments_for_planner=8; optimizer=off
+ Optimizer status: legacy query optimizer
+(14 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * from example_v) );
                                  QUERY PLAN                                  
@@ -1905,7 +1906,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example WHERE a >= (SELEC
    ->  Table Function Scan on multiset_5  (cost=2.25..4.42 rows=2 width=36)
          ->  Seq Scan on example  (cost=2.25..4.38 rows=2 width=16)
                Filter: a >= $0
-               InitPlan  (slice3)
+               InitPlan 1 (returns $0)  (slice3)
                  ->  Aggregate  (cost=2.24..2.25 rows=1 width=4)
                        ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.13..2.23 rows=1 width=4)
                              ->  Aggregate  (cost=2.13..2.14 rows=1 width=4)
@@ -2059,7 +2060,7 @@ ERROR:  table functions must be invoked in FROM clause
 SELECT multiset_3( TABLE(SELECT a from example) );  -- not in the from clause
 ERROR:  table functions must be invoked in FROM clause
 SELECT multiset_5( TABLE(SELECT * from example) ) over (order by 1);
-ERROR:  window functions may not return sets
+ERROR:  OVER specified, but multiset_5 is not a window function nor an aggregate function
 LINE 1: SELECT multiset_5( TABLE(SELECT * from example) ) over (orde...
                ^
 SELECT * from example where 3 = multiset_scalar_value( TABLE(select a from example) ); -- not in from
@@ -2073,14 +2074,14 @@ ERROR:  table functions must be invoked in FROM clause
 -- Error: multiset_5 expects (int, text) records as input
 SELECT * FROM multiset_5( TABLE(SELECT 1) );
 ERROR:  invalid input tuple for function multiset_example
-HINT:  expected (integer, text)
+HINT:  Expected (integer, text).
 -- ERROR cases for simple TableValue Expressions (anything not a parameter to function)
 SELECT TABLE( SELECT * from example );
 ERROR:  invalid use of TABLE value expression
 SELECT ARRAY( TABLE( SELECT * from example) );
-ERROR:  syntax error at or near "TABLE"
+ERROR:  syntax error at or near "("
 LINE 1: SELECT ARRAY( TABLE( SELECT * from example) );
-                      ^
+                           ^
 SELECT * FROM TABLE( SELECT * from example) );
 ERROR:  syntax error at or near "TABLE"
 LINE 1: SELECT * FROM TABLE( SELECT * from example) );
@@ -2133,12 +2134,12 @@ SELECT * FROM v1 order by a, b;
  4 |  value4.1/1
 (10 rows)
 
-\d v1
+\d+ v1
    View "table_function.v1"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | text    | 
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ a      | integer |           | plain    | 
+ b      | text    |           | extended | 
 View definition:
  SELECT tf.a, tf.b
    FROM multiset_2(TABLE( SELECT example.a, example.b
@@ -2167,12 +2168,12 @@ SELECT * FROM v2 order by a, b;
  4 |  value4.1/1
 (10 rows)
 
-\d v2
+\d+ v2
    View "table_function.v2"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | text    | 
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ a      | integer |           | plain    | 
+ b      | text    |           | extended | 
 View definition:
  SELECT tf.a, tf.b
    FROM multiset_2(TABLE( SELECT example.a, example.b
@@ -2202,12 +2203,12 @@ SELECT * FROM v3 order by a, b;
  4 |  value4.1/1
 (10 rows)
 
-\d v3
+\d+ v3
    View "table_function.v3"
- Column |  Type   | Modifiers 
---------+---------+-----------
- a      | integer | 
- b      | text    | 
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ a      | integer |           | plain    | 
+ b      | text    |           | extended | 
 View definition:
  SELECT tf.a, tf.b
    FROM multiset_2(TABLE( SELECT example.a, example.b
@@ -2374,8 +2375,8 @@ SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
 
 -- Should fail due to dependency on sessionize
 DROP FUNCTION sessionize_describe(internal);
-NOTICE:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 ERROR:  cannot drop function sessionize_describe(internal) because other objects depend on it
+DETAIL:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
   profnoid  |     procallback     | promethod 
@@ -2412,8 +2413,8 @@ CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   WITH (describe = sessionize_describe);
 -- Check the dependency again, drop should fail
 DROP FUNCTION sessionize_describe(internal);
-NOTICE:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 ERROR:  cannot drop function sessionize_describe(internal) because other objects depend on it
+DETAIL:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
   profnoid  |     procallback     | promethod 
@@ -2910,10 +2911,12 @@ SELECT * FROM project( TABLE( SELECT * FROM pg_am ), 100);
 ERROR:  invalid column position 100
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[2,3])[1]);
 ERROR:  unable to resolve function argument
-LINE 1: ... FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[2,3])[1]...
+LINE 1: ...ECT * FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[2,3...
                                                              ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ROW(1, '')::example_r).a);
 ERROR:  unable to resolve function argument
+LINE 1: ... project( TABLE( SELECT * FROM pg_am ), (ROW(1, '')::example...
+                                                             ^
 -- ========================
 -- User data exmaple
 -- ========================
@@ -3125,41 +3128,42 @@ DEALLOCATE p6;
 -- Cleanup
 -- =======
 DROP SCHEMA table_function CASCADE;
-NOTICE:  drop cascades to function noop_project(anytable)
-NOTICE:  drop cascades to function ud_project(anytable)
-NOTICE:  drop cascades to function ud_describe(internal)
-NOTICE:  drop cascades to function project(anytable,integer)
-NOTICE:  drop cascades to function project_describe(internal)
-NOTICE:  drop cascades to function sessionize_dynamic(anytable,interval)
-NOTICE:  drop cascades to function sessionize_static(anytable,interval)
-NOTICE:  drop cascades to function sessionize_plain(anytable,interval)
-NOTICE:  drop cascades to function sessionize_describe(internal)
-NOTICE:  drop cascades to function multi_args(anytable,integer)
-NOTICE:  drop cascades to function multiset_6(anytable)
-NOTICE:  drop cascades to function multiset_5(anytable)
-NOTICE:  drop cascades to function multiset_4(anytable)
-NOTICE:  drop cascades to function multiset_3(anytable)
-NOTICE:  drop cascades to function multiset_2(anytable)
-NOTICE:  drop cascades to function multiset_1(anytable)
-NOTICE:  drop cascades to function multiset_materialize_bad(anytable)
-NOTICE:  drop cascades to function multiset_materialize_good(anytable)
-NOTICE:  drop cascades to function multiset_setof_value(anytable)
-NOTICE:  drop cascades to function multiset_setof_null(anytable)
-NOTICE:  drop cascades to function multiset_scalar_tuple(anytable)
-NOTICE:  drop cascades to function multiset_scalar_value(anytable)
-NOTICE:  drop cascades to function multiset_scalar_null(anytable)
-NOTICE:  drop cascades to function scalar_tf_6(anyelement)
-NOTICE:  drop cascades to function scalar_tf_5(integer)
-NOTICE:  drop cascades to function scalar_tf_4(integer)
-NOTICE:  drop cascades to function scalar_tf_3(integer)
-NOTICE:  drop cascades to function scalar_tf_2(integer)
-NOTICE:  drop cascades to function scalar_tf_1(integer)
-NOTICE:  drop cascades to function scalar_5(anyelement)
-NOTICE:  drop cascades to function scalar_4(integer)
-NOTICE:  drop cascades to function scalar_3(integer)
-NOTICE:  drop cascades to function scalar_2(integer)
-NOTICE:  drop cascades to function scalar_1(integer)
-NOTICE:  drop cascades to table example_r
-NOTICE:  drop cascades to table history
-NOTICE:  drop cascades to table example
+NOTICE:  drop cascades to 37 other objects
+DETAIL:  drop cascades to table example
+drop cascades to table history
+drop cascades to table example_r
+drop cascades to function scalar_1(integer)
+drop cascades to function scalar_2(integer)
+drop cascades to function scalar_3(integer)
+drop cascades to function scalar_4(integer)
+drop cascades to function scalar_5(anyelement)
+drop cascades to function scalar_tf_1(integer)
+drop cascades to function scalar_tf_2(integer)
+drop cascades to function scalar_tf_3(integer)
+drop cascades to function scalar_tf_4(integer)
+drop cascades to function scalar_tf_5(integer)
+drop cascades to function scalar_tf_6(anyelement)
+drop cascades to function multiset_scalar_null(anytable)
+drop cascades to function multiset_scalar_value(anytable)
+drop cascades to function multiset_scalar_tuple(anytable)
+drop cascades to function multiset_setof_null(anytable)
+drop cascades to function multiset_setof_value(anytable)
+drop cascades to function multiset_materialize_good(anytable)
+drop cascades to function multiset_materialize_bad(anytable)
+drop cascades to function multiset_1(anytable)
+drop cascades to function multiset_2(anytable)
+drop cascades to function multiset_3(anytable)
+drop cascades to function multiset_4(anytable)
+drop cascades to function multiset_5(anytable)
+drop cascades to function multiset_6(anytable)
+drop cascades to function multi_args(anytable,integer)
+drop cascades to function sessionize_describe(internal)
+drop cascades to function sessionize_plain(anytable,interval)
+drop cascades to function sessionize_static(anytable,interval)
+drop cascades to function sessionize_dynamic(anytable,interval)
+drop cascades to function project_describe(internal)
+drop cascades to function project(anytable,integer)
+drop cascades to function ud_describe(internal)
+drop cascades to function ud_project(anytable)
+drop cascades to function noop_project(anytable)
 SET search_path TO public;

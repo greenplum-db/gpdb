@@ -7,8 +7,8 @@ comment on domain domaindroptest is 'About to drop this..';
 create domain dependenttypetest domaindroptest;
 -- fail because of dependent type
 drop domain domaindroptest;
-NOTICE:  type dependenttypetest depends on type domaindroptest
 ERROR:  cannot drop type domaindroptest because other objects depend on it
+DETAIL:  type dependenttypetest depends on type domaindroptest
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 drop domain domaindroptest cascade;
 NOTICE:  drop cascades to type dependenttypetest
@@ -161,24 +161,14 @@ ERROR:  null value in column "col3" violates not-null constraint
 INSERT INTO nulltest values ('a', 'b', 'c', 'd', 'c');  -- Good
 insert into nulltest values ('a', 'b', 'c', 'd', NULL);
 ERROR:  domain dcheck does not allow null values
--- temporally ignore and will be sovled by
---   https://www.pivotaltracker.com/story/show/116312671
--- start_ignore
 insert into nulltest values ('a', 'b', 'c', 'd', 'a');
-ERROR:  One or more assertions failed
-DETAIL:  Check constraint nulltest_col5_check for table nulltest was violated
--- end_ignore
+ERROR:  new row for relation "nulltest" violates check constraint "nulltest_col5_check"
 INSERT INTO nulltest values (NULL, 'b', 'c', 'd', 'd');
 ERROR:  domain dnotnull does not allow null values
 INSERT INTO nulltest values ('a', NULL, 'c', 'd', 'c');
 ERROR:  domain dnotnull does not allow null values
--- temporally ignore and will be sovled by
---   https://www.pivotaltracker.com/story/show/116312671
--- start_ignore
 INSERT INTO nulltest values ('a', 'b', NULL, 'd', 'c');
-ERROR:  One or more assertions failed
-DETAIL:  Not null constraint for column col3 of table nulltest was violated
--- end_ignore
+ERROR:  null value in column "col3" violates not-null constraint
 INSERT INTO nulltest values ('a', 'b', 'c', NULL, 'd'); -- Good
 -- Test copy
 COPY nulltest FROM stdin; --fail
@@ -235,15 +225,13 @@ create table defaulttest
             );
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "defaulttest_pkey" for table "defaulttest"
 insert into defaulttest(col4) values(0); -- fails, col5 defaults to null
-ERROR:  One or more assertions failed
-DETAIL:  Not null constraint for column col5 of table defaulttest was violated
+ERROR:  null value in column "col5" violates not-null constraint
 alter table defaulttest alter column col5 drop default;
 insert into defaulttest default values; -- succeeds, inserts domain default
 -- We used to treat SET DEFAULT NULL as equivalent to DROP DEFAULT; wrong
 alter table defaulttest alter column col5 set default null;
 insert into defaulttest(col4) values(0); -- fails
-ERROR:  One or more assertions failed
-DETAIL:  Not null constraint for column col5 of table defaulttest was violated
+ERROR:  null value in column "col5" violates not-null constraint
 alter table defaulttest alter column col5 drop default;
 insert into defaulttest default values;
 insert into defaulttest default values;
@@ -279,8 +267,9 @@ ERROR:  domain dnotnulltest does not allow null values
 alter domain dnotnulltest drop not null;
 update domnotnull set col1 = null;
 drop domain dnotnulltest cascade;
-NOTICE:  drop cascades to table domnotnull column col2
-NOTICE:  drop cascades to table domnotnull column col1
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table domnotnull column col1
+drop cascades to table domnotnull column col2
 -- Test ALTER DOMAIN .. DEFAULT ..
 create table domdeftest (col1 ddef1);
 insert into domdeftest default values;
@@ -408,8 +397,9 @@ insert into dtest values('xz23'); -- fail
 ERROR:  value for domain dtop violates check constraint "dtop_check"
 drop table dtest;
 drop domain vchar4 cascade;
-NOTICE:  drop cascades to type dinter
-NOTICE:  drop cascades to type dtop
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to type dinter
+drop cascades to type dtop
 -- Make sure that constraints of newly-added domain columns are
 -- enforced correctly, even if there's no default value for the new
 -- column. Per bug #1433
@@ -447,7 +437,7 @@ begin
 end$$ language plpgsql;
 select doubledecrement(3); -- fail because of implicit null assignment
 ERROR:  domain pos_int does not allow null values
-CONTEXT:  PL/pgSQL function "doubledecrement" line 2 at block variables initialization
+CONTEXT:  PL/pgSQL function "doubledecrement" line 2 during statement block local variable initialization
 create or replace function doubledecrement(p1 pos_int) returns pos_int as $$
 declare v pos_int := 0;
 begin
@@ -455,7 +445,7 @@ begin
 end$$ language plpgsql;
 select doubledecrement(3); -- fail at initialization assignment
 ERROR:  value for domain pos_int violates check constraint "pos_int_check"
-CONTEXT:  PL/pgSQL function "doubledecrement" line 2 at block variables initialization
+CONTEXT:  PL/pgSQL function "doubledecrement" line 2 during statement block local variable initialization
 create or replace function doubledecrement(p1 pos_int) returns pos_int as $$
 declare v pos_int := 1;
 begin

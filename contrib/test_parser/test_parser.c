@@ -3,10 +3,10 @@
  * test_parser.c
  *	  Simple example of a text search parser
  *
- * Copyright (c) 2007-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/test_parser/test_parser.c,v 1.4 2008/01/01 20:31:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/contrib/test_parser/test_parser.c,v 1.6 2009/06/11 14:48:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,7 +27,7 @@ typedef struct
 	char	   *buffer;			/* text to parse */
 	int			len;			/* length of the text in buffer */
 	int			pos;			/* position of the parser */
-}	ParserState;
+} ParserState;
 
 /* copy-paste from wparser.h of tsearch2 */
 typedef struct

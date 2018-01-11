@@ -2,9 +2,12 @@
  *
  * perfmon.h
  *
- * Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * src/include/postmaster/perfmon.h
+ *
+ * IDENTIFICATION
+ *	    src/include/postmaster/perfmon.h
  *
  *-------------------------------------------------------------------------
  */

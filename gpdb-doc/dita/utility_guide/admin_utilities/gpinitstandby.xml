@@ -55,7 +55,7 @@
                 the time of the last successfully committed transaction. </p>
             <p>The activated standby master effectively becomes the Greenplum Database
                 master, accepting client connections on the master port and performing normal master
-                operations such as SQL command processing and workload management. </p>
+                operations such as SQL command processing and resource management. </p>
             <note type="important">If the <codeph>gpinitstandby</codeph> utility previously failed
                 to initialize the standby master, you must delete the files in the standby master
                 data directory before running <codeph>gpinitstandby</codeph> again. The standby

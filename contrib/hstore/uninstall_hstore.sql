@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/contrib/hstore/uninstall_hstore.sql,v 1.6.2.1 2010/06/22 11:36:36 rhaas Exp $ */
+/* $PostgreSQL: pgsql/contrib/hstore/uninstall_hstore.sql,v 1.8 2009/03/25 22:19:01 tgl Exp $ */
 
 -- Adjust this setting to control where the objects get dropped.
 SET search_path = public;
@@ -38,10 +38,10 @@ DROP FUNCTION ghstore_penalty(internal,internal,internal);
 DROP FUNCTION ghstore_picksplit(internal, internal);
 DROP FUNCTION ghstore_union(internal, internal);
 DROP FUNCTION ghstore_same(internal, internal, internal);
-DROP FUNCTION ghstore_consistent(internal,internal,int4);
-DROP FUNCTION gin_consistent_hstore(internal, smallint, internal);
+DROP FUNCTION ghstore_consistent(internal,internal,int,oid,internal);
+DROP FUNCTION gin_consistent_hstore(internal, int2, internal, int4, internal, internal);
 DROP FUNCTION gin_extract_hstore(internal, internal);
-DROP FUNCTION gin_extract_hstore_query(internal, internal, smallint);
+DROP FUNCTION gin_extract_hstore_query(internal, internal, smallint, internal, internal);
 
 DROP TYPE hstore CASCADE;
 DROP TYPE ghstore CASCADE;

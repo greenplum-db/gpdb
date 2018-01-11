@@ -29,6 +29,8 @@
         aggregate plan for a scalar distinct qualified aggregate. </li>
       <li><codeph>optimizer_force_three_stage_scalar_dqa</codeph> forces GPORCA to choose a plan
         with multistage aggregates when such a plan alternative is generated. </li>
+      <li><codeph>optimizer_join_order</codeph> sets the query optimization level for join ordering
+        by specifying which types of join ordering alternatives to evaluate.</li>
       <li><codeph>optimizer_join_order_threshold</codeph> specifies the maximum number of join
         children for which GPORCA uses the dynamic programming-based join ordering algorithm.</li>
       <li><codeph>optimizer_nestloop_factor</codeph> controls nested loop join cost factor to apply
@@ -52,7 +54,8 @@
     <p> For information about the parameters, see the <cite>Greenplum Database Reference
         Guide</cite>.</p>
     <p>GPORCA generates minidumps to describe the optimization context for a given query. <ph
-        otherprops="pivotal">The minidump files are used by Pivotal support to analyze Greenplum
+        otherprops="pivotal"
+        >The minidump files are used by Pivotal support to analyze Greenplum
         Database issues. </ph>The information in the file is not in a format that can be easily used
       for debugging or troubleshooting. The minidump file is located under the master data directory
       and uses the following naming format:</p>

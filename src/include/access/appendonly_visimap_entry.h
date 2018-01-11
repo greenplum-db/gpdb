@@ -4,7 +4,11 @@
  *   responsibly for the internal handling and the usage
  *   of a single tuple in the visimap relation.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/appendonly_visimap_entry.h
  *
  *------------------------------------------------------------------------------
 */
@@ -25,59 +29,54 @@
 /*
  * On-disk (or in-tuple) data structure of the visibility map
  * data.
- */ 
+ */
 typedef struct AppendOnlyVisimapData
 {
-    /* 
-	 * Total length. Must be the first.
-     * Will later be set by SET_VARDATA_SIZE()
-     */
-    int32 _len;
+	/*
+	 * Total length. Must be the first. Will later be set by
+	 * SET_VARDATA_SIZE()
+	 */
+	int32		_len;
 
-    /*
-     * Version number for the VisiMap format.
-     * Currently only 1 is supported.
-     */ 
-    int32 version;
+	/*
+	 * Version number for the VisiMap format. Currently only 1 is supported.
+	 */
+	int32		version;
 
 	/* Possibily compressed bitmap data */
-    unsigned char data[1];
+	unsigned char data[1];
 } AppendOnlyVisimapData;
 
 typedef struct AppendOnlyVisimapEntry
 {
 	/*
-	 * Current on-disk representation of the
-	 * visibility entry.
+	 * Current on-disk representation of the visibility entry.
 	 *
-	 * The contents is only defined to offsets smaller than
-	 * VARSIZE(data);
-	 * 
-	 */ 
-	AppendOnlyVisimapData* data;
-
-	/*
-	 * Current uncompressed bitmap for the visibility map
-	 * entry.
-	 */ 
-	Bitmapset* bitmap;
-
-	/*
-	 * Current segment file number.
-	 * -1 indicates not set.
+	 * The contents is only defined to offsets smaller than VARSIZE(data);
+	 *
 	 */
-	int32 segmentFileNum;
+	AppendOnlyVisimapData *data;
 
 	/*
-	 * first row number covered by the current visibility map entry.
-	 * -1 indicates not set.
-	 */ 
-	int64 firstRowNum;
+	 * Current uncompressed bitmap for the visibility map entry.
+	 */
+	Bitmapset  *bitmap;
+
+	/*
+	 * Current segment file number. -1 indicates not set.
+	 */
+	int32		segmentFileNum;
+
+	/*
+	 * first row number covered by the current visibility map entry. -1
+	 * indicates not set.
+	 */
+	int64		firstRowNum;
 
 	/*
 	 * true if the entry has been changed and needs to be persisted.
 	 */
-	bool dirty;
+	bool		dirty;
 
 	/**
 	 * tuple id of the last loaded visibility map entry.
@@ -88,67 +87,67 @@ typedef struct AppendOnlyVisimapEntry
 
 	/*
 	 * Memory context to use for all allocations.
-	 */ 
+	 */
 	MemoryContext memoryContext;
 
 } AppendOnlyVisimapEntry;
 
 void AppendOnlyVisimapEntry_Init(
-	AppendOnlyVisimapEntry *visi_map_entry,
-	MemoryContext memoryContext);
+							AppendOnlyVisimapEntry *visi_map_entry,
+							MemoryContext memoryContext);
 
 void AppendOnlyVisimapEntry_Reset(
-	AppendOnlyVisimapEntry *visi_map_entry);
+							 AppendOnlyVisimapEntry *visi_map_entry);
 
 void AppendOnlyVisimapEntry_Copyout(
-	AppendOnlyVisimapEntry *visi_map_entry,
-	HeapTuple tuple,
-	TupleDesc tupleDesc);
+							   AppendOnlyVisimapEntry *visi_map_entry,
+							   HeapTuple tuple,
+							   TupleDesc tupleDesc);
 
 void AppendOnlyVisimapEntry_New(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *tupleId);
+						   AppendOnlyVisimapEntry *visiMapEntry,
+						   AOTupleId *tupleId);
 
 void AppendOnlyVisimapEntry_Write(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	Datum *value,
-	bool *is_null);
+							 AppendOnlyVisimapEntry *visiMapEntry,
+							 Datum *value,
+							 bool *is_null);
 
 void AppendOnlyVisimapEntry_WriteData(
-	AppendOnlyVisimapEntry *visiMapEntry);
+								 AppendOnlyVisimapEntry *visiMapEntry);
 
 bool AppendOnlyVisimapEntry_CoversTuple(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *aoTupleId);
+								   AppendOnlyVisimapEntry *visiMapEntry,
+								   AOTupleId *aoTupleId);
 
 bool AppendOnlyVisimapEntry_IsVisible(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *aoTupleId);
+								 AppendOnlyVisimapEntry *visiMapEntry,
+								 AOTupleId *aoTupleId);
 
 HTSU_Result AppendOnlyVisimapEntry_HideTuple(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *aoTupleId);
+								 AppendOnlyVisimapEntry *visiMapEntry,
+								 AOTupleId *aoTupleId);
 
 void AppendOnlyVisimapEntry_Finish(
-	AppendOnlyVisimapEntry *visiMapEntry);
+							  AppendOnlyVisimapEntry *visiMapEntry);
 
 bool AppendOnlyVisimapEntry_HasChanged(
-	AppendOnlyVisimapEntry *visiMapEntry);
+								  AppendOnlyVisimapEntry *visiMapEntry);
 
 bool AppendOnlyVisimapEntry_IsValid(
-	AppendOnlyVisimapEntry *visiMapEntry);
+							   AppendOnlyVisimapEntry *visiMapEntry);
 
 int64 AppendOnlyVisimapEntry_GetFirstRowNum(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *tupleId);
+									  AppendOnlyVisimapEntry *visiMapEntry,
+									  AOTupleId *tupleId);
 
 bool AppendOnlyVisimapEntry_GetNextInvisible(
-	AppendOnlyVisimapEntry *visiMapEntry,
-	AOTupleId *tupleId);
+										AppendOnlyVisimapEntry *visiMapEntry,
+										AOTupleId *tupleId);
 
 int64 AppendOnlyVisimapEntry_GetHiddenTupleCount(
-	AppendOnlyVisimapEntry *visiMapEntry);
+										   AppendOnlyVisimapEntry *visiMapEntry);
 
 void AppendOnlyVisiMapEnty_ReadData(
-	AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize);
+							   AppendOnlyVisimapEntry *visiMapEntry, size_t dataSize);
 #endif

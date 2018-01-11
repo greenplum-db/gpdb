@@ -9,6 +9,8 @@ class HeapChecksum:
     """
 
     def __init__(self, gparray, num_workers=8, logger=None):
+        if num_workers <= 0:
+            raise Exception("number of workers must be greater than 0")
         self.gparray = gparray
         self.workers = num_workers
         self.logger = logger
@@ -38,7 +40,7 @@ class HeapChecksum:
 
     def get_segments_checksum_settings(self, gpdb_list=None):
         """
-        :return: two lists of GpDB objects (as defined in gparray) for successes and failures,
+        :return: two lists of Segment objects (as defined in gparray) for successes and failures,
         where successes have successfully reported their checksum values
         """
         failures = []
@@ -72,7 +74,7 @@ class HeapChecksum:
 
     def check_segment_consistency(self, successes):
         """
-        :param successes: list of segments (GpDB objects) for which we successfully determined checksum setting
+        :param successes: list of segments (Segment objects) for which we successfully determined checksum setting
         :return: lists of segments that are consistent with master and inconsistent with master, respectively,
         along with master GpDb itself
         """

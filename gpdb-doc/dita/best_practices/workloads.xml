@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_hhc_z5w_r4">
-  <title>Memory and Workload Management</title>
+  <title>Memory and Resource Management with Resource Queues</title>
+  <shortdesc>Avoid memory errors and manage Greenplum Database resources.</shortdesc>
   <body>
     <p>Memory management has a significant impact on performance in a Greenplum Database cluster.
       The default settings are suitable for most environments. Do not change the default settings

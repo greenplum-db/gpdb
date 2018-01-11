@@ -2,6 +2,11 @@
 BEGIN
 1: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SET
+1: select 'dummy select to establish snapshot';
+?column?                          
+----------------------------------
+dummy select to establish snapshot
+(1 row)
 2: BEGIN;
 BEGIN
 2: insert into reindex_serialize_tab_heap values(99,'green',now(),10,15.10);

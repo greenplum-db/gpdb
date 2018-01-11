@@ -5,7 +5,7 @@
 import unittest
 from datetime import datetime
 from gppylib.commands.base import Command, CommandResult
-from gppylib.gparray import GpArray, GpDB
+from gppylib.gparray import GpArray, Segment
 from gppylib.operations.backup_utils import *
 from gppylib.operations.dump import *
 from mock import patch, MagicMock, Mock, mock_open, call, ANY
@@ -891,7 +891,7 @@ class DumpTestCase(unittest.TestCase):
                 seg.get_primary_dbid.return_value = id + 2
             return self.mock_segs
 
-    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
+    @patch('gppylib.gparray.Segment.getSegmentHostName', return_value='sdw')
     def test_backup_config_files_with_nbu_default(self, mock1):
         with patch('gppylib.operations.dump.backup_file_with_nbu', side_effect=my_counter) as nbu_mock:
             global i

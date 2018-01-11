@@ -3,11 +3,14 @@
  * bitmapsearch.c
  *	  Search routines for on-disk bitmap index access method.
  *
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Porions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  src/backend/access/bitmap/bitmapsearch.c
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +23,7 @@
 #include "storage/lmgr.h"
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 
 typedef struct ItemPos
 {
@@ -467,7 +471,7 @@ _bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused
 			scanPos->nvec++;
 		}
 
-		scanDesc = index_beginscan(lovHeap, lovIndex, ActiveSnapshot,
+		scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
 								   scan->numberOfKeys, scanKeys);
 
 		/*

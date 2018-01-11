@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -44,13 +44,9 @@ class PgtwoPhase11To20(PgtwoPhaseTestCase):
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {'11_noskip_change_tracking_create_commit_gpstop_i': ['noskip','change_tracking','create','commit','gpstop_i'],
-            '12_noskip_change_tracking_create_commit_gpstop_a': ['noskip','change_tracking','create','commit','gpstop_a'],
             '13_skip_resync_create_commit_gpstop_i': ['skip','resync','create','commit','gpstop_i'],
-            '14_skip_resync_create_commit_gpstop_a': ['skip','resync','create','commit','gpstop_a'],
             '15_noskip_resync_create_commit_gpstop_i': ['noskip','resync','create','commit','gpstop_i'],
-            '16_noskip_resync_create_commit_gpstop_a': ['noskip','resync','create','commit','gpstop_a'],
             '17_skip_sync_drop_commit_gpstop_i': ['skip','sync','drop','commit','gpstop_i'],
-            '18_skip_sync_drop_commit_gpstop_a': ['skip','sync','drop','commit','gpstop_a'],
             '19_skip_sync_drop_commit_failover_to_primary': ['skip','sync','drop','commit','failover_to_primary'],
             '20_skip_sync_drop_commit_failover_to_mirror': ['skip','sync','drop','commit','failover_to_mirror']
             }

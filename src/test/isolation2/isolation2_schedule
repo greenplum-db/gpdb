@@ -22,7 +22,6 @@ test: uao/cursor_before_update_row
 test: uao/cursor_withhold_row
 test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
-test: uao/drop_while_vacuum_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
 test: uao/max_concurrency_row
@@ -69,7 +68,6 @@ test: uao/cursor_before_update_column
 test: uao/cursor_withhold_column
 test: uao/cursor_withhold2_column
 test: uao/delete_while_vacuum_column
-test: uao/drop_while_vacuum_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column
 test: uao/max_concurrency_column

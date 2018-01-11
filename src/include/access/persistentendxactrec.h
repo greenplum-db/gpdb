@@ -3,7 +3,12 @@
  * persistentendxactrec.h
  *	  Make and read persistent information in commit, abort, and prepared records.
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/persistentendxactrec.h
  *
  *-------------------------------------------------------------------------
  */
@@ -25,7 +30,7 @@ typedef enum EndXactRecKind
 	EndXactRecKind_Commit = 1,
 	EndXactRecKind_Abort = 2,
 	EndXactRecKind_Prepare = 3,
-	MaxEndXactRecKind /* must always be last */
+	MaxEndXactRecKind			/* must always be last */
 } EndXactRecKind;
 
 /*
@@ -48,14 +53,15 @@ typedef enum PersistentEndXactFileSysAction
 	PersistentEndXactFileSysAction_Create = 1,
 	PersistentEndXactFileSysAction_Drop = 2,
 	PersistentEndXactFileSysAction_AbortingCreateNeeded = 3,
-	MaxPersistentEndXactFileSysAction /* must always be last */
+	MaxPersistentEndXactFileSysAction	/* must always be last */
 } PersistentEndXactFileSysAction;
 
-static inline bool PersistentEndXactFileSysAction_IsValid(
-	PersistentEndXactFileSysAction action)
+static inline bool
+PersistentEndXactFileSysAction_IsValid(
+									   PersistentEndXactFileSysAction action)
 {
 	return (action >= PersistentEndXactFileSysAction_Create &&
-		    action <= PersistentEndXactFileSysAction_AbortingCreateNeeded);
+			action <= PersistentEndXactFileSysAction_AbortingCreateNeeded);
 }
 
 /*
@@ -63,37 +69,37 @@ static inline bool PersistentEndXactFileSysAction_IsValid(
  */
 typedef struct PersistentEndXactFileSysActionInfo
 {
-	PersistentEndXactFileSysAction	action;
+	PersistentEndXactFileSysAction action;
 
-	PersistentFileSysObjName 	fsObjName;
+	PersistentFileSysObjName fsObjName;
 
 	PersistentFileSysRelStorageMgr relStorageMgr;
 
-	ItemPointerData			persistentTid;
+	ItemPointerData persistentTid;
 
-	int64					persistentSerialNum;
+	int64		persistentSerialNum;
 
 } PersistentEndXactFileSysActionInfo;
 
 typedef struct PersistentEndXactAppendOnlyMirrorResyncEofs
 {
-	RelFileNode				relFileNode;
+	RelFileNode relFileNode;
 
-	int32					segmentFileNum;
+	int32		segmentFileNum;
 
-	ItemPointerData			persistentTid;
+	ItemPointerData persistentTid;
 
-	int64					persistentSerialNum;
+	int64		persistentSerialNum;
 
-	int64					mirrorLossEof;
+	int64		mirrorLossEof;
 
-	int64					mirrorNewEof;
+	int64		mirrorNewEof;
 } PersistentEndXactAppendOnlyMirrorResyncEofs;
 
 
 typedef struct PersistentEndXactUntyped
 {
-	void 		*data;
+	void	   *data;
 
 	int32		len;
 
@@ -105,93 +111,101 @@ typedef struct PersistentEndXactUntyped
  */
 typedef union PersistentEndXactRecObjects
 {
-	PersistentEndXactUntyped		untyped[MaxPersistentEndXactObjKind];
+	PersistentEndXactUntyped untyped[MaxPersistentEndXactObjKind];
 
 	struct typed
 	{
-		PersistentEndXactFileSysActionInfo 		*fileSysActionInfos;
-		int32 									fileSysActionInfosLen;
-		int32 									fileSysActionInfosCount;
-		
-		PersistentEndXactAppendOnlyMirrorResyncEofs 	*appendOnlyMirrorResyncEofs;
-		int32 											appendOnlyMirrorResyncEofsLen;
-		int32 											appendOnlyMirrorResyncEofsCount;
-	}typed; 
-	
+		PersistentEndXactFileSysActionInfo *fileSysActionInfos;
+		int32		fileSysActionInfosLen;
+		int32		fileSysActionInfosCount;
+
+		PersistentEndXactAppendOnlyMirrorResyncEofs *appendOnlyMirrorResyncEofs;
+		int32		appendOnlyMirrorResyncEofsLen;
+		int32		appendOnlyMirrorResyncEofsCount;
+	}			typed;
+
 } PersistentEndXactRecObjects;
 
 extern char *EndXactRecKind_Name(
-	EndXactRecKind endXactRecKind);
+					EndXactRecKind endXactRecKind);
 
-extern bool EndXactRecKind_NeedsAction(
-		EndXactRecKind					endXactRecKind,
-	
-		PersistentEndXactFileSysAction	action);
+extern bool
+EndXactRecKind_NeedsAction(
+						   EndXactRecKind endXactRecKind,
+
+						   PersistentEndXactFileSysAction action);
 
 extern char *PersistentEndXactFileSysAction_Name(
-	PersistentEndXactFileSysAction action);
+									PersistentEndXactFileSysAction action);
 
 extern void PersistentEndXactRec_Init(
-	PersistentEndXactRecObjects	*objects);
+						  PersistentEndXactRecObjects *objects);
 
-extern void PersistentEndXactRec_AddFileSysActionInfos(
-	PersistentEndXactRecObjects			*objects,
+extern void
+PersistentEndXactRec_AddFileSysActionInfos(
+										   PersistentEndXactRecObjects *objects,
 
-	EndXactRecKind						endXactRecKind,
+										   EndXactRecKind endXactRecKind,
 
-	PersistentEndXactFileSysActionInfo	*fileSysActionInfos,
+										   PersistentEndXactFileSysActionInfo *fileSysActionInfos,
 
-	int									count);
+										   int count);
 
-extern int32 PersistentEndXactRec_FetchObjectsFromSmgr(
-	PersistentEndXactRecObjects	*objects,
+extern int32
+PersistentEndXactRec_FetchObjectsFromSmgr(
+										  PersistentEndXactRecObjects *objects,
 
-	EndXactRecKind				endXactRecKind,
+										  EndXactRecKind endXactRecKind,
 
-	int16						*objectCount);
+										  int16 *objectCount);
 
 extern bool PersistentEndXactRec_WillHaveObjectsFromSmgr(
-		EndXactRecKind				endXactRecKind);
+											 EndXactRecKind endXactRecKind);
 
-extern void PersistentEndXactRec_Print(
-		char							*procName,
-	
-		PersistentEndXactRecObjects 	*objects);
+extern void
+PersistentEndXactRec_Print(
+						   char *procName,
 
-extern int16 PersistentEndXactRec_ObjectCount(
-	PersistentEndXactRecObjects	*objects,
-	
-	EndXactRecKind				endXactRecKind);
+						   PersistentEndXactRecObjects *objects);
 
-extern int32 PersistentEndXactRec_SerializeLen(
-	PersistentEndXactRecObjects	*objects,
-	
-	EndXactRecKind				endXactRecKind);
+extern int16
+PersistentEndXactRec_ObjectCount(
+								 PersistentEndXactRecObjects *objects,
 
-extern void PersistentEndXactRec_Serialize(
-		PersistentEndXactRecObjects *objects,
-	
-		EndXactRecKind				endXactRecKind,
-	
-		int16						*numOfObjects,
-	
-		uint8						*buffer,
-	
-		int32						bufferLen);
+								 EndXactRecKind endXactRecKind);
 
-extern int32 PersistentEndXactRec_DeserializeLen(
-		uint8						*buffer,
-	
-		int16						numOfObjects);
+extern int32
+PersistentEndXactRec_SerializeLen(
+								  PersistentEndXactRecObjects *objects,
 
-extern void PersistentEndXactRec_Deserialize(
-	uint8						*buffer,
+								  EndXactRecKind endXactRecKind);
 
-	int16						numOfObjects,
+extern void
+PersistentEndXactRec_Serialize(
+							   PersistentEndXactRecObjects *objects,
 
-	PersistentEndXactRecObjects	*objects,
+							   EndXactRecKind endXactRecKind,
 
-	uint8						**nextData);
+							   int16 *numOfObjects,
 
-#endif   /* PERSISTENTENDXACTREC_H */
+							   uint8 *buffer,
 
+							   int32 bufferLen);
+
+extern int32
+PersistentEndXactRec_DeserializeLen(
+									uint8 *buffer,
+
+									int16 numOfObjects);
+
+extern void
+PersistentEndXactRec_Deserialize(
+								 uint8 *buffer,
+
+								 int16 numOfObjects,
+
+								 PersistentEndXactRecObjects *objects,
+
+								 uint8 **nextData);
+
+#endif							/* PERSISTENTENDXACTREC_H */

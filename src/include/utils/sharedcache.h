@@ -4,7 +4,12 @@
  *	  Interface for a generic shared cache.
  *
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/sharedcache.h
  *
  *
  *-------------------------------------------------------------------------
@@ -99,7 +104,7 @@ typedef struct CacheCtl
 
 	/*
 	 * Each partition requires a lightweight lock.
-	 * baseLWLockId is the first LW lock of a preallocated numPartions size
+	 * baseLWLockId is the first LW lock of a preallocated numPartitions size
 	 * lock array.
 	 */
 	LWLockId baseLWLockId;

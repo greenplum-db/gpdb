@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.60.2.1 2008/03/04 19:54:13 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.65 2009/06/11 14:49:12 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,6 +86,11 @@ extern void LockSharedObject(Oid classid, Oid objid, uint16 objsubid,
 				 LOCKMODE lockmode);
 extern void UnlockSharedObject(Oid classid, Oid objid, uint16 objsubid,
 				   LOCKMODE lockmode);
+
+extern void LockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid,
+						   LOCKMODE lockmode);
+extern void UnlockSharedObjectForSession(Oid classid, Oid objid, uint16 objsubid,
+							 LOCKMODE lockmode);
 
 /* Describe a locktag for error messages */
 extern void DescribeLockTag(StringInfo buf, const LOCKTAG *tag);

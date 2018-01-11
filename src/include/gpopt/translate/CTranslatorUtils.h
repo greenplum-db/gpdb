@@ -126,6 +126,10 @@ namespace gpdxl
 			static
 			const CWStringConst *PstrSystemColName(AttrNumber attno);
 
+			// returns the length for the system column with given attno number
+			static
+			const ULONG UlSystemColLength(AttrNumber attno);
+
 			// translate the join type from its GPDB representation into the DXL one
 			static
 			EdxlJoinType EdxljtFromJoinType(JoinType jt);
@@ -212,14 +216,6 @@ namespace gpdxl
 			static
 			EdxlSetOpType Edxlsetop(SetOperation setop, BOOL fAll);
 
-			// return the GPDB frame exclusion strategy from its corresponding DXL representation
-			static
-			WindowExclusion Windowexclusion(EdxlFrameExclusionStrategy edxlfes);
-
-			// return the GPDB frame boundary kind from its corresponding DXL representation
-			static
-			WindowBoundingKind Windowboundkind(EdxlFrameBoundary edxlfb);
-
 			// construct a dynamic array of sets of column attnos corresponding
 			// to the group by clause
 			static
@@ -305,11 +301,11 @@ namespace gpdxl
 
 			// check to see if the target list entry is a grouping column
 			static
-			BOOL FGroupingColumn(const TargetEntry *pte, const GroupClause *pgrcl);
+			BOOL FGroupingColumn(const TargetEntry *pte, const SortGroupClause *pgrcl);
 
 			// check to see if the sorting column entry is a grouping column
 			static
-			BOOL FGroupingColumn(const SortClause *psortcl, List *plGrpCl);
+			BOOL FGroupingColumn(const SortGroupClause *psortcl, List *plGrpCl);
 
 			// check if the expression has a matching target entry that is a grouping column
 			static

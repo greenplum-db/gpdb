@@ -219,7 +219,7 @@ SET enable_sort TO off;
 --
 -- awk '{if($1<10){print $0;}else{next;}}' onek.data | sort +0n -1
 --
-SELECT onek2.* FROM onek2 WHERE onek2.unique1 < 10 ORDER BY 1;
+SELECT onek2.* FROM onek2 WHERE onek2.unique1 < 10;
  unique1 | unique2 | two | four | ten | twenty | hundred | thousand | twothousand | fivethous | tenthous | odd | even | stringu1 | stringu2 | string4 
 ---------+---------+-----+------+-----+--------+---------+----------+-------------+-----------+----------+-----+------+----------+----------+---------
        0 |     998 |   0 |    0 |   0 |      0 |       0 |        0 |           0 |         0 |        0 |   0 |    1 | AAAAAA   | KMBAAA   | OOOOxx
@@ -268,7 +268,7 @@ SELECT onek2.unique1, onek2.stringu1 FROM onek2
 -- awk '{if($1>980){print $1,$14;}else{next;}}' onek.data | sort +1d -2
 --
 SELECT onek2.unique1, onek2.stringu1 FROM onek2
-   WHERE onek2.unique1 > 980 ORDER BY 1;
+   WHERE onek2.unique1 > 980;
  unique1 | stringu1 
 ---------+----------
      981 | TLAAAA
@@ -298,8 +298,6 @@ RESET enable_sort;
 SELECT two, stringu1, ten, string4
    INTO TABLE tmp
    FROM onek;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'two' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 --
 -- awk '{print $1,$2;}' person.data |
 -- awk '{if(NF!=2){print $3,$2;}else{print;}}' - emp.data |
@@ -307,67 +305,67 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- awk 'BEGIN{FS="      ";}{if(NF!=2){print $4,$5;}else{print;}}' - stud_emp.data
 --
 -- SELECT name, age FROM person*; ??? check if different
-SELECT p.name, p.age FROM person* p  ORDER BY 1,2;
+SELECT p.name, p.age FROM person* p;
   name   | age 
 ---------+-----
- alex    |  30
- belinda |  38
- bertha  |  88
- bill    |  20
- carina  |  58
- carmen  |  78
- chris   |  78
- cim     |  30
- denise  |  24
- diane   |  18
- edna    |  18
- esther  |  98
- fanny   |   8
- fred    |  28
- gina    |  18
- jane    |  58
- jean    |  28
- jeff    |  23
- jenifer |  38
- joan    |  18
- joe     |  20
- juanita |  58
- julie   |  68
- karen   |  48
- koko    |  88
- larry   |  60
- leah    |  68
- linda   |  19
- lita    |  25
- liza    |  38
- louise  |  98
- martie  |  88
- mary    |   8
- melissa |  28
  mike    |  40
- nan     |  28
- pamela  |  48
- pat     |  18
- paula   |  68
- rean    |  48
+ joe     |  20
  sally   |  34
- sam     |  30
  sandra  |  19
- sandy   |  38
- sarah   |  88
- sharon  |  25
- sharon  |  78
+ alex    |  30
  sue     |  50
- sumi    |  38
- susan   |  78
+ denise  |  24
+ sarah   |  88
  teresa  |  38
- trisha  |  88
- trudy   |  88
- velma   |  68
- vera    |  78
+ nan     |  28
+ leah    |  68
  wendy   |  78
+ melissa |  28
+ joan    |  18
+ mary    |   8
+ jane    |  58
+ liza    |  38
+ jean    |  28
+ jenifer |  38
+ juanita |  58
+ susan   |  78
  zena    |  98
+ martie  |  88
+ chris   |  78
+ pat     |  18
  zola    |  58
+ louise  |  98
+ edna    |  18
+ bertha  |  88
+ sumi    |  38
+ koko    |  88
+ gina    |  18
+ rean    |  48
+ sharon  |  78
+ paula   |  68
+ julie   |  68
+ belinda |  38
+ karen   |  48
+ carina  |  58
+ diane   |  18
+ esther  |  98
+ trudy   |  88
+ fanny   |   8
+ carmen  |  78
+ lita    |  25
+ pamela  |  48
+ sandy   |  38
+ trisha  |  88
+ uma     |  78
+ velma   |  68
+ sharon  |  25
+ sam     |  30
+ bill    |  20
+ fred    |  28
+ larry   |  60
+ jeff    |  23
+ cim     |  30
+ linda   |  19
 (58 rows)
 
 --
@@ -393,7 +391,7 @@ SELECT p.name, p.age FROM person* p ORDER BY age using >, name;
  chris   |  78
  sharon  |  78
  susan   |  78
- vera    |  78
+ uma     |  78
  wendy   |  78
  julie   |  68
  leah    |  68
@@ -508,13 +506,13 @@ VALUES (1,2), (3,4+4), (7,77.7)
 UNION ALL
 SELECT 2+2, 57
 UNION ALL
-SELECT * FROM int8_tbl;
+TABLE int8_tbl;
      column1      |      column2      
 ------------------+-------------------
                 1 |                 2
+                3 |                 8
                 7 |              77.7
                 4 |                57
-                3 |                 8
               123 |               456
               123 |  4567890123456789
  4567890123456789 |               123
@@ -788,8 +786,6 @@ select * from (values (2),(null),(1)) v(k) where k = k;
 
 -- Test unsupported sorting operators
 CREATE TABLE nosort (i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO nosort VALUES(1), (2);
 -- << is the bitwise shift left operator, it makes no sense to sort
 -- using this operator. This query should result in error.

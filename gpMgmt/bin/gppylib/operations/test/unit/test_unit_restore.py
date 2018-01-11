@@ -1115,7 +1115,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             from gppylib.commands.base import REMOTE
             cmd.assert_called_with("restoring metadata files to segment", cmdStr, ctxt=REMOTE, remoteHost="sdw")
 
-    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
+    @patch('gppylib.gparray.Segment.getSegmentHostName', return_value='sdw')
     def test_restore_config_files_with_nbu_default(self, mock1):
         with patch('gppylib.operations.restore.restore_file_with_nbu', side_effect=my_counter) as nbu_mock:
             global i

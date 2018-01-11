@@ -31,12 +31,19 @@ BEGIN;
 --
 --------------------------------------------------------------------------------
 
-CREATE FUNCTION session_state_memory_entries_f()
+CREATE FUNCTION session_state_memory_entries_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
-LANGUAGE C IMMUTABLE;
+LANGUAGE C VOLATILE EXECUTE ON MASTER;
 
-GRANT EXECUTE ON FUNCTION session_state_memory_entries_f() TO public;
+GRANT EXECUTE ON FUNCTION session_state_memory_entries_f_on_master() TO public;
+
+CREATE FUNCTION session_state_memory_entries_f_on_segments()
+RETURNS SETOF record
+AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+
+GRANT EXECUTE ON FUNCTION session_state_memory_entries_f_on_segments() TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -50,7 +57,7 @@ GRANT EXECUTE ON FUNCTION session_state_memory_entries_f() TO public;
 CREATE VIEW session_level_memory_consumption AS
 WITH all_entries AS (
    SELECT C.*
-          FROM gp_toolkit.__gp_localid, session_state_memory_entries_f() AS C (
+          FROM session_state_memory_entries_f_on_master() AS C (
             segid int,
             sessionid int,
             vmem_mb int,
@@ -64,7 +71,7 @@ WITH all_entries AS (
           )
     UNION ALL
     SELECT C.*
-          FROM gp_toolkit.__gp_masterid, session_state_memory_entries_f() AS C (
+          FROM session_state_memory_entries_f_on_segments() AS C (
             segid int,
             sessionid int,
             vmem_mb int,

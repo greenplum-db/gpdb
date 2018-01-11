@@ -1,9 +1,0 @@
--- start_ignore
-select * from pg_tablespace;
-  spcname   | spcowner | spclocation | spcacl 
-------------+----------+-------------+--------
- pg_default |       10 |             | 
- pg_global  |       10 |             | 
-(2 rows)
-
--- end_ignore

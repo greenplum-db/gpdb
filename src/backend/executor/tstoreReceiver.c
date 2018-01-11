@@ -5,15 +5,15 @@
  *	  a Tuplestore.
  *
  * Optionally, we can force detoasting (but not decompression) of out-of-line
- * toasted values.  This is to support cursors WITH HOLD, which must retain
+ * toasted values.	This is to support cursors WITH HOLD, which must retain
  * data even if the underlying table is dropped.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/tstoreReceiver.c,v 1.19.2.2 2009/12/29 17:41:18 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/tstoreReceiver.c,v 1.23 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -112,53 +112,43 @@ tstoreReceiveSlot_detoast(TupleTableSlot *slot, DestReceiver *self)
 	int			natts = typeinfo->natts;
 	int			nfree;
 	int			i;
-	HeapTuple	tuple;
 	MemoryContext oldcxt;
-	bool        *nulls;
-	
-	nulls = (bool *)MemoryContextAlloc(myState->cxt, natts * sizeof(bool));
 
 	/* Make sure the tuple is fully deconstructed */
 	slot_getallattrs(slot);
 
 	/*
 	 * Fetch back any out-of-line datums.  We build the new datums array in
-	 * myState->outvalues[] (but we can re-use the slot's isnull array).
-	 * Also, remember the fetched values to free afterwards.
+	 * myState->outvalues[] (but we can re-use the slot's isnull array). Also,
+	 * remember the fetched values to free afterwards.
 	 */
 	nfree = 0;
 	for (i = 0; i < natts; i++)
 	{
-		Datum		val;
-		bool         isnull;
-		
-		val = slot_getattr(slot,i+1,&isnull);
+		Datum		val = slot_get_values(slot)[i];
 
 		if (!attrs[i]->attisdropped &&
 			attrs[i]->attlen == -1 &&
-			!slot_attisnull(slot,i+1))
+			!slot_get_isnull(slot)[i])
 		{
 			if (VARATT_IS_EXTERNAL(DatumGetPointer(val)))
 			{
-				val = PointerGetDatum(heap_tuple_fetch_attr(
-														DatumGetPointer(val)));
+				val = PointerGetDatum(heap_tuple_fetch_attr((struct varlena *)
+													  DatumGetPointer(val)));
 				myState->tofree[nfree++] = val;
 			}
 		}
 
 		myState->outvalues[i] = val;
-		nulls[i] = isnull;
 	}
 
 	/*
 	 * Push the modified tuple into the tuplestore.
 	 */
-	tuple = heap_form_tuple(typeinfo,
-							myState->outvalues, nulls);
 	oldcxt = MemoryContextSwitchTo(myState->cxt);
-	tuplestore_puttuple(myState->tstore, tuple);
+	tuplestore_putvalues(myState->tstore, typeinfo,
+						 myState->outvalues, slot_get_isnull(slot));
 	MemoryContextSwitchTo(oldcxt);
-	heap_freetuple(tuple);
 
 	/* And release any temporary detoasted values */
 	for (i = 0; i < nfree; i++)
@@ -195,20 +185,17 @@ tstoreDestroyReceiver(DestReceiver *self)
  * Initially create a DestReceiver object.
  */
 DestReceiver *
-CreateTuplestoreDestReceiver(Tuplestorestate *tStore,
-							 MemoryContext tContext)
+CreateTuplestoreDestReceiver(void)
 {
 	TStoreState *self = (TStoreState *) palloc0(sizeof(TStoreState));
 
-	self->pub.receiveSlot = tstoreReceiveSlot_notoast;
+	self->pub.receiveSlot = tstoreReceiveSlot_notoast;	/* might change */
 	self->pub.rStartup = tstoreStartupReceiver;
 	self->pub.rShutdown = tstoreShutdownReceiver;
 	self->pub.rDestroy = tstoreDestroyReceiver;
 	self->pub.mydest = DestTuplestore;
 
-	self->tstore = tStore;
-	self->cxt = tContext;
-	self->detoast = false;
+	/* private fields will be set by SetTuplestoreDestReceiverParams */
 
 	return (DestReceiver *) self;
 }
@@ -217,11 +204,15 @@ CreateTuplestoreDestReceiver(Tuplestorestate *tStore,
  * Set parameters for a TuplestoreDestReceiver
  */
 void
-SetTuplestoreDestReceiverDeToast(DestReceiver *self,
-								 bool detoast)
+SetTuplestoreDestReceiverParams(DestReceiver *self,
+								Tuplestorestate *tStore,
+								MemoryContext tContext,
+								bool detoast)
 {
 	TStoreState *myState = (TStoreState *) self;
 
 	Assert(myState->pub.mydest == DestTuplestore);
+	myState->tstore = tStore;
+	myState->cxt = tContext;
 	myState->detoast = detoast;
 }

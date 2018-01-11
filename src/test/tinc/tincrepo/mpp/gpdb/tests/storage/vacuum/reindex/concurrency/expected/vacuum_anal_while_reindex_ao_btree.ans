@@ -1,10 +1,14 @@
 -- @Description Ensures that a vacuum during reindex operations is ok
--- 
+--
 
 DELETE FROM reindex_ao WHERE a < 128;
 DELETE 254
 1: BEGIN;
 BEGIN
+-- Remember index relfilenodes from master and segments before
+-- reindex.
+1: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname = 'idx_btree_reindex_vacuum_analyze_ao' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname = 'idx_btree_reindex_vacuum_analyze_ao');
+CREATE 3
 1: REINDEX index idx_btree_reindex_vacuum_analyze_ao;
 REINDEX
 2&: VACUUM ANALYZE reindex_ao;  <waiting ...>
@@ -12,6 +16,12 @@ REINDEX
 COMMIT
 2<:  <... completed>
 VACUUM
+-- Validate that reindex changed all index relfilenodes on master as well as
+-- segments.  The following query should return 0 tuples.
+1: select oldrels.* from old_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname = 'idx_btree_reindex_vacuum_analyze_ao' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname = 'idx_btree_reindex_vacuum_analyze_ao') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
+dbid|relfilenode|oid|relname
+----+-----------+---+-------
+(0 rows)
 2: COMMIT;
 COMMIT
 3: SELECT COUNT(*) FROM reindex_ao WHERE a = 1500;
@@ -19,19 +29,6 @@ count
 -----
 0    
 (1 row)
--- expect to have all the segments update relfilenode by reindex
--- by exposing the invisible rows, we can see the historical updates to the relfilenode of given index
--- aggregate by gp_segment_id and oid can verify total number of updates
--- finally compare total number of segments + master to ensure all segments and master got reindexed
-3: set gp_select_invisible=on;
-SET
-3: select relname, sum(relfilenode_updated_count)::int/(select count(*) from gp_segment_configuration where role='p' and xmax=0) as all_segs_reindexed_count from (select oid, relname, (count(relfilenode)-1) as relfilenode_updated_count from (select gp_segment_id, oid, relfilenode, relname from pg_class union all select gp_segment_id, oid, relfilenode, relname from gp_dist_random('pg_class')) all_pg_class where relname='idx_btree_reindex_vacuum_analyze_ao' group by gp_segment_id, oid, relname) per_seg_filenode_updated group by oid, relname;
-relname                            |all_segs_reindexed_count
------------------------------------+------------------------
-idx_btree_reindex_vacuum_analyze_ao|1                       
-(1 row)
-3: set gp_select_invisible=off;
-SET
 
 3: SELECT 1 as reltuples_same_as_count from pg_class where relname = 'reindex_ao'  and reltuples = (SELECT count(*) from reindex_ao);
 reltuples_same_as_count

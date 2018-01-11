@@ -262,6 +262,92 @@ DROP FUNCTION dup(anyelement);
 CREATE FUNCTION bad (f1 int, out f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 
+--
+-- table functions
+--
+
+CREATE OR REPLACE FUNCTION foo()
+RETURNS TABLE(a int)
+AS $$ SELECT a FROM generate_series(1,5) a(a) $$ LANGUAGE sql;
+SELECT * FROM foo();
+DROP FUNCTION foo();
+
+CREATE OR REPLACE FUNCTION foo(int)
+RETURNS TABLE(a int, b int)
+AS $$ SELECT a, b
+         FROM generate_series(1,$1) a(a),
+              generate_series(1,$1) b(b) $$ LANGUAGE sql;
+SELECT * FROM foo(3);
+DROP FUNCTION foo(int);
+
+--
+-- some tests on SQL functions with RETURNING
+--
+
+-- start_ignore
+-- GPDB_90_MERGE_FIXME: GPDB doesn't currently support the RETURNING clause.
+-- These tests have therefore been disabled. I'm marking this as a FIXME for
+-- the 9.0 merge, because I think we'll tackle the RETURNING clause and try
+-- to make that work again at that time, once we merge the ModifyTable node
+-- from the upstream.
+create temp table tt(f1 serial, data text);
+
+create function insert_tt(text) returns int as
+$$ insert into tt(data) values($1) returning f1 $$
+language sql;
+
+select insert_tt('foo');
+select insert_tt('bar');
+select * from tt;
+
+-- insert will execute to completion even if function needs just 1 row
+create or replace function insert_tt(text) returns int as
+$$ insert into tt(data) values($1),($1||$1) returning f1 $$
+language sql;
+
+select insert_tt('fool');
+select * from tt;
+
+-- setof does what's expected
+create or replace function insert_tt2(text,text) returns setof int as
+$$ insert into tt(data) values($1),($2) returning f1 $$
+language sql;
+
+select insert_tt2('foolish','barrish');
+select * from insert_tt2('baz','quux');
+select * from tt;
+
+-- limit doesn't prevent execution to completion
+select insert_tt2('foolish','barrish') limit 1;
+select * from tt;
+
+-- triggers will fire, too
+create function noticetrigger() returns trigger as $$
+begin
+  raise notice 'noticetrigger % %', new.f1, new.data;
+  return null;
+end $$ language plpgsql;
+create trigger tnoticetrigger after insert on tt for each row
+execute procedure noticetrigger();
+
+select insert_tt2('foolme','barme') limit 1;
+select * from tt;
+
+-- and rules work
+create temp table tt_log(f1 int, data text);
+
+create rule insert_tt_rule as on insert to tt do also
+  insert into tt_log values(new.*);
+
+select insert_tt2('foollog','barlog') limit 1;
+select * from tt;
+-- note that nextval() gets executed a second time in the rule expansion,
+-- which is expected.
+select * from tt_log;
+
+-- end of disabled RETURNING tests.
+-- end_ignore
+
 -- test case for a whole-row-variable bug
 create function foo1(n integer, out a text, out b text)
   returns setof record
@@ -274,6 +360,44 @@ reset work_mem;
 select t.a, t, t.a from foo1(10000) t limit 1;
 
 drop function foo1(n integer);
+
+-- test use of SQL functions returning record
+-- this is supported in some cases where the query doesn't specify
+-- the actual record type ...
+
+create function array_to_set(anyarray) returns setof record as $$
+  select i AS "index", $1[i] AS "value" from generate_subscripts($1, 1) i
+$$ language sql strict immutable;
+
+select array_to_set(array['one', 'two']);
+select * from array_to_set(array['one', 'two']) as t(f1 int,f2 text);
+select * from array_to_set(array['one', 'two']); -- fail
+
+-- start_ignore
+-- GPDB_90_MERGE_FIXME: disable RETURNING clause tests (see above).
+create temp table foo(f1 int8, f2 int8);
+
+create function testfoo() returns record as $$
+  insert into foo values (1,2) returning *;
+$$ language sql;
+
+select testfoo();
+select * from testfoo() as t(f1 int8,f2 int8);
+select * from testfoo(); -- fail
+
+drop function testfoo();
+
+create function testfoo() returns setof record as $$
+  insert into foo values (1,2), (3,4) returning *;
+$$ language sql;
+
+select testfoo();
+select * from testfoo() as t(f1 int8,f2 int8);
+select * from testfoo(); -- fail
+
+drop function testfoo();
+-- end of disabled RETURNING tests.
+-- end_ignore
 
 -- check handling of a SQL function with multiple OUT params (bug #5777)
 

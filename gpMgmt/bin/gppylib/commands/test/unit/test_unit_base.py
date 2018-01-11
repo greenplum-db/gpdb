@@ -4,11 +4,14 @@
 #
 
 import unittest
-from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME
+from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext
 from mock import patch
 
 
 class WorkerPoolTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        Command.propagate_env_map.clear()
 
     @patch('gppylib.commands.base.gplog.get_default_logger')
     def test_print_progress(self, mock1):
@@ -42,6 +45,36 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.subject.execute(cmd)
         self.assertIn(". other/gphome/greenplum_path.sh;", cmd.cmdStr)
 
+    def test_LocalExecutionContext_uses_no_environment(self):
+        self.subject = LocalExecutionContext(None)
+        cmd = Command('test', cmdStr='ls /tmp')
+        self.subject.execute(cmd)
+        self.assertEquals("ls /tmp", cmd.cmdStr)
+
+    def test_LocalExecutionContext_uses_ampersand(self):
+        self.subject = LocalExecutionContext(None)
+        cmd = Command('test', cmdStr='ls /tmp')
+        cmd.propagate_env_map['foo'] = 1
+        self.subject.execute(cmd)
+        self.assertEquals("foo=1 && ls /tmp", cmd.cmdStr)
+
+    def test_LocalExecutionContext_uses_ampersand_multiple(self):
+        self.subject = LocalExecutionContext(None)
+        cmd = Command('test', cmdStr='ls /tmp')
+        cmd.propagate_env_map['foo'] = 1
+        cmd.propagate_env_map['bar'] = 1
+        self.subject.execute(cmd)
+        self.assertEquals("bar=1 && foo=1 && ls /tmp", cmd.cmdStr)
+
+    def test_RemoteExecutionContext_uses_ampersand_multiple(self):
+        self.subject = RemoteExecutionContext('localhost', None, 'gphome')
+        cmd = Command('test', cmdStr='ls /tmp')
+        cmd.propagate_env_map['foo'] = 1
+        cmd.propagate_env_map['bar'] = 1
+        self.subject.execute(cmd)
+        self.assertEquals("bar=1 && foo=1 && ssh -o \'StrictHostKeyChecking no\' localhost "
+                          "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)
+
     def test_no_workders_in_WorkerPool(self):
         with self.assertRaises(Exception):
-            w = WorkerPool(numWorkers=0)
+            WorkerPool(numWorkers=0)

@@ -31,6 +31,8 @@
 #include "catalog/pg_extension.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_filespace.h"
+#include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -44,6 +46,7 @@
 #include "catalog/pg_ts_dict.h"
 #include "catalog/pg_ts_parser.h"
 #include "catalog/pg_ts_template.h"
+#include "catalog/pg_user_mapping.h"
 #include "cdb/cdbvars.h"
 
 #ifdef PG_MODULE_MAGIC
@@ -168,6 +171,9 @@ Datum		preassign_tsconfig_oid(PG_FUNCTION_ARGS);
 Datum		preassign_extension_oid(PG_FUNCTION_ARGS);
 Datum		preassign_enum_oid(PG_FUNCTION_ARGS);
 Datum		preassign_amop_oid(PG_FUNCTION_ARGS);
+Datum		preassign_fdw_oid(PG_FUNCTION_ARGS);
+Datum		preassign_fserver_oid(PG_FUNCTION_ARGS);
+Datum		preassign_user_mapping_oid(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(preassign_type_oid);
 PG_FUNCTION_INFO_V1(preassign_arraytype_oid);
@@ -197,6 +203,9 @@ PG_FUNCTION_INFO_V1(preassign_tsconfig_oid);
 PG_FUNCTION_INFO_V1(preassign_extension_oid);
 PG_FUNCTION_INFO_V1(preassign_enum_oid);
 PG_FUNCTION_INFO_V1(preassign_amop_oid);
+PG_FUNCTION_INFO_V1(preassign_fdw_oid);
+PG_FUNCTION_INFO_V1(preassign_fserver_oid);
+PG_FUNCTION_INFO_V1(preassign_user_mapping_oid);
 
 Datum
 preassign_type_oid(PG_FUNCTION_ARGS)
@@ -645,6 +654,62 @@ preassign_amop_oid(PG_FUNCTION_ARGS)
 										   InvalidOid,
 										   amopmethod,
 										   InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+preassign_fdw_oid(PG_FUNCTION_ARGS)
+{
+	Oid			fdwoid = PG_GETARG_OID(0);
+	char	   *fdwname = GET_STR(PG_GETARG_TEXT_P(1));
+	Oid			fdwowneroid = PG_GETARG_OID(2);
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(fdwoid,
+										   ForeignDataWrapperRelationId,
+										   fdwname,
+										   InvalidOid,
+										   fdwowneroid,
+										   InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+preassign_fserver_oid(PG_FUNCTION_ARGS)
+{
+	Oid			fsrvoid = PG_GETARG_OID(0);
+	char	   *fsrvname = GET_STR(PG_GETARG_TEXT_P(1));
+	Oid			fsrvfdw = PG_GETARG_OID(2);
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(fsrvoid,
+										   ForeignServerRelationId,
+										   fsrvname,
+										   InvalidOid,
+										   fsrvfdw,
+										   InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+preassign_user_mapping_oid(PG_FUNCTION_ARGS)
+{
+	Oid			umoid = PG_GETARG_OID(0);
+	Oid			umuser = PG_GETARG_OID(1);
+	Oid			umserver = PG_GETARG_OID(2);
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(umoid, UserMappingRelationId,
+										   NULL, InvalidOid, umuser, umserver);
 	}
 
 	PG_RETURN_VOID();

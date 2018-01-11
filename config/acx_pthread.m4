@@ -123,10 +123,15 @@ for flag in $acx_pthread_flags; do
         # pthread_cleanup_push because it is one of the few pthread
         # functions on Solaris that doesn't have a non-functional libc stub.
         # We try pthread_create on general principles.
-        AC_TRY_LINK([#include <pthread.h>],
-                    [pthread_t th; pthread_join(th, 0);
-                     pthread_attr_init(0); pthread_cleanup_push(0, 0);
-                     pthread_create(0,0,0,0); pthread_cleanup_pop(0); ],
+        AC_TRY_LINK([#include <pthread.h>
+                     static void routine(void *a) { a = 0; }
+                     static void *start_routine(void *a) { return a; }],
+                    [pthread_t th; pthread_attr_t attr;
+                     pthread_create(&th, 0, start_routine, 0);
+                     pthread_join(th, 0);
+                     pthread_attr_init(&attr);
+                     pthread_cleanup_push(routine, 0);
+                     pthread_cleanup_pop(0); ],
                     [acx_pthread_ok=yes], [acx_pthread_ok=no])
 
         if test "x$acx_pthread_ok" = xyes; then

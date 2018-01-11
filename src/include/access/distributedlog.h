@@ -5,7 +5,7 @@
  * xid information for each local transaction id.
  *
  * It is used to determine if the committed xid for a transaction we want to
- * determine the visibility of is for a distributed transaction or a 
+ * determine the visibility of is for a distributed transaction or a
  * local transaction.
  *
  * By default, entries in the SLRU (Simple LRU) module used to implement this
@@ -17,7 +17,12 @@
  * distributed transaction identifier -- the timestamp -- also so we can
  * be sure which distributed transaction we are looking at.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/distributedlog.h
  *
  *-------------------------------------------------------------------------
  */
@@ -32,41 +37,40 @@
  */
 typedef struct DistributedLogEntry
 {
-    DistributedTransactionTimeStamp distribTimeStamp;
-    DistributedTransactionId        distribXid;
+	DistributedTransactionTimeStamp distribTimeStamp;
+	DistributedTransactionId distribXid;
 
 } DistributedLogEntry;
 
 /* Number of SLRU buffers to use for the distributed log */
 #define NUM_DISTRIBUTEDLOG_BUFFERS	8
 
-extern void DistributedLog_SetCommitted(
-	TransactionId 						localXid,
-	DistributedTransactionTimeStamp		dtxStartTime,
-	DistributedTransactionId 			distribXid,
-	bool								isRedo);
+extern void DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
+								DistributedTransactionTimeStamp	distribTimeStamp,
+								DistributedTransactionId distribXid,
+								bool isRedo);
 extern bool DistributedLog_CommittedCheck(
-	TransactionId 						localXid,
-	DistributedTransactionTimeStamp		*dtxStartTime,
-	DistributedTransactionId 			*distribXid);
+							  TransactionId localXid,
+							  DistributedTransactionTimeStamp *dtxStartTime,
+							  DistributedTransactionId *distribXid);
 extern bool DistributedLog_ScanForPrevCommitted(
-	TransactionId 						*indexXid,
-	DistributedTransactionTimeStamp 	*distribTimeStamp,
-	DistributedTransactionId 			*distribXid);
+									TransactionId *indexXid,
+									DistributedTransactionTimeStamp *distribTimeStamp,
+									DistributedTransactionId *distribXid);
 
 extern Size DistributedLog_ShmemSize(void);
 extern void DistributedLog_ShmemInit(void);
 extern void DistributedLog_BootStrap(void);
 extern bool DistributedLog_UpgradeCheck(bool inRecovery);
 extern void DistributedLog_Startup(
-					TransactionId oldestActiveXid,
-					TransactionId nextXid);
+					   TransactionId oldestActiveXid,
+					   TransactionId nextXid);
 extern void DistributedLog_Shutdown(void);
 extern void DistributedLog_CheckPoint(void);
 extern void DistributedLog_Extend(TransactionId newestXid);
 extern void DistributedLog_Truncate(TransactionId oldestXid);
 extern bool DistributedLog_GetLowWaterXid(
-								TransactionId *lowWaterXid);
+							  TransactionId *lowWaterXid);
 
 /* XLOG stuff */
 #define DISTRIBUTEDLOG_ZEROPAGE		0x00
@@ -75,5 +79,4 @@ extern bool DistributedLog_GetLowWaterXid(
 extern void DistributedLog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void DistributedLog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 
-#endif   /* DISTRIBUTEDLOG_H */
-
+#endif							/* DISTRIBUTEDLOG_H */

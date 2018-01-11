@@ -1,3 +1,9 @@
 $PostgreSQL: pgsql/src/interfaces/libpq/README,v 1.2 2008/03/21 13:23:29 momjian Exp $
 
 This directory contains the C version of Libpq, the POSTGRES frontend library.
+
+==== Greenplum specific ====
+
+libpq is also used by QD to QEs communications, backend, check the macro FRONTEND.
+
+Check out Makefile in src/backend/libpq, which symlinks some files here.

@@ -3,7 +3,12 @@
  * execWorkfile.h
  *    prototypes for execworkfiles.c
  *
- * Copyright (c) 2010, Greenplum Inc.
+ * Portions Copyright (c) 2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/execWorkfile.h
  *
  *-------------------------------------------------------------------------
  */

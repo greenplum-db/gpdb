@@ -6,7 +6,11 @@
  *	 of active processes in the session and so on. It is also used to indicate
  *	 if a session is runaway and therefore needs to cleanup its resources.
  *
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/session_state.c
  *
  *-------------------------------------------------------------------------
  */
@@ -103,6 +107,7 @@ SessionState_Acquire(int sessionId)
 		acquired->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;
 		acquired->activeProcessCount = 0;
 		acquired->idle_start = 0;
+		acquired->resGroupSlot = NULL;
 
 #ifdef USE_ASSERT_CHECKING
 		acquired->isModifiedSessionId = false;
@@ -175,6 +180,7 @@ SessionState_Release(SessionState *acquired)
 		acquired->cleanupCountdown = CLEANUP_COUNTDOWN_BEFORE_RUNAWAY;
 		acquired->activeProcessCount = 0;
 		acquired->idle_start = 0;
+		acquired->resGroupSlot = NULL;
 
 #ifdef USE_ASSERT_CHECKING
 		acquired->isModifiedSessionId = false;

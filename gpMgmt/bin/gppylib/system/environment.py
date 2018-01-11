@@ -48,41 +48,18 @@ class GpMasterEnvironment:
         if readFromMasterCatalog:
             dbUrl = dbconn.DbURL(port=self.__masterPort, dbname='template1', timeout=timeout, retries=retries)
             conn = dbconn.connect(dbUrl, utility=True)
-            (self.__lcCollate, self.__lcMonetary, self.__lcNumeric) = catalog.getCollationSettings(conn)
 
             # MPP-13807, read/show the master's database version too
             self.__pgVersion = dbconn.execSQLForSingletonRow(conn, "select version();")[0]
             logger.info("master Greenplum Version: '%s'" % self.__pgVersion)
             conn.close()
-
-            checkNotNone("lc_collate", self.__lcCollate)
-            checkNotNone("lc_monetary", self.__lcMonetary)
-            checkNotNone("lc_numeric", self.__lcNumeric)
         else:
-            self.__lcCollate = None
-            self.__lcMonetary = None
-            self.__lcNumeric = None
             self.__pgVersion = None
 
 
     def getGpHome(self): return self.__gpHome
     def getGpVersion(self): return self.__gpVersion
     def getPgVersion(self): return self.__pgVersion
-    def getLcCollate(self):
-        checkNotNone("lc_collate", self.__lcCollate) # make sure we were initialized with "readFromMasterCatalog"
-        return self.__lcCollate
-
-    def getLcMonetary(self):
-        checkNotNone("lc_monetary", self.__lcMonetary) # make sure we were initialized with "readFromMasterCatalog"
-        return self.__lcMonetary
-
-    def getLcNumeric(self):
-        checkNotNone("lc_numeric", self.__lcNumeric) # make sure we were initialized with "readFromMasterCatalog"
-        return self.__lcNumeric
-
-    def getLocaleData(self):
-        checkNotNone("lc_numeric", self.__lcNumeric) # make sure we were initialized with "readFromMasterCatalog"
-        return ":".join([self.__lcCollate, self.__lcMonetary, self.__lcNumeric])
 
     def getMasterDataDir(self): return self.__masterDataDir
     def getMasterMaxConnections(self) : return self.__masterMaxConnections

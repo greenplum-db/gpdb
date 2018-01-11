@@ -197,7 +197,7 @@ $$ LANGUAGE plperl;
 CREATE TRIGGER "test_trigger_recurse" BEFORE INSERT ON trigger_test
 FOR EACH ROW EXECUTE PROCEDURE "trigger_recurse"();
 INSERT INTO trigger_test (i, v) values (10000, 'top');
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement at line 6.
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement at line 6.
 DETAIL:  PL/Perl function "trigger_recurse"
 SELECT * FROM trigger_test;
  i |                v                 |   foo   

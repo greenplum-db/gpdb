@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_rz1_cyj_gr">
-  <title>Best Practices</title>
+  <title>Greenplum Database Best Practices</title>
   <body>
-    <p><cite>Greenplum Database Best Practices Guide</cite> describes best practices for Greenplum
-      Database. A best practice is a method or technique that has consistently shown results
-      superior to those achieved with other means. Best practices are found through experience and
-      are proven to reliably lead to a desired result. Best practices are a commitment to use any
-      product correctly and optimally, by leveraging all the knowledge and expertise available to
-      ensure success. </p>
+    <p>A best practice is a method or technique that has consistently shown results superior to
+      those achieved with other means. Best practices are found through experience and are proven to
+      reliably lead to a desired result. Best practices are a commitment to use any product
+      correctly and optimally, by leveraging all the knowledge and expertise available to ensure
+      success. </p>
     <p>This document does not teach you how to use Greenplum Database features. Links are provided
       to other relevant parts of the Greenplum Database documentation for information on how to use
       and implement specific Greenplum Database features. This document addresses the most important

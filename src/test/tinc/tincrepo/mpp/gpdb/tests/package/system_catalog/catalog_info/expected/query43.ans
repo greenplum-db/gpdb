@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_stat_resqueues;
- queueid | queuename | n_queries_exec | n_queries_wait | elapsed_exec | elapsed_wait 
----------+-----------+----------------+----------------+--------------+--------------
-(0 rows)
-
--- end_ignore

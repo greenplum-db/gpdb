@@ -3,15 +3,19 @@
  * perfmon_segmentinfo.c
  *    Send segment information to perfmon
  *
- * Copyright (c) 2010, Greenplum inc.
- *
  * This file contains functions for sending segment information to
  * perfmon. At startup the postmaster process forks a new process
  * that sends segment info in predefined intervals using UDP packets.
  *
- *
  *  Created on: Feb 28, 2010
  *      Author: kkrik
+ *
+ * Portions Copyright (c) 2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/perfmon_segmentinfo.c
  *
  *-------------------------------------------------------------------------
 */
@@ -48,9 +52,6 @@ static volatile bool isSenderProcess = false;
 
 /* Static gpmon_seginfo_t item, (re)used for sending UDP packets. */
 static gpmon_packet_t seginfopkt;
-
-/* Maximum dynamic memory allocation in bytes */
-static uint64 mem_alloc_max;
 
 /* GpmonPkt-related routines */
 static void InitSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt);
@@ -169,12 +170,6 @@ NON_EXEC_STATIC void SegmentInfoSenderMain(int argc, char *argv[])
 
 	MyBackendId = InvalidBackendId;
 
-	/*
-	 * Save gp_vmem_protect_limit value in bytes.
-	 * This value cannot change after starting the server.
-	 */
-	mem_alloc_max = VmemTracker_GetVmemLimitBytes();
-
 	/* Init gpmon connection */
 	gpmon_init();
 
@@ -265,8 +260,8 @@ UpdateSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt)
 	Assert(gpmon_pkt);
 	Assert(GPMON_PKTTYPE_SEGINFO == gpmon_pkt->pkttype);
 
-	uint64 mem_alloc_used = VmemTracker_GetVmemLimitBytes() - VmemTracker_GetAvailableVmemBytes();
-	uint64 mem_alloc_available = mem_alloc_max - mem_alloc_used;
-	gpmon_pkt->u.seginfo.dynamic_memory_used = mem_alloc_used;
+	uint64 mem_alloc_available = VmemTracker_GetAvailableVmemBytes();
+	uint64 mem_alloc_limit = VmemTracker_GetVmemLimitBytes();
+	gpmon_pkt->u.seginfo.dynamic_memory_used = mem_alloc_limit - mem_alloc_available;
 	gpmon_pkt->u.seginfo.dynamic_memory_available =	mem_alloc_available;
 }

@@ -45,15 +45,17 @@
     <title id="jb155843">Managing Workload</title>
     <body>
       <p>A database system has a limited CPU capacity, memory, and disk I/O resources. When multiple
-        workloads compete for access to these resources, database performance suffers. Workload
-        management maximizes system throughput while meeting varied business requirements. With
-        role-based resource queues, Greenplum Database workload management limits
-        active queries and conserves system resources.</p>
-      <p>A resource queue limits the size and/or total number of queries that users or roles can
-        execute in the particular queue. By assigning database roles to the appropriate resource
-        queues, administrators can control concurrent user queries and prevent system overload. See
-          <xref href="./workload_mgmt.xml#topic1" type="topic" format="dita"/> for more information
-        about setting up resource queues.</p>
+        workloads compete for access to these resources, database performance suffers. Resource
+        management maximizes system throughput while meeting varied business requirements. Greenplum
+        Database provides resource queues and resource groups to help you manage these 
+        system resources.</p>
+      <p>Resource queues and resource groups limit resource usage and the total number of
+        concurrent queries executing in the particular queue or group. By assigning database roles
+        to the appropriate queue or group, administrators can control concurrent user queries
+         and prevent system overload. For more information about resource queues and resource
+         groups, including selecting the appropriate scheme for your Greenplum Database environment,
+         see 
+          <xref href="./wlmgmt.xml#topic1" type="topic" format="dita"/>.</p>
       <p>Greenplum Database administrators should run maintenance workloads such as
         data loads and <codeph>VACUUM ANALYZE</codeph> operations after business hours. Do not
         compete with database users for system resources; perform administrative tasks at low-usage
@@ -133,7 +135,7 @@
           <codeblock>ALTER TABLE sales ALTER COLUMN region SET STATISTICS 50;
 </codeblock>
         </p>
-        <p>This is equivalent to increasing <codeph>default_statistics_target</codeph> for a
+        <p>This is equivalent to changing <codeph>default_statistics_target</codeph> for a
           particular column. Subsequent <codeph>ANALYZE</codeph> operations will then gather more
           statistics data for that column and produce better query plans as a result.</p>
       </body>

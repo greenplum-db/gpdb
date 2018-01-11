@@ -2,7 +2,7 @@
  * pltcl.c		- PostgreSQL support for Tcl as
  *				  procedural language (PL)
  *
- *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.117.2.3 2010/05/13 18:29:25 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.128 2009/06/11 14:49:14 momjian Exp $
  *
  **********************************************************************/
 
@@ -18,9 +18,11 @@
 #define CONST84
 #endif
 
-#include "access/heapam.h"
 #include "catalog/namespace.h"
+#include "access/xact.h"
+#include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
+#include "catalog/pg_type.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "fmgr.h"
@@ -35,6 +37,7 @@
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 
+
 #define HAVE_TCL_VERSION(maj,min) \
 	((TCL_MAJOR_VERSION > maj) || \
 	 (TCL_MAJOR_VERSION == maj && TCL_MINOR_VERSION >= min))
@@ -43,6 +46,10 @@
 #if !HAVE_TCL_VERSION(8,0)
 #define Tcl_GetStringResult(interp)  ((interp)->result)
 #endif
+
+/* define our text domain for translations */
+#undef TEXTDOMAIN
+#define TEXTDOMAIN PG_TEXTDOMAIN("pltcl")
 
 #if defined(UNICODE_CONVERSION) && HAVE_TCL_VERSION(8,1)
 
@@ -278,7 +285,7 @@ pltcl_WaitForEvent(Tcl_Time *timePtr)
 {
 	return 0;
 }
-#endif   /* HAVE_TCL_VERSION(8,2) */
+#endif   /* HAVE_TCL_VERSION(8,4) */
 
 
 /*
@@ -314,6 +321,8 @@ _PG_init(void)
 	/* Be sure we do initialization only once (should be redundant now) */
 	if (pltcl_pm_init_done)
 		return;
+
+	pg_bindtextdomain(TEXTDOMAIN);
 
 #ifdef WIN32
 	/* Required on win32 to prevent error loading init.tcl */
@@ -800,7 +809,7 @@ pltcl_func_handler(PG_FUNCTION_ARGS, bool pltrusted)
 	{
 		UTF_BEGIN;
 		retval = InputFunctionCall(&prodesc->result_in_func,
-								   UTF_U2E((char *) Tcl_GetStringResult(interp)),
+							   UTF_U2E((char *) Tcl_GetStringResult(interp)),
 								   prodesc->result_typioparam,
 								   -1);
 		UTF_END;
@@ -958,6 +967,8 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted)
 				Tcl_DStringAppendElement(&tcl_cmd, "DELETE");
 			else if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
 				Tcl_DStringAppendElement(&tcl_cmd, "UPDATE");
+			else if (TRIGGER_FIRED_BY_TRUNCATE(trigdata->tg_event))
+				Tcl_DStringAppendElement(&tcl_cmd, "TRUNCATE");
 			else
 				elog(ERROR, "unrecognized OP tg_event: %u", trigdata->tg_event);
 
@@ -1133,10 +1144,10 @@ throw_tcl_error(Tcl_Interp *interp, const char *proname)
 {
 	/*
 	 * Caution is needed here because Tcl_GetVar could overwrite the
-	 * interpreter result (even though it's not really supposed to),
-	 * and we can't control the order of evaluation of ereport arguments.
-	 * Hence, make real sure we have our own copy of the result string
-	 * before invoking Tcl_GetVar.
+	 * interpreter result (even though it's not really supposed to), and we
+	 * can't control the order of evaluation of ereport arguments. Hence, make
+	 * real sure we have our own copy of the result string before invoking
+	 * Tcl_GetVar.
 	 */
 	char	   *emsg;
 	char	   *econtext;
@@ -1316,7 +1327,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 					free(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("pltcl functions cannot return type %s",
+							 errmsg("PL/Tcl functions cannot return type %s",
 									format_type_be(procStruct->prorettype))));
 				}
 			}
@@ -1328,7 +1339,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 				free(prodesc);
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("pltcl functions cannot return tuples yet")));
+				  errmsg("PL/Tcl functions cannot return composite types")));
 			}
 
 			perm_fmgr_info(typeStruct->typinput, &(prodesc->result_in_func));
@@ -1368,7 +1379,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 					free(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("pltcl functions cannot take type %s",
+							 errmsg("PL/Tcl functions cannot accept type %s",
 						format_type_be(procStruct->proargtypes.values[i]))));
 				}
 
@@ -1454,8 +1465,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 									  Anum_pg_proc_prosrc, &isnull);
 		if (isnull)
 			elog(ERROR, "null prosrc");
-		proc_source = DatumGetCString(DirectFunctionCall1(textout,
-														  prosrcdatum));
+		proc_source = TextDatumGetCString(prosrcdatum);
 		UTF_BEGIN;
 		Tcl_DStringAppend(&proc_internal_body, UTF_E2U(proc_source), -1);
 		UTF_END;
@@ -1536,19 +1546,19 @@ pltcl_elog(ClientData cdata, Tcl_Interp *interp,
 	if (level == ERROR)
 	{
 		/*
-		 * We just pass the error back to Tcl.  If it's not caught,
-		 * it'll eventually get converted to a PG error when we reach
-		 * the call handler.
+		 * We just pass the error back to Tcl.	If it's not caught, it'll
+		 * eventually get converted to a PG error when we reach the call
+		 * handler.
 		 */
 		Tcl_SetResult(interp, (char *) argv[2], TCL_VOLATILE);
 		return TCL_ERROR;
 	}
 
 	/*
-	 * For non-error messages, just pass 'em to elog().  We do not expect
-	 * that this will fail, but just on the off chance it does, report the
-	 * error back to Tcl.  Note we are assuming that elog() can't have any
-	 * internal failures that are so bad as to require a transaction abort.
+	 * For non-error messages, just pass 'em to elog().  We do not expect that
+	 * this will fail, but just on the off chance it does, report the error
+	 * back to Tcl.  Note we are assuming that elog() can't have any internal
+	 * failures that are so bad as to require a transaction abort.
 	 *
 	 * This path is also used for FATAL errors, which aren't going to come
 	 * back to us at all.
@@ -1945,6 +1955,7 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
 			break;
 
 		case SPI_OK_UTILITY:
+		case SPI_OK_REWRITTEN:
 			if (tuptable == NULL)
 			{
 				Tcl_SetResult(interp, "0", TCL_STATIC);

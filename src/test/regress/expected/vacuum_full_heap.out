@@ -27,7 +27,7 @@ select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
  pg_relation_size 
 ------------------
-           262144
+           229376
 (1 row)
 
 select max(b), min(length(c)) from vfheap;
@@ -41,7 +41,7 @@ select relname, relpages, reltuples from gp_dist_random('pg_class') where (oid =
  relname | relpages | reltuples 
 ---------+----------+-----------
  vfheap  |        2 |        50
- ivfheap |        8 |        50
+ ivfheap |        7 |        50
 (2 rows)
 
 -- just for the sake of code coverage, one more shot of vacuum full

@@ -3,10 +3,12 @@
  * filespace.h
  *		Filespace management commands (create/drop filespace).
  *
+ * Portions Copyright (c) 2009, Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2009-2009, Greenplum Inc
  *
- * $PostgreSQL$
+ * IDENTIFICATION
+ *	    src/include/commands/filespace.h
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +22,7 @@
 extern void CreateFileSpace(CreateFileSpaceStmt *stmt);
 
 /* DROP FILESPACE */
-extern void RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok);
+extern void DropFileSpace(DropFileSpaceStmt *stmt);
 extern void RemoveFileSpaceById(Oid fsoid);
 
 /* ALTER FILESPACE ... OWNER TO ... */

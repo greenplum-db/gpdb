@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_inherits.h,v 1.24 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_inherits.h,v 1.28 2009/05/12 03:11:02 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -54,5 +54,10 @@ typedef FormData_pg_inherits *Form_pg_inherits;
 #define Anum_pg_inherits_inhrelid		1
 #define Anum_pg_inherits_inhparent		2
 #define Anum_pg_inherits_inhseqno		3
+
+/* ----------------
+ *		pg_inherits has no initial contents
+ * ----------------
+ */
 
 #endif   /* PG_INHERITS_H */

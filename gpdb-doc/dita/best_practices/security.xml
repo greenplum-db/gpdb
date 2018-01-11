@@ -2,11 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_nyc_mdf_jr">
   <title>Security</title>
+  <shortdesc>Best practices to ensure the highest level of system security. </shortdesc>
   <body>
-    <p> This section describes basic security best practices that Pivotal recommends you follow to
-      ensure the highest level of system security.  </p>
     <section>
-      <title>Security Best Practices</title>
+      <title>Basic Security Best Practices</title>
       <ul id="ul_ocm_zsx_kr">
         <li> Secure the <codeph>gpadmin</codeph> system user. Greenplum requires a UNIX user id to
           install and initialize the Greenplum Database system. This system user is referred to as

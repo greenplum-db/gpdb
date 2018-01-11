@@ -32,7 +32,7 @@ function gen_env(){
 		source /opt/gcc_env.sh
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
-		make ${MAKE_TEST_COMMAND}
+		make -s ${MAKE_TEST_COMMAND}
 	EOF
 
 	chmod a+x /opt/run_test.sh

@@ -10,9 +10,10 @@
  * in this file; it can be defined by the caller for special purposes.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2003-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.26 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.29 2009/03/04 10:55:00 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -386,11 +387,3 @@
  * appear in production, only in regression tests.
  */
 #define ERRCODE_FAULT_INJECT				MAKE_SQLSTATE('X','X', '0','0','9')
-
-/* deprecated... */
-#define ERRCODE_CDB_FEATURE_NOT_SUPPORTED	ERRCODE_GP_FEATURE_NOT_SUPPORTED
-#define ERRCODE_CDB_FEATURE_NOT_YET			ERRCODE_GP_FEATURE_NOT_YET
-#define ERRCODE_CDB_COMMAND_ERROR			ERRCODE_GP_COMMAND_ERROR
-#define ERRCODE_CDB_INTERNAL_ERROR			ERRCODE_INTERNAL_ERROR
-#define ERRCODE_GP_INTERNAL_ERROR			ERRCODE_INTERNAL_ERROR
-

@@ -5,12 +5,13 @@
  *	  vars, compute regproc values for operators, etc
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.145 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.150 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,11 +20,11 @@
 #include "access/transam.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/tlist.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
@@ -42,7 +43,8 @@ typedef struct
 {
 	List	   *tlist;			/* underlying target list */
 	int			num_vars;		/* number of plain Var tlist entries */
-	bool		has_non_vars;	/* are there non-plain-Var entries? */
+	bool		has_ph_vars;	/* are there PlaceHolderVar entries? */
+	bool		has_non_vars;	/* are there other entries? */
 	/* array of num_vars entries: */
 	tlist_vinfo vars[1];		/* VARIABLE LENGTH ARRAY */
 } indexed_tlist;				/* VARIABLE LENGTH STRUCT */
@@ -460,7 +462,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 #ifdef USE_ASSERT_CHECKING
 				Assert(splan->scanrelid <= list_length(glob->finalrtable) && "Scan node's relid is outside the finalrtable!");
 				RangeTblEntry *rte = rt_fetch(splan->scanrelid, glob->finalrtable);
-				Assert(rte->rtekind == RTE_RELATION && "Scan plan should refer to a scan relation");
+				Assert((rte->rtekind == RTE_RELATION || rte->rtekind == RTE_CTE) && "Scan plan should refer to a scan relation");
 #endif
 
 				splan->plan.targetlist =
@@ -664,7 +666,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			break;
 		case T_CteScan:
 			{
-				CteScan *splan = (CteScan *) plan;
+				CteScan    *splan = (CteScan *) plan;
 
 				splan->scan.scanrelid += rtoffset;
 				splan->scan.plan.targetlist =
@@ -809,42 +811,34 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		case T_Agg:
 			set_upper_references(glob, plan, rtoffset);
 			break;
-		case T_Window:
-			set_upper_references(glob, plan, rtoffset);
-			if ( plan->targetlist == NIL )
-				set_dummy_tlist_references(plan, rtoffset);
+		case T_WindowAgg:
 			{
-				indexed_tlist  *subplan_itlist =
-					build_tlist_index(plan->lefttree->targetlist);
+				WindowAgg  *wplan = (WindowAgg *) plan;
+				indexed_tlist  *subplan_itlist;
 
-				/* Fix frame edges */
-				foreach(l, ((Window *) plan)->windowKeys)
+				set_upper_references(glob, plan, rtoffset);
+
+				if ( plan->targetlist == NIL )
+					set_dummy_tlist_references(plan, rtoffset);
+
+				/*
+				 * Fix frame edges. PostgreSQL uses fix_scan_expr here, but
+				 * in GPDB, we allow the ROWS/RANGE expressions to contain
+				 * references to the subplan, so we have to use fix_upper_expr.
+				 */
+				if (wplan->startOffset || wplan->endOffset)
 				{
-					WindowKey *win_key = (WindowKey *)lfirst(l);
-					WindowFrame *frame = win_key->frame;
+					subplan_itlist =
+						build_tlist_index(plan->lefttree->targetlist);
 
-					if (frame != NULL)
-					{
-						/*
-						 * Fix reference of frame edge expression *only*
-						 * when the edge is DELAYED type. Otherwise it will have
-						 * potential risk that the edge expression is converted
-						 * to Var (see fix_upper_expr_mutator for reason), which
-						 * cannot be evaluated in the executor's init stage.
-						 * It is ok that DELAYED frame edges have Var, since
-						 * they are evaluated at the executor's run time stage.
-						 */
-						if (window_edge_is_delayed(frame->trail))
-							frame->trail->val =
-								fix_upper_expr(glob, frame->trail->val,
-											   subplan_itlist, rtoffset);
-						if (window_edge_is_delayed(frame->lead))
-							frame->lead->val =
-								fix_upper_expr(glob, frame->lead->val,
-											   subplan_itlist, rtoffset);
-					}
+					wplan->startOffset =
+						fix_upper_expr(glob, wplan->startOffset,
+									   subplan_itlist, rtoffset);
+					wplan->endOffset =
+						fix_upper_expr(glob, wplan->endOffset,
+									   subplan_itlist, rtoffset);
+					pfree(subplan_itlist);
 				}
-				pfree(subplan_itlist);
 			}
 			break;
 		case T_Result:
@@ -1076,9 +1070,6 @@ trivial_subqueryscan(SubqueryScan *plan)
 		list_length(plan->subplan->targetlist))
 		return false;			/* tlists not same length */
 
-	if ( IsA(plan->subplan, Window) )
-		return false;
-
 	attrno = 1;
 	forboth(lp, plan->scan.plan.targetlist, lc, plan->subplan->targetlist)
 	{
@@ -1152,10 +1143,10 @@ fix_expr_common(PlannerGlobal *glob, Node *node)
 		record_plan_function_dependency(glob,
 										((Aggref *) node)->aggfnoid);
 	}
-	else if (IsA(node, WindowRef))
+	else if (IsA(node, WindowFunc))
 	{
 		record_plan_function_dependency(glob,
-										((WindowRef *) node)->winfnoid);
+										((WindowFunc *) node)->winfnoid);
 	}
 	else if (IsA(node, FuncExpr))
 	{
@@ -1184,13 +1175,13 @@ fix_expr_common(PlannerGlobal *glob, Node *node)
 	{
 		set_sa_opfuncid((ScalarArrayOpExpr *) node);
 		record_plan_function_dependency(glob,
-										((ScalarArrayOpExpr *) node)->opfuncid);
+									 ((ScalarArrayOpExpr *) node)->opfuncid);
 	}
 	else if (IsA(node, ArrayCoerceExpr))
 	{
 		if (OidIsValid(((ArrayCoerceExpr *) node)->elemfuncid))
 			record_plan_function_dependency(glob,
-											((ArrayCoerceExpr *) node)->elemfuncid);
+									 ((ArrayCoerceExpr *) node)->elemfuncid);
 	}
 	else if (IsA(node, Const))
 	{
@@ -1298,6 +1289,13 @@ fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context)
 			return (Node *) var;
 		}
 	}
+	if (IsA(node, PlaceHolderVar))
+	{
+		/* At scan level, we should always just evaluate the contained expr */
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
+
+		return fix_scan_expr_mutator((Node *) phv->phexpr, context);
+	}
 	fix_expr_common(context->glob, node);
 	return expression_tree_mutator(node, fix_scan_expr_mutator,
 								   (void *) context);
@@ -1308,6 +1306,7 @@ fix_scan_expr_walker(Node *node, fix_scan_expr_context *context)
 {
 	if (node == NULL)
 		return false;
+	Assert(!IsA(node, PlaceHolderVar));
 
 	/*
 	 * fix_expr_common will look up and set operator opcodes in the
@@ -1738,6 +1737,7 @@ build_tlist_index(List *tlist)
 			   list_length(tlist) * sizeof(tlist_vinfo));
 
 	itlist->tlist = tlist;
+	itlist->has_ph_vars = false;
 	itlist->has_non_vars = false;
 
 	/* Find the Vars and fill in the index array */
@@ -1769,6 +1769,8 @@ build_tlist_index(List *tlist)
 			vinfo->resno = tle->resno;
 			vinfo++;
 		}
+		else if (tle->expr && IsA(tle->expr, PlaceHolderVar))
+			itlist->has_ph_vars = true;
 		else
 			itlist->has_non_vars = true;
 	}
@@ -1782,7 +1784,9 @@ build_tlist_index(List *tlist)
  * build_tlist_index_other_vars --- build a restricted tlist index
  *
  * This is like build_tlist_index, but we only index tlist entries that
- * are Vars belonging to some rel other than the one specified.
+ * are Vars belonging to some rel other than the one specified.  We will set
+ * has_ph_vars (allowing PlaceHolderVars to be matched), but not has_non_vars
+ * (so nothing other than Vars and PlaceHolderVars can be matched).
  */
 static indexed_tlist *
 build_tlist_index_other_vars(List *tlist, Index ignore_rel)
@@ -1797,6 +1801,7 @@ build_tlist_index_other_vars(List *tlist, Index ignore_rel)
 			   list_length(tlist) * sizeof(tlist_vinfo));
 
 	itlist->tlist = tlist;
+	itlist->has_ph_vars = false;
 	itlist->has_non_vars = false;
 
 	/* Find the desired Vars and fill in the index array */
@@ -1817,6 +1822,8 @@ build_tlist_index_other_vars(List *tlist, Index ignore_rel)
 				vinfo++;
 			}
 		}
+		else if (tle->expr && IsA(tle->expr, PlaceHolderVar))
+			itlist->has_ph_vars = true;
 	}
 
 	itlist->num_vars = (vinfo - itlist->vars);
@@ -2093,7 +2100,33 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 		/* No referent found for Var */
 		elog(ERROR, "variable not found in subplan target lists");
 	}
+	if (IsA(node, PlaceHolderVar))
+	{
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
 
+		/* See if the PlaceHolderVar has bubbled up from a lower plan node */
+		if (context->outer_itlist->has_ph_vars)
+		{
+			newvar = search_indexed_tlist_for_non_var((Node *) phv,
+													  context->outer_itlist,
+													  OUTER);
+			if (newvar)
+				return (Node *) newvar;
+		}
+		if (context->inner_itlist && context->inner_itlist->has_ph_vars)
+		{
+			newvar = search_indexed_tlist_for_non_var((Node *) phv,
+													  context->inner_itlist,
+													  INNER);
+			if (newvar)
+				return (Node *) newvar;
+		}
+
+		/* If not supplied by input plans, evaluate the contained expr */
+		return fix_join_expr_mutator((Node *) phv->phexpr, context);
+	}
+
+	/* Try matching more complex expressions too, if tlists have any */
 	if (context->outer_itlist && context->outer_itlist->has_non_vars &&
 	        context->use_outer_tlist_for_matching_nonvars)
 	{
@@ -2179,6 +2212,22 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 		if (!newvar)
 			elog(ERROR, "variable not found in subplan target list");
 		return (Node *) newvar;
+	}
+	if (IsA(node, PlaceHolderVar))
+	{
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
+
+		/* See if the PlaceHolderVar has bubbled up from a lower plan node */
+		if (context->subplan_itlist->has_ph_vars)
+		{
+			newvar = search_indexed_tlist_for_non_var((Node *) phv,
+													  context->subplan_itlist,
+													  OUTER);
+			if (newvar)
+				return (Node *) newvar;
+		}
+		/* If not supplied by input plan, evaluate the contained expr */
+		return fix_upper_expr_mutator((Node *) phv->phexpr, context);
 	}
 	/* Try matching more complex expressions too, if tlist has any */
 	if (context->subplan_itlist->has_non_vars && !IsA(node, GroupId))
@@ -2339,8 +2388,8 @@ record_plan_function_dependency(PlannerGlobal *glob, Oid funcid)
 	 * we just assume they'll never change (or at least not in ways that'd
 	 * invalidate plans using them).  For this purpose we can consider a
 	 * built-in function to be one with OID less than FirstBootstrapObjectId.
-	 * Note that the OID generator guarantees never to generate such an
-	 * OID after startup, even at OID wraparound.
+	 * Note that the OID generator guarantees never to generate such an OID
+	 * after startup, even at OID wraparound.
 	 */
 	if (funcid >= (Oid) FirstBootstrapObjectId)
 	{
@@ -2400,6 +2449,7 @@ extract_query_dependencies_walker(Node *node, PlannerGlobal *context)
 {
 	if (node == NULL)
 		return false;
+	Assert(!IsA(node, PlaceHolderVar));
 	/* Extract function dependencies and check for regclass Consts */
 	fix_expr_common(context, node);
 	if (IsA(node, Query))
@@ -2515,7 +2565,9 @@ cdb_insert_result_node(PlannerGlobal *glob, Plan *plan, int rtoffset)
     resultplan = (Plan *) make_result(NULL, plan->targetlist, NULL, plan);
 
     /* Build a new targetlist for the given Plan, with Var nodes only. */
-    plan->targetlist = flatten_tlist(plan->targetlist);
+    plan->targetlist = flatten_tlist(plan->targetlist,
+									 PVC_RECURSE_AGGREGATES,
+									 PVC_INCLUDE_PLACEHOLDERS);
 
     /* Fix up the Result node and the Plan tree below it. */
     resultplan = set_plan_refs(glob, resultplan, rtoffset);

@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_resqueue;
- rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit 
----------+---------------+--------------+---------------
-(0 rows)
-
--- end_ignore

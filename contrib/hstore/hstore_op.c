@@ -12,7 +12,7 @@
 
 
 static HEntry *
-findkey(HStore * hs, char *key, int keylen)
+findkey(HStore *hs, char *key, int keylen)
 {
 	HEntry	   *StopLow = ARRPTR(hs);
 	HEntry	   *StopHigh = StopLow + hs->size;
@@ -57,13 +57,12 @@ fetchval(PG_FUNCTION_ARGS)
 		PG_RETURN_NULL();
 	}
 
-	out = palloc(VARHDRSZ + entry->vallen);
-	memcpy(VARDATA(out), STRPTR(hs) + entry->pos + entry->keylen, entry->vallen);
-	SET_VARSIZE(out, VARHDRSZ + entry->vallen);
+	out = cstring_to_text_with_len(STRPTR(hs) + entry->pos + entry->keylen,
+								   entry->vallen);
 
 	PG_FREE_IF_COPY(hs, 0);
 	PG_FREE_IF_COPY(key, 1);
-	PG_RETURN_POINTER(out);
+	PG_RETURN_TEXT_P(out);
 }
 
 PG_FUNCTION_INFO_V1(exists);
@@ -337,22 +336,19 @@ akeys(PG_FUNCTION_ARGS)
 	d = (Datum *) palloc(sizeof(Datum) * (hs->size + 1));
 	while (ptr - ARRPTR(hs) < hs->size)
 	{
-		text	   *item = (text *) palloc(VARHDRSZ + ptr->keylen);
+		text	   *item;
 
-		SET_VARSIZE(item, VARHDRSZ + ptr->keylen);
-		memcpy(VARDATA(item), base + ptr->pos, ptr->keylen);
+		item = cstring_to_text_with_len(base + ptr->pos, ptr->keylen);
 		d[ptr - ARRPTR(hs)] = PointerGetDatum(item);
 		ptr++;
 	}
 
-	a = construct_array(
-						d,
+	a = construct_array(d,
 						hs->size,
 						TEXTOID,
 						-1,
 						false,
-						'i'
-		);
+						'i');
 
 	ptr = ARRPTR(hs);
 	while (ptr - ARRPTR(hs) < hs->size)
@@ -381,23 +377,20 @@ avals(PG_FUNCTION_ARGS)
 	d = (Datum *) palloc(sizeof(Datum) * (hs->size + 1));
 	while (ptr - ARRPTR(hs) < hs->size)
 	{
-		int			vallen = (ptr->valisnull) ? 0 : ptr->vallen;
-		text	   *item = (text *) palloc(VARHDRSZ + vallen);
+		text	   *item;
 
-		SET_VARSIZE(item, VARHDRSZ + vallen);
-		memcpy(VARDATA(item), base + ptr->pos + ptr->keylen, vallen);
+		item = cstring_to_text_with_len(base + ptr->pos + ptr->keylen,
+										(ptr->valisnull) ? 0 : ptr->vallen);
 		d[ptr - ARRPTR(hs)] = PointerGetDatum(item);
 		ptr++;
 	}
 
-	a = construct_array(
-						d,
+	a = construct_array(d,
 						hs->size,
 						TEXTOID,
 						-1,
 						false,
-						'i'
-		);
+						'i');
 
 	ptr = ARRPTR(hs);
 	while (ptr - ARRPTR(hs) < hs->size)
@@ -416,10 +409,10 @@ typedef struct
 {
 	HStore	   *hs;
 	int			i;
-}	AKStore;
+} AKStore;
 
 static void
-setup_firstcall(FuncCallContext *funcctx, HStore * hs)
+setup_firstcall(FuncCallContext *funcctx, HStore *hs)
 {
 	MemoryContext oldcontext;
 	AKStore    *st;
@@ -458,10 +451,10 @@ skeys(PG_FUNCTION_ARGS)
 	if (st->i < st->hs->size)
 	{
 		HEntry	   *ptr = &(ARRPTR(st->hs)[st->i]);
-		text	   *item = (text *) palloc(VARHDRSZ + ptr->keylen);
+		text	   *item;
 
-		SET_VARSIZE(item, VARHDRSZ + ptr->keylen);
-		memcpy(VARDATA(item), STRPTR(st->hs) + ptr->pos, ptr->keylen);
+		item = cstring_to_text_with_len(STRPTR(st->hs) + ptr->pos,
+										ptr->keylen);
 		st->i++;
 
 		SRF_RETURN_NEXT(funcctx, PointerGetDatum(item));
@@ -509,11 +502,10 @@ svals(PG_FUNCTION_ARGS)
 		}
 		else
 		{
-			int			vallen = ptr->vallen;
-			text	   *item = (text *) palloc(VARHDRSZ + vallen);
+			text	   *item;
 
-			SET_VARSIZE(item, VARHDRSZ + vallen);
-			memcpy(VARDATA(item), STRPTR(st->hs) + ptr->pos + ptr->keylen, vallen);
+			item = cstring_to_text_with_len(STRPTR(st->hs) + ptr->pos + ptr->keylen,
+											ptr->vallen);
 			st->i++;
 
 			SRF_RETURN_NEXT(funcctx, PointerGetDatum(item));
@@ -618,36 +610,31 @@ each(PG_FUNCTION_ARGS)
 		HEntry	   *ptr = &(ARRPTR(st->hs)[st->i]);
 		Datum		res,
 					dvalues[2];
-		char		nulls[] = {' ', ' '};
+		bool		nulls[2] = {false, false};
 		text	   *item;
 		HeapTuple	tuple;
 
-		item = (text *) palloc(VARHDRSZ + ptr->keylen);
-		SET_VARSIZE(item, VARHDRSZ + ptr->keylen);
-		memcpy(VARDATA(item), STRPTR(st->hs) + ptr->pos, ptr->keylen);
+		item = cstring_to_text_with_len(STRPTR(st->hs) + ptr->pos, ptr->keylen);
 		dvalues[0] = PointerGetDatum(item);
 
 		if (ptr->valisnull)
 		{
 			dvalues[1] = (Datum) 0;
-			nulls[1] = 'n';
+			nulls[1] = true;
 		}
 		else
 		{
-			int			vallen = ptr->vallen;
-
-			item = (text *) palloc(VARHDRSZ + vallen);
-			SET_VARSIZE(item, VARHDRSZ + vallen);
-			memcpy(VARDATA(item), STRPTR(st->hs) + ptr->pos + ptr->keylen, vallen);
+			item = cstring_to_text_with_len(STRPTR(st->hs) + ptr->pos + ptr->keylen,
+											ptr->vallen);
 			dvalues[1] = PointerGetDatum(item);
 		}
 		st->i++;
 
-		tuple = heap_formtuple(funcctx->attinmeta->tupdesc, dvalues, nulls);
+		tuple = heap_form_tuple(funcctx->attinmeta->tupdesc, dvalues, nulls);
 		res = HeapTupleGetDatum(tuple);
 
 		pfree(DatumGetPointer(dvalues[0]));
-		if (nulls[1] != 'n')
+		if (!nulls[1])
 			pfree(DatumGetPointer(dvalues[1]));
 
 		SRF_RETURN_NEXT(funcctx, res);

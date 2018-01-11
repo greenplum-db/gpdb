@@ -7,7 +7,6 @@ set Debug_print_plan=on;
 -- OLAP_WINDOW 
 --
 -- Changes here should also be made to olap_window_seq.sql
-set gp_enable_sequential_window_plans to false;
 ---- 1 -- Null window specification -- OVER () ----
 select row_number() over (), cn,pn,vn 
 from sale; -- mvd 1->1
@@ -1603,7 +1602,7 @@ from sale_ord;
                ->  Sort  (cost=0.00..5.43 rows=6 width=12)
                      Sort Key: ord, cn
                      ->  Table Scan on sale_ord  (cost=0.00..0.07 rows=6 width=12)
- Settings:  gp_enable_sequential_window_plans=off; optimizer=on
+ Settings:  optimizer=on
 (9 rows)
 
 select cn,
@@ -7887,7 +7886,7 @@ explain select n from ( select row_number() over () from (values (0)) as t(x) ) 
    Group By: row_number()
    ->  Window  (cost=0.00..1.00 rows=1 width=8)
          ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Settings:  gp_enable_sequential_window_plans=off; optimizer=on
+ Settings:  optimizer=on
 (5 rows)
 
 -- MPP-5219

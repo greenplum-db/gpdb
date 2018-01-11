@@ -7,18 +7,19 @@
  * This module provides memory management services for portals, but it
  * doesn't actually run the executor for them.
  *
+ *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.106.2.5 2010/07/13 09:02:46 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.113 2009/01/01 17:23:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
 #include "commands/portalcmds.h"
@@ -293,7 +294,7 @@ CreateNewPortal(void)
  * you can pass a constant string, perhaps "(query not available)".)
  *
  * commandTag shall be NULL if and only if the original query string
- * (before rewriting) was an empty string.  Also, the passed commandTag must
+ * (before rewriting) was an empty string.	Also, the passed commandTag must
  * be a pointer to a constant string, since it is not copied.
  *
  * If cplan is provided, then it is a cached plan containing the stmts,
@@ -305,7 +306,7 @@ CreateNewPortal(void)
  * copying them into the portal's heap context.
  *
  * The caller is also responsible for ensuring that the passed prepStmtName
- * and sourceText (if not NULL) have adequate lifetime.
+ * (if not NULL) and sourceText have adequate lifetime.
  *
  * NB: this function mustn't do much beyond storing the passed values; in
  * particular don't do anything that risks elog(ERROR).  If that were to
@@ -325,7 +326,7 @@ PortalDefineQuery(Portal portal,
 	AssertState(portal->status == PORTAL_NEW);
 
 	AssertArg(sourceText != NULL);
-	Assert(commandTag != NULL || stmts == NIL);
+	AssertArg(commandTag != NULL || stmts == NIL);
 
 	portal->prepStmtName = prepStmtName;
 	portal->sourceText = sourceText;
@@ -380,11 +381,17 @@ PortalCreateHoldStore(Portal portal)
 							  ALLOCSET_DEFAULT_INITSIZE,
 							  ALLOCSET_DEFAULT_MAXSIZE);
 
-	/* Create the tuple store, selecting cross-transaction temp files. */
+	/*
+	 * Create the tuple store, selecting cross-transaction temp files, and
+	 * enabling random access only if cursor requires scrolling.
+	 *
+	 * XXX: Should maintenance_work_mem be used for the portal size?
+	 */
 	oldcxt = MemoryContextSwitchTo(portal->holdContext);
 
-	/* XXX: Should maintenance_work_mem be used for the portal size? */
-	portal->holdStore = tuplestore_begin_heap(true, true, work_mem);
+	portal->holdStore =
+		tuplestore_begin_heap(portal->cursorOptions & CURSOR_OPT_SCROLL,
+							  true, work_mem);
 
 	MemoryContextSwitchTo(oldcxt);
 }
@@ -1083,7 +1090,9 @@ pg_cursor(PG_FUNCTION_ARGS)
 	 * We put all the tuples into a tuplestore in one scan of the hashtable.
 	 * This avoids any issue of the hashtable possibly changing between calls.
 	 */
-	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	tupstore =
+		tuplestore_begin_heap(rsinfo->allowedModes & SFRM_Materialize_Random,
+							  false, work_mem);
 
 	/* generate junk in short-term context */
 	MemoryContextSwitchTo(oldcontext);
@@ -1092,7 +1101,6 @@ pg_cursor(PG_FUNCTION_ARGS)
 	while ((hentry = hash_seq_search(&hash_seq)) != NULL)
 	{
 		Portal		portal = hentry->portal;
-		HeapTuple	tuple;
 		Datum		values[6];
 		bool		nulls[6];
 
@@ -1100,22 +1108,16 @@ pg_cursor(PG_FUNCTION_ARGS)
 		if (!portal->visible)
 			continue;
 
-		MemSet(nulls, false, sizeof(nulls));
+		MemSet(nulls, 0, sizeof(nulls));
 
-		values[0] = DirectFunctionCall1(textin, CStringGetDatum((char *) portal->name));
-		if (!portal->sourceText)
-			nulls[1] = true;
-		else
-			values[1] = DirectFunctionCall1(textin,
-										CStringGetDatum((char *) portal->sourceText));
+		values[0] = CStringGetTextDatum(portal->name);
+		values[1] = CStringGetTextDatum(portal->sourceText);
 		values[2] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_HOLD);
 		values[3] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_BINARY);
 		values[4] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_SCROLL);
 		values[5] = TimestampTzGetDatum(portal->creation_time);
 
-		tuple = heap_form_tuple(tupdesc, values, nulls);
-
-		tuplestore_puttuple(tupstore, tuple);
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
 	/* clean up and return the tuplestore */

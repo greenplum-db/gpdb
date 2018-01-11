@@ -3,7 +3,11 @@
  * execDynamicScan.h
  *	 Definitions and API functions for execDynamicScan.c
  *
- * Copyright (c) 2014, Pivotal, Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/execDynamicScan.h
  *
  *--------------------------------------------------------------------------
  */
@@ -12,10 +16,7 @@
 
 #include "access/attnum.h"
 #include "nodes/execnodes.h"
-#include "utils/hsearch.h"
-#include "utils/palloc.h"
 #include "executor/tuptable.h"
-#include "commands/tablecmds.h"
 
 typedef void (PartitionInitMethod)(ScanState *scanState, AttrNumber *attMap);
 typedef void (PartitionEndMethod)(ScanState *scanState);
@@ -38,9 +39,6 @@ DynamicScan_GetNextTuple(ScanState *scanState, PartitionInitMethod *partitionIni
 
 extern MemoryContext
 DynamicScan_GetPartitionMemoryContext(ScanState *scanState);
-
-extern Relation
-DynamicScan_GetCurrentRelation(ScanState *scanState);
 
 extern Oid
 DynamicScan_GetTableOid(ScanState *scanState);

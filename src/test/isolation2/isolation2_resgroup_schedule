@@ -4,6 +4,7 @@ test: resgroup/enable_resgroup
 # basic syntax
 test: resgroup/resgroup_syntax
 test: resgroup/resgroup_transaction
+test: resgroup/resgroup_name_convention
 
 # functions
 test: resgroup/resgroup_concurrency
@@ -14,21 +15,29 @@ test: resgroup/resgroup_alter_memory
 test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_alter_memory_spill_ratio
 test: resgroup/resgroup_set_memory_spill_ratio
+test: resgroup/resgroup_unlimit_memory_spill_ratio
+test: resgroup/resgroup_cancel_terminate_concurrency
 
 # memory spill tests
-test: resgroup/resgroup_memory_hashagg_spill
-test: resgroup/resgroup_memory_hashjoin_spill
-test: resgroup/resgroup_memory_materialize_spill
-test: resgroup/resgroup_memory_sisc_mat_sort
-test: resgroup/resgroup_memory_sisc_sort_spill
-test: resgroup/resgroup_memory_sort_spill
-test: resgroup/resgroup_memory_spilltodisk
+#test: resgroup/resgroup_memory_hashagg_spill
+#test: resgroup/resgroup_memory_hashjoin_spill
+#test: resgroup/resgroup_memory_materialize_spill
+#test: resgroup/resgroup_memory_sisc_mat_sort
+#test: resgroup/resgroup_memory_sisc_sort_spill
+#test: resgroup/resgroup_memory_sort_spill
+#test: resgroup/resgroup_memory_spilltodisk
 
 # regression tests
 test: resgroup/resgroup_recreate
 
 # parallel tests
-test: resgroup/restore_default_resgroup
-test: resgroup/resgroup_parallel_queries
+#test: resgroup/restore_default_resgroup
+#test: resgroup/resgroup_parallel_queries
+
+# dump info
+test: resgroup/resgroup_dumpinfo
+
+# fault injection tests
+test: resgroup/resgroup_assign_slot_fail
 
 test: resgroup/disable_resgroup

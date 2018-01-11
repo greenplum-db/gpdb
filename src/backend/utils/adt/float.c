@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.153.2.1 2009/03/04 22:08:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.162 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -595,9 +595,7 @@ float4um(PG_FUNCTION_ARGS)
 	float4		arg1 = PG_GETARG_FLOAT4(0);
 	float4		result;
 
-	result = ((arg1 != 0) ? -(arg1) : arg1);
-
-	CHECKFLOATVAL(result, isinf(arg1), true);
+	result = -arg1;
 	PG_RETURN_FLOAT4(result);
 }
 
@@ -664,9 +662,7 @@ float8um(PG_FUNCTION_ARGS)
 	float8		arg1 = PG_GETARG_FLOAT8(0);
 	float8		result;
 
-	result = ((arg1 != 0) ? -(arg1) : arg1);
-
-	CHECKFLOATVAL(result, isinf(arg1), true);
+	result = -arg1;
 	PG_RETURN_FLOAT8(result);
 }
 
@@ -722,16 +718,16 @@ float8smaller(PG_FUNCTION_ARGS)
 Datum
 float4pl(PG_FUNCTION_ARGS)
 {
-	float8		arg1 = PG_GETARG_FLOAT4(0);
-	float8		arg2 = PG_GETARG_FLOAT4(1);
+	float4		arg1 = PG_GETARG_FLOAT4(0);
+	float4		arg2 = PG_GETARG_FLOAT4(1);
 	float4		result;
 
 	result = arg1 + arg2;
 
 	/*
 	 * There isn't any way to check for underflow of addition/subtraction
-	 * because numbers near the underflow value have been already been to the
-	 * point where we can't detect the that the two values were originally
+	 * because numbers near the underflow value have already been rounded to
+	 * the point where we can't detect that the two values were originally
 	 * different, e.g. on x86, '1e-45'::float4 == '2e-45'::float4 ==
 	 * 1.4013e-45.
 	 */
@@ -1801,7 +1797,9 @@ float8_accum(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = N;
 		transvalues[1] = sumX;
@@ -1851,7 +1849,9 @@ float8_decum(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = N;
 		transvalues[1] = miX;
@@ -1905,7 +1905,9 @@ float4_accum(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = N;
 		transvalues[1] = sumX;
@@ -1959,7 +1961,9 @@ float4_decum(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = N;
 		transvalues[1] = miX;
@@ -2156,7 +2160,9 @@ float8_regr_accum(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = N;
 		transvalues[1] = sumX;
@@ -2181,7 +2187,7 @@ float8_regr_accum(PG_FUNCTION_ARGS)
 
 		result = construct_array(transdatums, 6,
 								 FLOAT8OID,
-								 sizeof(float8), true /* float8 byval */, 'd');
+								 sizeof(float8), FLOAT8PASSBYVAL, 'd');
 
 		PG_RETURN_ARRAYTYPE_P(result);
 	}
@@ -2945,7 +2951,9 @@ float8_amalg_demalg(ArrayType *aTransArray, ArrayType *bTransArray,
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = aN;
 		transvalues[1] = aSumX;
@@ -3012,7 +3020,9 @@ float8_regr_amalg(PG_FUNCTION_ARGS)
 	 * parameter in-place to reduce palloc overhead. Otherwise we construct a
 	 * new array with the updated transition data and return it.
 	 */
-	if (fcinfo->context && IS_AGG_EXECUTION_NODE(fcinfo->context))
+	if (fcinfo->context &&
+		(IsA(fcinfo->context, AggState) ||
+		 IsA(fcinfo->context, WindowAggState)))
 	{
 		transvalues[0] = aN;
 		transvalues[1] = aSumX;

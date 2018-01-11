@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic3">
+   <title>Defining External Tables</title>
+   <shortdesc>External tables enable accessing external data as if it were a regular database
+      table. They are often used to move data into and out of a Greenplum database.</shortdesc>
+   <body>
+      <p>To create an external table definition, you specify the format of your input files and the
+         location of your external data sources. For information input file formats, see <xref
+            href="../load/topics/g-formatting-data-files.xml#topic95"/>.</p>
+      <p>Use one of the following protocols to access external table data sources. You cannot mix
+         protocols in <codeph>CREATE EXTERNAL TABLE</codeph> statements:<ul id="ul_zj5_prj_kr">
+            <li><codeph>file://</codeph> accesses external data files on segment host that the
+               Greenplum Database superuser (<codeph>gpadmin</codeph>) can access. See <xref
+                  href="g-file-protocol.xml#topic_qbh_pwh_kr"/>.</li>
+            <li><codeph>gpfdist://</codeph> points to a directory on the file host and serves
+               external data files to all Greenplum Database segments in parallel. See <xref
+                  href="g-gpfdist-protocol.xml#topic_sny_yph_kr"/>.</li>
+            <li><codeph>gpfdists://</codeph> is the secure version of <codeph>gpfdist</codeph>. See
+                  <xref href="g-gpfdists-protocol.xml#topic_sny_yph_kr"/>.</li>
+            <li><codeph>gphdfs://</codeph> accesses files on a Hadoop Distributed File System
+               (HDFS). See <xref href="g-gphdfs-protocol.xml#topic_z5g_l5h_kr"/>.<p>The files can be
+                  stored on an Amazon EMR instance HDFS. See <xref
+                     href="g-hdfs-emr-config.xml#amazon-emr"/>.</p></li>
+            <li><codeph>s3://</codeph> accesses files in an Amazon S3 bucket. See <xref
+                  href="g-s3-protocol.xml#amazon-emr"/>.</li>
+
+            <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and Hive tables using the Greenplum Platform Extension Framework (PXF). See <xref href="g-pxf-protocol.xml"></xref>.</li>
+         </ul></p>
+      <p>External tables access external files from within the database as if they are regular
+         database tables. External tables defined with the
+            <codeph>gpfdist</codeph>/<codeph>gpfdists</codeph>, <codeph>gphdfs</codeph>, and
+            <codeph>s3</codeph> protocols utilize Greenplum parallelism by using the resources of
+         all Greenplum Database segments to load or unload data. The <codeph>gphdfs</codeph>
+         protocol leverages the parallel architecture of the Hadoop Distributed File System to
+         access files on that system. The <codeph>s3</codeph> protocol utilizes the Amazon Web
+         Services (AWS) capabilities. </p>
+      <p>You can query external table data directly and in parallel using SQL commands such as
+            <codeph>SELECT</codeph>, <codeph>JOIN</codeph>, or <codeph>SORT EXTERNAL TABLE
+            DATA</codeph>, and you can create views for external tables. </p>
+      <p>The steps for using external tables are:</p>
+      <ol>
+         <li id="du215913">Define the external table. <p>To use the <codeph>s3</codeph> protocol,
+               you must also configure Greenplum Database and enable the protocol. See <xref
+                  href="g-s3-protocol.xml#amazon-emr"/>.</p></li>
+         <li id="du220314">Do one of the following:<ul id="ul_nd1_gd5_h4">
+               <li id="du220318">Start the Greenplum Database file server(s) when using the
+                     <codeph>gpfdist</codeph> or <codeph>gpdists</codeph> protocols. </li>
+               <li id="du220319">Verify that you have already set up the required one-time
+                  configuration for the <codeph>gphdfs</codeph> protocol.</li>
+               <li>Verify the Greenplum Database configuration for the <codeph>s3</codeph>
+                  protocol.</li>
+            </ul></li>
+         <li id="du215986">Place the data files in the correct locations.</li>
+         <li id="du216021">Query the external table with SQL commands.</li>
+      </ol>
+      <p>Greenplum Database provides readable and writable external tables:</p>
+      <ul>
+         <li id="du210036">Readable external tables for data loading. Readable external tables
+            support basic extraction, transformation, and loading (ETL) tasks common in data
+            warehousing. Greenplum Database segment instances read external table data in parallel
+            to optimize large load operations. You cannot modify readable external tables. </li>
+         <li id="du220433">Writable external tables for data unloading. Writable external tables support:<ul>
+               <li id="du220434">Selecting data from database tables to insert into the writable
+                  external table.</li>
+               <li id="du220435">Sending data to an application as a stream of data. For example,
+                  unload data from Greenplum Database and send it to an application that connects to
+                  another database or ETL tool to load the data elsewhere. </li>
+               <li id="du210321">Receiving output from Greenplum parallel MapReduce
+                  calculations.</li>
+            </ul><p>Writable external tables allow only <codeph>INSERT</codeph> operations.</p></li>
+      </ul>
+      <p>External tables can be file-based or web-based. External tables using the
+            <codeph>file://</codeph> protocol are read-only tables.</p>
+      <ul>
+         <li id="du209906">Regular (file-based) external tables access static flat files. Regular
+            external tables are rescannable: the data is static while the query runs.</li>
+         <li id="du209907">Web (web-based) external tables access dynamic data sources, either on a
+            web server with the <codeph>http://</codeph> protocol or by executing OS commands or
+            scripts. External web tables are not rescannable: the data can change while the query
+            runs. </li>
+      </ul>
+      <p>Dump and restore operate only on external and external web table <i>definitions</i>, not on
+         the data sources.</p>
+   </body>
+</topic>

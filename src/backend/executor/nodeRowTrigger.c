@@ -3,7 +3,12 @@
  * nodeRowTriggerOp.c
  *	  Implementation of nodeRowTriggerOp.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeRowTrigger.c
  *
  * The semantics of triggers is the following:
  * After triggers are executed after each tuple is processed, which
@@ -351,7 +356,7 @@ StoreTupleForTrigger(TupleTableSlot *slot, Datum *values, bool *nulls, ListCell 
 void
 ConstructNewTupleTableSlot(HeapTuple newtuple, TupleTableSlot *triggerTuple, ListCell *attr, Datum *values, bool *nulls)
 {
-	ExecStoreGenericTuple(newtuple , triggerTuple, true);
+	ExecStoreHeapTuple(newtuple , triggerTuple, InvalidBuffer, true);
 	slot_getallattrs(triggerTuple);
 
 	Datum *new_values = slot_get_values(triggerTuple);

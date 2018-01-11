@@ -1,0 +1,438 @@
+--
+-- Test the resource group name convention.
+--
+-- Resource group names follow the general object name convention:
+-- https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+--
+-- Besides that there are 3 reserved names:
+-- * default_group, admin_group: names of the 2 default resource groups;
+-- * none: a special name usually used in ALTER ROLE command to reset
+--   to the proper default resource group;
+--
+-- This case is put under isolation2 dir as other resource group cases,
+-- although it does not require any extended feature of the isolation2
+-- test framework.
+--
+
+--
+-- setup
+--
+
+CREATE OR REPLACE VIEW rg_name_view AS SELECT S.rsgname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' ORDER BY C.groupid;
+CREATE
+
+-- TODO: need to cleanup all existing resgroups
+
+--
+-- positive
+--
+
+-- by default resgroup names have the form of [_a-zA-Z][_a-zA-Z0-9]*
+CREATE RESOURCE GROUP rgNameTest01 WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP rgNameTest01 SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname     |concurrency
+------------+-----------
+rgnametest01|2          
+(1 row)
+DROP   RESOURCE GROUP rgNameTest01;
+DROP
+CREATE RESOURCE GROUP __rg_name_test_01__ WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP __rg_name_test_01__ SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname            |concurrency
+-------------------+-----------
+__rg_name_test_01__|2          
+(1 row)
+DROP   RESOURCE GROUP __rg_name_test_01__;
+DROP
+
+-- min length is 1 character
+CREATE RESOURCE GROUP Z WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+DROP   RESOURCE GROUP Z;
+DROP
+
+-- max length is 63 characters
+CREATE RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789 WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789 SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                                                        |concurrency
+---------------------------------------------------------------+-----------
+max012345678901234567890123456789012345678901234567890123456789|2          
+(1 row)
+DROP   RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789;
+DROP
+-- characters exceed the max length are ignored
+CREATE RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789further WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789are SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                                                        |concurrency
+---------------------------------------------------------------+-----------
+max012345678901234567890123456789012345678901234567890123456789|2          
+(1 row)
+DROP   RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789ignored;
+DROP
+
+-- special characters are allowed with double quotation marks
+-- white spaces
+CREATE RESOURCE GROUP "newlines s p a c e s t	a	b	s" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "newlines s p a c e s t	a	b	s" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                     |concurrency
+----------------------------+-----------
+newlines
+s p a c e s
+t	a	b	s|2          
+(1 row)
+DROP   RESOURCE GROUP "newlines s p a c e s t	a	b	s";
+DROP
+-- punctuations
+CREATE RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                      |concurrency
+-----------------------------+-----------
+!#$%&`()*+,-./:;<=>?@[]^_{|}~|2          
+(1 row)
+DROP   RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~";
+DROP
+-- quotation marks
+CREATE RESOURCE GROUP "'' are 2 single quotation marks" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "'' are 2 single quotation marks" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                        |concurrency
+-------------------------------+-----------
+'' are 2 single quotation marks|2          
+(1 row)
+DROP   RESOURCE GROUP "'' are 2 single quotation marks";
+DROP
+CREATE RESOURCE GROUP """ is 1 double quotation mark" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP """ is 1 double quotation mark" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                     |concurrency
+----------------------------+-----------
+" is 1 double quotation mark|2          
+(1 row)
+DROP   RESOURCE GROUP """ is 1 double quotation mark";
+DROP
+
+-- nothing special with leading character
+CREATE RESOURCE GROUP "0 as prefix" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "0 as prefix" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname    |concurrency
+-----------+-----------
+0 as prefix|2          
+(1 row)
+DROP   RESOURCE GROUP "0 as prefix";
+DROP
+CREATE RESOURCE GROUP " leading space" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP " leading space" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname       |concurrency
+--------------+-----------
+ leading space|2          
+(1 row)
+DROP   RESOURCE GROUP " leading space";
+DROP
+
+-- backslash is not used as the escape character
+CREATE RESOURCE GROUP "\\ are two backslashes" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "\\ are two backslashes" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname               |concurrency
+----------------------+-----------
+\\ are two backslashes|2          
+(1 row)
+DROP   RESOURCE GROUP "\\ are two backslashes";
+DROP
+-- below are octal, hex and unicode representations of "rg1"
+CREATE RESOURCE GROUP "\o162\o147\o61" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+CREATE RESOURCE GROUP "\x72\x67\x31" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+CREATE RESOURCE GROUP "\u0072\u0067\u0031" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "\o162\o147\o61" SET concurrency 2;
+ALTER
+ALTER  RESOURCE GROUP "\x72\x67\x31" SET concurrency 2;
+ALTER
+ALTER  RESOURCE GROUP "\u0072\u0067\u0031" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname           |concurrency
+------------------+-----------
+\o162\o147\o61    |2          
+\x72\x67\x31      |2          
+\u0072\u0067\u0031|2          
+(3 rows)
+-- but as \o, \x and \u are not supported,
+-- so they are just 3 different names,
+-- none of them equals to "rg1".
+DROP   RESOURCE GROUP "rg1";
+ERROR:  resource group "rg1" does not exist
+DROP   RESOURCE GROUP "\o162\o147\o61";
+DROP
+DROP   RESOURCE GROUP "\x72\x67\x31";
+DROP
+DROP   RESOURCE GROUP "\u0072\u0067\u0031";
+DROP
+
+-- unicode escapes are supported
+CREATE RESOURCE GROUP U&"\0441\043B\043E\043D" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP U&"\0441\043B\043E\043D" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname |concurrency
+--------+-----------
+слон|2          
+(1 row)
+DROP   RESOURCE GROUP U&"\0441\043B\043E\043D";
+DROP
+-- unicode representation of "rg1"
+CREATE RESOURCE GROUP U&"\0072\0067\0031" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "rg1" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+rg1    |2          
+(1 row)
+DROP   RESOURCE GROUP "rg1";
+DROP
+
+-- CJK characters are allowed with or without double quotation marks
+CREATE RESOURCE GROUP 资源组 WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "资源组" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname  |concurrency
+---------+-----------
+资源组|2          
+(1 row)
+DROP   RESOURCE GROUP 资源组;
+DROP
+CREATE RESOURCE GROUP リソース・グループ WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "リソース・グループ" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname                    |concurrency
+---------------------------+-----------
+リソース・グループ|2          
+(1 row)
+DROP   RESOURCE GROUP リソース・グループ;
+DROP
+CREATE RESOURCE GROUP 자원그룹 WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "자원그룹" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname     |concurrency
+------------+-----------
+자원그룹|2          
+(1 row)
+DROP   RESOURCE GROUP 자원그룹;
+DROP
+
+-- names are case sensitive,
+-- but are always converted to lower case unless around with quotation marks
+CREATE RESOURCE GROUP "RG_NAME_TEST" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+CREATE RESOURCE GROUP rg_Name_Test WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+CREATE RESOURCE GROUP "rg_name_test" WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "rg_name_test" already exists
+ALTER  RESOURCE GROUP Rg_NaMe_TeSt SET concurrency 2;
+ALTER
+ALTER  RESOURCE GROUP "RG_NAME_TEST" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname     |concurrency
+------------+-----------
+RG_NAME_TEST|2          
+rg_name_test|2          
+(2 rows)
+DROP   RESOURCE GROUP "RG_NAME_TEST";
+DROP
+DROP   RESOURCE GROUP RG_nAME_tEST;
+DROP
+
+-- reserved names are all lower case: "default_group", "admin_group", "none",
+-- they can be used by users with at least one upper case character.
+CREATE RESOURCE GROUP "None" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "None" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+None   |2          
+(1 row)
+DROP   RESOURCE GROUP "None";
+DROP
+CREATE RESOURCE GROUP "NONE" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "NONE" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+NONE   |2          
+(1 row)
+DROP   RESOURCE GROUP "NONE";
+DROP
+CREATE RESOURCE GROUP "DEFAULT_GROup" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "DEFAULT_GROup" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname      |concurrency
+-------------+-----------
+DEFAULT_GROup|2          
+(1 row)
+DROP   RESOURCE GROUP "DEFAULT_GROup";
+DROP
+CREATE RESOURCE GROUP "ADMIN_GROUP" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "ADMIN_GROUP" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname    |concurrency
+-----------+-----------
+ADMIN_GROUP|2          
+(1 row)
+DROP   RESOURCE GROUP "ADMIN_GROUP";
+DROP
+
+CREATE RESOURCE GROUP "with" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "with" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+with   |2          
+(1 row)
+DROP   RESOURCE GROUP "with";
+DROP
+CREATE RESOURCE GROUP "WITH" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "WITH" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+WITH   |2          
+(1 row)
+DROP   RESOURCE GROUP "WITH";
+DROP
+CREATE RESOURCE GROUP "group" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "group" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+group  |2          
+(1 row)
+DROP   RESOURCE GROUP "group";
+DROP
+CREATE RESOURCE GROUP "create" WITH (cpu_rate_limit=10, memory_limit=10);
+CREATE
+ALTER  RESOURCE GROUP "create" SET concurrency 2;
+ALTER
+SELECT * FROM rg_name_view;
+rsgname|concurrency
+-------+-----------
+create |2          
+(1 row)
+DROP   RESOURCE GROUP "create";
+DROP
+
+--
+-- negative
+--
+
+-- does not support single quotation marks around the name
+CREATE RESOURCE GROUP 'must_fail' WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "'must_fail'"
+LINE 1: CREATE RESOURCE GROUP 'must_fail' WITH (cpu_rate_limit=10, m...
+                              ^
+
+-- does not support leading numbers
+CREATE RESOURCE GROUP 0_must_fail WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "0"
+LINE 1: CREATE RESOURCE GROUP 0_must_fail WITH (cpu_rate_limit=10, m...
+                              ^
+
+-- reserved names are not allowed even with double quotation marks
+CREATE RESOURCE GROUP "default_group" WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "default_group" already exists
+CREATE RESOURCE GROUP "admin_group" WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "admin_group" already exists
+CREATE RESOURCE GROUP "none" WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group name "none" is reserved
+CREATE RESOURCE GROUP default_group WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "default_group" already exists
+CREATE RESOURCE GROUP admin_group WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "admin_group" already exists
+CREATE RESOURCE GROUP none WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group name "none" is reserved
+CREATE RESOURCE GROUP DEFAULT_GROUP WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "default_group" already exists
+CREATE RESOURCE GROUP Admin_Group WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group "admin_group" already exists
+CREATE RESOURCE GROUP NONE WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  resource group name "none" is reserved
+
+-- keywords are not allowed without quotation marks
+CREATE RESOURCE GROUP with WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "with WITH"
+LINE 1: CREATE RESOURCE GROUP with WITH (cpu_rate_limit=10, memory_l...
+                              ^
+CREATE RESOURCE GROUP WITH WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "WITH WITH"
+LINE 1: CREATE RESOURCE GROUP WITH WITH (cpu_rate_limit=10, memory_l...
+                              ^
+CREATE RESOURCE GROUP group WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "group"
+LINE 1: CREATE RESOURCE GROUP group WITH (cpu_rate_limit=10, memory_...
+                              ^
+CREATE RESOURCE GROUP CREATE WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  syntax error at or near "CREATE"
+LINE 1: CREATE RESOURCE GROUP CREATE WITH (cpu_rate_limit=10, memory...
+                              ^
+
+-- min length is 1 character
+CREATE RESOURCE GROUP "" WITH (cpu_rate_limit=10, memory_limit=10);
+ERROR:  zero-length delimited identifier at or near """"
+LINE 1: CREATE RESOURCE GROUP "" WITH (cpu_rate_limit=10, memory_lim...
+                              ^
+

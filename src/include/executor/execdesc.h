@@ -6,10 +6,11 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.37 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.40 2009/01/02 20:42:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -185,6 +186,16 @@ typedef struct QueryDispatchDesc
 	SliceTable *sliceTable;
 
 	List	   *cursorPositions;
+
+	/*
+	 * Set to true for CTAS and SELECT INTO. Set to false for ALTER TABLE
+	 * REORGANIZE. This is mainly used to track if the dispatched query is
+	 * meant for internal rewrite on QE segments or just for holding data from
+	 * a SELECT for a new relation. If DestIntoRel is set in the QD's
+	 * queryDesc->dest, use the original table's reloptions. If DestRemote is
+	 * set, use default reloptions + gp_default_storage_options.
+	 */
+	bool validate_reloptions;
 } QueryDispatchDesc;
 
 /*
@@ -254,12 +265,11 @@ typedef struct QueryDesc
 
 	/* This is always set NULL by the core system, but plugins can change it */
 	struct Instrumentation *totaltime;	/* total time spent in ExecutorRun */
-
 } QueryDesc;
 
 /* in pquery.c */
 extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
-								  const char *sourceText,
+				const char *sourceText,
 				Snapshot snapshot,
 				Snapshot crosscheck_snapshot,
 				DestReceiver *dest,
@@ -267,7 +277,7 @@ extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
 				bool doInstrument);
 
 extern QueryDesc *CreateUtilityQueryDesc(Node *utilitystmt,
-										 const char *sourceText,
+					   const char *sourceText,
 					   Snapshot snapshot,
 					   DestReceiver *dest,
 					   ParamListInfo params);

@@ -5,10 +5,6 @@
 -- Guc value to valid value compresslevel=1
 Alter role dsp_role1 set gp_default_storage_options="appendonly=true, compresslevel=1";
 
--- Set the role level guc to an invalid value
-
-Alter role dsp_role2 set gp_default_storage_options="appendonly=true, compresslevel=10";
-
 -- Set role level Guc to 2, and create compresstype=quicklz
 
 Alter role dsp_role3 set gp_default_storage_options="appendonly=true, compresslevel=2";
@@ -127,12 +123,6 @@ select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t6'
 select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t6');
 
 Drop table ao_rl_cl_t6;
-
-
--- Create table with invalid value compresslevel=10
-
-Drop table if exists ao_rl_cl_t4;
-Create table ao_rl_cl_t4 ( i int, j int) with(compresslevel=10);
 
 
 -- Create table with appendonly=false

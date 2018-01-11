@@ -978,6 +978,8 @@ LINE 1: ...-01'::date, '2010-12-30'::date, '2010-01-01'::date, '2012');
                                                                ^
 select decode('2011-01-05'::date, '2011-01-01'::date, '2011-01-01'::date, '2010-12-30'::date, '2010-01-01'::date, 2012);
 ERROR:  CASE types integer and date cannot be matched
+LINE 1: ...ct decode('2011-01-05'::date, '2011-01-01'::date, '2011-01-0...
+                                                             ^
 -- Test using DECODE as table, database, column, constraint, index, partition name.
 -- These all fail because DECODE is a reserved keyword.
 create table decode (a int, b int) distributed by (b);

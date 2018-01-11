@@ -23,7 +23,7 @@ ANALYZE
 1:commit;
 COMMIT
 2<:  <... completed>
-ERROR:  relation "t1" does not exist
+ERROR:  table "t1" does not exist
 2:select count(*) from newt1;
 count
 -----
@@ -47,12 +47,46 @@ ALTER
 1:commit;
 COMMIT
 2<:  <... completed>
-ERROR:  relation "t2" does not exist
+ERROR:  table "t2" does not exist
 2:select count(*) from newt2;
 count
 -----
 10   
 (1 row)
+
+-- The same, but with DROP IF EXISTS. (We used to have a bug, where the DROP
+-- command found and drop the relation in the segments, but not in master.)
+1:drop table if exists t3;
+DROP
+1:create table t3 (a int, b text) distributed by (a);
+CREATE
+1:insert into t3 select i, '123 '||i from generate_series(1,10)i;
+INSERT 10
+1:begin;
+BEGIN
+1:alter table t3 rename to t3_new;
+ALTER
+2&:drop table if exists t3;  <waiting ...>
+1:commit;
+COMMIT
+2<:  <... completed>
+DROP
+2:select count(*) from t3;
+ERROR:  relation "t3" does not exist
+LINE 1: select count(*) from t3;
+                             ^
+2:select relname from pg_class where relname like 't3%';
+relname
+-------
+t3_new 
+(1 row)
+2:select relname from gp_dist_random('pg_class') where relname like 't3%';
+relname
+-------
+t3_new 
+t3_new 
+t3_new 
+(3 rows)
 
 1:drop table if exists t3;
 DROP
@@ -69,11 +103,10 @@ DROP
 1:commit;
 COMMIT
 3<:  <... completed>
-ERROR:  relation "t3" does not exist
+ERROR:  table "t3" does not exist
 2<:  <... completed>
 DROP
 2:select count(*) from t3;
 ERROR:  relation "t3" does not exist
 LINE 1: select count(*) from t3;
                              ^
-

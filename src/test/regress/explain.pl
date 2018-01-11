@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 #
-# copyright (c) 2006, 2007, 2008, 2009 
+# Portions Copyright (c) 2006, 2007, 2008, 2009 Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 #
 #
@@ -12,6 +14,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
 use explain;
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -240,7 +243,8 @@ correctly identify the left and right children.
 
 Jeffrey I Cohen
 
-Copyright (c) 2006, 2007, 2008, 2009 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2006, 2007, 2008, 2009 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 
@@ -273,7 +277,8 @@ GetOptions(
     "prune:s" => \$prune,
     "output:s" => \$outfile,
     "statcolor:s" => \$statcol,
-    "edge:s" => \$edgescheme)
+    "edge:s" => \$edgescheme,
+    'version|v' => \&print_version)
     or pod2usage(2);
 
     

@@ -4,12 +4,13 @@
  *	  routines supporting merge joins
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.90.2.1 2010/05/28 01:14:16 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.97 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -200,7 +201,6 @@ MJExamineQuals(List *mergeclauses,
 		int			op_strategy;
 		Oid			op_lefttype;
 		Oid			op_righttype;
-		bool		op_recheck;
 		RegProcedure cmpproc;
 		AclResult	aclresult;
 
@@ -234,12 +234,10 @@ MJExamineQuals(List *mergeclauses,
 		get_op_opfamily_properties(qual->opno, opfamily,
 								   &op_strategy,
 								   &op_lefttype,
-								   &op_righttype,
-								   &op_recheck);
+								   &op_righttype);
 		if (op_strategy != BTEqualStrategyNumber)		/* should not happen */
 			elog(ERROR, "cannot merge using non-equality operator %u",
 				 qual->opno);
-		Assert(!op_recheck);	/* never true for btree */
 
 		/* And get the matching support procedure (comparison function) */
 		cmpproc = get_opfamily_proc(opfamily,
@@ -657,10 +655,6 @@ ExecMergeJoin(MergeJoinState *node)
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
-          	if (!TupIsNull(innerTupleSlot))
-          	{
-          		Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
-          	}
 		node->mj_InnerTupleSlot = innerTupleSlot;
 
 		ExecReScan(innerPlan, econtext);
@@ -676,7 +670,6 @@ ExecMergeJoin(MergeJoinState *node)
 	for (;;)
 	{
 		MJ_dump(node);
-		CheckSendPlanStateGpmonPkt(&node->js.ps);
 
 		/*
 		 * get the current state of the join and do things accordingly.
@@ -748,7 +741,8 @@ ExecMergeJoin(MergeJoinState *node)
 						 * they are not eager free safe. However, when the merge join
 						 * is done, we can free the memory used by the child nodes.
 						 */
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -815,7 +809,8 @@ ExecMergeJoin(MergeJoinState *node)
 						 */
 						ExecSquelchNode(outerPlan);
 
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -856,7 +851,8 @@ ExecMergeJoin(MergeJoinState *node)
 				innerTupleSlot = node->mj_InnerTupleSlot;
 				econtext->ecxt_innertuple = innerTupleSlot;
 
-				if (node->js.jointype == JOIN_IN &&
+				/* GPDB_84_MERGE_FIXME: why is this condition different from upstream? */
+				if (node->js.jointype == JOIN_SEMI &&
 					node->mj_MatchedOuter)
 					qualResult = false;
 				else
@@ -872,11 +868,19 @@ ExecMergeJoin(MergeJoinState *node)
 					node->mj_MatchedInner = true;
 
 					/* In an antijoin, we never return a matched tuple */
-					if (node->js.jointype == JOIN_LASJ) 
+					if (node->js.jointype == JOIN_ANTI)
 					{
 						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
 						break;
 					}
+
+					/*
+					 * In a semijoin, we'll consider returning the first
+					 * match, but after that we're done with this outer tuple.
+					 */
+					if (node->js.jointype == JOIN_SEMI)
+						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+
 					qualResult = (otherqual == NIL ||
 								  ExecQual(otherqual, econtext, false));
 					MJ_DEBUG_QUAL(otherqual, qualResult);
@@ -980,7 +984,8 @@ ExecMergeJoin(MergeJoinState *node)
 
 						if (((MergeJoin*)node->js.ps.plan)->unique_outer)
 						{
-							ExecEagerFreeMergeJoin(node);
+							if (!node->js.ps.delayEagerFree)
+								ExecEagerFreeMergeJoin(node);
 
 							/* we are done */
 							return NULL;
@@ -1202,7 +1207,8 @@ ExecMergeJoin(MergeJoinState *node)
 							 */
 							ExecSquelchNode(outerPlan);
 
-							ExecEagerFreeMergeJoin(node);
+							if (!node->js.ps.delayEagerFree)
+								ExecEagerFreeMergeJoin(node);
 
 							/* Otherwise we're done. */
 							return NULL;
@@ -1334,7 +1340,8 @@ ExecMergeJoin(MergeJoinState *node)
 						if (!TupIsNull(innerTupleSlot) && node->mj_squelchInner)
 							ExecSquelchNode(innerPlan);
 
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -1450,13 +1457,11 @@ ExecMergeJoin(MergeJoinState *node)
 				if (TupIsNull(innerTupleSlot))
 				{
 					MJ_printf("ExecMergeJoin: end of inner subplan\n");
-					ExecEagerFreeMergeJoin(node);
+
+					if (!node->js.ps.delayEagerFree)
+						ExecEagerFreeMergeJoin(node);
 
 					return NULL;
-				}
-				else
-				{
-					Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
 				}
 
 				/* Else remain in ENDOUTER state and process next tuple. */
@@ -1484,11 +1489,7 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillOuter(node);
 					if (result)
-					{
-						Gpmon_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                               	CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
 
 				/*
@@ -1503,7 +1504,8 @@ ExecMergeJoin(MergeJoinState *node)
 				{
 					MJ_printf("ExecMergeJoin: end of outer subplan\n");
 
-					ExecEagerFreeMergeJoin(node);
+					if (!node->js.ps.delayEagerFree)
+						ExecEagerFreeMergeJoin(node);
 
 					return NULL;
 				}
@@ -1544,6 +1546,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate = makeNode(MergeJoinState);
 	mergestate->js.ps.plan = (Plan *) node;
 	mergestate->js.ps.state = estate;
+	mergestate->js.ps.delayEagerFree = (eflags & EXEC_FLAG_REWIND) != 0;
 
 	/*
 	 * Miscellaneous initialization
@@ -1622,12 +1625,12 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	switch (node->join.jointype)
 	{
 		case JOIN_INNER:
-		case JOIN_IN:
+		case JOIN_SEMI:
 			mergestate->mj_FillOuter = false;
 			mergestate->mj_FillInner = false;
 			break;
 		case JOIN_LEFT:
-		case JOIN_LASJ:
+		case JOIN_ANTI:
 			mergestate->mj_FillOuter = true;
 			mergestate->mj_FillInner = false;
 			mergestate->mj_NullInnerTupleSlot =
@@ -1707,8 +1710,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	MJ1_printf("ExecInitMergeJoin: %s\n",
 			   "node initialized");
 
-	initGpmonPktForMergeJoin((Plan *)node, &mergestate->js.ps.gpmon_pkt, estate);
-	
 	return mergestate;
 }
 
@@ -1776,13 +1777,6 @@ ExecReScanMergeJoin(MergeJoinState *node, ExprContext *exprCtxt)
 	if (((PlanState *) node)->righttree->chgParam == NULL)
 		ExecReScan(((PlanState *) node)->righttree, exprCtxt);
 
-}
-void
-initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, MergeJoin));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

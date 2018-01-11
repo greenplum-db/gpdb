@@ -3,10 +3,10 @@
  * lsyscache.h
  *	  Convenience routines for common queries in the system catalog cache.
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.122 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.128 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -41,20 +41,23 @@ typedef enum CmpType
 	CmptOther	// other operator
 } CmpType;
 
+/* Hook for plugins to get control in get_attavgwidth() */
+typedef int32 (*get_attavgwidth_hook_type) (Oid relid, AttrNumber attnum);
+extern PGDLLIMPORT get_attavgwidth_hook_type get_attavgwidth_hook;
+
 extern bool op_in_opfamily(Oid opno, Oid opfamily);
 extern int	get_op_opfamily_strategy(Oid opno, Oid opfamily);
 extern void get_op_opfamily_properties(Oid opno, Oid opfamily,
 						   int *strategy,
 						   Oid *lefttype,
-						   Oid *righttype,
-						   bool *recheck);
+						   Oid *righttype);
 extern Oid get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
 					int16 strategy);
 extern bool get_ordering_op_properties(Oid opno,
 						   Oid *opfamily, Oid *opcintype, int16 *strategy);
 extern bool get_compare_function_for_ordering_op(Oid opno,
 									 Oid *cmpfunc, bool *reverse);
-extern Oid	get_equality_op_for_ordering_op(Oid opno);
+extern Oid	get_equality_op_for_ordering_op(Oid opno, bool *reverse);
 extern Oid	get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type);
 extern List *get_mergejoin_opfamilies(Oid opno);
 extern bool get_compatible_hash_operators(Oid opno,
@@ -63,7 +66,7 @@ extern bool get_op_hash_functions(Oid opno,
 					  RegProcedure *lhs_procno, RegProcedure *rhs_procno);
 extern void get_op_btree_interpretation(Oid opno,
 							List **opfamilies, List **opstrats);
-extern bool ops_in_same_btree_opfamily(Oid opno1, Oid opno2);
+extern bool equality_ops_are_compatible(Oid opno1, Oid opno2);
 extern Oid get_opfamily_proc(Oid opfamily, Oid lefttype, Oid righttype,
 				  int16 procnum);
 extern char *get_attname(Oid relid, AttrNumber attnum);
@@ -99,10 +102,12 @@ extern List *get_func_output_arg_types(Oid funcid);
 extern List *get_func_arg_types(Oid funcid);
 extern int	get_func_nargs(Oid funcid);
 extern Oid	get_func_signature(Oid funcid, Oid **argtypes, int *nargs);
+extern Oid	get_func_variadictype(Oid funcid);
 extern bool get_func_retset(Oid funcid);
 extern bool func_strict(Oid funcid);
 extern char func_volatile(Oid funcid);
 extern char func_data_access(Oid funcid);
+extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
 extern bool has_agg_prelimfunc(Oid aggid);
@@ -138,6 +143,9 @@ extern Node *get_typdefault(Oid typid);
 extern char get_typtype(Oid typid);
 extern bool type_is_rowtype(Oid typid);
 extern bool type_is_enum(Oid typid);
+extern void get_type_category_preferred(Oid typid,
+							char *typcategory,
+							bool *typispreferred);
 extern Oid	get_typ_typrelid(Oid typid);
 extern Oid	get_element_type(Oid typid);
 extern Oid	get_array_type(Oid typid);
@@ -184,8 +192,7 @@ extern char *get_check_constraint_name(Oid oidCheckconstraint);
 extern Node *get_check_constraint_expr_tree(Oid oidCheckconstraint);
 Oid get_check_constraint_relid(Oid oidCheckconstraint);
 
-extern bool has_subclass_fast(Oid relationId);
-extern bool has_subclass(Oid relationId);
+extern bool has_subclass_slow(Oid relationId);
 extern bool has_parquet_children(Oid relationId);
 extern GpPolicy *relation_policy(Relation rel);
 extern bool child_distribution_mismatch(Relation rel);
@@ -195,7 +202,6 @@ extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oi
 
 extern Oid get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt);
 extern CmpType get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight);
-extern List *find_all_inheritors(Oid parentrel);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);

@@ -75,6 +75,13 @@
                     errors.</li>
                 <li id="it147961">Starts the Greenplum Database system.</li>
             </ul>
+            <note>This utility uses secure shell (SSH) connections between systems to
+                perform its tasks. In large Greenplum Database deployments, cloud deployments,
+                or deployments with a large number of segments per host, this utility may
+                exceed the host's maximum threshold for unauthenticated connections.
+                Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter
+                to increase this threshold. For more information about SSH configuration
+                options, refer to the SSH documentation for your Linux distribution.</note>
         </section>
         <section id="section4">
             <title>Options</title>

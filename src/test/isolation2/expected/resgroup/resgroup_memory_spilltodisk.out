@@ -1,3 +1,7 @@
+-- up the admin_group memory limits
+ALTER RESOURCE GROUP admin_group SET memory_limit 30;
+ALTER
+
 -- Test Mark/Restore in Material Node
 create table spilltest1 (a integer);
 CREATE
@@ -8,13 +12,17 @@ INSERT 400000
 insert into spilltest2 select a from generate_series(1,400000) a;
 INSERT 400000
 
+-- go back to the default admin_group limit
+ALTER RESOURCE GROUP admin_group SET memory_limit 10;
+ALTER
+
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
 ERROR:  resource group "rg1_memory_test" does not exist
 -- end_ignore
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
 CREATE
 CREATE ROLE role1_memory_test SUPERUSER RESOURCE GROUP rg1_memory_test;
 CREATE

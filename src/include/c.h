@@ -10,10 +10,11 @@
  *
  *
  * Portions Copyright (c) 2006-2011, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * src/include/c.h
+ * $PostgreSQL: pgsql/src/include/c.h,v 1.236 2009/06/11 14:49:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -900,6 +901,7 @@ typedef NameData *Name;
 #define PG_TEXTDOMAIN(domain) (domain "-" PG_MAJORVERSION)
 #endif
 
+
 /* ----------------------------------------------------------------
  *				Section 8: system-specific hacks
  *
@@ -926,10 +928,6 @@ typedef NameData *Name;
 #define PG_BINARY_A "a"
 #define PG_BINARY_R "r"
 #define PG_BINARY_W "w"
-#endif
-
-#if defined(sun) && defined(__sparc__) && !defined(__SVR4)
-#include <unistd.h>
 #endif
 
 /*

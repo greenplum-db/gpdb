@@ -3,7 +3,8 @@
  * queue.c
  *	  Commands for manipulating resource queues.
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -16,6 +17,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
@@ -353,10 +355,9 @@ AlterResqueueCapabilityEntry(Oid queueid,
 
 			while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 			{
-				text	*shutoff_text	  = NULL;
-				char	*shutoff_str	  = NULL;
-				Datum	 shutoff_datum;
-				bool	 isnull			  = false;
+				char	   *shutoff_str;
+				Datum		shutoff_datum;
+				bool		isnull = false;
 				Form_pg_resourcetype rtyp = 
 						(Form_pg_resourcetype)GETSTRUCT(tuple);
 
@@ -397,15 +398,10 @@ AlterResqueueCapabilityEntry(Oid queueid,
 									 tupdesc,
 									 &isnull);
 				Assert(!isnull);
-				shutoff_text = DatumGetTextP(shutoff_datum);
-				shutoff_str = 
-						DatumGetCString(
-								DirectFunctionCall1(
-										textout,
-										PointerGetDatum(shutoff_text)));
+				shutoff_str = TextDatumGetCString(shutoff_datum);
 
 				pStrVal = makeString(shutoff_str);
-					
+
 				break;
 			} /* end while heaptuple is valid */
 			systable_endscan(sscan);
@@ -463,12 +459,11 @@ AlterResqueueCapabilityEntry(Oid queueid,
 		sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
 		while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 		{
-			List	*pentry			  = NIL;
-			Value	*pResnameVal	  = NULL;
-			text	*default_text	  = NULL;
-			char	*default_str	  = NULL;
-			Datum	 default_datum;
-			bool	 isnull			  = false;
+			List	   *pentry;
+			Value	   *pResnameVal;
+			char	   *default_str;
+			Datum		default_datum;
+			bool		isnull = false;
 			Form_pg_resourcetype rtyp = 
 					(Form_pg_resourcetype)GETSTRUCT(tuple);
 
@@ -501,12 +496,7 @@ AlterResqueueCapabilityEntry(Oid queueid,
 								 tupdesc,
 								 &isnull);
 			Assert(!isnull);
-			default_text = DatumGetTextP(default_datum);
-			default_str = 
-					DatumGetCString(
-							DirectFunctionCall1(
-									textout,
-									PointerGetDatum(default_text)));
+			default_str = TextDatumGetCString(default_datum);
 
 			/* add the new entry to dupcheck and WITH elems */
 			dupcheck = lappend(dupcheck, pResnameVal);
@@ -673,12 +663,11 @@ GetResqueueCapabilityEntry(Oid  queueid)
 	{
 		if (HeapTupleIsValid(tuple))
 		{
-			List		*pentry		 = NIL;
-			int			 resTypeInt	 = 0;
-			text		*resSet_text = NULL;
-			Datum		 resSet_datum;
-			char		*resSetting	 = NULL;
-			bool		 isnull		 = false;
+			List	   *pentry;
+			int			resTypeInt;
+			Datum		resSet_datum;
+			char	   *resSetting;
+			bool		isnull = false;
 
 			resTypeInt =
 					((Form_pg_resqueuecapability) GETSTRUCT(tuple))->restypid;
@@ -688,9 +677,7 @@ GetResqueueCapabilityEntry(Oid  queueid)
 										tupdesc,
 										&isnull);
 			Assert(!isnull);
-			resSet_text = DatumGetTextP(resSet_datum);
-			resSetting = DatumGetCString(DirectFunctionCall1(textout,
-					PointerGetDatum(resSet_text)));
+			resSetting = TextDatumGetCString(resSet_datum);
 
 			pentry = list_make2(
 					makeInteger(resTypeInt),
@@ -972,8 +959,8 @@ CreateQueue(CreateQueueStmt *stmt)
 		else
 		{
 				ereport(WARNING,
-						(errmsg("resource scheduling is disabled"),
-						 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
+						(errmsg("resource queue is disabled"),
+						 errhint("To enable set gp_resource_manager=queue")));
 		}
 	}
 
@@ -1390,8 +1377,8 @@ AlterQueue(AlterQueueStmt *stmt)
 		else
 		{
 			ereport(WARNING,
-					(errmsg("resource scheduling is disabled"),
-					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
+					(errmsg("resource queue is disabled"),
+					 errhint("To enable set gp_resource_manager=queue")));
 		}
 	}
 
@@ -1528,8 +1515,8 @@ DropQueue(DropQueueStmt *stmt)
 		else
 		{
 			ereport(WARNING,
-					(errmsg("resource scheduling is disabled"),
-					 errhint("To enable set resource_scheduler=on and gp_resource_manager=queue")));
+					(errmsg("resource queue is disabled"),
+					 errhint("To enable set gp_resource_manager=queue")));
 		}
 	}
 
@@ -1583,6 +1570,9 @@ GetResqueueName(Oid resqueueOid)
 	HeapTuple	tuple;
 	char	   *result;
 
+	if (resqueueOid == InvalidOid)
+		return pstrdup("Unknown");
+
 	/* SELECT rsqname FROM pg_resqueue WHERE oid = :1 */
 	rel = heap_open(ResQueueRelationId, AccessShareLock);
 
@@ -1615,7 +1605,10 @@ GetResqueueName(Oid resqueueOid)
  */
 char *GetResqueuePriority(Oid queueId)
 {
-	return GetResqueueCapability(queueId, PG_RESRCTYPE_PRIORITY);
+	if (queueId == InvalidOid)
+		return pstrdup("Unknown");
+	else
+		return GetResqueueCapability(queueId, PG_RESRCTYPE_PRIORITY);
 }
 
 /**

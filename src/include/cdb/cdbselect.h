@@ -6,7 +6,12 @@
  *  1024 file descriptors (as far as I can tell all of our platforms
  *  support 65536).
  *
- * Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbselect.h
  *
  *-------------------------------------------------------------------------
  */

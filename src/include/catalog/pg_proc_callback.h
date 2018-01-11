@@ -7,7 +7,13 @@
  *   and consists of:
  *     - DESCRIBE() - to support more complex pseudotype resolution
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_proc_callback.h
+ *
  *-------------------------------------------------------------------------
  */
 #ifndef PG_PROC_CALLBACK_H
@@ -20,9 +26,9 @@
  *		typedef struct FormData_pg_proc_callback
  * ----------------
  */
-#define ProcCallbackRelationId	3124
+#define ProcCallbackRelationId	7176
 
-CATALOG(pg_proc_callback,3124) BKI_WITHOUT_OIDS
+CATALOG(pg_proc_callback,7176) BKI_WITHOUT_OIDS
 {
 	regproc	profnoid;		/* oid of the main function */
 	regproc	procallback;	/* oid of the callback function */

@@ -3,10 +3,10 @@
  *
  * PostgreSQL transaction log manager
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/xlog.h,v 1.87 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/xlog.h,v 1.93 2009/06/26 20:29:04 tgl Exp $
  */
 #ifndef XLOG_H
 #define XLOG_H
@@ -21,23 +21,24 @@
 #include "utils/relcache.h"
 #include "utils/timestamp.h"
 #include "cdb/cdbpublic.h"
+#include "replication/walsender.h"
 
 /*
  * REDO Tracking DEFINEs.
  */
-#define REDO_PRINT_READ_BUFFER_NOT_FOUND(reln,blkno,buffer,lsn) \
+#define REDO_PRINT_READ_BUFFER_NOT_FOUND(rnode,blkno,buffer,lsn) \
 { \
 	if (Debug_persistent_recovery_print && !BufferIsValid(buffer)) \
 	{ \
-		xlog_print_redo_read_buffer_not_found(reln, blkno, lsn, PG_FUNCNAME_MACRO); \
+		xlog_print_redo_read_buffer_not_found(rnode, blkno, lsn, PG_FUNCNAME_MACRO); \
 	} \
 }
 
-#define REDO_PRINT_LSN_APPLICATION(reln,blkno,page,lsn) \
+#define REDO_PRINT_LSN_APPLICATION(rnode,blkno,page,lsn) \
 { \
 	if (Debug_persistent_recovery_print) \
 	{ \
-		xlog_print_redo_lsn_application(reln, blkno, (void*)page, lsn, PG_FUNCNAME_MACRO); \
+		xlog_print_redo_lsn_application(rnode, blkno, (void*)page, lsn, PG_FUNCNAME_MACRO); \
 	} \
 }
 
@@ -70,6 +71,7 @@ typedef struct XLogRecord
 	uint32		xl_len;			/* total len of rmgr data */
 	uint8		xl_info;		/* flag bits, see below */
 	RmgrId		xl_rmid;		/* resource manager for this record */
+	uint8       xl_extended_info; /* flag bits, see below */
 
 	/* Depending on MAXALIGN, there are either 2 or 6 wasted bytes here */
 
@@ -82,9 +84,19 @@ typedef struct XLogRecord
 #define XLogRecGetData(record)	((char*) (record) + SizeOfXLogRecord)
 
 /*
- * XLOG uses only low 4 bits of xl_info.  High 4 bits may be used by rmgr.
+ * XLOG uses only low 4 bits of xl_info. High 4 bits may be used by rmgr.
+ * XLR_CHECK_CONSISTENCY bits can be passed by XLogInsert caller.
  */
 #define XLR_INFO_MASK			0x0F
+
+/*
+ * Enforces consistency checks of replayed WAL at recovery. If enabled,
+ * each record will log a full-page write for each block modified by the
+ * record and will reuse it afterwards for consistency checks. The caller
+ * of XLogInsert can use this value if necessary, but if
+ * wal_consistency_checking is enabled for a rmgr this is set unconditionally.
+ */
+#define XLR_CHECK_CONSISTENCY 0x02
 
 /*
  * If we backed up any disk blocks with the XLOG record, we use flag bits in
@@ -110,8 +122,9 @@ typedef struct XLogRecord
 /* Sync methods */
 #define SYNC_METHOD_FSYNC		0
 #define SYNC_METHOD_FDATASYNC	1
-#define SYNC_METHOD_OPEN		2		/* for O_SYNC and O_DSYNC */
+#define SYNC_METHOD_OPEN		2		/* for O_SYNC */
 #define SYNC_METHOD_FSYNC_WRITETHROUGH	3
+#define SYNC_METHOD_OPEN_DSYNC	4		/* for O_DSYNC */
 extern int	sync_method;
 
 /*
@@ -163,29 +176,23 @@ extern int	XLOGbuffers;
 extern bool XLogArchiveMode;
 extern char *XLogArchiveCommand;
 extern int	XLogArchiveTimeout;
-extern char *XLOG_sync_method;
-extern const char XLOG_sync_method_default[];
 extern bool gp_keep_all_xlog;
 extern int keep_wal_segments;
+
+extern bool *wal_consistency_checking;
+extern char *wal_consistency_checking_string;
+
 extern bool log_checkpoints;
 
 #define XLogArchivingActive()	(XLogArchiveMode)
 #define XLogArchiveCommandSet() (XLogArchiveCommand[0] != '\0')
 
-/* 
- * Whether we need to always generate transaction log (XLOG), or if we can
- * bypass it and get better performance.
- *
- * For GPDB, we do not support XLogArchivingActive(), so we don't use it as a condition.
- */
-extern bool XLog_CanBypassWal(void);
-
 /*
- * For FileRep code that doesn't have the Bypass WAL logic yet.
+ * Is WAL-logging necessary? We need to log an XLOG record iff either
+ * WAL archiving is enabled or XLOG streaming is allowed.
  */
-extern bool XLog_UnconvertedCanBypassWal(void);
 
-extern char *writeBufAligned;
+#define XLogIsNeeded() (XLogArchivingActive() || (max_wal_senders > 0))
 
 extern bool am_startup;
 
@@ -201,19 +208,21 @@ extern bool XLOG_DEBUG;
 
 /* These directly affect the behavior of CreateCheckPoint and subsidiaries */
 #define CHECKPOINT_IS_SHUTDOWN	0x0001	/* Checkpoint is for shutdown */
-#define CHECKPOINT_IMMEDIATE	0x0002	/* Do it without delays */
-#define CHECKPOINT_FORCE		0x0004	/* Force even if no activity */
+#define CHECKPOINT_END_OF_RECOVERY	0x0002	/* Like shutdown checkpoint, but
+											 * issued at end of WAL recovery */
+#define CHECKPOINT_IMMEDIATE	0x0004	/* Do it without delays */
+#define CHECKPOINT_FORCE		0x0008	/* Force even if no activity */
 /* These are important to RequestCheckpoint */
-#define CHECKPOINT_WAIT			0x0008	/* Wait for completion */
+#define CHECKPOINT_WAIT			0x0010	/* Wait for completion */
 /* These indicate the cause of a checkpoint request */
-#define CHECKPOINT_CAUSE_XLOG	0x0010	/* XLOG consumption */
-#define CHECKPOINT_CAUSE_TIME	0x0020	/* Elapsed time */
+#define CHECKPOINT_CAUSE_XLOG	0x0020	/* XLOG consumption */
+#define CHECKPOINT_CAUSE_TIME	0x0040	/* Elapsed time */
 /*
  * This falls in two categories, affects behavior of CreateCheckPoint and also
  * indicates request is coming from ResyncManager process to switch primary
  * segment from resync mode to sync mode.
  */
-#define CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION 0x0040
+#define CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION 0x0400
 
 /* Checkpoint statistics */
 typedef struct CheckpointStatsData
@@ -248,6 +257,8 @@ extern void XLogFileRepFlushCache(
 extern void XLogGetLastRemoved(uint32 *log, uint32 *seg);
 extern XLogRecPtr XLogSaveBufferForHint(Buffer buffer, Relation relation);
 
+extern void RestoreBkpBlocks(XLogRecPtr lsn, XLogRecord *record, bool cleanup);
+
 extern void xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
 extern void xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 
@@ -259,8 +270,7 @@ extern bool XLogNeedsFlush(XLogRecPtr RecPtr);
 extern void XLogSetAsyncCommitLSN(XLogRecPtr record);
 
 extern bool RecoveryInProgress(void);
-extern XLogRecPtr GetInsertRecPtr(void);
-extern XLogRecPtr GetFlushRecPtr(void);
+extern bool XLogInsertAllowed(void);
 
 extern void UpdateControlFile(void);
 extern uint64 GetSystemIdentifier(void);
@@ -272,17 +282,18 @@ extern void BootStrapXLOG(void);
 extern void StartupXLOG(void);
 extern bool XLogStartupMultipleRecoveryPassesNeeded(void);
 extern bool XLogStartupIntegrityCheckNeeded(void);
-extern bool XLogStartup_DoNextPTCatVerificationIteration(void);
 extern void StartupXLOG_Pass2(void);
 extern void StartupXLOG_Pass3(void);
 extern void StartupXLOG_Pass4(void);
 extern void ShutdownXLOG(int code, Datum arg);
 extern void InitXLOGAccess(void);
 extern void CreateCheckPoint(int flags);
+extern bool CreateRestartPoint(int flags);
 extern void XLogPutNextOid(Oid nextOid);
 extern void XLogPutNextRelfilenode(Oid nextRelfilenode);
 extern XLogRecPtr GetRedoRecPtr(void);
 extern XLogRecPtr GetInsertRecPtr(void);
+extern XLogRecPtr GetFlushRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
 
 extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);
@@ -312,15 +323,13 @@ extern int XLogAddRecordsToChangeTracking(
 	XLogRecPtr	*lastChangeTrackingEndLoc);
 extern void XLogInChangeTrackingTransition(void);
 
-extern void XLogInitMirroredAlignedBuffer(int32 bufferLen);
-
 extern void xlog_print_redo_read_buffer_not_found(
-		Relation		reln,
+		RelFileNode		*reln,
 		BlockNumber 	blkno,
 		XLogRecPtr 		lsn,
 		const char		*funcName);
 extern void xlog_print_redo_lsn_application(
-		Relation		reln,
+		RelFileNode		*rnode,
 		BlockNumber 	blkno,
 		void			*page,
 		XLogRecPtr		lsn,
@@ -359,5 +368,8 @@ extern void do_pg_abort_backup(void);
 /* File path names (all relative to $PGDATA) */
 #define BACKUP_LABEL_FILE		"backup_label"
 #define BACKUP_LABEL_OLD		"backup_label.old"
+
+extern bool
+IsBkpBlockApplied(XLogRecord *record, uint8 block_id);
 
 #endif   /* XLOG_H */

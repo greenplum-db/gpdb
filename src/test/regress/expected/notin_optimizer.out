@@ -401,39 +401,29 @@ select a,b from g1 where (a,b) not in
 --
 explain select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=7.44..7.46 rows=10 width=8)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=8.96..8.98 rows=10 width=8)
    Merge Key: notin.l1.x, notin.l1.y
-   ->  Sort  (cost=7.44..7.46 rows=4 width=8)
+   ->  Sort  (cost=8.96..8.98 rows=4 width=8)
          Sort Key: notin.l1.x, notin.l1.y
-         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.42..7.27 rows=4 width=8)
+         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.44..8.79 rows=4 width=8)
                Join Filter: notin.l1.x = "NotIn_SUBQUERY".y AND notin.l1.y = "NotIn_SUBQUERY".sum
                ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=8)
-               ->  Materialize  (cost=3.42..3.45 rows=1 width=12)
-                     ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=3.36..3.42 rows=1 width=12)
-                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=3.36..3.38 rows=1 width=12)
-                                 ->  Unique  (cost=3.36..3.37 rows=1 width=16)
-                                       Group By: notin.l1.y, (pg_catalog.sum((sum(notin.l1.x))))
-                                       ->  Sort  (cost=3.36..3.37 rows=1 width=16)
-                                             Sort Key (Distinct): notin.l1.y, (pg_catalog.sum((sum(notin.l1.x))))
-                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=3.31..3.35 rows=1 width=16)
-                                                   Hash Key: notin.l1.y, (pg_catalog.sum((sum(notin.l1.x))))
-                                                   ->  Unique  (cost=3.31..3.33 rows=1 width=16)
-                                                         Group By: notin.l1.y, (pg_catalog.sum((sum(notin.l1.x))))
-                                                         ->  Sort  (cost=3.31..3.32 rows=1 width=16)
-                                                               Sort Key (Distinct): notin.l1.y, (pg_catalog.sum((sum(notin.l1.x))))
-                                                               ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
-                                                                     Group By: notin.l1.y
-                                                                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
-                                                                           Hash Key: notin.l1.y
-                                                                           ->  HashAggregate  (cost=3.14..3.14 rows=1 width=12)
-                                                                                 Group By: notin.l1.y
-                                                                                 ->  Seq Scan on l1  (cost=0.00..3.12 rows=2 width=8)
-                                                                                       Filter: y < 4
+               ->  Materialize  (cost=3.44..3.53 rows=3 width=12)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.25..3.43 rows=3 width=12)
+                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=3.25..3.31 rows=1 width=12)
+                                 ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
+                                       Group By: notin.l1.y
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
+                                             Hash Key: notin.l1.y
+                                             ->  HashAggregate  (cost=3.14..3.14 rows=1 width=12)
+                                                   Group By: notin.l1.y
+                                                   ->  Seq Scan on l1  (cost=0.00..3.12 rows=2 width=8)
+                                                         Filter: y < 4
  Settings:  optimizer=on
  Optimizer status: legacy query optimizer
-(30 rows)
+(20 rows)
 
 select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
@@ -453,17 +443,15 @@ select x,y from l1 where (x,y) not in
 --
 explain select * from g1 where (a,b,c) not in 
 	(select x,y,z from l1);
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=3.63..14.81 rows=11 width=12)
-   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.63..14.81 rows=4 width=12)
-         Join Filter: g1.a = "NotIn_SUBQUERY".x AND g1.b = "NotIn_SUBQUERY".y AND g1.c = "NotIn_SUBQUERY".z
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=3.53..14.71 rows=11 width=12)
+   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.53..14.71 rows=4 width=12)
+         Join Filter: g1.a = l1.x AND g1.b = l1.y AND g1.c = l1.z
          ->  Seq Scan on g1  (cost=0.00..2.11 rows=4 width=12)
-         ->  Materialize  (cost=3.63..3.93 rows=10 width=12)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.60 rows=10 width=12)
-                     ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..3.20 rows=4 width=12)
-                           ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
- Settings:  optimizer=on
+         ->  Materialize  (cost=3.53..3.83 rows=10 width=12)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.50 rows=10 width=12)
+                     ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
  Optimizer status: legacy query optimizer
 (10 rows)
 
@@ -988,7 +976,7 @@ explain select c1 from t1 where not c1 <>all (select c1n from t1n where c1n <all
                                                                                                                                                                       QUERY PLAN                                                                                                                                                                      
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324464.88 rows=8 width=4)
-   ->  Hash EXISTS Join  (cost=0.00..1324464.88 rows=3 width=4)
+   ->  Hash Semi Join  (cost=0.00..1324464.88 rows=3 width=4)
          Hash Cond: t1.c1 = t1n.c1n
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=1324033.87..1324033.87 rows=3 width=4)
@@ -1025,7 +1013,7 @@ explain select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=6 width=4)
-   ->  Hash EXISTS Join  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          Join Filter: t1.c1 < t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
@@ -1042,12 +1030,13 @@ select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
 
 --
 --q38
+-- GPDB_90_MERGE_FIXME: We should generate c2 IS NOT NULL derived filter.
 --
 explain select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Anti Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -1073,7 +1062,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where c2 not in (s
                                                   QUERY PLAN                                                   
 ---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join  (cost=0.00..1293.00 rows=2 width=4)
+   ->  Hash Anti Join  (cost=0.00..1293.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=862.00..862.00 rows=1 width=4)
@@ -1102,18 +1091,19 @@ select c1 from t1 where not exists (select c2 from t2 where c2 not in (select c3
 
 --
 --q40
+-- GPDB_90_MERGE_FIXME: We should be able to push down join filter on param $0 to a result node on top of LASJ (Not in)
 --
 explain select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);
-                                                          QUERY PLAN                                                          
-------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324894.16 rows=4 width=4)
-   ->  Hash Left Anti Semi Join  (cost=0.00..1324894.16 rows=2 width=4)
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324894.16 rows=4 width=4)
+   ->  Hash Anti Join  (cost=0.00..1324894.16 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=1324463.16..1324463.16 rows=1 width=4)
                ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..1324463.16 rows=1 width=4)
                      Hash Cond: t2.c2 = notin.t3.c3
-                     ->  Nested Loop EXISTS Join  (cost=0.00..1324032.16 rows=2 width=4)
+                     ->  Nested Loop Semi Join  (cost=0.00..1324032.16 rows=2 width=4)
                            Join Filter: true
                            ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                            ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
@@ -1217,10 +1207,11 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
 
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to table notin.l1
-NOTICE:  drop cascades to table notin.g1
-NOTICE:  drop cascades to table notin.t1n
-NOTICE:  drop cascades to table notin.t4
-NOTICE:  drop cascades to table notin.t3
-NOTICE:  drop cascades to table notin.t2
-NOTICE:  drop cascades to table notin.t1
+NOTICE:  drop cascades to 7 other objects
+DETAIL:  drop cascades to table notin.t1
+drop cascades to table notin.t2
+drop cascades to table notin.t3
+drop cascades to table notin.t4
+drop cascades to table notin.t1n
+drop cascades to table notin.g1
+drop cascades to table notin.l1

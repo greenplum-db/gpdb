@@ -4,14 +4,19 @@
  *
  * SegmentDatabaseDescriptor methods
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/dispatcher/cdbconn.c
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "miscadmin.h"
 #include "utils/memutils.h"
 #include "libpq/libpq-be.h"
@@ -21,58 +26,62 @@ extern int	pq_putmessage(char msgtype, const char *s, size_t len);
 
 static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
 
-#include "cdb/cdbconn.h"            /* me */
-#include "cdb/cdbutil.h"            /* CdbComponentDatabaseInfo */
+#include "cdb/cdbconn.h"		/* me */
+#include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"
 
-int		gp_segment_connect_timeout = 180;
+int			gp_segment_connect_timeout = 180;
 
-static const char* transStatusToString(PGTransactionStatusType status)
+static const char *
+transStatusToString(PGTransactionStatusType status)
 {
 	const char *ret = "";
+
 	switch (status)
 	{
-	case PQTRANS_IDLE:
-		ret = "idle";
-		break;
-	case PQTRANS_ACTIVE:
-		ret = "active";
-		break;
-	case PQTRANS_INTRANS:
-		ret = "idle, within transaction";
-		break;
-	case PQTRANS_INERROR:
-		ret = "idle, within failed transaction";
-		break;
-	case PQTRANS_UNKNOWN:
-		ret = "unknown transaction status";
-		break;
-	default:
-		Assert(false);
+		case PQTRANS_IDLE:
+			ret = "idle";
+			break;
+		case PQTRANS_ACTIVE:
+			ret = "active";
+			break;
+		case PQTRANS_INTRANS:
+			ret = "idle, within transaction";
+			break;
+		case PQTRANS_INERROR:
+			ret = "idle, within failed transaction";
+			break;
+		case PQTRANS_UNKNOWN:
+			ret = "unknown transaction status";
+			break;
+		default:
+			Assert(false);
 	}
 	return ret;
 }
 
-static void MPPnoticeReceiver(void * arg, const PGresult * res)
+static void
+MPPnoticeReceiver(void *arg, const PGresult *res)
 {
 	PQExpBufferData msgbuf;
 	PGMessageField *pfield;
-	int elevel = INFO;
-	char * sqlstate = "00000";
-	char * severity = "WARNING";
-	char * file = "";
-	char * line = NULL;
-	char * func = "";
-	char message[1024];
-	char * detail = NULL;
-	char * hint = NULL;
-	char * context = NULL;
+	int			elevel = INFO;
+	char	   *sqlstate = "00000";
+	char	   *severity = "WARNING";
+	char	   *file = "";
+	char	   *line = NULL;
+	char	   *func = "";
+	char		message[1024];
+	char	   *detail = NULL;
+	char	   *hint = NULL;
+	char	   *context = NULL;
 
 	SegmentDatabaseDescriptor *segdbDesc = (SegmentDatabaseDescriptor *) arg;
+
 	if (!res)
 		return;
 
-	strcpy(message,"missing error text");
+	strcpy(message, "missing error text");
 
 	for (pfield = res->errFields; pfield != NULL; pfield = pfield->next)
 	{
@@ -80,20 +89,20 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 		{
 			case PG_DIAG_SEVERITY:
 				severity = pfield->contents;
-				if (strcmp(pfield->contents,"WARNING")==0)
+				if (strcmp(pfield->contents, "WARNING") == 0)
 					elevel = WARNING;
-				else if (strcmp(pfield->contents,"NOTICE")==0)
+				else if (strcmp(pfield->contents, "NOTICE") == 0)
 					elevel = NOTICE;
-				else if (strcmp(pfield->contents,"DEBUG1")==0 ||
-					     strcmp(pfield->contents,"DEBUG")==0)
+				else if (strcmp(pfield->contents, "DEBUG1") == 0 ||
+						 strcmp(pfield->contents, "DEBUG") == 0)
 					elevel = DEBUG1;
-				else if (strcmp(pfield->contents,"DEBUG2")==0)
+				else if (strcmp(pfield->contents, "DEBUG2") == 0)
 					elevel = DEBUG2;
-				else if (strcmp(pfield->contents,"DEBUG3")==0)
+				else if (strcmp(pfield->contents, "DEBUG3") == 0)
 					elevel = DEBUG3;
-				else if (strcmp(pfield->contents,"DEBUG4")==0)
+				else if (strcmp(pfield->contents, "DEBUG4") == 0)
 					elevel = DEBUG4;
-				else if (strcmp(pfield->contents,"DEBUG5")==0)
+				else if (strcmp(pfield->contents, "DEBUG5") == 0)
 					elevel = DEBUG5;
 				else
 					elevel = INFO;
@@ -106,9 +115,9 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 				message[800] = '\0';
 				if (segdbDesc && segdbDesc->whoami && strlen(segdbDesc->whoami) < 200)
 				{
-					strcat(message,"  (");
+					strcat(message, "  (");
 					strcat(message, segdbDesc->whoami);
-					strcat(message,")");
+					strcat(message, ")");
 				}
 				break;
 			case PG_DIAG_MESSAGE_DETAIL:
@@ -141,17 +150,16 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 		}
 	}
 
-	if (elevel < client_min_messages &&  elevel  != INFO)
+	if (elevel < client_min_messages && elevel != INFO)
 		return;
 
-    /*
-     * We use PQExpBufferData instead of StringInfoData
-     * because the former uses malloc, the latter palloc.
-     * We are in a thread, and we CANNOT use palloc since it's not
-     * thread safe.  We cannot call elog or ereport either for the
-     * same reason.
-     */
-    initPQExpBuffer(&msgbuf);
+	/*
+	 * We use PQExpBufferData instead of StringInfoData because the former
+	 * uses malloc, the latter palloc. We are in a thread, and we CANNOT use
+	 * palloc since it's not thread safe.  We cannot call elog or ereport
+	 * either for the same reason.
+	 */
+	initPQExpBuffer(&msgbuf);
 
 
 	if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
@@ -159,49 +167,49 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 		/* New style with separate fields */
 
 		appendPQExpBufferChar(&msgbuf, PG_DIAG_SEVERITY);
-		appendBinaryPQExpBuffer(&msgbuf, severity, strlen(severity)+1);
+		appendBinaryPQExpBuffer(&msgbuf, severity, strlen(severity) + 1);
 
 		appendPQExpBufferChar(&msgbuf, PG_DIAG_SQLSTATE);
-		appendBinaryPQExpBuffer(&msgbuf, sqlstate, strlen(sqlstate)+1);
+		appendBinaryPQExpBuffer(&msgbuf, sqlstate, strlen(sqlstate) + 1);
 
 		/* M field is required per protocol, so always send something */
 		appendPQExpBufferChar(&msgbuf, PG_DIAG_MESSAGE_PRIMARY);
-        appendBinaryPQExpBuffer(&msgbuf, message , strlen(message) + 1);
+		appendBinaryPQExpBuffer(&msgbuf, message, strlen(message) + 1);
 
 		if (detail)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_MESSAGE_DETAIL);
-			appendBinaryPQExpBuffer(&msgbuf, detail, strlen(detail)+1);
+			appendBinaryPQExpBuffer(&msgbuf, detail, strlen(detail) + 1);
 		}
 
 		if (hint)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_MESSAGE_HINT);
-			appendBinaryPQExpBuffer(&msgbuf, hint, strlen(hint)+1);
+			appendBinaryPQExpBuffer(&msgbuf, hint, strlen(hint) + 1);
 		}
 
 		if (context)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_CONTEXT);
-			appendBinaryPQExpBuffer(&msgbuf, context, strlen(context)+1);
+			appendBinaryPQExpBuffer(&msgbuf, context, strlen(context) + 1);
 		}
 
 		if (file)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_SOURCE_FILE);
-			appendBinaryPQExpBuffer(&msgbuf, file, strlen(file)+1);
+			appendBinaryPQExpBuffer(&msgbuf, file, strlen(file) + 1);
 		}
 
 		if (line)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_SOURCE_LINE);
-			appendBinaryPQExpBuffer(&msgbuf, line, strlen(line)+1);
+			appendBinaryPQExpBuffer(&msgbuf, line, strlen(line) + 1);
 		}
 
 		if (func)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_SOURCE_FUNCTION);
-			appendBinaryPQExpBuffer(&msgbuf, func, strlen(func)+1);
+			appendBinaryPQExpBuffer(&msgbuf, func, strlen(func) + 1);
 		}
 
 	}
@@ -217,7 +225,7 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 
 	}
 
-	appendPQExpBufferChar(&msgbuf, '\0');		/* terminator */
+	appendPQExpBufferChar(&msgbuf, '\0');	/* terminator */
 
 	pq_putmessage('N', msgbuf.data, msgbuf.len);
 
@@ -227,8 +235,9 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 }
 
 /* Initialize a QE connection descriptor in storage provided by the caller. */
-void cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
-		struct CdbComponentDatabaseInfo *cdbinfo)
+void
+cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
+							  struct CdbComponentDatabaseInfo *cdbinfo)
 {
 	MemSet(segdbDesc, 0, sizeof(*segdbDesc));
 
@@ -236,12 +245,12 @@ void cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
 	segdbDesc->segment_database_info = cdbinfo;
 	segdbDesc->segindex = cdbinfo->segindex;
 
-	/* Connection info, set in function cdbconn_doConnect*/
+	/* Connection info, set in function cdbconn_doConnect */
 	segdbDesc->conn = NULL;
 	segdbDesc->motionListener = 0;
 	segdbDesc->backendPid = 0;
 
-	/*whoami*/
+	/* whoami */
 	segdbDesc->whoami = NULL;
 
 	/* Connection error info */
@@ -250,35 +259,37 @@ void cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
 }
 
 /* Free memory of segment descriptor. */
-void cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
+void
+cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 {
 	/* Free the error message buffer. */
 	segdbDesc->errcode = 0;
 	termPQExpBuffer(&segdbDesc->error_message);
 
-	if(segdbDesc->whoami != NULL)
+	if (segdbDesc->whoami != NULL)
 	{
 		pfree(segdbDesc->whoami);
 		segdbDesc->whoami = NULL;
 	}
-} /* cdbconn_termSegmentDescriptor */
+}								/* cdbconn_termSegmentDescriptor */
 
 /*
  * Connect to a QE as a client via libpq.
  * returns true if connected.
  */
-void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-					   const char *gpqeid,
-					   const char *options)
+void
+cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
+				  const char *gpqeid,
+				  const char *options)
 {
 #define MAX_KEYWORDS 10
 #define MAX_INT_STRING_LEN 20
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
 	const char *keywords[MAX_KEYWORDS];
 	const char *values[MAX_KEYWORDS];
-	char portstr[MAX_INT_STRING_LEN];
-	char timeoutstr[MAX_INT_STRING_LEN];
-	int nkeywords = 0;
+	char		portstr[MAX_INT_STRING_LEN];
+	char		timeoutstr[MAX_INT_STRING_LEN];
+	int			nkeywords = 0;
 
 	keywords[nkeywords] = "gpqeid";
 	values[nkeywords] = gpqeid;
@@ -295,9 +306,9 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 	}
 
 	/*
-	 * For entry DB connection, we make sure both "hostaddr" and "host" are empty string.
-	 * Or else, it will fall back to environment variables and won't use domain socket
-	 * in function connectDBStart.
+	 * For entry DB connection, we make sure both "hostaddr" and "host" are
+	 * empty string. Or else, it will fall back to environment variables and
+	 * won't use domain socket in function connectDBStart.
 	 *
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
@@ -369,23 +380,26 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		PQfinish(segdbDesc->conn);
 		segdbDesc->conn = NULL;
 	}
+
 	/*
 	 * Successfully connected.
 	 */
 	else
 	{
 		PQsetNoticeReceiver(segdbDesc->conn, &MPPnoticeReceiver, segdbDesc);
-		/* Command the QE to initialize its motion layer.
-		 * Wait for it to respond giving us the TCP port number
-		 * where it listens for connections from the gang below.
+
+		/*
+		 * Command the QE to initialize its motion layer. Wait for it to
+		 * respond giving us the TCP port number where it listens for
+		 * connections from the gang below.
 		 */
 		segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
 		segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
 		if (segdbDesc->motionListener == 0)
 		{
-			segdbDesc->errcode = ERRCODE_GP_INTERNAL_ERROR;
+			segdbDesc->errcode = ERRCODE_INTERNAL_ERROR;
 			appendPQExpBuffer(&segdbDesc->error_message,
-					"Internal error: No motion listener port");
+							  "Internal error: No motion listener port");
 
 			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 				write_log("%s\n", segdbDesc->error_message.data);
@@ -399,7 +413,7 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 				write_log("Connected to %s motionListener=%u/%u with options: %s\n",
 						  segdbDesc->whoami,
 						  (segdbDesc->motionListener & 0x0ffff),
-						  ((segdbDesc->motionListener>>16) & 0x0ffff),
+						  ((segdbDesc->motionListener >> 16) & 0x0ffff),
 						  options);
 		}
 	}
@@ -419,8 +433,8 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
 	const char *keywords[MAX_KEYWORDS];
 	const char *values[MAX_KEYWORDS];
-	char portstr[MAX_INT_STRING_LEN];
-	int nkeywords = 0;
+	char		portstr[MAX_INT_STRING_LEN];
+	int			nkeywords = 0;
 
 	keywords[nkeywords] = "gpqeid";
 	values[nkeywords] = gpqeid;
@@ -437,9 +451,9 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	}
 
 	/*
-	 * For entry DB connection, we make sure both "hostaddr" and "host" are empty string.
-	 * Or else, it will fall back to environment variables and won't use domain socket
-	 * in function connectDBStart.
+	 * For entry DB connection, we make sure both "hostaddr" and "host" are
+	 * empty string. Or else, it will fall back to environment variables and
+	 * won't use domain socket in function connectDBStart.
 	 *
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
@@ -492,9 +506,11 @@ void
 cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc)
 {
 	PQsetNoticeReceiver(segdbDesc->conn, &MPPnoticeReceiver, segdbDesc);
-	/* Command the QE to initialize its motion layer.
-	 * Wait for it to respond giving us the TCP port number
-	 * where it listens for connections from the gang below.
+
+	/*
+	 * Command the QE to initialize its motion layer. Wait for it to respond
+	 * giving us the TCP port number where it listens for connections from the
+	 * gang below.
 	 */
 	segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
 	segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
@@ -511,7 +527,8 @@ cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc)
 }
 
 /* Disconnect from QE */
-void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
+void
+cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 {
 	if (PQstatus(segdbDesc->conn) != CONNECTION_BAD)
 	{
@@ -522,8 +539,8 @@ void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 
 		if (status == PQTRANS_ACTIVE)
 		{
-			char errbuf[256];
-			bool sent;
+			char		errbuf[256];
+			bool		sent;
 
 			memset(errbuf, 0, sizeof(errbuf));
 
@@ -547,12 +564,13 @@ void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
  *
  * Return false if there'er still leftovers.
  */
-bool cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
-		int retryCount)
+bool
+cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
+					   int retryCount)
 {
-	PGresult *pRes = NULL;
+	PGresult   *pRes = NULL;
 	ExecStatusType stat;
-	int i = 0;
+	int			i = 0;
 
 	/* PQstatus() is smart enough to handle NULL */
 	while (NULL != (pRes = PQgetResult(segdbDesc->conn)))
@@ -561,8 +579,8 @@ bool cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
 		PQclear(pRes);
 
 		elog(LOG, "(%s) Leftover result at freeGang time: %s %s", segdbDesc->whoami,
-				PQresStatus(stat),
-				PQerrorMessage(segdbDesc->conn));
+			 PQresStatus(stat),
+			 PQerrorMessage(segdbDesc->conn));
 
 		if (stat == PGRES_FATAL_ERROR || stat == PGRES_BAD_RESPONSE)
 			return true;
@@ -575,20 +593,23 @@ bool cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
 }
 
 /* Return if it's a bad connection */
-bool cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc)
+bool
+cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc)
 {
 	return (segdbDesc->conn == NULL || PQsocket(segdbDesc->conn) < 0 ||
-		    PQstatus(segdbDesc->conn) == CONNECTION_BAD);
+			PQstatus(segdbDesc->conn) == CONNECTION_BAD);
 }
 
 /* Return if it's a connection OK */
-bool cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc)
+bool
+cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc)
 {
 	return (PQstatus(segdbDesc->conn) == CONNECTION_OK);
 }
 
 /* Reset error message buffer */
-void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
+void
+cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
 {
 	segdbDesc->errcode = 0;
 	resetPQExpBuffer(&segdbDesc->error_message);
@@ -598,8 +619,9 @@ void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
  * Build text to identify this QE in error messages.
  * Don't call this function in threads.
  */
-void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
-		int sliceIndex, MemoryContext mcxt)
+void
+setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
+				int sliceIndex, MemoryContext mcxt)
 {
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
 	MemoryContext oldContext = MemoryContextSwitchTo(mcxt);
@@ -645,9 +667,10 @@ cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
 				 char *errbuf,
 				 bool isCancel)
 {
-	bool ret;
+	bool		ret;
 
-	PGcancel *cn = PQgetCancel(segdbDesc->conn);
+	PGcancel   *cn = PQgetCancel(segdbDesc->conn);
+
 	if (cn == NULL)
 		return false;
 

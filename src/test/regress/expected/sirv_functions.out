@@ -922,7 +922,7 @@ $$
     LANGUAGE plpgsql volatile;
 --ctas with nested calls in the from clause
 create table sirv_test7_result2 as select * from sirv_test7_fun3(sirv_test7_fun2(2,1000,1000),3,2000,2000) as field1 distributed by (field1);
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
 PL/pgSQL function "sirv_test7_fun3" line 7 at EXECUTE statement
@@ -1094,7 +1094,7 @@ $$
 --insert select with nested calls in the from clause
 create table sirv_test8_result2 (field1 text, field2 int) distributed by (field2);
 insert into sirv_test8_result2 select * from sirv_test8_fun3(sirv_test8_fun2(2,1000,1000),3,2000,2000),(select 1) FOO;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
 PL/pgSQL function "sirv_test8_fun3" line 7 at EXECUTE statement
@@ -1244,12 +1244,12 @@ create table sirv_test10_result1(field1 countries,country_code text,country_name
 --ignore error messages
 --start_ignore 
 insert into sirv_test10_result1 select sirv_test10_srf1(2,1000,1000);
-ERROR:  function cannot execute on segment because it accesses relation "sirv_functions.country"  (seg0 slice1 pbld2:12011 pid=29727)
+ERROR:  function cannot execute on a QE slice because it accesses relation "sirv_functions.country"  (seg0 slice1 pbld2:12011 pid=29727)
 DETAIL:  
 SQL statement " ( with lang_total as ( select count(*) as lang_count,country.code,countrylanguage.countrycode from country join countrylanguage on (country.code=countrylanguage.countrycode) group by country.code,countrylanguage.countrycode order by country.code ) select country.code,country.name, lang_count, country.surfacearea, country.gnp from country left outer join lang_total on (lang_total.code = country.code) where lang_count >  $1  and country.surfacearea >  $2  and country.gnp >  $3  order by lang_total.lang_count desc )"
 PL/pgSQL function "sirv_test10_srf1" line 8 at for over select rows
 insert into sirv_test10_result1 select sirv_test10_srf1 from sirv_test10_srf1(2,1000,1000);
-ERROR:  function cannot execute on segment because it accesses relation "sirv_functions.country"  (entry db pbld2:12010 pid=29278)
+ERROR:  function cannot execute on a QE slice because it accesses relation "sirv_functions.country"  (entry db pbld2:12010 pid=29278)
 DETAIL:  
 SQL statement " ( with lang_total as ( select count(*) as lang_count,country.code,countrylanguage.countrycode from country join countrylanguage on (country.code=countrylanguage.countrycode) group by country.code,countrylanguage.countrycode order by country.code ) select country.code,country.name, lang_count, country.surfacearea, country.gnp from country left outer join lang_total on (lang_total.code = country.code) where lang_count >  $1  and country.surfacearea >  $2  and country.gnp >  $3  order by lang_total.lang_count desc )"
 PL/pgSQL function "sirv_test10_srf1" line 8 at for over select rows
@@ -1305,12 +1305,12 @@ create table sirv_test10_result2(res text) distributed by (res);
 --ignore error messages
 --start_ignore
 insert into sirv_test10_result2 select sirv_test10_srf2('result',2,1000,1000);
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 slice1 pbld2:12011 pid=29759)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 pbld2:12011 pid=29759)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
 PL/pgSQL function "sirv_test10_srf2" line 8 at EXECUTE statement
 insert into sirv_test10_result2 select * from sirv_test10_srf2('result',2,1000,1000);
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db pbld2:12010 pid=29278)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
 PL/pgSQL function "sirv_test10_srf2" line 8 at EXECUTE statement
@@ -1413,12 +1413,12 @@ create table sirv_test12_result1 (res text) distributed by (res);
 --ignore error messages
 --start_ignore
 insert into sirv_test12_result1 select sirv_test12(lang_count::int,surfacearea::float,gnp::float) from sirv_test12_input;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg1 slice1 pbld2:12012 pid=27128)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 slice1 pbld2:12012 pid=27128)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
 PL/pgSQL function "sirv_test12" line 7 at EXECUTE statement
 insert into sirv_test12_result1 select * from (select sirv_test12(lang_count::int,surfacearea::float,gnp::float) from sirv_test12_input) FOO;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg1 slice1 pbld2:12012 pid=27159)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 slice1 pbld2:12012 pid=27159)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
 PL/pgSQL function "sirv_test12" line 7 at EXECUTE statement

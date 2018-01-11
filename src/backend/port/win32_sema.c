@@ -130,10 +130,10 @@ PGSemaphoreLock(PGSemaphore sema, bool interruptOK)
 	wh[1] = *sema;
 
 	/*
-	 * As in other implementations of PGSemaphoreLock, we need to check
-	 * for cancel/die interrupts each time through the loop.  But here,
-	 * there is no hidden magic about whether the syscall will internally
-	 * service a signal --- we do that ourselves.
+	 * As in other implementations of PGSemaphoreLock, we need to check for
+	 * cancel/die interrupts each time through the loop.  But here, there is
+	 * no hidden magic about whether the syscall will internally service a
+	 * signal --- we do that ourselves.
 	 */
 	do
 	{

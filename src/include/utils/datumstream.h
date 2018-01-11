@@ -1,10 +1,19 @@
-/*
- * Datumstream
- *	Copyright (c) 2008, Greenplum Inc.
+/*-------------------------------------------------------------------------
+ *
+ * datumstream.h
+ *
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/datumstream.h
+ *
+ *-------------------------------------------------------------------------
  */
 
-#ifndef DATUM_STREAM_H
-#define DATUM_STREAM_H
+#ifndef DATUMSTREAM_H
+#define DATUMSTREAM_H
 
 #include "catalog/pg_attribute.h"
 #include "utils/datumstreamblock.h"
@@ -299,4 +308,4 @@ extern bool datumstreamread_find_block(DatumStreamRead * datumStream,
 extern void datumstreamread_block_content(DatumStreamRead * acc);
 extern bool init_datumstream_checksum(char *compName, bool checksum);
 
-#endif   /* DATUM_STREAM_H */
+#endif   /* DATUMSTREAM_H */

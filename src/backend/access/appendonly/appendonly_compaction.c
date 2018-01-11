@@ -12,7 +12,11 @@
  * the compacted segment files are dropped and the eof/tupcount/varblock
  * information in pg_aoseg_<oid> are reset to 0.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonly_compaction.c
  *
  *------------------------------------------------------------------------------
  */
@@ -48,34 +52,34 @@
 /*
  * Drops a segment file.
  *
- */ 
+ */
 static void
 AppendOnlyCompaction_DropSegmentFile(Relation aorel,
-		int segno)
+									 int segno)
 {
-	ItemPointerData persistentTid; 
-	int64 persistentSerialNum;
+	ItemPointerData persistentTid;
+	int64		persistentSerialNum;
 
 	if (!ReadGpRelationNode(
-			aorel->rd_rel->reltablespace,
-			aorel->rd_rel->relfilenode,
-			segno,
-			&persistentTid,
-			&persistentSerialNum))
+							aorel->rd_rel->reltablespace,
+							aorel->rd_rel->relfilenode,
+							segno,
+							&persistentTid,
+							&persistentSerialNum))
 	{
 		/* There is nothing to drop */
 		return;
 	}
 
-	elogif(Debug_appendonly_print_compaction, LOG, 
-		"Drop segment file: segno %d", segno);
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Drop segment file: segno %d", segno);
 
 	MirroredFileSysObj_ScheduleDropAppendOnlyFile(
-			&aorel->rd_node,
-			segno,
-			RelationGetRelationName(aorel),
-			&persistentTid,
-			persistentSerialNum);
+												  &aorel->rd_node,
+												  segno,
+												  RelationGetRelationName(aorel),
+												  &persistentTid,
+												  persistentSerialNum);
 
 	DeleteGpRelationNodeTuple(aorel, segno);
 }
@@ -83,10 +87,10 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel,
 /*
  * Calculates the ratio of hidden tuples as a double between 0 and 100
  */
-static double 
+static double
 AppendOnlyCompaction_GetHideRatio(int64 hiddenTupcount, int64 totalTupcount)
 {
-	double hideRatio;
+	double		hideRatio;
 
 	if (hiddenTupcount == 0 || totalTupcount == 0)
 	{
@@ -101,88 +105,89 @@ AppendOnlyCompaction_GetHideRatio(int64 hiddenTupcount, int64 totalTupcount)
  */
 bool
 AppendOnlyCompaction_ShouldCompact(
-	Relation aoRelation,
-	int segno,
-	int64 segmentTotalTupcount,
-	bool isFull)
+								   Relation aoRelation,
+								   int segno,
+								   int64 segmentTotalTupcount,
+								   bool isFull)
 {
-	bool result;
+	bool		result;
 	AppendOnlyVisimap visiMap;
-	int64 hiddenTupcount;
-	double hideRatio;
+	int64		hiddenTupcount;
+	double		hideRatio;
 
 	Assert(RelationIsAoRows(aoRelation) || RelationIsAoCols(aoRelation));
 
 	if (!gp_appendonly_compaction)
 	{
 		ereport(LOG,
-			(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
-				RelationGetRelationName(aoRelation),
-				segno),
-			 errdetail("Compaction is disabled")));
+				(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
+						RelationGetRelationName(aoRelation),
+						segno),
+				 errdetail("Compaction is disabled")));
 		/* Disable compaction by global guc. */
 		return false;
 	}
 
 	AppendOnlyVisimap_Init(&visiMap,
-			aoRelation->rd_appendonly->visimaprelid,
-			aoRelation->rd_appendonly->visimapidxid,
-			ShareLock,
-			SnapshotNow);
+						   aoRelation->rd_appendonly->visimaprelid,
+						   aoRelation->rd_appendonly->visimapidxid,
+						   ShareLock,
+						   SnapshotNow);
 	hiddenTupcount = AppendOnlyVisimap_GetSegmentFileHiddenTupleCount(
-			&visiMap, segno);
+																	  &visiMap, segno);
 
 	result = true;
 	if (isFull && hiddenTupcount > 0)
 	{
-		/* 
-		 * if it is a full vacuum and there is any obsolete data, do a compaction
+		/*
+		 * if it is a full vacuum and there is any obsolete data, do a
+		 * compaction
 		 */
 		result = true;
 	}
 	else
 	{
-	hideRatio = AppendOnlyCompaction_GetHideRatio(hiddenTupcount, segmentTotalTupcount);
-	if (hideRatio <= gp_appendonly_compaction_threshold || gp_appendonly_compaction_threshold == 0)
-	{
+		hideRatio = AppendOnlyCompaction_GetHideRatio(hiddenTupcount, segmentTotalTupcount);
+		if (hideRatio <= gp_appendonly_compaction_threshold || gp_appendonly_compaction_threshold == 0)
+		{
 			if (hiddenTupcount > 0)
 			{
-				ereportif(Debug_appendonly_print_compaction, LOG, 
-					(errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
-					"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-					"hide ratio %lf%%, threshold %d%%",
-					RelationGetRelationName(aoRelation),
-					segno,
-					hiddenTupcount, segmentTotalTupcount, 
-					hideRatio, gp_appendonly_compaction_threshold)));
+				ereportif(Debug_appendonly_print_compaction, LOG,
+						  (errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
+								  "hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", "
+								  "hide ratio %lf%%, threshold %d%%",
+								  RelationGetRelationName(aoRelation),
+								  segno,
+								  hiddenTupcount, segmentTotalTupcount,
+								  hideRatio, gp_appendonly_compaction_threshold)));
 				ereport(LOG,
-					(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
-					RelationGetRelationName(aoRelation),
-					segno),
-					errdetail("Ratio of obsolete tuples below threshold (%lf%% vs %d%%)",
-						hideRatio, gp_appendonly_compaction_threshold)));
+						(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
+								RelationGetRelationName(aoRelation),
+								segno),
+						 errdetail("Ratio of obsolete tuples below threshold (%lf%% vs %d%%)",
+								   hideRatio, gp_appendonly_compaction_threshold)));
 			}
 			else
 			{
-				ereportif(Debug_appendonly_print_compaction, LOG, 
-					(errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
-					"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-					"hide ratio %lf%%, threshold %d%%",
-					RelationGetRelationName(aoRelation),
-					segno,
-					hiddenTupcount, segmentTotalTupcount, 
-					hideRatio, gp_appendonly_compaction_threshold)));
+				ereportif(Debug_appendonly_print_compaction, LOG,
+						  (errmsg("Append-only compaction skipped on relation %s, segment file num %d, "
+								  "hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", "
+								  "hide ratio %lf%%, threshold %d%%",
+								  RelationGetRelationName(aoRelation),
+								  segno,
+								  hiddenTupcount, segmentTotalTupcount,
+								  hideRatio, gp_appendonly_compaction_threshold)));
 			}
 			result = false;
 		}
-		elogif(Debug_appendonly_print_compaction, LOG, 
-			"Schedule compaction: "
-			"segno %d, "
-			"hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", " 
-			"hide ratio %lf%%, threshold %d%%",
-			segno,
-			hiddenTupcount, segmentTotalTupcount, 
-			hideRatio, gp_appendonly_compaction_threshold);
+		elogif(Debug_appendonly_print_compaction, LOG,
+			   "Schedule compaction: "
+			   "segno %d, "
+			   "hidden tupcount " INT64_FORMAT ", total tupcount " INT64_FORMAT ", "
+			   "hide ratio %lf%%, threshold %d%%",
+			   segno,
+			   hiddenTupcount, segmentTotalTupcount,
+			   hideRatio, gp_appendonly_compaction_threshold);
 	}
 	AppendOnlyVisimap_Finish(&visiMap, ShareLock);
 	return result;
@@ -196,22 +201,22 @@ AppendOnlyCompaction_ShouldCompact(
  * For the segment file is truncates to the eof.
  */
 static void
-AppendOnlySegmentFileTruncateToEOF(Relation aorel, 
-		FileSegInfo *fsinfo)
+AppendOnlySegmentFileTruncateToEOF(Relation aorel,
+								   FileSegInfo *fsinfo)
 {
-	const char* relname = RelationGetRelationName(aorel);
+	const char *relname = RelationGetRelationName(aorel);
 	MirroredAppendOnlyOpen mirroredOpened;
-	int32				   fileSegNo;
-	char			filenamepath[MAXPGPATH];
-	int				segno;
-	int64			segeof;
+	int32		fileSegNo;
+	char		filenamepath[MAXPGPATH];
+	int			segno;
+	int64		segeof;
 
 	Assert(fsinfo);
 	Assert(RelationIsAoRows(aorel));
 
 	segno = fsinfo->segno;
 	relname = RelationGetRelationName(aorel);
-	segeof = (int64)fsinfo->eof;
+	segeof = (int64) fsinfo->eof;
 
 	/* Open and truncate the relation segfile beyond its eof */
 	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
@@ -227,95 +232,94 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 
 	if (OpenAOSegmentFile(aorel, filenamepath, fileSegNo, segeof, &mirroredOpened))
 	{
-		TruncateAOSegmentFile(&mirroredOpened, aorel, segeof, ERROR);
+		TruncateAOSegmentFile(&mirroredOpened, aorel, segeof);
 		CloseAOSegmentFile(&mirroredOpened);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
-				 "Successfully truncated AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-				 get_namespace_name(RelationGetNamespace(aorel)),
-				 relname,
-				 aorel->rd_id,
-				 aorel->rd_node.relNode,
-				 segno,
-				 segeof);
+			   "Successfully truncated AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
+			   get_namespace_name(RelationGetNamespace(aorel)),
+			   relname,
+			   aorel->rd_id,
+			   aorel->rd_node.relNode,
+			   segno,
+			   segeof);
 	}
 	else
 	{
 		elogif(Debug_appendonly_print_compaction, LOG,
-				 "No gp_relation_node entry for AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
-				 get_namespace_name(RelationGetNamespace(aorel)),
-				 relname,
-				 aorel->rd_id,
-				 aorel->rd_node.relNode,
-				 segno,
-				 segeof);
+			   "No gp_relation_node entry for AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
+			   get_namespace_name(RelationGetNamespace(aorel)),
+			   relname,
+			   aorel->rd_id,
+			   aorel->rd_node.relNode,
+			   segno,
+			   segeof);
 	}
 }
 
 static void
 AppendOnlyMoveTuple(MemTuple tuple,
-					TupleTableSlot	*slot,
+					TupleTableSlot *slot,
 					MemTupleBinding *mt_bind,
 					AppendOnlyInsertDesc insertDesc,
 					ResultRelInfo *resultRelInfo,
 					EState *estate)
 {
-	AOTupleId *oldAoTupleId;
-	Oid tupleOid;
-	AOTupleId newAoTupleId;
+	AOTupleId  *oldAoTupleId;
+	Oid			tupleOid;
+	AOTupleId	newAoTupleId;
 
 	Assert(resultRelInfo);
 	Assert(slot);
 	Assert(mt_bind);
 	Assert(estate);
 
-	oldAoTupleId = (AOTupleId*)slot_get_ctid(slot);
+	oldAoTupleId = (AOTupleId *) slot_get_ctid(slot);
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
 	tupleOid = MemTupleGetOid(tuple, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
-					  &tupleOid,
+					  tupleOid,
 					  &newAoTupleId);
 
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer)&newAoTupleId, estate, true);
+		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate, true);
 		ResetPerTupleExprContext(estate);
 	}
 
-	elogif(Debug_appendonly_print_compaction, DEBUG5, 
-			"Compaction: Moved tuple (%d," INT64_FORMAT ") -> (%d," INT64_FORMAT ")",
-			AOTupleIdGet_segmentFileNum(oldAoTupleId), AOTupleIdGet_rowNum(oldAoTupleId),
-			AOTupleIdGet_segmentFileNum(&newAoTupleId), AOTupleIdGet_rowNum(&newAoTupleId));
+	elogif(Debug_appendonly_print_compaction, DEBUG5,
+		   "Compaction: Moved tuple (%d," INT64_FORMAT ") -> (%d," INT64_FORMAT ")",
+		   AOTupleIdGet_segmentFileNum(oldAoTupleId), AOTupleIdGet_rowNum(oldAoTupleId),
+		   AOTupleIdGet_segmentFileNum(&newAoTupleId), AOTupleIdGet_rowNum(&newAoTupleId));
 }
 
 void
-AppendOnlyThrowAwayTuple(
-					Relation rel,
-					MemTuple tuple,
-					TupleTableSlot	*slot,
-					MemTupleBinding *mt_bind)
+AppendOnlyThrowAwayTuple(Relation rel,
+						 MemTuple tuple,
+						 TupleTableSlot *slot,
+						 MemTupleBinding *mt_bind)
 {
-	AOTupleId *oldAoTupleId;
+	AOTupleId  *oldAoTupleId;
 
 	Assert(slot);
 	Assert(mt_bind);
 
-	oldAoTupleId = (AOTupleId*)slot_get_ctid(slot);
+	oldAoTupleId = (AOTupleId *) slot_get_ctid(slot);
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
 	if (MemTupleHasExternal(tuple, mt_bind))
 	{
-		toast_delete(rel, (HeapTuple) tuple, mt_bind);
+		toast_delete(rel, (GenericTuple) tuple, mt_bind);
 	}
 
-	elogif(Debug_appendonly_print_compaction, DEBUG5, 
-			"Compaction: Throw away tuple (%d," INT64_FORMAT ")",
-			AOTupleIdGet_segmentFileNum(oldAoTupleId), AOTupleIdGet_rowNum(oldAoTupleId));
+	elogif(Debug_appendonly_print_compaction, DEBUG5,
+		   "Compaction: Throw away tuple (%d," INT64_FORMAT ")",
+		   AOTupleIdGet_segmentFileNum(oldAoTupleId), AOTupleIdGet_rowNum(oldAoTupleId));
 }
 
 /*
@@ -324,24 +328,24 @@ AppendOnlyThrowAwayTuple(
  *
  */
 static void
-AppendOnlySegmentFileFullCompaction(Relation aorel, 
-		AppendOnlyInsertDesc insertDesc,
-		FileSegInfo* fsinfo)
+AppendOnlySegmentFileFullCompaction(Relation aorel,
+									AppendOnlyInsertDesc insertDesc,
+									FileSegInfo *fsinfo)
 {
-	const char* relname;
+	const char *relname;
 	AppendOnlyVisimap visiMap;
 	AppendOnlyScanDesc scanDesc;
-	TupleDesc tupDesc;
-	MemTuple		tuple;
-	TupleTableSlot	*slot;
+	TupleDesc	tupDesc;
+	MemTuple	tuple;
+	TupleTableSlot *slot;
 	MemTupleBinding *mt_bind;
-	int compact_segno;
-	int64 movedTupleCount = 0;
+	int			compact_segno;
+	int64		movedTupleCount = 0;
 	ResultRelInfo *resultRelInfo;
-	EState *estate;
-	AOTupleId *aoTupleId;
-	int64 tupleCount = 0;
-	int64 tuplePerPage = INT_MAX;
+	EState	   *estate;
+	AOTupleId  *aoTupleId;
+	int64		tupleCount = 0;
+	int64		tuplePerPage = INT_MAX;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
@@ -355,24 +359,24 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	relname = RelationGetRelationName(aorel);
 
 	AppendOnlyVisimap_Init(&visiMap,
-			aorel->rd_appendonly->visimaprelid,
-			aorel->rd_appendonly->visimapidxid,
-			ShareUpdateExclusiveLock,
-			SnapshotNow);
+						   aorel->rd_appendonly->visimaprelid,
+						   aorel->rd_appendonly->visimapidxid,
+						   ShareUpdateExclusiveLock,
+						   SnapshotNow);
 
 	elogif(Debug_appendonly_print_compaction,
-			LOG, "Compact AO segno %d, relation %s, insert segno %d", 
-			compact_segno, relname, insertDesc->storageWrite.segmentFileNum);
+		   LOG, "Compact AO segno %d, relation %s, insert segno %d",
+		   compact_segno, relname, insertDesc->storageWrite.segmentFileNum);
 
 	/*
 	 * Todo: We need to limit the scan to one file and we need to avoid to
 	 * lock the file again.
-     *
-     * We use SnapshotAny to get visible and invisible tuples.
+	 *
+	 * We use SnapshotAny to get visible and invisible tuples.
 	 */
 	scanDesc = appendonly_beginrangescan(aorel,
-			SnapshotAny, SnapshotNow,
-			&compact_segno, 1, 0, NULL);
+										 SnapshotAny, SnapshotNow,
+										 &compact_segno, 1, 0, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc);
@@ -386,7 +390,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	resultRelInfo = makeNode(ResultRelInfo);
 	resultRelInfo->ri_RangeTableIndex = 1;	/* dummy */
 	resultRelInfo->ri_RelationDesc = aorel;
-	resultRelInfo->ri_TrigDesc = NULL;		/* we don't fire triggers */
+	resultRelInfo->ri_TrigDesc = NULL;	/* we don't fire triggers */
 	ExecOpenIndices(resultRelInfo);
 	estate->es_result_relations = resultRelInfo;
 	estate->es_num_result_relations = 1;
@@ -400,27 +404,27 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		/* Check interrupts as this may take time. */
 		CHECK_FOR_INTERRUPTS();
 
-		aoTupleId = (AOTupleId*)slot_get_ctid(slot);
+		aoTupleId = (AOTupleId *) slot_get_ctid(slot);
 		if (AppendOnlyVisimap_IsVisible(&scanDesc->visibilityMap, aoTupleId))
 		{
 			AppendOnlyMoveTuple(tuple,
-							slot,
-							mt_bind,
-							insertDesc,
-							resultRelInfo,
-							estate);
+								slot,
+								mt_bind,
+								insertDesc,
+								resultRelInfo,
+								estate);
 			movedTupleCount++;
 		}
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, 
-							tuple,
-							slot,
-							mt_bind);
+			AppendOnlyThrowAwayTuple(aorel,
+									 tuple,
+									 slot,
+									 mt_bind);
 		}
 
-		/* 
+		/*
 		 * Check for vacuum delay point after approximately a var block
 		 */
 		tupleCount++;
@@ -463,11 +467,12 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
  * Checks if the correct relation lock is held.
  * It does so be acquiring the lock in a no-wait mode.
  * If it didn't hold the lock before, it is released immediately.
- */ 
-bool 
+ */
+bool
 HasLockForSegmentFileDrop(Relation aorel)
 {
 	LockAcquireResult acquireResult = LockRelationNoWait(aorel, AccessExclusiveLock);
+
 	switch (acquireResult)
 	{
 		case LOCKACQUIRE_ALREADY_HELD:
@@ -477,12 +482,12 @@ HasLockForSegmentFileDrop(Relation aorel)
 		case LOCKACQUIRE_OK:
 			UnlockRelation(aorel, AccessExclusiveLock);
 #ifdef USE_ASSERT_CHECKING
-		acquireResult = LockRelationNoWait(aorel, ShareUpdateExclusiveLock);
-		if (acquireResult != LOCKACQUIRE_ALREADY_HELD)
-		{
-			elog(ERROR, "Don't hold access exclusive lock during drop");
-			return false;
-		}
+			acquireResult = LockRelationNoWait(aorel, ShareUpdateExclusiveLock);
+			if (acquireResult != LOCKACQUIRE_ALREADY_HELD)
+			{
+				elog(ERROR, "Don't hold access exclusive lock during drop");
+				return false;
+			}
 #endif
 			return false;
 		default:
@@ -497,28 +502,29 @@ HasLockForSegmentFileDrop(Relation aorel)
  * In non-utility mode, all compaction segment files should be
  * marked as in-use/in-compaction in the appendonlywriter.c code.
  *
- */ 
+ */
 void
 AppendOnlyDrop(Relation aorel, List *compaction_segno)
 {
-	const char* relname;
-	int total_segfiles;
-	FileSegInfo** segfile_array;
-	int i, segno;
-	FileSegInfo* fsinfo;
+	const char *relname;
+	int			total_segfiles;
+	FileSegInfo **segfile_array;
+	int			i,
+				segno;
+	FileSegInfo *fsinfo;
 
-	Assert (Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert (RelationIsAoRows(aorel));
+	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
+	Assert(RelationIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
-	elogif (Debug_appendonly_print_compaction, LOG, 
-			"Drop AO relation %s", relname);
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Drop AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 
-	for(i = 0 ; i < total_segfiles ; i++)
+	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
 		if (!list_member_int(compaction_segno, segno))
@@ -527,15 +533,17 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 		}
 
 		/*
-		 * Try to get the transaction write-lock for the Append-Only segment file.
+		 * Try to get the transaction write-lock for the Append-Only segment
+		 * file.
 		 *
-		 * NOTE: This is a transaction scope lock that must be held until commit / abort.
+		 * NOTE: This is a transaction scope lock that must be held until
+		 * commit / abort.
 		 */
 		LockRelationAppendOnlySegmentFile(
-												&aorel->rd_node,
-												segfile_array[i]->segno,
-												AccessExclusiveLock,
-												false);
+										  &aorel->rd_node,
+										  segfile_array[i]->segno,
+										  AccessExclusiveLock,
+										  false);
 
 		/* Re-fetch under the write lock to get latest committed eof. */
 		fsinfo = GetFileSegInfo(aorel, SnapshotNow, segno);
@@ -546,7 +554,7 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 			Assert(!HasSerializableBackends(false));
 			AppendOnlyCompaction_DropSegmentFile(aorel, segno);
 			ClearFileSegInfo(aorel, segno,
-					AOSEG_STATE_DEFAULT);
+							 AOSEG_STATE_DEFAULT);
 		}
 		pfree(fsinfo);
 	}
@@ -566,41 +574,44 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 void
 AppendOnlyTruncateToEOF(Relation aorel)
 {
-	const char* relname;
-	int total_segfiles;
-	FileSegInfo** segfile_array;
-	int i, segno;
+	const char *relname;
+	int			total_segfiles;
+	FileSegInfo **segfile_array;
+	int			i,
+				segno;
 	LockAcquireResult acquireResult;
-	FileSegInfo* fsinfo;
+	FileSegInfo *fsinfo;
 
-	Assert (RelationIsAoRows(aorel));
+	Assert(RelationIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
-	elogif (Debug_appendonly_print_compaction, LOG, 
-			"Compact AO relation %s", relname);
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 
-	for(i = 0 ; i < total_segfiles ; i++)
+	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
 
 		/*
-		 * Try to get the transaction write-lock for the Append-Only segment file.
+		 * Try to get the transaction write-lock for the Append-Only segment
+		 * file.
 		 *
-		 * NOTE: This is a transaction scope lock that must be held until commit / abort.
+		 * NOTE: This is a transaction scope lock that must be held until
+		 * commit / abort.
 		 */
 		acquireResult = LockRelationAppendOnlySegmentFile(
-												&aorel->rd_node,
-												segfile_array[i]->segno,
-												AccessExclusiveLock,
-												/* dontWait */ true);
+														  &aorel->rd_node,
+														  segfile_array[i]->segno,
+														  AccessExclusiveLock,
+														   /* dontWait */ true);
 		if (acquireResult == LOCKACQUIRE_NOT_AVAIL)
 		{
 			elog(DEBUG5, "truncate skips AO segfile %d, "
-					 "relation %s", segfile_array[i]->segno, relname);
+				 "relation %s", segfile_array[i]->segno, relname);
 			continue;
 		}
 
@@ -609,8 +620,8 @@ AppendOnlyTruncateToEOF(Relation aorel)
 
 		/*
 		 * This should not occur since this segfile info was found by the
-		 * "all" method, but better to catch for trouble shooting
-		 * (possibly index corruption?)
+		 * "all" method, but better to catch for trouble shooting (possibly
+		 * index corruption?)
 		 */
 		if (fsinfo == NULL)
 			elog(ERROR, "file seginfo for AO relation %s %u/%u/%u (segno=%u) is missing",
@@ -640,36 +651,37 @@ AppendOnlyTruncateToEOF(Relation aorel)
   * When the insert segno is negative, only truncate to eof operations
  * can be executed.
  *
- * The caller is required to hold either an AccessExclusiveLock (vacuum full) 
+ * The caller is required to hold either an AccessExclusiveLock (vacuum full)
  * or a ShareLock on the relation.
- */ 
+ */
 void
-AppendOnlyCompact(Relation aorel, 
-		List* compaction_segno, 
-		int insert_segno,
-		bool isFull)
+AppendOnlyCompact(Relation aorel,
+				  List *compaction_segno,
+				  int insert_segno,
+				  bool isFull)
 {
-	const char* relname;
-	int total_segfiles;
-	FileSegInfo** segfile_array;
+	const char *relname;
+	int			total_segfiles;
+	FileSegInfo **segfile_array;
 	AppendOnlyInsertDesc insertDesc = NULL;
-	int i, segno;
-	FileSegInfo* fsinfo;
+	int			i,
+				segno;
+	FileSegInfo *fsinfo;
 
-	Assert (Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
+	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(insert_segno >= 0);
 
 	relname = RelationGetRelationName(aorel);
 
-	elogif (Debug_appendonly_print_compaction, LOG, 
-			"Compact AO relation %s", relname);
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 
 	insertDesc = appendonly_insert_init(aorel, insert_segno, false);
 
-	for(i = 0 ; i < total_segfiles ; i++)
+	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
 		if (!list_member_int(compaction_segno, segno))
@@ -683,23 +695,25 @@ AppendOnlyCompact(Relation aorel,
 		}
 
 		/*
-		 * Try to get the transaction write-lock for the Append-Only segment file.
+		 * Try to get the transaction write-lock for the Append-Only segment
+		 * file.
 		 *
-		 * NOTE: This is a transaction scope lock that must be held until commit / abort.
+		 * NOTE: This is a transaction scope lock that must be held until
+		 * commit / abort.
 		 */
 		LockRelationAppendOnlySegmentFile(
-												&aorel->rd_node,
-												segfile_array[i]->segno,
-												AccessExclusiveLock,
-												false);
+										  &aorel->rd_node,
+										  segfile_array[i]->segno,
+										  AccessExclusiveLock,
+										  false);
 
 		/* Re-fetch under the write lock to get latest committed eof. */
 		fsinfo = GetFileSegInfo(aorel, SnapshotNow, segno);
 
 		/*
 		 * This should not occur since this segfile info was found by the
-		 * "all" method, but better to catch for trouble shooting
-		 * (possibly index corruption?)
+		 * "all" method, but better to catch for trouble shooting (possibly
+		 * index corruption?)
 		 */
 		if (fsinfo == NULL)
 			elog(ERROR, "file seginfo for AO relation %s %u/%u/%u (segno=%u) is missing",
@@ -710,12 +724,12 @@ AppendOnlyCompact(Relation aorel,
 				 segno);
 
 		if (AppendOnlyCompaction_ShouldCompact(aorel,
-				fsinfo->segno, fsinfo->total_tupcount, isFull))
+											   fsinfo->segno, fsinfo->total_tupcount, isFull))
 		{
 			AppendOnlySegmentFileFullCompaction(aorel,
-				insertDesc, 
-				fsinfo);
-		} 
+												insertDesc,
+												fsinfo);
+		}
 		pfree(fsinfo);
 	}
 
@@ -742,19 +756,19 @@ AppendOnlyCompact(Relation aorel,
 bool
 AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 {
-	Relation		pg_aoseg_rel;
-	TupleDesc		pg_aoseg_dsc;
-	HeapTuple		tuple;
-	HeapScanDesc	aoscan;
-	int				Anum_tupcount;
-	bool empty = true;
+	Relation	pg_aoseg_rel;
+	TupleDesc	pg_aoseg_dsc;
+	HeapTuple	tuple;
+	HeapScanDesc aoscan;
+	int			Anum_tupcount;
+	bool		empty = true;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
 
 	pg_aoseg_rel = heap_open(aorel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	aoscan = heap_beginscan(pg_aoseg_rel, SnapshotNow, 0, NULL);
-	Anum_tupcount = RelationIsAoRows(aorel)? Anum_pg_aoseg_tupcount: Anum_pg_aocs_tupcount;
+	Anum_tupcount = RelationIsAoRows(aorel) ? Anum_pg_aoseg_tupcount : Anum_pg_aocs_tupcount;
 	while ((tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL &&
 		   empty)
 	{

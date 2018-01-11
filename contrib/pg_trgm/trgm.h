@@ -1,3 +1,6 @@
+/*
+ * $PostgreSQL: pgsql/contrib/pg_trgm/trgm.h,v 1.11 2009/06/11 14:48:51 momjian Exp $
+ */
 #ifndef __TRGM_H__
 #define __TRGM_H__
 
@@ -36,14 +39,13 @@ uint32		trgm2int(trgm *ptr);
 #define ISPRINTABLECHAR(a)	( isascii( *(unsigned char*)(a) ) && isprint( *(unsigned char*)(a) ) )
 #endif
 #define ISPRINTABLETRGM(t)	( ISPRINTABLECHAR( ((char*)t) ) && ISPRINTABLECHAR( ((char*)t)+1 ) && ISPRINTABLECHAR( ((char*)t)+2 ) )
-#define TRGMINT(a) ( (*(((char*)(a))+2)<<16)+(*(((char*)(a))+1)<<8)+*(((char*)(a))+0) )
 
 typedef struct
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	uint8		flag;
 	char		data[1];
-}	TRGM;
+} TRGM;
 
 #define TRGMHDRSIZE		  (VARHDRSZ + sizeof(uint8))
 
@@ -85,6 +87,6 @@ typedef char *BITVECP;
 extern float4 trgm_limit;
 
 TRGM	   *generate_trgm(char *str, int slen);
-float4		cnt_sml(TRGM * trg1, TRGM * trg2);
+float4		cnt_sml(TRGM *trg1, TRGM *trg2);
 
 #endif

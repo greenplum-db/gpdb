@@ -2,8 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_kqw_prc_3r">
   <title>Best Practices Summary</title>
+  <shortdesc>A summary of best practices for Greenplum Database.</shortdesc>
   <body>
-    <p>This section contains a summary of best practices for Greenplum Database. </p>
     <section>
       <title>Data Model</title>
     </section>
@@ -78,7 +78,7 @@
       <p>See <xref href="schema.xml#distribution"/>.</p>
     </section>
     <section>
-      <title>Memory Management</title>
+      <title>Resource Queue Memory Management</title>
       <ul id="ul_ezm_src_3r">
         <li> Set <codeph>vm.overcommit_memory</codeph> to 2.</li>
         <li> Do not configure the OS to use huge pages. </li>

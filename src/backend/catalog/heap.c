@@ -4,12 +4,13 @@
  *	  code to create and destroy POSTGRES heap relations
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.327.2.1 2009/02/24 01:38:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.354 2009/06/11 14:48:54 momjian Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -32,6 +33,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/reloptions.h"
 #include "access/xact.h"
@@ -57,16 +59,18 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbpartition.h"
-#include "cdb/cdbsreh.h"
+#include "catalog/pg_type_fn.h"
+#include "catalog/storage.h"
 #include "commands/tablecmds.h"
 #include "commands/typecmds.h"
 #include "miscadmin.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/var.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
+#include "storage/bufmgr.h"
+#include "storage/freespace.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -74,13 +78,16 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"             /* CDB: GetMemoryChunkContext */
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
-#include "cdb/cdbvars.h"
-
+#include "catalog/gp_persistent.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbpersistentfilesysobj.h"
-#include "catalog/gp_persistent.h"
+#include "cdb/cdbpartition.h"
+#include "cdb/cdbsreh.h"
+#include "cdb/cdbvars.h"
 
 #include "utils/guc.h"
 
@@ -108,10 +115,14 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid ownerid,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
-static void StoreRelCheck(Relation rel, char *ccname, char *ccbin);
-static Node* cookConstraint (ParseState *pstate,
-							 Node 		*raw_constraint,
-							 char		*relname);
+static void StoreRelCheck(Relation rel, char *ccname, Node *expr,
+			  bool is_local, int inhcount);
+static void StoreConstraints(Relation rel, List *cooked_constraints);
+static bool MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
+							bool allow_merge, bool is_local);
+static Node *cookConstraint(ParseState *pstate,
+			   Node *raw_constraint,
+			   char *relname);
 static List *insert_ordered_unique_oid(List *list, Oid datum);
 
 /* ----------------------------------------------------------------
@@ -133,37 +144,37 @@ static List *insert_ordered_unique_oid(List *list, Oid datum);
 static FormData_pg_attribute a1 = {
 	0, {"ctid"}, TIDOID, 0, sizeof(ItemPointerData),
 	SelfItemPointerAttributeNumber, 0, -1, -1,
-	false, 'p', 's', true, false, false, true, 0
+	false, 'p', 's', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a2 = {
 	0, {"oid"}, OIDOID, 0, sizeof(Oid),
 	ObjectIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a3 = {
 	0, {"xmin"}, XIDOID, 0, sizeof(TransactionId),
 	MinTransactionIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a4 = {
 	0, {"cmin"}, CIDOID, 0, sizeof(CommandId),
 	MinCommandIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a5 = {
 	0, {"xmax"}, XIDOID, 0, sizeof(TransactionId),
 	MaxTransactionIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a6 = {
 	0, {"cmax"}, CIDOID, 0, sizeof(CommandId),
 	MaxCommandIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 /*
@@ -175,7 +186,7 @@ static FormData_pg_attribute a6 = {
 static FormData_pg_attribute a7 = {
 	0, {"tableoid"}, OIDOID, 0, sizeof(Oid),
 	TableOidAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 /*CDB*/
@@ -329,13 +340,18 @@ heap_create(const char *relname,
 									 shared_relation);
 
 	/*
-	 * have the storage manager create the relation's disk file, if needed.
+	 * Have the storage manager create the relation's disk file, if needed.
+	 *
+	 * We only create the main fork here, other forks will be created on
+	 * demand.
 	 */
 	if (create_storage)
 	{
 		bool isAppendOnly;
 		bool skipCreatingSharedTable = false;
 
+		/* GPDB_84_MERGE_FIXME: ensure RelationCreateStorage is eventually
+		 * called by our custom helpers here. */
 		/*
 		 * We save the persistent TID and serial number in pg_class so we
 		 * can supply them to the Storage Manager if the object is subsequently
@@ -371,7 +387,7 @@ heap_create(const char *relname,
 				RelationOpenSmgr(rel);
 
 				MirroredFileSysObj_TransactionCreateBufferPoolFile(
-													rel->rd_smgr,
+													&rel->rd_node,
 													relBufpoolKind,
 													rel->rd_isLocalBuf,
 													rel->rd_rel->relname.data,
@@ -410,7 +426,7 @@ heap_create(const char *relname,
 		if (Debug_persistent_print)
 			elog(Persistent_DebugPrintLevel(), 
 			     "heap_create: '%s', Append-Only '%s', persistent TID %s and serial number " INT64_FORMAT " for CREATE",
-				 relpath(rel->rd_node),
+				 relpath(rel->rd_node, MAIN_FORKNUM),
 				 (isAppendOnly ? "true" : "false"),
 				 ItemPointerToString(&rel->rd_segfile0_relationnodeinfo.persistentTid),
 				 rel->rd_segfile0_relationnodeinfo.persistentSerialNum);
@@ -891,7 +907,65 @@ void MetaTrackDropObject(Oid		classid,
 
 } /* end MetaTrackDropObject */
 
+/*
+ * InsertPgAttributeTuple
+ *		Construct and insert a new tuple in pg_attribute.
+ *
+ * Caller has already opened and locked pg_attribute.  new_attribute is the
+ * attribute to insert (but we ignore its attacl, if indeed it has one).
+ *
+ * indstate is the index state for CatalogIndexInsert.	It can be passed as
+ * NULL, in which case we'll fetch the necessary info.  (Don't do this when
+ * inserting multiple attributes, because it's a tad more expensive.)
+ *
+ * We always initialize attacl to NULL (i.e., default permissions).
+ */
+void
+InsertPgAttributeTuple(Relation pg_attribute_rel,
+					   Form_pg_attribute new_attribute,
+					   CatalogIndexState indstate)
+{
+	Datum		values[Natts_pg_attribute];
+	bool		nulls[Natts_pg_attribute];
+	HeapTuple	tup;
 
+	/* This is a tad tedious, but way cleaner than what we used to do... */
+	memset(values, 0, sizeof(values));
+	memset(nulls, false, sizeof(nulls));
+
+	values[Anum_pg_attribute_attrelid - 1] = ObjectIdGetDatum(new_attribute->attrelid);
+	values[Anum_pg_attribute_attname - 1] = NameGetDatum(&new_attribute->attname);
+	values[Anum_pg_attribute_atttypid - 1] = ObjectIdGetDatum(new_attribute->atttypid);
+	values[Anum_pg_attribute_attstattarget - 1] = Int32GetDatum(new_attribute->attstattarget);
+	values[Anum_pg_attribute_attlen - 1] = Int16GetDatum(new_attribute->attlen);
+	values[Anum_pg_attribute_attnum - 1] = Int16GetDatum(new_attribute->attnum);
+	values[Anum_pg_attribute_attndims - 1] = Int32GetDatum(new_attribute->attndims);
+	values[Anum_pg_attribute_attcacheoff - 1] = Int32GetDatum(new_attribute->attcacheoff);
+	values[Anum_pg_attribute_atttypmod - 1] = Int32GetDatum(new_attribute->atttypmod);
+	values[Anum_pg_attribute_attbyval - 1] = BoolGetDatum(new_attribute->attbyval);
+	values[Anum_pg_attribute_attstorage - 1] = CharGetDatum(new_attribute->attstorage);
+	values[Anum_pg_attribute_attalign - 1] = CharGetDatum(new_attribute->attalign);
+	values[Anum_pg_attribute_attnotnull - 1] = BoolGetDatum(new_attribute->attnotnull);
+	values[Anum_pg_attribute_atthasdef - 1] = BoolGetDatum(new_attribute->atthasdef);
+	values[Anum_pg_attribute_attisdropped - 1] = BoolGetDatum(new_attribute->attisdropped);
+	values[Anum_pg_attribute_attislocal - 1] = BoolGetDatum(new_attribute->attislocal);
+	values[Anum_pg_attribute_attinhcount - 1] = Int32GetDatum(new_attribute->attinhcount);
+
+	/* start out with empty permissions */
+	nulls[Anum_pg_attribute_attacl - 1] = true;
+
+	tup = heap_form_tuple(RelationGetDescr(pg_attribute_rel), values, nulls);
+
+	/* finally insert the new tuple, update the indexes, and clean up */
+	simple_heap_insert(pg_attribute_rel, tup);
+
+	if (indstate != NULL)
+		CatalogIndexInsert(indstate, tup);
+	else
+		CatalogUpdateIndexes(pg_attribute_rel, tup);
+
+	heap_freetuple(tup);
+}
 
 /* --------------------------------
  *		AddNewAttributeTuples
@@ -907,9 +981,8 @@ AddNewAttributeTuples(Oid new_rel_oid,
 					  bool oidislocal,
 					  int oidinhcount)
 {
-	const Form_pg_attribute *dpp;
+	Form_pg_attribute attr;
 	int			i;
-	HeapTuple	tup;
 	Relation	rel;
 	CatalogIndexState indstate;
 	int			natts = tupdesc->natts;
@@ -927,35 +1000,25 @@ AddNewAttributeTuples(Oid new_rel_oid,
 	 * First we add the user attributes.  This is also a convenient place to
 	 * add dependencies on their datatypes.
 	 */
-	dpp = tupdesc->attrs;
 	for (i = 0; i < natts; i++)
 	{
+		attr = tupdesc->attrs[i];
 		/* Fill in the correct relation OID */
-		(*dpp)->attrelid = new_rel_oid;
+		attr->attrelid = new_rel_oid;
 		/* Make sure these are OK, too */
-		(*dpp)->attstattarget = -1;
-		(*dpp)->attcacheoff = -1;
+		attr->attstattarget = -1;
+		attr->attcacheoff = -1;
 
-		tup = heap_addheader(Natts_pg_attribute,
-							 false,
-							 ATTRIBUTE_TUPLE_SIZE,
-							 (void *) *dpp);
+		InsertPgAttributeTuple(rel, attr, indstate);
 
-		simple_heap_insert(rel, tup);
-
-		CatalogIndexInsert(indstate, tup);
-
-		heap_freetuple(tup);
-
+		/* Add dependency info */
 		myself.classId = RelationRelationId;
 		myself.objectId = new_rel_oid;
 		myself.objectSubId = i + 1;
 		referenced.classId = TypeRelationId;
-		referenced.objectId = (*dpp)->atttypid;
+		referenced.objectId = attr->atttypid;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
-
-		dpp++;
 	}
 
 	/*
@@ -965,44 +1028,28 @@ AddNewAttributeTuples(Oid new_rel_oid,
 	 */
 	if (relkind != RELKIND_VIEW && relkind != RELKIND_COMPOSITE_TYPE)
 	{
-		dpp = SysAtt;
-		for (i = 0; i < -1 - FirstLowInvalidHeapAttributeNumber; i++)
+		for (i = 0; i < (int) lengthof(SysAtt); i++)
 		{
-			if (tupdesc->tdhasoid ||
-				(*dpp)->attnum != ObjectIdAttributeNumber)
+			FormData_pg_attribute attStruct;
+
+			/* skip OID where appropriate */
+			if (!tupdesc->tdhasoid &&
+				SysAtt[i]->attnum == ObjectIdAttributeNumber)
+				continue;
+
+			memcpy(&attStruct, (char *) SysAtt[i], sizeof(FormData_pg_attribute));
+
+			/* Fill in the correct relation OID in the copied tuple */
+			attStruct.attrelid = new_rel_oid;
+
+			/* Fill in correct inheritance info for the OID column */
+			if (attStruct.attnum == ObjectIdAttributeNumber)
 			{
-				Form_pg_attribute attStruct;
-
-				tup = heap_addheader(Natts_pg_attribute,
-									 false,
-									 ATTRIBUTE_TUPLE_SIZE,
-									 (void *) *dpp);
-				attStruct = (Form_pg_attribute) GETSTRUCT(tup);
-
-				/* Fill in the correct relation OID in the copied tuple */
-				attStruct->attrelid = new_rel_oid;
-
-				/* Fill in correct inheritance info for the OID column */
-				if (attStruct->attnum == ObjectIdAttributeNumber)
-				{
-					attStruct->attislocal = oidislocal;
-					attStruct->attinhcount = oidinhcount;
-				}
-
-				/*
-				 * Unneeded since they should be OK in the constant data
-				 * anyway
-				 */
-				/* attStruct->attstattarget = 0; */
-				/* attStruct->attcacheoff = -1; */
-
-				simple_heap_insert(rel, tup);
-
-				CatalogIndexInsert(indstate, tup);
-
-				heap_freetuple(tup);
+				attStruct.attislocal = oidislocal;
+				attStruct.attinhcount = oidinhcount;
 			}
-			dpp++;
+
+			InsertPgAttributeTuple(rel, &attStruct, indstate);
 		}
 	}
 
@@ -1059,17 +1106,15 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_reltoastidxid - 1] = ObjectIdGetDatum(rd_rel->reltoastidxid);
 	values[Anum_pg_class_relhasindex - 1] = BoolGetDatum(rd_rel->relhasindex);
 	values[Anum_pg_class_relisshared - 1] = BoolGetDatum(rd_rel->relisshared);
+	values[Anum_pg_class_relistemp - 1] = BoolGetDatum(rd_rel->relistemp);
 	values[Anum_pg_class_relkind - 1] = CharGetDatum(rd_rel->relkind);
 	values[Anum_pg_class_relstorage - 1] = CharGetDatum(rd_rel->relstorage);
 	values[Anum_pg_class_relnatts - 1] = Int16GetDatum(rd_rel->relnatts);
 	values[Anum_pg_class_relchecks - 1] = Int16GetDatum(rd_rel->relchecks);
-	values[Anum_pg_class_reltriggers - 1] = Int16GetDatum(rd_rel->reltriggers);
-	values[Anum_pg_class_relukeys - 1] = Int16GetDatum(rd_rel->relukeys);
-	values[Anum_pg_class_relfkeys - 1] = Int16GetDatum(rd_rel->relfkeys);
-	values[Anum_pg_class_relrefs - 1] = Int16GetDatum(rd_rel->relrefs);
 	values[Anum_pg_class_relhasoids - 1] = BoolGetDatum(rd_rel->relhasoids);
 	values[Anum_pg_class_relhaspkey - 1] = BoolGetDatum(rd_rel->relhaspkey);
 	values[Anum_pg_class_relhasrules - 1] = BoolGetDatum(rd_rel->relhasrules);
+	values[Anum_pg_class_relhastriggers - 1] = BoolGetDatum(rd_rel->relhastriggers);
 	values[Anum_pg_class_relhassubclass - 1] = BoolGetDatum(rd_rel->relhassubclass);
 	values[Anum_pg_class_relfrozenxid - 1] = TransactionIdGetDatum(rd_rel->relfrozenxid);
 	/* start out with empty permissions */
@@ -1207,7 +1252,9 @@ AddNewRelationType(const char *typeName,
 				   new_rel_kind,	/* relation kind */
 				   ownerid,		/* owner's ID */
 				   -1,			/* internal size (varlena) */
-				   'c',			/* type-type (complex) */
+				   TYPTYPE_COMPOSITE,	/* type-type (composite) */
+				   TYPCATEGORY_COMPOSITE,		/* type-category (ditto) */
+				   false,		/* composite types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_RECORD_IN, /* input procedure */
 				   F_RECORD_OUT,	/* output procedure */
@@ -1398,6 +1445,7 @@ heap_create_with_catalog(const char *relname,
 						 Oid relid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
+						 List *cooked_constraints,
 						 Oid relam,
 						 char relkind,
 						 char relstorage,
@@ -1495,25 +1543,30 @@ heap_create_with_catalog(const char *relname,
 	 * Was "appendonly" specified in the relopts? If yes, fix our relstorage.
 	 * Also, check for override (debug) GUCs.
 	 */
-	stdRdOptions = (StdRdOptions*) heap_reloptions(
-			relkind, reloptions, !valid_opts);
-	appendOnlyRel = stdRdOptions->appendonly;
-	validateAppendOnlyRelOptions(appendOnlyRel,
-								 stdRdOptions->blocksize,
-								 safefswritesize,
-								 stdRdOptions->compresslevel,
-								 stdRdOptions->compresstype,
-								 stdRdOptions->checksum,
-								 relkind,
-								 stdRdOptions->columnstore);
-	if(appendOnlyRel)
+	if (relkind == RELKIND_RELATION)
 	{
-		if(stdRdOptions->columnstore)
-            relstorage = RELSTORAGE_AOCOLS;
-		else
-			relstorage = RELSTORAGE_AOROWS;
-		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+		stdRdOptions = (StdRdOptions*) heap_reloptions(
+			relkind, reloptions, !valid_opts);
+		appendOnlyRel = stdRdOptions->appendonly;
+		validateAppendOnlyRelOptions(appendOnlyRel,
+									 stdRdOptions->blocksize,
+									 safefswritesize,
+									 stdRdOptions->compresslevel,
+									 stdRdOptions->compresstype,
+									 stdRdOptions->checksum,
+									 relkind,
+									 stdRdOptions->columnstore);
+		if(appendOnlyRel)
+		{
+			if(stdRdOptions->columnstore)
+				relstorage = RELSTORAGE_AOCOLS;
+			else
+				relstorage = RELSTORAGE_AOROWS;
+			reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+		}
 	}
+	else
+		appendOnlyRel = false;
 
 	/* MPP-8058: disallow OIDS on column-oriented tables */
 	if (tupdesc->tdhasoid && 
@@ -1704,6 +1757,8 @@ heap_create_with_catalog(const char *relname,
 				   ownerid,		/* owner's ID */
 				   -1,			/* Internal size (varlena) */
 				   TYPTYPE_BASE,	/* Not composite - typelem is */
+				   TYPCATEGORY_ARRAY,	/* type-category (array) */
+				   false,		/* array types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_ARRAY_IN,	/* array input proc */
 				   F_ARRAY_OUT, /* array output proc */
@@ -1811,10 +1866,13 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/*
-	 * We used to store pre-cooked constraints and defaults here.
-	 * We now store them along with raw constraints and defaults to ensure that
-	 * 	we have oid of pg_constraint and pg_attrdef consistent across segments
+	 * Store any supplied constraints and defaults.
+	 *
+	 * NB: this may do a CommandCounterIncrement and rebuild the relcache
+	 * entry, so the relation must be valid and self-consistent at this point.
+	 * In particular, there are not yet constraints and defaults anywhere.
 	 */
+	StoreConstraints(new_rel_desc, cooked_constraints);
 
 	/*
 	 * If there's a special on-commit action, remember it
@@ -2293,13 +2351,15 @@ void
 remove_gp_relation_node_and_schedule_drop(Relation rel)
 {
 	PersistentFileSysRelStorageMgr relStorageMgr;
+
+	/* GPDB_84_MERGE_FIXME: do we want to debug-log other forks besides main? */
 	
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
 			 "remove_gp_relation_node_and_schedule_drop: dropping relation '%s', relation id %u '%s', relfilenode %u",
 			 rel->rd_rel->relname.data,
 			 rel->rd_id,
-			 relpath(rel->rd_node),
+			 relpath(rel->rd_node, MAIN_FORKNUM),
 			 rel->rd_rel->relfilenode);
 
 	relStorageMgr = ((RelationIsAoRows(rel) || RelationIsAoCols(rel)) ?
@@ -2317,7 +2377,7 @@ remove_gp_relation_node_and_schedule_drop(Relation rel)
 		if (Debug_persistent_print)
 			elog(Persistent_DebugPrintLevel(), 
 				 "remove_gp_relation_node_and_schedule_drop: For Buffer Pool managed relation '%s' persistent TID %s and serial number " INT64_FORMAT " for DROP",
-				 relpath(rel->rd_node),
+				 relpath(rel->rd_node, MAIN_FORKNUM),
 				 ItemPointerToString(&rel->rd_segfile0_relationnodeinfo.persistentTid),
 				 rel->rd_segfile0_relationnodeinfo.persistentSerialNum);
 	}
@@ -2411,12 +2471,25 @@ heap_drop_with_catalog(Oid relid)
 	CheckTableNotInUse(rel, "DROP TABLE");
 
 	/*
-	 * Schedule unlinking of the relation's physical file at commit.
+	 * There can no longer be anyone *else* touching the relation, but we
+	 * might still have open queries or cursors in our own session.
+	 */
+	if (rel->rd_refcnt != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_IN_USE),
+				 errmsg("cannot drop \"%s\" because "
+						"it is being used by active queries in this session",
+						RelationGetRelationName(rel))));
+
+	/*
+	 * Schedule unlinking of the relation's physical files at commit.
 	 */
 	if (relkind != RELKIND_VIEW &&
 		relkind != RELKIND_COMPOSITE_TYPE &&
 		!RelationIsExternal(rel))
 	{
+		/* GPDB_84_MERGE_FIXME: ensure RelationDropStorage() eventually gets
+		   called by our helper here. */
 		remove_gp_relation_node_and_schedule_drop(rel);
 	}
 
@@ -2552,7 +2625,6 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 	RelationFetchGpRelationNodeForXLog(adrel);
 
 	tuple = heap_form_tuple(adrel->rd_att, values, nulls);
-
 	attrdefOid = simple_heap_insert(adrel, tuple);
 
 	CatalogUpdateIndexes(adrel, tuple);
@@ -2611,27 +2683,27 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 
 /*
  * Store a check-constraint expression for the given relation.
- * The expression must be presented as a nodeToString() string.
  *
  * Caller is responsible for updating the count of constraints
  * in the pg_class entry for the relation.
  */
 static void
-StoreRelCheck(Relation rel, char *ccname, char *ccbin)
+StoreRelCheck(Relation rel, char *ccname, Node *expr,
+			  bool is_local, int inhcount)
 {
-	Node	   *expr;
+	char	   *ccbin;
 	char	   *ccsrc;
 	List	   *varList;
 	int			keycount;
 	int16	   *attNos;
 
 	/*
-	 * Convert condition to an expression tree.
+	 * Flatten expression to string form for storage.
 	 */
-	expr = stringToNode(ccbin);
+	ccbin = nodeToString(expr);
 
 	/*
-	 * deparse it
+	 * Also deparse it to form the mostly-obsolete consrc field.
 	 */
 	ccsrc = deparse_expression(expr,
 							deparse_context_for(RelationGetRelationName(rel),
@@ -2639,13 +2711,15 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
 							   false, false);
 
 	/*
-	 * Find columns of rel that are used in ccbin
+	 * Find columns of rel that are used in expr
 	 *
 	 * NB: pull_var_clause is okay here only because we don't allow subselects
 	 * in check constraints; it would fail to examine the contents of
 	 * subselects.
 	 */
-	varList = pull_var_clause(expr, false);
+	varList = pull_var_clause(expr,
+							  PVC_REJECT_AGGREGATES,
+							  PVC_REJECT_PLACEHOLDERS);
 	keycount = list_length(varList);
 
 	if (keycount > 0)
@@ -2694,24 +2768,77 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
 						  InvalidOid,	/* no associated index */
 						  expr, /* Tree form check constraint */
 						  ccbin,	/* Binary form check constraint */
-						  ccsrc);		/* Source form check constraint */
+						  ccsrc,	/* Source form check constraint */
+						  is_local,		/* conislocal */
+						  inhcount);	/* coninhcount */
 
+	pfree(ccbin);
 	pfree(ccsrc);
 }
 
 /*
- * AddRelationConstraints
+ * Store defaults and constraints (passed as a list of CookedConstraint).
  *
- * Add both raw (not-yet-transformed) and cooked column default expressions and/or
- * constraint check expressions to an existing relation. This is defined to do both
- * for efficiency in DefineRelation, but of course you can do just one or
- * the other by passing empty lists.
+ * NOTE: only pre-cooked expressions will be passed this way, which is to
+ * say expressions inherited from an existing relation.  Newly parsed
+ * expressions can be added later, by direct calls to StoreAttrDefault
+ * and StoreRelCheck (see AddRelationNewConstraints()).
+ */
+static void
+StoreConstraints(Relation rel, List *cooked_constraints)
+{
+	int			numchecks = 0;
+	ListCell   *lc;
+
+	if (!cooked_constraints)
+		return;					/* nothing to do */
+
+	/*
+	 * Deparsing of constraint expressions will fail unless the just-created
+	 * pg_attribute tuples for this relation are made visible.  So, bump the
+	 * command counter.  CAUTION: this will cause a relcache entry rebuild.
+	 */
+	CommandCounterIncrement();
+
+	foreach(lc, cooked_constraints)
+	{
+		CookedConstraint *con = (CookedConstraint *) lfirst(lc);
+
+		switch (con->contype)
+		{
+			case CONSTR_DEFAULT:
+				StoreAttrDefault(rel, con->attnum, con->expr);
+				break;
+			case CONSTR_CHECK:
+				StoreRelCheck(rel, con->name, con->expr,
+							  con->is_local, con->inhcount);
+				numchecks++;
+				break;
+			default:
+				elog(ERROR, "unrecognized constraint type: %d",
+					 (int) con->contype);
+		}
+	}
+
+	if (numchecks > 0)
+		SetRelationNumChecks(rel, numchecks);
+}
+
+/*
+ * AddRelationNewConstraints
+ *
+ * Add new column default expressions and/or constraint check expressions
+ * to an existing relation.  This is defined to do both for efficiency in
+ * DefineRelation, but of course you can do just one or the other by passing
+ * empty lists.
  *
  * rel: relation to be modified
- * colDefaults: list of ColumnDef nodes
- * constraints: list of Constraint nodes
+ * newColDefaults: list of RawColumnDefault structures
+ * newConstraints: list of Constraint nodes
+ * allow_merge: TRUE if check constraints may be merged with existing ones
+ * is_local: TRUE if definition is local, FALSE if it's inherited
  *
- * All entries in colDefaults will be processed.  Entries in constraints
+ * All entries in newColDefaults will be processed.  Entries in newConstraints
  * will be processed only if they are CONSTR_CHECK type.
  *
  * Returns a list of CookedConstraint nodes that shows the cooked form of
@@ -2723,9 +2850,11 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
  * tuples visible.
  */
 List *
-AddRelationConstraints(Relation rel,
-						  List *colDefaults,
-						  List *constraints)
+AddRelationNewConstraints(Relation rel,
+						  List *newColDefaults,
+						  List *newConstraints,
+						  bool allow_merge,
+						  bool is_local)
 {
 	List	   *cookedConstraints = NIL;
 	TupleDesc	tupleDesc;
@@ -2764,24 +2893,14 @@ AddRelationConstraints(Relation rel,
 	/*
 	 * Process column default expressions.
 	 */
-	foreach(cell, colDefaults)
+	foreach(cell, newColDefaults)
 	{
-		ColumnDef  *colDef = (ColumnDef *) lfirst(cell);
-
+		RawColumnDefault *colDef = (RawColumnDefault *) lfirst(cell);
 		Form_pg_attribute atp = rel->rd_att->attrs[colDef->attnum - 1];
 
-		if (colDef->raw_default != NULL)
-		{
-			Insist (colDef->cooked_default == NULL);
-			expr = cookDefault(pstate, colDef->raw_default,
-							   atp->atttypid, atp->atttypmod,
-							   NameStr(atp->attname));
-		}
-		else
-		{
-			Insist (colDef->cooked_default != NULL);
-			expr = stringToNode(colDef->cooked_default);
-		}
+		expr = cookDefault(pstate, colDef->raw_default,
+						   atp->atttypid, atp->atttypmod,
+						   NameStr(atp->attname));
 
 		/*
 		 * If the expression is just a NULL constant, we do not bother to make
@@ -2805,6 +2924,8 @@ AddRelationConstraints(Relation rel,
 		cooked->name = NULL;
 		cooked->attnum = colDef->attnum;
 		cooked->expr = expr;
+		cooked->is_local = is_local;
+		cooked->inhcount = is_local ? 0 : 1;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2813,7 +2934,7 @@ AddRelationConstraints(Relation rel,
 	 */
 	numchecks = numoldchecks;
 	checknames = NIL;
-	foreach(cell, constraints)
+	foreach(cell, newConstraints)
 	{
 		Constraint *cdef = (Constraint *) lfirst(cell);
 		char	   *ccname;
@@ -2821,23 +2942,25 @@ AddRelationConstraints(Relation rel,
 		if (cdef->contype != CONSTR_CHECK)
 			continue;
 
-		/*
-		 * Transform raw parsetree to executable expression, and verify
-		 * it's valid as a CHECK constraint
-		 */
 		if (cdef->raw_expr != NULL)
 		{
-			Insist(cdef->cooked_expr == NULL);
+			Assert(cdef->cooked_expr == NULL);
+
+			/*
+			 * Transform raw parsetree to executable expression, and verify
+			 * it's valid as a CHECK constraint.
+			 */
 			expr = cookConstraint(pstate, cdef->raw_expr,
 								  RelationGetRelationName(rel));
 		}
-		/*
-		 * Here, we assume the parser will only pass us valid CHECK
-		 * expressions, so we do no particular checking.
-		 */
 		else
 		{
-			Insist(cdef->cooked_expr != NULL);
+			Assert(cdef->cooked_expr != NULL);
+
+			/*
+			 * Here, we assume the parser will only pass us valid CHECK
+			 * expressions, so we do no particular checking.
+			 */
 			expr = stringToNode(cdef->cooked_expr);
 		}
 
@@ -2849,15 +2972,6 @@ AddRelationConstraints(Relation rel,
 			ListCell   *cell2;
 
 			ccname = cdef->name;
-			/* Check against pre-existing constraints */
-			if (ConstraintNameIsUsed(CONSTRAINT_RELATION,
-									 RelationGetRelid(rel),
-									 RelationGetNamespace(rel),
-									 ccname))
-				ereport(ERROR,
-						(errcode(ERRCODE_DUPLICATE_OBJECT),
-				errmsg("constraint \"%s\" for relation \"%s\" already exists",
-					   ccname, RelationGetRelationName(rel))));
 			/* Check against other new constraints */
 			/* Needed because we don't do CommandCounterIncrement in loop */
 			foreach(cell2, checknames)
@@ -2868,6 +2982,19 @@ AddRelationConstraints(Relation rel,
 							 errmsg("check constraint \"%s\" already exists",
 									ccname)));
 			}
+
+			/* save name for future checks */
+			checknames = lappend(checknames, ccname);
+
+			/*
+			 * Check against pre-existing constraints.	If we are allowed to
+			 * merge with an existing constraint, there's no more to do here.
+			 * (We omit the duplicate constraint from the result, which is
+			 * what ATAddCheckConstraint wants.)
+			 */
+			if (MergeWithExistingConstraint(rel, ccname, expr,
+											allow_merge, is_local))
+				continue;
 		}
 		else
 		{
@@ -2886,7 +3013,9 @@ AddRelationConstraints(Relation rel,
 			List	   *vars;
 			char	   *colname;
 
-			vars = pull_var_clause(expr, false);
+			vars = pull_var_clause(expr,
+								   PVC_REJECT_AGGREGATES,
+								   PVC_REJECT_PLACEHOLDERS);
 
 			/* eliminate duplicates */
 			vars = list_union(NIL, vars);
@@ -2902,15 +3031,15 @@ AddRelationConstraints(Relation rel,
 										  "check",
 										  RelationGetNamespace(rel),
 										  checknames);
-		}
 
-		/* save name for future checks */
-		checknames = lappend(checknames, ccname);
+			/* save name for future checks */
+			checknames = lappend(checknames, ccname);
+		}
 
 		/*
 		 * OK, store it.
 		 */
-		StoreRelCheck(rel, ccname, nodeToString(expr));
+		StoreRelCheck(rel, ccname, expr, is_local, is_local ? 0 : 1);
 
 		numchecks++;
 
@@ -2919,6 +3048,8 @@ AddRelationConstraints(Relation rel,
 		cooked->name = ccname;
 		cooked->attnum = 0;
 		cooked->expr = expr;
+		cooked->is_local = is_local;
+		cooked->inhcount = is_local ? 0 : 1;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2938,46 +3069,88 @@ AddRelationConstraints(Relation rel,
 }
 
 /*
- * Transform raw parsetree to executable expression.
+ * Check for a pre-existing check constraint that conflicts with a proposed
+ * new one, and either adjust its conislocal/coninhcount settings or throw
+ * error as needed.
+ *
+ * Returns TRUE if merged (constraint is a duplicate), or FALSE if it's
+ * got a so-far-unique name, or throws error if conflict.
  */
-static Node*
-cookConstraint (ParseState 	*pstate,
-				Node 		*raw_constraint,
-				char		*relname)
+static bool
+MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
+							bool allow_merge, bool is_local)
 {
-	Node	*expr;
+	bool		found;
+	Relation	conDesc;
+	SysScanDesc conscan;
+	ScanKeyData skey[2];
+	HeapTuple	tup;
 
-	/* Transform raw parsetree to executable expression. */
-	expr = transformExpr(pstate, raw_constraint);
+	/* Search for a pg_constraint entry with same name and relation */
+	conDesc = heap_open(ConstraintRelationId, RowExclusiveLock);
 
-	/* Make sure it yields a boolean result. */
-	expr = coerce_to_boolean(pstate, expr, "CHECK");
+	found = false;
 
-	/* Make sure no outside relations are referred to. */
-	if (list_length(pstate->p_rtable) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-		errmsg("only table \"%s\" can be referenced in check constraint",
-			   relname)));
-	/*
-	 * No subplans or aggregates, either...
-	 */
-	if (pstate->p_hasSubLinks)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot use subquery in check constraint")));
-	if (pstate->p_hasAggs)
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-		   errmsg("cannot use aggregate function in check constraint")));
-	if (pstate->p_hasWindFuncs)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-		   errmsg("cannot use window function in check constraint")));
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(ccname));
 
-	return expr;
+	ScanKeyInit(&skey[1],
+				Anum_pg_constraint_connamespace,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetNamespace(rel)));
+
+	conscan = systable_beginscan(conDesc, ConstraintNameNspIndexId, true,
+								 SnapshotNow, 2, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(conscan)))
+	{
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tup);
+
+		if (con->conrelid == RelationGetRelid(rel))
+		{
+			/* Found it.  Conflicts if not identical check constraint */
+			if (con->contype == CONSTRAINT_CHECK)
+			{
+				Datum		val;
+				bool		isnull;
+
+				val = fastgetattr(tup,
+								  Anum_pg_constraint_conbin,
+								  conDesc->rd_att, &isnull);
+				if (isnull)
+					elog(ERROR, "null conbin for rel %s",
+						 RelationGetRelationName(rel));
+				if (equal(expr, stringToNode(TextDatumGetCString(val))))
+					found = true;
+			}
+			if (!found || !allow_merge)
+				ereport(ERROR,
+						(errcode(ERRCODE_DUPLICATE_OBJECT),
+				errmsg("constraint \"%s\" for relation \"%s\" already exists",
+					   ccname, RelationGetRelationName(rel))));
+			/* OK to update the tuple */
+			ereport(NOTICE,
+			   (errmsg("merging constraint \"%s\" with inherited definition",
+					   ccname)));
+			tup = heap_copytuple(tup);
+			con = (Form_pg_constraint) GETSTRUCT(tup);
+			if (is_local)
+				con->conislocal = true;
+			else
+				con->coninhcount++;
+			simple_heap_update(conDesc, &tup->t_self, tup);
+			CatalogUpdateIndexes(conDesc, tup);
+			break;
+		}
+	}
+
+	systable_endscan(conscan);
+	heap_close(conDesc, RowExclusiveLock);
+
+	return found;
 }
-
 
 /*
  * Update the count of constraints in the relation's pg_class tuple.
@@ -3050,10 +3223,11 @@ cookDefault(ParseState *pstate,
 	/*
 	 * Transform raw parsetree to executable expression.
 	 */
-	expr = transformExpr(pstate, raw_default);
+	expr = transformExpr(pstate, raw_default, EXPR_KIND_COLUMN_DEFAULT);
 
 	/*
-	 * Make sure default expr does not refer to any vars.
+	 * Make sure default expr does not refer to any vars (we need this check
+	 * since the pstate includes the target table).
 	 */
 	if (contain_var_clause(expr))
 		ereport(ERROR,
@@ -3061,28 +3235,15 @@ cookDefault(ParseState *pstate,
 			  errmsg("cannot use column references in default expression")));
 
 	/*
+	 * transformExpr() should have already rejected subqueries, aggregates,
+	 * and window functions, based on the EXPR_KIND_ for a default expression.
+	 *
 	 * It can't return a set either.
 	 */
 	if (expression_returns_set(expr))
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("default expression must not return a set")));
-
-	/*
-	 * No subplans or aggregates, either...
-	 */
-	if (pstate->p_hasSubLinks)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot use subquery in default expression")));
-	if (pstate->p_hasAggs)
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-			 errmsg("cannot use aggregate function in default expression")));
-	if (pstate->p_hasWindFuncs)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-			 errmsg("cannot use window function in default expression")));
 
 	/*
 	 * Coerce the expression to the correct type and typmod, if given. This
@@ -3112,63 +3273,40 @@ cookDefault(ParseState *pstate,
 	return expr;
 }
 
-
 /*
- * Removes all constraints on a relation that match the given name.
+ * Take a raw CHECK constraint expression and convert it to a cooked format
+ * ready for storage.
  *
- * It is the responsibility of the calling function to acquire a suitable
- * lock on the relation.
- *
- * Returns: The number of constraints removed.
+ * Parse state must be set up to recognize any vars that might appear
+ * in the expression.
  */
-int
-RemoveRelConstraints(Relation rel, const char *constrName,
-					 DropBehavior behavior)
+static Node *
+cookConstraint(ParseState *pstate,
+			   Node *raw_constraint,
+			   char *relname)
 {
-	int			ndeleted = 0;
-	Relation	conrel;
-	SysScanDesc conscan;
-	ScanKeyData key[1];
-	HeapTuple	contup;
-
-	/* Grab an appropriate lock on the pg_constraint relation */
-	conrel = heap_open(ConstraintRelationId, RowExclusiveLock);
-
-	/* Use the index to scan only constraints of the target relation */
-	ScanKeyInit(&key[0],
-				Anum_pg_constraint_conrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(rel)));
-
-	conscan = systable_beginscan(conrel, ConstraintRelidIndexId, true,
-								 SnapshotNow, 1, key);
+	Node	   *expr;
 
 	/*
-	 * Scan over the result set, removing any matching entries.
+	 * Transform raw parsetree to executable expression.
 	 */
-	while ((contup = systable_getnext(conscan)) != NULL)
-	{
-		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(contup);
+	expr = transformExpr(pstate, raw_constraint, EXPR_KIND_CHECK_CONSTRAINT);
 
-		if (strcmp(NameStr(con->conname), constrName) == 0)
-		{
-			ObjectAddress conobj;
+	/*
+	 * Make sure it yields a boolean result.
+	 */
+	expr = coerce_to_boolean(pstate, expr, "CHECK");
 
-			conobj.classId = ConstraintRelationId;
-			conobj.objectId = HeapTupleGetOid(contup);
-			conobj.objectSubId = 0;
+	/*
+	 * Make sure no outside relations are referred to.
+	 */
+	if (list_length(pstate->p_rtable) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+			errmsg("only table \"%s\" can be referenced in check constraint",
+				   relname)));
 
-			performDeletion(&conobj, behavior);
-
-			ndeleted++;
-		}
-	}
-
-	/* Clean up after the scan */
-	systable_endscan(conscan);
-	heap_close(conrel, RowExclusiveLock);
-
-	return ndeleted;
+	return expr;
 }
 
 
@@ -3377,7 +3515,7 @@ heap_truncate_check_FKs(List *relations, bool tempTables)
 	{
 		Relation	rel = lfirst(cell);
 
-		if (rel->rd_rel->reltriggers != 0)
+		if (rel->rd_rel->relhastriggers)
 			oids = lappend_oid(oids, RelationGetRelid(rel));
 	}
 

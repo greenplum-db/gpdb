@@ -4,12 +4,13 @@
  *	  handle clauses in parser
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.180 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.189 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,11 +22,9 @@
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
-#include "catalog/pg_window.h"
 #include "commands/defrem.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/analyze.h"
@@ -42,23 +41,18 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/rel.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"
 #include "catalog/catalog.h"
 #include "miscadmin.h"
 
-/* clause types for findTargetlistEntrySQL92 */
-#define ORDER_CLAUSE 0
-#define GROUP_CLAUSE 1
-#define DISTINCT_ON_CLAUSE 2
-
-static char *clauseText[] = {"ORDER BY", "GROUP BY", "DISTINCT ON"};
-
 static void extractRemainingColumns(List *common_colnames,
 						List *src_colnames, List *src_colvars,
 						List **res_colnames, List **res_colvars);
 static Node *transformJoinUsingClause(ParseState *pstate,
+						 RangeTblEntry *leftRTE, RangeTblEntry *rightRTE,
 						 List *leftVars, List *rightVars);
 static Node *transformJoinOnClause(ParseState *pstate, JoinExpr *j,
 					  RangeTblEntry *l_rte,
@@ -78,14 +72,22 @@ static Node *transformFromClauseItem(ParseState *pstate, Node *n,
 						Relids *containedRels);
 static Node *buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 				   Var *l_colvar, Var *r_colvar);
+static void checkExprIsVarFree(ParseState *pstate, Node *n,
+				   const char *constructName);
 static TargetEntry *findTargetlistEntrySQL92(ParseState *pstate, Node *node,
-						 List **tlist, int clause);
+						 List **tlist, ParseExprKind exprKind);
 static TargetEntry *findTargetlistEntrySQL99(ParseState *pstate, Node *node,
-					List **tlist);
+					List **tlist, ParseExprKind exprKind);
 static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 									   List **tlist, bool in_grpext,
 									   bool ignore_in_grpext,
+									   ParseExprKind exprKind,
                                        bool useSQL99);
+static int get_matching_location(int sortgroupref,
+					  List *sortgrouprefs, List *exprs);
+static List *addTargetToGroupList(ParseState *pstate, TargetEntry *tle,
+					 List *grouplist, List *targetlist, int location,
+					 bool resolveUnknown);
 static TargetEntry *getTargetBySortGroupRef(Index ref, List *tl);
 static List *reorderGroupList(List *grouplist);
 static List *transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
@@ -93,6 +95,16 @@ static List *transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 static List *transformRowExprToGroupClauses(ParseState *pstate, RowExpr *rowexpr,
 											List *groupsets, List *targetList);
 static void freeGroupList(List *grouplist);
+static List *addTargetToGroupList(ParseState *pstate, TargetEntry *tle,
+					 List *grouplist, List *targetlist, int location,
+					 bool resolveUnknown);
+static WindowClause *findWindowClause(List *wclist, const char *name);
+static Node *transformFrameOffset(ParseState *pstate, int frameOptions,
+								  Node *clause,
+								  List *orderClause, List *targetlist, bool isFollowing,
+								  int location);
+static SortGroupClause *make_group_clause(TargetEntry *tle, List *targetlist,
+				  Oid eqop, Oid sortop, bool nulls_first);
 
 typedef struct grouping_rewrite_ctx
 {
@@ -103,7 +115,7 @@ typedef struct grouping_rewrite_ctx
 typedef struct winref_check_ctx
 {
 	ParseState *pstate;
-	Index win_clause;
+	Index winref;
 	bool has_order;
 	bool has_frame;
 } winref_check_ctx;
@@ -156,166 +168,6 @@ transformFromClause(ParseState *pstate, List *frmList)
 	}
 }
 
-static void
-transformWindowFrameEdge(ParseState *pstate, WindowFrameEdge *e,
-						 WindowSpec *spec, Query *qry, bool is_rows)
-{
-	const char *constructName = NULL;
-
-	/* Only bound frame edges will have a value */
-	if (e->kind == WINDOW_BOUND_PRECEDING ||
-		e->kind == WINDOW_BOUND_FOLLOWING)
-	{
-		if (is_rows)
-		{
-			/* the e->val should already be transformed */
-
-			/*
-			 * Like LIMIT clause, simply coerce to int8
-			 */
-			constructName = "ROWS";
-			e->val = coerce_to_specific_type(pstate, e->val, INT8OID, constructName);
-		}
-		else
-		{
-			TargetEntry *te;
-			Oid otype;
-			Oid rtype;
-			Oid newrtype;
-			SortClause *sort;
-			Oid oprresult;
-			List *oprname;
-			Operator tup;
-			int32 typmod;
-
-			if (list_length(spec->order) != 1)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("only one ORDER BY column may be specified when RANGE is used in a window specification"),
-						 parser_errposition(pstate, spec->location)));
-
-			/* e->val should already be transformed */
-			typmod = exprTypmod(e->val);
-
-			if (IsA(e->val, Const))
-			{
-				Const *con = (Const *)e->val;
-
-				if (con->constisnull)
-					ereport(ERROR,
-							(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-							 errmsg("RANGE parameter cannot be NULL"),
-							 parser_errposition(pstate, con->location)));
-			}
-
-			sort = (SortClause *)linitial(spec->order);
-			te = getTargetBySortGroupRef(sort->tleSortGroupRef,
-										 qry->targetList);
-			otype = exprType((Node *)te->expr);
-			rtype = exprType(e->val);
-
-			/* XXX: Reverse these if user specified DESC */
-			if (e->kind == WINDOW_BOUND_FOLLOWING)
-				oprname = lappend(NIL, makeString("+"));
-			else
-				oprname = lappend(NIL, makeString("-"));
-
-			tup = oper(pstate, oprname, otype, rtype, true, 0);
-
-			if (!HeapTupleIsValid(tup))
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("window specification RANGE parameter type must be coercible to ORDER BY column type")));
-
-			oprresult = ((Form_pg_operator)GETSTRUCT(tup))->oprresult;
-			newrtype = ((Form_pg_operator)GETSTRUCT(tup))->oprright;
-			ReleaseSysCache(tup);
-			list_free_deep(oprname);
-
-			if (rtype != newrtype)
-			{
-				/*
-				 * We have to coerce the RHS to the new type so that we'll be
-				 * able to trivially find an operator later on.
-				 */
-
-				/* XXX: we assume that the typmod for the new RHS type
-				 * is the same as before... is that safe?
-				 */
-				Expr *expr =
-					(Expr *)coerce_to_target_type(NULL,
-												  e->val,
-											 	  rtype,
-											 	  newrtype, typmod,
-									 			  COERCION_EXPLICIT,
-												  COERCE_IMPLICIT_CAST,
-												  -1);
-				if (!PointerIsValid(expr))
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("type mismatch between ORDER BY and RANGE "
-									"parameter in window specification"),
-							 errhint("Operations between window specification "
-									 "the ORDER BY column and RANGE parameter "
-									 "must result in a data type which can be "
-									 "cast back to the ORDER BY column type"),
-							 parser_errposition(pstate, exprLocation((Node *) expr))));
-				}
-				else
-					e->val = (Node *)expr;
-			}
-
-			if (oprresult != otype)
-			{
-				/* see if it can be coerced */
-				if (!can_coerce_type(1, &oprresult, &otype, COERCION_EXPLICIT))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("invalid RANGE parameter"),
-							 errhint("Operations between window specification "
-									 "the ORDER BY column and RANGE parameter "
-									 "must result in a data type which can be "
-									 "cast back to the ORDER BY column type")));
-
-				/* The executor will do the rest of the work */
-			}
-
-			if (IsA(e->val, Const))
-			{
-				/* see if RANGE parameter is negative */
-				tup = ordering_oper(newrtype, false);
-				if (HeapTupleIsValid(tup))
-				{
-					Type typ = typeidType(newrtype);
-					Oid funcoid = oprfuncid(tup);
-					Datum zero;
-					Datum result;
-					Const *con = (Const *)e->val;
-
-					zero = stringTypeDatum(typ, "0", exprTypmod(e->val));
-
-					/*
-					 * As we know the value is a const and since transformExpr()
-					 * will have parsed the type into its internal format, we can
-					 * just poke directly into the Const structure.
-					 */
-					result = OidFunctionCall2(funcoid, con->constvalue, zero);
-
-					if (result)
-						ereport(ERROR,
-								(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-								 errmsg("RANGE parameter cannot be negative"),
-								 parser_errposition(pstate, con->location)));
-
-					ReleaseSysCache(tup);
-					ReleaseSysCache(typ);
-				}
-			}
-		}
-	}
-}
-
 /*
  * winref_checkspec_walker
  */
@@ -326,14 +178,14 @@ winref_checkspec_walker(Node *node, void *ctx)
 
 	if (!node)
 		return false;
-	else if (IsA(node, WindowRef))
+	else if (IsA(node, WindowFunc))
 	{
-		WindowRef *winref = (WindowRef *)node;
+		WindowFunc *winref = (WindowFunc *) node;
 
 		/*
 		 * Look at functions pointing to the interesting spec only.
 		 */
-		if (winref->winspec != ref->win_clause)
+		if (winref->winref != ref->winref)
 			return false;
 
 		if (winref->windistinct)
@@ -350,7 +202,7 @@ winref_checkspec_walker(Node *node, void *ctx)
 						 errmsg("DISTINCT cannot be used with window specification containing a framing clause"),
 						 parser_errposition(ref->pstate, winref->location)));
 		}
-
+#if 0 // FIXME
 		/*
 		 * Check compatibilities between function's requirement and
 		 * window specification by looking up pg_window catalog.
@@ -386,6 +238,7 @@ winref_checkspec_walker(Node *node, void *ctx)
 				ReleaseSysCache(tuple);
 			}
 		}
+#endif
 	}
 
 	return expression_tree_walker(node, winref_checkspec_walker, ctx);
@@ -394,7 +247,7 @@ winref_checkspec_walker(Node *node, void *ctx)
 /*
  * winref_checkspec
  *
- * See if any WindowRefs using this spec are DISTINCT qualified.
+ * See if any WindowFuncss using this spec are DISTINCT qualified.
  *
  * In addition, we're going to check winrequireorder / winallowframe.
  * You might want to do it in ParseFuncOrColumn,
@@ -402,320 +255,18 @@ winref_checkspec_walker(Node *node, void *ctx)
  * (especially parent inheritance) was done.
  */
 static bool
-winref_checkspec(ParseState *pstate, Query *qry, Index clauseno,
+winref_checkspec(ParseState *pstate, List *targetlist, Index winref,
 				 bool has_order, bool has_frame)
 {
 	winref_check_ctx ctx;
 
 	ctx.pstate = pstate;
-	ctx.win_clause = clauseno;
+	ctx.winref = winref;
 	ctx.has_order = has_order;
 	ctx.has_frame = has_frame;
 
-	return expression_tree_walker((Node *) qry->targetList,
+	return expression_tree_walker((Node *) targetlist,
 								  winref_checkspec_walker, (void *) &ctx);
-}
-
-/*
- * transformWindowClause
- * 		Process window clause specifications in a SELECT query
- *
- * There's a fair bit to do here: column references in the PARTITION and
- * ORDER clauses must be valid; ORDER clause must present if the function
- * requires; the frame clause must be checked to ensure that the function
- * supports framing, that the framed column is of the right type, that the
- * offset is sane, that the start and end of the frame are sane.
- * Then we translate it to use the proper parse nodes for the respective
- * part of the clause.
- */
-void
-transformWindowClause(ParseState *pstate, Query *qry)
-{
-	ListCell *w;
-	List *winout = NIL;
-	List *winin = pstate->p_win_clauses;
-	Index clauseno = -1;
-
-	/*
-	 * We have two lists of window specs: one in the ParseState -- put there
-	 * when we find the OVER(...) clause in the targetlist and the other
-	 * is windowClause, a list of named window clauses. So, we concatenate
-	 * them together.
-	 *
-	 * Note that we're careful place those found in the target list at
-	 * the end because the spec might refer to a named clause and we'll
-	 * after to know about those first.
-	 */
-
-	foreach(w, winin)
-	{
-		WindowSpec *ws = lfirst(w);
-		WindowSpec *newspec = makeNode(WindowSpec);
-		ListCell   *tmp;
-		bool		found = false;
-
-		clauseno++;
-
-		if (checkExprHasWindFuncs((Node *)ws))
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot use window function in a window specification"),
-					 parser_errposition(pstate, ws->location)));
-
-		/*
-		 * Loop through those clauses we've already processed to
-		 * a) check that the name passed in is not already taken and
-		 * b) look up the parent window spec.
-		 *
-		 * This is obvious O(n^2) but n is small.
-		 */
-		if (ws->parent || ws->name)
-		{
-			/*
-			 * Firstly, check that the parent is not a reference to this
-			 * window specification.
-			 */
-			if (ws->parent && ws->name && strcmp(ws->parent, ws->name) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-						 errmsg("window \"%s\" cannot reference itself",
-								ws->name),
-						 parser_errposition(pstate, ws->location)));
-
-			foreach(tmp, winout)
-			{
-				WindowSpec *ws2 = lfirst(tmp);
-
-				/* Only check if the name exists if wc->name is not NULL */
-				if (ws->name != NULL && strcmp(ws2->name, ws->name) == 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_DUPLICATE_OBJECT),
-							 errmsg("window name \"%s\" occurs more than once in WINDOW clause",
-									ws->name),
-							 parser_errposition(pstate, ws->location)));
-
-				/*
-				 * If this spec has a parent reference, we need to test that
-				 * the following rules are met. Given the following:
-				 *
-				 * 		OVER (myspec ...) ... WINDOW myspec AS (...)
-				 *
-				 * the OVER clause cannot have a partitioning clause; only
-				 * the OVER clause or myspec can have an ORDER clause; myspec
-				 * cannot have a framing clause.
-				 */
-
-				/*
-				 * XXX: these errors could apply to any number of clauses in the
-				 * query and may be considered ambiguous by the user. Perhaps a
-				 * location (see FuncCall) would help?
-				 */
-				if (ws->parent && ws2->name &&
-					strcmp(ws->parent, ws2->name) == 0)
-				{
-					found = true;
-					if (ws->partition != NIL)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("PARTITION BY not allowed when an existing window name is specified"),
-								 parser_errposition(pstate, ws->location)));
-
-					if (ws->order != NIL && ws2->order != NIL)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("conflicting ORDER BY clauses in window specification"),
-								 parser_errposition(pstate, ws->location)));
-
-					/*
-					 * We only want to disallow the specification of a
-					 * framing clause when the target list form is like:
-					 *
-					 *  foo() OVER (w1 ORDER BY baz) ...
-					 */
-					if (!(ws->partition == NIL && ws->order == NIL &&
-						  ws->name == NULL) &&
-						ws2->frame)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("window specification \"%s\" cannot have "
-										"a framing clause", ws2->name),
-								 errhint("Window specifications which are "
-										 "referenced by other window "
-										 "specifications cannot have framing "
-										 "clauses"),
-                                 parser_errposition(pstate, ws2->location)
-                                 ));
-
-					/*
-					 * The specifications are valid so just copy the details
-					 * from the parent spec.
-					 */
-					newspec->parent = ws2->name;
-					/* XXX: some parameters might not be processed! */
-					newspec->partition = copyObject(ws2->partition);
-
-					if (ws->order == NIL && ws2->order != NIL)
-						newspec->order = copyObject(ws2->order);
-
-					newspec->frame = copyObject(ws2->frame);
-
-				}
-			}
-
-			if(!found && ws->parent)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						errmsg("window specification \"%s\" not found",
-							   ws->parent),
-						 parser_errposition(pstate, ws->location)));
-		}
-
-		newspec->name = ws->name;
-		newspec->location = ws->location;
-
-		/*
-		 * Process partition, if one is defined and if it isn't already
-		 * in newspec.
-		 */
-		if (!newspec->partition && ws->partition)
-		{
-			newspec->partition = 
-                transformSortClause(pstate,
-                                    ws->partition,
-                                    &qry->targetList,
-                                    true /* fix unknowns */ ,
-                                    false /* use SQL92 rules */ );
-		}
-		/* order is just like partition */
-		if (ws->order || newspec->order)
-		{
-			/*
-			 * Only do this if it came from the new definition
-			 */
-			if (ws->order != NIL && newspec->order == NIL)
-			{
-				newspec->order = 
-                    transformSortClause(pstate,
-                                        ws->order,
-                                        &qry->targetList,
-                                        true /* fix unknowns */ ,
-                                        false /* use SQL92 rules */ );
-			}
-		}
-
-		/*
-		 * Finally, process the framing clause. parseProcessWindFunc() will
-		 * have picked up window functions that do not support framing.
-		 *
-		 * What we do need to do is the following:
-		 * - If BETWEEN has been specified, the trailing bound is not
-		 *   UNBOUNDED FOLLOWING; the leading bound is not UNBOUNDED
-		 *   PRECEDING; if the first bound specifies CURRENT ROW, the
-		 *   second bound shall not specify a PRECEDING bound; if the
-		 *   first bound specifies a FOLLOWING bound, the second bound
-		 *   shall not specify a PRECEDING or CURRENT ROW bound.
-		 *
-		 * - If the user did not specify BETWEEN, the bound is assumed to be
-		 *   a trailing bound and the leading bound is set to CURRENT ROW.
-		 *   We're careful not to set is_between here because the user did not
-		 *   specify it.
-		 *
-		 * - If RANGE is specified: the ORDER BY clause of the window spec
-		 *   may specify only one column; the type of that column must support
-		 *   +/- <integer> operations and must be merge-joinable.
-		 */
-		if (ws->frame)
-		{
-			/* with that out of the way, we may proceed */
-			WindowFrame *nf = copyObject(ws->frame);
-
-			/*
-			 * Framing is only supported on specifications with an ordering
-			 * clause.
-			 */
-			if (!ws->order && !newspec->order)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("window specifications with a framing clause must have an ORDER BY clause"),
-					 parser_errposition(pstate, ws->location)));
-
-			if (nf->is_between)
-			{
-				Assert(PointerIsValid(nf->trail));
-				Assert(PointerIsValid(nf->lead));
-
-				if (nf->trail->kind == WINDOW_UNBOUND_FOLLOWING)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting bounds in window framing clause"),
-							 errhint("First bound of BETWEEN clause in window specification cannot be UNBOUNDED FOLLOWING"),
-							 parser_errposition(pstate, exprLocation(nf->trail->val))));
-				if (nf->lead->kind == WINDOW_UNBOUND_PRECEDING)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting bounds in window framing clause"),
-							 errhint("Second bound of BETWEEN clause in window specification cannot be UNBOUNDED PRECEDING"),
-							 parser_errposition(pstate, exprLocation(nf->lead->val))));
-				if (nf->trail->kind == WINDOW_CURRENT_ROW &&
-					(nf->lead->kind == WINDOW_BOUND_PRECEDING ||
-					 nf->lead->kind == WINDOW_UNBOUND_PRECEDING))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting bounds in window framing clause"),
-							 errhint("Second bound cannot be PRECEDING when first bound is CURRENT ROW"),
-							 parser_errposition(pstate, exprLocation(nf->lead->val))));
-				if ((nf->trail->kind == WINDOW_BOUND_FOLLOWING ||
-					 nf->trail->kind == WINDOW_UNBOUND_FOLLOWING) &&
-					!(nf->lead->kind == WINDOW_BOUND_FOLLOWING ||
-					  nf->lead->kind == WINDOW_UNBOUND_FOLLOWING))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting bounds in window framing clause"),
-							 errhint("Second bound must be FOLLOWING if first bound is FOLLOWING"),
-							 parser_errposition(pstate, exprLocation(nf->lead->val))));
-
-			}
-			else
-			{
-				/*
-				 * If only a single bound has been specified, set the
-				 * leading bound to CURRENT ROW
-				 */
-				WindowFrameEdge *e = makeNode(WindowFrameEdge);
-
-				Assert(!PointerIsValid(nf->lead));
-
-				e->kind = WINDOW_CURRENT_ROW;
-				nf->lead = e;
-			}
-
-			transformWindowFrameEdge(pstate, nf->trail, newspec, qry,
-									 nf->is_rows);
-			transformWindowFrameEdge(pstate, nf->lead, newspec, qry,
-									 nf->is_rows);
-			newspec->frame = nf;
-		}
-
-		/* finally, check function restriction with this spec. */
-		winref_checkspec(pstate, qry, clauseno,
-						 PointerIsValid(newspec->order),
-						 PointerIsValid(newspec->frame));
-
-		winout = lappend(winout, newspec);
-	}
-
-	/* If there are no window functions in the targetlist,
-	 * forget the window clause.
-	 */
-	if (!pstate->p_hasWindFuncs)
-	{
-		pstate->p_win_clauses = NIL;
-		qry->windowClause = NIL;
-	}
-	else
-	{
-		qry->windowClause = winout;
-	}
 }
 
 /*
@@ -761,6 +312,8 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
      *
 	 * CDB: Acquire ExclusiveLock if it is a distributed relation and we are
 	 * doing UPDATE or DELETE activity
+	 *
+	 * GPDB_84_MERGE_FIXME: Why can't we just always call parserOpenTable here?
 	 */
 	setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
 	if (pstate->p_is_insert && !pstate->p_is_update)
@@ -774,7 +327,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 													  false, NULL);
 	}
 	cancel_parser_errposition_callback(&pcbstate);
-	
+
 	/*
 	 * Now build an RTE.
 	 */
@@ -854,8 +407,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 *
 	 * If we find an explicit reference to the rel later during parse
 	 * analysis, we will add the ACL_SELECT bit back again; see
-	 * scanRTEForColumn (for simple field references), ExpandColumnRefStar
-	 * (for foo.*) and ExpandAllTables (for *).
+	 * markVarForSelectPriv and its callers.
 	 */
 	rte->requiredPerms = requiredPerms;
 
@@ -908,7 +460,8 @@ interpretOidsOption(List *defList)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
 
-		if (pg_strcasecmp(def->defname, "oids") == 0)
+		if (def->defnamespace == NULL &&
+			pg_strcasecmp(def->defname, "oids") == 0)
 			return defGetBoolean(def);
 	}
 
@@ -965,7 +518,9 @@ extractRemainingColumns(List *common_colnames,
  *	  Result is a transformed qualification expression.
  */
 static Node *
-transformJoinUsingClause(ParseState *pstate, List *leftVars, List *rightVars)
+transformJoinUsingClause(ParseState *pstate,
+						 RangeTblEntry *leftRTE, RangeTblEntry *rightRTE,
+						 List *leftVars, List *rightVars)
 {
 	Node	   *result = NULL;
 	ListCell   *lvars,
@@ -975,17 +530,25 @@ transformJoinUsingClause(ParseState *pstate, List *leftVars, List *rightVars)
 	 * We cheat a little bit here by building an untransformed operator tree
 	 * whose leaves are the already-transformed Vars.  This is OK because
 	 * transformExpr() won't complain about already-transformed subnodes.
+	 * However, this does mean that we have to mark the columns as requiring
+	 * SELECT privilege for ourselves; transformExpr() won't do it.
 	 */
 	forboth(lvars, leftVars, rvars, rightVars)
 	{
-		Node	   *lvar = (Node *) lfirst(lvars);
-		Node	   *rvar = (Node *) lfirst(rvars);
+		Var		   *lvar = (Var *) lfirst(lvars);
+		Var		   *rvar = (Var *) lfirst(rvars);
 		A_Expr	   *e;
 
+		/* Require read access to the join variables */
+		markVarForSelectPriv(pstate, lvar, leftRTE);
+		markVarForSelectPriv(pstate, rvar, rightRTE);
+
+		/* Now create the lvar = rvar join condition */
 		e = makeSimpleA_Expr(AEXPR_OP, "=",
 							 copyObject(lvar), copyObject(rvar),
 							 -1);
 
+		/* And combine into an AND clause, if multiple join columns */
 		if (result == NULL)
 			result = (Node *) e;
 		else
@@ -1003,7 +566,7 @@ transformJoinUsingClause(ParseState *pstate, List *leftVars, List *rightVars)
 	 * transformJoinOnClause() does.  Just invoke transformExpr() to fix up
 	 * the operators, and we're done.
 	 */
-	result = transformExpr(pstate, result);
+	result = transformExpr(pstate, result, EXPR_KIND_JOIN_USING);
 
 	result = coerce_to_boolean(pstate, result, "JOIN/USING");
 
@@ -1042,7 +605,8 @@ transformJoinOnClause(ParseState *pstate, JoinExpr *j,
 	pstate->p_relnamespace = relnamespace;
 	pstate->p_varnamespace = list_make2(l_rte, r_rte);
 
-	result = transformWhereClause(pstate, j->quals, "JOIN/ON");
+	result = transformWhereClause(pstate, j->quals,
+								  EXPR_KIND_JOIN_ON, "JOIN/ON");
 
 	pstate->p_relnamespace = save_relnamespace;
 	pstate->p_varnamespace = save_varnamespace;
@@ -1061,7 +625,9 @@ transformJoinOnClause(ParseState *pstate, JoinExpr *j,
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
 		 errmsg("JOIN/ON clause refers to \"%s\", which is not part of JOIN",
-				rt_fetch(varno, pstate->p_rtable)->eref->aliasname)));
+				rt_fetch(varno, pstate->p_rtable)->eref->aliasname),
+				 parser_errposition(pstate,
+								 locate_var_of_relation(result, varno, 0))));
 	}
 	bms_free(clause_varnos);
 
@@ -1116,17 +682,27 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 	/*
 	 * We require user to supply an alias for a subselect, per SQL92. To relax
 	 * this, we'd have to be prepared to gin up a unique alias for an
-	 * unlabeled subselect.
+	 * unlabeled subselect.  (This is just elog, not ereport, because the
+	 * grammar should have enforced it already.)
 	 */
 	if (r->alias == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("subquery in FROM must have an alias")));
+		elog(ERROR, "subquery in FROM must have an alias");
+
+	/*
+	 * Set p_expr_kind to show this parse level is recursing to a subselect.
+	 * We can't be nested within any expression, so don't need save-restore
+	 * logic here.
+	 */
+	Assert(pstate->p_expr_kind == EXPR_KIND_NONE);
+	pstate->p_expr_kind = EXPR_KIND_FROM_SUBSELECT;
 
 	/*
 	 * Analyze and transform the subquery.
 	 */
 	query = parse_sub_analyze(r->subquery, pstate);
+
+	/* Restore state */
+	pstate->p_expr_kind = EXPR_KIND_NONE;
 
 	/*
 	 * Check that we got something reasonable.	Many of these conditions are
@@ -1253,7 +829,7 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 	/*
 	 * Transform the raw expression.
 	 */
-	funcexpr = transformExpr(pstate, r->funccallnode);
+	funcexpr = transformExpr(pstate, r->funccallnode, EXPR_KIND_FROM_FUNCTION);
 
 	/*
 	 * The function parameters cannot make use of any variables from other
@@ -1272,20 +848,6 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 					 errmsg("function expression in FROM cannot refer to other relations of same query level"),
 					 parser_errposition(pstate,
 										locate_var_of_level(funcexpr, 0))));
-	}
-
-	/*
-	 * Disallow aggregate functions in the expression.	(No reason to postpone
-	 * this check until parseCheckAggregates.)
-	 */
-	if (pstate->p_hasAggs)
-	{
-		if (checkExprHasAggs(funcexpr))
-			ereport(ERROR,
-					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("cannot use aggregate function in function expression in FROM"),
-					 parser_errposition(pstate,
-										locate_agg_of_level(funcexpr, 0))));
 	}
 
 	/*
@@ -1351,39 +913,20 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 	if (IsA(n, RangeVar))
 	{
 		/* Plain relation reference, or perhaps a CTE reference */
-		RangeVar *rv = (RangeVar *) n;
+		RangeVar   *rv = (RangeVar *) n;
 		RangeTblRef *rtr;
 		RangeTblEntry *rte = NULL;
 		int			rtindex;
 
-		/*
-		 * If it is an unqualified name, it might be a reference to some
-		 * CTE visible in this or a parent query.
-		 */
+		/* if it is an unqualified name, it might be a CTE reference */
 		if (!rv->schemaname)
 		{
-			ParseState *ps;
-			Index	levelsup;
+			CommonTableExpr *cte;
+			Index		levelsup;
 
-			for (ps = pstate, levelsup = 0;
-				 ps != NULL;
-				 ps = ps->parentParseState, levelsup++)
-			{
-				ListCell *lc;
-
-				foreach(lc, ps->p_ctenamespace)
-				{
-					CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
-
-					if (strcmp(rv->relname, cte->ctename) == 0)
-					{
-						rte = transformCTEReference(pstate, rv, cte, levelsup);
-						break;
-					}
-				}
-				if (rte)
-					break;
-			}
+			cte = scanNameSpaceForCTE(pstate, rv->relname, &levelsup);
+			if (cte)
+				rte = transformCTEReference(pstate, rv, cte, levelsup);
 		}
 
 		/* if not found as a CTE, must be a table reference */
@@ -1460,6 +1003,7 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 				   *r_colvars,
 				   *res_colvars;
 		RangeTblEntry *rte;
+		int			k;
 
 		/*
 		 * Recursively process the left and right subtrees
@@ -1644,6 +1188,8 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 			}
 
 			j->quals = transformJoinUsingClause(pstate,
+												l_rte,
+												r_rte,
 												l_usingvars,
 												r_usingvars);
 		}
@@ -1704,6 +1250,12 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		*top_rte = rte;
 		*top_rti = j->rtindex;
 
+		/* make a matching link to the JoinExpr for later use */
+		for (k = list_length(pstate->p_joinexprs) + 1; k < j->rtindex; k++)
+			pstate->p_joinexprs = lappend(pstate->p_joinexprs, NULL);
+		pstate->p_joinexprs = lappend(pstate->p_joinexprs, j);
+		Assert(list_length(pstate->p_joinexprs) == j->rtindex);
+
 		/*
 		 * Prepare returned namespace list.  If the JOIN has an alias then it
 		 * hides the contained RTEs as far as the relnamespace goes;
@@ -1755,9 +1307,10 @@ buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 	outcoltypmod = l_colvar->vartypmod;
 	if (outcoltype != r_colvar->vartype)
 	{
-		outcoltype = select_common_type(list_make2_oid(l_colvar->vartype,
-													   r_colvar->vartype),
-										"JOIN/USING");
+		outcoltype = select_common_type(pstate,
+										list_make2(l_colvar, r_colvar),
+										"JOIN/USING",
+										NULL);
 		outcoltypmod = -1;		/* ie, unknown */
 	}
 	else if (outcoltypmod != r_colvar->vartypmod)
@@ -1775,8 +1328,7 @@ buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 	if (l_colvar->vartype != outcoltype)
 		l_node = coerce_type(pstate, (Node *) l_colvar, l_colvar->vartype,
 							 outcoltype, outcoltypmod,
-							 COERCION_IMPLICIT, COERCE_IMPLICIT_CAST,
-							 -1);
+							 COERCION_IMPLICIT, COERCE_IMPLICIT_CAST, -1);
 	else if (l_colvar->vartypmod != outcoltypmod)
 		l_node = (Node *) makeRelabelType((Expr *) l_colvar,
 										  outcoltype, outcoltypmod,
@@ -1787,8 +1339,7 @@ buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 	if (r_colvar->vartype != outcoltype)
 		r_node = coerce_type(pstate, (Node *) r_colvar, r_colvar->vartype,
 							 outcoltype, outcoltypmod,
-							 COERCION_IMPLICIT, COERCE_IMPLICIT_CAST,
-							 -1);
+							 COERCION_IMPLICIT, COERCE_IMPLICIT_CAST, -1);
 	else if (r_colvar->vartypmod != outcoltypmod)
 		r_node = (Node *) makeRelabelType((Expr *) r_colvar,
 										  outcoltype, outcoltypmod,
@@ -1831,6 +1382,7 @@ buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 
 				c->coalescetype = outcoltype;
 				c->args = list_make2(l_node, r_node);
+				c->location = -1;
 				res_node = (Node *) c;
 				break;
 			}
@@ -1853,14 +1405,14 @@ buildMergedJoinVar(ParseState *pstate, JoinType jointype,
  */
 Node *
 transformWhereClause(ParseState *pstate, Node *clause,
-					 const char *constructName)
+					 ParseExprKind exprKind, const char *constructName)
 {
 	Node	   *qual;
 
 	if (clause == NULL)
 		return NULL;
 
-	qual = transformExpr(pstate, clause);
+	qual = transformExpr(pstate, clause, exprKind);
 
 	qual = coerce_to_boolean(pstate, qual, constructName);
 
@@ -1880,23 +1432,39 @@ transformWhereClause(ParseState *pstate, Node *clause,
  */
 Node *
 transformLimitClause(ParseState *pstate, Node *clause,
-					 const char *constructName)
+					 ParseExprKind exprKind, const char *constructName)
 {
 	Node	   *qual;
 
 	if (clause == NULL)
 		return NULL;
 
-	qual = transformExpr(pstate, clause);
+	qual = transformExpr(pstate, clause, exprKind);
 
 	qual = coerce_to_specific_type(pstate, qual, INT8OID, constructName);
 
-	/*
-	 * LIMIT can't refer to any vars or aggregates of the current query; we
-	 * don't allow subselects either (though that case would at least be
-	 * sensible)
-	 */
-	if (contain_vars_of_level(qual, 0))
+	/* LIMIT can't refer to any variables of the current query */
+	checkExprIsVarFree(pstate, qual, constructName);
+
+	return qual;
+}
+
+/*
+ * checkExprIsVarFree
+ *		Check that given expr has no Vars of the current query level
+ *		(aggregates and window functions should have been rejected already).
+ *
+ * This is used to check expressions that have to have a consistent value
+ * across all rows of the query, such as a LIMIT.  Arguably it should reject
+ * volatile functions, too, but we don't do that --- whatever value the
+ * function gives on first execution is what you get.
+ *
+ * constructName does not affect the semantics, but is used in error messages
+ */
+static void
+checkExprIsVarFree(ParseState *pstate, Node *n, const char *constructName)
+{
+	if (contain_vars_of_level(n, 0))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
@@ -1904,28 +1472,57 @@ transformLimitClause(ParseState *pstate, Node *clause,
 				 errmsg("argument of %s must not contain variables",
 						constructName),
 				 parser_errposition(pstate,
-									locate_var_of_level(qual, 0))));
+									locate_var_of_level(n, 0))));
 	}
-	if (checkExprHasAggs(qual))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-		/* translator: %s is name of a SQL construct, eg LIMIT */
-				 errmsg("argument of %s must not contain aggregates",
-						constructName),
-				 parser_errposition(pstate,
-									locate_agg_of_level(qual, 0))));
-	}
-	if (contain_subplans(qual))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		/* translator: %s is name of a SQL construct, eg LIMIT */
-				 errmsg("argument of %s must not contain subqueries",
-						constructName)));
-	}
+}
 
-	return qual;
+
+/*
+ * checkTargetlistEntrySQL92 -
+ *	  Validate a targetlist entry found by findTargetlistEntrySQL92
+ *
+ * When we select a pre-existing tlist entry as a result of syntax such
+ * as "GROUP BY 1", we have to make sure it is acceptable for use in the
+ * indicated clause type; transformExpr() will have treated it as a regular
+ * targetlist item.
+ */
+static void
+checkTargetlistEntrySQL92(ParseState *pstate, TargetEntry *tle,
+						  ParseExprKind exprKind)
+{
+	switch (exprKind)
+	{
+		case EXPR_KIND_GROUP_BY:
+			/* reject aggregates and window functions */
+			if (pstate->p_hasAggs &&
+				contain_aggs_of_level((Node *) tle->expr, 0))
+				ereport(ERROR,
+						(errcode(ERRCODE_GROUPING_ERROR),
+						 /* translator: %s is name of a SQL construct, eg GROUP BY */
+						 errmsg("aggregate functions are not allowed in %s",
+								ParseExprKindName(exprKind)),
+						 parser_errposition(pstate,
+											locate_agg_of_level((Node *) tle->expr, 0))));
+			if (pstate->p_hasWindowFuncs &&
+				contain_windowfuncs((Node *) tle->expr))
+				ereport(ERROR,
+						(errcode(ERRCODE_WINDOWING_ERROR),
+						 /* translator: %s is name of a SQL construct, eg GROUP BY */
+						 errmsg("window functions are not allowed in %s",
+								ParseExprKindName(exprKind)),
+						 parser_errposition(pstate,
+											locate_windowfunc((Node *) tle->expr))));
+			break;
+		case EXPR_KIND_ORDER_BY:
+			/* no extra checks needed */
+			break;
+		case EXPR_KIND_DISTINCT_ON:
+			/* no extra checks needed */
+			break;
+		default:
+			elog(ERROR, "unexpected exprKind in checkTargetlistEntrySQL92");
+			break;
+	}
 }
 
 /*
@@ -1960,6 +1557,7 @@ transformLimitClause(ParseState *pstate, Node *clause,
 static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 									   List **tlist, bool in_grpext,
 									   bool ignore_in_grpext,
+									   ParseExprKind exprKind,
                                        bool useSQL99)
 {
 	List *result_list = NIL;
@@ -1983,6 +1581,7 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 			subresult_list = findListTargetlistEntries(pstate, lfirst(gl),
 													   tlist, true, 
                                                        ignore_in_grpext,
+													   exprKind,
                                                        useSQL99);
 
 			result_list = list_concat(result_list, subresult_list);
@@ -2011,10 +1610,11 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 			TargetEntry *tle;
 
             if (useSQL99)
-                tle = findTargetlistEntrySQL99(pstate, rowexpr_arg, tlist);
+                tle = findTargetlistEntrySQL99(pstate, rowexpr_arg, tlist,
+											   exprKind);
             else
                 tle = findTargetlistEntrySQL92(pstate, rowexpr_arg, tlist,
-                                               GROUP_CLAUSE);
+                                               exprKind);
 
 			/* If RowExpr does not appear immediately inside a GROUPING SETS,
 			 * we append its targetlit to the given targetlist.
@@ -2029,9 +1629,9 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 		TargetEntry *tle;
 
         if (useSQL99)
-            tle = findTargetlistEntrySQL99(pstate, node, tlist);
+            tle = findTargetlistEntrySQL99(pstate, node, tlist, exprKind);
         else
-            tle = findTargetlistEntrySQL92(pstate, node, tlist, GROUP_CLAUSE);
+            tle = findTargetlistEntrySQL92(pstate, node, tlist, exprKind);
 
 		result_list = lappend(result_list, tle);
 	}
@@ -2054,11 +1654,11 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
  *
  * node		the ORDER BY, GROUP BY, or DISTINCT ON expression to be matched
  * tlist	the target list (passed by reference so we can append to it)
- * clause	identifies clause type being processed
+ * exprKind	identifies clause type being processed
  */
 static TargetEntry *
 findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
-						 int clause)
+						 ParseExprKind exprKind)
 {
 	ListCell   *tl;
 
@@ -2102,12 +1702,13 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 	 *----------
 	 */
 	if (IsA(node, ColumnRef) &&
-		list_length(((ColumnRef *) node)->fields) == 1)
+		list_length(((ColumnRef *) node)->fields) == 1 &&
+		IsA(linitial(((ColumnRef *) node)->fields), String))
 	{
 		char	   *name = strVal(linitial(((ColumnRef *) node)->fields));
 		int			location = ((ColumnRef *) node)->location;
 
-		if (clause == GROUP_CLAUSE)
+		if (exprKind == EXPR_KIND_GROUP_BY)
 		{
 			/*
 			 * In GROUP BY, we must prefer a match against a FROM-clause
@@ -2149,7 +1750,8 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 							/*------
 							  translator: first %s is name of a SQL construct, eg ORDER BY */
 									 errmsg("%s \"%s\" is ambiguous",
-											clauseText[clause], name),
+											ParseExprKindName(exprKind),
+											name),
 									 parser_errposition(pstate, location)));
 					}
 					else
@@ -2158,7 +1760,11 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 				}
 			}
 			if (target_result != NULL)
-				return target_result;	/* return the first match */
+			{
+				/* return the first match, after suitable validation */
+				checkTargetlistEntrySQL92(pstate, target_result, exprKind);
+				return target_result;
+			}
 		}
 	}
 	if (IsA(node, A_Const))
@@ -2173,7 +1779,7 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 			/* translator: %s is name of a SQL construct, eg ORDER BY */
 					 errmsg("non-integer constant in %s",
-							clauseText[clause]),
+							ParseExprKindName(exprKind)),
 					 parser_errposition(pstate, location)));
 
 		target_pos = intVal(val);
@@ -2184,21 +1790,25 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 			if (!tle->resjunk)
 			{
 				if (++targetlist_pos == target_pos)
-					return tle; /* return the unique match */
+				{
+					/* return the unique match, after suitable validation */
+					checkTargetlistEntrySQL92(pstate, tle, exprKind);
+					return tle;
+				}
 			}
 		}
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
 		/* translator: %s is name of a SQL construct, eg ORDER BY */
 				 errmsg("%s position %d is not in select list",
-						clauseText[clause], target_pos),
+						ParseExprKindName(exprKind), target_pos),
 				 parser_errposition(pstate, location)));
 	}
 
 	/*
 	 * Otherwise, we have an expression, so process it per SQL99 rules.
 	 */
-	return findTargetlistEntrySQL99(pstate, node, tlist);
+	return findTargetlistEntrySQL99(pstate, node, tlist, exprKind);
 }
 
 /*
@@ -2212,9 +1822,11 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
  *
  * node		the ORDER BY, GROUP BY, etc expression to be matched
  * tlist	the target list (passed by reference so we can append to it)
+ * exprKind	identifies clause type being processed
  */
 static TargetEntry *
-findTargetlistEntrySQL99(ParseState *pstate, Node *node, List **tlist)
+findTargetlistEntrySQL99(ParseState *pstate, Node *node, List **tlist,
+						 ParseExprKind exprKind)
 {
 	TargetEntry *target_result;
 	ListCell   *tl;
@@ -2227,7 +1839,7 @@ findTargetlistEntrySQL99(ParseState *pstate, Node *node, List **tlist)
 	 * resjunk target here, though the SQL92 cases above must ignore resjunk
 	 * targets.
 	 */
-	expr = transformExpr(pstate, node);
+	expr = transformExpr(pstate, node, exprKind);
 
 	foreach(tl, *tlist)
 	{
@@ -2242,24 +1854,12 @@ findTargetlistEntrySQL99(ParseState *pstate, Node *node, List **tlist)
 	 * end of the target list.	This target is given resjunk = TRUE so that it
 	 * will not be projected into the final tuple.
 	 */
-	target_result = transformTargetEntry(pstate, node, expr, NULL, true);
+	target_result = transformTargetEntry(pstate, node, expr, exprKind,
+										 NULL, true);
 
 	*tlist = lappend(*tlist, target_result);
 
 	return target_result;
-}
-
-static GroupClause *
-make_group_clause(TargetEntry *tle, List *targetlist,
-				  Oid sortop, bool nulls_first)
-{
-	GroupClause *result;
-
-	result = makeNode(GroupClause);
-	result->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
-	result->sortop = sortop;
-	result->nulls_first = nulls_first;
-	return result;
 }
 
 /*
@@ -2320,17 +1920,20 @@ make_grouping_clause(ParseState *pstate, GroupingClause *grpcl, List* targetList
 		else
 		{
 			TargetEntry *tle = findTargetlistEntrySQL92(pstate, node,
-                                                        &targetList, GROUP_CLAUSE);
-			Oid          sort_op;
+                                                        &targetList, EXPR_KIND_GROUP_BY);
+			Oid			sortop;
+			Oid			eqop;
 
 			/* Unlike ordinary grouping sets, we will create duplicate
 			 * expression entries. For example, rollup(a,a) consists
 			 * of three grouping sets "(a,a), (a), ()".
 			 */
-			sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
+			get_sort_group_operators(exprType((Node *) tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			result->groupsets =
 				lappend(result->groupsets,
-						make_group_clause(tle, targetList, sort_op, false));
+						make_group_clause(tle, targetList, eqop, sortop, false));
 		}
 	}
 
@@ -2432,7 +2035,7 @@ grouping_rewrite_walker(Node *node, void *context)
 	else if(IsA(node, SortBy))
 	{
 		/*
-		 * When WindowSpec leaves the main parser, partition and order
+		 * When WindowClause leaves the main parser, partition and order
 		 * clauses will be lists of SortBy structures. Process them here to
 		 * avoid muddying up the expression_tree_walker().
 		 */
@@ -2473,7 +2076,7 @@ create_group_clause(List *tlist_group, List *targetlist,
 	 */
 	foreach(l, sortClause)
 	{
-		SortClause *sc = (SortClause *) lfirst(l);
+		SortGroupClause *sc = (SortGroupClause *) lfirst(l);
 		ListCell   *prev = NULL;
 		ListCell   *tl = NULL;
 		bool		found = false;
@@ -2489,13 +2092,13 @@ create_group_clause(List *tlist_group, List *targetlist,
 				if (!tle->resjunk &&
 					sc->tleSortGroupRef == tle->ressortgroupref)
 				{
-					GroupClause *gc;
+					SortGroupClause *gc;
 
 					tlist = list_delete_cell(tlist, tl, prev);
 
 					/* Use the sort clause's sorting information */
 					gc = make_group_clause(tle, targetlist,
-										   sc->sortop, sc->nulls_first);
+										   sc->eqop, sc->sortop, sc->nulls_first);
 					result = lappend(result, gc);
 					found = true;
 					break;
@@ -2516,7 +2119,19 @@ create_group_clause(List *tlist_group, List *targetlist,
 	return result;
 }
 
+static SortGroupClause *
+make_group_clause(TargetEntry *tle, List *targetlist,
+				  Oid eqop, Oid sortop, bool nulls_first)
+{
+	SortGroupClause *result;
 
+	result = makeNode(SortGroupClause);
+	result->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
+	result->eqop = eqop;
+	result->sortop = sortop;
+	result->nulls_first = nulls_first;
+	return result;
+}
 
 /*
  * transformGroupClause -
@@ -2527,16 +2142,11 @@ create_group_clause(List *tlist_group, List *targetlist,
  *
  * GROUP BY items will be added to the targetlist (as resjunk columns)
  * if not already present, so the targetlist must be passed by reference.
- *
- * The order of the elements of the grouping clause does not affect
- * the semantics of the query. However, the optimizer is not currently
- * smart enough to reorder the grouping clause, so we try to do some
- * primitive reordering here.
  */
 List *
 transformGroupClause(ParseState *pstate, List *grouplist,
 					 List **targetlist, List *sortClause,
-                     bool useSQL99)
+                     ParseExprKind exprKind, bool useSQL99)
 {
 	List	   *result = NIL;
 	List	   *tle_list = NIL;
@@ -2554,7 +2164,7 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 
 		node = (Node*)lfirst(l);
 		tl = findListTargetlistEntries(pstate, node, targetlist, false, false, 
-                                       useSQL99);
+                                       exprKind, useSQL99);
 
 		foreach(tl_cell, tl)
 		{
@@ -2610,9 +2220,6 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 	foreach(l, reorder_grouplist)
 	{
 		Node *node = (Node*) lfirst(l);
-		TargetEntry *tle;
-		GroupClause *gc;
-		Oid			sort_op;
 
 		if (node == NULL) /* the empty grouping set */
 			result = list_concat(result, list_make1(NIL));
@@ -2640,12 +2247,17 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 
 		else
 		{
+			TargetEntry *tle;
+			SortGroupClause *gc;
+			Oid			sortop;
+			Oid			eqop;
 
-            if (useSQL99)
-                tle = findTargetlistEntrySQL99(pstate, node, targetlist);
-            else
-                tle = findTargetlistEntrySQL92(pstate, node, targetlist, 
-                                               GROUP_CLAUSE);
+			if (useSQL99)
+				tle = findTargetlistEntrySQL99(pstate, node, targetlist,
+											   exprKind);
+			else
+				tle = findTargetlistEntrySQL92(pstate, node, targetlist, 
+											   exprKind);
 
 			/*
 			 * Avoid making duplicate grouplist entries.  Note that we don't
@@ -2654,11 +2266,13 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 			 * "GROUP BY foo ORDER BY foo USING <<<", the GROUP BY operation
 			 * silently takes on the equality semantics implied by the ORDER BY.
 			 */
-			if (targetIsInSortGroupList(tle, InvalidOid, result))
+			if (targetIsInSortList(tle, InvalidOid, result))
 				continue;
 
-			sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
-			gc = make_group_clause(tle, *targetlist, sort_op, false);
+			get_sort_group_operators(exprType((Node *) tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
+			gc = make_group_clause(tle, *targetlist, eqop, sortop, false);
 			result = lappend(result, gc);
 		}
 	}
@@ -2667,44 +2281,21 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 	 * extensions.
 	 */
 	{
-		List *grp_tles = NIL;
 		ListCell *lc;
-		grouping_rewrite_ctx ctx;
 
-		/* Find all unique target entries appeared in reorder_grouplist. */
+		/*
+		 * Find all unique target entries appeared in reorder_grouplist.
+		 * We stash them in the ParseState, to be processed later by
+		 * processExtendedGrouping().
+		 */
 		foreach (lc, reorder_grouplist)
 		{
-			grp_tles = list_concat_unique(
-				grp_tles,
+			pstate->p_grp_tles = list_concat_unique(
+				pstate->p_grp_tles,
 				findListTargetlistEntries(pstate, lfirst(lc),
-										  targetlist, false, true, useSQL99));
+										  targetlist, false, true,
+										  exprKind, useSQL99));
 		}
-
-		/*
-		 * For each GROUPING function, check if its argument(s) appear in the
-		 * GROUP BY clause. We also set ngrpcols, nargs and grpargs values for
-		 * each GROUPING function here. These values are used together with
-		 * GROUPING_ID to calculate the final value for each GROUPING function
-		 * in the executor.
-		 */
-
-		ctx.grp_tles = grp_tles;
-		ctx.pstate = pstate;
-		expression_tree_walker((Node *)*targetlist, grouping_rewrite_walker,
-							   (void *)&ctx);
-
-		/*
-		 * The expression might be present in a window clause as well
-		 * so process those.
-		 */
-		expression_tree_walker((Node *)pstate->p_win_clauses,
-							   grouping_rewrite_walker, (void *)&ctx);
-
-		/*
-		 * The expression might be present in the having clause as well.
-		 */
-		expression_tree_walker(pstate->having_qual,
-							   grouping_rewrite_walker, (void *)&ctx);
 	}
 
 	list_free(tle_list);
@@ -2712,6 +2303,42 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 	freeGroupList(reorder_grouplist);
 
 	return result;
+}
+
+void
+processExtendedGrouping(ParseState *pstate,
+						Node *havingQual,
+						List *windowClause,
+						List *targetlist)
+{
+	grouping_rewrite_ctx ctx;
+
+	/*
+	 * For each GROUPING function, check if its argument(s) appear in the
+	 * GROUP BY clause. We also set ngrpcols, nargs and grpargs values for
+	 * each GROUPING function here. These values are used together with
+	 * GROUPING_ID to calculate the final value for each GROUPING function
+	 * in the executor.
+	 */
+	ctx.pstate = pstate;
+	ctx.grp_tles = pstate->p_grp_tles;
+	pstate->p_grp_tles = NIL;
+
+	expression_tree_walker((Node *) targetlist, grouping_rewrite_walker,
+						   (void *)&ctx);
+
+	/*
+	 * The expression might be present in a window clause as well
+	 * so process those.
+	 */
+	expression_tree_walker((Node *) windowClause,
+						   grouping_rewrite_walker, (void *)&ctx);
+
+	/*
+	 * The expression might be present in the having clause as well.
+	 */
+	expression_tree_walker(havingQual,
+						   grouping_rewrite_walker, (void *)&ctx);
 }
 
 /*
@@ -2728,6 +2355,7 @@ List *
 transformSortClause(ParseState *pstate,
 					List *orderlist,
 					List **targetlist,
+					ParseExprKind exprKind,
 					bool resolveUnknown,
 					bool useSQL99)
 {
@@ -2740,10 +2368,11 @@ transformSortClause(ParseState *pstate,
 		TargetEntry *tle;
 
 		if (useSQL99)
-			tle = findTargetlistEntrySQL99(pstate, sortby->node, targetlist);
+			tle = findTargetlistEntrySQL99(pstate, sortby->node,
+										   targetlist, exprKind);
 		else
-			tle = findTargetlistEntrySQL92(pstate, sortby->node, targetlist,
-										   ORDER_CLAUSE);
+			tle = findTargetlistEntrySQL92(pstate, sortby->node,
+										   targetlist, exprKind);
 
 		sortlist = addTargetToSortList(pstate, tle,
 									   sortlist, *targetlist, sortby,
@@ -2754,13 +2383,229 @@ transformSortClause(ParseState *pstate,
 }
 
 /*
+ * transformWindowDefinitions -
+ *		transform window definitions (WindowDef to WindowClause)
  *
+ * There's a fair bit to do here: column references in the PARTITION and
+ * ORDER clauses must be valid; ORDER clause must present if the function
+ * requires; the frame clause must be checked to ensure that the function
+ * supports framing, that the framed column is of the right type, that the
+ * offset is sane, that the start and end of the frame are sane.
+ * Then we translate it to use the proper parse nodes for the respective
+ * part of the clause.
+ */
+List *
+transformWindowDefinitions(ParseState *pstate,
+						   List *windowdefs,
+						   List **targetlist)
+{
+	List	   *result = NIL;
+	Index		winref = 0;
+	ListCell   *lc;
+
+	/*
+	 * We have two lists of window specs: one in the ParseState -- put there
+	 * when we find the OVER(...) clause in the targetlist and the other
+	 * is windowClause, a list of named window clauses. So, we concatenate
+	 * them together.
+	 *
+	 * Note that we're careful place those found in the target list at
+	 * the end because the spec might refer to a named clause and we'll
+	 * after to know about those first.
+	 */
+	foreach(lc, windowdefs)
+	{
+		WindowDef  *windef = lfirst(lc);
+		WindowClause *refwc = NULL;
+		List	   *partitionClause;
+		List	   *orderClause;
+		WindowClause *wc;
+
+		winref++;
+
+		/*
+		 * Check for duplicate window names.
+		 */
+		if (windef->name &&
+			findWindowClause(result, windef->name) != NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_WINDOWING_ERROR),
+					 errmsg("window \"%s\" is already defined", windef->name),
+					 parser_errposition(pstate, windef->location)));
+
+		/*
+		 * If it references a previous window, look that up.
+		 */
+		if (windef->refname)
+		{
+			refwc = findWindowClause(result, windef->refname);
+			if (refwc == NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("window \"%s\" does not exist",
+								windef->refname),
+						 parser_errposition(pstate, windef->location)));
+		}
+
+		/*
+		 * Transform PARTITION and ORDER specs, if any.  These are treated
+		 * almost exactly like top-level GROUP BY and ORDER BY clauses,
+		 * including the special handling of nondefault operator semantics.
+		 */
+		orderClause =
+			transformSortClause(pstate,
+								windef->orderClause,
+								targetlist,
+								EXPR_KIND_WINDOW_ORDER,
+								true /* fix unknowns */ ,
+								true /* force SQL99 rules */ );
+		partitionClause =
+			transformSortClause(pstate,
+								windef->partitionClause,
+								targetlist,
+								EXPR_KIND_WINDOW_PARTITION,
+								true /* fix unknowns */ ,
+								true /* force SQL99 rules */ );
+
+		/*
+		 * And prepare the new WindowClause.
+		 */
+		wc = makeNode(WindowClause);
+		wc->name = windef->name;
+		wc->refname = windef->refname;
+
+		/*
+		 * Per spec, a windowdef that references a previous one copies the
+		 * previous partition clause (and mustn't specify its own).  It can
+		 * specify its own ordering clause, but only if the previous one had
+		 * none.  It always specifies its own frame clause, and the previous
+		 * one must not have a frame clause.  Yeah, it's bizarre that each of
+		 * these cases works differently, but SQL:2008 says so; see 7.11
+		 * <window clause> syntax rule 10 and general rule 1.  The frame
+		 * clause rule is especially bizarre because it makes "OVER foo"
+		 * different from "OVER (foo)", and requires the latter to throw an
+		 * error if foo has a nondefault frame clause.  Well, ours not to
+		 * reason why, but we do go out of our way to throw a useful error
+		 * message for such cases.
+		 */
+		if (refwc)
+		{
+			if (partitionClause)
+				ereport(ERROR,
+						(errcode(ERRCODE_WINDOWING_ERROR),
+				errmsg("cannot override PARTITION BY clause of window \"%s\"",
+					   windef->refname),
+						 parser_errposition(pstate, windef->location)));
+			wc->partitionClause = copyObject(refwc->partitionClause);
+		}
+		else
+			wc->partitionClause = partitionClause;
+		if (refwc)
+		{
+			if (orderClause && refwc->orderClause)
+				ereport(ERROR,
+						(errcode(ERRCODE_WINDOWING_ERROR),
+				   errmsg("cannot override ORDER BY clause of window \"%s\"",
+						  windef->refname),
+						 parser_errposition(pstate, windef->location)));
+			if (orderClause)
+			{
+				wc->orderClause = orderClause;
+				wc->copiedOrder = false;
+			}
+			else
+			{
+				wc->orderClause = copyObject(refwc->orderClause);
+				wc->copiedOrder = true;
+			}
+		}
+		else
+		{
+			wc->orderClause = orderClause;
+			wc->copiedOrder = false;
+		}
+		if (refwc && refwc->frameOptions != FRAMEOPTION_DEFAULTS)
+		{
+			/*
+			 * Use this message if this is a WINDOW clause, or if it's an OVER
+			 * clause that includes ORDER BY or framing clauses.  (We already
+			 * rejected PARTITION BY above, so no need to check that.)
+			 */
+			if (windef->name ||
+				orderClause || windef->frameOptions != FRAMEOPTION_DEFAULTS)
+				ereport(ERROR,
+						(errcode(ERRCODE_WINDOWING_ERROR),
+						 errmsg("cannot copy window \"%s\" because it has a frame clause",
+								windef->refname),
+						 parser_errposition(pstate, windef->location)));
+			/* Else this clause is just OVER (foo), so say this: */
+			ereport(ERROR,
+					(errcode(ERRCODE_WINDOWING_ERROR),
+					 errmsg("cannot copy window \"%s\" because it has a frame clause",
+							windef->refname),
+					 errhint("Omit the parentheses in this OVER clause."),
+					 parser_errposition(pstate, windef->location)));
+		}
+
+		/*
+		 * Finally, process the framing clause. parseProcessWindFunc() will
+		 * have picked up window functions that do not support framing.
+		 *
+		 * What we do need to do is the following:
+		 * - If BETWEEN has been specified, the trailing bound is not
+		 *   UNBOUNDED FOLLOWING; the leading bound is not UNBOUNDED
+		 *   PRECEDING; if the first bound specifies CURRENT ROW, the
+		 *   second bound shall not specify a PRECEDING bound; if the
+		 *   first bound specifies a FOLLOWING bound, the second bound
+		 *   shall not specify a PRECEDING or CURRENT ROW bound.
+		 *
+		 * - If the user did not specify BETWEEN, the bound is assumed to be
+		 *   a trailing bound and the leading bound is set to CURRENT ROW.
+		 *   We're careful not to set is_between here because the user did not
+		 *   specify it.
+		 *
+		 * - If RANGE is specified: the ORDER BY clause of the window spec
+		 *   may specify only one column; the type of that column must support
+		 *   +/- <integer> operations and must be merge-joinable.
+		 */
+
+		wc->frameOptions = windef->frameOptions;
+		wc->winref = winref;
+		/* Process frame offset expressions */
+		wc->startOffset = transformFrameOffset(pstate, wc->frameOptions,
+											   windef->startOffset, wc->orderClause,
+											   *targetlist,
+											   (windef->frameOptions & FRAMEOPTION_START_VALUE_FOLLOWING) != 0,
+											   windef->location);
+		wc->endOffset = transformFrameOffset(pstate, wc->frameOptions,
+											 windef->endOffset, wc->orderClause,
+											 *targetlist,
+											 (windef->frameOptions & FRAMEOPTION_END_VALUE_FOLLOWING) != 0,
+											 windef->location);
+
+		/* finally, check function restriction with this spec. */
+		winref_checkspec(pstate, *targetlist, winref,
+						 PointerIsValid(wc->orderClause),
+						 wc->frameOptions != FRAMEOPTION_DEFAULTS);
+
+		result = lappend(result, wc);
+	}
+
+	/* If there are no window functions in the targetlist,
+	 * forget the window clause.
+	 */
+	if (!pstate->p_hasWindowFuncs)
+		pstate->p_windowdefs = NIL;
+
+	return result;
+}
+
+/*
  * transformDistinctToGroupBy
  *
  * 		transform DISTINCT clause to GROUP-BY clause
- *
  */
-static List *
+List *
 transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 							List **sortClause, List **groupClause)
 {
@@ -2800,19 +2645,6 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 														&sortby, true);
 			}
 		}
-
-		/*
-		 * fix tags of group clauses
-		 */
-		foreach(lc, group_clause_list)
-		{
-			Node *node = lfirst(lc);
-			if (IsA(node, SortClause))
-			{
-				SortClause *sc = (SortClause *) node;
-				sc->type = T_GroupClause;
-			}
-		}
 	}
 
 	*groupClause = group_clause_list;
@@ -2829,144 +2661,178 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 
 /*
  * transformDistinctClause -
- *	  transform a DISTINCT or DISTINCT ON clause
+ *	  transform a DISTINCT clause
  *
- * Since we may need to add items to the query's sortClause list, that list
- * is passed by reference.	Likewise for the targetlist.
+ * Since we may need to add items to the query's targetlist, that list
+ * is passed by reference.
+ *
+ * As with GROUP BY, we absorb the sorting semantics of ORDER BY as much as
+ * possible into the distinctClause.  This avoids a possible need to re-sort,
+ * and allows the user to choose the equality semantics used by DISTINCT,
+ * should she be working with a datatype that has more than one equality
+ * operator.
+ *
+ * is_agg is true if we are transforming an aggregate(DISTINCT ...)
+ * function call.  This does not affect any behavior, only the phrasing
+ * of error messages.
  */
 List *
-transformDistinctClause(ParseState *pstate, List *distinctlist,
-						List **targetlist, List **sortClause, List **groupClause)
+transformDistinctClause(ParseState *pstate,
+						List **targetlist, List *sortClause, bool is_agg)
 {
 	List	   *result = NIL;
 	ListCell   *slitem;
-	ListCell   *dlitem;
+	ListCell   *tlitem;
 
-	/* No work if there was no DISTINCT clause */
-	if (distinctlist == NIL)
-		return NIL;
-
-	if (linitial(distinctlist) == NULL)
+	/*
+	 * The distinctClause should consist of all ORDER BY items followed by all
+	 * other non-resjunk targetlist items.	There must not be any resjunk
+	 * ORDER BY items --- that would imply that we are sorting by a value that
+	 * isn't necessarily unique within a DISTINCT group, so the results
+	 * wouldn't be well-defined.  This construction ensures we follow the rule
+	 * that sortClause and distinctClause match; in fact the sortClause will
+	 * always be a prefix of distinctClause.
+	 *
+	 * Note a corner case: the same TLE could be in the ORDER BY list multiple
+	 * times with different sortops.  We have to include it in the
+	 * distinctClause the same way to preserve the prefix property. The net
+	 * effect will be that the TLE value will be made unique according to both
+	 * sortops.
+	 */
+	foreach(slitem, sortClause)
 	{
-		/* We had SELECT DISTINCT */
+		SortGroupClause *scl = (SortGroupClause *) lfirst(slitem);
+		TargetEntry *tle = get_sortgroupclause_tle(scl, *targetlist);
 
-		if (!pstate->p_hasAggs && !pstate->p_hasWindFuncs && *groupClause == NIL)
+		if (tle->resjunk)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+					 is_agg ?
+					 errmsg("in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list") :
+					 errmsg("for SELECT DISTINCT, ORDER BY expressions must appear in select list"),
+					 parser_errposition(pstate,
+										exprLocation((Node *) tle->expr))));
+		result = lappend(result, copyObject(scl));
+	}
+
+	/*
+	 * Now add any remaining non-resjunk tlist items, using default sort/group
+	 * semantics for their data types.
+	 */
+	foreach(tlitem, *targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(tlitem);
+
+		if (tle->resjunk)
+			continue;			/* ignore junk */
+		result = addTargetToGroupList(pstate, tle,
+									  result, *targetlist,
+									  exprLocation((Node *) tle->expr),
+									  true);
+	}
+
+	return result;
+}
+
+/*
+ * transformDistinctOnClause -
+ *	  transform a DISTINCT ON clause
+ *
+ * Since we may need to add items to the query's targetlist, that list
+ * is passed by reference.
+ *
+ * As with GROUP BY, we absorb the sorting semantics of ORDER BY as much as
+ * possible into the distinctClause.  This avoids a possible need to re-sort,
+ * and allows the user to choose the equality semantics used by DISTINCT,
+ * should she be working with a datatype that has more than one equality
+ * operator.
+ */
+List *
+transformDistinctOnClause(ParseState *pstate, List *distinctlist,
+						  List **targetlist, List *sortClause)
+{
+	List	   *result = NIL;
+	List	   *sortgrouprefs = NIL;
+	bool		skipped_sortitem;
+	ListCell   *lc;
+	ListCell   *lc2;
+
+	/*
+	 * Add all the DISTINCT ON expressions to the tlist (if not already
+	 * present, they are added as resjunk items).  Assign sortgroupref numbers
+	 * to them, and make a list of these numbers.  (NB: we rely below on the
+	 * sortgrouprefs list being one-for-one with the original distinctlist.
+	 * Also notice that we could have duplicate DISTINCT ON expressions and
+	 * hence duplicate entries in sortgrouprefs.)
+	 */
+	foreach(lc, distinctlist)
+	{
+		Node	   *dexpr = (Node *) lfirst(lc);
+		int			sortgroupref;
+		TargetEntry *tle;
+
+		tle = findTargetlistEntrySQL92(pstate, dexpr, targetlist,
+									   EXPR_KIND_DISTINCT_ON);
+		sortgroupref = assignSortGroupRef(tle, *targetlist);
+		sortgrouprefs = lappend_int(sortgrouprefs, sortgroupref);
+	}
+
+	/*
+	 * If the user writes both DISTINCT ON and ORDER BY, adopt the sorting
+	 * semantics from ORDER BY items that match DISTINCT ON items, and also
+	 * adopt their column sort order.  We insist that the distinctClause and
+	 * sortClause match, so throw error if we find the need to add any more
+	 * distinctClause items after we've skipped an ORDER BY item that wasn't
+	 * in DISTINCT ON.
+	 */
+	skipped_sortitem = false;
+	foreach(lc, sortClause)
+	{
+		SortGroupClause *scl = (SortGroupClause *) lfirst(lc);
+
+		if (list_member_int(sortgrouprefs, scl->tleSortGroupRef))
 		{
-			/*
-			 * MPP-15040
-			 * turn distinct clause into grouping clause to make both sort-based
-			 * and hash-based grouping implementations viable plan options
-			 */
-
-			return transformDistinctToGroupBy(pstate, targetlist, sortClause, groupClause);
-		}
-
-		/*
-		 * All non-resjunk elements from target list that are not already in
-		 * the sort list should be added to it.  (We don't really care what
-		 * order the DISTINCT fields are checked in, so we can leave the
-		 * user's ORDER BY spec alone, and just add additional sort keys to it
-		 * to ensure that all targetlist items get sorted.)
-		 */
-		*sortClause = addAllTargetsToSortList(pstate,
-											  *sortClause,
-											  *targetlist,
-											  true);
-
-		/*
-		 * Now, DISTINCT list consists of all non-resjunk sortlist items.
-		 * Actually, all the sortlist items had better be non-resjunk!
-		 * Otherwise, user wrote SELECT DISTINCT with an ORDER BY item that
-		 * does not appear anywhere in the SELECT targetlist, and we can't
-		 * implement that with only one sorting pass...
-		 */
-		foreach(slitem, *sortClause)
-		{
-			SortClause *scl = (SortClause *) lfirst(slitem);
-			TargetEntry *tle = get_sortgroupclause_tle(scl, *targetlist);
-
-			if (tle->resjunk)
+			if (skipped_sortitem)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-						 errmsg("for SELECT DISTINCT, ORDER BY expressions must appear in select list"),
+						 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions"),
 						 parser_errposition(pstate,
-											exprLocation((Node *) tle->expr))));
+								  get_matching_location(scl->tleSortGroupRef,
+														sortgrouprefs,
+														distinctlist))));
 			else
 				result = lappend(result, copyObject(scl));
 		}
+		else
+			skipped_sortitem = true;
 	}
-	else
+
+	/*
+	 * Now add any remaining DISTINCT ON items, using default sort/group
+	 * semantics for their data types.	(Note: this is pretty questionable; if
+	 * the ORDER BY list doesn't include all the DISTINCT ON items and more
+	 * besides, you certainly aren't using DISTINCT ON in the intended way,
+	 * and you probably aren't going to get consistent results.  It might be
+	 * better to throw an error or warning here.  But historically we've
+	 * allowed it, so keep doing so.)
+	 */
+	forboth(lc, distinctlist, lc2, sortgrouprefs)
 	{
-		/* We had SELECT DISTINCT ON (expr, ...) */
+		Node	   *dexpr = (Node *) lfirst(lc);
+		int			sortgroupref = lfirst_int(lc2);
+		TargetEntry *tle = get_sortgroupref_tle(sortgroupref, *targetlist);
 
-		/*
-		 * If the user writes both DISTINCT ON and ORDER BY, then the two
-		 * expression lists must match (until one or the other runs out).
-		 * Otherwise the ORDER BY requires a different sort order than the
-		 * DISTINCT does, and we can't implement that with only one sort pass
-		 * (and if we do two passes, the results will be rather
-		 * unpredictable). However, it's OK to have more DISTINCT ON
-		 * expressions than ORDER BY expressions; we can just add the extra
-		 * DISTINCT values to the sort list, much as we did above for ordinary
-		 * DISTINCT fields.
-		 *
-		 * Actually, it'd be OK for the common prefixes of the two lists to
-		 * match in any order, but implementing that check seems like more
-		 * trouble than it's worth.
-		 */
-		ListCell   *nextsortlist = list_head(*sortClause);
-
-		foreach(dlitem, distinctlist)
-		{
-			TargetEntry *tle;
-
-			tle = findTargetlistEntrySQL92(pstate, lfirst(dlitem),
-                                           targetlist, DISTINCT_ON_CLAUSE);
-
-			if (nextsortlist != NULL)
-			{
-				SortClause *scl = (SortClause *) lfirst(nextsortlist);
-
-				if (tle->ressortgroupref != scl->tleSortGroupRef)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-							 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions"),
-							 parser_errposition(pstate, exprLocation((Node *) lfirst(dlitem)))));
-				result = lappend(result, copyObject(scl));
-				nextsortlist = lnext(nextsortlist);
-			}
-			else
-			{
-				SortBy sortby;
-
-				sortby.type = T_SortBy;
-				sortby.sortby_dir = SORTBY_DEFAULT;
-				sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-				sortby.useOp = NIL;
-				sortby.location = -1;
-				sortby.node = (Node *) tle->expr;
-				*sortClause = addTargetToSortList(pstate, tle,
-												  *sortClause, *targetlist,
-												  &sortby, true);
-
-				/*
-				 * Probably, the tle should always have been added at the end
-				 * of the sort list ... but search to be safe.
-				 */
-				foreach(slitem, *sortClause)
-				{
-					SortClause *scl = (SortClause *) lfirst(slitem);
-
-					if (tle->ressortgroupref == scl->tleSortGroupRef)
-					{
-						result = lappend(result, copyObject(scl));
-						break;
-					}
-				}
-				if (slitem == NULL)		/* should not happen */
-					elog(ERROR, "failed to add DISTINCT ON clause to target list");
-			}
-		}
+		if (targetIsInSortList(tle, InvalidOid, result))
+			continue;			/* already in list (with some semantics) */
+		if (skipped_sortitem)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+					 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions"),
+					 parser_errposition(pstate, exprLocation(dexpr))));
+		result = addTargetToGroupList(pstate, tle,
+									  result, *targetlist,
+									  exprLocation(dexpr),
+									  true);
 	}
 
 	return result;
@@ -2998,7 +2864,8 @@ transformScatterClause(ParseState *pstate,
 		Node			*node = lfirst(olitem);
 		TargetEntry		*tle;
 
-		tle = findTargetlistEntrySQL99(pstate, node, targetlist);
+		tle = findTargetlistEntrySQL99(pstate, node, targetlist,
+									   EXPR_KIND_SCATTER_BY);
 
 		/* coerce unknown to text */
 		if (exprType((Node *) tle->expr) == UNKNOWNOID)
@@ -3015,44 +2882,31 @@ transformScatterClause(ParseState *pstate,
 	return outlist;
 }
 
-
 /*
- * addAllTargetsToSortList
- *		Make sure all non-resjunk targets in the targetlist are in the
- *		ORDER BY list, adding the not-yet-sorted ones to the end of the list.
- *		This is typically used to help implement SELECT DISTINCT.
+ * get_matching_location
+ *		Get the exprLocation of the exprs member corresponding to the
+ *		(first) member of sortgrouprefs that equals sortgroupref.
  *
- * See addTargetToSortList for info about pstate and resolveUnknown inputs.
- *
- * Returns the updated ORDER BY list.
- * May modify targetlist in place even when resolveUnknown is FALSE.
+ * This is used so that we can point at a troublesome DISTINCT ON entry.
+ * (Note that we need to use the original untransformed DISTINCT ON list
+ * item, as whatever TLE it corresponds to will very possibly have a
+ * parse location pointing to some matching entry in the SELECT list
+ * or ORDER BY list.)
  */
-List *
-addAllTargetsToSortList(ParseState *pstate, List *sortlist,
-						List *targetlist, bool resolveUnknown)
+static int
+get_matching_location(int sortgroupref, List *sortgrouprefs, List *exprs)
 {
-	ListCell   *l;
+	ListCell   *lcs;
+	ListCell   *lce;
 
-	foreach(l, targetlist)
+	forboth(lcs, sortgrouprefs, lce, exprs)
 	{
-		TargetEntry *tle = (TargetEntry *) lfirst(l);
-
-		if (!tle->resjunk)
-		{
-			SortBy		sortby;
-
-			sortby.type = T_SortBy;
-			sortby.sortby_dir = SORTBY_DEFAULT;
-			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-			sortby.useOp = NIL;
-			sortby.location = -1;
-			sortby.node = (Node *) tle->expr;
-			sortlist = addTargetToSortList(pstate, tle,
-										   sortlist, targetlist,
-										   &sortby, resolveUnknown);
-		}
+		if (lfirst_int(lcs) == sortgroupref)
+			return exprLocation((Node *) lfirst(lce));
 	}
-	return sortlist;
+	/* if no match, caller blew it */
+	elog(ERROR, "get_matching_location: no matching sortgroupref");
+	return -1;					/* keep compiler quiet */
 }
 
 /*
@@ -3066,8 +2920,7 @@ addAllTargetsToSortList(ParseState *pstate, List *sortlist,
  * pstate should be provided if resolveUnknown is TRUE, but can be NULL
  * otherwise.
  *
- * Returns the updated ORDER BY list.
- * May modify targetlist entry in place even when resolveUnknown is FALSE.
+ * Returns the updated SortGroupClause list.
  */
 List *
 addTargetToSortList(ParseState *pstate, TargetEntry *tle,
@@ -3076,7 +2929,7 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 {
 	Oid			restype = exprType((Node *) tle->expr);
 	Oid			sortop;
-	Oid			cmpfunc;
+	Oid			eqop;
 	bool		reverse;
 	int			location;
 	ParseCallbackState pcbstate;
@@ -3096,25 +2949,29 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	 * Rather than clutter the API of get_sort_group_operators and the other
 	 * functions we're about to use, make use of error context callback to
 	 * mark any error reports with a parse position.  We point to the operator
-	 * location if present, else to the expression being sorted.  (NB: use
-	 * the original untransformed expression here; the TLE entry might well
-	 * point at a duplicate expression in the regular SELECT list.)
+	 * location if present, else to the expression being sorted.  (NB: use the
+	 * original untransformed expression here; the TLE entry might well point
+	 * at a duplicate expression in the regular SELECT list.)
 	 */
 	location = sortby->location;
 	if (location < 0)
 		location = exprLocation(sortby->node);
 	setup_parser_errposition_callback(&pcbstate, pstate, location);
 
-	/* determine the sortop */
+	/* determine the sortop, eqop, and directionality */
 	switch (sortby->sortby_dir)
 	{
 		case SORTBY_DEFAULT:
 		case SORTBY_ASC:
-			sortop = ordering_oper_opid(restype);
+			get_sort_group_operators(restype,
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			reverse = false;
 			break;
 		case SORTBY_DESC:
-			sortop = reverse_ordering_oper_opid(restype);
+			get_sort_group_operators(restype,
+									 false, true, true,
+									 NULL, &eqop, &sortop);
 			reverse = true;
 			break;
 		case SORTBY_USING:
@@ -3129,18 +2986,18 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 			 * equality operator, and determine whether to consider it like
 			 * ASC or DESC.
 			 */
-			if (!get_compare_function_for_ordering_op(sortop,
-													  &cmpfunc, &reverse))
+			eqop = get_equality_op_for_ordering_op(sortop, &reverse);
+			if (!OidIsValid(eqop))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					   errmsg("operator %s is not a valid ordering operator",
 							  strVal(llast(sortby->useOp))),
-						 parser_errposition(pstate, sortby->location),
 						 errhint("Ordering operators must be \"<\" or \">\" members of btree operator families.")));
 			break;
 		default:
 			elog(ERROR, "unrecognized sortby_dir: %d", sortby->sortby_dir);
 			sortop = InvalidOid;	/* keep compiler quiet */
+			eqop = InvalidOid;
 			reverse = false;
 			break;
 	}
@@ -3148,12 +3005,13 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	cancel_parser_errposition_callback(&pcbstate);
 
 	/* avoid making duplicate sortlist entries */
-	if (!targetIsInSortGroupList(tle, sortop, sortlist))
+	if (!targetIsInSortList(tle, sortop, sortlist))
 	{
-		SortClause *sortcl = makeNode(SortClause);
+		SortGroupClause *sortcl = makeNode(SortGroupClause);
 
 		sortcl->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
 
+		sortcl->eqop = eqop;
 		sortcl->sortop = sortop;
 
 		switch (sortby->sortby_nulls)
@@ -3178,6 +3036,75 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	}
 
 	return sortlist;
+}
+
+/*
+ * addTargetToGroupList
+ *		If the given targetlist entry isn't already in the SortGroupClause
+ *		list, add it to the end of the list, using default sort/group
+ *		semantics.
+ *
+ * This is very similar to addTargetToSortList, except that we allow the
+ * case where only a grouping (equality) operator can be found, and that
+ * the TLE is considered "already in the list" if it appears there with any
+ * sorting semantics.
+ *
+ * location is the parse location to be fingered in event of trouble.  Note
+ * that we can't rely on exprLocation(tle->expr), because that might point
+ * to a SELECT item that matches the GROUP BY item; it'd be pretty confusing
+ * to report such a location.
+ *
+ * If resolveUnknown is TRUE, convert TLEs of type UNKNOWN to TEXT.  If not,
+ * do nothing (which implies the search for an equality operator will fail).
+ * pstate should be provided if resolveUnknown is TRUE, but can be NULL
+ * otherwise.
+ *
+ * Returns the updated SortGroupClause list.
+ */
+static List *
+addTargetToGroupList(ParseState *pstate, TargetEntry *tle,
+					 List *grouplist, List *targetlist, int location,
+					 bool resolveUnknown)
+{
+	Oid			restype = exprType((Node *) tle->expr);
+	Oid			sortop;
+	Oid			eqop;
+
+	/* if tlist item is an UNKNOWN literal, change it to TEXT */
+	if (restype == UNKNOWNOID && resolveUnknown)
+	{
+		tle->expr = (Expr *) coerce_type(pstate, (Node *) tle->expr,
+										 restype, TEXTOID, -1,
+										 COERCION_IMPLICIT,
+										 COERCE_IMPLICIT_CAST,
+										 -1);
+		restype = TEXTOID;
+	}
+
+	/* avoid making duplicate grouplist entries */
+	if (!targetIsInSortList(tle, InvalidOid, grouplist))
+	{
+		SortGroupClause *grpcl = makeNode(SortGroupClause);
+		ParseCallbackState pcbstate;
+
+		setup_parser_errposition_callback(&pcbstate, pstate, location);
+
+		/* determine the eqop and optional sortop */
+		get_sort_group_operators(restype,
+								 false, true, false,
+								 &sortop, &eqop, NULL);
+
+		cancel_parser_errposition_callback(&pcbstate);
+
+		grpcl->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
+		grpcl->eqop = eqop;
+		grpcl->sortop = sortop;
+		grpcl->nulls_first = false;		/* OK with or without sortop */
+
+		grouplist = lappend(grouplist, grpcl);
+	}
+
+	return grouplist;
 }
 
 /*
@@ -3210,8 +3137,8 @@ assignSortGroupRef(TargetEntry *tle, List *tlist)
 }
 
 /*
- * targetIsInSortGroupList
- *		Is the given target item already in the sortlist or grouplist?
+ * targetIsInSortList
+ *		Is the given target item already in the sortlist?
  *		If sortop is not InvalidOid, also test for a match to the sortop.
  *
  * It is not an oversight that this function ignores the nulls_first flag.
@@ -3223,15 +3150,15 @@ assignSortGroupRef(TargetEntry *tle, List *tlist)
  * opposite nulls direction is redundant.  Also, we can consider
  * ORDER BY foo ASC, foo DESC redundant, so check for a commutator match.
  *
- * Works for SortClause, GroupClause and GroupingClause lists.  Note
- * that the main reason we need this routine (and not just a quick
- * test for nonzeroness of ressortgroupref) is that a TLE might be in
- * only one of the lists.
+ * Works for both ordering and grouping lists (sortop would normally be
+ * InvalidOid when considering grouping).  Note that the main reason we need
+ * this routine (and not just a quick test for nonzeroness of ressortgroupref)
+ * is that a TLE might be in only one of the lists.
  *
  * Any GroupingClauses in the list will be skipped during comparison.
  */
 bool
-targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortgroupList)
+targetIsInSortList(TargetEntry *tle, Oid sortop, List *sortgroupList)
 {
 	Index		ref = tle->ressortgroupref;
 	ListCell   *l;
@@ -3248,9 +3175,9 @@ targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortgroupList)
 		if (node == NULL)
 			continue;
 
-		if (IsA(node, GroupClause) || IsA(node, SortClause))
+		if (IsA(node, SortGroupClause))
 		{
-			GroupClause *scl = (GroupClause *) node;
+			SortGroupClause *scl = (SortGroupClause *) node;
 
 			if (scl->tleSortGroupRef == ref &&
 				(sortop == InvalidOid ||
@@ -3390,7 +3317,6 @@ transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 	List *args = rowexpr->args;
 	List *grping_set = NIL;
 	ListCell *arglc;
-	Oid sort_op;
 
 	foreach (arglc, args)
 	{
@@ -3409,10 +3335,16 @@ transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 			 * generated in findListTargetlistEntries().
 			 */
 			TargetEntry *arg_tle =
-				findTargetlistEntrySQL92(pstate, node, &targetList, GROUP_CLAUSE);
-			sort_op = ordering_oper_opid(exprType((Node *)arg_tle->expr));
+				findTargetlistEntrySQL92(pstate, node, &targetList,
+										 EXPR_KIND_GROUP_BY);
+			Oid			sortop;
+			Oid			eqop;
+
+			get_sort_group_operators(exprType((Node *) arg_tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			grping_set = lappend(grping_set,
-								 make_group_clause(arg_tle, targetList, sort_op, false));
+								 make_group_clause(arg_tle, targetList, eqop, sortop, false));
 		}
 	}
 	groupsets = lappend (groupsets, grping_set);
@@ -3439,7 +3371,6 @@ transformRowExprToGroupClauses(ParseState *pstate, RowExpr *rowexpr,
 {
 	List *args = rowexpr->args;
 	ListCell *arglc;
-	Oid sort_op;
 
 	foreach (arglc, args)
 	{
@@ -3457,18 +3388,250 @@ transformRowExprToGroupClauses(ParseState *pstate, RowExpr *rowexpr,
 			 * generated in findListTargetlistEntries().
 			 */
 			TargetEntry *arg_tle =
-				findTargetlistEntrySQL92(pstate, node, &targetList, GROUP_CLAUSE);
+				findTargetlistEntrySQL92(pstate, node, &targetList,
+										 EXPR_KIND_GROUP_BY);
+			Oid			sortop;
+			Oid			eqop;
 
-			sort_op = ordering_oper_opid(exprType((Node *)arg_tle->expr));
+			get_sort_group_operators(exprType((Node *) arg_tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 
 			/* avoid making duplicate expression entries */
-			if (targetIsInSortGroupList(arg_tle, sort_op, groupsets))
+			if (targetIsInSortList(arg_tle, sortop, groupsets))
 				continue;
 
 			groupsets = lappend(groupsets,
-								make_group_clause(arg_tle, targetList, sort_op, false));
+								make_group_clause(arg_tle, targetList, eqop, sortop, false));
 		}
 	}
 
 	return groupsets;
+}
+
+/*
+ * findWindowClause
+ *		Find the named WindowClause in the list, or return NULL if not there
+ */
+static WindowClause *
+findWindowClause(List *wclist, const char *name)
+{
+	ListCell   *l;
+
+	foreach(l, wclist)
+	{
+		WindowClause *wc = (WindowClause *) lfirst(l);
+
+		if (wc->name && strcmp(wc->name, name) == 0)
+			return wc;
+	}
+
+	return NULL;
+}
+
+/*
+ * transformFrameOffset
+ *		Process a window frame offset expression
+ */
+static Node *
+transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
+					 List *orderClause, List *targetlist, bool isFollowing,
+					 int location)
+{
+	const char *constructName = NULL;
+	Node	   *node;
+
+	/* Quick exit if no offset expression */
+	if (clause == NULL)
+		return NULL;
+
+	if (frameOptions & FRAMEOPTION_ROWS)
+	{
+		/* Transform the raw expression tree */
+		node = transformExpr(pstate, clause, EXPR_KIND_WINDOW_FRAME_ROWS);
+
+		/*
+		 * Like LIMIT clause, simply coerce to int8
+		 */
+		constructName = "ROWS";
+		node = coerce_to_specific_type(pstate, node, INT8OID, constructName);
+	}
+	else if (frameOptions & FRAMEOPTION_RANGE)
+	{
+		TargetEntry *te;
+		Oid			otype;
+		Oid			rtype;
+		Oid			newrtype;
+		SortGroupClause *sort;
+		Oid			oprresult;
+		List	   *oprname;
+		Operator	tup;
+		int32		typmod;
+
+		/* Transform the raw expression tree */
+		node = transformExpr(pstate, clause, EXPR_KIND_WINDOW_FRAME_RANGE);
+
+		/*
+		 * this needs a lot of thought to decide how to support in the context
+		 * of Postgres' extensible datatype framework
+		 */
+		constructName = "RANGE";
+
+		/* caller should've checked this already, but better safe than sorry */
+		if (list_length(orderClause) == 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("window specifications with a framing clause must have an ORDER BY clause"),
+					 parser_errposition(pstate, location)));
+		if (list_length(orderClause) > 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("only one ORDER BY column may be specified when RANGE is used in a window specification"),
+					 parser_errposition(pstate, location)));
+
+		typmod = exprTypmod(node);
+
+		if (IsA(node, Const))
+		{
+			Const *con = (Const *) node;
+
+			if (con->constisnull)
+				ereport(ERROR,
+						(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+						 errmsg("RANGE parameter cannot be NULL"),
+						 parser_errposition(pstate, con->location)));
+		}
+
+		sort = (SortGroupClause *) linitial(orderClause);
+		te = getTargetBySortGroupRef(sort->tleSortGroupRef,
+									 targetlist);
+		otype = exprType((Node *)te->expr);
+		rtype = exprType(node);
+
+		/* XXX: Reverse these if user specified DESC */
+		if (isFollowing)
+			oprname = lappend(NIL, makeString("+"));
+		else
+			oprname = lappend(NIL, makeString("-"));
+
+		tup = oper(pstate, oprname, otype, rtype, true, 0);
+
+		if (!HeapTupleIsValid(tup))
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("window specification RANGE parameter type must be coercible to ORDER BY column type")));
+
+		oprresult = ((Form_pg_operator)GETSTRUCT(tup))->oprresult;
+		newrtype = ((Form_pg_operator)GETSTRUCT(tup))->oprright;
+		ReleaseSysCache(tup);
+		list_free_deep(oprname);
+
+		if (rtype != newrtype)
+		{
+			/*
+			 * We have to coerce the RHS to the new type so that we'll be
+			 * able to trivially find an operator later on.
+			 */
+
+			/* XXX: we assume that the typmod for the new RHS type
+			 * is the same as before... is that safe?
+			 */
+			Expr *expr =
+				(Expr *)coerce_to_target_type(NULL,
+											  node,
+											  rtype,
+											  newrtype, typmod,
+											  COERCION_EXPLICIT,
+											  COERCE_IMPLICIT_CAST,
+											  -1);
+			if (!PointerIsValid(expr))
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("type mismatch between ORDER BY and RANGE "
+								"parameter in window specification"),
+						 errhint("Operations between window specification "
+								 "the ORDER BY column and RANGE parameter "
+								 "must result in a data type which can be "
+								 "cast back to the ORDER BY column type"),
+						 parser_errposition(pstate, exprLocation((Node *) expr))));
+			}
+
+			node = (Node *) expr;
+		}
+
+		if (oprresult != otype)
+		{
+			/*
+			 * See if it can be coerced. The point of this is to just
+			 * throw an error if the coercion is not possible. The
+			 * actual coercion will be done later, in the executor.
+			 *
+			 * XXX: Why not do it here?
+			 */
+			if (!can_coerce_type(1, &oprresult, &otype, COERCION_EXPLICIT))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("invalid RANGE parameter"),
+						 errhint("Operations between window specification "
+								 "the ORDER BY column and RANGE parameter "
+								 "must result in a data type which can be "
+								 "cast back to the ORDER BY column type")));
+		}
+
+		if (IsA(node, Const))
+		{
+			/*
+			 * see if RANGE parameter is negative
+			 *
+			 * Note: There's a similar check in nodeWindowAgg.c, for the
+			 * case that the parameter is not a Const. Make sure it uses
+			 * the same logic!
+			 */
+			Const *con = (Const *) node;
+			Oid			sortop;
+
+			get_sort_group_operators(newrtype,
+									 false, false, false,
+									 &sortop, NULL, NULL);
+
+			if (OidIsValid(sortop))
+			{
+				Type typ = typeidType(newrtype);
+				Oid funcoid = get_opcode(sortop);
+				Datum zero;
+				Datum result;
+
+				zero = stringTypeDatum(typ, "0", exprTypmod(node));
+
+				/*
+				 * As we know the value is a const and since transformExpr()
+				 * will have parsed the type into its internal format, we can
+				 * just poke directly into the Const structure.
+				 */
+				result = OidFunctionCall2(funcoid, con->constvalue, zero);
+
+				if (result)
+					ereport(ERROR,
+							(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+							 errmsg("RANGE parameter cannot be negative"),
+							 parser_errposition(pstate, con->location)));
+
+				ReleaseSysCache(typ);
+			}
+		}
+	}
+	else
+	{
+		Assert(false);
+		node = NULL;
+	}
+
+	/* In GPDB, we allow this. */
+#if 0
+	/* Disallow variables in frame offsets */
+	checkExprIsVarFree(pstate, node, constructName);
+#endif
+
+	return node;
 }

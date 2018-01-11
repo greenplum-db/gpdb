@@ -5,8 +5,13 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbgroup.h
  *
  *-------------------------------------------------------------------------
  */
@@ -16,9 +21,10 @@
 #include "nodes/params.h"
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
-#include "nodes/relation.h"   /* GroupContext */
+#include "nodes/relation.h"
 
 #include "optimizer/clauses.h" /* AggClauseCounts */
+#include "optimizer/planmain.h"   /* GroupContext */
 
 extern Plan *
 cdb_grouping_planner(PlannerInfo* root,

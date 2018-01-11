@@ -90,7 +90,7 @@ founddeadlockprocess
 -- we expect to see an ERROR message here due to function_volatile function
 -- tried to update table from ENTRY_DB_SINGLETON (which is read-only) in session1
 1<:  <... completed>
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (entry db 127.0.0.1:15432 pid=94879)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (entry db 127.0.0.1:15432 pid=94879)
 DETAIL:  
 SQL statement "UPDATE deadlock_entry_db_singleton_table SET d = d + 1 WHERE c =  $1 "
 PL/pgSQL function "function_volatile" line 3 at SQL statement

@@ -18,6 +18,10 @@ set optimizer_enable_master_only_queries = on;
 -- master only tables
 
 create schema orca;
+-- start_ignore
+GRANT ALL ON SCHEMA orca TO PUBLIC;
+SET search_path to orca, public;
+-- end_ignore
 
 create table orca.r();
 set allow_system_table_mods='DML';
@@ -100,7 +104,7 @@ SELECT x1 AS one FROM orca.foo having 1 < 2;
 select distinct 1, null;
 select distinct 1, null from orca.foo;
 select distinct 1, sum(x1) from orca.foo;
-select distinct x1, rank() over(order by x1) from (select x1 from orca.foo order by x1) x;
+select distinct x1, rank() over(order by x1) from (select x1 from orca.foo order by x1) x; --order none
 select distinct x1, sum(x3) from orca.foo group by x1,x2;
 select distinct s from (select sum(x2) s from orca.foo group by x1) x;
 select * from orca.foo a where a.x1 = (select distinct sum(b.x1)+avg(b.x1) sa from orca.bar1 b group by b.x3 order by sa limit 1);
@@ -271,7 +275,7 @@ select lead(a) over(order by a) from orca.r order by 1;
 select lag(c,d) over(order by c,d) from orca.s order by 1;
 select lead(c,c+d,1000) over(order by c,d) from orca.s order by 1;
 
--- cte 
+-- cte
 with x as (select a, b from orca.r)
 select rank() over(partition by a, case when b = 0 then a+b end order by b asc) as rank_within_parent from x order by a desc ,case when a+b = 0 then a end ,b;
 
@@ -341,24 +345,24 @@ insert into orca.onek values (670,6,0,2,0,10,0,70,70,170,670,0,1,'UZAAAA','GAAAA
 insert into orca.onek values (543,7,1,3,3,3,3,43,143,43,543,6,7,'XUAAAA','HAAAAA','VVVVxx');
 
 select ten, sum(distinct four) from orca.onek a
-group by ten 
+group by ten
 having exists (select 1 from orca.onek b where sum(distinct a.four) = b.four);
 
 -- indexes on partitioned tables
 create table orca.pp(a int) partition by range(a)(partition pp1 start(1) end(10));
 create index pp_a on orca.pp(a);
 
--- list partition tests 
+-- list partition tests
 
--- test homogeneous partitions 
+-- test homogeneous partitions
 drop table if exists orca.t;
 
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
-distributed by (a) 
+distributed by (a)
 partition by list(d) (partition part1 values('a'), partition part2 values('b'));
 
-insert into orca.t 
-	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 
 select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
@@ -391,11 +395,11 @@ select * from orca.multilevel_p;
 drop table if exists orca.t;
 
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
-distributed by (a) 
+distributed by (a)
 partition by list(d) (partition part1 values('a') with (appendonly=true, compresslevel=5, orientation=column), partition part2 values('b') with (appendonly=true, compresslevel=5, orientation=column));
 
-insert into orca.t 
-	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 
 select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
@@ -404,8 +408,8 @@ alter table orca.t drop column to_be_drop;
 
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
 
-insert into orca.t 
-	select i, i::char(2), i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
@@ -414,8 +418,8 @@ select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
 -- test heterogeneous partitions
 drop table if exists orca.t;
 
-create table orca.t ( timest character varying(6), user_id numeric(16,0) not null, to_be_drop char(5), tag1 char(5), tag2 char(5)) 
-distributed by (user_id) 
+create table orca.t ( timest character varying(6), user_id numeric(16,0) not null, to_be_drop char(5), tag1 char(5), tag2 char(5))
+distributed by (user_id)
 partition by list (timest) (partition part201203 values('201203') with (appendonly=true, compresslevel=5, orientation=column), partition part201204 values('201204') with (appendonly=true, compresslevel=5, orientation=row), partition part201205 values('201205'));
 
 insert into orca.t values('201203',0,'drop', 'tag1','tag2');
@@ -481,6 +485,9 @@ set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
+-- start_ignore
+analyze orca.t_date;
+-- end_ignore
 explain select * from orca.t_date where user_id=9;
 select * from orca.t_date where user_id=9;
 
@@ -517,7 +524,9 @@ set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
-
+-- start_ignore
+analyze orca.t_text;
+-- end_ignore
 explain select * from orca.t_text where user_id=9;
 select * from orca.t_text where user_id=9;
 
@@ -563,6 +572,9 @@ insert into orca.t_employee values('01-08-2012'::date,2,'tag1','(2, ''foo'')'::o
 
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enable_dynamictablescan = off;
+-- start_ignore
+analyze orca.t_employee;
+-- end_ignore
 explain select * from orca.t_employee where user_id = 2;
 select * from orca.t_employee where user_id = 2;
 reset optimizer_enable_dynamictablescan;
@@ -574,13 +586,13 @@ reset optimizer_enable_partial_index;
 drop table if exists orca.t_ceeval_ints;
 
 create table orca.t_ceeval_ints(user_id numeric(16,0), category_id int, tag1 char(5), tag2 char(5))
-distributed by (user_id) 
+distributed by (user_id)
 partition by list (category_id)
 	(partition part100 values('100') , partition part101 values('101'), partition part103 values('102'));
 create index user_id_ceeval_ints on orca.t_ceeval_ints_1_prt_part101(user_id);
 
 insert into orca.t_ceeval_ints values(1, 100, 'tag1', 'tag2');
-insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');	
+insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(3, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(4, 101, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(5, 102, 'tag1', 'tag2');
@@ -591,7 +603,9 @@ set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
-
+-- start_ignore
+analyze orca.t_ceeval_ints;
+-- end_ignore
 explain select * from orca.t_ceeval_ints where user_id=4;
 select * from orca.t_ceeval_ints where user_id=4;
 
@@ -669,7 +683,7 @@ insert into orca.toanalyze values (1,1), (2,2), (3,3);
 alter table orca.toanalyze drop column a;
 analyze orca.toanalyze;
 
--- union 
+-- union
 
 create table orca.ur (a int, b int);
 create table orca.us (c int, d int);
@@ -762,7 +776,7 @@ reset optimizer_enable_tablescan;
 -- MPP-22791: SIGSEGV when querying a table with default partition only
 create table mpp22791(a int, b int) partition by range(b) (default partition d);
 insert into mpp22791 values (1, 1), (2, 2), (3, 3);
-select * from mpp22791 where b > 1; 
+select * from mpp22791 where b > 1;
 select * from mpp22791 where b <= 3;
 
 -- MPP-20713, MPP-20714, MPP-20738: Const table get with a filter
@@ -795,8 +809,8 @@ WITH (appendonly=true, compresstype=zlib) DISTRIBUTED BY (uid136);
 
  set allow_system_table_mods="DML";
 
- UPDATE pg_class                                                                                                                                                                                     
- SET                                                                                                                                                                                                 
+ UPDATE pg_class
+ SET
          relpages = 30915::int, reltuples = 7.28661e+07::real WHERE relname = 'tmp_verd_s_pp_provtabs_agt_0015_extract1' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'xvclin');
 
  insert into pg_statistic values ('orca.tmp_verd_s_pp_provtabs_agt_0015_extract1'::regclass,1::smallint,0::real,17::integer,264682::real,1::smallint,2::smallint,0::smallint,0::smallint,1054::oid,1058::oid,0::oid,0::oid,'{0.000161451,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],NULL::real[],NULL::real[],NULL::real[],'{8X8#1F8V92A2025G,YFAXQ§UBF210PA0P,2IIVIE8V92A2025G,9§BP8F8V92A2025G,35A9EE8V92A2025G,§AJ2Z§9MA210PA0P,3NUQ3E8V92A2025G,F7ZD4F8V92A2025G,$WHHEO§§E210PA0P,Z6EATH2BE210PA0P,N7I28E8V92A2025G,YU0K$E$§9210PA0P,3TAI1ANIF210PA0P,P#H8BF8V92A2025G,VTQ$N$D§92A201SC,N7ZD4F8V92A2025G,77BP8F8V92A2025G,39XOXY78H210PA01,#2#OX6NHH210PA01,2DG1J#XZH210PA01,MFEG$E8V92A2025G,M0HKWNGND210PA0P,FSXI67NSA210PA0P,C1L77E8V92A2025G,01#21E8V92A2025G}'::bpchar[],'{§00§1HKZC210PA0P,1D90GE8V92A2025G,2ULZI6L0O210PA01,489G7L8$I210PA01,5RE8FF8V92A2025G,76NIRFNIF210PA0P,8KOMKE8V92A2025G,#9Y#GPSHB210PA0P,BDAJ#D8V92A2025G,CV9Z7IYVK210PA01,#EC5FE8V92A2025G,FQWY§O1XC210PA0P,H8HL4E8V92A2025G,INC5FE8V92A2025G,K4MX0XHCF210PA0P,LKE8FF8V92A2025G,N03G9UM2F210PA0P,OHJ$#GFZ9210PA0P,PXU3T1OTB210PA0P,RCUA45F1H210PA01,SU§FRY#QI210PA01,UABHMLSLK210PA01,VRBP8F8V92A2025G,X65#KZIDC210PA0P,YLFG§#A2G210PA0P,ZZG8H29OC210PA0P,ZZZDBCEVA210PA0P}'::bpchar[],NULL::bpchar[],NULL::bpchar[]);
@@ -923,6 +937,9 @@ alter table orca.bm_dyn_test add partition part5 values(5);
 insert into orca.bm_dyn_test values(2, 5, '2');
 
 set optimizer_enable_bitmapscan=on;
+-- start_ignore
+analyze orca.bm_dyn_test;
+-- end_ignore
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
 select * from orca.bm_dyn_test where i=2 and t='2';
@@ -946,6 +963,9 @@ insert into orca.bm_dyn_test_onepart values(2, 5, '2');
 
 set optimizer_enable_bitmapscan=on;
 set optimizer_enable_dynamictablescan = off;
+-- start_ignore
+analyze orca.bm_dyn_test_onepart;
+-- end_ignore
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
@@ -979,7 +999,7 @@ create table bm.hom_bm_heap (i int, to_be_dropped char(5), j int, t text) distri
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 insert into bm.hom_bm_heap select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_heap_idx on bm.hom_bm_heap using bitmap (i);
@@ -992,13 +1012,13 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_heap whe
 
 -- Bitmap index scan on AO parts with dropped columns
 drop table if exists bm.hom_bm_ao;
-create table bm.hom_bm_ao (i int, to_be_dropped char(5), j int, t text) 
+create table bm.hom_bm_ao (i int, to_be_dropped char(5), j int, t text)
 with (appendonly=true, compresslevel=5, orientation=row)
 distributed by (i) partition by list(j)
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 insert into bm.hom_bm_ao select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_ao_idx on bm.hom_bm_ao using bitmap (i);
@@ -1011,13 +1031,13 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_ao where
 
 -- Bitmap index scan on AOCO parts with dropped columns
 drop table if exists bm.hom_bm_aoco;
-create table bm.hom_bm_aoco (i int, to_be_dropped char(5), j int, t text) 
+create table bm.hom_bm_aoco (i int, to_be_dropped char(5), j int, t text)
 with (appendonly=true, compresslevel=5, orientation=column)
 distributed by (i) partition by list(j)
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 insert into bm.hom_bm_aoco select i % 10, 'drop', i % 5, (i % 10)::text  from generate_series(1, 100) i;
 create index hom_bm_aoco_idx on bm.hom_bm_aoco using bitmap (i);
@@ -1138,7 +1158,7 @@ set optimizer_enable_indexjoin=on;
 
 -- force_explain
 set optimizer_segments = 3;
-EXPLAIN 
+EXPLAIN
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_opt tt, my_tq_agg_opt_part tq
 WHERE tq.sym = tt.symbol AND
@@ -1295,7 +1315,7 @@ insert into canSetTag_input_data values(1, 1, 'A', 1);
 insert into canSetTag_input_data values(2, 1, 'A', 0);
 insert into canSetTag_input_data values(3, 0, 'B', 1);
 
-create table canSetTag_bug_table as 
+create table canSetTag_bug_table as
 SELECT attr, class, (select canSetTag_Func(count(distinct class)::int) from canSetTag_input_data)
    as dclass FROM canSetTag_input_data GROUP BY attr, class distributed by (attr);
 
@@ -1314,7 +1334,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
 -- Test Bitmap index scan with in list
 CREATE TABLE bitmap_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
 CREATE INDEX bitmap_index ON bitmap_test USING BITMAP(a);
-EXPLAIN SELECT * FROM bitmap_test WHERE a in (select 1);
+EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
@@ -1399,9 +1419,13 @@ create table foo (a int, b character varying(10));
 explain select * from foo where b in ('1', '2');
 
 set optimizer_enable_ctas = off;
+set log_statement='none';
+set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 reset client_min_messages;
+reset log_min_duration_statement;
+reset log_statement;
 reset optimizer_enable_ctas;
 
 -- start_ignore
@@ -1412,6 +1436,46 @@ create table bar(name text);
 insert into bar values('person');
 select * from unnest((select string_to_array(name, ',') from bar)) as a;
 
--- clean up
-drop schema orca cascade;
-reset optimizer_segments;
+-- Query should not fall back to planner and handle implicit cast properly
+
+CREATE TYPE myint;
+
+CREATE FUNCTION myintout(myint) RETURNS cstring AS 'int4out' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE FUNCTION myintin(cstring) RETURNS myint AS 'int4in' LANGUAGE INTERNAL STRICT IMMUTABLE;
+
+CREATE TYPE myint
+(
+	INPUT=myintin,
+	OUTPUT=myintout,
+	INTERNALLENGTH=4,
+	PASSEDBYVALUE
+);
+
+CREATE FUNCTION myint_int8(myint) RETURNS int8 AS 'int48' LANGUAGE INTERNAL STRICT IMMUTABLE;
+
+CREATE CAST (myint AS int8) WITH FUNCTION myint_int8(myint) AS IMPLICIT;
+
+CREATE TABLE csq_cast_param_outer (a int, b myint);
+INSERT INTO csq_cast_param_outer VALUES
+	(1, '42'),
+	(2, '12');
+
+CREATE TABLE csq_cast_param_inner (c int, d myint);
+INSERT INTO csq_cast_param_inner VALUES
+	(11, '11'),
+	(101, '12');
+
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+
+DROP CAST (myint as int8);
+
+CREATE FUNCTION myint_numeric(myint) RETURNS numeric AS 'int4_numeric' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE CAST (myint AS numeric) WITH FUNCTION myint_numeric(myint) AS IMPLICIT;
+
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+
+-- start_ignore
+DROP SCHEMA orca CASCADE;
+-- end_ignore

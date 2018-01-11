@@ -19,10 +19,10 @@
  * data across crashes.  During database startup, we simply force the
  * currently-active page of SUBTRANS to zeroes.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/subtrans.c,v 1.20 2008/01/01 19:45:48 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/subtrans.c,v 1.24 2009/01/01 17:23:36 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,6 +31,8 @@
 #include "access/slru.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
+#include "pg_trace.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 #include "cdb/cdbpersistentstore.h"
 
@@ -319,9 +321,11 @@ ShutdownSUBTRANS(void)
 	 * This is not actually necessary from a correctness point of view. We do
 	 * it merely as a debugging aid.
 	 */
+	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_START(false);
 	SimpleLruFlush(SubTransCtl, false);
 
 	MIRRORED_UNLOCK;
+	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_DONE(false);
 }
 
 /*
@@ -341,9 +345,11 @@ CheckPointSUBTRANS(void)
 	 * it merely to improve the odds that writing of dirty pages is done by
 	 * the checkpoint process and not by backends.
 	 */
+	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_START(true);
 	SimpleLruFlush(SubTransCtl, true);
 
 	MIRRORED_UNLOCK;
+	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_DONE(true);
 }
 
 

@@ -3,12 +3,12 @@
 #include "gtest/gtest.h"
 #include "mock_classes.h"
 
-using ::testing::AtMost;
-using ::testing::AtLeast;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::Throw;
 using ::testing::_;
+using ::testing::AtLeast;
+using ::testing::AtMost;
+using ::testing::Invoke;
+using ::testing::Return;
+using ::testing::Throw;
 
 class MockGPWriter : public GPWriter {
    public:

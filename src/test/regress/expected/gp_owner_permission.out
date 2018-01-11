@@ -16,19 +16,19 @@ CREATE INDEX idx_mytab1_heap ON mytab1_heap(b);
 INSERT INTO mytab1_heap SELECT a , a - 10 FROM generate_series(1,100) a;
 DELETE FROM mytab1_heap WHERE a % 4 = 0;
 REVOKE ALL PRIVILEGES ON mytab1_heap FROM test2;
-NOTICE:  no privileges could be revoked from role test2 on object mytab1_heap
+NOTICE:  no privileges could be revoked
 CREATE TABLE mytab1_ao(a int, b int) WITH (appendonly = TRUE);
 CREATE INDEX idx_mytab1_ao ON mytab1_ao(b);
 INSERT INTO mytab1_ao SELECT a , a - 10 FROM generate_series(1,100) a;
 DELETE FROM mytab1_ao WHERE a % 4 = 0;
 REVOKE ALL PRIVILEGES ON mytab1_ao FROM test2;
-NOTICE:  no privileges could be revoked from role test2 on object mytab1_ao
+NOTICE:  no privileges could be revoked
 CREATE TABLE mytab1_aoco(a int, b int) WITH (appendonly = TRUE, orientation = COLUMN);
 CREATE INDEX idx_mytab1_aoco ON mytab1_aoco(b);
 INSERT INTO mytab1_aoco SELECT a , a - 10 FROM generate_series(1,100) a;
 DELETE FROM mytab1_aoco WHERE a % 4 = 0;
 REVOKE ALL PRIVILEGES ON mytab1_aoco FROM test2;
-NOTICE:  no privileges could be revoked from role test2 on object mytab1_aoco
+NOTICE:  no privileges could be revoked
 COMMIT;
 SET role = test2;
 SET client_min_messages=WARNING;

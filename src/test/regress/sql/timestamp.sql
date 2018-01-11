@@ -52,6 +52,7 @@ INSERT INTO TIMESTAMP_TBL VALUES ('infinity');
 INSERT INTO TIMESTAMP_TBL VALUES ('epoch');
 -- Obsolete special values
 INSERT INTO TIMESTAMP_TBL VALUES ('invalid');
+INSERT INTO TIMESTAMP_TBL VALUES ('undefined');
 INSERT INTO TIMESTAMP_TBL VALUES ('current');
 
 -- Postgres v6.0 standard output format

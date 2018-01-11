@@ -11,7 +11,7 @@ from gppylib.commands import unix
 from gppylib.commands.pg import DbStatus
 from gppylib import gplog
 from gppylib.commands.base import *
-from gppylib.gparray import GpDB
+from gppylib.gparray import Segment
 from gppylib.utils import canStringBeParsedAsInt
 from gppylib.gp_dbid import writeGpDbidFile
 from time import sleep
@@ -126,7 +126,7 @@ class ConfExpSegCmd(Command):
                 targetDir = self.filespaceDirs[i]
                 cpCmd = unix.LocalDirCopy("copy filespace from %s to %s" % (sourceDir, targetDir), sourceDir, targetDir)
                 cpCmd.run(validateAfter=True)
-            unix.RemoveFiles.local("remove filespace template after copy to proper location", filespaceDataDir)
+            unix.RemoveDirectory.local("remove filespace template after copy to proper location", filespaceDataDir)
         except Exception, e:
             self.set_results(CommandResult(1, '', e, True, False))
             raise
@@ -256,7 +256,7 @@ def parseargs():
 
     if options.batch_size <= 0:
         logger.warn('batch_size was less than zero.  Setting to 1.')
-        batch_size = 1
+        options.batch_size = 1
 
     if options.newsegments and not options.tarfile:
         raise Exception('-n option requires -t option to be specified')

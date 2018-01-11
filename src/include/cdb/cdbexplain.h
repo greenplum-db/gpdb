@@ -3,7 +3,12 @@
  * cdbexplain.h
  *    Functions supporting the Greenplum EXPLAIN ANALYZE command
  *
- * Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbexplain.h
  *
  *-------------------------------------------------------------------------
  */
@@ -29,20 +34,6 @@ cdbexplain_agg_init0(CdbExplain_Agg *agg)
     agg->vsum = 0;
     agg->vcnt = 0;
     agg->imax = 0;
-}
-
-static inline void
-cdbexplain_agg_init1(CdbExplain_Agg *agg, double v, int id)
-{
-    if (v > 0)
-    {
-        agg->vmax = v;
-        agg->vsum = v;
-        agg->vcnt = 1;
-        agg->imax = id;
-    }
-    else
-        cdbexplain_agg_init0(agg);
 }
 
 static inline bool

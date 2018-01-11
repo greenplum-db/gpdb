@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -114,7 +114,7 @@ class regress(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         self.standby.promote()
 
         logger.info('Wait for the standby to be ready to accept connections ...')
-        time.sleep(3)
+        PSQL.wait_for_database_up(port=self.standby.port)
 
         # Verify the result replicated to the standby.
         logger.info('Verify if table foo exists...')
@@ -122,8 +122,9 @@ class regress(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
                             str(self.standby.port))
 
         # The table should exist
-        stdout = proc.communicate()[0]
-        logger.info(stdout)
+        (stdout, stderr) = proc.communicate()
+        logger.info("stdout: %s" % stdout)
+        logger.info("stderr: %s" % stderr)
         search = "1000"
         self.assertTrue(stdout.find(search) >= 0)
 

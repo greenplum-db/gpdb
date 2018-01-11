@@ -9,10 +9,10 @@ anything but an empty database, such as template1; else it's likely to
 be very slow.
 
 Run on an empty database, it returns the system join relationships (shown
-below for 8.3).  Note that unexpected matches may indicate bogus entries
+below for 8.4devel).  Note that unexpected matches may indicate bogus entries
 in system tables --- don't accept a peculiar match without question.
 In particular, a field shown as joining to more than one target table is
-probably messed up.  In 8.3, the *only* fields that should join to more
+probably messed up.  In 8.4devel, the *only* fields that should join to more
 than one target are pg_description.objoid, pg_depend.objid,
 pg_depend.refobjid, pg_shdescription.objoid, pg_shdepend.objid, and
 pg_shdepend.refobjid.  (Running make_oidjoins_check is an easy way to spot
@@ -31,7 +31,7 @@ revision in the patterns of cross-links between system tables.
 (Ideally we'd just regenerate the script as part of the regression
 tests themselves, but that seems too slow...)
 
-NOTE: in 8.3, make_oidjoins_check produces two bogus join checks:
+NOTE: in 8.4devel, make_oidjoins_check produces two bogus join checks:
 Join pg_catalog.pg_class.relfilenode => pg_catalog.pg_class.oid
 Join pg_catalog.pg_database.datlastsysoid => pg_catalog.pg_database.oid
 These are artifacts and should not be added to the oidjoins regress test.

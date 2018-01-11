@@ -60,6 +60,9 @@ class GpdbRestore(Operation):
         if options.list_backup and options.drop_db:
             raise ProgramArgumentValidationException("Cannot specify --list-backup and -e together")
 
+        if self.context.batch_default <= 0:
+            raise ProgramArgumentValidationException("-B <parallel processes> must be greater than 0")
+
         if not options.masterDataDirectory:
             options.masterDataDirectory = gp.get_masterdatadir()
 
@@ -308,7 +311,7 @@ class GpdbRestore(Operation):
             logger.info("Restore global objects     = On")
         else:
             logger.info("Restore global objects     = Off")
-        logger.info("Array fault tolerance      = %s" % info['fault_action'])
+        logger.info("Array has mirrors      = %s" % ("Yes" if info['has_mirrors'] else "No"))
         logger.info("------------------------------------------")
 
     def _list_dump_tables(self):
@@ -334,17 +337,17 @@ class GpdbRestore(Operation):
         """
         Checking cluster status, no primary should be down.
         """
-        fault_action = self.context.gparray.getFaultStrategy()
+        hasMirrors = self.context.gparray.hasMirrors
         primaries = self.context.get_current_primaries()
         fail_count = len([seg for seg in primaries if seg.isSegmentDown()])
 
-        if fault_action == 'readonly' and fail_count != 0:
+        if fail_count != 0:
             logger.fatal("There are %d primary segment databases marked as invalid")
             logger.fatal("Array fault action is set to readonly, unable to initiate a restore")
             logger.info("Use gprecoverseg utility to recover failed segment instances")
             raise ExceptionNoStackTraceNeeded("Unable to continue")
 
-        return {'fault_action': fault_action,
+        return {'has_mirrors': hasMirrors,
                 'fail_count': fail_count}
 
     def _gather_dump_info(self):

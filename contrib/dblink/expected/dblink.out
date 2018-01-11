@@ -134,10 +134,8 @@ WHERE t.a > 7;
 
 -- open a cursor with bad SQL and fail_on_error set to false
 SELECT dblink_open('rmt_foo_cursor','SELECT * FROM foobar',false);
-NOTICE:  sql error
-DETAIL:  ERROR:  relation "foobar" does not exist
-LINE 1: DECLARE rmt_foo_cursor CURSOR FOR SELECT * FROM foobar
-                                                        ^
+NOTICE:  relation "foobar" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not open cursor.
  dblink_open 
 -------------
  ERROR
@@ -204,8 +202,8 @@ FROM dblink_fetch('rmt_foo_cursor',4) AS t(a int, b text, c text[]);
 -- intentionally botch a fetch
 SELECT *
 FROM dblink_fetch('rmt_foobar_cursor',4,false) AS t(a int, b text, c text[]);
-NOTICE:  sql error
-DETAIL:  ERROR:  cursor "rmt_foobar_cursor" does not exist
+NOTICE:  cursor "rmt_foobar_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not fetch from cursor.
  a | b | c 
 ---+---+---
 (0 rows)
@@ -219,8 +217,8 @@ SELECT dblink_exec('ABORT');
 
 -- close the wrong cursor
 SELECT dblink_close('rmt_foobar_cursor',false);
-NOTICE:  sql error
-DETAIL:  ERROR:  cursor "rmt_foobar_cursor" does not exist
+NOTICE:  cursor "rmt_foobar_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not close cursor.
  dblink_close 
 --------------
  ERROR
@@ -229,13 +227,13 @@ DETAIL:  ERROR:  cursor "rmt_foobar_cursor" does not exist
 -- should generate 'cursor "rmt_foo_cursor" not found' error
 SELECT *
 FROM dblink_fetch('rmt_foo_cursor',4) AS t(a int, b text, c text[]);
-ERROR:  sql error
-DETAIL:  ERROR:  cursor "rmt_foo_cursor" does not exist
+ERROR:  cursor "rmt_foo_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not fetch from cursor.
 -- this time, 'cursor "rmt_foo_cursor" not found' as a notice
 SELECT *
 FROM dblink_fetch('rmt_foo_cursor',4,false) AS t(a int, b text, c text[]);
-NOTICE:  sql error
-DETAIL:  ERROR:  cursor "rmt_foo_cursor" does not exist
+NOTICE:  cursor "rmt_foo_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not fetch from cursor.
  a | b | c 
 ---+---+---
 (0 rows)
@@ -321,10 +319,8 @@ WHERE a = 11;
 
 -- botch a change to some other data
 SELECT dblink_exec('UPDATE foobar SET f3[2] = ''b99'' WHERE f1 = 11',false);
-NOTICE:  sql error
-DETAIL:  ERROR:  relation "foobar" does not exist
-LINE 1: UPDATE foobar SET f3[2] = 'b99' WHERE f1 = 11
-               ^
+NOTICE:  relation "foobar" does not exist
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not execute command.
  dblink_exec 
 -------------
  ERROR
@@ -420,10 +416,8 @@ SELECT dblink_disconnect('myconn2');
 
 -- open a cursor incorrectly
 SELECT dblink_open('myconn','rmt_foo_cursor','SELECT * FROM foobar',false);
-NOTICE:  sql error
-DETAIL:  ERROR:  relation "foobar" does not exist
-LINE 1: DECLARE rmt_foo_cursor CURSOR FOR SELECT * FROM foobar
-                                                        ^
+NOTICE:  relation "foobar" does not exist
+CONTEXT:  Error occurred on dblink connection named "myconn": could not open cursor.
  dblink_open 
 -------------
  ERROR
@@ -508,8 +502,8 @@ SELECT dblink_close('myconn','rmt_foo_cursor');
 
 -- this should fail because there is no open transaction
 SELECT dblink_exec('myconn','DECLARE xact_test CURSOR FOR SELECT * FROM foo');
-ERROR:  sql error
-DETAIL:  ERROR:  DECLARE CURSOR can only be used in transaction blocks
+ERROR:  DECLARE CURSOR can only be used in transaction blocks
+CONTEXT:  Error occurred on dblink connection named "unnamed": could not execute command.
 -- reset remote transaction state
 SELECT dblink_exec('myconn','ABORT');
  dblink_exec 
@@ -558,8 +552,8 @@ FROM dblink_fetch('myconn','rmt_foo_cursor',4) AS t(a int, b text, c text[]);
 -- fetch some data incorrectly
 SELECT *
 FROM dblink_fetch('myconn','rmt_foobar_cursor',4,false) AS t(a int, b text, c text[]);
-NOTICE:  sql error
-DETAIL:  ERROR:  cursor "rmt_foobar_cursor" does not exist
+NOTICE:  cursor "rmt_foobar_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "myconn": could not fetch from cursor.
  a | b | c 
 ---+---+---
 (0 rows)
@@ -574,8 +568,8 @@ SELECT dblink_exec('myconn','ABORT');
 -- should generate 'cursor "rmt_foo_cursor" not found' error
 SELECT *
 FROM dblink_fetch('myconn','rmt_foo_cursor',4) AS t(a int, b text, c text[]);
-ERROR:  sql error
-DETAIL:  ERROR:  cursor "rmt_foo_cursor" does not exist
+ERROR:  cursor "rmt_foo_cursor" does not exist
+CONTEXT:  Error occurred on dblink connection named "myconn": could not fetch from cursor.
 -- close the named persistent connection
 SELECT dblink_disconnect('myconn');
  dblink_disconnect 
@@ -757,3 +751,45 @@ SELECT dblink_build_sql_delete('test_dropped', '2', 1,
   10 | k  | {a10,b10,c10}
  (11 rows)
 
+-- test foreign data wrapper functionality
+CREATE ROLE dblink_regression_test;
+CREATE FOREIGN DATA WRAPPER postgresql;
+CREATE SERVER fdtest FOREIGN DATA WRAPPER postgresql OPTIONS (dbname 'contrib_regression', host 'localhost');
+CREATE USER MAPPING FOR public SERVER fdtest OPTIONS (user :'USER');
+GRANT USAGE ON FOREIGN SERVER fdtest TO dblink_regression_test;
+GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO dblink_regression_test;
+SET SESSION AUTHORIZATION dblink_regression_test;
+-- should fail
+SELECT dblink_connect('myconn', 'fdtest');
+ERROR:  password is required
+DETAIL:  Non-superusers must provide a password in the connection string.
+-- should succeed
+SELECT dblink_connect_u('myconn', 'fdtest');
+ dblink_connect_u 
+------------------
+ OK
+(1 row)
+
+SELECT * FROM dblink('myconn','SELECT * FROM foo') AS t(a int, b text, c text[]);
+ a  | b |       c       
+----+---+---------------
+  0 | a | {a0,b0,c0}
+  1 | b | {a1,b1,c1}
+  2 | c | {a2,b2,c2}
+  3 | d | {a3,b3,c3}
+  4 | e | {a4,b4,c4}
+  5 | f | {a5,b5,c5}
+  6 | g | {a6,b6,c6}
+  7 | h | {a7,b7,c7}
+  8 | i | {a8,b8,c8}
+  9 | j | {a9,b9,c9}
+ 10 | k | {a10,b10,c10}
+(11 rows)
+
+\c - -
+REVOKE USAGE ON FOREIGN SERVER fdtest FROM dblink_regression_test;
+REVOKE EXECUTE ON FUNCTION dblink_connect_u(text, text) FROM dblink_regression_test;
+DROP USER dblink_regression_test;
+DROP USER MAPPING FOR public SERVER fdtest;
+DROP SERVER fdtest;
+DROP FOREIGN DATA WRAPPER postgresql;

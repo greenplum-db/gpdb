@@ -7,9 +7,9 @@
  * with some sort of sed hackery, but no time for that now.  It's likely
  * that an exact mapping will not be what's wanted anyhow ...
  *
- * Copyright (c) 2003-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/pl/plpgsql/src/plerrcodes.h,v 1.15 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/pl/plpgsql/src/plerrcodes.h,v 1.18 2009/03/04 10:55:00 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -80,6 +80,10 @@
 },
 
 {
+	"case_not_found", ERRCODE_CASE_NOT_FOUND
+},
+
+{
 	"cardinality_violation", ERRCODE_CARDINALITY_VIOLATION
 },
 
@@ -132,6 +136,14 @@
 },
 
 {
+	"invalid_argument_for_ntile_function", ERRCODE_INVALID_ARGUMENT_FOR_NTILE
+},
+
+{
+	"invalid_argument_for_nth_value_function", ERRCODE_INVALID_ARGUMENT_FOR_NTH_VALUE
+},
+
+{
 	"invalid_argument_for_power_function", ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION
 },
 
@@ -173,6 +185,14 @@
 
 {
 	"invalid_regular_expression", ERRCODE_INVALID_REGULAR_EXPRESSION
+},
+
+{
+	"invalid_row_count_in_limit_clause", ERRCODE_INVALID_ROW_COUNT_IN_LIMIT_CLAUSE
+},
+
+{
+	"invalid_row_count_in_result_offset_clause", ERRCODE_INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE
 },
 
 {
@@ -477,6 +497,10 @@
 
 {
 	"grouping_error", ERRCODE_GROUPING_ERROR
+},
+
+{
+	"windowing_error", ERRCODE_WINDOWING_ERROR
 },
 
 {

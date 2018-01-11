@@ -123,16 +123,12 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 		
 		Assert(strlen(distribId) < TMGIDSIZE);
 
-		values[3] = 
-			DirectFunctionCall1(textin,
-				                CStringGetDatum(distribId));
+		values[3] = CStringGetTextDatum(distribId);
 
 		/*
 		 * For now, we only log committed distributed transactions.
 		 */
-		values[4] = 
-			DirectFunctionCall1(textin,
-				                CStringGetDatum("Committed"));
+		values[4] = CStringGetTextDatum("Committed");
 
 		values[5] = TransactionIdGetDatum(context->indexXid);
 

@@ -7,7 +7,12 @@
  * to start the segment info sender process.
  *
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/postmaster/perfmon_segmentinfo.h
  *
  *-------------------------------------------------------------------------
  */

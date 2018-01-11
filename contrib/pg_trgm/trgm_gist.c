@@ -1,3 +1,6 @@
+/*
+ * $PostgreSQL: pgsql/contrib/pg_trgm/trgm_gist.c,v 1.16 2009/06/11 14:48:51 momjian Exp $
+ */
 #include "trgm.h"
 
 #include "access/gist.h"
@@ -72,7 +75,7 @@ gtrgm_out(PG_FUNCTION_ARGS)
 }
 
 static void
-makesign(BITVECP sign, TRGM * a)
+makesign(BITVECP sign, TRGM *a)
 {
 	int4		k,
 				len = ARRNELEM(a);
@@ -159,12 +162,38 @@ gtrgm_decompress(PG_FUNCTION_ARGS)
 Datum
 gtrgm_consistent(PG_FUNCTION_ARGS)
 {
-	text	   *query = (text *) PG_GETARG_TEXT_P(1);
-	TRGM	   *key = (TRGM *) DatumGetPointer(((GISTENTRY *) PG_GETARG_POINTER(0))->key);
-	TRGM	   *qtrg = generate_trgm(VARDATA(query), VARSIZE(query) - VARHDRSZ);
-	int			res = false;
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+	text	   *query = PG_GETARG_TEXT_P(1);
 
-	if (GIST_LEAF((GISTENTRY *) PG_GETARG_POINTER(0)))
+	/* StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2); */
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
+	TRGM	   *key = (TRGM *) DatumGetPointer(entry->key);
+	TRGM	   *qtrg;
+	bool		res = false;
+	char	   *cache = (char *) fcinfo->flinfo->fn_extra;
+
+	/* All cases served by this function are exact */
+	*recheck = false;
+
+	if (cache == NULL || VARSIZE(cache) != VARSIZE(query) || memcmp(cache, query, VARSIZE(query)) != 0)
+	{
+		qtrg = generate_trgm(VARDATA(query), VARSIZE(query) - VARHDRSZ);
+
+		if (cache)
+			pfree(cache);
+
+		fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
+								   MAXALIGN(VARSIZE(query)) + VARSIZE(qtrg));
+		cache = (char *) fcinfo->flinfo->fn_extra;
+
+		memcpy(cache, query, VARSIZE(query));
+		memcpy(cache + MAXALIGN(VARSIZE(query)), qtrg, VARSIZE(qtrg));
+	}
+
+	qtrg = (TRGM *) (cache + MAXALIGN(VARSIZE(query)));
+
+	if (GIST_LEAF(entry))
 	{							/* all leafs contains orig trgm */
 		float4		tmpsml = cnt_sml(key, qtrg);
 
@@ -200,7 +229,7 @@ gtrgm_consistent(PG_FUNCTION_ARGS)
 }
 
 static int4
-unionkey(BITVECP sbase, TRGM * add)
+unionkey(BITVECP sbase, TRGM *add)
 {
 	int4		i;
 
@@ -347,7 +376,7 @@ hemdistsign(BITVECP a, BITVECP b)
 }
 
 static int
-hemdist(TRGM * a, TRGM * b)
+hemdist(TRGM *a, TRGM *b)
 {
 	if (ISALLTRUE(a))
 	{
@@ -397,7 +426,7 @@ typedef struct
 } CACHESIGN;
 
 static void
-fillcache(CACHESIGN *item, TRGM * key)
+fillcache(CACHESIGN *item, TRGM *key)
 {
 	item->allistrue = false;
 	if (ISARRKEY(key))

@@ -1,3 +1,4 @@
+--
 -- NUMEROLOGY
 -- Test various combinations of numeric types and functions.
 --
@@ -28,8 +29,6 @@ INSERT INTO INT4_NUMER_TBL(f1) VALUES ('-2147483647');
 --  so let's try explicit conversions for now - tgl 97/05/07
 --
 CREATE TABLE TEMP_FLOAT (f1 FLOAT8);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO TEMP_FLOAT (f1)
   SELECT float8(f1) FROM INT4_NUMER_TBL;
 INSERT INTO TEMP_FLOAT (f1)
@@ -52,8 +51,6 @@ SELECT '' AS ten, f1 FROM TEMP_FLOAT
 
 -- int4
 CREATE TABLE TEMP_INT4 (f1 INT4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO TEMP_INT4 (f1)
   SELECT int4(f1) FROM FLOAT8_NUMER_TBL
   WHERE (f1 > -2147483647) AND (f1 < 2147483647);
@@ -76,8 +73,6 @@ SELECT '' AS nine, f1 FROM TEMP_INT4
 
 -- int2
 CREATE TABLE TEMP_INT2 (f1 INT2);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO TEMP_INT2 (f1)
   SELECT int2(f1) FROM FLOAT8_NUMER_TBL
   WHERE (f1 >= -32767) AND (f1 <= 32767);
@@ -99,15 +94,13 @@ SELECT '' AS five, f1 FROM TEMP_INT2
 -- Group-by combinations
 --
 CREATE TABLE TEMP_GROUP (f1 INT4, f2 INT4, f3 FLOAT8);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO TEMP_GROUP
   SELECT 1, (- i.f1), (- f.f1)
   FROM INT4_NUMER_TBL i, FLOAT8_NUMER_TBL f;
 INSERT INTO TEMP_GROUP
   SELECT 2, i.f1, f.f1
   FROM INT4_NUMER_TBL i, FLOAT8_NUMER_TBL f;
-SELECT DISTINCT f1 AS two FROM TEMP_GROUP;
+SELECT DISTINCT f1 AS two FROM TEMP_GROUP ORDER BY 1;
  two 
 -----
    1
@@ -120,7 +113,7 @@ SELECT f1 AS two, max(f3) AS max_float, min(f3) as min_float
   ORDER BY two, max_float, min_float;
  two |      max_float       |       min_float       
 -----+----------------------+-----------------------
-   1 | 1.2345678901234e+200 |                     0
+   1 | 1.2345678901234e+200 |                    -0
    2 |                    0 | -1.2345678901234e+200
 (2 rows)
 
@@ -132,7 +125,7 @@ SELECT f1 AS two, max(f3) AS max_float, min(f3) AS min_float
   ORDER BY two, max_float, min_float;
  two |      max_float       |       min_float       
 -----+----------------------+-----------------------
-   1 | 1.2345678901234e+200 |                     0
+   1 | 1.2345678901234e+200 |                    -0
    2 |                    0 | -1.2345678901234e+200
 (2 rows)
 

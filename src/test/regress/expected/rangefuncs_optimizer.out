@@ -25,15 +25,15 @@ LINE 1: select * from foo2, foot(foo2.fooid) z where foo2.f2 = z.f2;
                                  ^
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(foo2.fooid) z where z.fooid = foo2.fooid) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foo2" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2" 
 DETAIL:  SQL function "foot" during startup
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(1) z where z.fooid = foo2.fooid) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foo2"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2"  
 DETAIL:  SQL function "foot" during startup
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(foo2.fooid) z where z.fooid = 1) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foo2" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2" 
 DETAIL:  SQL function "foot" during startup
 -- nested functions
 select foot.fooid, foot.f2 from foot(sin(pi()/2)::int) ORDER BY 1,2;
@@ -270,12 +270,12 @@ INSERT INTO foorescan values(5009,5,'abc.5009.5');
 CREATE FUNCTION foorescan(int,int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid >= $1 and fooid < $2 ;' LANGUAGE SQL;
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM foorescan(5002,5004)) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW vw_foorescan AS SELECT * FROM foorescan(5002,5004);
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM vw_foorescan) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  
 DETAIL:  SQL function "foorescan" during startup
 CREATE TABLE barrescan (fooid int primary key);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "barrescan_pkey" for table "barrescan"
@@ -288,18 +288,18 @@ INSERT INTO barrescan values(5008);
 CREATE FUNCTION foorescan(int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid = $1;' LANGUAGE SQL;
 --invokes ExecFunctionReScan with chgParam != NULL
 SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
 DETAIL:  SQL function "foorescan" during startup
 SELECT b.fooid, max(f.foosubid) FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW fooview1 AS SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
 SELECT * FROM fooview1 AS fv WHERE fv.fooid = 5004;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW fooview2 AS SELECT b.fooid, max(f.foosubid) AS maxsubid FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
 SELECT * FROM fooview2 AS fv WHERE fv.maxsubid = 5;
-ERROR:  function cannot execute on segment because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
 DETAIL:  SQL function "foorescan" during startup
 DROP VIEW vw_foorescan;
 DROP VIEW fooview1;
@@ -439,6 +439,227 @@ CREATE FUNCTION bad (f1 int, out f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 ERROR:  cannot determine result data type
 DETAIL:  A function returning a polymorphic type must have at least one polymorphic argument.
+--
+-- table functions
+--
+CREATE OR REPLACE FUNCTION foo()
+RETURNS TABLE(a int)
+AS $$ SELECT a FROM generate_series(1,5) a(a) $$ LANGUAGE sql;
+SELECT * FROM foo();
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+DROP FUNCTION foo();
+CREATE OR REPLACE FUNCTION foo(int)
+RETURNS TABLE(a int, b int)
+AS $$ SELECT a, b
+         FROM generate_series(1,$1) a(a),
+              generate_series(1,$1) b(b) $$ LANGUAGE sql;
+SELECT * FROM foo(3);
+ a | b 
+---+---
+ 1 | 1
+ 1 | 2
+ 1 | 3
+ 2 | 1
+ 2 | 2
+ 2 | 3
+ 3 | 1
+ 3 | 2
+ 3 | 3
+(9 rows)
+
+DROP FUNCTION foo(int);
+--
+-- some tests on SQL functions with RETURNING
+--
+-- start_ignore
+-- GPDB_90_MERGE_FIXME: GPDB doesn't currently support the RETURNING clause.
+-- These tests have therefore been disabled. I'm marking this as a FIXME for
+-- the 9.0 merge, because I think we'll tackle the RETURNING clause and try
+-- to make that work again at that time, once we merge the ModifyTable node
+-- from the upstream.
+create temp table tt(f1 serial, data text);
+NOTICE:  CREATE TABLE will create implicit sequence "tt_f1_seq" for serial column "tt.f1"
+create function insert_tt(text) returns int as
+$$ insert into tt(data) values($1) returning f1 $$
+language sql;
+select insert_tt('foo');
+ insert_tt 
+-----------
+         1
+(1 row)
+
+select insert_tt('bar');
+ insert_tt 
+-----------
+         2
+(1 row)
+
+select * from tt;
+ f1 | data 
+----+------
+  1 | foo
+  2 | bar
+(2 rows)
+
+-- insert will execute to completion even if function needs just 1 row
+create or replace function insert_tt(text) returns int as
+$$ insert into tt(data) values($1),($1||$1) returning f1 $$
+language sql;
+select insert_tt('fool');
+ insert_tt 
+-----------
+         3
+(1 row)
+
+select * from tt;
+ f1 |   data   
+----+----------
+  1 | foo
+  2 | bar
+  3 | fool
+  4 | foolfool
+(4 rows)
+
+-- setof does what's expected
+create or replace function insert_tt2(text,text) returns setof int as
+$$ insert into tt(data) values($1),($2) returning f1 $$
+language sql;
+select insert_tt2('foolish','barrish');
+ insert_tt2 
+------------
+          5
+          6
+(2 rows)
+
+select * from insert_tt2('baz','quux');
+ insert_tt2 
+------------
+          7
+          8
+(2 rows)
+
+select * from tt;
+ f1 |   data   
+----+----------
+  1 | foo
+  2 | bar
+  3 | fool
+  4 | foolfool
+  5 | foolish
+  6 | barrish
+  7 | baz
+  8 | quux
+(8 rows)
+
+-- limit doesn't prevent execution to completion
+select insert_tt2('foolish','barrish') limit 1;
+ insert_tt2 
+------------
+          9
+(1 row)
+
+select * from tt;
+ f1 |   data   
+----+----------
+  1 | foo
+  2 | bar
+  3 | fool
+  4 | foolfool
+  5 | foolish
+  6 | barrish
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+(10 rows)
+
+-- triggers will fire, too
+create function noticetrigger() returns trigger as $$
+begin
+  raise notice 'noticetrigger % %', new.f1, new.data;
+  return null;
+end $$ language plpgsql;
+create trigger tnoticetrigger after insert on tt for each row
+execute procedure noticetrigger();
+select insert_tt2('foolme','barme') limit 1;
+NOTICE:  noticetrigger 11 foolme
+CONTEXT:  SQL function "insert_tt2" statement 1
+NOTICE:  noticetrigger 12 barme
+CONTEXT:  SQL function "insert_tt2" statement 1
+ insert_tt2 
+------------
+         11
+(1 row)
+
+select * from tt;
+ f1 |   data   
+----+----------
+  1 | foo
+  2 | bar
+  3 | fool
+  4 | foolfool
+  5 | foolish
+  6 | barrish
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+ 11 | foolme
+ 12 | barme
+(12 rows)
+
+-- and rules work
+create temp table tt_log(f1 int, data text);
+create rule insert_tt_rule as on insert to tt do also
+  insert into tt_log values(new.*);
+select insert_tt2('foollog','barlog') limit 1;
+NOTICE:  noticetrigger 13 foollog
+CONTEXT:  SQL function "insert_tt2" statement 1
+NOTICE:  noticetrigger 14 barlog
+CONTEXT:  SQL function "insert_tt2" statement 1
+ insert_tt2 
+------------
+         13
+(1 row)
+
+select * from tt;
+ f1 |   data   
+----+----------
+  1 | foo
+  2 | bar
+  3 | fool
+  4 | foolfool
+  5 | foolish
+  6 | barrish
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+ 11 | foolme
+ 12 | barme
+ 13 | foollog
+ 14 | barlog
+(14 rows)
+
+-- note that nextval() gets executed a second time in the rule expansion,
+-- which is expected.
+select * from tt_log;
+ f1 |  data   
+----+---------
+ 15 | foollog
+ 16 | barlog
+(2 rows)
+
+-- end of disabled RETURNING tests.
+-- end_ignore
 -- test case for a whole-row-variable bug
 create function foo1(n integer, out a text, out b text)
   returns setof record
@@ -461,6 +682,77 @@ select t.a, t, t.a from foo1(10000) t limit 1;
 (1 row)
 
 drop function foo1(n integer);
+-- test use of SQL functions returning record
+-- this is supported in some cases where the query doesn't specify
+-- the actual record type ...
+create function array_to_set(anyarray) returns setof record as $$
+  select i AS "index", $1[i] AS "value" from generate_subscripts($1, 1) i
+$$ language sql strict immutable;
+select array_to_set(array['one', 'two']);
+ array_to_set 
+--------------
+ (1,one)
+ (2,two)
+(2 rows)
+
+select * from array_to_set(array['one', 'two']) as t(f1 int,f2 text);
+ f1 | f2  
+----+-----
+  1 | one
+  2 | two
+(2 rows)
+
+select * from array_to_set(array['one', 'two']); -- fail
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from array_to_set(array['one', 'two']);
+                      ^
+-- start_ignore
+-- GPDB_90_MERGE_FIXME: disable RETURNING clause tests (see above).
+create temp table foo(f1 int8, f2 int8);
+create function testfoo() returns record as $$
+  insert into foo values (1,2) returning *;
+$$ language sql;
+select testfoo();
+ testfoo 
+---------
+ (1,2)
+(1 row)
+
+select * from testfoo() as t(f1 int8,f2 int8);
+ f1 | f2 
+----+----
+  1 |  2
+(1 row)
+
+select * from testfoo(); -- fail
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from testfoo();
+                      ^
+drop function testfoo();
+create function testfoo() returns setof record as $$
+  insert into foo values (1,2), (3,4) returning *;
+$$ language sql;
+select testfoo();
+ testfoo 
+---------
+ (1,2)
+ (3,4)
+(2 rows)
+
+select * from testfoo() as t(f1 int8,f2 int8);
+ f1 | f2 
+----+----
+  1 |  2
+  3 |  4
+(2 rows)
+
+select * from testfoo(); -- fail
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from testfoo();
+                      ^
+drop function testfoo();
+-- end of disabled RETURNING tests.
+-- end_ignore
 -- check handling of a SQL function with multiple OUT params (bug #5777)
 create or replace function foobar(out integer, out numeric) as
 $$ select (1, 2.1) $$ language sql;

@@ -1,27 +1,32 @@
 /*-------------------------------------------------------------------------
-*
-* fileam.c
-*	  file access method routines
-*
-* This access layer mimics the heap access API with respect to how it
-* communicates with its respective scan node (external scan node) but
-* instead of accessing the heap pages, it actually "scans" data by
-* reading it from a local flat file or a remote data source.
-*
-* The actual data access, whether local or remote, is done with the
-* curl c library ('libcurl') which uses a 'c-file like' API but behind
-* the scenes actually does all the work of parsing the URI and communicating
-* with the target. In this case if the URI uses the file protocol (file://)
-* curl will try to open the specified file locally. If the URI uses the
-* http protocol (http://) then curl will reach out to that address and
-* get the data from there.
-*
-* As data is being read it gets parsed with the COPY command parsing rules,
-* as if it is data meant for COPY. Therefore, currently, with the lack of
-* single row error handling the first error will raise an error and the
-* query will terminate.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * fileam.c
+ *	  file access method routines
+ *
+ * This access layer mimics the heap access API with respect to how it
+ * communicates with its respective scan node (external scan node) but
+ * instead of accessing the heap pages, it actually "scans" data by
+ * reading it from a local flat file or a remote data source.
+ *
+ * The actual data access, whether local or remote, is done with the
+ * curl c library ('libcurl') which uses a 'c-file like' API but behind
+ * the scenes actually does all the work of parsing the URI and communicating
+ * with the target. In this case if the URI uses the file protocol (file://)
+ * curl will try to open the specified file locally. If the URI uses the
+ * http protocol (http://) then curl will reach out to that address and
+ * get the data from there.
+ *
+ * As data is being read it gets parsed with the COPY command parsing rules,
+ * as if it is data meant for COPY. Therefore, currently, with the lack of
+ * single row error handling the first error will raise an error and the
+ * query will terminate.
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/external/fileam.c
  *
  *-------------------------------------------------------------------------
  */
@@ -173,7 +178,7 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 
 		/*
 		 * Segindex may be -1, for the following case. A slice is executed on
-		 * entry db, (for example, gp_configuration), then external table is
+		 * entry db, (for example, gp_segment_configuration), then external table is
 		 * executed on another slice. Entry db slice will still call
 		 * ExecInitExternalScan (probably we should fix this?), then segindex
 		 * = -1 will bomb out here.
@@ -397,7 +402,12 @@ external_endscan(FileScanDesc scan)
 	 */
 	if (!scan->fs_noop && scan->fs_file)
 	{
-		url_fclose(scan->fs_file, true, relname);
+		/*
+		 * QueryFinishPending == true means QD have got
+		 * enough tuples and query can return correctly,
+		 * so slient errors when closing external file.
+		 */
+		url_fclose(scan->fs_file, !QueryFinishPending, relname);
 		scan->fs_file = NULL;
 	}
 
@@ -503,21 +513,12 @@ external_insert_init(Relation rel)
 
 	if (extentry->command)
 	{
-		/* EXECUTE */
-
-		const char *command = extentry->command;
-		const char *prefix = "execute:";
-		char	   *prefixed_command = NULL;
-
-		/* allocate space for "execute:<cmd>" + 1 for null in sprintf */
-		prefixed_command = (char *) palloc((strlen(prefix) +
-											strlen(command)) *
-										   sizeof(char) + 1);
-
-		/* build the command string - 'execute:command' */
-		sprintf((char *) prefixed_command, "%s%s", prefix, command);
-
-		extInsertDesc->ext_uri = prefixed_command;
+		/*
+		 * EXECUTE
+		 *
+		 * build the command string, 'execute:<command>'
+		 */
+		extInsertDesc->ext_uri = psprintf("execute:%s", extentry->command);
 	}
 	else
 	{
@@ -588,6 +589,7 @@ external_insert_init(Relation rel)
  * - transaction information is of no interest.
  * - tuples are sent always to the destination (local file or remote target).
  *
+ * Like heap_insert(), this function can modify the input tuple!
  */
 Oid
 external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup)
@@ -645,6 +647,7 @@ external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup)
 									 NULL);
 
 		/* Mark the correct record type in the passed tuple */
+		HeapTupleHeaderSetDatumLength(instup->t_data, instup->t_len);
 		HeapTupleHeaderSetTypeId(instup->t_data, tupDesc->tdtypeid);
 		HeapTupleHeaderSetTypMod(instup->t_data, tupDesc->tdtypmod);
 
@@ -761,10 +764,7 @@ else \
 	/* set the error message. Use original msg and add column name if availble */ \
 	if (pstate->cur_attname)\
 	{\
-		pstate->cdbsreh->errmsg = (char *) palloc((strlen(edata->message) + \
-												   strlen(pstate->cur_attname) + \
-												   10 + 1) * sizeof(char)); \
-		sprintf(pstate->cdbsreh->errmsg, "%s, column %s", \
+		pstate->cdbsreh->errmsg = psprintf("%s, column %s", \
 				edata->message, \
 				pstate->cur_attname); \
 	}\
@@ -1125,6 +1125,17 @@ externalgettup_custom(FileScanDesc scan)
 							 */
 							pstate->raw_buf_done = true;
 							justifyDatabuf(&formatter->fmt_databuf);
+
+							if (pstate->fe_eof && formatter->fmt_databuf.len > 0)
+							{
+								/*
+								 * The formatter needs more data, but we have reached
+								 * EOF. This is an error.
+								 */
+								ereport(ERROR,
+										(ERRCODE_DATA_EXCEPTION,
+										 errmsg("unexpected end of file")));
+							}
 
 							continue;
 
@@ -2356,7 +2367,7 @@ parseFormatString(CopyState pstate, char *fmtstr, bool iscustom)
 		}
 
 		if (!formatter_found)
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("external table internal parse error: "
 								   "no formatter function name found")));
 
@@ -2373,11 +2384,11 @@ parseFormatString(CopyState pstate, char *fmtstr, bool iscustom)
 
 error:
 	if (token)
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 					  errmsg("external table internal parse error at \"%s\"",
 							 token)));
 	else
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 					  errmsg("external table internal parse error at end of "
 							 "line")));
 

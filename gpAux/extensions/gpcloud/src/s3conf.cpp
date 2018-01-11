@@ -64,18 +64,10 @@ S3Params InitConfig(const string& urlWithOptions) {
                     configSection);
 
     bool useHttps = s3Cfg.GetBool(configSection, "encryption", "true");
-    bool verifyCert = s3Cfg.GetBool(configSection, "verifycert", "true");
 
     string version = s3Cfg.Get(configSection, "version", "");
 
     S3Params params(sourceUrl, useHttps, version, urlRegion);
-
-    string sse_type = s3Cfg.Get(configSection, "server_side_encryption", "none");
-    if (sse_type == "sse-s3") {
-        params.setSSEType(SSE_S3);
-    } else {
-        params.setSSEType(SSE_NONE);
-    }
 
     string content = s3Cfg.Get(configSection, "loglevel", "WARNING");
     s3ext_loglevel = getLogLevel(content.c_str());
@@ -107,7 +99,18 @@ S3Params InitConfig(const string& urlWithOptions) {
 
     params.setProxy(s3Cfg.Get(configSection, "proxy", ""));
 
-    params.setVerifyCert(verifyCert);
+    params.setAutoCompress(s3Cfg.GetBool(configSection, "autocompress", "true"));
+
+    params.setVerifyCert(s3Cfg.GetBool(configSection, "verifycert", "true"));
+
+    string sse_type = s3Cfg.Get(configSection, "server_side_encryption", "");
+    if (sse_type == "sse-s3") {
+        params.setSSEType(SSE_S3);
+    } else {
+        params.setSSEType(SSE_NONE);
+    }
+
+    params.setGpcheckcloud_newline(s3Cfg.Get(configSection, "gpcheckcloud_newline", "\n"));
 
     CheckEssentialConfig(params);
 
@@ -125,5 +128,11 @@ void CheckEssentialConfig(const S3Params& params) {
 
     if (s3ext_segnum <= 0) {
         S3_CHECK_OR_DIE(false, S3ConfigError, "\"FATAL: segment info is invalid\"", "segment");
+    }
+
+    string newline = params.getGpcheckcloud_newline();
+    if (newline.compare("\n") && newline.compare("\r\n") && newline.compare("\r")) {
+        S3_CHECK_OR_DIE(false, S3ConfigError, "\"FATAL: gpcheckcloud_newline is invalid\"\"",
+                        "gpcheckcloud_newline");
     }
 }

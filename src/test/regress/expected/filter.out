@@ -442,10 +442,9 @@ select i, j, row_number() over (partition by j order by i) from filter_test ORDE
 
 select i, j, row_number() filter (WHERE i % 2 = 1) over (partition by j order by i) 
 FROM filter_test ORDER BY j, i;
-ERROR:  function row_number(integer) does not exist
+ERROR:  FILTER is not implemented for non-aggregate window functions
 LINE 1: select i, j, row_number() filter (WHERE i % 2 = 1) over (par...
                      ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select i, rank() over (order by i) from filter_test ORDER BY i;
  i  | rank 
 ----+------
@@ -462,10 +461,9 @@ select i, rank() over (order by i) from filter_test ORDER BY i;
 (10 rows)
 
 select i, rank() filter (where true) over (order by i) from filter_test ORDER BY i;
-ERROR:  function rank(integer) does not exist
+ERROR:  FILTER is not implemented for non-aggregate window functions
 LINE 1: select i, rank() filter (where true) over (order by i) from ...
                   ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select i, ntile(3) over (order by i) from filter_test ORDER BY i;
  i  | ntile 
 ----+-------
@@ -482,7 +480,7 @@ select i, ntile(3) over (order by i) from filter_test ORDER BY i;
 (10 rows)
 
 select i, ntile(3) filter (where true) over (order by i) from filter_test ORDER BY i;
-ERROR:  filter clause specified, but ntile is not an aggregate function
+ERROR:  FILTER is not implemented for non-aggregate window functions
 LINE 1: select i, ntile(3) filter (where true) over (order by i) fro...
                   ^
 select i, ntile(4-j) over (partition by j order by i) 
@@ -501,7 +499,7 @@ FROM filter_test where j < 4 ORDER BY j, i;
 
 select i, ntile(4-j) filter (where true) over (partition by j order by i) 
 from filter_test where j < 4 ORDER BY j, i;
-ERROR:  filter clause specified, but ntile is not an aggregate function
+ERROR:  FILTER is not implemented for non-aggregate window functions
 LINE 1: select i, ntile(4-j) filter (where true) over (partition by ...
                   ^
 -- TEST against non aggregate function => should error
@@ -521,7 +519,7 @@ select i, lower('Hello') from filter_test order by i;
 (10 rows)
 
 select i, lower('Hello') filter (where i < 5) from filter_test order by i;
-ERROR:  filter clause specified, but lower is not an aggregate function
+ERROR:  FILTER specified, but lower is not an aggregate function
 LINE 1: select i, lower('Hello') filter (where i < 5) from filter_te...
                   ^
 -- TEST against function like projection => should error
@@ -625,10 +623,11 @@ SELECT maxodd(i) FROM filter_test;
 (1 row)
 
 SELECT maxodd(i) FILTER (WHERE TRUE) from filter_test;
-ERROR:  function maxodd(integer) is not defined as STRICT
-LINE 1: SELECT maxodd(i) FILTER (WHERE TRUE) from filter_test;
-               ^
-HINT:  The filter clause is only supported over functions defined as STRICT.
+ maxodd 
+--------
+      9
+(1 row)
+
 SELECT j, maxodd(i) FROM filter_test group by j order by j;
  j | maxodd 
 ---+--------
@@ -639,16 +638,20 @@ SELECT j, maxodd(i) FROM filter_test group by j order by j;
 (4 rows)
 
 SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test group by j order by j;
-ERROR:  function maxodd(integer) is not defined as STRICT
-LINE 1: SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test gro...
-                  ^
-HINT:  The filter clause is only supported over functions defined as STRICT.
+ j | maxodd 
+---+--------
+ 1 |      3
+ 2 |      0
+ 3 |      9
+   |      0
+(4 rows)
+
 -- TEST view deparsing of FILTER expressions.
 CREATE VIEW filter_view AS SELECT count(*) FILTER (WHERE TRUE) FROM filter_test;
 SELECT definition from pg_views WHERE viewname='filter_view';
-                                      definition                                       
----------------------------------------------------------------------------------------
- SELECT count(CASE WHEN true THEN 1 ELSE NULL::integer END) AS count FROM filter_test;
+                           definition                           
+----------------------------------------------------------------
+ SELECT count(*) FILTER (WHERE true) AS count FROM filter_test;
 (1 row)
 
 drop aggregate maxodd(int);

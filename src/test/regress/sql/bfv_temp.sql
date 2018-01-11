@@ -17,9 +17,17 @@ set role sec_definer_role;
 
 select sec_definer_create_test() ;
 
--- There should be one temp table, the one we created (we assume that there are no
--- other backends using temp tables running at the same time).
-select count(*) from pg_tables where schemaname like 'pg_temp%';
+-- Remember the name of the temp namespace and temp toast namespace
+CREATE TABLE temp_nspnames as
+select nsp.nspname as nspname, toastnsp.nspname as toastnspname from pg_class c
+inner join pg_namespace nsp on c.relnamespace = nsp.oid
+inner join pg_class toastc on toastc.oid = c.reltoastrelid
+inner join pg_namespace toastnsp on toastc.relnamespace = toastnsp.oid
+where c.oid = 'wmt_toast_issue_temp'::regclass;
+
+-- there should be exactly one temp table with that name.
+select count(*) from temp_nspnames;
+
 
 -- Disconnect and reconnect.
 \c regression
@@ -28,11 +36,17 @@ select count(*) from pg_tables where schemaname like 'pg_temp%';
 -- temp tables.
 select pg_sleep(2);
 
--- Check that the temporary table was dropped at disconnect.
-select * from pg_tables where schemaname like 'pg_temp%';
+-- Check that the temp namespaces were dropped altogether.
+select nsp.nspname, temp_nspnames.* FROM pg_namespace nsp, temp_nspnames
+where nsp.nspname = temp_nspnames.nspname OR nsp.nspname = temp_nspnames.toastnspname;
+
+-- Check that the temporary table was dropped at disconnect. (It really should be
+-- gone if the whole namespace is gone, but doesn't hurt to check.)
+select * from pg_tables where tablename = 'wmt_toast_issue_temp';
+
 
 -- Clean up
 reset role;
+drop table temp_nspnames;
 drop function public.sec_definer_create_test();
 drop role sec_definer_role;
-

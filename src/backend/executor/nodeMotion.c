@@ -3,7 +3,12 @@
  * nodeMotion.c
  *	  Routines to handle moving tuples around in Greenplum Database.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeMotion.c
  *
  *-------------------------------------------------------------------------
  */
@@ -25,12 +30,10 @@
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/tuplesort.h"
-#include "utils/tuplesort_mk.h"
 #include "utils/tuplesort_mk_details.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/memutils.h"
-#include "utils/debugbreak.h"
 #include "utils/typcache.h"
 
 
@@ -57,7 +60,7 @@
 typedef struct CdbTupleHeapInfo
 {
 	/* Next tuple from this sender */
-    HeapTuple	tuple;
+    GenericTuple tuple;
 
     /* Which sender did this tuple come from? */
 	int			sourceRouteId;
@@ -160,23 +163,6 @@ bool isMotionGather(const Motion *m)
 			&& m->numOutputSegs == 1);
 }
 
-/*
- * Set the statistic info in gpmon packet.
- */
-static void
-setMotionStatsForGpmon(MotionState *node)
-{
-	ChunkTransportState *transportStates = node->ps.state->interconnect_context;
-	int motionId = ((Motion *) node->ps.plan)->motionID;
-
-	ChunkTransportStateEntry *transportEntry = NULL;
-	getChunkTransportState(transportStates, motionId, &transportEntry);
-	uint64 avgAckTime = 0;
-	if (transportEntry->stat_count_acks > 0)
-		avgAckTime = transportEntry->stat_total_ack_time / transportEntry->stat_count_acks;
-}
-
-
 /* ----------------------------------------------------------------
  *		ExecMotion
  * ----------------------------------------------------------------
@@ -237,12 +223,6 @@ ExecMotion(MotionState * node)
 
 		if (tuple == NULL)
 			node->ps.state->active_recv_id = -1;
-		else
-		{
-			Gpmon_Incr_Rows_In(GpmonPktFromMotionState(node));
-			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
-			setMotionStatsForGpmon(node);
-		}
 #ifdef MEASURE_MOTION_TIME
 		gettimeofday(&stopTime, NULL);
 
@@ -261,7 +241,6 @@ ExecMotion(MotionState * node)
 			node->motionTime.tv_sec++;
 		}
 #endif
-		CheckSendPlanStateGpmonPkt(&node->ps);
 		return tuple;
 	}
 	else if(node->mstype == MOTIONSTATE_SEND)
@@ -330,10 +309,6 @@ execMotionSender(MotionState * node)
 			doSendTuple(motion, node, outerTupleSlot);
 			/* doSendTuple() may have set node->stopRequested as a side-effect */
 
-			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
-			setMotionStatsForGpmon(node);
-			CheckSendPlanStateGpmonPkt(&node->ps);
-
 			if (node->stopRequested)
 			{
 				elog(gp_workfile_caching_loglevel, "Motion initiating Squelch walker");
@@ -374,7 +349,7 @@ execMotionUnsortedReceiver(MotionState * node)
 {
 	/* RECEIVER LOGIC */
 	TupleTableSlot *slot;
-	HeapTuple	tuple;
+	GenericTuple tuple;
 	Motion	   *motion = (Motion *) node->ps.plan;
 	ReceiveReturnCode recvRC;
 
@@ -489,7 +464,7 @@ static bool motion_mkhp_read(void *vpctxt, MKEntry *a)
     MotionMKHeapReaderContext *ctxt = (MotionMKHeapReaderContext *) vpctxt;
     MotionState *node = ctxt->node;
 
-    HeapTuple inputTuple = NULL;
+    GenericTuple inputTuple = NULL;
 	Motion *motion = (Motion *) node->ps.plan;
 
     ReceiveReturnCode recvRC;
@@ -540,7 +515,7 @@ static bool motion_mkhp_read(void *vpctxt, MKEntry *a)
 static Datum tupsort_fetch_datum_motion(MKEntry *a, MKContext *mkctxt, MKLvContext *lvctxt, bool *isNullOut)
 {
 	Datum d;
-    if (is_heaptuple_memtuple(a->ptr))
+    if (is_memtuple(a->ptr))
         d = memtuple_getattr((MemTuple) a->ptr, mkctxt->mt_bind, lvctxt->attno, isNullOut);
     else
         d = heap_getattr((HeapTuple) a->ptr, lvctxt->attno, mkctxt->tupdesc, isNullOut);
@@ -641,7 +616,7 @@ execMotionSortedReceiver(MotionState * node)
 {
 	TupleTableSlot *slot;
     CdbHeap        *hp = (CdbHeap *) node->tupleheap;
-	HeapTuple	tuple,
+	GenericTuple tuple,
 				inputTuple;
 	Motion	   *motion = (Motion *) node->ps.plan;
 	ReceiveReturnCode recvRC;
@@ -782,7 +757,7 @@ execMotionSortedReceiver(MotionState * node)
 void
 execMotionSortedReceiverFirstTime(MotionState * node)
 {
-	HeapTuple	inputTuple;
+	GenericTuple inputTuple;
     CdbHeap    *hp = (CdbHeap *) node->tupleheap;
 	Motion	   *motion = (Motion *) node->ps.plan;
 	int			iSegIdx;
@@ -878,7 +853,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	Assert(node->motionID <= sliceTable->nMotions);
 
 	estate->currentSliceIdInPlan = node->motionID;
-	int parentExecutingSliceId = estate->currentExecutingSliceId;
 	estate->currentExecutingSliceId = node->motionID;
 
 	/*
@@ -1059,14 +1033,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
     }
 #endif
 
-	/*
-	 * Temporarily set currentExecutingSliceId to the parent value, since
-	 * this motion might be in the top slice of an InitPlan.
-	 */
-	estate->currentExecutingSliceId = parentExecutingSliceId;
-	initGpmonPktForMotion((Plan *)node, &motionstate->ps.gpmon_pkt, estate);
-	estate->currentExecutingSliceId = node->motionID;
-
 	return motionstate;
 }
 
@@ -1214,14 +1180,14 @@ ExecEndMotion(MotionState * node)
  * CdbMergeComparator:
  * Used to compare tuples for a sorted motion node.
  */
-int
+static int
 CdbMergeComparator(void *lhs, void *rhs, void *context)
 {
     CdbMergeComparatorContext  *ctx = (CdbMergeComparatorContext *)context;
     CdbTupleHeapInfo   *linfo = (CdbTupleHeapInfo *) lhs;
     CdbTupleHeapInfo   *rinfo = (CdbTupleHeapInfo *) rhs;
-    HeapTuple           ltup = linfo->tuple;
-    HeapTuple           rtup = rinfo->tuple;
+    GenericTuple ltup = linfo->tuple;
+    GenericTuple rtup = rinfo->tuple;
     FmgrInfo           *sortFunctions;
 	int				   *cmpFlags;
     int                 numSortCols;
@@ -1246,15 +1212,15 @@ CdbMergeComparator(void *lhs, void *rhs, void *context)
                     isnull2;
         int32       compare;
 
-	if(is_heaptuple_memtuple(ltup))
-		datum1 = memtuple_getattr((MemTuple) ltup, ctx->mt_bind, attno, &isnull1);
-	else
-		datum1 = heap_getattr(ltup, attno, tupDesc, &isnull1);
+		if (is_memtuple(ltup))
+			datum1 = memtuple_getattr((MemTuple) ltup, ctx->mt_bind, attno, &isnull1);
+		else
+			datum1 = heap_getattr((HeapTuple) ltup, attno, tupDesc, &isnull1);
 
-	if(is_heaptuple_memtuple(rtup))
-		datum2 = memtuple_getattr((MemTuple) rtup, ctx->mt_bind, attno, &isnull2);
-	else
-		datum2 = heap_getattr(rtup, attno, tupDesc, &isnull2);
+		if (is_memtuple(rtup))
+			datum2 = memtuple_getattr((MemTuple) rtup, ctx->mt_bind, attno, &isnull2);
+		else
+			datum2 = heap_getattr((HeapTuple) rtup, attno, tupDesc, &isnull2);
 
         compare = ApplySortFunction(&sortFunctions[nkey],
                                     cmpFlags[nkey],
@@ -1270,7 +1236,7 @@ CdbMergeComparator(void *lhs, void *rhs, void *context)
 
 
 /* Create context object for use by CdbMergeComparator */
-CdbMergeComparatorContext *
+static CdbMergeComparatorContext *
 CdbMergeComparator_CreateContext(TupleDesc      tupDesc,
                                  int            numSortCols,
                                  AttrNumber    *sortColIdx,
@@ -1429,7 +1395,7 @@ void
 doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 {
 	int16		    targetRoute;
-	HeapTuple       tuple;
+	GenericTuple tuple;
 	SendReturnCode  sendRC;
 	ExprContext    *econtext = node->ps.ps_ExprContext;
 	
@@ -1589,12 +1555,4 @@ ExecStopMotion(MotionState * node)
 	SendStopMessage(node->ps.state->motionlayer_context,
 					node->ps.state->interconnect_context,
 					motion->motionID);
-}
-
-void
-initGpmonPktForMotion(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Motion));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

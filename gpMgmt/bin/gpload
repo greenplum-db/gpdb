@@ -5,10 +5,10 @@ fi
 if [ ! -z "$GPHOME_LOADERS" ]; then
     . $GPHOME_LOADERS/greenplum_loaders_path.sh
 fi
-if [ `uname -s` = "AIX" -a ! -z "$GP_LIBPATH_FOR_PYTHON" ]; then
+if [ `uname -s` = "AIX" ]; then
     LIBPATH=$GP_LIBPATH_FOR_PYTHON:$LIBPATH
     export LIBPATH
+    python_64 `which gpload.py` $*
+else
+    exec gpload.py $*
 fi
-
-
-exec gpload.py $*

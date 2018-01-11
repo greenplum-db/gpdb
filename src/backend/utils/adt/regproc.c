@@ -8,12 +8,12 @@
  * special I/O conversion routines.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/regproc.c,v 1.105 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/regproc.c,v 1.110 2009/01/01 17:23:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,7 @@
 #include "access/heapam.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_ts_config.h"
@@ -36,6 +37,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 static void parseNameAndArgTypes(const char *string, bool allowNone,
 					 List **names, int *nargs, Oid *argtypes);
@@ -187,7 +189,8 @@ regprocout(PG_FUNCTION_ARGS)
 			 * Would this proc be found (uniquely!) by regprocin? If not,
 			 * qualify it.
 			 */
-			clist = FuncnameGetCandidates(list_make1(makeString(proname)), -1, false, false);
+			clist = FuncnameGetCandidates(list_make1(makeString(proname)),
+										  -1, false, false);
 			if (clist != NULL && clist->next == NULL &&
 				clist->oid == proid)
 				nspname = NULL;

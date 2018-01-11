@@ -3,9 +3,11 @@
  * primary_mirror_mode.h
  *	  Exports from primary_mirror_mode.c.
  *
- * Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * $PostgreSQL: pgsql/src/include/postmaster/primary_mirror_mode.h,v 1.20 2009/05/05 19:59:00 tgl Exp $
+ * IDENTIFICATION
+ *	    src/include/postmaster/primary_mirror_mode.h
  *
  *-------------------------------------------------------------------------
  */
@@ -296,9 +298,6 @@ extern bool updateSegmentState(SegmentState_e segmentState, FaultType_e faultTyp
 extern bool updateDataState(DataState_e dataState);
 
 extern int64 getChangeTrackingSessionId(void);
-
-extern void primaryMirrorSetBGWriterPID( pid_t pid );
-extern pid_t primaryMirrorGetBGWriterPID(void);
 
 extern void primaryMirrorSetIOSuspended( bool ioSuspended );
 extern bool primaryMirrorIsIOSuspended(void);

@@ -432,20 +432,20 @@ CLOSE foo12;
 -- leave some cursors open, to test that auto-close works.
 -- record this in the system view as well (don't query the time field there
 -- however)
-SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
+SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY 1;
  name  |                               statement                               | is_holdable | is_binary | is_scrollable 
 -------+-----------------------------------------------------------------------+-------------+-----------+---------------
  foo13 | DECLARE foo13 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
- foo15 | DECLARE foo15 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
- foo19 | DECLARE foo19 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
- foo17 | DECLARE foo17 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
  foo14 | DECLARE foo14 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
- foo21 | DECLARE foo21 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
- foo23 | DECLARE foo23 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
- foo18 | DECLARE foo18 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
- foo20 | DECLARE foo20 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
- foo22 | DECLARE foo22 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
+ foo15 | DECLARE foo15 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
  foo16 | DECLARE foo16 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
+ foo17 | DECLARE foo17 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
+ foo18 | DECLARE foo18 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
+ foo19 | DECLARE foo19 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
+ foo20 | DECLARE foo20 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
+ foo21 | DECLARE foo21 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
+ foo22 | DECLARE foo22 CURSOR FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4;        | f           | f         | f
+ foo23 | DECLARE foo23 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2; | f           | f         | f
 (11 rows)
 
 END;
@@ -471,7 +471,7 @@ END;
 --
 -- Cursors outside transaction blocks
 --
-SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY name;
+SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
  name | statement | is_holdable | is_binary | is_scrollable 
 ------+-----------+-------------+-----------+---------------
 (0 rows)
@@ -499,7 +499,7 @@ FETCH FROM foo25;
 
 --FETCH BACKWARD FROM foo25;
 --FETCH ABSOLUTE -1 FROM foo25;
-SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY name;
+SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
  name  |                                statement                                 | is_holdable | is_binary | is_scrollable 
 -------+--------------------------------------------------------------------------+-------------+-----------+---------------
  foo25 | DECLARE foo25 CURSOR WITH HOLD FOR SELECT * FROM tenk2 ORDER BY 1,2,3,4; | t           | f         | f
@@ -591,14 +591,14 @@ drop function count_tt1_v();
 drop function count_tt1_s();
 -- Create a cursor with the BINARY option and check the pg_cursors view
 BEGIN;
-SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY name;
+SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
  name |                              statement                               | is_holdable | is_binary | is_scrollable 
 ------+----------------------------------------------------------------------+-------------+-----------+---------------
  c2   | declare c2 cursor with hold for select count_tt1_v(), count_tt1_s(); | t           | f         | f
 (1 row)
 
 DECLARE bc BINARY CURSOR FOR SELECT * FROM tenk1;
-SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY name;
+SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
  name |                              statement                               | is_holdable | is_binary | is_scrollable 
 ------+----------------------------------------------------------------------+-------------+-----------+---------------
  bc   | DECLARE bc BINARY CURSOR FOR SELECT * FROM tenk1;                    | f           | t         | f
@@ -609,7 +609,7 @@ ROLLBACK;
 -- We should not see the portal that is created internally to
 -- implement EXECUTE in pg_cursors
 PREPARE cprep AS
-  SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors ORDER BY name;
+  SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors;
 EXECUTE cprep;
  name |                              statement                               | is_holdable | is_binary | is_scrollable 
 ------+----------------------------------------------------------------------+-------------+-----------+---------------
@@ -754,7 +754,7 @@ SELECT f1, f2 FROM uctest;
 --FETCH RELATIVE 0 FROM c1;
 DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -762,7 +762,7 @@ SELECT f1, f2 FROM uctest;
 
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -770,7 +770,7 @@ SELECT f1, f2 FROM uctest;
 
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -811,7 +811,7 @@ SELECT f1, f2 FROM uctest;
 
 DELETE FROM uctest WHERE CURRENT OF c1; -- currently broken on GPDB! (does nothing)
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -819,7 +819,7 @@ SELECT f1, f2 FROM uctest;
 
 DELETE FROM uctest WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -827,7 +827,7 @@ SELECT f1, f2 FROM uctest;
 
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1; -- no-op
 SELECT f1, f2 FROM uctest;
- f1 | f2  
+ f1 |  f2   
 ----+-------
   8 | one
  13 | three
@@ -846,7 +846,10 @@ SELECT f1, f2 FROM uctest;
 (2 rows)
 
 -- Check inheritance cases
+-- GPDB_84_MERGE_FIXME: This notice is being produced by our version of
+-- GPDB,we assume it is correct.
 CREATE TEMP TABLE ucchild () inherits (uctest);
+NOTICE:  Table has parent, setting distribution columns to match parent table
 INSERT INTO ucchild values(100, 'hundred');
 SELECT f1, f2 FROM uctest;
  f1  |   f2    
@@ -857,7 +860,7 @@ SELECT f1, f2 FROM uctest;
 (3 rows)
 
 BEGIN;
-DECLARE c1 CURSOR FOR SELECT f1, f2 FROM uctest;
+DECLARE c1 CURSOR FOR SELECT f1, f2 FROM uctest FOR UPDATE;
 FETCH 1 FROM c1;
  f1 |  f2   
 ----+-------
@@ -893,6 +896,42 @@ SELECT f1, f2 FROM uctest;
  110 | hundred
 (3 rows)
 
+-- Can update from a self-join, but only if FOR UPDATE says which to use
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5;
+FETCH 1 FROM c1;
+ f1 | f2  | distkey | f1 |  f2   | distkey 
+----+-----+---------+----+-------+---------
+ 18 | one |         | 13 | three | 
+(1 row)
+
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;  -- fail
+ERROR:  cursor "c1" is not a simply updatable scan of table "uctest"
+ROLLBACK;
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5 FOR UPDATE;
+FETCH 1 FROM c1;
+ f1 | f2  | distkey | f1 |  f2   | distkey 
+----+-----+---------+----+-------+---------
+ 18 | one |         | 13 | three | 
+(1 row)
+
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;  -- fail
+ERROR:  cursor "c1" is not a simply updatable scan of table "uctest"
+ROLLBACK;
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5 FOR SHARE OF a;
+FETCH 1 FROM c1;
+ f1 | f2  | distkey | f1 |  f2   | distkey 
+----+-----+---------+----+-------+---------
+ 18 | one |         | 13 | three | 
+(1 row)
+
+UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF c1;
+ERROR:  cursor "c1" is not a simply updatable scan of table "uctest"
+SELECT * FROM uctest;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK;
 -- Check various error cases
 DELETE FROM uctest WHERE CURRENT OF c1;  -- fail, no such cursor
 ERROR:  cursor "c1" does not exist
@@ -901,6 +940,11 @@ DELETE FROM uctest WHERE CURRENT OF cx;  -- fail, can't use held cursor
 ERROR:  cursor "cx" is held from a previous transaction
 BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM tenk2;
+DELETE FROM uctest WHERE CURRENT OF c;  -- fail, cursor on wrong table
+ERROR:  cursor "c" is not a simply updatable scan of table "uctest"
+ROLLBACK;
+BEGIN;
+DECLARE c CURSOR FOR SELECT * FROM tenk2 FOR SHARE;
 DELETE FROM uctest WHERE CURRENT OF c;  -- fail, cursor on wrong table
 ERROR:  cursor "c" is not a simply updatable scan of table "uctest"
 ROLLBACK;
@@ -939,7 +983,7 @@ ROLLBACK;
 BEGIN;
 DECLARE c1 CURSOR FOR SELECT * FROM LOWER('TEST');
 FETCH ALL FROM c1;
- lower
+ lower 
 -------
  test
 (1 row)

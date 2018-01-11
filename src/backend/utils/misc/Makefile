@@ -4,7 +4,7 @@
 #    Makefile for utils/misc
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/utils/misc/Makefile,v 1.27 2007/01/20 17:16:14 petere Exp $
+#    $PostgreSQL: pgsql/src/backend/utils/misc/Makefile,v 1.28 2008/02/19 10:30:09 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ SUBDIRS     := fstream
 override CPPFLAGS := -I$(srcdir) $(CPPFLAGS)
 
 OBJS = guc.o help_config.o pg_rusage.o ps_status.o superuser.o tzparser.o uriparser.o \
-       faultinjector.o netcheck.o simex.o simexsys.o syncbitvector.o testutils.o \
+       faultinjector.o netcheck.o testutils.o \
 	   bitstream.o bitmap_compression.o guc_gp.o zlib_wrapper.o backend_cancel.o
 
 # This location might depend on the installation directories. Therefore
@@ -42,6 +42,4 @@ endif
 # Note: guc-file.c is not deleted by 'make clean',
 # since we want to ship it in distribution tarballs.
 clean: 
-	for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
-	rm -f SUBSYS.o $(OBJS)
 	@rm -f lex.yy.c

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en"><title id="fd163461">gp_fault_strategy</title><body><p>The <codeph>gp_fault_strategy</codeph> table specifies the fault action.</p><table id="fd163466"><title>pg_catalog.gp_fault_strategy</title><tgroup cols="4"><colspec colnum="1" colname="col1" colwidth="131pt"/><colspec colnum="2" colname="col2" colwidth="97pt"/><colspec colnum="3" colname="col3" colwidth="82pt"/><colspec colnum="4" colname="col4" colwidth="138pt"/><thead><row><entry colname="col1">column</entry><entry colname="col2">type</entry><entry colname="col3">references</entry><entry colname="col4">description</entry></row></thead><tbody><row><entry colname="col1"><codeph>fault_strategy</codeph></entry><entry colname="col2">char</entry><entry colname="col3"/><entry colname="col4">The mirror failover action to take when a segment failure occurs:<p>n =
-                nothing</p><p>f = file-based failover</p></entry></row></tbody></tgroup></table></body></topic>

@@ -4,11 +4,12 @@
  *	  Management of large buffered files, primarily temporary files.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.29 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.34 2009/06/11 14:49:01 momjian Exp $
  *
  * NOTES:
  *
@@ -33,7 +34,9 @@
 
 #include "storage/fd.h"
 #include "storage/buffile.h"
+#include "storage/buf_internals.h"
 #include "miscadmin.h"
+
 #include "cdb/cdbvars.h"
 #include "utils/workfile_mgr.h"
 
@@ -267,6 +270,8 @@ BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
 
 	/* we choose not to advance curOffset here */
 
+	BufFileReadCount++;
+
 	return nb;
 }
 
@@ -291,7 +296,6 @@ BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
 	{
 		bytestowrite = nbytes - wpos;
 
-
 		if (FileSeek(file->file, file->offset, SEEK_SET) != file->offset)
 		{
 			elog(ERROR, "could not seek in temporary file: %m");
@@ -313,6 +317,8 @@ BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
 		}
 		file->offset += wrote;
 		wpos += wrote;
+
+		BufFileWriteCount++;
 	}
 	file->dirty = false;
 
@@ -523,9 +529,13 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
 			newOffset = (file->offset + file->pos) + offset;
 			break;
 
+#ifdef NOT_USED
+		case SEEK_END:
+			/* could be implemented, not needed currently */
+			break;
+#endif
 		default:
-			elog(LOG, "invalid whence: %d", whence);
-			Assert(false);
+			elog(ERROR, "invalid whence: %d", whence);
 			return EOF;
 	}
 

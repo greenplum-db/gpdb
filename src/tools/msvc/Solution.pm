@@ -3,7 +3,7 @@ package Solution;
 #
 # Package that encapsulates a Visual C++ solution file generation
 #
-# src/tools/msvc/Solution.pm
+# $PostgreSQL: pgsql/src/tools/msvc/Solution.pm,v 1.47 2009/01/06 18:37:50 mha Exp $
 #
 use Carp;
 use strict;
@@ -17,7 +17,7 @@ sub new
     my $options = shift;
     die "Pthreads is required by Greenplum DB.\n" unless $options->{pthread};
     die "zlib is required by Greenplum DB.\n" unless $options->{zlib};
-    die "b2zlib is required by Greenplum DB.\n" unless $options->{bzlib};
+    die "libbz2 is required by Greenplum DB.\n" unless $options->{bz2};
     my $self = {
         projects => {},
         options  => $options,
@@ -28,7 +28,7 @@ sub new
     };
     bless $self;
 
-    # integer_datetimes is now the default
+	# integer_datetimes is now the default
 	$options->{integer_datetimes} = 1 
 		unless exists $options->{integer_datetimes};
     $options->{float4byval} = 1
@@ -44,7 +44,7 @@ sub new
             die "XML requires both XSLT and ICONV\n";
         }
     }
-    $options->{blocksize} = 32
+	$options->{blocksize} = 8
 		unless $options->{blocksize}; # undef or 0 means default
 	die "Bad blocksize $options->{blocksize}"
 		unless grep {$_ == $options->{blocksize}} (1,2,4,8,16,32);
@@ -190,8 +190,37 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
         print O "#define USE_INTEGER_DATETIMES 1\n" if ($self->{options}->{integer_datetimes});
         print O "#define USE_LDAP 1\n" if ($self->{options}->{ldap});
         print O "#define HAVE_LIBZ 1\n" if ($self->{options}->{zlib});
+        print O "#define HAVE_LIBBZ2 1\n" if ($self->{options}->{bz2});
         print O "#define USE_SSL 1\n" if ($self->{options}->{openssl});
-        print O "#define ENABLE_NLS 1\n" if ($self->{options}->{nls});
+		print O "#define ENABLE_NLS 1\n" if ($self->{options}->{nls});
+
+		print O "#define BLCKSZ ",1024 * $self->{options}->{blocksize},"\n";
+		print O "#define RELSEG_SIZE ",
+			(1024 / $self->{options}->{blocksize}) * 
+				$self->{options}->{segsize} * 1024, "\n";
+		print O "#define XLOG_BLCKSZ ",
+			1024 * $self->{options}->{wal_blocksize},"\n";
+		print O "#define XLOG_SEG_SIZE (",
+			$self->{options}->{wal_segsize}," * 1024 * 1024)\n";
+        
+        if ($self->{options}->{float4byval}) 
+        {
+            print O "#define USE_FLOAT4_BYVAL 1\n";
+            print O "#define FLOAT4PASSBYVAL true\n";
+        }
+        else
+        {
+            print O "#define FLOAT4PASSBYVAL false\n";
+        }
+        if ($self->{options}->{float8byval})
+        {
+            print O "#define USE_FLOAT8_BYVAL 1\n";
+            print O "#define FLOAT8PASSBYVAL true\n";
+        }
+        else
+        {
+            print O "#define FLOAT8PASSBYVAL false\n";
+        }
 
         print O "#define BLCKSZ ",1024 * $self->{options}->{blocksize},"\n";
 	#	print O "#define RELSEG_SIZE ",
@@ -284,7 +313,7 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
         }
 
     if (IsNewer('src\include\utils\probes.h','src\backend\utils\probes.d'))
-        {
+    {
 		print "Generating probes.h...\n";
         system(
 'psed -f src\backend\utils\Gen_dummy_probes.sed src\backend\utils\probes.d > src\include\utils\probes.h'
@@ -332,6 +361,19 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
         print "Generating preproc.y...\n";
         chdir('src\interfaces\ecpg\preproc');
         system('attrib -r preproc.y');
+        system('perl parse.pl < ..\..\..\backend\parser\gram.y > preproc.y');
+        chdir('..\..\..\..');
+    }
+
+    if (
+        IsNewer(
+            'src\interfaces\ecpg\preproc\preproc.y',
+            'src\backend\parser\gram.y'
+        )
+      )
+    {
+        print "Generating preproc.y...\n";
+        chdir('src\interfaces\ecpg\preproc');
         system('perl parse.pl < ..\..\..\backend\parser\gram.y > preproc.y');
         chdir('..\..\..\..');
     }
@@ -441,10 +483,10 @@ sub AddProject
         #$proj->AddLibrary($self->{options}->{zlib} . '\lib\zdll.lib');
         $proj->AddLibrary($self->{options}->{curl} . '\lib\libcurl.lib');
     }
-	if ($self->{options}->{bzlib})
+	if ($self->{options}->{bz2})
     {
-        $proj->AddIncludeDir($self->{options}->{bzlib} . '\include');
-        $proj->AddLibrary($self->{options}->{bzlib} . '\lib\libbz2.lib');
+        $proj->AddIncludeDir($self->{options}->{bz2} . '\include');
+        $proj->AddLibrary($self->{options}->{bz2} . '\lib\libbz2.lib');
     }
     if ($self->{options}->{openssl})
     {

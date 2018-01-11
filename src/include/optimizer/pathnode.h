@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.79 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.80 2009/01/01 17:24:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,14 +78,14 @@ extern Path *create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, List *
 extern Path *create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
 extern Path *create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
 extern Path *create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
-
 extern Path *create_ctescan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys);
-extern Path *create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel);
+extern Path *create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, CdbLocusType ctelocus);
 
 extern bool path_contains_inner_index(Path *path);
 extern NestPath *create_nestloop_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -94,6 +95,7 @@ extern NestPath *create_nestloop_path(PlannerInfo *root,
 extern MergePath *create_mergejoin_path(PlannerInfo *root,
 					  RelOptInfo *joinrel,
 					  JoinType jointype,
+					  SpecialJoinInfo *sjinfo,
 					  Path *outer_path,
 					  Path *inner_path,
 					  List *restrict_clauses,
@@ -106,6 +108,7 @@ extern MergePath *create_mergejoin_path(PlannerInfo *root,
 extern HashPath *create_hashjoin_path(PlannerInfo *root,
 					 RelOptInfo *joinrel,
 					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
 					 Path *outer_path,
 					 Path *inner_path,
 					 List *restrict_clauses,
@@ -123,7 +126,7 @@ extern RelOptInfo *build_join_rel(PlannerInfo *root,
 			   Relids joinrelids,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
-			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr);
 extern void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
 

@@ -30,6 +30,7 @@
 
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
+#include "utils/fmgroids.h"
 
 #include "gpos/base.h"
 #include "gpos/error/CException.h"
@@ -334,49 +335,6 @@ COptTasks::SOptimizeMinidumpContext::PoptmdpConvert
 
 //---------------------------------------------------------------------------
 //	@function:
-//		SzAllocate
-//
-//	@doc:
-//		Allocate string buffer with protection against OOM
-//
-//---------------------------------------------------------------------------
-CHAR *
-COptTasks::SzAllocate
-	(
-	IMemoryPool *pmp,
-	ULONG ulSize
-	)
-{
-	CHAR *sz = NULL;
-	GPOS_TRY
-	{
-		// allocation of string buffer may happen outside gpos_exec() function,
-		// we must guard against system OOM here
-#ifdef FAULT_INJECTOR
-		gpdb::OptTasksFaultInjector(OptTaskAllocateStringBuffer);
-#endif // FAULT_INJECTOR
-
-		if (NULL == pmp)
-		{
-			sz = (CHAR *) gpdb::GPDBAlloc(ulSize);
-		}
-		else
-		{
-			sz = GPOS_NEW_ARRAY(pmp, CHAR, ulSize);
-		}
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiNoAvailableMemory);
-	}
-	GPOS_CATCH_END;
-
-	return sz;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		SzFromWsz
 //
 //	@doc:
@@ -395,7 +353,7 @@ COptTasks::SzFromWsz
 	const ULONG ulWCHARSize = GPOS_SIZEOF(WCHAR);
 	const ULONG ulMaxLength = (ulInputLength + 1) * ulWCHARSize;
 
-	CHAR *sz = SzAllocate(NULL, ulMaxLength);
+	CHAR *sz = (CHAR *) gpdb::GPDBAlloc(ulMaxLength);
 
 	gpos::clib::LWcsToMbs(sz, const_cast<WCHAR *>(wsz), ulMaxLength);
 	sz[ulMaxLength - 1] = '\0';
@@ -564,19 +522,27 @@ COptTasks::Execute
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		LogErrorAndDelete(err_buf);
+		LogExceptionMessageAndDelete(err_buf, ex.UlSeverityLevel());
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
-	LogErrorAndDelete(err_buf);
+	LogExceptionMessageAndDelete(err_buf);
 }
 
 void
-COptTasks::LogErrorAndDelete(CHAR* err_buf) {
+COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG ulSeverityLevel)
+{
 
 	if ('\0' != err_buf[0])
 	{
-		elog(LOG, "%s", SzFromWsz((WCHAR *)err_buf));
+		int ulGpdbSeverityLevel;
+
+		if (ulSeverityLevel == CException::ExsevDebug1)
+			ulGpdbSeverityLevel = DEBUG1;
+		else
+			ulGpdbSeverityLevel = LOG;
+
+		elog(ulGpdbSeverityLevel, "%s", SzFromWsz((WCHAR *)err_buf));
 	}
 
 	pfree(err_buf);
@@ -795,8 +761,11 @@ COptTasks::PoconfCreate
 								ulJoinArityForAssociativityCommutativity,
 								ulArrayExpansionThreshold,
 								ulJoinOrderThreshold,
-								ulBroadcastThreshold
-								)
+								ulBroadcastThreshold,
+								false /* don't create Assert nodes for constraints, we'll
+								      * enforce them ourselves in the executor */
+								),
+						GPOS_NEW(pmp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK))
 						);
 }
 

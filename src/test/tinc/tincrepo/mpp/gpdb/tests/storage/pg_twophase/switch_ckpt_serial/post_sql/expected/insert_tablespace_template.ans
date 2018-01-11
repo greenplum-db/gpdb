@@ -1,2 +1,0 @@
-DROP TABLESPACE pg2_ts1_template;
-DROP TABLESPACE

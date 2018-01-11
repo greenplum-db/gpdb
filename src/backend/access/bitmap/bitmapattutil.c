@@ -1,15 +1,21 @@
 /*-------------------------------------------------------------------------
  *
  * bitmapattutil.c
- *	Defines the routines to maintain all distinct attribute values
- *	which are indexed in the on-disk bitmap index.
+ *	  Defines the routines to maintain all distinct attribute values
+ *	  which are indexed in the on-disk bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ *
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  src/backend/access/bitmap/bitmapattutil.c
+ *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "access/genam.h"
@@ -33,9 +39,10 @@
 #include "nodes/primnodes.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
-#include "utils/syscache.h"
-#include "utils/lsyscache.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
+#include "utils/syscache.h"
+#include "utils/snapmgr.h"
 
 static TupleDesc _bitmap_create_lov_heapTupleDesc(Relation rel);
 
@@ -110,12 +117,13 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		_bt_initmetapage(btree_metapage, P_NONE, 0);
 
 		/* XLOG the metapage */
-		if (!XLog_UnconvertedCanBypassWal() && !lovIndex->rd_istemp)
+
+		if (!lovIndex->rd_istemp)
 		{
 			// Fetch gp_persistent_relation_node information that will be added to XLOG record.
 			RelationFetchGpRelationNodeForXLog(lovIndex);
 
-			log_newpage_rel(lovIndex, BufferGetBlockNumber(btree_metabuf),
+			log_newpage_rel(lovIndex, BufferGetBlockNumber(btree_metabuf), MAIN_FORKNUM,
 						btree_metapage);
 		}
 
@@ -146,7 +154,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		heap_create_with_catalog(lovHeapName, PG_BITMAPINDEX_NAMESPACE,
 								 rel->rd_rel->reltablespace,
 								 InvalidOid, rel->rd_rel->relowner,
-								 tupDesc,
+								 tupDesc, NIL,
 								 /* relam */ InvalidOid, RELKIND_RELATION, RELSTORAGE_HEAP,
 								 rel->rd_rel->relisshared, false, /* bufferPoolBulkLoad */ false, 0,
 								 ONCOMMIT_NOOP, NULL /* GP Policy */,
@@ -224,9 +232,7 @@ _bitmap_create_lov_heapTupleDesc(Relation rel)
 	for (attno = 1; attno <= oldTupDesc->natts; attno++)
 	{
 		/* copy the attribute to be indexed. */
-		memcpy(tupDesc->attrs[attno - 1], oldTupDesc->attrs[attno - 1],
-			   ATTRIBUTE_TUPLE_SIZE);
-		tupDesc->attrs[attno - 1]->attnum = attno;
+		TupleDescCopyEntry(tupDesc, attno, oldTupDesc, attno);
 	}
 
 	/* the block number */

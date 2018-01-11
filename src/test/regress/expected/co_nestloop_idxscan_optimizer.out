@@ -16,8 +16,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.09 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..431.09 rows=1 width=8)
          Join Filter: true
-         ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=8)
-               ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
          ->  Bitmap Table Scan on foo  (cost=0.00..0.09 rows=1 width=8)
                Recheck Cond: foo.id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
@@ -40,8 +39,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.09 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..431.09 rows=1 width=8)
          Join Filter: true
-         ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=8)
-               ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
          ->  Bitmap Table Scan on foo  (cost=0.00..0.09 rows=1 width=8)
                Recheck Cond: foo.id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
@@ -66,8 +64,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.09 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..431.09 rows=1 width=8)
          Join Filter: true
-         ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=8)
-               ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Table Scan on bar  (cost=0.00..431.00 rows=1 width=8)
          ->  Bitmap Table Scan on foo  (cost=0.00..0.09 rows=1 width=8)
                Recheck Cond: foo.id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
@@ -83,5 +80,6 @@ select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id
 
 set optimizer_enable_hashjoin = on;
 drop schema co_nestloop_idxscan cascade;
-NOTICE:  drop cascades to table co_nestloop_idxscan.bar
-NOTICE:  drop cascades to append only columnar table co_nestloop_idxscan.foo
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to append only columnar table co_nestloop_idxscan.foo
+drop cascades to table co_nestloop_idxscan.bar

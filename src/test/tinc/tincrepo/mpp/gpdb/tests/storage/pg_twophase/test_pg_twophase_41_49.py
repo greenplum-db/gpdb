@@ -1,5 +1,5 @@
 """
-Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+Copyright (c) 2004-Present Pivotal Software, Inc.
 
 This program and the accompanying materials are made available under
 the terms of the under the Apache License, Version 2.0 (the "License");
@@ -44,15 +44,9 @@ class PgtwoPhase41To49(PgtwoPhaseTestCase):
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {'41_skip_change_tracking_create_abort_gpstop_i': ['skip','change_tracking','create','abort','gpstop_i'],
-            '42_skip_change_tracking_create_abort_gpstop_a': ['skip','change_tracking','create','abort','gpstop_a'],
             '43_noskip_change_tracking_create_abort_gpstop_i': ['noskip','change_tracking','create','abort','gpstop_i'],
-            '44_noskip_change_tracking_create_abort_gpstop_a': ['noskip','change_tracking','create','abort','gpstop_a'],
             '45_skip_resync_create_abort_gpstop_i': ['skip','resync','create','abort','gpstop_i'],
-            '46_skip_resync_create_abort_gpstop_a': ['skip','resync','create','abort','gpstop_a'],
             '47_noskip_resync_create_abort_gpstop_i': ['noskip','resync','create','abort','gpstop_i'],
-            '48_noskip_resync_create_abort_gpstop_a': ['noskip','resync','create','abort','gpstop_a'],
             '49_noskip_sync_create_end_prepare_two_phase_sleep_gpstop_i' : ['noskip','sync','create','end_prepare_two_phase_sleep', 'gpstop_i']
             }
     return data
-        
-

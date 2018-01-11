@@ -225,31 +225,26 @@ IN_ARRAY () {
     return 0
 }
 
+#
+# NOTE: this function is called a lot; try to keep it quick.
+#
 LOG_MSG () {
-		TIME=`$DATE +%H":"%M":"%S`
-		CUR_DATE=`$DATE +%Y%m%d`
+		TIMESTAMP=`$DATE +%Y%m%d":"%H":"%M":"%S`
 		DISPLAY_TXT=0
-		#Check to see if we need to update value of EXIT_STATUS
-		if [ `$ECHO $1|$AWK -F"]" '{print $1}'|$TR -d '\133'|$GREP -c "WARN"` -eq 1 ];then
+
+		# Check to see if we need to update value of EXIT_STATUS. Strip off
+		# everything in the message after the first ending bracket ']' and
+		# compare it to WARN/FATAL.
+		level=${1%%]*}
+		case "$level" in
+		*WARN*)
 			EXIT_STATUS=1
-		fi
-		if [ `$ECHO $1|$AWK -F"]" '{print $1}'|$TR -d '\133'|$GREP -c "FATAL"` -eq 1 ];then
+			;;
+		*FATAL*)
 			EXIT_STATUS=2
-		fi
-		WARN=`$ECHO $1|$AWK -F"]" '{print $1}'|$TR -d '\133'|$GREP -c "WARN"`
-		if [ x"$WARN" == x"" ]; then
-		    WARN=0
-		fi
-		if [ $WARN -eq 1 ];then
-			EXIT_STATUS=1
-		fi
-		FATAL=`$ECHO $1|$AWK -F"]" '{print $1}'|$TR -d '\133'|$GREP -c "FATAL"`
-		if [ x"$FATAL" == x"" ]; then
-		    FATAL=0
-		fi
-		if [ $FATAL -eq 1 ];then
-			EXIT_STATUS=2
-		fi
+			;;
+		esac
+
 		if [ x"" == x"$DEBUG_LEVEL" ];then
 			DEBUG_LEVEL=1
 		fi
@@ -258,12 +253,12 @@ LOG_MSG () {
 		fi
 		if [ $VERBOSE ]; then
 				if [ $DEBUG_LEVEL -eq 1 ] || [ $DISPLAY_TXT -eq 1 ];then
-			        $ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" | $TEE -a $LOG_FILE
+					$ECHO "${TIMESTAMP}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" | $TEE -a $LOG_FILE
 				else
-				$ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" >> $LOG_FILE
+					$ECHO "${TIMESTAMP}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" >> $LOG_FILE
 				fi
 		else
-				$ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" >> $LOG_FILE
+				$ECHO "${TIMESTAMP}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1" >> $LOG_FILE
 		fi
 }
 
@@ -300,8 +295,8 @@ ERROR_EXIT () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		TIME=`$DATE +%H":"%M":"%S`
 		CUR_DATE=`$DATE +%Y%m%d`
-		$ECHO "${CUR_DATE}:${TIME}:${PROG_NAME}:${CALL_HOST}:${USER_NAME}-$1 Script Exiting!" >> $LOG_FILE
-		$ECHO "${CUR_DATE}:${TIME}:${PROG_NAME}:${CALL_HOST}:${USER_NAME}-$1 Script Exiting!"
+		$ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1 Script Exiting!" >> $LOG_FILE
+		$ECHO "${CUR_DATE}:${TIME}:${PROG_PIDNAME}:${CALL_HOST}:${USER_NAME}-$1 Script Exiting!"
 		DEBUG_LEVEL=1
 		if [ $BACKOUT_FILE ]; then
 				if [ -s $BACKOUT_FILE ]; then

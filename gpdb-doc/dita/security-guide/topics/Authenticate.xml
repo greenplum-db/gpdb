@@ -2,6 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_n5w_gtd_jr">
   <title>Configuring Client Authentication</title>
+  <shortdesc>Describes the available methods for authenticating Greenplum Database
+    clients.</shortdesc>
   <body>
     <p>When a Greenplum Database system is first initialized, the system contains one predefined
       superuser role. This role will have the same name as the operating system user who initialized
@@ -38,10 +40,10 @@
         client access record is in this format:
         <codeblock>host   database   role   CIDR-address   authentication-method
 </codeblock></p>
-      <p>Each UNIX-domain socket access record is in this format:
+      <p>A UNIX-domain socket access record is in this format:
         <codeblock>local   database   role   authentication-method
 </codeblock></p>
-      <p>The meaning of the <codeph>pg_hba_conf</codeph> fields is as follows: <parml>
+      <p>The meaning of the <codeph>pg_hba.conf</codeph> fields is as follows: <parml>
           <plentry>
             <pt>local</pt>
             <pd> Matches connection attempts using UNIX-domain sockets. Without a record of this
@@ -108,21 +110,35 @@
           <plentry>
             <pt> authentication-method </pt>
             <pd> Specifies the authentication method to use when connecting. See <xref
-                href="#topic_nyh_gwd_jr" format="dita"/> for more details. </pd>
+                href="#topic_nyh_gwd_jr" format="dita"/> for options. </pd>
           </plentry>
         </parml></p>
+      <note type="caution">For a more secure system, consider removing records for remote
+        connections that use trust authentication from the <codeph>pg_hba.conf</codeph> file. Trust
+        authentication grants any user who can connect to the server access to the database using
+        any role they specify. You can safely replace trust authentication with ident authentication
+        for local UNIX-socket connections. You can also use ident authentication for local and
+        remote TCP clients, but the client host must be running an ident service and you must trust
+        the integrity of that machine.</note>
     </body>
   </topic>
   <topic id="topic_xwr_rvd_jr">
     <title>Editing the pg_hba.conf File</title>
     <body>
+      <p>Initially, the <codeph>pg_hba.conf</codeph> file is set up with generous permissions for
+        the gpadmin user and no database access for other Greenplum Database roles. You will need to
+        edit the <codeph>pg_hba.conf</codeph> file to enable users' access to databases and to
+        secure the gpadmin user. Consider removing entries that have trust authentication, since
+        they allow anyone with access to the server to connect with any role they choose. For local
+        (UNIX socket) connections, use ident authentication, which requires the operating system
+        user to match the role specified. For local and remote TCP connections, ident authentication
+        requires the client's host to run an indent service. You could install an ident service on
+        the master host and then use ident authentication for local TCP connections, for example
+        127.0.0.1/28. Using ident authentication for remote TCP connections is less secure because
+        it requires you to trust the integrity of the ident service on the client's host. </p>
       <p>This example shows how to edit the <codeph>pg_hba.conf</codeph> file of the master to allow
         remote client access to all databases from all roles using encrypted password
         authentication. </p>
-      <note>For a more secure system, consider removing all connections that use trust
-        authentication from your master <codeph>pg_hba.conf</codeph>. Trust authentication means the
-        role is granted access without any authentication, therefore bypassing all security. Replace
-        trust entries with ident authentication if your system has an ident service available. </note>
       <p>To edit <codeph>pg_hba.conf</codeph>:<ol id="ol_krz_zvd_jr">
           <li>Open the file <codeph>$MASTER_DATA_DIRECTORY/pg_hba.conf</codeph> in a text
             editor.</li>
@@ -188,8 +204,10 @@ host    all   dba   192.168.0.0/32  md5
             </plentry>
             <plentry>
               <pt>Ident</pt>
-              <pd>Authenticates based on the client's operating system user name. You should only
-                use this for local connections.</pd>
+              <pd>Authenticates based on the client's operating system user name. This is secure for
+                local socket connections. Using ident for TCP connections from remote hosts requires
+                that the client's host is running an ident service. The ident authentication method
+                should only be used with remote hosts on a trusted, closed network. </pd>
             </plentry>
           </parml></p>
         <p>Following are some sample <codeph>pg_hba.conf</codeph> basic authentication

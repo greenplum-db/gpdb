@@ -22,6 +22,7 @@
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
+#include "catalog/pg_statistic.h"
 #include "optimizer/walkers.h"
 #include "utils/rel.h"
 
@@ -35,6 +36,7 @@
 #include "gpos/string/CWStringDynamic.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
+#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/dxltokens.h"
@@ -154,7 +156,10 @@ CTranslatorUtils::Pdxltabdesc
 			// the fact that catalog tables (master-only) are not analyzed often and will result in Orca producing
 			// inferior plans.
 
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Queries on master-only tables"));
+			GPOS_THROW_EXCEPTION(gpdxl::ExmaDXL, // ulMajor
+								 gpdxl::ExmiQuery2DXLUnsupportedFeature, // ulMinor
+								 CException::ExsevDebug1, // ulSeverityLevel mapped to GPDB severity level
+								 GPOS_WSZ_LIT("Queries on master-only tables"));
 		}
 
 	// add columns from md cache relation object to table descriptor
@@ -689,11 +694,11 @@ CTranslatorUtils::EdxljtFromJoinType
 			edxljt = EdxljtRight;
 			break;
 
-		case JOIN_IN:
+		case JOIN_SEMI:
 			edxljt = EdxljtIn;
 			break;
 
-		case JOIN_LASJ:
+		case JOIN_ANTI:
 			edxljt = EdxljtLeftAntiSemijoin;
 			break;
 
@@ -876,6 +881,49 @@ CTranslatorUtils::PmdidSystemColType
 	}
 }
 
+
+// Returns the length for the system column with given attno number
+const ULONG
+CTranslatorUtils::UlSystemColLength
+	(
+	AttrNumber attno
+	)
+{
+	GPOS_ASSERT(FirstLowInvalidHeapAttributeNumber < attno && 0 > attno);
+
+	switch (attno)
+	{
+		case SelfItemPointerAttributeNumber:
+			// tid type
+			return 6;
+
+		case ObjectIdAttributeNumber:
+		case TableOidAttributeNumber:
+			// OID type
+
+		case MinTransactionIdAttributeNumber:
+		case MaxTransactionIdAttributeNumber:
+			// xid type
+
+		case MinCommandIdAttributeNumber:
+		case MaxCommandIdAttributeNumber:
+			// cid type
+
+		case GpSegmentIdAttributeNumber:
+			// int4
+			return 4;
+
+		default:
+			GPOS_RAISE
+				(
+				gpdxl::ExmaDXL,
+				gpdxl::ExmiPlStmt2DXLConversion,
+				GPOS_WSZ_LIT("Invalid attribute number")
+				);
+			return ULONG_MAX;
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorUtils::Scandirection
@@ -1018,91 +1066,6 @@ CTranslatorUtils::Edxlsetop
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorUtils::Windowexclusion
-//
-//	@doc:
-//		Return the GPDB frame exclusion strategy from its corresponding
-//		DXL representation
-//
-//---------------------------------------------------------------------------
-WindowExclusion
-CTranslatorUtils::Windowexclusion
-	(
-	EdxlFrameExclusionStrategy edxlfes
-	)
-{
-	GPOS_ASSERT(EdxlfesSentinel > edxlfes);
-	ULONG rgrgulMapping[][2] =
-		{
-		{EdxlfesNulls, WINDOW_EXCLUSION_NULL},
-		{EdxlfesCurrentRow, WINDOW_EXCLUSION_CUR_ROW},
-		{EdxlfesGroup, WINDOW_EXCLUSION_GROUP},
-		{EdxlfesTies, WINDOW_EXCLUSION_TIES}
-		};
-
-	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
-	WindowExclusion we = WINDOW_EXCLUSION_NO_OTHERS;
-
-	for (ULONG ul = 0; ul < ulArity; ul++)
-	{
-		ULONG *pulElem = rgrgulMapping[ul];
-		if ((ULONG) edxlfes == pulElem[0])
-		{
-			we = (WindowExclusion) pulElem[1];
-			break;
-		}
-	}
-	return we;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::Windowboundkind
-//
-//	@doc:
-//		Return the GPDB frame boundary kind from its corresponding
-//		DXL representation
-//
-//---------------------------------------------------------------------------
-WindowBoundingKind
-CTranslatorUtils::Windowboundkind
-	(
-	EdxlFrameBoundary edxlfb
-	)
-{
-	GPOS_ASSERT(EdxlfbSentinel > edxlfb);
-
-	ULONG rgrgulMapping[][2] =
-			{
-			{EdxlfbUnboundedPreceding, WINDOW_UNBOUND_PRECEDING},
-			{EdxlfbBoundedPreceding, WINDOW_BOUND_PRECEDING},
-			{EdxlfbCurrentRow, WINDOW_CURRENT_ROW},
-			{EdxlfbBoundedFollowing, WINDOW_BOUND_FOLLOWING},
-			{EdxlfbUnboundedFollowing, WINDOW_UNBOUND_FOLLOWING},
-			{EdxlfbDelayedBoundedPreceding, WINDOW_DELAYED_BOUND_PRECEDING},
-		    {EdxlfbDelayedBoundedFollowing, WINDOW_DELAYED_BOUND_FOLLOWING}
-			};
-
-	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
-	WindowBoundingKind wbk = WINDOW_UNBOUND_PRECEDING;
-	for (ULONG ul = 0; ul < ulArity; ul++)
-	{
-		ULONG *pulElem = rgrgulMapping[ul];
-		if ((ULONG) edxlfb == pulElem[0])
-		{
-			wbk = (WindowBoundingKind) pulElem[1];
-			break;
-		}
-	}
-	GPOS_ASSERT(WINDOW_DELAYED_BOUND_FOLLOWING >= wbk && "Invalid window frame boundary");
-
-	return wbk;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorUtils::PdrgpulGroupingCols
 //
 //	@doc:
@@ -1159,7 +1122,7 @@ CTranslatorUtils::PdrgpbsGroupBy
 
 	Node *pnode = (Node*) LInitial(plGroupClause);
 
-	if (NULL == pnode || IsA(pnode, GroupClause))
+	if (NULL == pnode || IsA(pnode, SortGroupClause))
 	{
 		// simple group by
 		CBitSet *pbsGroupingSet = PbsGroupingSet(pmp, plGroupClause, ulCols, phmululGrpColPos, pbsGrpCols);
@@ -1201,11 +1164,11 @@ CTranslatorUtils::PdrgpbsGroupBy
 		Node *pnodeGroupingSet = (Node *) lfirst(plcGroupingSet);
 
 		CBitSet *pbs = NULL;
-		if (IsA(pnodeGroupingSet, GroupClause))
+		if (IsA(pnodeGroupingSet, SortGroupClause))
 		{
 			// grouping set contains a single grouping column
 			pbs = GPOS_NEW(pmp) CBitSet(pmp, ulCols);
-			ULONG ulSortGrpRef = ((GroupClause *) pnodeGroupingSet)->tleSortGroupRef;
+			ULONG ulSortGrpRef = ((SortGroupClause *) pnodeGroupingSet)->tleSortGroupRef;
 			pbs->FExchangeSet(ulSortGrpRef);
 			UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
 		}
@@ -1253,10 +1216,10 @@ CTranslatorUtils::PdrgpbsRollup
 	{
 		Node *pnode = (Node *) lfirst(plcGroupingSet);
 		CBitSet *pbs = GPOS_NEW(pmp) CBitSet(pmp);
-		if (IsA(pnode, GroupClause))
+		if (IsA(pnode, SortGroupClause))
 		{
 			// simple group clause, create a singleton grouping set
-			GroupClause *pgrpcl = (GroupClause *) pnode;
+			SortGroupClause *pgrpcl = (SortGroupClause *) pnode;
 			ULONG ulSortGrpRef = pgrpcl->tleSortGroupRef;
 			(void) pbs->FExchangeSet(ulSortGrpRef);
 			pdrgpbsGroupingSets->Append(pbs);
@@ -1271,14 +1234,14 @@ CTranslatorUtils::PdrgpbsRollup
 			ForEach (plcGrpCl, plist)
 			{
 				Node *pnodeGrpCl = (Node *) lfirst(plcGrpCl);
-				if (!IsA(pnodeGrpCl, GroupClause))
+				if (!IsA(pnodeGrpCl, SortGroupClause))
 				{
 					// each list entry must be a group clause
 					// for example, rollup((a,b),(c,(d,e)));
 					GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Nested grouping sets"));
 				}
 
-				GroupClause *pgrpcl = (GroupClause *) pnodeGrpCl;
+				SortGroupClause *pgrpcl = (SortGroupClause *) pnodeGrpCl;
 				ULONG ulSortGrpRef = pgrpcl->tleSortGroupRef;
 				(void) pbs->FExchangeSet(ulSortGrpRef);
 				UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
@@ -1345,12 +1308,12 @@ CTranslatorUtils::PbsGroupingSet
 			continue;
 		}
 
-		if (!IsA(pnodeElem, GroupClause))
+		if (!IsA(pnodeElem, SortGroupClause))
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Mixing grouping sets with simple group by lists"));
 		}
 
-		ULONG ulSortGrpRef = ((GroupClause *) pnodeElem)->tleSortGroupRef;
+		ULONG ulSortGrpRef = ((SortGroupClause *) pnodeElem)->tleSortGroupRef;
 		pbs->FExchangeSet(ulSortGrpRef);
 		
 		UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
@@ -1870,11 +1833,12 @@ CTranslatorUtils::FWindowSpec
 	List *plWindowClause
 	)
 {
-	ListCell *plcWindowCl = NULL;
+	ListCell *plcWindowCl;
 	ForEach (plcWindowCl, plWindowClause)
 	{
-		WindowSpec *pwindowspec = (WindowSpec*) lfirst(plcWindowCl);
-		if (FSortingColumn(pte, pwindowspec->order) || FSortingColumn(pte, pwindowspec->partition))
+		WindowClause *pwc = (WindowClause *) lfirst(plcWindowCl);
+		if (FSortingColumn(pte, pwc->orderClause) ||
+		    FSortingColumn(pte, pwc->partitionClause))
 		{
 			return true;
 		}
@@ -1928,7 +1892,8 @@ CTranslatorUtils::FSortingColumn
 	ForEach (plcSortCl, plSortCl)
 	{
 		Node *pnodeSortCl = (Node*) lfirst(plcSortCl);
-		if (IsA(pnodeSortCl, SortClause) && pte->ressortgroupref == ((SortClause *) pnodeSortCl)->tleSortGroupRef)
+		if (IsA(pnodeSortCl, SortGroupClause) &&
+		    pte->ressortgroupref == ((SortGroupClause *) pnodeSortCl)->tleSortGroupRef)
 		{
 			return true;
 		}
@@ -2022,7 +1987,8 @@ CTranslatorUtils::FGroupingColumn
 			continue;
 		}
 
-		if (IsA(pnodeGrpCl, GroupClause) && FGroupingColumn(pte, (GroupClause*) pnodeGrpCl))
+		if (IsA(pnodeGrpCl, SortGroupClause) &&
+		    FGroupingColumn(pte, (SortGroupClause*) pnodeGrpCl))
 		{
 			return true;
 		}
@@ -2036,7 +2002,8 @@ CTranslatorUtils::FGroupingColumn
 			{
 				Node *pnodeGroupingSet = (Node *) lfirst(plcGroupingSet);
 
-				if (IsA(pnodeGroupingSet, GroupClause) && FGroupingColumn(pte, ((GroupClause *) pnodeGroupingSet)))
+				if (IsA(pnodeGroupingSet, SortGroupClause) &&
+				    FGroupingColumn(pte, ((SortGroupClause *) pnodeGroupingSet)))
 				{
 					return true;
 				}
@@ -2063,7 +2030,7 @@ BOOL
 CTranslatorUtils::FGroupingColumn
 	(
 	const TargetEntry *pte,
-	const GroupClause *pgrcl
+	const SortGroupClause *pgrcl
 	)
 {
 	GPOS_ASSERT(NULL != pgrcl);
@@ -2081,7 +2048,7 @@ CTranslatorUtils::FGroupingColumn
 BOOL
 CTranslatorUtils::FGroupingColumn
 	(
-	const SortClause *psortcl,
+	const SortGroupClause *psortcl,
 	List *plGrpCl
 	)
 {
@@ -2089,9 +2056,9 @@ CTranslatorUtils::FGroupingColumn
 	ForEach (plcGrpCl, plGrpCl)
 	{
 		Node *pnodeGrpCl = (Node*) lfirst(plcGrpCl);
-		GPOS_ASSERT(IsA(pnodeGrpCl, GroupClause) && "We currently do not support grouping sets.");
+		GPOS_ASSERT(IsA(pnodeGrpCl, SortGroupClause) && "We currently do not support grouping sets.");
 
-		GroupClause *pgrpcl = (GroupClause*) pnodeGrpCl;
+		SortGroupClause *pgrpcl = (SortGroupClause *) pnodeGrpCl;
 		if (psortcl->tleSortGroupRef == pgrpcl->tleSortGroupRef)
 		{
 			return true;
@@ -2469,11 +2436,11 @@ CTranslatorUtils::CheckAggregateWindowFn
 	)
 {
 	GPOS_ASSERT(NULL != pnode);
-	GPOS_ASSERT(IsA(pnode, WindowRef));
+	GPOS_ASSERT(IsA(pnode, WindowFunc));
 
-	WindowRef *pwinref = (WindowRef*) pnode;
+	WindowFunc *pwinfunc = (WindowFunc *) pnode;
 
-	if (gpdb::FAggregateExists(pwinref->winfnoid) && !gpdb::FAggHasPrelimOrInvPrelimFunc(pwinref->winfnoid))
+	if (gpdb::FAggregateExists(pwinfunc->winfnoid) && !gpdb::FAggHasPrelimOrInvPrelimFunc(pwinfunc->winfnoid))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT("Aggregate window function without prelim or inverse prelim function"));

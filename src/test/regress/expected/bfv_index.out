@@ -465,3 +465,98 @@ explain select * from tbl_ab where b::oid=1;
 
 drop table tbl_ab;
 drop function count_index_scans(text);
+-- start_ignore
+select enable_xform('CXformGet2TableScan');
+          enable_xform          
+--------------------------------
+ CXformGet2TableScan is enabled
+(1 row)
+
+-- end_ignore
+--
+-- Check that ORCA can use an index for joins on quals like:
+--
+-- indexkey CMP expr
+-- expr CMP indexkey
+--
+-- where expr is a scalar expression free of index keys and may have outer
+-- references.
+--
+create table nestloop_x (i int, j int) distributed by (i);
+create table nestloop_y (i int, j int) distributed by (i);
+insert into nestloop_x select g, g from generate_series(1, 20) g;
+insert into nestloop_y select g, g from generate_series(1, 7) g;
+create index nestloop_y_idx on nestloop_y (j);
+-- Coerce the Postgres planner to produce a similar plan. Nested loop joins
+-- are not enabled by default. And to dissuade it from choosing a sequential
+-- scan, bump up the cost. enable_seqscan=off  won't help, because there is
+-- no other way to scan table 'x', and once the planner chooses a seqscan for
+-- one table, it will happily use a seqscan for other tables as well, despite
+-- enable_seqscan=off. (On PostgreSQL, enable_seqscan works differently, and
+-- just bumps up the cost of a seqscan, so it would work there.)
+set seq_page_cost=10000000;
+set enable_indexscan=on;
+set enable_nestloop=on;
+explain select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..30030626.55 rows=47 width=16)
+   ->  Nested Loop  (cost=0.00..30030626.55 rows=16 width=16)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..30000001.00 rows=20 width=8)
+               ->  Seq Scan on nestloop_x x  (cost=0.00..30000000.20 rows=7 width=8)
+         ->  Index Scan using nestloop_y_idx on nestloop_y y  (cost=0.00..510.39 rows=1 width=8)
+               Index Cond: (x.i + x.j) < y.j
+ Settings:  enable_indexscan=on; enable_nestloop=on; optimizer=off; seq_page_cost=1e+07
+ Optimizer status: legacy query optimizer
+(8 rows)
+
+select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+ i | j | i | j 
+---+---+---+---
+ 1 | 1 | 3 | 3
+ 1 | 1 | 4 | 4
+ 1 | 1 | 5 | 5
+ 1 | 1 | 6 | 6
+ 1 | 1 | 7 | 7
+ 2 | 2 | 5 | 5
+ 2 | 2 | 6 | 6
+ 2 | 2 | 7 | 7
+ 3 | 3 | 7 | 7
+(9 rows)
+
+explain select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..30030627.05 rows=47 width=16)
+   ->  Nested Loop  (cost=0.00..30030627.05 rows=16 width=16)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..30000001.00 rows=20 width=8)
+               ->  Seq Scan on nestloop_x x  (cost=0.00..30000000.20 rows=7 width=8)
+         ->  Index Scan using nestloop_y_idx on nestloop_y y  (cost=0.00..510.39 rows=1 width=8)
+               Index Cond: y.j > (x.i + x.j + 2)
+ Settings:  enable_indexscan=on; enable_nestloop=on; optimizer=off; seq_page_cost=1e+07
+ Optimizer status: legacy query optimizer
+(8 rows)
+
+select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+ i | j | i | j 
+---+---+---+---
+ 1 | 1 | 5 | 5
+ 1 | 1 | 6 | 6
+ 1 | 1 | 7 | 7
+ 2 | 2 | 7 | 7
+(4 rows)
+
+drop table nestloop_x, nestloop_y;
+SET enable_seqscan = OFF;
+SET enable_indexscan = ON;
+DROP TABLE IF EXISTS bpchar_ops;
+CREATE TABLE bpchar_ops(id INT8, v char(10)) DISTRIBUTED BY(id);
+CREATE INDEX bpchar_ops_btree_idx ON bpchar_ops USING btree(v bpchar_pattern_ops);
+INSERT INTO bpchar_ops VALUES (0, 'row');
+SELECT * FROM bpchar_ops WHERE v = 'row '::char(20);
+ id |     v
+----+------------
+  0 | row
+(1 row)
+
+DROP TABLE bpchar_ops;

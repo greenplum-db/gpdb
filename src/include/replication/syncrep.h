@@ -16,8 +16,8 @@
 #include "access/xlogdefs.h"
 #include "utils/guc.h"
 
-/*#define SyncRepRequested() \
-//	(max_wal_senders > 0 && synchronous_commit > SYNCHRONOUS_COMMIT_LOCAL_FLUSH)*/
+#define SyncRepRequested() \
+	(max_wal_senders > 0)
 
 /* SyncRepWaitMode */
 #define SYNC_REP_NO_WAIT		-1
@@ -32,6 +32,9 @@
 #define SYNC_REP_WAITING			1
 #define SYNC_REP_WAIT_COMPLETE		2
 
+/* user-settable parameters for synchronous replication */
+extern char *SyncRepStandbyNames;
+
 /* called by user backend */
 extern void SyncRepWaitForLSN(XLogRecPtr XactCommitLSN);
 
@@ -42,13 +45,12 @@ extern void SyncRepCleanupAtProcExit(void);
 extern void SyncRepInitConfig(void);
 extern void SyncRepReleaseWaiters(void);
 
-/* called by wal writer */
-//extern void SyncRepUpdateSyncStandbysDefined(void);
+/* called by checkpointer */
+extern void SyncRepUpdateSyncStandbysDefined(void);
 
 /* called by various procs */
-extern int	SyncRepWakeQueue(bool all, int mode);
+extern int     SyncRepWakeQueue(bool all, int mode);
 
-//extern bool check_synchronous_standby_names(char **newval, void **extra, GucSource source);
-//extern void assign_synchronous_commit(int newval, void *extra);
+extern const char *check_synchronous_standby_names(const char *newval, bool doit, GucSource source);
 
 #endif   /* _SYNCREP_H */

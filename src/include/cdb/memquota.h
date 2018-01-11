@@ -1,10 +1,17 @@
 /*-------------------------------------------------------------------------
  *
  * memquota.h
- * Routines related to memory quota for queries.
+ *	  Routines related to memory quota for queries.
  *
- * Copyright (c) 2005-2010, Greenplum inc
- *-------------------------------------------------------------------------*/
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/memquota.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef MEMQUOTA_H_
 #define MEMQUOTA_H_
 
@@ -49,6 +56,11 @@ extern uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOp
  * Is result node memory intensive?
  */
 extern bool IsResultMemoryIntesive(Result *res);
+
+/**
+ * Is operator memory intensive
+ */
+extern bool IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt);
 
 /*
  * Calculate the amount of memory reserved for the query

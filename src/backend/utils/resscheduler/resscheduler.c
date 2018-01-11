@@ -4,9 +4,14 @@
  *	  POSTGRES resource scheduling management code.
  *
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/resscheduler/resscheduler.c
  *
  *
 -------------------------------------------------------------------------
@@ -30,6 +35,7 @@
 #include "rewrite/rewriteHandler.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
+#include "storage/lmgr.h"
 #include "tcop/tcopprot.h"
 #include "tcop/pquery.h"
 #include "tcop/utility.h"
@@ -60,7 +66,7 @@ bool	ResourceCleanupIdleGangs;				/* Cleanup idle gangs? */
  * Global variables
  */
 ResSchedulerData	*ResScheduler;	/* Resource Scheduler (shared) data .*/
-Oid				MyQueueId;			/* resource queue for current role. */
+Oid				MyQueueId = InvalidOid;	/* resource queue for current role. */
 static uint32	portalId = 0;		/* id of portal, for tracking cursors. */
 static int32	numHoldPortals = 0;	/* # of holdable cursors tracked. */
 

@@ -48,7 +48,7 @@
             [ key_match_type ]
             [ key_action ]</codeblock>
       <p>where <varname>storage_directive</varname> for a column is:</p>
-      <codeblock>   COMPRESSTYPE={ZLIB | QUICKLZ | RLE_TYPE | NONE}
+      <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
     [COMPRESSLEVEL={0-9} ]
     [BLOCKSIZE={8192-2097152} ]</codeblock>
       <p>where <varname>storage_parameter</varname> for the table is:</p>
@@ -56,7 +56,7 @@
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    COMPRESSLEVEL={0-9}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
@@ -126,8 +126,8 @@
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
-   COMPRESSLEVEL={1-9}
+   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSLEVEL={1-19}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
     </section>
@@ -384,11 +384,12 @@
             checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
             disable checksum validation, checking the table data for on-disk corruption will not be
             performed.</pd>
-          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default),
-              <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
-            of compression used. The value <codeph>NONE</codeph>disables compression. QuickLZ uses
-            less CPU power and compresses data faster at a lower compression ratio than zlib.
-            Conversely, zlib provides more compact compression ratios at lower speeds. This option
+          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
+              <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
+              of compression used. The value <codeph>NONE</codeph> disables compression. Zstd provides
+	      for both speed or a good compression ratio, tunable with the <codeph>COMPRESSLEVEL</codeph> option.
+	      QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
+              compression types on usual workloads. The <codeph>COMPRESSTYPE</codeph> option
             is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note>
@@ -399,18 +400,19 @@
               in many consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,
                 <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
                 <codeph>TIMESTAMP</codeph>, delta compression is also applied if the
-                <codeph>COMPRESSTYPE</codeph> option is set to <codeph>RLE-TYPE</codeph>
+                <codeph>COMPRESSTYPE</codeph> option is set to <codeph>RLE_TYPE</codeph>
               compression. The delta compression algorithm is based on the delta between column
               values in consecutive rows and is designed to improve compression when data is loaded
               in sorted order or the compression is applied to column data that is in sorted
               order.</p><p>For information about using table compression, see "Choosing the Table
               Storage Model" in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
-          <pd><b>COMPRESSLEVEL</b> — For zlib compression of append-optimized tables, set to an
-            integer value between 1 (fastest compression) to 9 (highest compression ratio). QuickLZ
+              <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
+	      integer value from 1 (fastest compression) to 19 (highest compression ratio).
+	      For zlib compression, the valid range is from 1 to 9. QuickLZ
             compression level can only be set to 1. If not declared, the default is 1. For
-              <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value between 1
+              <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value from 1
             (fastest compression) to 4 (highest compression ratio). </pd>
-          <pd>This option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
+          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
           <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
           <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
@@ -640,9 +642,10 @@
             <li>
               <cmdname>ORIENTATION</cmdname>
             </li>
-          </ul><p>The defaults can be set for a database, schema, and user. For information about
-            setting storage options, see the server configuration parameter
-              <codeph>gp_default_storage_options</codeph>.</p></li>
+          </ul><p>The defaults can be set for the system, a database, or a user. For information about
+            setting storage options, see the server configuration parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
+          >gp_default_storage_options</xref></codeph>.</p></li>
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so

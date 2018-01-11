@@ -2,13 +2,14 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gptransfer">
   <title>Migrating Data with Gptransfer</title>
+  <shortdesc>Information about the <codeph>gptransfer</codeph> migration utility, which transfers
+    Greenplum Database metadata and data from one Greenplum database to another.</shortdesc>
   <body>
-    <p>The <codeph>gptransfer</codeph> migration utility transfers Greenplum Database metadata and
-      data from one Greenplum database to another Greenplum database, allowing you to migrate the
-      entire contents of a database, or just selected tables, to another database. The source and
-      destination databases may be in the same or a different cluster. <codeph>gptransfer</codeph>
-      moves data in parallel across all the segments, using the <codeph>gpfdist</codeph> data
-      loading utility to attain the highest transfer rates. </p>
+    <p><codeph>gptransfer</codeph> enables you to migrate the entire contents of a database, or just
+      selected tables, to another database. The source and destination databases may be in the same
+      or a different cluster. <codeph>gptransfer</codeph> moves data in parallel across all the
+      segments, using the <codeph>gpfdist</codeph> data loading utility to attain the highest
+      transfer rates. </p>
     <p><codeph>gptransfer</codeph> handles the setup and execution of the data transfer.
       Participating clusters must already exist, have network access between all hosts in both
       clusters, and have certificate-authenticated ssh access between all hosts in both clusters. </p>
@@ -231,9 +232,9 @@ host2_name,host2_ipaddr
       </table>
       <p>The <codeph>--full</codeph> option and the <codeph>--schema-only</codeph> option can be
         used together if you want to copy a database in phases, for example, during scheduled
-        periods of downtime or low activity. Run <codeph>gptransfer --full --schema-only -d
-            <i>&lt;database_name></i> ...</codeph> to create the full database on the destination
-        cluster, but with no data. Then you can transfer the tables in stages during scheduled down
+        periods of downtime or low activity. Run <codeph>gptransfer --full --schema-only ...</codeph>
+        to create the full database schema on the destination
+        cluster, but with no data. You can then transfer the tables in stages during scheduled down
         times or periods of low activity. Be sure to include the <codeph>--truncate</codeph> or
           <codeph>--drop</codeph> option when you later transfer tables to prevent the transfer from
         failing because the table already exists at the destination.</p>
@@ -280,9 +281,8 @@ host2_name,host2_ipaddr
         smaller tables. </p>
       <ol>
         <li>Before you begin to transfer data, replicate the schema or schemas from the source
-          cluster to the destination cluster. Do not use <codeph>gptransfer</codeph> with the
-            <codeph>--full –schema-only</codeph> options. Here are some options for copying the
-            schema:<ul id="ul_q1y_1hh_1s">
+          cluster to the destination cluster. Options for copying the
+            schema include:<ul id="ul_q1y_1hh_1s">
             <li>Use the <codeph>gpsd</codeph> (Greenplum Statistics Dump) support utility. This
               method includes statistics, so be sure to run <codeph>ANALYZE</codeph> after creating
               the schema on the destination cluster.</li>

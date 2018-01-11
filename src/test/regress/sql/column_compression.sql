@@ -570,18 +570,23 @@ compresstype=none);
 execute ccddlcheck;
 drop table ccddl;
 
--- Ensure that we can handle the SQL types that are recognized by the parser
--- but are not represented in the catalog.
+-- We used to accept SQL standard aliases for the built-in types,
+-- like "character varying", "integer", before GPDB 6, but not anymore.
 alter type character varying set default encoding (compresstype=zlib);
+alter type varchar set default encoding (compresstype=zlib);
 
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'varchar' and t.oid = e.typid;
 
 alter type character set default encoding (compresstype=zlib);
+alter type bpchar set default encoding (compresstype=zlib);
+
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'bpchar' and t.oid = e.typid;
 
 alter type timestamp with time zone set default encoding(compresstype=zlib);
+alter type timestamptz set default encoding (compresstype=zlib);
+
 select typoptions from pg_type t, pg_type_encoding e where
   t.typname = 'timestamptz' and t.oid = e.typid;
 

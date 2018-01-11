@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 #
-# copyright (c) 2011
+# Portions Copyright (c) 2011 Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 
 use POSIX;
@@ -75,15 +77,15 @@ the new generated code for the previous contents.
 The aggregate transition functions are constructed from CREATE
 FUNCTION statements.  But we should really use CREATE AGGREGATE
 statements to generate the DATA statements for pg_aggregate and the
-pg_proc entries.  A similar limitation exists for window functions in
-pg_window.  And operators and operator classes?  Access methods? Casts?
+pg_proc entries.  And operators and operator classes?  Access methods? Casts?
 
 
 =head1 AUTHORS
 
 Jeffrey I Cohen
 
-Copyright (c) 2011 Greenplum.  All rights reserved.  
+Portions Copyright (c) 2011 Greenplum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 
@@ -295,6 +297,9 @@ sub get_fnoptlist
 		'security\s+definer|security\s+invoker|' .
 		'cost\s+(\d+)|' .
 		'rows\s+(\d+)|' .
+		'execute\s+on\s+any|' .
+		'execute\s+on\s+master|' .
+		'execute\s+on\s+all\s+segments|' .
 		'no\s+sql|contains\s+sql|reads\s+sql\s+data|modifies\s+sql\s+data|' .
 		'language\s+\S+|' .
 		'as\s+\\\'\S+\\\'(?:\s*,\s*\\\'\S+\\\')*';
@@ -338,6 +343,7 @@ sub make_opt
 	my $proisstrict = 0;
 	my $prosecdef	= 0;
 	my $prodataaccess;
+	my $proexeclocation;
 	my $prosrc;
 	my $func_as;
 
@@ -381,6 +387,28 @@ sub make_opt
 				# prodataaccess is first char of option ([n]o sql, [c]ontains sql,
 				# [r]eads sql data, [m]odifies sql data).
 				$prodataaccess = lc(substr($opt, 0, 1));
+			}
+
+			if ($opt =~ m/^execute\s+on\s+any/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 'a';
+			}
+			if ($opt =~ m/^execute\s+on\s+master/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 'm';
+			}
+			if ($opt =~ m/^execute\s+on\s+all\s+segments/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 's';
 			}
 
 			if ($opt =~ m/^AS\s+\'.*\'$/)
@@ -440,12 +468,13 @@ sub make_opt
 			provolatile	 => $provolatile,
 #			pronargs
 #			prorettype
-			proiswin	 => 0,
+			proiswindow	 => 0,
 #			proargtypes
 #			proallargtypes
 #			proargmodes
 #			proargnames
-			prodataaccess	=> $prodataaccess
+			prodataaccess	=> $prodataaccess,
+			proexeclocation	=> $proexeclocation
 		};
 
 		if (defined($func_as) && defined($prolang))
@@ -787,7 +816,7 @@ sub get_fnwithhash
 			$vv =~ s/^\s+//;
 			$vv =~ s/\s+$//;
 
-			if ($kk =~ m/proisagg|proiswin/)
+			if ($kk =~ m/proisagg|proiswindow/)
 			{
 				# unquote the string
 				$vv =~ s/\"//g;
@@ -831,7 +860,7 @@ sub printfndef
 	$bigstr .= "/* " .
 		$fndef->{name} . "(" . 
 		($fndef->{rawargs} ? $fndef->{rawargs} : "" ) . ") => " .
-		(exists($fndef->{returntype}) ? $fndef->{returntype} : "()") . " */ \n"
+		(exists($fndef->{returntype}) ? $fndef->{returntype} : "()") . " */\n"
 		if ($addcomment);
 
 
@@ -844,6 +873,8 @@ sub printfndef
 		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
+		(exists($fndef->{with}->{proiswindow}) ? $fndef->{with}->{proiswindow} :
+		 ($tup->{proiswindow} ? "t" : "f")) . " " .
 		($tup->{prosecdef} ? "t" : "f") . " " .
 		($tup->{proisstrict} ? "t" : "f") . " " .
 		($tup->{proretset} ? "t" : "f") . " " .
@@ -851,8 +882,6 @@ sub printfndef
 		($tup->{pronargs} ? $tup->{pronargs} : 0) . " " .
 		($tup->{pronargdefaults} ? $tup->{pronargdefaults} : 0) . " " .
 		($tup->{prorettype} ? $tup->{prorettype} : '""') . " " .
-		(exists($fndef->{with}->{proiswin}) ? $fndef->{with}->{proiswin} :
-		 ($tup->{proiswin} ? "t" : "f")) . " " .
 		($tup->{proargtypes} ? '"'. $tup->{proargtypes} . '"' : '""') . " " .
 		($tup->{proallargtypes} ? '"' . $tup->{proallargtypes} . '"'  : "_null_")  . " " .
 		($tup->{proargmodes} ? '"' . $tup->{proargmodes} . '"' : "_null_") . " " .
@@ -864,6 +893,7 @@ sub printfndef
 		($tup->{proacl} ? $tup->{proacl} : "_null_") . " " . 
 		($tup->{proconfig} ? $tup->{proconfig} : "_null_") . " " . 
 		$tup->{prodataaccess} . " " .
+		($tup->{proexeclocation} ? $tup->{proexeclocation} : "a" ) . " " .
 		"));\n";
 	$bigstr .= "DESCR(" . $fndef->{with}->{description} . ");\n"
 		if (exists($fndef->{with}->{description}));
@@ -1260,8 +1290,7 @@ the new generated code for the previous contents.
 The aggregate transition functions are constructed from CREATE
 FUNCTION statements.  But we should really use CREATE AGGREGATE
 statements to generate the DATA statements for pg_aggregate and the
-pg_proc entries.  A similar limitation exists for window functions in
-pg_window.  And operators and operator classes?  Access methods? Casts?
+pg_proc entries.  And operators and operator classes?  Access methods? Casts?
 
 EOF_toplong
 

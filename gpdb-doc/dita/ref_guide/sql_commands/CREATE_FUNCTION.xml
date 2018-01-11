@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bs20941">CREATE FUNCTION</title><body><p id="sql_command_desc">Defines a new function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION <varname>name</varname>    
+<topic id="topic1">
+    <title id="bs20941">CREATE FUNCTION</title>
+    <body>
+        <p id="sql_command_desc">Defines a new function.</p>
+        <section id="section2"
+            ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION <varname>name</varname>    
     ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [ { DEFAULT | = } <varname>defexpr</varname> ] [, ...] ] )
       [ RETURNS { [ SETOF ] rettype 
         | TABLE ([{ argname argtype | LIKE other table }
@@ -11,124 +16,231 @@
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINE
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
     | COST <varname>execution_cost</varname>
     | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
     | AS '<varname>definition</varname>'
     | AS '<varname>obj_file</varname>', '<varname>link_symbol</varname>' } ...
     [ WITH ({ DESCRIBE = describe_function
-           } [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines a new function. <codeph>CREATE
-OR REPLACE FUNCTION</codeph> will either create a new function, or replace
-an existing definition. </p><p>The name of the new function must not match any existing function
-with the same argument types in the same schema. However, functions of
-different argument types may share a name (overloading). </p><p>To update the definition of an existing function, use <codeph>CREATE
-OR REPLACE FUNCTION</codeph>. It is not possible to change the name or
-argument types of a function this way (this would actually create a new,
-distinct function). Also, <codeph>CREATE OR REPLACE FUNCTION</codeph>
-will not let you change the return type of an existing function. To do
-that, you must drop and recreate the function. If you drop and then recreate
-a function, you will have to drop existing objects (rules, views, triggers,
-and so on) that refer to the old function. Use <codeph>CREATE OR REPLACE
-FUNCTION</codeph> to change a function definition without breaking objects
-that refer to the function.</p><p>For more information about creating functions, see the <xref href="https://www.postgresql.org/docs/8.3/static/xfunc.html" scope="external" format="html">User Defined Functions</xref> section of the PostgreSQL
-documentation.</p><sectiondiv id="section4"><b>Limited Use of VOLATILE and STABLE Functions</b><p>To prevent data from becoming out-of-sync across the segments in Greenplum
-Database, any function classified as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph>
-cannot be executed at the segment level if it contains SQL or modifies
-the database in any way. For example, functions such as <codeph>random()</codeph>
-or <codeph>timeofday()</codeph> are not allowed to execute on distributed
-data in Greenplum Database because they could potentially cause inconsistent
-data between the segment instances.</p><p>To ensure data consistency, <codeph>VOLATILE</codeph> and <codeph>STABLE</codeph>
-functions can safely be used in statements that are evaluated on and
-execute from the master. For example, the following statements are always
-executed on the master (statements without a <codeph>FROM</codeph> clause):</p><codeblock>SELECT setval('myseq', 201);
-SELECT foo();</codeblock><p>In cases where a statement has a <codeph>FROM</codeph> clause
-containing a distributed table and the function used
-in the <codeph>FROM</codeph> clause simply returns a set of
-rows, execution may be allowed on the segments:</p><codeblock>SELECT * FROM foo();</codeblock><p>One exception to this rule are functions that return a table reference
-(<codeph>rangeFuncs</codeph>) or functions that use the <codeph>refCursor</codeph>
-data type. Note that you cannot return a <codeph>refcursor</codeph> from
-any kind of function in Greenplum Database.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the function to create.</pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>, <codeph>INOUT</codeph>, 
-or <codeph>VARIADIC</codeph>. Only <codeph>OUT</codeph> arguments can follow an argument declared as <codeph>VARIADIC</codeph>. If omitted, the default is <codeph>IN</codeph>.
-</pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of an argument. Some languages (currently only PL/pgSQL)
-let you use the name in the function body. For other languages the name
-of an input argument is just extra documentation. But the name of an
-output argument is significant, since it defines the column name in the
-result row type. (If you omit the name for an output argument, the system
-will choose a default column name.) </pd></plentry><plentry><pt><varname>argtype</varname></pt><pd>The data type(s) of the function's arguments (optionally schema-qualified),
-if any. The argument types may be base, composite, or domain types, or
-may reference the type of a table column. </pd><pd>Depending on the implementation language it may also be allowed to
-specify pseudotypes such as <codeph>cstring</codeph>. Pseudotypes indicate
-that the actual argument type is either incompletely specified, or outside
-the set of ordinary SQL data types. </pd><pd>The type of a column is referenced by writing
-                            <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>. Using this
-                        feature can sometimes help make a function independent of changes to the
-                        definition of a table. </pd></plentry>
-<plentry><pt><varname>defexpr</varname></pt><pd>An expression to be used as the default value if
-  the parameter is not specified. The expression must be coercible to the argument type of the
-  parameter. Only <codeph>IN</codeph> and <codeph>INOUT</codeph> parameters can have a default
-  value. Each input parameter in the argument list that follows a parameter with a default value
-  must have a default value as well.</pd></plentry>
-<plentry><pt><varname>rettype</varname></pt><pd>The return data type (optionally schema-qualified). The return type
-can be a base, composite, or domain type, or may reference the type of
-a table column. Depending on the implementation language it may also
-be allowed to specify pseudotypes such as <codeph>cstring</codeph>. If
-the function is not supposed to return a value, specify <codeph>void</codeph>
-as the return type. </pd><pd>When there are <codeph>OUT</codeph> or <codeph>INOUT</codeph> parameters,
-the <codeph>RETURNS</codeph> clause may be omitted. If present, it must
-agree with the result type implied by the output parameters: <codeph>RECORD</codeph>
-if there are multiple output parameters, or the same type as the single
-output parameter. </pd><pd>The <codeph>SETOF</codeph> modifier indicates that the function will
-return a set of items, rather than a single item. </pd><pd>The type of a column is referenced by writing
-                            <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>. </pd></plentry><plentry><pt><varname>langname</varname></pt><pd>The name of the language that the function is implemented in. May be <codeph>SQL</codeph>,
-                            <codeph>C</codeph>, <codeph>internal</codeph>, or the name of a
-                        user-defined procedural language. See <codeph><xref
+           } [, ...] ) ]</codeblock></section>
+        <section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines
+                a new function. <codeph>CREATE OR REPLACE FUNCTION</codeph> will either create a new
+                function, or replace an existing definition. </p><p>The name of the new function
+                must not match any existing function with the same argument types in the same
+                schema. However, functions of different argument types may share a name
+                (overloading). </p><p>To update the definition of an existing function, use
+                    <codeph>CREATE OR REPLACE FUNCTION</codeph>. It is not possible to change the
+                name or argument types of a function this way (this would actually create a new,
+                distinct function). Also, <codeph>CREATE OR REPLACE FUNCTION</codeph> will not let
+                you change the return type of an existing function. To do that, you must drop and
+                recreate the function. If you drop and then recreate a function, you will have to
+                drop existing objects (rules, views, triggers, and so on) that refer to the old
+                function. Use <codeph>CREATE OR REPLACE FUNCTION</codeph> to change a function
+                definition without breaking objects that refer to the function.</p><p>For more
+                information about creating functions, see the <xref
+                    href="https://www.postgresql.org/docs/8.3/static/xfunc.html" scope="external"
+                    format="html">User Defined Functions</xref> section of the PostgreSQL
+                documentation.</p><sectiondiv id="section4"><b>Limited Use of VOLATILE and STABLE
+                    Functions</b><p>To prevent data from becoming out-of-sync across the segments in
+                    Greenplum Database, any function classified as <codeph>STABLE</codeph> or
+                        <codeph>VOLATILE</codeph> cannot be executed at the segment level if it
+                    contains SQL or modifies the database in any way. For example, functions such as
+                        <codeph>random()</codeph> or <codeph>timeofday()</codeph> are not allowed to
+                    execute on distributed data in Greenplum Database because they could potentially
+                    cause inconsistent data between the segment instances.</p><p>To ensure data
+                    consistency, <codeph>VOLATILE</codeph> and <codeph>STABLE</codeph> functions can
+                    safely be used in statements that are evaluated on and execute from the master.
+                    For example, the following statements are always executed on the master
+                    (statements without a <codeph>FROM</codeph>
+                    clause):</p><codeblock>SELECT setval('myseq', 201);
+SELECT foo();</codeblock><p>In
+                    cases where a statement has a <codeph>FROM</codeph> clause containing a
+                    distributed table and the function used in the <codeph>FROM</codeph> clause
+                    simply returns a set of rows, execution may be allowed on the
+                    segments:</p><codeblock>SELECT * FROM foo();</codeblock><p>One exception to this
+                    rule are functions that return a table reference (<codeph>rangeFuncs</codeph>)
+                    or functions that use the <codeph>refCursor</codeph> data type. Note that you
+                    cannot return a <codeph>refcursor</codeph> from any kind of function in
+                    Greenplum Database.</p></sectiondiv>
+            <sectiondiv><b>Function Volitionality and EXECUTE ON Attributes</b><p>Volatility
+                    attributes (<codeph>IMMUTABLE</codeph>, <codeph>STABLE</codeph>,
+                        <codeph>VOLATILE</codeph>) and <codeph>EXECUTE ON</codeph> attributes
+                    specify two different aspects of function execution. In general, volatility
+                    indicates when the function is executed, and <codeph>EXECUTE ON</codeph>
+                    indicates where it is executed. </p><p>For example, a function defined with the
+                        <codeph>IMMUTABLE</codeph> attribute can be executed at query planning time,
+                    while a function with the <codeph>VOLATILE</codeph> attribute must be executed
+                    for every row in the query. A function with the <codeph>EXECUTE ON
+                        MASTER</codeph> attribute is executed only on the master segment and a
+                    function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute is executed
+                    on all primary segment instances (not the master).</p><p>See <xref
+                        href="../../admin_guide/query/topics/functions-operators.xml#topic26/in151167"
+                        >Using Functions and Operators</xref> in the <cite>Greenplum Database
+                        Administrator Guide</cite>.</p></sectiondiv></section>
+        <section id="section5"><title>Parameters</title><parml>
+                <plentry>
+                    <pt><varname>name</varname></pt>
+                    <pd>The name (optionally schema-qualified) of the function to create.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>argmode</varname></pt>
+                    <pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
+                            <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. Only
+                            <codeph>OUT</codeph> arguments can follow an argument declared as
+                            <codeph>VARIADIC</codeph>. If omitted, the default is
+                            <codeph>IN</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>argname</varname></pt>
+                    <pd>The name of an argument. Some languages (currently only PL/pgSQL) let you
+                        use the name in the function body. For other languages the name of an input
+                        argument is just extra documentation. But the name of an output argument is
+                        significant, since it defines the column name in the result row type. (If
+                        you omit the name for an output argument, the system will choose a default
+                        column name.) </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>argtype</varname></pt>
+                    <pd>The data type(s) of the function's arguments (optionally schema-qualified),
+                        if any. The argument types may be base, composite, or domain types, or may
+                        reference the type of a table column. </pd>
+                    <pd>Depending on the implementation language it may also be allowed to specify
+                        pseudotypes such as <codeph>cstring</codeph>. Pseudotypes indicate that the
+                        actual argument type is either incompletely specified, or outside the set of
+                        ordinary SQL data types. </pd>
+                    <pd>The type of a column is referenced by writing
+                                <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>.
+                        Using this feature can sometimes help make a function independent of changes
+                        to the definition of a table. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>defexpr</varname></pt>
+                    <pd>An expression to be used as the default value if the parameter is not
+                        specified. The expression must be coercible to the argument type of the
+                        parameter. Only <codeph>IN</codeph> and <codeph>INOUT</codeph> parameters
+                        can have a default value. Each input parameter in the argument list that
+                        follows a parameter with a default value must have a default value as
+                        well.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>rettype</varname></pt>
+                    <pd>The return data type (optionally schema-qualified). The return type can be a
+                        base, composite, or domain type, or may reference the type of a table
+                        column. Depending on the implementation language it may also be allowed to
+                        specify pseudotypes such as <codeph>cstring</codeph>. If the function is not
+                        supposed to return a value, specify <codeph>void</codeph> as the return
+                        type. </pd>
+                    <pd>When there are <codeph>OUT</codeph> or <codeph>INOUT</codeph> parameters,
+                        the <codeph>RETURNS</codeph> clause may be omitted. If present, it must
+                        agree with the result type implied by the output parameters:
+                            <codeph>RECORD</codeph> if there are multiple output parameters, or the
+                        same type as the single output parameter. </pd>
+                    <pd>The <codeph>SETOF</codeph> modifier indicates that the function will return
+                        a set of items, rather than a single item. </pd>
+                    <pd>The type of a column is referenced by writing
+                                <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>.
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>langname</varname></pt>
+                    <pd>The name of the language that the function is implemented in. May be
+                            <codeph>SQL</codeph>, <codeph>C</codeph>, <codeph>internal</codeph>, or
+                        the name of a user-defined procedural language. See <codeph><xref
                                 href="./CREATE_LANGUAGE.xml#topic1" type="topic" format="dita"
                             /></codeph> for the procedural languages supported in Greenplum
                         Database. For backward compatibility, the name may be enclosed by single
-                        quotes. </pd></plentry><plentry><pt>IMMUTABLE</pt><pt>STABLE</pt><pt>VOLATILE</pt><pd>These attributes inform the query optimizer about the behavior of
-the function. At most one choice may be specified. If none of these appear,
-<codeph>VOLATILE</codeph> is the default assumption. Since Greenplum
-Database currently has limited use of <codeph>VOLATILE</codeph> functions,
-if a function is truly <codeph>IMMUTABLE</codeph>, you must declare it
-as so to be able to use it without restrictions.</pd><pd><codeph>IMMUTABLE</codeph> indicates that the function cannot modify
-the database and always returns the same result when given the same argument
-values. It does not do database lookups or otherwise use information
-not directly present in its argument list. If this option is given, any
-call of the function with all-constant arguments can be immediately replaced
-with the function value.</pd><pd><codeph>STABLE</codeph> indicates that the function cannot modify
-the database, and that within a single table scan it will consistently
-return the same result for the same argument values, but that its result
-could change across SQL statements. This is the appropriate selection
-for functions whose results depend on database lookups, parameter values
-(such as the current time zone), and so on. Also note that the <varname>current_timestamp</varname>
-family of functions qualify as stable, since their values do not change
-within a transaction.</pd><pd><codeph>VOLATILE</codeph> indicates that the function value can change
-even within a single table scan, so no optimizations can be made. Relatively
-few database functions are volatile in this sense; some examples are
-<codeph>random()</codeph>, <codeph>currval()</codeph>, <codeph>timeofday()</codeph>.
-But note that any function that has side-effects must be classified volatile,
-even if its result is quite predictable, to prevent calls from being
-optimized away; an example is <codeph>setval()</codeph>.</pd></plentry><plentry><pt>CALLED ON NULL INPUT</pt><pt>RETURNS NULL ON NULL INPUT</pt><pt>STRICT</pt><pd><codeph>CALLED ON NULL INPUT</codeph> (the default) indicates that
-the function will be called normally when some of its arguments are null.
-It is then the function author's responsibility to check for null values
-if necessary and respond appropriately. <codeph>RETURNS NULL ON NULL
-INPUT</codeph> or <codeph>STRICT</codeph> indicates that the function
-always returns null whenever any of its arguments are null. If this parameter
-is specified, the function is not executed when there are null arguments;
-instead a null result is assumed automatically.</pd></plentry><plentry><pt>[EXTERNAL] SECURITY INVOKER</pt><pt>[EXTERNAL] SECURITY DEFINER</pt><pd><codeph>SECURITY INVOKER</codeph> (the default) indicates that the
-function is to be executed with the privileges of the user that calls
-it. <codeph>SECURITY DEFINER</codeph> specifies that the function is
-to be executed with the privileges of the user that created it. The key
-word <codeph>EXTERNAL</codeph> is allowed for SQL conformance, but it
-is optional since, unlike in SQL, this feature applies to all functions
-not just external ones.</pd></plentry>
-<plentry> <pt>COST <varname>execution_cost</varname></pt>
-<pd>A positive number identifying the estimated execution cost for the function,
-in <xref href="https://www.postgresql.org/docs/8.3/static/runtime-config-query.html#GUC-CPU-OPERATOR-COST" scope="external" format="html">cpu_operator_cost</xref> units.
-If the function returns a set, <varname>execution_cost</varname> identifies the
-cost per returned row. If the cost is not specified, C-language and internal
-functions default to 1 unit, while functions in other languages default to 100 
-units. The planner tries to evaluate the function less often when you specify
-larger <varname>execution_cost</varname> values.</pd></plentry>
+                        quotes. </pd>
+                </plentry>
+                <plentry>
+                    <pt>IMMUTABLE</pt>
+                    <pt>STABLE</pt>
+                    <pt>VOLATILE</pt>
+                    <pd>These attributes inform the query optimizer about the behavior of the
+                        function. At most one choice may be specified. If none of these appear,
+                            <codeph>VOLATILE</codeph> is the default assumption. Since Greenplum
+                        Database currently has limited use of <codeph>VOLATILE</codeph> functions,
+                        if a function is truly <codeph>IMMUTABLE</codeph>, you must declare it as so
+                        to be able to use it without restrictions.</pd>
+                    <pd><codeph>IMMUTABLE</codeph> indicates that the function cannot modify the
+                        database and always returns the same result when given the same argument
+                        values. It does not do database lookups or otherwise use information not
+                        directly present in its argument list. If this option is given, any call of
+                        the function with all-constant arguments can be immediately replaced with
+                        the function value.</pd>
+                    <pd><codeph>STABLE</codeph> indicates that the function cannot modify the
+                        database, and that within a single table scan it will consistently return
+                        the same result for the same argument values, but that its result could
+                        change across SQL statements. This is the appropriate selection for
+                        functions whose results depend on database lookups, parameter values (such
+                        as the current time zone), and so on. Also note that the
+                            <varname>current_timestamp</varname> family of functions qualify as
+                        stable, since their values do not change within a transaction.</pd>
+                    <pd><codeph>VOLATILE</codeph> indicates that the function value can change even
+                        within a single table scan, so no optimizations can be made. Relatively few
+                        database functions are volatile in this sense; some examples are
+                            <codeph>random()</codeph>, <codeph>timeofday()</codeph>. But note that
+                        any function that has side-effects must be classified volatile, even if its
+                        result is quite predictable, to prevent calls from being optimized away; an
+                        example is <codeph>setval()</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>CALLED ON NULL INPUT</pt>
+                    <pt>RETURNS NULL ON NULL INPUT</pt>
+                    <pt>STRICT</pt>
+                    <pd><codeph>CALLED ON NULL INPUT</codeph> (the default) indicates that the
+                        function will be called normally when some of its arguments are null. It is
+                        then the function author's responsibility to check for null values if
+                        necessary and respond appropriately. <codeph>RETURNS NULL ON NULL
+                            INPUT</codeph> or <codeph>STRICT</codeph> indicates that the function
+                        always returns null whenever any of its arguments are null. If this
+                        parameter is specified, the function is not executed when there are null
+                        arguments; instead a null result is assumed automatically.</pd>
+                </plentry>
+                <plentry>
+                    <pt>[EXTERNAL] SECURITY INVOKER</pt>
+                    <pt>[EXTERNAL] SECURITY DEFINER</pt>
+                    <pd><codeph>SECURITY INVOKER</codeph> (the default) indicates that the function
+                        is to be executed with the privileges of the user that calls it.
+                            <codeph>SECURITY DEFINER</codeph> specifies that the function is to be
+                        executed with the privileges of the user that created it. The key word
+                            <codeph>EXTERNAL</codeph> is allowed for SQL conformance, but it is
+                        optional since, unlike in SQL, this feature applies to all functions not
+                        just external ones.</pd>
+                </plentry>
+
+                <plentry>
+                    <pt>EXECUTE ON ANY</pt>
+                    <pt>EXECUTE ON MASTER</pt>
+                    <pt>EXECUTE ON ALL SEGMENTS</pt>
+                    <pd>The <codeph>EXECUTE ON</codeph> attributes specify where (master or segment
+                        instance) a function executes when it is invoked during the query execution
+                        process.</pd>
+                    <pd><codeph>EXECUTE ON ANY</codeph> (the default) indicates that the function
+                        can be executed on the master, or any segment instance, and it returns the
+                        same result regardless of where it is executed. Greenplum Database
+                        determines where the function executes.</pd>
+                    <pd><codeph>EXECUTE ON MASTER</codeph> indicates that the function must execute
+                        only on the master instance. </pd>
+                    <pd><codeph>EXECUTE ON ALL SEGMENTS</codeph> indicates that the function must
+                        execute on all primary segment instances, but not the master, for each
+                        invocation. The overall result of the function is the <codeph>UNION
+                            ALL</codeph> of the results from all segment instances. </pd>
+                    <pd>For information about using <codeph>EXECUTE ON</codeph> attributes, see
+                            <xref href="#topic1/section6" format="dita">Notes</xref>.</pd>
+                </plentry>
+
+                <plentry>
+                    <pt>COST <varname>execution_cost</varname></pt>
+                    <pd>A positive number identifying the estimated execution cost for the function,
+                        in <xref
+                            href="https://www.postgresql.org/docs/8.3/static/runtime-config-query.html#GUC-CPU-OPERATOR-COST"
+                            scope="external" format="html">cpu_operator_cost</xref> units. If the
+                        function returns a set, <varname>execution_cost</varname> identifies the
+                        cost per returned row. If the cost is not specified, C-language and internal
+                        functions default to 1 unit, while functions in other languages default to
+                        100 units. The planner tries to evaluate the function less often when you
+                        specify larger <varname>execution_cost</varname> values.</pd>
+                </plentry>
                 <plentry>
                     <pt><varname>configuration_parameter</varname></pt>
                     <pt><varname>value</varname></pt>
@@ -137,60 +249,77 @@ larger <varname>execution_cost</varname> values.</pd></plentry>
                         restored to its prior value when the function exits. <codeph>SET FROM
                             CURRENT</codeph> applies the session's current value of the parameter
                         when the function is entered.</pd>
-                </plentry><plentry><pt><varname>definition</varname></pt><pd>A string constant defining the function; the meaning depends on the
-language. It may be an internal function name, the path to an object
-file, an SQL command, or text in a procedural language.</pd></plentry><plentry><pt><varname>obj_file, link_symbol</varname></pt><pd>This form of the <codeph>AS</codeph> clause is used for dynamically
-loadable C language functions when the function name in the C language
-source code is not the same as the name of the SQL function. The string
-<varname>obj_file</varname> is the name of the file containing the dynamically loadable
-object, and <varname>link_symbol</varname> is the name of the function in the C language
-source code. If the link symbol is omitted, it is assumed to be the same
-as the name of the SQL function being defined. It is recommended to locate
-shared libraries either relative to <codeph>$libdir</codeph> (which is
-located at <codeph>$GPHOME/lib</codeph>) or through the dynamic library
-path (set by the <codeph>dynamic_library_path</codeph> server configuration
-parameter). This simplifies version upgrades if the new installation
-is at a different location.</pd></plentry><plentry><pt><varname>describe_function</varname></pt><pd>The name of a callback function to execute when a query that calls
-this function is parsed. The callback function returns a tuple descriptor
-that indicates the result type.</pd></plentry></parml></section><section id="section6"><title>Notes</title><p>Any compiled code (shared library files) for custom functions must be
-placed in the same location on every host in your Greenplum Database
-array (master and all segments). This location must also be in the <codeph>LD_LIBRARY_PATH</codeph>
-so that the server can locate the files. It is recommended to locate
-shared libraries either relative to <codeph>$libdir</codeph> (which is
-located at <codeph>$GPHOME/lib</codeph>) or through the dynamic library
-path (set by the <codeph>dynamic_library_path</codeph> server configuration
-parameter) on all master segment instances in the Greenplum array.</p><p>The full SQL type syntax is allowed for input arguments and return
-value. However, some details of the type specification (such as the precision
-field for type <varname>numeric</varname>) are the responsibility of the underlying
-function implementation and are not recognized or enforced by the <codeph>CREATE
-FUNCTION</codeph> command. </p><p>Greenplum Database allows function overloading. The same name can
-be used for several different functions so long as they have distinct
-argument types. However, the C names of all functions must be different,
-so you must give overloaded C functions different C names (for example,
-use the argument types as part of the C names). </p><p>Two functions are considered the same if they have the same names
-and input argument types, ignoring any <codeph>OUT</codeph> parameters. Thus for example
-these declarations conflict:</p><codeblock>CREATE FUNCTION foo(int) ...
+                </plentry>
+                <plentry>
+                    <pt><varname>definition</varname></pt>
+                    <pd>A string constant defining the function; the meaning depends on the
+                        language. It may be an internal function name, the path to an object file,
+                        an SQL command, or text in a procedural language.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>obj_file, link_symbol</varname></pt>
+                    <pd>This form of the <codeph>AS</codeph> clause is used for dynamically loadable
+                        C language functions when the function name in the C language source code is
+                        not the same as the name of the SQL function. The string
+                            <varname>obj_file</varname> is the name of the file containing the
+                        dynamically loadable object, and <varname>link_symbol</varname> is the name
+                        of the function in the C language source code. If the link symbol is
+                        omitted, it is assumed to be the same as the name of the SQL function being
+                        defined. It is recommended to locate shared libraries either relative to
+                            <codeph>$libdir</codeph> (which is located at
+                            <codeph>$GPHOME/lib</codeph>) or through the dynamic library path (set
+                        by the <codeph>dynamic_library_path</codeph> server configuration
+                        parameter). This simplifies version upgrades if the new installation is at a
+                        different location.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>describe_function</varname></pt>
+                    <pd>The name of a callback function to execute when a query that calls this
+                        function is parsed. The callback function returns a tuple descriptor that
+                        indicates the result type.</pd>
+                </plentry>
+            </parml></section>
+        <section id="section6"><title>Notes</title><p>Any compiled code (shared library files) for
+                custom functions must be placed in the same location on every host in your Greenplum
+                Database array (master and all segments). This location must also be in the
+                    <codeph>LD_LIBRARY_PATH</codeph> so that the server can locate the files. It is
+                recommended to locate shared libraries either relative to <codeph>$libdir</codeph>
+                (which is located at <codeph>$GPHOME/lib</codeph>) or through the dynamic library
+                path (set by the <codeph>dynamic_library_path</codeph> server configuration
+                parameter) on all master segment instances in the Greenplum array.</p><p>The full
+                SQL type syntax is allowed for input arguments and return value. However, some
+                details of the type specification (such as the precision field for type
+                    <varname>numeric</varname>) are the responsibility of the underlying function
+                implementation and are not recognized or enforced by the <codeph>CREATE
+                    FUNCTION</codeph> command. </p><p>Greenplum Database allows function
+                overloading. The same name can be used for several different functions so long as
+                they have distinct argument types. However, the C names of all functions must be
+                different, so you must give overloaded C functions different C names (for example,
+                use the argument types as part of the C names). </p><p>Two functions are considered
+                the same if they have the same names and input argument types, ignoring any
+                    <codeph>OUT</codeph> parameters. Thus for example these declarations
+                conflict:</p><codeblock>CREATE FUNCTION foo(int) ...
 CREATE FUNCTION foo(int, out text) ...</codeblock>
-<p>Functions that have different argument type lists are not considered to conflict at
-creation time, but if argument defaults are provided, they might conflict in use.
-For example, consider:</p><codeblock>CREATE FUNCTION foo(int) ...
+            <p>Functions that have different argument type lists are not considered to conflict at
+                creation time, but if argument defaults are provided, they might conflict in use.
+                For example, consider:</p><codeblock>CREATE FUNCTION foo(int) ...
 CREATE FUNCTION foo(int, int default 42) ...</codeblock>
-<p>The call <codeph>foo(10)</codeph>, will fail due to the ambiguity about which function should
-be called.</p>
-<p>When repeated <codeph>CREATE FUNCTION</codeph> calls refer to the same
-object file, the file is only loaded once. To unload and reload the file,
-use the <codeph>LOAD</codeph> command. </p><p>You must have the <codeph>USAGE</codeph> privilege on a language to be able to define a function using that language.</p>
-<p>It is often helpful to use dollar quoting to write the function definition
-string, rather than the normal single quote syntax. Without dollar quoting,
-any single quotes or backslashes in the function definition must be escaped
-by doubling them. A dollar-quoted string constant consists of a dollar
-sign (<codeph>$</codeph>), an optional tag of zero or more characters,
-another dollar sign, an arbitrary sequence of characters that makes up
-the string content, a dollar sign, the same tag that began this dollar
-quote, and a dollar sign. Inside the dollar-quoted string, single quotes,
-backslashes, or any character can be used without escaping. The string
-content is always written literally. For example, here are two different
-ways to specify the string "Dianne's horse" using dollar quoting:</p><codeblock>$$Dianne's horse$$
+            <p>The call <codeph>foo(10)</codeph>, will fail due to the ambiguity about which
+                function should be called.</p>
+            <p>When repeated <codeph>CREATE FUNCTION</codeph> calls refer to the same object file,
+                the file is only loaded once. To unload and reload the file, use the
+                    <codeph>LOAD</codeph> command. </p><p>You must have the <codeph>USAGE</codeph>
+                privilege on a language to be able to define a function using that language.</p>
+            <p>It is often helpful to use dollar quoting to write the function definition string,
+                rather than the normal single quote syntax. Without dollar quoting, any single
+                quotes or backslashes in the function definition must be escaped by doubling them. A
+                dollar-quoted string constant consists of a dollar sign (<codeph>$</codeph>), an
+                optional tag of zero or more characters, another dollar sign, an arbitrary sequence
+                of characters that makes up the string content, a dollar sign, the same tag that
+                began this dollar quote, and a dollar sign. Inside the dollar-quoted string, single
+                quotes, backslashes, or any character can be used without escaping. The string
+                content is always written literally. For example, here are two different ways to
+                specify the string "Dianne's horse" using dollar quoting:</p><codeblock>$$Dianne's horse$$
 $SomeTag$Dianne's horse$SomeTag$</codeblock>
             <p>If a <codeph>SET</codeph> clause is attached to a function, the effects of a
                     <codeph>SET LOCAL</codeph> command executed inside the function for the same
@@ -202,26 +331,58 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                     LOCAL</codeph> command. The effects of such a command will persist after the
                 function exits, unless the current transaction is rolled back.</p>
             <p>If a function with a <codeph>VARIADIC</codeph> argument is declared as
-              <codeph>STRICT</codeph>, the strictness check tests that the variadic array as a
-               whole is non-null. PL/pgSQL will still call the function if the array has null
-               elements.</p>
-<sectiondiv id="section7"><b>Using Functions With Queries on Distributed Data</b><p>In some cases, Greenplum Database does not support using functions in
-a query where the data in a table specified in the <codeph>FROM</codeph>
-clause is distributed over Greenplum Database segments. As an example,
-this SQL query contains the function <codeph>func()</codeph>:</p><codeblock>SELECT func(a) FROM table1;</codeblock><p>The function is not supported for use in the query if all of the following
-conditions are met:</p><ul><li id="bs144942">The data of table <codeph>table1</codeph> is distributed over Greenplum
-Database segments.</li><li id="bs144694">The function <codeph>func()</codeph> reads or modifies data from distributed
-tables. </li><li id="bs145327">The function <codeph>func()</codeph> returns more than one row or takes
-an argument (<codeph>a</codeph>) that comes from <codeph>table1</codeph>.</li></ul><p>If any of the conditions are not met, the function is supported. Specifically,
-the function is supported if any of the following conditions apply:</p><ul><li id="bs144699">The function <codeph>func()</codeph> does not access data from distributed
-tables, or accesses data that is only on the Greenplum Database master.
-</li><li id="bs144700">The table <codeph>table1</codeph> is a master only table.</li><li id="bs144701">The function <codeph>func()</codeph> returns only one row and only takes
-input arguments that are constant values. The function is supported if
-it can be changed to require no input arguments.</li></ul></sectiondiv></section><section id="section8"><title>Examples</title><p>A very simple addition function:</p><codeblock>CREATE FUNCTION add(integer, integer) RETURNS integer
+                    <codeph>STRICT</codeph>, the strictness check tests that the variadic array as a
+                whole is non-null. PL/pgSQL will still call the function if the array has null
+                elements.</p>
+            <sectiondiv id="section7"><b>Using Functions with Queries on Distributed Data</b><p>In
+                    some cases, Greenplum Database does not support using functions in a query where
+                    the data in a table specified in the <codeph>FROM</codeph> clause is distributed
+                    over Greenplum Database segments. As an example, this SQL query contains the
+                    function
+                    <codeph>func()</codeph>:</p><codeblock>SELECT func(a) FROM table1;</codeblock><p>The
+                    function is not supported for use in the query if all of the following
+                    conditions are met:</p><ul>
+                    <li id="bs144942">The data of table <codeph>table1</codeph> is distributed over
+                        Greenplum Database segments.</li>
+                    <li id="bs144694">The function <codeph>func()</codeph> reads or modifies data
+                        from distributed tables. </li>
+                    <li id="bs145327">The function <codeph>func()</codeph> returns more than one row
+                        or takes an argument (<codeph>a</codeph>) that comes from
+                            <codeph>table1</codeph>.</li>
+                </ul><p>If any of the conditions are not met, the function is supported.
+                    Specifically, the function is supported if any of the following conditions
+                    apply:</p><ul>
+                    <li id="bs144699">The function <codeph>func()</codeph> does not access data from
+                        distributed tables, or accesses data that is only on the Greenplum Database
+                        master. </li>
+                    <li id="bs144700">The table <codeph>table1</codeph> is a master only table.</li>
+                    <li id="bs144701">The function <codeph>func()</codeph> returns only one row and
+                        only takes input arguments that are constant values. The function is
+                        supported if it can be changed to require no input arguments.</li>
+                </ul></sectiondiv>
+            <sectiondiv><b>Using EXECUTE ON attributes</b><p>A function that executes queries to
+                    access tables is only supported when a function is executed on the master. Such
+                    functions should be defined with the <codeph>EXECUTE ON MASTER</codeph>
+                    attribute. Otherwise, the function might return incorrect results when the
+                    function is used in a complicated query. Without the attribute, planner
+                    optimization might determine it would be beneficial to push the function
+                    invocation to segment instances.</p>These are limitations for functions defined
+                with the <codeph>EXECUTE ON MASTER</codeph> or <codeph>EXECUTE ON ALL
+                    SEGMENTS</codeph> attribute:<ul id="ul_nlg_jky_fcb">
+                    <li>The function must be a set-returning function.</li>
+                    <li>The function cannot be in the <codeph>FROM</codeph> clause of a query.</li>
+                    <li>The function cannot be in the <codeph>SELECT</codeph> list of a query with a
+                            <codeph>FROM</codeph> clause.</li>
+                    <li>A query that includes the function falls back from GPORCA to the legacy
+                        query planner.</li>
+                </ul></sectiondiv></section>
+        <section id="section8"><title>Examples</title><p>A very simple addition
+                function:</p><codeblock>CREATE FUNCTION add(integer, integer) RETURNS integer
     AS 'select $1 + $2;'
     LANGUAGE SQL
     IMMUTABLE
-    RETURNS NULL ON NULL INPUT;</codeblock><p>Increment an integer, making use of an argument name, in PL/pgSQL:</p><codeblock>CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
+    RETURNS NULL ON NULL INPUT;</codeblock><p>Increment
+                an integer, making use of an argument name, in PL/pgSQL:</p><codeblock>CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
 integer AS $$
         BEGIN
                 RETURN i + 1;
@@ -242,21 +403,42 @@ CREATE FUNCTION return_enum_as_array( anyenum, anyelement, anyelement )
     RETURNS TABLE (ae anyenum, aa anyarray) AS $$
     SELECT $1, array[$2, $3] 
 $$ LANGUAGE SQL STABLE;
-SELECT * FROM return_enum_as_array('red'::rainbow, 'green'::rainbow, 'blue'::rainbow);</codeblock><p>Return a record containing multiple output parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
+
+SELECT * FROM return_enum_as_array('red'::rainbow, 'green'::rainbow, 'blue'::rainbow);</codeblock><p>Return
+                a record containing multiple output
+                parameters:</p><codeblock>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
     AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
     LANGUAGE SQL;
-SELECT * FROM dup(42);</codeblock><p>You can do the same thing more verbosely with an explicitly named composite
-type:</p><codeblock>CREATE TYPE dup_result AS (f1 int, f2 text);
+
+SELECT * FROM dup(42);</codeblock><p>You
+                can do the same thing more verbosely with an explicitly named composite type:</p><codeblock>CREATE TYPE dup_result AS (f1 int, f2 text);
 CREATE FUNCTION dup(int) RETURNS dup_result
     AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
     LANGUAGE SQL;
-SELECT * FROM dup(42);</codeblock></section><section id="section9"><title>Compatibility</title><p><codeph>CREATE FUNCTION</codeph> is defined in SQL:1999 and later. The
-Greenplum Database version is similar but not fully compatible. The attributes
-are not portable, neither are the different available languages. </p><p>For compatibility with some other database systems, <varname>argmode</varname>
-can be written either before or after <varname>argname</varname>. But only the first
-way is standard-compliant. </p>
-<p>The SQL standard does not specify parameter defaults.</p>
-</section><section id="section10"><title>See Also</title><p><codeph><xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
+
+SELECT * FROM dup(42);</codeblock>
+            <p>This function is defined with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> to run on
+                all primary segment instances. The <codeph>SELECT</codeph> command executes the
+                function that returns the time it was run on each segment
+                instance.<codeblock>CREATE FUNCTION run_on_segs (text) returns setof text as $$
+  begin 
+    return next ($1 || ' - ' || now()::text ); 
+  end;
+ $$ language plpgsql VOLATILE EXECUTE ON ALL SEGMENTS;
+
+SELECT run_on_segs('my test');</codeblock></p></section>
+        <section id="section9"><title>Compatibility</title><p><codeph>CREATE FUNCTION</codeph> is
+                defined in SQL:1999 and later. The Greenplum Database version is similar but not
+                fully compatible. The attributes are not portable, neither are the different
+                available languages. </p><p>For compatibility with some other database systems,
+                    <varname>argmode</varname> can be written either before or after
+                    <varname>argname</varname>. But only the first way is standard-compliant. </p>
+            <p>The SQL standard does not specify parameter defaults.</p>
+        </section>
+        <section id="section10"><title>See Also</title><p><codeph><xref
+                        href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
                         <codeph><xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
                     /></codeph>, <codeph><xref href="./LOAD.xml#topic1" type="topic" format="dita"
-                    /></codeph></p></section></body></topic>
+                    /></codeph></p></section>
+    </body>
+</topic>

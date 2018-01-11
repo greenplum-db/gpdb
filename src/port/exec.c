@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/exec.c,v 1.67 2010/01/14 00:14:06 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/port/exec.c,v 1.63 2009/06/11 14:49:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -511,13 +511,12 @@ pipe_read_line(char *cmd, char *line, int maxsize)
 
 /*
  * pclose() plus useful error reporting
- * Is this necessary?  bjm 2004-05-11
- * It is better here because pipe.c has win32 backend linkage.
  */
 int
 pclose_check(FILE *stream)
 {
 	int			exitstatus;
+	char	   *reason;
 
 	exitstatus = pclose(stream);
 
@@ -527,35 +526,20 @@ pclose_check(FILE *stream)
 	if (exitstatus == -1)
 	{
 		/* pclose() itself failed, and hopefully set errno */
-		perror("pclose failed");
+		log_error(_("pclose failed: %s"), strerror(errno));
 	}
-	else if (WIFEXITED(exitstatus))
-		log_error(_("child process exited with exit code %d"),
-				  WEXITSTATUS(exitstatus));
-	else if (WIFSIGNALED(exitstatus))
-#if defined(WIN32)
-		log_error(_("child process was terminated by exception 0x%X"),
-				  WTERMSIG(exitstatus));
-#elif defined(HAVE_DECL_SYS_SIGLIST) && HAVE_DECL_SYS_SIGLIST
-	{
-		char		str[256];
-
-		snprintf(str, sizeof(str), "%d: %s", WTERMSIG(exitstatus),
-				 WTERMSIG(exitstatus) < NSIG ?
-				 sys_siglist[WTERMSIG(exitstatus)] : "(unknown)");
-		log_error(_("child process was terminated by signal %s"), str);
-	}
-#else
-		log_error(_("child process was terminated by signal %d"),
-				  WTERMSIG(exitstatus));
-#endif
 	else
-		log_error(_("child process exited with unrecognized status %d"),
-				  exitstatus);
-
-	return -1;
+	{
+		reason = wait_result_to_str(exitstatus);
+		log_error("%s", reason);
+#ifdef FRONTEND
+		free(reason);
+#else
+		pfree(reason);
+#endif
+	}
+	return exitstatus;
 }
-
 
 /*
  *	set_pglocale_pgservice
@@ -641,7 +625,6 @@ AddUserToTokenDacl(HANDLE hToken)
 	DWORD		dwNewAclSize;
 	DWORD		dwSize = 0;
 	DWORD		dwTokenInfoLength = 0;
-	DWORD		dwResult = 0;
 	PACL		pacl = NULL;
 	PSID		psidUser = NULL;
 	TOKEN_DEFAULT_DACL tddNew;
@@ -675,7 +658,7 @@ AddUserToTokenDacl(HANDLE hToken)
 	}
 
 	/* Get the ACL info */
-	if (!GetAclInformation(ptdd->DefaultDacl, (LPVOID) & asi,
+	if (!GetAclInformation(ptdd->DefaultDacl, (LPVOID) &asi,
 						   (DWORD) sizeof(ACL_SIZE_INFORMATION),
 						   AclSizeInformation))
 	{
@@ -691,7 +674,7 @@ AddUserToTokenDacl(HANDLE hToken)
 	}
 
 	/* Figure out the size of the new ACL */
-	dwNewAclSize = asi.AclBytesInUse + sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psidUser) - sizeof(DWORD);
+	dwNewAclSize = asi.AclBytesInUse + sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psidUser) -sizeof(DWORD);
 
 	/* Allocate the ACL buffer & initialize it */
 	pacl = (PACL) LocalAlloc(LPTR, dwNewAclSize);

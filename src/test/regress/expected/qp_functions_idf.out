@@ -596,19 +596,19 @@ select variance(a) over(partition by median(b))from perct group by a,b order by 
 
 -- SQL with IDF in aggregate function - MPP-16862
 select median( median(a)) from perct;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select median( median(a)) from perct;
                        ^
 select median(percentile_cont(0.5) within group (order by a)) from perct;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select median(percentile_cont(0.5) within group (order by a)...
                       ^
 select a, percentile_disc(0.1234567890)  within group ( order by avg(a)) from perct group by a;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: ...ntile_disc(0.1234567890)  within group ( order by avg(a)) fr...
                                                              ^
 select a,median( ( count (*) )) from perct group by 1 limit 2;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select a,median( ( count (*) )) from perct group by 1 limit ...
                            ^
 -- SQL with IDF with SRF
@@ -626,27 +626,31 @@ ERROR:  aggregate function calls cannot be nested
 LINE 1: select sum(median(a))  from perct ;
                    ^
 select median( median(0.9) ) ;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select median( median(0.9) ) ;
                        ^
 select median( percentile_cont(0.2) within group( ORDER by 1)) ;
-ERROR:  argument of percentile function must not contain aggregates
+ERROR:  aggregate function calls cannot be nested
 LINE 1: select median( percentile_cont(0.2) within group( ORDER by 1...
                        ^
 -- SQL with IDF and Grouping Sets
 select a,median(b) from perct4 group by median(c);
-ERROR:  aggregates not allowed in GROUP BY clause
+ERROR:  aggregate functions are not allowed in GROUP BY
 LINE 1: select a,median(b) from perct4 group by median(c);
                                                 ^
 -- SQL with Outer aggregate reference and IDF
 select ( (select sum(a) from perct group by b having median(t.a) < 5 limit 1 ) ) from perct t;
-ERROR:  percentile functions cannot reference columns from outer queries
-LINE 1: ...select sum(a) from perct group by b having median(t.a) < 5 l...
-                                                             ^
+ ?column? 
+----------
+         
+(1 row)
+
 select ( select percentile_cont(0.6) within group (order by t.a) from perct where a <10 limit 1 )  from perct t;
-ERROR:  percentile functions cannot reference columns from outer queries
-LINE 1: ...elect percentile_cont(0.6) within group (order by t.a) from ...
-                                                             ^
+ ?column? 
+----------
+     60.4
+(1 row)
+
 -- SQL with Group by () and IDF
 select a,median(b) from perct group by ();
 ERROR:  column "perct.a" must appear in the GROUP BY clause or be used in an aggregate function
@@ -659,27 +663,245 @@ LINE 1: select a,percentile_cont(0.7) within group(order by b) from ...
 -- SQL with Cube and IDF
 -- SQL with GroupingSets and IDF
 select percentile_cont(0.7) within group (order by a) from perct4 group by grouping sets((b),(c), ());
-ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+ percentile_cont 
+-----------------
+             6.9
+            16.6
+            26.6
+            76.6
+            86.6
+            36.6
+            56.6
+            66.6
+            96.6
+             100
+            70.3
+            70.3
+            46.6
+(13 rows)
+
 select median(a) from perct group by grouping sets((), (b));
-ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+ median 
+--------
+      5
+    100
+   14.5
+   24.5
+   34.5
+   44.5
+   50.5
+   54.5
+   64.5
+   74.5
+   84.5
+   94.5
+(12 rows)
+
 -- SQL with grouping and IDF
 select a, median(b) , grouping(c) , grouping(a) from perct4 group by grouping sets((a,c),a,c,());
-ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+  a  | median | grouping | grouping 
+-----+--------+----------+----------
+     |      5 |        0 |        1
+     |      5 |        1 |        1
+     |    4.5 |        0 |        0
+     |    4.5 |        1 |        0
+   1 |      0 |        0 |        0
+   1 |      0 |        1 |        0
+   2 |      0 |        0 |        0
+   2 |      0 |        1 |        0
+   3 |      0 |        0 |        0
+   3 |      0 |        1 |        0
+   4 |      0 |        0 |        0
+   4 |      0 |        1 |        0
+   6 |      0 |        0 |        0
+   6 |      0 |        1 |        0
+   7 |      0 |        0 |        0
+   7 |      0 |        1 |        0
+   8 |      0 |        0 |        0
+   8 |      0 |        1 |        0
+   9 |      0 |        0 |        0
+   9 |      0 |        1 |        0
+  10 |      1 |        0 |        0
+  10 |      1 |        1 |        0
+  11 |      1 |        0 |        0
+  11 |      1 |        1 |        0
+  12 |      1 |        0 |        0
+  12 |      1 |        1 |        0
+  13 |      1 |        0 |        0
+  13 |      1 |        1 |        0
+  14 |      1 |        0 |        0
+  14 |      1 |        1 |        0
+  16 |      1 |        0 |        0
+  16 |      1 |        1 |        0
+  17 |      1 |        0 |        0
+  17 |      1 |        1 |        0
+  18 |      1 |        0 |        0
+  18 |      1 |        1 |        0
+  19 |      1 |        0 |        0
+  19 |      1 |        1 |        0
+  20 |      2 |        0 |        0
+  20 |      2 |        1 |        0
+  21 |      2 |        0 |        0
+  21 |      2 |        1 |        0
+  22 |      2 |        0 |        0
+  22 |      2 |        1 |        0
+  23 |      2 |        0 |        0
+  23 |      2 |        1 |        0
+  24 |      2 |        0 |        0
+  24 |      2 |        1 |        0
+  26 |      2 |        0 |        0
+  26 |      2 |        1 |        0
+  27 |      2 |        0 |        0
+  27 |      2 |        1 |        0
+  28 |      2 |        0 |        0
+  28 |      2 |        1 |        0
+  29 |      2 |        0 |        0
+  29 |      2 |        1 |        0
+  30 |      3 |        0 |        0
+  30 |      3 |        1 |        0
+  31 |      3 |        0 |        0
+  31 |      3 |        1 |        0
+  32 |      3 |        0 |        0
+  32 |      3 |        1 |        0
+  33 |      3 |        0 |        0
+  33 |      3 |        1 |        0
+  34 |      3 |        0 |        0
+  34 |      3 |        1 |        0
+  36 |      3 |        0 |        0
+  36 |      3 |        1 |        0
+  37 |      3 |        0 |        0
+  37 |      3 |        1 |        0
+  38 |      3 |        0 |        0
+  38 |      3 |        1 |        0
+  39 |      3 |        0 |        0
+  39 |      3 |        1 |        0
+  40 |      4 |        0 |        0
+  40 |      4 |        1 |        0
+  41 |      4 |        0 |        0
+  41 |      4 |        1 |        0
+  42 |      4 |        0 |        0
+  42 |      4 |        1 |        0
+  43 |      4 |        0 |        0
+  43 |      4 |        1 |        0
+  44 |      4 |        0 |        0
+  44 |      4 |        1 |        0
+  46 |      4 |        0 |        0
+  46 |      4 |        1 |        0
+  47 |      4 |        0 |        0
+  47 |      4 |        1 |        0
+  48 |      4 |        0 |        0
+  48 |      4 |        1 |        0
+  49 |      4 |        0 |        0
+  49 |      4 |        1 |        0
+  50 |      5 |        0 |        0
+  50 |      5 |        1 |        0
+  51 |      5 |        0 |        0
+  51 |      5 |        1 |        0
+  52 |      5 |        0 |        0
+  52 |      5 |        1 |        0
+  53 |      5 |        0 |        0
+  53 |      5 |        1 |        0
+  54 |      5 |        0 |        0
+  54 |      5 |        1 |        0
+  56 |      5 |        0 |        0
+  56 |      5 |        1 |        0
+  57 |      5 |        0 |        0
+  57 |      5 |        1 |        0
+  58 |      5 |        0 |        0
+  58 |      5 |        1 |        0
+  59 |      5 |        0 |        0
+  59 |      5 |        1 |        0
+  60 |      6 |        0 |        0
+  60 |      6 |        1 |        0
+  61 |      6 |        0 |        0
+  61 |      6 |        1 |        0
+  62 |      6 |        0 |        0
+  62 |      6 |        1 |        0
+  63 |      6 |        0 |        0
+  63 |      6 |        1 |        0
+  64 |      6 |        0 |        0
+  64 |      6 |        1 |        0
+  66 |      6 |        0 |        0
+  66 |      6 |        1 |        0
+  67 |      6 |        0 |        0
+  67 |      6 |        1 |        0
+  68 |      6 |        0 |        0
+  68 |      6 |        1 |        0
+  69 |      6 |        0 |        0
+  69 |      6 |        1 |        0
+  70 |      7 |        0 |        0
+  70 |      7 |        1 |        0
+  71 |      7 |        0 |        0
+  71 |      7 |        1 |        0
+  72 |      7 |        0 |        0
+  72 |      7 |        1 |        0
+  73 |      7 |        0 |        0
+  73 |      7 |        1 |        0
+  74 |      7 |        0 |        0
+  74 |      7 |        1 |        0
+  76 |      7 |        0 |        0
+  76 |      7 |        1 |        0
+  77 |      7 |        0 |        0
+  77 |      7 |        1 |        0
+  78 |      7 |        0 |        0
+  78 |      7 |        1 |        0
+  79 |      7 |        0 |        0
+  79 |      7 |        1 |        0
+  80 |      8 |        0 |        0
+  80 |      8 |        1 |        0
+  81 |      8 |        0 |        0
+  81 |      8 |        1 |        0
+  82 |      8 |        0 |        0
+  82 |      8 |        1 |        0
+  83 |      8 |        0 |        0
+  83 |      8 |        1 |        0
+  84 |      8 |        0 |        0
+  84 |      8 |        1 |        0
+  86 |      8 |        0 |        0
+  86 |      8 |        1 |        0
+  87 |      8 |        0 |        0
+  87 |      8 |        1 |        0
+  88 |      8 |        0 |        0
+  88 |      8 |        1 |        0
+  89 |      8 |        0 |        0
+  89 |      8 |        1 |        0
+  90 |      9 |        0 |        0
+  90 |      9 |        1 |        0
+  91 |      9 |        0 |        0
+  91 |      9 |        1 |        0
+  92 |      9 |        0 |        0
+  92 |      9 |        1 |        0
+  93 |      9 |        0 |        0
+  93 |      9 |        1 |        0
+  94 |      9 |        0 |        0
+  94 |      9 |        1 |        0
+  96 |      9 |        0 |        0
+  96 |      9 |        1 |        0
+  97 |      9 |        0 |        0
+  97 |      9 |        1 |        0
+  98 |      9 |        0 |        0
+  98 |      9 |        1 |        0
+  99 |      9 |        0 |        0
+  99 |      9 |        1 |        0
+ 100 |     10 |        0 |        0
+ 100 |     10 |        1 |        0
+(184 rows)
+
 -- SQL with group_id and IDF
 select median(group_id()) from perct group by a,b;
-ERROR:  argument of percentile function must not contain grouping(), or group_id()
-LINE 1: select median(group_id()) from perct group by a,b;
-               ^
+ERROR:  aggregate function calls cannot be nested
 -- SQL with IDF and windows func : ERROR
 select percentile_cont(0.2) within group (order by median(a) over()) from perct;
-ERROR:  window OVER clause can only be used with an aggregate
+ERROR:  syntax error at or near "over"
+LINE 1: ...entile_cont(0.2) within group (order by median(a) over()) fr...
+                                                             ^
 -- SQL with IDF , aggregate func and over clause within IDF : ERROR
 select percentile_cont(0.2) within group (order by stddev(b) over() ) from perct;
-ERROR:  argument of percentile function must not contain window functions
-LINE 1: select percentile_cont(0.2) within group (order by stddev(b)...
-               ^
+ERROR:  aggregate function calls cannot contain window function calls
+LINE 1: ...elect percentile_cont(0.2) within group (order by stddev(b) ...
+                                                             ^
 select median(avg(a) over()) from perct;
-ERROR:  argument of percentile function must not contain window functions
+ERROR:  aggregate function calls cannot contain window function calls
 LINE 1: select median(avg(a) over()) from perct;
                ^
 -- SQL with math expression as input to median
@@ -740,11 +962,10 @@ select percentile_disc(0.05::int)  within group (order by a) from perct;
 (1 row)
 
 select percentile_disc(0.05::text) within group (order by a) from perct;
- percentile_disc 
------------------
-               5
-(1 row)
-
+ERROR:  function percentile_disc(text, integer) does not exist
+LINE 1: select percentile_disc(0.05::text) within group (order by a)...
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- start_ignore
 CREATE SEQUENCE serial START 101;
 -- end_ignore
@@ -869,8 +1090,8 @@ create view idf_v1 as select median (( select median((select median(a) from perc
 -- end_ignore
 select pg_get_viewdef('idf_v1');  
                                                        pg_get_viewdef                                                        
------------------------------------------------------------------------------------------------------------------------------
- SELECT median((SELECT median((SELECT median(float8(perct.a)) AS "median" FROM perct)) AS "median" FROM perct)) AS "median";
+---------------------------------------------------------------------------------------------------------------------
+ SELECT MEDIAN((SELECT MEDIAN((SELECT MEDIAN(perct.a) AS "median" FROM perct)) AS "median" FROM perct)) AS "median";
 (1 row)
 
  
@@ -880,8 +1101,7 @@ create view idf_v4 as select percentile_disc(1.5) within group (order by a) as p
 -- end_ignore
 -- Expected Error : input is out of range
 select * from idf_v4;
-ERROR:  input is out of range
-HINT:  Argument to percentile function must be between 0.0 and 1.0.
+ERROR:  percentile value 1.5 is not between 0 and 1
 -- SQL with IDF and distinct
 select distinct(median(b)) from perct group by a;
  median 

@@ -170,9 +170,68 @@ set enable_seqscan =off;
 select * from tstest where t @@ 'bar' for share of tstest;
 
 
+-- Stable (and volatile) functions need to be re-evaluated on every
+-- execution of a prepared statement. There used to be a bug, where
+-- they were evaluated once at planning time or at first execution,
+-- and the same value was incorrectly reused on subsequent executions.
+create function stabletestfunc() returns integer as $$
+begin
+  raise notice 'stabletestfunc executed';
+  return 123;
+end;
+$$ language plpgsql stable;
+
+create table stabletesttab (id integer);
+
+insert into stabletesttab values (1);
+insert into stabletesttab values (1000);
+
+-- This might evaluate the function, for cost estimate purposes. That's
+-- not of importance for this test.
+prepare myprep as select * from stabletesttab where id < stabletestfunc();
+
+-- Check that the stable function should be re-executed on every execution of the prepared statetement.
+execute myprep;
+execute myprep;
+execute myprep;
+
+
+-- Test agg on top of join subquery on partition table with ORDER-BY clause
+CREATE TABLE bfv_planner_t1 (a int, b int, c int) distributed by (c);
+CREATE TABLE bfv_planner_t2 (f int,g int) DISTRIBUTED BY (f) PARTITION BY RANGE(g)
+(
+PARTITION "201612" START (1) END (10)
+);
+insert into bfv_planner_t1 values(1,2,3), (2,3,4), (3,4,5);
+insert into bfv_planner_t2 values(3,1), (4,2), (5,2);
+
+select count(*) from
+(select a,b,c from bfv_planner_t1 order by c) T1
+join
+(select f,g from bfv_planner_t2) T2
+on
+T1.a=T2.g and T1.c=T2.f;
+
+
+-- This produced a "could not find pathkey item to sort" error at one point.
+-- The problem was that we stripped out column b from the SubqueryScan's
+-- target list, as it's not needed in the final result, but we tried to
+-- maintain the ordering (a,b) in the Gather Motion node, which would have
+-- required column b to be present, at least as a junk column.
+create table bfv_planner_t3 (a int4, b int4);
+select a from (select * from bfv_planner_t3 order by a, b) as x limit 1;
+
+-- Similar case, but when evaluating a window function rather than LIMIT
+select first_value(a) over w, a
+from (select * from bfv_planner_t3 order by a, b) as x
+WINDOW w AS (order by a);
+
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
 drop table if exists bfv_planner_foo;
 drop table if exists testmedian;
+drop table if exists bfv_planner_t1;
+drop table if exists bfv_planner_t2;
 -- end_ignore

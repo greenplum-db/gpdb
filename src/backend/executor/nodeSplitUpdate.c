@@ -3,7 +3,12 @@
  * nodeSplitUpdate.c
  *	  Implementation of nodeSplitUpdate.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeSplitUpdate.c
  *
  *-------------------------------------------------------------------------
  */
@@ -148,6 +153,8 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	/* Check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK | EXEC_FLAG_REWIND)));
 
+	bool    has_oids = false;
+
 	SplitUpdateState *splitupdatestate;
 
 	splitupdatestate = makeNode(SplitUpdateState);
@@ -167,7 +174,15 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	splitupdatestate->deleteTuple = ExecInitExtraTupleSlot(estate);
 
 	/* New TupleDescriptor for output TupleTableSlots (old_values + new_values, ctid, gp_segment, action).*/
-	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist, false);
+	if (estate->es_result_relation_info != NULL &&
+		estate->es_result_relation_info->ri_RelationDesc != NULL &&
+		estate->es_result_relation_info->ri_RelationDesc->rd_rel != NULL &&
+		estate->es_result_relation_info->ri_RelationDesc->rd_rel->relhasoids)
+	{
+		has_oids = true;
+	}
+
+	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist, has_oids);
 	ExecSetSlotDescriptor(splitupdatestate->insertTuple, tupDesc);
 	ExecSetSlotDescriptor(splitupdatestate->deleteTuple, tupDesc);
 

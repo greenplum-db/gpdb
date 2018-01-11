@@ -10,11 +10,11 @@
  * via functions such as SubTransGetTopmostTransaction().
  *
  *
- *	Copyright (c) 2003-2008, PostgreSQL Global Development Group
+ *	Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *	Author: Jan Wieck, Afilias USA INC.
  *	64-bit txids: Marko Kreen, Skype Technologies
  *
- *	$PostgreSQL: pgsql/src/backend/utils/adt/txid.c,v 1.4 2008/01/01 19:45:53 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/utils/adt/txid.c,v 1.8 2009/01/01 17:23:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,6 +26,7 @@
 #include "funcapi.h"
 #include "libpq/pqformat.h"
 #include "utils/builtins.h"
+#include "utils/snapmgr.h"
 
 
 #ifndef INT64_IS_BUSTED
@@ -363,9 +364,9 @@ txid_current_snapshot(PG_FUNCTION_ARGS)
 	TxidEpoch	state;
 	Snapshot	cur;
 
-	cur = ActiveSnapshot;
+	cur = GetActiveSnapshot();
 	if (cur == NULL)
-		elog(ERROR, "txid_current_snapshot: ActiveSnapshot == NULL");
+		elog(ERROR, "no active snapshot set");
 
 	load_xid_epoch(&state);
 

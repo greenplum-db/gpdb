@@ -3,12 +3,12 @@
  * nodeBitmapAnd.c
  *	  routines to handle BitmapAnd nodes.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapAnd.c,v 1.10 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapAnd.c,v 1.11 2009/01/01 17:23:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -91,8 +91,6 @@ ExecInitBitmapAnd(BitmapAnd *node, EState *estate, int eflags)
 		i++;
 	}
 
-	initGpmonPktForBitmapAnd((Plan *) node, &bitmapandstate->ps.gpmon_pkt, estate);
-
 	return bitmapandstate;
 }
 
@@ -126,7 +124,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
 	int			nplans;
 	int			i;
 	bool		empty = false;
-	HashBitmap *hbm = NULL;
+	TIDBitmap  *hbm = NULL;
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
@@ -148,21 +146,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
 
 		subresult = MultiExecProcNode(subnode);
 
-		/*
-		 * If at any stage we have a completely empty bitmap, we can fall out
-		 * without evaluating the remaining subplans, since ANDing them can no
-		 * longer change the result.  (Note: the fact that indxpath.c orders
-		 * the subplans by selectivity should make this case more likely to
-		 * occur.)
-		 */
-		if (subresult == NULL)
-		{
-			empty = true;
-			break;
-		}
-
-		if (!(IsA(subresult, HashBitmap) ||
-			  IsA(subresult, StreamBitmap)))
+		if (!subresult || !(IsA(subresult, TIDBitmap) || IsA(subresult, StreamBitmap)))
 			elog(ERROR, "unrecognized result from subplan");
 
 		/*
@@ -170,19 +154,32 @@ MultiExecBitmapAnd(BitmapAndState *node)
 		 * If we encounter some streamed bitmaps we'll add this hash bitmap
 		 * as a stream to it.
 		 */
-		if (IsA(subresult, HashBitmap))
+		if (IsA(subresult, TIDBitmap))
 		{
 			/* first subplan that generates a hash bitmap */
 			if (hbm == NULL)
-				hbm = (HashBitmap *) subresult;
+				hbm = (TIDBitmap *) subresult;
 			else
 			{
-				tbm_intersect(hbm, (HashBitmap *)subresult);
+				tbm_intersect(hbm, (TIDBitmap *)subresult);
 			}
 
-			/* If tbm is empty, short circuit, per logic outlined above */
+			/*
+			 * If at any stage we have a completely empty bitmap, we can fall out
+			 * without evaluating the remaining subplans, since ANDing them can no
+			 * longer change the result.  (Note: the fact that indxpath.c orders
+			 * the subplans by selectivity should make this case more likely to
+			 * occur.)
+			 */
 			if (tbm_is_empty(hbm))
 			{
+				/*
+				 * GPDB_84_MERGE_FIXME: If we saw any StreamBitmap inputs, we
+				 * will create an OpStream to AND the empty result with the
+				 * StreamBitmaps we saw already. We could just close them now,
+				 * and return an empty hash bitmap here, but I'm not sure how
+				 * to close the already-opened stream bitmaps correctly.
+				 */
 				empty = true;
 				break;
 			}
@@ -210,20 +207,14 @@ MultiExecBitmapAnd(BitmapAndState *node)
 	if (node->ps.instrument)
         InstrStopNode(node->ps.instrument, empty ? 0 : 1);
 
-	if (empty)
-	{
-		node->bitmap = NULL;
-		return (Node*) NULL;
-	}
-
 	/* check to see if we have any hash bitmaps */
 	if (hbm != NULL)
 	{
-		if(node->bitmap && IsA(node->bitmap, StreamBitmap))
+		if (node->bitmap && IsA(node->bitmap, StreamBitmap))
 			stream_add_node((StreamBitmap *)node->bitmap,
 						tbm_create_stream_node(hbm), BMS_AND);
 		else
-			node->bitmap = (Node *)hbm;
+			node->bitmap = (Node *) hbm;
 	}
 
 	return (Node *) node->bitmap;
@@ -291,12 +282,4 @@ ExecReScanBitmapAnd(BitmapAndState *node, ExprContext *exprCtxt)
 		 */
 		ExecReScan(subnode, exprCtxt);
 	}
-}
-
-void
-initGpmonPktForBitmapAnd(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapAnd));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

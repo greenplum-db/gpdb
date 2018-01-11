@@ -205,11 +205,6 @@ select * from my_sum
 union all
 select * from my_sum;
 
--- With clause with recursive
-with recursive my_sum(total) as (select sum(value) from with_test)
-select *
-from my_sum;
-
 -- ERROR cases
 
 -- duplicate CTE name

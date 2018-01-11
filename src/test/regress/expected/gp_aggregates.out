@@ -1,0 +1,272 @@
+-- array_agg tests
+SELECT array_agg(a order by a) as a_by_a from aggtest;
+    a_by_a     
+---------------
+ {0,42,56,100}
+(1 row)
+
+SELECT array_agg(b order by b) as b_by_b from aggtest;
+           b_by_b            
+-----------------------------
+ {0.09561,7.8,99.097,324.78}
+(1 row)
+
+SELECT array_agg(a order by a) as a_by_a,
+       array_agg(a order by b) as a_by_b,
+       array_agg(b order by a) as b_by_a,
+       array_agg(b order by b) as b_by_b
+  FROM aggtest;
+    a_by_a     |    a_by_b     |           b_by_a            |           b_by_b            
+---------------+---------------+-----------------------------+-----------------------------
+ {0,42,56,100} | {0,56,100,42} | {0.09561,324.78,7.8,99.097} | {0.09561,7.8,99.097,324.78}
+(1 row)
+
+-- Negative test cases for ordered aggregate syntax
+SELECT count(order by a) from aggtest;       -- zero parameter aggregate
+ERROR:  syntax error at or near "order"
+LINE 1: SELECT count(order by a) from aggtest;
+                     ^
+SELECT count(a order by a) from aggtest;     -- regular (non-orderd) aggregate
+ count 
+-------
+     4
+(1 row)
+
+SELECT abs(a order by a) from aggtest;       -- regular function
+ERROR:  ORDER BY specified, but abs is not an aggregate function
+LINE 1: SELECT abs(a order by a) from aggtest;
+               ^
+SELECT a(aggtest order by a) from aggtest;   -- function-like column reference
+ERROR:  function a(aggtest) does not exist
+LINE 1: SELECT a(aggtest order by a) from aggtest;
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SELECT nosuchagg(a order by a) FROM aggtest; -- no such function
+ERROR:  function nosuchagg(smallint) does not exist
+LINE 1: SELECT nosuchagg(a order by a) FROM aggtest;
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SELECT lag(a order by a) from aggtest;       -- window function (no window clause)
+ERROR:  window function lag requires an OVER clause
+LINE 1: SELECT lag(a order by a) from aggtest;
+               ^
+SELECT lag(a order by a) over (order by a) FROM aggtest;  -- window function
+ERROR:  aggregate ORDER BY is not implemented for window functions
+LINE 1: SELECT lag(a order by a) over (order by a) FROM aggtest;
+               ^
+SELECT count(a order by a) over (order by a) FROM aggtest;  -- window derived aggregate
+ERROR:  aggregate ORDER BY is not implemented for window functions
+LINE 1: SELECT count(a order by a) over (order by a) FROM aggtest;
+               ^
+SELECT array_agg(a order by a) over (order by a) FROM aggtest; -- window derived ordered aggregate
+ERROR:  aggregate ORDER BY is not implemented for window functions
+LINE 1: SELECT array_agg(a order by a) over (order by a) FROM aggtes...
+               ^
+-- check for mpp-2687
+CREATE TEMPORARY TABLE mpp2687t (
+    dk text,
+    gk text
+) DISTRIBUTED BY (dk);
+CREATE VIEW mpp2687v AS
+    SELECT DISTINCT gk
+    FROM mpp2687t
+    GROUP BY gk;
+NOTICE:  view "mpp2687v" will be a temporary view
+SELECT * FROM mpp2687v;
+ gk 
+----
+(0 rows)
+
+-- MPP-4617
+select case when ten < 5 then ten else ten * 2 end, count(distinct two), count(distinct four) from tenk1 group by 1;
+ case | count | count 
+------+-------+-------
+    3 |     1 |     2
+    1 |     1 |     2
+    2 |     1 |     2
+    0 |     1 |     2
+   16 |     1 |     2
+   10 |     1 |     2
+   14 |     1 |     2
+   12 |     1 |     2
+    4 |     1 |     2
+   18 |     1 |     2
+(10 rows)
+
+select ten, ten, count(distinct two), count(distinct four) from tenk1 group by 1,2;
+ ten | ten | count | count 
+-----+-----+-------+-------
+   3 |   3 |     1 |     2
+   5 |   5 |     1 |     2
+   4 |   4 |     1 |     2
+   6 |   6 |     1 |     2
+   1 |   1 |     1 |     2
+   0 |   0 |     1 |     2
+   2 |   2 |     1 |     2
+   8 |   8 |     1 |     2
+   9 |   9 |     1 |     2
+   7 |   7 |     1 |     2
+(10 rows)
+
+--MPP-20151: distinct is transformed to a group-by
+select distinct two from tenk1 order by two;
+ two 
+-----
+   0
+   1
+(2 rows)
+
+select distinct two, four from tenk1 order by two, four;
+ two | four 
+-----+------
+   0 |    0
+   0 |    2
+   1 |    1
+   1 |    3
+(4 rows)
+
+select distinct two, max(two) over() from tenk1 order by two;
+ two | max 
+-----+-----
+   0 |   1
+   1 |   1
+(2 rows)
+
+select distinct two, sum(four) over() from tenk1 order by two;
+ two |  sum  
+-----+-------
+   0 | 15000
+   1 | 15000
+(2 rows)
+
+select distinct two, sum(four) from tenk1 group by two order by two;
+ two |  sum  
+-----+-------
+   0 |  5000
+   1 | 10000
+(2 rows)
+
+select distinct two, sum(four) from tenk1 group by two having sum(four) > 5000;
+ two |  sum  
+-----+-------
+   1 | 10000
+(1 row)
+
+select distinct t1.two, t2.two, t1.four, t2.four from tenk1 t1, tenk1 t2 where t1.hundred=t2.hundred order by t1.two, t1.four;
+ two | two | four | four 
+-----+-----+------+------
+   0 |   0 |    0 |    0
+   0 |   0 |    2 |    2
+   1 |   1 |    1 |    1
+   1 |   1 |    3 |    3
+(4 rows)
+
+-- A variant with more result rows. We had a bug at one point where the
+-- Motion Gather node on top of this was missing the Merge Key, and hence
+-- the output came out unsorted. But it was not visible if all the rows
+-- were processed on the same segment, as is the case with the above variant
+-- with only two distinct 'two' values.
+select distinct ten, sum(ten) over() from tenk1 order by ten;
+ ten |  sum  
+-----+-------
+   0 | 45000
+   1 | 45000
+   2 | 45000
+   3 | 45000
+   4 | 45000
+   5 | 45000
+   6 | 45000
+   7 | 45000
+   8 | 45000
+   9 | 45000
+(10 rows)
+
+-- Test for a planner bug we used to have, when this query gets planned
+-- as a merge join. This should perform a merge join between 'l' and 'ps',
+-- using both pk and sk as the merge keys. Due to the bug, the planner
+-- used mix up the columns in the path keys, and used incorrect columns
+-- as the merge keys. (This is a modified version of a TPC-H query)
+create table l (ok bigint, pk integer, sk integer, quantity numeric) distributed by (ok);
+create table ps (pk integer, sk integer, availqty integer) distributed by (pk);
+insert into l select g%5, 50-g, g, 5 from generate_series(1, 50) g;
+insert into ps select g, 50-g, 10 from generate_series(1, 25) g;
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+ pk | sk | availqty 
+----+----+----------
+  6 | 44 |       10
+  3 | 47 |       10
+ 21 | 29 |       10
+ 15 | 35 |       10
+ 20 | 30 |       10
+ 25 | 25 |       10
+ 13 | 37 |       10
+ 22 | 28 |       10
+  7 | 43 |       10
+ 16 | 34 |       10
+ 24 | 26 |       10
+ 10 | 40 |       10
+ 19 | 31 |       10
+  8 | 42 |       10
+  9 | 41 |       10
+  4 | 46 |       10
+ 14 | 36 |       10
+  5 | 45 |       10
+ 11 | 39 |       10
+ 18 | 32 |       10
+ 12 | 38 |       10
+  2 | 48 |       10
+ 23 | 27 |       10
+  1 | 49 |       10
+ 17 | 33 |       10
+(25 rows)
+
+-- the same, but force a merge join and sorted agg.
+set enable_hashagg=off;
+set enable_hashjoin=off;
+set enable_mergejoin=on;
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+ pk | sk | availqty 
+----+----+----------
+  1 | 49 |       10
+  2 | 48 |       10
+  3 | 47 |       10
+  4 | 46 |       10
+  5 | 45 |       10
+  6 | 44 |       10
+  7 | 43 |       10
+  8 | 42 |       10
+  9 | 41 |       10
+ 10 | 40 |       10
+ 11 | 39 |       10
+ 12 | 38 |       10
+ 13 | 37 |       10
+ 14 | 36 |       10
+ 15 | 35 |       10
+ 16 | 34 |       10
+ 17 | 33 |       10
+ 18 | 32 |       10
+ 19 | 31 |       10
+ 20 | 30 |       10
+ 21 | 29 |       10
+ 22 | 28 |       10
+ 23 | 27 |       10
+ 24 | 26 |       10
+ 25 | 25 |       10
+(25 rows)
+
+reset enable_hashagg;
+reset enable_hashjoin;
+reset enable_mergejoin;
+drop table l, ps;

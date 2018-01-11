@@ -5,8 +5,8 @@
    <title>External Table Parameters</title>
    <body>
       <p>The following parameters configure the external tables feature of Greenplum Database. </p>
-      <p>See <xref href="../load/topics/g-external-tables.xml#topic3"/> for more
-         information about external tables.</p>
+      <p>See <xref href="../external/g-external-tables.xml#topic3"/> for more information about
+         external tables.</p>
       <simpletable id="kh164454">
          <strow>
             <stentry>

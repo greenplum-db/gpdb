@@ -6,28 +6,5 @@
   <body>
     <p>You enter SQL statements called queries to view, change, and analyze data in a database using
       the <codeph>psql</codeph> interactive SQL client and other client tools.</p>
-    <ul id="ul_rh3_z4j_kr" otherprops="op-print">
-      <li>
-        <xref href="parallel-proc.xml"/>
-      </li>
-      <li>
-        <xref href="query-piv-optimizer.xml"/>
-      </li>
-      <li>
-        <xref href="defining-queries.xml"/>
-      </li>
-      <li>
-        <xref href="functions-operators.xml"/>
-      </li>
-      <li>
-        <xref href="query-performance.xml"/>
-      </li>
-      <li>
-        <xref href="spill-files.xml"/>
-      </li>
-      <li>
-        <xref href="query-profiling.xml"/>
-      </li>
-    </ul>
   </body>
 </topic>

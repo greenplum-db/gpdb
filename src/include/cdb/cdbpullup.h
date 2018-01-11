@@ -3,7 +3,12 @@
  * cdbpullup.h
  *    definitions for cdbpullup.c utilities
  *
- * Copyright (c)2006-2008, Greenplum inc
+ * Portions Copyright (c)2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbpullup.h
  *
  *-------------------------------------------------------------------------
  */
@@ -102,6 +107,8 @@ cdbpullup_exprHasSubplanRef(Expr *expr);
 
 
 extern Expr *cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist);
+
+extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist);
 
 
 /*

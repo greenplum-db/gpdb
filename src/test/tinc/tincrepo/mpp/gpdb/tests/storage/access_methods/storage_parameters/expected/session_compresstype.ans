@@ -444,7 +444,7 @@ DROP TABLE
 Drop table if exists ao_ss_ct_t11;
 psql:/path/sql_file:1: NOTICE:  table "ao_ss_ct_t11" does not exist, skipping
 DROP TABLE
-ALTER TYPE char SET DEFAULT ENCODING (compresstype=zlib);
+ALTER TYPE bpchar SET DEFAULT ENCODING (compresstype=zlib);
 ALTER TYPE
 Create table ao_ss_ct_t11 ( i int, j char(20)) with(orientation=column);
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -482,7 +482,7 @@ select attnum, attoptions from pg_attribute_encoding where attrelid='ao_ss_ct_t1
       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
-ALTER TYPE char SET DEFAULT ENCODING (compresstype=none);
+ALTER TYPE bpchar SET DEFAULT ENCODING (compresstype=none);
 ALTER TYPE
 Drop table ao_ss_ct_t11;
 DROP TABLE

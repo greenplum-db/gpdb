@@ -52,12 +52,14 @@
  * we log the completed index pages to WAL if and only if WAL archiving is
  * active.
  *
+ * This code isn't concerned about the FSM at all. The caller is responsible
+ * for initializing that.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.114 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.119 2009/01/01 17:23:36 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,8 +70,8 @@
 #include "access/nbtree.h"
 #include "miscadmin.h"
 #include "storage/smgr.h"
+#include "utils/rel.h"
 #include "utils/tuplesort.h"
-#include "utils/tuplesort_mk.h"
 
 #include "cdb/cdbvars.h"
 
@@ -161,10 +163,8 @@ _bt_spoolinit(Relation index, bool isunique, bool isdead)
 	 * work_mem.
 	 */
 	btKbytes = isdead ? work_mem : maintenance_work_mem;
-	if(gp_enable_mk_sort)
-		btspool->sortstate = tuplesort_begin_index_mk(index, isunique, btKbytes, false);
-	else
-		btspool->sortstate = tuplesort_begin_index(index, isunique, btKbytes, false);
+	btspool->sortstate = tuplesort_begin_index_btree(index, isunique,
+													 btKbytes, false);
 
 	return btspool;
 }
@@ -175,10 +175,7 @@ _bt_spoolinit(Relation index, bool isunique, bool isdead)
 void
 _bt_spooldestroy(BTSpool *btspool)
 {
-	if(gp_enable_mk_sort)
-		tuplesort_end_mk((Tuplesortstate_mk *) btspool->sortstate);
-	else
-		tuplesort_end((Tuplesortstate *) btspool->sortstate);
+	tuplesort_end(btspool->sortstate);
 	pfree(btspool);
 }
 
@@ -188,10 +185,7 @@ _bt_spooldestroy(BTSpool *btspool)
 void
 _bt_spool(IndexTuple itup, BTSpool *btspool)
 {
-	if(gp_enable_mk_sort)
-		tuplesort_putindextuple_mk((Tuplesortstate_mk *) btspool->sortstate, itup);
-	else
-		tuplesort_putindextuple((Tuplesortstate *) btspool->sortstate, itup);
+	tuplesort_putindextuple(btspool->sortstate, itup);
 }
 
 /*
@@ -211,27 +205,17 @@ _bt_leafbuild(BTSpool *btspool, BTSpool *btspool2)
 	}
 #endif   /* BTREE_BUILD_STATS */
 
-	if(gp_enable_mk_sort)
-	{
-		tuplesort_performsort_mk((Tuplesortstate_mk *) btspool->sortstate);
-		if (btspool2)
-			tuplesort_performsort_mk((Tuplesortstate_mk *) btspool2->sortstate);
-	}
-	else
-	{
-		tuplesort_performsort((Tuplesortstate *) btspool->sortstate);
-		if (btspool2)
-			tuplesort_performsort((Tuplesortstate *) btspool2->sortstate);
-	}
-
+	tuplesort_performsort(btspool->sortstate);
+	if (btspool2)
+		tuplesort_performsort(btspool2->sortstate);
 
 	wstate.index = btspool->index;
 
 	/*
-	 * We need to log index creation in WAL iff WAL archiving is enabled AND
-	 * it's not a temp index.
+	 * We need to log index creation in WAL iff WAL archiving/streaming is
+	 * enabled AND it's not a temp index.
 	 */
-	wstate.btws_use_wal = !XLog_UnconvertedCanBypassWal() && !wstate.index->rd_istemp;
+	wstate.btws_use_wal = XLogIsNeeded() && !wstate.index->rd_istemp;
 
 	/* reserve the metapage */
 	wstate.btws_pages_alloced = BTREE_METAPAGE + 1;
@@ -290,7 +274,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	if (wstate->btws_use_wal)
 	{
 		/* We use the heap NEWPAGE record type for this */
-		log_newpage_rel(wstate->index, blkno, page);
+		log_newpage_rel(wstate->index, MAIN_FORKNUM, blkno, page);
 	}
 
 	/*
@@ -310,7 +294,8 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		LWLockAcquire(MirroredLock, LW_SHARED);
 
 		/* don't set checksum for all-zero page */
-		smgrextend(wstate->index->rd_smgr, wstate->btws_pages_written++,
+		smgrextend(wstate->index->rd_smgr, MAIN_FORKNUM,
+				   wstate->btws_pages_written++,
 				   (char *) wstate->btws_zeropage,
 				   true);
 
@@ -332,13 +317,15 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	if (blkno == wstate->btws_pages_written)
 	{
 		/* extending the file... */
-		smgrextend(wstate->index->rd_smgr, blkno, (char *) page, true);
+		smgrextend(wstate->index->rd_smgr, MAIN_FORKNUM, blkno,
+				   (char *) page, true);
 		wstate->btws_pages_written++;
 	}
 	else
 	{
 		/* overwriting a block we zero-filled before */
-		smgrwrite(wstate->index->rd_smgr, blkno, (char *) page, true);
+		smgrwrite(wstate->index->rd_smgr, MAIN_FORKNUM, blkno,
+				  (char *) page, true);
 	}
 
 	LWLockRelease(MirroredLock);
@@ -720,16 +707,8 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 		 */
 
 		/* the preparation of merge */
-		if(gp_enable_mk_sort)
-		{
-			itup = tuplesort_getindextuple_mk((Tuplesortstate_mk *) btspool->sortstate, true, &should_free); 
-			itup2 = tuplesort_getindextuple_mk((Tuplesortstate_mk *) btspool2->sortstate, true, &should_free2);
-		}
-		else
-		{
-			itup = tuplesort_getindextuple((Tuplesortstate *) btspool->sortstate, true, &should_free); 
-			itup2 = tuplesort_getindextuple((Tuplesortstate *) btspool2->sortstate, true, &should_free2);
-		}
+		itup = tuplesort_getindextuple(btspool->sortstate, true, &should_free);
+		itup2 = tuplesort_getindextuple(btspool2->sortstate, true, &should_free2);
 
 		indexScanKey = _bt_mkscankey_nodata(wstate->index);
 
@@ -801,22 +780,15 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 				_bt_buildadd(wstate, state, itup);
 				if (should_free)
 					pfree(itup);
-				if(gp_enable_mk_sort)
-					itup = tuplesort_getindextuple_mk((Tuplesortstate_mk *)btspool->sortstate, true, &should_free);
-				else
-					itup = tuplesort_getindextuple((Tuplesortstate *) btspool->sortstate, true, &should_free);
+				itup = tuplesort_getindextuple(btspool->sortstate, true, &should_free);
 			}
 			else
 			{
 				_bt_buildadd(wstate, state, itup2);
 				if (should_free2)
 					pfree(itup2);
-				if(gp_enable_mk_sort)
-					itup2 = tuplesort_getindextuple_mk((Tuplesortstate_mk *) btspool2->sortstate,
-							true, &should_free2);
-				else
-					itup2 = tuplesort_getindextuple((Tuplesortstate *) btspool2->sortstate,
-							true, &should_free2);
+				itup2 = tuplesort_getindextuple(btspool2->sortstate,
+												true, &should_free2);
 			}
 		}
 		_bt_freeskey(indexScanKey);
@@ -824,15 +796,8 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	else
 	{
 		/* merge is unnecessary */
-		while ((itup = (
-				gp_enable_mk_sort ? 
-				tuplesort_getindextuple_mk((Tuplesortstate_mk *) btspool->sortstate, 
-						true, &should_free)
-				:
-				tuplesort_getindextuple((Tuplesortstate *) btspool->sortstate, 
-						true, &should_free)
-				))
-			!= NULL)
+		while ((itup = tuplesort_getindextuple(btspool->sortstate,
+											   true, &should_free)) != NULL)
 		{
 			/* When we see first tuple, create first index page */
 			if (state == NULL)
@@ -865,6 +830,6 @@ _bt_load(BTWriteState *wstate, BTSpool *btspool, BTSpool *btspool2)
 	if (!wstate->index->rd_istemp)
 	{
 		RelationOpenSmgr(wstate->index);
-		smgrimmedsync(wstate->index->rd_smgr);
+		smgrimmedsync(wstate->index->rd_smgr, MAIN_FORKNUM);
 	}
 }

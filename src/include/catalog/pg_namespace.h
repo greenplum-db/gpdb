@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_namespace.h,v 1.23 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_namespace.h,v 1.25 2009/01/01 17:23:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -72,9 +72,9 @@ DESCR("system catalog schema");
 DATA(insert OID = 99 ( "pg_toast" PGUID _null_ ));
 DESCR("reserved schema for TOAST tables");
 #define PG_TOAST_NAMESPACE 99
-DATA(insert OID = 3012  ( "pg_bitmapindex" PGUID _null_ ));
+DATA(insert OID = 7012  ( "pg_bitmapindex" PGUID _null_ ));
 DESCR("Reserved schema for internal relations of bitmap indexes");
-#define PG_BITMAPINDEX_NAMESPACE 3012
+#define PG_BITMAPINDEX_NAMESPACE 7012
 DATA(insert OID = 2200 ( "public" PGUID _null_ ));
 DESCR("standard public schema");
 #define PG_PUBLIC_NAMESPACE 2200

@@ -3,7 +3,12 @@
  * cdbdisp_dtx.h
  * routines for dispatching DTX commands to the qExec processes.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbdisp_dtx.h
  *
  *-------------------------------------------------------------------------
  */
@@ -13,7 +18,7 @@
 #include "lib/stringinfo.h"         /* StringInfo */
 #include "cdb/cdbtm.h"
 
-struct pg_result;                   /* #include "gp-libpq-fe.h" */
+struct pg_result;                   /* #include "libpq-fe.h" */
 struct CdbPgResults;
 /*
  * CdbDispatchDtxProtocolCommand:

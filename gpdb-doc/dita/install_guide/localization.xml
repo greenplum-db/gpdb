@@ -1,0 +1,729 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jk143814">Configuring Localization Settings</title>
+  <shortdesc>Describes the available localization features of Greenplum Database. </shortdesc>
+  <body>
+    <p>Greenplum Database supports localization with two approaches: </p>
+    <ul>
+      <li id="jk143823">Using the locale features of the operating system to provide locale-specific
+        collation order, number formatting, and so on. </li>
+      <li id="jk143825">Providing a number of different character sets defined in the Greenplum
+        Database server, including multiple-byte character sets, to support storing text in all
+        kinds of languages, and providing character set translation between client and server.</li>
+    </ul>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="jk143798">About Locale Support in Greenplum Database</title>
+    <body>
+      <p>Locale support refers to an application respecting cultural preferences regarding
+        alphabets, sorting, number formatting, etc. Greenplum Database uses the standard ISO C and
+        POSIX locale facilities provided by the server operating system. For additional information
+        refer to the documentation of your operating system.</p>
+      <p>Locale support is automatically initialized when a Greenplum Database system is
+        initialized. The initialization utility, <codeph><xref
+            href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic" format="dita"
+            scope="peer">gpinitsystem</xref></codeph>, will initialize the Greenplum array with the
+        locale setting of its execution environment by default, so if your system is already set to
+        use the locale that you want in your Greenplum Database system then there is nothing else
+        you need to do. </p>
+      <p>When you are ready to initiate Greenplum Database and you want to use a different locale
+        (or you are not sure which locale your system is set to), you can instruct
+          <codeph>gpinitsystem</codeph> exactly which locale to use by specifying the -n
+          <varname>locale</varname> option. For example:</p>
+      <codeblock>$ gpinitsystem -c gp_init_config -n sv_SE</codeblock>
+      <p>See <xref href="./init_gpdb.xml#topic1" type="topic" format="dita"/> for information about
+        the database initialization process.</p>
+      <p>The example above sets the locale to Swedish (sv) as spoken in Sweden (SE). Other
+        possibilities might be <codeph>en_US</codeph> (U.S. English) and <codeph>fr_CA</codeph>
+        (French Canadian). If more than one character set can be useful for a locale then the
+        specifications look like this: <codeph>cs_CZ.ISO8859-2</codeph>. What locales are available
+        under what names on your system depends on what was provided by the operating system vendor
+        and what was installed. On most systems, the command <codeph>locale -a</codeph> will provide
+        a list of available locales.</p>
+      <p>Occasionally it is useful to mix rules from several locales, for example use English
+        collation rules but Spanish messages. To support that, a set of locale subcategories exist
+        that control only a certain aspect of the localization rules:</p>
+      <ul>
+        <li id="jk145923"><codeph>LC_COLLATE</codeph> — String sort order </li>
+        <li id="jk145924"><codeph>LC_CTYPE</codeph> — Character classification (What is a letter?
+          Its upper-case equivalent?) </li>
+        <li id="jk145925"><codeph>LC_MESSAGES</codeph> — Language of messages </li>
+        <li id="jk145926"><codeph>LC_MONETARY</codeph> — Formatting of currency amounts </li>
+        <li id="jk145927"><codeph>LC_NUMERIC</codeph> — Formatting of numbers </li>
+        <li id="jk145928"><codeph>LC_TIME</codeph> — Formatting of dates and times </li>
+      </ul>
+      <p>If you want the system to behave as if it had no locale support, use the special locale
+          <codeph>C</codeph> or <codeph>POSIX</codeph>.</p>
+      <p>The nature of some locale categories is that their value has to be fixed for the lifetime
+        of a Greenplum Database system. That is, once <codeph>gpinitsystem</codeph> has run, you
+        cannot change them anymore. <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> are
+        those categories. They affect the sort order of indexes, so they must be kept fixed, or
+        indexes on text columns will become corrupt. Greenplum Database enforces this by recording
+        the values of <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> that are seen by
+        gpinitsystem. The server automatically adopts those two values based on the locale that was
+        chosen at initialization time. </p>
+      <p>The other locale categories can be changed as desired whenever the server is running by
+        setting the server configuration parameters that have the same name as the locale categories
+        (see the <i>Greenplum Database Reference Guide</i> for more information on setting server
+        configuration parameters). The defaults that are chosen by gpinitsystem are written into the
+        master and segment <codeph>postgresql.conf</codeph> configuration files to serve as defaults
+        when the Greenplum Database system is started. If you delete these assignments from the
+        master and each segment <codeph>postgresql.conf</codeph> files then the server will inherit
+        the settings from its execution environment.</p>
+      <p>Note that the locale behavior of the server is determined by the environment variables seen
+        by the server, not by the environment of any client. Therefore, be careful to configure the
+        correct locale settings on each Greenplum Database host (master and segments) before
+        starting the system. A consequence of this is that if client and server are set up in
+        different locales, messages may appear in different languages depending on where they
+        originated. </p>
+      <p>Inheriting the locale from the execution environment means the following on most operating
+        systems: For a given locale category, say the collation, the following environment variables
+        are consulted in this order until one is found to be set: <codeph>LC_ALL</codeph>,
+          <codeph>LC_COLLATE</codeph> (the variable corresponding to the respective category),
+          <codeph>LANG</codeph>. If none of these environment variables are set then the locale
+        defaults to <codeph>C</codeph>. </p>
+      <p>Some message localization libraries also look at the environment variable
+          <codeph>LANGUAGE</codeph> which overrides all other locale settings for the purpose of
+        setting the language of messages. If in doubt, please refer to the documentation for your
+        operating system, in particular the documentation about <codeph>gettext</codeph>, for more
+        information. </p>
+      <p>Native language support (NLS), which enables messages to be translated to the user's
+        preferred language, is not enabled in Greenplum Database for languages other than English.
+        This is independent of the other locale support.</p>
+    </body>
+    <topic id="topic3" xml:lang="en">
+      <title>Locale Behavior</title>
+      <body>
+        <p>The locale settings influence the following SQL features: </p>
+        <ul>
+          <li id="jk144083">Sort order in queries using <codeph>ORDER BY</codeph> on textual data </li>
+          <li id="jk144085">The ability to use indexes with <codeph>LIKE</codeph> clauses </li>
+          <li id="jk144087">The <codeph>upper</codeph>, <codeph>lower</codeph>, and
+              <codeph>initcap</codeph> functions </li>
+          <li id="jk144089">The <codeph>to_char</codeph> family of functions</li>
+        </ul>
+        <p>The drawback of using locales other than <codeph>C</codeph> or <codeph>POSIX</codeph> in
+          Greenplum Database is its performance impact. It slows character handling and prevents
+          ordinary indexes from being used by <codeph>LIKE</codeph>. For this reason use locales
+          only if you actually need them.</p>
+      </body>
+    </topic>
+    <topic id="topic4" xml:lang="en">
+      <title>Troubleshooting Locales</title>
+      <body>
+        <p>If locale support does not work as expected, check that the locale support in your
+          operating system is correctly configured. To check what locales are installed on your
+          system, you may use the command <codeph>locale -a</codeph> if your operating system
+          provides it. </p>
+        <p>Check that Greenplum Database is actually using the locale that you think it is.
+            <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings are determined at
+          initialization time and cannot be changed without redoing <codeph><xref
+              href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic" format="dita"
+              scope="peer">gpinitsystem</xref></codeph>. Other locale settings including
+            <codeph>LC_MESSAGES</codeph> and <codeph>LC_MONETARY</codeph> are initially determined
+          by the operating system environment of the master and/or segment host, but can be changed
+          after initialization by editing the <codeph>postgresql.conf</codeph> file of each
+          Greenplum master and segment instance. You can check the active locale settings of the
+          master host using the <codeph>SHOW</codeph> command. Note that every host in your
+          Greenplum Database array should be using identical locale settings.</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic5" xml:lang="en">
+    <title>Character Set Support</title>
+    <body>
+      <p>The character set support in Greenplum Database allows you to store text in a variety of
+        character sets, including single-byte character sets such as the ISO 8859 series and
+        multiple-byte character sets such as EUC (Extended Unix Code), UTF-8, and Mule internal
+        code. All supported character sets can be used transparently by clients, but a few are not
+        supported for use within the server (that is, as a server-side encoding). The default
+        character set is selected while initializing your Greenplum Database array using
+          <codeph>gpinitsystem</codeph>. It can be overridden when you create a database, so you can
+        have multiple databases each with a different character set.</p>
+      <table id="jk167966">
+        <title>Greenplum Database Character Sets<ph>
+            <fn id="jk167975">Not all APIs support all the listed character sets. For example, the
+              JDBC driver does not support MULE_INTERNAL, LATIN6, LATIN8, and LATIN10.</fn>
+          </ph></title>
+        <tgroup cols="6">
+          <colspec colnum="1" colname="col1" colwidth="78pt"/>
+          <colspec colnum="2" colname="col2" colwidth="124pt"/>
+          <colspec colnum="3" colname="col3" colwidth="82pt"/>
+          <colspec colnum="4" colname="col4" colwidth="38pt"/>
+          <colspec colnum="5" colname="col5" colwidth="51pt"/>
+          <colspec colnum="6" colname="col6" colwidth="75pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Name</entry>
+              <entry colname="col2">Description</entry>
+              <entry colname="col3">Language</entry>
+              <entry colname="col4">Server?</entry>
+              <entry colname="col5">Bytes/Char</entry>
+              <entry colname="col6">Aliases</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">BIG5</entry>
+              <entry colname="col2">Big Five</entry>
+              <entry colname="col3">Traditional Chinese</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1-2</entry>
+              <entry colname="col6">WIN950, Windows950</entry>
+            </row>
+            <row>
+              <entry colname="col1">EUC_CN</entry>
+              <entry colname="col2">Extended UNIX Code-CN</entry>
+              <entry colname="col3">Simplified Chinese</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-3</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">EUC_JP</entry>
+              <entry colname="col2">Extended UNIX Code-JP</entry>
+              <entry colname="col3">Japanese</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-3</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">EUC_KR</entry>
+              <entry colname="col2">Extended UNIX Code-KR</entry>
+              <entry colname="col3">Korean</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-3</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">EUC_TW</entry>
+              <entry colname="col2">Extended UNIX Code-TW</entry>
+              <entry colname="col3">Traditional Chinese, Taiwanese</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-3</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">GB18030</entry>
+              <entry colname="col2">National Standard</entry>
+              <entry colname="col3">Chinese</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1-2</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">GBK</entry>
+              <entry colname="col2">Extended National Standard</entry>
+              <entry colname="col3">Simplified Chinese</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1-2</entry>
+              <entry colname="col6">WIN936, Windows936</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_5</entry>
+              <entry colname="col2">ISO 8859-5, ECMA 113</entry>
+              <entry colname="col3">Latin/Cyrillic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_6</entry>
+              <entry colname="col2">ISO 8859-6, ECMA 114</entry>
+              <entry colname="col3">Latin/Arabic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_7</entry>
+              <entry colname="col2">ISO 8859-7, ECMA 118</entry>
+              <entry colname="col3">Latin/Greek</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_8</entry>
+              <entry colname="col2">ISO 8859-8, ECMA 121</entry>
+              <entry colname="col3">Latin/Hebrew</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">JOHAB</entry>
+              <entry colname="col2">JOHA </entry>
+              <entry colname="col3">Korean (Hangul)</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-3</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">KOI8</entry>
+              <entry colname="col2">KOI8-R(U)</entry>
+              <entry colname="col3">Cyrillic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">KOI8R</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN1</entry>
+              <entry colname="col2">ISO 8859-1, ECMA 94</entry>
+              <entry colname="col3">Western European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO88591</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN2</entry>
+              <entry colname="col2">ISO 8859-2, ECMA 94</entry>
+              <entry colname="col3">Central European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO88592</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN3</entry>
+              <entry colname="col2">ISO 8859-3, ECMA 94</entry>
+              <entry colname="col3">South European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO88593</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN4</entry>
+              <entry colname="col2">ISO 8859-4, ECMA 94</entry>
+              <entry colname="col3">North European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO88594</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN5</entry>
+              <entry colname="col2">ISO 8859-9, ECMA 128</entry>
+              <entry colname="col3">Turkish</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO88599</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN6</entry>
+              <entry colname="col2">ISO 8859-10, ECMA 144</entry>
+              <entry colname="col3">Nordic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO885910</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN7</entry>
+              <entry colname="col2">ISO 8859-13</entry>
+              <entry colname="col3">Baltic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO885913</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN8</entry>
+              <entry colname="col2">ISO 8859-14</entry>
+              <entry colname="col3">Celtic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO885914</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN9</entry>
+              <entry colname="col2">ISO 8859-15</entry>
+              <entry colname="col3">LATIN1 with Euro and accents</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO885915</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN10</entry>
+              <entry colname="col2">ISO 8859-16, ASRO SR 14111</entry>
+              <entry colname="col3">Romanian</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ISO885916</entry>
+            </row>
+            <row>
+              <entry colname="col1">MULE_INTERNAL</entry>
+              <entry colname="col2">Mule internal code</entry>
+              <entry colname="col3">Multilingual Emacs</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-4</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">SJIS</entry>
+              <entry colname="col2">Shift JIS</entry>
+              <entry colname="col3">Japanese</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1-2</entry>
+              <entry colname="col6">Mskanji, ShiftJIS, WIN932, Windows932</entry>
+            </row>
+            <row>
+              <entry colname="col1">SQL_ASCII</entry>
+              <entry colname="col2">unspecified<fn id="jk168303">The SQL_ASCII setting behaves
+                  considerably differently from the other settings. Byte values 0-127 are
+                  interpreted according to the ASCII standard, while byte values 128-255 are taken
+                  as uninterpreted characters. If you are working with any non-ASCII data, it is
+                  unwise to use the SQL_ASCII setting as a client encoding. SQL_ASCII is not
+                  supported as a server encoding.</fn><xref href="#topic5/jk168303" scope="local"
+                  type="fn" format="dita"/></entry>
+              <entry colname="col3">any</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">UHC</entry>
+              <entry colname="col2">Unified Hangul Code</entry>
+              <entry colname="col3">Korean</entry>
+              <entry colname="col4">No</entry>
+              <entry colname="col5">1-2</entry>
+              <entry colname="col6">WIN949, Windows949</entry>
+            </row>
+            <row>
+              <entry colname="col1">UTF8</entry>
+              <entry colname="col2">Unicode, 8-bit </entry>
+              <entry colname="col3">all</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1-4</entry>
+              <entry colname="col6">Unicode</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN866</entry>
+              <entry colname="col2">Windows CP866</entry>
+              <entry colname="col3">Cyrillic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ALT</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN874</entry>
+              <entry colname="col2">Windows CP874</entry>
+              <entry colname="col3">Thai</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1250</entry>
+              <entry colname="col2">Windows CP1250</entry>
+              <entry colname="col3">Central European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1251</entry>
+              <entry colname="col2">Windows CP1251</entry>
+              <entry colname="col3">Cyrillic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">WIN</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1252</entry>
+              <entry colname="col2">Windows CP1252</entry>
+              <entry colname="col3">Western European</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1253</entry>
+              <entry colname="col2">Windows CP1253</entry>
+              <entry colname="col3">Greek</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1254</entry>
+              <entry colname="col2">Windows CP1254</entry>
+              <entry colname="col3">Turkish</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1255</entry>
+              <entry colname="col2">Windows CP1255</entry>
+              <entry colname="col3">Hebrew</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1256</entry>
+              <entry colname="col2">Windows CP1256</entry>
+              <entry colname="col3">Arabic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1257</entry>
+              <entry colname="col2">Windows CP1257</entry>
+              <entry colname="col3">Baltic</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6"/>
+            </row>
+            <row>
+              <entry colname="col1">WIN1258</entry>
+              <entry colname="col2">Windows CP1258</entry>
+              <entry colname="col3">Vietnamese</entry>
+              <entry colname="col4">Yes</entry>
+              <entry colname="col5">1</entry>
+              <entry colname="col6">ABC, TCVN, TCVN5712, VSCII</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="topic6" xml:lang="en">
+    <title>Setting the Character Set</title>
+    <body>
+      <p>gpinitsystem defines the default character set for a Greenplum Database system by reading
+        the setting of the <codeph>ENCODING</codeph> parameter in the
+          <codeph>gp_init_config</codeph> file at initialization time. The default character set is
+          <codeph>UNICODE</codeph> or <codeph>UTF8</codeph>.</p>
+      <p>You can create a database with a different character set besides what is used as the
+        system-wide default. For example: </p>
+      <codeblock>=&gt; CREATE DATABASE korean WITH ENCODING 'EUC_KR';</codeblock>
+      <note type="important">Although you can specify any encoding you want for a database, it is
+        unwise to choose an encoding that is not what is expected by the locale you have selected.
+        The <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings imply a particular
+        encoding, and locale-dependent operations (such as sorting) are likely to misinterpret data
+        that is in an incompatible encoding.</note>
+      <p>Since these locale settings are frozen by gpinitsystem, the apparent flexibility to use
+        different encodings in different databases is more theoretical than real.</p>
+      <p>One way to use multiple encodings safely is to set the locale to <codeph>C</codeph> or
+          <codeph>POSIX</codeph> during initialization time, thus disabling any real locale
+        awareness. </p>
+    </body>
+  </topic>
+  <topic id="topic7" xml:lang="en">
+    <title>Character Set Conversion Between Server and Client</title>
+    <body>
+      <p>Greenplum Database supports automatic character set conversion between server and client
+        for certain character set combinations. The conversion information is stored in the master
+          <codeph>pg_conversion</codeph> system catalog table. Greenplum Database comes with some
+        predefined conversions or you can create a new conversion using the SQL command
+          <codeph>CREATE CONVERSION</codeph>. </p>
+      <table id="jk168487">
+        <title>Client/Server Character Set Conversions</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="125pt"/>
+          <colspec colnum="2" colname="col2" colwidth="250pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">Server Character Set </entry>
+              <entry colname="col2">Available Client Character Sets</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">BIG5</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">EUC_CN</entry>
+              <entry colname="col2">EUC_CN, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">EUC_JP</entry>
+              <entry colname="col2">EUC_JP, MULE_INTERNAL, SJIS, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">EUC_KR</entry>
+              <entry colname="col2">EUC_KR, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">EUC_TW </entry>
+              <entry colname="col2">EUC_TW, BIG5, MULE_INTERNAL, UTF8 </entry>
+            </row>
+            <row>
+              <entry colname="col1">GB18030</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">GBK</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_5</entry>
+              <entry colname="col2">ISO_8859_5, KOI8, MULE_INTERNAL, UTF8, WIN866, WIN1251</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_6</entry>
+              <entry colname="col2">ISO_8859_6, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_7</entry>
+              <entry colname="col2">ISO_8859_7, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_8</entry>
+              <entry colname="col2">ISO_8859_8, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">JOHAB</entry>
+              <entry colname="col2">JOHAB, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">KOI8</entry>
+              <entry colname="col2">KOI8, ISO_8859_5, MULE_INTERNAL, UTF8, WIN866, WIN1251</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN1</entry>
+              <entry colname="col2">LATIN1, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN2</entry>
+              <entry colname="col2">LATIN2, MULE_INTERNAL, UTF8, WIN1250</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN3</entry>
+              <entry colname="col2">LATIN3, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN4</entry>
+              <entry colname="col2">LATIN4, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN5</entry>
+              <entry colname="col2">LATIN5, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN6</entry>
+              <entry colname="col2">LATIN6, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN7</entry>
+              <entry colname="col2">LATIN7, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN8</entry>
+              <entry colname="col2">LATIN8, UTF8 </entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN9</entry>
+              <entry colname="col2">LATIN9, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">LATIN10</entry>
+              <entry colname="col2">LATIN10, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">MULE_INTERNAL</entry>
+              <entry colname="col2">MULE_INTERNAL, BIG5, EUC_CN, EUC_JP, EUC_KR, EUC_TW, ISO_8859_5,
+                KOI8, LATIN1 to LATIN4, SJIS, WIN866, WIN1250, WIN1251</entry>
+            </row>
+            <row>
+              <entry colname="col1">SJIS</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">SQL_ASCII</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">UHC</entry>
+              <entry colname="col2">not supported as a server encoding</entry>
+            </row>
+            <row>
+              <entry colname="col1">UTF8</entry>
+              <entry colname="col2">all supported encodings</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN866</entry>
+              <entry colname="col2">WIN866</entry>
+            </row>
+            <row>
+              <entry colname="col1">ISO_8859_5</entry>
+              <entry colname="col2">KOI8, MULE_INTERNAL, UTF8, WIN1251</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN874</entry>
+              <entry colname="col2">WIN874, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1250</entry>
+              <entry colname="col2">WIN1250, LATIN2, MULE_INTERNAL, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1251</entry>
+              <entry colname="col2">WIN1251, ISO_8859_5, KOI8, MULE_INTERNAL, UTF8, WIN866 </entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1252</entry>
+              <entry colname="col2">WIN1252, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1253</entry>
+              <entry colname="col2">WIN1253, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1254</entry>
+              <entry colname="col2">WIN1254, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1255</entry>
+              <entry colname="col2">WIN1255, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1256</entry>
+              <entry colname="col2">WIN1256, UTF8</entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1257</entry>
+              <entry colname="col2">WIN1257, UTF8 </entry>
+            </row>
+            <row>
+              <entry colname="col1">WIN1258</entry>
+              <entry colname="col2">WIN1258, UTF8</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>To enable automatic character set conversion, you have to tell Greenplum Database the
+        character set (encoding) you would like to use in the client. There are several ways to
+        accomplish this: </p>
+      <ul>
+        <li id="jk168660">Using the <codeph>\encoding</codeph> command in <codeph>psql</codeph>,
+          which allows you to change client encoding on the fly.</li>
+        <li id="jk168661">Using <codeph>SET client_encoding TO</codeph>. Setting the client encoding
+          can be done with this SQL command:
+            <codeblock>=&gt; SET CLIENT_ENCODING TO '<varname>value</varname>';</codeblock><p>To
+            query the current client encoding:
+            </p><codeblock>=&gt; SHOW client_encoding;</codeblock><p>To return to the default
+            encoding: </p><codeblock>=&gt; RESET client_encoding;</codeblock></li>
+        <li id="jk168667">Using the <codeph>PGCLIENTENCODING</codeph> environment variable. When
+            <codeph>PGCLIENTENCODING</codeph> is defined in the client's environment, that client
+          encoding is automatically selected when a connection to the server is made. (This can
+          subsequently be overridden using any of the other methods mentioned above.) </li>
+        <li id="jk168668">Setting the configuration parameter <codeph>client_encoding</codeph>. If
+            <codeph>client_encoding</codeph> is set in the master <codeph>postgresql.conf</codeph>
+          file, that client encoding is automatically selected when a connection to Greenplum
+          Database is made. (This can subsequently be overridden using any of the other methods
+          mentioned above.) </li>
+      </ul>
+      <p>If the conversion of a particular character is not possible — suppose you chose
+          <codeph>EUC_JP</codeph> for the server and <codeph>LATIN1</codeph> for the client, then
+        some Japanese characters do not have a representation in <codeph>LATIN1</codeph> — then an
+        error is reported. </p>
+      <p>If the client character set is defined as <codeph>SQL_ASCII</codeph>, encoding conversion
+        is disabled, regardless of the server's character set. The use of <codeph>SQL_ASCII</codeph>
+        is unwise unless you are working with all-ASCII data. <codeph>SQL_ASCII</codeph> is not
+        supported as a server encoding.</p>
+    </body>
+  </topic>
+</topic>

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_namespace.c,v 1.18 2008/01/01 19:45:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_namespace.c,v 1.21 2009/01/01 17:23:37 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -56,7 +56,7 @@ NamespaceCreate(const char *nspName, Oid ownerId)
 	for (i = 0; i < Natts_pg_namespace; i++)
 	{
 		nulls[i] = false;
-		values[i] = (Datum) 0;
+		values[i] = (Datum) NULL;
 	}
 	namestrcpy(&nname, nspName);
 	values[Anum_pg_namespace_nspname - 1] = NameGetDatum(&nname);

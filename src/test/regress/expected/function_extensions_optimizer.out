@@ -1,0 +1,389 @@
+-- -----------------------------------------------------------------
+-- Test extensions to functions (MPP-16060)
+-- 	1. data access indicators
+-- -----------------------------------------------------------------
+-- test prodataaccess
+create function func1(int, int) returns int as
+$$
+  select $1 + $2;
+$$ language sql immutable contains sql;
+-- check prodataaccess column in pg_proc
+select proname, prodataaccess from pg_proc where proname = 'func1';
+ proname | prodataaccess 
+---------+---------------
+ func1   | c
+(1 row)
+
+-- check prodataaccess in pg_attribute
+select relname, attname, attlen from pg_class c, pg_attribute
+where attname = 'prodataaccess' and attrelid = c.oid and c.relname = 'pg_proc';
+ relname |    attname    | attlen 
+---------+---------------+--------
+ pg_proc | prodataaccess |      1
+(1 row)
+
+create function func2(a anyelement, b anyelement, flag bool)
+returns anyelement as
+$$
+  select $1 + $2;
+$$ language sql reads sql data;
+-- check prodataaccess column in pg_proc
+select proname, prodataaccess from pg_proc where proname = 'func2';
+ proname | prodataaccess 
+---------+---------------
+ func2   | r
+(1 row)
+
+create function func3() returns oid as
+$$
+  select oid from pg_class where relname = 'pg_type';
+$$ language sql modifies sql data volatile;
+-- check prodataaccess column in pg_proc
+select proname, prodataaccess from pg_proc where proname = 'func3';
+ proname | prodataaccess 
+---------+---------------
+ func3   | m
+(1 row)
+
+-- check default value of prodataaccess
+drop function func1(int, int);
+create function func1(int, int) returns varchar as $$
+declare
+	v_name varchar(20) DEFAULT 'zzzzz';
+begin
+	select relname from pg_class into v_name where oid=$1;
+	return v_name;
+end;
+$$ language plpgsql READS SQL DATA;
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func1';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func1   |             | r
+(1 row)
+
+create function func4(int, int) returns int as
+$$
+  select $1 + $2;
+$$ language sql CONTAINS SQL;
+-- check prodataaccess column
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func4   |             | c
+(1 row)
+
+-- change prodataaccess option
+create or replace function func4(int, int) returns int as
+$$
+  select $1 + $2;
+$$ language sql modifies sql data;
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func4   |             | m
+(1 row)
+
+-- upper case language name
+create or replace function func5(int) returns int as
+$$
+  select $1;
+$$ language "SQL";
+-- check prodataaccess column
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func5   |             | c
+(1 row)
+
+-- alter function with data access
+alter function func5(int) reads sql data;
+-- check prodataaccess column
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func5   |             | r
+(1 row)
+
+-- alter function with data access
+alter function func5(int) modifies sql data;
+-- check prodataaccess column
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func5   |             | m
+(1 row)
+
+-- alter function with data access
+alter function func5(int) no sql;
+ERROR:  conflicting options
+HINT:  A SQL function cannot specify NO SQL.
+-- alter function with data access
+alter function func5(int) volatile contains sql;
+alter function func5(int) immutable reads sql data;
+ERROR:  conflicting options
+HINT:  IMMUTABLE conflicts with READS SQL DATA.
+alter function func5(int) immutable modifies sql data;
+ERROR:  conflicting options
+HINT:  IMMUTABLE conflicts with MODIFIES SQL DATA.
+-- data_access indicators for plpgsql
+drop function func1(int, int);
+create or replace function func1(int, int) returns varchar as $$
+declare
+	v_name varchar(20) DEFAULT 'zzzzz';
+begin
+	select relname from pg_class into v_name where oid=$1;
+	return v_name;
+end;
+$$ language plpgsql reads sql data;
+select proname, proargnames, prodataaccess from pg_proc where proname = 'func1';
+ proname | proargnames | prodataaccess 
+---------+-------------+---------------
+ func1   |             | r
+(1 row)
+
+-- check conflicts
+drop function func1(int, int);
+create function func1(int, int) returns int as
+$$
+  select $1 + $2;
+$$ language sql immutable no sql;
+ERROR:  conflicting options
+HINT:  A SQL function cannot specify NO SQL.
+create function func1(int, int) returns int as
+$$
+  select $1 + $2;
+$$ language sql immutable reads sql data;
+ERROR:  conflicting options
+HINT:  IMMUTABLE conflicts with READS SQL DATA.
+-- stable function with modifies data_access
+create table bar (c int, d int);
+create function func1_mod_int_stb(x int) returns int as $$
+begin
+	update bar set d = d+1 where c = $1;
+	return $1 + 1;
+end
+$$ language plpgsql stable modifies sql data;
+select * from func1_mod_int_stb(5) order by 1;
+ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "update bar set d = d+1 where c =  $1 "
+PL/pgSQL function "func1_mod_int_stb" line 2 at SQL statement
+drop function func2(anyelement, anyelement, bool);
+drop function func3();
+drop function func4(int, int);
+drop function func5(int);
+drop function func1_mod_int_stb(int);
+-- Test EXECUTE ON [ANY | MASTER | ALL SEGMENTS ]
+CREATE TABLE srf_testtab (t text) DISTRIBUTED BY (t);
+INSERT INTO srf_testtab VALUES ('foo 0');
+INSERT INTO srf_testtab VALUES ('foo 1');
+INSERT INTO srf_testtab VALUES ('foo -1');
+create function srf_on_master () returns setof text as $$
+begin
+  return next 'foo ' || current_setting('gp_segment');
+  return next 'bar ' || current_setting('gp_segment');
+end;
+$$ language plpgsql EXECUTE ON MASTER;
+-- A function with ON MASTER or ON ALL SEGMENTS is only allowed in the target list
+-- in the simple case with no FROM.
+select srf_on_master();
+ srf_on_master 
+---------------
+ foo -1
+ bar -1
+(2 rows)
+
+select srf_on_master() FROM srf_testtab;
+ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
+-- In both these cases, the function should run on master and hence return
+-- ('foo -1'), ('bar -1')
+select * from srf_on_master();
+ srf_on_master 
+---------------
+ foo -1
+ bar -1
+(2 rows)
+
+select * from srf_testtab, srf_on_master();
+   t    | srf_on_master 
+--------+---------------
+ foo 1  | foo -1
+ foo 0  | foo -1
+ foo -1 | foo -1
+ foo 1  | bar -1
+ foo 0  | bar -1
+ foo -1 | bar -1
+(6 rows)
+
+-- Should run on master, even when used in a join. (With EXECUTE ON ANY,
+-- it would be pushed to segments.)
+select * from srf_testtab, srf_on_master() where srf_on_master = srf_testtab.t;
+   t    | srf_on_master 
+--------+---------------
+ foo -1 | foo -1
+(1 row)
+
+-- Repeat, with EXECUTE ON ALL SEGMENTS
+create function srf_on_all_segments () returns setof text as $$
+begin
+
+  -- To make the output reproducible, regardless of the number of segments in
+  -- the cluster, only return rows on segments 0 and 1
+  if current_setting('gp_segment')::integer < 2 then
+    return next 'foo ' || current_setting('gp_segment');
+    return next 'bar ' || current_setting('gp_segment');
+  end if;
+end;
+$$ language plpgsql EXECUTE ON ALL SEGMENTS;
+select srf_on_all_segments();
+ srf_on_all_segments 
+---------------------
+ foo 1
+ bar 1
+ foo 0
+ bar 0
+(4 rows)
+
+select srf_on_all_segments() FROM srf_testtab;
+ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
+select * from srf_on_all_segments();
+ srf_on_all_segments 
+---------------------
+ foo 1
+ bar 1
+ foo 0
+ bar 0
+(4 rows)
+
+select * from srf_testtab, srf_on_all_segments();
+   t    | srf_on_all_segments 
+--------+---------------------
+ foo -1 | foo 0
+ foo 1  | foo 0
+ foo 0  | foo 0
+ foo -1 | bar 0
+ foo 1  | bar 0
+ foo 0  | bar 0
+ foo 1  | foo 1
+ foo 0  | foo 1
+ foo -1 | foo 1
+ foo 1  | bar 1
+ foo 0  | bar 1
+ foo -1 | bar 1
+(12 rows)
+
+select * from srf_testtab, srf_on_all_segments() where srf_on_all_segments = srf_testtab.t;
+   t   | srf_on_all_segments 
+-------+---------------------
+ foo 1 | foo 1
+ foo 0 | foo 0
+(2 rows)
+
+-- And with EXEUCTE ON ANY.
+create function test_srf () returns setof text as $$
+begin
+  return next 'foo';
+end;
+$$ language plpgsql EXECUTE ON ANY IMMUTABLE;
+-- Set the owner, to make the output of the \df+ tests below repeatable,
+-- regardless of the name of the current user.
+CREATE ROLE srftestuser;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+ALTER FUNCTION test_srf() OWNER TO srftestuser;
+select test_srf();
+ test_srf 
+----------
+ foo
+(1 row)
+
+select test_srf() FROM srf_testtab;
+ test_srf 
+----------
+ foo
+ foo
+ foo
+(3 rows)
+
+select * from test_srf();
+ test_srf 
+----------
+ foo
+(1 row)
+
+-- Since the function is marked as EXECUTE ON ANY, and IMMUTABLE, the planner
+-- can choose to run it anywhere.
+explain select * from srf_testtab, test_srf();
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882719.56 rows=1000 width=14)
+   ->  Nested Loop  (cost=0.00..882719.51 rows=334 width=14)
+         Join Filter: true
+         ->  Table Scan on srf_testtab  (cost=0.00..431.00 rows=1 width=6)
+         ->  Function Scan on test_srf  (cost=0.00..0.01 rows=334 width=8)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.45.0
+(7 rows)
+
+explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.16 rows=1000 width=14)
+   ->  Hash Join  (cost=0.00..431.10 rows=334 width=14)
+         Hash Cond: test_srf.test_srf = srf_testtab.t
+         ->  Result  (cost=0.00..0.03 rows=334 width=8)
+               ->  Function Scan on test_srf  (cost=0.00..0.01 rows=334 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=6)
+               ->  Table Scan on srf_testtab  (cost=0.00..431.00 rows=1 width=6)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.45.0
+(9 rows)
+
+-- Test ALTER FUNCTION, and that \df displays the EXECUTE ON correctly
+\df+ test_srf
+                                                                             List of functions
+ Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
+                                                                                                                                      : begin                  
+                                                                                                                                      :   return next 'foo';   
+                                                                                                                                      : end;                   
+                                                                                                                                      :                        
+(1 row)
+
+alter function test_srf() EXECUTE ON MASTER;
+\df+ test_srf
+                                                                             List of functions
+ Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | normal | no sql      | master     | immutable  | srftestuser | plpgsql  |                      | 
+                                                                                                                                      : begin                  
+                                                                                                                                      :   return next 'foo';   
+                                                                                                                                      : end;                   
+                                                                                                                                      :                        
+(1 row)
+
+alter function test_srf() EXECUTE ON ALL SEGMENTS;
+\df+ test_srf
+                                                                              List of functions
+ Schema |   Name   | Result data type | Argument data types |  Type  | Data access |  Execute on  | Volatility |    Owner    | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+--------+-------------+--------------+------------+-------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | normal | no sql      | all segments | immutable  | srftestuser | plpgsql  |                      | 
+                                                                                                                                        : begin                  
+                                                                                                                                        :   return next 'foo';   
+                                                                                                                                        : end;                   
+                                                                                                                                        :                        
+(1 row)
+
+alter function test_srf() EXECUTE ON ANY;
+\df+ test_srf
+                                                                             List of functions
+ Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
+                                                                                                                                      : begin                  
+                                                                                                                                      :   return next 'foo';   
+                                                                                                                                      : end;                   
+                                                                                                                                      :                        
+(1 row)
+
+DROP FUNCTION test_srf();
+DROP ROLE srftestuser;

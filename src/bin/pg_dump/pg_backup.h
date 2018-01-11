@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.45 2007/01/25 03:30:43 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.52 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -60,6 +60,14 @@ typedef enum _archiveMode
 	archModeRead
 } ArchiveMode;
 
+typedef enum _teSection
+{
+	SECTION_NONE = 1,			/* COMMENTs, ACLs, etc; can be anywhere */
+	SECTION_PRE_DATA,			/* stuff to be processed before data */
+	SECTION_DATA,				/* TABLE DATA, BLOBS, BLOB COMMENTS */
+	SECTION_POST_DATA			/* stuff to be processed after data */
+} teSection;
+
 /*
  *	We may want to have some more user-readable data, but in the mean
  *	time this gives us some abstraction and type checking.
@@ -90,11 +98,13 @@ typedef struct _restoreOptions
 {
 	int			createDB;		/* Issue commands to create the database */
 	int			noOwner;		/* Don't try to match original object owner */
+	int			noTablespace;	/* Don't issue tablespace-related commands */
 	int			disable_triggers;		/* disable triggers during data-only
 										 * restore */
 	int			use_setsessauth;/* Use SET SESSION AUTHORIZATION commands
 								 * instead of OWNER TO */
 	char	   *superuser;		/* Username to use as superuser */
+	char	   *use_role;		/* Issue SET ROLE to this */
 	int			dataOnly;
 	int			postdataSchemaRestore;
 	int			dropSchema;
@@ -130,6 +140,7 @@ typedef struct _restoreOptions
 	int			suppressDumpWarnings;	/* Suppress output of WARNING entries
 										 * to stderr */
 	bool		single_txn;
+	int			number_of_jobs;
 
 	bool	   *idWanted;		/* array showing which dump IDs to emit */
 } RestoreOptions;
@@ -159,8 +170,8 @@ extern void ArchiveEntry(Archive *AHX,
 			 const char *tag,
 			 const char *namespace, const char *tablespace,
 			 const char *owner, bool withOids,
-			 const char *desc, 
-             const char *defn,
+			 const char *desc, teSection section,
+			 const char *defn,
 			 const char *dropStmt, const char *copyStmt,
 			 const DumpId *deps, int nDeps,
 			 DataDumperPtr dumpFn, void *dumpArg);

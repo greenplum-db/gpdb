@@ -12,6 +12,7 @@ pgbouncer.pid
 # Local binaries
 /pg_regress
 /twophase_pqexecparams
+GPTest.pm
 
 # Generated subdirectories
 /tmp_check/
@@ -22,3 +23,6 @@ data/wet_csv?.tbl
 data/wet_text?.tbl
 data/wet_syntax?.tbl
 data/wet_execute.tbl
+
+stdin
+stdout

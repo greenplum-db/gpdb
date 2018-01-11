@@ -11,7 +11,7 @@ from gppylib.mainUtils import *
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 import os, sys, getopt, socket, StringIO, signal, copy
 
-from gppylib import gparray, gplog, pgconf, userinput, utils
+from gppylib import gparray, gplog, pgconf, userinput, utils, heapchecksum
 from gppylib.util import gp_utils
 from gppylib.commands import base, gp, pg, unix
 from gppylib.db import catalog, dbconn
@@ -23,14 +23,16 @@ from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
 from gppylib.testold.testUtils import *
 from gppylib.parseutils import line_reader, parse_filespace_order, parse_gpaddmirrors_line, \
-        canonicalize_address
+    canonicalize_address
 from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, \
-        writeLinesToFile, readAllLinesFromFile, TableLogger, \
-        PathNormalizationException, normalizeAndValidateInputPath
+    writeLinesToFile, readAllLinesFromFile, TableLogger, \
+    PathNormalizationException, normalizeAndValidateInputPath
 from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.userinput import *
 
 logger = gplog.get_default_logger()
+
+MAX_PARALLEL_ADD_MIRRORS = 96
 
 def validateFlexibleHeadersListAllFilespaces(configFileLabel, gpArray, fileData):
     """
@@ -43,7 +45,7 @@ def validateFlexibleHeadersListAllFilespaces(configFileLabel, gpArray, fileData)
     if not flexibleHeaders:
         return
 
-    filespaceNameToFilespace = dict([ (fs.getName(), fs) for fs in gpArray.getFilespaces(False)])
+    filespaceNameToFilespace = dict([(fs.getName(), fs) for fs in gpArray.getFilespaces(False)])
     specifiedFilespaces = {}
     for fsName in flexibleHeaders:
         if fsName not in filespaceNameToFilespace:
@@ -53,12 +55,12 @@ def validateFlexibleHeadersListAllFilespaces(configFileLabel, gpArray, fileData)
         specifiedFilespaces[fsName] = True
     if len(fileData.getFlexibleHeaders()) != len(filespaceNameToFilespace):
         raise Exception('%s specified only %d of %d filespaces' %
-            (configFileLabel, len(fileData.getFlexibleHeaders()), len(filespaceNameToFilespace)))
+                        (configFileLabel, len(fileData.getFlexibleHeaders()), len(filespaceNameToFilespace)))
 
 
 class GpMirrorBuildCalculator:
     """
-    Create mirror segment (GpDB) objects for an existing array, using different strategies.
+    Create mirror segment (Segment) objects for an existing array, using different strategies.
 
     This class should be used by constructing and then calling either getSpreadMirrors, getGroupMirrors, or call
        addMirror multiple times
@@ -76,9 +78,9 @@ class GpMirrorBuildCalculator:
         def comparePorts(left, right):
             return cmp(left.getSegmentPort(), right.getSegmentPort())
 
-        self.__mirrorsAddedByHost = {} # map hostname to the # of mirrors that have been added to that host
-        self.__primariesUpdatedToHaveMirrorsByHost = {} # map hostname to the # of primaries that have been attached to mirrors for that host
-        self.__primaryPortBaseByHost = {} # map hostname to the lowest port number in-use by a primary on that host
+        self.__mirrorsAddedByHost = {}  # map hostname to the # of mirrors that have been added to that host
+        self.__primariesUpdatedToHaveMirrorsByHost = {}  # map hostname to the # of primaries that have been attached to mirrors for that host
+        self.__primaryPortBaseByHost = {}  # map hostname to the lowest port number in-use by a primary on that host
         for hostName, segments in self.__primariesByHost.iteritems():
             self.__primaryPortBaseByHost[hostName] = min([seg.getSegmentPort() for seg in segments])
             self.__mirrorsAddedByHost[hostName] = 0
@@ -91,48 +93,48 @@ class GpMirrorBuildCalculator:
 
         standard, message = self.__gpArray.isStandardArray()
         if standard == False:
-           logger.warn('The current system appears to be non-standard.')
-           logger.warn(message)
-           logger.warn('gpaddmirrors will not be able to symmetrically distribute the new mirrors.')
-           logger.warn('It is recommended that you specify your own input file with appropriate values.')
-           if not ask_yesno('', "Are you sure you want to continue with this gpaddmirrors session?",'N'):
-              logger.info("User Aborted. Exiting...")
-              sys.exit(0)
-           self.__isStandard = False
+            logger.warn('The current system appears to be non-standard.')
+            logger.warn(message)
+            logger.warn('gpaddmirrors will not be able to symmetrically distribute the new mirrors.')
+            logger.warn('It is recommended that you specify your own input file with appropriate values.')
+            if not ask_yesno('', "Are you sure you want to continue with this gpaddmirrors session?", 'N'):
+                logger.info("User Aborted. Exiting...")
+                sys.exit(0)
+            self.__isStandard = False
         else:
-           self.__isStandard = True
+            self.__isStandard = True
 
     def addMirror(self, resultOut, primary, targetHost, address, port, mirrorDataDir, replicationPort,
-            primarySegmentReplicationPort, filespaceOidToPathMap):
+                  primarySegmentReplicationPort, filespaceOidToPathMap):
         """
         Add a mirror to the gpArray backing this calculator, also update resultOut and do some other checking
 
         Unlike __addMirrorForTargetHost, this does not require that the segments be added to
                a host that already has a primary
-        
+
         """
         if targetHost not in self.__mirrorsAddedByHost:
             self.__mirrorsAddedByHost[targetHost] = 0
             self.__primaryPortBaseByHost[targetHost] = self.__minPrimaryPortOverall
             self.__primariesUpdatedToHaveMirrorsByHost[targetHost] = 0
-            
+
         mirrorIndexOnTargetHost = self.__mirrorsAddedByHost[targetHost]
         assert mirrorIndexOnTargetHost is not None
 
-        mirror = gparray.GpDB(
-                content = primary.getSegmentContentId(),
-                preferred_role = gparray.ROLE_MIRROR,
-                dbid = self.__nextDbId,
-                role = gparray.ROLE_MIRROR,
-                mode = gparray.MODE_RESYNCHRONIZATION,
-                status = gparray.STATUS_UP,
-                hostname = targetHost,
-                address = address,
-                port = port,
-                datadir = mirrorDataDir,
-                replicationPort = replicationPort)
+        mirror = gparray.Segment(
+            content=primary.getSegmentContentId(),
+            preferred_role=gparray.ROLE_MIRROR,
+            dbid=self.__nextDbId,
+            role=gparray.ROLE_MIRROR,
+            mode=gparray.MODE_RESYNCHRONIZATION,
+            status=gparray.STATUS_UP,
+            hostname=targetHost,
+            address=address,
+            port=port,
+            datadir=mirrorDataDir,
+            replicationPort=replicationPort)
         for fsOid, fsPath in filespaceOidToPathMap.iteritems():
-            mirror.addSegmentFilespace( fsOid, fsPath )
+            mirror.addSegmentFilespace(fsOid, fsPath)
 
         self.__gpArray.addSegmentDb(mirror)
 
@@ -145,7 +147,7 @@ class GpMirrorBuildCalculator:
         self.__mirrorsAddedByHost[targetHost] = mirrorIndexOnTargetHost + 1
         self.__nextDbId += 1
 
-    def __addMirrorForTargetHost(self, resultOut, primary, targetHost ):
+    def __addMirrorForTargetHost(self, resultOut, primary, targetHost):
         """
         Add a new mirror for the given primary to the targetHost.
 
@@ -167,7 +169,7 @@ class GpMirrorBuildCalculator:
         for thePrimary in primariesOnPrimaryHost:
             address = thePrimary.getSegmentAddress()
             if address in primaryHostAddressList:
-               continue
+                continue
             primaryHostAddressList.append(address)
         primaryHostAddressList.sort()
 
@@ -193,7 +195,7 @@ class GpMirrorBuildCalculator:
         primarySegmentReplicationPort = primaryHostBasePort + self.__mirrorPortOffset * 3
 
         if mirrorIndexOnTargetHost >= len(self.__mirrorDataDirs):
-            raise Exception("More mirrors targeted to host %s than there are mirror data directories" % targetHost )
+            raise Exception("More mirrors targeted to host %s than there are mirror data directories" % targetHost)
 
         mirrorDataDir = self.__mirrorDataDirs[mirrorIndexOnTargetHost]
         filespaceOidToPathMap = self.__mirrorFilespaceOidToPathMaps[mirrorIndexOnTargetHost]
@@ -216,7 +218,7 @@ class GpMirrorBuildCalculator:
             for thePrimary in primariesOnPrimaryHost:
                 address = thePrimary.getSegmentAddress()
                 if address in primaryHostAddressList:
-                   continue
+                    continue
                 primaryHostAddressList.append(address)
             primaryHostAddressList.sort()
 
@@ -224,7 +226,7 @@ class GpMirrorBuildCalculator:
             for thePrimary in primariesOnTargetHost:
                 address = thePrimary.getSegmentAddress()
                 if address in mirrorHostAddressList:
-                   continue
+                    continue
                 mirrorHostAddressList.append(address)
             mirrorHostAddressList.sort()
 
@@ -232,13 +234,13 @@ class GpMirrorBuildCalculator:
             index = 0
             for address in primaryHostAddressList:
                 if address == primaryAddress:
-                   break
+                    break
                 index = index + 1
             index = (index + 1) % len(primaryHostAddressList)
             address = mirrorHostAddressList[index]
 
-        self.addMirror( resultOut, primary, targetHost, address, port, mirrorDataDir, replicationPort,
-                primarySegmentReplicationPort, filespaceOidToPathMap)
+        self.addMirror(resultOut, primary, targetHost, address, port, mirrorDataDir, replicationPort,
+                       primarySegmentReplicationPort, filespaceOidToPathMap)
 
     def getGroupMirrors(self):
         """
@@ -256,7 +258,7 @@ class GpMirrorBuildCalculator:
 
             # for the primary host, build mirrors on the target host
             for i in range(len(primariesThisHost)):
-                self.__addMirrorForTargetHost( result, primariesThisHost[i], targetHost)
+                self.__addMirrorForTargetHost(result, primariesThisHost[i], targetHost)
 
         return result
 
@@ -273,7 +275,7 @@ class GpMirrorBuildCalculator:
         for hostIndex, primaryHostName in enumerate(hosts):
             primariesThisHost = self.__primariesByHost[primaryHostName]
 
-            hostOffset = 1 # hostOffset is used to put mirrors on primary+1,primary+2,primary+3,...
+            hostOffset = 1  # hostOffset is used to put mirrors on primary+1,primary+2,primary+3,...
             for i in range(len(primariesThisHost)):
                 targetHostIndex = (hostIndex + hostOffset) % len(hosts)
                 if targetHostIndex == hostIndex:
@@ -281,16 +283,18 @@ class GpMirrorBuildCalculator:
                     targetHostIndex = (hostIndex + hostOffset) % len(hosts)
                 targetHost = hosts[targetHostIndex]
 
-                self.__addMirrorForTargetHost( result, primariesThisHost[i], targetHost)
+                self.__addMirrorForTargetHost(result, primariesThisHost[i], targetHost)
 
                 hostOffset += 1
         return result
 
+
 class GpAddMirrorsProgram:
     """
     The implementation of gpaddmirrors
-    
+
     """
+
     def __init__(self, options):
         """
         Constructor:
@@ -306,21 +310,21 @@ class GpAddMirrorsProgram:
         # create fileData object from config file
         #
         filename = self.__options.mirrorConfigFile
-        fslist   = None
-        rows     = []
+        fslist = None
+        rows = []
         with open(filename) as f:
             for lineno, line in line_reader(f):
                 if fslist is None:
                     fslist = parse_filespace_order(filename, lineno, line)
                 else:
                     fixed, flexible = parse_gpaddmirrors_line(filename, lineno, line, fslist)
-                    rows.append( ParsedConfigFileRow(fixed, flexible, line) )
+                    rows.append(ParsedConfigFileRow(fixed, flexible, line))
         fileData = ParsedConfigFile(fslist, rows)
 
         # validate fileData
         #
         validateFlexibleHeadersListAllFilespaces("Mirror config", gpArray, fileData)
-        filespaceNameToFilespace = dict([ (fs.getName(), fs) for fs in gpArray.getFilespaces(False)])
+        filespaceNameToFilespace = dict([(fs.getName(), fs) for fs in gpArray.getFilespaces(False)])
 
         allAddresses = [row.getFixedValuesMap()["address"] for row in fileData.getRows()]
         allNoneArr = [None for a in allAddresses]
@@ -335,7 +339,7 @@ class GpAddMirrorsProgram:
 
         # note: passed port offset in this call should not matter
         calc = GpMirrorBuildCalculator(gpArray, self.__options.mirrorOffset, [], [])
-        
+
         for row in fileData.getRows():
             fixedValues = row.getFixedValuesMap()
             flexibleValues = row.getFlexibleValuesMap()
@@ -348,14 +352,14 @@ class GpAddMirrorsProgram:
             port = int(fixedValues['port'])
             replicationPort = int(fixedValues['replicationPort'])
             primarySegmentReplicationPort = int(fixedValues['primarySegmentReplicationPort'])
-            dataDir = normalizeAndValidateInputPath( fixedValues['dataDirectory'], "in config file", row.getLine())
+            dataDir = normalizeAndValidateInputPath(fixedValues['dataDirectory'], "in config file", row.getLine())
             hostName = interfaceLookup.getHostName(address)
             if hostName is None:
                 raise Exception("Segment Host Address %s is unreachable" % address)
-            
+
             filespaceOidToPathMap = {}
             for fsName, path in flexibleValues.iteritems():
-                path = normalizeAndValidateInputPath( path, "in config file", row.getLine())
+                path = normalizeAndValidateInputPath(path, "in config file", row.getLine())
                 filespaceOidToPathMap[filespaceNameToFilespace[fsName].getOid()] = path
 
             primary = segsByContentId[contentId]
@@ -364,11 +368,11 @@ class GpAddMirrorsProgram:
             primary = primary[0]
 
             calc.addMirror(toBuild, primary, hostName, address, port, dataDir, replicationPort, \
-                primarySegmentReplicationPort, filespaceOidToPathMap )
+                           primarySegmentReplicationPort, filespaceOidToPathMap)
 
         if len(toBuild) != len(primaries):
             raise Exception("Wrong number of mirrors specified (specified %s mirror(s) for %s primarie(s))" % \
-                    (len(toBuild), len(primaries)))
+                            (len(toBuild), len(primaries)))
 
         return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.parallelDegree)
 
@@ -384,7 +388,7 @@ class GpAddMirrorsProgram:
         lines.append("filespaceOrder=" + (":".join([fs.getName() for fs in filespaceArr])))
 
         #
-        # now a line for each mirror 
+        # now a line for each mirror
         #
         for i, toBuild in enumerate(mirrorBuilder.getMirrorsToBuild()):
             mirror = toBuild.getFailoverSegment()
@@ -395,15 +399,15 @@ class GpAddMirrorsProgram:
             #
             mirrorFilespaces = mirror.getSegmentFilespaces()
             filespaceValues = []
-            for fs in filespaceArr :
+            for fs in filespaceArr:
                 path = mirrorFilespaces.get(fs.getOid())
-                assert path is not None   # checking consistency should have been done earlier, but doublecheck here
+                assert path is not None  # checking consistency should have been done earlier, but doublecheck here
                 filespaceValues.append(":" + path)
 
             line = 'mirror%d=%d:%s:%d:%d:%d:%s%s' % \
-                    (i, \
+                   (i, \
                     mirror.getSegmentContentId(), \
-                    canonicalize_address( mirror.getSegmentAddress() ), \
+                    canonicalize_address(mirror.getSegmentAddress()), \
                     mirror.getSegmentPort(), \
                     mirror.getSegmentReplicationPort(), \
                     primary.getSegmentReplicationPort(), \
@@ -439,26 +443,26 @@ class GpAddMirrorsProgram:
                 if line.startswith("filespace "):
                     if index < maxPrimariesPerHost:
                         raise Exception('Number of %s directories must equal %d but %d were read from %s' % \
-                            (labelOfPathsBeingRead, maxPrimariesPerHost, index, configFile))
+                                        (labelOfPathsBeingRead, maxPrimariesPerHost, index, configFile))
 
                     fsName = line[len("filespace "):].strip()
                     labelOfPathsBeingRead = fsName
 
                     if fsName not in filespaceNameToOid:
                         raise Exception("Unknown filespace %s specified in input file %s" % \
-                            (fsName, configFile))
+                                        (fsName, configFile))
                     fsOid = filespaceNameToOid[fsName]
 
                     if fsName in enteredFilespaces:
-                        raise Exception( "Filespace %s specified twice in input file %s" % \
-                            (fsName, configFile))
+                        raise Exception("Filespace %s specified twice in input file %s" % \
+                                        (fsName, configFile))
                     enteredFilespaces[fsName] = True
 
                     index = 0
                 else:
                     if index == maxPrimariesPerHost:
                         raise Exception('Number of %s directories must equal %d but more were read from %s' % \
-                            (labelOfPathsBeingRead, maxPrimariesPerHost, configFile))
+                                        (labelOfPathsBeingRead, maxPrimariesPerHost, configFile))
 
                     path = normalizeAndValidateInputPath(line, "config file")
                     if fsOid == gparray.SYSTEM_FILESPACE:
@@ -468,18 +472,18 @@ class GpAddMirrorsProgram:
                     index += 1
             if index < maxPrimariesPerHost:
                 raise Exception('Number of %s directories must equal %d but %d were read from %s' % \
-                    (labelOfPathsBeingRead, maxPrimariesPerHost, index, configFile))
+                                (labelOfPathsBeingRead, maxPrimariesPerHost, index, configFile))
 
             if len(enteredFilespaces) != len(filespaceNameToOid):
                 raise Exception("Only read directories for %d of %d filespaces from %s" % \
-                    (len(enteredFilespaces), len(filespaceNameToOid), configFile))
+                                (len(enteredFilespaces), len(filespaceNameToOid), configFile))
         else:
 
             #
             # get from stdin
             #
             while len(dirs) < maxPrimariesPerHost:
-                print 'Enter mirror segment data directory location %d of %d >' % (len(dirs)+1, maxPrimariesPerHost)
+                print 'Enter mirror segment data directory location %d of %d >' % (len(dirs) + 1, maxPrimariesPerHost)
                 line = sys.stdin.readline().strip()
                 if len(line) > 0:
                     try:
@@ -487,12 +491,11 @@ class GpAddMirrorsProgram:
                     except PathNormalizationException, e:
                         print "\n%s\n" % e
 
-
             for fs in gpArray.getFilespaces(False):
                 index = 0
                 while index < maxPrimariesPerHost:
                     print "Enter mirror filespace '%s' directory location %d of %d >" % \
-                                (fs.getName(), index+1, maxPrimariesPerHost)
+                          (fs.getName(), index + 1, maxPrimariesPerHost)
                     line = sys.stdin.readline().strip()
                     if len(line) > 0:
                         try:
@@ -532,7 +535,7 @@ class GpAddMirrorsProgram:
 
             fsMap = mir.getSegmentFilespaces()
             for oid, path in copy.copy(fsMap).iteritems():
-                fsMap[oid] = utils.createSegmentSpecificPath( path, gpPrefix, mir)
+                fsMap[oid] = utils.createSegmentSpecificPath(path, gpPrefix, mir)
             fsMap[gparray.SYSTEM_FILESPACE] = dataDir
 
         return GpMirrorListToBuild(toBuild, self.__pool, self.__options.quiet, self.__options.parallelDegree)
@@ -552,12 +555,12 @@ class GpAddMirrorsProgram:
         logger.info('---------------------------------------------------------')
         logger.info('Greenplum master data directory          = %s' % gpEnv.getMasterDataDir())
         logger.info('Greenplum master port                    = %d' % gpEnv.getMasterPort())
-        logger.info('Parallel batch limit                     = %d' % self.__options.parallelDegree )
+        logger.info('Parallel batch limit                     = %d' % self.__options.parallelDegree)
 
         total = len(mirrorBuilder.getMirrorsToBuild())
         for i, toRecover in enumerate(mirrorBuilder.getMirrorsToBuild()):
             logger.info('---------------------------------------------------------')
-            logger.info('Mirror %d of %d' % (i+1, total))
+            logger.info('Mirror %d of %d' % (i + 1, total))
             logger.info('---------------------------------------------------------')
 
             tabLog = TableLogger()
@@ -590,10 +593,44 @@ class GpAddMirrorsProgram:
                 'Value of port offset supplied via -p option produces ports outside of the valid range' \
                 'Mirror port base range must be between %d and %d' % (minAllowedPort, maxAllowedPort))
 
+
+    def validate_heap_checksums(self, gpArray):
+        num_workers = min(len(gpArray.get_hostlist()), MAX_PARALLEL_ADD_MIRRORS)
+        heap_checksum_util = heapchecksum.HeapChecksum(gparray=gpArray, num_workers=num_workers, logger=logger)
+        successes, failures = heap_checksum_util.get_segments_checksum_settings()
+        if len(successes) == 0:
+            logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
+            return 1
+
+        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+
+        inconsistent_segment_msgs = []
+        for segment in inconsistent:
+            inconsistent_segment_msgs.append("dbid: %s "
+                                             "checksum set to %s differs from master checksum set to %s" %
+                                             (segment.getSegmentDbId(), segment.heap_checksum,
+                                              master_heap_checksum))
+
+        if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
+            logger.fatal("Cluster heap checksum setting differences reported")
+            logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+                              % (len(inconsistent_segment_msgs), len(gpArray.segmentPairs)))
+            logger.fatal("Review %s for details" % get_logfile())
+            log_to_file_only("Failed checksum consistency validation:", logging.WARN)
+            logger.fatal("gpaddmirrors error: Cluster will not be modified as checksum settings are not consistent "
+                              "across the cluster.")
+
+            for msg in inconsistent_segment_msgs:
+                log_to_file_only(msg, logging.WARN)
+                raise Exception("Segments have heap_checksum set inconsistently to master")
+        else:
+            logger.info("Heap checksum setting consistent across cluster")
+
+
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
             raise ProgramArgumentValidationException(
-                    "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
+                "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
         self.__pool = base.WorkerPool(self.__options.parallelDegree)
         gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
@@ -602,43 +639,45 @@ class GpAddMirrorsProgram:
         confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
 
+        # check that heap_checksums is consistent across cluster, fail immediately if not
+        self.validate_heap_checksums(gpArray)
+
         # check that we actually have mirrors
-        if gpArray.getFaultStrategy() != gparray.FAULT_STRATEGY_NONE:
+        if gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded( \
-                    "GPDB physical mirroring cannot be added.  The cluster is already configured with %s." % \
-                    gparray.getFaultStrategyLabel(gpArray.getFaultStrategy()))
+                "GPDB physical mirroring cannot be added.  The cluster is already configured with Mirrors.")
 
         # figure out what needs to be done
-        mirrorBuilder = self.__getMirrorsToBuildBasedOnOptions(gpEnv, gpArray )
+        mirrorBuilder = self.__getMirrorsToBuildBasedOnOptions(gpEnv, gpArray)
         mirrorBuilder.checkForPortAndDirectoryConflicts(gpArray)
 
         if self.__options.outputSampleConfigFile is not None:
-          # just output config file and done
+            # just output config file and done
             self.__outputToFile(mirrorBuilder, self.__options.outputSampleConfigFile, gpArray)
             logger.info('Configuration file output to %s successfully.' % self.__options.outputSampleConfigFile)
         else:
-            self.__displayAddMirrors(gpEnv, mirrorBuilder, gpArray )
+            self.__displayAddMirrors(gpEnv, mirrorBuilder, gpArray)
             if self.__options.interactive:
                 if not userinput.ask_yesno(None, "\nContinue with add mirrors procedure", 'N'):
                     raise UserAbortedException()
 
-            gpArray.setFaultStrategy(gparray.FAULT_STRATEGY_FILE_REPLICATION)
-            mirrorBuilder.buildMirrors("add", gpEnv, gpArray )
+            if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
+                return 1
 
             logger.info("******************************************************************")
             logger.info("Mirror segments have been added; data synchronization is in progress.")
             logger.info("Data synchronization will continue in the background.")
-            logger.info("")
             logger.info("Use  gpstate -s  to check the resynchronization progress.")
             logger.info("******************************************************************")
-                
-        return 0 # success -- exit code 0!
+
+        return 0  # success -- exit code 0!
 
     def cleanup(self):
         if self.__pool:
             self.__pool.haltWork()
 
-        #-------------------------------------------------------------------------
+            # -------------------------------------------------------------------------
+
     @staticmethod
     def createParser():
 
@@ -667,22 +706,22 @@ class GpAddMirrorsProgram:
                          dest="outputSampleConfigFile",
                          metavar="<configFile>", type="string",
                          help="Sample configuration file name to output; "
-                         "this file can be passed to a subsequent call using -i option")
-        
+                              "this file can be passed to a subsequent call using -i option")
+
         addTo.add_option("-m", None, type="string",
                          dest="mirrorDataDirConfigFile",
                          metavar="<dataDirConfigFile>",
                          help="Mirroring data directory configuration file")
 
         addTo.add_option('-s', default=False, action='store_true',
-                         dest="spreadMirroring" ,
+                         dest="spreadMirroring",
                          help="use spread mirroring for placing mirrors on hosts")
 
         addTo.add_option("-p", None, type="int", default=1000,
                          dest="mirrorOffset",
                          metavar="<mirrorOffset>",
                          help="Mirror port offset.  The mirror port offset will be used multiple times "
-                         "to derive three sets of ports [default: %default]")
+                              "to derive three sets of ports [default: %default]")
 
         addTo.add_option("-B", None, type="int", default=16,
                          dest="parallelDegree",
@@ -694,8 +733,6 @@ class GpAddMirrorsProgram:
 
     @staticmethod
     def createProgram(options, args):
-        if len(args) > 0 :
+        if len(args) > 0:
             raise ProgramArgumentValidationException("too many arguments: only options may be specified", True)
         return GpAddMirrorsProgram(options)
-
-

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic24">
+   <title>HDFS Readable and Writable External Table Examples</title>
+   <body>
+      <p>The following code defines a readable external table for an HDFS file named
+            <codeph>filename.txt</codeph> on port 8081.</p>
+      <p>
+         <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( 
+        name text, 
+        date date, 
+        amount float4, 
+        category text, 
+        desc1 text ) 
+   LOCATION ('gphdfs://hdfshost-1:8081/data/filename.txt') 
+   FORMAT 'TEXT' (DELIMITER ',');
+</codeblock>
+      </p>
+      <p>The following code defines a set of readable external tables that have a custom format
+         located in the same HDFS directory on port 8081.</p>
+      <p>
+         <codeblock>=# CREATE EXTERNAL TABLE ext_expenses 
+   LOCATION ('gphdfs://hdfshost-1:8081/data/custdat*.dat') 
+   FORMAT 'custom' (formatter='gphdfs_import');
+</codeblock>
+      </p>
+      <p>The following code defines an HDFS directory for a writable external table on port 8081
+         with all compression options specified.</p>
+      <p>
+         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses 
+   LOCATION ('gphdfs://hdfshost-1:8081/data/?compress=true&amp;compression_type=RECORD
+   &amp;codec=org.apache.hadoop.io.compress.DefaultCodec') 
+   FORMAT 'custom' (formatter='gphdfs_export');
+</codeblock>
+      </p>
+      <p>Because the previous code uses the default compression options for
+            <codeph>compression_type</codeph> and <codeph>codec</codeph>, the following command is
+         equivalent.</p>
+      <p>
+         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE ext_expenses 
+   LOCATION    ('gphdfs://hdfshost-1:8081/data?compress=true')
+   FORMAT 'custom' (formatter='gphdfs_export');
+</codeblock>
+      </p>
+   </body>
+</topic>

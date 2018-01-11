@@ -30,11 +30,11 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/combocid.c,v 1.6 2009/01/01 17:23:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -190,7 +190,7 @@ HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
 	if (!(tup->t_infomask & HEAP_XMIN_COMMITTED) &&
 		TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(tup)))
 	{
-		CommandId	cmin = HeapTupleHeaderGetRawCommandId(tup);
+		CommandId	cmin = HeapTupleHeaderGetCmin(tup);
 
 		*cmax = GetComboCommandId(HeapTupleHeaderGetXmin(tup), cmin, *cmax);
 		*iscombo = true;

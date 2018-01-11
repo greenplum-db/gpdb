@@ -11,11 +11,15 @@ gpstop [-d <master_data_directory>] [-B <parallel_processes>]
        [-M smart | fast | immediate] [-t <timeout_seconds>]
        [-r] [-y] [-a] [-l <logfile_directory>] [-v | -q]
 
-gpstop -m [-d <master_data_directory>] [-y] [-l <logfile_directory>] 
+gpstop -m [-d <master_data_directory>] [-y] [-l <logfile_directory>]
        [-v | -q]
 
 gpstop -u [-d <master_data_directory>] [-l <logfile_directory>] 
-          [-v | -q] 
+       [-v | -q]
+
+gpstop --host <segment_host_name> [-d <master_data_directory>]
+       [-l <logfile_directory>] [-t <timeout_seconds>] [-a]
+       [-v | -q]
 
 gpstop --version
 
@@ -67,6 +71,21 @@ OPTIONS
 
  Optional. The master host data directory. If not specified, 
  the value set for $MASTER_DATA_DIRECTORY will be used.
+
+
+--host <segment_host_name>
+
+ Stop all segments on this host. Specify segment_host_name as
+ it is displayed in gp_segment_configuration.
+
+ This cannot be used together with `-m`, `-r`, `-u`, or
+ `-y` options.
+
+ This will only complete if failover segments are available.
+ This will fail if the system doesn't have mirrors. It will also
+ fail if the specified host has a master or standby master on
+ it. It will also fail if the specified host has both a primary
+ and its corresponding mirror on it, the same host.
 
 
 -l <logfile_directory>
@@ -167,6 +186,7 @@ Stop a Greenplum Database system in smart mode:
 
   gpstop
 
+
 Stop a Greenplum Database system in fast mode:
 
   gpstop -M fast
@@ -180,6 +200,12 @@ Stop all segment instances and then restart the system:
 Stop a master instance that was started in maintenance mode:
 
   gpstop -m
+
+
+Stop all segments on a particular host, while keeping
+other hosts up:
+
+  gpstop --host sdw1
 
 
 Reload the postgresql.conf and pg_hba.conf files after 

@@ -24,19 +24,19 @@ FOR EACH ROW EXECUTE PROCEDURE fn_x_after();
 CREATE TRIGGER trg_x_before BEFORE INSERT ON x
 FOR EACH ROW EXECUTE PROCEDURE fn_x_before();
 COPY x (a, b, c, d, e) from stdin;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (b, d) from stdin;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (b, d) from stdin;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (a, b, c, d, e) from stdin;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 -- non-existent column in column list: should fail
@@ -61,15 +61,15 @@ ERROR:  extra data after last expected column
 CONTEXT:  COPY x, line 1: "2002	232	40	50	60	70	80"
 -- various COPY options: delimiters, oids, NULL string
 COPY x (b, c, d, e) from stdin with oids delimiter ',' null 'x';
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x from stdin WITH DELIMITER AS ';' NULL AS '';
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x from stdin WITH DELIMITER AS ':' NULL AS E'\\X';
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 -- check results of copy in

@@ -5,8 +5,11 @@
  *
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
- * Portions Copyright (c) 2016, Pivotal Software Inc
+ * Portions Copyright (c) 2016-Present Pivotal Software, Inc.
  *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/complex_type.h
  *
  * NOTE
  *	  These routines do *not* use the float types from adt/.

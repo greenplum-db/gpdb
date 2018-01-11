@@ -83,7 +83,7 @@ def MPP_12038_fault_injection():
 #
 
 class GpMirrorToBuild:
-    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization):
+    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, logger=logger):
         checkNotNone("liveSegment", liveSegment)
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
@@ -172,12 +172,16 @@ class GpMirrorToBuild:
 
 
 class GpMirrorListToBuild:
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
         self.__parallelDegree = parallelDegree
         self.__additionalWarnings = additionalWarnings or []
+        if not logger:
+            raise Exception('logger argument cannot be None')
+
+        self.__logger = logger
 
     def getMirrorsToBuild(self):
         """
@@ -207,7 +211,7 @@ class GpMirrorListToBuild:
                                        seg.getSegmentContentId() == target_segment.getSegmentContentId() and
                                        seg.getSegmentDbId() != target_segment.getSegmentDbId()]
 
-        logger.info('Starting file move procedure for %s' % target_segment)
+        self.__logger.info('Starting file move procedure for %s' % target_segment)
 
         if os.path.exists(os.path.join(default_filespace_dir, GP_TRANSACTION_FILES_FILESPACE)):
             # On the expansion segments, the current filespace used by existing nodes will be the
@@ -215,25 +219,25 @@ class GpMirrorListToBuild:
             # The filespace directories which have to be moved will be the default pg_system directories.
             new_filespace_entries = GetFilespaceEntriesDict(
                 GetCurrentFilespaceEntries(gparray, FileType.TRANSACTION_FILES).run()).run()
-            logger.info('getting filespace information')
+            self.__logger.info('getting filespace information')
             new_filespace_name = gparray.getFileSpaceName(int(new_filespace_entries[1][0]))
-            logger.info('getting move operations list for filespace %s' % new_filespace_name)
+            self.__logger.info('getting move operations list for filespace %s' % new_filespace_name)
             operation_list = GetMoveOperationList(segments,
                                                   FileType.TRANSACTION_FILES,
                                                   new_filespace_name,
                                                   new_filespace_entries,
                                                   cur_filespace_entries,
                                                   pg_system_filespace_entries).run()
-            logger.info('Starting transaction files move')
+            self.__logger.info('Starting transaction files move')
             ParallelOperation(operation_list).run()
 
-            logger.debug('Checking transaction files move')
+            self.__logger.debug('Checking transaction files move')
             try:
                 for operation in operation_list:
                     operation.get_ret()
                     pass
             except Exception, e:
-                logger.info('Failed to move transaction filespace. Rolling back changes ...')
+                self.__logger.info('Failed to move transaction filespace. Rolling back changes ...')
                 RollBackFilespaceChanges(gparray.getExpansionSegDbList(),
                                          FileType.TRANSACTION_FILES,
                                          cur_filespace_name,
@@ -252,16 +256,16 @@ class GpMirrorListToBuild:
                                                   new_filespace_entries,
                                                   cur_filespace_entries,
                                                   pg_system_filespace_entries).run()
-            logger.info('Starting temporary files move')
+            self.__logger.info('Starting temporary files move')
             ParallelOperation(operation_list).run()
 
-            logger.debug('Checking temporary files move')
+            self.__logger.debug('Checking temporary files move')
             try:
                 for operation in operation_list:
                     operation.get_ret()
                     pass
             except Exception, e:
-                logger.info('Failed to move temporary filespace. Rolling back changes ...')
+                self.__logger.info('Failed to move temporary filespace. Rolling back changes ...')
                 RollBackFilespaceChanges(gparray.getExpansionDbList(),
                                          FileType.TRANSACTION_FILES,
                                          cur_filespace_name,
@@ -281,12 +285,12 @@ class GpMirrorListToBuild:
         testOutput("building %s segment(s)" % len(self.__mirrorsToBuild))
 
         if len(self.__mirrorsToBuild) == 0:
-            logger.info("No segments to " + actionName)
-            return
+            self.__logger.info("No segments to " + actionName)
+            return True
 
         self.checkForPortAndDirectoryConflicts(gpArray)
 
-        logger.info("%s segment(s) to %s" % (len(self.__mirrorsToBuild), actionName))
+        self.__logger.info("%s segment(s) to %s" % (len(self.__mirrorsToBuild), actionName))
 
         self.__verifyGpArrayContents(gpArray)
 
@@ -347,14 +351,14 @@ class GpMirrorListToBuild:
             try:
                 UpdateFlatFiles(gpArray, primaries=True).run()
             except MoveFilespaceError, e:
-                logger.error(str(e))
+                self.__logger.error(str(e))
                 raise
         else:
             try:
                 print 'updating flat files'
                 UpdateFlatFiles(gpArray, primaries=False).run()
             except MoveFilespaceError, e:
-                logger.error(str(e))
+                self.__logger.error(str(e))
                 raise
 
         # update and save metadata in memory
@@ -403,7 +407,7 @@ class GpMirrorListToBuild:
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
-            logger.info("Updating configuration with new mirrors")
+            self.__logger.info("Updating configuration with new mirrors")
             configInterface.getConfigurationProvider().updateSystemConfig(
                 gpArray,
                 "%s: segment config for resync" % programName,
@@ -414,13 +418,13 @@ class GpMirrorListToBuild:
 
             MPP_12038_fault_injection()
 
-            logger.info("Updating mirrors")
+            self.__logger.info("Updating mirrors")
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
 
-            logger.info("Starting mirrors")
-            self.__startAll(gpEnv, gpArray, mirrorsToStart)
+            self.__logger.info("Starting mirrors")
+            start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
 
-            logger.info("Updating configuration to mark mirrors up")
+            self.__logger.info("Updating configuration to mark mirrors up")
             for seg in mirrorsToStart:
                 seg.setSegmentStatus(gparray.STATUS_UP)
             for seg in primariesToConvert:
@@ -439,13 +443,15 @@ class GpMirrorListToBuild:
             # note: converting the primaries may take a really long time to complete because of initializing
             #       resynchronization
             #
-            logger.info("Updating primaries")
+            self.__logger.info("Updating primaries")
             self.__convertAllPrimaries(gpEnv, gpArray, primariesToConvert, convertPrimaryUsingFullResync)
 
-            logger.info("Done updating primaries")
+            self.__logger.info("Done updating primaries")
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
+        return start_all_successful
 
     def __verifyGpArrayContents(self, gpArray):
         """
@@ -586,7 +592,7 @@ class GpMirrorListToBuild:
         destSegmentByHost = GpArray.getSegmentsByHostName(destSegments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(destSegments, isTargetReusedLocation)
 
-        logger.info('Building template directory')
+        self.__logger.info('Building template directory')
         (tempDir, blankTarFile, tarFileName) = self.__buildTarFileForTransfer(gpEnv, gpArray.master, srcSegments[0],
                                                                               destSegments)
 
@@ -606,7 +612,7 @@ class GpMirrorListToBuild:
         #
         # validate directories for target segments
         #
-        logger.info('Validating remote directories')
+        self.__logger.info('Validating remote directories')
         cmds = []
         for hostName in destSegmentByHost.keys():
             cmds.append(createConfigureNewSegmentCommand(hostName, 'validate blank segments', True))
@@ -632,7 +638,7 @@ class GpMirrorListToBuild:
         #
         # copy tar from master to target hosts
         #
-        logger.info('Copying template directory file')
+        self.__logger.info('Copying template directory file')
         cmds = []
         for hostName in destSegmentByHost.keys():
             cmds.append(gp.RemoteCopy("copy segment tar", blankTarFile, hostName, tarFileName))
@@ -642,7 +648,7 @@ class GpMirrorListToBuild:
         #
         # unpack and configure new segments
         #
-        logger.info('Configuring new segments')
+        self.__logger.info('Configuring new segments')
         cmds = []
         for hostName in destSegmentByHost.keys():
             cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
@@ -671,16 +677,16 @@ class GpMirrorListToBuild:
         #
         # Clean up copied tar from each remote host
         #
-        logger.info('Cleaning files')
+        self.__logger.info('Cleaning files')
         cmds = []
         for hostName, segments in destSegmentByHost.iteritems():
-            cmds.append(unix.RemoveFiles('remove tar file', tarFileName, ctxt=gp.REMOTE, remoteHost=hostName))
+            cmds.append(unix.RemoveFile('remove tar file', tarFileName, ctxt=gp.REMOTE, remoteHost=hostName))
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "cleaning up tar file on segment hosts")
 
         #
         # clean up the local temp directory
         #
-        unix.RemoveFiles.local('remove temp directory', tempDir)
+        unix.RemoveDirectory.local('remove temp directory', tempDir)
 
     def _get_running_postgres_segments(self, segments):
         running_segments = []
@@ -692,13 +698,13 @@ class GpMirrorListToBuild:
                     if is_pid_postmaster(datadir, pid, seg.getSegmentHostName()):
                         running_segments.append(seg)
                     else:
-                        logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (
+                        self.__logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (
                         seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
                 else:
-                    logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (
+                    self.__logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (
                     seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
             else:
-                logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (
+                self.__logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (
                 seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
 
         return running_segments
@@ -709,7 +715,7 @@ class GpMirrorListToBuild:
         cmd.run()
         results = cmd.get_results()
         if results.rc != 0:
-            logger.warning('Unable to determine if %s is symlink. Assuming it is not symlink' % (datadir))
+            self.__logger.warning('Unable to determine if %s is symlink. Assuming it is not symlink' % (datadir))
             return datadir
         return results.stdout.strip()
 
@@ -723,7 +729,7 @@ class GpMirrorListToBuild:
         if len(directives) == 0:
             return
 
-        logger.info('Ensuring that shared memory is cleaned up for stopped segments')
+        self.__logger.info('Ensuring that shared memory is cleaned up for stopped segments')
         segments = [d.getSegment() for d in directives]
         segmentsByHost = GpArray.getSegmentsByHostName(segments)
         operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in
@@ -734,7 +740,7 @@ class GpMirrorListToBuild:
             try:
                 operation.get_ret()
             except Exception as e:
-                logger.warning('Unable to clean up shared memory for stopped segments on host (%s)' % operation.host)
+                self.__logger.warning('Unable to clean up shared memory for stopped segments on host (%s)' % operation.host)
 
     def __ensureStopped(self, gpEnv, directives):
         """
@@ -745,7 +751,7 @@ class GpMirrorListToBuild:
         if len(directives) == 0:
             return
 
-        logger.info("Ensuring %d failed segment(s) are stopped" % (len(directives)))
+        self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(directives)))
         segments = [d.getSegment() for d in directives]
         segments = self._get_running_postgres_segments(segments)
         segmentByHost = GpArray.getSegmentsByHostName(segments)
@@ -788,8 +794,8 @@ class GpMirrorListToBuild:
             # Nothing to wait on
             return
 
-        logger.info("Waiting for segments to be marked down.")
-        logger.info("This may take up to %d seconds on large clusters." % wait_time)
+        self.__logger.info("Waiting for segments to be marked down.")
+        self.__logger.info("This may take up to %d seconds on large clusters." % wait_time)
 
         # wait for all needed segments to be marked down by the prober.  We'll wait
         # a max time of double the interval 
@@ -807,7 +813,7 @@ class GpMirrorListToBuild:
             else:
                 if last_seg_up_count != seg_up_count:
                     print "\n",
-                    logger.info("%d of %d segments have been marked down." %
+                    self.__logger.info("%d of %d segments have been marked down." %
                                 (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count
 
@@ -820,7 +826,7 @@ class GpMirrorListToBuild:
 
         if seg_up_count == 0:
             print "\n",
-            logger.info("%d of %d segments have been marked down." %
+            self.__logger.info("%d of %d segments have been marked down." %
                         (initial_seg_up_count, initial_seg_up_count))
         else:
             raise Exception("%d segments were not marked down by FTS" % seg_up_count)
@@ -829,7 +835,7 @@ class GpMirrorListToBuild:
         if len(directives) == 0:
             return
 
-        logger.info("Cleaning files from %d segment(s)" % (len(directives)))
+        self.__logger.info("Cleaning files from %d segment(s)" % (len(directives)))
         segments = [d.getSegment() for d in directives]
         segmentByHost = GpArray.getSegmentsByHostName(segments)
 
@@ -842,7 +848,7 @@ class GpMirrorListToBuild:
 
     def __createStartSegmentsOp(self, gpEnv):
         return startSegments.StartSegmentsOperation(self.__pool, self.__quiet,
-                                                    gpEnv.getLocaleData(), gpEnv.getGpVersion(),
+                                                    gpEnv.getGpVersion(),
                                                     gpEnv.getGpHome(), gpEnv.getMasterDataDir()
                                                     )
 
@@ -870,19 +876,20 @@ class GpMirrorListToBuild:
     def __startAll(self, gpEnv, gpArray, segments):
 
         # the newly started segments should belong to the current era
-        era = read_era(gpEnv.getMasterDataDir(), logger=gplog.get_logger_if_verbose())
+        era = read_era(gpEnv.getMasterDataDir(), logger=self.__logger)
 
         segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments,
                                                                                startSegments.START_AS_PRIMARY_OR_MIRROR,
                                                                                era)
-
+        start_all_successfull = len(segmentStartResult.getFailedSegmentObjs()) == 0
         for failure in segmentStartResult.getFailedSegmentObjs():
             failedSeg = failure.getSegment()
             failureReason = failure.getReason()
-            logger.warn(
+            self.__logger.warn(
                 "Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (
                 failedSeg, failureReason))
-        pass
+
+        return start_all_successfull
 
     def __convertAllPrimaries(self, gpEnv, gpArray, segments, convertUsingFullResync):
         segmentStartResult = self.__createStartSegmentsOp(gpEnv).transitionSegments(gpArray, segments,
@@ -891,7 +898,7 @@ class GpMirrorListToBuild:
         for failure in segmentStartResult.getFailedSegmentObjs():
             failedSeg = failure.getSegment()
             failureReason = failure.getReason()
-            logger.warn("Failed to inform primary segment of updated mirroring state.  Segment: %s: REASON: %s" % (
+            self.__logger.warn("Failed to inform primary segment of updated mirroring state.  Segment: %s: REASON: %s" % (
             failedSeg, failureReason))
 
 

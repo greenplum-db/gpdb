@@ -5,31 +5,38 @@
  *
  * Access-method specific inspection functions are in separate files.
  *
- * Copyright (c) 2007-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/pageinspect/rawpage.c,v 1.4.2.1 2009/03/31 22:54:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/contrib/pageinspect/rawpage.c,v 1.13 2009/06/11 14:48:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "fmgr.h"
-#include "funcapi.h"
 #include "access/heapam.h"
 #include "access/transam.h"
+#include "catalog/catalog.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
-#include "utils/builtins.h"
+#include "fmgr.h"
+#include "funcapi.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
+#include "utils/builtins.h"
 
 #include "cdb/cdbfilerepprimary.h"
 
 PG_MODULE_MAGIC;
 
 Datum		get_raw_page(PG_FUNCTION_ARGS);
+Datum		get_raw_page_fork(PG_FUNCTION_ARGS);
 Datum		page_header(PG_FUNCTION_ARGS);
+
+static bytea *get_raw_page_internal(text *relname, ForkNumber forknum,
+					  BlockNumber blkno);
+
 
 /*
  * get_raw_page
@@ -43,10 +50,55 @@ get_raw_page(PG_FUNCTION_ARGS)
 {
 	text	   *relname = PG_GETARG_TEXT_P(0);
 	uint32		blkno = PG_GETARG_UINT32(1);
-
-	Relation	rel;
-	RangeVar   *relrv;
 	bytea	   *raw_page;
+
+	/*
+	 * We don't normally bother to check the number of arguments to a C
+	 * function, but here it's needed for safety because early 8.4 beta
+	 * releases mistakenly redefined get_raw_page() as taking three arguments.
+	 */
+	if (PG_NARGS() != 2)
+		ereport(ERROR,
+				(errmsg("wrong number of arguments to get_raw_page()"),
+				 errhint("Run the updated pageinspect.sql script.")));
+
+	raw_page = get_raw_page_internal(relname, MAIN_FORKNUM, blkno);
+
+	PG_RETURN_BYTEA_P(raw_page);
+}
+
+/*
+ * get_raw_page_fork
+ *
+ * Same, for any fork
+ */
+PG_FUNCTION_INFO_V1(get_raw_page_fork);
+
+Datum
+get_raw_page_fork(PG_FUNCTION_ARGS)
+{
+	text	   *relname = PG_GETARG_TEXT_P(0);
+	text	   *forkname = PG_GETARG_TEXT_P(1);
+	uint32		blkno = PG_GETARG_UINT32(2);
+	bytea	   *raw_page;
+	ForkNumber	forknum;
+
+	forknum = forkname_to_number(text_to_cstring(forkname));
+
+	raw_page = get_raw_page_internal(relname, forknum, blkno);
+
+	PG_RETURN_BYTEA_P(raw_page);
+}
+
+/*
+ * workhorse
+ */
+static bytea *
+get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
+{
+	bytea	   *raw_page;
+	RangeVar   *relrv;
+	Relation	rel;
 	char	   *raw_page_data;
 	Buffer		buf;
 	MIRROREDLOCK_BUFMGR_DECLARE;
@@ -72,11 +124,11 @@ get_raw_page(PG_FUNCTION_ARGS)
 						RelationGetRelationName(rel))));
 
 	/*
-	 * Reject attempts to read non-local temporary relations; we would
-	 * be likely to get wrong data since we have no visibility into the
-	 * owning session's local buffers.
+	 * Reject attempts to read non-local temporary relations; we would be
+	 * likely to get wrong data since we have no visibility into the owning
+	 * session's local buffers.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(rel)))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot access temporary tables of other sessions")));
@@ -95,7 +147,7 @@ get_raw_page(PG_FUNCTION_ARGS)
 
 	/* Take a verbatim copy of the page */
 
-	buf = ReadBuffer(rel, blkno);
+	buf = ReadBufferExtended(rel, forknum, blkno, RBM_NORMAL, NULL);
 	LockBuffer(buf, BUFFER_LOCK_SHARE);
 
 	memcpy(raw_page_data, BufferGetPage(buf), BLCKSZ);
@@ -108,7 +160,7 @@ get_raw_page(PG_FUNCTION_ARGS)
 
 	relation_close(rel, AccessShareLock);
 
-	PG_RETURN_BYTEA_P(raw_page);
+	return raw_page;
 }
 
 /*
@@ -160,10 +212,10 @@ page_header(PG_FUNCTION_ARGS)
 
 	/* Extract information from the page header */
 
-	lsn = PageGetLSN(page);
+	lsn = PageGetLSN((Page) page);
 	snprintf(lsnchar, sizeof(lsnchar), "%X/%X", lsn.xlogid, lsn.xrecoff);
 
-	values[0] = DirectFunctionCall1(textin, CStringGetDatum(lsnchar));
+	values[0] = CStringGetTextDatum(lsnchar);
 	values[1] = UInt16GetDatum(page->pd_checksum);
 	values[2] = UInt16GetDatum(page->pd_flags);
 	values[3] = UInt16GetDatum(page->pd_lower);

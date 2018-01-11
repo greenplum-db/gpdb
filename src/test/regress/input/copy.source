@@ -17,6 +17,13 @@ COPY onek FROM '@abs_builddir@/results/onek.data';
 
 COPY tenk1 FROM '@abs_srcdir@/data/tenk.data';
 
+-- Create a table that's identical to 'tenk1', but all the data is in a single
+-- segment. This comes handy in making some PostgreSQL tests pass on GPDB,
+-- where data distribution might make a difference to a test result.
+CREATE SCHEMA singleseg;
+create table singleseg.tenk1 (like tenk1, distkey int4) distributed by (distkey);
+COPY singleseg.tenk1 (unique1,unique2,two,four,ten,twenty,hundred,thousand,twothousand,fivethous,tenthous,odd,even,stringu1,stringu2,string4) FROM '@abs_srcdir@/data/tenk.data';
+
 COPY slow_emp4000 FROM '@abs_srcdir@/data/rect.data';
 
 COPY person FROM '@abs_srcdir@/data/person.data';

@@ -21,4 +21,5 @@ behave: $(BEHAVE_BIN)
 		PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC):$(PEXPECT_LIB) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) 2>&1 ; \
 	else \
 		echo "Please specify tags=tagname or flags=[behave flags]"; \
+		exit 1; \
 	fi

@@ -24,20 +24,20 @@ INSERT INTO CIRCLE_TBL VALUES ('1abc,3,5');
 
 INSERT INTO CIRCLE_TBL VALUES ('(3,(1,2),3)');
 
-SELECT * FROM CIRCLE_TBL ORDER BY (center(f1))[0],diameter(f1);
+SELECT * FROM CIRCLE_TBL;
 
 SELECT '' AS six, center(f1) AS center
-  FROM CIRCLE_TBL ORDER BY (center(f1))[0],diameter(f1);
+  FROM CIRCLE_TBL;
 
 SELECT '' AS six, radius(f1) AS radius
-  FROM CIRCLE_TBL ORDER BY (center(f1))[0],diameter(f1);
+  FROM CIRCLE_TBL;
 
 SELECT '' AS six, diameter(f1) AS diameter
-  FROM CIRCLE_TBL ORDER BY (center(f1))[0],diameter(f1);
+  FROM CIRCLE_TBL;
 
-SELECT '' AS two, f1 FROM CIRCLE_TBL WHERE radius(f1) < 5 ORDER BY (center(f1))[0],diameter(f1);
+SELECT '' AS two, f1 FROM CIRCLE_TBL WHERE radius(f1) < 5;
 
-SELECT '' AS four, f1 FROM CIRCLE_TBL WHERE diameter(f1) >= 10 ORDER BY (center(f1))[0],diameter(f1);
+SELECT '' AS four, f1 FROM CIRCLE_TBL WHERE diameter(f1) >= 10;
 
 SELECT '' as five, c1.f1 AS one, c2.f1 AS two, (c1.f1 <-> c2.f1) AS distance
   FROM CIRCLE_TBL c1, CIRCLE_TBL c2

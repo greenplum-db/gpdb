@@ -35,35 +35,38 @@ INSERT INTO arrtest (a, b[1:2], c, d[1:2])
    VALUES ('{}', '{3,4}', '{foo,bar}', '{bar,foo}');
 
 
-SELECT * FROM arrtest ORDER BY 1,2,3,4;
+SELECT * FROM arrtest;
 
 SELECT arrtest.a[1],
           arrtest.b[1][1][1],
           arrtest.c[1],
           arrtest.d[1][1],
           arrtest.e[0]
-   FROM arrtest ORDER BY 1,2,3,4;
+   FROM arrtest;
 
 SELECT a[1], b[1][1][1], c[1], d[1][1], e[0]
-   FROM arrtest ORDER BY 1,2,3,4;
+   FROM arrtest;
 
 SELECT a[1:3],
           b[1:1][1:2][1:2],
           c[1:2],
           d[1:1][1:2]
-   FROM arrtest ORDER BY 1,2,3,4;
+   FROM arrtest;
 
 SELECT array_ndims(a) AS a,array_ndims(b) AS b,array_ndims(c) AS c
-    FROM arrtest ORDER BY 1,2,3;
+    FROM arrtest;
+
+SELECT array_ndims(a) AS a,array_ndims(b) AS b,array_ndims(c) AS c
+   FROM arrtest;
 
 SELECT array_dims(a) AS a,array_dims(b) AS b,array_dims(c) AS c
-   FROM arrtest ORDER BY 1,2;
+   FROM arrtest;
 
 -- returns nothing
 SELECT *
    FROM arrtest
    WHERE a[1] < 5 and
-         c = '{"foobar"}'::_name ORDER BY 1,2,3,4;
+         c = '{"foobar"}'::_name;
 
 UPDATE arrtest
   SET a[1:2] = '{16,25}'
@@ -78,20 +81,20 @@ UPDATE arrtest
   SET c[2:2] = '{"new_word"}'
   WHERE array_dims(c) is not null;
 
-SELECT a,b,c FROM arrtest ORDER BY 1,2,3;
+SELECT a,b,c FROM arrtest;
 
 SELECT a[1:3],
           b[1:1][1:2][1:2],
           c[1:2],
           d[1:1][2:2]
-   FROM arrtest ORDER BY 1,2,3,4;
+   FROM arrtest;
 
 INSERT INTO arrtest(a) VALUES('{1,null,3}');
-SELECT a FROM arrtest ORDER BY 1;
+SELECT a FROM arrtest;
 UPDATE arrtest SET a[4] = NULL WHERE a[2] IS NULL;
-SELECT a FROM arrtest WHERE a[2] IS NULL ORDER BY 1;
+SELECT a FROM arrtest WHERE a[2] IS NULL;
 DELETE FROM arrtest WHERE a[2] IS NULL AND b IS NULL;
-SELECT a,b,c FROM arrtest ORDER BY 1,2,3;
+SELECT a,b,c FROM arrtest;
 
 --
 -- test array extension
@@ -356,12 +359,12 @@ select f1 from t1;
 update t1 set f1[5].q2 = 43;
 select f1 from t1;
 
-create or replace function unnest1(anyarray)
+create or replace function unnest1(anyarray) 
 returns setof anyelement as $$
 select $1[s] from generate_subscripts($1,1) g(s);
 $$ language sql immutable;
 
-create or replace function unnest2(anyarray)
+create or replace function unnest2(anyarray) 
 returns setof anyelement as $$
 select $1[s1][s2] from generate_subscripts($1,1) g1(s1),
                    generate_subscripts($1,2) g2(s2);

@@ -2,7 +2,12 @@
  *
  * cdbpersistentfilesysobj.c
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbpersistentfilesysobj.c
  *
  *-------------------------------------------------------------------------
  */
@@ -25,7 +30,6 @@
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistentfilespace.h"
 #include "cdb/cdbpersistenttablespace.h"
-#include "cdb/cdbpersistentcheck.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbdirectopen.h"
 #include "cdb/cdbfilerepservice.h"
@@ -39,6 +43,7 @@
 #include "cdb/cdbglobalsequence.h"
 
 #include "storage/itemptr.h"
+#include "storage/lmgr.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
@@ -455,8 +460,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentRelationNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintRelationFile,
-						Persistent_RelationScanKeyInit,
-						Persistent_RelationAllowDuplicateEntry,
 						Natts_gp_persistent_relation_node,
 						Anum_gp_persistent_relation_node_persistent_serial_num);
 
@@ -478,8 +481,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentDatabaseNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintDatabaseDir,
-						Persistent_DatabaseScanKeyInit,
-						Persistent_DatabaseAllowDuplicateEntry,
 						Natts_gp_persistent_database_node,
 						Anum_gp_persistent_database_node_persistent_serial_num);
 		
@@ -501,8 +502,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentTableSpaceNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintTablespaceDir,
-						Persistent_TablespaceScanKeyInit,
-						Persistent_TablespaceAllowDuplicateEntry,
 						Natts_gp_persistent_tablespace_node,
 						Anum_gp_persistent_tablespace_node_persistent_serial_num);
 
@@ -524,8 +523,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentFileSpaceNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintFilespaceDir,
-						Persistent_FilespaceScanKeyInit,
-						Persistent_FilespaceAllowDuplicateEntry,
 						Natts_gp_persistent_filespace_node,
 						Anum_gp_persistent_filespace_node_persistent_serial_num);
 		
@@ -1100,7 +1097,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Did not expect to find a 'Free' entry"),
 				 errcontext_persistent_relation_state_change(
 								 						fsObjName,
@@ -1124,7 +1121,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Found different serial number " INT64_FORMAT " than expected (persistent file-system object found is '%s', state '%s')",
 				        actualSerialNum,
 						PersistentFileSysObjName_TypeAndObjectName(&actualFsObjName),
@@ -1150,7 +1147,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Found persistent file-system object in unexpected state '%s'",
 						PersistentFileSysObjState_Name(actualState)),
 				 errcontext_persistent_relation_state_change(
@@ -1209,6 +1206,7 @@ PersistentFileSysObjStateChangeResult PersistentFileSysObj_StateChange(
 
 	PersistentFileSysObjData 		*fileSysObjData;
 	PersistentFileSysObjSharedData 	*fileSysObjSharedData;
+	PersistentFileSysRelStorageMgr   relStorageMgr = PersistentFileSysRelStorageMgr_None;
 
 	Datum *values;
 
@@ -1257,6 +1255,11 @@ PersistentFileSysObjStateChangeResult PersistentFileSysObj_StateChange(
 							persistentTid,
 							values,
 							&tupleCopy);
+
+	if (fsObjType == PersistentFsObjType_RelationFile)
+		relStorageMgr =
+		(PersistentFileSysRelStorageMgr)DatumGetInt16(values[Anum_gp_persistent_relation_node_relation_storage_manager
+		- 1]);
 
 	READTUPLE_FOR_UPDATE_ERRCONTEXT_POP;
 
@@ -1324,7 +1327,8 @@ PersistentFileSysObjStateChangeResult PersistentFileSysObj_StateChange(
 								fsObjName,
 								persistentTid,
 								persistentSerialNum,
-								verifyExpectedResult);
+								verifyExpectedResult,
+								relStorageMgr);
 	}
 
 	switch (verifyExpectedResult)
@@ -4462,7 +4466,7 @@ static int32 PersistentFileSysObj_GetBufferPoolRelationTotalBlocks(
 
 	reln = smgropen(*relFileNode);
 
-	numOf32kBlocks = smgrnblocks(reln);
+	numOf32kBlocks = smgrnblocks(reln, MAIN_FORKNUM);
 
 	smgrclose(reln);
 

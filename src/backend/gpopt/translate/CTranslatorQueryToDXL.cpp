@@ -302,7 +302,6 @@ CTranslatorQueryToDXL::CheckUnsupportedNodeTypes
 		{T_FieldStore, GPOS_WSZ_LIT("FIELDSTORE")},
 		{T_CoerceToDomainValue, GPOS_WSZ_LIT("COERCETODOMAINVALUE")},
 		{T_GroupId, GPOS_WSZ_LIT("GROUPID")},
-		{T_PercentileExpr, GPOS_WSZ_LIT("PERCENTILE")},
 		{T_CurrentOfExpr, GPOS_WSZ_LIT("CURRENT OF")},
 	};
 
@@ -1464,29 +1463,29 @@ CTranslatorQueryToDXL::Pdrgpdxlws
 	DrgPdxlws *pdrgpdxlws = GPOS_NEW(m_pmp) DrgPdxlws(m_pmp);
 
 	// translate window specification
-	ListCell *plcWindowSpec = NULL;
-	ForEach (plcWindowSpec, plWindowClause)
+	ListCell *plcWindowCl;
+	ForEach (plcWindowCl, plWindowClause)
 	{
-		WindowSpec *pwindowspec = (WindowSpec *) lfirst(plcWindowSpec);
-		DrgPul *pdrgppulPartCol = PdrgpulPartCol(pwindowspec->partition, phmiulSortColsColId);
+		WindowClause *pwc = (WindowClause *) lfirst(plcWindowCl);
+		DrgPul *pdrgppulPartCol = PdrgpulPartCol(pwc->partitionClause, phmiulSortColsColId);
 
 		CDXLNode *pdxlnSortColList = NULL;
 		CMDName *pmdname = NULL;
 		CDXLWindowFrame *pdxlwf = NULL;
 
-		if (NULL != pwindowspec->name)
+		if (NULL != pwc->name)
 		{
-			CWStringDynamic *pstrAlias = CDXLUtils::PstrFromSz(m_pmp, pwindowspec->name);
+			CWStringDynamic *pstrAlias = CDXLUtils::PstrFromSz(m_pmp, pwc->name);
 			pmdname = GPOS_NEW(m_pmp) CMDName(m_pmp, pstrAlias);
 			GPOS_DELETE(pstrAlias);
 		}
 
-		if (0 < gpdb::UlListLength(pwindowspec->order))
+		if (0 < gpdb::UlListLength(pwc->orderClause))
 		{
 			// create a sorting col list
 			pdxlnSortColList = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarSortColList(m_pmp));
 
-			DrgPdxln *pdrgpdxlnSortCol = PdrgpdxlnSortCol(pwindowspec->order, phmiulSortColsColId);
+			DrgPdxln *pdrgpdxlnSortCol = PdrgpdxlnSortCol(pwc->orderClause, phmiulSortColsColId);
 			const ULONG ulSize = pdrgpdxlnSortCol->UlLength();
 			for (ULONG ul = 0; ul < ulSize; ul++)
 			{
@@ -1497,10 +1496,12 @@ CTranslatorQueryToDXL::Pdrgpdxlws
 			pdrgpdxlnSortCol->Release();
 		}
 
-		if (NULL != pwindowspec->frame)
-		{
-			pdxlwf = m_psctranslator->Pdxlwf((Expr *) pwindowspec->frame, m_pmapvarcolid, pdxlnScPrL, &m_fHasDistributedTables);
-		}
+		pdxlwf = m_psctranslator->Pdxlwf(pwc->frameOptions,
+						 pwc->startOffset,
+						 pwc->endOffset,
+						 m_pmapvarcolid,
+						 pdxlnScPrL,
+						 &m_fHasDistributedTables);
 
 		CDXLWindowSpec *pdxlws = GPOS_NEW(m_pmp) CDXLWindowSpec(m_pmp, pdrgppulPartCol, pmdname, pdxlnSortColList, pdxlwf);
 		pdrgpdxlws->Append(pdxlws);
@@ -1556,13 +1557,13 @@ CTranslatorQueryToDXL::PdxlnWindow
 		CDXLNode *pdxlnPrEl =  PdxlnPrEFromGPDBExpr(pte->expr, pte->resname);
 		ULONG ulColId = CDXLScalarProjElem::PdxlopConvert(pdxlnPrEl->Pdxlop())->UlId();
 
-		if (IsA(pte->expr, WindowRef))
+		if (IsA(pte->expr, WindowFunc))
 		{
 			CTranslatorUtils::CheckAggregateWindowFn((Node*) pte->expr);
 		}
 		if (!pte->resjunk)
 		{
-			if (IsA(pte->expr, Var) || IsA(pte->expr, WindowRef))
+			if (IsA(pte->expr, Var) || IsA(pte->expr, WindowFunc))
 			{
 				// add window functions and non-computed columns to the project list of the window operator
 				pdxlnPrL->AddChild(pdxlnPrEl);
@@ -1615,7 +1616,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 				pdxlnPrEl->Release();
 			}
 		}
-		else if (IsA(pte->expr, WindowRef))
+		else if (IsA(pte->expr, WindowFunc))
 		{
 			// computed columns used in the order by clause
 			pdxlnPrL->AddChild(pdxlnPrEl);
@@ -1725,8 +1726,8 @@ CTranslatorQueryToDXL::PdrgpulPartCol
 		Node *pnodePartCl = (Node*) lfirst(plcPartCl);
 		GPOS_ASSERT(NULL != pnodePartCl);
 
-		GPOS_ASSERT(IsA(pnodePartCl, SortClause));
-		SortClause *psortcl = (SortClause*) pnodePartCl;
+		GPOS_ASSERT(IsA(pnodePartCl, SortGroupClause));
+		SortGroupClause *psortcl = (SortGroupClause *) pnodePartCl;
 
 		// get the colid of the partition-by column
 		ULONG ulColId = CTranslatorUtils::UlColId((INT) psortcl->tleSortGroupRef, phmiulColColId);
@@ -1761,9 +1762,9 @@ CTranslatorQueryToDXL::PdrgpdxlnSortCol
 		Node *pnodeSortCl = (Node*) lfirst(plcSortCl);
 		GPOS_ASSERT(NULL != pnodeSortCl);
 
-		GPOS_ASSERT(IsA(pnodeSortCl, SortClause));
+		GPOS_ASSERT(IsA(pnodeSortCl, SortGroupClause));
 
-		SortClause *psortcl = (SortClause*) pnodeSortCl;
+		SortGroupClause *psortcl = (SortGroupClause *) pnodeSortCl;
 
 		// get the colid of the sorting column
 		const ULONG ulColId = CTranslatorUtils::UlColId((INT) psortcl->tleSortGroupRef, phmiulColColId);
@@ -1972,7 +1973,7 @@ CTranslatorQueryToDXL::PdxlnSimpleGroupBy
 			// find colid for grouping column
 			ulColId = CTranslatorUtils::UlColId(ulResNo, phmiulChild);
 		}
-		else if (IsA(pte->expr, Aggref) || IsA(pte->expr, PercentileExpr))
+		else if (IsA(pte->expr, Aggref))
 		{
 			if (IsA(pte->expr, Aggref) && ((Aggref *) pte->expr)->aggdistinct && !FDuplicateDqaArg(plDQA, (Aggref *) pte->expr))
 			{
@@ -1987,7 +1988,7 @@ CTranslatorQueryToDXL::PdxlnSimpleGroupBy
 			AddSortingGroupingColumn(pte, phmiulSortgrouprefColId, ulColId);
 		}
 
-		if (fGroupingCol || IsA(pte->expr, Aggref) || IsA(pte->expr, PercentileExpr))
+		if (fGroupingCol || IsA(pte->expr, Aggref))
 		{
 			// add to the list of output columns
 			StoreAttnoColIdMapping(phmiulOutputCols, ulResNo, ulColId);
@@ -3855,12 +3856,15 @@ CTranslatorQueryToDXL::StoreAttnoColIdMapping
 {
 	GPOS_ASSERT(NULL != phmiul);
 
-#ifdef GPOS_DEBUG
-	BOOL fResult =
-#endif // GPOS_DEBUG
-	phmiul->FInsert(GPOS_NEW(m_pmp) INT(iAttno), GPOS_NEW(m_pmp) ULONG(ulColId));
+	INT *piKey = GPOS_NEW(m_pmp) INT(iAttno);
+	ULONG *pulValue = GPOS_NEW(m_pmp) ULONG(ulColId);
+	BOOL fResult = phmiul->FInsert(piKey, pulValue);
 
-	GPOS_ASSERT(fResult);
+	if (!fResult)
+	{
+		GPOS_DELETE(piKey);
+		GPOS_DELETE(pulValue);
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -4087,6 +4091,11 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		CommonTableExpr *pcte = (CommonTableExpr *) lfirst(plc);
 		GPOS_ASSERT(IsA(pcte->ctequery, Query));
 		
+		if (pcte->cterecursive)
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("WITH RECURSIVE"));
+		}
+
 		Query *pqueryCte = CQueryMutators::PqueryNormalize(m_pmp, m_pmda, (Query *) pcte->ctequery, ulCteQueryLevel + 1);
 		
 		// the query representing the cte can only access variables defined in the current level as well as

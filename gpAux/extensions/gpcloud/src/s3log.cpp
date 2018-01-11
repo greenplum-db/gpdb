@@ -12,7 +12,7 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
 
-void _LogMessage(const char* fmt, va_list args) {
+static void _LogMessage(const char* fmt, va_list args) {
     char buf[MAX_MESSAGE_LINE_LENGTH];
     vsnprintf(buf, sizeof(buf), fmt, args);
 #ifdef S3_STANDALONE
@@ -22,7 +22,7 @@ void _LogMessage(const char* fmt, va_list args) {
 #endif
 }
 
-void _send_to_remote(const char* fmt, va_list args) {
+static void _send_to_remote(const char* fmt, va_list args) {
     char buf[MAX_MESSAGE_LINE_LENGTH];
     size_t len = vsnprintf(buf, sizeof(buf), fmt, args);
     sendto(s3ext_logsock_udp, buf, len, 0, (struct sockaddr*)&s3ext_logserveraddr,

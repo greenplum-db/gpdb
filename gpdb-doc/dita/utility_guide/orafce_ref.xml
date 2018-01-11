@@ -6,10 +6,8 @@
   domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
   class="- topic/topic ">
   <title id="me143671" class="- topic/title ">Oracle Compatibility Functions</title>
-  <body class="- topic/body ">
-    <p>This reference describes the Oracle Compatibility SQL functions in Greenplum Database. These
-      functions target PostgreSQL.</p>
-  </body>
+  <shortdesc>Describes the Oracle Compatibility SQL functions in Greenplum Database. These functions
+    target PostgreSQL.</shortdesc>
   <topic id="topic2" xml:lang="en" ditaarch:DITAArchVersion="1.1"
     domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
     class="- topic/topic ">

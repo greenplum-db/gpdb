@@ -6,7 +6,7 @@
  * copyright (c) Oliver Elphick <olly@lfix.co.uk>, 2001;
  * licence: BSD
  *
- * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.36.2.1 2008/09/24 08:59:46 mha Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.43 2009/06/11 14:49:07 momjian Exp $
  */
 #include "postgres_fe.h"
 
@@ -53,6 +53,8 @@ dbState(DBState state)
 			return _("shutting down");
 		case DB_IN_CRASH_RECOVERY:
 			return _("in crash recovery");
+		case DB_IN_ARCHIVE_RECOVERY:
+			return _("in archive recovery");
 		case DB_IN_STANDBY_MODE:
 			return _("in standby mode");
 		case DB_IN_STANDBY_PROMOTED:
@@ -74,13 +76,14 @@ main(int argc, char *argv[])
 	char		ControlFilePath[MAXPGPATH];
 	char	   *DataDir;
 	pg_crc32c	crc;
+	time_t		time_tmp;
 	char		pgctime_str[128];
 	char		ckpttime_str[128];
 	char		sysident_str[32];
 	const char *strftime_fmt = "%c";
 	const char *progname;
 
-	set_pglocale_pgservice(argv[0], "pg_controldata");
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_controldata"));
 
 	progname = get_progname(argv[0]);
 
@@ -143,13 +146,20 @@ main(int argc, char *argv[])
 				 "is expecting.  The results below are untrustworthy.\n\n"));
 
 	/*
+	 * This slightly-chintzy coding will work as long as the control file
+	 * timestamps are within the range of time_t; that should be the case in
+	 * all foreseeable circumstances, so we don't bother importing the
+	 * backend's timezone library into pg_controldata.
+	 *
 	 * Use variable for format to suppress overly-anal-retentive gcc warning
 	 * about %c
 	 */
+	time_tmp = (time_t) ControlFile.time;
 	strftime(pgctime_str, sizeof(pgctime_str), strftime_fmt,
-			 localtime(&(ControlFile.time)));
+			 localtime(&time_tmp));
+	time_tmp = (time_t) ControlFile.checkPointCopy.time;
 	strftime(ckpttime_str, sizeof(ckpttime_str), strftime_fmt,
-			 localtime(&(ControlFile.checkPointCopy.time)));
+			 localtime(&time_tmp));
 
 	/*
 	 * Format system_identifier separately to keep platform-dependent format
@@ -224,12 +234,10 @@ main(int argc, char *argv[])
 		   ControlFile.toast_max_chunk_size);
 	printf(_("Date/time type storage:               %s\n"),
 		   (ControlFile.enableIntTimes ? _("64-bit integers") : _("floating-point numbers")));
-	printf(_("Maximum length of locale name:        %u\n"),
-		   ControlFile.localeBuflen);
-	printf(_("LC_COLLATE:                           %s\n"),
-		   ControlFile.lc_collate);
-	printf(_("LC_CTYPE:                             %s\n"),
-		   ControlFile.lc_ctype);
+	printf(_("Float4 argument passing:              %s\n"),
+		   (ControlFile.float4ByVal ? _("by value") : _("by reference")));
+	printf(_("Float8 argument passing:              %s\n"),
+		   (ControlFile.float8ByVal ? _("by value") : _("by reference")));
 	printf(_("Data page checksum version:           %u\n"),
 		   ControlFile.data_checksum_version);
 	return 0;

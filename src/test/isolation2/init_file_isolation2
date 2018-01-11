@@ -8,4 +8,8 @@ s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 # entry db matches
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
+
+# remove beginning output of gpconfig
+m/^\d+.*gpconfig.*-\[INFO\]:-/
+s/^\d+.*gpconfig.*-\[INFO\]:-//
 -- end_matchsubs

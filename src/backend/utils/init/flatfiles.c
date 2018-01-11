@@ -20,10 +20,10 @@
  * a way that this is OK.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.30 2008/01/01 19:45:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.36 2009/01/01 17:23:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,7 @@
 #include "access/transam.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_auth_time_constraint.h"
@@ -49,13 +50,16 @@
 #include "catalog/pg_tablespace.h"
 #include "commands/trigger.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
+#include "storage/lmgr.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
 #include "utils/flatfiles.h"
 #include "utils/guc.h"
 #include "utils/relcache.h"
 #include "utils/resowner.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbmirroredflatfile.h"
 
@@ -461,13 +465,14 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 			 * it is, ignore it, since we can't handle that in startup mode.
 			 *
 			 * It is entirely likely that it's 1-byte format not 4-byte, and
-			 * theoretically possible that it's compressed inline, but textout
-			 * should be able to handle those cases even in startup mode.
+			 * theoretically possible that it's compressed inline, but
+			 * text_to_cstring should be able to handle those cases even in
+			 * startup mode.
 			 */
 			if (VARATT_IS_EXTERNAL(DatumGetPointer(datum)))
 				auth_info[curr_role].rolpassword = pstrdup("");
 			else
-				auth_info[curr_role].rolpassword = DatumGetCString(DirectFunctionCall1(textout, datum));
+				auth_info[curr_role].rolpassword = TextDatumGetCString(datum);
 
 			/* assume passwd has attlen -1 */
 			off = att_addlength_pointer(off, -1, tp + off);
@@ -481,13 +486,14 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 		}
 		else
 		{
-			/*
-			 * rolvaliduntil is timestamptz, which we assume is double
-			 * alignment and pass-by-value.
-			 */
+			TimestampTz *rvup;
+
+			/* Assume timestamptz has double alignment */
 			off = att_align_nominal(off, 'd');
-			datum = fetch_att(tp + off, true, sizeof(TimestampTz));
-			auth_info[curr_role].rolvaliduntil = DatumGetCString(DirectFunctionCall1(timestamptz_out, datum));
+			rvup = (TimestampTz *) (tp + off);
+			auth_info[curr_role].rolvaliduntil =
+				DatumGetCString(DirectFunctionCall1(timestamptz_out,
+												TimestampTzGetDatum(*rvup)));
 		}
 
 		/*
@@ -934,12 +940,6 @@ BuildFlatFiles(bool database_only)
 				rel_authmem,
 				rel_authtime;
 
-	/*
-	 * We don't have any hope of running a real relcache, but we can use the
-	 * same fake-relcache facility that WAL replay uses.
-	 */
-	XLogInitRelationCache();
-
 	/* Need a resowner to keep the heapam and buffer code happy */
 	owner = ResourceOwnerCreate(NULL, "BuildFlatFiles");
 	CurrentResourceOwner = owner;
@@ -949,9 +949,15 @@ BuildFlatFiles(bool database_only)
 	rnode.dbNode = 0;
 	rnode.relNode = DatabaseRelationId;
 
-	/* No locking is needed because no one else is alive yet */
-	rel_db = XLogOpenRelation(rnode);
+	/*
+	 * We don't have any hope of running a real relcache, but we can use the
+	 * same fake-relcache facility that WAL replay uses.
+	 *
+	 * No locking is needed because no one else is alive yet.
+	 */
+	rel_db = CreateFakeRelcacheEntry(rnode);
 	write_database_file(rel_db, true);
+	FreeFakeRelcacheEntry(rel_db);
 
 	if (!database_only)
 	{
@@ -959,13 +965,13 @@ BuildFlatFiles(bool database_only)
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthIdRelationId;
-		rel_authid = XLogOpenRelation(rnode);
+		rel_authid = CreateFakeRelcacheEntry(rnode);
 
 		/* hard-wired path to pg_auth_members */
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthMemRelationId;
-		rel_authmem = XLogOpenRelation(rnode);
+		rel_authmem = CreateFakeRelcacheEntry(rnode);
 
 		write_auth_file(rel_authid, rel_authmem);
 
@@ -973,15 +979,17 @@ BuildFlatFiles(bool database_only)
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthTimeConstraintRelationId;
-		rel_authtime = XLogOpenRelation(rnode);
+		rel_authtime = CreateFakeRelcacheEntry(rnode);
 
 		write_auth_time_file(rel_authid, rel_authtime);
+
+		FreeFakeRelcacheEntry(rel_authid);
+		FreeFakeRelcacheEntry(rel_authmem);
+		FreeFakeRelcacheEntry(rel_authtime);
 	}
 
 	CurrentResourceOwner = NULL;
 	ResourceOwnerDelete(owner);
-
-	XLogCloseRelationCache();
 }
 
 

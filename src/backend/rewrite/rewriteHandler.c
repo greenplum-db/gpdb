@@ -4,11 +4,12 @@
  *		Primary module of query rewriter.
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.181 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.186 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,10 +18,9 @@
 #include "access/heapam.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteDefine.h"
 #include "rewrite/rewriteHandler.h"
@@ -417,7 +417,7 @@ rewriteRuleAction(Query *parsetree,
 					break;
 			}
 			if (sub_action->hasSubLinks)
-				break;		/* no need to keep scanning rtable */
+				break;			/* no need to keep scanning rtable */
 		}
 	}
 
@@ -499,7 +499,8 @@ rewriteRuleAction(Query *parsetree,
 												   sub_action->rtable),
 										  parsetree->targetList,
 										  event,
-										  current_varno);
+										  current_varno,
+										  NULL);
 		if (sub_action_ptr)
 			*sub_action_ptr = sub_action;
 		else
@@ -529,7 +530,7 @@ rewriteRuleAction(Query *parsetree,
 								parsetree->rtable),
 					   rule_action->returningList,
 					   CMD_SELECT,
-					   0);
+					   0, &rule_action->hasSubLinks);
 
 		/*
 		 * There could have been some SubLinks in parsetree's returningList,
@@ -537,7 +538,7 @@ rewriteRuleAction(Query *parsetree,
 		 */
 		if (parsetree->hasSubLinks && !rule_action->hasSubLinks)
 			rule_action->hasSubLinks =
-					checkExprHasSubLink((Node *) rule_action->returningList);
+				checkExprHasSubLink((Node *) rule_action->returningList);
 	}
 
 	return rule_action;
@@ -1214,9 +1215,13 @@ ApplyRetrieveRule(Query *parsetree,
 	Assert(subrte->relid == relation->rd_id);
 	subrte->requiredPerms = rte->requiredPerms;
 	subrte->checkAsUser = rte->checkAsUser;
+	subrte->selectedCols = rte->selectedCols;
+	subrte->modifiedCols = rte->modifiedCols;
 
 	rte->requiredPerms = 0;		/* no permission check on subquery itself */
 	rte->checkAsUser = InvalidOid;
+	rte->selectedCols = NULL;
+	rte->modifiedCols = NULL;
 
 	/*
 	 * FOR UPDATE/SHARE of view?
@@ -1293,7 +1298,7 @@ markQueryForLocking(Query *qry, Node *jtnode, bool forUpdate, bool noWait)
 				if (strcmp(cte->ctename, rte->ctename) == 0)
 					break;
 			}
-			if (lc == NULL)				/* shouldn't happen */
+			if (lc == NULL)		/* shouldn't happen */
 				elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
 			/* should be analyzed by now */
 			Assert(IsA(cte->ctequery, Query));
@@ -1542,7 +1547,8 @@ CopyAndAddInvertedQual(Query *parsetree,
 							  rt_fetch(rt_index, parsetree->rtable),
 							  parsetree->targetList,
 							  event,
-							  rt_index);
+							  rt_index,
+							  &parsetree->hasSubLinks);
 	/* And attach the fixed qual */
 	AddInvertedQual(parsetree, new_qual);
 

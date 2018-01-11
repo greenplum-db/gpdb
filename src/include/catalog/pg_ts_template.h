@@ -4,10 +4,10 @@
  *	definition of dictionary templates for tsearch
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_ts_template.h,v 1.4 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_ts_template.h,v 1.6 2009/01/01 17:23:58 momjian Exp $
  *
  * NOTES
  *		the genbki.sh script reads this file and generates .bki
@@ -21,12 +21,7 @@
 #ifndef PG_TS_TEMPLATE_H
 #define PG_TS_TEMPLATE_H
 
-/* ----------------
- *		postgres.h contains the system type definitions and the
- *		CATALOG(), BKI_BOOTSTRAP and DATA() sugar words so this file
- *		can be read by both genbki.sh and the C compiler.
- * ----------------
- */
+#include "catalog/genbki.h"
 
 /* ----------------
  *		pg_ts_template definition.	cpp turns this into

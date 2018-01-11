@@ -66,7 +66,7 @@ select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
  pg_relation_size 
 ------------------
-           262144
+           229376
 (1 row)
 
 select max(b), min(length(c)), min(substring(c, 10, 1)) from vfheap;

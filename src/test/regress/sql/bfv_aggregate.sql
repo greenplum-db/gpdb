@@ -47,6 +47,10 @@ create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
 
 -- TEST
+-- start_ignore
+-- GPDB_84_MERGE_FIXME: QP team should look at this query (the implementation
+-- changed in the window func merge)
+-- end_ignore
 select
    id, val,
    sum(val) over (w),
@@ -179,6 +183,10 @@ select string_agg(b) over (partition by a+1) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a+1) from foo order by 1;
 -- fall back and planner's plan produces unsupported execution
+-- start_ignore
+-- GPDB_84_MERGE_FIXME: QP team should look at these three queries (the
+-- implementation changed in the window func merge)
+-- end_ignore
 select string_agg(b) over (partition by a order by a) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a,b order by a,b) from foo order by 1;
 select '1' || string_agg(b) over (partition by a+1 order by a+1) from foo;
@@ -1350,6 +1358,33 @@ select c0, c1, array_length(ARRAY[
  SUM(c4 % 5665), SUM(c4 % 5666), SUM(c4 % 5667), SUM(c4 % 5668), SUM(c4 % 5669),
  SUM(c4 % 5670), SUM(c4 % 5671)], 1)
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
+
+-- MPP-29042 Multistage aggregation plans should have consistent targetlists in
+-- case of same column aliases and grouping on them.
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (a varchar, b character varying) DISTRIBUTED RANDOMLY;
+INSERT INTO t1 VALUES ('aaaaaaa', 'cccccccccc');
+INSERT INTO t1 VALUES ('aaaaaaa', 'ddddd');
+INSERT INTO t1 VALUES ('bbbbbbb', 'eeee');
+INSERT INTO t1 VALUES ('bbbbbbb', 'eeef');
+INSERT INTO t1 VALUES ('bbbbb', 'dfafa');
+SELECT substr(a, 1) as a FROM (SELECT ('-'||a)::varchar as a FROM (SELECT a FROM t1) t2) t3 GROUP BY a ORDER BY a;
+SELECT array_agg(f ORDER BY f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
+
+
+-- Check that ORDER BY NULLS FIRST/LAST in an aggregate is respected (these are
+-- variants of similar query in PostgreSQL's aggregates test)
+create temporary table aggordertest (a int4, b int4) distributed by (a);
+insert into aggordertest values (1,1), (2,2), (1,3), (3,4), (null,5), (2,null);
+
+select array_agg(a order by a nulls first) from aggordertest;
+select array_agg(a order by a nulls last) from aggordertest;
+select array_agg(a order by a desc nulls first) from aggordertest;
+select array_agg(a order by a desc nulls last) from aggordertest;
+select array_agg(a order by b nulls first) from aggordertest;
+select array_agg(a order by b nulls last) from aggordertest;
+select array_agg(a order by b desc nulls first) from aggordertest;
+select array_agg(a order by b desc nulls last) from aggordertest;
 
 
 -- CLEANUP

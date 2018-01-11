@@ -3,7 +3,7 @@
  * sinvaladt.c
  *	  POSTGRES shared cache invalidation data manager.
  *
- * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -351,7 +351,9 @@ CleanupInvalidationState(int status, Datum arg)
 	stateP = &segP->procState[MyBackendId - 1];
 
 	/* Update next local transaction ID for next holder of this backendID */
-	nextLocalTransactionId = stateP->nextLXID;
+	/* GPDB_84_MERGE_FIXME: this assignment was reversed in the 8.3 merge; does
+	 * this change need to be backported to 4/5? */
+	stateP->nextLXID = nextLocalTransactionId;
 
 	/* Mark myself inactive */
 	stateP->procPid = 0;
@@ -368,6 +370,33 @@ CleanupInvalidationState(int status, Datum arg)
 	segP->lastBackend = i;
 
 	LWLockRelease(SInvalWriteLock);
+}
+
+/*
+ * BackendIdIsActive
+ *		Test if the given backend ID is currently assigned to a process.
+ */
+bool
+BackendIdIsActive(int backendID)
+{
+	bool		result;
+	SISeg	   *segP = shmInvalBuffer;
+
+	/* Need to lock out additions/removals of backends */
+	LWLockAcquire(SInvalWriteLock, LW_SHARED);
+
+	if (backendID > 0 && backendID <= segP->lastBackend)
+	{
+		ProcState  *stateP = &segP->procState[backendID - 1];
+
+		result = (stateP->procPid != 0);
+	}
+	else
+		result = false;
+
+	LWLockRelease(SInvalWriteLock);
+
+	return result;
 }
 
 /*

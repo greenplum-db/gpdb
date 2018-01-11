@@ -48,6 +48,8 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 		{"logfile", required_argument, NULL, 'l'},
 		{"verbose", no_argument, NULL, 'v'},
 		{"progress", no_argument, NULL, 'X'},
+		{"add-checksum", no_argument, NULL, 'J'},
+		{"remove-checksum", no_argument, NULL, 'j'},
 
 		{"dispatcher-mode", no_argument, NULL, 1},
 
@@ -93,7 +95,7 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 
 	getcwd(ctx->cwd, MAXPGPATH);
 
-	while ((option = getopt_long(argc, argv, "d:D:b:B:cgG:kl:p:P:u:v",
+	while ((option = getopt_long(argc, argv, "d:D:b:B:cgG:jJkl:p:P:u:v",
 								 long_options, &optindex)) != -1)
 	{
 		switch (option)
@@ -129,6 +131,14 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 					pg_log(ctx, PG_FATAL, "cannot open debug file\n");
 					exit_nicely(ctx, false);
 				}
+				break;
+
+			case 'j':
+				ctx->checksum_mode = CHECKSUM_REMOVE;
+				break;
+
+			case 'J':
+				ctx->checksum_mode = CHECKSUM_ADD;
 				break;
 
 			case 'k':
@@ -218,6 +228,11 @@ parseCommandLine(migratorContext *ctx, int argc, char *argv[])
 			pg_log(ctx, PG_FATAL, "Cannot write to terminal\n");
 	}
 
+	/* Ensure we are only adding checksums in copy mode */
+	if (ctx->transfer_mode != TRANSFER_MODE_COPY &&
+		ctx->checksum_mode != CHECKSUM_NONE)
+		pg_log(ctx, PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
+
 	/* Get values from env if not already set */
 	validateDirectoryOption(ctx, &ctx->old.pgdata, "OLDDATADIR", "-d",
 							"old cluster data resides");
@@ -245,6 +260,8 @@ Options:\n\
  -D, --new-datadir=new_datadir    new cluster data directory\n\
  -g, --debug                      enable debugging\n\
  -G, --debugfile=debug_filename   output debugging activity to file\n\
+ -j, --remove-checksum            remove data checksums when creating new cluster\n\
+ -J, --add-checksum               add data checksumming to the new cluster\n\
  -k, --link                       link instead of copying files to new cluster\n\
  -l, --logfile=log_filename       log session activity to file\n\
  -p, --old-port=old_portnum       old cluster port number (default %d)\n\

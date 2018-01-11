@@ -25,6 +25,24 @@ groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_rati
 rg_spill_test|20                 |20                          |20                |20                         
 (1 row)
 
+-- positive, memory_spill_ratio range is [0, 100]
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
+ALTER
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |0                 |0                          
+(1 row)
+
+-- positive: no limit on the sum of shared and spill
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 81;
+ALTER
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |81                |81                         
+(1 row)
+
 -- negative: memory_spill_ratio is invalid
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20.0;
 ERROR:  syntax error at or near "20.0"
@@ -37,34 +55,16 @@ LINE 1: ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO a;
 SELECT * FROM rg_spill_status;
 groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------------+-------------------+----------------------------+------------------+---------------------------
-rg_spill_test|20                 |20                          |20                |20                         
-(1 row)
-
--- negative: memory_spill_ratio is less than RESGROUP_MIN_MEMORY_SPILL_RATIO
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
-ERROR:  memory spill ratio must be greater than 1
-SELECT * FROM rg_spill_status;
-groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------------+-------------------+----------------------------+------------------+---------------------------
-rg_spill_test|20                 |20                          |20                |20                         
+rg_spill_test|20                 |20                          |81                |81                         
 (1 row)
 
 -- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
-ERROR:  memory spill ratio must be less than 100
+ERROR:  memory_spill_ratio range is [0, 100]
 SELECT * FROM rg_spill_status;
 groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------------+-------------------+----------------------------+------------------+---------------------------
-rg_spill_test|20                 |20                          |20                |20                         
-(1 row)
-
--- negative: sum of shared and spill exceeds RESGROUP_MAX_MEMORY_LIMIT
-ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 81;
-ERROR:  The sum of memory_shared_quota (20) and memory_spill_ratio (81) exceeds 100
-SELECT * FROM rg_spill_status;
-groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------------+-------------------+----------------------------+------------------+---------------------------
-rg_spill_test|20                 |20                          |20                |20                         
+rg_spill_test|20                 |20                          |81                |81                         
 (1 row)
 
 -- cleanup

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dc20941">DROP RESOURCE GROUP</title><body><p id="sql_command_desc">Removes a resource group.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP RESOURCE GROUP <varname>group_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command removes a resource group from Greenplum
+<topic id="topic1"><title id="dc20941">DROP RESOURCE GROUP</title><body>
+    <p id="sql_command_desc">Removes a resource group.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP RESOURCE GROUP <varname>group_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command removes a resource group from Greenplum
 Database. Only a superuser
 can drop a resource group.</p><p>To drop a resource group, the group cannot be assigned to any roles,
 nor can it have any statements pending or running in the group.</p><p>You cannot drop the pre-defined <codeph>admin_group</codeph> and <codeph>default_group</codeph> resource groups.</p>

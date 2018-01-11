@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_inherits;
- inhrelid | inhparent | inhseqno 
-----------+-----------+----------
-(0 rows)
-
--- end_ignore

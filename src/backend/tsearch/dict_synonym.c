@@ -3,11 +3,11 @@
  * dict_synonym.c
  *		Synonym dictionary: replace word by its synonym
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/dict_synonym.c,v 1.7.2.1 2008/06/18 20:55:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/dict_synonym.c,v 1.10 2009/01/01 17:23:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,6 +29,7 @@ typedef struct
 {
 	int			len;			/* length of syn array */
 	Syn		   *syn;
+	bool		case_sensitive;
 } DictSyn;
 
 /*
@@ -76,6 +77,7 @@ dsynonym_init(PG_FUNCTION_ARGS)
 	DictSyn    *d;
 	ListCell   *l;
 	char	   *filename = NULL;
+	bool		case_sensitive = false;
 	tsearch_readline_state trst;
 	char	   *starti,
 			   *starto,
@@ -89,6 +91,8 @@ dsynonym_init(PG_FUNCTION_ARGS)
 
 		if (pg_strcasecmp("Synonyms", defel->defname) == 0)
 			filename = defGetString(defel);
+		else if (pg_strcasecmp("CaseSensitive", defel->defname) == 0)
+			case_sensitive = defGetBoolean(defel);
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -153,8 +157,16 @@ dsynonym_init(PG_FUNCTION_ARGS)
 			}
 		}
 
-		d->syn[cur].in = lowerstr(starti);
-		d->syn[cur].out = lowerstr(starto);
+		if (case_sensitive)
+		{
+			d->syn[cur].in = pstrdup(starti);
+			d->syn[cur].out = pstrdup(starto);
+		}
+		else
+		{
+			d->syn[cur].in = lowerstr(starti);
+			d->syn[cur].out = lowerstr(starto);
+		}
 
 		cur++;
 
@@ -166,6 +178,8 @@ skipline:
 
 	d->len = cur;
 	qsort(d->syn, d->len, sizeof(Syn), compareSyn);
+
+	d->case_sensitive = case_sensitive;
 
 	PG_RETURN_POINTER(d);
 }
@@ -184,7 +198,11 @@ dsynonym_lexize(PG_FUNCTION_ARGS)
 	if (len <= 0 || d->len <= 0)
 		PG_RETURN_POINTER(NULL);
 
-	key.in = lowerstr_with_len(in, len);
+	if (d->case_sensitive)
+		key.in = pnstrdup(in, len);
+	else
+		key.in = lowerstr_with_len(in, len);
+
 	key.out = NULL;
 
 	found = (Syn *) bsearch(&key, d->syn, d->len, sizeof(Syn), compareSyn);

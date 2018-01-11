@@ -361,7 +361,6 @@ ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelog ADD CONSTRAINT satelliteupdate
 CREATE INDEX fki_satelliteupdatelog_idadvertiser_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idadvertiser);
 CREATE INDEX fki_satelliteupdatelog_idaffiliate_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idaffiliate);
 CREATE INDEX fki_satelliteupdatelog_idrep_fk ON qp_misc_jiras.satelliteupdatelog USING btree (idrep);
-------------------------
 
 CREATE TABLE qp_misc_jiras.satelliteupdatelogkey (
     idsatelliteupdatelog integer NOT NULL,
@@ -371,7 +370,6 @@ CREATE TABLE qp_misc_jiras.satelliteupdatelogkey (
 
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupdatelogkey_pk PRIMARY KEY (idsatelliteupdatelog, columnname);
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupdatelogkey_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
-------------
 CREATE TABLE qp_misc_jiras.satellite (
     id integer NOT NULL,
     name character varying NOT NULL,
@@ -393,7 +391,6 @@ ALTER SEQUENCE qp_misc_jiras.satellite_id_seq OWNED BY qp_misc_jiras.satellite.i
 ALTER TABLE qp_misc_jiras.satellite ALTER COLUMN id SET DEFAULT nextval('qp_misc_jiras.satellite_id_seq'::regclass);
 
 
---------
 CREATE TABLE qp_misc_jiras.satelliteupdatelogserver (
     idsatelliteupdatelog integer NOT NULL,
     idsatellite integer NOT NULL,
@@ -406,7 +403,6 @@ ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satellite
 CREATE INDEX fki_satelliteupdatelogserver_idsatelliteupdatelog_fk ON qp_misc_jiras.satelliteupdatelogserver USING btree (idsatelliteupdatelog);
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satelliteupdatelogserver_idsatellite_fk FOREIGN KEY (idsatellite) REFERENCES qp_misc_jiras.satellite(id);
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satelliteupdatelogserver_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
--------------
 
 SELECT /* gptest */ s.id, s.action, s.type, sk.columnName AS "columnName", sk.value
 FROM qp_misc_jiras.satelliteUpdateLog AS s
@@ -704,8 +700,6 @@ insert into qp_misc_jiras.tbl5246_sale values
   ( 4, 40, 800, '1401-6-1', 1, 1);
 
 
-
---The following query shouldn't crash and error out
 
 explain select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.tbl5246_sale;
 
@@ -1440,7 +1434,6 @@ DROP TABLE IF EXISTS qp_misc_jiras.one_of_every_data_type;
 
 create table qp_misc_jiras.tbl7553_test (i int, j int);
 insert into qp_misc_jiras.tbl7553_test values(1,2);
-
 explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
 
 select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -1685,16 +1678,16 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 INSERT INTO qp_misc_jiras.inet_ip_pairs (saddr) SELECT (i%201 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet FROM generate_series(1,1000000) i;
 
 
--- --------------------------------------------------------
+--
 -- MPP-6870: CREATE INDEX caused Out-Of-Memory problem
--- --------------------------------------------------------
+--
 CREATE INDEX  inet_ip_pairs_idx1 ON  qp_misc_jiras.inet_ip_pairs (saddr);
 SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 
 
--- --------------------------------------------------------
+--
 -- Data should be evenly distributed to multiple segments?
--- --------------------------------------------------------
+--
 SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
 
 
@@ -1830,7 +1823,7 @@ CREATE OR REPLACE FUNCTION mustan.f7( in_d text ) RETURNS DATE AS $$
 DECLARE
 	out_dt date;
 BEGIN
-	---SELECT d INTO out_dt FROM mustan.test WHERE d=cast( in_d as date );
+	-- SELECT d INTO out_dt FROM mustan.test WHERE d=cast( in_d as date );
 	SELECT d INTO out_dt FROM mustan.test WHERE d=in_d::date;
 	return out_dt;
 END;
@@ -2038,17 +2031,11 @@ CREATE TABLE qp_misc_jiras.tbl8860_1 (
      key TEXT NOT NULL
 ) distributed by (id);
 
--- -----------------------------------------
 CREATE TABLE qp_misc_jiras.tbl8860_2 (
      id INTEGER NOT NULL,
      key CHARACTER VARYING(50) NOT NULL
 ) distributed by (id);
-
--- -----------------------------------------
 INSERT INTO qp_misc_jiras.tbl8860_1 SELECT 1, key FROM qp_misc_jiras.tbl8860_2;
-
--- -----------------------------------------
-
 -- start_ignore
 drop table if exists qp_misc_jiras.tbl8860_1;
 drop table if exists qp_misc_jiras.tbl8860_2;
@@ -2199,9 +2186,6 @@ drop index qp_misc_jiras.bmap2_index;
 drop table qp_misc_jiras.badbitmapindex;
 drop table qp_misc_jiras.bmap2;
 
--- temporally ignore and will be sovled by
---   https://www.pivotaltracker.com/story/show/116312671
--- start_ignore
 CREATE TABLE qp_misc_jiras.ir_voice_sms_and_data (
     imsi_number character varying(35),
     ir_call_country_name character varying(35),
@@ -2227,7 +2211,7 @@ case when ir_call_type_group_code in ('H', 'VH', 'PCB') then 'Thailland'
 else 'Unidentify' end
 ;
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
--- end_ignore 
+
 create table qp_misc_jiras.x (a int, b int) distributed by (a);
 
 
@@ -2558,6 +2542,7 @@ select id, seq, sum (val) over (partition by id order by clickdate range between
 select id, seq, sum (val) over (partition by id order by clickdate range between interval '0 seconds' preceding and interval '1000 seconds' following) from qp_misc_jiras.esc176_1;
 select id, seq, sum(val) over (partition by id order by seq::numeric range between 0 following and 10 following), val from qp_misc_jiras.esc176_1;
 select id, seq, sum(val) over (partition by id order by seq::numeric range between 10 preceding and 0 preceding), val from qp_misc_jiras.esc176_1;
+
 insert into qp_misc_jiras.esc176_1 values (1,9,0.3,CURRENT_TIMESTAMP);
 insert into qp_misc_jiras.esc176_1 values (1,10,0.4,CURRENT_TIMESTAMP);
 insert into qp_misc_jiras.esc176_1 values (1,11,0.6, CURRENT_TIMESTAMP);

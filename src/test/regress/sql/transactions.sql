@@ -130,7 +130,7 @@ BEGIN;
 ROLLBACK;
 COMMIT;		-- should not be in a transaction block
 		
-SELECT * FROM savepoints ORDER BY 1;
+SELECT * FROM savepoints;
 
 -- test whole-tree commit on an aborted subtransaction
 BEGIN;
@@ -139,7 +139,7 @@ BEGIN;
 		INSERT INTO savepoints VALUES (5);
 		SELECT foo;
 COMMIT;
-SELECT * FROM savepoints ORDER BY 1;
+SELECT * FROM savepoints;
 
 BEGIN;
 	INSERT INTO savepoints VALUES (6);
@@ -160,7 +160,7 @@ BEGIN;
 	ROLLBACK TO SAVEPOINT one;
 		INSERT INTO savepoints VALUES (11);
 COMMIT;
-SELECT a FROM savepoints WHERE a in (9, 10, 11) ORDER BY 1;
+SELECT a FROM savepoints WHERE a in (9, 10, 11);
 -- rows 9 and 11 should have been created by different xacts
 SELECT a.xmin = b.xmin FROM savepoints a, savepoints b WHERE a.a=9 AND b.a=11;
 
@@ -177,7 +177,7 @@ BEGIN;
 			SAVEPOINT three;
 				INSERT INTO savepoints VALUES (17);
 COMMIT;
-SELECT a FROM savepoints WHERE a BETWEEN 12 AND 17 ORDER BY 1;
+SELECT a FROM savepoints WHERE a BETWEEN 12 AND 17;
 
 BEGIN;
 	INSERT INTO savepoints VALUES (18);
@@ -190,7 +190,7 @@ BEGIN;
 	ROLLBACK TO SAVEPOINT one;
 		INSERT INTO savepoints VALUES (22);
 COMMIT;
-SELECT a FROM savepoints WHERE a BETWEEN 18 AND 22 ORDER BY 1;
+SELECT a FROM savepoints WHERE a BETWEEN 18 AND 22;
 
 DROP TABLE savepoints;
 

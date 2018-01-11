@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_tar.c,v 1.62 2007/11/15 21:14:41 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_tar.c,v 1.65 2009/06/04 19:16:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -54,17 +54,13 @@ static FILE *newTempFile(void);
 
 #define K_STD_BUF_SIZE 1024
 
-
-#ifdef HAVE_LIBZ
- /* typedef gzFile	 ThingFile; */
-typedef FILE ThingFile;
-#else
-typedef FILE ThingFile;
-#endif
-
 typedef struct
 {
-	ThingFile  *zFH;
+#ifdef HAVE_LIBZ
+	gzFile		zFH;
+#else
+	FILE		*zFH;
+#endif
 	FILE	   *nFH;
 	FILE	   *tarFH;
 	FILE	   *tmpFH;
@@ -146,6 +142,7 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
 	AH->WriteBufPtr = _WriteBuf;
 	AH->ReadBufPtr = _ReadBuf;
 	AH->ClosePtr = _CloseArchive;
+	AH->ReopenPtr = NULL;
 	AH->PrintTocDataPtr = _PrintTocData;
 	AH->ReadExtraTocPtr = _ReadExtraToc;
 	AH->WriteExtraTocPtr = _WriteExtraToc;
@@ -155,6 +152,8 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
 	AH->StartBlobPtr = _StartBlob;
 	AH->EndBlobPtr = _EndBlob;
 	AH->EndBlobsPtr = _EndBlobs;
+	AH->ClonePtr = NULL;
+	AH->DeClonePtr = NULL;
 
 	/*
 	 * Set up some special context used in compressing data.
@@ -1337,7 +1336,9 @@ _tarGetHeader(ArchiveHandle *AH, TAR_MEMBER *th)
 
 		if (len != 512)
 			die_horribly(AH, modulename,
-						 "incomplete tar header found (%lu bytes)\n",
+						 ngettext("incomplete tar header found (%lu byte)\n",
+								  "incomplete tar header found (%lu bytes)\n",
+								  len),
 						 (unsigned long) len);
 
 		/* Calc checksum */

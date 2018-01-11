@@ -1,2 +1,0 @@
-CREATE TABLESPACE pg2_dropts_template FILESPACE filespace_test_a;
-CREATE TABLESPACE

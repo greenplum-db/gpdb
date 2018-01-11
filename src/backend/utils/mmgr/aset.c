@@ -8,11 +8,12 @@
  *
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.76 2008/01/01 19:45:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.79 2009/06/11 14:49:06 momjian Exp $
  *
  * NOTE:
  *	This is a new (Feb. 05, 1999) implementation of the allocation set
@@ -665,8 +666,7 @@ randomize_mem(char *ptr, size_t size)
 	}
 	save_ctr = ctr;
 }
-
-#endif /* RANDOMIZE_ALLOCATED_MEMORY */
+#endif   /* RANDOMIZE_ALLOCATED_MEMORY */
 
 
 /*
@@ -1042,6 +1042,10 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 		/* fill the allocated space with junk */
 		randomize_mem((char *) AllocChunkGetPointer(chunk), size);
 #endif
+#ifdef RANDOMIZE_ALLOCATED_MEMORY
+		/* fill the allocated space with junk */
+		randomize_mem((char *) AllocChunkGetPointer(chunk), size);
+#endif
 
 		/*
 		 * Stick the new block underneath the active allocation block, so that
@@ -1094,6 +1098,10 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 		{
 			((char *) AllocChunkGetPointer(chunk))[size] = 0x7E;
 		}
+#endif
+#ifdef RANDOMIZE_ALLOCATED_MEMORY
+		/* fill the allocated space with junk */
+		randomize_mem((char *) AllocChunkGetPointer(chunk), size);
 #endif
 #ifdef RANDOMIZE_ALLOCATED_MEMORY
 		/* fill the allocated space with junk */
@@ -1252,6 +1260,10 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	{
 		((char *) AllocChunkGetPointer(chunk))[size] = 0x7E;
 	}
+#endif
+#ifdef RANDOMIZE_ALLOCATED_MEMORY
+	/* fill the allocated space with junk */
+	randomize_mem((char *) AllocChunkGetPointer(chunk), size);
 #endif
 #ifdef RANDOMIZE_ALLOCATED_MEMORY
 	/* fill the allocated space with junk */

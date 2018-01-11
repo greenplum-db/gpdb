@@ -4,10 +4,10 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeIndexscan.h,v 1.31 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeIndexscan.h,v 1.34 2009/01/01 17:23:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,8 @@
 
 extern int	ExecCountSlotsIndexScan(IndexScan *node);
 extern IndexScanState *ExecInitIndexScan(IndexScan *node, EState *estate, int eflags);
+extern IndexScanState *ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
+							  Relation currentRelation, Oid indexid);
 extern TupleTableSlot *ExecIndexScan(IndexScanState *node);
 extern void ExecEndIndexScan(IndexScanState *node);
 extern void ExecIndexMarkPos(IndexScanState *node);
@@ -27,8 +29,8 @@ extern void ExecEagerFreeIndexScan(IndexScanState *node);
 
 /* routines exported to share code with nodeBitmapIndexscan.c */
 extern void ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					   List *quals, List *strategies, List *subtypes,
-					   ScanKey *scanKeys, int *numScanKeys,
+					   Index scanrelid,
+					   List *quals, ScanKey *scanKeys, int *numScanKeys,
 					   IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					   IndexArrayKeyInfo **arrayKeys, int *numArrayKeys);
 extern void ExecIndexEvalRuntimeKeys(ExprContext *econtext,
@@ -39,8 +41,4 @@ extern bool ExecIndexAdvanceArrayKeys(IndexArrayKeyInfo *arrayKeys, int numArray
 
 extern TupleTableSlot *IndexNext(IndexScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromIndexScanState(IndexScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 #endif   /* NODEINDEXSCAN_H */

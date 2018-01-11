@@ -3,12 +3,14 @@
 # Copyright (c) Greenplum Inc 2014. All Rights Reserved. 
 #
 
-import unittest
 from gppylib.commands.base import CommandResult
-from gppylib.operations.unix import RemoteOperation, CleanSharedMem
+from gppylib.operations.unix import CleanSharedMem
 from mock import Mock, MagicMock, patch
 
-class CleanSharedMemTestCase(unittest.TestCase):
+from test.unit.gp_unittest import GpTestCase, run_tests
+
+
+class CleanSharedMemTestCase(GpTestCase):
     def _get_mock_segment(self, name, datadir, port, hostname, address):
         m = Mock()
         m.name = name
@@ -38,7 +40,7 @@ class CleanSharedMemTestCase(unittest.TestCase):
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
-    def test_run_with_invalid_pid_file(self, mock1, mock2): 
+    def test_run_with_invalid_pid_file(self, mock1, mock2):
         segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfadsasdfasdf'.split()
@@ -51,7 +53,7 @@ class CleanSharedMemTestCase(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.unix.Command.run')
     @patch('gppylib.operations.unix.Command.get_results', return_value=CommandResult(1, '', '', False, False))
-    def test_run_with_error_in_workerpool(self, mock1, mock2, mock3): 
+    def test_run_with_error_in_workerpool(self, mock1, mock2, mock3):
         segments = [self._get_mock_segment('seg1', '/tmp/gpseg1', 1234, 'host1', 'host1')]
         c = CleanSharedMem(segments)
         file_contents = 'asdfads\nasdfsd asdfadsf\n12345 23456'.split()
@@ -60,3 +62,7 @@ class CleanSharedMemTestCase(unittest.TestCase):
         with patch('__builtin__.open', m, create=True):
             with self.assertRaisesRegexp(Exception, 'Unable to clean up shared memory'):
                 c.run()
+
+
+if __name__ == '__main__':
+    run_tests()

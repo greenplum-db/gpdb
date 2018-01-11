@@ -1,10 +1,8 @@
-# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.11 2007/08/21 13:32:33 mha Exp $
+# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.13 2009/01/05 09:27:20 petere Exp $
 
 # Use replacement include files for those missing on Win32
 override CPPFLAGS+="-I$(top_srcdir)/src/include/port/win32"
 
-DLLTOOL= i686-pc-mingw32-dlltool
-DLLWRAP= i686-pc-mingw32-dllwrap
 ifdef PGXS
 BE_DLLLIBS= -L$(libdir) -lpostgres
 else
@@ -51,6 +49,7 @@ endif
 ifndef MAKE_DLL
 MAKE_DLL	= true
 endif
+
 
 # Build rules to add versioninfo resources to win32 binaries
 

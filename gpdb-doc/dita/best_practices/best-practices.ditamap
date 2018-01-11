@@ -3,7 +3,7 @@
 <map xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="map">
     <title>Greenplum Database Best Practices</title>
     <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html" otherprops="pivotal"/>
+        format="html"/>
     <topicref href="intro.xml">
         <topicref href="summary.xml"/>
         <topicref href="sysconfig.xml"/>

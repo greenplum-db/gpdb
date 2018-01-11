@@ -1,0 +1,13 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: compiled_bits_ubuntu16
+run:
+  path: gpdb_src/concourse/scripts/compile_gpdb_open_source_ubuntu.bash
+params:
+  CONFIGURE_FLAGS: ""
+  TRANSFER_DIR: compiled_bits_ubuntu16
+  COMPILED_BITS_FILENAME: compiled_bits_ubuntu16.tar.gz

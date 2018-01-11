@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic13">
+   <title>Using the Greenplum Parallel File Server (gpfdist)</title>
+   <shortdesc>The <cmdname>gpfdist</cmdname> protocol is used in a <codeph>CREATE EXTERNAL
+         TABLE</codeph> SQL command to access external data served by the Greenplum Database
+         <codeph>gpfdist</codeph> file server utility. When external data is served by
+         <cmdname>gpfdist</cmdname>, all segments in the Greenplum Database system can read or write
+      external table data in parallel.</shortdesc>
+   <body>
+      <p>This topic describes the setup and management tasks for using <cmdname>gpfdist</cmdname>
+         with external tables.</p>
+      <ul id="ul_krw_tmg_bbb">
+         <li><xref href="#topic_xkt_vjy_4bb" format="dita"/></li>
+         <li><xref href="#topic14" format="dita"/></li>
+         <li><xref href="#topic15" format="dita"/></li>
+         <li><xref href="#topic16" format="dita"/></li>
+         <li><xref href="#topic17" format="dita"/></li>
+         <li><xref href="#topic18" format="dita"/></li>
+      </ul>
+   </body>
+   <topic id="topic_xkt_vjy_4bb">
+      <title>About gpfdist and External Tables</title>
+      <body>
+         <p>The <codeph>gpfdist</codeph> file server utility is located in the
+               <codeph>$GPHOME/bin</codeph> directory on your Greenplum Database master host and on
+            each segment host. When you start a <codeph>gpfdist</codeph> instance you specify a
+            listen port and the path to a directory containing files to read or where files are to
+            be written. For example, this command runs <codeph>gpfdist</codeph> in the background,
+            listening on port 8801, and serving files in the
+               <codeph>/home/gpadmin/external_files</codeph> directory:</p>
+         <codeblock>$ gpfdist -p 8801 -d /home/gpadmin/external_files &amp;</codeblock>
+         <p>The <codeph>CREATE EXTERNAL TABLE</codeph> command <codeph>LOCATION</codeph> clause
+            connects an external table definition to one or more <codeph>gpfdist</codeph> instances.
+            If the external table is readable, the <codeph>gpfdist</codeph> server reads data
+            records from files from in specified directory, packs them into a block, and sends the
+            block in a response to a Greenplum Database segment's request. The segments unpack rows
+            they receive and distribute them according to the external table's distribution policy.
+            If the external table is a writable table, segments send blocks of rows in a request to
+            gpfdist and gpfdist writes them to the external file.</p>
+         <p>External data files can contain rows in CSV format or any delimited text format
+            supported by the <codeph>FORMAT</codeph> clause of the <codeph>CREATE EXTERNAL
+               TABLE</codeph> command. In addition, <codeph>gpfdist</codeph> can be configured with
+            a YAML-formatted file to transform external data files between a supported text format
+            and another format, for example XML or JSON. See &lt;ref> for an example that shows how
+            to use <codeph>gpfdist</codeph> to read external XML files into a Greenplum Database
+            readable external table. </p>
+         <p>For readable external tables, <codeph>gpfdist</codeph> uncompresses
+               <codeph>gzip</codeph> (<codeph>.gz</codeph>) and <codeph>bzip2</codeph>
+               (.<codeph>bz2</codeph>) files automatically. You can use the wildcard character (*)
+            or other C-style pattern matching to denote multiple files to read. External files are
+            assumed to be relative to the directory specified when you started the
+               <codeph>gpfdist</codeph> instance. </p>
+      </body>
+   </topic>
+   <topic id="topic14">
+      <title>About gpfdist Setup and Performance</title>
+      <body>
+         <p>You can run <codeph>gpfdist</codeph> instances on multiple hosts and you can run
+            multiple <codeph>gpfdist</codeph> instances on each host. This allows you to deploy
+               <codeph>gpfdist</codeph> servers strategically so that you can attain fast data load
+            and unload rates by utilizing all of the available network bandwidth and Greenplum
+            Database's parallelism. </p>
+         <ul id="ul_rkb_plg_bbb">
+            <li id="du165860">Allow network traffic to use all ETL host network interfaces
+               simultaneously. Run one instance of <cmdname>gpfdist</cmdname> for each interface on
+               the ETL host, then declare the host name of each NIC in the <codeph>LOCATION</codeph>
+               clause of your external table definition (see <xref
+                  href="g-creating-external-tables---examples.xml#topic44"/>).</li>
+         </ul>
+         <fig id="du165872">
+            <title>External Table Using Single gpfdist Instance with Multiple NICs</title>
+            <image href="../graphics/ext_tables_multinic.jpg" placement="break" width="472px"
+               height="271px" id="image_skb_plg_bbb"/>
+         </fig>
+         <ul id="ul_tkb_plg_bbb">
+            <li id="du212280">Divide external table data equally among multiple
+                  <cmdname>gpfdist</cmdname> instances on the ETL host. For example, on an ETL
+               system with two NICs, run two <cmdname>gpfdist</cmdname> instances (one on each NIC)
+               to optimize data load performance and divide the external table data files evenly
+               between the two <cmdname>gpfdist</cmdname> servers.</li>
+         </ul>
+         <fig id="du165882">
+            <title>External Tables Using Multiple gpfdist Instances with Multiple NICs</title>
+            <image href="../graphics/ext_tables.jpg" placement="break" width="467px" height="282px"
+               id="image_ukb_plg_bbb"/>
+         </fig>
+         <note type="note">Use pipes (|) to separate formatted text when you submit files to
+               <cmdname>gpfdist</cmdname>. Greenplum Database encloses comma-separated text strings
+            in single or double quotes. <cmdname>gpfdist</cmdname> has to remove the quotes to parse
+            the strings. Using pipes to separate formatted text avoids the extra step and improves
+            performance.</note>
+      </body>
+   </topic>
+   <topic id="topic15">
+      <title>Controlling Segment Parallelism</title>
+      <body>
+         <p>The <codeph>gp_external_max_segs</codeph> server configuration parameter controls the
+            number of segment instances that can access a single <cmdname>gpfdist</cmdname> instance
+            simultaneously. 64 is the default. You can set the number of segments such that some
+            segments process external data files and some perform other database processing. Set
+            this parameter in the <codeph>postgresql.conf</codeph> file of your master instance.</p>
+      </body>
+   </topic>
+   <topic id="topic16">
+      <title>Installing gpfdist</title>
+      <body>
+         <p>
+            <cmdname>gpfdist</cmdname> is installed in <codeph>$GPHOME/bin</codeph> of your
+            Greenplum Database master host installation. Run <cmdname>gpfdist</cmdname> on a machine
+            other than the Greenplum Database master or standby master, such as on a machine devoted
+            to ETL processing. Running <cmdname>gpfdist</cmdname> on the master or standby master
+            can have a performance impact on query execution. To install <cmdname>gpfdist</cmdname>
+            on your ETL server, get it from the <i>Greenplum Load Tools</i> package and follow its
+            installation instructions.</p>
+      </body>
+   </topic>
+   <topic id="topic17">
+      <title>Starting and Stopping gpfdist</title>
+      <body>
+         <p>You can start <cmdname>gpfdist</cmdname> in your current directory location or in any
+            directory that you specify. The default port is <codeph>8080</codeph>.</p>
+         <p>From your current directory, type: </p>
+         <p>
+            <codeblock>gpfdist &amp;</codeblock>
+         </p>
+         <p>From a different directory, specify the directory from which to serve files, and
+            optionally, the HTTP port to run on.</p>
+         <p>To start <cmdname>gpfdist</cmdname> in the background and log output messages and errors
+            to a log file:</p>
+         <p>
+            <codeblock>$ gpfdist -d /var/load_files -p 8081 -l /home/<codeph>gpadmin</codeph>/log &amp;
+</codeblock>
+         </p>
+         <p>For multiple <cmdname>gpfdist</cmdname> instances on the same ETL host (see <xref
+               href="#topic14/du165872" format="dita"/>), use a different base directory and port
+            for each instance. For example:</p>
+         <p>
+            <codeblock>$ gpfdist -d /var/load_files1 -p 8081 -l /home/<codeph>gpadmin</codeph>/log1 &amp;
+$ gpfdist -d /var/load_files2 -p 8082 -l /home/<codeph>gpadmin</codeph>/log2 &amp;
+</codeblock>
+         </p>
+         <p>To stop <cmdname>gpfdist</cmdname> when it is running in the background:</p>
+         <p>First find its process id:</p>
+         <p>
+            <codeblock>$ ps -ef | grep gpfdist</codeblock>
+         </p>
+         <p>Then kill the process, for example (where 3456 is the process ID in this example):</p>
+         <p>
+            <codeblock>$ kill 3456
+</codeblock>
+         </p>
+      </body>
+   </topic>
+   <topic id="topic18">
+      <title>Troubleshooting gpfdist</title>
+      <body>
+         <p>The segments access <cmdname>gpfdist</cmdname> at runtime. Ensure that the Greenplum
+            segment hosts have network access to <cmdname>gpfdist</cmdname>.
+               <cmdname>gpfdist</cmdname> is a web server: test connectivity by running the
+            following command from each host in the Greenplum array (segments and master):</p>
+         <p>
+            <codeblock>$ wget http://<i>gpfdist_hostname</i>:<i>port</i>/<i>filename</i>
+         </codeblock>
+         </p>
+         <p>The <codeph>CREATE EXTERNAL TABLE</codeph> definition must have the correct host name,
+            port, and file names for <cmdname>gpfdist</cmdname>. Specify file names and paths
+            relative to the directory from which <cmdname>gpfdist</cmdname> serves files (the
+            directory path specified when <cmdname>gpfdist</cmdname> started). See <xref
+               href="g-creating-external-tables---examples.xml#topic44"/>.</p>
+         <p>If you start <cmdname>gpfdist</cmdname> on your system and IPv6 networking is disabled,
+               <cmdname>gpfdist</cmdname> displays this warning message when testing for an IPv6
+            port.</p>
+         <codeblock>[WRN gpfdist.c:2050] Creating the socket failed
+</codeblock>
+         <p>If the corresponding IPv4 port is available, <cmdname>gpfdist</cmdname> uses that port
+            and the warning for IPv6 port can be ignored. To see information about the ports that
+               <cmdname>gpfdist</cmdname> tests, use the <codeph>-V</codeph> option.</p>
+         <p>For information about IPv6 and IPv4 networking, see your operating system
+            documentation.</p>
+         <p>When reading or writing data with the <codeph>gpfdist</codeph> or
+               <codeph>gfdists</codeph> protocol, the <codeph>gpfdist</codeph> utility rejects HTTP
+            requests that do not include <codeph>X-GP-PROTO</codeph> in the request header. If
+               <codeph>X-GP-PROTO</codeph> is not detected in the header request
+               <codeph>gpfist</codeph> returns a 400 error in the status line of the HTTP response
+            header: <codeph>400 invalid request (no gp-proto)</codeph>.</p>
+         <p>Greenplum Database includes <codeph>X-GP-PROTO</codeph> in the HTTP request header to
+            indicate that the request is from Greenplum Database. </p>
+      </body>
+   </topic>
+</topic>

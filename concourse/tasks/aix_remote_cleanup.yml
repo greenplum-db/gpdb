@@ -1,0 +1,22 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+
+inputs:
+- name: gpdb_src
+- name: session_id
+
+outputs:
+
+params:
+  BLD_TARGETS:
+  REMOTE_HOST:
+  REMOTE_PORT:
+  REMOTE_USER:
+  REMOTE_KEY:
+
+run:
+  path: gpdb_src/concourse/scripts/aix_remote_cleanup.bash

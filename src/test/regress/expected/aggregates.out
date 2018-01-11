@@ -280,11 +280,11 @@ group by ten
 having exists (select 1 from onek b where sum(distinct a.four) = b.four);
  ten | sum 
 -----+-----
-   2 |   2
-   6 |   2
    0 |   2
-   8 |   2
+   2 |   2
    4 |   2
+   6 |   2
+   8 |   2
 (5 rows)
 
 -- this should fail because subquery has an agg of its own in WHERE
@@ -292,7 +292,7 @@ select ten, sum(distinct four) from onek a
 group by ten
 having exists (select 1 from onek b
                where sum(distinct a.four + b.four) = b.four);
-ERROR:  aggregates not allowed in WHERE clause
+ERROR:  aggregate functions are not allowed in WHERE
 LINE 4:                where sum(distinct a.four + b.four) = b.four)...
                              ^
 -- Test handling of sublinks within outer-level aggregates.
@@ -316,8 +316,6 @@ CREATE TEMPORARY TABLE bitwise_test(
   x INT2,
   y BIT(4)
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i2' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- empty case
 SELECT 
   BIT_AND(i2) AS "?",
@@ -393,8 +391,6 @@ CREATE TEMPORARY TABLE bool_test(
   b2 BOOL,
   b3 BOOL,
   b4 BOOL);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- empty case
 SELECT
   BOOL_AND(b1)   AS "n",
@@ -493,11 +489,11 @@ select f1, (select min(unique1) from tenk1 where unique1 > f1) AS gt
 from int4_tbl;
      f1      | gt 
 -------------+----
-      123456 |   
- -2147483647 |  0
            0 |  1
+      123456 |   
      -123456 |  0
   2147483647 |   
+ -2147483647 |  0
 (5 rows)
 
 -- check some cases that were handled incorrectly in 8.3.0
@@ -528,6 +524,15 @@ select max(unique2) from tenk1 order by max(unique2)+1;
 -- MPP: This works in Postgres
 select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
 ERROR:  set-valued function called in context that cannot accept a set
+-- check for correct detection of nested-aggregate errors
+select max(min(unique1)) from tenk1;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select max(min(unique1)) from tenk1;
+                   ^
+select (select max(min(unique1)) from int8_tbl) from tenk1;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select (select max(min(unique1)) from int8_tbl) from tenk1;
+                           ^
 --
 -- Test combinations of DISTINCT and/or ORDER BY
 --
@@ -561,20 +566,32 @@ select array_agg(b order by a desc)
 
 select array_agg(distinct a)
   from (values (1),(2),(1),(3),(null),(2)) v(a);
- array_agg 
+  array_agg   
 --------------
  {1,2,3,NULL}
 (1 row)
 
--- TODO: support distinct + order by
-/*
 select array_agg(distinct a order by a)
   from (values (1),(2),(1),(3),(null),(2)) v(a);
+  array_agg   
+--------------
+ {1,2,3,NULL}
+(1 row)
+
 select array_agg(distinct a order by a desc)
   from (values (1),(2),(1),(3),(null),(2)) v(a);
+  array_agg   
+--------------
+ {NULL,3,2,1}
+(1 row)
+
 select array_agg(distinct a order by a desc nulls last)
   from (values (1),(2),(1),(3),(null),(2)) v(a);
-*/
+  array_agg   
+--------------
+ {3,2,1,NULL}
+(1 row)
+
 -- multi-arg aggs, strict/nonstrict, distinct/order by
 select aggfstr(a,b,c)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c);
@@ -590,36 +607,71 @@ select aggfns(a,b,c)
  {"(1,3,foo)","(0,,)","(2,2,bar)","(3,1,baz)"}
 (1 row)
 
-/*
 select aggfstr(distinct a,b,c)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,3) i;
+                aggfstr                
+---------------------------------------
+ {"(1,3,foo)","(2,2,bar)","(3,1,baz)"}
+(1 row)
+
 select aggfns(distinct a,b,c)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,3) i;
+                    aggfns                     
+-----------------------------------------------
+ {"(0,,)","(1,3,foo)","(2,2,bar)","(3,1,baz)"}
+(1 row)
 
 select aggfstr(distinct a,b,c order by b)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,3) i;
+                aggfstr                
+---------------------------------------
+ {"(3,1,baz)","(2,2,bar)","(1,3,foo)"}
+(1 row)
+
 select aggfns(distinct a,b,c order by b)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,3) i;
+                    aggfns                     
+-----------------------------------------------
+ {"(3,1,baz)","(2,2,bar)","(1,3,foo)","(0,,)"}
+(1 row)
 
 -- test specific code paths
-
 select aggfns(distinct a,a,c order by c using ~<~,a)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,2) i;
+                     aggfns                     
+------------------------------------------------
+ {"(2,2,bar)","(3,3,baz)","(1,1,foo)","(0,0,)"}
+(1 row)
+
 select aggfns(distinct a,a,c order by c using ~<~)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,2) i;
+                     aggfns                     
+------------------------------------------------
+ {"(2,2,bar)","(3,3,baz)","(1,1,foo)","(0,0,)"}
+(1 row)
+
 select aggfns(distinct a,a,c order by a)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,2) i;
+                     aggfns                     
+------------------------------------------------
+ {"(0,0,)","(1,1,foo)","(2,2,bar)","(3,3,baz)"}
+(1 row)
+
 select aggfns(distinct a,b,c order by a,c using ~<~,b)
   from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
        generate_series(1,2) i;
-*/
+                    aggfns                     
+-----------------------------------------------
+ {"(0,,)","(1,3,foo)","(2,2,bar)","(3,1,baz)"}
+(1 row)
+
 -- check node I/O via view creation and usage, also deparsing logic
 create view agg_view1 as
   select aggfns(a,b,c)
@@ -641,23 +693,33 @@ create or replace view agg_view1 as
     from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
          generate_series(1,3) i;
 select * from agg_view1;
-ERROR:  DISTINCT is supported only for single-argument aggregates
+                    aggfns                     
+-----------------------------------------------
+ {"(0,,)","(1,3,foo)","(2,2,bar)","(3,1,baz)"}
+(1 row)
+
 select pg_get_viewdef('agg_view1'::regclass);
                                                                                        pg_get_viewdef                                                                                        
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  SELECT aggfns(DISTINCT v.a, v.b, v.c) AS aggfns FROM (VALUES (1,3,'foo'::text), (0,NULL::integer,NULL::text), (2,2,'bar'::text), (3,1,'baz'::text)) v(a, b, c), generate_series(1, 3) i(i);
 (1 row)
 
--- TODO: support distinct + order by
-/*
 create or replace view agg_view1 as
   select aggfns(distinct a,b,c order by b)
     from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
          generate_series(1,3) i;
-
 select * from agg_view1;
+                    aggfns                     
+-----------------------------------------------
+ {"(3,1,baz)","(2,2,bar)","(1,3,foo)","(0,,)"}
+(1 row)
+
 select pg_get_viewdef('agg_view1'::regclass);
-*/
+                                                                                              pg_get_viewdef                                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ SELECT aggfns(DISTINCT v.a, v.b, v.c ORDER BY v.b) AS aggfns FROM (VALUES (1,3,'foo'::text), (0,NULL::integer,NULL::text), (2,2,'bar'::text), (3,1,'baz'::text)) v(a, b, c), generate_series(1, 3) i(i);
+(1 row)
+
 create or replace view agg_view1 as
   select aggfns(a,b,c order by b+1)
     from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c);
@@ -698,47 +760,49 @@ select * from agg_view1;
 (1 row)
 
 select pg_get_viewdef('agg_view1'::regclass);
-                                                                                pg_get_viewdef                                                                                 
+                                                                                      pg_get_viewdef                                                                                      
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  SELECT aggfns(v.a, v.b, v.c ORDER BY v.c USING ~<~ NULLS LAST) AS aggfns FROM (VALUES (1,3,'foo'::text), (0,NULL::integer,NULL::text), (2,2,'bar'::text), (3,1,'baz'::text)) v(a, b, c);
 (1 row)
 
--- TODO: support distinct + order by
-/*
 create or replace view agg_view1 as
   select aggfns(distinct a,b,c order by a,c using ~<~,b)
     from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
          generate_series(1,2) i;
-
 select * from agg_view1;
+                    aggfns                     
+-----------------------------------------------
+ {"(0,,)","(1,3,foo)","(2,2,bar)","(3,1,baz)"}
+(1 row)
+
 select pg_get_viewdef('agg_view1'::regclass);
-*/
+                                                                                                             pg_get_viewdef                                                                                                              
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ SELECT aggfns(DISTINCT v.a, v.b, v.c ORDER BY v.a, v.c USING ~<~ NULLS LAST, v.b) AS aggfns FROM (VALUES (1,3,'foo'::text), (0,NULL::integer,NULL::text), (2,2,'bar'::text), (3,1,'baz'::text)) v(a, b, c), generate_series(1, 2) i(i);
+(1 row)
+
 drop view agg_view1;
 -- incorrect DISTINCT usage errors
-select array_agg(distinct a,b,c order by i)
+select aggfns(distinct a,b,c order by i)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
-ERROR:  function array_agg(integer, integer, text) does not exist
-LINE 1: select array_agg(distinct a,b,c order by i)
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-select array_agg(distinct a,b,c order by a,b+1)
+ERROR:  in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+LINE 1: select aggfns(distinct a,b,c order by i)
+                                              ^
+select aggfns(distinct a,b,c order by a,b+1)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
-ERROR:  function array_agg(integer, integer, text) does not exist
-LINE 1: select array_agg(distinct a,b,c order by a,b+1)
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-select array_agg(distinct a,b,c order by a,b,i,c)
+ERROR:  in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+LINE 1: select aggfns(distinct a,b,c order by a,b+1)
+                                                ^
+select aggfns(distinct a,b,c order by a,b,i,c)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
-ERROR:  function array_agg(integer, integer, text) does not exist
-LINE 1: select array_agg(distinct a,b,c order by a,b,i,c)
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-select array_agg(distinct a,a,c order by a,b)
+ERROR:  in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+LINE 1: select aggfns(distinct a,b,c order by a,b,i,c)
+                                                  ^
+select aggfns(distinct a,a,c order by a,b)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
-ERROR:  function array_agg(integer, integer, text) does not exist
-LINE 1: select array_agg(distinct a,a,c order by a,b)
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+ERROR:  in an aggregate with DISTINCT, ORDER BY expressions must appear in argument list
+LINE 1: select aggfns(distinct a,a,c order by a,b)
+                                                ^
 -- string_agg tests
 select string_agg(a) from (values('aaaa'),('bbbb'),('cccc')) g(a);
   string_agg  
@@ -770,253 +834,348 @@ select string_agg(a,',') from (values(null),(null)) g(a);
  
 (1 row)
 
--- array_agg tests
-SELECT array_agg(a order by a) as a_by_a from aggtest;
-    a_by_a     
----------------
- {0,42,56,100}
-(1 row)
-
-SELECT array_agg(b order by b) as b_by_b from aggtest;
-           b_by_b            
------------------------------
- {0.09561,7.8,99.097,324.78}
-(1 row)
-
-SELECT array_agg(a order by a) as a_by_a, 
-       array_agg(a order by b) as a_by_b,
-       array_agg(b order by a) as b_by_a,
-       array_agg(b order by b) as b_by_b 
-  FROM aggtest;
-    a_by_a     |    a_by_b     |           b_by_a            |           b_by_b            
----------------+---------------+-----------------------------+-----------------------------
- {0,42,56,100} | {0,56,100,42} | {0.09561,324.78,7.8,99.097} | {0.09561,7.8,99.097,324.78}
-(1 row)
-
--- Negative test cases for ordered aggregate syntax
-SELECT count(order by a) from aggtest;       -- zero parameter aggregate
-ERROR:  syntax error at or near "order"
-LINE 1: SELECT count(order by a) from aggtest;
-                     ^
-SELECT count(a order by a) from aggtest;     -- regular (non-orderd) aggregate
-ERROR:  ORDER BY specified, but count is not an ordered aggregate function
-LINE 1: SELECT count(a order by a) from aggtest;
-               ^
-SELECT abs(a order by a) from aggtest;       -- regular function
-ERROR:  ORDER BY specified, but abs is not an ordered aggregate function
-LINE 1: SELECT abs(a order by a) from aggtest;
-               ^
-SELECT a(aggtest order by a) from aggtest;   -- function-like column reference
-ERROR:  function a(aggtest) does not exist
-LINE 1: SELECT a(aggtest order by a) from aggtest;
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-SELECT nosuchagg(a order by a) FROM aggtest; -- no such function
-ERROR:  function nosuchagg(smallint) does not exist
-LINE 1: SELECT nosuchagg(a order by a) FROM aggtest;
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-SELECT lag(a order by a) from aggtest;       -- window function (no window clause)
-ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
-LINE 1: SELECT lag(a order by a) from aggtest;
-               ^
-SELECT lag(a order by a) over (order by a) FROM aggtest;  -- window function
-ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
-LINE 1: SELECT lag(a order by a) over (order by a) FROM aggtest;
-               ^
-SELECT count(a order by a) over (order by a) FROM aggtest;  -- window derived aggregate
-ERROR:  aggregate ORDER BY is not implemented for window functions
-LINE 1: SELECT count(a order by a) over (order by a) FROM aggtest;
-               ^
-SELECT array_agg(a order by a) over (order by a) FROM aggtest; -- window derived ordered aggregate
-ERROR:  aggregate ORDER BY is not implemented for window functions
-LINE 1: SELECT array_agg(a order by a) over (order by a) FROM aggtes...
-               ^
--- check for mpp-2687
-CREATE TEMPORARY TABLE mpp2687t (
-    dk text,
-    gk text
-) DISTRIBUTED BY (dk);
-CREATE VIEW mpp2687v AS
-    SELECT DISTINCT gk
-    FROM mpp2687t 
-    GROUP BY gk;
-NOTICE:  view "mpp2687v" will be a temporary view
-SELECT * FROM mpp2687v;
- gk 
-----
-(0 rows)
-
--- MPP-4617
-select case when ten < 5 then ten else ten * 2 end, count(distinct two), count(distinct four) from tenk1 group by 1;
- case | count | count 
-------+-------+-------
-    3 |     1 |     2
-    1 |     1 |     2
-    2 |     1 |     2
-    0 |     1 |     2
-   16 |     1 |     2
-   10 |     1 |     2
-   14 |     1 |     2
-   12 |     1 |     2
-    4 |     1 |     2
-   18 |     1 |     2
-(10 rows)
-
-select ten, ten, count(distinct two), count(distinct four) from tenk1 group by 1,2;
- ten | ten | count | count 
------+-----+-------+-------
-   3 |   3 |     1 |     2
-   5 |   5 |     1 |     2
-   4 |   4 |     1 |     2
-   6 |   6 |     1 |     2
-   1 |   1 |     1 |     2
-   0 |   0 |     1 |     2
-   2 |   2 |     1 |     2
-   8 |   8 |     1 |     2
-   9 |   9 |     1 |     2
-   7 |   7 |     1 |     2
-(10 rows)
-
---MPP-20151: distinct is transformed to a group-by
-select distinct two from tenk1 order by two;
- two 
+-- FILTER tests
+select min(unique1) filter (where unique1 > 100) from tenk1;
+ min 
 -----
-   0
-   1
-(2 rows)
-
-select distinct two, four from tenk1 order by two, four;
- two | four 
------+------
-   0 |    0
-   0 |    2
-   1 |    1
-   1 |    3
-(4 rows)
-
-select distinct two, max(two) over() from tenk1 order by two;
- two | max 
------+-----
-   0 |   1
-   1 |   1
-(2 rows)
-
-select distinct two, sum(four) over() from tenk1 order by two;
- two |  sum  
------+-------
-   0 | 15000
-   1 | 15000
-(2 rows)
-
-select distinct two, sum(four) from tenk1 group by two order by two;
- two |  sum  
------+-------
-   0 |  5000
-   1 | 10000
-(2 rows)
-
-select distinct two, sum(four) from tenk1 group by two having sum(four) > 5000;
- two |  sum  
------+-------
-   1 | 10000
+ 101
 (1 row)
 
-select distinct t1.two, t2.two, t1.four, t2.four from tenk1 t1, tenk1 t2 where t1.hundred=t2.hundred order by t1.two, t1.four;
- two | two | four | four 
------+-----+------+------
-   0 |   0 |    0 |    0
-   0 |   0 |    2 |    2
-   1 |   1 |    1 |    1
-   1 |   1 |    3 |    3
-(4 rows)
+select ten, sum(distinct four) filter (where four::text ~ '123') from onek a
+group by ten;
+ ten | sum 
+-----+-----
+   0 |    
+   1 |    
+   2 |    
+   3 |    
+   4 |    
+   5 |    
+   6 |    
+   7 |    
+   8 |    
+   9 |    
+(10 rows)
 
--- Test for a planner bug we used to have, when this query gets planned
--- as a merge join. This should perform a merge join between 'l' and 'ps',
--- using both pk and sk as the merge keys. Due to the bug, the planner
--- used mix up the columns in the path keys, and used incorrect columns
--- as the merge keys. (This is a modified version of a TPC-H query)
-create table l (ok bigint, pk integer, sk integer, quantity numeric) distributed by (ok);
-create table ps (pk integer, sk integer, availqty integer) distributed by (pk);
-insert into l select g%5, 50-g, g, 5 from generate_series(1, 50) g;
-insert into ps select g, 50-g, 10 from generate_series(1, 25) g;
-select  g.pk, g.sk, ps.availqty
-from ps,
-     (select sum(l.quantity) as qty_sum, l.pk, l.sk
-      from l
-      group by l.pk, l.sk ) g
-where g.pk = ps.pk and g.sk = ps.sk
-and ps.availqty > g.qty_sum ;
- pk | sk | availqty 
-----+----+----------
-  6 | 44 |       10
-  3 | 47 |       10
- 21 | 29 |       10
- 15 | 35 |       10
- 20 | 30 |       10
- 25 | 25 |       10
- 13 | 37 |       10
- 22 | 28 |       10
-  7 | 43 |       10
- 16 | 34 |       10
- 24 | 26 |       10
- 10 | 40 |       10
- 19 | 31 |       10
-  8 | 42 |       10
-  9 | 41 |       10
-  4 | 46 |       10
- 14 | 36 |       10
-  5 | 45 |       10
- 11 | 39 |       10
- 18 | 32 |       10
- 12 | 38 |       10
-  2 | 48 |       10
- 23 | 27 |       10
-  1 | 49 |       10
- 17 | 33 |       10
-(25 rows)
+select ten, sum(distinct four) filter (where four > 10) from onek a
+group by ten
+having exists (select 1 from onek b where sum(distinct a.four) = b.four);
+ ten | sum 
+-----+-----
+   0 |    
+   2 |    
+   4 |    
+   6 |    
+   8 |    
+(5 rows)
 
--- the same, but force a merge join and sorted agg.
-set enable_hashagg=off;
-set enable_hashjoin=off;
-set enable_mergejoin=on;
-select  g.pk, g.sk, ps.availqty
-from ps,
-     (select sum(l.quantity) as qty_sum, l.pk, l.sk
-      from l
-      group by l.pk, l.sk ) g
-where g.pk = ps.pk and g.sk = ps.sk
-and ps.availqty > g.qty_sum ;
- pk | sk | availqty 
-----+----+----------
-  1 | 49 |       10
-  2 | 48 |       10
-  3 | 47 |       10
-  4 | 46 |       10
-  5 | 45 |       10
-  6 | 44 |       10
-  7 | 43 |       10
-  8 | 42 |       10
-  9 | 41 |       10
- 10 | 40 |       10
- 11 | 39 |       10
- 12 | 38 |       10
- 13 | 37 |       10
- 14 | 36 |       10
- 15 | 35 |       10
- 16 | 34 |       10
- 17 | 33 |       10
- 18 | 32 |       10
- 19 | 31 |       10
- 20 | 30 |       10
- 21 | 29 |       10
- 22 | 28 |       10
- 23 | 27 |       10
- 24 | 26 |       10
- 25 | 25 |       10
-(25 rows)
+--select max(foo COLLATE "C") filter (where (bar collate "POSIX") > '0')
+--from (values ('a', 'b')) AS v(foo,bar);
+-- outer reference in FILTER (PostgreSQL extension)
+select (select count(*)
+        from (values (1)) t0(inner_c))
+from (values (2),(3)) t1(outer_c); -- inner query is aggregation query
+ ?column? 
+----------
+        1
+        1
+(2 rows)
 
-reset enable_hashagg;
-reset enable_hashjoin;
-reset enable_mergejoin;
-drop table l, ps;
+select (select count(*) filter (where outer_c <> 0)
+        from (values (1)) t0(inner_c))
+from (values (2),(3)) t1(outer_c); -- outer query is aggregation query
+ ?column? 
+----------
+        2
+(1 row)
+
+select (select count(inner_c) filter (where outer_c <> 0)
+        from (values (1)) t0(inner_c))
+from (values (2),(3)) t1(outer_c); -- inner query is aggregation query
+ ?column? 
+----------
+        1
+        1
+(2 rows)
+
+select
+  (select max((select i.unique2 from tenk1 i where i.unique1 = o.unique1))
+     filter (where o.unique1 < 10))
+from tenk1 o;					-- outer query is aggregation query
+ ?column? 
+----------
+     9998
+(1 row)
+
+-- subquery in FILTER clause (PostgreSQL extension)
+select sum(unique1) FILTER (WHERE
+  unique1 IN (SELECT unique1 FROM onek where unique1 < 100)) FROM tenk1;
+ sum  
+------
+ 4950
+(1 row)
+
+-- exercise lots of aggregate parts with FILTER
+select aggfns(distinct a,b,c order by a,c using ~<~,b) filter (where a > 1)
+    from (values (1,3,'foo'),(0,null,null),(2,2,'bar'),(3,1,'baz')) v(a,b,c),
+    generate_series(1,2) i;
+          aggfns           
+---------------------------
+ {"(2,2,bar)","(3,1,baz)"}
+(1 row)
+
+-- ordered-set aggregates
+select p, percentile_cont(p) within group (order by x::float8)
+from generate_series(1,5) x,
+     (values (0::float8),(0.1),(0.25),(0.4),(0.5),(0.6),(0.75),(0.9),(1)) v(p)
+group by p order by p;
+  p   | percentile_cont 
+------+-----------------
+    0 |               1
+  0.1 |             1.4
+ 0.25 |               2
+  0.4 |             2.6
+  0.5 |               3
+  0.6 |             3.4
+ 0.75 |               4
+  0.9 |             4.6
+    1 |               5
+(9 rows)
+
+select p, percentile_cont(p order by p) within group (order by x)  -- error
+from generate_series(1,5) x,
+     (values (0::float8),(0.1),(0.25),(0.4),(0.5),(0.6),(0.75),(0.9),(1)) v(p)
+group by p order by p;
+ERROR:  cannot use multiple ORDER BY clauses with WITHIN GROUP
+LINE 1: select p, percentile_cont(p order by p) within group (order ...
+                                                ^
+select p, sum() within group (order by x::float8)  -- error
+from generate_series(1,5) x,
+     (values (0::float8),(0.1),(0.25),(0.4),(0.5),(0.6),(0.75),(0.9),(1)) v(p)
+group by p order by p;
+ERROR:  sum is not an ordered-set aggregate, so it cannot have WITHIN GROUP
+LINE 1: select p, sum() within group (order by x::float8)  
+                  ^
+select p, percentile_cont(p,p)  -- error
+from generate_series(1,5) x,
+     (values (0::float8),(0.1),(0.25),(0.4),(0.5),(0.6),(0.75),(0.9),(1)) v(p)
+group by p order by p;
+ERROR:  WITHIN GROUP is required for ordered-set aggregate percentile_cont
+LINE 1: select p, percentile_cont(p,p)  
+                  ^
+select percentile_cont(0.5) within group (order by b) from aggtest;
+ percentile_cont  
+------------------
+ 53.4485001564026
+(1 row)
+
+select percentile_cont(0.5) within group (order by b), sum(b) from aggtest;
+ percentile_cont  |   sum   
+------------------+---------
+ 53.4485001564026 | 431.773
+(1 row)
+
+select percentile_cont(0.5) within group (order by thousand) from tenk1;
+ percentile_cont 
+-----------------
+           499.5
+(1 row)
+
+select percentile_disc(0.5) within group (order by thousand) from tenk1;
+ percentile_disc 
+-----------------
+             499
+(1 row)
+
+select rank(3) within group (order by x)
+from (values (1),(1),(2),(2),(3),(3),(4)) v(x);
+ rank 
+------
+    5
+(1 row)
+
+select cume_dist(3) within group (order by x)
+from (values (1),(1),(2),(2),(3),(3),(4)) v(x);
+ cume_dist 
+-----------
+     0.875
+(1 row)
+
+select percent_rank(3) within group (order by x)
+from (values (1),(1),(2),(2),(3),(3),(4),(5)) v(x);
+ percent_rank 
+--------------
+          0.5
+(1 row)
+
+select dense_rank(3) within group (order by x)
+from (values (1),(1),(2),(2),(3),(3),(4)) v(x);
+ dense_rank 
+------------
+          3
+(1 row)
+
+select percentile_disc(array[0,0.1,0.25,0.5,0.75,0.9,1]) within group (order by thousand)
+from tenk1;
+      percentile_disc       
+----------------------------
+ {0,99,249,499,749,899,999}
+(1 row)
+
+select percentile_cont(array[0,0.25,0.5,0.75,1]) within group (order by thousand)
+from tenk1;
+       percentile_cont       
+-----------------------------
+ {0,249.75,499.5,749.25,999}
+(1 row)
+
+select percentile_disc(array[[null,1,0.5],[0.75,0.25,null]]) within group (order by thousand)
+from tenk1;
+         percentile_disc         
+---------------------------------
+ {{NULL,999,499},{749,249,NULL}}
+(1 row)
+
+select percentile_cont(array[0,1,0.25,0.75,0.5,1]) within group (order by x)
+from generate_series(1,6) x;
+    percentile_cont    
+-----------------------
+ {1,6,2.25,4.75,3.5,6}
+(1 row)
+
+select ten, mode() within group (order by string4) from tenk1 group by ten order by ten;
+ ten |  mode  
+-----+--------
+   0 | HHHHxx
+   1 | OOOOxx
+   2 | VVVVxx
+   3 | OOOOxx
+   4 | HHHHxx
+   5 | HHHHxx
+   6 | OOOOxx
+   7 | AAAAxx
+   8 | VVVVxx
+   9 | VVVVxx
+(10 rows)
+
+select percentile_disc(array[0.25,0.5,0.75]) within group (order by x)
+from unnest('{fred,jim,fred,jack,jill,fred,jill,jim,jim,sheila,jim,sheila}'::text[]) u(x);
+ percentile_disc 
+-----------------
+ {fred,jill,jim}
+(1 row)
+
+-- check collation propagates up in suitable cases:
+--select pg_collation_for(percentile_disc(1) within group (order by x collate "POSIX"))
+--  from (values ('fred'),('jim')) v(x);
+-- ordered-set aggs created with CREATE AGGREGATE
+select test_rank(3) within group (order by x)
+from (values (1),(1),(2),(2),(3),(3),(4)) v(x);
+ test_rank 
+-----------
+         5
+(1 row)
+
+select test_percentile_disc(0.5) within group (order by thousand) from tenk1;
+ test_percentile_disc 
+----------------------
+                  499
+(1 row)
+
+-- ordered-set aggs can't use ungrouped vars in direct args:
+select rank(x) within group (order by x) from generate_series(1,5) x;
+ERROR:  column "x.x" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select rank(x) within group (order by x) from generate_serie...
+                    ^
+DETAIL:  Direct arguments of an ordered-set aggregate must use only grouped columns.
+-- outer-level agg can't use a grouped arg of a lower level, either:
+select array(select percentile_disc(a) within group (order by x)
+               from (values (0.3),(0.7)) v(a) group by a)
+  from generate_series(1,5) g(x);
+ERROR:  outer-level aggregate cannot contain a lower-level variable in its direct arguments
+LINE 1: select array(select percentile_disc(a) within group (order b...
+                                            ^
+-- agg in the direct args is a grouping violation, too:
+select rank(sum(x)) within group (order by x) from generate_series(1,5) x;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select rank(sum(x)) within group (order by x) from generate_...
+                    ^
+-- hypothetical-set type unification and argument-count failures:
+select rank(3) within group (order by x) from (values ('fred'),('jim')) v(x);
+ERROR:  WITHIN GROUP types text and integer cannot be matched
+LINE 1: select rank(3) within group (order by x) from (values ('fred...
+                    ^
+select rank(3) within group (order by stringu1,stringu2) from tenk1;
+ERROR:  function rank(integer, name, name) does not exist
+LINE 1: select rank(3) within group (order by stringu1,stringu2) fro...
+               ^
+HINT:  To use the hypothetical-set aggregate rank, the number of hypothetical direct arguments (here 1) must match the number of ordering columns (here 2).
+select rank('fred') within group (order by x) from generate_series(1,5) x;
+ERROR:  invalid input syntax for integer: "fred"
+LINE 1: select rank('fred') within group (order by x) from generate_...
+                    ^
+--select rank('adam'::text collate "C") within group (order by x collate "POSIX")
+--  from (values ('fred'),('jim')) v(x);
+-- hypothetical-set type unification successes:
+select rank('adam'::varchar) within group (order by x) from (values ('fred'),('jim')) v(x);
+ rank 
+------
+    1
+(1 row)
+
+select rank('3') within group (order by x) from generate_series(1,5) x;
+ rank 
+------
+    3
+(1 row)
+
+-- divide by zero check
+select percent_rank(0) within group (order by x) from generate_series(1,0) x;
+ percent_rank 
+--------------
+            0
+(1 row)
+
+-- deparse and multiple features:
+create view aggordview1 as
+select ten,
+       percentile_disc(0.5) within group (order by thousand) as p50,
+       percentile_disc(0.5) within group (order by thousand) filter (where hundred=1) as px,
+       rank(5,'AZZZZ',50) within group (order by hundred, string4 desc, hundred)
+  from tenk1
+ group by ten order by ten;
+select pg_get_viewdef('aggordview1');
+                                                                                                                                                                                          pg_get_viewdef                                                                                                                                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ SELECT tenk1.ten, percentile_disc((0.5)::double precision) WITHIN GROUP (ORDER BY tenk1.thousand) AS p50, percentile_disc((0.5)::double precision) WITHIN GROUP (ORDER BY tenk1.thousand) FILTER (WHERE (tenk1.hundred = 1)) AS px, rank(5, 'AZZZZ'::name, 50) WITHIN GROUP (ORDER BY tenk1.hundred, tenk1.string4 DESC, tenk1.hundred) AS rank FROM tenk1 GROUP BY tenk1.ten ORDER BY tenk1.ten;
+(1 row)
+
+select * from aggordview1 order by ten;
+ ten | p50 | px  | rank 
+-----+-----+-----+------
+   0 | 490 |     |  101
+   1 | 491 | 401 |  101
+   2 | 492 |     |  101
+   3 | 493 |     |  101
+   4 | 494 |     |  101
+   5 | 495 |     |   67
+   6 | 496 |     |    1
+   7 | 497 |     |    1
+   8 | 498 |     |    1
+   9 | 499 |     |    1
+(10 rows)
+
+drop view aggordview1;
+-- variadic aggregates
+select least_agg(q1,q2) from int8_tbl;
+     least_agg     
+-------------------
+ -4567890123456789
+(1 row)
+
+select least_agg(variadic array[q1,q2]) from int8_tbl;
+     least_agg     
+-------------------
+ -4567890123456789
+(1 row)
+

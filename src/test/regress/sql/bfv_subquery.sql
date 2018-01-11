@@ -271,3 +271,18 @@ select * from foo where not exists (select * from bar where foo.b = foo.b || 'a'
 select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d = 'bb');
 
 drop table foo, bar;
+
+--
+-- subqueries with unnest in projectlist
+--
+-- start_ignore
+DROP TABLE IF EXISTS A;
+CREATE TABLE A AS SELECT ARRAY[1,2,3] AS X;
+INSERT INTO A VALUES(NULL::int4[]);
+-- end_ignore
+
+SELECT (NOT EXISTS (SELECT UNNEST(X))) AS B FROM A;
+SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+
+DROP TABLE A;

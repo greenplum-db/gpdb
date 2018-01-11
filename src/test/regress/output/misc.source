@@ -451,23 +451,24 @@ SELECT class, aa, a FROM a_star*;
 -- everyone else does nothing.
 --
 SELECT p.name, name(p.hobbies) FROM ONLY person p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 --
 -- as above, but jeff also does post_hacking.
 --
 SELECT p.name, name(p.hobbies) FROM person* p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 --
 -- the next two queries demonstrate how functions generate bogus duplicates.
 -- this is a "feature" ..
 --
-SELECT DISTINCT hobbies_r.name, name(hobbies_r.equipment) FROM hobbies_r;
-ERROR:  function cannot execute on segment because it accesses relation "public.equipment_r"
+SELECT DISTINCT hobbies_r.name, name(hobbies_r.equipment) FROM hobbies_r
+  ORDER BY 1,2;
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
 DETAIL:  SQL function "equipment" during startup
 SELECT hobbies_r.name, (hobbies_r.equipment).name FROM hobbies_r;
-ERROR:  function cannot execute on segment because it accesses relation "public.equipment_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
 DETAIL:  SQL function "equipment" during startup
 --
 -- mike needs advil and peet's coffee,
@@ -475,29 +476,29 @@ DETAIL:  SQL function "equipment" during startup
 -- everyone else is fine.
 --
 SELECT p.name, name(p.hobbies), name(equipment(p.hobbies)) FROM ONLY person p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 --
 -- as above, but jeff needs advil and peet's coffee as well.
 --
 SELECT p.name, name(p.hobbies), name(equipment(p.hobbies)) FROM person* p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 --
 -- just like the last two, but make sure that the target list fixup and
 -- unflattening is being done correctly.
 --
 SELECT name(equipment(p.hobbies)), p.name, name(p.hobbies) FROM ONLY person p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 SELECT (p.hobbies).equipment.name, p.name, name(p.hobbies) FROM person* p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 SELECT (p.hobbies).equipment.name, name(p.hobbies), p.name FROM ONLY person p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 SELECT name(equipment(p.hobbies)), name(p.hobbies), p.name FROM person* p;
-ERROR:  function cannot execute on segment because it accesses relation "public.hobbies_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
 DETAIL:  SQL function "hobbies" during startup
 SELECT user_relns() AS user_relns
    ORDER BY user_relns;
@@ -506,10 +507,8 @@ SELECT user_relns() AS user_relns
  __gp_aovisimap_hidden_t
  __gp_fullname
  __gp_is_append_only
- __gp_localid
  __gp_log_master_ext
  __gp_log_segment_ext
- __gp_masterid
  __gp_number_of_segments
  __gp_user_data_tables
  __gp_user_data_tables_readable
@@ -518,6 +517,7 @@ SELECT user_relns() AS user_relns
  a_star
  abstime_tbl
  aggtest
+ aggtype
  array_index_op_test
  array_op_test
  arrtest
@@ -537,7 +537,6 @@ SELECT user_relns() AS user_relns
  city
  copy_tbl
  d_star
- date_null
  date_tbl
  default_seq
  default_tbl
@@ -554,7 +553,6 @@ SELECT user_relns() AS user_relns
  fkc_primary_table1
  fkc_primary_table2
  float4_tbl
- float8_null
  float8_tbl
  floats
  func_index_heap
@@ -609,9 +607,7 @@ SELECT user_relns() AS user_relns
  insert_seq
  insert_tbl
  int2_tbl
- int4_null
  int4_tbl
- int8_null
  int8_tbl
  interval_tbl
  iportaltest
@@ -631,11 +627,9 @@ SELECT user_relns() AS user_relns
  onek
  onek2
  path_tbl
- path_tbl_s_seq
  person
  point_tbl
  polygon_tbl
- polygon_tbl_s_seq
  ramp
  random_tbl
  real_city
@@ -650,6 +644,7 @@ SELECT user_relns() AS user_relns
  tab1
  tab2
  tenk1
+ tenk1
  tenk2
  test_tsvector
  text_tbl
@@ -661,7 +656,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(158 rows)
+(152 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 
@@ -702,10 +697,10 @@ SELECT name(equipment(ROW('skywalking', 'mer')));
 (1 row)
 
 SELECT *, name(equipment(h.*)) FROM hobbies_r h;
-ERROR:  function cannot execute on segment because it accesses relation "public.equipment_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
 DETAIL:  SQL function "equipment" during startup
 SELECT *, (equipment(CAST((h.*) AS hobbies_r))).name FROM hobbies_r h;
-ERROR:  function cannot execute on segment because it accesses relation "public.equipment_r"
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
 DETAIL:  SQL function "equipment" during startup
 --
 -- check that old-style C functions work properly with TOASTed values

@@ -15,9 +15,9 @@
 #   hitting max_connections limit on segments.
 #
 
-test: gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan
+test: gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi spi_processed64bit gp_xml pgoptions shared_scan null
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain
 test: bitmap_index gp_dump_query_oids analyze gp_owner_permission
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
@@ -46,11 +46,11 @@ test: query_finish_pending
 
 test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf
 
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly alter_distpol_dropped query_finish
+test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing parruleord
+test: partition partition1 partition_indexing parruleord partition_storage partition_ddl
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking
@@ -67,12 +67,13 @@ test: sreh
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
-test: alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
+test: external_table external_table_create_privs column_compression compression_zstd eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
+test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
 ignore: icudp_full
 
 test: resource_queue
 test: resource_queue_function
+test: resource_group
 test: wrkloadadmin
 
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
@@ -98,25 +99,29 @@ test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 # (https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=e5550d5fec66aa74caad1f79b79826ec64898688)
 test: catalog
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gporca bfv_statistic
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins gporca bfv_statistic
+# NOTE: gporca_faults uses gp_fault_injector - so do not add to a parallel group
+test: gporca_faults
  
 test: aggregate_with_groupingsets 
 
 test: nested_case_null sort bb_mpph
 test: bb_memory_quota memconsumption
 
+test: tuple_serialization
+
 # NOTE: The bfv_temp test assumes that there are no temporary tables in
 # other sessions. Therefore the other tests in this group mustn't create
 # temp tables
-test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp
+test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
-test: qp_olap_mdqa qp_misc
+test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 
-test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption
+test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
-test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback
+test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback planner_fallback
 
 test: qp_functions_in_contexts_setup
 test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_constant qp_functions_in_with
@@ -124,7 +129,7 @@ test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_fu
 test: olap_setup
 test: qp_olap_group qp_olap_group2
 
-test: hooktest
+test: hooktest partition_rank
 
 ignore: tpch500GB_orca
 

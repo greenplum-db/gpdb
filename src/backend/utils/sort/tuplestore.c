@@ -29,7 +29,7 @@
  * When the caller requests backward-scan capability, we write the temp file
  * in a format that allows either forward or backward scan.  Otherwise, only
  * forward scan is allowed.  A request for backward scan must be made before
- * putting any tuples into the tuplestore.  Rewind is normally allowed but
+ * putting any tuples into the tuplestore.	Rewind is normally allowed but
  * can be turned off via tuplestore_set_eflags; turning off rewind for all
  * read pointers enables truncation of the tuplestore at the oldest read point
  * for minimal memory usage.  (The caller must explicitly call tuplestore_trim
@@ -43,12 +43,13 @@
  * before switching to the other state or activating a different read pointer.
  *
  *
- * Portions Copyright (c) 2007-2017, Pivotal Software Inc.
+ * Portions Copyright (c) 2007-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.48.2.1 2009/12/29 17:41:09 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.48 2009/06/11 14:49:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,7 +86,7 @@ typedef enum
  *
  * Special case: if eof_reached is true, then the pointer's read position is
  * implicitly equal to the write position, and current/file/offset aren't
- * maintained.  This way we need not update all the read pointers each time
+ * maintained.	This way we need not update all the read pointers each time
  * we write.
  */
 typedef struct
@@ -183,6 +184,11 @@ struct Tuplestorestate
 	long		allowedMem;		/* total memory allowed, in bytes */
 	long        availMemMin;    /* availMem low water mark (bytes) */
 	int64       spilledBytes;   /* memory used for spilled tuples */
+
+	/*
+	 * MemTupleBinding used for putvalues of tuplestore.
+	 */
+	 MemTupleBinding	*mt_bind;
 };
 
 #define COPYTUP(state,tup)	((*(state)->copytup) (state, tup))
@@ -210,7 +216,7 @@ struct Tuplestorestate
  * If state->backward is true, then the stored representation of
  * the tuple must be followed by another "unsigned int" that is a copy of the
  * length --- so the total tape space used is actually sizeof(unsigned int)
- * more than the stored length value.  This allows read-backwards.  When
+ * more than the stored length value.  This allows read-backwards.	When
  * state->backward is not set, the write/read routines may omit the extra
  * length word.
  *
@@ -341,6 +347,7 @@ tuplestore_begin_heap(bool randomAccess, bool interXact, int maxKBytes)
 	state->copytup = copytup_heap;
 	state->writetup = writetup_heap;
 	state->readtup = readtup_heap;
+	state->mt_bind = NULL;
 
 	return state;
 }
@@ -449,6 +456,11 @@ tuplestore_clear(Tuplestorestate *state)
 		readptr->eof_reached = false;
 		readptr->current = 0;
 	}
+
+	if (state->mt_bind)
+		pfree(state->mt_bind);
+
+	state->mt_bind = NULL;
 }
 
 /*
@@ -491,6 +503,8 @@ tuplestore_end(Tuplestorestate *state)
 		pfree(state->memtuples);
 	}
 	pfree(state->readptrs);
+	if (state->mt_bind)
+		pfree(state->mt_bind);
 	pfree(state);
 }
 
@@ -635,8 +649,13 @@ tuplestore_putvalues(Tuplestorestate *state, TupleDesc tdesc,
 {
 	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
 
-	MemTupleBinding *mt_bind = create_memtuple_binding(tdesc);
-	MemTuple tuple = memtuple_form_to(mt_bind, values, isnull, NULL, NULL, false);
+	if (!state->mt_bind)
+	{
+		state->mt_bind = create_memtuple_binding(tdesc);
+		Assert(state->mt_bind);
+	}
+
+	MemTuple tuple = memtuple_form_to(state->mt_bind, values, isnull, NULL, NULL, false);
 
 	USEMEM(state, GetMemoryChunkSpace(tuple));
 
@@ -795,7 +814,7 @@ tuplestore_puttuple_common(Tuplestorestate *state, void *tuple)
  * Backward scan is only allowed if randomAccess was set true or
  * EXEC_FLAG_BACKWARD was specified to tuplestore_set_eflags().
  */
-static void *
+static GenericTuple
 tuplestore_gettuple(Tuplestorestate *state, bool forward,
 					bool *should_free)
 {
@@ -967,7 +986,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 }
 
 /*
- * tuplestore_gettupleslot - exported function to fetch a MemTuple
+ * tuplestore_gettupleslot - exported function to fetch a tuple into a slot
  *
  * If successful, put tuple in slot and return TRUE; else, clear the slot
  * and return FALSE.
@@ -983,19 +1002,22 @@ bool
 tuplestore_gettupleslot(Tuplestorestate *state, bool forward,
 						bool copy, TupleTableSlot *slot)
 {
-	MemTuple tuple;
+	GenericTuple tuple;
 	bool		should_free;
 
-	tuple = (MemTuple) tuplestore_gettuple(state, forward, &should_free);
+	tuple = tuplestore_gettuple(state, forward, &should_free);
 
 	if (tuple)
 	{
 		if (copy && !should_free)
 		{
-			tuple = memtuple_copy_to(tuple, NULL, NULL);
+			if (is_memtuple(tuple))
+				tuple = (GenericTuple) memtuple_copy_to((MemTuple) tuple, NULL, NULL);
+			else
+				tuple = (GenericTuple) heap_copytuple((HeapTuple) tuple);
 			should_free = true;
 		}
-		ExecStoreMinimalTuple(tuple, slot, should_free);
+		ExecStoreGenericTuple(tuple, slot, should_free);
 		return true;
 	}
 	else
@@ -1323,19 +1345,19 @@ getlen(Tuplestorestate *state, bool eofOK)
 static void *
 copytup_heap(Tuplestorestate *state, void *tup)
 {
-	if(!is_heaptuple_memtuple((HeapTuple) tup))
+	if (!is_memtuple((GenericTuple) tup))
 		return heaptuple_copy_to((HeapTuple) tup, NULL, NULL);
-
-	return memtuple_copy_to((MemTuple) tup, NULL, NULL);
+	else
+		return memtuple_copy_to((MemTuple) tup, NULL, NULL);
 }
 
 static void
 writetup_heap(Tuplestorestate *state, void *tup)
 {
-	uint32 tuplen = 0;
-	Size         memsize = 0;
+	uint32		tuplen = 0;
+	Size		memsize = 0;
 
-	if(is_heaptuple_memtuple((HeapTuple) tup))
+	if (is_memtuple((GenericTuple) tup))
 		tuplen = memtuple_get_size((MemTuple) tup);
 	else
 	{
@@ -1361,10 +1383,10 @@ writetup_heap(Tuplestorestate *state, void *tup)
 static void *
 readtup_heap(Tuplestorestate *state, unsigned int len)
 {
-	void *tup = NULL;
-	uint32 tuplen = 0;
+	void	   *tup = NULL;
+	uint32		tuplen = 0;
 
-	if(is_len_memtuplen(len))
+	if (is_len_memtuplen(len))
 	{
 		tuplen = memtuple_size_from_uint32(len);
 	}
@@ -1404,11 +1426,14 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 	}
 
 	if (state->backward)	/* need trailing length word? */
+	{
 		if (BufFileRead(state->myfile, (void *) &tuplen,
 						sizeof(tuplen)) != sizeof(tuplen))
 		{
 			insist_log(false, "unexpected end of data");
 		}
+	}
+
 	return (void *) tup;
 }
 

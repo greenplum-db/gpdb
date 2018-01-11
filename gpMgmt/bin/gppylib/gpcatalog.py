@@ -23,12 +23,9 @@ class GPCatalogException(Exception):
 
 # Hard coded since "master only" is not defined in the catalog
 MASTER_ONLY_TABLES = [
-    'gp_configuration',
+    'gp_segment_configuration',
     'gp_configuration_history',
     'gp_distribution_policy',
-    'gp_db_interfaces',
-    'gp_interfaces',
-    'gp_fault_strategy',
     'gp_segment_configuration',
     'pg_description',
     'pg_listener',  # ???

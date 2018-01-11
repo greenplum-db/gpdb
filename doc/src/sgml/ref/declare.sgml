@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/declare.sgml,v 1.42 2007/10/24 23:27:07 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/declare.sgml,v 1.47 2009/06/10 19:21:37 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-DECLARE">
  <refmeta>
   <refentrytitle id="SQL-DECLARE-TITLE">DECLARE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -40,6 +41,15 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
    After the cursor is created, rows are fetched from it using
    <xref linkend="sql-fetch" endterm="sql-fetch-title">.
   </para>
+
+  <note>
+   <para>
+    This page describes usage of cursors at the SQL command level.
+    If you are trying to use cursors inside a <application>PL/pgSQL</>
+    function, the rules are different &mdash;
+    see <xref linkend="plpgsql-cursors">.
+   </para>
+  </note>
  </refsect1>
 
  <refsect1>
@@ -175,10 +185,9 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
     <productname>PostgreSQL</productname> reports an error if such a
     command is used outside a transaction block.
     Use
-    <xref linkend="sql-begin" endterm="sql-begin-title">,
+    <xref linkend="sql-begin" endterm="sql-begin-title"> and
     <xref linkend="sql-commit" endterm="sql-commit-title">
-    and
-    <xref linkend="sql-rollback" endterm="sql-rollback-title">
+    (or <xref linkend="sql-rollback" endterm="sql-rollback-title">)
     to define a transaction block.
    </para>
 
@@ -214,6 +223,26 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
    </para>
 
    <para>
+    Backward fetches are also disallowed when the query
+    includes <literal>FOR UPDATE</> or <literal>FOR SHARE</>; therefore
+    <literal>SCROLL</literal> may not be specified in this case.
+   </para>
+
+   <caution>
+    <para>
+     Scrollable and <literal>WITH HOLD</literal> cursors may give unexpected
+     results if they invoke any volatile functions (see <xref
+     linkend="xfunc-volatility">).  When a previously fetched row is
+     re-fetched, the functions might be re-executed, perhaps leading to
+     results different from the first time.  One workaround for such cases
+     is to declare the cursor <literal>WITH HOLD</literal> and commit the
+     transaction before reading any rows from it.  This will force the
+     entire output of the cursor to be materialized in temporary storage,
+     so that volatile functions are executed exactly once for each row.
+    </para>
+   </caution>
+
+   <para>
     If the cursor's query includes <literal>FOR UPDATE</> or <literal>FOR
     SHARE</>, then returned rows are locked at the time they are first
     fetched, in the same way as for a regular
@@ -221,19 +250,40 @@ DECLARE <replaceable class="parameter">name</replaceable> [ BINARY ] [ INSENSITI
     these options.
     In addition, the returned rows will be the most up-to-date versions;
     therefore these options provide the equivalent of what the SQL standard
-    calls a <quote>sensitive cursor</>.  It is often wise to use <literal>FOR
-    UPDATE</> if the cursor is intended to be used with <command>UPDATE
-    ... WHERE CURRENT OF</> or <command>DELETE ... WHERE CURRENT OF</>,
-    since this will prevent other sessions from changing the rows between
-    the time they are fetched and the time they are updated.  Without
-    <literal>FOR UPDATE</>, a subsequent <literal>WHERE CURRENT OF</> command
-    will have no effect if the row was changed meanwhile.
+    calls a <quote>sensitive cursor</>.  (Specifying <literal>INSENSITIVE</>
+    together with <literal>FOR UPDATE</> or <literal>FOR SHARE</> is an error.)
    </para>
 
-   <para>
-    <literal>SCROLL</literal> may not be specified when the query
-    includes <literal>FOR UPDATE</> or <literal>FOR SHARE</>.
-   </para>
+   <caution>
+    <para>
+     It is generally recommended to use <literal>FOR UPDATE</> if the cursor
+     is intended to be used with <command>UPDATE ... WHERE CURRENT OF</> or
+     <command>DELETE ... WHERE CURRENT OF</>.  Using <literal>FOR UPDATE</>
+     prevents other sessions from changing the rows between the time they are
+     fetched and the time they are updated.  Without <literal>FOR UPDATE</>,
+     a subsequent <literal>WHERE CURRENT OF</> command will have no effect if
+     the row was changed since the cursor was created.
+    </para>
+
+    <para>
+     Another reason to use <literal>FOR UPDATE</> is that without it, a
+     subsequent <literal>WHERE CURRENT OF</> might fail if the cursor query
+     does not meet the SQL standard's rules for being <quote>simply
+     updatable</> (in particular, the cursor must reference just one table
+     and not use grouping or <literal>ORDER BY</>).  Cursors
+     that are not simply updatable might work, or might not, depending on plan
+     choice details; so in the worst case, an application might work in testing
+     and then fail in production.
+    </para>
+
+    <para>
+     The main reason not to use <literal>FOR UPDATE</> with <literal>WHERE
+     CURRENT OF</> is if you need the cursor to be scrollable, or to be
+     insensitive to the subsequent updates (that is, continue to show the old
+     data).  If this is a requirement, pay close heed to the caveats shown
+     above.
+    </para>
+   </caution>
 
    <para>
     The SQL standard only makes provisions for cursors in embedded

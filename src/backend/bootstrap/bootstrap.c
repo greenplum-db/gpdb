@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.238 2008/01/01 19:45:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.250 2009/02/18 15:58:41 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,15 +35,15 @@
 #include "postmaster/walwriter.h"
 #include "replication/walreceiver.h"
 #include "storage/bufpage.h"
-#include "storage/freespace.h"
+#include "storage/bufmgr.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
-#include "utils/flatfiles.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
+#include "utils/tqual.h"
 
 extern int	optind;
 extern char *optarg;
@@ -477,7 +477,6 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
 		case BgWriterProcess:
 			/* don't set signals, bgwriter has its own agenda */
-			InitXLOGAccess();
 			BackgroundWriterMain();
 			proc_exit(1);		/* should never return */
 

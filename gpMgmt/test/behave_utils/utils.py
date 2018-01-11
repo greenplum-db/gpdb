@@ -183,9 +183,10 @@ def check_return_code(context, ret_code):
     if context.ret_code != int(ret_code):
         emsg = ""
         if context.error_message:
-            emsg += context.error_message
-        raise Exception(
-            "expected return code '%s' does not equal actual return code '%s' %s" % (ret_code, context.ret_code, emsg))
+            emsg += "STDERR:\n%s\n" % context.error_message
+        if context.stdout_message:
+            emsg += "STDOUT:\n%s\n" % context.stdout_message
+        raise Exception("expected return code '%s' does not equal actual return code '%s' \n%s" % (ret_code, context.ret_code, emsg))
 
 
 def check_not_return_code(context, ret_code):

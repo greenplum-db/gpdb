@@ -775,19 +775,19 @@ ROLLBACK;
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF a;
 ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- Negative, cursor-agnostic: cannot update external tables
-CREATE EXTERNAL WEB TABLE foo (x text) EXECUTE 'echo "foo";' FORMAT 'TEXT';
+CREATE EXTERNAL WEB TABLE ucexttest (x text) EXECUTE 'echo "foo";' FORMAT 'TEXT';
 BEGIN;
-DECLARE c CURSOR FOR SELECT * FROM foo;
+DECLARE c CURSOR FOR SELECT * FROM ucexttest;
 FETCH 1 from c;
   x  
 -----
  foo
 (1 row)
 
-UPDATE foo SET x = 'bar' WHERE CURRENT OF c;
-ERROR:  cannot update or delete from external relation "foo"
+UPDATE ucexttest SET x = 'bar' WHERE CURRENT OF c;
+ERROR:  cannot update or delete from external relation "ucexttest"
 ROLLBACK;
-DROP EXTERNAL TABLE foo;
+DROP EXTERNAL TABLE ucexttest;
 -- Negative, cursor-agnostic: cannot update AO
 CREATE TEMP TABLE aotest (a int, b text)
 	WITH (appendonly=true);
@@ -808,3 +808,36 @@ DECLARE c CURSOR FOR SELECT * FROM aocotest;
 DELETE FROM aocotest WHERE CURRENT OF c;
 ERROR:  "aocotest" is not simply updatable
 ROLLBACK;
+--
+-- PL/pgSQL cursors
+--
+-- Test that cursors opened in PL/pgSQL can also be updated.
+-- (Not supported by ORCA, as of this writing.)
+create temp table uctest3 as
+  select n as i, n as j from generate_series(1, 5) n distributed randomly;
+create or replace function plpgsql_uc_test() returns void as $$
+declare
+  c cursor for select * from uctest3 where i = 3;
+  r record;
+begin
+  open c;
+  fetch c into r;
+  raise notice '%, %', r.i, r.j;
+  update uctest3 set i = i * 100, j = r.j * 2 where current of c;
+end;
+$$ language plpgsql;
+select plpgsql_uc_test();
+NOTICE:  3, 3
+ERROR:  cursor "c" is not a simply updatable scan of table "uctest3"
+CONTEXT:  SQL statement "update uctest3 set i = i * 100, j =  $1  * 2 where current of  $2 "
+PL/pgSQL function "plpgsql_uc_test" line 8 at SQL statement
+select * from uctest3;
+ i | j 
+---+---
+ 1 | 1
+ 3 | 3
+ 4 | 4
+ 5 | 5
+ 2 | 2
+(5 rows)
+

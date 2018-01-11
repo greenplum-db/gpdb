@@ -1,7 +1,15 @@
-/*
- * DatumStreamBlock
+/*-------------------------------------------------------------------------
  *
- *	Copyright (c) 2011, EMC, Inc.
+ * datumstreamblock.c
+ *
+ * Portions Copyright (c) 2011, EMC, Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/datumstream/datumstreamblock.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
@@ -34,6 +42,18 @@ static void DatumStreamBlock_IntegrityCheckDense(
 									 void *errdetailArg,
 							 int (*errcontextCallback) (void *errcontextArg),
 									 void *errcontextArg);
+
+/* Proper align with zero padding */
+static inline char *
+att_align_zero(char *data, char alignchar)
+{
+    size_t  misalignment = (size_t)att_align_nominal(1, alignchar) - 1;
+
+    while ((size_t)data & misalignment)
+		*(data++) = 0;
+
+	return data;
+}
 
 /*
  * DatumStreamBlockRead.
@@ -1154,7 +1174,7 @@ DatumStreamBlockWrite_PrintInputVarlenaInfo(
 {
 	uint8	   *p;
 
-	p = DatumGetPointer(originalDatum);
+	p = (uint8 *) DatumGetPointer(originalDatum);
 
 	ereport(LOG,
 		  (errmsg("Write input varlena input <%s> (nth %d, was extended %s)",
@@ -3153,6 +3173,11 @@ DatumStreamBlockWrite_PutDense(
 				wasExtended = false;
 			}
 		}
+		else
+		{
+			dataLen = 0;
+			dataStart = NULL;
+		}
 
 		if (Debug_datumstream_write_print_small_varlena_info)
 		{
@@ -3190,7 +3215,7 @@ DatumStreamBlockWrite_PutDense(
 						 errdetail_datumstreamblockwrite(dsw),
 						 errcontext_datumstreamblockwrite(dsw)));
 			}
-			if (dataLen != dsw->rle_last_item_size)
+			if (dataLen != dsw->rle_last_item_size || !dataStart)
 			{
 				isEqual = false;
 			}

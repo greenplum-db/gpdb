@@ -7,18 +7,20 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/genam.h,v 1.81 2009/08/01 20:59:17 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/access/genam.h,v 1.78 2009/06/11 14:49:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef GENAM_H
 #define GENAM_H
 
-#include "access/relscan.h"
 #include "access/sdir.h"
-#include "nodes/primnodes.h"
+#include "access/skey.h"
+#include "nodes/tidbitmap.h"
+#include "storage/buf.h"
 #include "storage/lock.h"
 #include "utils/relcache.h"
+#include "utils/snapshot.h"
 
 /*
  * Struct for statistics returned by ambuild
@@ -32,13 +34,17 @@ typedef struct IndexBuildResult
 /*
  * Struct for input arguments passed to ambulkdelete and amvacuumcleanup
  *
- * Note that num_heap_tuples will not be valid during ambulkdelete,
- * only amvacuumcleanup.
+ * num_heap_tuples is accurate only when estimated_count is false;
+ * otherwise it's just an estimate (currently, the estimate is the
+ * prior value of the relation's pg_class.reltuples field).  It will
+ * always just be an estimate during ambulkdelete.
  */
 typedef struct IndexVacuumInfo
 {
 	Relation	index;			/* the index being vacuumed */
 	bool		vacuum_full;	/* VACUUM FULL (we have exclusive lock) */
+	bool		analyze_only;	/* ANALYZE (without any actual vacuum) */
+	bool		estimated_count;	/* num_heap_tuples is an estimate */
 	int			message_level;	/* ereport level for progress messages */
 	double		num_heap_tuples;	/* tuples remaining in heap */
 	BufferAccessStrategy strategy;		/* access strategy for reads */
@@ -57,12 +63,15 @@ typedef struct IndexVacuumInfo
  *
  * Note: pages_removed is the amount by which the index physically shrank,
  * if any (ie the change in its total size on disk).  pages_deleted and
- * pages_free refer to free space within the index file.
+ * pages_free refer to free space within the index file.  Some index AMs
+ * may compute num_index_tuples by reference to num_heap_tuples, in which
+ * case they should copy the estimated_count field from IndexVacuumInfo.
  */
 typedef struct IndexBulkDeleteResult
 {
 	BlockNumber num_pages;		/* pages remaining in index */
 	BlockNumber pages_removed;	/* # removed during vacuum operation */
+	bool		estimated_count;	/* num_index_tuples is an estimate */
 	double		num_index_tuples;		/* tuples remaining */
 	double		tuples_removed; /* # removed during vacuum operation */
 	BlockNumber pages_deleted;	/* # unused pages in index */
@@ -72,21 +81,21 @@ typedef struct IndexBulkDeleteResult
 /* Typedef for callback function to determine if a tuple is bulk-deletable */
 typedef bool (*IndexBulkDeleteCallback) (ItemPointer itemptr, void *state);
 
-/* Struct for heap-or-index scans of system tables */
-typedef struct SysScanDescData
-{
-	Relation	heap_rel;		/* catalog being scanned */
-	Relation	irel;			/* NULL if doing heap scan */
-	HeapScanDesc scan;			/* only valid in heap-scan case */
-	IndexScanDesc iscan;		/* only valid in index-scan case */
-} SysScanDescData;
-
-typedef SysScanDescData *SysScanDesc;
+/* struct definitions appear in relscan.h */
+typedef struct IndexScanDescData *IndexScanDesc;
+typedef struct SysScanDescData *SysScanDesc;
 
 
 /*
  * generalized index_ interface routines (in indexam.c)
  */
+
+/*
+ * IndexScanIsValid
+ *		True iff the index scan is valid.
+ */
+#define IndexScanIsValid(scan) PointerIsValid(scan)
+
 extern Relation index_open(Oid relationId, LOCKMODE lockmode);
 extern void index_close(Relation relation, LOCKMODE lockmode);
 
@@ -100,20 +109,15 @@ extern IndexScanDesc index_beginscan(Relation heapRelation,
 				Relation indexRelation,
 				Snapshot snapshot,
 				int nkeys, ScanKey key);
-extern IndexScanDesc index_beginscan_generic(Relation heapRelation,
-				Relation indexRelation,
-				Snapshot snapshot,
-				int nkeys, ScanKey key, bool isMultiscan);
-
+extern IndexScanDesc index_beginscan_bitmap(Relation indexRelation,
+					   Snapshot snapshot,
+					   int nkeys, ScanKey key);
 extern void index_rescan(IndexScanDesc scan, ScanKey key);
 extern void index_endscan(IndexScanDesc scan);
 extern void index_markpos(IndexScanDesc scan);
 extern void index_restrpos(IndexScanDesc scan);
 extern HeapTuple index_getnext(IndexScanDesc scan, ScanDirection direction);
-extern bool index_getnext_indexitem(IndexScanDesc scan,
-						ScanDirection direction);
-
-extern Node *index_getmulti(IndexScanDesc scan, Node *bitmap);
+extern Node *index_getbitmap(IndexScanDesc scan, Node *bitmap);
 
 extern IndexBulkDeleteResult *index_bulk_delete(IndexVacuumInfo *info,
 				  IndexBulkDeleteResult *stats,
@@ -144,6 +148,14 @@ extern SysScanDesc systable_beginscan(Relation heapRelation,
 				   Snapshot snapshot,
 				   int nkeys, ScanKey key);
 extern HeapTuple systable_getnext(SysScanDesc sysscan);
+extern bool systable_recheck_tuple(SysScanDesc sysscan, HeapTuple tup);
 extern void systable_endscan(SysScanDesc sysscan);
+extern SysScanDesc systable_beginscan_ordered(Relation heapRelation,
+						   Relation indexRelation,
+						   Snapshot snapshot,
+						   int nkeys, ScanKey key);
+extern HeapTuple systable_getnext_ordered(SysScanDesc sysscan,
+						 ScanDirection direction);
+extern void systable_endscan_ordered(SysScanDesc sysscan);
 
 #endif   /* GENAM_H */

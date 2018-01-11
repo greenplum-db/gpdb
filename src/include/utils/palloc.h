@@ -19,10 +19,11 @@
  *
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/palloc.h,v 1.38 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/palloc.h,v 1.41 2009/01/01 17:24:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -63,7 +64,6 @@
 #define CDB_PALLOC_CALLER_ID
 #endif
 
-#include "pg_trace.h"
 #include "utils/memaccounting.h"
 
 /*
@@ -153,6 +153,10 @@ extern void MemoryContextStats(MemoryContext context);
 #define pstrdup(str)  MemoryContextStrdup(CurrentMemoryContext, (str))
 
 extern char *pnstrdup(const char *in, Size len);
+
+/* sprintf into a palloc'd buffer --- these are in psprintf.c */
+extern char *psprintf(const char *fmt,...) __attribute__((format(printf, 1, 2)));
+extern size_t pvsnprintf(char *buf, size_t len, const char *fmt, va_list args)  __attribute__((format(printf, 3, 0)));
 
 #if defined(WIN32) || defined(__CYGWIN__)
 extern void *pgport_palloc(Size sz);

@@ -3,7 +3,12 @@
  * nodeExternalscan.c
  *	  Support routines for scans of external relations (on flat files for example)
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeExternalscan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -136,14 +141,12 @@ ExternalNext(ExternalScanState *node)
 		 */
 		if (tuple)
 		{
-			ExecStoreGenericTuple(tuple, slot, true);
+			ExecStoreHeapTuple(tuple, slot, InvalidBuffer, true);
 			if (node->ess_ScanDesc->fs_hasConstraints && !ExternalConstraintCheck(slot, node))
 			{
 				ExecClearTuple(slot);
 				continue;
 			}
-			Gpmon_Incr_Rows_Out(GpmonPktFromExtScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		    /*
 		     * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
 		     */
@@ -276,8 +279,6 @@ ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 	externalstate->ss.ps.delayEagerFree =
 		((eflags & (EXEC_FLAG_REWIND | EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) != 0);
 
-	initGpmonPktForExternalScan((Plan *)node, &externalstate->ss.ps.gpmon_pkt, estate);
-
 	return externalstate;
 }
 
@@ -383,20 +384,11 @@ ExecExternalReScan(ExternalScanState *node, ExprContext *exprCtxt)
 		estate->es_evTupleNull[scanrelid - 1] = false;
 		return;
 	}
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	fileScan = node->ess_ScanDesc;
 
 	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
 	external_rescan(fileScan);
-}
-
-void
-initGpmonPktForExternalScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, ExternalScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

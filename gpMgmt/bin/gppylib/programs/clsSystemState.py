@@ -291,7 +291,7 @@ class GpSystemStateProgram:
 
     def __getMirrorType(self, gpArray):
 
-        if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if gpArray.hasMirrors:
             if gpArray.guessIsSpreadMirror():
                 return "Spread"
             else:
@@ -304,7 +304,7 @@ class GpSystemStateProgram:
         Returns the exitCode
 
         """
-        if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if gpArray.hasMirrors:
             logger.info("-------------------------------------------------------------" )
             logger.info("-Current GPDB mirror list and status" )
             logger.info("-Type = %s" % self.__getMirrorType(gpArray) )
@@ -358,8 +358,7 @@ class GpSystemStateProgram:
 
         else:
             logger.info("-------------------------------------------------------------" )
-            logger.info("-Primary list [%s not used]" % \
-                        gparray.getFaultStrategyLabel(gparray.FAULT_STRATEGY_FILE_REPLICATION))
+            logger.info("-Primary list [Mirror not used]")
             logger.info("-------------------------------------------------------------" )
 
             tabLog = TableLogger().setWarnWithArrows(True)
@@ -376,7 +375,7 @@ class GpSystemStateProgram:
         Returns the exitCode
         """
         exitCode = 0
-        if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if gpArray.hasMirrors:
             tabLog = TableLogger().setWarnWithArrows(True)
             tabLog.info(["Mirror","Datadir", "Port", "Status", "Data Status", ""])
 
@@ -430,7 +429,7 @@ class GpSystemStateProgram:
 
         else:
             logger.warn("-------------------------------------------------------------" )
-            logger.warn( "%s not used" % gparray.getFaultStrategyLabel(gparray.FAULT_STRATEGY_FILE_REPLICATION))
+            logger.warn( "Mirror not used")
             logger.warn("-------------------------------------------------------------" )
 
         return exitCode
@@ -603,7 +602,7 @@ class GpSystemStateProgram:
         returns the exit code
         """
         exitCode = 0
-        if gpArray.getFaultStrategy() != gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if not gpArray.hasMirrors:
             logger.info("Physical mirroring is not configured")
             return 1
 
@@ -683,7 +682,7 @@ class GpSystemStateProgram:
 
         # segments that are down (excluding those that are part of changetracking)
         changeTrackingMirrors = [contentIdToMirror[s.getSegmentContentId()][0] for s in primariesInChangeTracking]
-        changeTrackingMirrorsByDbId = GpArray.getSegmentsGroupedByValue(changeTrackingMirrors, gparray.GpDB.getSegmentDbId)
+        changeTrackingMirrorsByDbId = GpArray.getSegmentsGroupedByValue(changeTrackingMirrors, gparray.Segment.getSegmentDbId)
         segmentsThatAreDown = [s for s in gpArray.getSegDbList() if \
                             not s.getSegmentDbId() in changeTrackingMirrorsByDbId and \
                             data.isSegmentProbablyDown(s)]
@@ -882,7 +881,7 @@ class GpSystemStateProgram:
                 CATEGORY__RESYNCHRONIZATION_INFO:True}
         for seg in gpArray.getSegDbList():
             tabLog.addSeparator()
-            if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+            if gpArray.hasMirrors:
                 toSuppress = categoriesToIgnoreOnMirror if seg.isSegmentMirror(current_role=True) else {}
             else: toSuppress = categoriesToIgnoreWithoutMirroring
             data.addSegmentToTableLogger(tabLog, seg, toSuppress)
@@ -1022,7 +1021,7 @@ class GpSystemStateProgram:
             peerPrimary = None
             data.addValue(VALUE__CURRENT_ROLE, "Primary" if seg.isSegmentPrimary(current_role=True) else "Mirror")
             data.addValue(VALUE__PREFERRED_ROLE, "Primary" if seg.isSegmentPrimary(current_role=False) else "Mirror")
-            if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+            if gpArray.hasMirrors:
 
                 if seg.isSegmentPrimary(current_role=True):
                     data.addValue(VALUE__MIRROR_STATUS, gparray.getDataModeLabel(seg.getSegmentMode()))
@@ -1048,7 +1047,7 @@ class GpSystemStateProgram:
                 #
                 # mirror info
                 #
-                if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+                if gpArray.hasMirrors:
                     # print out mirroring state from the segment itself
                     if seg.isSegmentPrimary(current_role=True):
                         self.__addResyncProgressFields(data, seg, segmentData, False)

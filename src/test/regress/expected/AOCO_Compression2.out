@@ -3564,8 +3564,9 @@ CREATE TYPE int_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists int_rle_type cascade;
-NOTICE:  drop cascades to function int_rle_type_out(int_rle_type)
-NOTICE:  drop cascades to function int_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function int_rle_type_in(cstring)
+drop cascades to function int_rle_type_out(int_rle_type)
 CREATE FUNCTION int_rle_type_in(cstring) 
  RETURNS int_rle_type
  AS 'int4in' 
@@ -3616,8 +3617,9 @@ CREATE TYPE char_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists char_rle_type cascade;
-NOTICE:  drop cascades to function char_rle_type_out(char_rle_type)
-NOTICE:  drop cascades to function char_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function char_rle_type_in(cstring)
+drop cascades to function char_rle_type_out(char_rle_type)
 CREATE FUNCTION char_rle_type_in(cstring) 
  RETURNS char_rle_type
  AS 'charin' 
@@ -3667,8 +3669,9 @@ CREATE TYPE text_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists text_rle_type cascade;
-NOTICE:  drop cascades to function text_rle_type_out(text_rle_type)
-NOTICE:  drop cascades to function text_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function text_rle_type_in(cstring)
+drop cascades to function text_rle_type_out(text_rle_type)
 CREATE FUNCTION text_rle_type_in(cstring) 
  RETURNS text_rle_type
  AS 'textin' 
@@ -3717,8 +3720,9 @@ CREATE TYPE varchar_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists varchar_rle_type cascade;
-NOTICE:  drop cascades to function varchar_rle_type_out(varchar_rle_type)
-NOTICE:  drop cascades to function varchar_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function varchar_rle_type_in(cstring)
+drop cascades to function varchar_rle_type_out(varchar_rle_type)
 CREATE FUNCTION varchar_rle_type_in(cstring) 
  RETURNS varchar_rle_type
  AS 'varcharin' 
@@ -3768,8 +3772,9 @@ CREATE TYPE date_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists date_rle_type cascade;
-NOTICE:  drop cascades to function date_rle_type_out(date_rle_type)
-NOTICE:  drop cascades to function date_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function date_rle_type_in(cstring)
+drop cascades to function date_rle_type_out(date_rle_type)
 CREATE FUNCTION date_rle_type_in(cstring) 
  RETURNS date_rle_type
  AS 'date_in' 
@@ -3820,8 +3825,9 @@ CREATE TYPE timestamp_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists timestamp_rle_type cascade;
-NOTICE:  drop cascades to function timestamp_rle_type_out(timestamp_rle_type)
-NOTICE:  drop cascades to function timestamp_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function timestamp_rle_type_in(cstring)
+drop cascades to function timestamp_rle_type_out(timestamp_rle_type)
 CREATE FUNCTION timestamp_rle_type_in(cstring) 
  RETURNS timestamp_rle_type
  AS 'timestamp_in' 
@@ -3943,6 +3949,13 @@ DEFAULT COLUMN ENCODING (COMPRESSTYPE=zlib, compresslevel=5)
 )
 WITH (APPENDONLY=true, ORIENTATION=column, OIDS=FALSE)
 distributed by (col1);
+select pg_size_pretty(pg_relation_size('mpp17012_compress_test2')),
+get_ao_compression_ratio('mpp17012_compress_test2');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 0 bytes        |                       -1
+(1 row)
+
 \d+ mpp17012_compress_test2
                              Append-Only Columnar Table "public.mpp17012_compress_test2"
  Column |       Type        | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
@@ -3957,9 +3970,18 @@ Options: appendonly=true, orientation=column
 Distributed by: (col1)
 
 insert into mpp17012_compress_test2 values('a',generate_series(1,250),'ksjdhfksdhfksdhfksjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
-select get_ao_compression_ratio('mpp17012_compress_test2');
+select pg_size_pretty(pg_relation_size('mpp17012_compress_test2')),
+get_ao_compression_ratio('mpp17012_compress_test2');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 712 bytes      |                    36.75
+(1 row)
+
+-- compute compression ratio on empty aorow table
+create table empty_aorow_table (c int) with (appendonly=true) distributed by (c);
+select get_ao_compression_ratio('empty_aorow_table');
  get_ao_compression_ratio 
 --------------------------
-                    36.75
+                        1
 (1 row)
 

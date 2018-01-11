@@ -8,8 +8,6 @@
 # this directory and SUBDIRS to subdirectories containing more things
 # to build.
 
-PARTIAL_LINKING=yes
-
 ifdef PARTIAL_LINKING
 # old style: linking using SUBSYS.o
 subsysfilename = SUBSYS.o
@@ -47,7 +45,7 @@ clean-local:
 ifdef SUBDIRS
 	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean || exit; done
 endif
-	rm -f objfiles.txt SUBSYS.o $(OBJS)
+	rm -f $(subsysfilename) $(OBJS)
 	@if [ -d $(CURDIR)/test ]; then $(MAKE) -C $(CURDIR)/test clean; fi
 
 

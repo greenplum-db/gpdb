@@ -24,7 +24,7 @@ typedef struct
 	char	   *ident;
 	int			nplans;
 	SPIPlanPtr *splan;
-}	EPlan;
+} EPlan;
 
 static EPlan *FPlans = NULL;
 static int	nFPlans = 0;
@@ -578,7 +578,7 @@ check_foreign_key(PG_FUNCTION_ARGS)
 
 		snprintf(ident, sizeof(ident), "%s$%u", trigger->tgname, rel->rd_id);
 		plan = find_plan(ident, &FPlans, &nFPlans);
-		ret = SPI_execp(plan->splan[r], kvals, NULL, tcount);
+		ret = SPI_execp(plan->splan[r], kvals, NULL, (int64) tcount);
 		/* we have no NULLs - so we pass   ^^^^  here */
 
 		if (ret < 0)
@@ -599,7 +599,7 @@ check_foreign_key(PG_FUNCTION_ARGS)
 		else
 		{
 #ifdef REFINT_VERBOSE
-			elog(NOTICE, "%s: %d tuple(s) of %s are %s",
+			elog(NOTICE, "%s: " UINT64_FORMAT " tuple(s) of %s are %s",
 				 trigger->tgname, SPI_processed, relname,
 				 (action == 'c') ? "deleted" : "set to null");
 #endif

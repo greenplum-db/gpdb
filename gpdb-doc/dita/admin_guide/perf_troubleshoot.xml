@@ -52,7 +52,7 @@
                     <codeblock>SELECT * FROM pg_stat_activity;
 </codeblock>
                 </p>
-                <p>Note the information does not update instantaneously.</p>
+                <p>Note that the information does not update instantaneously.</p>
             </body>
         </topic>
         <topic id="topic5" xml:lang="en">
@@ -79,10 +79,16 @@ a.current_query
         ORDER BY c.relname;
 </codeblock>
                 </p>
-                <p>If you use resource queues for workload management, queries that are waiting in a
-                    queue will also show in <i>pg_locks</i>. To see how many queries are waiting to
-                    run from a resource queue, use the<i> gp_resqueue_status </i>system catalog
-                    view. For example:</p>
+                <p>If you use resource groups, queries that are waiting will also show in
+                        <i>pg_locks</i>. To see how many queries are waiting to run in a resource
+                    group, use the<i> gp_resgroup_status </i>system catalog view. For example:</p>
+                <p>
+                    <codeblock>SELECT * FROM gp_toolkit.gp_resgroup_status;
+</codeblock>
+                </p>
+                <p>Similarly, if you use resource queues, queries that are waiting in a queue also show in
+                        <i>pg_locks</i>. To see how many queries are waiting to run from a resource
+                    queue, use the<i> gp_resqueue_status </i>system catalog view. For example:</p>
                 <p>
                     <codeblock>SELECT * FROM gp_toolkit.gp_resqueue_status;
 </codeblock>

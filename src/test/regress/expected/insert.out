@@ -2,20 +2,18 @@
 -- insert with DEFAULT in the target_list
 --
 create table inserttest (col1 int4, col2 int4 NOT NULL, col3 text default 'testing');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into inserttest (col1, col2, col3) values (DEFAULT, DEFAULT, DEFAULT);
-ERROR:  null value in column "col2" violates not-null constraint  (seg0 sysadmins-macbook-pro.local:34701 pid=46538)
+ERROR:  null value in column "col2" violates not-null constraint
 insert into inserttest (col2, col3) values (3, DEFAULT);
 insert into inserttest (col1, col2, col3) values (DEFAULT, 5, DEFAULT);
 insert into inserttest values (DEFAULT, 5, 'test');
 insert into inserttest values (DEFAULT, 7);
-select * from inserttest order by 1,2,3;
+select * from inserttest;
  col1 | col2 |  col3   
 ------+------+---------
       |    3 | testing
-      |    5 | test
       |    5 | testing
+      |    5 | test
       |    7 | testing
 (4 rows)
 
@@ -24,18 +22,26 @@ select * from inserttest order by 1,2,3;
 --
 insert into inserttest (col1, col2, col3) values (DEFAULT, DEFAULT);
 ERROR:  INSERT has more target columns than expressions
+LINE 1: insert into inserttest (col1, col2, col3) values (DEFAULT, D...
+                                            ^
 insert into inserttest (col1, col2, col3) values (1, 2);
 ERROR:  INSERT has more target columns than expressions
+LINE 1: insert into inserttest (col1, col2, col3) values (1, 2);
+                                            ^
 insert into inserttest (col1) values (1, 2);
 ERROR:  INSERT has more expressions than target columns
+LINE 1: insert into inserttest (col1) values (1, 2);
+                                                 ^
 insert into inserttest (col1) values (DEFAULT, DEFAULT);
 ERROR:  INSERT has more expressions than target columns
-select * from inserttest order by 1,2,3;
+LINE 1: insert into inserttest (col1) values (DEFAULT, DEFAULT);
+                                                       ^
+select * from inserttest;
  col1 | col2 |  col3   
 ------+------+---------
       |    3 | testing
-      |    5 | test
       |    5 | testing
+      |    5 | test
       |    7 | testing
 (4 rows)
 
@@ -44,16 +50,16 @@ select * from inserttest order by 1,2,3;
 --
 insert into inserttest values(10, 20, '40'), (-1, 2, DEFAULT),
     ((select 2), (select i from (values(3)) as foo (i)), 'values are fun!');
-select * from inserttest order by 1,2,3;
+select * from inserttest;
  col1 | col2 |      col3       
 ------+------+-----------------
+      |    3 | testing
+      |    5 | testing
+      |    5 | test
+      |    7 | testing
+   10 |   20 | 40
    -1 |    2 | testing
     2 |    3 | values are fun!
-   10 |   20 | 40
-      |    3 | testing
-      |    5 | test
-      |    5 | testing
-      |    7 | testing
 (7 rows)
 
 drop table inserttest;

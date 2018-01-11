@@ -1,12 +1,17 @@
 /*--------------------------------------------------------------------------
  *
  * partitionselection.h
- *	 Definitions and API functions for partitionselection.c
+ *	  Definitions and API functions for partitionselection.c
  *
- * Copyright (c) Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	  src/include/cdb/partitionselection.h
  *
  *--------------------------------------------------------------------------
  */
+
 #ifndef PARTITIONSELECTION_H
 #define PARTITIONSELECTION_H
 

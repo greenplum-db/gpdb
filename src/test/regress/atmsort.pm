@@ -1013,7 +1013,7 @@ sub format_query_output
         {
             # If no ordering cols specified (no directive), and SELECT has
             # ORDER BY, see if number of order by cols matches all cols in
-            # selected lists. Treat the order by cols as a column separated
+            # selected lists. Treat the order by cols as a comma separated
             # list and count them. Works ok for simple ORDER BY clauses
             if (defined($directive->{sql_statement}))
             {
@@ -1102,6 +1102,7 @@ sub atmsort_bigloop
     my $getstatement = 0;
     my $has_order = 0;
     my $copy_to_stdout_result = 0;
+    my $describe_mode = 0;
     my $directive = {};
     my $big_ignore = 0;
     my %define_match_expression;
@@ -1218,12 +1219,41 @@ sub atmsort_bigloop
                 goto reprocess_row;
             }
 
+            my $end_of_table = 0;
+
+            if ($describe_mode)
+            {
+                # \d tables don't always end with a row count, and there may be
+                # more than one of them per command. So we allow any of the
+                # following to end the table:
+                # - a blank line
+                # - a row that doesn't have the same number of column separators
+                #   as the header line
+                # - a row count (checked below)
+                if ($ini =~ m/^$/)
+                {
+                    $end_of_table = 1;
+                }
+                elsif (exists($directive->{firstline}))
+                {
+                    # Count the number of column separators in the table header
+                    # and our current line.
+                    my $headerSeparators = ($directive->{firstline} =~ tr/\|//);
+                    my $lineSeparators = ($ini =~ tr/\|//);
+
+                    if ($headerSeparators != $lineSeparators)
+                    {
+                        $end_of_table = 1;
+                    }
+                }
+
+                # Don't reset describe_mode at the end of the table; there may
+                # be more tables still to go.
+            }
+
             # regex example: (5 rows)
             if ($ini =~ m/^\s*\(\d+\s+row(?:s)*\)\s*$/)
             {
-                format_query_output($glob_fqo,
-                                    $has_order, \@outarr, $directive);
-
                 # Always ignore the rowcount for explain plan out as the
                 # skeleton plans might be the same even if the row counts
                 # differ because of session level GUCs.
@@ -1231,6 +1261,14 @@ sub atmsort_bigloop
                 {
                     $ini = 'GP_IGNORE:' . $ini;
                 }
+
+                $end_of_table = 1;
+            }
+
+            if ($end_of_table)
+            {
+                format_query_output($glob_fqo,
+                                    $has_order, \@outarr, $directive);
 
                 $directive = {};
                 @outarr = ();
@@ -1272,16 +1310,20 @@ sub atmsort_bigloop
             }
 
             # Note: \d is for the psql "describe"
-            if ($ini =~ m/(?:insert|update|delete|select|\\d|copy)/i)
+            if ($ini =~ m/(?:insert|update|delete|select|^\s*\\d|copy|execute)/i)
             {
                 $copy_to_stdout_result = 0;
                 $has_order = 0;
                 $sql_statement = "";
 
-                if ($ini =~ m/explain.*(?:insert|update|delete|select)/i)
+                if ($ini =~ m/explain.*(?:insert|update|delete|select|execute)/i)
                 {
                     $directive->{explain} = 'normal';
                 }
+
+                # Should we apply more heuristics to try to find the end of \d
+                # output?
+                $describe_mode = ($ini =~ m/^\s*\\d/);
             }
 
 			# Catching multiple commands and capturing the parens matches
@@ -1289,7 +1331,7 @@ sub atmsort_bigloop
 			# each command has a unique first character. This allows us to
 			# use fewer regular expression matches in this hot section.
 			if ($has_comment &&
-				$ini =~ m/\-\-\s*((force_explain)\s*(operator)?\s*$|(ignore)\s*$|(order)\s+\d+.*$|(mvd)\s+\d+.*$)/)
+				$ini =~ m/\-\-\s*((force_explain)\s*(operator)?\s*$|(ignore)\s*$|(order)\s+(\d+|none).*$|(mvd)\s+\d+.*$)/)
 			{
 				my $cmd = substr($1, 0, 1);
 				if ($cmd eq 'i')
@@ -1300,7 +1342,14 @@ sub atmsort_bigloop
 				{
 					my $olist = $ini;
 					$olist =~ s/^.*\-\-\s*order//;
-					$directive->{order} = $olist;
+					if ($olist =~ /none/)
+					{
+						$directive->{order_none} = 1;
+					}
+					else
+					{
+						$directive->{order} = $olist;
+					}
 				}
 				elsif ($cmd eq 'f')
 				{
@@ -1422,19 +1471,44 @@ sub atmsort_bigloop
 
                 print $atmsort_outfh $apref, $ini;
 
+                # If there is an ORDER BY in the query, then the results must
+                # be in the order that we have memorized in the expected
+                # output. Otherwise, the order of the rows is not
+                # well-defined, so we sort them before comparing, to mask out
+                # any differences in the order.
+                #
+                # This isn't foolproof, and will get fooled by ORDER BYs in
+                # subqueries, for example. But it catches the commmon cases.
                 if (defined($sql_statement)
                     && length($sql_statement)
+                    && !defined($directive->{order_none})
                     # multiline match
                     && ($sql_statement =~ m/select.*order.*by/is))
                 {
-                    $has_order = 1; # so do *not* sort output
-                    $directive->{sql_statement} = $sql_statement;
+                    # There was an ORDER BY. But if it was part of an
+                    # "agg() OVER (ORDER BY ...)" or "WITHIN GROUP (ORDER BY
+                    # ...)" construct, ignore it, because those constructs
+                    # don't mean that the final result has to be in order.
+                    my $t = $sql_statement;
+                    $t =~ s/over\s*\(order\s+by.*\)/xx/isg;
+                    $t =~ s/over\s*\((partition\s+by.*)?order\s+by.*\)/xx/isg;
+                    $t =~ s/window\s+\w+\s+as\s+\((partition\s+by.*)?order\s+by.*\)/xx/isg;
+                    $t =~ s/within\s+group\s*\((order\s+by.*)\)/xx/isg;
+
+                    if ($t =~ m/order\s+by/is)
+                    {
+                        $has_order = 1; # so do *not* sort output
+                    }
+                    else
+                    {
+                        $has_order = 0; # need to sort query output
+                    }
                 }
                 else
                 {
                     $has_order = 0; # need to sort query output
-                    $directive->{sql_statement} = $sql_statement;
                 }
+                $directive->{sql_statement} = $sql_statement;
                 $sql_statement = '';
 
                 $getrows = 1;

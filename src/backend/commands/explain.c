@@ -4,11 +4,12 @@
  *	  Explain query execution plans
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.179 2008/10/04 21:56:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.186 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,8 +24,6 @@
 #include "commands/queue.h"
 #include "executor/execUtils.h"
 #include "executor/instrument.h"
-#include "nodes/pg_list.h"
-#include "nodes/print.h"
 #include "optimizer/clauses.h"
 #include "optimizer/planner.h"
 #include "optimizer/var.h"
@@ -33,12 +32,10 @@
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"
-#include "utils/json.h"
 #include "utils/lsyscache.h"
-#include "utils/memutils.h"             /* AllocSetContextCreate() */
-#include "utils/resscheduler.h"
 #include "utils/tuplesort.h"
-#include "utils/tuplesort_mk.h"
+#include "utils/snapmgr.h"
+
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbpartition.h"
@@ -48,6 +45,7 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/memquota.h"
 #include "miscadmin.h"
+#include "utils/resscheduler.h"
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
@@ -65,6 +63,7 @@ explain_get_index_name_hook_type explain_get_index_name_hook = NULL;
 typedef struct ExplainState
 {
 	/* options */
+	bool		printTList;		/* print plan targetlists */
 	bool		printAnalyze;	/* print actual times */
 	/* other states */
 	PlannedStmt *pstmt;			/* top of plan */
@@ -73,10 +72,7 @@ typedef struct ExplainState
     /* CDB */
     struct CdbExplain_ShowStatCtx  *showstatctx;    /* EXPLAIN ANALYZE info */
     Slice          *currentSlice;   /* slice whose nodes we are visiting */
-    ErrorData      *deferredError;  /* caught error to be re-thrown */
 } ExplainState;
-
-extern bool Test_print_direct_dispatch_info;
 
 static void ExplainOneQuery(Query *query, ExplainStmt *stmt,
 				const char *queryString,
@@ -93,13 +89,14 @@ static void ExplainDXL(Query *query, ExplainStmt *stmt,
 static void ExplainCodegen(PlanState *planstate, TupOutputState *tstate);
 #endif
 static double elapsed_time(instr_time *starttime);
-static ErrorData *explain_defer_error(ExplainState *es);
 static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es);
+static void show_plan_tlist(Plan *plan,
+				StringInfo str, int indent, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
-			   int scanrelid, Plan *outer_plan, Plan *inner_plan,
+			   int scanrelid, Plan *scan_plan, Plan *outer_plan,
 			   StringInfo str, int indent, ExplainState *es);
 static void show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 				StringInfo str, int indent, ExplainState *es);
@@ -212,7 +209,6 @@ ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
 	/* Initialize ExplainState structure. */
 	memset(es, 0, sizeof(*es));
 	es->showstatctx = NULL;
-	es->deferredError = NULL;
 	es->pstmt = NULL;
 
 	initStringInfo(&buf);
@@ -287,10 +283,10 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 		PlannedStmt *plan;
 
 		/* plan the query */
-		plan = planner(query, 0, params);
+		plan = pg_plan_query(query, 0, params);
 
 		/* run it (if needed) and produce output */
-		ExplainOnePlan(plan, params, stmt, queryString, tstate);
+		ExplainOnePlan(plan, stmt, queryString, params, tstate);
 	}
 }
 
@@ -362,32 +358,25 @@ ExplainCodegen(PlanState *planstate, TupOutputState *tstate) {
  * to call it.
  */
 void
-ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
-			   ExplainStmt *stmt, const char *queryString, TupOutputState *tstate)
+ExplainOnePlan(PlannedStmt *plannedstmt, ExplainStmt *stmt,
+			   const char *queryString, ParamListInfo params,
+			   TupOutputState *tstate)
 {
 	QueryDesc  *queryDesc;
 	instr_time	starttime;
 	double		totaltime = 0;
-	ExplainState *es;
 	StringInfoData buf;
-	EState     *estate = NULL;
 	int			eflags;
-	int         nb;
-	MemoryContext explaincxt = CurrentMemoryContext;
 
 	/*
-	 * Update snapshot command ID to ensure this query sees results of any
-	 * previously executed queries.  (It's a bit cheesy to modify
-	 * ActiveSnapshot without making a copy, but for the limited ways in which
-	 * EXPLAIN can be invoked, I think it's OK, because the active snapshot
-	 * shouldn't be shared with anything else anyway.)
+	 * Use a snapshot with an updated command ID to ensure this query sees
+	 * results of any previously executed queries.
 	 */
-	ActiveSnapshot->curcid = GetCurrentCommandId(false);
+	PushUpdatedSnapshot(GetActiveSnapshot());
 
 	/* Create a QueryDesc requesting no output */
-	queryDesc = CreateQueryDesc(plannedstmt,
-								queryString,
-								ActiveSnapshot, InvalidSnapshot,
+	queryDesc = CreateQueryDesc(plannedstmt, queryString,
+								GetActiveSnapshot(), InvalidSnapshot,
 								None_Receiver, params,
 								stmt->analyze);
 
@@ -402,14 +391,10 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 				GetResqueuePriority(GetResQueueId()));
 	}
 
-	/* Initialize ExplainState structure. */
-	es = (ExplainState *) palloc0(sizeof(ExplainState));
-	es->pstmt = queryDesc->plannedstmt;
-
-    /*
-     * Start timing.
-     */
-    INSTR_TIME_SET_CURRENT(starttime);
+	/*
+	 * Start timing.
+	 */
+	INSTR_TIME_SET_CURRENT(starttime);
 
 	/* If analyzing, we need to cope with queued triggers */
 	if (stmt->analyze)
@@ -418,12 +403,12 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     /* Allocate workarea for summary stats. */
     if (stmt->analyze)
     {
-        es->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
-                                                        starttime);
-
         /* Attach workarea to QueryDesc so ExecSetParamPlan() can find it. */
-        queryDesc->showstatctx = es->showstatctx;
+        queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
+															   starttime);
     }
+	else
+		queryDesc->showstatctx = NULL;
 
 	/* Select execution options */
 	if (stmt->analyze)
@@ -434,7 +419,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 #ifdef USE_CODEGEN
-	if (stmt->codegen && codegen && Gp_segment == -1) {
+	if (stmt->codegen && codegen && Gp_segment == -1)
+	{
 		eflags |= EXEC_FLAG_EXPLAIN_CODEGEN;
 	}
 #endif
@@ -443,179 +429,45 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	ExecutorStart(queryDesc, eflags);
 
 #ifdef USE_CODEGEN
-	if (stmt->codegen && codegen && Gp_segment == -1) {
+	if (stmt->codegen && codegen && Gp_segment == -1)
+	{
 		ExplainCodegen(queryDesc->planstate, tstate);
 	}
 #endif
 
-    estate = queryDesc->estate;
-
-    /* CDB: Find slice table entry for the root slice. */
-    es->currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
-
 	/* Execute the plan for statistics if asked for */
-	/* In GPDB, we attempt to proceed with our report even if there is an error.
-     */
 	if (stmt->analyze)
 	{
 		/* run the plan */
-        PG_TRY();
-        {
-		    ExecutorRun(queryDesc, ForwardScanDirection, 0L);
-        }
-        PG_CATCH();
-        {
-			MemoryContextSwitchTo(explaincxt);
-			es->deferredError = explain_defer_error(es);
-        }
-        PG_END_TRY();
+		ExecutorRun(queryDesc, ForwardScanDirection, 0L);
 
-        /* Wait for completion of all qExec processes. */
-        PG_TRY();
-        {
-            if (estate->dispatcherState && estate->dispatcherState->primaryResults)
-			{
-				CdbCheckDispatchResult(estate->dispatcherState,
-									   DISPATCH_WAIT_NONE);
-			}
-        }
-        PG_CATCH();
-        {
-			MemoryContextSwitchTo(explaincxt);
-            es->deferredError = explain_defer_error(es);
-        }
-        PG_END_TRY();
+		/* Wait for completion of all qExec processes. */
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+			CdbCheckDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
 
-        /* Suspend timing. */
-	    totaltime += elapsed_time(&starttime);
-
-        /* Get local stats if root slice was executed here in the qDisp. */
-        if (!es->currentSlice ||
-            sliceRunsOnQD(es->currentSlice))
-            cdbexplain_localExecStats(queryDesc->planstate, es->showstatctx);
-
-        /* Fill in the plan's Instrumentation with stats from qExecs. */
-        if (estate->dispatcherState && estate->dispatcherState->primaryResults)
-            cdbexplain_recvExecStats(queryDesc->planstate,
-                                     estate->dispatcherState->primaryResults,
-                                     LocallyExecutingSliceIndex(estate),
-                                     es->showstatctx);
+		/* We can't clean up 'till we're done printing the stats... */
+		/* Suspend timing. */
+		totaltime += elapsed_time(&starttime);
 	}
 
-	es->printAnalyze = stmt->analyze;
-	es->pstmt = queryDesc->plannedstmt;
-	es->rtable = queryDesc->plannedstmt->rtable;
-
-    if (stmt->verbose)
-	{
-		char	   *s;
-		char	   *f;
-
-		if (queryDesc->plannedstmt->planTree && estate->es_sliceTable)
-		{
-        	Node   *saved_es_sliceTable;
-
-			/* Little two-step to get EXPLAIN VERBOSE to show slice table. */
-			saved_es_sliceTable = queryDesc->plannedstmt->planTree->sliceTable;		/* probably NULL */
-			queryDesc->plannedstmt->planTree->sliceTable = (Node *) queryDesc->estate->es_sliceTable;
-			s = nodeToString(queryDesc->plannedstmt);
-			queryDesc->plannedstmt->planTree->sliceTable = saved_es_sliceTable;
-		}
-		else
-		{
-			s = nodeToString(queryDesc->plannedstmt);
-		}
-
-		if (s)
-		{
-			if (Explain_pretty_print)
-				f = pretty_format_node_dump(s);
-			else
-				f = format_node_dump(s);
-			pfree(s);
-			do_text_output_multiline(tstate, f);
-			pfree(f);
-			do_text_output_oneline(tstate, ""); /* separator line */
-		}
-	}
-
+	/* Create textual dump of plan tree */
 	initStringInfo(&buf);
-
-    /*
-     * Produce the EXPLAIN report into buf.  (Sometimes we get internal errors
-     * while doing this; try to proceed with a partial report anyway.)
-     */
-    PG_TRY();
-    {
-     	int indent = 0;
-    	CmdType cmd = queryDesc->plannedstmt->commandType;
-    	Plan *childPlan = queryDesc->plannedstmt->planTree;
-
-    	if ( (cmd == CMD_DELETE || cmd == CMD_INSERT || cmd == CMD_UPDATE) &&
-    		  queryDesc->plannedstmt->planGen == PLANGEN_PLANNER )
-    	{
-    	   	/* Set sliceNum to the slice number of the outer-most query plan node */
-    	   	int sliceNum = 0;
-    	   	int numSegments = getgpsegmentCount();
-	    	char *cmdName = NULL;
-
-   			switch (cmd)
-			{
-				case CMD_DELETE:
-					cmdName = "Delete";
-					break;
-				case CMD_INSERT:
-					cmdName = "Insert";
-					break;
-				case CMD_UPDATE:
-					cmdName = "Update";
-					break;
-				default:
-					/* This should never be reached */
-					Assert(!"Unexpected statement type");
-					break;
-			}
-			appendStringInfo(&buf, "%s", cmdName);
-
-			if (IsA(childPlan, Motion))
-			{
-				Motion	   *pMotion = (Motion *) childPlan;
-				if (pMotion->motionType == MOTIONTYPE_FIXED && pMotion->numOutputSegs != 0)
-				{
-					numSegments = 1;
-				}
-				/* else: other motion nodes execute on all segments */
-			}
-			else if ((childPlan->directDispatch).isDirectDispatch)
-			{
-				numSegments = 1;
-			}
-			appendStringInfo(&buf, " (slice%d; segments: %d)", sliceNum, numSegments);
-			appendStringInfo(&buf, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
-			appendStringInfo(&buf, "  ->  ");
-			indent = 3;
-		}
-	    explain_outNode(&buf, childPlan, queryDesc->planstate,
-					    NULL, NULL, indent, es);
-    }
-    PG_CATCH();
-    {
-		MemoryContextSwitchTo(explaincxt);
-        es->deferredError = explain_defer_error(es);
-
-        /* Keep a NUL at the end of the output buffer. */
-        buf.data[Min(buf.len, buf.maxlen-1)] = '\0';
-    }
-    PG_END_TRY();
+	ExplainPrintPlan(&buf, queryDesc, stmt->analyze, stmt->verbose);
 
 	/*
 	 * If we ran the command, run any AFTER triggers it queued.  (Note this
 	 * will not include DEFERRED triggers; since those don't run until end of
 	 * transaction, we can't measure them.)  Include into total runtime.
-     * Skip triggers if there has been an error.
 	 */
-	if (es->printAnalyze &&
-        !es->deferredError)
+	if (stmt->analyze)
+	{
+		INSTR_TIME_SET_CURRENT(starttime);
+		AfterTriggerEndQuery(queryDesc->estate);
+		totaltime += elapsed_time(&starttime);
+	}
+
+	/* Print info about runtime of triggers */
+	if (stmt->analyze)
 	{
 		ResultRelInfo *rInfo;
 		bool		show_relname;
@@ -623,11 +475,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		List	   *targrels = queryDesc->estate->es_trig_target_relations;
 		int			nr;
 		ListCell   *l;
-
-
-		INSTR_TIME_SET_CURRENT(starttime);
-		AfterTriggerEndQuery(queryDesc->estate);
-		totaltime += elapsed_time(&starttime);
 
 		show_relname = (numrels > 1 || targrels != NIL);
 		rInfo = queryDesc->estate->es_result_relations;
@@ -645,18 +492,20 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
      * Display per-slice and whole-query statistics.
      */
     if (stmt->analyze)
-        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, es->showstatctx, &buf, estate);
+        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, queryDesc->showstatctx,
+									&buf, queryDesc->estate);
 
     /*
      * Show non-default GUC settings that might have affected the plan.
      */
-    nb = gp_guc_list_show(&buf, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
-                           gp_guc_list_for_explain);
-    if (nb > 0)
-    {
-        truncateStringInfo(&buf, buf.len - 2);  /* drop final "; " */
-        appendStringInfoChar(&buf, '\n');
-    }
+	{
+		char	   *settings;
+
+		settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_explain);
+		if (*settings)
+			appendStringInfo(&buf, "Settings:  %s\n", settings);
+		pfree(settings);
+	}
 
     /* Display optimizer status: either 'legacy query optimizer' or Orca version number */
 	appendStringInfo(&buf, "Optimizer status: ");
@@ -671,66 +520,129 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	}
 #endif
 
-    /*
-     * Display final elapsed time.
-     */
-	if (stmt->analyze)
-		appendStringInfo(&buf, "Total runtime: %.3f ms\n",
-						 1000.0 * totaltime);
-
-    /*
-     * Send EXPLAIN report to client.  Some might have been sent already
-     * by explain_outNode().
-     */
-    if (buf.len > 0)
-        do_text_output_multiline(tstate, buf.data);
-
-    /*
-	 * Close down the query and free resources.
-     *
-     * For EXPLAIN ANALYZE, if a qExec failed or gave an error, ExecutorEnd()
-     * will reissue the error locally at this point.  Intercept any such error
-     * and reduce it to a NOTICE so it won't interfere with our output.
+	/*
+	 * Close down the query and free resources.  Include time for this in the
+	 * total runtime (although it should be pretty minimal).
 	 */
-    PG_TRY();
-    {
-	    ExecutorEnd(queryDesc);
-    }
-    PG_CATCH();
-    {
-		MemoryContextSwitchTo(explaincxt);
-        es->deferredError = explain_defer_error(es);
-    }
-    PG_END_TRY();
+	INSTR_TIME_SET_CURRENT(starttime);
 
-    /*
-     * If we intercepted an error, now's the time to re-throw it.
-     * Although we have marked it as a NOTICE instead of an ERROR,
-     * it will still get the same error handling and cleanup treatment.
-     *
-     * We must call EndCommand() to send a successful completion response;
-     * otherwise libpq clients just discard the nice report they have received.
-     * Oddly, the NOTICE will be sent *after* the success response; that
-     * should be good enough for now.
-     */
-    if (es->deferredError)
-    {
-        ErrorData  *edata = es->deferredError;
+	ExecutorEnd(queryDesc);
 
-        /* Tell client the command ended successfully. */
-        EndCommand("EXPLAIN", tstate->dest->mydest);
+	FreeQueryDesc(queryDesc);
 
-        /* Resume handling the error.  Clean up and send the NOTICE message. */
-        es->deferredError = NULL;
-        ReThrowError(edata);
-    }
-
-    FreeQueryDesc(queryDesc);
+	PopActiveSnapshot();
 
 	/* We need a CCI just in case query expanded to multiple plans */
 	if (stmt->analyze)
 		CommandCounterIncrement();
-}                               /* ExplainOnePlan_internal */
+
+	totaltime += elapsed_time(&starttime);
+
+	if (stmt->analyze)
+		appendStringInfo(&buf, "Total runtime: %.3f ms\n",
+						 1000.0 * totaltime);
+	do_text_output_multiline(tstate, buf.data);
+
+	pfree(buf.data);
+}
+
+/*
+ * ExplainPrintPlan -
+ *	  convert a QueryDesc's plan tree to text and append it to 'str'
+ *
+ * 'analyze' means to include runtime instrumentation results
+ * 'verbose' means a verbose printout (currently, it shows targetlists)
+ *
+ * NB: will not work on utility statements
+ */
+void
+ExplainPrintPlan(StringInfo str, QueryDesc *queryDesc,
+				 bool analyze, bool verbose)
+{
+	EState     *estate = queryDesc->estate;
+	ExplainState es;
+	int			indent = 0;
+	CmdType		cmd = queryDesc->plannedstmt->commandType;
+	Plan	   *childPlan = queryDesc->plannedstmt->planTree;
+
+	Assert(queryDesc->plannedstmt != NULL);
+
+	memset(&es, 0, sizeof(es));
+	es.printTList = verbose;
+	es.printAnalyze = analyze;
+	es.pstmt = queryDesc->plannedstmt;
+	es.rtable = queryDesc->plannedstmt->rtable;
+	es.showstatctx = queryDesc->showstatctx;
+
+	/* CDB: Find slice table entry for the root slice. */
+	es.currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
+
+	/* Get local stats if root slice was executed here in the qDisp. */
+	if (analyze)
+	{
+		if (!es.currentSlice || sliceRunsOnQD(es.currentSlice))
+			cdbexplain_localExecStats(queryDesc->planstate, es.showstatctx);
+
+        /* Fill in the plan's Instrumentation with stats from qExecs. */
+        if (estate->dispatcherState && estate->dispatcherState->primaryResults)
+            cdbexplain_recvExecStats(queryDesc->planstate,
+                                     estate->dispatcherState->primaryResults,
+                                     LocallyExecutingSliceIndex(estate),
+                                     es.showstatctx);
+	}
+
+	/*
+	 * Produce the EXPLAIN report into buf.
+	 */
+	if ( (cmd == CMD_DELETE || cmd == CMD_INSERT || cmd == CMD_UPDATE) &&
+		 queryDesc->plannedstmt->planGen == PLANGEN_PLANNER )
+	{
+		/* Set sliceNum to the slice number of the outer-most query plan node */
+		int sliceNum = 0;
+		int numSegments = getgpsegmentCount();
+		char *cmdName = NULL;
+
+		switch (cmd)
+		{
+			case CMD_DELETE:
+				cmdName = "Delete";
+				break;
+			case CMD_INSERT:
+				cmdName = "Insert";
+				break;
+			case CMD_UPDATE:
+				cmdName = "Update";
+				break;
+			default:
+				/* This should never be reached */
+				Assert(!"Unexpected statement type");
+				break;
+		}
+		appendStringInfo(str, "%s", cmdName);
+
+		if (IsA(childPlan, Motion))
+		{
+			Motion	   *pMotion = (Motion *) childPlan;
+			if (pMotion->motionType == MOTIONTYPE_FIXED && pMotion->numOutputSegs != 0)
+			{
+				numSegments = 1;
+			}
+			/* else: other motion nodes execute on all segments */
+		}
+		else if ((childPlan->directDispatch).isDirectDispatch)
+		{
+			numSegments = 1;
+		}
+		appendStringInfo(str, " (slice%d; segments: %d)", sliceNum, numSegments);
+		appendStringInfo(str, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
+		appendStringInfo(str, "  ->  ");
+		indent = 3;
+	}
+
+	explain_outNode(str,
+					childPlan, queryDesc->planstate,
+					NULL, NULL, indent, &es);
+}
 
 /*
  * report_triggers -
@@ -789,40 +701,6 @@ elapsed_time(instr_time *starttime)
 }
 
 
-/*
- * explain_defer_error
- *    Called within PG_CATCH handler to demote and save the current error.
- *
- * We'll try to postpone the error cleanup until after we have produced
- * the EXPLAIN ANALYZE report, and then reflect the error to the client as
- * merely a NOTICE (because an ERROR causes libpq clients to discard the
- * report).
- *
- * If successful, upon return we fall thru the bottom of the PG_CATCH
- * handler and continue sequentially.  Otherwise we re-throw to the
- * next outer error handler.
- */
-static ErrorData *
-explain_defer_error(ExplainState *es)
-{
-    ErrorData  *edata;
-
-    /* Already saved an earlier error?  Rethrow it now. */
-    if (es->deferredError)
-        ReThrowError(es->deferredError);    /* does not return */
-
-    /* Try to downgrade the error to a NOTICE.  Rethrow if disallowed. */
-    if (!elog_demote(NOTICE))
-        PG_RE_THROW();
-
-    /* Save the error info and expunge it from the error system. */
-    edata = CopyErrorData();
-    FlushErrorState();
-
-    /* Caller must eventually ReThrowError() for proper cleanup. */
-    return edata;
-}                               /* explain_defer_error */
-
 static void
 appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceId)
 {
@@ -879,8 +757,8 @@ explain_outNode(StringInfo str,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es)
 {
-	const char	   *pname = NULL;
     Slice      *currentSlice = es->currentSlice;    /* save */
+	const char *pname;
 	int			i;
 	bool		skip_outer=false;
 	char       *skip_outer_msg = NULL;
@@ -962,11 +840,11 @@ explain_outNode(StringInfo str,
 				case JOIN_RIGHT:
 					pname = "Nested Loop Right Join";
 					break;
-				case JOIN_IN:
-					pname = "Nested Loop EXISTS Join";
+				case JOIN_SEMI:
+					pname = "Nested Loop Semi Join";
 					break;
-				case JOIN_LASJ:
-					pname = "Nested Loop Left Anti Semi Join";
+				case JOIN_ANTI:
+					pname = "Nested Loop Anti Join";
 					break;
 				case JOIN_LASJ_NOTIN:
 					pname = "Nested Loop Left Anti Semi Join (Not-In)";
@@ -991,11 +869,11 @@ explain_outNode(StringInfo str,
 				case JOIN_RIGHT:
 					pname = "Merge Right Join";
 					break;
-				case JOIN_IN:
-					pname = "Merge EXISTS Join";
+				case JOIN_SEMI:
+					pname = "Merge Semi Join";
 					break;
-				case JOIN_LASJ:
-					pname = "Merge Left Anti Semi Join";
+				case JOIN_ANTI:
+					pname = "Merge Anti Join";
 					break;
 				case JOIN_LASJ_NOTIN:
 					pname = "Merge Left Anti Semi Join (Not-In)";
@@ -1020,11 +898,11 @@ explain_outNode(StringInfo str,
 				case JOIN_RIGHT:
 					pname = "Hash Right Join";
 					break;
-				case JOIN_IN:
-					pname = "Hash EXISTS Join";
+				case JOIN_SEMI:
+					pname = "Hash Semi Join";
 					break;
-				case JOIN_LASJ:
-					pname = "Hash Left Anti Semi Join";
+				case JOIN_ANTI:
+					pname = "Hash Anti Join";
 					break;
 				case JOIN_LASJ_NOTIN:
 					pname = "Hash Left Anti Semi Join (Not-In)";
@@ -1060,6 +938,9 @@ explain_outNode(StringInfo str,
 			break;
 		case T_BitmapIndexScan:
 			pname = "Bitmap Index Scan";
+			break;
+		case T_DynamicBitmapIndexScan:
+			pname = "Dynamic Bitmap Index Scan";
 			break;
 		case T_BitmapHeapScan:
 			pname = "Bitmap Heap Scan";
@@ -1122,8 +1003,8 @@ explain_outNode(StringInfo str,
 					break;
 			}
 			break;
-		case T_Window:
-			pname = "Window";
+		case T_WindowAgg:
+			pname = "WindowAgg";
 			break;
 		case T_TableFunctionScan:
 			pname = "Table Function Scan";
@@ -1132,19 +1013,47 @@ explain_outNode(StringInfo str,
 			pname = "Unique";
 			break;
 		case T_SetOp:
-			switch (((SetOp *) plan)->cmd)
+			switch (((SetOp *) plan)->strategy)
 			{
-				case SETOPCMD_INTERSECT:
-					pname = "SetOp Intersect";
+				case SETOP_SORTED:
+					switch (((SetOp *) plan)->cmd)
+					{
+						case SETOPCMD_INTERSECT:
+							pname = "SetOp Intersect";
+							break;
+						case SETOPCMD_INTERSECT_ALL:
+							pname = "SetOp Intersect All";
+							break;
+						case SETOPCMD_EXCEPT:
+							pname = "SetOp Except";
+							break;
+						case SETOPCMD_EXCEPT_ALL:
+							pname = "SetOp Except All";
+							break;
+						default:
+							pname = "SetOp ???";
+							break;
+					}
 					break;
-				case SETOPCMD_INTERSECT_ALL:
-					pname = "SetOp Intersect All";
-					break;
-				case SETOPCMD_EXCEPT:
-					pname = "SetOp Except";
-					break;
-				case SETOPCMD_EXCEPT_ALL:
-					pname = "SetOp Except All";
+				case SETOP_HASHED:
+					switch (((SetOp *) plan)->cmd)
+					{
+						case SETOPCMD_INTERSECT:
+							pname = "HashSetOp Intersect";
+							break;
+						case SETOPCMD_INTERSECT_ALL:
+							pname = "HashSetOp Intersect All";
+							break;
+						case SETOPCMD_EXCEPT:
+							pname = "HashSetOp Except";
+							break;
+						case SETOPCMD_EXCEPT_ALL:
+							pname = "HashSetOp Except All";
+							break;
+						default:
+							pname = "HashSetOp ???";
+							break;
+					}
 					break;
 				default:
 					pname = "SetOp ???";
@@ -1168,7 +1077,7 @@ explain_outNode(StringInfo str,
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = nSenders;
-				
+
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_HASH:
@@ -1288,6 +1197,7 @@ explain_outNode(StringInfo str,
 			}
 			break;
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			appendStringInfo(str, " on %s",
 				explain_get_index_name(((BitmapIndexScan *) plan)->indexid));
 			break;
@@ -1310,8 +1220,8 @@ explain_outNode(StringInfo str,
 				/* Get the range table, it should be a TableFunction */
 				rte = rt_fetch(((Scan *) plan)->scanrelid, es->rtable);
 				Assert(rte->rtekind == RTE_TABLEFUNCTION);
-				
-				/* 
+
+				/*
 				 * Lookup the function name.
 				 *
 				 * Unlike RTE_FUNCTION there should be no cases where the
@@ -1326,9 +1236,9 @@ explain_outNode(StringInfo str,
 				if (strcmp(rte->eref->aliasname, proname) != 0)
 					appendStringInfo(str, " %s",
 									 quote_identifier(rte->eref->aliasname));
-				
+
 				/* might be nice to add order by and scatter by info */
-				
+
 			}
 			break;
 		case T_FunctionScan:
@@ -1445,9 +1355,9 @@ explain_outNode(StringInfo str,
 
 	appendStringInfoChar(str, '\n');
 
-#ifdef DEBUG_EXPLAIN
-	appendStringInfo(str, "plan->targetlist=%s\n", nodeToString(plan->targetlist));
-#endif
+	/* target list */
+	if (es->printTList)
+		show_plan_tlist(plan, str, indent, es);
 
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
@@ -1457,19 +1367,20 @@ explain_outNode(StringInfo str,
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond",
 						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
+						   plan, outer_plan,
 						   str, indent, es);
 			show_scan_qual(plan->qual,
 						   "Filter",
 						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
+						   plan, outer_plan,
 						   str, indent, es);
 			break;
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
 						   "Index Cond",
 						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
+						   plan, outer_plan,
 						   str, indent, es);
 			break;
 		case T_BitmapHeapScan:
@@ -1481,7 +1392,7 @@ explain_outNode(StringInfo str,
 				show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
 							   "Recheck Cond",
 							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
+							   plan, outer_plan,
 							   str, indent, es);
 			}
 			else if (nodeTag(plan) == T_BitmapAppendOnlyScan)
@@ -1489,7 +1400,7 @@ explain_outNode(StringInfo str,
 				show_scan_qual(((BitmapAppendOnlyScan *) plan)->bitmapqualorig,
 							   "Recheck Cond",
 							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
+							   plan, outer_plan,
 							   str, indent, es);
 			}
 			else if (nodeTag(plan) == T_BitmapTableScan)
@@ -1497,7 +1408,7 @@ explain_outNode(StringInfo str,
 				show_scan_qual(((BitmapTableScan *) plan)->bitmapqualorig,
 							   "Recheck Cond",
 							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
+							   plan, outer_plan,
 							   str, indent, es);
 			}
 			/* FALL THRU */
@@ -1514,15 +1425,14 @@ explain_outNode(StringInfo str,
 			show_scan_qual(plan->qual,
 						   "Filter",
 						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
+						   plan, outer_plan,
 						   str, indent, es);
 			break;
 		case T_SubqueryScan:
 			show_scan_qual(plan->qual,
 						   "Filter",
 						   ((Scan *) plan)->scanrelid,
-						   outer_plan,
-						   ((SubqueryScan *) plan)->subplan,
+						   plan, outer_plan,
 						   str, indent, es);
 			break;
 		case T_TidScan:
@@ -1538,12 +1448,12 @@ explain_outNode(StringInfo str,
 				show_scan_qual(tidquals,
 							   "TID Cond",
 							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
+							   plan, outer_plan,
 							   str, indent, es);
 				show_scan_qual(plan->qual,
 							   "Filter",
 							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
+							   plan, outer_plan,
 							   str, indent, es);
 			}
 			break;
@@ -1597,44 +1507,24 @@ explain_outNode(StringInfo str,
 						       "Group By",
 						       str, indent, es);
 			break;
-		case T_Window:
+		case T_WindowAgg:
 			{
-				Window *window = (Window *)plan;
-				ListCell *cell;
-				char orderKeyStr[32]; /* XXX big enough */
-				int i;
+				WindowAgg *window = (WindowAgg *) plan;
 
-				if ( window->numPartCols > 0 )
+				if ( window->partNumCols > 0 )
 				{
 					show_grouping_keys(plan,
-									   window->numPartCols,
+									   window->partNumCols,
 									   window->partColIdx,
 									   "Partition By",
 									   str, indent, es);
 				}
 
-				if (list_length(window->windowKeys) > 1)
-					i = 0;
-				else
-					i = -1;
-
-				foreach(cell, window->windowKeys)
-				{
-					WindowKey *key = (WindowKey *) lfirst(cell);
-
-					if ( i < 0 )
-						sprintf(orderKeyStr, "Order By");
-					else
-					{
-						sprintf(orderKeyStr, "Order By (level %d)", ++i);
-					}
-
-					show_sort_keys(outerPlan(plan),
-								   key->numSortCols,
-								   key->sortColIdx,
-								   orderKeyStr,
-								   str, indent, es);
-				}
+				show_sort_keys(outerPlan(plan),
+							   window->ordNumCols,
+							   window->ordColIdx,
+							   "Order By",
+							   str, indent, es);
 				/* XXX don't show framing for now */
 			}
 			break;
@@ -1647,7 +1537,7 @@ explain_outNode(StringInfo str,
 						   str, indent, es);
 
 			/* Partitioning and ordering information */
-			
+
 		}
 		break;
 
@@ -1745,7 +1635,7 @@ explain_outNode(StringInfo str,
             SliceTable *sliceTable = planstate->state->es_sliceTable;
 
 			appendStringInfoFill(str, 2*indent, ' ');
-		    appendStringInfoString(str, "  InitPlan");
+			appendStringInfo(str, "  %s", sp->plan_name);
 
             /* Subplan might have its own root slice */
             if (sliceTable &&
@@ -1763,8 +1653,8 @@ explain_outNode(StringInfo str,
                  * for now, just omit the slice id.
                  */
             }
-
             appendStringInfoChar(str, '\n');
+
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "    ->  ");
@@ -1862,7 +1752,7 @@ explain_outNode(StringInfo str,
 
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
-			
+
 			appendStringInfo(str, "  ->  ");
 
 			explain_outNode(str, subnode,
@@ -1954,7 +1844,6 @@ explain_outNode(StringInfo str,
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "  %s\n", sp->plan_name);
-
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "    ->  ");
@@ -1970,15 +1859,66 @@ explain_outNode(StringInfo str,
 }
 
 /*
+ * Show the targetlist of a plan node
+ */
+static void
+show_plan_tlist(Plan *plan,
+				StringInfo str, int indent, ExplainState *es)
+{
+	List	   *context;
+	bool		useprefix;
+	ListCell   *lc;
+	int			i;
+
+	/* No work if empty tlist (this occurs eg in bitmap indexscans) */
+	if (plan->targetlist == NIL)
+		return;
+	/* The tlist of an Append isn't real helpful, so suppress it */
+	if (IsA(plan, Append))
+		return;
+	/* Likewise for RecursiveUnion */
+	if (IsA(plan, RecursiveUnion))
+		return;
+
+	/* Set up deparsing context */
+	context = deparse_context_for_plan((Node *) plan,
+									   NULL,
+									   es->rtable,
+									   es->pstmt->subplans);
+	useprefix = list_length(es->rtable) > 1;
+
+	/* Emit line prefix */
+	for (i = 0; i < indent; i++)
+		appendStringInfo(str, "  ");
+	appendStringInfo(str, "  Output: ");
+
+	/* Deparse each non-junk result column */
+	i = 0;
+	foreach(lc, plan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+		if (tle->resjunk)
+			continue;
+		if (i++ > 0)
+			appendStringInfo(str, ", ");
+		appendStringInfoString(str,
+							   deparse_expression((Node *) tle->expr, context,
+												  useprefix, false));
+	}
+
+	appendStringInfoChar(str, '\n');
+}
+
+/*
  * Show a qualifier expression for a scan plan node
  *
  * Note: outer_plan is the referent for any OUTER vars in the scan qual;
- * this would be the outer side of a nestloop plan.  inner_plan should be
- * NULL except for a SubqueryScan plan node, where it should be the subplan.
+ * this would be the outer side of a nestloop plan.  Pass NULL if none.
  */
 static void
 show_scan_qual(List *qual, const char *qlabel,
-			   int scanrelid, Plan *outer_plan, Plan *inner_plan,
+			   int scanrelid, Plan *scan_plan, Plan *outer_plan,
 			   StringInfo str, int indent, ExplainState *es)
 {
 	List	   *context;
@@ -1995,10 +1935,11 @@ show_scan_qual(List *qual, const char *qlabel,
 	node = (Node *) make_ands_explicit(qual);
 
 	/* Set up deparsing context */
-	context = deparse_context_for_plan((Node *) outer_plan,
-									   (Node *) inner_plan,
-									   es->rtable);
-	useprefix = (outer_plan != NULL || inner_plan != NULL);
+	context = deparse_context_for_plan((Node *) scan_plan,
+									   (Node *) outer_plan,
+									   es->rtable,
+									   es->pstmt->subplans);
+	useprefix = (outer_plan != NULL || IsA(scan_plan, SubqueryScan));
 
 	/* Deparse the expression */
 	exprstr = deparse_expr_sweet(node, context, useprefix, false);
@@ -2027,9 +1968,10 @@ show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 		return;
 
 	/* Set up deparsing context */
-	context = deparse_context_for_plan((Node *) outerPlan(plan),
-									   (Node *) innerPlan(plan),
-									   es->rtable);
+	context = deparse_context_for_plan((Node *) plan,
+									   NULL,
+									   es->rtable,
+									   es->pstmt->subplans);
 	useprefix = list_length(es->rtable) > 1;
 
 	/* Deparse the expression */
@@ -2069,7 +2011,6 @@ show_grouping_keys(Plan        *plan,
     appendStringInfo(str, "  %s: ", qlabel);
 
     Node *outerPlan = (Node *) outerPlan(subplan);
-    Node *innerPlan = (Node *) innerPlan(subplan);
 
 	/*
 	 * Dig the child nodes of the subplan. This logic should match that in
@@ -2081,9 +2022,10 @@ show_grouping_keys(Plan        *plan,
 		outerPlan = (Node *) llast(((Sequence *) subplan)->subplans);
 
 	/* Set up deparse context */
-	context = deparse_context_for_plan(outerPlan,
-									   innerPlan,
-										   es->rtable);
+	context = deparse_context_for_plan((Node *) subplan,
+									   outerPlan,
+									   es->rtable,
+									   es->pstmt->subplans);
 
 	if (IsA(plan, Agg))
 	{
@@ -2150,16 +2092,15 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 	if (nkeys <= 0)
 		return;
 
-	useprefix = list_length(es->rtable) > 1;    /*CDB*/
-
 	for (i = 0; i < indent; i++)
 		appendStringInfo(str, "  ");
 	appendStringInfo(str, "  %s: ", qlabel);
 
 	/* Set up deparsing context */
-	context = deparse_context_for_plan((Node *) outerPlan(sortplan),
-									   NULL,	/* Sort has no innerPlan */
-									   es->rtable);
+	context = deparse_context_for_plan((Node *) sortplan,
+									   NULL,
+									   es->rtable,
+									   es->pstmt->subplans);
 	useprefix = list_length(es->rtable) > 1;
 
 	for (keyno = 0; keyno < nkeys; keyno++)
@@ -2201,9 +2142,10 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 		return;
 
 	/* Set up deparse context */
-	context = deparse_context_for_plan((Node *) outerPlan(plan),
-									   NULL,	/* Motion has no innerPlan */
-									   es->rtable);
+	context = deparse_context_for_plan((Node *) plan,
+									   (Node *) outerPlan(plan),
+									   es->rtable,
+									   es->pstmt->subplans);
 
     /* Merge Receive ordering key */
     if (nkeys > 0)
@@ -2268,8 +2210,9 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 
 		/* Set up deparsing context */
 		context = deparse_context_for_plan((Node *) parent,
-										   (Node *) parent,
-										   es->rtable);
+										   (Node *) outerPlan(parent),
+										   es->rtable,
+										   es->pstmt->subplans);
 		useprefix = list_length(es->rtable) > 1;
 
 		/* Deparse the expression */

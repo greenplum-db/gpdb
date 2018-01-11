@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.199.2.1 2009/12/09 21:58:17 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.211 2009/06/11 14:49:08 momjian Exp $
  *
  * NOTES
  *	  some of the information in this file should be moved to other files.
@@ -112,20 +112,6 @@ do { \
 		CHECK_TIME_SLICE(); \
 	} \
 \
-	if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_Cancel && !InterruptPending) \
-	{\
-		SimExESSubClass subclass = SimEx_CheckInject(); \
-		if (subclass == SimExESSubClass_Cancel_QueryCancel) \
-		{\
-			InterruptPending = true; \
-			QueryCancelPending = true; \
-		}\
-		else if (subclass == SimExESSubClass_Cancel_ProcDie) \
-		{\
-			InterruptPending = true; \
-			ProcDiePending = true; \
-		}\
-	}\
 	if (InterruptPending) \
 		ProcessInterrupts(__FILE__, __LINE__); \
 	if (IsResQueueEnabled() && gp_enable_resqueue_priority)	\
@@ -284,6 +270,20 @@ extern PGDLLIMPORT Oid MyDatabaseTableSpace;
 
 extern int	DateStyle;
 extern int	DateOrder;
+
+/*
+ * IntervalStyles
+ *	 INTSTYLE_POSTGRES			   Like Postgres < 8.4 when DateStyle = 'iso'
+ *	 INTSTYLE_POSTGRES_VERBOSE	   Like Postgres < 8.4 when DateStyle != 'iso'
+ *	 INTSTYLE_SQL_STANDARD		   SQL standard interval literals
+ *	 INTSTYLE_ISO_8601			   ISO-8601-basic formatted intervals
+ */
+#define INTSTYLE_POSTGRES			0
+#define INTSTYLE_POSTGRES_VERBOSE	1
+#define INTSTYLE_SQL_STANDARD		2
+#define INTSTYLE_ISO_8601			3
+
+extern int	IntervalStyle;
 
 /*
  * IntervalStyles
@@ -503,5 +503,9 @@ extern AuxProcType MyAuxProcType; /* bootstrap.c */
 #define AmCheckpointerProcess()     (MyAuxProcType == CheckpointerProcess)
 #define AmWalWriterProcess()        (MyAuxProcType == WalWriterProcess)
 #define AmWalReceiverProcess()      (MyAuxProcType == WalReceiverProcess)
+
+/* in access/transam/xlog.c */
+extern bool BackupInProgress(void);
+extern void CancelBackup(void);
 
 #endif   /* MISCADMIN_H */

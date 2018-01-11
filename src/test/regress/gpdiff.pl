@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 #
-# Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
+# Portions Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 #
 # Pod::Usage is loaded lazily when needed, if the --help or other such option
@@ -19,6 +21,7 @@ Getopt::Long::Configure qw(pass_through);
 use FindBin;
 use lib "$FindBin::Bin";
 use atmsort;
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -95,7 +98,7 @@ This comparison is designed to ignore certain Greenplum-specific
 informational messages, as well as handle the cases where query output
 order may differ for a multi-segment Greenplum database versus a
 single PostgreSQL instance.  Type "atmsort.pl --man" for more details.
-gpdiff is invoked by pg_regress as part of "make install-check".
+gpdiff is invoked by pg_regress as part of "make installcheck-world".
 In this case the diff options are something like:
 
  "-w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE:".
@@ -121,7 +124,8 @@ potential erroneous comparison.
 
 Jeffrey I Cohen
 
-Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 
@@ -139,16 +143,6 @@ my %glob_atmsort_args;
 
 my $glob_ignore_plans;
 my $glob_init_file = [];
-
-sub print_version
-{
-    my $VERSION = do { my @r = ('4.3.99.00' =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
-
-    print "$0 version $VERSION\n";
-    print "Type \'gpdiff.pl --help\' for more information on the standard options\n";
-
-    exit(1);
-}
 
 sub gpdiff_files
 {

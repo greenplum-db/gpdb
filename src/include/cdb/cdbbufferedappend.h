@@ -6,7 +6,12 @@
  * The client is given direct access to the write buffer for appending
  * buffers efficiency.
  *        
- * Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbbufferedappend.h
  *
  *-------------------------------------------------------------------------
  */
@@ -160,13 +165,13 @@ extern void BufferedAppendFinishBuffer(
     int32				 usedLen_uncompressed);
 
 /*
- * Returns the current file’s length.
+ * Returns the length of the current file.
  */
 extern int64 BufferedAppendFileLen(
     BufferedAppend *bufferedAppend);
 
 /*
- * Flushes the current file for append.  Caller is resposible for closing
+ * Flushes the current file for append.  Caller is responsible for closing
  * the file afterwards.
  */
 extern void BufferedAppendCompleteFile(

@@ -33,12 +33,13 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.612 2010/06/16 00:54:16 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.583 2009/06/26 20:29:04 tgl Exp $
  *
  * NOTES
  *
@@ -330,9 +331,9 @@ static bool gHaveCalledOnetimeInitFunctions = false;
  * states later than PM_RUN --- Shutdown and FatalError must be consulted
  * to find that out.  FatalError is never true in PM_INIT through PM_RUN
  * states, nor in PM_SHUTDOWN states (because we don't enter those states
- * when trying to recover from a crash).
- *
- * RecoveryError means that we have crashed during recovery, and
+ * when trying to recover from a crash).  It can be true in PM_STARTUP state,
+ * because we don't clear it until we've successfully started WAL redo.
+ * Similarly, RecoveryError means that we have crashed during recovery, and
  * should not try to restart.
  */
 typedef enum
@@ -493,9 +494,8 @@ extern char *optarg;
 extern int	optind,
 			opterr;
 
-/* If not HAVE_GETOPT, we are using src/port/getopt.c, which has optreset */
-#if defined(HAVE_INT_OPTRESET) || !defined(HAVE_GETOPT)
-extern int	optreset;
+#ifdef HAVE_INT_OPTRESET
+extern int	optreset;			/* might not be declared by system headers */
 #endif
 
 /* some GUC values used in fetching status from status transition */
@@ -511,10 +511,6 @@ static void getInstallationPaths(const char *argv0);
 static void checkDataDir(void);
 static void checkPgDir(const char *dir);
 static void checkPgDir2(const char *dir);
-
-#ifdef USE_TEST_UTILS
-static void SimExProcExit(void);
-#endif /* USE_TEST_UTILS */
 
 #ifdef USE_BONJOUR
 static void reg_reply(DNSServiceRegistrationReplyErrorType errorCode,
@@ -555,7 +551,9 @@ static int	BackendStartup(Port *port);
 static int	ProcessStartupPacket(Port *port, bool SSLdone);
 static void processCancelRequest(Port *port, void *pkt, MsgType code);
 static void processPrimaryMirrorTransitionRequest(Port *port, void *pkt);
+#ifndef USE_SEGWALREP
 static void processPrimaryMirrorTransitionQuery(Port *port, void *pkt);
+#endif
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static enum CAC_state canAcceptConnections(void);
@@ -596,7 +594,7 @@ typedef struct
 	HANDLE		waitHandle;
 	HANDLE		procHandle;
 	DWORD		procId;
-}	win32_deadchild_waitinfo;
+} win32_deadchild_waitinfo;
 
 #endif
 
@@ -653,9 +651,9 @@ typedef struct
 	char		my_exec_path[MAXPGPATH];
 	char		pkglib_path[MAXPGPATH];
 	char		ExtraOptions[MAXPGPATH];
-	char		lc_collate[LOCALE_NAME_BUFLEN];
-	char		lc_ctype[LOCALE_NAME_BUFLEN];
-}	BackendParameters;
+	char		lc_collate[NAMEDATALEN];
+	char		lc_ctype[NAMEDATALEN];
+} BackendParameters;
 
 static void read_backend_variables(char *id, Port *port);
 static void restore_backend_variables(BackendParameters *param, Port *port);
@@ -732,17 +730,6 @@ bool GPIsSegmentDatabase()
 bool GPAreFileReplicationStructuresRequired(void)
 {
     return AreFileReplicationStructuresRequired;
-}
-
-/**
- * filerep process is interested in the bg writer's pid, so
- *   all sets of bgwriter pid should go through this function
- *   so that we update shared memory
- */
-static void SetBGWriterPID(pid_t pid)
-{
-    BgWriterPID = pid;
-    primaryMirrorSetBGWriterPID(pid);
 }
 
 /**
@@ -1153,7 +1140,7 @@ PostmasterMain(int argc, char *argv[])
 	/*
 	 * Check for invalid combinations of GUC settings.
 	 */
-	if (ReservedBackends > MaxBackends)
+	if (ReservedBackends >= MaxBackends)
 	{
 		write_stderr("%s: superuser_reserved_connections must be less than max_connections\n", progname);
 		ExitPostmaster(1);
@@ -1182,6 +1169,19 @@ PostmasterMain(int argc, char *argv[])
              "The contentid value to pass can be determined this server's entry in the segment configuration; it may be -1 for a master, or in utility mode."
              )));
 	}
+
+/*
+ * This value of max_wal_senders will be inherited by all the child processes
+ * through fork(). This value is used by XLogIsNeeded().
+ */
+#ifdef USE_SEGWALREP
+		max_wal_senders = 1;
+#else
+	if ( GpIdentity.segindex == MASTER_CONTENT_ID)
+		max_wal_senders = 1;
+	else
+		max_wal_senders = 0;
+#endif
 
 	if ( GpIdentity.numsegments < 0 )
 	{
@@ -1758,19 +1758,20 @@ static void
 checkPgDir(const char *dir)
 {
 	struct stat st;
-	char buf[strlen(DataDir) + strlen(dir) + 32];
+	/*
+	 * DataDir is known to be smaller than MAXPGPATH, and 'dir' argument is always
+	 * a short constant.
+	 */
+	char		buf[MAXPGPATH + MAXPGPATH];
 
-	snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, dir);
-	buf[ARRAY_SIZE(buf) - 1] = '\0';
+	snprintf(buf, sizeof(buf), "%s%s", DataDir, dir);
 
 	if (stat(buf, &st) != 0)
 	{
 		/* check if pg_log is there */
-		snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, "/pg_log");
+		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/pg_log");
 		if (stat(buf, &st) == 0)
-		{
 			elog(LOG, "System file or directory missing (%s), shutting down segment", dir);
-		}
 
 		/* quit all processes and exit */
 		pmdie(SIGQUIT);
@@ -1780,32 +1781,29 @@ checkPgDir(const char *dir)
 /*
  * check if file or directory under current transaction filespace exists and is accessible
  */
-static void checkPgDir2(const char *dir)
+static void
+checkPgDir2(const char *dir)
 {
 	Assert(DataDir);
 
 	struct stat st;
-	char buf[MAXPGPATH];
-	char *path = makeRelativeToTxnFilespace((char*)dir);
+	char	   *path = makeRelativeToTxnFilespace((char*)dir);
 
-	snprintf(buf, MAXPGPATH, "%s", path);
-	buf[ARRAY_SIZE(buf) - 1] = '\0';
-
-	if (stat(buf, &st) != 0)
+	if (stat(path, &st) != 0)
 	{
 		/* check if pg_log is there */
-		snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, "/pg_log");
+		char		buf[MAXPGPATH + MAXPGPATH];
+
+		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/pg_log");
 		if (stat(buf, &st) == 0)
-		{
 			elog(LOG, "System file or directory missing (%s), shutting down segment", path);
-		}
 
 		pfree(path);
 		/* quit all processes and exit */
 		pmdie(SIGQUIT);
 		return;
 	}
-	
+
 	pfree(path);
 }
 
@@ -1959,52 +1957,6 @@ checkIODataDirectory(void)
 
 	return failure;
 }
-
-#ifdef USE_TEST_UTILS
-/*
- * Simulate an unexpected process exit using SimEx
- */
-static void SimExProcExit()
-{
-	if (gp_simex_init && gp_simex_run && pmState == PM_RUN)
-	{
-		pid_t pid = 0;
-		int sig = 0;
-		const char *procName = NULL;
-		const char *sigName = NULL;
-
-		if (gp_simex_class == SimExESClass_ProcKill)
-		{
-			sig = SIGKILL;
-			sigName = "SIGKILL";
-
-			SimExESSubClass subclass = SimEx_CheckInject();
-			if (subclass == SimExESSubClass_ProcKill_BgWriter)
-			{
-				pid = BgWriterPID;
-				procName = GetServerProcessTitle(pid);
-			}
-			else
-			{
-				Assert(subclass == SimExESSubClass_OK &&
-				       "Unexpected ES subclass for SIGKILL injection");
-			}
-		}
-
-		if (pid != 0)
-		{
-			Assert(sig != 0);
- 			Assert(procName != NULL);
- 			Assert(sigName != NULL);
-
- 			ereport(LOG,
- 					(errmsg_internal("sending %s to %s (%d)", sigName, procName, (int) pid)));
- 			signal_child(pid, sig);
- 		}
- 	}
-}
-#endif /* USE_TEST_UTILS */
-
 
 #ifdef USE_BONJOUR
 
@@ -2188,7 +2140,7 @@ BeginResetOfPostmasterAfterChildrenAreShutDown(void)
 	 * this happens before forking the filerep peer reset process;
 	 * the latter process should not use information from shared memory;
 	 */
-	shmem_exit(0 /*code*/);
+	shmem_exit(1 /*code*/);
 	reset_shared(PostPortNumber, true /*isReset*/);
 
 	/*
@@ -2327,10 +2279,6 @@ ServerLoop(void)
             timeout.tv_usec = 0;
         }
 
-#ifdef USE_TEST_UTILS
-        SimExProcExit();
-#endif /* USE_TEST_UTILS */
-
         errno = 0;
         if (acceptNewConnections)
         {
@@ -2375,10 +2323,6 @@ ServerLoop(void)
 			checkPgDir2("pg_multixact/offsets");
 			checkPgDir2("pg_xlog/archive_status");	
 		}
-
-#ifdef USE_TEST_UTILS
-		SimExProcExit();
-#endif /* USE_TEST_UTILS */
 
 		/*
 		 * Block all signals until we wait again.  (This makes it safe for our
@@ -2445,10 +2389,6 @@ ServerLoop(void)
 			}
 		}
 
-#ifdef USE_TEST_UTILS
-        SimExProcExit();
-#endif /* USE_TEST_UTILS */
-
         if (!FatalError)
         {
             /* only do primary/mirror transitions if we are NOT during process shutdown because of FatalError...
@@ -2476,7 +2416,7 @@ ServerLoop(void)
 			    pmState > PM_STARTUP_PASS4 &&
 			    pmState < PM_CHILD_STOP_BEGIN)
 			{
-				SetBGWriterPID(StartBackgroundWriter());
+				BgWriterPID = StartBackgroundWriter();
 				if (Debug_print_server_processes)
 					elog(LOG,"restarted 'background writer process' as pid %ld",
 						 (long)BgWriterPID);
@@ -2589,7 +2529,8 @@ initMasks(fd_set *rmask)
 
 		if (fd == PGINVALID_SOCKET)
 			break;
-		FD_SET(fd, rmask);
+		FD_SET		(fd, rmask);
+
 		if (fd > maxsock)
 			maxsock = fd;
 	}
@@ -2623,13 +2564,7 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 		/*
 		 * EOF after SSLdone probably means the client didn't like our
 		 * response to NEGOTIATE_SSL_CODE.	That's not an error condition, so
-		 * don't clutter the log with a complaint.else if (strcmp(nameptr, "replication") == 0)
-			{
-				if (!parse_bool(valptr, &am_walsender))
-					ereport(FATAL,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("invalid value for boolean option \"replication\"")));
-			}
+		 * don't clutter the log with a complaint.
 		 */
 		if (!SSLdone)
 			ereport(COMMERROR,
@@ -2689,6 +2624,8 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 		processPrimaryMirrorTransitionRequest(port, buf);
 		return 127;
 	}
+
+#ifndef USE_SEGWALREP
 	else if (proto == PRIMARY_MIRROR_TRANSITION_QUERY_CODE)
 	{
 	    /* disable the authentication timeout in case it takes a long time */
@@ -2697,6 +2634,7 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 		processPrimaryMirrorTransitionQuery(port, buf);
 		return 127;
 	}
+#endif
 
 	/* Otherwise this is probably a normal postgres-message */
 
@@ -2805,6 +2743,18 @@ retry1:
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 							 errmsg("option not supported: \"replication\"")));
 			}
+			else if (strcmp(nameptr, GPCONN_TYPE) == 0)
+			{
+				if (strcmp(valptr, GPCONN_TYPE_FTS) == 0)
+				{
+					elog(LOG, "handling FTS connection");
+					am_ftshandler = true;
+				}
+				else
+					ereport(FATAL,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("invalid value for option: \"%s\"", GPCONN_TYPE)));
+			}
 			else
 			{
 				/* Assume it's a generic GUC option */
@@ -2821,9 +2771,11 @@ retry1:
 		 * given packet length, complain.
 		 */
 		if (offset != len - 1)
+		{
 			ereport(FATAL,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("invalid startup packet layout: expected terminator as last byte")));
+		}
 	}
 	else
 	{
@@ -2890,7 +2842,7 @@ retry1:
 		port->user_name[NAMEDATALEN - 1] = '\0';
 
 	/* Walsender is not related to a particular database */
-	if (am_walsender)
+	if (am_walsender || am_ftshandler)
 		port->database_name[0] = '\0';
 
 	/*
@@ -2940,6 +2892,11 @@ retry1:
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 					 errSendAlert(true),
 					 errmsg("sorry, too many clients already")));
+			break;
+		case CAC_WAITBACKUP:
+			/* GPDB_84_MERGE_FIXME: we don't have a WAITBACKUP state. 
+			 * Do we want to just remove this case entirely? */
+			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
 		case CAC_OK:
 			break;
@@ -3211,22 +3168,8 @@ processTransitionRequest_getStatus(void)
 	sendPrimaryMirrorTransitionResult(statusBuf);
 }
 
-static void
-processTransitionRequest_getCollationAndDataDir(void)
-{
-	char statusBuf[10000 + MAXPGPATH];
 
-	snprintf(statusBuf, sizeof(statusBuf), "Success: lc_collate:%s\n"
-				"lc_monetary:%s\n"
-				"lc_numeric:%s\n"
-				"datadir:%s\n",
-				locale_collate,
-				locale_monetary,
-				locale_numeric,
-				data_directory );
 
-	sendPrimaryMirrorTransitionResult(statusBuf);
-}
 
 static void
 processTransitionRequest_getVersion(void)
@@ -3252,7 +3195,7 @@ static void processTransitionRequest_getFaultInjectStatus(void * buf, int *offse
 		return;
 	}
 
-	if (FaultInjector_IsFaultInjected(FaultInjectorIdentifierStringToEnum(faultName))) {
+	if (FaultInjector_IsFaultInjected(faultName)) {
 		isDone = true;
 	}
 
@@ -3290,9 +3233,9 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 	elog(DEBUG1, "FAULT INJECTED: Name %s Type %s, DDL %s, DB %s, Table %s, NumOccurrences %d  SleepTime %d",
 		 faultName, type, ddlStatement, databaseName, tableName, numOccurrences, sleepTimeSeconds );
 
+	strlcpy(faultInjectorEntry.faultName, faultName, sizeof(faultInjectorEntry.faultName));
 	faultInjectorEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
-	if (faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified ||
-		faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdMax) {
+	if (faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified) {
 		ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
 							errmsg("could not recognize fault name")));
 
@@ -3420,10 +3363,6 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	{
 		processTransitionRequest_getStatus();
 	}
-	else if (strcmp("getCollationAndDataDirSettings", targetModeStr) == 0)
-	{
-		processTransitionRequest_getCollationAndDataDir();
-    }
 	else if (strcmp("getMirrorStatus", targetModeStr) == 0)
 	{
 		processTransitionRequest_getMirrorStatus();
@@ -3574,6 +3513,7 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	}
 }
 
+#ifndef USE_SEGWALREP
 static void
 sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
 {
@@ -3684,6 +3624,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 
 	return;
 }
+#endif
 
 /*
  * The client has sent a cancel request packet, not a normal
@@ -4004,7 +3945,8 @@ SIGHUP_handler(SIGNAL_ARGS)
 			}
 		}
 		signal_child_if_up(SysLoggerPID, SIGHUP);
-		signal_child_if_up(PgStatPID, SIGHUP);
+		if (PgStatPID != 0)
+			signal_child(PgStatPID, SIGHUP);
 
 		/* Reload authentication config files too */
 		if (!load_hba())
@@ -4235,7 +4177,7 @@ CommenceNormalOperations(void)
 	 */
 	if (BgWriterPID == 0)
 	{
-		SetBGWriterPID(StartBackgroundWriter());
+		BgWriterPID = StartBackgroundWriter();
 		if (Debug_print_server_processes)
 			elog(LOG,"on startup successful: started 'background writer' as pid %ld",
 				 (long)BgWriterPID);
@@ -4496,6 +4438,24 @@ do_reaper()
 				continue;
 			}
 
+			/*
+			 * Start the bgwriter if not running.
+			 *
+			 * In archive recovery, the startup process already asked us
+			 * to start it. There's no particular reason the pass 3 needs it
+			 * it to be running, except that it needs to know whether it's
+			 * running or not, when it wants to create a checkpoint. The
+			 * easiest way to deal with that is to ensure it's always
+			 * running.
+			 *
+			 * In GPDB, it's actually the checkpointer process that we care
+			 * about. So launch that too.
+			 */
+			if (BgWriterPID == 0)
+				BgWriterPID = StartBackgroundWriter();
+			if (CheckpointerPID == 0)
+				CheckpointerPID = StartCheckpointer();
+
 		    Assert(StartupPass3PID == 0);
 			StartupPass3PID = StartupPass3DataBase();
 			Assert(StartupPass3PID != 0);
@@ -4620,29 +4580,6 @@ do_reaper()
 				continue;
 			}
 
-			/*
-			 * Startup Pass 4 can perform PersistentTable-Catalog verification
-			 * too. But, it is turned on when appropriate GUC is set.
-			 *
-			 * If the GUC is set --
-			 * 1. Both Non-DB specific and DB-specific verification checks
-			 * are executed to see if the system is consistent.
-			 * 2. First run of Pass 4 performs basic integrity checks and
-			 * non-DB specific checks. At the same time, next DB on which DB-specific
-			 * verifications are to be performed is selected.
-			 * 3. This DB selected in #2 will be used in the next cycle of Pass 4
-			 * as a new spawned process for verification purposes. At the same time,
-			 * a new database is selected for the subsequent cycle and thus this
-			 * continues until there are no more DBs left to be verified in the system.
-			 */
-			if (XLogStartup_DoNextPTCatVerificationIteration())
-			{
-				Assert(StartupPass4PID == 0);
-				StartupPass4PID = StartupPass4DataBase();
-				Assert(StartupPass4PID != 0);
-				continue;
-			}
-
 			if (PgStatPID == 0)
 			{
 				PgStatPID = pgstat_start();
@@ -4715,8 +4652,7 @@ do_reaper()
 		 */
 		if (pid == BgWriterPID)
 		{
-		    SetBGWriterPID(0);
-
+			BgWriterPID = 0;
 			if (EXIT_STATUS_0(exitstatus) &&
 			    (pmState == PM_CHILD_STOP_WAIT_BGWRITER_CHECKPOINT
 			    || (FatalError && pmState >= PM_CHILD_STOP_BEGIN)))
@@ -5353,11 +5289,9 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		signal_child(StartupPass4PID, (SendStop ? SIGSTOP : SIGQUIT));
 	}
 
-    /* Take care of the bgwriter too */
+	/* Take care of the bgwriter too */
 	if (pid == BgWriterPID)
-    {
-        SetBGWriterPID(0);
-    }
+		BgWriterPID = 0;
 	else if (BgWriterPID != 0 && !FatalError)
 	{
 		ereport((Debug_print_server_processes ? LOG : DEBUG2),
@@ -5898,9 +5832,7 @@ StateMachineTransition_ShutdownBgWriterWithCheckpoint(void)
 	{
 		/* Start the bgwriter if not running */
 		if (BgWriterPID == 0 )
-		{
-			SetBGWriterPID(StartBackgroundWriter());
-		}
+			BgWriterPID = StartBackgroundWriter();
 	}
 
 	/* SIGUSR2, regardless of shutdown mode */
@@ -6323,7 +6255,8 @@ BackendStartup(Port *port)
 
 	/* Pass down canAcceptConnections state */
 	port->canAcceptConnections = canAcceptConnections();
-	bn->dead_end = (port->canAcceptConnections != CAC_OK);
+	bn->dead_end = (port->canAcceptConnections != CAC_OK &&
+					port->canAcceptConnections != CAC_WAITBACKUP);
 
 	/*
 	 * Unless it's a dead_end child, assign it a child slot number
@@ -6585,6 +6518,9 @@ BackendInitialize(Port *port)
 	 */
 	if (am_walsender)
 		init_ps_display("wal sender process", port->user_name, remote_ps_data,
+						update_process_title ? "authentication" : "");
+	else if (am_ftshandler)
+		init_ps_display("fts handler process", port->user_name, remote_ps_data,
 						update_process_title ? "authentication" : "");
     else
 	    init_ps_display(port->user_name, port->database_name, remote_ps_data,
@@ -7151,15 +7087,6 @@ SubPostmasterMain(int argc, char *argv[])
 #endif
 
 		/*
-		 * process any libraries that should be preloaded at postmaster start
-		 *
-		 * NOTE: we have to re-load the shared_preload_libraries here because
-		 * this backend is not fork()ed so we can't inherit any shared
-		 * libraries / DLL's from our parent (the postmaster).
-		 */
-		process_shared_preload_libraries();
-
-		/*
 		 * Perform additional initialization and client authentication.
 		 *
 		 * We want to do this before InitProcess() for a couple of reasons: 1.
@@ -7372,7 +7299,7 @@ sigusr1_handler(SIGNAL_ARGS)
 		 * we'll just try again later.
 		 */
 		Assert(BgWriterPID == 0);
-		SetBGWriterPID(StartBackgroundWriter());
+		BgWriterPID = StartBackgroundWriter();
 
 		pmState = PM_RECOVERY;
 	}
@@ -7834,24 +7761,28 @@ StartAutovacuumWorker(void)
 	 */
 	if (canAcceptConnections() == CAC_OK)
 	{
-		/*
-		 * Compute the cancel key that will be assigned to this session. We
-		 * probably don't need cancel keys for autovac workers, but we'd
-		 * better have something random in the field to prevent unfriendly
-		 * people from sending cancels to them.
-		 */
-		MyCancelKey = PostmasterRandom();
-
 		bn = (Backend *) malloc(sizeof(Backend));
 		if (bn)
 		{
+			/*
+			 * Compute the cancel key that will be assigned to this session.
+			 * We probably don't need cancel keys for autovac workers, but
+			 * we'd better have something random in the field to prevent
+			 * unfriendly people from sending cancels to them.
+			 */
+			MyCancelKey = PostmasterRandom();
+			bn->cancel_key = MyCancelKey;
+
+			/* Autovac workers are not dead_end and need a child slot */
+			bn->dead_end = false;
+			bn->child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
+
 			bn->pid = StartAutoVacWorker();
 			if (bn->pid > 0)
 			{
-				bn->cancel_key = MyCancelKey;
 				bn->is_autovacuum = true;
-				bn->dead_end = false;
-				DLAddHead(BackendList, DLNewElem(bn));
+				DLInitElem(&bn->elem, bn);
+				DLAddHead(BackendList, &bn->elem);
 #ifdef EXEC_BACKEND
 				ShmemBackendArrayAdd(bn);
 #endif
@@ -8017,8 +7948,8 @@ save_backend_variables(BackendParameters *param, Port *port,
 
 	strlcpy(param->ExtraOptions, ExtraOptions, MAXPGPATH);
 
-	strlcpy(param->lc_collate, setlocale(LC_COLLATE, NULL), LOCALE_NAME_BUFLEN);
-	strlcpy(param->lc_ctype, setlocale(LC_CTYPE, NULL), LOCALE_NAME_BUFLEN);
+	strlcpy(param->lc_collate, setlocale(LC_COLLATE, NULL), NAMEDATALEN);
+	strlcpy(param->lc_ctype, setlocale(LC_CTYPE, NULL), NAMEDATALEN);
 
 	return true;
 }

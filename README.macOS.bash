@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "Caching password..."
+sudo -K
+sudo true;
+
 if hash brew 2>/dev/null; then
 	  echo "Homebrew is already installed!"
 else
@@ -8,8 +12,9 @@ else
 fi
 
 brew install bash-completion
+brew install conan
 brew install cmake # gporca
-brew install ninja # gporca
+brew install xerces-c #gporca
 brew install libyaml   # enables `--enable-mapreduce`
 brew install libevent # gpfdist
 brew install apr # gpperfmon
@@ -17,13 +22,16 @@ brew install apr-util # gpperfmon
 brew link --force apr
 brew link --force apr-util
 
-
 # Installing Golang
 mkdir -p ~/go/src
 brew install go # Or get the latest from https://golang.org/dl/
 
 # Installing python libraries
 brew install python
+cat >> ~/.bash_profile << EOF
+export PATH=/usr/local/opt/python/libexec/bin:\$PATH
+EOF
+source ~/.bash_profile
 pip install lockfile psi paramiko pysql psutil setuptools
 pip install unittest2 parse pexpect mock pyyaml
 pip install git+https://github.com/behave/behave@v1.2.4
@@ -91,4 +99,3 @@ EOF
 
 # Step: install any optional tools
 brew install gdb
-

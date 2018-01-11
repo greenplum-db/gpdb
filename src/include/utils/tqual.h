@@ -5,80 +5,19 @@
  *
  *	  Should be moved/renamed...	- vadim 07/28/98
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/tqual.h,v 1.71 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/tqual.h,v 1.74 2009/01/01 17:24:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef TQUAL_H
 #define TQUAL_H
 
-#include "access/htup.h"
-#include "storage/buf.h"
-#include "utils/timestamp.h"  /* TimestampTz */
-#include "access/xact.h"
-#include "utils/combocid.h" /*MaxComboCids*/
 #include "utils/rel.h"	/* Relation */
+#include "utils/snapshot.h"
 
-
-#include "cdb/cdbdistributedsnapshot.h"  /* DistributedSnapshotWithLocalMapping */
-
-#define MAX_XIDBUF_SIZE (1024 * 1024)
-#define MAX_XIDBUF_XIDS (MAX_XIDBUF_SIZE/sizeof(uint32))
-#define MAX_XIDBUF_INIT_PAGES 16
-
-/*
- * We use SnapshotData structures to represent both "regular" (MVCC)
- * snapshots and "special" snapshots that have non-MVCC semantics.
- * The specific semantics of a snapshot are encoded by the "satisfies"
- * function.
- */
-typedef struct SnapshotData *Snapshot;
-
-typedef bool (*SnapshotSatisfiesFunc) (Relation relation, HeapTupleHeader tuple,
-										   Snapshot snapshot, Buffer buffer);
-
-typedef struct SnapshotData
-{
-	SnapshotSatisfiesFunc satisfies;	/* tuple test function */
-
-	/*
-	 * The remaining fields are used only for MVCC snapshots, and are normally
-	 * just zeroes in special snapshots.  (But xmin and xmax are used
-	 * specially by HeapTupleSatisfiesDirty.)
-	 *
-	 * An MVCC snapshot can never see the effects of XIDs >= xmax. It can see
-	 * the effects of all older XIDs except those listed in the snapshot. xmin
-	 * is stored as an optimization to avoid needing to search the XID arrays
-	 * for most tuples.
-	 */
-	TransactionId xmin;			/* all XID < xmin are visible to me */
-	TransactionId xmax;			/* all XID >= xmax are invisible to me */
-	uint32		xcnt;			/* # of xact ids in xip[] */
-	TransactionId *xip;			/* array of xact IDs in progress */
-	/* note: all ids in xip[] satisfy xmin <= xip[i] < xmax */
-	int32		subxcnt;		/* # of xact ids in subxip[], -1 if overflow */
-	TransactionId *subxip;		/* array of subxact IDs in progress */
-	/*
-	 * note: all ids in subxip[] are >= xmin, but we don't bother filtering
-	 * out any that are >= xmax
-	 */
-	CommandId	curcid;			/* in my xact, CID < curcid are visible */
-
-	bool haveDistribSnapshot;
-						/* True if this snapshot is distributed. */
-								
-	DistributedSnapshotWithLocalMapping	distribSnapshotWithLocalMapping;
-								/*
-								 * GP: Global information about which
-								 * transactions are visible for a distributed
-								 * transaction, with cached local xids
-								 */
-} SnapshotData;
-
-#define InvalidSnapshot		((Snapshot) NULL)
 
 /* Static variables representing various special snapshot semantics */
 extern PGDLLIMPORT SnapshotData SnapshotNowData;
@@ -103,15 +42,6 @@ extern PGDLLIMPORT SnapshotData SnapshotToastData;
 #define IsMVCCSnapshot(snapshot)  \
 	((snapshot)->satisfies == HeapTupleSatisfiesMVCC)
 
-
-extern PGDLLIMPORT Snapshot SerializableSnapshot;
-extern PGDLLIMPORT Snapshot LatestSnapshot;
-extern PGDLLIMPORT Snapshot ActiveSnapshot;
-
-extern TransactionId TransactionXmin;
-extern TransactionId RecentXmin;
-extern TransactionId RecentGlobalXmin;
-
 /*
  * HeapTupleSatisfiesVisibility
  *		True iff heap tuple satisfies a time qual.
@@ -128,16 +58,6 @@ extern TransactionId RecentGlobalXmin;
 #define HeapTupleSatisfiesVisibility(rel, tuple, snapshot, buffer)	\
 	((*(snapshot)->satisfies) (rel, (tuple)->t_data, snapshot, buffer))
 
-/* Result codes for HeapTupleSatisfiesUpdate */
-typedef enum
-{
-	HeapTupleMayBeUpdated,
-	HeapTupleInvisible,
-	HeapTupleSelfUpdated,
-	HeapTupleUpdated,
-	HeapTupleBeingUpdated
-} HTSU_Result;
-
 /* Result codes for HeapTupleSatisfiesVacuum */
 typedef enum
 {
@@ -147,44 +67,6 @@ typedef enum
 	HEAPTUPLE_INSERT_IN_PROGRESS,		/* inserting xact is still in progress */
 	HEAPTUPLE_DELETE_IN_PROGRESS	/* deleting xact is still in progress */
 } HTSV_Result;
-
-/* Result codes for TupleTransactionStatus */
-typedef enum TupleTransactionStatus
-{
-	TupleTransactionStatus_None,
-	TupleTransactionStatus_Frozen,
-	TupleTransactionStatus_HintCommitted,
-	TupleTransactionStatus_HintAborted,
-	TupleTransactionStatus_CLogInProgress,
-	TupleTransactionStatus_CLogCommitted,
-	TupleTransactionStatus_CLogAborted,
-	TupleTransactionStatus_CLogSubCommitted,
-} TupleTransactionStatus;
-
-/* Result codes for TupleVisibilityStatus */
-typedef enum TupleVisibilityStatus
-{
-	TupleVisibilityStatus_Unknown,
-	TupleVisibilityStatus_InProgress,
-	TupleVisibilityStatus_Aborted,
-	TupleVisibilityStatus_Past,
-	TupleVisibilityStatus_Now,
-} TupleVisibilityStatus;
-
-typedef struct TupleVisibilitySummary
-{
-	ItemPointerData				tid;
-	int16						infomask;
-	int16						infomask2;
-	ItemPointerData				updateTid;
-	TransactionId				xmin;
-	TupleTransactionStatus      xminStatus;
-	TransactionId				xmax;
-	TupleTransactionStatus      xmaxStatus;
-	CommandId					cid;			/* inserting or deleting command ID, or both */
-	TupleVisibilityStatus		visibilityStatus;
-} TupleVisibilitySummary;
-
 
 /* These are the "satisfies" test routines for the various snapshot types */
 extern bool HeapTupleSatisfiesMVCC(Relation relation, HeapTupleHeader tuple,
@@ -208,36 +90,5 @@ extern HTSV_Result HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader t
 
 extern void HeapTupleSetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
 					 uint16 infomask, TransactionId xid);
-
-extern Snapshot GetTransactionSnapshot(void);
-extern Snapshot GetLatestSnapshot(void);
-extern Snapshot CopySnapshot(Snapshot snapshot);
-extern void FreeSnapshot(Snapshot snapshot);
-extern void FreeXactSnapshot(void);
-extern void LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix);
-extern void GetTupleVisibilitySummary(
-	HeapTuple				tuple,
-	TupleVisibilitySummary	*tupleVisibilitySummary);
-
-
-// 0  gp_tid                    			TIDOID
-// 1  gp_xmin                  			INT4OID
-// 2  gp_xmin_status        			TEXTOID
-// 3  gp_xmin_commit_distrib_id		TEXTOID
-// 4  gp_xmax		          		INT4OID
-// 5  gp_xmax_status       			TEXTOID
-// 6  gp_xmax_distrib_id    			TEXTOID
-// 7  gp_command_id	    			INT4OID
-// 8  gp_infomask    	   			TEXTOID
-// 9  gp_update_tid         			TIDOID
-// 10 gp_visibility             			TEXTOID
-
-extern void GetTupleVisibilitySummaryDatums(
-	Datum		*values,
-	bool		*nulls,
-	TupleVisibilitySummary	*tupleVisibilitySummary);
-
-extern char *GetTupleVisibilitySummaryString(
-	TupleVisibilitySummary	*tupleVisibilitySummary);
 
 #endif   /* TQUAL_H */

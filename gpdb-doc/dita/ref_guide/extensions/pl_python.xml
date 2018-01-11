@@ -96,13 +96,15 @@
         from the PL/Python function with <codeph>return</codeph> statement, or
           <codeph>yield</codeph> statement in case of a result-set statement. </p>
     </body>
-  <topic id="topic1113" xml:lang="en">
-    <title id="pw2137121113">Arrays and Lists</title>
-    <body>
-      <p>You pass SQL array values into PL/Python functions with a Python list. Similarly, PL/Python functions return SQL array values as a Python list. In the typical PL/Python usage pattern, you will specify an array with <codeph>[]</codeph>.</p>
+    <topic id="topic1113" xml:lang="en">
+      <title id="pw2137121113">Arrays and Lists</title>
+      <body>
+        <p>You pass SQL array values into PL/Python functions with a Python list. Similarly,
+          PL/Python functions return SQL array values as a Python list. In the typical PL/Python
+          usage pattern, you will specify an array with <codeph>[]</codeph>.</p>
 
-<p>The following example creates a PL/Python function that returns an array of integers:</p>
-<codeblock>CREATE FUNCTION return_py_int_array()
+        <p>The following example creates a PL/Python function that returns an array of integers:</p>
+        <codeblock>CREATE FUNCTION return_py_int_array()
   RETURNS int[]
 AS $$
   return [1, 11, 21, 31]
@@ -114,10 +116,14 @@ SELECT return_py_int_array();
  {1,11,21,31}
 (1 row) </codeblock>
 
-<p>PL/Python treats multi-dimensional arrays as lists of lists. You pass a multi-dimensional array to a PL/Python function using nested Python lists. When a PL/Python function returns a multi-dimensional array, the inner lists at each level must all be of the same size. </p>
+        <p>PL/Python treats multi-dimensional arrays as lists of lists. You pass a multi-dimensional
+          array to a PL/Python function using nested Python lists. When a PL/Python function returns
+          a multi-dimensional array, the inner lists at each level must all be of the same size. </p>
 
-<p>The following example creates a PL/Python function that takes a multi-dimensional array of integers as input. The function displays the type of the provided argument, and returns the multi-dimensional array:</p>
-<codeblock>CREATE FUNCTION return_multidim_py_array(x int4[]) 
+        <p>The following example creates a PL/Python function that takes a multi-dimensional array
+          of integers as input. The function displays the type of the provided argument, and returns
+          the multi-dimensional array:</p>
+        <codeblock>CREATE FUNCTION return_multidim_py_array(x int4[]) 
   RETURNS int4[]
 AS $$
   plpy.info(x, type(x))
@@ -132,18 +138,28 @@ CONTEXT:  PL/Python function "return_multidim_py_type"
  {{1,2,3},{4,5,6}}
 (1 row) </codeblock>
 
-<p>PL/Python also accepts other Python sequences, such as tuples, as function arguments for backwards compatibility with Greenplum versions where multi-dimensional arrays were not supported. In such cases, the Python sequences are always treated as one-dimensional arrays because they are ambiguous with composite types.</p>
-    </body>
-  </topic>
-  <topic id="topic1117" xml:lang="en">
-    <title id="pw2137121117">Composite Types</title>
-    <body>
-<p>You pass composite-type arguments to a PL/Python function using Python mappings. The element names of the mapping are the attribute names of the composite types. If an attribute has the null value, its mapping value is <codeph>None</codeph>.</p>
-<p>You can return a composite type result as a sequence type (tuple or list).
-You must specify a composite type as a tuple, rather than a list, when it is used in a multi-dimensional array. You cannot return an array of composite types as a list because it would be ambiguous to determine whether the list represents a composite type or another array dimension. In the typical usage pattern, you will specify composite type tuples with <codeph>()</codeph>.</p>
+        <p>PL/Python also accepts other Python sequences, such as tuples, as function arguments for
+          backwards compatibility with Greenplum versions where multi-dimensional arrays were not
+          supported. In such cases, the Python sequences are always treated as one-dimensional
+          arrays because they are ambiguous with composite types.</p>
+      </body>
+    </topic>
+    <topic id="topic1117" xml:lang="en">
+      <title id="pw2137121117">Composite Types</title>
+      <body>
+        <p>You pass composite-type arguments to a PL/Python function using Python mappings. The
+          element names of the mapping are the attribute names of the composite types. If an
+          attribute has the null value, its mapping value is <codeph>None</codeph>.</p>
+        <p>You can return a composite type result as a sequence type (tuple or list). You must
+          specify a composite type as a tuple, rather than a list, when it is used in a
+          multi-dimensional array. You cannot return an array of composite types as a list because
+          it would be ambiguous to determine whether the list represents a composite type or another
+          array dimension. In the typical usage pattern, you will specify composite type tuples with
+            <codeph>()</codeph>.</p>
 
-<p>In the following example, you create a composite type and a PL/Python function that returns an array of the composite type:</p>
-<codeblock>CREATE TYPE type_record AS (
+        <p>In the following example, you create a composite type and a PL/Python function that
+          returns an array of the composite type:</p>
+        <codeblock>CREATE TYPE type_record AS (
   first text,
   second int4
 );
@@ -159,9 +175,12 @@ SELECT * FROM composite_type_as_list();
 ------------------------------------------------------------------------------------
  {{"(first,1)","(second,1)"},{"(first,2)","(second,2)"},{"(first,3)","(second,3)"}}
 (1 row) </codeblock>
-    <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/devel/static/plpython-data.html#plpython-arrays" scope="external" format="html">Arrays, Lists</xref> documentation for additional information on PL/Python handling of arrays and composite types.</p>
-    </body>
-  </topic>
+        <p>Refer to the PostgreSQL <xref
+            href="https://www.postgresql.org/docs/devel/static/plpython-data.html#plpython-arrays"
+            scope="external" format="html">Arrays, Lists</xref> documentation for additional
+          information on PL/Python handling of arrays and composite types.</p>
+      </body>
+    </topic>
 
     <topic id="topic8" xml:lang="en">
       <title>Executing and Preparing SQL Queries </title>
@@ -170,6 +189,11 @@ SELECT * FROM composite_type_as_list();
           SQL query and prepare an execution plan for a query, <codeph>plpy.execute</codeph> and
             <codeph>plpy.prepare</codeph>. Preparing the execution plan for a query is useful if you
           run the query from multiple Python functions.</p>
+        <p>PL/Python also supports the <codeph>plpy.subtransaction()</codeph> function to help
+          manage <codeph>plpy.execute</codeph> calls in an explicit subtransaction. See <xref
+            href="https://www.postgresql.org/docs/9.1/static/plpython-subtransaction.html"
+            format="html" scope="external">Explicit Subtransactions</xref> in the PostgreSQL
+          documentation for additional information about <codeph>plpy.subtransaction()</codeph>.</p>
       </body>
       <topic id="topic_jnf_45f_zt">
         <title>plpy.execute</title>
@@ -237,21 +261,22 @@ SELECT * FROM composite_type_as_list();
 $$ LANGUAGE plpythonu;</codeblock>
         </body>
       </topic>
-  </topic>
+    </topic>
     <topic id="topic_s3d_vc4_xt">
       <title>Handling Python Errors and Messages</title>
       <body>
-        <p> The Python module <codeph>plpy</codeph> implements these functions to manage errors and messages:</p>
-          <ul id="ul_fp4_jq5_xt">
-              <li><codeph>plpy.debug</codeph></li>
-              <li><codeph>plpy.log</codeph></li>
-              <li><codeph>plpy.info</codeph></li>
-              <li><codeph>plpy.notice</codeph></li>
-              <li><codeph>plpy.warning</codeph></li>
-              <li><codeph>plpy.error</codeph></li>
-              <li><codeph>plpy.fatal</codeph></li>
-              <li><codeph>plpy.debug</codeph></li>
-          </ul>
+        <p> The Python module <codeph>plpy</codeph> implements these functions to manage errors and
+          messages:</p>
+        <ul id="ul_fp4_jq5_xt">
+          <li><codeph>plpy.debug</codeph></li>
+          <li><codeph>plpy.log</codeph></li>
+          <li><codeph>plpy.info</codeph></li>
+          <li><codeph>plpy.notice</codeph></li>
+          <li><codeph>plpy.warning</codeph></li>
+          <li><codeph>plpy.error</codeph></li>
+          <li><codeph>plpy.fatal</codeph></li>
+          <li><codeph>plpy.debug</codeph></li>
+        </ul>
         <p>The message functions <codeph>plpy.error</codeph> and <codeph>plpy.fatal</codeph> raise a
           Python exception which, if uncaught, propagates out to the calling query, causing the
           current transaction or subtransaction to be aborted. The functions <codeph>raise
@@ -301,6 +326,13 @@ $$;</codeblock>
       <p>The command returns the location of the Python installation. The Python installed with
         Greenplum Database is in the Greenplum Database <codeph>ext/python</codeph> directory.</p>
       <codeblock>/<varname>path_to_greenplum-db</varname>/ext/python/bin/python</codeblock>
+      <p otherprops="pivotal">Greenplum Database provides a collection of data science-related
+        Python libraries that can be used with the Greenplum Database PL/Python language. You can
+        download these libraries in <codeph>.gppkg</codeph> format from <xref
+          href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
+          >Pivotal Network</xref>. For information about the libraries, see <xref scope="peer"
+          type="topic" format="dita" href="../../install_guide/install_python_dsmod.xml#topic1"
+          >Python Data Science Module Package</xref>.</p>
       <p>If you are building a Python module, you must ensure that the build creates the correct
         executable. For example on a Linux system, the build should create a 64-bit executable.</p>
       <p>Before building a Python module to be installed, ensure that the appropriate software to
@@ -623,12 +655,13 @@ INSERT INTO sales VALUES
         by the input value. In the Python function, the row numbering starts from 0. Valid input for
         the function is an integer between 0 and 4. </p>
       <codeblock>CREATE OR REPLACE FUNCTION mypytest(a integer) 
-  RETURNS text 
+  RETURNS setof text 
 AS $$ 
   rv = plpy.execute("SELECT * FROM sales ORDER BY id", 5)
-  region = rv[a]["region"]
+  region =[]
+  region.append(rv[a]["region"])
   return region
-$$ language plpythonu;</codeblock>
+$$ language plpythonu EXECUTE ON MASTER;</codeblock>
       <p>Running this <codeph>SELECT</codeph> statement returns the <codeph>REGION</codeph> column
         value from the third row of the result set.</p>
       <codeblock>SELECT mypytest(2) ;</codeblock>

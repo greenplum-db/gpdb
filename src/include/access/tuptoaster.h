@@ -6,7 +6,7 @@
  *
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/access/tuptoaster.h,v 1.38 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/tuptoaster.h,v 1.43 2009/01/01 17:23:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 #include "access/htup.h"
 #include "access/memtup.h"
 #include "storage/bufpage.h"
+#include "utils/relcache.h"
 
 #ifndef VARSIZE_TO_SHORT
 #define VARSIZE_TO_SHORT(PTR)   ((char)(VARSIZE(PTR)-VARHDRSZ+VARHDRSZ_SHORT) | 0x80)
@@ -51,10 +52,9 @@
  */
 #define TOAST_TUPLES_PER_PAGE	4
 
-/* Note: sizeof(PageHeaderData) includes the first ItemId on the page */
 #define TOAST_TUPLE_THRESHOLD	\
 	MAXALIGN_DOWN((BLCKSZ - \
-				   MAXALIGN(sizeof(PageHeaderData) + (TOAST_TUPLES_PER_PAGE-1) * sizeof(ItemIdData))) \
+				   MAXALIGN(SizeOfPageHeaderData + TOAST_TUPLES_PER_PAGE * sizeof(ItemIdData))) \
 				  / TOAST_TUPLES_PER_PAGE)
 
 #define TOAST_TUPLE_TARGET		TOAST_TUPLE_THRESHOLD
@@ -78,10 +78,9 @@
  */
 #define EXTERN_TUPLES_PER_PAGE	4		/* tweak only this */
 
-/* Note: sizeof(PageHeaderData) includes the first ItemId on the page */
 #define EXTERN_TUPLE_MAX_SIZE	\
 	MAXALIGN_DOWN((BLCKSZ - \
-				   MAXALIGN(sizeof(PageHeaderData) + (EXTERN_TUPLES_PER_PAGE-1) * sizeof(ItemIdData))) \
+				   MAXALIGN(SizeOfPageHeaderData + EXTERN_TUPLES_PER_PAGE * sizeof(ItemIdData))) \
 				  / EXTERN_TUPLES_PER_PAGE)
 
 #define TOAST_MAX_CHUNK_SIZE	\
@@ -106,8 +105,13 @@
  */
 extern HeapTuple toast_insert_or_update(Relation rel,
 					   HeapTuple newtup, HeapTuple oldtup, 
-					   MemTupleBinding *pbind, int toast_tuple_target,
-					   bool isFrozen, bool use_wal, bool use_fsm);
+					   int toast_tuple_target,
+					   bool isFrozen, int options);
+
+extern MemTuple toast_insert_or_update_memtup(Relation rel,
+							  MemTuple newtup, MemTuple oldtup, 
+							  MemTupleBinding *pbind, int toast_tuple_target,
+							  bool isFrozen, int options);
 
 /* ----------
  * toast_delete -
@@ -115,7 +119,7 @@ extern HeapTuple toast_insert_or_update(Relation rel,
  *	Called by heap_delete().
  * ----------
  */
-extern void toast_delete(Relation rel, HeapTuple oldtup, MemTupleBinding *pbind);
+extern void toast_delete(Relation rel, GenericTuple oldtup, MemTupleBinding *pbind);
 
 /* ----------
  * heap_tuple_fetch_attr() -
@@ -125,7 +129,7 @@ extern void toast_delete(Relation rel, HeapTuple oldtup, MemTupleBinding *pbind)
  *		in compressed format.
  * ----------
  */
-extern struct varlena *heap_tuple_fetch_attr(struct varlena *attr);
+extern struct varlena *heap_tuple_fetch_attr(struct varlena * attr);
 
 /* ----------
  * varattrib_untoast_ptr_len
@@ -150,7 +154,7 @@ extern int varattrib_untoast_len(Datum d);
  *		it as needed.
  * ----------
  */
-extern struct varlena *heap_tuple_untoast_attr(struct varlena *attr);
+extern struct varlena *heap_tuple_untoast_attr(struct varlena * attr);
 
 /* ----------
  * heap_tuple_untoast_attr_slice() -
@@ -159,7 +163,7 @@ extern struct varlena *heap_tuple_untoast_attr(struct varlena *attr);
  *		(Handles all cases for attribute storage)
  * ----------
  */
-extern struct varlena *heap_tuple_untoast_attr_slice(struct varlena *attr,
+extern struct varlena *heap_tuple_untoast_attr_slice(struct varlena * attr,
 							  int32 sliceoffset,
 							  int32 slicelength);
 

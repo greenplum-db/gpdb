@@ -3,10 +3,10 @@
  * dict_int.c
  *	  Text search dictionary for integers
  *
- * Copyright (c) 2007-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/dict_int/dict_int.c,v 1.3 2008/01/01 20:31:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/contrib/dict_int/dict_int.c,v 1.5 2009/06/11 14:48:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,7 +23,7 @@ typedef struct
 {
 	int			maxlen;
 	bool		rejectlong;
-}	DictInt;
+} DictInt;
 
 
 PG_FUNCTION_INFO_V1(dintdict_init);

@@ -3,9 +3,6 @@
 -- Guc value to valid value compresslevel=1
 Alter role dsp_role1 set gp_default_storage_options="appendonly=true, compresslevel=1";
 ALTER ROLE
--- Set the role level guc to an invalid value
-Alter role dsp_role2 set gp_default_storage_options="appendonly=true, compresslevel=10";
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
 -- Set role level Guc to 2, and create compresstype=quicklz
 Alter role dsp_role3 set gp_default_storage_options="appendonly=true, compresslevel=2";
 ALTER ROLE
@@ -334,12 +331,6 @@ select compresslevel, compresstype, blocksize, checksum, columnstore from pg_app
 
 Drop table ao_rl_cl_t6;
 DROP TABLE
--- Create table with invalid value compresslevel=10
-Drop table if exists ao_rl_cl_t4;
-psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t4" does not exist, skipping
-DROP TABLE
-Create table ao_rl_cl_t4 ( i int, j int) with(compresslevel=10);
-psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
 -- Create table with appendonly=false
 Drop table if exists ao_rl_cl_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t4" does not exist, skipping

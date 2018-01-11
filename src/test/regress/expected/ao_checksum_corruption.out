@@ -104,7 +104,7 @@ INFO:  corrupting file base/107062/107070.1 at 8  (seg2 slice1 127.0.0.1:40002 p
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_header_large_co;
-ERROR:  Header checksum does not match.  Expected 0xBA9CC649 and found 0xC997AE7 (cdbappendonlystorageread.c:846)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Header checksum does not match.  Expected 0xBA9CC649 and found 0xC997AE7   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Large content, corrupt content
 create table corrupt_content_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=true) DISTRIBUTED RANDOMLY;
 insert into corrupt_content_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,8)  ;
@@ -118,7 +118,7 @@ INFO:  corrupting file base/107062/107080.1 at -3  (seg2 slice1 127.0.0.1:40002 
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_content_large_co;
-ERROR:  Block checksum does not match.  Expected 0x9C02F450 and found 0xA78638C (cdbappendonlystorageread.c:1184)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Block checksum does not match.  Expected 0x9C02F450 and found 0xA78638C   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Small content, corrupt block header
 create table corrupt_header_small_co(a int) with (appendonly=true, orientation=column, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -133,7 +133,7 @@ INFO:  corrupting file base/107062/107090.1 at 8  (seg2 slice1 127.0.0.1:40002 p
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_header_small_co;
-ERROR:  Header checksum does not match.  Expected 0xAA39D941 and found 0xE8FB379B (cdbappendonlystorageread.c:846)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Header checksum does not match.  Expected 0xAA39D941 and found 0xE8FB379B   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Small content, corrupt content
 create table corrupt_content_small_co(a int) with (appendonly=true, orientation=column, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -148,7 +148,7 @@ INFO:  corrupting file base/107062/107097.1 at -3  (seg2 slice1 127.0.0.1:40002 
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_content_small_co;
-ERROR:  Block checksum does not match.  Expected 0xA3CAEC7A and found 0x35B07BA6 (cdbappendonlystorageread.c:1184)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Block checksum does not match.  Expected 0xA3CAEC7A and found 0x35B07BA6   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Row-oriented, Small content, corrupt block header
 create table corrupt_header_small_ao(a int) with (appendonly=true, orientation=row, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -163,7 +163,7 @@ INFO:  corrupting file base/107062/107104.1 at 8  (seg2 slice1 127.0.0.1:40002 p
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_header_small_ao;
-ERROR:  Header checksum does not match.  Expected 0x413AF15D and found 0x805DA822 (cdbappendonlystorageread.c:846)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Header checksum does not match.  Expected 0x413AF15D and found 0x805DA822   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Row-oriented, Small content, corrupt content
 create table corrupt_content_small_ao(a int) with (appendonly=true, orientation=row, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -178,7 +178,7 @@ INFO:  corrupting file base/107062/107111.1 at -3  (seg2 slice1 127.0.0.1:40002 
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_content_small_ao;
-ERROR:  Block checksum does not match.  Expected 0x30FEE3C5 and found 0xA6847419 (cdbappendonlystorageread.c:1184)  (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  Block checksum does not match.  Expected 0x30FEE3C5 and found 0xA6847419   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Also test gp_appendonly_verify_block_checksums=off.
 create table appendonly_verify_block_checksums_co (t text)  with (checksum=true, appendonly=true, orientation=column, compresstype=none);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as the Greenplum Database data distribution key for this table.
@@ -196,7 +196,7 @@ INFO:  corrupting file base/107062/107118.1 by replacing <type 'str'> with ###  
 
 -- Fails, checksum is wrong.
 SELECT * FROM appendonly_verify_block_checksums_co;
-ERROR:  Block checksum does not match.  Expected 0x9368C3E7 and found 0x188A875E (cdbappendonlystorageread.c:1184)  (seg2 slice1 127.0.0.1:40002 pid=28139)
+ERROR:  Block checksum does not match.  Expected 0x9368C3E7 and found 0x188A875E   (seg2 slice1 127.0.0.1:40002 pid=28139)
 -- try again, ignoring the checksum failure.
 set gp_appendonly_verify_block_checksums = off;
 SELECT * FROM appendonly_verify_block_checksums_co;
@@ -212,13 +212,4 @@ SELECT * FROM appendonly_verify_block_checksums_co;
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
 DROP SCHEMA corrupt_checksums CASCADE;
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.appendonly_verify_block_checksums_co
-NOTICE:  drop cascades to append only table corrupt_checksums.corrupt_content_small_ao
-NOTICE:  drop cascades to append only table corrupt_checksums.corrupt_header_small_ao
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_content_small_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_header_small_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_content_large_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_header_large_co
-NOTICE:  drop cascades to function corrupt_checksums.corrupt_file(text,bytea,bytea)
-NOTICE:  drop cascades to function corrupt_checksums.corrupt_file(text,integer)
-NOTICE:  drop cascades to function corrupt_checksums.get_aoseg1_path(regclass)
+NOTICE:  drop cascades to 10 other objects

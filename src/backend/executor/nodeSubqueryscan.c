@@ -8,12 +8,13 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.39 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.40 2009/01/01 17:23:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,12 +75,6 @@ SubqueryNext(SubqueryScanState *node)
         !TupIsNull(slot))
     {
     	slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
-    }
-
-    if (!TupIsNull(slot))
-    {
-        Gpmon_Incr_Rows_Out(GpmonPktFromSubqueryScanState(node));
-        CheckSendPlanStateGpmonPkt(&node->ss.ps);
     }
 
 	return slot;
@@ -185,8 +180,6 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&subquerystate->ss.ps);
 	ExecAssignScanProjectionInfo(&subquerystate->ss);
 
-	initGpmonPktForSubqueryScan((Plan *)node, &subquerystate->ss.ps.gpmon_pkt, estate);
-
 	return subquerystate;
 }
 
@@ -265,11 +258,4 @@ ExecSubqueryReScan(SubqueryScanState *node, ExprContext *exprCtxt)
 	/*node->ss.ps.ps_TupFromTlist = false;*/
 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
-}
-	
-void
-initGpmonPktForSubqueryScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SubqueryScan));
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

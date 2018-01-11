@@ -218,7 +218,7 @@ where l1.l_suppkey = (
 	where s_nationkey = 11 and l2.l_returnflag = 'A'
 	limit 1
 )
-limit -1;
+limit 0;
 
 select l1.l_partkey, l1.l_suppkey, l1.l_comment
 from skewed_lineitem l1
@@ -231,7 +231,7 @@ where l1.l_suppkey in (
 	where s_nationkey = 11 and l2.l_returnflag = 'A'
 	limit 2
 )
-limit -1;
+limit 0;
 
 select l1.l_partkey, l1.l_suppkey, l1.l_comment
 from skewed_lineitem l1
@@ -243,7 +243,7 @@ where exists (
 	where l1.l_suppkey = s_suppkey
 	and s_nationkey = 11 and l1.l_returnflag = 'A'
 )
-limit -1;
+limit 0;
 
 -- cause hashjoin to spill
 set statement_mem = '1MB';

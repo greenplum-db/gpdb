@@ -5,12 +5,13 @@
  *
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.152 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.158 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,32 +21,34 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
-#include "catalog/pg_appendonly_fn.h"
-#include "catalog/pg_inherits.h"
-#include "catalog/pg_exttable.h"
+#include "catalog/catalog.h"
+#include "miscadmin.h"
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/cost.h"
 #include "optimizer/plancat.h"
 #include "optimizer/predtest.h"
 #include "optimizer/prep.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
-#include "utils/fmgroids.h"
+#include "storage/bufmgr.h"
 #include "utils/lsyscache.h"
-#include "utils/relcache.h"
-#include "utils/syscache.h"
-#include "catalog/catalog.h"
-#include "miscadmin.h"
+#include "utils/rel.h"
+#include "utils/snapmgr.h"
+
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbrelsize.h"
+#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_exttable.h"
 
 
 /* GUC parameter */
-bool		constraint_exclusion = false;
+int			constraint_exclusion = CONSTRAINT_EXCLUSION_PARTITION;
 
 /* Hook for plugins to get control in get_relation_info() */
 get_relation_info_hook_type get_relation_info_hook = NULL;
@@ -262,6 +265,8 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			info->amcostestimate = indexRelation->rd_am->amcostestimate;
 			info->amoptionalkey = indexRelation->rd_am->amoptionalkey;
 			info->amsearchnulls = indexRelation->rd_am->amsearchnulls;
+			info->amhasgettuple = OidIsValid(indexRelation->rd_am->amgettuple);
+			info->amhasgetbitmap = OidIsValid(indexRelation->rd_am->amgetbitmap);
 
 			/*
 			 * Fetch the ordering operators associated with the index, if any.
@@ -374,8 +379,6 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 static void
 get_external_relation_info(Relation relation, RelOptInfo *rel)
 {
-	ExtTableEntry *extentry;
-
 	/*
      * Get partitioning key info for distributed relation.
      */
@@ -384,18 +387,7 @@ get_external_relation_info(Relation relation, RelOptInfo *rel)
 	/*
 	 * Get the pg_exttable fields for this table
 	 */
-	extentry = GetExtTableEntry(RelationGetRelid(relation));
-
-	rel->urilocationlist = extentry->urilocations;
-	rel->execlocationlist = extentry->execlocations;
-	rel->execcommand = extentry->command;
-	rel->fmttype = extentry->fmtcode;
-	rel->fmtopts = extentry->fmtopts;
-	rel->rejectlimit = extentry->rejectlimit;
-	rel->rejectlimittype = extentry->rejectlimittype;
-	rel->fmterrtbl = extentry->fmterrtbl;
-	rel->ext_encoding = extentry->encoding;
-	rel->writable = extentry->iswritable;
+	rel->extEntry = GetExtTableEntry(RelationGetRelid(relation));
 }
 
 /*
@@ -532,38 +524,19 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			if(RelationIsExternal(rel))
 				break;
 			
-			if(RelationIsAoRows(rel))
+			if (RelationIsAoRows(rel))
 			{
-				/* MPP-7629 */
-				FileSegTotals	*fstotal = GetSegFilesTotals(rel, SnapshotNow);
-				
-				Assert(fstotal);
-				curpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
-				pfree(fstotal);
+				int64		totalbytes;
+
+				totalbytes = GetAOTotalBytes(rel, SnapshotNow);
+				curpages = RelationGuessNumberOfBlocks(totalbytes);
 			}
 			else if (RelationIsAoCols(rel))
 			{
-				/* TODO: largely copied from gp_statistics_estimate_reltuples_relpages_ao_cs
-				 * but there really should be a CO equivalent to GetSegFilesTotals, this is
-				 * a little ugly */
-				
-				int					nsegs, i , j;
-				double				totalBytes = 0;
-				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
-				
-			    if (aocsInfo)
-			    {
-			    	for(i = 0; i < nsegs; i++)
-			    	{
-			    		for(j = 0; j < RelationGetNumberOfAttributes(rel); j++)
-			    		{
-			    			AOCSVPInfoEntry *e = getAOCSVPEntry(aocsInfo[i], j);
-			    			Assert(e);
-			    			totalBytes += e->eof_uncompressed;
-			    		}
-			    	}
-			    }
-			    curpages = RelationGuessNumberOfBlocks(totalBytes);
+				int64		totalbytes;
+
+				totalbytes = GetAOCSTotalBytes(rel, SnapshotNow, false);
+				curpages = RelationGuessNumberOfBlocks(totalbytes);
 			}
 			else
 			{
@@ -697,7 +670,7 @@ estimate_tuple_width(Relation   rel,
 	tuple_width += sizeof(HeapTupleHeaderData);
 	tuple_width += sizeof(ItemPointerData);
     /* note: integer division is intentional here */
-	density = (BLCKSZ - sizeof(PageHeaderData)) / tuple_width;
+	density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 
     *bytes_per_tuple = tuple_width;
     *tuples_per_page = Max(1.0, density);
@@ -783,7 +756,7 @@ get_relation_constraints(PlannerInfo *root,
 		/* Add NOT NULL constraints in expression form, if requested */
 		if (include_notnull && constr->has_not_null)
 		{
-			int		natts = relation->rd_att->natts;
+			int			natts = relation->rd_att->natts;
 
 			for (i = 1; i <= natts; i++)
 			{
@@ -791,7 +764,7 @@ get_relation_constraints(PlannerInfo *root,
 
 				if (att->attnotnull && !att->attisdropped)
 				{
-					NullTest *ntest = makeNode(NullTest);
+					NullTest   *ntest = makeNode(NullTest);
 
 					ntest->arg = (Expr *) makeVar(varno,
 												  i,
@@ -818,8 +791,9 @@ get_relation_constraints(PlannerInfo *root,
  * self-inconsistent restrictions, or restrictions inconsistent with the
  * relation's CHECK constraints.
  *
- * Note: this examines only rel->relid and rel->baserestrictinfo; therefore
- * it can be called before filling in other fields of the RelOptInfo.
+ * Note: this examines only rel->relid, rel->reloptkind, and
+ * rel->baserestrictinfo; therefore it can be called before filling in
+ * other fields of the RelOptInfo.
  */
 bool
 relation_excluded_by_constraints(PlannerInfo *root,
@@ -830,8 +804,10 @@ relation_excluded_by_constraints(PlannerInfo *root,
 	List	   *safe_constraints;
 	ListCell   *lc;
 
-	/* Skip the test if constraint exclusion is disabled */
-	if (!root->config->constraint_exclusion)
+	/* Skip the test if constraint exclusion is disabled for the rel */
+	if (root->config->constraint_exclusion == CONSTRAINT_EXCLUSION_OFF ||
+		(root->config->constraint_exclusion == CONSTRAINT_EXCLUSION_PARTITION &&
+		 rel->reloptkind != RELOPT_OTHER_MEMBER_REL))
 		return false;
 
 	/*
@@ -882,7 +858,7 @@ relation_excluded_by_constraints(PlannerInfo *root,
 		return false;
 
 	/*
-	 * OK to fetch the constraint expressions.  Include "col IS NOT NULL"
+	 * OK to fetch the constraint expressions.	Include "col IS NOT NULL"
 	 * expressions for attnotnull columns, in case we can refute those.
 	 */
 	constraint_pred = get_relation_constraints(root, rte->relid, rel, true);
@@ -1020,6 +996,7 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 
 		case RTE_TABLEFUNCTION:
 		case RTE_FUNCTION:
+		case RTE_VALUES:
 		case RTE_CTE:
 			/* Not all of these can have dropped cols, but share code anyway */
 			expandRTE(rte, varno, 0, -1, true /* include dropped */ ,
@@ -1037,21 +1014,6 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 					tlist = NIL;
 					break;
 				}
-
-				tlist = lappend(tlist,
-								makeTargetEntry((Expr *) var,
-												var->varattno,
-												NULL,
-												false));
-			}
-			break;
-
-		case RTE_VALUES:
-			expandRTE(rte, varno, 0, -1, false /* dropped not applicable */ ,
-					  NULL, &colvars);
-			foreach(l, colvars)
-			{
-				var = (Var *) lfirst(l);
 
 				tlist = lappend(tlist,
 								makeTargetEntry((Expr *) var,
@@ -1119,7 +1081,8 @@ Selectivity
 join_selectivity(PlannerInfo *root,
 				 Oid operator,
 				 List *args,
-				 JoinType jointype)
+				 JoinType jointype,
+				 SpecialJoinInfo *sjinfo)
 {
 	RegProcedure oprjoin = get_oprjoin(operator);
 	float8		result;
@@ -1131,96 +1094,17 @@ join_selectivity(PlannerInfo *root,
 	if (!oprjoin)
 		return (Selectivity) 0.5;
 
-	result = DatumGetFloat8(OidFunctionCall4(oprjoin,
+	result = DatumGetFloat8(OidFunctionCall5(oprjoin,
 											 PointerGetDatum(root),
 											 ObjectIdGetDatum(operator),
 											 PointerGetDatum(args),
-											 Int16GetDatum(jointype)));
+											 Int16GetDatum(jointype),
+											 PointerGetDatum(sjinfo)));
 
 	if (result < 0.0 || result > 1.0)
 		elog(ERROR, "invalid join selectivity: %f", result);
 
 	return (Selectivity) result;
-}
-
-static int
-oid_cmp(const void *left, const void *right)
-{
-	if (*(Oid *)left < *(Oid *)right)
-		return -1;
-	if (*(Oid *)left > *(Oid *)right)
-		return 1;
-	return 0;
-}
-
-/*
- * find_inheritance_children
- *
- * Returns a list containing the OIDs of all relations which
- * inherit *directly* from the relation with OID 'inhparent'.
- *
- * XXX might be a good idea to create an index on pg_inherits' inhparent
- * field, so that we can use an indexscan instead of sequential scan here.
- * However, in typical databases pg_inherits won't have enough entries to
- * justify an indexscan...
- */
-List *
-find_inheritance_children(Oid inhparent)
-{
-	List	   *list = NIL;
-	Relation	relation;
-	HeapScanDesc scan;
-	HeapTuple	inheritsTuple;
-	Oid			inhrelid;
-	ScanKeyData key[1];
-	ListCell   *item;
-	int         i;
-	Oid        *ordered_list;
-
-	/*
-	 * Can skip the scan if pg_class shows the relation has never had a
-	 * subclass.
-	 */
-	if (!has_subclass_fast(inhparent))
-		return NIL;
-
-	ScanKeyInit(&key[0],
-				Anum_pg_inherits_inhparent,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(inhparent));
-	relation = heap_open(InheritsRelationId, AccessShareLock);
-	scan = heap_beginscan(relation, SnapshotNow, 1, key);
-	while ((inheritsTuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
-	{
-		inhrelid = ((Form_pg_inherits) GETSTRUCT(inheritsTuple))->inhrelid;
-		list = lappend_oid(list, inhrelid);
-	}
-	heap_endscan(scan);
-	heap_close(relation, AccessShareLock);
-
-	/*
-	 * The order in which child OIDs are scanned on master may not be
-	 * the same on segments.  When a partitioned table needs to be
-	 * rewritten during ALTER TABLE, master generates new OIDs for
-	 * every child in this list.  Segments scan pg_inherits and
-	 * correlate the list of OIDs dispatched by master with each
-	 * child.  To guarantee that the child <--> new OID pairs are
-	 * identical on master and segments, we need the following sort.
-	 */
-	ordered_list = (Oid *) palloc(sizeof(Oid) * list_length(list));
-	i = 0;
-	foreach(item, list)
-	{
-		ordered_list[i++] = lfirst_oid(item);
-	}
-	qsort(ordered_list, list_length(list), sizeof(Oid), oid_cmp);
-	i = 0;
-	foreach(item, list)
-	{
-		lfirst_oid(item) = ordered_list[i++];
-	}
-	pfree(ordered_list);
-	return list;
 }
 
 /*
@@ -1241,15 +1125,16 @@ has_unique_index(RelOptInfo *rel, AttrNumber attno)
 
 		/*
 		 * Note: ignore partial indexes, since they don't allow us to conclude
-		 * that all attr values are distinct.  We don't take any interest in
-		 * expressional indexes either. Also, a multicolumn unique index
-		 * doesn't allow us to conclude that just the specified attr is
-		 * unique.
+		 * that all attr values are distinct, *unless* they are marked predOK
+		 * which means we know the index's predicate is satisfied by the
+		 * query. We don't take any interest in expressional indexes either.
+		 * Also, a multicolumn unique index doesn't allow us to conclude that
+		 * just the specified attr is unique.
 		 */
 		if (index->unique &&
 			index->ncolumns == 1 &&
 			index->indexkeys[0] == attno &&
-			index->indpred == NIL)
+			(index->indpred == NIL || index->predOK))
 			return true;
 	}
 	return false;

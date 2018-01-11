@@ -4,10 +4,10 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeMaterial.h,v 1.27 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeMaterial.h,v 1.28 2009/01/01 17:23:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,10 +24,5 @@ extern void ExecMaterialMarkPos(MaterialState *node);
 extern void ExecMaterialRestrPos(MaterialState *node);
 extern void ExecMaterialReScan(MaterialState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeMaterial(MaterialState *node);
-
-static inline gpmon_packet_t * GpmonPktFromMaterialState(MaterialState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 
 #endif   /* NODEMATERIAL_H */

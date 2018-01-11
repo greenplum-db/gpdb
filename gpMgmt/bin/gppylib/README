@@ -35,7 +35,7 @@ Coding Principles
     Never set a default value for the fundamental aspects of a class.
 
     This is bad:
-        class GpDB():
+        class Segment():
             def __init__(self, dbid=-1, ...):
                 self.dbid = dbid  # ^^ Setting the core aspects of the class
 
@@ -47,11 +47,11 @@ Coding Principles
     function with parameters set by name for clarity.
 
     This is unclear:
-        db = GpDB(-1, 'p', 0, 'm', 's', 'u', 'localhost', 'localhost', 5432,
+        db = Segment(-1, 'p', 0, 'm', 's', 'u', 'localhost', 'localhost', 5432,
 		          datadir, None)
 
     This is better:
-        db = GpDB(content = -1, preferred_role = 'p', dbid = 0, role = 'p',
+        db = Segment(content = -1, preferred_role = 'p', dbid = 0, role = 'p',
 				  mode = 's', status = 'u', hostname = 'localhost',
 				  address = 'localhost', port = 5432, datadir = '/gpdata/gp-1',
 				  replicationPort = None)

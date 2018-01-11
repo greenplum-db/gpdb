@@ -81,7 +81,7 @@ extern void FtsCondSetTxnReadOnly(bool *);
 extern void ftsLock(void);
 extern void ftsUnlock(void);
 
-void FtsNotifyProber(void);
+extern void FtsNotifyProber(void);
 
 extern bool isFtsReadOnlySet(void);
 extern uint64 getFtsVersion(void);

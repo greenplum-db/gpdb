@@ -1,11 +1,15 @@
-/*
- * Copyright (c) 2013 EMC Corporation All Rights Reserved
+/*-------------------------------------------------------------------------
  *
- * This software is protected, without limitation, by copyright law
- * and international treaties. Use of this software and the intellectual
- * property contained therein is expressly limited to the terms and
- * conditions of the License Agreement under which it is provided by
- * or on behalf of EMC.
+ * memaccounting.c
+ *
+ * Portions Copyright (c) 2013 EMC Corporation All Rights Reserved
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/mmgr/memaccounting.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
@@ -21,6 +25,8 @@
 #include "miscadmin.h"
 #include "utils/vmem_tracker.h"
 #include "utils/memaccounting_private.h"
+#include "utils/gp_alloc.h"
+#include "utils/ext_alloc.h"
 
 #define MEMORY_REPORT_FILE_NAME_LENGTH 255
 #define SHORT_LIVING_MEMORY_ACCOUNT_ARRAY_INIT_LEN 64
@@ -173,6 +179,12 @@ MemoryAccount *RolloverMemoryAccount = NULL;
 MemoryAccount *AlienExecutorMemoryAccount = NULL;
 
 /*
+ * RelinqishedPoolMemoryAccount is a shared executor account that tracks amount
+ * of additional free memory available for execution
+ */
+MemoryAccount *RelinquishedPoolMemoryAccount = NULL;
+
+/*
  * Total outstanding (i.e., allocated - freed) memory across all
  * memory accounts, including RolloverMemoryAccount
  */
@@ -222,6 +234,40 @@ MemoryAccounting_Reset()
 	}
 
 	InitMemoryAccounting();
+}
+
+/*
+ * MemoryAccounting_DeclareDone
+ * 		Increments the RelinquishedPoolMemoryAccount by the difference between the current
+ * 		Memory Account's quota and allocated amount.
+ * 		This should only be called when a MemoryAccount is certain that it will not
+ * 		allocate any more memory
+ */
+uint64
+MemoryAccounting_DeclareDone()
+{
+	MemoryAccount *currentAccount = MemoryAccounting_ConvertIdToAccount(ActiveMemoryAccountId);
+	uint64 relinquished = 0;
+	if (currentAccount->maxLimit > 0 && currentAccount->maxLimit > currentAccount->allocated)
+	{
+		relinquished = currentAccount->maxLimit - currentAccount->allocated;
+		RelinquishedPoolMemoryAccount->allocated += relinquished;
+		currentAccount->relinquishedMemory = relinquished;
+	}
+
+	elog(DEBUG2, "Memory Account %d relinquished %lu bytes of memory", currentAccount->ownerType, relinquished);
+	return relinquished;
+}
+
+uint64
+MemoryAccounting_RequestQuotaIncrease()
+{
+	MemoryAccount *currentAccount = MemoryAccounting_ConvertIdToAccount(ActiveMemoryAccountId);
+
+	uint64 result = RelinquishedPoolMemoryAccount->allocated;
+	currentAccount->acquiredMemory = result;
+	RelinquishedPoolMemoryAccount->allocated = 0;
+	return result;
 }
 
 /*
@@ -506,6 +552,29 @@ MemoryAccounting_SaveToLog()
 	}
 }
 
+/*
+ * Get string output of the current Optimizer Memory account. This is used only in
+ */
+void
+MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(StringInfoData *str)
+{
+
+	MemoryAccountIdType shortLivingCount = shortLivingMemoryAccountArray->accountCount;
+
+	for (MemoryAccountIdType shortLivingArrayIdx = 0; shortLivingArrayIdx < shortLivingCount; ++shortLivingArrayIdx)
+	{
+		MemoryAccount *shortLivingAccount = shortLivingMemoryAccountArray->allAccounts[shortLivingArrayIdx];
+		if (shortLivingAccount->ownerType == MEMORY_OWNER_TYPE_Optimizer)
+		{
+			appendStringInfo(str, "\n  ORCA Memory used: peak %.0fK bytes  allocated %.0fK bytes  freed %.0fK bytes ",
+							 ceil((double) shortLivingAccount->peak / 1024L),
+							 ceil((double) shortLivingAccount->allocated / 1024L),
+							 ceil((double) shortLivingAccount->freed / 1024L));
+			break;
+		}
+	}
+}
+
 /*****************************************************************************
  *	  PRIVATE ROUTINES FOR MEMORY ACCOUNTING								 *
  *****************************************************************************/
@@ -541,6 +610,9 @@ InitLongLivingAccounts() {
 			longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_MemAccount];
 	AlienExecutorMemoryAccount =
 			longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Exec_AlienShared];
+	RelinquishedPoolMemoryAccount =
+			longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Exec_RelinquishedPool];
+
 }
 
 /* Initializes all the short living accounts */
@@ -623,8 +695,27 @@ InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit, MemoryOwnerTyp
 	newAccount->maxLimit = maxLimit;
 
 	newAccount->allocated = 0;
+
+	/*
+	 * Every call to ORCA to optimize a query maps to a new short living memory
+	 * account. However, the nature of Orca's memory usage is that it holds data
+	 * in a cache. Thus, GetOptimizerOutstandingMemoryBalance() returns the
+	 * current amount of memory that Orca has not yet freed according to the
+	 * Memory Accounting framework. Each new Orca memory account will start off
+	 * its 'allocated' amount from the outstanding amount. This approach ensures
+	 * that when Orca does release memory it allocated during an earlier
+	 * generation that the accounting math does not lead to an underflow but
+	 * properly accounts for the outstanding amount.
+	 */
+	if (ownerType == MEMORY_OWNER_TYPE_Optimizer)
+	{
+		elog(DEBUG2, "Rolling over previous outstanding Optimizer allocated memory %lu", GetOptimizerOutstandingMemoryBalance());
+		newAccount->allocated = GetOptimizerOutstandingMemoryBalance();
+	}
 	newAccount->freed = 0;
 	newAccount->peak = 0;
+	newAccount->relinquishedMemory = 0;
+	newAccount->acquiredMemory = 0;
 	newAccount->parentId = parentAccountId;
 
 	if (ownerType <= MEMORY_OWNER_TYPE_END_LONG_LIVING)
@@ -665,8 +756,10 @@ CreateMemoryAccountImpl(long maxLimit, MemoryOwnerType ownerType, MemoryAccountI
 	 * TopMemoryContext, and not under MemoryAccountMemoryContext
 	 */
 	Assert(ownerType == MEMORY_OWNER_TYPE_LogicalRoot || ownerType == MEMORY_OWNER_TYPE_SharedChunkHeader ||
-			ownerType == MEMORY_OWNER_TYPE_Rollover || ownerType == MEMORY_OWNER_TYPE_MemAccount ||
+			ownerType == MEMORY_OWNER_TYPE_Rollover ||
+			ownerType == MEMORY_OWNER_TYPE_MemAccount ||
 			ownerType == MEMORY_OWNER_TYPE_Exec_AlienShared ||
+			ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool ||
 			(MemoryAccountMemoryContext != NULL && MemoryAccountMemoryAccount != NULL));
 
 	if (ownerType <= MEMORY_OWNER_TYPE_END_LONG_LIVING || ownerType == MEMORY_OWNER_TYPE_Top)
@@ -930,15 +1023,22 @@ MemoryAccountToString(MemoryAccountTree *memoryAccountTreeNode, void *context, u
 
 	MemoryAccount *memoryAccount = memoryAccountTreeNode->account;
 
+	if (memoryAccount->ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool) return CdbVisit_Walk;
+
 	MemoryAccountSerializerCxt *memAccountCxt = (MemoryAccountSerializerCxt*) context;
 
 	appendStringInfoFill(memAccountCxt->buffer, 2 * depth, ' ');
 
 	Assert(memoryAccount->peak >= MemoryAccounting_GetBalance(memoryAccount));
 	/* We print only integer valued memory consumption, in standard GPDB KB unit */
-	appendStringInfo(memAccountCxt->buffer, "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT "bytes. Quota: " UINT64_FORMAT "bytes.\n",
+	appendStringInfo(memAccountCxt->buffer, "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: " UINT64_FORMAT " bytes.",
 			MemoryAccounting_GetOwnerName(memoryAccount->ownerType),
 			memoryAccount->peak, MemoryAccounting_GetBalance(memoryAccount), memoryAccount->maxLimit);
+	if (memoryAccount->relinquishedMemory > 0)
+		appendStringInfo(memAccountCxt->buffer, " Relinquished Memory: " UINT64_FORMAT " bytes. ", memoryAccount->relinquishedMemory);
+	if (memoryAccount->acquiredMemory > 0)
+		appendStringInfo(memAccountCxt->buffer, " Acquired Additional Memory: " UINT64_FORMAT " bytes.", memoryAccount->acquiredMemory);
+	appendStringInfo(memAccountCxt->buffer, "\n");
 
 	memAccountCxt->memoryAccountCount++;
 
@@ -965,6 +1065,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "MemAcc";
 	case MEMORY_OWNER_TYPE_Exec_AlienShared:
 		return "X_Alien";
+	case MEMORY_OWNER_TYPE_Exec_RelinquishedPool:
+		return "RelinquishedPool";
 
 		/* Short living accounts */
 	case MEMORY_OWNER_TYPE_Top:
@@ -1016,6 +1118,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_DynamicIndexScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapIndexScan:
 		return "X_BitmapIndexScan";
+	case MEMORY_OWNER_TYPE_Exec_DynamicBitmapIndexScan:
+		return "X_DynamicBitmapIndexScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapHeapScan:
 		return "X_BitmapHeapScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapAppendOnlyScan:
@@ -1054,8 +1158,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_Motion";
 	case MEMORY_OWNER_TYPE_Exec_ShareInputScan:
 		return "X_ShareInputScan";
-	case MEMORY_OWNER_TYPE_Exec_Window:
-		return "X_Window";
+	case MEMORY_OWNER_TYPE_Exec_WindowAgg:
+		return "X_WindowAgg";
 	case MEMORY_OWNER_TYPE_Exec_Repeat:
 		return "X_Repeat";
 	case MEMORY_OWNER_TYPE_Exec_DML:
@@ -1070,6 +1174,12 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_BitmapTableScan";
 	case MEMORY_OWNER_TYPE_Exec_PartitionSelector:
 		return "X_PartitionSelector";
+	case MEMORY_OWNER_TYPE_Exec_RecursiveUnion:
+		return "X_RecursiveUnion";
+	case MEMORY_OWNER_TYPE_Exec_CteScan:
+		return "X_CteScan";
+	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
+		return "X_WorkTableScan";
 	default:
 		Assert(false);
 		break;
@@ -1279,6 +1389,7 @@ AdvanceMemoryAccountingGeneration()
 	 * reset.
 	 */
 	MemoryAccounting_SwitchAccount((MemoryAccountIdType)MEMORY_OWNER_TYPE_Rollover);
+
 	MemoryContextReset(MemoryAccountMemoryContext);
 	Assert(MemoryAccountMemoryAccount->allocated == MemoryAccountMemoryAccount->freed);
 	shortLivingMemoryAccountArray = NULL;
@@ -1302,6 +1413,13 @@ AdvanceMemoryAccountingGeneration()
 	 * includes SharedChunkHeadersMemoryAccount balance.
 	 */
 	RolloverMemoryAccount->peak = Max(RolloverMemoryAccount->peak, MemoryAccountingPeakBalance);
+
+	/*
+	 * Reset the RelinquishedPool Long living account, the amount should not be carried between memory account generations
+	 */
+	RelinquishedPoolMemoryAccount->allocated = 0;
+	RelinquishedPoolMemoryAccount->peak = 0;
+	RelinquishedPoolMemoryAccount->freed = 0;
 
 	liveAccountStartId = nextAccountId;
 

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 1996-2003, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
- * Portions Copyright (c) 2016, Pivotal Software Inc
+ * Portions Copyright (c) 2016-Present Pivotal Software, Inc.
  *
  * IDENTIFICATION
  *	  src/bin/pg_dump/cdb/cdb_lockbox.c

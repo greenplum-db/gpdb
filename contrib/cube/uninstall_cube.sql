@@ -19,7 +19,7 @@ DROP FUNCTION g_cube_decompress(internal);
 
 DROP FUNCTION g_cube_compress(internal);
 
-DROP FUNCTION g_cube_consistent(internal,cube,int4);
+DROP FUNCTION g_cube_consistent(internal,cube,int,oid,internal);
 
 DROP OPERATOR ~ (cube, cube);
 

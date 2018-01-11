@@ -1,12 +1,17 @@
 /*--------------------------------------------------------------------------
-*
-* cdbhash.h
-*	 Definitions and API functions for cdbhash.c
-*
-* Copyright (c) 2005-2008, Greenplum inc
-*
-*--------------------------------------------------------------------------
-*/
+ *
+ * cdbhash.h
+ *	 Definitions and API functions for cdbhash.c
+ *
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbhash.h
+ *
+ *--------------------------------------------------------------------------
+ */
 #ifndef CDBHASH_H
 #define CDBHASH_H
 

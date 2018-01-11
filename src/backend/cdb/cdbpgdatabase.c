@@ -21,7 +21,7 @@ typedef struct
 {
 	CdbComponentDatabases *cdb_component_dbs;
 	int			currIdx;
-}	Working_State;
+} Working_State;
 
 PG_FUNCTION_INFO_V1(gp_pgdatabase__);
 
@@ -44,8 +44,7 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
+		 * switch to memory context appropriate for multiple function calls
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -66,8 +65,8 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
 		/*
-		 * Collect all the locking information that we will format and
-		 * send out as a result set.
+		 * Collect all the locking information that we will format and send
+		 * out as a result set.
 		 */
 		mystatus = (Working_State *) palloc(sizeof(Working_State));
 		funcctx->user_fctx = (void *) mystatus;
@@ -107,17 +106,29 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		values[2] = UInt16GetDatum(db->segindex);
 
 		values[3] = BoolGetDatum(false);
-		if (db->status == 'u')
+		if (db->status == GP_SEGMENT_CONFIGURATION_STATUS_UP)
 		{
-			if (db->mode == 's' || db->mode == 'c')
-			{
-				values[3] = BoolGetDatum(true);
-			} else if (db->mode == 'r' && db->role == 'p')
+#ifdef USE_SEGWALREP
+			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
+				db->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC)
 			{
 				values[3] = BoolGetDatum(true);
 			}
+#else
+			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
+				db->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
+			{
+				values[3] = BoolGetDatum(true);
+			}
+			else if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_RESYNC &&
+					 db->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+			{
+				values[3] = BoolGetDatum(true);
+			}
+#endif
 		}
-		values[4] = BoolGetDatum(db->preferred_role == 'p');
+		values[4] = BoolGetDatum(db->preferred_role ==
+								 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);

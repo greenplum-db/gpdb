@@ -1,1 +1,0 @@
-ALTER DATABASE dmldb SET timezone TO PST8;

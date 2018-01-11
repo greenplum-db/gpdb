@@ -13,5 +13,6 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 OBJS = md.o smgr.o smgrtype.o
+OBJS += md_gp.o smgr_ao.o
 
 include $(top_srcdir)/src/backend/common.mk

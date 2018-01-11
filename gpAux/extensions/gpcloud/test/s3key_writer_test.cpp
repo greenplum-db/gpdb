@@ -3,12 +3,12 @@
 #include "gtest/gtest.h"
 #include "mock_classes.h"
 
+using ::testing::_;
 using ::testing::AtLeast;
 using ::testing::AtMost;
 using ::testing::Invoke;
 using ::testing::Return;
 using ::testing::Throw;
-using ::testing::_;
 
 class S3KeyWriterTest : public testing::Test, public S3KeyWriter {
    public:

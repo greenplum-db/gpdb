@@ -207,7 +207,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
         Database system, some SQL commands have been added or modified, and there are a few
         PostgreSQL features that are not supported. Greenplum has also added features not found in
         PostgreSQL, such as physical data distribution, parallel query optimization, external
-        tables, resource queues for workload management and enhanced table partitioning. For full
+        tables, resource queues, and enhanced table partitioning. For full
         SQL syntax and references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic"
           format="dita"/>.</p>
       <table id="ik213423">
@@ -300,7 +300,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>ALTER RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3">Greenplum Database workload management feature - not in
+              <entry colname="col3">Greenplum Database resource management feature - not in
                 PostgreSQL.</entry>
             </row>
             <row>
@@ -342,7 +342,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>ALTER TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"/>
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>SET DEFAULT ENCODING</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER USER</codeph></entry>
@@ -505,7 +505,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3">Greenplum Database workload management feature - not in
+              <entry colname="col3">Greenplum Database resource management feature - not in
                 PostgreSQL 8.3.</entry>
             </row>
             <row>
@@ -527,9 +527,9 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE SEQUENCE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Limitations:</b><p>The <codeph>lastval</codeph> and
-                    <codeph>currval</codeph> functions are not supported.</p><p>The
-                    <codeph>setval</codeph> function is only allowed in queries that do not operate
+              <entry colname="col3"><b>Limitations:</b><p>The <codeph>lastval()</codeph> and
+                    <codeph>currval()</codeph> functions are not supported.</p><p>The
+                    <codeph>setval()</codeph> function is only allowed in queries that do not operate
                   on distributed data.</p></entry>
             </row>
             <row>
@@ -570,7 +570,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Limitations:</b><p>The functions used to implement a new base
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>COMPRESSTYPE | COMPRESSLEVEL | BLOCKSIZE</codeph></p><p><b>Limitations:</b></p><p>The functions used to implement a new base
                   type must be <codeph>IMMUTABLE</codeph> functions.</p></entry>
             </row>
             <row>
@@ -706,7 +706,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>DROP RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3">Greenplum Database workload management feature - not in
+              <entry colname="col3">Greenplum Database resource management feature - not in
                 PostgreSQL 8.3.</entry>
             </row>
             <row>

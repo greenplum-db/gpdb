@@ -39,6 +39,7 @@ try:
     from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, \
         GP_TEMPORARY_FILES_FILESPACE, GetCurrentFilespaceEntries, GetFilespaceEntries, GetFilespaceEntriesDict, \
         RollBackFilespaceChanges, GetMoveOperationList, FileType, UpdateFlatFiles
+    from gppylib.heapchecksum import HeapChecksum
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -55,12 +56,15 @@ FILE_SPACES_INPUT_FILENAME_SUFFIX = ".fs"
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
 FILE_SPACES_INPUT_FILE_LINE_1_PREFIX = "filespaceOrder"
 
+#global var
+_gp_expand = None
+
 description = ("""
 Adds additional segments to a pre-existing GPDB Array.
 """)
 
 _help = ["""
-The input file should be be a plain text file with a line for each segment
+The input file should be a plain text file with a line for each segment
 to add with the format:
 
   <hostname>:<port>:<data_directory>:<dbid>:<content>:<definedprimary>
@@ -157,7 +161,9 @@ def parseargs():
 
     # Parse the command line arguments
     (options, args) = parser.parse_args()
+    return options, args, parser
 
+def validate_options(options, args, parser):
     if len(args) > 0:
         logger.error('Unknown argument %s' % args[0])
         parser.exit()
@@ -573,9 +579,9 @@ class GpExpandStatus():
         if os.path.exists(self._status_standby_filename):
             os.unlink(self._status_standby_filename)
         if self._master_mirror:
-            RemoveFiles.remote('gpexpand master mirror status file cleanup',
-                               self._master_mirror.getSegmentHostName(),
-                               self._status_filename)
+            RemoveFile.remote('gpexpand master mirror status file cleanup',
+                              self._master_mirror.getSegmentHostName(),
+                              self._status_filename)
 
     def remove_segment_configuration_backup_file(self):
         """ Remove the segment configuration backup file """
@@ -633,7 +639,7 @@ class SegmentTemplate:
 
     def __init__(self, logger, statusLogger, pool,
                  gparray, masterDataDirectory,
-                 dburl, conn, noVacuumCatalog, tempDir,
+                 dburl, conn, noVacuumCatalog, tempDir, batch_size,
                  segTarDir='.', schemaTarFile='gpexpand_schema.tar'):
         self.logger = logger
         self.statusLogger = statusLogger
@@ -641,9 +647,9 @@ class SegmentTemplate:
         self.gparray = gparray
         self.noVacuumCatalog = noVacuumCatalog
         self.tempDir = tempDir
+        self.batch_size = batch_size
         self.dburl = dburl
         self.conn = conn
-        self.gparray = gparray
         self.masterDataDirectory = masterDataDirectory
         self.schema_tar_file = schemaTarFile
         self.maxDbId = self.gparray.get_max_dbid()
@@ -651,7 +657,7 @@ class SegmentTemplate:
         self.segTarFile = os.path.join(segTarDir, self.schema_tar_file)
 
         hosts = []
-        for seg in gparray.getExpansionSegDbList():
+        for seg in self.gparray.getExpansionSegDbList():
             hosts.append(seg.getSegmentHostName())
         self.hosts = SegmentTemplate.consolidate_hosts(pool, hosts)
         logger.debug('Hosts: %s' % self.hosts)
@@ -736,13 +742,13 @@ class SegmentTemplate:
     def _select_src_segment(self):
         """Gets a segment to use as a source for pg_hba.conf
         and postgresql.conf files"""
-        seg = self.gparray.segments[0]
-        if seg.primaryDB.valid:
-            self.srcSegHostname = seg.primaryDB.getSegmentHostName()
-            self.srcSegDataDir = seg.primaryDB.getSegmentDataDirectory()
-        elif seg.mirrorDBs[0] is not None and seg.mirrorDBs[0].valid:
-            self.srcSegHostname = seg.mirrorDBs[0].getSegmentHostName()
-            self.srcSegDataDir = seg.mirrorDBs[0].getSegmentDataDirectory()
+        segPair = self.gparray.segmentPairs[0]
+        if segPair.primaryDB.valid:
+            self.srcSegHostname = segPair.primaryDB.getSegmentHostName()
+            self.srcSegDataDir = segPair.primaryDB.getSegmentDataDirectory()
+        elif segPair.mirrorDB and segPair.mirrorDB.valid:
+            self.srcSegHostname = segPair.mirrorDB.getSegmentHostName()
+            self.srcSegDataDir = segPair.mirrorDB.getSegmentDataDirectory()
         else:
             raise SegmentTemplateError("no valid segdb for content=0 to use as a template")
 
@@ -772,7 +778,7 @@ class SegmentTemplate:
         for host in iter(new_segment_info):
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
                                             tarFile=self.segTarFile, newSegments=True,
-                                            verbose=gplog.logging_is_verbose(), batchSize=options.batch_size,
+                                            verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)
 
@@ -785,7 +791,7 @@ class SegmentTemplate:
         for host in iter(new_segment_info):
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
-                                            verbose=gplog.logging_is_verbose(), batchSize=options.batch_size,
+                                            verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host, validationOnly=True)
             self.pool.addCommand(segCfgCmd)
 
@@ -845,29 +851,29 @@ class SegmentTemplate:
                     cpCmd.run(validateAfter=True)
 
         # Don't need log files and gpperfmon files in template.
-        rmCmd = RemoveFiles('gpexpand remove gppermfon data from template',
-                            self.tempDir + '/gpperfmon/data')
+        rmCmd = RemoveDirectory('gpexpand remove gppermfon data from template',
+                                self.tempDir + '/gpperfmon/data')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove logs from template',
-                            self.tempDir + '/pg_log/*')
+        rmCmd = RemoveDirectoryContents('gpexpand remove logs from template',
+                                        self.tempDir + '/pg_log')
         rmCmd.run(validateAfter=True)
 
         # other files not needed
-        rmCmd = RemoveFiles('gpexpand remove postmaster.opt from template',
+        rmCmd = RemoveFile('gpexpand remove postmaster.opt from template',
                             self.tempDir + '/postmaster.opts')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove postmaster.pid from template',
+        rmCmd = RemoveFile('gpexpand remove postmaster.pid from template',
                             self.tempDir + '/postmaster.pid')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove gpexpand files from template',
+        rmCmd = RemoveGlob('gpexpand remove gpexpand files from template',
                             self.tempDir + '/gpexpand.*')
         rmCmd.run(validateAfter=True)
 
         # We dont need the flat files
-        rmCmd = RemoveFiles('gpexpand remove transaction flat file from template',
+        rmCmd = RemoveFile('gpexpand remove transaction flat file from template',
                             self.tempDir + '/' + GP_TRANSACTION_FILES_FILESPACE)
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove temporary flat file from template',
+        rmCmd = RemoveFile('gpexpand remove temporary flat file from template',
                             self.tempDir + '/' + GP_TEMPORARY_FILES_FILESPACE)
         rmCmd.run(validateAfter=True)
 
@@ -905,9 +911,9 @@ class SegmentTemplate:
     def cleanup_build_segment_template(tarFile, tempDir):
         """Reverts the work done by build_segment_template.  Deletes the temp
         directory and local tar file"""
-        rmCmd = RemoveFiles('gpexpand remove temp dir: %s' % tempDir, tempDir)
+        rmCmd = RemoveDirectory('gpexpand remove temp dir: %s' % tempDir, tempDir)
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove segment template file', tarFile)
+        rmCmd = RemoveFile('gpexpand remove segment template file', tarFile)
         rmCmd.run(validateAfter=True)
 
     @staticmethod
@@ -922,8 +928,8 @@ class SegmentTemplate:
 
         # Remove template tar file
         for host in hosts:
-            rmCmd = RemoveFiles('gpexpand remove segment template file on host: %s' % host,
-                                tarFile, ctxt=REMOTE, remoteHost=host)
+            rmCmd = RemoveFile('gpexpand remove segment template file on host: %s' % host,
+                               tarFile, ctxt=REMOTE, remoteHost=host)
             pool.addCommand(rmCmd)
 
         if removeDataDirs:
@@ -932,8 +938,8 @@ class SegmentTemplate:
                 filespaces = seg.getSegmentFilespaces()
                 for oid in filespaces:
                     datadir = filespaces[oid]
-                    rmCmd = RemoveFiles('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
-                                        datadir, ctxt=REMOTE, remoteHost=hostname)
+                    rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
+                                            datadir, ctxt=REMOTE, remoteHost=hostname)
                     pool.addCommand(rmCmd)
         pool.join()
         pool.check_results()
@@ -964,39 +970,41 @@ class NewSegmentInput:
 # ------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------
 class gpexpand:
-    def __init__(self, logger, gparray, dburl, parallel=1):
+    def __init__(self, logger, gparray, dburl, options, parallel=1):
         self.pastThePointOfNoReturn = False
         self.logger = logger
         self.dburl = dburl
+        self.options = options
         self.numworkers = parallel
         self.gparray = gparray
         self.unique_index_tables = {}
         self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods='dml')
-        self.old_segments = gparray.getSegDbList()
-
+        self.old_segments = self.gparray.getSegDbList()
         if dburl.pgdb == 'template0' or dburl.pgdb == 'template1' or dburl.pgdb == 'postgres':
             raise ExpansionError("Invalid database '%s' specified.  Cannot use a template database.\n"
                                  "Please set the environment variable PGDATABASE to a different "
                                  "database or use the -D option to specify a database and re-run" % dburl.pgdb)
 
-        datadir = gparray.master.getSegmentDataDirectory()
-        self.statusLogger = GpExpandStatus(logger, datadir, gparray.standbyMaster)
+        datadir = self.gparray.master.getSegmentDataDirectory()
+        self.statusLogger = GpExpandStatus(logger=logger,
+                                           master_data_directory=datadir,
+                                           master_mirror=self.gparray.standbyMaster)
 
         # Adjust batch size if it's too high given the number of segments
-        seg_count = len(gparray.getSegDbList())
-        if options.batch_size > seg_count:
-            options.batch_size = seg_count
-        self.pool = WorkerPool(numWorkers=options.batch_size)
+        seg_count = len(self.old_segments)
+        if self.options.batch_size > seg_count:
+            self.options.batch_size = seg_count
+        self.pool = WorkerPool(numWorkers=self.options.batch_size)
 
         self.tempDir = self.statusLogger.get_temp_dir()
         if not self.tempDir:
-            self.tempDir = createTempDirectoryName(options.master_data_directory, "gpexpand")
+            self.tempDir = createTempDirectoryName(self.options.master_data_directory, "gpexpand")
         self.queue = None
         self.segTemplate = None
         pass
 
     @staticmethod
-    def prepare_gpdb_state(logger, dburl):
+    def prepare_gpdb_state(logger, dburl, options):
         """ Gets GPDB in the appropriate state for an expansion.
         This state will depend on if this is a new expansion setup,
         a continuation of a previous expansion or a rollback """
@@ -1006,13 +1014,13 @@ class gpexpand:
 
         if status_file_exists:
             # gpexpand status file exists so the last run of gpexpand didn't finish properly
-            gpexpand.get_gpdb_in_state(GPDB_UTILITY)
+            gpexpand.get_gpdb_in_state(GPDB_UTILITY, options)
         else:
-            gpexpand.get_gpdb_in_state(GPDB_STARTED)
+            gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
 
             logger.info('Querying gpexpand schema for current expansion state')
             try:
-                gpexpand_db_status = gpexpand.get_status_from_db(dburl)
+                gpexpand_db_status = gpexpand.get_status_from_db(dburl, options)
             except Exception, e:
                 raise Exception('Error while trying to query the gpexpand schema: %s' % e)
             logger.debug('Expansion status returned is %s' % gpexpand_db_status)
@@ -1020,12 +1028,12 @@ class gpexpand:
             if (not gpexpand_db_status and options.filename) and not options.clean:
                 # New expansion, need to be in master only
                 logger.info('Readying Greenplum Database for a new expansion')
-                gpexpand.get_gpdb_in_state(GPDB_UTILITY)
+                gpexpand.get_gpdb_in_state(GPDB_UTILITY, options)
 
         return gpexpand_db_status
 
     @staticmethod
-    def get_gpdb_in_state(state):
+    def get_gpdb_in_state(state, options):
         runningStatus = chk_local_db_running(options.master_data_directory, options.pgport)
         gpdb_running = runningStatus[0] and runningStatus[1] and runningStatus[2] and runningStatus[3]
         if gpdb_running:
@@ -1054,7 +1062,7 @@ class gpexpand:
             raise Exception('Unkown gpdb state')
 
     @staticmethod
-    def get_status_from_db(dburl):
+    def get_status_from_db(dburl, options):
         """Gets gpexpand status from the gpexpand schema"""
         status_conn = None
         gpexpand_db_status = None
@@ -1111,7 +1119,7 @@ class gpexpand:
                 else:
                     raise ExpansionError("""gpexpand schema exists in database %s, not in %s.
 Set PGDATABASE or use the -D option to specify the correct database to use.""" % (
-                    dbname.decode('utf-8'), options.database))
+                        dbname.decode('utf-8'), options.database))
                 finally:
                     if c:
                         c.close()
@@ -1123,14 +1131,14 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
             max_connections = int(catalog.getSessionGUC(conn, 'max_connections'))
         except DatabaseError, ex:
-            if options.verbose:
+            if self.options.verbose:
                 logger.exception(ex)
             logger.error('Failed to check max_connections GUC')
             if conn: conn.close()
             raise ex
 
-        if max_connections < options.parallel * 2 + 1:
-            self.logger.error('max_connections is too small to expand %d tables at' % options.parallel)
+        if max_connections < self.options.parallel * 2 + 1:
+            self.logger.error('max_connections is too small to expand %d tables at' % self.options.parallel)
             self.logger.error('a time.  This will lead to connection errors.  Either')
             self.logger.error('reduce the value for -n passed to gpexpand or raise')
             self.logger.error('max_connections in postgresql.conf')
@@ -1161,7 +1169,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 conn.close()
 
         except DatabaseError, ex:
-            if options.verbose:
+            if self.options.verbose:
                 logger.exception(ex)
             logger.error('Failed to check for unalterable tables.')
             if conn: conn.close()
@@ -1205,7 +1213,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 conn.close()
 
         except DatabaseError, ex:
-            if options.verbose:
+            if self.options.verbose:
                 logger.exception(ex)
             logger.error('Failed to check for unique indexes.')
             if conn: conn.close()
@@ -1213,7 +1221,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         return has_unique_indexes
 
-    def rollback(self):
+    def rollback(self, dburl):
         """Rolls back and expansion setup that didn't successfully complete"""
         cleanSchema = False
         status_history = self.statusLogger.get_status_history()
@@ -1284,7 +1292,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         logger.info("Generating input file...")
 
-        for db in gparray.getExpansionSegDbList():
+        for db in self.gparray.getExpansionSegDbList():
             tempStr = "%s:%s:%d:%s:%d:%d:%s" % (canonicalize_address(db.getSegmentHostName())
                                                 , canonicalize_address(db.getSegmentAddress())
                                                 , db.getSegmentPort()
@@ -1330,7 +1338,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                     firstLine = firstLine + ":" + fs.getName()
             outfileFD.write(firstLine + '\n')
 
-            for db in gparray.getExpansionSegDbList():
+            for db in self.gparray.getExpansionSegDbList():
                 dbid = db.getSegmentDbId()
                 outLine = str(dbid)
                 segmentFilespaces = db.getSegmentFilespaces()
@@ -1368,11 +1376,11 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         retValue = []
 
-        if not options.filename and not inputFilename:
+        if not self.options.filename and not inputFilename:
             raise ExpansionError('Missing input file')
 
-        if options.filename:
-            inputFilename = options.filename
+        if self.options.filename:
+            inputFilename = self.options.filename
         fsInputFilename = inputFilename + FILE_SPACES_INPUT_FILENAME_SUFFIX
         fsOidList = []
         fsDictionary = {}
@@ -1471,14 +1479,21 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 f.close()
             return retValue
         except IOError:
-            raise ExpansionError('Input file %s not found' % options.filename)
+            raise ExpansionError('Input file %s not found' % self.options.filename)
 
     def add_segments(self):
         """Starts the process of adding the new segments to the array"""
-        self.segTemplate = SegmentTemplate(self.logger, self.statusLogger, self.pool,
-                                           self.gparray, options.master_data_directory,
-                                           self.dburl, self.conn, options.novacuum,
-                                           self.tempDir, options.tardir)
+        self.segTemplate = SegmentTemplate(logger=self.logger,
+                                           statusLogger=self.statusLogger,
+                                           pool=self.pool,
+                                           gparray=self.gparray,
+                                           masterDataDirectory=self.options.master_data_directory,
+                                           dburl=self.dburl,
+                                           conn=self.conn,
+                                           noVacuumCatalog=self.options.novacuum,
+                                           tempDir=self.tempDir,
+                                           segTarDir=self.options.tardir,
+                                           batch_size=self.options.batch_size)
         try:
             self.segTemplate.build_segment_template()
             self.segTemplate.build_new_segments()
@@ -1590,7 +1605,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         orig_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(originalArray.getSegDbList())
         for host in iter(orig_segment_info):
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', orig_segment_info[host],
-                                            verbose=gplog.logging_is_verbose(), batchSize=options.batch_size,
+                                            verbose=gplog.logging_is_verbose(), batchSize=self.options.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)
 
@@ -1625,8 +1640,8 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         for the new segments.
         """
         self.statusLogger.set_gp_segment_configuration_backup(
-            options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
-        gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
+            self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
+        self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
 
         self.logger.info('Starting Greenplum Database in restricted mode')
@@ -1678,7 +1693,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         self.logger.info('Configuring new segment filespaces')
         newSegments = self.gparray.getExpansionSegDbList()
-        fsObjList = gparray.getFilespaces(includeSystemFilespace=False)
+        fsObjList = self.gparray.getFilespaces(includeSystemFilespace=False)
 
         if len(fsObjList) == 0:
             # No filespaces to configure
@@ -1689,7 +1704,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             if seg.isSegmentMirror() == True:
                 continue
             name = "gpexpand prep new segment filespaces. host = %s, sysdatadir = %s" % (
-            seg.getSegmentHostName(), seg.getSegmentDataDirectory())
+                seg.getSegmentHostName(), seg.getSegmentDataDirectory())
             segFilespaces = seg.getSegmentFilespaces()
             filespaceNames = []
             filespaceLocations = []
@@ -1778,7 +1793,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                      , dbname=database[0]
                                      )
                 name = "gpexpand execute segment cleanup commands. seg dbid = %s, command = %s" % (
-                seg.getSegmentDbId(), str(statements))
+                    seg.getSegmentDbId(), str(statements))
                 execSQLCmd = ExecuteSQLStatementsCommand(name=name
                                                          , url=dburl
                                                          , sqlCommandList=statements
@@ -1802,7 +1817,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 , nowait=False
                 , ctxt=REMOTE
                 , remoteHost=seg.getSegmentHostName()
-                )
+            )
             self.pool.addCommand(segStopCmd)
         self.pool.join()
         self.pool.check_results()
@@ -1893,16 +1908,16 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
     def sync_new_mirrors(self):
         """ This method will execute gprecoverseg so that all new segments sync with their mirrors."""
-        if gparray.get_mirroring_enabled() == True:
+        if self.gparray.get_mirroring_enabled() == True:
             self.logger.info('Starting new mirror segment synchronization')
             cmd = GpRecoverSeg(name="gpexpand syncing mirrors", options="-a -F")
             cmd.run(validateAfter=True)
 
     def start_prepare(self):
         """Inserts into gpexpand.status that expansion preparation has started."""
-        if options.filename:
+        if self.options.filename:
             self.statusLogger.create_status_file()
-            self.statusLogger.set_status('EXPANSION_PREPARE_STARTED', os.path.abspath(options.filename))
+            self.statusLogger.set_status('EXPANSION_PREPARE_STARTED', os.path.abspath(self.options.filename))
 
     def finalize_prepare(self):
         """Removes the gpexpand status file and segment configuration backup file"""
@@ -1919,7 +1934,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         dbconn.execSQL(self.conn, status_detail_table_sql)
 
         # views
-        if not options.simple_progress:
+        if not self.options.simple_progress:
             dbconn.execSQL(self.conn, progress_view_sql)
         else:
             dbconn.execSQL(self.conn, progress_view_simple_sql)
@@ -1948,7 +1963,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             if dbname == 'template0':
                 continue
             self.logger.info('Populating %s.%s with data from database %s' % (
-            gpexpand_schema, status_detail_table, dbname.decode('utf-8')))
+                gpexpand_schema, status_detail_table, dbname.decode('utf-8')))
             self._populate_regular_tables(dbname)
             self._populate_partitioned_tables(dbname)
             inject_fault('gpexpand MPP-14620 fault injection')
@@ -1977,7 +1992,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             all other table types.
         """
 
-        src_bytes_str = "0" if options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
+        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
         sql = """SELECT
     n.nspname || '.' || c.relname as fq_name,
     n.oid as schemaoid,
@@ -2026,9 +2041,9 @@ WHERE
                 rank = 1 if self.unique_index_tables.has_key(full_name) else 2
 
                 fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
-                dbname, fqname, schema_oid, table_oid,
-                dist_policy, policy_name, policy_oids,
-                rank, undone_status, rel_bytes))
+                    dbname, fqname, schema_oid, table_oid,
+                    dist_policy, policy_name, policy_oids,
+                    rank, undone_status, rel_bytes))
         except Exception, e:
             raise ExpansionError(e)
         finally:
@@ -2049,7 +2064,7 @@ WHERE
 
     def _populate_partitioned_tables(self, dbname):
         """population of status_detail for partitioned tables. """
-        src_bytes_str = "0" if options.simple_progress else "pg_relation_size(quote_ident(p.partitionschemaname) || '.' || quote_ident(p.partitiontablename))"
+        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(p.partitionschemaname) || '.' || quote_ident(p.partitiontablename))"
         sql = """
 SELECT
     p.partitionschemaname || '.' || p.partitiontablename as fq_name,
@@ -2108,9 +2123,9 @@ ORDER BY tablename, c2.oid desc;
                 rank = 1 if self.unique_index_tables.has_key(full_name) else 2
 
                 fp.write("""%s\t%s\t%s\t%s\t%s\t%s\t%s\tNULL\t%d\t%s\tNULL\tNULL\t%d\n""" % (
-                dbname, fqname, schema_oid, table_oid,
-                dist_policy, policy_name, policy_oids,
-                rank, undone_status, rel_bytes))
+                    dbname, fqname, schema_oid, table_oid,
+                    dist_policy, policy_name, policy_oids,
+                    rank, undone_status, rel_bytes))
         except Exception:
             raise
         finally:
@@ -2131,7 +2146,7 @@ ORDER BY tablename, c2.oid desc;
 
     def _update_distribution_policy(self, dbname):
         """ NULL out the distribution policy for both
-            regular and paritioned table before expansion
+            regular and partitioned table before expansion
         """
 
         table_conn = self.connect_database(dbname)
@@ -2203,7 +2218,6 @@ UPDATE gp_distribution_policy
 
     def perform_expansion(self):
         """Performs the actual table re-organiations"""
-        global table_expand_error
         expansionStart = datetime.datetime.now()
 
         # setup a threadpool
@@ -2212,7 +2226,7 @@ UPDATE gp_distribution_policy
         # go through and reset any "IN PROGRESS" tables
         self.conn = dbconn.connect(self.dburl, encoding='UTF8')
         sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STARTED', '%s' ) " % (
-        gpexpand_schema, status_table, expansionStart)
+            gpexpand_schema, status_table, expansionStart)
         cursor = dbconn.execSQL(self.conn, sql)
         self.conn.commit()
 
@@ -2227,14 +2241,16 @@ UPDATE gp_distribution_policy
         for row in cursor:
             self.logger.debug(row)
             name = "name"
-            tbl = ExpandTable(row)
-            cmd = ExpandCommand(name, self.dburl, tbl)
+            tbl = ExpandTable(options=self.options, row=row)
+            cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options)
             self.queue.addCommand(cmd)
+
+        table_expand_error = False
 
         stopTime = None
         stoppedEarly = False
-        if options.end:
-            stopTime = options.end
+        if self.options.end:
+            stopTime = self.options.end
 
         # wait till done.
         while not self.queue.isDone():
@@ -2252,10 +2268,17 @@ UPDATE gp_distribution_policy
         self.queue.haltWork()
         self.queue.joinWorkers()
 
+        # Doing this after the halt and join workers guarantees that no new completed items can be added
+        # while we're doing a check
+        for expandCommand in self.queue.getCompletedItems():
+            if expandCommand.table_expand_error:
+                table_expand_error = True
+                break
+
         if stoppedEarly:
             logger.info('End time reached.  Stopping expansion.')
             sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STOPPED', '%s' ) " % (
-            gpexpand_schema, status_table, expansionStopped)
+                gpexpand_schema, status_table, expansionStopped)
             cursor = dbconn.execSQL(self.conn, sql)
             self.conn.commit()
             logger.info('You can resume expansion by running gpexpand again')
@@ -2270,14 +2293,14 @@ UPDATE gp_distribution_policy
             # gpexpand will resume next run
             try:
                 sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STOPPED', '%s' ) " % (
-                gpexpand_schema, status_table, expansionStopped)
+                    gpexpand_schema, status_table, expansionStopped)
                 cursor = dbconn.execSQL(self.conn, sql)
                 self.conn.commit()
             except:
                 pass
         else:
             sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION COMPLETE', '%s' ) " % (
-            gpexpand_schema, status_table, expansionStopped)
+                gpexpand_schema, status_table, expansionStopped)
             cursor = dbconn.execSQL(self.conn, sql)
             self.conn.commit()
             logger.info("EXPANSION COMPLETED SUCCESSFULLY")
@@ -2296,7 +2319,7 @@ UPDATE gp_distribution_policy
         try:
             expansionStopped = datetime.datetime.now()
             sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STOPPED', '%s' ) " % (
-            gpexpand_schema, status_table, expansionStopped)
+                gpexpand_schema, status_table, expansionStopped)
             cursor = dbconn.execSQL(self.conn, sql)
             self.conn.commit()
 
@@ -2325,7 +2348,7 @@ UPDATE gp_distribution_policy
             self.logger.warn('Expansion has not yet completed.  Removing the expansion')
             self.logger.warn('schema now will leave the following tables unexpanded:')
             unexpanded_tables_sql = "SELECT fq_name FROM %s.%s WHERE status = 'NOT STARTED' ORDER BY rank" % (
-            gpexpand_schema, status_detail_table)
+                gpexpand_schema, status_detail_table)
 
             cursor = dbconn.execSQL(c, unexpanded_tables_sql)
             unexpanded_tables_text = ''.join("\t%s\n" % row[0] for row in cursor)
@@ -2343,8 +2366,8 @@ UPDATE gp_distribution_policy
         c = dbconn.connect(self.dburl, encoding='UTF8')
         if ask_yesno('', "Do you want to dump the gpexpand.status_detail table to file?", 'Y'):
             self.logger.info(
-                "Dumping gpexpand.status_detail to %s/gpexpand.status_detail" % options.master_data_directory)
-            copy_gpexpand_status_detail_sql = "COPY gpexpand.status_detail TO '%s/gpexpand.status_detail'" % options.master_data_directory
+                "Dumping gpexpand.status_detail to %s/gpexpand.status_detail" % self.options.master_data_directory)
+            copy_gpexpand_status_detail_sql = "COPY gpexpand.status_detail TO '%s/gpexpand.status_detail'" % self.options.master_data_directory
             dbconn.execSQL(c, copy_gpexpand_status_detail_sql)
 
         self.logger.info("Removing gpexpand schema")
@@ -2460,9 +2483,43 @@ UPDATE gp_distribution_policy
         UpdateFlatFiles(self.gparray, primaries=False, expansion=True).run()
 
 
+    def validate_heap_checksums(self):
+        num_workers = min(len(self.gparray.get_hostlist()), MAX_PARALLEL_EXPANDS)
+        heap_checksum_util = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=self.logger)
+        successes, failures = heap_checksum_util.get_segments_checksum_settings()
+        if len(successes) == 0:
+            logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
+            return 1
+
+        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+
+        inconsistent_segment_msgs = []
+        for segment in inconsistent:
+            inconsistent_segment_msgs.append("dbid: %s "
+                                             "checksum set to %s differs from master checksum set to %s" %
+                                             (segment.getSegmentDbId(), segment.heap_checksum,
+                                              master_heap_checksum))
+
+        if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
+            self.logger.fatal("Cluster heap checksum setting differences reported")
+            self.logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+                              % (len(inconsistent_segment_msgs), len(self.gparray.segmentPairs)))
+            self.logger.fatal("Review %s for details" % get_logfile())
+            log_to_file_only("Failed checksum consistency validation:", logging.WARN)
+            self.logger.fatal("gpexpand error: Cluster will not be modified as checksum settings are not consistent "
+                              "across the cluster.")
+
+            for msg in inconsistent_segment_msgs:
+                log_to_file_only(msg, logging.WARN)
+                raise Exception("Segments have heap_checksum set inconsistently to master")
+        else:
+            self.logger.info("Heap checksum setting consistent across cluster")
+
+
 # -----------------------------------------------
 class ExpandTable():
-    def __init__(self, row=None):
+    def __init__(self, options, row=None):
+        self.options = options
         if row is not None:
             (self.dbname, self.fq_name, self.schema_oid, self.table_oid,
              self.distrib_policy, self.distrib_policy_names, self.distrib_policy_coloids,
@@ -2531,13 +2588,13 @@ class ExpandTable():
 
         if foo == "" or foo == "None" or foo is None:
             sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
-            schema_name, table_name, new_storage_options)
+                schema_name, table_name, new_storage_options)
         else:
             dist_cols = foo.split(',')
             dist_cols = ['"%s"' % x.strip() for x in dist_cols]
             dist_cols = ','.join(dist_cols)
             sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
-            schema_name, table_name, new_storage_options, dist_cols)
+                schema_name, table_name, new_storage_options, dist_cols)
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
         logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
@@ -2546,7 +2603,7 @@ class ExpandTable():
         if not cancel_flag:
             dbconn.execSQL(table_conn, sql)
             table_conn.commit()
-            if options.analyze:
+            if self.options.analyze:
                 sql = 'ANALYZE "%s"."%s"' % (schema_name, table_name)
                 logger.info('Analyzing %s.%s' % (schema_name.decode('utf-8'), table_name.decode('utf-8')))
                 dbconn.execSQL(table_conn, sql)
@@ -2600,7 +2657,7 @@ class PrepFileSpaces(Command):
             self.filespaces.append(entry)
         cmdStr = """echo "select * from gp_prep_new_segment( array %s )" """ % (str(self.filespaces))
         cmdStr += """ | $GPHOME/bin/postgres --single --gp_num_contents_in_cluster=1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true  -E -D %s --gp_dbid=%s --gp_contentid=%s template1""" % (
-        self.sysDataDirectory, str(self.dbid), str(self.contentId))
+            self.sysDataDirectory, str(self.dbid), str(self.contentId))
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
@@ -2676,18 +2733,19 @@ class ExecuteSQLStatementsCommand(SQLCommand):
 
 # -----------------------------------------------
 class ExpandCommand(SQLCommand):
-    def __init__(self, name, status_url, table):
+    def __init__(self, name, status_url, table, options):
         self.status_url = status_url
         self.table = table
+        self.options = options
         self.cmdStr = "Expand %s.%s" % (table.dbname, table.fq_name)
         self.table_url = copy.deepcopy(status_url)
         self.table_url.pgdb = table.dbname
+        self.table_expand_error = False
 
         SQLCommand.__init__(self, name)
         pass
 
     def run(self, validateAfter=False):
-        global table_expand_error
         # connect.
         status_conn = None
         table_conn = None
@@ -2697,12 +2755,12 @@ class ExpandCommand(SQLCommand):
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
             table_conn = dbconn.connect(self.table_url, encoding='UTF8')
         except DatabaseError, ex:
-            if options.verbose:
+            if self.options.verbose:
                 logger.exception(ex)
             logger.error(ex.__str__().strip())
             if status_conn: status_conn.close()
             if table_conn: table_conn.close()
-            table_expand_error = True
+            self.table_expand_error = True
             return
 
         # validate table hasn't been dropped
@@ -2727,22 +2785,22 @@ class ExpandCommand(SQLCommand):
                 # Set conn for  cancel
                 self.cancel_conn = table_conn
                 start_time = datetime.datetime.now()
-                if not options.simple_progress:
+                if not self.options.simple_progress:
                     self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
 
                 table_exp_success = self.table.expand(table_conn, self.cancel_flag)
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
-                table_expand_error = True
-                if options.verbose:
+                self.table_expand_error = True
+                if self.options.verbose:
                     logger.exception(ex)
                 logger.error('Table %s.%s failed to expand: %s' % (self.table.dbname.decode('utf-8'),
                                                                    self.table.fq_name.decode('utf-8'),
                                                                    ex.__str__().strip()))
             else:
                 logger.info('ALTER TABLE of %s.%s canceled' % (
-                self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
+                    self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
 
         if table_exp_success:
             end_time = datetime.datetime.now()
@@ -2750,9 +2808,9 @@ class ExpandCommand(SQLCommand):
             logger.info(
                 "Finished expanding %s.%s" % (self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
             self.table.mark_finished(status_conn, start_time, end_time)
-        elif not options.simple_progress:
+        elif not self.options.simple_progress:
             logger.info("Reseting status_detail for %s.%s" % (
-            self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
+                self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
             self.table.reset_started(status_conn)
 
         # disconnect
@@ -2773,10 +2831,10 @@ class ExpandCommand(SQLCommand):
 
 
 # ------------------------------- UI Help --------------------------------
-def read_hosts_file():
+def read_hosts_file(hosts_file):
     new_hosts = []
     try:
-        f = open(options.hosts_file, 'r')
+        f = open(hosts_file, 'r')
         try:
             for l in f:
                 if l.strip().startswith('#') or l.strip() == '':
@@ -2787,12 +2845,12 @@ def read_hosts_file():
         finally:
             f.close()
     except IOError:
-        raise ExpansionError('Hosts file %s not found' % options.hosts_file)
+        raise ExpansionError('Hosts file %s not found' % hosts_file)
 
     return new_hosts
 
 
-def interview_setup(gparray):
+def interview_setup(gparray, options):
     help = """
 System Expansion is used to add segments to an existing GPDB array.
 gpexpand did not detect a System Expansion that is in progress.
@@ -2839,7 +2897,7 @@ before continuing by re-running this utility and providing the input file. """
             return input_value
 
     if options.hosts_file:
-        new_hosts = read_hosts_file()
+        new_hosts = read_hosts_file(options.hosts_file)
     else:
         new_hosts = ask_list(None,
                              "\nEnter a comma separated list of new hosts you want\n" \
@@ -2957,8 +3015,8 @@ before continuing by re-running this utility and providing the input file. """
 
     print "\nGenerating configuration file...\n"
 
-    outfile = gp_expand.generate_inputfile()
-    outFilespaceFileName = gp_expand.generate_filespaces_inputfile(outFileNamePrefix=outfile)
+    outfile = _gp_expand.generate_inputfile()
+    outFilespaceFileName = _gp_expand.generate_filespaces_inputfile(outFileNamePrefix=outfile)
 
     outFileStr = ""
     if outfile != None:
@@ -2973,8 +3031,8 @@ with: gpexpand -i %s %s
 
 
 def sig_handler(sig):
-    if gp_expand is not None:
-        gp_expand.shutdown()
+    if _gp_expand is not None:
+        _gp_expand.shutdown()
 
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     signal.signal(signal.SIGHUP, signal.SIG_DFL)
@@ -2986,13 +3044,11 @@ def sig_handler(sig):
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
-if __name__ == '__main__':
-    gp_expand = None
+def main(options, args, parser):
+    global _gp_expand
+
     remove_pid = True
-    table_expand_error = False
-
     try:
-
         # setup signal handlers so we can clean up correctly
         signal.signal(signal.SIGTERM, sig_handler)
         signal.signal(signal.SIGHUP, sig_handler)
@@ -3000,7 +3056,7 @@ if __name__ == '__main__':
         logger = get_default_logger()
         setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
 
-        options, args = parseargs()
+        options, args = validate_options(options, args, parser)
 
         if options.verbose:
             enable_verbose_logging()
@@ -3023,7 +3079,7 @@ if __name__ == '__main__':
         if options.database:
             dburl.pgdb = options.database
 
-        gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl)
+        gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl, options)
 
         # Get array configuration
         try:
@@ -3033,17 +3089,17 @@ if __name__ == '__main__':
             logger.error('Greenplum instance you wish to expand is running')
             logger.error('and that your environment is correct, then rerun')
             logger.error('gexpand ' + ' '.join(sys.argv[1:]))
-            gpexpand.get_gpdb_in_state(GPDB_STARTED)
+            gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
             sys.exit(1)
 
-        gp_expand = gpexpand(logger, gparray, dburl, parallel=options.parallel)
+        _gp_expand = gpexpand(logger, gparray, dburl, options, parallel=options.parallel)
 
         gpexpand_file_status = None
         if not gpexpand_db_status:
-            gpexpand_file_status = gp_expand.get_state()
+            gpexpand_file_status = _gp_expand.get_state()
 
         if options.clean and gpexpand_db_status is not None:
-            gp_expand.cleanup_schema(gpexpand_db_status)
+            _gp_expand.cleanup_schema(gpexpand_db_status)
             logger.info('Cleanup Finished.  exiting...')
             sys.exit(0)
 
@@ -3057,7 +3113,7 @@ if __name__ == '__main__':
                 if gpexpand_file_status is None:
                     logger.error('There is no partially completed setup to rollback.')
                     sys.exit(1)
-                gp_expand.rollback()
+                _gp_expand.rollback(dburl)
                 logger.info('Rollback complete.  Greenplum Database can now be started')
                 sys.exit(0)
             except ExpansionError, e:
@@ -3065,51 +3121,52 @@ if __name__ == '__main__':
                 sys.exit(1)
 
         if gpexpand_db_status == 'SETUP DONE' or gpexpand_db_status == 'EXPANSION STOPPED':
-            if not gp_expand.validate_max_connections():
+            if not _gp_expand.validate_max_connections():
                 raise ValidationError()
-            gp_expand.perform_expansion()
+            _gp_expand.perform_expansion()
         elif gpexpand_db_status == 'EXPANSION STARTED':
             logger.info('It appears the last run of gpexpand did not exit cleanly.')
             logger.info('Resuming the expansion process...')
-            if not gp_expand.validate_max_connections():
+            if not _gp_expand.validate_max_connections():
                 raise ValidationError()
-            gp_expand.perform_expansion()
+            _gp_expand.perform_expansion()
         elif gpexpand_db_status == 'EXPANSION COMPLETE':
             logger.info('Expansion has already completed.')
             logger.info('If you want to expand again, run gpexpand -c to remove')
             logger.info('the gpexpand schema and begin a new expansion')
         elif gpexpand_db_status == None and gpexpand_file_status == None and options.filename:
-            if not gp_expand.validate_unalterable_tables():
+            if not _gp_expand.validate_unalterable_tables():
                 raise ValidationError()
-            if gp_expand.check_unique_indexes():
+            if _gp_expand.check_unique_indexes():
                 logger.info("Tables with unique indexes exist.  Until these tables are successfully")
                 logger.info("redistributed, unique constraints may be violated.  For more information")
                 logger.info("on this issue, see the Greenplum Database Administrator Guide")
                 if not options.silent:
                     if not ask_yesno(None, "Would you like to continue with System Expansion", 'N'):
                         raise ValidationError()
-            newSegList = gp_expand.read_input_files()
-            gp_expand.addNewSegments(newSegList)
-            gp_expand.sync_packages()
-            gp_expand.start_prepare()
-            gp_expand.add_segments()
-            gp_expand.update_original_segments()
-            gp_expand.update_catalog()
-            gp_expand.move_filespaces()
-            gp_expand.configure_new_segment_filespaces()
-            gp_expand.cleanup_new_segments()
-            gp_expand.setup_schema()
-            gp_expand.prepare_schema()
+            _gp_expand.validate_heap_checksums()
+            newSegList = _gp_expand.read_input_files()
+            _gp_expand.addNewSegments(newSegList)
+            _gp_expand.sync_packages()
+            _gp_expand.start_prepare()
+            _gp_expand.add_segments()
+            _gp_expand.update_original_segments()
+            _gp_expand.update_catalog()
+            _gp_expand.move_filespaces()
+            _gp_expand.configure_new_segment_filespaces()
+            _gp_expand.cleanup_new_segments()
+            _gp_expand.setup_schema()
+            _gp_expand.prepare_schema()
             logger.info('Starting Greenplum Database')
             GpStart.local('gpexpand expansion prepare final start')
-            gp_expand.sync_new_mirrors()
+            _gp_expand.sync_new_mirrors()
             logger.info('************************************************')
             logger.info('Initialization of the system expansion complete.')
             logger.info('To begin table expansion onto the new segments')
             logger.info('rerun gpexpand')
             logger.info('************************************************')
         elif options.filename is None and gpexpand_file_status == None:
-            interview_setup(gparray)
+            interview_setup(gparray, options)
         else:
             logger.error('The last gpexpand setup did not complete successfully.')
             logger.error('Please run gpexpand -r to rollback to the original state.')
@@ -3119,34 +3176,34 @@ if __name__ == '__main__':
 
     except ValidationError:
         logger.info('Bringing Greenplum Database back online...')
-        if gp_expand is not None:
-            gp_expand.shutdown()
-        gpexpand.get_gpdb_in_state(GPDB_STARTED)
+        if _gp_expand is not None:
+            _gp_expand.shutdown()
+        gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
         sys.exit()
     except Exception, e:
-        if options.verbose:
+        if options and options.verbose:
             logger.exception("gpexpand failed. exiting...")
         else:
             logger.error("gpexpand failed: %s \n\nExiting..." % e)
-        if gp_expand is not None and gp_expand.pastThePointOfNoReturn == True:
+        if _gp_expand is not None and _gp_expand.pastThePointOfNoReturn == True:
             logger.error(
                 'gpexpand is past the point of rollback. Any remaining issues must be addressed outside of gpexpand.')
-        if gp_expand is not None:
-            if gpexpand_db_status is None and gp_expand.get_state() is None:
+        if _gp_expand is not None:
+            if gpexpand_db_status is None and _gp_expand.get_state() is None:
                 logger.info('Bringing Greenplum Database back online...')
-                gpexpand.get_gpdb_in_state(GPDB_STARTED)
+                gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
             else:
-                if gp_expand.pastThePointOfNoReturn == False:
+                if _gp_expand.pastThePointOfNoReturn == False:
                     logger.error('Please run \'gpexpand -r%s\' to rollback to the original state.' % (
-                    '' if not options.database else ' -D %s' % options.database))
-            gp_expand.shutdown()
+                        '' if not options.database else ' -D %s' % options.database))
+            _gp_expand.shutdown()
         sys.exit(3)
     except KeyboardInterrupt:
         # Disable SIGINT while we shutdown.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-        if gp_expand is not None:
-            gp_expand.shutdown()
+        if _gp_expand is not None:
+            _gp_expand.shutdown()
 
         # Re-enabled SIGINT
         signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -3156,10 +3213,14 @@ if __name__ == '__main__':
 
     finally:
         try:
-            if remove_pid:
+            if remove_pid and options:
                 remove_pid_file(options.master_data_directory)
         except NameError:
             pass
 
-        if gp_expand is not None:
-            gp_expand.halt_work()
+        if _gp_expand is not None:
+            _gp_expand.halt_work()
+
+if __name__ == '__main__':
+    options, args, parser = parseargs()
+    main(options, args, parser)

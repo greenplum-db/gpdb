@@ -4,7 +4,12 @@
  *	  Header file for routines in cdbutil.c and results returned by
  *	  those routines.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbutil.h
  *
  *-------------------------------------------------------------------------
  */
@@ -17,6 +22,7 @@
  */
 
 #include <math.h>
+#include "catalog/gp_segment_config.h"
 
 /* cdb_rand returns a random float value between 0 and 1 inclusive */
 #define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
@@ -24,9 +30,6 @@
 /* cdb_randint returns integer value between lower and upper inclusive */
 #define cdb_randint(upper,lower) \
 	( (int) floor( cdb_rand()*(((upper)-(lower))+0.999999) ) + (lower) )
-
-
-#include "c.h"
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for MPP 2.0 database information
@@ -62,16 +65,18 @@ typedef struct CdbComponentDatabaseInfo
 	int16		hostSegs;		/* number of primary segments on the same hosts */
 } CdbComponentDatabaseInfo;
 
-#define SEGMENT_ROLE_PRIMARY 'p'
-#define SEGMENT_ROLE_MIRROR 'm'
-
 #define SEGMENT_IS_ACTIVE_MIRROR(p) \
-	((p)->role == SEGMENT_ROLE_MIRROR ? true : false)
+	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR ? true : false)
 #define SEGMENT_IS_ACTIVE_PRIMARY(p) \
-	((p)->role == SEGMENT_ROLE_PRIMARY ? true : false)
+	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY ? true : false)
 
-#define SEGMENT_IS_ALIVE(p) ((p)->status == 'u' ? true : false)
+#define SEGMENT_IS_ALIVE(p) \
+	((p)->status == GP_SEGMENT_CONFIGURATION_STATUS_UP ? true : false)
 
+#define SEGMENT_IS_IN_SYNC(p) \
+	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ? true : false)
+#define SEGMENT_IS_NOT_INSYNC(p) \
+	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC ? true : false)
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for return value from getCdbSegmentDatabases()
@@ -163,7 +168,6 @@ extern char *getDnsAddress(char *name, int port, int elevel);
 extern int16 master_standby_dbid(void);
 extern CdbComponentDatabaseInfo *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
-extern int16 my_mirror_dbid(void);
 
 /*
  * Returns the number of segments

@@ -6,8 +6,8 @@
 #include "storage/lock.h"
 #include "storage/proc.h"
 #include "cmockery.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"
 
 #include "../cdbgang.c"
@@ -16,51 +16,54 @@
 
 static CdbComponentDatabases *s_cdb = NULL;
 static const char *segHostIp[TOTOAL_SEGMENTS * 2] = {
-		"10.10.10.0",
-		"10.10.10.1",
-		"10.10.10.2",
-		"10.10.10.3",
-		"10.10.10.4",
-		"10.10.10.5",
-		"10.10.10.6",
-		"10.10.10.7",
-		"10.10.10.8",
-		"10.10.10.9",
-		"10.10.10.10",
-		"10.10.10.11",
-		"10.10.10.12",
-		"10.10.10.13",
-		"10.10.10.14",
-		"10.10.10.15",
-		"10.10.10.16",
-		"10.10.10.17",
-		"10.10.10.18",
-		"10.10.10.19"
+	"10.10.10.0",
+	"10.10.10.1",
+	"10.10.10.2",
+	"10.10.10.3",
+	"10.10.10.4",
+	"10.10.10.5",
+	"10.10.10.6",
+	"10.10.10.7",
+	"10.10.10.8",
+	"10.10.10.9",
+	"10.10.10.10",
+	"10.10.10.11",
+	"10.10.10.12",
+	"10.10.10.13",
+	"10.10.10.14",
+	"10.10.10.15",
+	"10.10.10.16",
+	"10.10.10.17",
+	"10.10.10.18",
+	"10.10.10.19"
 };
 static const char *qdHostIp = "127.0.0.1";
 static segBasePort = 30000;
-static int qdPort = 5432;
+static int	qdPort = 5432;
 static PGconn pgconn;
 
-static CdbComponentDatabases *makeTestCdb(int entryCnt, int segCnt)
+static CdbComponentDatabases *
+makeTestCdb(int entryCnt, int segCnt)
 {
-	int i = 0;
+	int			i = 0;
 
 	CdbComponentDatabases *cdb = palloc0(sizeof(CdbComponentDatabases));
+
 	cdb->total_entry_dbs = entryCnt;
 	cdb->total_segments = segCnt;
-	cdb->total_segment_dbs = TOTOAL_SEGMENTS * 2; /*with mirror*/
+	cdb->total_segment_dbs = TOTOAL_SEGMENTS * 2;	/* with mirror */
 	cdb->my_dbid = 1;
 	cdb->my_segindex = -1;
 	cdb->my_isprimary = true;
 	cdb->entry_db_info = palloc0(
-			sizeof(CdbComponentDatabaseInfo) * cdb->total_entry_dbs);
+								 sizeof(CdbComponentDatabaseInfo) * cdb->total_entry_dbs);
 	cdb->segment_db_info = palloc0(
-			sizeof(CdbComponentDatabaseInfo) * cdb->total_segment_dbs);
+								   sizeof(CdbComponentDatabaseInfo) * cdb->total_segment_dbs);
 
 	for (i = 0; i < cdb->total_entry_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *cdbinfo = &cdb->entry_db_info[i];
+
 		cdbinfo->hostip = qdHostIp;
 		cdbinfo->port = qdPort;
 
@@ -76,6 +79,7 @@ static CdbComponentDatabases *makeTestCdb(int entryCnt, int segCnt)
 	for (i = 0; i < cdb->total_segment_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *cdbinfo = &cdb->segment_db_info[i];
+
 		cdbinfo->hostip = segHostIp[i];
 		cdbinfo->port = segBasePort + i / 2;
 
@@ -91,7 +95,8 @@ static CdbComponentDatabases *makeTestCdb(int entryCnt, int segCnt)
 	return cdb;
 }
 
-void validateCdbInfo(CdbComponentDatabaseInfo *cdbinfo, int segindex)
+void
+validateCdbInfo(CdbComponentDatabaseInfo *cdbinfo, int segindex)
 {
 	assert_string_equal(cdbinfo->hostip, segHostIp[segindex * 2]);
 	assert_int_equal(cdbinfo->port, segBasePort + segindex);
@@ -103,9 +108,10 @@ void validateCdbInfo(CdbComponentDatabaseInfo *cdbinfo, int segindex)
 	assert_int_equal(cdbinfo->preferred_role, 'p');
 }
 
-void mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
+void
+mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
 {
-	static char	motionListener_str[11];
+	static char motionListener_str[11];
 
 	snprintf(motionListener_str, sizeof(motionListener_str), "%u", motionListener);
 
@@ -130,14 +136,15 @@ void mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
 	will_return_count(PQbackendPID, qePid, -1);
 }
 
-static void test__createWriterGang(void **state)
+static void
+test__createWriterGang(void **state)
 {
-	int segmentCount = TOTOAL_SEGMENTS;
-	int ftsVersion = 1;
-	PGconn *conn = &pgconn;
-	uint32 motionListener = 10000;
-	int qePid = 2000;
-	int i = 0;
+	int			segmentCount = TOTOAL_SEGMENTS;
+	int			ftsVersion = 1;
+	PGconn	   *conn = &pgconn;
+	uint32		motionListener = 10000;
+	int			qePid = 2000;
+	int			i = 0;
 
 	will_return(IsTransactionOrTransactionBlock, true);
 	will_return(getCdbComponentDatabases, s_cdb);
@@ -154,7 +161,7 @@ static void test__createWriterGang(void **state)
 
 	cdbgang_setAsync(false);
 
-	Gang * gang = AllocateWriterGang();
+	Gang	   *gang = AllocateWriterGang();
 
 	/* validate gang */
 	assert_int_equal(gang->size, TOTOAL_SEGMENTS);
@@ -181,15 +188,16 @@ static void test__createWriterGang(void **state)
 	}
 }
 
-static void test__createReaderGang(void **state)
+static void
+test__createReaderGang(void **state)
 {
-	int segmentCount = TOTOAL_SEGMENTS;
-	int ftsVersion = 1;
-	PGconn *conn = &pgconn;
+	int			segmentCount = TOTOAL_SEGMENTS;
+	int			ftsVersion = 1;
+	PGconn	   *conn = &pgconn;
 	const char *portalName = "portal1";
-	uint32 motionListener = 10000;
-	int qePid = 2000;
-	int i = 0;
+	uint32		motionListener = 10000;
+	int			qePid = 2000;
+	int			i = 0;
 
 	will_return(IsTransactionOrTransactionBlock, true);
 	will_return_count(getgpsegmentCount, segmentCount, -1);
@@ -203,7 +211,7 @@ static void test__createReaderGang(void **state)
 	mockLibpq(conn, motionListener, qePid);
 
 	cdbgang_setAsync(false);
-	Gang * gang = AllocateReaderGang(GANGTYPE_PRIMARY_READER, portalName);
+	Gang	   *gang = AllocateReaderGang(GANGTYPE_PRIMARY_READER, portalName);
 
 	/* validate gang */
 	assert_int_equal(gang->size, TOTOAL_SEGMENTS);
@@ -233,10 +241,11 @@ static void test__createReaderGang(void **state)
 /*
  * Make sure resetSessionForPrimaryGangLoss doesn't access catalog.
  */
-static void test__resetSessionForPrimaryGangLoss(void **state)
+static void
+test__resetSessionForPrimaryGangLoss(void **state)
 {
-	PROC_HDR dummyGlobal;
-	PGPROC dummyProc;
+	PROC_HDR	dummyGlobal;
+	PGPROC		dummyProc;
 
 	will_be_called(RedZoneHandler_DetectRunawaySession);
 	will_return(ProcCanSetMppSessionId, true);
@@ -250,15 +259,16 @@ static void test__resetSessionForPrimaryGangLoss(void **state)
 	assert_int_equal(OldTempNamespace, 9999);
 }
 
-int main(int argc, char* argv[])
+int
+main(int argc, char *argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
-	const UnitTest tests[] =
+	const		UnitTest tests[] =
 	{
-	unit_test(test__resetSessionForPrimaryGangLoss),
-	unit_test(test__createWriterGang),
-	unit_test(test__createReaderGang), };
+		unit_test(test__resetSessionForPrimaryGangLoss),
+		unit_test(test__createWriterGang),
+	unit_test(test__createReaderGang),};
 
 	MemoryContextInit();
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "gang test");
@@ -268,7 +278,8 @@ int main(int argc, char* argv[])
 	GpIdentity.segindex = -1;
 	gp_connections_per_thread = 64;
 
-	Port procport;
+	Port		procport;
+
 	MyProcPort = &procport;
 	MyProcPort->database_name = "test";
 	MyProcPort->user_name = "gpadmin";

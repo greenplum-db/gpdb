@@ -1,7 +1,15 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * execIndexScan.h
  *
- * Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/execIndexscan.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef EXECINDEXSCAN_H
 #define EXECINDEXSCAN_H
@@ -23,8 +31,7 @@ FreeRuntimeKeysContext(IndexScanState *indexstate);
 
 extern void
 ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					List *quals, List *strategies, List *subtypes,
-					ScanKey *scanKeys, int *numScanKeys,
+					List *quals, ScanKey *scanKeys, int *numScanKeys,
 					IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					IndexArrayKeyInfo **arrayKeys, int *numArrayKeys);
 

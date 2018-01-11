@@ -5,10 +5,11 @@
  *
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.113 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.118 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,10 +19,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 #include "optimizer/clauses.h" /* AggClauseCounts */
-
-/* GUC parameters */
-#define DEFAULT_CURSOR_TUPLE_FRACTION 1.0 /* assume all rows will be fetched */
-extern double cursor_tuple_fraction;
+#include "utils/uri.h"
 
 /*
  * A structure that contains information for planning GROUP BY 
@@ -66,6 +64,10 @@ typedef struct GroupContext
 	bool *querynode_changed;
 } GroupContext;
 
+/* GUC parameters */
+#define DEFAULT_CURSOR_TUPLE_FRACTION 1.0 /* assume all rows will be fetched */
+extern double cursor_tuple_fraction;
+
 /*
  * prototypes for plan/planmain.c
  */
@@ -94,18 +96,6 @@ extern Plan *make_distinctaggs_for_rollup(PlannerInfo *root, bool is_agg,
 										  Plan *lefttree);
 
 /*
- * prototypes for plan/planwindow.c
- */
-extern Plan *window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr);
-extern RangeTblEntry *package_plan_as_rte(Query *query, Plan *plan, Alias *eref, List *pathkeys);
-extern Value *get_tle_name(TargetEntry *tle, List* rtable, const char *default_name);
-extern bool contain_windowref(Node *node, void *context);
-extern bool window_edge_is_delayed(WindowFrameEdge *edge);
-extern Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query, List **p_pathkeys,
-       const char *alias_name, List *col_names, Query **query_p);
-
-
-/*
  * prototype for plan/plangroupext.c
  */
 extern Plan *plan_grouping_extension(PlannerInfo *root,
@@ -115,7 +105,9 @@ extern Plan *plan_grouping_extension(PlannerInfo *root,
 									 List **p_tlist, List *sub_tlist,
 									 bool is_agg, bool twostage,
 									 List *qual,
-									 int *p_numGroupCols, AttrNumber **p_grpColIdx, Oid **p_grpOperators,
+									 int *p_numGroupCols,
+									 AttrNumber **p_grpColIdx,
+									 Oid **p_grpOperators,
 									 AggClauseCounts *agg_counts,
 									 CanonicalGroupingSets *canonical_grpsets,
 									 double *p_dNumGroups,
@@ -124,6 +116,7 @@ extern Plan *plan_grouping_extension(PlannerInfo *root,
 									 Plan *lefttree);
 extern void free_canonical_groupingsets(CanonicalGroupingSets *canonical_grpsets);
 extern Plan *add_repeat_node(Plan *result_plan, int repeat_count, uint64 grouping);
+extern bool contain_group_id(Node *node);
 
 /*
  * prototypes for plan/createplan.c
@@ -133,7 +126,8 @@ extern SubqueryScan *make_subqueryscan(PlannerInfo *root, List *qptlist, List *q
 				  Index scanrelid, Plan *subplan, List *subrtable);
 extern Append *make_append(List *appendplans, bool isTarget, List *tlist);
 extern RecursiveUnion *make_recursive_union(List *tlist,
-			   Plan *lefttree, Plan *righttree, int wtParam);
+					 Plan *lefttree, Plan *righttree, int wtParam,
+					 List *distinctList, long numGroups);
 extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
 						List *pathkeys, double limit_tuples, bool add_keys_to_targetlist);
 extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
@@ -141,16 +135,13 @@ extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
 									  AttrNumber *grpColIdx, bool appendGrouping,
 									  Plan *lefttree);
-extern Sort *make_sort_from_reordered_groupcols(PlannerInfo *root,
-												List *groupcls,
-												AttrNumber *orig_grpColIdx,
-												AttrNumber *new_grpColIdx,
-												TargetEntry *grouping,
-												TargetEntry *groupid,
-												int req_ngrpkeys,
-												Plan *lefttree);
 extern List *reconstruct_group_clause(List *orig_groupClause, List *tlist,
 						 AttrNumber *grpColIdx, int numcols);
+
+extern Motion *make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecutorVarFormat);
+extern Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
+		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
+		  double limit_tuples);
 
 extern Agg *make_agg(PlannerInfo *root, List *tlist, List *qual,
 					 AggStrategy aggstrategy, bool streaming,
@@ -165,7 +156,11 @@ extern HashJoin *make_hashjoin(List *tlist,
 			  List *hashclauses, List *hashqualclauses,
 			  Plan *lefttree, Plan *righttree,
 			  JoinType jointype);
-extern Hash *make_hash(Plan *lefttree);
+extern Hash *make_hash(Plan *lefttree,
+		  Oid skewTable,
+		  AttrNumber skewColumn,
+		  Oid skewColType,
+		  int32 skewColTypmod);
 extern NestLoop *make_nestloop(List *tlist,
 							   List *joinclauses, List *otherclauses,
 							   Plan *lefttree, Plan *righttree,
@@ -178,16 +173,21 @@ extern MergeJoin *make_mergejoin(List *tlist,
 			   bool *mergenullsfirst,
 			   Plan *lefttree, Plan *righttree,
 			   JoinType jointype);
-extern Window *make_window(PlannerInfo *root, List *tlist,
-			int numPartCols, AttrNumber *partColIdx, Oid *partOperators,
-			List *windowKeys, Plan *lefttree);
+extern WindowAgg *make_windowagg(PlannerInfo *root, List *tlist,
+			   List *windowFuncs, Index winref,
+			   int partNumCols, AttrNumber *partColIdx, Oid *partOperators,
+			   int ordNumCols, AttrNumber *ordColIdx, Oid *ordOperators,
+			   AttrNumber firstOrderCol, Oid firstOrderCmpOperator, bool firstOrderNullsFirst,
+			   int frameOptions, Node *startOffset, Node *endOffset,
+			   Plan *lefttree);
 extern Material *make_material(Plan *lefttree);
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern Unique *make_unique(Plan *lefttree, List *distinctList);
 extern Limit *make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
 		   int64 offset_est, int64 count_est);
-extern SetOp *make_setop(SetOpCmd cmd, Plan *lefttree,
-		   List *distinctList, AttrNumber flagColIdx);
+extern SetOp *make_setop(SetOpCmd cmd, SetOpStrategy strategy, Plan *lefttree,
+		   List *distinctList, AttrNumber flagColIdx, int firstFlag,
+		   long numGroups, double outputRows);
 extern Result *make_result(PlannerInfo *root, List *tlist,
 			Node *resconstantqual, Plan *subplan);
 extern Repeat *make_repeat(List *tlist,
@@ -209,6 +209,8 @@ extern Plan *add_agg_cost(PlannerInfo *root, Plan *plan,
 		 int numAggs, int transSpace);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
 
+extern List *create_external_scan_uri_list(struct ExtTableEntry *extEntry, bool *ismasteronly);
+
 /*
  * prototypes for plan/initsplan.c
  */
@@ -217,7 +219,6 @@ extern int	join_collapse_limit;
 
 extern void add_base_rels_to_query(PlannerInfo *root, Node *jtnode);
 extern void build_base_rel_tlists(PlannerInfo *root, List *final_tlist);
-extern void add_IN_vars_to_tlists(PlannerInfo *root);
 extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
 					   Relids where_needed);
 extern List *deconstruct_jointree(PlannerInfo *root);
@@ -236,6 +237,9 @@ extern RestrictInfo *build_implied_join_equality(Oid opno,
 							Expr *item2,
 							Relids qualscope,
 							Relids nullable_relids);
+
+extern void check_mergejoinable(RestrictInfo *restrictinfo);
+extern void check_hashjoinable(RestrictInfo *restrictinfo);
 
 /*
  * prototypes for plan/setrefs.c
@@ -256,8 +260,8 @@ extern void set_opfuncid(OpExpr *opexpr);
 extern void set_sa_opfuncid(ScalarArrayOpExpr *opexpr);
 extern void record_plan_function_dependency(PlannerGlobal *glob, Oid funcid);
 extern void extract_query_dependencies(List *queries,
-									   List **relationOids,
-									   List **invalItems);
+						   List **relationOids,
+						   List **invalItems);
 extern void cdb_extract_plan_dependencies(PlannerGlobal *glob, Plan *plan);
 
 extern int num_distcols_in_grouplist(List *gc);

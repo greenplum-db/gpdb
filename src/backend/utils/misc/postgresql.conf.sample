@@ -24,8 +24,11 @@
 # "postgres -c log_connections=on".  Some parameters can be changed at run time
 # with the "SET" SQL command.
 #
-# Memory units:  kB = kilobytes MB = megabytes GB = gigabytes
-# Time units:    ms = milliseconds s = seconds min = minutes h = hours d = days
+# Memory units:  kB = kilobytes        Time units:  ms  = milliseconds
+#                MB = megabytes                     s   = seconds
+#                GB = gigabytes                     min = minutes
+#                                                   h   = hours
+#                                                   d   = days
 
 
 #------------------------------------------------------------------------------
@@ -70,8 +73,7 @@
 
 #max_connections = 200			# (change requires restart)
 # Note:  Increasing max_connections costs ~400 bytes of shared memory per 
-# connection slot, plus lock space (see max_locks_per_transaction).  You might
-# also need to raise shared_buffers to support more connections.
+# connection slot, plus lock space (see max_locks_per_transaction).
 #superuser_reserved_connections = 3	# (change requires restart)
 #unix_socket_directory = ''		# (change requires restart)
 #unix_socket_group = ''			# (change requires restart)
@@ -91,9 +93,9 @@
 #db_user_namespace = off
 
 # Kerberos and GSSAPI
-#krb_server_keyfile = ''		# (change requires restart)
-#krb_srvname = 'postgres'		# (change requires restart, Kerberos only)
-#krb_caseins_users = off		# (change requires restart)
+#krb_server_keyfile = ''
+#krb_srvname = 'postgres'		# (Kerberos only)
+#krb_caseins_users = off
 
 # - TCP Keepalives -
 # see "man 7 tcp" for details
@@ -112,7 +114,7 @@
 
 # - Memory -
 
-#shared_buffers = 128MB			# min 128kB or max_connections*16kB
+#shared_buffers = 128MB			# min 128kB
 					# (change requires restart)
 #temp_buffers = 8MB			# min 800kB
 max_prepared_transactions = 250		# can be 0 or more
@@ -122,13 +124,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #work_mem = 32MB			# min 64kB
 #maintenance_work_mem = 64MB		# min 1MB
 #max_stack_depth = 2MB			# min 100kB
-
-# - Free Space Map -
-
-#max_fsm_pages = 204800			# min max_fsm_relations*16, 6 bytes each
-					# (change requires restart)
-#max_fsm_relations = 1000		# min 100, ~70 bytes each
-					# (change requires restart)
 
 # - Kernel Resource Usage -
 
@@ -143,6 +138,10 @@ max_prepared_transactions = 250		# can be 0 or more
 #vacuum_cost_page_miss = 10		# 0-10000 credits
 #vacuum_cost_page_dirty = 20		# 0-10000 credits
 #vacuum_cost_limit = 200		# 1-10000 credits
+
+# - Asynchronous Behavior -
+
+#effective_io_concurrency = 1		# 1-1000. 0 disables prefetching
 
 #------------------------------------------------------------------------------
 # QUERY TUNING
@@ -169,9 +168,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #gp_selectivity_damping_for_scans = on
 #gp_selectivity_damping_for_joins = off
 
-
-#gp_enable_sequential_window_plans = off
-
 #enable_sort = on
 #gp_enable_sort_limit = on
 #gp_enable_sort_distinct = on
@@ -190,6 +186,7 @@ max_prepared_transactions = 250		# can be 0 or more
 
 # - Other Planner Options -
 
+#cursor_tuple_fraction = 0.1		# range 0.0-1.0
 #from_collapse_limit = 20
 #join_collapse_limit = 20		# 1 disables collapsing of explicit
 					# JOIN clauses
@@ -218,10 +215,10 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					# off, meaning append to existing files
 					# in all cases.
 #log_rotation_age = 1d			# Automatic rotation of logfiles will
-					# happen after that time.  0 to disable.
+					# happen after that time.  0 disables.
 #log_rotation_size = 10MB		# Automatic rotation of logfiles will 
 					# happen after that much log output.
-					# 0 to disable.
+					# 0 disables.
 
 # - When to Log -
 
@@ -236,7 +233,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					#   warning
 					#   error
 
-#log_min_messages = warning		# Values in order of decreasing detail:
+#log_min_messages = warning		# values in order of decreasing detail:
 					#   debug5
 					#   debug4
 					#   debug3
@@ -268,7 +265,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #log_min_duration_statement = -1	# -1 is disabled, 0 logs all statements
 					# and their durations, > 0 logs only
-					# statements running at least this time.
+					# statements running at least this number
+					# of milliseconds
 
 # - What to Log -
 
@@ -277,7 +275,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #debug_print_prelim_plan = off
 #debug_print_slice_table = off
 #debug_print_plan = off
-#debug_pretty_print = off
+#debug_pretty_print = on
 #log_checkpoints = off
 #log_connections = off
 #log_disconnections = off
@@ -372,7 +370,10 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #track_activities = on
 #track_counts = off
+#track_functions = none			# none, pl, all
+#track_activity_query_size = 1024
 #update_process_title = on
+#stats_temp_directory = 'pg_stat_tmp'
 
 #stats_queue_level = off
 
@@ -397,7 +398,8 @@ log_autostats=off	# print additional autostats information
 					# requires track_counts to also be on.
 #log_autovacuum_min_duration = -1	# -1 disables, 0 logs all actions and
 					# their durations, > 0 logs only
-					# actions running at least that time.
+					# actions running at least this number
+					# of milliseconds.
 #autovacuum_max_workers = 3		# max number of autovacuum subprocesses
 #autovacuum_naptime = 1min		# time between autovacuum runs
 #autovacuum_vacuum_threshold = 50	# min number of row updates before
@@ -408,9 +410,9 @@ log_autostats=off	# print additional autostats information
 #autovacuum_analyze_scale_factor = 0.1	# fraction of table size before analyze
 #autovacuum_freeze_max_age = 200000000	# maximum XID age before forced vacuum
 					# (change requires restart)
-#autovacuum_vacuum_cost_delay = 20	# default vacuum cost delay for
-					# autovacuum, -1 means use
-					# vacuum_cost_delay
+#autovacuum_vacuum_cost_delay = 20ms	# default vacuum cost delay for
+					# autovacuum, in milliseconds;
+					# -1 means use vacuum_cost_delay
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
 					# autovacuum, -1 means use
 					# vacuum_cost_limit
@@ -429,12 +431,14 @@ log_autostats=off	# print additional autostats information
 #session_replication_role = 'origin'
 #statement_timeout = 0			# 0 is disabled
 #idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
-#vacuum_freeze_min_age = 100000000
+#vacuum_freeze_min_age = 50000000
+#vacuum_freeze_table_age = 150000000
 #bytea_output='escape'
 
 # - Locale and Formatting -
 
 #datestyle = 'iso, mdy'
+#intervalstyle = 'postgres'
 #timezone = unknown			# actually, defaults to TZ environment
 					# setting
 #timezone_abbreviations = 'Default'     # Select the set of available time zone

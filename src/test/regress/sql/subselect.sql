@@ -40,45 +40,45 @@ INSERT INTO SUBSELECT_TBL VALUES (3, 3, 3);
 INSERT INTO SUBSELECT_TBL VALUES (6, 7, 8);
 INSERT INTO SUBSELECT_TBL VALUES (8, 9, NULL);
 
-SELECT '' AS eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
+SELECT '' AS eight, * FROM SUBSELECT_TBL;
 
 -- Uncorrelated subselects
 
 SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL
-  WHERE f1 IN (SELECT 1) ORDER BY 2;
+  WHERE f1 IN (SELECT 1);
 
 SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
-  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL) ORDER BY 2;
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL);
 
 SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
   WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE
-    f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 2;
+    f2 IN (SELECT f1 FROM SUBSELECT_TBL));
 
 SELECT '' AS three, f1, f2
   FROM SUBSELECT_TBL
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
-                         WHERE f3 IS NOT NULL) ORDER BY 2,3;
+                         WHERE f3 IS NOT NULL);
 
 -- Correlated subselects
 
 SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
   FROM SUBSELECT_TBL upper
-  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1) ORDER BY 2,3;
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1);
 
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f1 IN
-    (SELECT f2 FROM SUBSELECT_TBL WHERE CAST(upper.f2 AS float) = f3) ORDER BY 2,3;
+    (SELECT f2 FROM SUBSELECT_TBL WHERE CAST(upper.f2 AS float) = f3);
 
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL
-               WHERE f2 = CAST(f3 AS integer)) ORDER BY 2,3;
+               WHERE f2 = CAST(f3 AS integer));
 
 SELECT '' AS five, f1 AS "Correlated Field"
   FROM SUBSELECT_TBL
   WHERE (f1, f2) IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
-                     WHERE f3 IS NOT NULL) ORDER BY 2;
+                     WHERE f3 IS NOT NULL);
 
 --
 -- Use some existing tables in the regression test
@@ -87,7 +87,7 @@ SELECT '' AS five, f1 AS "Correlated Field"
 SELECT '' AS eight, ss.f1 AS "Correlated Field", ss.f3 AS "Second Field"
   FROM SUBSELECT_TBL ss
   WHERE f1 NOT IN (SELECT f1+1 FROM INT4_TBL
-                   WHERE f1 != ss.f1 AND f1 < 2147483647) ORDER BY 2,3;
+                   WHERE f1 != ss.f1 AND f1 < 2147483647);
 
 select q1, float8(count(*)) / (select count(*) from int8_tbl)
 from int8_tbl group by q1 order by q1;
@@ -127,21 +127,21 @@ INSERT INTO bar VALUES (3, 1);
 
 -- These cases require an extra level of distinct-ing above subquery s
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s);
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT id1,id2 FROM bar GROUP BY id1,id2) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT id1,id2 FROM bar GROUP BY id1,id2) AS s);
 SELECT * FROM foo WHERE id IN
     (SELECT id2 FROM (SELECT id1, id2 FROM bar UNION
-                      SELECT id1, id2 FROM bar) AS s) ORDER BY 1;
+                      SELECT id1, id2 FROM bar) AS s);
 
 -- These cases do not
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT DISTINCT ON (id2) id1, id2 FROM bar) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT DISTINCT ON (id2) id1, id2 FROM bar) AS s);
 SELECT * FROM foo WHERE id IN
-    (SELECT id2 FROM (SELECT id2 FROM bar GROUP BY id2) AS s) ORDER BY 1;
+    (SELECT id2 FROM (SELECT id2 FROM bar GROUP BY id2) AS s);
 SELECT * FROM foo WHERE id IN
     (SELECT id2 FROM (SELECT id2 FROM bar UNION
-                      SELECT id2 FROM bar) AS s) ORDER BY 1;
+                      SELECT id2 FROM bar) AS s);
 
 --
 -- Test case to catch problems with multiply nested sub-SELECTs not getting
@@ -203,7 +203,7 @@ END) AS "Status",
 END) AS "Status_OK"
 FROM orderstest ord;
 
-SELECT * FROM orders_view ORDER BY 1,2,5;
+SELECT * FROM orders_view;
 
 DROP TABLE orderstest cascade;
 
@@ -241,7 +241,7 @@ create rule shipped_view_update as on update to shipped_view do instead
     update shipped set partnum = new.partnum, value = new.value
         where ttype = new.ttype and ordnum = new.ordnum;
 
-select * from shipped_view ORDER BY 1,2;
+select * from shipped_view;
 
 select f1, ss1 as relabel from
     (select *, (select sum(f1) from int4_tbl b where f1 >= a.f1) as ss1
@@ -321,11 +321,28 @@ select * from
 group by f1,f2,fs;
 
 --
+-- Test case for bug #5514 (mishandling of whole-row Vars in subselects)
+--
+
+create temp table table_a(id integer);
+insert into table_a values (42);
+
+create temp view view_a as select * from table_a;
+
+select view_a from view_a;
+select (select view_a) from view_a;
+select (select (select view_a)) from view_a;
+select (select (a.*)::text) from view_a a;
+
+--
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
 
-select q from (select max(f1) as max from int4_tbl group by f1 order by f1) q order by max;
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
 
 --
 -- Test case for sublinks pushed down into subselects via join alias expansion
@@ -359,3 +376,20 @@ select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
 --
 
 select '1'::text in (select '1'::name union all select '1'::name);
+
+--
+-- Check sane behavior with nested IN SubLinks
+--
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+
+--
+-- Check for incorrect optimization when IN subquery contains a SRF
+--
+set enable_hashjoin to 0;
+explain select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+reset enable_hashjoin;

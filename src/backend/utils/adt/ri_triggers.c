@@ -15,7 +15,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.114 2009/08/01 19:59:41 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.113 2009/06/11 14:49:04 momjian Exp $
  *
  * ----------
  */
@@ -30,17 +30,24 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_operator.h"
+#include "catalog/pg_type.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
 #include "miscadmin.h"
 #include "utils/acl.h"
+#include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
+#include "utils/syscache.h"
+#include "utils/tqual.h"
 
 
 /* ----------
@@ -2754,12 +2761,13 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	/*
 	 * Run the plan.  For safety we force a current snapshot to be used. (In
 	 * serializable mode, this arguably violates serializability, but we
-	 * really haven't got much choice.)  We need at most one tuple returned,
-	 * so pass limit = 1.
+	 * really haven't got much choice.)  We don't need to register the
+	 * snapshot, because SPI_execute_snapshot will see to it.  We need at most
+	 * one tuple returned, so pass limit = 1.
 	 */
 	spi_result = SPI_execute_snapshot(qplan,
 									  NULL, NULL,
-									  CopySnapshot(GetLatestSnapshot()),
+									  GetLatestSnapshot(),
 									  InvalidSnapshot,
 									  true, false, 1);
 
@@ -3310,13 +3318,15 @@ ri_PerformCheck(RI_QueryKey *qkey, SPIPlanPtr qplan,
 	 * caller passes detectNewRows == false then it's okay to do the query
 	 * with the transaction snapshot; otherwise we use a current snapshot, and
 	 * tell the executor to error out if it finds any rows under the current
-	 * snapshot that wouldn't be visible per the transaction snapshot.
+	 * snapshot that wouldn't be visible per the transaction snapshot.  Note
+	 * that SPI_execute_snapshot will register the snapshots, so we don't need
+	 * to bother here.
 	 */
 	if (IsXactIsoLevelSerializable && detectNewRows)
 	{
 		CommandCounterIncrement();		/* be sure all my own work is visible */
-		test_snapshot = CopySnapshot(GetLatestSnapshot());
-		crosscheck_snapshot = CopySnapshot(GetTransactionSnapshot());
+		test_snapshot = GetLatestSnapshot();
+		crosscheck_snapshot = GetTransactionSnapshot();
 	}
 	else
 	{
@@ -3604,7 +3614,7 @@ static SPIPlanPtr
 ri_FetchPreparedPlan(RI_QueryKey *key)
 {
 	RI_QueryHashEntry *entry;
-	SPIPlanPtr		plan;
+	SPIPlanPtr	plan;
 
 	/*
 	 * On the first call initialize the hashtable
@@ -3622,11 +3632,11 @@ ri_FetchPreparedPlan(RI_QueryKey *key)
 		return NULL;
 
 	/*
-	 * Check whether the plan is still valid.  If it isn't, we don't want
-	 * to simply rely on plancache.c to regenerate it; rather we should
-	 * start from scratch and rebuild the query text too.  This is to cover
-	 * cases such as table/column renames.  We depend on the plancache
-	 * machinery to detect possible invalidations, though.
+	 * Check whether the plan is still valid.  If it isn't, we don't want to
+	 * simply rely on plancache.c to regenerate it; rather we should start
+	 * from scratch and rebuild the query text too.  This is to cover cases
+	 * such as table/column renames.  We depend on the plancache machinery to
+	 * detect possible invalidations, though.
 	 *
 	 * CAUTION: this check is only trustworthy if the caller has already
 	 * locked both FK and PK rels.
@@ -3636,8 +3646,8 @@ ri_FetchPreparedPlan(RI_QueryKey *key)
 		return plan;
 
 	/*
-	 * Otherwise we might as well flush the cached plan now, to free a
-	 * little memory space before we make a new one.
+	 * Otherwise we might as well flush the cached plan now, to free a little
+	 * memory space before we make a new one.
 	 */
 	entry->plan = NULL;
 	if (plan)
@@ -3666,8 +3676,8 @@ ri_HashPreparedPlan(RI_QueryKey *key, SPIPlanPtr plan)
 		ri_InitHashTables();
 
 	/*
-	 * Add the new plan.  We might be overwriting an entry previously
-	 * found invalid by ri_FetchPreparedPlan.
+	 * Add the new plan.  We might be overwriting an entry previously found
+	 * invalid by ri_FetchPreparedPlan.
 	 */
 	entry = (RI_QueryHashEntry *) hash_search(ri_query_cache,
 											  (void *) key,
@@ -3958,7 +3968,7 @@ ri_HashCompareOp(Oid eq_opr, Oid typeid)
 				 * polymorphic type such as ANYARRAY or ANYENUM.  If so,
 				 * assume the coercion is valid; otherwise complain.
 				 */
-				if (!IsPolymorphicType(lefttype))
+				if (!IsBinaryCoercible(typeid, lefttype))
 					elog(ERROR, "no conversion function from %s to %s",
 						 format_type_be(typeid),
 						 format_type_be(lefttype));

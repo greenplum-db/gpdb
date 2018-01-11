@@ -4,23 +4,19 @@
  *	  POSTGRES low-level lock mechanism
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.112.2.1 2008/09/16 01:56:35 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.116 2009/04/04 17:40:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef LOCK_H_
 #define LOCK_H_
 
-#include "nodes/pg_list.h"
 #include "storage/backendid.h"
-#include "storage/itemptr.h"
 #include "storage/lwlock.h"
 #include "storage/shmem.h"
-#include "utils/resowner.h"
-
 
 /* struct PGPROC is declared in proc.h, but must forward-reference it */
 typedef struct PGPROC PGPROC;
@@ -73,6 +69,9 @@ typedef struct
 #define VirtualTransactionIdEquals(vxid1, vxid2) \
 	((vxid1).backendId == (vxid2).backendId && \
 	 (vxid1).localTransactionId == (vxid2).localTransactionId)
+#define SetInvalidVirtualTransactionId(vxid) \
+	((vxid).backendId = InvalidBackendId, \
+	 (vxid).localTransactionId = InvalidLocalTransactionId)
 #define GET_VXID_FROM_PGPROC(vxid, proc) \
 	((vxid).backendId = (proc).backendId, \
 	 (vxid).localTransactionId = (proc).lxid)
@@ -467,7 +466,7 @@ typedef struct LOCALLOCK
 
 /* Waiter global locallock. (needed by resource queuing). */
 extern LOCALLOCK *awaitedLock;
-extern ResourceOwner awaitedOwner;
+extern struct ResourceOwnerData *awaitedOwner;
 
 /*
  * This struct holds information passed from lmgr internals to the lock
@@ -551,8 +550,9 @@ extern LockAcquireResult LockAcquire(const LOCKTAG *locktag,
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
-extern void LockReleaseCurrentOwner(void);
-extern void LockReassignCurrentOwner(void);
+// TODO why are we missing extern void LockReleaseSession(LOCKMETHODID lockmethodid); ?
+extern void LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks);
+extern void LockReassignCurrentOwner(LOCALLOCK **locallocks, int nlocks);
 extern VirtualTransactionId *GetLockConflicts(const LOCKTAG *locktag,
 				 LOCKMODE lockmode);
 extern void AtPrepare_Locks(void);

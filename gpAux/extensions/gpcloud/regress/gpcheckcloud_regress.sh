@@ -10,6 +10,8 @@ RANDOM_PREFIX=gpcheckcloud-$(date +%Y%m%d)-$(cat /dev/urandom | env LC_CTYPE=C t
 echo "Preparing data to upload..."
 dd if=/dev/urandom of=/tmp/gpcheckcloud.small bs=6 count=1 &> /dev/null
 dd if=/dev/urandom of=/tmp/gpcheckcloud.large bs=78MB count=1 &> /dev/null
+echo -ne "\n" >> /tmp/gpcheckcloud.small
+echo -ne "\n" >> /tmp/gpcheckcloud.large
 
 MD5SUM_SMALL=`cat /tmp/gpcheckcloud.small |openssl md5 |cut -d ' ' -f 2`
 MD5SUM_LARGE=`cat /tmp/gpcheckcloud.large |openssl md5 |cut -d ' ' -f 2`
@@ -45,6 +47,7 @@ CHECK_CASES=(
 "s3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/ 138fc555074671912125ba692c678246"
 "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/gzipped/ 7b2260e9a3a3f26e84aa28dc2124f68f"
 "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/gzipped_normal1/ eacb7b210d3f7703ee06d16f520b103e"
+"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/gpcheckcloud_newline/ d9331ecb3dc71b9bfca469654d26ec5f"
 )
 
 startTimer

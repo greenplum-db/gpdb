@@ -862,10 +862,11 @@ class InstallPackage(Operation):
         # distribute package to segments
         srcFile = self.gppkg.abspath
         dstFile = os.path.join(GPHOME, self.gppkg.pkg)
-        GpScp(srcFile, dstFile, self.segment_host_list).run()
 
         # install package on segments
-        HostOperation(InstallPackageLocally(dstFile), self.segment_host_list).run()
+        if self.segment_host_list:
+            GpScp(srcFile, dstFile, self.segment_host_list).run()
+            HostOperation(InstallPackageLocally(dstFile), self.segment_host_list).run()
 
         # install package on standby
         if self.standby_host:

@@ -3,12 +3,12 @@
  * nbtcompare.c
  *	  Comparison functions for btree access method.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtcompare.c,v 1.55 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtcompare.c,v 1.57 2009/01/01 17:23:35 momjian Exp $
  *
  * NOTES
  *
@@ -236,13 +236,4 @@ btnamecmp(PG_FUNCTION_ARGS)
 	Name		b = PG_GETARG_NAME(1);
 
 	PG_RETURN_INT32(strncmp(NameStr(*a), NameStr(*b), NAMEDATALEN));
-}
-
-Datum
-btname_pattern_cmp(PG_FUNCTION_ARGS)
-{
-	Name		a = PG_GETARG_NAME(0);
-	Name		b = PG_GETARG_NAME(1);
-
-	PG_RETURN_INT32(memcmp(NameStr(*a), NameStr(*b), NAMEDATALEN));
 }

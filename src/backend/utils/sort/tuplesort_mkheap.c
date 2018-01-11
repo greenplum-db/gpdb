@@ -1,8 +1,16 @@
-/*
- * tuplesort_mkheap.c
- *		Multi level key heap.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) Greenplum Inc, 2008-2009.
+ * tuplesort_mkheap.c
+ *	  Multi level key heap.
+ *
+ * Portions Copyright (c) Greenplum Inc, 2008-2009.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/sort/tuplesort_mkheap.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 #include "access/genam.h"

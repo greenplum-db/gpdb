@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lwlock.h,v 1.38 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lwlock.h,v 1.42 2009/03/03 08:11:24 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,7 +57,6 @@ typedef enum LWLockId
 	ProcArrayLock,
 	SInvalReadLock,
 	SInvalWriteLock,
-	FreeSpaceLock,
 	WALInsertLock,
 	WALWriteLock,
 	ControlFileLock,
@@ -101,7 +100,9 @@ typedef enum LWLockId
 	RelfilenodeGenLock,
 	FilespaceHashLock,
 	TablespaceHashLock,
-
+#ifdef USE_SEGWALREP
+	GpReplicationConfigFileLock,
+#endif
 	/* must be last except for MaxDynamicLWLock: */
 	NumFixedLWLocks,
 

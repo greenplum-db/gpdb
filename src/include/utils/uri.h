@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* uri.h
-*	  Definitions for URI strings
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * uri.h
+ *	  Definitions for URI strings
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/uri.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef URI_H
 #define URI_H
 

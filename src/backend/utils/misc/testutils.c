@@ -1,8 +1,16 @@
-/*
- * testutils.c
- * 		Implementation of testing utilities.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2010, Greenplum inc
+ * testutils.c
+ *	  Implementation of testing utilities.
+ *
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/testutils.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include <sys/time.h>

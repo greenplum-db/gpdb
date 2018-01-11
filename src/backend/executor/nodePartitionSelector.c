@@ -5,7 +5,11 @@
  *	  Oids based on a given set of predicates. It works for both constant
  *	  partition elimination and join partition elimination
  *
- * Copyright (c) 2014, Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodePartitionSelector.c
  *
  *-------------------------------------------------------------------------
  */
@@ -204,7 +208,6 @@ ExecPartitionSelector(PartitionSelectorState *node)
 
 	/* partition elimination with the given input tuple */
 	ResetExprContext(econtext);
-	node->ps.ps_OuterTupleSlot = inputSlot;
 	econtext->ecxt_outertuple = inputSlot;
 	econtext->ecxt_scantuple = inputSlot;
 

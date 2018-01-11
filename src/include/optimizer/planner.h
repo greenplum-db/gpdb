@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planner.h,v 1.45 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planner.h,v 1.47 2009/01/09 15:46:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,8 +42,10 @@ extern bool choose_hashed_grouping(PlannerInfo *root,
 								   double tuple_fraction, double limit_tuples,
 								   Path *cheapest_path,
 								   Path *sorted_path,
-								   Oid *groupOperators, int numGroupOps,
+								   int numGroupOps,
 								   double dNumGroups,
 								   AggClauseCounts *agg_counts);
+
+extern Expr *expression_planner(Expr *expr);
 
 #endif   /* PLANNER_H */

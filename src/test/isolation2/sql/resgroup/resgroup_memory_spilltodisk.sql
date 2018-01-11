@@ -1,15 +1,21 @@
+-- up the admin_group memory limits
+ALTER RESOURCE GROUP admin_group SET memory_limit 30;
+
 -- Test Mark/Restore in Material Node
 create table spilltest1 (a integer);
 create table spilltest2 (a integer);
 insert into spilltest1 select a from generate_series(1,400000) a;
 insert into spilltest2 select a from generate_series(1,400000) a;
 
+-- go back to the default admin_group limit
+ALTER RESOURCE GROUP admin_group SET memory_limit 10;
+
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 -- end_ignore
 CREATE RESOURCE GROUP rg1_memory_test WITH
-(concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=10);
+(concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
 CREATE ROLE role1_memory_test SUPERUSER RESOURCE GROUP rg1_memory_test;
 SET ROLE TO role1_memory_test;
 

@@ -42,13 +42,15 @@ GRANT regressgroup2 TO regressuser4 WITH ADMIN OPTION;
 SET SESSION AUTHORIZATION regressuser1;
 SELECT session_user, current_user;
 
-CREATE TABLE atest1 ( a int, b text );
+CREATE TABLE atest1 ( a int, b text ) distributed randomly;
 SELECT * FROM atest1;
 INSERT INTO atest1 VALUES (1, 'one');
 DELETE FROM atest1;
-UPDATE atest1 SET b = 'blech' WHERE a = 213;
+UPDATE atest1 SET a = 1 WHERE b = 'blech';
 TRUNCATE atest1;
+BEGIN;
 LOCK atest1 IN ACCESS EXCLUSIVE MODE;
+COMMIT;
 
 REVOKE ALL ON atest1 FROM PUBLIC;
 SELECT * FROM atest1;
@@ -74,13 +76,15 @@ SELECT * FROM atest2; -- ok
 INSERT INTO atest1 VALUES (2, 'two'); -- ok
 INSERT INTO atest2 VALUES ('foo', true); -- fail
 INSERT INTO atest1 SELECT 1, b FROM atest1; -- ok
-UPDATE atest1 SET b = 'twotwo' WHERE a = 2; -- ok
+UPDATE atest1 SET a = 1 WHERE a = 2; -- ok
 UPDATE atest2 SET col2 = NOT col2; -- fail
 SELECT * FROM atest1 FOR UPDATE; -- ok
 SELECT * FROM atest2 FOR UPDATE; -- fail
 DELETE FROM atest2; -- fail
 TRUNCATE atest2; -- fail
+BEGIN;
 LOCK atest2 IN ACCESS EXCLUSIVE MODE; -- fail
+COMMIT;
 COPY atest2 FROM stdin; -- fail
 GRANT ALL ON atest1 TO PUBLIC; -- fail
 
@@ -97,7 +101,7 @@ SELECT * FROM atest2; -- fail
 INSERT INTO atest1 VALUES (2, 'two'); -- fail
 INSERT INTO atest2 VALUES ('foo', true); -- fail
 INSERT INTO atest1 SELECT 1, b FROM atest1; -- fail
-UPDATE atest1 SET b = 'twotwo' WHERE a = 2; -- fail
+UPDATE atest1 SET a = 1 WHERE a = 2; -- fail
 UPDATE atest2 SET col2 = NULL; -- ok
 UPDATE atest2 SET col2 = NOT col2; -- fails; requires SELECT on atest2
 UPDATE atest2 SET col2 = true FROM atest1 WHERE atest1.a = 5; -- ok
@@ -105,7 +109,9 @@ SELECT * FROM atest1 FOR UPDATE; -- fail
 SELECT * FROM atest2 FOR UPDATE; -- fail
 DELETE FROM atest2; -- fail
 TRUNCATE atest2; -- fail
+BEGIN;
 LOCK atest2 IN ACCESS EXCLUSIVE MODE; -- ok
+COMMIT;
 COPY atest2 FROM stdin; -- fail
 
 -- checks in subquery, both fail
@@ -165,6 +171,124 @@ SELECT * FROM atestv4; -- ok (even though regressuser2 cannot access underlying 
 SELECT * FROM atest2; -- ok
 SELECT * FROM atestv2; -- fail (even though regressuser2 can access underlying atest2)
 
+-- Test column level permissions
+
+SET SESSION AUTHORIZATION regressuser1;
+CREATE TABLE atest5 (one int, two int, three int) distributed randomly;
+CREATE TABLE atest6 (one int, two int, blue int);
+GRANT SELECT (one), INSERT (two), UPDATE (three) ON atest5 TO regressuser4;
+GRANT ALL (one) ON atest5 TO regressuser3;
+
+INSERT INTO atest5 VALUES (1,2,3);
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT * FROM atest5; -- fail
+SELECT one FROM atest5; -- ok
+COPY atest5 (one) TO stdout; -- ok
+SELECT two FROM atest5; -- fail
+COPY atest5 (two) TO stdout; -- fail
+SELECT atest5 FROM atest5; -- fail
+COPY atest5 (one,two) TO stdout; -- fail
+SELECT 1 FROM atest5; -- ok
+SELECT 1 FROM atest5 a JOIN atest5 b USING (one); -- ok
+SELECT 1 FROM atest5 a JOIN atest5 b USING (two); -- fail
+SELECT 1 FROM atest5 a NATURAL JOIN atest5 b; -- fail
+SELECT (j.*) IS NULL FROM (atest5 a JOIN atest5 b USING (one)) j; -- fail
+SELECT 1 FROM atest5 WHERE two = 2; -- fail
+SELECT * FROM atest1, atest5; -- fail
+SELECT atest1.* FROM atest1, atest5; -- ok
+SELECT atest1.*,atest5.one FROM atest1, atest5; -- ok
+SELECT atest1.*,atest5.one FROM atest1 JOIN atest5 ON (atest1.a = atest5.two); -- fail
+SELECT atest1.*,atest5.one FROM atest1 JOIN atest5 ON (atest1.a = atest5.one); -- ok
+SELECT one, two FROM atest5; -- fail
+
+SET SESSION AUTHORIZATION regressuser1;
+GRANT SELECT (one,two) ON atest6 TO regressuser4;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT one, two FROM atest5 NATURAL JOIN atest6; -- fail still
+
+SET SESSION AUTHORIZATION regressuser1;
+GRANT SELECT (two) ON atest5 TO regressuser4;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT one, two FROM atest5 NATURAL JOIN atest6; -- ok now
+
+-- test column-level privileges for INSERT and UPDATE
+INSERT INTO atest5 (two) VALUES (3); -- ok
+COPY atest5 FROM stdin; -- fail
+COPY atest5 (two) FROM stdin; -- ok
+1
+\.
+INSERT INTO atest5 (three) VALUES (4); -- fail
+INSERT INTO atest5 VALUES (5,5,5); -- fail
+UPDATE atest5 SET three = 10; -- ok
+UPDATE atest5 SET one = 8; -- fail
+UPDATE atest5 SET three = 5, one = 2; -- fail
+
+SET SESSION AUTHORIZATION regressuser1;
+REVOKE ALL (one) ON atest5 FROM regressuser4;
+GRANT SELECT (one,two,blue) ON atest6 TO regressuser4;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT one FROM atest5; -- fail
+UPDATE atest5 SET one = 1; -- fail
+SELECT atest6 FROM atest6; -- ok
+COPY atest6 TO stdout; -- ok
+
+-- test column-level privileges when involved with DELETE
+SET SESSION AUTHORIZATION regressuser1;
+ALTER TABLE atest6 ADD COLUMN three integer;
+GRANT DELETE ON atest5 TO regressuser3;
+GRANT SELECT (two) ON atest5 TO regressuser3;
+REVOKE ALL (one) ON atest5 FROM regressuser3;
+GRANT SELECT (one) ON atest5 TO regressuser4;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT atest6 FROM atest6; -- fail
+SELECT one FROM atest5 NATURAL JOIN atest6; -- fail
+
+SET SESSION AUTHORIZATION regressuser1;
+ALTER TABLE atest6 DROP COLUMN three;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT atest6 FROM atest6; -- ok
+SELECT one FROM atest5 NATURAL JOIN atest6; -- ok
+
+SET SESSION AUTHORIZATION regressuser1;
+ALTER TABLE atest6 DROP COLUMN two;
+REVOKE SELECT (one,blue) ON atest6 FROM regressuser4;
+
+SET SESSION AUTHORIZATION regressuser4;
+SELECT * FROM atest6; -- fail
+SELECT 1 FROM atest6; -- fail
+
+SET SESSION AUTHORIZATION regressuser3;
+DELETE FROM atest5 WHERE one = 1; -- fail
+DELETE FROM atest5 WHERE two = 2; -- ok
+
+-- check inheritance cases
+SET SESSION AUTHORIZATION regressuser1;
+CREATE TABLE atestp1 (f1 int, f2 int) WITH OIDS;
+CREATE TABLE atestp2 (fx int, fy int) WITH OIDS;
+CREATE TABLE atestc (fz int) INHERITS (atestp1, atestp2);
+GRANT SELECT(fx,fy,oid) ON atestp2 TO regressuser2;
+GRANT SELECT(fx) ON atestc TO regressuser2;
+
+SET SESSION AUTHORIZATION regressuser2;
+SELECT fx FROM atestp2; -- ok
+SELECT fy FROM atestp2; -- fail, no privilege on atestc.fy
+SELECT atestp2 FROM atestp2; -- fail, no privilege on atestc.fy
+SELECT oid FROM atestp2; -- fail, no privilege on atestc.oid
+
+SET SESSION AUTHORIZATION regressuser1;
+GRANT SELECT(fy,oid) ON atestc TO regressuser2;
+
+SET SESSION AUTHORIZATION regressuser2;
+SELECT fx FROM atestp2; -- still ok
+SELECT fy FROM atestp2; -- ok
+SELECT atestp2 FROM atestp2; -- ok
+SELECT oid FROM atestp2; -- ok
 
 -- privileges on functions, languages
 
@@ -398,7 +522,7 @@ drop table dep_priv_test;
 
 -- clean up
 
-\c regression
+\c
 
 DROP FUNCTION testfunc2(int);
 DROP FUNCTION testfunc4(boolean);
@@ -414,6 +538,11 @@ DROP TABLE atest1;
 DROP TABLE atest2;
 DROP TABLE atest3;
 DROP TABLE atest4;
+DROP TABLE atest5;
+DROP TABLE atest6;
+DROP TABLE atestc;
+DROP TABLE atestp1;
+DROP TABLE atestp2;
 
 DROP GROUP regressgroup1;
 DROP GROUP regressgroup2;

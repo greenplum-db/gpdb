@@ -10,7 +10,7 @@
 		  username="${ivyrepo.user}" passwd="${ivyrepo.passwd}" />
     </ivy:settings>
     <ivy:resolve conf="${BLD_ARCH}"
-                 log="download-only"/>
+                 log="quiet"/>
     <ivy:report conf="${BLD_ARCH}"
                 graph="false"/>
   </target>
@@ -19,20 +19,7 @@
     <ivy:cleancache />
   </target>
 
-
   <target name="post-resolve-trigger">
-    <echo>
-      ======================================================================
-        Post Resolve Trigger
-      ======================================================================
-      
-      organisation=${dep.organisation}
-      module=${dep.module}
-      revision=${dep.revision}
-      platform=${BLD_ARCH}      
-
-    </echo>
-
    <exec executable="./ivy.sh">
     <arg value="${dep.module}"/>
     <arg value="${dep.revision}"/>
@@ -43,18 +30,7 @@
   </target>
 
   <target name="download-untar-trigger">
-    <echo>
-======================================================================
-  Post download artifact
-======================================================================
-    organisation=${dep.organisation}
-    module=${dep.module}
-    revision=${dep.revision}
-    artifact=${dep.artifact}
-    origin=${dep.origin}
-    local=${dep.local}
-    size=${dep.size}</echo>
-
+    <echo>organisation=${dep.organisation} | module=${dep.module} | revision=${dep.revision} | artifact=${dep.artifact} | origin=${dep.origin} | local=${dep.local} | size=${dep.size}</echo>
   <exec executable="./ivy_util.sh">
     <arg value="${dep.file}"/>
     <arg value="${dep.revision}"/>

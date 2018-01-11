@@ -2,7 +2,12 @@
  *
  * cdbappendonlystorage_int.h
  *
- * Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbappendonlystorage_int.h
  *
  *-------------------------------------------------------------------------
  */
@@ -13,7 +18,7 @@
 #include "cdb/cdbappendonlystorage.h"
 
 /*
- * For checksum protection that doesn’t require examining the unchecked data,
+ * For checksum protection that doesn't require examining the unchecked data,
  * we always use a 64 bit header.  
  *
  * So, 64 bit header + [ block checksum + header checksum ].  When the table

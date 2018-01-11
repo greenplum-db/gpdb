@@ -3,7 +3,11 @@
  * execDynamicScan.c
  *	  Support routines for iterating through dynamically chosen partitions of a relation
  *
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execDynamicScan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -11,13 +15,12 @@
 
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
+#include "executor/executor.h"
 #include "executor/execDynamicScan.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/instrument.h"
-#include "executor/execIndexscan.h"
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
-#include "access/genam.h"
 
 static Oid
 DynamicScan_GetOriginalRelationOid(ScanState *scanState);
@@ -803,8 +806,7 @@ DynamicScan_GetNextTuple(ScanState *scanState, PartitionInitMethod *partitionIni
 MemoryContext
 DynamicScan_GetPartitionMemoryContext(ScanState *scanState)
 {
-	Assert(T_BitmapTableScanState == scanState->ps.type
-			|| T_BitmapIndexScanState == scanState->ps.type);
+	Assert(T_BitmapTableScanState == scanState->ps.type);
 
 	Scan *scan = (Scan *)scanState->ps.plan;
 

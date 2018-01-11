@@ -53,7 +53,7 @@
  *	  transaction.
  *
  * Like NOTIFY, LISTEN and UNLISTEN just add the desired action to a list
- * of pending actions.  If we reach transaction commit, the changes are
+ * of pending actions.	If we reach transaction commit, the changes are
  * applied to pg_listener just before executing any pending NOTIFYs.  This
  * method is necessary because to avoid race conditions, we must hold lock
  * on pg_listener from when we insert a new listener tuple until we commit.
@@ -125,12 +125,12 @@ typedef enum
 typedef struct
 {
 	ListenActionKind action;
-	char		condname[1];				/* actually, as long as needed */
+	char		condname[1];	/* actually, as long as needed */
 } ListenAction;
 
-static List *pendingActions = NIL;			/* list of ListenAction */
+static List *pendingActions = NIL;		/* list of ListenAction */
 
-static List *upperPendingActions = NIL;		/* list of upper-xact lists */
+static List *upperPendingActions = NIL; /* list of upper-xact lists */
 
 /*
  * State for outbound notifies consists of a list of all relnames NOTIFYed
@@ -148,7 +148,7 @@ static List *upperPendingActions = NIL;		/* list of upper-xact lists */
  * condition name, it will get a self-notify at commit.  This is a bit odd
  * but is consistent with our historical behavior.
  */
-static List *pendingNotifies = NIL;				/* list of C strings */
+static List *pendingNotifies = NIL;		/* list of C strings */
 
 static List *upperPendingNotifies = NIL;		/* list of upper-xact lists */
 
@@ -488,7 +488,7 @@ Exec_Listen(Relation lRel, const char *relname)
 	namestrcpy(&condname, relname);
 	values[Anum_pg_listener_relname - 1] = NameGetDatum(&condname);
 	values[Anum_pg_listener_listenerpid - 1] = Int32GetDatum(MyProcPid);
-	values[Anum_pg_listener_notification - 1] = Int32GetDatum(0);		/* no notifies pending */
+	values[Anum_pg_listener_notify - 1] = Int32GetDatum(0);		/* no notifies pending */
 
 	tuple = heap_form_tuple(RelationGetDescr(lRel), values, nulls);
 
@@ -599,9 +599,9 @@ Send_Notify(Relation lRel)
 	/* preset data to update notify column to MyProcPid */
 	memset(nulls, false, sizeof(nulls));
 	memset(repl, false, sizeof(repl));
-	repl[Anum_pg_listener_notification - 1] = true;
+	repl[Anum_pg_listener_notify - 1] = true;
 	memset(value, 0, sizeof(value));
-	value[Anum_pg_listener_notification - 1] = Int32GetDatum(MyProcPid);
+	value[Anum_pg_listener_notify - 1] = Int32GetDatum(MyProcPid);
 
 	scan = heap_beginscan(lRel, SnapshotNow, 0, NULL);
 
@@ -989,9 +989,9 @@ ProcessIncomingNotify(void)
 	/* Prepare data for rewriting 0 into notification field */
 	memset(nulls, false, sizeof(nulls));
 	memset(repl, false, sizeof(repl));
-	repl[Anum_pg_listener_notification - 1] = true;
+	repl[Anum_pg_listener_notify - 1] = true;
 	memset(value, 0, sizeof(value));
-	value[Anum_pg_listener_notification - 1] = Int32GetDatum(0);
+	value[Anum_pg_listener_notify - 1] = Int32GetDatum(0);
 
 	while ((lTuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{

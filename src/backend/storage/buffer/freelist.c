@@ -4,12 +4,12 @@
  *	  routines for managing the buffer pool's replacement strategy.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/freelist.c,v 1.64 2008/01/01 19:45:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/buffer/freelist.c,v 1.67 2009/06/22 20:04:28 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -374,9 +374,7 @@ GetAccessStrategy(BufferAccessStrategyType btype)
 	int			ring_size;
 
 	/*
-	 * Select ring size to use.  See buffer/README for rationales. (Currently
-	 * all cases are the same size, but keep this code structure for
-	 * flexibility.)
+	 * Select ring size to use.  See buffer/README for rationales.
 	 *
 	 * Note: if you change the ring size for BAS_BULKREAD, see also
 	 * SYNC_SCAN_REPORT_INTERVAL in access/heap/syncscan.c.
@@ -389,6 +387,9 @@ GetAccessStrategy(BufferAccessStrategyType btype)
 
 		case BAS_BULKREAD:
 			ring_size = 256 * 1024 / BLCKSZ;
+			break;
+		case BAS_BULKWRITE:
+			ring_size = 16 * 1024 * 1024 / BLCKSZ;
 			break;
 		case BAS_VACUUM:
 			ring_size = 256 * 1024 / BLCKSZ;

@@ -41,16 +41,6 @@ def getUserPIDs(conn):
     sql = """SELECT procpid FROM pg_stat_activity WHERE procpid != pg_backend_pid()"""
     return basicSQLExec(conn,sql)
 
-def getCollationSettings(conn):
-    sql = """ 
-    SELECT current_setting('lc_collate') as lc_collate,
-           current_setting('lc_monetary') as lc_monetary,
-           current_setting('lc_numeric') as lc_numeric;
-    """
-    rows = basicSQLExec(conn,sql)
-    
-    return (rows[0][0],rows[0][1],rows[0][2])
-
 def doesSchemaExist(conn,schemaname):
     sql = "SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname = '%s'" % schemaname
     cursor=None

@@ -234,7 +234,7 @@ DROP TABLE sreh_constr;
 -- External Tables 
 -- ###########################################################
 CREATE EXTERNAL WEB TABLE gpfdist_sreh_start (x text)
-execute E'((@bindir@/gpfdist -p 8080 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 8080 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 3; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_sreh_stop (x text)

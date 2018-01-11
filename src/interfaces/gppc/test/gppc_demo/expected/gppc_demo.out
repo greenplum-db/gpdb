@@ -366,7 +366,7 @@ WARNING:  warning emit
 
 SELECT errorcallbackfunc1('error');
 INFO:  inside callback: error
-ERROR:  error emit (gppc.c:1340)
+ERROR:  error emit
 SELECT errorcallbackfunc1('notice'); 
 INFO:  inside callback message is: notice emit
 NOTICE:  notice emit
@@ -905,10 +905,10 @@ SELECT spifunc6($$DROP INDEX spi_idx2$$, 0 , 0);
 \d spi_idx2
 -- Negative: connect again when already connected
 SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 1);
-ERROR:  connect error: already connected and cannot connect again. (gppc.c:1340)
+ERROR:  connect error: already connected and cannot connect again.
 -- Negative: try to execute without connection
 SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 2);
-ERROR:  query execution error: Connection has been closed unexpectedly. (gppc.c:1340)
+ERROR:  query execution error: Connection has been closed unexpectedly.
 -- Negative: close connection again when it has been closed already
 SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 3);
-ERROR:  connect error: connection has been closed and cannot be closed again. (gppc.c:1340)
+ERROR:  connect error: connection has been closed and cannot be closed again.

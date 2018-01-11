@@ -14,9 +14,10 @@
  *
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
- * Copyright (c) 2003-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/nodes/tidbitmap.h,v 1.6 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/tidbitmap.h,v 1.11 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -100,14 +101,18 @@ typedef struct PagetableEntry
 {
 	BlockNumber blockno;		/* page number (hashtable key) */
 	bool		ischunk;		/* T = lossy storage, F = exact */
+	bool		recheck;		/* should the tuples be rechecked? */
 	tbm_bitmapword	words[Max(WORDS_PER_PAGE, WORDS_PER_CHUNK)];
 } PagetableEntry;
 
 /*
  * Actual bitmap representation is private to tidbitmap.c.	Callers can
- * do IsA(x, HashBitmap) on it, but nothing else.
+ * do IsA(x, TIDBitmap) on it, but nothing else.
  */
-typedef struct HashBitmap HashBitmap;
+typedef struct TIDBitmap TIDBitmap;
+
+/* Likewise, TBMIterator is private */
+typedef struct TBMIterator TBMIterator;
 
 /*
  * Stream bitmap representation.
@@ -115,10 +120,15 @@ typedef struct HashBitmap HashBitmap;
 typedef struct StreamBitmap
 {
 	NodeTag			type;		/* to make it a valid Node */
-	PagetableEntry	entry;		/* a page of tids in this stream bitmap */
 	struct StreamNode      *streamNode; /* state internal to stream implementation */
     struct Instrumentation *instrument; /* CDB: stats for EXPLAIN ANALYZE */
 } StreamBitmap;
+
+/* A version of TBMIterator for StreamBitmap */
+typedef struct StreamBMIterator StreamBMIterator;
+
+/* A version of TBMIterator that handles both TIDBitmap and StreamBitmap */
+typedef struct GenericBMIterator GenericBMIterator;
 
 /*
  * Stream object.
@@ -126,10 +136,8 @@ typedef struct StreamBitmap
 typedef struct StreamNode
 {
 	StreamType      type;       /* one of: BMS_INDEX, BMS_AND, BMS_OR */
-	bool          (*pull)(struct StreamNode *self, PagetableEntry *e);
-	BlockNumber		nextblock;	/* block number we're up to */
-	void		   *opaque;     /* for IndexStream only */
-	List		   *input;		/* input streams; for OpStream only */
+	void		   *opaque;		/* implementation-specific data */
+	void 		  (*begin_iterate)(struct StreamNode *self, StreamBMIterator *iterator);
 	void          (*free)(struct StreamNode *self);
 	void          (*set_instrument)(struct StreamNode *self, struct Instrumentation *instr);
 	void          (*upd_instrument)(struct StreamNode *self);
@@ -152,31 +160,61 @@ typedef struct
 {
 	BlockNumber blockno;		/* page number containing tuples */
 	int			ntuples;		/* -1 indicates lossy result */
+	bool		recheck;		/* should the tuples be rechecked? */
+	/* Note: recheck is always true if ntuples < 0 */
 	OffsetNumber offsets[1];	/* VARIABLE LENGTH ARRAY */
 } TBMIterateResult;				/* VARIABLE LENGTH STRUCT */
 
+/* Make this visible for bitmap.c */
+struct StreamBMIterator
+{
+	const struct StreamNode *node;	/* the root node to iterate out of */
+	union
+	{
+		TBMIterator	   *hash;		/* for IndexStream */
+		List		   *stream;		/* for OpStream */
+	} input;						/* input iterator(s) */
+	void			   *opaque;		/* for the implementation in bitmap.c */
+
+	PagetableEntry	   *nextentry;	/* for IndexStream, a pointer to the next cached entry */
+	BlockNumber			nextblock;	/* block number we're up to */
+	PagetableEntry		entry;		/* storage for a page of tids in this stream bitmap */
+
+	bool    	      (*pull)(struct StreamBMIterator *self, PagetableEntry *e);
+	void			  (*end_iterate)(struct StreamBMIterator *self);
+
+	TBMIterateResult	output;		/* MUST BE LAST (because variable-size) */
+};
+
 /* function prototypes in nodes/tidbitmap.c */
-extern HashBitmap *tbm_create(long maxbytes);
-extern void tbm_free(HashBitmap *tbm);
+extern TIDBitmap *tbm_create(long maxbytes);
+extern void tbm_free(TIDBitmap *tbm);
 
-extern void tbm_add_tuples(HashBitmap *tbm, const ItemPointer tids, int ntids);
-extern void tbm_union(HashBitmap *a, const HashBitmap *b);
-extern void tbm_intersect(HashBitmap *a, const HashBitmap *b);
-extern bool tbm_is_empty(const HashBitmap *tbm);
+extern void tbm_add_tuples(TIDBitmap *tbm,
+			   const ItemPointer tids, int ntids,
+			   bool recheck);
+extern void tbm_add_page(TIDBitmap *tbm, BlockNumber pageno);
+extern void tbm_union(TIDBitmap *a, const TIDBitmap *b);
+extern void tbm_intersect(TIDBitmap *a, const TIDBitmap *b);
+extern bool tbm_is_empty(const TIDBitmap *tbm);
 
-extern void tbm_begin_iterate(HashBitmap *tbm);
-extern bool tbm_iterate(Node *tbm, TBMIterateResult *output);
+extern TBMIterator *tbm_begin_iterate(TIDBitmap *tbm);
+extern TBMIterateResult *tbm_iterate(TBMIterator *iterator);
+extern void tbm_end_iterate(TBMIterator *iterator);
 
 extern void stream_move_node(StreamBitmap *strm, StreamBitmap *other, StreamType kind);
 extern void stream_add_node(StreamBitmap *strm, StreamNode *node, StreamType kind);
-extern StreamNode *tbm_create_stream_node(HashBitmap *tbm);
-extern bool bitmap_stream_iterate(StreamNode *n, PagetableEntry *e);
+extern StreamNode *tbm_create_stream_node(TIDBitmap *tbm);
 
-/* These functions accept either a HashBitmap or a StreamBitmap... */
-extern void tbm_bitmap_free(Node *bm);
-extern void tbm_bitmap_set_instrument(Node *bm, struct Instrumentation *instr);
-extern void tbm_bitmap_upd_instrument(Node *bm);
+/* These functions accept either a TIDBitmap or a StreamBitmap... */
+extern GenericBMIterator *tbm_generic_begin_iterate(Node *bm);
+extern TBMIterateResult *tbm_generic_iterate(GenericBMIterator *iterator);
+extern void tbm_generic_end_iterate(GenericBMIterator *iterator);
+extern void tbm_generic_free(Node *bm);
+extern void tbm_generic_set_instrument(Node *bm, struct Instrumentation *instr);
+extern void tbm_generic_upd_instrument(Node *bm);
 
 extern void tbm_convert_appendonly_tid_out(ItemPointer psudeoHeapTid, AOTupleId *aoTid);
+
 
 #endif   /* TIDBITMAP_H */

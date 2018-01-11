@@ -62,7 +62,6 @@ struct SubPlan;
 struct Result;
 struct Material;
 struct ShareInputScan;
-struct WindowFrame;
 //struct Const;
 //struct List;
 
@@ -159,88 +158,6 @@ namespace gpdxl
 
 			// private copy ctor
 			CTranslatorDXLToPlStmt(const CTranslatorDXLToPlStmt&);
-
-			// segment mapping for tables with LOCATION http:// or file://
-			void MapLocationsFile
-					(
-					OID oidRel,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			// segment mapping for tables with LOCATION gpfdist(s):// or custom protocol
-			void MapLocationsFdist
-					(
-					OID oidRel,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB,
-					Uri *pUri,
-					const ULONG ulTotalPrimaries
-					);
-
-			// segment mapping for tables with EXECUTE 'cmd' ON.
-			void MapLocationsExecute
-					(
-					OID oidRel,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB,
-					const ULONG ulTotalPrimaries
-					);
-
-			// segment mapping for tables with EXECUTE 'cmd' on all segments
-			void MapLocationsExecuteAllSegments
-					(
-					CHAR *szPrefixedCommand,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			// segment mapping for tables with EXECUTE 'cmd' per host
-			void MapLocationsExecutePerHost
-					(
-					CHAR *szPrefixedCommand,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			// segment mapping for tables with EXECUTE 'cmd' on a given host
-			void MapLocationsExecuteOneHost
-					(
-					CHAR *szHostName,
-					CHAR *szPrefixedCommand,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			//segment mapping for tables with EXECUTE 'cmd' on N random segments
-			void MapLocationsExecuteRandomSegments
-					(
-					ULONG ulSegments,
-					const ULONG ulTotalPrimaries,
-					CHAR *szPrefixedCommand,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			// segment mapping for tables with EXECUTE 'cmd' on a given segment
-			void MapLocationsExecuteOneSegment
-					(
-					INT iTargetSegInd,
-					CHAR *szPrefixedCommand,
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB
-					);
-
-			// segment mapping for tables with LOCATION gphdfs://
-			void MapLocationsHdfs
-					(
-					char **rgszSegFileMap,
-					CdbComponentDatabases *pcdbCompDB,
-					CHAR *szFirstUri
-					);
-
-			// list of URIs for external scan
-			List* PlExternalScanUriList(OID oidRel);
 
 			// walker to set index var attno's
 			static
@@ -370,15 +287,6 @@ namespace gpdxl
 				const CDXLNode *pdxlnMotion,
 				CDXLTranslateContext *pdxltrctxOut,
 				DrgPdxltrctx *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
-				);
-
-			// translate the DXL window frame into GPDB window frame node
-			WindowFrame *Pwindowframe
-				(
-				const CDXLWindowFrame *pdxlwf,
-				const CDXLTranslateContext *pdxltrctxChild,
-				CDXLTranslateContext *pdxltrctxOut,
-				Plan *pplan
 				);
 
 			// translate DXL sort node into GPDB Sort plan node
@@ -675,7 +583,7 @@ namespace gpdxl
 				BitmapTableScan *pdbts
 				);
 			
-			// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan
+			// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan or DynamicBitmapIndexScan
 			Plan *PplanBitmapIndexProbe
 				(
 				const CDXLNode *pdxlnBitmapIndexProbe,

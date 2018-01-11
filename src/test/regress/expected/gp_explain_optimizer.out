@@ -127,9 +127,9 @@ SELECT * from
 get_explain_output($$ 
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Hash Cond:%';
-                          et                          
-------------------------------------------------------
-         Hash Cond: "inner".column1 = "outer".column1
+                                et                                
+------------------------------------------------------------------
+                     Hash Cond: "outer".column1 = "outer".column1
 (1 row)
 
 SELECT * from

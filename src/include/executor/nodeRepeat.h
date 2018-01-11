@@ -2,15 +2,13 @@
  *
  * nodeRepeat.h
  *
- * Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * IDENTIFICATION:
- *     $Id$
  *
- * $File$
- * $Change$
- * $Author$
- * $DateTime$
+ * IDENTIFICATION
+ *	    src/include/executor/nodeRepeat.h
+ *
  *-------------------------------------------------------------------------
  */
 
@@ -24,10 +22,5 @@ extern RepeatState *ExecInitRepeat(Repeat *node, EState *estate, int eflags);
 extern int ExecCountSlotsRepeat(Repeat *node);
 extern void ExecEndRepeat(RepeatState *node);
 extern void ExecReScanRepeat(RepeatState *node, ExprContext *exprCtxt);
-
-static inline gpmon_packet_t * GpmonPktFromRepeatState(RepeatState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
 
 #endif

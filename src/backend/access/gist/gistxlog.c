@@ -4,19 +4,23 @@
  *	  WAL replay logic for GiST.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			 $PostgreSQL: pgsql/src/backend/access/gist/gistxlog.c,v 1.27.2.1 2009/12/24 17:52:19 tgl Exp $
+ *			 $PostgreSQL: pgsql/src/backend/access/gist/gistxlog.c,v 1.32 2009/01/20 18:59:36 heikki Exp $
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "access/bufmask.h"
 #include "access/gist_private.h"
-#include "access/heapam.h"
+#include "access/xlogutils.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
+
 #include "utils/guc.h"
 
 typedef struct
@@ -190,7 +194,6 @@ gistRedoPageUpdateRecord(XLogRecPtr lsn, XLogRecord *record, bool isnewroot)
 
 	gistxlogPageUpdate *xldata = (gistxlogPageUpdate *) XLogRecGetData(record);
 	PageUpdateRecord xlrec;
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
@@ -204,18 +207,16 @@ gistRedoPageUpdateRecord(XLogRecPtr lsn, XLogRecord *record, bool isnewroot)
 							 NULL);
 
 	/* nothing else to do if page was backed up (and no info to do it with) */
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
 	decodePageUpdateRecord(&xlrec, record);
 
-	reln = XLogOpenRelation(xlrec.data->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, xlrec.data->blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec.data->blkno, buffer, lsn);
+	buffer = XLogReadBuffer(xlrec.data->node, xlrec.data->blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec.data->node, xlrec.data->blkno, buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
 		
@@ -250,7 +251,7 @@ gistRedoPageUpdateRecord(XLogRecPtr lsn, XLogRecord *record, bool isnewroot)
 
 	/* add tuples */
 	if (xlrec.len > 0)
-		gistfillbuffer(reln, page, xlrec.itup, xlrec.len, InvalidOffsetNumber);
+		gistfillbuffer(page, xlrec.itup, xlrec.len, InvalidOffsetNumber);
 
 	/*
 	 * special case: leafpage, nothing to insert, nothing to delete, then
@@ -283,21 +284,18 @@ gistRedoPageDeleteRecord(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	gistxlogPageDelete *xldata = (gistxlogPageDelete *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
 	/* nothing else to do if page was backed up (and no info to do it with) */
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xldata->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, xldata->blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xldata->blkno, buffer, lsn);
+	buffer = XLogReadBuffer(xldata->node, xldata->blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xldata->node, xldata->blkno, buffer, lsn);
 	if (!BufferIsValid(buffer))
 		return;
 
@@ -350,14 +348,12 @@ gistRedoPageSplitRecord(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	PageSplitRecord xlrec;
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 	int			i;
 	int			flags;
 
 	decodePageSplitRecord(&xlrec, record);
-	reln = XLogOpenRelation(xlrec.data->node);
 	flags = xlrec.data->origleaf ? F_LEAF : 0;
 
 	/* loop around all pages */
@@ -368,7 +364,7 @@ gistRedoPageSplitRecord(XLogRecPtr lsn, XLogRecord *record)
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
 
-		buffer = XLogReadBuffer(reln, newpage->header->blkno, true);
+		buffer = XLogReadBuffer(xlrec.data->node, newpage->header->blkno, true);
 		Assert(BufferIsValid(buffer));
 		page = (Page) BufferGetPage(buffer);
 
@@ -376,7 +372,7 @@ gistRedoPageSplitRecord(XLogRecPtr lsn, XLogRecord *record)
 		GISTInitBuffer(buffer, flags);
 
 		/* and fill it */
-		gistfillbuffer(reln, page, newpage->itup, newpage->header->num, FirstOffsetNumber);
+		gistfillbuffer(page, newpage->itup, newpage->header->num, FirstOffsetNumber);
 
 		PageSetLSN(page, lsn);
 		MarkBufferDirty(buffer);
@@ -402,16 +398,13 @@ gistRedoCreateIndex(XLogRecPtr lsn, XLogRecord *record)
 	gistxlogCreateIndex *xldata = (gistxlogCreateIndex *) XLogRecGetData(record);
 	
 	RelFileNode *node = &(xldata->node);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
-	reln = XLogOpenRelation(*node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, GIST_ROOT_BLKNO, true);
+	buffer = XLogReadBuffer(*node, GIST_ROOT_BLKNO, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -449,8 +442,9 @@ void
 gist_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
-
 	MemoryContext oldCxt;
+
+	RestoreBkpBlocks(lsn, record, false);
 
 	oldCxt = MemoryContextSwitchTo(opCtx);
 	switch (info)
@@ -631,6 +625,52 @@ gistMakePageLayout(Buffer *buffers, int nbuffers)
 }
 
 /*
+ * Mask a Gist page before running consistency checks on it.
+ */
+void
+gist_mask(char *pagedata, BlockNumber blkno)
+{
+	Page		page = (Page) pagedata;
+
+	mask_page_lsn_and_checksum(page);
+
+	mask_page_hint_bits(page);
+	mask_unused_space(page);
+
+	/*
+	 * NSN is nothing but a special purpose LSN. Hence, mask it for the same
+	 * reason as mask_page_lsn.
+	 */
+	PageXLogRecPtrSet(GistPageGetOpaque(page)->nsn, (uint64) MASK_MARKER);
+
+#if PG_VERSION_NUM >= 90100
+	/*
+	 * We update F_FOLLOW_RIGHT flag on the left child after writing WAL
+	 * record. Hence, mask this flag. See gistplacetopage() for details.
+	 */
+	GistMarkFollowRight(page);
+#endif
+
+	if (GistPageIsLeaf(page))
+	{
+		/*
+		 * In gist leaf pages, it is possible to modify the LP_FLAGS without
+		 * emitting any WAL record. Hence, mask the line pointer flags. See
+		 * gistkillitems() for details.
+		 */
+		mask_lp_flags(page);
+	}
+
+#if PG_VERSION_NUM >= 90600
+	/*
+	 * During gist redo, we never mark a page as garbage. Hence, mask it to
+	 * ignore any differences.
+	 */
+	GistClearPageHasGarbage(page);
+#endif
+}
+
+/*
  * Continue insert after crash.  In normal situations, there aren't any
  * incomplete inserts, but if a crash occurs partway through an insertion
  * sequence, we'll need to finish making the index valid at the end of WAL
@@ -655,7 +695,7 @@ gistContinueInsert(gistIncompleteInsert *insert)
 				lenitup;
 	Relation	index;
 
-	index = XLogOpenRelation(insert->node);
+	index = CreateFakeRelcacheEntry(insert->node);
 
 	/*
 	 * needed vector itup never will be more than initial lenblkno+2, because
@@ -680,7 +720,7 @@ gistContinueInsert(gistIncompleteInsert *insert)
 		 * it was split root, so we should only make new root. it can't be
 		 * simple insert into root, we should replace all content of root.
 		 */
-		Buffer		buffer = XLogReadBuffer(index, GIST_ROOT_BLKNO, true);
+		Buffer		buffer = XLogReadBuffer(insert->node, GIST_ROOT_BLKNO, true);
 
 		gistnewroot(index, buffer, itup, lenitup, NULL);
 		UnlockReleaseBuffer(buffer);
@@ -760,7 +800,7 @@ gistContinueInsert(gistIncompleteInsert *insert)
 				LockBuffer(buffers[numbuffer], GIST_EXCLUSIVE);
 				GISTInitBuffer(buffers[numbuffer], 0);
 				pages[numbuffer] = BufferGetPage(buffers[numbuffer]);
-				gistfillbuffer(index, pages[numbuffer], itup, lenitup, FirstOffsetNumber);
+				gistfillbuffer(pages[numbuffer], itup, lenitup, FirstOffsetNumber);
 				numbuffer++;
 
 				if (BufferGetBlockNumber(buffers[0]) == GIST_ROOT_BLKNO)
@@ -807,7 +847,7 @@ gistContinueInsert(gistIncompleteInsert *insert)
 
 				for (j = 0; j < ntodelete; j++)
 					PageIndexTupleDelete(pages[0], todelete[j]);
-				gistfillbuffer(index, pages[0], itup, lenitup, InvalidOffsetNumber);
+				gistfillbuffer(pages[0], itup, lenitup, InvalidOffsetNumber);
 
 				xlinfo = XLOG_GIST_PAGE_UPDATE;
 				rdata = formUpdateRdata(index, buffers[0],
@@ -854,6 +894,8 @@ gistContinueInsert(gistIncompleteInsert *insert)
 
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
+
+	FreeFakeRelcacheEntry(index);
 
 	ereport(LOG,
 			(errmsg("index %u/%u/%u needs VACUUM FULL or REINDEX to finish crash recovery",

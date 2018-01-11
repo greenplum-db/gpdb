@@ -8,13 +8,23 @@
  *    on top of the upstream entries from tuplesort.h:
  *    - Support for reader-writer tuplesort
  *
+ * NB: This should not be #included directly, only from tuplesort.h!
+ * The switcheroo magic to switch between the normal and MK tuplesorts
+ * might get confused otherwise.
+ *
  * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/tuplesort_gp.h
  *
  *-------------------------------------------------------------------------
  */
 #ifndef TUPLESORT_GP_H
 #define TUPLESORT_GP_H
 
+#include "utils/tuplesort.h"
 #include "nodes/execnodes.h"
 #include "utils/workfile_mgr.h"
 #include "gpmon/gpmon.h"
@@ -36,6 +46,7 @@ struct Tuplesortstate;
 
 
 extern struct Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
+		ScanState * ss,
 		const char* rwfile_prefix, bool isWriter,
 		TupleDesc tupDesc, 
 		int nkeys, AttrNumber *attNums,

@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_auth_members;
- roleid | member | grantor | admin_option 
---------+--------+---------+--------------
-(0 rows)
-
--- end_ignore

@@ -3,7 +3,12 @@
  * cdbcat.c
  *	  Provides routines for reading info from mpp schema tables
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbcat.c
  *
  *-------------------------------------------------------------------------
  */
@@ -48,16 +53,16 @@ createRandomDistribution(void)
 GpPolicy *
 GpPolicyCopy(MemoryContext mcxt, const GpPolicy *src)
 {
-	GpPolicy  *tgt;
+	GpPolicy   *tgt;
 	size_t		nb;
 
 	if (!src)
 		return NULL;
 	nb = sizeof(*src) - sizeof(src->attrs) + src->nattrs * sizeof(src->attrs[0]);
-   	tgt = (GpPolicy *)MemoryContextAlloc(mcxt, nb);
+	tgt = (GpPolicy *) MemoryContextAlloc(mcxt, nb);
 	memcpy(tgt, src, nb);
 	return tgt;
-}	                            /* GpPolicyCopy */
+}								/* GpPolicyCopy */
 
 /*
  * GpPolicyEqual -- Test equality of policies (by value only).
@@ -65,26 +70,26 @@ GpPolicyCopy(MemoryContext mcxt, const GpPolicy *src)
 bool
 GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 {
-	int	i;
-	
+	int			i;
+
 	if (lft == rgt)
-	    return true;
-	
+		return true;
+
 	if (!lft || !rgt)
 		return false;
-	
-	if ( lft->ptype != rgt->ptype )
-	    return false;
-	
-	if ( lft->nattrs != rgt->nattrs )
-	    return false;
-	
-	for ( i = 0; i < lft->nattrs; i++ )
-	    if ( lft->attrs[i] != rgt->attrs[i] )
-	        return false;
-	
+
+	if (lft->ptype != rgt->ptype)
+		return false;
+
+	if (lft->nattrs != rgt->nattrs)
+		return false;
+
+	for (i = 0; i < lft->nattrs; i++)
+		if (lft->attrs[i] != rgt->attrs[i])
+			return false;
+
 	return true;
-}	                            /* GpPolicyEqual */
+}								/* GpPolicyEqual */
 
 /*
  * GpPolicyFetch
@@ -101,7 +106,7 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 GpPolicy *
 GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 {
-	GpPolicy  *policy = NULL;	/* The result */
+	GpPolicy   *policy = NULL;	/* The result */
 	Relation	gp_policy_rel;
 	ScanKeyData scankey;
 	SysScanDesc scan;
@@ -120,8 +125,8 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	}
 
 	/*
-	 * EXECUTE-type external tables have an "ON ..." specification, stored
-	 * in pg_exttable.location. See if it's "MASTER_ONLY". Other types of
+	 * EXECUTE-type external tables have an "ON ..." specification, stored in
+	 * pg_exttable.location. See if it's "MASTER_ONLY". Other types of
 	 * external tables have a gp_distribution_policy row, like normal tables.
 	 */
 	if (get_rel_relstorage(tbloid) == RELSTORAGE_EXTERNAL)
@@ -136,15 +141,16 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 		ExtTableEntry *e = GetExtTableEntryIfExists(tbloid);
 
 		/*
-		 * Writeable external tables have gp_distribution_policy entries,
-		 * like regular tables. Readable external tables are implicitly
-		 * randomly distributed, except for "EXECUTE ... ON MASTER" ones.
+		 * Writeable external tables have gp_distribution_policy entries, like
+		 * regular tables. Readable external tables are implicitly randomly
+		 * distributed, except for "EXECUTE ... ON MASTER" ones.
 		 */
 		if (e && !e->iswritable)
 		{
-			char *on_clause = (char *) strVal(linitial(e->execlocations));
+			char	   *on_clause = (char *) strVal(linitial(e->execlocations));
 
-			if (strcmp(on_clause, "MASTER_ONLY") == 0) {
+			if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			{
 				policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
 				policy->ptype = POLICYTYPE_ENTRY;
 				policy->nattrs = 0;
@@ -190,13 +196,13 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 		/*
 		 * Get the attributes on which to partition.
 		 */
-		attr = heap_getattr(gp_policy_tuple, Anum_gp_policy_attrnums, 
+		attr = heap_getattr(gp_policy_tuple, Anum_gp_policy_attrnums,
 							RelationGetDescr(gp_policy_rel), &isNull);
 
 		/*
 		 * Get distribution keys only if this table has a policy.
 		 */
-		if(!isNull)
+		if (!isNull)
 		{
 			extract_INT2OID_array(attr, &nattrs, &attrnums);
 			Assert(nattrs >= 0);
@@ -227,7 +233,7 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	}
 
 	return policy;
-}                               /* GpPolicyFetch */
+}								/* GpPolicyFetch */
 
 
 /*
@@ -269,9 +275,9 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 
 	Insist(policy->ptype == POLICYTYPE_PARTITIONED);
 
-    /*
-     * Open and lock the gp_distribution_policy catalog.
-     */
+	/*
+	 * Open and lock the gp_distribution_policy catalog.
+	 */
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/*
@@ -309,12 +315,12 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
 
 	/*
-     * Close the gp_distribution_policy relcache entry without unlocking.
-     * We have updated the catalog: consequently the lock must be held until
-     * end of transaction.
-     */
-    heap_close(gp_policy_rel, NoLock);
-}                               /* GpPolicyStore */
+	 * Close the gp_distribution_policy relcache entry without unlocking. We
+	 * have updated the catalog: consequently the lock must be held until end
+	 * of transaction.
+	 */
+	heap_close(gp_policy_rel, NoLock);
+}								/* GpPolicyStore */
 
 /*
  * Sets the policy of a table into the gp_distribution_policy table
@@ -334,9 +340,9 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 
 	Insist(policy->ptype == POLICYTYPE_PARTITIONED);
 
-    /*
-     * Open and lock the gp_distribution_policy catalog.
-     */
+	/*
+	 * Open and lock the gp_distribution_policy catalog.
+	 */
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/*
@@ -366,7 +372,7 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 		values[1] = PointerGetDatum(attrnums);
 	else
 		nulls[1] = true;
-		
+
 	repl[0] = false;
 	repl[1] = true;
 
@@ -380,14 +386,16 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 				ObjectIdGetDatum(tbloid));
 	scan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
 							  SnapshotNow, 1, &skey);
+
 	/*
 	 * Read first (and only ) tuple
 	 */
 	if ((gp_policy_tuple = systable_getnext(scan)) != NULL)
 	{
-		HeapTuple newtuple = heap_modify_tuple(gp_policy_tuple,
-											   RelationGetDescr(gp_policy_rel),
-											   values, nulls, repl);
+		HeapTuple	newtuple = heap_modify_tuple(gp_policy_tuple,
+												 RelationGetDescr(gp_policy_rel),
+												 values, nulls, repl);
+
 		simple_heap_update(gp_policy_rel, &gp_policy_tuple->t_self, newtuple);
 		CatalogUpdateIndexes(gp_policy_rel, newtuple);
 
@@ -402,12 +410,12 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	systable_endscan(scan);
 
 	/*
-     * Close the gp_distribution_policy relcache entry without unlocking.
-     * We have updated the catalog: consequently the lock must be held until
-     * end of transaction.
-     */
-    heap_close(gp_policy_rel, NoLock);
-}                               /* GpPolicyReplace */
+	 * Close the gp_distribution_policy relcache entry without unlocking. We
+	 * have updated the catalog: consequently the lock must be held until end
+	 * of transaction.
+	 */
+	heap_close(gp_policy_rel, NoLock);
+}								/* GpPolicyReplace */
 
 
 /*
@@ -422,9 +430,9 @@ GpPolicyRemove(Oid tbloid)
 	SysScanDesc sscan;
 	HeapTuple	tuple;
 
-    /*
-     * Open and lock the gp_distribution_policy catalog.
-     */
+	/*
+	 * Open and lock the gp_distribution_policy catalog.
+	 */
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/* Delete the policy entry from the catalog. */
@@ -443,12 +451,12 @@ GpPolicyRemove(Oid tbloid)
 	systable_endscan(sscan);
 
 	/*
-     * Close the gp_distribution_policy relcache entry without unlocking.
-     * We have updated the catalog: consequently the lock must be held until
-     * end of transaction.
-     */
-    heap_close(gp_policy_rel, NoLock);
-}                               /* GpPolicyRemove */
+	 * Close the gp_distribution_policy relcache entry without unlocking. We
+	 * have updated the catalog: consequently the lock must be held until end
+	 * of transaction.
+	 */
+	heap_close(gp_policy_rel, NoLock);
+}								/* GpPolicyRemove */
 
 /*
  * Returns true only if the policy is a randomly distributed.  In other cases,
@@ -478,15 +486,15 @@ GpPolicyIsRandomly(GpPolicy *policy)
  */
 void
 checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
-			 			  bool isprimary, bool has_exprs, bool has_pkey,
+						  bool isprimary, bool has_exprs, bool has_pkey,
 						  bool has_ukey)
 {
-	Bitmapset *polbm = NULL;
-	Bitmapset *indbm = NULL;
-	int i;
-	GpPolicy *pol = rel->rd_cdbpolicy;
+	Bitmapset  *polbm = NULL;
+	Bitmapset  *indbm = NULL;
+	int			i;
+	GpPolicy   *pol = rel->rd_cdbpolicy;
 
-	/* 
+	/*
 	 * Firstly, unique/primary key indexes aren't supported if we're
 	 * distributing randomly.
 	 */
@@ -498,7 +506,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 						isprimary ? "PRIMARY KEY" : "UNIQUE")));
 	}
 
-	/* 
+	/*
 	 * We use bitmaps to make intersection tests easier. As noted, order is
 	 * not relevant so looping is just painful.
 	 */
@@ -507,7 +515,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	for (i = 0; i < nidxatts; i++)
 	{
 		if (indattr[i] < 0)
-        	ereport(ERROR,
+			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 					 errmsg("cannot create %s on system column",
 							isprimary ? "primary key" : "unique index")));
@@ -518,7 +526,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	Assert(bms_membership(polbm) != BMS_EMPTY_SET);
 	Assert(bms_membership(indbm) != BMS_EMPTY_SET);
 
-	/* 
+	/*
 	 * If the existing policy is not a subset, we must either error out or
 	 * update the distribution policy. It might be tempting to say that even
 	 * when the policy is a subset, we should update it to match the index
@@ -526,8 +534,8 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	 * distribution on (a, b) but then creates an index on (a, b, c) we'll
 	 * change the policy underneath them.
 	 *
-	 * What is really needed is a new field in gp_distribution_policy telling us
-	 * if the policy has been explicitly set.
+	 * What is really needed is a new field in gp_distribution_policy telling
+	 * us if the policy has been explicitly set.
 	 */
 	if (!bms_is_subset(polbm, indbm))
 	{
@@ -538,17 +546,18 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 					 errmsg("%s must contain all columns in the "
 							"distribution key of relation \"%s\"",
 							isprimary ? "PRIMARY KEY" : "UNIQUE index",
-						RelationGetRelationName(rel))));
+							RelationGetRelationName(rel))));
 		}
 		else
 		{
 			/* update policy since table is not populated yet. See MPP-101 */
-			GpPolicy *policy = palloc(sizeof(GpPolicy) + 
-									  (sizeof(AttrNumber) * nidxatts));
+			GpPolicy   *policy = palloc(sizeof(GpPolicy) +
+										(sizeof(AttrNumber) * nidxatts));
+
 			policy->ptype = POLICYTYPE_PARTITIONED;
 			policy->nattrs = 0;
 			for (i = 0; i < nidxatts; i++)
-				policy->attrs[policy->nattrs++] = indattr[i];	
+				policy->attrs[policy->nattrs++] = indattr[i];
 
 			GpPolicyReplace(rel->rd_id, policy);
 

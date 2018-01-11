@@ -190,7 +190,7 @@ HINT:  Use ALTER EXTERNAL TABLE instead
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
-ERROR:  Unsupported ALTER command for table type external
+ERROR:  Unsupported ALTER command for table type external. No constraints allowed.
 alter external table ext add column extnewcol int; -- pass
 alter external table ext alter column extnewcol set default 1; -- should fail (unsupported alter type)
 ERROR:  Unsupported ALTER command for table type external
@@ -278,6 +278,10 @@ DROP EXTERNAL TABLE ext_r;
 RESET SESSION AUTHORIZATION;
 REVOKE ALL PRIVILEGES ON PROTOCOL demoprot FROM extprotu;
 DROP ROLE IF EXISTS extprotu;
+-- Test multi-object DROP
+CREATE PROTOCOL demoprot_droptest1 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+CREATE PROTOCOL demoprot_droptest2 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
 --
 -- WET tests
 --
@@ -518,7 +522,7 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
 select * from ret_too_many_uris;
-ERROR:  There are more external files (URLs) than primary segments that can read them. Found 20 URLs and 3 primary segments.
+ERROR:  There are more external files (URLs) than primary segments that can read them.
 create writable external table wet_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/wet.out1',  'gpfdist://foo.invalid:7070/wet.out2',
   'gpfdist://foo.invalid:7070/wet.out3',  'gpfdist://foo.invalid:7070/wet.out4',
@@ -798,12 +802,6 @@ select count(*) from gp_read_error_log('exttab_cte_2');
      1
 (1 row)
 
-select count(*) from gp_read_error_log('exttab_cte_1');
- count 
--------
-     2
-(1 row)
-
 -- CTE without segment reject limit exceeded
 select gp_truncate_error_log('exttab_cte_1');
  gp_truncate_error_log 
@@ -832,12 +830,6 @@ NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related
  10 | 10_number
 (5 rows)
 
-select count(*) from gp_read_error_log('exttab_cte_1');
- count 
--------
-     4
-(1 row)
-
 -- Define a cursor on an external table scan query with segment reject limit reached
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text ) 
@@ -859,13 +851,6 @@ SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i 
 UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i;
 COMMIT;
--- This should have the errors populated already
-SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_1');
- ?column? 
-----------
- t
-(1 row)
-
 reset CLIENT_MIN_MESSAGES;
 -- Fetch on external table scans with segment reject limit reached
 SELECT gp_truncate_error_log('exttab_cursor_1');
@@ -983,13 +968,6 @@ FETCH exttab_cur1;
 
 COMMIT;
 NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
--- This should have errors populated already
-SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_1');
- ?column? 
-----------
- t
-(1 row)
-
 -- Check permissions with gp_truncate_error_log and gp_read_error_log
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text ) 
@@ -1031,12 +1009,6 @@ RESET ROLE;
 DROP ROLE IF EXISTS exttab_superuser;
 CREATE ROLE exttab_superuser WITH SUPERUSER LOGIN;
 SET ROLE exttab_superuser;
-SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
- count 
--------
-     2
-(1 row)
-
 SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_2');
  count 
 -------
@@ -1290,12 +1262,6 @@ NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related
    4 |  37 | 4_number
 (3 rows)
 
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
- ?column? 
-----------
- t
-(1 row)
-
 SELECT gp_truncate_error_log('exttab_subq_1');
  gp_truncate_error_log 
 -----------------------
@@ -1318,12 +1284,6 @@ NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related
 -----+-----+---
 (0 rows)
 
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
- ?column? 
-----------
- t
-(1 row)
-
 SELECT gp_truncate_error_log('exttab_subq_1');
  gp_truncate_error_log 
 -----------------------
@@ -1345,12 +1305,6 @@ NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related
 ---+---
 (0 rows)
 
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
- ?column? 
-----------
- t
-(1 row)
-
 SELECT gp_truncate_error_log('exttab_subq_1');
  gp_truncate_error_log 
 -----------------------
@@ -1368,12 +1322,6 @@ FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=49348)
 DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_subq_1');
- ?column? 
-----------
- t
-(1 row)
-
 -- CSQ
 SELECT gp_truncate_error_log('exttab_subq_1');
  gp_truncate_error_log 
@@ -2150,13 +2098,6 @@ SELECT * from exttab_union_insert_1 order by i;
  10 | 10_number
 (8 rows)
 
--- Error table count
-select count(*) > 0 FROM gp_read_error_log('exttab_union_1');
- ?column? 
-----------
- t
-(1 row)
-
 -- Views reaching segment reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_views_1 CASCADE;
 NOTICE:  table "exttab_views_1" does not exist, skipping
@@ -2373,13 +2314,6 @@ NOTICE:  Found 8 data formatting errors (8 or more input rows). Rejected related
  7 |     7 |     7 |     1 | 7 |     7 |     7 |     1
 (5 rows)
 
-SELECT relname,linenum,errmsg,rawdata FROM gp_read_error_log('exttab_windows_1') ORDER BY linenum LIMIT 2;
-     relname      | linenum |           errmsg            | rawdata 
-------------------+---------+-----------------------------+---------
- exttab_windows_1 |       3 | missing data for column "j" | error_0
- exttab_windows_1 |       3 | missing data for column "j" | error_0
-(2 rows)
-
 -- with reaching segment reject limit
 SELECT gp_truncate_error_log('exttab_windows_1');
  gp_truncate_error_log 
@@ -2458,10 +2392,10 @@ WHERE e1.i = e2.i LIMIT 5
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice4 @hostname@:40000 pid=49348)
 DETAIL:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-SELECT count(*) FROM gp_read_error_log('exttab_limit_1');
+SELECT count(*) FROM gp_read_error_log('exttab_limit_2');
  count 
 -------
-     4
+     1
 (1 row)
 
 SELECT gp_truncate_error_log('exttab_limit_1');
@@ -2505,12 +2439,6 @@ NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related
  4 | 4_number
  6 | 6_number
 (5 rows)
-
-SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_1');
- ?column? 
-----------
- t
-(1 row)
 
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_2');
  ?column? 

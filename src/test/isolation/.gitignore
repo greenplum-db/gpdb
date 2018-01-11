@@ -5,6 +5,7 @@
 /explain.pm
 /gpdiff.pl
 /gpstringsubs.pl
+/GPTest.pm
 
 # Local generated source files
 /specparse.c

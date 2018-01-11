@@ -3,12 +3,12 @@
  * auth.c
  *	  Routines to handle network authentication
  *
- * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.164.2.5 2009/10/16 22:08:48 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.183 2009/06/25 11:30:08 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -120,12 +120,12 @@ static Port *pam_port_cludge;	/* Workaround for passing "Port *port" into
 
 /* Correct header from the Platform SDK */
 typedef
-ULONG(*__ldap_start_tls_sA) (
-							 IN PLDAP ExternalHandle,
-							 OUT PULONG ServerReturnValue,
-							 OUT LDAPMessage ** result,
-							 IN PLDAPControlA * ServerControls,
-							 IN PLDAPControlA * ClientControls
+ULONG		(*__ldap_start_tls_sA) (
+												IN PLDAP ExternalHandle,
+												OUT PULONG ServerReturnValue,
+												OUT LDAPMessage **result,
+										   IN PLDAPControlA * ServerControls,
+											IN PLDAPControlA * ClientControls
 );
 #endif
 
@@ -194,10 +194,10 @@ static int check_valid_until_for_gssapi(Port *port);
  *----------------------------------------------------------------
  */
 #ifdef ENABLE_SSPI
-typedef		SECURITY_STATUS
+typedef SECURITY_STATUS
 			(WINAPI * QUERY_SECURITY_CONTEXT_TOKEN_FN) (
 													   PCtxtHandle, void **);
-static int pg_SSPI_recvauth(Port *port);
+static int	pg_SSPI_recvauth(Port *port);
 #endif
 
 /*----------------------------------------------------------------
@@ -484,7 +484,7 @@ ClientAuthentication(Port *port)
 		{
 			ereport(FATAL,
 					(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-					 errmsg("connection requires a valid client certificate")));
+				  errmsg("connection requires a valid client certificate")));
 		}
 #else
 
@@ -2050,7 +2050,7 @@ ident_unix(int sock, char *ident_user)
 	{
 		ereport(LOG,
 				(errcode_for_socket_access(),
-				 errmsg("could not get effective UID from peer credentials: %m")));
+		   errmsg("could not get effective UID from peer credentials: %m")));
 		return false;
 	}
 
@@ -2060,8 +2060,8 @@ ident_unix(int sock, char *ident_user)
 	if (pass == NULL)
 	{
 		ereport(LOG,
-			(errmsg("local user with ID %d does not exist",
-					(int) uid)));
+				(errmsg("local user with ID %d does not exist",
+						(int) uid)));
 		return false;
 	}
 
@@ -2188,7 +2188,6 @@ authident(hbaPort *port)
 
 	return check_usermap(port->hba->usermap, port->user_name, ident_user, false);
 }
-
 
 /*----------------------------------------------------------------
  * PAM authentication system
@@ -2756,6 +2755,7 @@ CheckCertAuth(Port *port)
 	/* Just pass the certificate CN to the usermap check */
 	return check_usermap(port->hba->usermap, port->user_name, port->peer_cn, false);
 }
+
 #endif
 
 

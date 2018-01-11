@@ -3,10 +3,10 @@
  * varsup.c
  *	  postgres OID & XID variables support routines
  *
- * Copyright (c) 2000-2008, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.81 2008/01/01 19:45:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.84 2009/04/23 00:23:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,15 +96,20 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 					 errmsg("database is not accepting commands to avoid wraparound data loss in database \"%s\"",
 							NameStr(ShmemVariableCache->limit_datname)),
-					 errhint("Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in \"%s\". Reset the xid_stop_limit GUC.",
+					 errhint("Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a database-wide VACUUM in \"%s\". Reset the xid_stop_limit GUC.",
 							 NameStr(ShmemVariableCache->limit_datname))));
 		else if (TransactionIdFollowsOrEquals(xid, ShmemVariableCache->xidWarnLimit))
 			ereport(WARNING,
-					(errmsg("database \"%s\" must be vacuumed within %u transactions",
-							NameStr(ShmemVariableCache->limit_datname),
-							ShmemVariableCache->xidWrapLimit - xid),
-					 errhint("To avoid a database shutdown, execute a full-database VACUUM in \"%s\".",
-							 NameStr(ShmemVariableCache->limit_datname))));
+			(errmsg("database \"%s\" must be vacuumed within %u transactions",
+					NameStr(ShmemVariableCache->limit_datname),
+					ShmemVariableCache->xidWrapLimit - xid),
+			 /*
+			  * In GPDB, don't say anything about old prepared transactions, because the system
+			  * only uses prepared transactions internally. PREPARE TRANSACTION is not available
+			  * to users.
+			  */
+			 errhint("To avoid a database shutdown, execute a database-wide VACUUM in \"%s\".",
+					 NameStr(ShmemVariableCache->limit_datname))));
 	}
 
 	/*
@@ -315,7 +320,12 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 		   (errmsg("database \"%s\" must be vacuumed within %u transactions",
 				   NameStr(*oldest_datname),
 				   xidWrapLimit - curXid),
-			errhint("To avoid a database shutdown, execute a full-database VACUUM in \"%s\".",
+			 /*
+			  * In GPDB, don't say anything about old prepared transactions, because the system
+			  * only uses prepared transactions internally. PREPARE TRANSACTION is not available
+			  * to users.
+			  */
+			errhint("To avoid a database shutdown, execute a database-wide VACUUM in \"%s\".",
 					NameStr(*oldest_datname))));
 }
 

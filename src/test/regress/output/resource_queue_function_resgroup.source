@@ -6,18 +6,18 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 INSERT INTO test_table values(1, 2);
 -- MPP-17240
 CREATE RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='10MB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE ROLE test_role WITH RESOURCE QUEUE test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10465)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10466)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10467)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10465)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10466)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10467)
+HINT:  To enable set gp_resource_manager=queue
 GRANT SELECT ON test_table TO test_role;
 SET STATEMENT_MEM = '125MB';
 -- should return true
@@ -48,22 +48,22 @@ RESET STATEMENT_MEM;
 REVOKE SELECT ON test_table FROM test_role;
 DROP ROLE test_role; 
 DROP RESOURCE QUEUE test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 -- MPP-15992
 CREATE RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='8GB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 CREATE ROLE test_role WITH RESOURCE QUEUE test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 NOTICE:  resource group required -- using default resource group "default_group"
-WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10465)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10466)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
-WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10467)
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg0 172.17.0.2:25432 pid=10465)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg1 172.17.0.2:25433 pid=10466)
+HINT:  To enable set gp_resource_manager=queue
+WARNING:  resource queue is disabled  (seg2 172.17.0.2:25434 pid=10467)
+HINT:  To enable set gp_resource_manager=queue
 GRANT SELECT ON test_table TO test_role;
 SET ROLE test_role; 
 -- should return result 
@@ -75,8 +75,8 @@ SELECT count(*) FROM test_table;
 
 RESET ROLE;
 ALTER RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='10GB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SET ROLE test_role; 
 -- should return result 
 SELECT count(*) FROM test_table; 
@@ -94,8 +94,8 @@ select checkResourceQueueMemoryLimits('test_q');
 (1 row)
 
 ALTER RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='7GB');
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 SET ROLE test_role; 
 -- should return result 
 SELECT count(*) FROM test_table; 
@@ -116,6 +116,6 @@ REVOKE SELECT ON test_table FROM test_role;
 DROP TABLE test_table;
 DROP ROLE test_role; 
 DROP RESOURCE QUEUE test_q;
-WARNING:  resource scheduling is disabled
-HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource queue is disabled
+HINT:  To enable set gp_resource_manager=queue
 DROP FUNCTION checkResourceQueueMemoryLimits(cstring);

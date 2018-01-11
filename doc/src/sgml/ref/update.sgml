@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/update.sgml,v 1.45 2007/11/28 15:42:31 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/update.sgml,v 1.49 2009/01/22 20:16:00 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-UPDATE">
  <refmeta>
   <refentrytitle id="SQL-UPDATE-TITLE">UPDATE</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -25,7 +26,7 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ * ] [ [ AS 
           ( <replaceable class="PARAMETER">column</replaceable> [, ...] ) = ( { <replaceable class="PARAMETER">expression</replaceable> | DEFAULT } [, ...] ) } [, ...]
     [ FROM <replaceable class="PARAMETER">fromlist</replaceable> ]
     [ WHERE <replaceable class="PARAMETER">condition</replaceable> | WHERE CURRENT OF <replaceable class="PARAMETER">cursor_name</replaceable> ]
-    [ RETURNING * | <replaceable class="parameter">output_expression</replaceable> [ AS <replaceable class="parameter">output_name</replaceable> ] [, ...] ]
+    [ RETURNING * | <replaceable class="parameter">output_expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...] ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -58,9 +59,10 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ * ] [ [ AS 
   </para>
 
   <para>
-   You must have the <literal>UPDATE</literal> privilege on the table
-   to update it, as well as the <literal>SELECT</literal>
-   privilege to any table whose values are read in the
+   You must have the <literal>UPDATE</literal> privilege on the table,
+   or at least on the column(s) that are listed to be updated.
+   You must also have the <literal>SELECT</literal>
+   privilege on any column whose values are read in the
    <replaceable class="parameter">expressions</replaceable> or
    <replaceable class="parameter">condition</replaceable>.
   </para>
@@ -164,10 +166,13 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ * ] [ [ AS 
      <para>
       The name of the cursor to use in a <literal>WHERE CURRENT OF</>
       condition.  The row to be updated is the one most recently fetched
-      from this cursor.  The cursor must be a simple (non-join, non-aggregate)
+      from this cursor.  The cursor must be a non-grouping
       query on the <command>UPDATE</>'s target table.
       Note that <literal>WHERE CURRENT OF</> cannot be
-      specified together with a Boolean condition.
+      specified together with a Boolean condition.  See
+      <xref linkend="sql-declare" endterm="sql-declare-title">
+      for more information about using cursors with
+      <literal>WHERE CURRENT OF</>.
      </para>
     </listitem>
    </varlistentry>
@@ -328,7 +333,7 @@ COMMIT;
    <literal>c_films</> is currently positioned:
 <programlisting>
 UPDATE films SET kind = 'Dramatic' WHERE CURRENT OF c_films;
-</programlisting>      
+</programlisting>
   </para>
  </refsect1>
 

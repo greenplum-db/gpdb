@@ -11,26 +11,17 @@
       <li id="eu150554">
         <xref href="./gp_configuration_history.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150176">
-        <xref href="gp_db_interfaces.xml" type="topic" format="dita"/>
-      </li>
       <li id="eu150300">
         <xref href="./gp_distribution_policy.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu150308">
         <xref href="./gp_fastsequence.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150471">
-        <xref href="./gp_fault_strategy.xml#topic1" type="topic" format="dita"/>
-      </li>
       <li id="eu150472">
         <xref href="./gp_global_sequence.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu150476">
         <xref href="./gp_id.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150180">
-        <xref href="./gp_interfaces.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu152757">gp_master_mirroring (Deprecated. See <xref
         href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
@@ -202,9 +193,6 @@
         <xref href="./pg_type.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu151122">pg_user_mapping (not supported)</li>
-      <li id="eu149986">
-        <xref href="./pg_window.xml#topic1" type="topic" format="dita"/>
-      </li>
     </ul>
   </body>
 </topic>

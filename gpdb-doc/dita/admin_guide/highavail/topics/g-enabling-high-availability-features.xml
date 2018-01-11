@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-   <title>Enabling High Availability Features</title>
+   <title>Enabling High Availability and Data Consistency Features</title>
    <abstract>
       <shortdesc>The fault tolerance and the high-availability features of Greenplum Database can be
          configured.</shortdesc>

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # set variables if they are unset or null
-export HADOOP_HOME=${HADOOP_HOME:-/usr/hdp/2.3.2.0-2950}
-export GP_HADOOP_TARGET_VERSION=${GP_HADOOP_TARGET_VERSION:-cdh4.1}
+export HADOOP_HOME=${HADOOP_HOME:-/usr/local/hadoop}
+export GP_HADOOP_TARGET_VERSION=${GP_HADOOP_TARGET_VERSION:-hadoop}
 export HADOOP_HOST=${HADOOP_HOST:-localhost}
 export HADOOP_PORT=${HADOOP_PORT:-8020}
 
@@ -89,7 +89,7 @@ _main() {
 	$HADOOPCMD fs -rm -f -r /mapred/*
 
 	# gphdfs_regress_schedule
-	PGOPTIONS="-c optimizer=off -c codegen=off -c gp_hadoop_home=${HADOOP_HOME} -c gp_hadoop_target_version=${GP_HADOOP_TARGET_VERSION}" ${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/gphdfs_init_file --schedule=$CURDIR/gphdfs_regress_schedule  --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=.
+	PGOPTIONS="-c optimizer=off -c codegen=off -c gp_hadoop_home=${HADOOP_HOME} -c gp_hadoop_target_version=${GP_HADOOP_TARGET_VERSION}" ${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/gphdfs_init_file --schedule=$CURDIR/gphdfs_regress_schedule --inputdir=$CURDIR/source_replaced --outputdir=.
 }
 
 _main "$@"

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic20">
+   <title>One-time gphdfs Protocol Installation</title>
+   <body>
+      <p>Install and configure Hadoop for use with <codeph>gphdfs</codeph> as follows:<ol
+            id="ol_whb_fxz_h4">
+            <li id="du188617">Install Java 1.7 or later on <b>all</b> Greenplum Database hosts:
+               master, segment, and standby master.</li>
+            <li id="du225465">Install a compatible Hadoop distribution on all hosts. The
+               distribution must be the same on all hosts. For Hadoop installation information, see
+               the Hadoop distribution documentation.<p>See the <i>Greenplum Database Release
+                     Notes</i> for information about compatible Hadoop distributions.</p>
+            </li>
+            <li id="du191308">After installation, ensure that the Greenplum system user
+                  (<codeph>gpadmin</codeph>) has read and execute access to the Hadoop libraries or
+               to the Greenplum MR client.</li>
+            <li id="du171526">Set the following environment variables on <b>all</b> segments: <ul
+                  id="ul_s5n_3z1_kp">
+                  <li>
+                     <codeph>JAVA_HOME</codeph> – the Java home directory</li>
+                  <li>
+                     <codeph>HADOOP_HOME</codeph> – the Hadoop home directory</li>
+               </ul> For example, add lines such as the following to the <codeph>gpadmin</codeph>
+               user <codeph>.bashrc</codeph> profile.
+                  <codeblock>export JAVA_HOME=/usr/java/default
+export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
+                  variables must be set in the <codeph>~gpadmin/.bashrc</codeph> or the
+                     <codeph>~gpadmin/.bash_profile</codeph> file so that the gpadmin user shell
+                  environment can locate the Java home and Hadoop home.</p>
+            </li>
+            <li id="du191372">Set the following Greenplum Database server configuration parameters
+               and restart Greenplum Database.<table id="du191386">
+                  <title>Server Configuration Parameters for Hadoop Targets</title>
+                  <tgroup cols="4">
+                     <colspec colnum="1" colname="col1" colwidth="1.5*"/>
+                     <colspec colnum="2" colname="col2" colwidth="2*"/>
+                     <colspec colnum="3" colname="col3" colwidth="1*"/>
+                     <colspec colnum="4" colname="col4" colwidth="1*"/>
+                     <thead>
+                        <row>
+                           <entry colname="col1">Configuration Parameter</entry>
+                           <entry colname="col2">Description</entry>
+                           <entry colname="col3">Default Value</entry>
+                           <entry colname="col4">Set Classifications</entry>
+                        </row>
+                     </thead>
+                     <tbody>
+                        <row>
+                           <entry colname="col1">
+                              <codeph>gp_hadoop_target_version</codeph>
+                           </entry>
+                           <entry colname="col2">The Hadoop target. Choose one of the following: <p>
+                                 <codeph>cdh</codeph>
+                              </p><p>
+                                 <codeph>hadoop</codeph>
+                              </p><p>
+                                 <codeph>hdp</codeph>
+                              </p><p>
+                                 <codeph>mpr</codeph>
+                              </p></entry>
+                           <entry colname="col3">
+                              <codeph>hadoop</codeph>
+                           </entry>
+                           <entry colname="col4">master<p>session</p>reload </entry>
+                        </row>
+                        <row otherprops="oss">
+                           <entry colname="col1">
+                              <codeph>gp_hadoop_home</codeph>
+                           </entry>
+                           <entry colname="col2">This parameter specifies the
+                              installation directory for Hadoop.</entry>
+                           <entry colname="col3">
+                              <codeph>NULL</codeph>
+                           </entry>
+                           <entry colname="col4">master<p>session</p><p>reload</p></entry>
+                        </row>
+                     </tbody>
+                  </tgroup>
+               </table> 
+               For example, the following commands use the Greenplum Database utilities
+                  <codeph>gpconfig</codeph> and <codeph>gpstop</codeph> to set the server
+               configuration parameters and restart Greenplum
+               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v 'hdp'
+gpstop -u</codeblock>
+               For information about the Greenplum Database utilities <codeph>gpconfig</codeph> and
+                  <codeph>gpstop</codeph>, see the <cite>Greenplum Database Utility Guide</cite>. </li>
+            <li id="li_mfx_jmf_lt">If needed, ensure that the <codeph>CLASSPATH</codeph> environment
+               variable generated by the <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph> file on
+               every Greenplum Database host contains the path to JAR files that contain Java
+               classes that are required for <codeph>gphdfs</codeph>.<p>For example, if
+                     <codeph>gphdfs</codeph> returns a class not found exception, ensure the JAR
+                  file containing the class is on every Greenplum Database host and update the
+                     <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph> file so that the
+                     <codeph>CLASSPATH</codeph> environment variable created by file contains the
+                  JAR file.</p></li>
+         </ol>
+      </p>
+   </body>
+   <topic id="topic_jnp_yng_4v">
+      <title>About gphdfs JVM Memory</title>
+      <body>
+         <p>When Greenplum Database accesses external table data from an HDFS location with
+               <codeph>gphdfs</codeph> protocol, each Greenplum Database segment on a host system
+            starts a JVM for use by the protocol. The default JVM heapsize is 1GB and should be
+            enough for most workloads</p>
+         <p>If the <codeph>gphdfs</codeph> JVM runs out of memory, the issue might be related to the
+            density of tuples inside the Hadoop HDFS block assigned to the <codeph>gphdfs</codeph>
+            segment worker. A higher density of tuples per block requires more
+               <codeph>gphdfs</codeph> memory. HDFS block size is usually 128MB, 256MB, or 512MB
+            depending on the Hadoop cluster configuration.</p>
+         <p>You can increase the JVM heapsize by changing <codeph>GP_JAVA_OPT</codeph> variable in
+            the file <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph>. In this example line, the
+            option <codeph>-Xmx1000m</codeph> specifies that the JVM consumes 1GB of virtual
+            memory.</p>
+         <p>
+            <codeblock>export GP_JAVA_OPT='-Xmx1000m -XX:+DisplayVMOutputToStderr'</codeblock>
+         </p>
+         <p>The <codeph>$GPHOME/lib/hadoop/hadoop_env.sh</codeph> must be updated for every segment
+            instance in the Greenplum Database system.</p>
+         <note type="important">Before increasing the <codeph>gphdfs</codeph> JVM memory, ensure
+            that you have sufficient memory on the host. For example, 8 primary segments consume 8GB
+            of virtual memory for the <codeph>gphdfs</codeph> JVM when using default. Increasing the
+            Java -<codeph>Xmx</codeph> value to 2GB results in 16GB allocated in that environment of
+            8 segments per host. </note>
+      </body>
+   </topic>
+</topic>

@@ -162,7 +162,8 @@ Drop table if exists ao_db_bk_t4;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_bk_t4" does not exist, skipping
 DROP TABLE
 Create table ao_db_bk_t4 ( i int, j int) with(blocksize=3456);
-psql:/path/sql_file:1: ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 3456
+psql:/path/sql_file:1: ERROR:  value 3456 out of bounds for option "blocksize"
+DETAIL:  Valid values are between "8192" and "2097152".
 -- Create table with other storage parameters , orientation, checksum, compresstype, compresslevel
 Drop table if exists ao_db_bk_t5;
 psql:/path/sql_file:1: NOTICE:  table "ao_db_bk_t5" does not exist, skipping

@@ -4,11 +4,12 @@
  *	  Virtual file descriptor code.
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.143.2.1 2009/12/03 11:03:44 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.149 2009/06/11 14:49:01 momjian Exp $
  *
  * NOTES:
  *
@@ -64,6 +65,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>		/* for getrlimit */
+#endif
 
 #include "miscadmin.h"
 #include "access/xact.h"
@@ -148,9 +152,15 @@ static int	max_safe_fds = 32;	/* default if not changed */
 #define FD_TEMPORARY		(1 << 0)	/* T = delete when closed */
 #define FD_CLOSE_AT_EOXACT	(1 << 1)	/* T = close at eoXact */
 
+/*
+ * Flag to tell whether it's worth scanning VfdCache looking for temp files to
+ * close
+ */
+static bool have_xact_temporary_files = false;
+
 typedef struct vfd
 {
-	int fd;			/* current FD, or VFD_CLOSED if none */
+	int			fd;				/* current FD, or VFD_CLOSED if none */
 	unsigned short fdstate;		/* bitflags for VFD's state */
 	ResourceOwner resowner;		/* owner, for automatic cleanup */
 	File		nextFree;		/* link to next free VFD, if in freelist */
@@ -401,13 +411,38 @@ count_usable_fds(int max_to_probe, int *usable_fds, int *already_open)
 	int			highestfd = 0;
 	int			j;
 
+#ifdef HAVE_GETRLIMIT
+	struct rlimit rlim;
+	int			getrlimit_status;
+#endif
+
 	size = 1024;
 	fd = (int *) palloc(size * sizeof(int));
+
+#ifdef HAVE_GETRLIMIT
+#ifdef RLIMIT_NOFILE			/* most platforms use RLIMIT_NOFILE */
+	getrlimit_status = getrlimit(RLIMIT_NOFILE, &rlim);
+#else	/* but BSD doesn't ... */
+	getrlimit_status = getrlimit(RLIMIT_OFILE, &rlim);
+#endif   /* RLIMIT_NOFILE */
+	if (getrlimit_status != 0)
+		ereport(WARNING, (errmsg("getrlimit failed: %m")));
+#endif   /* HAVE_GETRLIMIT */
 
 	/* dup until failure or probe limit reached */
 	for (;;)
 	{
 		int			thisfd;
+
+#ifdef HAVE_GETRLIMIT
+
+		/*
+		 * don't go beyond RLIMIT_NOFILE; causes irritating kernel logs on
+		 * some platforms
+		 */
+		if (getrlimit_status == 0 && highestfd >= rlim.rlim_cur - 1)
+			break;
+#endif
 
 		thisfd = dup(0);
 		if (thisfd < 0)
@@ -1081,6 +1116,9 @@ OpenNamedFile(const char   *fileName,
 
 		ResourceOwnerRememberFile(CurrentResourceOwner, file);
 		VfdCache[file].resowner = CurrentResourceOwner;
+
+		/* ensure cleanup happens at eoxact */
+		have_xact_temporary_files = true;
 	}
 
 	return file;
@@ -1175,6 +1213,42 @@ FileClose(File file)
 	FreeVfd(file);
 }
 
+/*
+ * FilePrefetch - initiate asynchronous read of a given range of the file.
+ * The logical seek position is unaffected.
+ *
+ * Currently the only implementation of this function is using posix_fadvise
+ * which is the simplest standardized interface that accomplishes this.
+ * We could add an implementation using libaio in the future; but note that
+ * this API is inappropriate for libaio, which wants to have a buffer provided
+ * to read into.
+ */
+int
+FilePrefetch(File file, off_t offset, int amount)
+{
+#if defined(USE_POSIX_FADVISE) && defined(POSIX_FADV_WILLNEED)
+	int			returnCode;
+
+	Assert(FileIsValid(file));
+
+	DO_DB(elog(LOG, "FilePrefetch: %d (%s) " INT64_FORMAT " %d",
+			   file, VfdCache[file].fileName,
+			   (int64) offset, amount));
+
+	returnCode = FileAccess(file);
+	if (returnCode < 0)
+		return returnCode;
+
+	returnCode = posix_fadvise(VfdCache[file].fd, offset, amount,
+							   POSIX_FADV_WILLNEED);
+
+	return returnCode;
+#else
+	Assert(FileIsValid(file));
+	return 0;
+#endif
+}
+
 int
 FileRead(File file, char *buffer, int amount)
 {
@@ -1184,7 +1258,8 @@ FileRead(File file, char *buffer, int amount)
 
 	DO_DB(elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, amount, buffer));
+			   (int64) VfdCache[file].seekPos,
+			   amount, buffer));
 
 	if (Debug_filerep_print)
 		elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
@@ -1243,7 +1318,8 @@ FileWrite(File file, char *buffer, int amount)
 
 	DO_DB(elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, amount, buffer));
+			   (int64) VfdCache[file].seekPos,
+			   amount, buffer));
 
 	returnCode = FileAccess(file);
 	if (returnCode < 0)
@@ -1344,7 +1420,8 @@ FileSeek(File file, int64 offset, int whence)
 
 	DO_DB(elog(LOG, "FileSeek: %d (%s) " INT64_FORMAT " " INT64_FORMAT " %d",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, offset, whence));
+			   (int64) VfdCache[file].seekPos,
+			   (int64) offset, whence));
 
 	if (FileIsNotOpen(file))
 	{
@@ -1352,7 +1429,8 @@ FileSeek(File file, int64 offset, int whence)
 		{
 			case SEEK_SET:
 				if (offset < 0)
-					elog(ERROR, "invalid seek offset: %ld", offset);
+					elog(ERROR, "invalid seek offset: " INT64_FORMAT,
+						 (int64) offset);
 				VfdCache[file].seekPos = offset;
 				break;
 			case SEEK_CUR:
@@ -1989,7 +2067,11 @@ CleanupTempFiles(bool isProcExit)
 {
 	Index		i;
 
-	if (SizeVfdCache > 0)
+	/*
+	 * Careful here: at proc_exit we need extra cleanup, not just
+	 * xact_temporary files.
+	 */
+	if (isProcExit || have_xact_temporary_files)
 	{
 		Assert(FileIsNotOpen(0));		/* Make sure ring not corrupted */
 		for (i = 1; i < SizeVfdCache; i++)
@@ -2016,6 +2098,8 @@ CleanupTempFiles(bool isProcExit)
 				}
 			}
 		}
+
+		have_xact_temporary_files = false;
 	}
 
 	workfile_mgr_cleanup();

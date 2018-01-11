@@ -7,6 +7,11 @@
  * Portions Copyright (c) 1996-2006, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2007, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbappendonlyam.h
  *
  *-------------------------------------------------------------------------
  */
@@ -169,7 +174,6 @@ typedef struct AppendOnlyScanDescData
 	Index       aos_scanrelid;
 	int			aos_nkeys;			/* number of scan keys */
 	ScanKey		aos_key;			/* array of scan key descriptors */
-	bool		aos_notoast;		/* using toast for this relation? */
 	
 	/* file segment scan state */
 	int			aos_filenamepath_maxlen;
@@ -347,10 +351,10 @@ extern bool appendonly_fetch(
 	TupleTableSlot *slot);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
 extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno, bool update_mode);
-extern void appendonly_insert(
+extern Oid appendonly_insert(
 		AppendOnlyInsertDesc aoInsertDesc, 
 		MemTuple instup, 
-		Oid *tupleOid, 
+		Oid tupleOid,
 		AOTupleId *aoTupleId);
 extern void appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc);
 extern BlockNumber RelationGuessNumberOfBlocks(double totalbytes);
@@ -370,17 +374,31 @@ extern HTSU_Result appendonly_update(
 
 #ifdef USE_SEGWALREP
 #define XLOG_APPENDONLY_INSERT    0x00
+#define XLOG_APPENDONLY_TRUNCATE  0x10
 
-typedef struct xl_ao_insert
+typedef struct
+{
+	RelFileNode node;
+	uint32		segment_filenum;
+	int64		offset;
+} xl_ao_target;
+
+#define SizeOfAOTarget (offsetof(xl_ao_target, offset) + sizeof(int64))
+
+typedef struct
 {
 	/* meta data about the inserted block of AO data*/
-	RelFileNode node;
-	uint		segment_filenum;
-	int64		offset;
-		/* BLOCK DATA FOLLOWS AT END OF STRUCT */
+	xl_ao_target target;
+	/* BLOCK DATA FOLLOWS AT END OF STRUCT */
 } xl_ao_insert;
 
-#define SizeOfAOInsert (offsetof(xl_ao_insert, offset) + sizeof(int64))
+#define SizeOfAOInsert (offsetof(xl_ao_insert, target) + SizeOfAOTarget)
+
+typedef struct
+{
+	/* meta data about the truncated AO/CO file*/
+	xl_ao_target target;
+} xl_ao_truncate;
 
 extern void appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);

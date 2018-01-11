@@ -13,10 +13,19 @@ CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$
     SELECT * FROM resGroupPalloc($2)
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION hold_memory_by_percent_on_qe(int, float) RETURNS int AS $$
+    SELECT resGroupPalloc($2) FROM gp_dist_random('gp_id')
+$$ LANGUAGE sql;
+
+-- After a 'q' command the client connection is disconnected but the
+-- QD may still be alive, if we then query pg_stat_activity quick enough
+-- we might still see this session with current_query '<IDLE>'.
+-- A filter is put to filter out this kind of quitted sessions.
 CREATE OR REPLACE VIEW rg_activity_status AS
 	SELECT rsgname, waiting_reason, current_query
 	FROM pg_stat_activity
-	WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test'
+	WHERE rsgname in ('rg1_memory_test', 'rg2_memory_test')
+	  AND current_query <> '<IDLE>'
 	ORDER BY sess_id;
 
 CREATE OR REPLACE VIEW rg_mem_status AS
@@ -490,3 +499,48 @@ DROP ROLE role1_memory_test;
 DROP ROLE role2_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
+
+--
+-- Test PrepareTransaction report an error
+--
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
+
+SET debug_dtm_action = "fail_begin_command";
+SET debug_dtm_action_target = "protocol";
+SET debug_dtm_action_protocol = "prepare";
+SET debug_dtm_action_segment = 0;
+
+-- ALTER should fail and the memory_limit in both catalog and share memory are
+-- still 5%
+ALTER RESOURCE GROUP rg_test_group set memory_limit 1;
+
+RESET debug_dtm_action;
+RESET debug_dtm_action_target;
+RESET debug_dtm_action_protocol;
+RESET debug_dtm_action_segment;
+
+-- should still be 5% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+
+--
+-- Test error happen on commit_prepare, DDL success after retry
+--
+SET debug_dtm_action = "fail_begin_command";
+SET debug_dtm_action_target = "protocol";
+SET debug_dtm_action_protocol = "commit_prepared";
+SET debug_dtm_action_segment = 0;
+
+-- ALTER should success
+ALTER RESOURCE GROUP rg_test_group set memory_limit 4;
+
+RESET debug_dtm_action;
+RESET debug_dtm_action_target;
+RESET debug_dtm_action_protocol;
+RESET debug_dtm_action_segment;
+
+-- should still be 4% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+
+DROP ROLE rg_test_role;
+DROP RESOURCE GROUP rg_test_group;

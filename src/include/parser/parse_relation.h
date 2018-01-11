@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_relation.h,v 1.59 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_relation.h,v 1.64 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -28,8 +28,8 @@ extern RangeTblEntry *refnameRangeTblEntry(ParseState *pstate,
 					 int location,
 					 int *sublevels_up);
 extern CommonTableExpr *scanNameSpaceForCTE(ParseState *pstate,
-											const char *refname,
-											Index *ctelevelsup);
+					const char *refname,
+					Index *ctelevelsup);
 extern void checkNameSpaceConflicts(ParseState *pstate, List *namespace1,
 						List *namespace2);
 extern int RTERangeTablePosn(ParseState *pstate,
@@ -50,6 +50,10 @@ extern Node *qualifiedNameToVar(ParseState *pstate,
 				   char *colname,
 				   bool implicitRTEOK,
 				   int location);
+extern void markVarForSelectPriv(ParseState *pstate, Var *var,
+					 RangeTblEntry *rte);
+extern Relation parserOpenTable(ParseState *pstate, const RangeVar *relation,
+				int lockmode, bool nowait, bool *lockUpgraded);
 extern RangeTblEntry *addRangeTableEntry(ParseState *pstate,
 				   RangeVar *relation,
 				   Alias *alias,
@@ -84,8 +88,6 @@ extern RangeTblEntry *addRangeTableEntryForCTE(ParseState *pstate,
 						 Index levelsup,
 						 Alias *alias,
 						 bool inFromCl);
-extern bool isSimplyUpdatableRelation(Oid relid, bool noerror);
-extern Index extractSimplyUpdatableRTEIndex(List *rtable);
 extern void addRTEtoQuery(ParseState *pstate, RangeTblEntry *rte,
 			  bool addToJoinList,
 			  bool addToRelNameSpace, bool addToVarNameSpace);
@@ -98,5 +100,8 @@ extern List *expandRelAttrs(ParseState *pstate, RangeTblEntry *rte,
 extern int	attnameAttNum(Relation rd, const char *attname, bool sysColOK);
 extern Name attnumAttName(Relation rd, int attid);
 extern Oid	attnumTypeId(Relation rd, int attid);
+
+extern bool isSimplyUpdatableRelation(Oid relid, bool noerror);
+extern Index extractSimplyUpdatableRTEIndex(List *rtable);
 
 #endif   /* PARSE_RELATION_H */

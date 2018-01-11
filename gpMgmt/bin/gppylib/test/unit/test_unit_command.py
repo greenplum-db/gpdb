@@ -1,6 +1,7 @@
 from commands.base import Command, CommandResult, REMOTE, GPHOME
 from gp_unittest import *
 
+
 class CommandTest(GpTestCase):
     def setUp(self):
         self.subject = Command("my name", "my command string")
@@ -49,6 +50,12 @@ class CommandTest(GpTestCase):
     def test_create_command_with_custom_gphome(self):
         self.subject = Command("my name", "my command string", ctxt=REMOTE, remoteHost="someHost", gphome="/new/gphome")
         self.assertIn("/new/gphome", self.subject.exec_context.gphome)
+
+    def test_running_command_remembers_pid(self):
+        self.subject = Command("my name", "ls")
+        self.subject.pid = -1
+        self.subject.run()
+        self.assertTrue(self.subject.pid > 0)
 
 if __name__ == '__main__':
     run_tests()

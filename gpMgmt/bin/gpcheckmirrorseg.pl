@@ -1034,6 +1034,17 @@ sub dandydiff
 		my $pfilsiz = shift @ppp;
 		my $mfilsiz = shift @mmm;
 
+		# GPDB_84_MERGE_FIXME: ignore relation forks other than the main on the
+		# primary. Review to ensure gpcheckmirrorseg deals with relation forks
+		# correctly in all use cases.
+		if (($pfilnam =~ /_fsm$/)
+			|| ($pfilnam =~ /_vm$/))
+		{
+			# Advance, and don't mark this file as an extra.
+			$pstat = ($plin = <$pfh>);
+			next;
+		}
+
 		# if filenames don't match, advance the lesser (and mark it as
 		# an "extra")
 		if ($pfilnam gt $mfilnam)

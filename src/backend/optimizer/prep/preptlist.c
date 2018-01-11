@@ -13,11 +13,12 @@
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.88 2008/01/01 19:45:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.96 2009/04/19 19:46:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,7 +26,9 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/gp_policy.h"     /* CDB: POLICYTYPE_PARTITIONED */
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/plancat.h"
@@ -38,13 +41,13 @@
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 
 
 static List *expand_targetlist(List *tlist, int command_type,
 				  Index result_relation, List *range_table);
-static List *supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
-													 List *range_table,
-													 List *tlist);
+static List *supplement_simply_updatable_targetlist(List *range_table,
+													List *tlist);
 
 
 /*
@@ -141,15 +144,8 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	} 
 
 	/* simply updatable cursors */
-	if (command_type == CMD_SELECT && 
-		parse->utilityStmt &&
-		IsA(parse->utilityStmt, DeclareCursorStmt) &&
-		((DeclareCursorStmt *) parse->utilityStmt)->is_simply_updatable)
-	{
-		tlist = supplement_simply_updatable_targetlist((DeclareCursorStmt *) parse->utilityStmt, 
-													   range_table,
-													   tlist);
-	}
+	if (root->glob->simplyUpdatable)
+		tlist = supplement_simply_updatable_targetlist(range_table, tlist);
 
 	/*
 	 * Add TID targets for rels selected FOR UPDATE/SHARE.	The executor uses
@@ -195,6 +191,11 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
             if (isdistributed)
                 continue;
 
+			/* ignore child rels */
+			if (rc->rti != rc->prti)
+				continue;
+
+			/* always need the ctid */
 			var = makeVar(rc->rti,
 						  SelfItemPointerAttributeNumber,
 						  TIDOID,
@@ -210,6 +211,26 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 								  true);
 
 			tlist = lappend(tlist, tle);
+
+			/* if parent of inheritance tree, need the tableoid too */
+			if (rc->isParent)
+			{
+				var = makeVar(rc->rti,
+							  TableOidAttributeNumber,
+							  OIDOID,
+							  -1,
+							  0);
+
+				resname = (char *) palloc(32);
+				snprintf(resname, 32, "tableoid%u", rc->rti);
+
+				tle = makeTargetEntry((Expr *) var,
+									  list_length(tlist) + 1,
+									  resname,
+									  true);
+
+				tlist = lappend(tlist, tle);
+			}
 		}
 	}
 
@@ -225,13 +246,16 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 		List	   *vars;
 		ListCell   *l;
 
-		vars = pull_var_clause((Node *) parse->returningList, false);
+		vars = pull_var_clause((Node *) parse->returningList,
+							   PVC_RECURSE_AGGREGATES,
+							   PVC_INCLUDE_PLACEHOLDERS);
 		foreach(l, vars)
 		{
 			Var		   *var = (Var *) lfirst(l);
 			TargetEntry *tle;
 
-			if (var->varno == result_relation)
+			if (IsA(var, Var) &&
+				var->varno == result_relation)
 				continue;		/* don't need it */
 
 			if (tlist_member((Node *) var, tlist))
@@ -442,9 +466,8 @@ expand_targetlist(List *tlist, int command_type,
  * available in the tuple itself.
  */
 static List *
-supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt, List *range_table, List *tlist) 
+supplement_simply_updatable_targetlist(List *range_table, List *tlist)
 {
-	Assert(stmt->is_simply_updatable);
 	Index varno = extractSimplyUpdatableRTEIndex(range_table);
 
 	/* ctid */
@@ -482,7 +505,7 @@ supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt, List *range_tabl
 	 * our ability to uniquely identify a tuple. Without inheritance, we omit tableoid
 	 * to avoid the overhead of carrying tableoid for each tuple in the result set.
 	 */
-	if (find_inheritance_children(reloid) != NIL)
+	if (find_inheritance_children(reloid, NoLock) != NIL)
 	{
 		Var         *varTableoid = makeVar(varno,
 										   TableOidAttributeNumber,

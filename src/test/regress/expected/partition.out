@@ -1,39 +1,77 @@
 set enable_partition_rules = false;
-set gp_enable_hash_partitioned_tables = true;
 -- Check multi level partition COPY
-CREATE TABLE REGION (
-                    R_REGIONKEY INTEGER not null,
-                    R_NAME CHAR(25),
-                    R_COMMENT VARCHAR(152)
-                    )
-distributed by (r_regionkey)
-partition by hash (r_regionkey) partitions 1
-subpartition by hash (r_name) subpartitions 3
-,subpartition by hash (r_comment) subpartitions 2
+create table region
 (
-partition p1(subpartition sp1,subpartition sp2,subpartition sp3)
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+distributed by (r_regionkey)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition africa values ('AFRICA'),
+	subpartition america values ('AMERICA'),
+	subpartition asia values ('ASIA'),
+	subpartition europe values ('EUROPE'),
+	subpartition mideast values ('MIDDLE EAST'),
+	subpartition australia values ('AUSTRALIA'),
+	subpartition antarctica values ('ANTARCTICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
 );
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1" for table "region"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1_3_prt_1" for table "region_1_prt_p1_2_prt_sp1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1_3_prt_2" for table "region_1_prt_p1_2_prt_sp1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2_3_prt_1" for table "region_1_prt_p1_2_prt_sp2"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2_3_prt_2" for table "region_1_prt_p1_2_prt_sp2"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3_3_prt_1" for table "region_1_prt_p1_2_prt_sp3"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3_3_prt_2" for table "region_1_prt_p1_2_prt_sp3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_africa" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_america" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_asia" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_europe" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_mideast" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_australia" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_antarctica" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_africa" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_america" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_asia" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_europe" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_mideast" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_australia" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_antarctica" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_africa" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_america" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_asia" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_europe" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_mideast" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_australia" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_antarctica" for table "region_1_prt_region3"
 create unique index region_pkey on region(r_regionkey);
-NOTICE:  building index for child partition "region_1_prt_p1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1_3_prt_2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2_3_prt_2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3_3_prt_2"
+NOTICE:  building index for child partition "region_1_prt_region1"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_antarctica"
+NOTICE:  building index for child partition "region_1_prt_region2"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_antarctica"
+NOTICE:  building index for child partition "region_1_prt_region3" for table "region"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_antarctica"
 copy region from stdin with delimiter '|';
 -- Test indexes
 set enable_seqscan to off;
@@ -74,26 +112,18 @@ select * from region where r_regionkey = 6;
 (1 row)
 
 -- Test indexes with insert
--- start_matchsubs
---
--- # Note: insert is different partition depending on endianness
---
--- m/ERROR:.*duplicate key violates unique constraint.*region_1_prt_p1_2_prt_sp\d+_3_prt_1_pkey/
--- s/sp\d+/SPSOMETHING/
---
--- end_matchsubs
-insert into region values(7, 'abc', 'def');
+insert into region values(7, 'AUSTRALIA', 'def');
 select * from region where r_regionkey = '7';
  r_regionkey |          r_name           | r_comment 
 -------------+---------------------------+-----------
-           7 | abc                       | def
+           7 | AUSTRALIA                 | def
 (1 row)
 
 -- test duplicate key. We shouldn't really allow primary keys on partitioned
 -- tables since we cannot enforce them. But since this insert maps to a
 -- single definitive partition, we can detect it.
-insert into region values(7, 'abc', 'def');
-ERROR: duplicate key value violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"  (seg0 slarimac:40000 pid=97859)
+insert into region values(7, 'AUSTRALIA', 'def');
+ERROR: duplicate key value violates unique constraint "region_pkey_1_prt_region3_2_prt_australia"  (seg0 slarimac:40000 pid=97859)
 DETAIL: Key (r_regionkey)=(7) already exists.
 drop table region;
 -- exchange
@@ -193,6 +223,23 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  relation "bar_p" must have the same column names and column order as "foo_p"
 drop table foo_p;
 drop table bar_p;
+-- still different schema, but more than one level partitioning
+CREATE TABLE two_level_pt(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+      SUBPARTITION BY RANGE (c)
+      SUBPARTITION TEMPLATE (
+      START (11) END (12) EVERY (1))
+      ( START (1) END (2) EVERY (1));
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1" for table "two_level_pt"
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1_2_prt_1" for table "two_level_pt_1_prt_1"
+CREATE TABLE candidate_for_leaf(a int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- should fail
+ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
+      EXCHANGE PARTITION FOR (11) WITH TABLE candidate_for_leaf;
+ERROR:  relation "candidate_for_leaf" must have the same column names and column order as "two_level_pt"
 -- different owner 
 create role part_role;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
@@ -226,6 +273,24 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  owner of "bar_p" must be the same as that of "foo_p"
 drop table foo_p;
 drop table bar_p;
+-- should work, and new partition should inherit ownership (mpp-6538)
+set role part_role;
+create table foo_p (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(6) every(3));
+reset role;
+alter table foo_p split partition for(rank(1)) at (2) into (partition prt_11, partition prt_12);
+\dt foo_*
+                     List of relations
+ Schema |        Name        | Type  |   Owner   | Storage 
+--------+--------------------+-------+-----------+---------
+ public | foo_p              | table | part_role | heap
+ public | foo_p_1_prt_2      | table | part_role | heap
+ public | foo_p_1_prt_prt_11 | table | part_role | heap
+ public | foo_p_1_prt_prt_12 | table | part_role | heap
+(4 rows)
+
+drop table foo_p;
 drop role part_role;
 -- with and without OIDs
 -- MPP-8405: disallow OIDS on partitioned tables 
@@ -241,7 +306,8 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 -- but disallow exchange if different oid settings
 create table foo_p (i int, j int) with (oids = false) distributed by (i)
 partition by range(j)
@@ -355,7 +421,7 @@ HINT:  drop the invalid constraints and retry
 -- message can print that correctly.
 create table bar_c(i int check (i > 1000), j int check (j > 1000)) distributed by (i);
 alter table foo_p exchange partition for(rank(2)) with table bar_c;
-ERROR:  invalid constraint(s) found on "bar_c": "bar_c_i_check", "bar_c_j_check"
+ERROR:  invalid constraint(s) found on "bar_c": "bar_c_j_check", "bar_c_i_check"
 HINT:  drop the invalid constraints and retry
 -- Shouldn't fail: check constraint matches partition rule.
 -- Note this test is slightly different from prior versions to get
@@ -393,7 +459,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 grant select on foo_p to part_role;
 revoke all on bar_p from part_role;
-NOTICE:  no privileges could be revoked from role part_role on object bar_p
+NOTICE:  no privileges could be revoked
 select has_table_privilege('part_role', 'foo_p_1_prt_6'::regclass, 'select');
  has_table_privilege 
 ---------------------
@@ -663,28 +729,28 @@ select * from bar_p;
 drop table foo_p;
 drop table bar_p;
 -- exchange default partition is not allowed (single level)
-drop table if exists d;
-NOTICE:  table "d" does not exist, skipping
+drop table if exists dex;
+NOTICE:  table "dex" does not exist, skipping
 drop table if exists exh_abc;
 NOTICE:  table "exh_abc" does not exist, skipping
-create table d (i int,  j int) partition by range(j)
+create table dex (i int,  j int) partition by range(j)
 (partition a start (1) end(10), partition b start(11) end(20),
 default partition abc);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "d_1_prt_abc" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
-create table exh_abc (like d);
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_abc" for table "dex"
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_a" for table "dex"
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_b" for table "dex"
+create table exh_abc (like dex);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-alter table d exchange default partition with table exh_abc;
+alter table dex exchange default partition with table exh_abc;
 ERROR:  cannot exchange DEFAULT partition
 set gp_enable_exchange_default_partition = on;
-alter table d exchange default partition with table exh_abc;
+alter table dex exchange default partition with table exh_abc;
 WARNING:  Exchanging default partition may result in unexpected query results if the data being exchanged should have been inserted into a different partition
-NOTICE:  exchanged partition "abc" of relation "d" with relation "exh_abc"
+NOTICE:  exchanged partition "abc" of relation "dex" with relation "exh_abc"
 reset gp_enable_exchange_default_partition;
-drop table d;
+drop table dex;
 drop table exh_abc;
 -- exchange default partition is not allowed (multi level)
 Drop table if exists sto_ao_ao;
@@ -836,29 +902,29 @@ create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '0.5 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '0.5 days'...
-                                                             ^
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '0....
+                                                        ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '0.5 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '0.5 days'...
-                                                             ^
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '0....
+                                                        ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '12 hours'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '12 hours'...
-                                                             ^
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '12...
+                                                        ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '1.2 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '1.2 days'...
-                                                             ^
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '1....
+                                                        ^
 -- should work
 create table foo_p (i int, j timestamp) distributed by (i)
 partition by range(j)
@@ -1172,7 +1238,7 @@ careful');
 copy partsupp from stdin with delimiter '|';
 drop table partsupp;
 --MPP-3285
-CREATE TABLE LINEITEM (
+CREATE TABLE PARTLINEITEM (
                 L_ORDERKEY INT8,
                 L_PARTKEY INTEGER,
                 L_SUPPKEY INTEGER,
@@ -1196,12 +1262,12 @@ partition p1 start('1992-01-31') end('1998-11-01') every(interval '20 months')
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'l_orderkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_1" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_2" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_3" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_4" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_5" for table "lineitem"
-copy lineitem from stdin with delimiter '|';
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_1" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_2" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_3" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_4" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_5" for table "partlineitem"
+copy partlineitem from stdin with delimiter '|';
 select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
  start, parrangestartincl,
  pg_get_expr(parrangeend, parchildrelid, false) as end,
@@ -1209,7 +1275,7 @@ select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
   pg_get_expr(parlistvalues, parchildrelid, false) as list from
    pg_partition_rule
     r, pg_partition p where r.paroid = p.oid and p.parlevel = 0 and
-	 p.parrelid = 'lineitem'::regclass order by 1;
+	 p.parrelid = 'partlineitem'::regclass order by 1;
  parname | parruleord |       start        | parrangestartincl |        end         | parrangeendincl | list 
 ---------+------------+--------------------+-------------------+--------------------+-----------------+------
  p1_1    |          1 | '01-31-1992'::date | t                 | '09-30-1993'::date | f               | 
@@ -1219,7 +1285,7 @@ select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
  p1_5    |          5 | '09-30-1998'::date | t                 | '11-01-1998'::date | f               | 
 (5 rows)
 
-drop table lineitem;
+drop table partlineitem;
 -- Make sure ADD creates dependencies
 create table i (i int) partition by range(i) (start (1) end(3) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -1357,53 +1423,6 @@ select pg_get_partition_def('partsupp'::regclass, true);
 (1 row)
 
 drop table partsupp;
-set gp_enable_hash_partitioned_tables = true;
-create table i5 (i int, g text) partition by list(g) 
-  subpartition by hash(i) subpartitions 3
-(partition p1 values('foo', 'bar'), partition p2 values('foz')
-);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1" for table "i5"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_1" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_2" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_3" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2" for table "i5"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_1" for table "i5_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_2" for table "i5_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_3" for table "i5_1_prt_p2"
-select tablename, partitiontablename,
-partitionboundary from pg_partitions where
-tablename = 'i5';
- tablename | partitiontablename  |         partitionboundary         
------------+---------------------+-----------------------------------
- i5        | i5_1_prt_p1         | PARTITION p1 VALUES('foo', 'bar')
- i5        | i5_1_prt_p2         | PARTITION p2 VALUES('foz')
- i5        | i5_1_prt_p1_2_prt_1 | 
- i5        | i5_1_prt_p1_2_prt_2 | 
- i5        | i5_1_prt_p1_2_prt_3 | 
- i5        | i5_1_prt_p2_2_prt_1 | 
- i5        | i5_1_prt_p2_2_prt_2 | 
- i5        | i5_1_prt_p2_2_prt_3 | 
-(8 rows)
-
-select pg_get_partition_def('i5'::regclass, true);
-                pg_get_partition_def                 
------------------------------------------------------
- PARTITION BY LIST(g)                                
-           SUBPARTITION BY HASH(i) SUBPARTITIONS 3   
-           (                                         
-           PARTITION p1 VALUES('foo', 'bar')         
-                   (                                 
-                   ),                                
-           PARTITION p2 VALUES('foz')                
-                   (                                 
-                   )                                 
-           )
-(1 row)
-
-drop table i5;
-set gp_enable_hash_partitioned_tables = false;
 -- ALTER TABLE ALTER PARTITION tests
 CREATE TABLE ataprank (id int, rank int,
 year date, gender char(1),
@@ -1880,176 +1899,142 @@ NOTICE:  CREATE TABLE will create partition "granttest_1_prt_2" for table "grant
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_2_2_prt_1" for table "granttest_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_3" for table "granttest"
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_3_2_prt_1" for table "granttest_1_prt_3"
-select has_table_privilege('part_role', 'granttest'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_2         | f       | f      | f
+ granttest_1_prt_2_2_prt_1 | f       | f      | f
+ granttest_1_prt_3         | f       | f      | f
+ granttest_1_prt_3_2_prt_1 | f       | f      | f
+ granttest                 | f       | f      | f
+ granttest_1_prt_1         | f       | f      | f
+ granttest_1_prt_1_2_prt_1 | f       | f      | f
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
+grant select (i) on granttest to part_role;
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_2         | f       | t      | f
+ granttest_1_prt_2_2_prt_1 | f       | t      | f
+ granttest_1_prt_3         | f       | t      | f
+ granttest_1_prt_3_2_prt_1 | f       | t      | f
+ granttest                 | f       | t      | f
+ granttest_1_prt_1         | f       | t      | f
+ granttest_1_prt_1_2_prt_1 | f       | t      | f
+(7 rows)
 
 grant select on granttest to part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | t       | t      | t
+ granttest_1_prt_1_2_prt_1 | t       | t      | t
+ granttest_1_prt_2         | t       | t      | t
+ granttest_1_prt_2_2_prt_1 | t       | t      | t
+ granttest_1_prt_3         | t       | t      | t
+ granttest_1_prt_3_2_prt_1 | t       | t      | t
+ granttest                 | t       | t      | t
+(7 rows)
 
 grant insert on granttest to part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | t       | t      | t
+ granttest_1_prt_1_2_prt_1 | t       | t      | t
+ granttest_1_prt_2         | t       | t      | t
+ granttest_1_prt_2_2_prt_1 | t       | t      | t
+ granttest_1_prt_3         | t       | t      | t
+ granttest_1_prt_3_2_prt_1 | t       | t      | t
+ granttest                 | t       | t      | t
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+revoke insert on granttest from part_role;
+grant insert (j) on granttest to part_role;
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | f       | f      | t
+ granttest_1_prt_1_2_prt_1 | f       | f      | t
+ granttest_1_prt_2         | f       | f      | t
+ granttest_1_prt_2_2_prt_1 | f       | f      | t
+ granttest_1_prt_3         | f       | f      | t
+ granttest_1_prt_3_2_prt_1 | f       | f      | t
+ granttest                 | f       | f      | t
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+-- Check that when a new partition is created, it inherits the permissions
+-- from the parent.
+alter table granttest add partition newpart start(100) end (101);
+NOTICE:  CREATE TABLE will create partition "granttest_1_prt_newpart" for table "granttest"
+NOTICE:  CREATE TABLE will create partition "granttest_1_prt_newpart_2_prt_1" for table "granttest_1_prt_newpart"
+select relname, has_table_privilege('part_role', oid, 'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | t       | t      | t
+ granttest_1_prt_1_2_prt_1       | t       | t      | t
+ granttest_1_prt_2               | t       | t      | t
+ granttest_1_prt_2_2_prt_1       | t       | t      | t
+ granttest_1_prt_3               | t       | t      | t
+ granttest_1_prt_3_2_prt_1       | t       | t      | t
+ granttest                       | t       | t      | t
+ granttest_1_prt_newpart         | t       | t      | t
+ granttest_1_prt_newpart_2_prt_1 | t       | t      | t
+(9 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | f       | f      | t
+ granttest_1_prt_1_2_prt_1       | f       | f      | t
+ granttest_1_prt_2               | f       | f      | t
+ granttest_1_prt_2_2_prt_1       | f       | f      | t
+ granttest_1_prt_3               | f       | f      | t
+ granttest_1_prt_3_2_prt_1       | f       | f      | t
+ granttest                       | f       | f      | t
+ granttest_1_prt_newpart         | f       | f      | t
+ granttest_1_prt_newpart_2_prt_1 | f       | f      | t
+(9 rows)
 
 revoke all on granttest from part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | f       | f      | f
+ granttest_1_prt_1_2_prt_1       | f       | f      | f
+ granttest_1_prt_2               | f       | f      | f
+ granttest_1_prt_2_2_prt_1       | f       | f      | f
+ granttest_1_prt_3               | f       | f      | f
+ granttest_1_prt_3_2_prt_1       | f       | f      | f
+ granttest_1_prt_newpart         | f       | f      | f
+ granttest_1_prt_newpart_2_prt_1 | f       | f      | f
+ granttest                       | f       | f      | f
+(9 rows)
 
 drop table granttest;
 drop role part_role;
@@ -2350,7 +2335,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_newpart" for table "partsupp"
 NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1" for table "partsupp"
 drop table partsupp;
--- MPP-3379
+-- Deletion tests
+CREATE TABLE tmp_nation_region (n_regionkey integer);
 drop table if exists tmp_nation;
 NOTICE:  table "tmp_nation" does not exist, skipping
 CREATE TABLE tmp_nation (N_NATIONKEY INTEGER, N_NAME CHAR(25), N_REGIONKEY INTEGER, N_COMMENT VARCHAR(152))  
@@ -2368,7 +2354,7 @@ NOTICE:  CREATE TABLE will create partition "tmp_nation_1_prt_p2" for table "tmp
 NOTICE:  CREATE TABLE will create partition "tmp_nation_1_prt_p3" for table "tmp_nation"
 NOTICE:  CREATE TABLE will create partition "tmp_nation_1_prt_p4" for table "tmp_nation"
 NOTICE:  CREATE TABLE will create partition "tmp_nation_1_prt_p5" for table "tmp_nation"
-delete from tmp_nation;
+delete from tmp_nation where n_regionkey in (select n_regionkey from tmp_nation_region) and n_nationkey between 1 and 5;
 drop table tmp_nation;
 -- SPLIT tests
 -- basic sanity tests. All should pass.
@@ -2516,6 +2502,20 @@ select partitiontablename,partitionposition,partitionrangestart,
 (9 rows)
 
 drop table k;
+-- Add CO partition and split, reported in MPP-17761
+create table k (i int) with (appendonly = true, orientation = column) distributed by (i) partition by range(i) (start(1) end(10) every(5));
+alter table k add partition co start(11) end (17) with (appendonly = true, orientation = column);
+alter table k split partition co at (14) into (partition co1, partition co2);
+NOTICE:  dropped partition "co" for relation "k"
+drop table k;
+create table k (a int, b int) with (appendonly = true) distributed by (a) partition by list(b)
+(
+	partition a values (1, 2, 3, 4) with (appendonly = true, orientation = column),
+	partition b values (5, 6, 7 ,8) with (appendonly = true, orientation = column)
+);
+alter table k split partition for(2) at(2) into (partition one, partition two);
+NOTICE:  dropped partition "a" for relation "k"
+drop table k;
 -- Test errors for default handling
 create table k (i int) partition by range(i) (start(1) end(2), 
 default partition mydef);
@@ -2563,111 +2563,25 @@ update v set j = 2;
 update v set j = 3;
 ERROR:  moving tuple from partition "v_1_prt_1" to partition "v_1_prt_2" not supported  (seg0 slarimac:40000 pid=97875)
 drop table v;
--- test AO seg totals
---
--- Note: ignore partition tablenames due to endianness issues
---
-create  or replace function ao_ptotal(relname text) returns float8 as $$
-declare
-  aosegname text;
-  tupcount float8 := 0;
-  rc int := 0;
-begin
-
-  execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
-  if aosegname > 0 then
-	  execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
-  end if;
-  return tupcount;
-end; $$ language plpgsql volatile READS SQL DATA;
+-- try SREH on a partitioned table.
 create table ao_p (i int) with (appendonly = true)
  partition by range(i)
- (start(1) end(10) every(1));
+ (start(1) end(5) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_1" for table "ao_p"
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_2" for table "ao_p"
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_3" for table "ao_p"
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_4" for table "ao_p"
-NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_5" for table "ao_p"
-NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_6" for table "ao_p"
-NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_7" for table "ao_p"
-NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_8" for table "ao_p"
-NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_9" for table "ao_p"
-insert into ao_p values(1), (2), (3);
--- start_ignore
-select partitiontablename, ao_ptotal(partitiontablename)
-from pg_partitions where tablename = 'ao_p';
- partitiontablename | ao_ptotal 
---------------------+-----------
- ao_p_1_prt_1       |         1
- ao_p_1_prt_2       |         1
- ao_p_1_prt_3       |         1
- ao_p_1_prt_4       |          
- ao_p_1_prt_5       |          
- ao_p_1_prt_6       |          
- ao_p_1_prt_7       |          
- ao_p_1_prt_8       |          
- ao_p_1_prt_9       |          
-(9 rows)
-
--- end_ignore
-truncate ao_p;
--- start_ignore
-select partitiontablename, ao_ptotal(partitiontablename)
-from pg_partitions where tablename = 'ao_p';
- partitiontablename | ao_ptotal 
---------------------+-----------
- ao_p_1_prt_1       |          
- ao_p_1_prt_2       |          
- ao_p_1_prt_3       |          
- ao_p_1_prt_4       |          
- ao_p_1_prt_5       |          
- ao_p_1_prt_6       |          
- ao_p_1_prt_7       |          
- ao_p_1_prt_8       |          
- ao_p_1_prt_9       |          
-(9 rows)
-
--- end_ignore
-copy ao_p from stdin;
--- start_ignore
-select partitiontablename, ao_ptotal(partitiontablename)
-from pg_partitions where tablename = 'ao_p';
- partitiontablename | ao_ptotal 
---------------------+-----------
- ao_p_1_prt_1       |          
- ao_p_1_prt_2       |          
- ao_p_1_prt_3       |          
- ao_p_1_prt_4       |         1
- ao_p_1_prt_5       |         1
- ao_p_1_prt_6       |         1
- ao_p_1_prt_7       |          
- ao_p_1_prt_8       |          
- ao_p_1_prt_9       |          
-(9 rows)
-
--- end_ignore
--- try SREH
 copy ao_p from stdin log errors segment reject limit 100;
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
--- start_ignore
-select partitiontablename, ao_ptotal(partitiontablename)
-from pg_partitions where tablename = 'ao_p';
- partitiontablename | ao_ptotal 
---------------------+-----------
- ao_p_1_prt_1       |          
- ao_p_1_prt_2       |          
- ao_p_1_prt_3       |          
- ao_p_1_prt_4       |         1
- ao_p_1_prt_5       |         1
- ao_p_1_prt_6       |         2
- ao_p_1_prt_7       |         1
- ao_p_1_prt_8       |          
- ao_p_1_prt_9       |          
-(9 rows)
+select * from ao_p;
+ i 
+---
+ 2
+ 3
+(2 rows)
 
--- end_ignore
 drop table ao_p;
 -- MPP-3591: make sure we get inclusive/exclusive right with every().
 create table k (i int) partition by range(i)
@@ -2705,10 +2619,7 @@ NOTICE:  CREATE TABLE will create partition "a_1_prt_g" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_g_2_prt_h" for table "a_1_prt_g"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_g_2_prt_h_3_prt_i" for table "a_1_prt_g_2_prt_h"
 revoke all on a from public;
-NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g
-NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g_2_prt_h
-NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g_2_prt_h_3_prt_i
-NOTICE:  no privileges could be revoked from role PUBLIC on object a
+NOTICE:  no privileges could be revoked
 grant insert on a to part_role;
 -- revoke it from one existing partition, to make sure we don't screw up
 -- existing permissions
@@ -2773,9 +2684,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "a_1_prt_f_1" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_f_2" for table "a"
 revoke all on a from public;
-NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_f_1
-NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_f_2
-NOTICE:  no privileges could be revoked from role PUBLIC on object a
+NOTICE:  no privileges could be revoked
 grant insert on a to part_role;
 alter table a split partition for(rank(1)) at (date '2006-01-01')
   into (partition f, partition g);
@@ -3337,10 +3246,30 @@ select * from pg_partition_templates where tablename like 'rank_settemp%';
  public     | rank_settemp | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
 (1 row)
 
+alter table rank_settemp set subpartition template (start (date '2006-01-01') with (appendonly=true));
+NOTICE:  replacing level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_1" for table "rank_settemp_1_prt_subpartition_template"
+alter table rank_settemp add partition f1 values ('N');
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f1" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f1_2_prt_1" for table "rank_settemp_1_prt_f1"
+alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
+NOTICE:  replacing level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_1" for table "rank_settemp_1_prt_subpartition_template"
+alter table rank_settemp add partition f2 values ('C');
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f2" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f2_2_prt_1" for table "rank_settemp_1_prt_f2"
+select * from pg_partition_templates where tablename like 'rank_settemp%';
+ schemaname |  tablename   | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |                         partitionboundary                          
+------------+--------------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+--------------------------------------------------------------------
+ public     | rank_settemp |               | range         |              1 |             1 |                 1 |                     | '01-01-2007'::date  | t                       |                   | f                     |                      | f                  | START ('01-01-2007'::date) WITH (appendonly=true, compresslevel=5)
+(1 row)
+
 drop table rank_settemp;
--- MPP-5397
--- should be able to add partition after dropped a col
-create table mpp_5397 (a int, b int, c int) 
+-- MPP-5397 and MPP-7002
+-- should be able to add/split/exchange partition after dropped a col
+create table mpp_5397 (a int, b int, c int, d int)
   distributed by (a) 
   partition by range (b)  
   (partition a1 start (0) end (5), 
@@ -3353,6 +3282,11 @@ alter table mpp_5397 drop column c;
 -- should work now
 alter table mpp_5397 add partition z end (20);
 NOTICE:  CREATE TABLE will create partition "mpp_5397_1_prt_z" for table "mpp_5397"
+-- ensure splitting default partition also works
+alter table mpp_5397 add default partition adefault;
+alter table mpp_5397 drop column d;
+alter table mpp_5397 split default partition start (21) inclusive end (25) inclusive;
+NOTICE:  dropped partition "adefault" for relation "mpp_5397"
 drop table mpp_5397;
 -- MPP-4987 -- make sure we can't damage a partitioning configuration
 -- MPP-8405: disallow OIDS on partitioned tables 
@@ -3369,7 +3303,8 @@ NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_6" for table "ran
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_7" for table "rank_damage"
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_8" for table "rank_damage"
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_9" for table "rank_damage"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 -- this works
 create table rank_damage (i int, j int)  partition by range(j) (start(1) end(10)
 every(1));
@@ -3402,7 +3337,8 @@ ERROR:  can't drop a constraint from "rank_damage_1_prt_1"; it is part of a part
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
 alter table rank_damage add partition ppo end (22) with (oids = true);
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_ppo" for table "rank_damage"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 drop table rank_damage, rank2_damage;
 -- MPP-5831, type cast in SPLIT
 CREATE TABLE sg_cal_event_silvertail_hour (
@@ -3434,6 +3370,18 @@ NOTICE:  exchanged partition "st_default" of relation "sg_cal_event_silvertail_h
 NOTICE:  dropped partition "st_default" for relation "sg_cal_event_silvertail_hour"
 NOTICE:  CREATE TABLE will create partition "sg_cal_event_silvertail_hour_1_prt_p2009042907" for table "sg_cal_event_silvertail_hour"
 NOTICE:  CREATE TABLE will create partition "sg_cal_event_silvertail_hour_1_prt_st_default" for table "sg_cal_event_silvertail_hour"
+select pg_get_partition_def('sg_cal_event_silvertail_hour'::regclass, true);
+                                                                                              pg_get_partition_def                                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PARTITION BY RANGE(transactiontime)                                                                                                                                                                             
+           (                                                                                                                                                                                                     
+           PARTITION "P2009041607" START ('Thu Apr 16 07:00:00 2009'::timestamp(2) without time zone) END ('Thu Apr 16 08:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),  
+           PARTITION "P2009041608" START ('Thu Apr 16 08:00:00 2009'::timestamp(2) without time zone) END ('Thu Apr 16 09:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),  
+           PARTITION p2009042907 START ('Wed Apr 29 07:00:00 2009'::timestamp(2) without time zone) END ('Wed Apr 29 08:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),    
+           DEFAULT PARTITION st_default  WITH (appendonly=true, compresslevel=5)                                                                                                                                 
+           )
+(1 row)
+
 drop table sg_cal_event_silvertail_hour;
 -- Make sure we inherit master's storage settings
 create table foo_p (i int, j int, k text)
@@ -3523,21 +3471,35 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "mpp5878_1_prt_1" for table "mpp5878"
 NOTICE:  CREATE TABLE will create partition "mpp5878_1_prt_2" for table "mpp5878"
-select partitionlistvalues from pg_partitions where tablename like 'mpp5878%';
-                            partitionlistvalues                             
-----------------------------------------------------------------------------
- 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
- 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
-(2 rows)
+create table mpp5878a (a int, b character(1), d character(1))
+partition by list (b,d)
+(
+values (('a','b'),('c','d')),
+values (('e','f'),('g','h'))
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp5878a_1_prt_1" for table "mpp5878a"
+NOTICE:  CREATE TABLE will create partition "mpp5878a_1_prt_2" for table "mpp5878a"
+select tablename, partitionlistvalues from pg_partitions where tablename like 'mpp5878%';
+ tablename |                            partitionlistvalues                             
+-----------+----------------------------------------------------------------------------
+ mpp5878   | 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
+ mpp5878   | 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
+ mpp5878a  | 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
+ mpp5878a  | 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
+(4 rows)
 
-select partitionboundary from pg_partitions where tablename like 'mpp5878%';
-        partitionboundary         
-----------------------------------
- VALUES( ('a', 'b'),  ('c', 'd'))
- VALUES( ('e', 'f'),  ('g', 'h'))
-(2 rows)
+select tablename, partitionboundary from pg_partitions where tablename like 'mpp5878%';
+ tablename |        partitionboundary         
+-----------+----------------------------------
+ mpp5878   | VALUES( ('a', 'b'),  ('c', 'd'))
+ mpp5878   | VALUES( ('e', 'f'),  ('g', 'h'))
+ mpp5878a  | VALUES( ('a', 'b'),  ('c', 'd'))
+ mpp5878a  | VALUES( ('e', 'f'),  ('g', 'h'))
+(4 rows)
 
-drop table mpp5878;
+drop table mpp5878, mpp5878a;
 -- MPP-5941: work with many levels of templates
 CREATE TABLE mpp5941 (a int, b date, c char, 
 	   		 		 d char(4), e varchar(20), f timestamp)
@@ -4042,7 +4004,65 @@ select schemaname, tablename from pg_tables where schemaname = 'public' and tabl
 (10 rows)
 
 drop table anotherit;
--- test table constraint inheritance
+--
+-- Test table constraint inheritance
+--
+-- with a named UNIQUE constraint
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
+NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+alter table it add constraint it_unique_i unique (i);
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_i_key" for table "it"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_1_i_key" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_2_i_key" for table "it_1_prt_2"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename  |    indexname     
+------------+------------+------------------
+ public     | it         | it_i_key
+ public     | it_1_prt_1 | it_1_prt_1_i_key
+ public     | it_1_prt_2 | it_1_prt_2_i_key
+(3 rows)
+
+alter table it drop constraint it_unique_i;
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+drop table it;
+-- with a PRIMARY KEY constraint, without giving it a name explicitly.
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
+NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+alter table it add primary key(i);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_pkey" for table "it"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_pkey" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_pkey" for table "it_1_prt_2"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename  |    indexname    
+------------+------------+-----------------
+ public     | it         | it_pkey
+ public     | it_1_prt_1 | it_1_prt_1_pkey
+ public     | it_1_prt_2 | it_1_prt_2_pkey
+(3 rows)
+
+-- FIXME: dropping a primary key doesn't currently work correctly. It doesn't
+-- drop the key on the partitions, only the parent. See
+-- https://github.com/greenplum-db/gpdb/issues/3750
+--
+-- alter table it add primary key(i);
+-- select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+drop table it;
 create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
 NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
 NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"
@@ -5588,6 +5608,16 @@ NOTICE:  exchanged partition "sp2" of partition "p1" of relation "mpp10223b" wit
 NOTICE:  dropped partition "sp2" for partition "p1" of relation "mpp10223b"
 NOTICE:  CREATE TABLE will create partition "mpp10223b_1_prt_p1_2_prt_sp2" for table "mpp10223b_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "mpp10223b_1_prt_p1_2_prt_sp3" for table "mpp10223b_1_prt_p1"
+ select partitiontablename,partitionposition,partitionrangestart,
+        partitionrangeend from pg_partitions where tablename = 'mpp10223b'
+            order by partitionposition;
+       partitiontablename      | partitionposition | partitionrangestart | partitionrangeend 
+ ------------------------------+-------------------+---------------------+-------------------
+  mpp10223b_1_prt_p1           |                 1 | 1                   | 10
+  mpp10223b_1_prt_p1_2_prt_sp2 |                 1 | 20                  | 25
+  mpp10223b_1_prt_p1_2_prt_sp3 |                 2 | 25                  | 30
+ (3 rows)
+ 
 select pg_get_partition_def('mpp10223b'::regclass,true);
                    pg_get_partition_def                   
 ----------------------------------------------------------
@@ -5596,8 +5626,8 @@ select pg_get_partition_def('mpp10223b'::regclass,true);
            (                                              
            PARTITION p1 START (1) END (10)                
                    (                                      
-                   SUBPARTITION sp3 START (25) END (30),  
-                   SUBPARTITION sp2 START (20) END (25)   
+                   SUBPARTITION sp2 START (20) END (25),   
+                   SUBPARTITION sp3 START (25) END (30)  
                    )                                      
            )
 (1 row)
@@ -5855,6 +5885,8 @@ LINE 1: alter table cov1 drop partition for (funky(1));
 alter table cov1 drop default partition for (rank(1));
 ERROR:  Cannot specify a name, rank, or value for a DEFAULT partition in this context
 -- no default
+alter table cov1 split default partition at (9);
+ERROR:  DEFAULT partition of relation "cov1" does not exist
 alter table cov1 drop default partition;
 ERROR:  DEFAULT partition of relation "cov1" does not exist
 -- cannot add except by name
@@ -5867,79 +5899,6 @@ ERROR:  template cannot contain specification for child partition
 alter table cov1 add default partition def1, drop default partition;
 NOTICE:  CREATE TABLE will create partition "cov1_1_prt_def1" for table "cov1"
 NOTICE:  dropped partition "def1" for relation "cov1"
-drop table cov1;
-set gp_enable_hash_partitioned_tables = true;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  PARTITIONS clause requires a HASH partition
-LINE 3: partition by range (b)
-                     ^
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_1" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_2" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_3" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_4" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_5" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_6" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_7" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_8" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_9" for table "cov1"
-ERROR:  SUBPARTITIONS clause requires a HASH partition (at depth 2)
-LINE 4: subpartition by range (d)
-                        ^
-set gp_enable_hash_partitioned_tables = false;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  syntax error at or near "3"
-LINE 4: partitions 3
-                   ^
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  syntax error at or near "3"
-LINE 5: subpartitions 3
-                      ^
--- legal?!?! 
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-(
-start () end(2)  
-);
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_1" for table "cov1"
--- no start, just end!
-select * from pg_partitions where tablename = 'cov1';
- schemaname | tablename | partitionschemaname | partitiontablename | partitionname | parentpartitiontablename | parentpartitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault | partitionboundary | parenttablespace | partitiontablespace 
-------------+-----------+---------------------+--------------------+---------------+--------------------------+---------------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+-------------------+------------------+---------------------
- public     | cov1      | public              | cov1_1_prt_1       |               |                          |                     | range         |              0 |             1 |                 1 |                     |                     | t                       | 2                 | f                     |                      | f                  |  END (2)          | pg_default       | pg_default
-(1 row)
-
 drop table cov1;
 -- every 5 (1) now disallowed...
 create table cov1 (a int, b int)
@@ -7773,6 +7732,8 @@ drop table input1;
 drop table part_tab;
 drop table deep_part;
 -- Avoid TupleDesc leak when COPY partition table from files
+-- This also covers the bug reported in MPP-9548 where insertion
+-- into a dropped/added column yielded incorrect results
 drop table if exists pt_td_leak;
 NOTICE:  table "pt_td_leak" does not exist, skipping
 CREATE TABLE pt_td_leak
@@ -7804,6 +7765,14 @@ select * from pt_td_leak where col1 = 5;
 ------+------+------
     5 |    5 |    5
 (1 row)
+
+-- Check that data inserted into dropped/added column is correct
+select * from pt_td_leak where col3 = 1;
+ col1 | col2 | col3
+------+------+------
+    1 |    1 |    1
+    1 |    8 |    1
+(2 rows)
 
 drop table pt_td_leak;
 drop table pt_td_leak_exchange;
@@ -7846,3 +7815,190 @@ NOTICE:  exchanged partition "other_log_ids" of relation "test_split_part" with 
 NOTICE:  dropped partition "other_log_ids" for relation "test_split_part"
 NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_New" for table "test_split_part"
 NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_other_log_ids" for table "test_split_part"
+-- Test that pg_get_partition_def() correctly dumps the renamed names for
+-- partitions. Originally reported in MPP-7232
+create table mpp7232a (a int, b int) distributed by (a) partition by range (b) (start (1) end (3) every (1));
+select pg_get_partition_def('mpp7232a'::regclass, true);
+         pg_get_partition_def          
+---------------------------------------
+ PARTITION BY RANGE(b)                 
+           (                           
+           START (1) END (3) EVERY (1) 
+           )
+(1 row)
+
+alter table mpp7232a rename partition for (rank(1)) to alpha;
+alter table mpp7232a rename partition for (rank(2)) to bravo;
+select partitionname, partitionrank from pg_partitions where tablename like 'mpp7232a' order by 2;
+ partitionname | partitionrank 
+---------------+---------------
+ alpha         |             1
+ bravo         |             2
+(2 rows)
+
+select pg_get_partition_def('mpp7232a'::regclass, true);
+                  pg_get_partition_def                   
+---------------------------------------------------------
+ PARTITION BY RANGE(b)                                   
+           (                                             
+           PARTITION alpha START (1) END (2) EVERY (1),  
+           PARTITION bravo START (2) END (3) EVERY (1)   
+           )
+(1 row)
+
+create table mpp7232b (a int, b int) distributed by (a) partition by range (b) (partition alpha start (1) end (3) every (1));
+select partitionname, partitionrank from pg_partitions where tablename like 'mpp7232b' order by 2;
+ partitionname | partitionrank 
+---------------+---------------
+ alpha_1       |             1
+ alpha_2       |             2
+(2 rows)
+
+alter table mpp7232b rename partition for (rank(1)) to foo;
+NOTICE:  renamed partition "alpha_1" to "foo" for relation "mpp7232b"
+select pg_get_partition_def('mpp7232b'::regclass, true);
+                  pg_get_partition_def                   
+---------------------------------------------------------
+ PARTITION BY RANGE(b)                                   
+           (                                             
+           PARTITION alpha_2 START (2) END (3) EVERY (1) 
+           PARTITION foo START (1) END (2) EVERY (1),    
+           )
+(1 row)
+
+-- Test .. WITH (tablename = <foo> ..) syntax.
+create table mpp17740 (a integer, b integer, e date) with (appendonly = true, orientation = column)
+distributed by (a)
+partition by range(e)
+(
+    partition mpp17740_20120523 start ('2012-05-23'::date) inclusive end ('2012-05-24'::date) exclusive with (tablename = 'mpp17740_20120523', appendonly = true),
+    partition mpp17740_20120524 start ('2012-05-24'::date) inclusive end ('2012-05-25'::date) exclusive with (tablename = 'mpp17740_20120524', appendonly = true)
+);
+select partitiontablename, partitionrangestart, partitionrangeend from pg_partitions where tablename = 'mpp17740' order by partitiontablename;
+ partitiontablename | partitionrangestart | partitionrangeend  
+--------------------+---------------------+--------------------
+ mpp17740_20120523  | '05-23-2012'::date  | '05-24-2012'::date
+ mpp17740_20120524  | '05-24-2012'::date  | '05-25-2012'::date
+(2 rows)
+
+alter table mpp17740 add partition mpp17740_20120520 start ('2012-05-20'::date) inclusive end ('2012-05-21'::date) exclusive with (tablename = 'mpp17740_20120520', appendonly=true);
+select partitiontablename, partitionrangestart, partitionrangeend from pg_partitions where tablename = 'mpp17740' order by partitiontablename;
+ partitiontablename | partitionrangestart | partitionrangeend  
+--------------------+---------------------+--------------------
+ mpp17740_20120520  | '05-20-2012'::date  | '05-21-2012'::date
+ mpp17740_20120523  | '05-23-2012'::date  | '05-24-2012'::date
+ mpp17740_20120524  | '05-24-2012'::date  | '05-25-2012'::date
+(3 rows)
+
+-- Test mix of add and drop various column before split, and exchange partition at the end
+create table sales (pkid serial, option1 int, option2 int, option3 int, constraint partable_pkey primary key(pkid, option3))
+distributed by (pkid) partition by range (option3)
+(
+	partition aa start(1) end(100),
+	partition bb start(101) end(200),
+	partition cc start(201) end (300)
+);
+NOTICE:  CREATE TABLE will create implicit sequence "sales_pkid_seq" for serial column "sales.pkid"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_pkey" for table "sales"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_aa_pkey" for table "sales_1_prt_aa"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_bb_pkey" for table "sales_1_prt_bb"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_cc_pkey" for table "sales_1_prt_cc"
+alter table sales add column tax float;
+alter table sales drop column tax;
+create table newpart(like sales);
+alter table newpart add constraint partable_pkey primary key(pkid, option3);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "newpart_pkey" for table "newpart"
+alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
+NOTICE:  dropped partition "aa" for relation "sales"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_aa1_pkey" for table "sales_1_prt_aa1"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sales_1_prt_aa2_pkey" for table "sales_1_prt_aa2"
+select table_schema, table_name, constraint_name, constraint_type
+	from information_schema.table_constraints
+	where table_name in ('sales', 'newpart')
+	and constraint_name = 'partable_pkey'
+	order by table_name desc;
+ table_schema | table_name | constraint_name | constraint_type 
+--------------+------------+-----------------+-----------------
+ public       | newpart    | partable_pkey   | PRIMARY KEY
+ public       | sales      | partable_pkey   | PRIMARY KEY
+(2 rows)
+
+alter table sales exchange partition for (101) with table newpart;
+select * from sales order by pkid;
+ pkid | option1 | option2 | option3 
+------+---------+---------+---------
+(0 rows)
+
+-- Create exchange table before drop column, make sure the consistency check still exist
+create table newpart2(like sales);
+alter table sales drop column option2;
+alter table sales exchange partition for (101) with table newpart2;
+ERROR:  relation "newpart2" must have the same column names and column order as "sales"
+select * from sales order by pkid;
+ pkid | option1 | option3 
+------+---------+---------
+(0 rows)
+
+drop table sales cascade;
+NOTICE:  drop cascades to default for table newpart column pkid
+-- Ensure that new partitions get the correct attributes (MPP17110)
+CREATE TABLE pt_tab_encode (a int, b text)
+with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+distributed by (a)
+partition by list(b) (partition s_abc values ('abc') with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1));
+NOTICE:  CREATE TABLE will create partition "pt_tab_encode_1_prt_s_abc" for table "pt_tab_encode"
+alter table pt_tab_encode add partition "s_xyz" values ('xyz') WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1);
+NOTICE:  CREATE TABLE will create partition "pt_tab_encode_1_prt_s_xyz" for table "pt_tab_encode"
+select tablename, partitiontablename from pg_partitions where tablename = 'pt_tab_encode';
+   tablename   |    partitiontablename     
+---------------+---------------------------
+ pt_tab_encode | pt_tab_encode_1_prt_s_abc
+ pt_tab_encode | pt_tab_encode_1_prt_s_xyz
+(2 rows)
+
+select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
+ gp_segment_id |         attrelid          | attnum |                       attoptions                       
+---------------+---------------------------+--------+-----------------------------------------------------
+            -1 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+            -1 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(2 rows)
+
+select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;
+ gp_segment_id |         attrelid          | attnum |                       attoptions                       
+---------------+---------------------------+--------+-----------------------------------------------------
+             0 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             0 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             2 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(5 rows)
+
+select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
+ gp_segment_id |         attrelid          | attnum |                       attoptions                       
+---------------+---------------------------+--------+-----------------------------------------------------
+            -1 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+            -1 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(2 rows)
+
+select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass order by 1,3 limit 5;
+ gp_segment_id |         attrelid          | attnum |                       attoptions                       
+---------------+---------------------------+--------+-----------------------------------------------------
+             0 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             0 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             2 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(5 rows)
+
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid = 'pt_tab_encode_1_prt_s_abc'::regclass;
+            oid            | relkind | relstorage |                                reloptions                                 
+---------------------------+---------+------------+------------------------------------------------------------------------
+ pt_tab_encode_1_prt_s_abc | r       | c          | {appendonly=true,orientation=column,compresstype=zlib,compresslevel=1}
+(1 row)
+
+select oid::regclass, relkind, relstorage, reloptions from pg_class where oid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
+            oid            | relkind | relstorage |                                reloptions                                 
+---------------------------+---------+------------+------------------------------------------------------------------------
+ pt_tab_encode_1_prt_s_xyz | r       | c          | {appendonly=true,orientation=column,compresstype=zlib,compresslevel=1}
+(1 row)
+

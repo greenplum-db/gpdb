@@ -69,3 +69,115 @@ NOTICE:  dropped partition "extra" for relation "target"
 update target set b = 10 where c = 10;
 drop table todelete;
 drop table target;
+--
+-- Explicit Distribution motion must be added if any of the child nodes
+-- contains any motion excluding the motions in initplans.
+-- These test cases and expectation are applicable for GPDB planner not for ORCA.
+--
+SET gp_autostats_mode = NONE;
+CREATE TABLE keo1 ( user_vie_project_code_pk character varying(24), user_vie_fiscal_year_period_sk character varying(24), user_vie_act_cntr_marg_cum character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo1 VALUES ('1', '1', '1');
+CREATE TABLE keo2 ( projects_pk character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo2 VALUES ('1');
+CREATE TABLE keo3 ( sky_per character varying(24), bky_per character varying(24)) DISTRIBUTED BY (sky_per);
+INSERT INTO keo3 VALUES ('1', '1');
+CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo4 VALUES ('1', '1');
+-- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
+EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+    ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
+        ON b.projects_pk=a.user_vie_project_code_pk
+        WHERE a.user_vie_fiscal_year_period_sk =
+          (SELECT MAX (sky_per) FROM keo3 WHERE bky_per =
+             (SELECT keo4.keo_para_required_period FROM keo4 WHERE keo_para_budget_date =
+                (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
+    ) t1
+WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Update (slice0; segments: 3)  (rows=2325 width=142)
+   ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)  (cost=1790.74..2439.02 rows=2325 width=142)
+         ->  Hash Join  (cost=1790.74..2439.02 rows=2325 width=142)
+               Hash Cond: b.projects_pk::text = a.user_vie_project_code_pk::text
+               InitPlan 3 (returns $2)  (slice9)
+                 ->  Aggregate  (cost=1212.70..1212.71 rows=1 width=32)
+                       InitPlan 2 (returns $1)  (slice8)
+                         ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=430.08..860.08 rows=27 width=28)
+                               ->  Seq Scan on keo4  (cost=430.08..860.08 rows=9 width=28)
+                                     Filter: keo_para_budget_date::text = $0
+                                     InitPlan 1 (returns $0)  (slice7)
+                                       ->  Aggregate  (cost=430.07..430.08 rows=1 width=32)
+                                             ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=430.00..430.05 rows=1 width=32)
+                                                   ->  Aggregate  (cost=430.00..430.01 rows=1 width=32)
+                                                         ->  Seq Scan on keo4  (cost=0.00..364.00 rows=8800 width=66)
+                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=352.55..352.60 rows=1 width=32)
+                             ->  Aggregate  (cost=352.55..352.56 rows=1 width=32)
+                                   ->  Seq Scan on keo3  (cost=0.00..352.50 rows=7 width=66)
+                                         Filter: bky_per::text = $1::text
+               ->  Seq Scan on keo2 b  (cost=0.00..441.00 rows=11367 width=66)
+               ->  Hash  (cost=570.37..570.37 rows=205 width=208)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=279.86..570.37 rows=205 width=208)
+                           ->  Hash Join  (cost=279.86..562.19 rows=69 width=208)
+                                 Hash Cond: keo1.user_vie_project_code_pk::text = a.user_vie_project_code_pk::text
+                                 ->  Seq Scan on keo1  (cost=0.00..243.00 rows=4767 width=142)
+                                 ->  Hash  (cost=279.32..279.32 rows=15 width=66)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..279.32 rows=15 width=66)
+                                             ->  Seq Scan on keo1 a  (cost=0.00..278.75 rows=5 width=66)
+                                                   Filter: user_vie_fiscal_year_period_sk::text = $2
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(31 rows)
+
+UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+    ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
+        ON b.projects_pk=a.user_vie_project_code_pk
+        WHERE a.user_vie_fiscal_year_period_sk =
+          (SELECT MAX (sky_per) FROM keo3 WHERE bky_per =
+             (SELECT keo4.keo_para_required_period FROM keo4 WHERE keo_para_budget_date =
+                (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
+    ) t1
+WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
+SELECT user_vie_act_cntr_marg_cum FROM keo1;
+ user_vie_act_cntr_marg_cum 
+----------------------------
+ 234.682
+(1 row)
+
+-- Explicit Redistribution motion should not be added in case of GPDB Planner (test case not applicable to ORCA)
+CREATE TABLE keo5 (x int, y int) DISTRIBUTED BY (x);
+INSERT INTO keo5 VALUES (1,1);
+EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Delete (slice0; segments: 3)  (rows=2471070 width=10)
+   ->  Result  (cost=1198.81..76614.79 rows=2471070 width=10)
+         One-Time Filter: $0
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Limit  (cost=0.00..0.06 rows=1 width=0)
+                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=0)
+                       ->  Limit  (cost=0.00..0.04 rows=1 width=0)
+                             ->  Seq Scan on keo5  (cost=0.00..1176.25 rows=9567 width=0)
+                                   Filter: x < 2
+         ->  Hash Join  (cost=1198.75..76614.73 rows=2471070 width=10)
+               Hash Cond: public.keo5.x = public.keo5.x
+               ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=14)
+               ->  Hash  (cost=1186.25..1186.25 rows=334 width=4)
+                     ->  HashAggregate  (cost=1176.25..1186.25 rows=334 width=4)
+                           Group By: public.keo5.x
+                           ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=4)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(18 rows)
+
+DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+SELECT x FROM keo5;
+ x 
+---
+(0 rows)
+
+RESET gp_autostats_mode;
+DROP TABLE keo1;
+DROP TABLE keo2;
+DROP TABLE keo3;
+DROP TABLE keo4;
+DROP TABLE keo5;

@@ -375,7 +375,7 @@ alter table atacc3 rename test2 to testx;
 alter table atacc3 inherit atacc2;
 -- fail due to mismatched data type
 alter table atacc3 add test2 bool;
-alter table atacc3 add inherit atacc2;
+alter table atacc3 inherit atacc2;
 alter table atacc3 drop test2;
 -- succeed
 alter table atacc3 add test2 int;
@@ -391,19 +391,20 @@ select test2 from atacc2;
 drop table atacc2 cascade;
 drop table atacc1;
 
--- let's try only to add only to the parent
+-- adding only to a parent is disallowed as of 8.4
 
 create table atacc1 (test int);
-create table atacc2 (test2 int);
-create table atacc3 (test3 int) inherits (atacc1, atacc2);
-alter table only atacc2 add constraint foo check (test2>0);
--- fail and then succeed on atacc2
-insert into atacc2 (test2) values (-3);
-insert into atacc2 (test2) values (3);
--- both succeed on atacc3
-insert into atacc3 (test2) values (-3);
-insert into atacc3 (test2) values (3);
-drop table atacc3;
+create table atacc2 (test2 int) inherits (atacc1);
+-- fail:
+alter table only atacc1 add constraint foo check (test>0);
+-- ok:
+alter table only atacc2 add constraint foo check (test>0);
+-- check constraint not there on parent
+insert into atacc1 (test) values (-3);
+insert into atacc1 (test) values (3);
+-- check constraint is there on child
+insert into atacc2 (test) values (-3);
+insert into atacc2 (test) values (3);
 drop table atacc2;
 drop table atacc1;
 
@@ -618,7 +619,7 @@ insert into def_test default values;
 alter table def_test alter column c1 set default 10;
 alter table def_test alter column c2 set default 'new_default';
 insert into def_test default values;
-select * from def_test order by 1,2;
+select * from def_test;
 
 -- set defaults to an incorrect type: this should fail
 alter table def_test alter column c1 set default 'wrong_datatype';
@@ -639,7 +640,7 @@ alter table def_view_test alter column c1 set default 45;
 insert into def_view_test default values;
 alter table def_view_test alter column c2 set default 'view_default';
 insert into def_view_test default values;
-select * from def_view_test order by 1,2;
+select * from def_view_test;
 
 drop rule def_view_test_ins on def_view_test;
 drop view def_view_test;
@@ -712,7 +713,7 @@ alter table atacc1 drop xmin;
 
 -- try creating a view and altering that, should fail
 create view myview as select * from atacc1;
-select * from myview order by 1,2,3;
+select * from myview;
 alter table myview drop d;
 drop view myview;
 
@@ -755,10 +756,10 @@ create index "testing_idx" on atacc1("........pg.dropped.1........");
 -- test create as and select into
 insert into atacc1 values (21, 22, 23);
 create table alter_table_test1 as select * from atacc1;
-select * from alter_table_test1 order by 1,2;
+select * from alter_table_test1;
 drop table alter_table_test1;
 select * into alter_table_test2 from atacc1;
-select * from alter_table_test2 order by 1,2;
+select * from alter_table_test2;
 drop table alter_table_test2;
 
 -- try dropping all columns
@@ -776,10 +777,10 @@ alter table parent drop a;
 create table child (d varchar(255)) inherits (parent);
 insert into child values (12, 13, 'testing');
 
-select * from parent order by 1,2,3;
+select * from parent;
 select * from child;
 alter table parent drop c;
-select * from parent order by 1,2;
+select * from parent;
 select * from child;
 
 drop table child;
@@ -853,7 +854,7 @@ alter table c1 drop column f1;
 -- should work
 alter table p1 drop column f1;
 -- c1.f1 is still there, but no longer inherited
-select f1 from c1 order by 1;
+select f1 from c1;
 alter table c1 drop column f1;
 select f1 from c1;
 
@@ -923,7 +924,7 @@ order by relname, attnum;
 drop table p1, p2 cascade;
 
 --
--- Test the ALTER TABLE WITHOUT OIDS command
+-- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
 create table altstartwith (col integer) with oids;
 
@@ -936,24 +937,59 @@ alter table altstartwith set without oids;
 select oid > 0, * from altstartwith; -- fails
 select * from altstartwith;
 
--- Run inheritance tests
+alter table altstartwith set with oids;
+
+select oid > 0, * from altstartwith;
+
+drop table altstartwith;
+
+-- Check inheritance cases
 create table altwithoid (col integer) with oids;
 
--- Inherits parents oid column
+-- Inherits parents oid column anyway
 create table altinhoid () inherits (altwithoid) without oids;
 
 insert into altinhoid values (1);
 
-select oid > 0, * from altwithoid order by col;
-select oid > 0, * from altinhoid order by col;
+select oid > 0, * from altwithoid;
+select oid > 0, * from altinhoid;
 
 alter table altwithoid set without oids;
-alter table altinhoid set without oids;
 
 select oid > 0, * from altwithoid; -- fails
 select oid > 0, * from altinhoid; -- fails
 select * from altwithoid;
 select * from altinhoid;
+
+alter table altwithoid set with oids;
+
+select oid > 0, * from altwithoid;
+select oid > 0, * from altinhoid;
+
+drop table altwithoid cascade;
+
+create table altwithoid (col integer) without oids;
+
+-- child can have local oid column
+create table altinhoid () inherits (altwithoid) with oids;
+
+insert into altinhoid values (1);
+
+select oid > 0, * from altwithoid; -- fails
+select oid > 0, * from altinhoid;
+
+alter table altwithoid set with oids;
+
+select oid > 0, * from altwithoid;
+select oid > 0, * from altinhoid;
+
+-- the child's local definition should remain
+alter table altwithoid set without oids;
+
+select oid > 0, * from altwithoid; -- fails
+select oid > 0, * from altinhoid;
+
+drop table altwithoid cascade;
 
 -- test renumbering of child-table columns in inherited operations
 
@@ -967,9 +1003,9 @@ insert into p1 values (1,2,'abc');
 insert into c1 values(11,'xyz',33,0); -- should fail
 insert into c1 values(11,'xyz',33,22);
 
-select * from p1 order by 1,2,3;
+select * from p1;
 update p1 set a1 = a1 + 1, f2 = upper(f2);
-select * from p1 order by 1,2,3;
+select * from p1;
 
 drop table p1 cascade;
 
@@ -979,17 +1015,17 @@ drop table p1 cascade;
 create domain mytype as text;
 create temp table foo (f1 text, f2 mytype, f3 text);
 
-insert into foo values('aa','bb','cc');
+insert into foo values('bb','cc','dd');
 select * from foo;
 
 drop domain mytype cascade;
 
 select * from foo;
 insert into foo values('qq','rr');
-select * from foo order by 1,2;
+select * from foo;
 update foo set f3 = 'zz';
-select * from foo order by 1,2;
-select f3,max(f1) from foo group by f3 order by f3;
+select * from foo;
+select f3,max(f1) from foo group by f3;
 
 -- Simple tests for alter table column type
 alter table foo alter f1 TYPE integer; -- fails
@@ -1001,24 +1037,24 @@ create table anothertab (atcol1 serial8, atcol2 boolean,
 
 insert into anothertab (atcol1, atcol2) values (default, true);
 insert into anothertab (atcol1, atcol2) values (default, false);
-select * from anothertab order by 1,2;
+select * from anothertab;
 
 alter table anothertab alter column atcol1 type boolean; -- fails
 alter table anothertab alter column atcol1 type integer;
 
-select * from anothertab order by 1,2;
+select * from anothertab;
 
 insert into anothertab (atcol1, atcol2) values (45, null); -- fails
 insert into anothertab (atcol1, atcol2) values (default, null);
 
-select * from anothertab order by 1,2;
+select * from anothertab;
 
 alter table anothertab alter column atcol2 type text
       using case when atcol2 is true then 'IT WAS TRUE' 
                  when atcol2 is false then 'IT WAS FALSE'
                  else 'IT WAS NULL!' end;
 
-select * from anothertab order by 1,2;
+select * from anothertab;
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
 alter table anothertab alter column atcol1 drop default;
@@ -1029,7 +1065,7 @@ alter table anothertab drop constraint anothertab_chk;
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end;
 
-select * from anothertab order by 1,2;
+select * from anothertab;
 
 drop table anothertab;
 
@@ -1039,13 +1075,13 @@ insert into another values(1, 'one');
 insert into another values(2, 'two');
 insert into another values(3, 'three');
 
-select * from another order by 1,2;
+select * from another;
 
 alter table another
   alter f1 type text using f2 || ' more',
   alter f2 type bigint using f1 * 10;
 
-select * from another order by 1,2;
+select * from another;
 
 drop table another;
 
@@ -1107,9 +1143,9 @@ drop schema alter1;
 insert into alter2.t1(f2) values(13);
 insert into alter2.t1(f2) values(14);
 
-select * from alter2.t1 order by 1;
+select * from alter2.t1;
 
-select * from alter2.v1 order by 1;
+select * from alter2.v1;
 
 select alter2.plus1(41);
 

@@ -223,7 +223,7 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
-   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
+   ->  Hash Semi Join  (cost=0.00..862.01 rows=3 width=31)
          Hash Cond: pt.ptid = t.tid
          ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
          ->  Hash  (cost=100.00..100.00 rows=34 width=4)
@@ -263,7 +263,7 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
-   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
+   ->  Hash Semi Join  (cost=0.00..862.01 rows=3 width=31)
          Hash Cond: pt.ptid = t.tid
          ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
          ->  Hash  (cost=100.00..100.00 rows=34 width=4)
@@ -335,7 +335,7 @@ select count(*) from t, pt where tid = ptid;
 explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Window  (cost=0.00..485.02 rows=6 width=64)
+ WindowAgg  (cost=0.00..485.02 rows=6 width=64)
    Order By: pt.ptid, pt.pt1
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.02 rows=18 width=50)
          Merge Key: pt.ptid, pt.pt1
@@ -1915,7 +1915,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..862.00 rows=1 width=20)
    Hash Cond: jpat.b = pat.b
-   ->  Window  (cost=0.00..431.00 rows=1 width=16)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
          Order By: jpat.a
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                Merge Key: jpat.a

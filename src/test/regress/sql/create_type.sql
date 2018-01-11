@@ -20,7 +20,9 @@ CREATE TYPE city_budget (
    internallength = 16, 
    input = int44in, 
    output = int44out, 
-   element = int4
+   element = int4,
+   category = 'x',   -- just to verify the system will take it
+   preferred = true  -- ditto
 );
 
 -- Test creation and destruction of shell types
@@ -113,8 +115,7 @@ WHERE attrelid = 'mytab'::regclass AND attnum > 0;
 -- Create & Drop type as non-superuser
 CREATE USER user_bob;
 SET SESSION AUTHORIZATION user_bob;
-CREATE TYPE shell;
-DROP TYPE shell;
+CREATE TYPE shell; -- not allowed
 CREATE TYPE compfoo as (f1 int, f2 text);
 DROP TYPE compfoo;
 RESET SESSION AUTHORIZATION;

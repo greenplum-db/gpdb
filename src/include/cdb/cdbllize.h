@@ -3,7 +3,12 @@
  * cdbllize.h
  *	  definitions for cdbplan.c utilities
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbllize.h
  *
  *
  * NOTES
@@ -27,10 +32,13 @@ extern bool is_plan_node(Node *node);
 
 extern Flow *makeFlow(FlowType flotype);
 
-extern Flow *pull_up_Flow(Plan *plan, Plan *subplan, bool withSort);
+extern Flow *pull_up_Flow(Plan *plan, Plan *subplan);
 
 extern bool focusPlan(Plan *plan, bool stable, bool rescannable);
 extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr);
+extern bool repartitionPlanForGroupClauses(struct PlannerInfo *root, Plan *plan,
+							   bool stable, bool rescannable,
+							   List *sortclauses, List *targetlist);
 extern bool broadcastPlan(Plan *plan, bool stable, bool rescannable);
 
 #endif   /* CDBLLIZE_H */

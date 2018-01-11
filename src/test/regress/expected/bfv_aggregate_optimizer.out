@@ -113,7 +113,15 @@ select
    mysum2(val) over (w)
 from toy
 window w as (order by id rows 2 preceding);
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ id | val | sum | mysum1 | mysum2 
+----+-----+-----+--------+--------
+  1 |   1 |   1 |      1 |      1
+  2 |   2 |   3 |      3 |      3
+  3 |   3 |   6 |      6 |      6
+  4 |   4 |   9 |      9 |      9
+  5 |   5 |  12 |     12 |     12
+(5 rows)
+
 --
 -- Error executing for aggregate with anyarray as return type
 --
@@ -293,11 +301,29 @@ select string_agg(b || 'txt') over (partition by a+1) from foo order by 1;
 
 -- fall back and planner's plan produces unsupported execution
 select string_agg(b) over (partition by a order by a) from foo order by 1;
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ string_agg 
+------------
+ aaa
+ bbb
+ ccc
+(3 rows)
+
 select string_agg(b || 'txt') over (partition by a,b order by a,b) from foo order by 1;
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ string_agg 
+------------
+ aaatxt
+ bbbtxt
+ ccctxt
+(3 rows)
+
 select '1' || string_agg(b) over (partition by a+1 order by a+1) from foo;
-ERROR:  aggregate functions with no prelimfn or invprelimfn are not yet supported as window functions
+ ?column? 
+----------
+ 1aaa
+ 1bbb
+ 1ccc
+(3 rows)
+
 -- Test for a bug in memtuple compute_null_save() function, where the result value
 -- was a 16-bit integer, which overflowed with a tuple with enough NULL attributes.
 -- That bug wasn't related to aggregates per se, but this is one way to construct
@@ -1465,6 +1491,82 @@ from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
  c0  |     c1      | array_length 
 -----+-------------+--------------
  foo | 2015-09-1.1 |         5670
+(1 row)
+
+-- MPP-29042 Multistage aggregation plans should have consistent targetlists in
+-- case of same column aliases and grouping on them.
+DROP TABLE IF EXISTS t1;
+NOTICE:  table "t1" does not exist, skipping
+CREATE TABLE t1 (a varchar, b character varying) DISTRIBUTED RANDOMLY;
+INSERT INTO t1 VALUES ('aaaaaaa', 'cccccccccc');
+INSERT INTO t1 VALUES ('aaaaaaa', 'ddddd');
+INSERT INTO t1 VALUES ('bbbbbbb', 'eeee');
+INSERT INTO t1 VALUES ('bbbbbbb', 'eeef');
+INSERT INTO t1 VALUES ('bbbbb', 'dfafa');
+SELECT substr(a, 1) as a FROM (SELECT ('-'||a)::varchar as a FROM (SELECT a FROM t1) t2) t3 GROUP BY a ORDER BY a;
+    a     
+----------
+ -aaaaaaa
+ -bbbbb
+ -bbbbbbb
+(3 rows)
+
+SELECT array_agg(f ORDER BY f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
+             array_agg              
+------------------------------------
+ {cccccccccc,ddddd,dfafa,eeee,eeef}
+(1 row)
+
+-- Check that ORDER BY NULLS FIRST/LAST in an aggregate is respected (these are
+-- variants of similar query in PostgreSQL's aggregates test)
+create temporary table aggordertest (a int4, b int4) distributed by (a);
+insert into aggordertest values (1,1), (2,2), (1,3), (3,4), (null,5), (2,null);
+select array_agg(a order by a nulls first) from aggordertest;
+    array_agg     
+------------------
+ {NULL,1,1,2,2,3}
+(1 row)
+
+select array_agg(a order by a nulls last) from aggordertest;
+    array_agg     
+------------------
+ {1,1,2,2,3,NULL}
+(1 row)
+
+select array_agg(a order by a desc nulls first) from aggordertest;
+    array_agg     
+------------------
+ {NULL,3,2,2,1,1}
+(1 row)
+
+select array_agg(a order by a desc nulls last) from aggordertest;
+    array_agg     
+------------------
+ {3,2,2,1,1,NULL}
+(1 row)
+
+select array_agg(a order by b nulls first) from aggordertest;
+    array_agg     
+------------------
+ {2,1,2,1,3,NULL}
+(1 row)
+
+select array_agg(a order by b nulls last) from aggordertest;
+    array_agg     
+------------------
+ {1,2,1,3,NULL,2}
+(1 row)
+
+select array_agg(a order by b desc nulls first) from aggordertest;
+    array_agg     
+------------------
+ {2,NULL,3,1,2,1}
+(1 row)
+
+select array_agg(a order by b desc nulls last) from aggordertest;
+    array_agg     
+------------------
+ {NULL,3,1,2,1,2}
 (1 row)
 
 -- CLEANUP

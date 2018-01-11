@@ -10,12 +10,13 @@
  * and so on.  (Those are the things planner.c deals with.)
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.106 2008/01/11 04:02:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.115 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,10 +25,12 @@
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/placeholder.h"
 #include "optimizer/planmain.h"
 #include "optimizer/tlist.h"
 #include "utils/selfuncs.h"
 
+#include "catalog/pg_proc.h"
 #include "cdb/cdbpath.h"        /* cdbpath_rows() */
 #include "cdb/cdbvars.h"
 
@@ -71,9 +74,9 @@ static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
  * PlannerInfo field and not a passed parameter is that the low-level routines
  * in indxpath.c need to see it.)
  *
- * Note: the PlannerInfo node also includes group_pathkeys and sort_pathkeys,
- * which like query_pathkeys need to be canonicalized once the info is
- * available.
+ * Note: the PlannerInfo node also includes group_pathkeys, window_pathkeys,
+ * distinct_pathkeys, and sort_pathkeys, which like query_pathkeys need to be
+ * canonicalized once the info is available.
  *
  * tuple_fraction is interpreted as follows:
  *	  0: expect all tuples to be retrieved (normal case)
@@ -125,8 +128,23 @@ query_planner(PlannerInfo *root, List *tlist,
 													 root->query_pathkeys);
 		root->group_pathkeys = canonicalize_pathkeys(root,
 													 root->group_pathkeys);
+		root->window_pathkeys = canonicalize_pathkeys(root,
+													  root->window_pathkeys);
+		root->distinct_pathkeys = canonicalize_pathkeys(root,
+													root->distinct_pathkeys);
 		root->sort_pathkeys = canonicalize_pathkeys(root,
 													root->sort_pathkeys);
+
+		{
+			char		exec_location;
+
+			exec_location = check_execute_on_functions((Node *) parse->targetList);
+
+			if (exec_location == PROEXECLOCATION_MASTER)
+				CdbPathLocus_MakeEntry(&(*cheapest_path)->locus);
+			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+				CdbPathLocus_MakeStrewn(&(*cheapest_path)->locus);
+		}
 		return;
 	}
 
@@ -134,8 +152,8 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * Init planner lists to empty, and set up the array to hold RelOptInfos
 	 * for "simple" rels.
 	 *
-	 * NOTE: in_info_list and append_rel_list were set up by subquery_planner,
-	 * do not touch here; eq_classes may contain data already, too.
+	 * NOTE: append_rel_list was set up by subquery_planner, so do not touch
+	 * here; eq_classes may contain data already, too.
 	 */
 	root->simple_rel_array_size = list_length(parse->rtable) + 1;
 	root->simple_rel_array = (RelOptInfo **)
@@ -146,7 +164,8 @@ query_planner(PlannerInfo *root, List *tlist,
 	root->left_join_clauses = NIL;
 	root->right_join_clauses = NIL;
 	root->full_join_clauses = NIL;
-	root->oj_info_list = NIL;
+	root->join_info_list = NIL;
+	root->placeholder_list = NIL;
 	root->initial_rels = NIL;
 
 	/*
@@ -202,28 +221,20 @@ query_planner(PlannerInfo *root, List *tlist,
 	root->total_table_pages = total_pages;
 
 	/*
-	 * Examine the targetlist and qualifications, adding entries to baserel
-	 * targetlists for all referenced Vars.  Restrict and join clauses are
-	 * added to appropriate lists belonging to the mentioned relations.  We
-	 * also build EquivalenceClasses for provably equivalent expressions, and
-	 * form a target joinlist for make_one_rel() to work from.
-	 *
-	 * Note: all subplan nodes will have "flat" (var-only) tlists. This
-	 * implies that all expression evaluations are done at the root of the
-	 * plan tree. Once upon a time there was code to try to push expensive
-	 * function calls down to lower plan nodes, but that's dead code and has
-	 * been for a long time...
+	 * Examine the targetlist and join tree, adding entries to baserel
+	 * targetlists for all referenced Vars, and generating PlaceHolderInfo
+	 * entries for all referenced PlaceHolderVars.  Restrict and join clauses
+	 * are added to appropriate lists belonging to the mentioned relations.
+	 * We also build EquivalenceClasses for provably equivalent expressions.
+	 * The SpecialJoinInfo list is also built to hold information about join
+	 * order restrictions.  Finally, we form a target joinlist for
+	 * make_one_rel() to work from.
 	 */
 	build_base_rel_tlists(root, tlist);
 
-	joinlist = deconstruct_jointree(root);
+	find_placeholders_in_jointree(root);
 
-	/*
-	 * Vars mentioned in InClauseInfo items also have to be added to baserel
-	 * targetlists.  Nearly always, they'd have got there from the original
-	 * WHERE qual, but in corner cases maybe not.
-	 */
-	add_IN_vars_to_tlists(root);
+	joinlist = deconstruct_jointree(root);
 
 	/*
 	 * Reconsider any postponed outer-join quals now that we have built up
@@ -248,11 +259,21 @@ query_planner(PlannerInfo *root, List *tlist,
 	/*
 	 * We have completed merging equivalence sets, so it's now possible to
 	 * convert the requested query_pathkeys to canonical form.	Also
-	 * canonicalize the groupClause and sortClause pathkeys for use later.
+	 * canonicalize the groupClause, windowClause, distinctClause and
+	 * sortClause pathkeys for use later.
 	 */
 	root->query_pathkeys = canonicalize_pathkeys(root, root->query_pathkeys);
 	root->group_pathkeys = canonicalize_pathkeys(root, root->group_pathkeys);
+	root->window_pathkeys = canonicalize_pathkeys(root, root->window_pathkeys);
+	root->distinct_pathkeys = canonicalize_pathkeys(root, root->distinct_pathkeys);
 	root->sort_pathkeys = canonicalize_pathkeys(root, root->sort_pathkeys);
+
+	/*
+	 * Examine any "placeholder" expressions generated during subquery pullup.
+	 * Make sure that the Vars they need are marked as needed at the relevant
+	 * join level.
+	 */
+	fix_placeholder_input_needed_levels(root);
 
 	/*
 	 * Ready to do the primary planning.
@@ -312,11 +333,14 @@ query_planner(PlannerInfo *root, List *tlist,
 		/*
 		 * If both GROUP BY and ORDER BY are specified, we will need two
 		 * levels of sort --- and, therefore, certainly need to read all the
-		 * tuples --- unless ORDER BY is a subset of GROUP BY.
+		 * tuples --- unless ORDER BY is a subset of GROUP BY.  Likewise if we
+		 * have both DISTINCT and GROUP BY.
 		 */
-		if (parse->groupClause && parse->sortClause &&
-			!pathkeys_contained_in(root->sort_pathkeys, root->group_pathkeys))
+		if (!pathkeys_contained_in(root->sort_pathkeys, root->group_pathkeys) ||
+			!pathkeys_contained_in(root->distinct_pathkeys, root->group_pathkeys))
 			tuple_fraction = 0.0;
+		/* GPDB_84_MERGE_FIXME: Are we missing the condition on window_pathkeys on
+		 * purpose? */
 	}
 	else if (parse->hasAggs || root->hasHavingQual)
 	{
@@ -443,13 +467,13 @@ distcols_in_groupclause(List *gc, Bitmapset *bms)
 		if (node == NULL)
 			continue;
 
-		Assert(IsA(node, GroupClause) ||
+		Assert(IsA(node, SortGroupClause) ||
 			   IsA(node, List) ||
 			   IsA(node, GroupingClause));
 
-		if (IsA(node, GroupClause))
+		if (IsA(node, SortGroupClause))
 		{
-			bms = bms_add_member(bms, ((GroupClause *)node)->tleSortGroupRef);
+			bms = bms_add_member(bms, ((SortGroupClause *) node)->tleSortGroupRef);
 		}
 
 		else if (IsA(node, List))
@@ -516,7 +540,6 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;
 	c1->gp_enable_preunique = gp_enable_preunique;
 	c1->gp_eager_preunique = gp_eager_preunique;
-	c1->gp_enable_sequential_window_plans = gp_enable_sequential_window_plans;
 	c1->gp_hashagg_streambottom = gp_hashagg_streambottom;
 	c1->gp_enable_agg_distinct = gp_enable_agg_distinct;
 	c1->gp_enable_dqa_pruning = gp_enable_dqa_pruning;
@@ -527,13 +550,13 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->gp_enable_groupext_distinct_gather = gp_enable_groupext_distinct_gather;
 	c1->gp_enable_sort_limit = gp_enable_sort_limit;
 	c1->gp_enable_sort_distinct = gp_enable_sort_distinct;
-	c1->gp_enable_mk_sort = gp_enable_mk_sort;
-	c1->gp_enable_motion_mk_sort = gp_enable_motion_mk_sort;
 
 	c1->gp_enable_direct_dispatch = gp_enable_direct_dispatch;
 	c1->gp_dynamic_partition_pruning = gp_dynamic_partition_pruning;
 
 	c1->gp_cte_sharing = gp_cte_sharing;
+
+	c1->honor_order_by = true;
 
 	return c1;
 }

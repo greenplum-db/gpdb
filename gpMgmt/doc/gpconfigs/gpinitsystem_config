@@ -14,7 +14,7 @@ SEG_PREFIX=gpseg
 
 #### Base number by which primary segment port numbers 
 #### are calculated.
-PORT_BASE=40000
+PORT_BASE=20000
 
 #### File system location(s) where primary segment data directories 
 #### will be created. The number of locations in the list dictate
@@ -49,15 +49,15 @@ ENCODING=UNICODE
 
 #### Base number by which mirror segment port numbers 
 #### are calculated.
-#MIRROR_PORT_BASE=50000
+#MIRROR_PORT_BASE=21000
 
 #### Base number by which primary file replication port 
 #### numbers are calculated.
-#REPLICATION_PORT_BASE=41000
+#REPLICATION_PORT_BASE=22000
 
 #### Base number by which mirror file replication port 
 #### numbers are calculated. 
-#MIRROR_REPLICATION_PORT_BASE=51000
+#MIRROR_REPLICATION_PORT_BASE=23000
 
 #### File system location(s) where mirror segment data directories 
 #### will be created. The number of mirror locations must equal the

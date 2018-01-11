@@ -3,14 +3,6 @@
 #include "http_parser.cpp"
 #include "ini.cpp"
 
-TEST(Utils, simplecurl) {
-    CURL *c = CreateCurlHandler(NULL);
-    EXPECT_EQ(c, (void *)NULL);
-    c = CreateCurlHandler("www.google.com");
-    EXPECT_NE(c, (void *)NULL);
-    curl_easy_cleanup(c);
-}
-
 TEST(Utils, nth) {
     const char *teststr = "aaabbbcccaaatttaaa";
 

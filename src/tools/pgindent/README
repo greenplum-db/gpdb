@@ -1,46 +1,28 @@
-src/tools/pgindent/README
+$PostgreSQL: pgsql/src/tools/pgindent/README,v 1.31 2009/06/10 01:51:44 momjian Exp $
 
 pgindent
 ========
 
 This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
-*.l files.
+*.l files.  For source code typedefs, download:
 
-1) Change directory to the top of the build tree.
+	http://www.pgbuildfarm.org/cgi-bin/typedefs.pl
 
-2) Download the typedef file from the buildfarm:
+1) Run 'gmake distclean' from the top of the source tree to remove any
+   derived C files.
 
-	wget -O src/tools/pgindent/typedefs.list http://buildfarm.postgresql.org/cgi-bin/typedefs.pl
+2) From the top of the source tree, run:
 
-3) Remove all derived files (pgindent has trouble with one of the flex macros):
-
-	gmake maintainer-clean
-
-4) Run pgindent:
-
-	find . -name '*.[ch]' -type f -print | \
-	egrep -v -f src/tools/pgindent/exclude_file_patterns | \
-	xargs -n100 pgindent src/tools/pgindent/typedefs.list
-
-5) Remove any files that generate errors and restore their original
-   versions.
-
-6) Do a full test build:
-
-	run configure
-	# stop is only necessary if it's going to install in a location with an
-	# already running server
-	pg_ctl stop
-	gmake -C src install
-	gmake -C contrib install
-	gmake installcheck-world
+	find . -name '*.[ch]' -type f -print |
+	egrep -v '/s_lock.h|/ecpg/test/expected/|/snowball/libstemmer/' |
+	xargs -n100 pgindent /tmp/typedefs.pl
 
 
 ---------------------------------------------------------------------------
 
-We have standardized on NetBSD's indent.  We have fixed a few bugs which
-requre the NetBSD source to be patched with indent.bsd.patch patch.  A
-fully patched version is available at ftp://ftp.postgresql.org/pub/dev.
+We have standardized on NetBSD's indent.  We have fixed a few bugs which 
+requre the NetBSD source to be patched with indent.bsd.patch patch.  A 
+fully patched  version is available at ftp://ftp.postgresql.org/pub/dev.
 
 GNU indent, version 2.2.6, has several problems, and is not recommended.
 These bugs become pretty major when you are doing >500k lines of code.
@@ -53,13 +35,12 @@ Notes about excluded files:
 src/include/storage/s_lock.h is excluded because it contains assembly code
 that pgindent tends to mess up.
 
+src/interfaces/ecpg/test/expected/ is excluded to avoid breaking the ecpg
+regression tests.
+
 src/include/snowball/libstemmer/ and src/backend/snowball/libstemmer/
 are excluded because those files are imported from an external project,
 not maintained locally, and are machine-generated anyway.
-
-src/interfaces/ecpg/test/expected/ is excluded to avoid breaking the ecpg
-regression tests.  Several *.h files are included in regression output so
-should not be changed.
 
 ---------------------------------------------------------------------------
 
@@ -77,3 +58,4 @@ To use pgindent:
 4) Save a list of typedefs by running:
 
 	src/tools/find_typedef /usr/local/pgsql/bin /usr/local/pgsql/lib > /tmp/pgtypedefs
+

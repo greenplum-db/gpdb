@@ -2,14 +2,20 @@
  *
  * deprecated.c
  *
- *   Utility function to support deprecating functions from one release
+ * Utility function to support deprecating functions from one release
  * to the next.  Deleting the function outright as part of upgrade is
  * not good because it could theoretically cascade to user views, so 
  * instead the definition of a deprecated function should be changed
  * to point to this function instead which will provide an error message
  * when the function is called.
  *
- * Copyright (c) 2010, Greenplum
+ * Portions Copyright (c) 2010, Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/fmgr/deprecated.c
+ *
  *-------------------------------------------------------------------------
  */
 

@@ -39,10 +39,10 @@
  * anything we saw during replay.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.27.2.1 2009/11/23 09:59:00 heikki Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.31 2009/06/26 20:29:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,12 +55,13 @@
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
 #include "miscadmin.h"
+#include "pg_trace.h"
 #include "storage/backendid.h"
 #include "storage/lmgr.h"
-#include "utils/memutils.h"
 #include "storage/procarray.h"
-#include "cdb/cdbpersistentstore.h"
+#include "utils/memutils.h"
 
+#include "cdb/cdbpersistentstore.h"
 
 /*
  * Defines for MultiXactOffset page sizes.	A page is the same BLCKSZ as is
@@ -1674,10 +1675,12 @@ ShutdownMultiXact(void)
 	MIRRORED_LOCK;
 
 	/* Flush dirty MultiXact pages to disk */
+	TRACE_POSTGRESQL_MULTIXACT_CHECKPOINT_START(false);
 	SimpleLruFlush(MultiXactOffsetCtl, false);
 	SimpleLruFlush(MultiXactMemberCtl, false);
 
 	MIRRORED_UNLOCK;
+	TRACE_POSTGRESQL_MULTIXACT_CHECKPOINT_DONE(false);
 }
 
 /*
@@ -1715,6 +1718,8 @@ CheckPointMultiXact(void)
 
 	MIRRORED_LOCK;
 
+	TRACE_POSTGRESQL_MULTIXACT_CHECKPOINT_START(true);
+
 	/* Flush dirty MultiXact pages to disk */
 	SimpleLruFlush(MultiXactOffsetCtl, true);
 	SimpleLruFlush(MultiXactMemberCtl, true);
@@ -1727,10 +1732,12 @@ CheckPointMultiXact(void)
 	 * SimpleLruTruncate would get confused.  It seems best not to risk
 	 * removing any data during recovery anyway, so don't truncate.
 	 */
-	if (!InRecovery)
+	if (!RecoveryInProgress())
 		TruncateMultiXact();
 
 	MIRRORED_UNLOCK;
+
+	TRACE_POSTGRESQL_MULTIXACT_CHECKPOINT_DONE(true);
 }
 
 /*
@@ -2079,6 +2086,9 @@ multixact_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __att
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 
 	MIRRORED_LOCK;
+
+	/* Backup blocks are not used in multixact records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	if (info == XLOG_MULTIXACT_ZERO_OFF_PAGE)
 	{

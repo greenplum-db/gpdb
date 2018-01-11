@@ -4,10 +4,10 @@
  *	  tuple table support stuff
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/tuptable.h,v 1.38.2.1 2009/03/30 04:09:09 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/executor/tuptable.h,v 1.42 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -106,7 +106,7 @@
  * has only a minimal and not also a regular physical tuple, then tts_tuple
  * points at tts_minhdr and the fields of that struct are set correctly
  * for access to the minimal tuple; in particular, tts_minhdr.t_data points
- * MINIMAL_TUPLE_OFFSET bytes before tts_mintuple.  This allows column
+ * MINIMAL_TUPLE_OFFSET bytes before tts_mintuple.	This allows column
  * extraction to treat the case identically to regular physical tuples.
  *
  * tts_slow/tts_off are saved state for slot_deform_tuple, and should not
@@ -191,7 +191,6 @@ static inline bool TupHasVirtualTuple(TupleTableSlot *slot)
 static inline HeapTuple TupGetHeapTuple(TupleTableSlot *slot)
 {
 	Assert(TupHasHeapTuple(slot));
-	Assert(!is_heaptuple_memtuple(slot->PRIVATE_tts_heaptuple));
 	return slot->PRIVATE_tts_heaptuple; 
 }
 static inline MemTuple TupGetMemTuple(TupleTableSlot *slot)
@@ -399,34 +398,37 @@ extern MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt
 
 extern HeapTuple ExecFetchSlotHeapTuple(TupleTableSlot *slot);
 extern MemTuple ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast);
-
 extern Datum ExecFetchSlotTupleDatum(TupleTableSlot *slot);
 
-static inline void *ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_inline_toast)
+static inline GenericTuple
+ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_inline_toast)
 {
 	Assert(!TupIsNull(slot));
 	if (slot->PRIVATE_tts_memtuple == NULL && slot->PRIVATE_tts_heaptuple != NULL)
-		return (void *) slot->PRIVATE_tts_heaptuple;
+		return (GenericTuple) slot->PRIVATE_tts_heaptuple;
 
-	return ExecFetchSlotMemTuple(slot, mtup_inline_toast);
+	return (GenericTuple) ExecFetchSlotMemTuple(slot, mtup_inline_toast);
 }
 
-static inline TupleTableSlot *ExecStoreGenericTuple(void *tup, TupleTableSlot *slot, bool shouldFree)
+static inline TupleTableSlot *
+ExecStoreGenericTuple(GenericTuple tup, TupleTableSlot *slot, bool shouldFree)
 {
-	if (is_heaptuple_memtuple((HeapTuple) tup))
+	if (is_memtuple(tup))
 		return ExecStoreMinimalTuple((MemTuple) tup, slot, shouldFree);
 
 	return ExecStoreHeapTuple((HeapTuple) tup, slot, InvalidBuffer, shouldFree);
 }
 
-static inline HeapTuple ExecCopyGenericTuple(TupleTableSlot *slot)
+static inline GenericTuple
+ExecCopyGenericTuple(TupleTableSlot *slot)
 {
 	Assert(!TupIsNull(slot));
 	if(slot->PRIVATE_tts_heaptuple != NULL && slot->PRIVATE_tts_memtuple == NULL)
-		return ExecCopySlotHeapTuple(slot);
-	return (HeapTuple) ExecCopySlotMemTuple(slot);
+		return (GenericTuple) ExecCopySlotHeapTuple(slot);
+	return (GenericTuple) ExecCopySlotMemTuple(slot);
 }
 
+extern HeapTuple ExecMaterializeSlot(TupleTableSlot *slot);
 extern TupleTableSlot *ExecCopySlot(TupleTableSlot *dstslot, TupleTableSlot *srcslot);
 
 extern void ExecModifyMemTuple(TupleTableSlot *slot, Datum *values, bool *isnull, bool *doRepl);

@@ -1,7 +1,7 @@
 #
 # Makefile for utils
 #
-# $PostgreSQL: pgsql/src/backend/utils/Makefile,v 1.25 2007/02/09 15:55:58 petere Exp $
+# $PostgreSQL: pgsql/src/backend/utils/Makefile,v 1.28 2008/08/01 13:16:09 alvherre Exp $
 #
 
 subdir = src/backend/utils
@@ -15,7 +15,6 @@ SUBDIRS     = adt cache datumstream error fmgr hash init mb misc mmgr resowner \
 include $(top_srcdir)/src/backend/common.mk
 
 all: fmgroids.h probes.h
-
 
 $(SUBDIRS:%=%-recursive): fmgroids.h
 
@@ -31,8 +30,8 @@ probes.h: Gen_dummy_probes.sed
 endif
 
 probes.h: probes.d
-ifeq ($(enable_dtrace), xxxyes)
-	$(DTRACE) -C -s $< -o $@.tmp
+ifeq ($(enable_dtrace), yes)
+	$(DTRACE) -C -h -s $< -o $@.tmp
 	sed -e 's/POSTGRESQL_/TRACE_POSTGRESQL_/g' $@.tmp >$@
 	rm $@.tmp
 else
@@ -41,5 +40,4 @@ endif
 
 
 clean:
-	for dir in $(SUBDIRS); do $(MAKE) -C $$dir $@ || exit; done
-	rm -f SUBSYS.o fmgrtab.o fmgroids.h fmgrtab.c probes.h
+	rm -f fmgroids.h fmgrtab.c probes.h

@@ -36,13 +36,8 @@ cp ./postgresql.conf.orig ./postgresql.conf.kerberized
 echo "krb_server_keyfile='server.keytab'" >> ./postgresql.conf.kerberized
 cp ./postgresql.conf.kerberized  ${MASTER_DATA_DIRECTORY}/postgresql.conf
 
-###
-# Restart the server, to reload the config.
-#
-# Changing krb_server_keyfile requires a restart to take effect, SIGHUP
-# is not enough (GPDB_84_MERGE_FIXME: this changes in PostgreSQL 8.4, commit
-# a27addbc87)
-pg_ctl -D ${MASTER_DATA_DIRECTORY} restart -w
+# Reload the config.
+pg_ctl -D ${MASTER_DATA_DIRECTORY} reload -w
 
 echo "Server configured for Kerberos authentication"
 
@@ -50,7 +45,11 @@ echo "Server configured for Kerberos authentication"
 # Test that we can *not* connect yet, because we haven't run kinit.
 #
 echo "Testing connection, should fail"
-! psql "dbname=postgres hostaddr=127.0.0.1 krbsrvname=postgres  host=localhost user=krbtestuser" -c "SELECT version()"
+psql "dbname=postgres hostaddr=127.0.0.1 krbsrvname=postgres  host=localhost user=krbtestuser" -c "SELECT version()" &&
+if [ $? -eq 0 ]; then
+    echo "FAIL: Connection to server succeeded, even though we had not run kinit yet!"
+    exit 1
+fi
 
 # Run kinit, to obtain a Kerberos TGT, so that we can log in.
 echo "Obtaining Kerberos ticket-granting-ticket from KDC..."
@@ -68,7 +67,11 @@ psql -P pager=off "dbname=template1" -c "ALTER USER krbtestuser valid until '201
 
 # should not be able to connect anymore
 echo "Testing connection, with expired user account. Should not succeed"
-! psql "dbname=postgres hostaddr=127.0.0.1 krbsrvname=postgres  host=localhost user=krbtestuser" -c "SELECT version()"
+psql "dbname=postgres hostaddr=127.0.0.1 krbsrvname=postgres  host=localhost user=krbtestuser" -c "SELECT version()" &&
+if [ $? -eq 0 ]; then
+    echo "FAIL: Connection with expired user account succeeded!"
+    exit 1
+fi
 
 psql -P pager=off "dbname=template1" -c "ALTER USER krbtestuser valid until '2054-04-10 11:46:00-07'"
 # now it should succeed again.

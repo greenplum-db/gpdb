@@ -196,6 +196,9 @@ dump_new_oids(migratorContext *ctx)
 		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, relname, relnamespace FROM pg_class", "preassign_relation_oid");
 		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, proname, pronamespace FROM pg_proc", "preassign_procedure_oid");
 		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, amopmethod FROM pg_amop", "preassign_amop_oid");
+		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, fdwname, fdwowner FROM pg_foreign_data_wrapper", "preassign_fdw_oid");
+		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, srvname, srvowner, srvfdw FROM pg_foreign_server", "preassign_fdw_server_oid");
+		dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, umuser, umserver FROM pg_user_mapping", "preassign_user_mapping_oid");
 
 		PQfinish(conn);
 
@@ -222,7 +225,9 @@ slurp_oid_files(migratorContext *ctx)
 	if (!oid_dump)
 		pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", GLOBAL_OIDS_DUMP_FILE);
 
-	fstat(fileno(oid_dump), &st);
+	if (fstat(fileno(oid_dump), &st) != 0)
+		pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+			   GLOBAL_OIDS_DUMP_FILE, strerror(errno));
 
 	reserved_oids = pg_malloc(ctx, st.st_size + 1);
 	fread(reserved_oids, st.st_size, 1, oid_dump);
@@ -241,7 +246,9 @@ slurp_oid_files(migratorContext *ctx)
 		if (!oid_dump)
 			pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", filename);
 
-		fstat(fileno(oid_dump), &st);
+		if (fstat(fileno(oid_dump), &st) != 0)
+			pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+				   filename, strerror(errno));
 
 		reserved_oids = pg_malloc(ctx, st.st_size + 1);
 		fread(reserved_oids, st.st_size, 1, oid_dump);

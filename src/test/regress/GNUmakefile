@@ -3,21 +3,16 @@
 # GNUmakefile--
 #    Makefile for src/test/regress (the regression tests)
 #
-# Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.71 2008/01/01 19:46:00 momjian Exp $
+# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.77 2009/01/01 17:24:04 momjian Exp $
 #
 #-------------------------------------------------------------------------
 
 subdir = src/test/regress
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-
-contribdir = $(top_builddir)/contrib
-
-# port number for temp-installation test postmaster
-TEMP_PORT = 5$(DEF_PGPORT)
 
 # file with extra config for temp build
 TEMP_CONF =
@@ -87,6 +82,10 @@ install: all installdirs
 	$(INSTALL_PROGRAM) atmsort.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	$(INSTALL_PROGRAM) explain.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
 	$(INSTALL_PROGRAM) explain.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
+	$(INSTALL_PROGRAM) GPTest.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/GPTest.pm'
+
+installdirs:
+	$(mkinstalldirs) '$(DESTDIR)$(pgxsdir)/$(subdir)'
 
 uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/pg_regress$(X)'
@@ -96,12 +95,15 @@ uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
+	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/GPTest.pm'
 
 
 # Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C.
 
 NAME = regress
-OBJS = regress.o partindex.o workfile_mgr_test.o
+OBJS = regress.o
+
+OBJS += regress_gp.o partindex.o workfile_mgr_test.o
 
 include $(top_srcdir)/src/Makefile.shlib
 
@@ -109,48 +111,55 @@ all: all-lib
 
 # Test input and expected files.  These are created by pg_regress itself, so we
 # don't have a rule to create them.  We do need rules to clean them however.
-ifile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/input/*.source)))
-input_files  := $(foreach file, $(ifile_list), sql/$(file).sql)
-ofile_list := $(subst .source,, $(notdir $(wildcard $(top_srcdir)/$(subdir)/output/*.source)))
-output_files := $(foreach file, $(ofile_list), expected/$(file).out)
+input_files = $(patsubst $(srcdir)/input/%.source,sql/%.sql, $(wildcard $(srcdir)/input/*.source))
+output_files := $(patsubst $(srcdir)/output/%.source,expected/%.out, $(wildcard $(srcdir)/output/*.source))
+
+# not installed by default
+
+regress_data_files = \
+	$(filter-out $(addprefix $(srcdir)/,$(output_files)),$(wildcard $(srcdir)/expected/*.out)) \
+	$(wildcard $(srcdir)/input/*.source) \
+	$(wildcard $(srcdir)/output/*.source) \
+	$(wildcard $(srcdir)/output/uao_dml/*.source) \
+	$(wildcard $(srcdir)/output/uao_ddl/*.source) \
+	$(filter-out $(addprefix $(srcdir)/,$(input_files)),$(wildcard $(srcdir)/sql/*.sql)) \
+	$(wildcard $(srcdir)/data/*.data) \
+	$(srcdir)/parallel_schedule $(srcdir)/serial_schedule $(srcdir)/resultmap
+
+install-tests: all install install-lib installdirs-tests
+	$(MAKE) -C $(top_builddir)/contrib/spi install
+	for file in $(regress_data_files); do \
+	  $(INSTALL_DATA) $$file '$(DESTDIR)$(pkglibdir)/regress/'$$file; \
+	done
+
+installdirs-tests: installdirs
+	$(mkinstalldirs)  $(patsubst $(srcdir)/%/,'$(DESTDIR)$(pkglibdir)/regress/%',$(sort $(dir $(regress_data_files))))
 
 
-ifneq ($(PORTNAME),win32)
-abs_srcdir := $(shell cd "$(srcdir)" && pwd)
-abs_builddir := $(shell pwd)
-else
-abs_srcdir := $(shell cd $(srcdir) && pwd -W)
-endif
+# Get some extra C modules from contrib/spi...
 
-# When doing a VPATH build, copy over the remaining .sql and .out
-# files so that the driver script can find them.  We have to use an
-# absolute path for the targets, because otherwise make will try to
-# locate the missing files using VPATH, and will find them in
-# $(srcdir), but the point here is that we want to copy them from
-# $(srcdir) to the build directory.
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest
 
-ifdef VPATH
-remaining_files_src := $(wildcard $(srcdir)/sql/*.sql) $(wildcard $(srcdir)/expected/*.out) $(srcdir)/resultmap
-remaining_files_build := $(patsubst $(srcdir)/%, $(abs_builddir)/%, $(remaining_files_src))
+refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
+	cp $< $@
 
-all: $(remaining_files_build)
-$(remaining_files_build): $(abs_builddir)/%: $(srcdir)/%
-	ln -s $< $@
-endif
+autoinc$(DLSUFFIX): $(top_builddir)/contrib/spi/autoinc$(DLSUFFIX)
+	cp $< $@
 
+$(top_builddir)/contrib/spi/refint$(DLSUFFIX): $(top_srcdir)/contrib/spi/refint.c
+	$(MAKE) -C $(top_builddir)/contrib/spi refint$(DLSUFFIX)
 
-# And finally some extra C modules...
+$(top_builddir)/contrib/spi/autoinc$(DLSUFFIX): $(top_srcdir)/contrib/spi/autoinc.c
+	$(MAKE) -C $(top_builddir)/contrib/spi autoinc$(DLSUFFIX)
 
-all: all-spi tablespace-setup includecheck hooktest
-
-.PHONY: all-spi
-all-spi:
-	$(MAKE) -C $(contribdir)/spi refint$(DLSUFFIX) autoinc$(DLSUFFIX)
 
 # Tablespace setup
+
+all: tablespace-setup
+
 .PHONY: tablespace-setup
 tablespace-setup:
-	-rm -rf ./testtablespace
+	rm -rf ./testtablespace
 	mkdir ./testtablespace
 
 # Check for include files that are not being shipped
@@ -166,7 +175,7 @@ hooktest:
 ## Run tests
 ##
 
-pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
+pg_regress_call = ./pg_regress --inputdir=$(srcdir) --dlpath=. --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 
 # These are currently skipped because they don't work yet for segment wal replication
 # segspace: cannot restart database at the moment
@@ -176,22 +185,22 @@ pg_regress_call := $(pg_regress_call) --exclude-tests="segspace_setup segspace s
 endif
 
 check: all
-	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
+	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --schedule=$(srcdir)/parallel_schedule 
 
 installcheck: all
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
+	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule 
 
 installcheck-good: all twophase_pqexecparams hooktest
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao; \
+	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao; \
 	else \
 	bash kerberos/setup_test.sh; \
-	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao --host=`hostname`; \
+	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao --host=`hostname`; \
 	fi
 
 testbouncer: all
 	bash -c "bouncer/setup.sh"
-	$(pg_regress_call)  --port=65432 --psqldir=$(PSQLDIR) --schedule=./minimal_schedule --srcdir=$(abs_srcdir) --host=`hostname`;
+	$(pg_regress_call)  --port=65432 --psqldir=$(PSQLDIR) --schedule=./minimal_schedule --host=`hostname`;
 	bash -c "bouncer/stop.sh"
 
 # old interfaces follow...
@@ -201,13 +210,13 @@ runtest: installcheck
 runtest-parallel: installcheck-parallel
 
 bigtest: all
-	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir) numeric_big 
+	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule numeric_big 
 
 bigcheck: all
-	$(pg_regress_call)  --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule numeric_big
+	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) numeric_big
 
 bkuprestore: all
-	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bkuprestore_schedule --srcdir=$(abs_srcdir)
+	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bkuprestore_schedule
 
 ##
 ## Clean up
@@ -215,23 +224,18 @@ bkuprestore: all
 
 clean distclean maintainer-clean: clean-lib
 # things built by `all' target
-	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
-	$(MAKE) -C $(contribdir)/spi clean
+	$(MAKE) -C $(top_builddir)/contrib/spi clean
 	$(MAKE) -C hooktest/ clean
-	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
+	rm -f twophase_pqexecparams
 # things created by dynamic configs
 	find sql -type l | xargs rm -f
 	find expected -type l | xargs rm -f
+	rm -f $(OBJS) refint$(DLSUFFIX) autoinc$(DLSUFFIX) pg_regress_main.o pg_regress.o pg_regress$(X)
 # things created by various check targets
+	rm -f $(output_files) $(input_files)
 	rm -rf testtablespace
 	rm -rf results tmp_check log
 	rm -f regression.diffs regression.out regress.out run_check.out
 	rm -f data/pg_class32.data
 	rm -f gmon.out
 	rm -f $(srcdir)/sql/cppudf.sql
-ifeq ($(PORTNAME), cygwin)
-	rm -f regress.def
-endif
-ifdef VPATH
-	rm -f $(remaining_files_build)
-endif

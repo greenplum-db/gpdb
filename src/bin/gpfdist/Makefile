@@ -16,6 +16,10 @@ OBJS = gpfdist.o gpfdist_helper.o fstream.o gfile.o
 # need to link with unnecessary libraries.
 GPFDIST_LIBS =-levent
 
+ifeq ($(PORTNAME),aix)
+  GPFDIST_LIBS += -lbz2 -lbsd
+endif
+
 ifeq ($(have_yaml),yes)
   GPFDIST_LIBS += -lyaml
   OBJS += transform.o

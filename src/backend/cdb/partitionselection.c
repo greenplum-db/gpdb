@@ -3,7 +3,11 @@
  * partitionselection.c
  *	  Provides utility routines to support partition selection.
  *
- * Copyright (c) Pivotal Inc.
+ * Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/partitionselection.c
  *
  *--------------------------------------------------------------------------
  */
@@ -26,7 +30,7 @@
 typedef struct AttrMapContext
 {
 	const AttrNumber *newattno; /* The mapping table to remap the varattno */
-	Index varno; /* Which rte's varattno to re-map */
+	Index		varno;			/* Which rte's varattno to re-map */
 } AttrMapContext;
 
 static bool change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt);
@@ -42,13 +46,15 @@ static bool change_varattnos_varno_walker(Node *node, const AttrMapContext *attr
 static int32
 eval_propagation_expression(PartitionSelectorState *node, Oid part_oid)
 {
-	ExprState *propagationExprState = node->propagationExprState;
+	ExprState  *propagationExprState = node->propagationExprState;
 
 	ExprContext *econtext = node->ps.ps_ExprContext;
+
 	ResetExprContext(econtext);
-	bool isNull = false;
+	bool		isNull = false;
 	ExprDoneCond isDone = ExprSingleResult;
-	Datum result = ExecEvalExpr(propagationExprState, econtext, &isNull, &isDone);
+	Datum		result = ExecEvalExpr(propagationExprState, econtext, &isNull, &isDone);
+
 	return DatumGetInt32(result);
 }
 
@@ -68,13 +74,14 @@ eval_part_qual(ExprState *exprstate, PartitionSelectorState *node, TupleTableSlo
 {
 	/* evaluate generalPredicate */
 	ExprContext *econtext = node->ps.ps_ExprContext;
+
 	ResetExprContext(econtext);
 	econtext->ecxt_outertuple = inputTuple;
 	econtext->ecxt_scantuple = inputTuple;
 
-	List *qualList = list_make1(exprstate);
+	List	   *qualList = list_make1(exprstate);
 
-	return ExecQual(qualList, econtext, false /* result is not for null */);
+	return ExecQual(qualList, econtext, false /* result is not for null */ );
 }
 
 /* ----------------------------------------------------------------
@@ -94,24 +101,27 @@ eval_part_qual(ExprState *exprstate, PartitionSelectorState *node, TupleTableSlo
  *
  * ----------------------------------------------------------------
  */
-static PartitionRule*
+static PartitionRule *
 partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oid root_oid, Datum value, Oid exprTypid, bool isNull)
 {
-	Assert (NULL != pn);
-	Assert (NULL != accessMethods);
-	Partition *part = pn->part;
+	Assert(NULL != pn);
+	Assert(NULL != accessMethods);
+	Partition  *part = pn->part;
 
-	Assert (1 == part->parnatts);
-	AttrNumber partAttno = part->paratts[0];
-	Assert (0 < partAttno);
+	Assert(1 == part->parnatts);
+	AttrNumber	partAttno = part->paratts[0];
 
-	Relation rel = relation_open(root_oid, NoLock);
-	TupleDesc tupDesc = RelationGetDescr(rel);
+	Assert(0 < partAttno);
+
+	Relation	rel = relation_open(root_oid, NoLock);
+	TupleDesc	tupDesc = RelationGetDescr(rel);
+
 	Assert(tupDesc->natts >= partAttno);
 
 	int			i;
 	Datum	   *values = palloc0(partAttno * sizeof(Datum));
 	bool	   *isnull = palloc(partAttno * sizeof(bool));
+
 	for (i = 0; i < partAttno - 1; i++)
 		isnull[i] = true;
 	isnull[partAttno - 1] = isNull;
@@ -136,21 +146,27 @@ partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oi
  */
 static List *
 partition_rules_for_general_predicate(PartitionSelectorState *node, int level,
-						TupleTableSlot *inputTuple, PartitionNode *parentNode)
+									  TupleTableSlot *inputTuple, PartitionNode *parentNode)
 {
-	Assert (NULL != node);
-	Assert (NULL != parentNode);
+	Assert(NULL != node);
+	Assert(NULL != parentNode);
 
-	List *result = NIL;
-	ListCell *lc = NULL;
-	foreach (lc, parentNode->rules)
+	List	   *result = NIL;
+	ListCell   *lc = NULL;
+
+	foreach(lc, parentNode->rules)
 	{
 		PartitionRule *rule = (PartitionRule *) lfirst(lc);
-		/* We need to register it to allLevelParts to evaluate the current predicate */
+
+		/*
+		 * We need to register it to allLevelParts to evaluate the current
+		 * predicate
+		 */
 		node->levelPartRules[level] = rule;
 
 		/* evaluate generalPredicate */
-		ExprState *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
+		ExprState  *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
+
 		if (eval_part_qual(exprstate, node, inputTuple))
 		{
 			result = lappend(result, rule);
@@ -159,11 +175,15 @@ partition_rules_for_general_predicate(PartitionSelectorState *node, int level,
 
 	if (parentNode->default_part)
 	{
-		/* We need to register it to allLevelParts to evaluate the current predicate */
+		/*
+		 * We need to register it to allLevelParts to evaluate the current
+		 * predicate
+		 */
 		node->levelPartRules[level] = parentNode->default_part;
 
 		/* evaluate generalPredicate */
-		ExprState *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
+		ExprState  *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
+
 		if (eval_part_qual(exprstate, node, inputTuple))
 		{
 			result = lappend(result, parentNode->default_part);
@@ -185,32 +205,35 @@ partition_rules_for_general_predicate(PartitionSelectorState *node, int level,
  */
 static PartitionRule *
 partition_rules_for_equality_predicate(PartitionSelectorState *node, int level,
-						TupleTableSlot *inputTuple, PartitionNode *parentNode)
+									   TupleTableSlot *inputTuple, PartitionNode *parentNode)
 {
-	Assert (NULL != node);
-	Assert (NULL != node->ps.plan);
-	Assert (NULL != parentNode);
+	Assert(NULL != node);
+	Assert(NULL != node->ps.plan);
+	Assert(NULL != parentNode);
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
-	Assert (level < ps->nLevels);
+
+	Assert(level < ps->nLevels);
 
 	/* evaluate equalityPredicate to get partition identifier value */
-	ExprState *exprState = (ExprState *) lfirst(list_nth_cell(node->levelEqExprStates, level));
+	ExprState  *exprState = (ExprState *) lfirst(list_nth_cell(node->levelEqExprStates, level));
 
 	ExprContext *econtext = node->ps.ps_ExprContext;
+
 	ResetExprContext(econtext);
 	econtext->ecxt_outertuple = inputTuple;
 	econtext->ecxt_scantuple = inputTuple;
 
-	bool isNull = false;
+	bool		isNull = false;
 	ExprDoneCond isDone = ExprSingleResult;
-	Datum value = ExecEvalExpr(exprState, econtext, &isNull, &isDone);
+	Datum		value = ExecEvalExpr(exprState, econtext, &isNull, &isDone);
 
 	/*
-	 * Compute the type of the expression result. Sometimes this can be different
-	 * than the type of the partition rules (MPP-25707), and we'll need this type
-	 * to choose the correct comparator.
+	 * Compute the type of the expression result. Sometimes this can be
+	 * different than the type of the partition rules (MPP-25707), and we'll
+	 * need this type to choose the correct comparator.
 	 */
-	Oid exprTypid = exprType((Node *) exprState->expr);
+	Oid			exprTypid = exprType((Node *) exprState->expr);
+
 	return partition_selection(parentNode, node->accessMethods, ps->relid, value, exprTypid, isNull);
 }
 
@@ -241,34 +264,38 @@ SelectedParts *
 processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple)
 {
 	SelectedParts *selparts = makeNode(SelectedParts);
+
 	selparts->partOids = NIL;
 	selparts->scanIds = NIL;
 
-	Assert (NULL != node->ps.plan);
+	Assert(NULL != node->ps.plan);
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
-	Assert (level < ps->nLevels);
+
+	Assert(level < ps->nLevels);
 
 	/* get equality and general predicate for the current level */
-	Expr *equalityPredicate = (Expr *) lfirst(list_nth_cell(ps->levelEqExpressions, level));
-	Expr *generalPredicate = (Expr *) lfirst(list_nth_cell(ps->levelExpressions, level));
+	Expr	   *equalityPredicate = (Expr *) lfirst(list_nth_cell(ps->levelEqExpressions, level));
+	Expr	   *generalPredicate = (Expr *) lfirst(list_nth_cell(ps->levelExpressions, level));
 
 	/* get parent PartitionNode if in level 0, it's the root PartitionNode */
 	PartitionNode *parentNode = node->rootPartitionNode;
+
 	if (0 != level)
 	{
-		Assert (NULL != node->levelPartRules[level - 1]);
+		Assert(NULL != node->levelPartRules[level - 1]);
 		parentNode = node->levelPartRules[level - 1]->children;
 	}
 
 	/* list of PartitionRule that satisfied the predicates */
-	List *satisfiedRules = NIL;
+	List	   *satisfiedRules = NIL;
 
 	/* If equalityPredicate exists */
 	if (NULL != equalityPredicate)
 	{
-		Assert (NULL == generalPredicate);
+		Assert(NULL == generalPredicate);
 
 		PartitionRule *chosenRule = partition_rules_for_equality_predicate(node, level, inputTuple, parentNode);
+
 		if (chosenRule != NULL)
 		{
 			satisfiedRules = lappend(satisfiedRules, chosenRule);
@@ -277,27 +304,30 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 	/* If generalPredicate exists */
 	else if (NULL != generalPredicate)
 	{
-		List *chosenRules = partition_rules_for_general_predicate(node, level, inputTuple, parentNode);
+		List	   *chosenRules = partition_rules_for_general_predicate(node, level, inputTuple, parentNode);
+
 		satisfiedRules = list_concat(satisfiedRules, chosenRules);
 	}
 	/* None of the predicate exists */
 	else
 	{
 		/*
-		 * Neither equality predicate nor general predicate
-		 * exists. Return all the next level PartitionRule.
+		 * Neither equality predicate nor general predicate exists. Return all
+		 * the next level PartitionRule.
 		 *
-		 * WARNING: Do NOT use list_concat with satisfiedRules
-		 * and parentNode->rules. list_concat will destructively modify
-		 * satisfiedRules to point to parentNode->rules, which will
-		 * then be freed when we free satisfiedRules. This does not
-		 * apply when we execute partition_rules_for_general_predicate
-		 * as it creates its own list.
+		 * WARNING: Do NOT use list_concat with satisfiedRules and
+		 * parentNode->rules. list_concat will destructively modify
+		 * satisfiedRules to point to parentNode->rules, which will then be
+		 * freed when we free satisfiedRules. This does not apply when we
+		 * execute partition_rules_for_general_predicate as it creates its own
+		 * list.
 		 */
-		ListCell* lc = NULL;
-		foreach (lc, parentNode->rules)
+		ListCell   *lc = NULL;
+
+		foreach(lc, parentNode->rules)
 		{
 			PartitionRule *rule = (PartitionRule *) lfirst(lc);
+
 			satisfiedRules = lappend(satisfiedRules, rule);
 		}
 
@@ -307,25 +337,29 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 		}
 	}
 
-	/* Based on the satisfied PartitionRules, go to next
-	 * level or propagate PartOids if we are in the leaf level
+	/*
+	 * Based on the satisfied PartitionRules, go to next level or propagate
+	 * PartOids if we are in the leaf level
 	 */
-	ListCell* lc = NULL;
-	foreach (lc, satisfiedRules)
+	ListCell   *lc = NULL;
+
+	foreach(lc, satisfiedRules)
 	{
 		PartitionRule *rule = (PartitionRule *) lfirst(lc);
+
 		node->levelPartRules[level] = rule;
 
 		/* If we already in the leaf level */
 		if (level == ps->nLevels - 1)
 		{
-			bool shouldPropagate = true;
+			bool		shouldPropagate = true;
 
 			/* if residual predicate exists */
 			if (NULL != ps->residualPredicate)
 			{
 				/* evaluate residualPredicate */
-				ExprState *exprstate = node->residualPredicateExprState;
+				ExprState  *exprstate = node->residualPredicateExprState;
+
 				shouldPropagate = eval_part_qual(exprstate, node, inputTuple);
 			}
 
@@ -336,16 +370,22 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 					if (!list_member_oid(selparts->partOids, rule->parchildrelid))
 					{
 						selparts->partOids = lappend_oid(selparts->partOids, rule->parchildrelid);
-						int scanId = eval_propagation_expression(node, rule->parchildrelid);
+						int			scanId = eval_propagation_expression(node, rule->parchildrelid);
+
 						selparts->scanIds = lappend_int(selparts->scanIds, scanId);
 					}
 				}
 			}
 		}
-		/* Recursively call this function for next level's partition elimination */
+
+		/*
+		 * Recursively call this function for next level's partition
+		 * elimination
+		 */
 		else
 		{
-			SelectedParts *selpartsChild = processLevel(node, level+1, inputTuple);
+			SelectedParts *selpartsChild = processLevel(node, level + 1, inputTuple);
+
 			selparts->partOids = list_concat(selparts->partOids, selpartsChild->partOids);
 			selparts->scanIds = list_concat(selparts->scanIds, selpartsChild->scanIds);
 			pfree(selpartsChild);
@@ -372,38 +412,40 @@ initPartitionSelection(PartitionSelector *node, EState *estate)
 {
 	/* create and initialize PartitionSelectorState structure */
 	PartitionSelectorState *psstate;
-	ListCell *lc;
+	ListCell   *lc;
 
 	psstate = makeNode(PartitionSelectorState);
 	psstate->ps.plan = (Plan *) node;
 	psstate->ps.state = estate;
-	psstate->levelPartRules = (PartitionRule**) palloc0(node->nLevels * sizeof(PartitionRule*));
+	psstate->levelPartRules = (PartitionRule **) palloc0(node->nLevels * sizeof(PartitionRule *));
 
 	/* ExprContext initialization */
 	ExecAssignExprContext(estate, &psstate->ps);
 
 	/* initialize ExprState for evaluating expressions */
-	foreach (lc, node->levelEqExpressions)
+	foreach(lc, node->levelEqExpressions)
 	{
-		Expr *eqExpr = (Expr *) lfirst(lc);
+		Expr	   *eqExpr = (Expr *) lfirst(lc);
+
 		psstate->levelEqExprStates = lappend(psstate->levelEqExprStates,
-								ExecInitExpr(eqExpr, (PlanState *) psstate));
+											 ExecInitExpr(eqExpr, (PlanState *) psstate));
 	}
 
-	foreach (lc, node->levelExpressions)
+	foreach(lc, node->levelExpressions)
 	{
-		Expr *generalExpr = (Expr *) lfirst(lc);
+		Expr	   *generalExpr = (Expr *) lfirst(lc);
+
 		psstate->levelExprStates = lappend(psstate->levelExprStates,
-								ExecInitExpr(generalExpr, (PlanState *) psstate));
+										   ExecInitExpr(generalExpr, (PlanState *) psstate));
 	}
 
 	psstate->residualPredicateExprState = ExecInitExpr((Expr *) node->residualPredicate,
-									(PlanState *) psstate);
+													   (PlanState *) psstate);
 	psstate->propagationExprState = ExecInitExpr((Expr *) node->propagationExpression,
-									(PlanState *) psstate);
+												 (PlanState *) psstate);
 
 	psstate->ps.targetlist = (List *) ExecInitExpr((Expr *) node->plan.targetlist,
-									(PlanState *) psstate);
+												   (PlanState *) psstate);
 
 	return psstate;
 }
@@ -417,7 +459,7 @@ initPartitionSelection(PartitionSelector *node, EState *estate)
  */
 void
 getPartitionNodeAndAccessMethod(Oid rootOid, List *partsMetadata, MemoryContext memoryContext,
-						PartitionNode **partsAndRules, PartitionAccessMethods **accessMethods)
+								PartitionNode **partsAndRules, PartitionAccessMethods **accessMethods)
 {
 	Assert(NULL != partsMetadata);
 	findPartitionMetadataEntry(partsMetadata, rootOid, partsAndRules, accessMethods);
@@ -450,17 +492,17 @@ static_part_selection(PartitionSelector *ps)
 	psstate = initPartitionSelection(ps, estate);
 
 	getPartitionNodeAndAccessMethod
-								(
-								ps->relid,
-								partsMetadata,
-								estate->es_query_cxt,
-								&psstate->rootPartitionNode,
-								&psstate->accessMethods
-								);
+		(
+		 ps->relid,
+		 partsMetadata,
+		 estate->es_query_cxt,
+		 &psstate->rootPartitionNode,
+		 &psstate->accessMethods
+		);
 
 	MemoryContextSwitchTo(oldcxt);
 
-	selparts = processLevel(psstate, 0 /* level */, NULL /*inputSlot*/);
+	selparts = processLevel(psstate, 0 /* level */ , NULL /* inputSlot */ );
 
 	/* cleanup */
 	FreeExecutorState(estate);
@@ -485,7 +527,7 @@ varattnos_map(TupleDesc old, TupleDesc new)
 	int			i,
 				j;
 
-	bool mapRequired = false;
+	bool		mapRequired = false;
 
 	attmap = (AttrNumber *) palloc0(sizeof(AttrNumber) * old->natts);
 	for (i = 1; i <= old->natts; i++)
@@ -534,10 +576,15 @@ varattnos_map(TupleDesc old, TupleDesc new)
 void
 change_varattnos_of_a_node(Node *node, const AttrNumber *newattno)
 {
-	/* Only attempt re-mapping if re-mapping is necessary (i.e., non-null newattno map) */
+	/*
+	 * Only attempt re-mapping if re-mapping is necessary (i.e., non-null
+	 * newattno map)
+	 */
 	if (newattno)
 	{
-		change_varattnos_of_a_varno(node, newattno, 1 /* varno is hard-coded to 1 (i.e., only first RTE) */);
+		change_varattnos_of_a_varno(node, newattno, 1	/* varno is hard-coded
+														 * to 1 (i.e., only
+									  * first RTE) */ );
 	}
 }
 

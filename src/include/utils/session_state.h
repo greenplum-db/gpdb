@@ -3,7 +3,13 @@
  * session_state.h
  *	  This file contains declarations for session state information.
  *
- * Copyright (c) 2014, Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/session_state.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef SESSIONSTATE_H
 #define SESSIONSTATE_H
@@ -81,6 +87,11 @@ typedef struct SessionState
 	 * If, however, the current entry is in the used list, the
 	 * next entry would point to the next used entry */
 	struct SessionState *next;
+
+	/*
+	 * Resource group per-session slot information.
+	 */
+	void *resGroupSlot;
 
 #ifdef USE_ASSERT_CHECKING
 	/* If we modify the sessionId in ProcMppSessionId, this field is turned on */

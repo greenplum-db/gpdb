@@ -263,7 +263,7 @@ where l1.l_suppkey = (
 	where s_nationkey = 11 and l2.l_returnflag = 'A'
 	limit 1
 )
-limit -1;
+limit 0;
  l_partkey | l_suppkey | l_comment 
 -----------+-----------+-----------
 (0 rows)
@@ -279,7 +279,7 @@ where l1.l_suppkey in (
 	where s_nationkey = 11 and l2.l_returnflag = 'A'
 	limit 2
 )
-limit -1;
+limit 0;
  l_partkey | l_suppkey | l_comment 
 -----------+-----------+-----------
 (0 rows)
@@ -294,7 +294,7 @@ where exists (
 	where l1.l_suppkey = s_suppkey
 	and s_nationkey = 11 and l1.l_returnflag = 'A'
 )
-limit -1;
+limit 0;
  l_partkey | l_suppkey | l_comment 
 -----------+-----------+-----------
 (0 rows)

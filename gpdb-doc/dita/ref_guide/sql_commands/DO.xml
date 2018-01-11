@@ -17,7 +17,7 @@
         returning void. It is parsed and executed a single time.</p>
       <p>The optional <codeph>LANGUAGE</codeph> clause can appear either before or after the code
         block.</p>
-      <p> Anonymous blocks are procedural language structures that provide the capability to create
+      <p>Anonymous blocks are procedural language structures that provide the capability to create
         and execute procedural code on the fly without persistently storing the code as database
         objects in the system catalogs. The concept of anonymous blocks is similar to UNIX shell
         scripts, which enable several manually entered commands to be grouped and executed as one
@@ -58,12 +58,15 @@
     <section id="section5">
       <title>Notes</title>
       <p>The PL/pgSQL language is installed on the Greenplum Database system and is registered in a
-        user created database. The PL/Python language is installed by default, but not registered. Other languages are
-        not installed or registered. The system catalog <codeph>pg_language</codeph> contains
-        information about the registered languages in a database.</p>
+        user created database. The PL/Python and PL/Perl languages are installed by default, but not
+        registered. Other languages are not installed or registered. The system catalog
+          <codeph>pg_language</codeph> contains information about the registered languages in a
+        database.</p>
       <p>The user must have <codeph>USAGE</codeph> privilege for the procedural language, or must be
         a superuser if the language is untrusted. This is the same privilege requirement as for
         creating a function in the language.</p>
+      <p>Anonymous blocks do not support function volatility or <codeph>EXECUTE ON</codeph>
+        attributes.</p>
     </section>
     <section>
       <title>Examples</title>

@@ -42,4 +42,24 @@ class S3RESTfulService : public RESTfulService {
     void performCurl(CURL* curl, Response& response);
 };
 
+class S3MessageParser {
+   public:
+    S3MessageParser(const Response& resp);
+
+    ~S3MessageParser();
+
+    const string& getMessage() const {
+        return message;
+    }
+    const string& getCode() const {
+        return code;
+    }
+    string parseS3Tag(const string& tag);
+
+   private:
+    xmlParserCtxtPtr xmlptr;
+    string message;
+    string code;
+};
+
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

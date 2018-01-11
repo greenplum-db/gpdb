@@ -3,3 +3,7 @@
  m/NOTICE:  Table doesn\'t have \'DISTRIBUTED BY\' clause.*/
  m/HINT:  The \'DISTRIBUTED BY\' clause determines the distribution of data.*/
 -- end_matchignore
+-- start_matchsubs
+m/ \(gppc\.c:[0-9]+\)$/
+s/ \(gppc\.c:[0-9]+\)$//
+-- end_matchsubs

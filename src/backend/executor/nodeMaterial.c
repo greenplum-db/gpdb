@@ -4,12 +4,13 @@
  *	  Routines to handle materialization nodes.
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.61 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.69 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -144,7 +145,6 @@ ExecMaterial(MaterialState *node)
 
 				break;
 			}
-			Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
 
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 		}
@@ -194,11 +194,6 @@ ExecMaterial(MaterialState *node)
 	if(tsa != NULL && ntuplestore_acc_tell(tsa, NULL))
 	{
 		ntuplestore_acc_current_tupleslot(tsa, slot);
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -233,18 +228,13 @@ ExecMaterial(MaterialState *node)
 			return NULL;
 		}
 
-		Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
-
 		if (tsa)
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 
 		/*
-		 * And return a copy of the tuple.	(XXX couldn't we just return the
-		 * outerslot?)
+		 * We can just return the subplan's returned tuple, without copying.
 		 */
-		Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		return ExecCopySlot(slot, outerslot);
+		return outerslot;
 	}
 
 
@@ -288,6 +278,16 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	matstate->eflags = (eflags & (EXEC_FLAG_REWIND |
 								  EXEC_FLAG_BACKWARD |
 								  EXEC_FLAG_MARK));
+
+	/*
+	 * Tuplestore's interpretation of the flag bits is subtly different from
+	 * the general executor meaning: it doesn't think BACKWARD necessarily
+	 * means "backwards all the way to start".	If told to support BACKWARD we
+	 * must include REWIND in the tuplestore eflags, else tuplestore_trim
+	 * might throw away too much.
+	 */
+	if (eflags & EXEC_FLAG_BACKWARD)
+		matstate->eflags |= EXEC_FLAG_REWIND;
 
 	matstate->eof_underlying = false;
 	matstate->ts_state = palloc0(sizeof(GenericTupStore));
@@ -377,8 +377,6 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 		snEntry->sharePlan = (Node *) node;
 		snEntry->shareState = (Node *) matstate;
 	}
-
-	initGpmonPktForMaterial((Plan *)node, &matstate->ss.ps.gpmon_pkt, estate);
 
 	return matstate;
 }
@@ -547,10 +545,8 @@ ExecChildRescan(MaterialState *node, ExprContext *exprCtxt)
 	 * first ExecProcNode. Otherwise, we need to rescan subplan here
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
-	{
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-	}
+
 	node->eof_underlying = false;
 }
 
@@ -611,14 +607,6 @@ ExecMaterialReScan(MaterialState *node, ExprContext *exprCtxt)
 		/* In this case we are just passing on the subquery's output */
 		ExecChildRescan(node, exprCtxt);
 	}
-}
-
-void
-initGpmonPktForMaterial(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Material));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

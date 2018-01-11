@@ -4,7 +4,11 @@
  *
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeBitmapTableScan.h
  *
  *-------------------------------------------------------------------------
  */
@@ -24,11 +28,5 @@ extern void BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap);
 extern void BitmapTableScanEndPartition(ScanState *node);
 extern void BitmapTableScanReScanPartition(ScanState *node);
 extern TupleTableSlot *BitmapTableScanFetchNext(ScanState *node);
-
-
-static inline gpmon_packet_t * GpmonPktFromBitmapTableScanState(BitmapTableScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 
 #endif   /* NODEBITMAPTABLESCAN_H */

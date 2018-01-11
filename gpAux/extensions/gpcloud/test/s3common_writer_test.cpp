@@ -3,11 +3,11 @@
 #include "gtest/gtest.h"
 #include "mock_classes.h"
 
-using ::testing::AtLeast;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::Throw;
 using ::testing::_;
+using ::testing::AtLeast;
+using ::testing::Invoke;
+using ::testing::Return;
+using ::testing::Throw;
 
 class MockS3InterfaceForCompressionWrite : public MockS3Interface {
    public:

@@ -4,6 +4,7 @@
  *	  Commands for creating and altering external tables
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -25,6 +26,7 @@
 #include "commands/copy.h"
 #include "commands/defrem.h"
 #include "commands/tablecmds.h"
+#include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"
@@ -118,7 +120,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("Internal error: unknown external table type")));
 	}
 
@@ -503,22 +505,15 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 	foreach(cell, locs)
 	{
 		Uri		   *uri;
-		text	   *t;
 		char	   *uri_str_orig;
 		char	   *uri_str_final;
-		Size		len;
 		Value	   *v = lfirst(cell);
 
 		/* get the current URI string from the command */
-		uri_str_orig = pstrdup(v->val.str);
+		uri_str_orig = v->val.str;
 
 		/* parse it to its components */
 		uri = ParseExternalTableUri(uri_str_orig);
-
-		/* allocate memory for a modified URI string (if needs modification) */
-		uri_str_final = (char *) palloc(strlen(uri_str_orig) *
-										sizeof(char) +
-									 1 + 4 + 1 /* default port if added */ );
 
 		/*
 		 * in here edit the uri string if needed
@@ -539,7 +534,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 			hostname[len] = '\0';
 
 			/* add the default port number to the uri string */
-			sprintf(uri_str_final, "%s%s:%d%s",
+			uri_str_final = psprintf("%s%s:%d%s",
 					(uri->protocol == URI_GPFDIST ? PROTOCOL_GPFDIST : PROTOCOL_GPFDISTS),
 					hostname,
 					FDIST_DEF_PORT, after_hostname);
@@ -549,7 +544,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		else
 		{
 			/* no changes to original uri string */
-			uri_str_final = (char *) uri_str_orig;
+			uri_str_final = pstrdup(uri_str_orig);
 		}
 
 		/*
@@ -629,16 +624,9 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							"\'%s\'", uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
-		len = VARHDRSZ + strlen(uri_str_final);
-
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf((char *) VARDATA(t), "%s", uri_str_final);
-
-
-		astate = accumArrayResult(astate, PointerGetDatum(t),
-								  false, TEXTOID,
+		astate = accumArrayResult(astate,
+								  CStringGetTextDatum(uri_str_final), false,
+								  TEXTOID,
 								  CurrentMemoryContext);
 
 		FreeExternalTableUri(uri);
@@ -662,93 +650,71 @@ transformExecOnClause(List *on_clause)
 
 	ListCell   *exec_location_opt;
 	char	   *exec_location_str = NULL;
-	char	   *value_str = NULL;
-	int			value_int;
-	Size		len;
-	text	   *t;
 
 	if (on_clause == NIL)
 		exec_location_str = "ALL_SEGMENTS";
-	else {
-	/*
-	 * Extract options from the statement node tree NOTE: as of now we only
-	 * support one option in the ON clause and therefore more than one is an
-	 * error (check here in case the sql parser isn't strict enough).
-	 */
-	foreach(exec_location_opt, on_clause)
+	else
 	{
-		DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
+		/*
+		 * Extract options from the statement node tree NOTE: as of now we only
+		 * support one option in the ON clause and therefore more than one is an
+		 * error (check here in case the sql parser isn't strict enough).
+		 */
+		foreach(exec_location_opt, on_clause)
+		{
+			DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
 
-		/* only one element is allowed! */
-		if (exec_location_str)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-				  errmsg("ON clause must not have more than one element.")));
+			/* only one element is allowed! */
+			if (exec_location_str)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("ON clause must not have more than one element.")));
 
-		if (strcmp(defel->defname, "all") == 0)
-		{
-			/* result: "ALL_SEGMENTS" */
-			exec_location_str = (char *) palloc(12 + 1);
-			exec_location_str = "ALL_SEGMENTS";
+			if (strcmp(defel->defname, "all") == 0)
+			{
+				/* result: "ALL_SEGMENTS" */
+				exec_location_str = "ALL_SEGMENTS";
+			}
+			else if (strcmp(defel->defname, "hostname") == 0)
+			{
+				/* result: "HOST:<hostname>" */
+				exec_location_str = psprintf("HOST:%s", strVal(defel->arg));
+			}
+			else if (strcmp(defel->defname, "eachhost") == 0)
+			{
+				/* result: "PER_HOST" */
+				exec_location_str = "PER_HOST";
+			}
+			else if (strcmp(defel->defname, "master") == 0)
+			{
+				/* result: "MASTER_ONLY" */
+				exec_location_str = "MASTER_ONLY";
+			}
+			else if (strcmp(defel->defname, "segment") == 0)
+			{
+				/* result: "SEGMENT_ID:<segid>" */
+				exec_location_str = psprintf("SEGMENT_ID:%d", (int) intVal(defel->arg));
+			}
+			else if (strcmp(defel->defname, "random") == 0)
+			{
+				/* result: "TOTAL_SEGS:<number>" */
+				exec_location_str = psprintf("TOTAL_SEGS:%d", (int) intVal(defel->arg));
+			}
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("Unknown location code for EXECUTE in tablecmds.")));
+			}
 		}
-		else if (strcmp(defel->defname, "hostname") == 0)
-		{
-			/* result: "HOST:<hostname>" */
-			value_str = strVal(defel->arg);
-			exec_location_str = (char *) palloc(5 + 1 + strlen(value_str) + 1);
-			sprintf((char *) exec_location_str, "HOST:%s", value_str);
-		}
-		else if (strcmp(defel->defname, "eachhost") == 0)
-		{
-			/* result: "PER_HOST" */
-			exec_location_str = (char *) palloc(8 + 1);
-			exec_location_str = "PER_HOST";
-		}
-		else if (strcmp(defel->defname, "master") == 0)
-		{
-			/* result: "MASTER_ONLY" */
-			exec_location_str = (char *) palloc(11 + 1);
-			exec_location_str = "MASTER_ONLY";
-		}
-		else if (strcmp(defel->defname, "segment") == 0)
-		{
-			/* result: "SEGMENT_ID:<segid>" */
-			value_int = intVal(defel->arg);
-			exec_location_str = (char *) palloc(10 + 1 + 8 + 1);
-			sprintf((char *) exec_location_str, "SEGMENT_ID:%d", value_int);
-		}
-		else if (strcmp(defel->defname, "random") == 0)
-		{
-			/* result: "TOTAL_SEGS:<number>" */
-			value_int = intVal(defel->arg);
-			exec_location_str = (char *) palloc(10 + 1 + 8 + 1);
-			sprintf((char *) exec_location_str, "TOTAL_SEGS:%d", value_int);
-		}
-		else
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
-				 errmsg("Unknown location code for EXECUTE in tablecmds.")));
-		}
-	}
 	}
 
 	/* convert to text[] */
-	astate = NULL;
-	len = VARHDRSZ + strlen(exec_location_str);
-	t = (text *) palloc(len + 1);
-	SET_VARSIZE(t, len);
-	sprintf((char *) VARDATA(t), "%s", exec_location_str);
-
-
-	astate = accumArrayResult(astate, PointerGetDatum(t),
-							  false, TEXTOID,
+	astate = accumArrayResult(NULL,
+							  CStringGetTextDatum(exec_location_str), false,
+							  TEXTOID,
 							  CurrentMemoryContext);
-
-	if (astate)
-		result = makeArrayResult(astate, CurrentMemoryContext);
-	else
-		result = (Datum) 0;
+	result = makeArrayResult(astate, CurrentMemoryContext);
 
 	return result;
 }
@@ -800,15 +766,11 @@ optionsListToArray(List *options)
 		DefElem    *defel = (DefElem *) lfirst(option);
 		char       *key = defel->defname;
 		char       *val = defGetString(defel);
-		text       *t;
-		Size       len;
+		char	   *s;
 
-        // first 1 for '=', last 1 for '\0'
-		len = VARHDRSZ + strlen(key) + 1 + strlen(val) + 1;
-		t = palloc(len);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%s", key, val);
-		astate = accumArrayResult(astate, PointerGetDatum(t), false,
+		s = psprintf("%s=%s", key, val);
+		astate = accumArrayResult(astate,
+								  CStringGetTextDatum(s), false,
 				                  TEXTOID, CurrentMemoryContext);
 	}
 
@@ -840,7 +802,6 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	bool		fill_missing = false;
 	List	   *force_notnull = NIL;
 	List	   *force_quote = NIL;
-	Size		len;
 	StringInfoData fnn,
 				fq,
 				nl;
@@ -1028,37 +989,16 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		/*
 		 * build the format option string that will get stored in the catalog.
 		 */
-
-		len = 9 + 1 + 1 + strlen(delim) + 1 +	/* "delimiter 'x' of 'off'" */
-			1 +					/* space					*/
-			4 + 1 + 1 + strlen(null_print) + 1 +		/* "null 'str'"				*/
-			1 +					/* space					*/
-			6 + 1 + 1 + strlen(escape) + 1;		/* "escape 'c' or 'off' 	 */
-
-		if (fmttype_is_csv(formattype))
-			len += 1 +			/* space					*/
-				5 + 1 + 3;		/* "quote 'x'"				*/
-
-		len += header_line ? strlen(" header") : 0;
-		len += fill_missing ? strlen(" fill missing fields") : 0;
-		len += force_notnull ? strlen(fnn.data) : 0;
-		len += force_quote ? strlen(fq.data) : 0;
-		len += (eol_str ? (1 + 7 + 1 + 1 + strlen(eol_str) + 1) : 0);	/* space x 2, newline
-																		 * 'xx/xxxx' */
-
 		/* +1 leaves room for sprintf's trailing null */
-		format_str = (char *) palloc(len + 1);
-
 		if (fmttype_is_text(formattype))
 		{
-			sprintf((char *) format_str, "delimiter '%s' null '%s' escape '%s'%s%s%s",
+			format_str = psprintf("delimiter '%s' null '%s' escape '%s'%s%s%s",
 					delim, null_print, escape, (header_line ? " header" : ""),
 					(fill_missing ? " fill missing fields" : ""), (eol_str ? nl.data : ""));
 		}
 		else if (fmttype_is_csv(formattype))
 		{
-
-			sprintf((char *) format_str, "delimiter '%s' null '%s' escape '%s' quote '%s'%s%s%s%s%s",
+			format_str = psprintf("delimiter '%s' null '%s' escape '%s' quote '%s'%s%s%s%s%s",
 			delim, null_print, escape, quote, (header_line ? " header" : ""),
 					(fill_missing ? " fill missing fields" : ""),
 			   (force_notnull ? fnn.data : ""), (force_quote ? fq.data : ""),
@@ -1067,7 +1007,8 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		else
 		{
 			/* should never happen */
-			Assert(false);
+			elog(ERROR, "unrecognized format type: %c", formattype);
+			format_str = NULL;
 		}
 
 	}
@@ -1077,21 +1018,14 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		 * avro format, add "formatter 'gphdfs_import’ " directly, user
 		 * don't need to set this value
 		 */
-		char	   *val = NULL;
+		char	   *val;
 
 		if (iswritable)
-		{
 			val = "gphdfs_export";
-		}
 		else
-		{
 			val = "gphdfs_import";
-		}
 
-		const int	maxlen = 32;
-
-		format_str = (char *) palloc0(maxlen + 1);
-		sprintf(format_str, "%s '%s' ", "formatter", val);
+		format_str = psprintf("formatter '%s' ", val);
 	}
 	else
 	{
@@ -1140,7 +1074,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	}
 
 	/* convert c string to text datum */
-	result = DirectFunctionCall1(textin, CStringGetDatum(format_str));
+	result = CStringGetTextDatum(format_str);
 
 	/* clean up */
 	pfree(format_str);

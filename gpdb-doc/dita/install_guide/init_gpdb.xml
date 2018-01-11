@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jm138244">Initializing a Greenplum Database System</title>
+  <shortdesc>Describes how to initialize a Greenplum Database database system. </shortdesc>
+  <body>
+    <p>The instructions in this chapter assume you have already installed the Greenplum Database
+      software on all of the hosts in the system according to the instructions in <xref
+        href="prep_os_install_gpdb.xml#topic1" type="topic" format="dita"/>. </p>
+    <p>This chapter contains the following topics:</p>
+    <ul>
+      <li id="jm137819">
+        <xref href="#topic2" type="topic" format="dita"/>
+      </li>
+      <li id="jm138219">
+        <xref href="#topic3" type="topic" format="dita"/>
+      </li>
+      <li id="jm138984">
+        <xref href="#topic9" type="topic" format="dita"/>
+      </li>
+    </ul>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="jm137384">Overview</title>
+    <body>
+      <p>Because Greenplum Database is distributed, the process for initializing a Greenplum
+        Database management system (DBMS) involves initializing several individual PostgreSQL
+        database instances (called <i>segment instances</i> in Greenplum).</p>
+      <p>Each database instance (the master and all segments) must be initialized across all of the
+        hosts in the system in such a way that they can all work together as a unified DBMS.
+        Greenplum provides its own version of <codeph>initdb</codeph> called <codeph><xref
+            href="../utility_guide/admin_utilities/gpinitsystem.html" type="topic" format="dita"
+            scope="peer">gpinitsystem</xref></codeph>, which takes care of initializing the database
+        on the master and on each segment instance, and starting each instance in the correct order. </p>
+      <p>After the Greenplum Database database system has been initialized and started, you can then
+        create and manage databases as you would in a regular PostgreSQL DBMS by connecting to the
+        Greenplum master.</p>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en">
+    <title id="jm137833">Initializing Greenplum Database</title>
+    <body>
+      <p>These are the high-level tasks for initializing Greenplum Database:</p>
+      <ol>
+        <li id="jm138478">Make sure you have completed all of the installation tasks described in
+            <xref href="prep_os_install_gpdb.xml#topic1" type="topic" format="dita"/>.</li>
+        <li id="jm138489">Create a host file that contains the host addresses of your
+            <varname>segments</varname>. See <xref href="#topic4" type="topic" format="dita"/>.</li>
+        <li id="jm138493">Create your Greenplum Database system configuration file. See <xref
+            href="#topic5" type="topic" format="dita"/>.</li>
+        <li id="jm138497">By default, Greenplum Database will be initialized using the locale of the
+          master host system. Make sure this is the correct locale you want to use, as some locale
+          options cannot be changed after initialization. See <xref href="localization.xml#topic1"
+            type="topic" format="dita"/> for more information.</li>
+        <li id="jm143805">Run the Greenplum Database initialization utility on the master host. See
+            <xref href="#topic6" type="topic" format="dita"/>.</li>
+      </ol>
+    </body>
+    <topic id="topic4" xml:lang="en">
+      <title id="jm138555">Creating the Initialization Host File</title>
+      <body>
+        <p>The <codeph><xref href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic"
+              format="dita" scope="peer">gpinitsystem</xref></codeph> utility requires a host file
+          that contains the list of addresses for each segment host. The initialization utility
+          determines the number of segment instances per host by the number host addresses listed
+          per host times the number of data directory locations specified in the
+            <codeph>gpinitsystem_config</codeph> file.</p>
+        <p>This file should only contain <varname>segment</varname> host addresses (not the master
+          or standby master). For segment machines with multiple, unbonded network interfaces, this
+          file should list the host address names for each interface — one per line.</p>
+        <note type="note">The Greenplum Database segment host naming convention is
+            <varname>sdwN</varname> where <varname>sdw</varname> is a prefix and
+            <varname>N</varname> is an integer. For example, <codeph>sdw2</codeph> and so on. If
+          hosts have multiple unbonded NICs, the convention is to append a dash (<codeph>-</codeph>)
+          and number to the host name. For example, <codeph>sdw1-1</codeph> and
+            <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.
+          However, NIC bonding is recommended to create a load-balanced, fault-tolerant
+          network.</note>
+        <section id="jm138608">
+          <title>To create the initialization host file</title>
+          <ol>
+            <li id="jm144077">Log in as
+              <codeph>gpadmin</codeph>.<codeblock>$ su - gpadmin</codeblock></li>
+            <li id="jm144112">Create a file named <codeph>hostfile_gpinitsystem</codeph>. In this
+              file add the host address name(s) of your <i>segment</i> host interfaces, one name per
+              line, no extra lines or spaces. For example, if you have four segment hosts with two
+              unbonded network interfaces
+              each:<codeblock>sdw1-1
+sdw1-2
+sdw2-1
+sdw2-2
+sdw3-1
+sdw3-2
+sdw4-1
+sdw4-2</codeblock></li>
+            <li id="jm138635">Save and close the file.</li>
+          </ol>
+          <note type="note">If you are not sure of the host names and/or interface address names
+            used by your machines, look in the <codeph>/etc/hosts</codeph> file.</note>
+        </section>
+      </body>
+    </topic>
+    <topic id="topic5" xml:lang="en">
+      <title id="jm138566">Creating the Greenplum Database Configuration File</title>
+      <body>
+        <p>Your Greenplum Database configuration file tells the <codeph><xref
+              href="../utility_guide/admin_utilities/gpinitsystem.html" type="topic" format="dita"
+              scope="peer">gpinitsystem</xref></codeph> utility how you want to configure your
+          Greenplum Database system. An example configuration file can be found in
+            <codeph>$GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config</codeph>.</p>
+        <section id="jm138725">
+          <title>To create a gpinitsystem_config file</title>
+          <ol>
+            <li id="jm144228">Log in as
+              <codeph>gpadmin</codeph>.<codeblock>$ su - gpadmin</codeblock></li>
+            <li id="jm144214">Make a copy of the <codeph>gpinitsystem_config</codeph> file to use as
+              a starting point. For
+              example:<codeblock>$ cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_config \
+     /home/gpadmin/gpconfigs/gpinitsystem_config</codeblock></li>
+            <li id="jm138730">Open the file you just copied in a text editor. <p>Set all of the
+                required parameters according to your environment. See <xref
+                  href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic"
+                  format="dita" scope="peer">gpinitsystem</xref> for more information. A Greenplum
+                Database system must contain a master instance and at <i>least two</i> segment
+                instances (even if setting up a single node system). </p><p>The
+                  <codeph>DATA_DIRECTORY</codeph> parameter is what determines how many segments per
+                host will be created. If your segment hosts have multiple network interfaces, and
+                you used their interface address names in your host file, the number of segments
+                will be evenly spread over the number of available interfaces.</p><p>Here is an
+                example of the <i>required</i> parameters in the
+                  <codeph>gpinitsystem_config</codeph> file:
+              </p><codeblock>ARRAY_NAME="EMC Greenplum DW"
+SEG_PREFIX=gpseg
+PORT_BASE=40000 
+declare -a DATA_DIRECTORY=(/data1/primary /data1/primary 
+/data1/primary /data2/primary /data2/primary /data2/primary)
+MASTER_HOSTNAME=mdw 
+MASTER_DIRECTORY=/data/master 
+MASTER_PORT=5432 
+TRUSTED SHELL=ssh
+CHECK_POINT_SEGMENTS=8
+ENCODING=UNICODE</codeblock></li>
+            <li id="jm143448">(Optional) If you want to deploy mirror segments, uncomment and set
+              the mirroring parameters according to your environment. Here is an example of the
+                <i>optional</i> mirror parameters in the <codeph>gpinitsystem_config</codeph>
+                file:<codeblock>MIRROR_PORT_BASE=50000
+REPLICATION_PORT_BASE=41000
+MIRROR_REPLICATION_PORT_BASE=51000
+declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /data2/mirror /data2/mirror /data2/mirror)</codeblock><note>You
+                can initialize your Greenplum system with primary segments only and deploy mirrors
+                later using the <codeph><xref
+                    href="../utility_guide/admin_utilities/gpaddmirrors.xml" type="topic"
+                    format="dita" scope="peer">gpaddmirrors</xref></codeph> utility.</note></li>
+            <li id="jm138783">Save and close the file.</li>
+          </ol>
+        </section>
+      </body>
+    </topic>
+    <topic id="topic6" xml:lang="en">
+      <title id="jm142333">Running the Initialization Utility</title>
+      <body>
+        <p>The <codeph><xref href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic"
+              format="dita" scope="peer">gpinitsystem</xref></codeph> utility will create a
+          Greenplum Database system using the values defined in the configuration file.</p>
+        <section id="jm138821">
+          <title>To run the initialization utility</title>
+          <ol>
+            <li id="jm143533">Run the following command referencing the path and file name of your
+              initialization configuration file (<codeph>gpinitsystem_config</codeph>) and host file
+                (<codeph>hostfile_gpinitsystem</codeph>). For
+                example:<codeblock>$ cd ~
+$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem</codeblock><p>For
+                a fully redundant system (with a standby master and a <i>spread</i> mirror
+                configuration) include the <codeph>-s</codeph> and <codeph>-S</codeph> options. For
+                example:</p><codeblock>$ gpinitsystem -c gpconfigs/gpinitsystem_config -h gpconfigs/hostfile_gpinitsystem \
+  -s <varname>standby_master_hostname</varname> -S</codeblock></li>
+            <li id="jm138853">The utility will verify your setup information and make sure it can
+              connect to each host and access the data directories specified in your configuration.
+              If all of the pre-checks are successful, the utility will prompt you to confirm your
+              configuration. For
+              example:<codeblock>=&gt; Continue with Greenplum creation? <b>Yy/Nn</b></codeblock></li>
+            <li id="jm143919">Press <codeph>y</codeph> to start the initialization.</li>
+            <li id="jm141337">The utility will then begin setup and initialization of the master
+              instance and each segment instance in the system. Each segment instance is set up in
+              parallel. Depending on the number of segments, this process can take a while.</li>
+            <li id="jm141341">At the end of a successful setup, the utility will start your
+              Greenplum Database system. You should
+              see:<codeblock><varname>=&gt; Greenplum Database instance successfully created.</varname></codeblock></li>
+          </ol>
+        </section>
+      </body>
+      <topic id="topic7" xml:lang="en">
+        <title id="jm138878">Troubleshooting Initialization Problems</title>
+        <body>
+          <p>If the utility encounters any errors while setting up an instance, the entire process
+            will fail, and could possibly leave you with a partially created system. Refer to the
+            error messages and logs to determine the cause of the failure and where in the process
+            the failure occurred. Log files are created in <codeph>~/gpAdminLogs</codeph>.</p>
+          <p>Depending on when the error occurred in the process, you may need to clean up and then
+            try the gpinitsystem utility again. For example, if some segment instances were created
+            and some failed, you may need to stop <codeph>postgres</codeph> processes and remove any
+            utility-created data directories from your data storage area(s). A backout script is
+            created to help with this cleanup if necessary.</p>
+          <section id="jm139087">
+            <title>Using the Backout Script</title>
+            <p>If the gpinitsystem utility fails, it will create the following backout script if it
+              has left your system in a partially installed state:</p>
+            <p>
+              <codeph>~/gpAdminLogs/backout_gpinitsystem_<varname>&lt;user></varname>_<varname>&lt;timestamp&gt;</varname></codeph>
+            </p>
+            <p>You can use this script to clean up a partially created Greenplum Database system.
+              This backout script will remove any utility-created data directories,
+                <codeph>postgres</codeph> processes, and log files. After correcting the error that
+              caused gpinitsystem to fail and running the backout script, you should be ready to
+              retry initializing your Greenplum Database array.</p>
+            <p>The following example shows how to run the backout script:</p>
+            <codeblock>$ sh backout_gpinitsystem_gpadmin_20071031_121053</codeblock>
+          </section>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+  <topic id="topic8" xml:lang="en">
+    <title id="jm144793">Setting Greenplum Environment Variables</title>
+    <body>
+      <p>You must configure your environment on the Greenplum Database master (and standby master).
+        A <codeph>greenplum_path.sh</codeph> file is provided in your <codeph>$GPHOME</codeph>
+        directory with environment variable settings for Greenplum Database. You can source this
+        file in the <codeph>gpadmin</codeph> user's startup shell profile (such as
+          <codeph>.bashrc</codeph>). </p>
+      <p>The Greenplum Database management utilities also require that the
+          <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable be set. This should point to
+        the directory created by the gpinitsystem utility in the master data directory location. </p>
+      <note>The <codeph>greenplum_path.sh</codeph> script changes the operating environment in order
+        to support running the Greenplum Database-specific utilities. These same changes to the
+        environment can negatively affect the operation of other system-level utilities, such as
+          <codeph>ps</codeph> or <codeph>yum</codeph>. Use separate accounts for performing system
+        administration and database administration, instead of attempting to perform both functions
+        as <codeph>gpadmin</codeph>.</note>
+      <section id="jm144961">
+        <title>To set up your user environment for Greenplum</title>
+        <ol>
+          <li id="jm144981">Make sure you are logged in as
+            <codeph>gpadmin</codeph>:<codeblock>$ su - gpadmin</codeblock></li>
+          <li id="jm145055">Open your profile file (such as <codeph>.bashrc</codeph>) in a text
+            editor. For example:<codeblock>$ vi ~/.bashrc</codeblock></li>
+          <li id="jm145072">Add lines to this file to source the <codeph>greenplum_path.sh</codeph>
+            file and set the <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable. For
+            example:<codeblock>source /usr/local/greenplum-db/greenplum_path.sh
+export MASTER_DATA_DIRECTORY=/data/master/gpseg-1</codeblock></li>
+          <li id="jm145148">(Optional) You may also want to set some client session environment
+            variables such as <codeph>PGPORT</codeph>, <codeph>PGUSER</codeph> and
+              <codeph>PGDATABASE</codeph> for convenience. For
+            example:<codeblock>export PGPORT=5432
+export PGUSER=gpadmin export PGDATABASE=<varname>default_login_database_name</varname></codeblock></li>
+          <li>(Optional) If you use RHEL 7 or CentOS 7, add the following line to the end of the
+              <codeph>.bashrc</codeph> file to enable using the <codeph>ps</codeph> command in the
+              <codeph>greenplum_path.sh</codeph>
+            environment:<codeblock>export LD_PRELOAD=/lib64/libz.so.1 ps</codeblock></li>
+          <li id="jm145208">Save and close the file.</li>
+          <li id="jm145155">After editing the profile file, source it to make the changes active.
+            For example:<codeblock>$ source ~/.bashrc
+</codeblock></li>
+          <li id="jm145342">If you have a standby master host, copy your environment file to the
+            standby master as well. For
+            example:<codeblock>$ cd ~
+$ scp .bashrc <varname>standby_hostname</varname>:`pwd`</codeblock></li>
+        </ol>
+        <note type="note">The <codeph>.bashrc</codeph> file should not produce any output. If you
+          wish to have a message display to users upon logging in, use the <codeph>.profile</codeph>
+          file instead. </note>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic9" xml:lang="en">
+    <title id="jm138979">Next Steps</title>
+    <body>
+      <p>After your system is up and running, the next steps are:</p>
+      <ul>
+        <li id="jm139449">
+          <xref href="#topic10" type="topic" format="dita"/>
+        </li>
+        <li id="jm142387">
+          <xref href="#topic11" type="topic" format="dita"/>
+        </li>
+      </ul>
+    </body>
+    <topic id="topic10" xml:lang="en">
+      <title id="jm138989">Allowing Client Connections</title>
+      <body>
+        <p>After a Greenplum Database is first initialized it will only allow local connections to
+          the database from the <codeph>gpadmin</codeph> role (or whatever system user ran
+            <codeph>gpinitsystem</codeph>). If you would like other users or client machines to be
+          able to connect to Greenplum Database, you must give them access. See the <i>Greenplum
+            Database Administrator Guide</i> for more information.</p>
+      </body>
+    </topic>
+    <topic id="topic11" xml:lang="en">
+      <title id="jm139424">Creating Databases and Loading Data</title>
+      <body>
+        <p>After verifying your installation, you may want to begin creating databases and loading
+          data. See <xref href="../admin_guide/ddl/ddl.xml" format="dita" type="topic" scope="peer"
+            >Defining Database Objects</xref> and <xref
+            href="../admin_guide/load/topics/g-loading-and-unloading-data.xml" type="topic"
+            format="dita" scope="peer">Loading and Unloading Data</xref> in the <i>Greenplum
+            Database Administrator Guide</i> for more information about creating databases, schemas,
+          tables, and other database objects in Greenplum Database and loading your data.</p>
+      </body>
+    </topic>
+  </topic>
+</topic>

@@ -30,6 +30,8 @@
 
 #include "gpopt/gpdbwrappers.h"
 
+#include "utils/ext_alloc.h"
+
 #define GP_WRAP_START	\
 	sigjmp_buf local_sigjmp_buf;	\
 	{	\
@@ -635,6 +637,21 @@ gpdb::CFuncDataAccess
 	return '\0';
 }
 
+char
+gpdb::CFuncExecLocation
+	(
+	Oid funcid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_proc */
+		return func_exec_location(funcid);
+	}
+	GP_WRAP_END;
+	return '\0';
+}
+
 bool
 gpdb::FFunctionExists
 	(
@@ -1111,7 +1128,45 @@ gpdb::OidEqualityOp
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_type */
-		return equality_oper_opid(oidType);
+		Oid eq_opr;
+
+		get_sort_group_operators(oidType,
+					 false, true, false,
+					 NULL, &eq_opr, NULL);
+
+		return eq_opr;
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
+
+Oid
+gpdb::OidEqualityOpForOrderingOp
+	(
+	Oid opno,
+	bool *reverse
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_amop */
+		return get_equality_op_for_ordering_op(opno, reverse);
+	}
+	GP_WRAP_END;
+	return InvalidOid;
+}
+
+Oid
+gpdb::OidOrderingOpForEqualityOp
+(
+	Oid opno,
+	bool *reverse
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_amop */
+		return get_ordering_op_for_equality_op(opno, reverse);
 	}
 	GP_WRAP_END;
 	return InvalidOid;
@@ -2224,21 +2279,7 @@ gpdb::FRelPartIsNone
 }
 
 bool
-gpdb::FHashPartitioned
-	(
-	char c
-	)
-{
-	GP_WRAP_START;
-	{
-		return PARTTYP_HASH == char_to_parttype(c);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
-gpdb::FHasSubclass
+gpdb::FHasSubclassSlow
 	(
 	Oid oidRel
 	)
@@ -2246,7 +2287,7 @@ gpdb::FHasSubclass
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_inherits */
-		return has_subclass(oidRel);
+		return has_subclass_slow(oidRel);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2458,6 +2499,21 @@ gpdb::Pexttable
 	{
 		/* catalog tables: pg_exttable */
 		return GetExtTableEntry(relationId);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+
+List *
+gpdb::PlExternalScanUriList
+	(
+	ExtTableEntry *ext,
+	bool *ismasteronlyp
+	)
+{
+	GP_WRAP_START;
+	{
+		return create_external_scan_uri_list(ext, ismasteronlyp);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -2747,8 +2803,7 @@ gpdb::IndexOpProperties
 	Oid opno,
 	Oid opfamily,
 	int *strategy,
-	Oid *subtype,
-	bool *recheck
+	Oid *subtype
 	)
 {
 	GP_WRAP_START;
@@ -2759,7 +2814,7 @@ gpdb::IndexOpProperties
 		// type is simply ignored.
 		Oid	lefttype;
 
-		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype, recheck);
+		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype);
 		return;
 	}
 	GP_WRAP_END;
@@ -3058,4 +3113,42 @@ gpdb::FMDCacheNeedsReset
 	return true;
 }
 
+// Functions for ORCA's memory consumption to be tracked by GPDB
+void *
+gpdb::OptimizerAlloc
+		(
+			size_t size
+		)
+{
+	GP_WRAP_START;
+	{
+		return Ext_OptimizerAlloc(size);
+	}
+	GP_WRAP_END;
+
+	return NULL;
+}
+
+void
+gpdb::OptimizerFree
+		(
+			void *ptr
+		)
+{
+	GP_WRAP_START;
+	{
+		Ext_OptimizerFree(ptr);
+	}
+	GP_WRAP_END;
+}
+
+// returns true if a query cancel is requested in GPDB
+bool
+gpdb::FAbortRequested
+	(
+	void
+	)
+{
+	return (QueryCancelPending || ProcDiePending);
+}
 // EOF

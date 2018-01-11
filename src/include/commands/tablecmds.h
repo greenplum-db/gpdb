@@ -4,10 +4,10 @@
  *	  prototypes for tablecmds.c.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.37 2008/01/30 19:46:48 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.43 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -47,14 +47,11 @@ extern Oid	DefineRelation(CreateStmt *stmt, char relkind, char relstorage, bool 
 
 extern void	DefineExternalRelation(CreateExternalStmt *stmt);
 
-extern void DefineForeignRelation(CreateForeignStmt *createForeignStmt);
-
 extern void	DefinePartitionedRelation(CreateStmt *stmt, Oid reloid);
 
 extern void EvaluateDeferredStatements(List *deferredStmts);
 
-extern bool RemoveRelation(const RangeVar *relation, DropBehavior behavior,
-						   DropStmt *stmt /* MPP */, char relkind);
+extern void RemoveRelations(DropStmt *drop);
 
 extern bool RelationToRemoveIsTemp(const RangeVar *relation, DropBehavior behavior);
 
@@ -64,7 +61,8 @@ extern void ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing);
 
 extern void AlterTableInternal(Oid relid, List *cmds, bool recurse);
 
-extern void AlterTableNamespace(RangeVar *relation, const char *newschema);
+extern void AlterTableNamespace(RangeVar *relation, const char *newschema,
+					ObjectType stmttype);
 
 extern void AlterTableNamespaceInternal(Relation rel, Oid oldNspOid,
 							Oid nspOid, ObjectAddresses *objsMoved);
@@ -86,21 +84,22 @@ extern void renameatt(Oid myrelid,
 		  bool recurse,
 		  bool recursing);
 
-extern void renamerel(Oid myrelid,
-		  const char *newrelname,
-		  ObjectType reltype,
-		  RenameStmt *stmt /* MPP */);
+extern void RenameRelation(Oid myrelid,
+			   const char *newrelname,
+			   ObjectType reltype,
+			   RenameStmt *stmt /* MPP */);
 
 extern void find_composite_type_dependencies(Oid typeOid,
 											 const char *origTblName,
 											 const char *origTypeName);
 
+extern void RenameRelationInternal(Oid myrelid,
+					   const char *newrelname,
+					   Oid namespaceId);
+
 extern void find_composite_type_dependencies(Oid typeOid,
 								 const char *origTblName,
 								 const char *origTypeName);
-
-extern void change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
-
 
 extern void register_on_commit_action(Oid relid, OnCommitAction action);
 extern void remove_on_commit_action(Oid relid);
@@ -116,9 +115,9 @@ extern Oid  rel_partition_get_master(Oid relid);
 
 extern Oid get_settable_tablespace_oid(char *tablespacename);
 
-extern List *
-MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
-				List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
+extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
+			List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
+
 extern List *make_dist_clause(Relation rel);
 
 extern Oid transformFkeyCheckAttrs(Relation pkrel,

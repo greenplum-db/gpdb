@@ -373,6 +373,30 @@ SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value
 SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
 RESET gp_vmem_idle_resource_timeout;
 
+-- Make sure ALTER TABLE REORGANIZE does not change the table type due
+-- to gp_default_storage_options GUC
+set gp_default_storage_options='appendonly=false,blocksize=32768';
+create table alter_table_reorg_heap (a int, b text);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+alter table alter_table_reorg_heap set with (reorganize=true);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
+
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+create table alter_table_reorg_aoco (a int, b text);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
+set gp_default_storage_options='appendonly=false,blocksize=32768';
+alter table alter_table_reorg_aoco set with (reorganize=true);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
+
+-- Make sure SELECT INTO uses gp_default_storage_options GUC
+create table select_into_heap_from (a int, b text);
+insert into select_into_heap_from select i, 'aaa' from generate_series(1,50)i;
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+select * into select_into_heap_to from select_into_heap_from;
+select relname, relstorage, reloptions from pg_class where relname='select_into_heap_to';
+select count(*) from select_into_heap_to;
+
 -- cleanup
 \c postgres
 drop database dsp1;

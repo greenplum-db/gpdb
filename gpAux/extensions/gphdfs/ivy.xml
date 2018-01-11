@@ -18,24 +18,22 @@
     </configurations>
 
     <dependencies>
-      <dependency org="${org}"     name="${name}"    rev="${revision}"           conf="compile->master"/>
+      <!--dependency org="${org}"     name="${name}"    rev="${revision}"           conf="compile->master"/-->
 
-      <dependency org="apache" name="hadoop-core"        rev="${revision}"               conf="hadoop2->master"/>
-      <dependency org="apache" name="hadoop-mapreduce-client-core"
-                  rev="${hadoop-common.revision}" conf="hadoop2->master"/>
-      <dependency org="apache" name="hadoop-mapreduce-client-common"
-                  rev="${hadoop-common.revision}" conf="hadoop2->master"/>
+      <dependency org="org.apache.hadoop" name="hadoop-common"                  rev="2.4.0" conf="hadoop2->master"/>
+      <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-core"   rev="2.4.0" conf="hadoop2->master"/>
+      <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-common" rev="2.4.0" conf="hadoop2->master"/>
 
-    <dependency org="apache" name="avro" rev="1.7.7" conf="hadoop2->master"/>
-    <dependency org="apache" name="avro-mapred" rev="1.7.7" conf="hadoop2->master"/>
-    <dependency org="codehaus" name="jackson-core-asl" rev="1.9.3" conf="hadoop2->master"/>
+      <dependency org="org.apache.avro"    name="avro"                  rev="1.7.7" conf="hadoop2->master"/>
+      <dependency org="org.apache.avro"    name="avro-mapred"           rev="1.7.7" conf="hadoop2->master"/>
+      <dependency org="org.codehaus.jackson" name="jackson-core-asl"    rev="1.9.3" conf="hadoop2->master"/>
 
-      <dependency org="apache" name="parquet-column"        rev="1.7.0"               conf="hadoop2->master"/>
-      <dependency org="apache" name="parquet-common"        rev="1.7.0"               conf="hadoop2->master"/>
-      <dependency org="apache" name="parquet-hadoop"        rev="1.7.0"               conf="hadoop2->master"/>
-      <dependency org="apache" name="parquet-encoding"        rev="1.7.0"               conf="hadoop2->master"/>
-      <dependency org="apache" name="parquet-generator"        rev="1.7.0"               conf="hadoop2->master"/>
-      <dependency org="apache" name="parquet-format" rev="2.3.0-incubating" conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-column"        rev="1.7.0"               conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-common"        rev="1.7.0"               conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-hadoop"        rev="1.7.0"               conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-encoding"      rev="1.7.0"               conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-generator"     rev="1.7.0"               conf="hadoop2->master"/>
+      <dependency org="org.apache.parquet" name="parquet-format"        rev="2.3.0-incubating"    conf="hadoop2->master"/>
 
       <!-- dependency for UT -->
       <dependency org="org.apache.hadoop" name="hadoop-client" rev="2.4.0" conf="ut->*"/>
@@ -44,21 +42,22 @@
         <artifact name="hadoop-common" type="test-jar" ext="jar" e:classifier="tests" />
       </dependency>
 
+      <dependency org="org.apache.hadoop" name="hadoop-minicluster" rev="2.4.0" conf="ut->*"/>
       <dependency org="org.apache.hadoop" name="hadoop-hdfs" rev="2.4.0" conf="ut->*">
           <artifact name="hadoop-hdfs" type="jar"/>
           <artifact name="hadoop-hdfs" type="test-jar" ext="jar" e:classifier="tests" />
       </dependency>
       <dependency org="log4j"                 name="log4j"                 rev="1.2.17" conf="ut->*"/>
-	  <dependency org="junit"                 name="junit"                 rev="4.10"   conf="ut->*"/>
+      <dependency org="junit"                 name="junit"                 rev="4.10"   conf="ut->*"/>
 
-      <dependency org="apache" name="avro" rev="1.7.7" conf="ut->*"/>
-      <dependency org="apache" name="avro-mapred" rev="1.7.7" conf="ut->*"/>
+      <dependency org="org.apache.avro" name="avro" rev="1.7.7" conf="ut->*"/>
+      <dependency org="org.apache.avro" name="avro-mapred" rev="1.7.7" conf="ut->*"/>
 
-      <dependency org="apache" name="parquet-column"        rev="1.7.0"               conf="ut->*"/>
-      <dependency org="apache" name="parquet-common"        rev="1.7.0"               conf="ut->*"/>
-      <dependency org="apache" name="parquet-hadoop"        rev="1.7.0"               conf="ut->*"/>
-      <dependency org="apache" name="parquet-encoding"        rev="1.7.0"               conf="ut->*"/>
-      <dependency org="apache" name="parquet-generator"        rev="1.7.0"               conf="ut->*"/>
-      <dependency org="apache" name="parquet-format" rev="2.3.0-incubating" conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-column"        rev="1.7.0"               conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-common"        rev="1.7.0"               conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-hadoop"        rev="1.7.0"               conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-encoding"      rev="1.7.0"               conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-generator"     rev="1.7.0"               conf="ut->*"/>
+      <dependency org="org.apache.parquet" name="parquet-format"        rev="2.3.0-incubating"    conf="ut->*"/>
   </dependencies>
 </ivy-module>

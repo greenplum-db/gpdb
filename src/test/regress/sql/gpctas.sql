@@ -58,3 +58,35 @@ END;
 $$ LANGUAGE plpgsql;
 
 create table ctas_output as select ctas_inputArray()::int[] as x;
+
+
+-- Test CTAS with VALUES.
+
+CREATE TEMP TABLE yolo(i, j, k) AS (VALUES (0,0,0), (1, NULL, 0), (2, NULL, 0), (3, NULL, 0)) DISTRIBUTED BY (i);
+
+
+--
+-- Test that the rows are distributed correctly in CTAS, even if the query
+-- has an ORDER BY. This used to tickle a bug at one point.
+--
+
+DROP TABLE IF EXISTS ctas_src, ctas_dst;
+
+CREATE TABLE ctas_src(
+col1 int4,
+col2 decimal,
+col3 char,
+col4 boolean,
+col5 int
+) DISTRIBUTED by(col4);
+
+-- I'm not sure why, but dropping a column was crucial to tickling the
+-- original bug.
+ALTER TABLE ctas_src DROP COLUMN col2;
+INSERT INTO ctas_src(col1, col3,col4,col5)
+    SELECT g, 'a',True,g from generate_series(1,5) g;
+
+CREATE TABLE ctas_dst as SELECT col1,col3,col4,col5 FROM ctas_src order by 1;
+
+-- This will fail to find some of the rows, if they're distributed incorrectly.
+SELECT * FROM ctas_src, ctas_dst WHERE ctas_src.col1 = ctas_dst.col1

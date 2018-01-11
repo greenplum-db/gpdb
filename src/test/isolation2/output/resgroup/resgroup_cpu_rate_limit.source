@@ -1,11 +1,7 @@
 -- start_ignore
-DROP VIEW IF EXISTS cpu_status;
-DROP
 DROP VIEW IF EXISTS busy;
 DROP
 DROP VIEW IF EXISTS cancel_all;
-DROP
-DROP FUNCTION IF EXISTS round_percentage(text);
 DROP
 DROP TABLE IF EXISTS bigtable;
 DROP
@@ -17,23 +13,41 @@ DROP RESOURCE GROUP rg1_cpu_test;
 ERROR:  resource group "rg1_cpu_test" does not exist
 DROP RESOURCE GROUP rg2_cpu_test;
 ERROR:  resource group "rg2_cpu_test" does not exist
+DROP LANGUAGE IF EXISTS plpythonu;
+DROP
 -- end_ignore
 
 --
 -- helper functions, tables and views
 --
-
-CREATE TABLE bigtable AS SELECT i AS c1, 'abc' AS c2 FROM generate_series(1,100000) i;
-CREATE 100000
-
--- the cpu usage limitation has an error rate about +-7.5%,
--- and also we want to satisfy the 0.1:0.2 rate under 90% overall limitation
--- so we round the cpu rate by 15%
-CREATE OR REPLACE FUNCTION round_percentage(float) RETURNS text AS $$ SELECT (round($1/15)*15)::text||'%' $$ LANGUAGE sql;
+CREATE LANGUAGE plpythonu;
 CREATE
 
-CREATE OR REPLACE VIEW cpu_status AS SELECT b.rsgname, round_percentage(avg(b.cpu)) AS cpu FROM gp_segment_configuration gsc, ( SELECT btrim((cpu->'key')::text, '"')::int AS content, (cpu->'value') ::text::float AS cpu, rsgname FROM ( SELECT rsgname, row_to_json(json_each(cpu_usage::json)) AS cpu FROM gp_toolkit.gp_resgroup_status ) a ) b WHERE gsc.content = b.content AND gsc.role = 'p' AND gsc.content <> -1 GROUP BY b.rsgname ORDER BY b.rsgname;
+DROP TABLE IF EXISTS cpu_usage_samples;
+DROP
+CREATE TABLE cpu_usage_samples (sample text);
 CREATE
+
+-- fetch_sample: select cpu_usage from gp_toolkit.gp_resgroup_status
+-- and dump them into text in json format then save them in db for
+-- further analysis.
+CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$ import pygresql.pg as pg import json 
+conn = pg.connect(dbname="isolation2resgrouptest") group_cpus = conn.query("select rsgname, cpu_usage from gp_toolkit.gp_resgroup_status")\ .getresult() json_text = json.dumps(dict([(name, json.loads(cpu)) for name, cpu in group_cpus])) sql = "insert into cpu_usage_samples values ('{value}')".format(value=json_text) conn.query(sql) return json_text $$ LANGUAGE plpythonu;
+CREATE
+
+-- verify_cpu_usage: calculate each QE's average cpu usage using all the data in
+-- the table cpu_usage_sample. And compare the average value to the expected value.
+-- return true if the practical value is close to the expected value.
+CREATE OR REPLACE FUNCTION verify_cpu_usage(groupname TEXT, expect_cpu_usage INT, err_rate INT) RETURNS BOOL AS $$ import pygresql.pg as pg import json 
+conn = pg.connect(dbname="isolation2resgrouptest") 
+def add_vector(vec1, vec2): r = dict() for seg_id1, value1 in vec1.items(): r[seg_id1] = value1 + vec2[seg_id1] return r 
+
+def verify_cpu_usage(): all_info = conn.query("select sample from cpu_usage_samples").getresult() usage_sum = reduce(add_vector, [json.loads(info)[groupname] for info, in all_info]) usage = [(float(v) / len(all_info)) for k, v in usage_sum.items() if k != "-1"] avg = sum(usage) / len(usage) return abs(avg - expect_cpu_usage) <= err_rate 
+return verify_cpu_usage() $$ LANGUAGE plpythonu;
+CREATE
+
+CREATE TABLE bigtable AS SELECT i AS c1, 'abc' AS c2 FROM generate_series(1,50000) i;
+CREATE 50000
 
 CREATE VIEW busy AS SELECT count(*) FROM bigtable t1, bigtable t2, bigtable t3, bigtable t4, bigtable t5 WHERE 0 = (t1.c1 % 2 + 10000)! AND 0 = (t2.c1 % 2 + 10000)! AND 0 = (t3.c1 % 2 + 10000)! AND 0 = (t4.c1 % 2 + 10000)! AND 0 = (t5.c1 % 2 + 10000)! ;
 CREATE
@@ -45,14 +59,14 @@ CREATE
 -- check gpdb cgroup configuration
 --
 -- cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
--- shares := 1024 * ncores
+-- shares := 1024 * gp_resource_group_cpu_priority
 --
 
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_quota_us) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_period_us) * $(nproc) * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_limit"))";
 True
 
 
-! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * 256";
+! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_priority")";
 True
 
 
@@ -69,6 +83,10 @@ True
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/$(psql -d isolation2resgrouptest -Aqtc "SELECT oid FROM pg_resgroup WHERE rsgname='admin_group'")/cpu.shares) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) * $(psql -d isolation2resgrouptest -Aqtc "SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=2 AND g.rsgname='admin_group'") / 100)";
 True
 
+
+-- lower admin_group's cpu_rate_limit to minimize its side effect
+ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 1;
+ALTER
 
 -- create two resource groups
 CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_rate_limit=10, memory_limit=20);
@@ -125,15 +143,6 @@ SET
 -- on empty load the cpu usage shall be 0%
 --
 
-SELECT * FROM cpu_status;
-rsgname      |cpu
--------------+---
-admin_group  |0% 
-default_group|0% 
-rg1_cpu_test |0% 
-rg2_cpu_test |0% 
-(4 rows)
-
 --
 -- a group should burst to use all the cpu usage
 -- when it's the only one with running queries.
@@ -150,19 +159,118 @@ rg2_cpu_test |0%
 13&: SELECT * FROM busy;  <waiting ...>
 14&: SELECT * FROM busy;  <waiting ...>
 
-SELECT pg_sleep(20);
+-- start_ignore
+TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 89.900000000000006, "0": 89.569999999999993, "2": 89.650000000000006, "-1": 90.480000000000004}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.01, "0": 0.01, "2": 0.01, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
 pg_sleep
 --------
         
 (1 row)
-SELECT * FROM cpu_status;
-rsgname      |cpu
--------------+---
-admin_group  |0% 
-default_group|0% 
-rg1_cpu_test |90%
-rg2_cpu_test |0% 
-(4 rows)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.109999999999999, "0": 90.209999999999994, "2": 90.090000000000003, "-1": 88.549999999999997}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.01, "0": 0.02, "2": 0.02, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.040000000000006, "0": 90.069999999999993, "2": 90.049999999999997, "-1": 87.859999999999999}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.02, "0": 0.02, "2": 0.01, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.030000000000001, "0": 90.260000000000005, "2": 90.140000000000001, "-1": 90.290000000000006}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.0, "0": 0.02, "2": 0.01, "-1": 0.080000000000000002}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.019999999999996, "0": 90.310000000000002, "2": 90.049999999999997, "-1": 90.700000000000003}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.02, "0": 0.02, "2": 0.02, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.129999999999995, "0": 90.159999999999997, "2": 90.120000000000005, "-1": 88.640000000000001}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.01, "0": 0.02, "2": 0.01, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.299999999999997, "0": 90.079999999999998, "2": 90.030000000000001, "-1": 90.730000000000004}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.02, "0": 0.02, "2": 0.01, "-1": 0.11}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 88.870000000000005, "0": 88.939999999999998, "2": 88.709999999999994, "-1": 89.810000000000002}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.01, "0": 0.029999999999999999, "2": 0.01, "-1": 0.089999999999999997}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.049999999999997, "0": 90.129999999999995, "2": 90.049999999999997, "-1": 88.400000000000006}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.01, "0": 0.02, "2": 0.01, "-1": 0.080000000000000002}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                               
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 90.269999999999996, "0": 90.079999999999998, "2": 90.269999999999996, "-1": 87.700000000000003}, "rg2_cpu_test": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}, "admin_group": {"1": 0.029999999999999999, "0": 0.01, "2": 0.02, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+-- end_ignore
+
+SELECT verify_cpu_usage('rg1_cpu_test', 90, 10);
+verify_cpu_usage
+----------------
+t               
+(1 row)
 
 -- start_ignore
 SELECT * FROM cancel_all;
@@ -209,19 +317,123 @@ ERROR:  canceling statement due to user request
 23&: SELECT * FROM busy;  <waiting ...>
 24&: SELECT * FROM busy;  <waiting ...>
 
-SELECT pg_sleep(20);
+-- start_ignore
+TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 30.23, "0": 30.09, "2": 29.989999999999998, "-1": 29.57}, "rg2_cpu_test": {"1": 59.609999999999999, "0": 59.859999999999999, "2": 59.810000000000002, "-1": 58.880000000000003}, "admin_group": {"1": 0.02, "0": 0.029999999999999999, "2": 0.02, "-1": 0.080000000000000002}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
 pg_sleep
 --------
         
 (1 row)
-SELECT * FROM cpu_status;
-rsgname      |cpu
--------------+---
-admin_group  |0% 
-default_group|0% 
-rg1_cpu_test |30%
-rg2_cpu_test |60%
-(4 rows)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 30.32, "0": 30.25, "2": 30.239999999999998, "-1": 29.260000000000002}, "rg2_cpu_test": {"1": 59.93, "0": 59.909999999999997, "2": 59.950000000000003, "-1": 58.520000000000003}, "admin_group": {"1": 0.01, "0": 0.02, "2": 0.02, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 31.75, "0": 31.66, "2": 31.699999999999999, "-1": 30.84}, "rg2_cpu_test": {"1": 58.630000000000003, "0": 58.640000000000001, "2": 58.579999999999998, "-1": 57.439999999999998}, "admin_group": {"1": 0.02, "0": 0.029999999999999999, "2": 0.01, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 30.190000000000001, "0": 30.109999999999999, "2": 30.09, "-1": 30.039999999999999}, "rg2_cpu_test": {"1": 59.899999999999999, "0": 60.119999999999997, "2": 59.920000000000002, "-1": 60.520000000000003}, "admin_group": {"1": 0.02, "0": 0.02, "2": 0.01, "-1": 0.11}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 29.23, "0": 29.239999999999998, "2": 29.260000000000002, "-1": 29.219999999999999}, "rg2_cpu_test": {"1": 60.729999999999997, "0": 60.68, "2": 60.780000000000001, "-1": 60.969999999999999}, "admin_group": {"1": 0.029999999999999999, "0": 0.01, "2": 0.02, "-1": 0.089999999999999997}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+TRUNCATE TABLE cpu_usage_samples;
+TRUNCATE
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                           
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 25.890000000000001, "0": 25.879999999999999, "2": 25.879999999999999, "-1": 26.109999999999999}, "rg2_cpu_test": {"1": 64.090000000000003, "0": 64.069999999999993, "2": 64.069999999999993, "-1": 64.329999999999998}, "admin_group": {"1": 0.0, "0": 0.02, "2": 0.02, "-1": 0.11}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                  
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 25.940000000000001, "0": 25.879999999999999, "2": 25.809999999999999, "-1": 26.149999999999999}, "rg2_cpu_test": {"1": 63.57, "0": 63.710000000000001, "2": 62.909999999999997, "-1": 63.32}, "admin_group": {"1": 0.01, "0": 0.02, "2": 0.02, "-1": 0.089999999999999997}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                                              
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 27.920000000000002, "0": 28.18, "2": 27.949999999999999, "-1": 27.629999999999999}, "rg2_cpu_test": {"1": 62.170000000000002, "0": 62.119999999999997, "2": 62.350000000000001, "-1": 60.600000000000001}, "admin_group": {"1": 0.029999999999999999, "0": 0.01, "2": 0.02, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 29.350000000000001, "0": 29.350000000000001, "2": 29.359999999999999, "-1": 29.600000000000001}, "rg2_cpu_test": {"1": 60.68, "0": 60.689999999999998, "2": 60.700000000000003, "-1": 60.82}, "admin_group": {"1": 0.02, "0": 0.01, "2": 0.01, "-1": 0.11}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+SELECT fetch_sample();
+fetch_sample                                                                                                                                                                                                                                                                                                                                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+{"rg1_cpu_test": {"1": 27.969999999999999, "0": 27.84, "2": 27.760000000000002, "-1": 27.399999999999999}, "rg2_cpu_test": {"1": 62.109999999999999, "0": 62.149999999999999, "2": 62.159999999999997, "-1": 60.960000000000001}, "admin_group": {"1": 0.02, "0": 0.029999999999999999, "2": 0.029999999999999999, "-1": 0.10000000000000001}, "default_group": {"1": 0.0, "0": 0.0, "2": 0.0, "-1": 0.0}}
+(1 row)
+SELECT pg_sleep(1.7);
+pg_sleep
+--------
+        
+(1 row)
+-- end_ignore
+
+SELECT verify_cpu_usage('rg1_cpu_test', 30, 10);
+verify_cpu_usage
+----------------
+t               
+(1 row)
+SELECT verify_cpu_usage('rg2_cpu_test', 60, 10);
+verify_cpu_usage
+----------------
+t               
+(1 row)
 
 -- start_ignore
 SELECT * FROM cancel_all;
@@ -262,6 +474,10 @@ ERROR:  canceling statement due to user request
 ERROR:  canceling statement due to user request
 -- end_ignore
 
+-- restore admin_group's cpu_rate_limit
+ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 10;
+ALTER
+
 -- cleanup
 REVOKE ALL ON busy FROM role1_cpu_test;
 REVOKE
@@ -274,4 +490,6 @@ DROP
 DROP RESOURCE GROUP rg1_cpu_test;
 DROP
 DROP RESOURCE GROUP rg2_cpu_test;
+DROP
+DROP LANGUAGE plpythonu CASCADE;
 DROP

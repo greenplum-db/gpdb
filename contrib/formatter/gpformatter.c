@@ -333,7 +333,13 @@ formatter_import(PG_FUNCTION_ARGS)
 				bool	nextlen = remaining >= sizeof(len);
 				
 				if (nextlen)
+				{
 					memcpy(&len, data_buf + data_cur, sizeof(len));
+
+					if (len < 0)
+						elog(ERROR, "invalid length of varlen datatype: %d",
+									len);
+				}
 
 				/* if len or data bytes don't exist in this buffer, return */
 				if (!nextlen || (nextlen && (remaining - sizeof(len) < len)))

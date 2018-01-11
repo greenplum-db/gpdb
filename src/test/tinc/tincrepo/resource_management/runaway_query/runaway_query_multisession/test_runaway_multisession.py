@@ -18,7 +18,7 @@ def _set_VLIM_SLIM_REDZONEPERCENT(vlimMB, slimMB, activationPercent):
 
     # Restart DB
     Command('Restart database for GUCs to take effect', 
-            'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
+            'source $GPHOME/greenplum_path.sh && gpstop -air').run(validateAfter=True)
 
 def _reset_VLIM_SLIM_REDZONEPERCENT():
 
@@ -32,7 +32,7 @@ def _reset_VLIM_SLIM_REDZONEPERCENT():
             'source $GPHOME/greenplum_path.sh;gpconfig -r runaway_detector_activation_percent --skipvalidation').run(validateAfter=True)
     # Restart DB
     Command('Restart database for GUCs to take effect', 
-            'source $GPHOME/greenplum_path.sh && gpstop -ar').run(validateAfter=True)
+            'source $GPHOME/greenplum_path.sh && gpstop -air').run(validateAfter=True)
 
 
 class RunawayMultiSessionTestCase(SQLIsolationTestCase):

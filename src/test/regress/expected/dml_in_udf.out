@@ -297,7 +297,7 @@ BEGIN
 END
 $$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 INSERT INTO volatilefn_dml_int8(col1,col3) SELECT col2,dml_in_udf_func(14) FROM volatilefn_dml_int8_candidate;
-ERROR:  function cannot execute on segment because it issues a non-SELECT statement  (seg0 rh55-qavm52:34533 pid=31563)
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 rh55-qavm52:34533 pid=31563)
 DETAIL:  
 SQL statement "DROP TABLE IF EXISTS udftest_foo"
 PL/pgSQL function "dml_in_udf_func" line 2 at SQL statement

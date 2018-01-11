@@ -56,7 +56,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           having <codeph>CREATEROLE</codeph> privilege can change defaults for non-superuser roles.
           See the <i>Greenplum Database Administrator Guide</i> for information about all
           user-settable configuration parameters.</li>
-        <li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a workload management resource
+        <li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a resource
           queue. The role would then be subject to the limits assigned to the resource queue when
           issuing queries. Specify <codeph>NONE</codeph> to assign the role to the default resource
           queue. A role can only belong to one resource queue. For a role without
@@ -67,7 +67,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
           the resource group. You can assign a single resource group to one or more roles. See
               <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-            /></codeph> for additional information.</li>
+            /></codeph> for additional information.  </li>
         <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
           attributes that can be specified in <codeph><xref href="./CREATE_ROLE.xml#topic1"
               type="topic" format="dita"/></codeph>. Attributes not mentioned in the command retain

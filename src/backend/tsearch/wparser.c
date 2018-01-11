@@ -3,11 +3,11 @@
  * wparser.c
  *		Standard interface to word parser
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser.c,v 1.8 2008/01/15 18:22:47 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser.c,v 1.11 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,7 +15,6 @@
 
 #include "funcapi.h"
 #include "access/genam.h"
-#include "access/heapam.h"
 #include "access/skey.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
@@ -310,9 +309,9 @@ ts_headline_byid_opt(PG_FUNCTION_ARGS)
 	prsobj = lookup_ts_parser_cache(cfg->prsId);
 
 	if (!OidIsValid(prsobj->headlineOid))
-		ereport(ERROR, 
+		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("text search parser does not support headline creation")));
+		   errmsg("text search parser does not support headline creation")));
 
 	memset(&prs, 0, sizeof(HeadlineParsedText));
 	prs.lenwords = 32;

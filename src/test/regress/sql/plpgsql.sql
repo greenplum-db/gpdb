@@ -2,24 +2,24 @@
 -- PLPGSQL
 --
 -- Scenario:
--- 
+--
 --     A building with a modern TP cable installation where any
 --     of the wall connectors can be used to plug in phones,
 --     ethernet interfaces or local office hubs. The backside
 --     of the wall connectors is wired to one of several patch-
 --     fields in the building.
--- 
+--
 --     In the patchfields, there are hubs and all the slots
 --     representing the wall connectors. In addition there are
 --     slots that can represent a phone line from the central
 --     phone system.
--- 
+--
 --     Triggers ensure consistency of the patching information.
--- 
+--
 --     Functions are used to build up powerful views that let
 --     you look behind the wall when looking at a patchfield
 --     or into a room.
--- 
+--
 
 
 create table Room (
@@ -116,10 +116,10 @@ create unique index PHone_name on PHone using btree (slotname bpchar_ops);
 
 
 -- ************************************************************
--- * 
+-- *
 -- * Trigger procedures and functions for the patchfield
 -- * test of PL/pgSQL
--- * 
+-- *
 -- ************************************************************
 
 
@@ -708,11 +708,11 @@ begin
     mytype := substr(myname, 1, 2);
     link := mytype || substr(blname, 1, 2);
     if link = ''PLPL'' then
-        raise exception 
+        raise exception
 		''backlink between two phone lines does not make sense'';
     end if;
     if link in (''PLWS'', ''WSPL'') then
-        raise exception 
+        raise exception
 		''direct link of phone line to wall slot not permitted'';
     end if;
     if mytype = ''PS'' then
@@ -868,19 +868,19 @@ begin
     mytype := substr(myname, 1, 2);
     link := mytype || substr(blname, 1, 2);
     if link = ''PHPH'' then
-        raise exception 
+        raise exception
 		''slotlink between two phones does not make sense'';
     end if;
     if link in (''PHHS'', ''HSPH'') then
-        raise exception 
+        raise exception
 		''link of phone to hub does not make sense'';
     end if;
     if link in (''PHIF'', ''IFPH'') then
-        raise exception 
+        raise exception
 		''link of phone to hub does not make sense'';
     end if;
     if link in (''PSWS'', ''WSPS'') then
-        raise exception 
+        raise exception
 		''slotlink from patchslot to wallslot not permitted'';
     end if;
     if mytype = ''PS'' then
@@ -1264,35 +1264,35 @@ insert into PSlot values ('PS.base.tb4', 'PF0_X', '', '');
 insert into PSlot values ('PS.base.tb5', 'PF0_X', '', '');
 insert into PSlot values ('PS.base.tb6', 'PF0_X', '', '');
 
-insert into PField values ('PF1_1', 'Wallslots 1st floor');
+insert into PField values ('PF1_1', 'Wallslots first floor');
 
-insert into PSlot values ('PS.1st.a1', 'PF1_1', '', 'WS.101.1a');
-insert into PSlot values ('PS.1st.a2', 'PF1_1', '', 'WS.101.1b');
-insert into PSlot values ('PS.1st.a3', 'PF1_1', '', 'WS.101.2a');
-insert into PSlot values ('PS.1st.a4', 'PF1_1', '', 'WS.101.2b');
-insert into PSlot values ('PS.1st.a5', 'PF1_1', '', 'WS.101.3a');
-insert into PSlot values ('PS.1st.a6', 'PF1_1', '', 'WS.101.3b');
+insert into PSlot values ('PS.first.a1', 'PF1_1', '', 'WS.101.1a');
+insert into PSlot values ('PS.first.a2', 'PF1_1', '', 'WS.101.1b');
+insert into PSlot values ('PS.first.a3', 'PF1_1', '', 'WS.101.2a');
+insert into PSlot values ('PS.first.a4', 'PF1_1', '', 'WS.101.2b');
+insert into PSlot values ('PS.first.a5', 'PF1_1', '', 'WS.101.3a');
+insert into PSlot values ('PS.first.a6', 'PF1_1', '', 'WS.101.3b');
 
-insert into PSlot values ('PS.1st.b1', 'PF1_1', '', 'WS.102.1a');
-insert into PSlot values ('PS.1st.b2', 'PF1_1', '', 'WS.102.1b');
-insert into PSlot values ('PS.1st.b3', 'PF1_1', '', 'WS.102.2a');
-insert into PSlot values ('PS.1st.b4', 'PF1_1', '', 'WS.102.2b');
-insert into PSlot values ('PS.1st.b5', 'PF1_1', '', 'WS.102.3a');
-insert into PSlot values ('PS.1st.b6', 'PF1_1', '', 'WS.102.3b');
+insert into PSlot values ('PS.first.b1', 'PF1_1', '', 'WS.102.1a');
+insert into PSlot values ('PS.first.b2', 'PF1_1', '', 'WS.102.1b');
+insert into PSlot values ('PS.first.b3', 'PF1_1', '', 'WS.102.2a');
+insert into PSlot values ('PS.first.b4', 'PF1_1', '', 'WS.102.2b');
+insert into PSlot values ('PS.first.b5', 'PF1_1', '', 'WS.102.3a');
+insert into PSlot values ('PS.first.b6', 'PF1_1', '', 'WS.102.3b');
 
-insert into PSlot values ('PS.1st.c1', 'PF1_1', '', 'WS.105.1a');
-insert into PSlot values ('PS.1st.c2', 'PF1_1', '', 'WS.105.1b');
-insert into PSlot values ('PS.1st.c3', 'PF1_1', '', 'WS.105.2a');
-insert into PSlot values ('PS.1st.c4', 'PF1_1', '', 'WS.105.2b');
-insert into PSlot values ('PS.1st.c5', 'PF1_1', '', 'WS.105.3a');
-insert into PSlot values ('PS.1st.c6', 'PF1_1', '', 'WS.105.3b');
+insert into PSlot values ('PS.first.c1', 'PF1_1', '', 'WS.105.1a');
+insert into PSlot values ('PS.first.c2', 'PF1_1', '', 'WS.105.1b');
+insert into PSlot values ('PS.first.c3', 'PF1_1', '', 'WS.105.2a');
+insert into PSlot values ('PS.first.c4', 'PF1_1', '', 'WS.105.2b');
+insert into PSlot values ('PS.first.c5', 'PF1_1', '', 'WS.105.3a');
+insert into PSlot values ('PS.first.c6', 'PF1_1', '', 'WS.105.3b');
 
-insert into PSlot values ('PS.1st.d1', 'PF1_1', '', 'WS.106.1a');
-insert into PSlot values ('PS.1st.d2', 'PF1_1', '', 'WS.106.1b');
-insert into PSlot values ('PS.1st.d3', 'PF1_1', '', 'WS.106.2a');
-insert into PSlot values ('PS.1st.d4', 'PF1_1', '', 'WS.106.2b');
-insert into PSlot values ('PS.1st.d5', 'PF1_1', '', 'WS.106.3a');
-insert into PSlot values ('PS.1st.d6', 'PF1_1', '', 'WS.106.3b');
+insert into PSlot values ('PS.first.d1', 'PF1_1', '', 'WS.106.1a');
+insert into PSlot values ('PS.first.d2', 'PF1_1', '', 'WS.106.1b');
+insert into PSlot values ('PS.first.d3', 'PF1_1', '', 'WS.106.2a');
+insert into PSlot values ('PS.first.d4', 'PF1_1', '', 'WS.106.2b');
+insert into PSlot values ('PS.first.d5', 'PF1_1', '', 'WS.106.3a');
+insert into PSlot values ('PS.first.d6', 'PF1_1', '', 'WS.106.3b');
 
 --
 -- Now we wire the wall connectors 1a-2a in room 001 to the
@@ -1326,21 +1326,21 @@ update WSlot set backlink = 'PS.base.a5' where slotname = 'WS.001.3a';
 select * from WSlot where roomno = '001' order by slotname;
 select * from PSlot where slotname ~ 'PS.base.a' order by slotname;
 
-insert into PField values ('PF1_2', 'Phonelines 1st floor');
+insert into PField values ('PF1_2', 'Phonelines first floor');
 
-insert into PSlot values ('PS.1st.ta1', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.ta2', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.ta3', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.ta4', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.ta5', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.ta6', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta1', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta2', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta3', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta4', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta5', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta6', 'PF1_2', '', '');
 
-insert into PSlot values ('PS.1st.tb1', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.tb2', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.tb3', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.tb4', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.tb5', 'PF1_2', '', '');
-insert into PSlot values ('PS.1st.tb6', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb1', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb2', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb3', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb4', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb5', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb6', 'PF1_2', '', '');
 
 --
 -- Fix the wrong name for patchfield PF0_2
@@ -1366,16 +1366,16 @@ insert into PLine values ('PL.007', '-108', '', 'PS.base.tb3');
 insert into PLine values ('PL.008', '-109', '', 'PS.base.tb4');
 insert into PLine values ('PL.009', '-121', '', 'PS.base.tb5');
 insert into PLine values ('PL.010', '-122', '', 'PS.base.tb6');
-insert into PLine values ('PL.015', '-134', '', 'PS.1st.ta1');
-insert into PLine values ('PL.016', '-137', '', 'PS.1st.ta3');
-insert into PLine values ('PL.017', '-139', '', 'PS.1st.ta4');
-insert into PLine values ('PL.018', '-362', '', 'PS.1st.tb1');
-insert into PLine values ('PL.019', '-363', '', 'PS.1st.tb2');
-insert into PLine values ('PL.020', '-364', '', 'PS.1st.tb3');
-insert into PLine values ('PL.021', '-365', '', 'PS.1st.tb5');
-insert into PLine values ('PL.022', '-367', '', 'PS.1st.tb6');
+insert into PLine values ('PL.015', '-134', '', 'PS.first.ta1');
+insert into PLine values ('PL.016', '-137', '', 'PS.first.ta3');
+insert into PLine values ('PL.017', '-139', '', 'PS.first.ta4');
+insert into PLine values ('PL.018', '-362', '', 'PS.first.tb1');
+insert into PLine values ('PL.019', '-363', '', 'PS.first.tb2');
+insert into PLine values ('PL.020', '-364', '', 'PS.first.tb3');
+insert into PLine values ('PL.021', '-365', '', 'PS.first.tb5');
+insert into PLine values ('PL.022', '-367', '', 'PS.first.tb6');
 insert into PLine values ('PL.028', '-501', 'Fax entrance', 'PS.base.ta2');
-insert into PLine values ('PL.029', '-502', 'Fax 1st floor', 'PS.1st.ta1');
+insert into PLine values ('PL.029', '-502', 'Fax first floor', 'PS.first.ta1');
 
 --
 -- Buy some phones, plug them into the wall and patch the
@@ -2444,7 +2444,7 @@ drop function footest();
 -- test scrollable cursor support
 
 create function sc_test() returns setof integer as $$
-declare 
+declare
   c scroll cursor for select f1 from int4_tbl;
   x integer;
 begin
@@ -2461,7 +2461,7 @@ $$ language plpgsql;
 select * from sc_test();
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c no scroll cursor for select f1 from int4_tbl;
   x integer;
 begin
@@ -2478,7 +2478,7 @@ $$ language plpgsql;
 select * from sc_test();  -- fails because of NO SCROLL specification
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c refcursor;
   x integer;
 begin
@@ -2495,7 +2495,7 @@ $$ language plpgsql;
 select * from sc_test();
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c refcursor;
   x integer;
 begin
@@ -2582,6 +2582,430 @@ $$ language plpgsql;
 
 select * from ret_query2(8);
 
+-- test EXECUTE USING
+create function exc_using(int, text) returns int as $$
+declare i int;
+begin
+  for i in execute 'select * from generate_series(1,$1)' using $1+1 loop
+    raise notice '%', i;
+  end loop;
+  execute 'select $2 + $2*3 + length($1)' into i using $2,$1;
+  return i;
+end
+$$ language plpgsql;
+
+select exc_using(5, 'foobar');
+
+-- test FOR-over-cursor
+
+create or replace function forc01() returns void as $$
+declare
+  c cursor(r1 integer, r2 integer)
+       for select * from generate_series(r1,r2) i;
+  c2 cursor
+       for select * from generate_series(41,43) i;
+begin
+  for r in c(5,7) loop
+    raise notice '% from %', r.i, c;
+  end loop;
+  -- again, to test if cursor was closed properly
+  for r in c(9,10) loop
+    raise notice '% from %', r.i, c;
+  end loop;
+  -- and test a parameterless cursor
+  for r in c2 loop
+    raise notice '% from %', r.i, c2;
+  end loop;
+  -- and try it with a hand-assigned name
+  raise notice 'after loop, c2 = %', c2;
+  c2 := 'special_name';
+  for r in c2 loop
+    raise notice '% from %', r.i, c2;
+  end loop;
+  raise notice 'after loop, c2 = %', c2;
+  -- and try it with a generated name
+  -- (which we can't show in the output because it's variable)
+  c2 := null;
+  for r in c2 loop
+    raise notice '%', r.i;
+  end loop;
+  raise notice 'after loop, c2 = %', c2;
+  return;
+end;
+$$ language plpgsql;
+
+select forc01();
+
+-- try updating the cursor's current row
+
+create temp table forc_test as
+  select 1 as distkey, n as i, n as j from generate_series(1,10) n distributed by (distkey);
+
+create or replace function forc01() returns void as $$
+declare
+  c cursor for select * from forc_test;
+begin
+  for r in c loop
+    raise notice '%, %', r.i, r.j;
+    update forc_test set i = i * 100, j = r.j * 2 where current of c;
+  end loop;
+end;
+$$ language plpgsql;
+
+select forc01();
+
+select i, j from forc_test;
+
+drop function forc01();
+
+-- fail because cursor has no query bound to it
+
+create or replace function forc_bad() returns void as $$
+declare
+  c refcursor;
+begin
+  for r in c loop
+    raise notice '%', r.i;
+  end loop;
+end;
+$$ language plpgsql;
+
+-- test RETURN QUERY EXECUTE
+
+create or replace function return_dquery()
+returns setof int as $$
+begin
+  return query execute 'select * from (values(10),(20)) f';
+  return query execute 'select * from (values($1),($2)) f' using 40,50;
+end;
+$$ language plpgsql;
+
+select * from return_dquery();
+
+drop function return_dquery();
+
+-- Tests for 8.4's new RAISE features
+
+create or replace function raise_test() returns void as $$
+begin
+  raise notice '% % %', 1, 2, 3
+     using errcode = '55001', detail = 'some detail info', hint = 'some hint';
+  raise '% % %', 1, 2, 3
+     using errcode = 'division_by_zero', detail = 'some detail info';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- Since we can't actually see the thrown SQLSTATE in default psql output,
+-- test it like this; this also tests re-RAISE
+
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = 'division_by_zero', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- SQLSTATE specification in WHEN
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when sqlstate '1234F' then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise sqlstate '1234F';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- conflict on message
+create or replace function raise_test() returns void as $$
+begin
+  raise notice 'some message' using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- conflict on errcode
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- nothing to re-RAISE
+create or replace function raise_test() returns void as $$
+begin
+  raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+drop function raise_test();
+
+-- test CASE statement
+
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+        b int = 1;
+begin
+  case $1
+    when 1 then
+      return 'one';
+    when 2 then
+      return 'two';
+    when 3,4,3+5 then
+      return 'three, four or eight';
+    when a then
+      return 'ten';
+    when a+b, a+b+1 then
+      return 'eleven, twelve';
+  end case;
+end;
+$$ language plpgsql immutable;
+
+select case_test(1);
+select case_test(2);
+select case_test(3);
+select case_test(4);
+select case_test(5); -- fails
+select case_test(8);
+select case_test(10);
+select case_test(11);
+select case_test(12);
+select case_test(13); -- fails
+
+create or replace function catch() returns void as $$
+begin
+  raise notice '%', case_test(6);
+exception
+  when case_not_found then
+    raise notice 'caught case_not_found % %', SQLSTATE, SQLERRM;
+end
+$$ language plpgsql;
+
+select catch();
+
+-- test the searched variant too, as well as ELSE
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+begin
+  case
+    when $1 = 1 then
+      return 'one';
+    when $1 = a + 2 then
+      return 'twelve';
+    else
+      return 'other';
+  end case;
+end;
+$$ language plpgsql immutable;
+
+select case_test(1);
+select case_test(2);
+select case_test(12);
+select case_test(13);
+
+drop function catch();
+drop function case_test(bigint);
+
+-- test variadic functions
+
+create or replace function vari(variadic int[])
+returns void as $$
+begin
+  for i in array_lower($1,1)..array_upper($1,1) loop
+    raise notice '%', $1[i];
+  end loop; end;
+$$ language plpgsql;
+
+select vari(1,2,3,4,5);
+select vari(3,4,5);
+select vari(variadic array[5,6,7]);
+
+drop function vari(int[]);
+
+-- coercion test
+create or replace function pleast(variadic numeric[])
+returns numeric as $$
+declare aux numeric = $1[array_lower($1,1)];
+begin
+  for i in array_lower($1,1)+1..array_upper($1,1) loop
+    if $1[i] < aux then aux := $1[i]; end if;
+  end loop;
+  return aux;
+end;
+$$ language plpgsql immutable strict;
+
+select pleast(10,1,2,3,-16);
+select pleast(10.2,2.2,-1.1);
+select pleast(10.2,10, -20);
+select pleast(10,20, -1.0);
+
+-- in case of conflict, non-variadic version is preferred
+create or replace function pleast(numeric)
+returns numeric as $$
+begin
+  raise notice 'non-variadic function called';
+  return $1;
+end;
+$$ language plpgsql immutable strict;
+
+select pleast(10);
+
+drop function pleast(numeric[]);
+drop function pleast(numeric);
+
+-- test table functions
+
+create function tftest(int) returns table(a int, b int) as $$
+begin
+  return query select $1, $1+i from generate_series(1,5) g(i);
+end;
+$$ language plpgsql immutable strict;
+
+select * from tftest(10);
+
+create or replace function tftest(a1 int) returns table(a int, b int) as $$
+begin
+  a := a1; b := a1 + 1;
+  return next;
+  a := a1 * 10; b := a1 * 10 + 1;
+  return next;
+end;
+$$ language plpgsql immutable strict;
+
+select * from tftest(10);
+
+drop function tftest(int);
+
+create or replace function rttest()
+returns setof int as $$
+declare rc int;
+begin
+  return query values(10),(20);
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query select * from (values(10),(20)) f(a) where false;
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query execute 'values(10),(20)';
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query execute 'select * from (values(10),(20)) f(a) where false';
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+end;
+$$ language plpgsql;
+
+select * from rttest();
+
+drop function rttest();
+
+-- Test for proper cleanup at subtransaction exit.  This example
+-- exposed a bug in PG 8.2.
+
+CREATE FUNCTION leaker_1(fail BOOL) RETURNS INTEGER AS $$
+DECLARE
+  v_var INTEGER;
+BEGIN
+  BEGIN
+    v_var := (leaker_2(fail)).error_code;
+  EXCEPTION
+    WHEN others THEN RETURN 0;
+  END;
+  RETURN 1;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION leaker_2(fail BOOL, OUT error_code INTEGER, OUT new_id INTEGER)
+  RETURNS RECORD AS $$
+BEGIN
+  IF fail THEN
+    RAISE EXCEPTION 'fail ...';
+  END IF;
+  error_code := 1;
+  new_id := 1;
+  RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM leaker_1(false);
+SELECT * FROM leaker_1(true);
+
+DROP FUNCTION leaker_1(bool);
+DROP FUNCTION leaker_2(bool);
+
 -- Test for appropriate cleanup of non-simple expression evaluations
 -- (bug in all versions prior to August 2010)
 
@@ -2663,6 +3087,50 @@ rollback;
 
 drop function error2(p_name_table text);
 drop function error1(text);
+
+-- Test handling of string literals.
+
+set standard_conforming_strings = off;
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice 'foo\\bar\041baz';
+  return 'foo\\bar\041baz';
+end
+$$ language plpgsql;
+
+select strtest();
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice E'foo\\bar\041baz';
+  return E'foo\\bar\041baz';
+end
+$$ language plpgsql;
+
+select strtest();
+
+set standard_conforming_strings = on;
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice 'foo\\bar\041baz\';
+  return 'foo\\bar\041baz\';
+end
+$$ language plpgsql;
+
+select strtest();
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice E'foo\\bar\041baz';
+  return E'foo\\bar\041baz';
+end
+$$ language plpgsql;
+
+select strtest();
+
+drop function strtest();
 
 -- Test anonymous code blocks.
 

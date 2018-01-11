@@ -4,10 +4,10 @@
 <topic id="topic103">
    <title>Example Custom Data Access Protocol </title>
    <body>
-      <p>The following is the API for the Greenplum Database custom data access
-         protocol. The example protocol implementation <xref href="g-gpextprotocal.c.xml#topic106"/>
-         is written in C and shows how the API can be used. For information about accessing a custom
-         data access protocol, see <xref href="g-using-a-custom-protocol.xml#topic43"/>.</p>
+      <p>The following is the API for the Greenplum Database custom data access protocol. The
+         example protocol implementation <xref href="g-gpextprotocal.c.xml#topic106"/> is written in
+         C and shows how the API can be used. For information about accessing a custom data access
+         protocol, see <xref href="g-using-a-custom-protocol.xml#topic43"/>.</p>
       <codeblock>/* ---- Read/Write function API ------*/
 CALLED_AS_EXTPROTOCOL(fcinfo)
 EXTPROTOCOL_GET_URL(fcinfo)(fcinfo) 

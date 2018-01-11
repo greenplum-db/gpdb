@@ -3,7 +3,13 @@
  * tablefuncapi.h
  *	  Declarations for Table Function API
  *
- * Copyright (c) 2011, EMC corporation
+ * Portions Copyright (c) 2011, EMC corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/tablefuncapi.h
+ *
  *-------------------------------------------------------------------------
  */
 #ifndef TABLEFUNCAPI_H

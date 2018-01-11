@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from gparray import GpDB, GpArray, FAULT_STRATEGY_NONE
+from gparray import Segment, GpArray
 from gppylib import gparray
 from gppylib.commands.base import CommandResult, WorkerPool, Command
 from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
@@ -113,13 +113,13 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         self.subject._check_segment_state_for_connection(conf_provider)
 
     def test_check_segment_state__when_one_segment_not_ready__raises(self):
-        segment1 = Mock(spec=GpDB)
+        segment1 = Mock(spec=Segment)
         segment1.getSegmentHostName.return_value = 'foo1'
         segment1.isSegmentUp.return_value = True
         segment1.isSegmentMaster.return_value = False
         segment1.isSegmentStandby.return_value = False
 
-        segment2 = Mock(spec=GpDB)
+        segment2 = Mock(spec=Segment)
         segment2.getSegmentHostName.return_value = 'foo2'
         segment2.isSegmentUp.return_value = True
         segment2.isSegmentMaster.return_value = False
@@ -147,7 +147,7 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
                                                   'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\n'
                                                   'dataState: InChangeTracking\n',
                                                   False, True)
-        segment_mock = Mock(spec=GpDB)
+        segment_mock = Mock(spec=Segment)
         segment_mock.isSegmentQD.return_value = False
         segment_mock.isSegmentModeInChangeLogging.return_value = True
         segment_mock.getSegmentHostName.return_value = 'foo1'
@@ -173,7 +173,7 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
                                                   'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\n'
                                                   'dataState: InChangeTracking\n',
                                                   False, True)
-        segment = Mock(spec=GpDB)
+        segment = Mock(spec=Segment)
         segment.isSegmentQD.return_value = False
         segment.isSegmentModeInChangeLogging.return_value = True
         segment.getSegmentHostName.return_value = 'foo1'
@@ -218,8 +218,9 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
     def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self):
         self.execSqlResult.fetchall.return_value = [[3], [1]]
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock(spec=GpDB)
+        gparray_mock.hasMirrors = True
+
+        segment_mock = Mock(spec=Segment)
         segment_mock.getSegmentContentId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertTrue(mismatched)
@@ -227,23 +228,25 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self):
         self.execSqlResult.fetchall.return_value = [[3]]
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
-        segment_mock = Mock(spec=GpDB)
+        gparray_mock.hasMirrors = True
+
+        segment_mock = Mock(spec=Segment)
         segment_mock.getSegmentContentId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertFalse(mismatched)
 
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self):
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
-        segment_mock = Mock(spec=GpDB)
+        gparray_mock.hasMirrors = False
+
+        segment_mock = Mock(spec=Segment)
         segment_mock.getSegmentDbId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertFalse(mismatched)
 
     def test__run__when_no_replication_is_setup__raises(self):
         self.gparray.getSegDbList.return_value = []
-        self.gparray.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
+        self.gparray.hasMirrors = False
 
         with self.assertRaisesRegexp(Exception, 'replication is not configured'):
             self.subject.run()
@@ -251,7 +254,7 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
     ############################################################
     # Private
     def _get_mock_segment(self, name, port, address, datadir):
-        segment = Mock(spec=GpDB)
+        segment = Mock(spec=Segment)
         segment.getSegmentHostName.return_value = name
         segment.getSegmentAddress.return_value = address
         segment.getSegmentPort.return_value = port
@@ -264,12 +267,12 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         return conf_provider
 
     def _segments_mock(self):
-        segment1 = Mock(spec=GpDB)
+        segment1 = Mock(spec=Segment)
         segment1.getSegmentHostName.return_value = 'foo1'
         segment1.isSegmentUp.return_value = True
         segment1.isSegmentMaster.return_value = False
         segment1.isSegmentStandby.return_value = False
-        segment2 = Mock(spec=GpDB)
+        segment2 = Mock(spec=Segment)
         segment2.getSegmentHostName.return_value = 'foo2'
         segment2.isSegmentUp.return_value = True
         segment2.isSegmentMaster.return_value = False

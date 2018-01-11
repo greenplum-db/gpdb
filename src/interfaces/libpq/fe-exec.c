@@ -3,6 +3,7 @@
  * fe-exec.c
  *	  functions related to sending a query down to the backend
  *
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -12,7 +13,15 @@
  *
  *-------------------------------------------------------------------------
  */
-#include "postgres_fe.h"
+
+/*
+ * This file is compiled with both frontend and backend codes, symlinked by
+ * src/backend/Makefile, and use macro FRONTEND to switch.
+ *
+ * Include "c.h" to adopt Greenplum C types. Don't include "postgres_fe.h",
+ * which only defines FRONTEND besides including "c.h"
+ */
+#include "c.h"
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -52,7 +61,6 @@ static bool static_std_strings = false;
 
 static PGEvent *dupEvents(PGEvent *events, int count);
 static bool pqAddTuple(PGresult *res, PGresAttValue *tup);
-static bool PQsendQueryStart(PGconn *conn);
 static int PQsendQueryGuts(PGconn *conn,
 				const char *command,
 				const char *stmtName,
@@ -162,6 +170,15 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
 	result->curBlock = NULL;
 	result->curOffset = 0;
 	result->spaceLeft = 0;
+	result->cdbstats = NULL;            /*CDB*/
+
+	result->extras = NULL;
+	result->extraslen = 0;
+
+	result->numRejected = 0;
+	result->numCompleted = 0;
+	result->naotupcounts = 0;
+	result->aotupcounts = NULL;
 
 	if (conn)
 	{
@@ -690,6 +707,15 @@ PQclear(PGresult *res)
 	res->nEvents = 0;
 	/* res->curBlock was zeroed out earlier */
 
+	if (res->extras)
+		free(res->extras);
+	res->extraslen = 0;
+	res->extras = NULL;
+
+	if (res->aotupcounts)
+		free(res->aotupcounts);
+	res->naotupcounts = 0;
+
 	/* Free the PGresult structure itself */
 	free(res);
 }
@@ -1116,7 +1142,6 @@ fail:
 	return 0;
 }
 
-
 /*
  * PQsendQuery
  *	 Submit a query, but don't wait for it to finish
@@ -1336,7 +1361,7 @@ PQsendQueryPrepared(PGconn *conn,
 /*
  * Common startup code for PQsendQuery and sibling routines
  */
-static bool
+bool
 PQsendQueryStart(PGconn *conn)
 {
 	if (!conn)

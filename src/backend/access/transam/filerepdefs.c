@@ -1,14 +1,19 @@
-/*
- *  cdbfilerepdefs.h
+/*-------------------------------------------------------------------------
+ *
+ * cdbfilerepdefs.c
  *  
- * Definitions needed by in header files outside of cdb.
+ * Portions Copyright (c) 2009-2010, Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- *  Copyright 2009-2010, Greenplum Inc. All rights reserved.
  *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/filerepdefs.c
+ *
+ *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
-#include "storage/relfilenode.h"
-#include "storage/itemptr.h"
+
 #include "access/filerepdefs.h"
 
 char * 

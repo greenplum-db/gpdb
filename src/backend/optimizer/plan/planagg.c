@@ -4,20 +4,23 @@
  *	  Special planning for aggregate queries.
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.41 2008/07/10 02:14:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.46 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "catalog/pg_aggregate.h"
+#include "catalog/pg_am.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
@@ -26,7 +29,6 @@
 #include "optimizer/predtest.h"
 #include "optimizer/subselect.h"
 #include "parser/parse_clause.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -97,11 +99,11 @@ optimize_minmax_aggregates(PlannerInfo *root, List *tlist, Path *best_path)
 	/*
 	 * Reject unoptimizable cases.
 	 *
-	 * We don't handle GROUP BY, because our current implementations of
-	 * grouping require looking at all the rows anyway, and so there's not
-	 * much point in optimizing MIN/MAX.
+	 * We don't handle GROUP BY or windowing, because our current
+	 * implementations of grouping require looking at all the rows anyway, and
+	 * so there's not much point in optimizing MIN/MAX.
 	 */
-	if (parse->groupClause)
+	if (parse->groupClause || parse->hasWindowFuncs)
 		return NULL;
 
 	/*
@@ -191,12 +193,12 @@ optimize_minmax_aggregates(PlannerInfo *root, List *tlist, Path *best_path)
 											 &aggs_list);
 
 	/*
-	 * We have to replace Aggrefs with Params in equivalence classes too,
-	 * else ORDER BY or DISTINCT on an optimized aggregate will fail.
+	 * We have to replace Aggrefs with Params in equivalence classes too, else
+	 * ORDER BY or DISTINCT on an optimized aggregate will fail.
 	 *
-	 * Note: at some point it might become necessary to mutate other
-	 * data structures too, such as the query's sortClause or distinctClause.
-	 * Right now, those won't be examined after this point.
+	 * Note: at some point it might become necessary to mutate other data
+	 * structures too, such as the query's sortClause or distinctClause. Right
+	 * now, those won't be examined after this point.
 	 */
 	mutate_eclass_expressions(root,
 							  replace_aggs_with_params_mutator,
@@ -248,7 +250,14 @@ find_minmax_aggs_walker(Node *node, List **context)
 		Assert(aggref->agglevelsup == 0);
 		if (list_length(aggref->args) != 1)
 			return true;		/* it couldn't be MIN/MAX */
-		/* note: we do not care if DISTINCT is mentioned ... */
+
+		/*
+		 * We might implement the optimization when a FILTER clause is present
+		 * by adding the filter to the quals of the generated subquery.  For
+		 * now, just punt.
+		 */
+		if (aggref->aggfilter != NULL)
+			return true;
 
 		aggsortop = fetch_agg_sort_op(aggref->aggfnoid);
 		if (!OidIsValid(aggsortop))
@@ -479,7 +488,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	Plan	   *plan;
 	Plan	   *iplan;
 	TargetEntry *tle;
-	SortClause *sortcl;
+	SortGroupClause *sortcl;
 
 	/*
 	 * Generate a suitably modified query.	Much of the work here is probably
@@ -494,6 +503,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	subparse->utilityStmt = NULL;
 	subparse->intoClause = NULL;
 	subparse->hasAggs = false;
+	subparse->hasDistinctOn = false;
 	subparse->groupClause = NIL;
 	subparse->havingQual = NULL;
 	subparse->distinctClause = NIL;
@@ -507,8 +517,12 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	subparse->targetList = list_make1(tle);
 
 	/* set up the appropriate ORDER BY entry */
-	sortcl = makeNode(SortClause);
+	sortcl = makeNode(SortGroupClause);
 	sortcl->tleSortGroupRef = assignSortGroupRef(tle, subparse->targetList);
+	sortcl->eqop = get_equality_op_for_ordering_op(info->aggsortop, NULL);
+	if (!OidIsValid(sortcl->eqop))		/* shouldn't happen */
+		elog(ERROR, "could not find equality operator for ordering operator %u",
+			 info->aggsortop);
 	sortcl->sortop = info->aggsortop;
 	sortcl->nulls_first = info->nulls_first;
 	subparse->sortClause = list_make1(sortcl);
@@ -516,8 +530,8 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	/* set up LIMIT 1 */
 	subparse->limitOffset = NULL;
 	subparse->limitCount = (Node *) makeConst(INT8OID, -1, sizeof(int64),
-											  Int64GetDatum(1),
-											  false, true /* not by val */ );
+											  Int64GetDatum(1), false,
+											  FLOAT8PASSBYVAL);
 
 	/*
 	 * Generate the plan for the subquery.	We already have a Path for the
@@ -559,7 +573,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 							   0, 1);
 
     /* Decorate the Limit node with a Flow node. */
-    plan->flow = pull_up_Flow(plan, plan->lefttree, false);
+    plan->flow = pull_up_Flow(plan, plan->lefttree);
 
 	/*
 	 * Convert the plan into an InitPlan, and make a Param for its result.

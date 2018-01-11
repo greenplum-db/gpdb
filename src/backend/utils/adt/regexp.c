@@ -3,12 +3,12 @@
  * regexp.c
  *	  Postgres' interface to the regular expression package.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/regexp.c,v 1.78.2.1 2008/03/19 02:40:43 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/regexp.c,v 1.82 2009/06/11 14:49:04 momjian Exp $
  *
  *		Alistair Crooks added the code for the regex caching
  *		agc - cached the regular expressions used - there's a good chance
@@ -40,7 +40,7 @@
 
 
 /* GUC-settable flavor parameter */
-static int	regex_flavor = REG_ADVANCED;
+int			regex_flavor = REG_ADVANCED;
 
 
 /* all the options of interest for regex functions */
@@ -414,33 +414,6 @@ parse_re_flags(pg_re_flags *flags, text *opts)
 
 
 /*
- * assign_regex_flavor - GUC hook to validate and set REGEX_FLAVOR
- */
-const char *
-assign_regex_flavor(const char *value, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(value, "advanced") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_ADVANCED;
-	}
-	else if (pg_strcasecmp(value, "extended") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_EXTENDED;
-	}
-	else if (pg_strcasecmp(value, "basic") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_BASIC;
-	}
-	else
-		return NULL;			/* fail */
-	return value;			   /* OK */
-}
-
-
-/*
  * report whether regex_flavor is currently BASIC
  */
 bool
@@ -608,10 +581,10 @@ textregexsubstr(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * It is possible to have a match to the whole pattern but no match
-	 * for a subexpression; for example 'foo(bar)?' is considered to match
-	 * 'foo' but there is no subexpression match.  So this extra test for
-	 * match failure is not redundant.
+	 * It is possible to have a match to the whole pattern but no match for a
+	 * subexpression; for example 'foo(bar)?' is considered to match 'foo' but
+	 * there is no subexpression match.  So this extra test for match failure
+	 * is not redundant.
 	 */
 	if (so < 0 || eo < 0)
 		PG_RETURN_NULL();

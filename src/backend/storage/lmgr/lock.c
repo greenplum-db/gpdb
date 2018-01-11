@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.181.2.2 2009/03/11 00:08:06 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.188 2009/06/11 14:49:02 momjian Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -38,14 +38,14 @@
 #include "miscadmin.h"
 #include "pg_trace.h"
 #include "pgstat.h"
+#include "storage/lmgr.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
-#include "utils/testutils.h"
-#include "executor/execdesc.h"
-#include "utils/resscheduler.h"
-#include "storage/procarray.h"
+#include "utils/resowner.h"
 
 #include "cdb/cdbvars.h"
+#include "storage/procarray.h"
+#include "utils/resscheduler.h"
 
 /* This configuration variable is used to set the lock table size */
 int			max_locks_per_xact; /* set by guc.c */
@@ -278,6 +278,8 @@ static uint32 proclock_hash(const void *key, Size keysize);
 void RemoveLocalLock(LOCALLOCK *locallock);
 static void GrantLockLocal(LOCALLOCK *locallock, ResourceOwner owner);
 static void WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner);
+static void ReleaseLockIfHeld(LOCALLOCK *locallock, bool sessionLock);
+static void LockReassignOwner(LOCALLOCK *locallock, ResourceOwner parent);
 static bool UnGrantLock(LOCK *lock, LOCKMODE lockmode,
 			PROCLOCK *proclock, LockMethod lockMethodTable);
 static void CleanUpLock(LOCK *lock, PROCLOCK *proclock,
@@ -962,11 +964,21 @@ LockAcquire(const LOCKTAG *locktag,
 		 * Sleep till someone wakes me up.
 		 */
 
-		PG_TRACE2(lock__startwait, locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_WAIT_START(locktag->locktag_field1,
+										 locktag->locktag_field2,
+										 locktag->locktag_field3,
+										 locktag->locktag_field4,
+										 locktag->locktag_type,
+										 lockmode);
 
 		WaitOnLock(locallock, owner);
 
-		PG_TRACE2(lock__endwait, locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_WAIT_DONE(locktag->locktag_field1,
+										locktag->locktag_field2,
+										locktag->locktag_field3,
+										locktag->locktag_field4,
+										locktag->locktag_type,
+										lockmode);
 
 		/*
 		 * NOTE: do not do any material change of state between here and
@@ -1001,7 +1013,14 @@ LockAcquire(const LOCKTAG *locktag,
 void
 RemoveLocalLock(LOCALLOCK *locallock)
 {
-	if (locallock->lockOwners != NULL)
+	int         i;
+
+	for (i = locallock->numLockOwners - 1; i >= 0; i--)
+	{
+		if (locallock->lockOwners[i].owner != NULL)
+			ResourceOwnerForgetLock(locallock->lockOwners[i].owner, locallock);
+	}
+	if (locallock->lockOwners != NULL) // TODO FIX_COMMIT^ does not have this check, why?
 		pfree(locallock->lockOwners);
 	locallock->lockOwners = NULL;
 	if (!hash_search(LockMethodLocalHash,
@@ -1293,6 +1312,8 @@ GrantLockLocal(LOCALLOCK *locallock, ResourceOwner owner)
 	lockOwners[i].owner = owner;
 	lockOwners[i].nLocks = 1;
 	locallock->numLockOwners++;
+	if (owner != NULL)
+		ResourceOwnerRememberLock(owner, locallock);
 }
 
 /*
@@ -1324,7 +1345,7 @@ WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner)
 {
 	LOCKMETHODID lockmethodid = LOCALLOCK_LOCKMETHOD(*locallock);
 	LockMethod	lockMethodTable = LockMethods[lockmethodid];
-	char	   * volatile new_status = NULL;
+	char	   *volatile new_status = NULL;
 
 	LOCK_PRINT("WaitOnLock: sleeping on lock",
 			   locallock->lock, locallock->tag.mode);
@@ -1357,20 +1378,20 @@ WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner)
 	 * the locktable state must fully reflect the fact that we own the lock;
 	 * we can't do additional work on return.
 	 *
-	 * We can and do use a PG_TRY block to try to clean up after failure,
-	 * but this still has a major limitation: elog(FATAL) can occur while
-	 * waiting (eg, a "die" interrupt), and then control won't come back here.
-	 * So all cleanup of essential state should happen in LockWaitCancel,
-	 * not here.  We can use PG_TRY to clear the "waiting" status flags,
-	 * since doing that is unimportant if the process exits.
+	 * We can and do use a PG_TRY block to try to clean up after failure, but
+	 * this still has a major limitation: elog(FATAL) can occur while waiting
+	 * (eg, a "die" interrupt), and then control won't come back here. So all
+	 * cleanup of essential state should happen in LockWaitCancel, not here.
+	 * We can use PG_TRY to clear the "waiting" status flags, since doing that
+	 * is unimportant if the process exits.
 	 */
 	PG_TRY();
 	{
 		if (ProcSleep(locallock, lockMethodTable) != STATUS_OK)
 		{
 			/*
-			 * We failed as a result of a deadlock, see CheckDeadLock().
-			 * Quit now.
+			 * We failed as a result of a deadlock, see CheckDeadLock(). Quit
+			 * now.
 			 */
 			awaitedLock = NULL;
 			LOCK_PRINT("WaitOnLock: aborting on lock",
@@ -1438,7 +1459,7 @@ RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
 	Assert(lockmethodid != RESOURCE_LOCKMETHOD);
 	/* Make sure proc is waiting */
 	Assert(proc->waitStatus == STATUS_WAITING);
-	Assert(proc->links.next != INVALID_OFFSET);
+	Assert(proc->links.next != NULL);
 	Assert(waitLock);
 	Assert(waitLock->waitProcs.size > 0);
 	Assert(0 < lockmethodid && lockmethodid < lengthof(LockMethods));
@@ -1552,6 +1573,8 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 				Assert(lockOwners[i].nLocks > 0);
 				if (--lockOwners[i].nLocks == 0)
 				{
+					if (owner != NULL)
+						ResourceOwnerForgetLock(owner, locallock);
 					/* compact out unused slot */
 					locallock->numLockOwners--;
 					if (i < locallock->numLockOwners)
@@ -1690,14 +1713,13 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 		{
 			LOCALLOCKOWNER *lockOwners = locallock->lockOwners;
 
-			/* If it's above array position 0, move it down to 0 */
-			for (i = locallock->numLockOwners - 1; i > 0; i--)
+			/* If session lock is above array position 0, move it down to 0 */
+			for (i = 0; i < locallock->numLockOwners; i++)
 			{
 				if (lockOwners[i].owner == NULL)
-				{
 					lockOwners[0] = lockOwners[i];
-					break;
-				}
+				else
+					ResourceOwnerForgetLock(lockOwners[i].owner, locallock);
 			}
 
 			if (locallock->numLockOwners > 0 &&
@@ -1710,6 +1732,8 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 				/* We aren't deleting this locallock, so done */
 				continue;
 			}
+			else
+				locallock->numLockOwners = 0;
 		}
 
 		/* Mark the proclock to show we need to release this lockmode */
@@ -1814,55 +1838,93 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 /*
  * LockReleaseCurrentOwner
  *		Release all locks belonging to CurrentResourceOwner
+ *
+ * If the caller knows what those locks are, it can pass them as an array.
+ * That speeds up the call significantly, when a lot of locks are held.
+ * Otherwise, pass NULL for locallocks, and we'll traverse through our hash
+ * table to find them.
  */
 void
-LockReleaseCurrentOwner(void)
+LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks)
 {
-	HASH_SEQ_STATUS status;
-	LOCALLOCK  *locallock;
+	if (locallocks == NULL)
+	{
+		HASH_SEQ_STATUS status;
+		LOCALLOCK  *locallock;
+
+		hash_seq_init(&status, LockMethodLocalHash);
+
+		while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+			ReleaseLockIfHeld(locallock, false);
+	}
+	else
+	{
+		int                     i;
+
+		for (i = nlocks - 1; i >= 0; i--)
+			ReleaseLockIfHeld(locallocks[i], false);
+	}
+}
+
+/*
+ * ReleaseLockIfHeld
+ *              Release any session-level locks on this lockable object if sessionLock
+ *              is true; else, release any locks held by CurrentResourceOwner.
+ *
+ * It is tempting to pass this a ResourceOwner pointer (or NULL for session
+ * locks), but without refactoring LockRelease() we cannot support releasing
+ * locks belonging to resource owners other than CurrentResourceOwner.
+ * If we were to refactor, it'd be a good idea to fix it so we don't have to
+ * do a hashtable lookup of the locallock, too.  However, currently this
+ * function isn't used heavily enough to justify refactoring for its
+ * convenience.
+ */
+static void
+ReleaseLockIfHeld(LOCALLOCK *locallock, bool sessionLock)
+{
+	ResourceOwner owner;
 	LOCALLOCKOWNER *lockOwners;
 	int			i;
 
-	hash_seq_init(&status, LockMethodLocalHash);
+	/* Identify owner for lock (must match LockRelease!) */
+	if (sessionLock)
+		owner = NULL;
+	else
+		owner = CurrentResourceOwner;
 
-	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+	/* Scan to see if there are any locks belonging to the target owner */
+	lockOwners = locallock->lockOwners;
+	for (i = locallock->numLockOwners - 1; i >= 0; i--)
 	{
-		/* Ignore items that must be nontransactional */
-		if (!LockMethods[LOCALLOCK_LOCKMETHOD(*locallock)]->transactional)
-			continue;
-
-		/* Scan to see if there are any locks belonging to current owner */
-		lockOwners = locallock->lockOwners;
-		for (i = locallock->numLockOwners - 1; i >= 0; i--)
+		if (lockOwners[i].owner == owner)
 		{
-			if (lockOwners[i].owner == CurrentResourceOwner)
+			Assert(lockOwners[i].nLocks > 0);
+			if (lockOwners[i].nLocks < locallock->nLocks)
 			{
-				Assert(lockOwners[i].nLocks > 0);
-				if (lockOwners[i].nLocks < locallock->nLocks)
-				{
-					/*
-					 * We will still hold this lock after forgetting this
-					 * ResourceOwner.
-					 */
-					locallock->nLocks -= lockOwners[i].nLocks;
-					/* compact out unused slot */
-					locallock->numLockOwners--;
-					if (i < locallock->numLockOwners)
-						lockOwners[i] = lockOwners[locallock->numLockOwners];
-				}
-				else
-				{
-					Assert(lockOwners[i].nLocks == locallock->nLocks);
-					/* We want to call LockRelease just once */
-					lockOwners[i].nLocks = 1;
-					locallock->nLocks = 1;
-					if (!LockRelease(&locallock->tag.lock,
-									 locallock->tag.mode,
-									 false))
-						elog(WARNING, "LockReleaseCurrentOwner: failed??");
-				}
-				break;
+				/*
+				 * We will still hold this lock after forgetting this
+				 * ResourceOwner.
+				 */
+				locallock->nLocks -= lockOwners[i].nLocks;
+				/* compact out unused slot */
+				locallock->numLockOwners--;
+				if (owner != NULL)
+					ResourceOwnerForgetLock(owner, locallock);
+				if (i < locallock->numLockOwners)
+					lockOwners[i] = lockOwners[locallock->numLockOwners];
 			}
+			else
+			{
+				Assert(lockOwners[i].nLocks == locallock->nLocks);
+				/* We want to call LockRelease just once */
+				lockOwners[i].nLocks = 1;
+				locallock->nLocks = 1;
+				if (!LockRelease(&locallock->tag.lock,
+								 locallock->tag.mode,
+								 sessionLock))
+					elog(WARNING, "ReleaseLockIfHeld: failed??");
+			}
+			break;
 		}
 	}
 }
@@ -1870,63 +1932,84 @@ LockReleaseCurrentOwner(void)
 /*
  * LockReassignCurrentOwner
  *		Reassign all locks belonging to CurrentResourceOwner to belong
- *		to its parent resource owner
+ *		to its parent resource owner.
+ *
+ * If the caller knows what those locks are, it can pass them as an array.
+ * That speeds up the call significantly, when a lot of locks are held
+ * (e.g pg_dump with a large schema).  Otherwise, pass NULL for locallocks,
+ * and we'll traverse through our hash table to find them.
  */
 void
-LockReassignCurrentOwner(void)
+LockReassignCurrentOwner(LOCALLOCK **locallocks, int nlocks)
 {
 	ResourceOwner parent = ResourceOwnerGetParent(CurrentResourceOwner);
-	HASH_SEQ_STATUS status;
-	LOCALLOCK  *locallock;
-	LOCALLOCKOWNER *lockOwners;
 
 	Assert(parent != NULL);
 
-	hash_seq_init(&status, LockMethodLocalHash);
+	if (locallocks == NULL)
+	{
+		HASH_SEQ_STATUS status;
+		LOCALLOCK  *locallock;
 
-	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+		hash_seq_init(&status, LockMethodLocalHash);
+
+		while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+			LockReassignOwner(locallock, parent);
+	}
+	else
 	{
 		int			i;
-		int			ic = -1;
-		int			ip = -1;
 
-		/* Ignore items that must be nontransactional */
-		if (!LockMethods[LOCALLOCK_LOCKMETHOD(*locallock)]->transactional)
-			continue;
-
-		/*
-		 * Scan to see if there are any locks belonging to current owner or
-		 * its parent
-		 */
-		lockOwners = locallock->lockOwners;
-		for (i = locallock->numLockOwners - 1; i >= 0; i--)
-		{
-			if (lockOwners[i].owner == CurrentResourceOwner)
-				ic = i;
-			else if (lockOwners[i].owner == parent)
-				ip = i;
-		}
-
-		if (ic < 0)
-			continue;			/* no current locks */
-
-		if (ip < 0)
-		{
-			/* Parent has no slot, so just give it child's slot */
-			lockOwners[ic].owner = parent;
-		}
-		else
-		{
-			/* Merge child's count with parent's */
-			lockOwners[ip].nLocks += lockOwners[ic].nLocks;
-			/* compact out unused slot */
-			locallock->numLockOwners--;
-			if (ic < locallock->numLockOwners)
-				lockOwners[ic] = lockOwners[locallock->numLockOwners];
-		}
+		for (i = nlocks - 1; i >= 0; i--)
+			LockReassignOwner(locallocks[i], parent);
 	}
 }
 
+/*
+ * Subroutine of LockReassignCurrentOwner. Reassigns a given lock belonging to
+ * CurrentResourceOwner to its parent.
+ */
+static void
+LockReassignOwner(LOCALLOCK *locallock, ResourceOwner parent)
+{
+	LOCALLOCKOWNER *lockOwners;
+	int			i;
+	int			ic = -1;
+	int			ip = -1;
+
+	/*
+	 * Scan to see if there are any locks belonging to current owner or its
+	 * parent
+	 */
+	lockOwners = locallock->lockOwners;
+	for (i = locallock->numLockOwners - 1; i >= 0; i--)
+	{
+		if (lockOwners[i].owner == CurrentResourceOwner)
+			ic = i;
+		else if (lockOwners[i].owner == parent)
+			ip = i;
+	}
+
+	if (ic < 0)
+		return;					/* no current locks */
+
+	if (ip < 0)
+	{
+		/* Parent has no slot, so just give it the child's slot */
+		lockOwners[ic].owner = parent;
+		ResourceOwnerRememberLock(parent, locallock);
+	}
+	else
+	{
+		/* Merge child's count with parent's */
+		lockOwners[ip].nLocks += lockOwners[ic].nLocks;
+		/* compact out unused slot */
+		locallock->numLockOwners--;
+		if (ic < locallock->numLockOwners)
+			lockOwners[ic] = lockOwners[locallock->numLockOwners];
+	}
+	ResourceOwnerForgetLock(CurrentResourceOwner, locallock);
+}
 
 /*
  * GetLockConflicts

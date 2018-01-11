@@ -4,12 +4,12 @@
  *
  *	  Routines for aggregate-manipulation commands
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/aggregatecmds.c,v 1.45.2.1 2008/06/08 21:09:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/aggregatecmds.c,v 1.49 2009/06/11 14:48:55 momjian Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -46,26 +46,39 @@
  *
  * "oldstyle" signals the old (pre-8.2) style where the aggregate input type
  * is specified by a BASETYPE element in the parameters.  Otherwise,
- * "args" defines the input type(s).
+ * "args" is a pair, whose first element is a list of FunctionParameter structs
+ * defining the agg's arguments (both direct and aggregated), and whose second
+ * element is an Integer node with the number of direct args, or -1 if this
+ * isn't an ordered-set aggregate.
+ * "parameters" is a list of DefElem representing the agg's definition clauses.
  */
 void
-DefineAggregate(List *name, List *args, bool oldstyle, List *parameters, 
-				bool ordered)
+DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
+				bool ordered, const char *queryString)
 {
 	char	   *aggName;
 	Oid			aggNamespace;
 	AclResult	aclresult;
+	char		aggKind = AGGKIND_NORMAL;
 	List	   *transfuncName = NIL;
 	List	   *prelimfuncName = NIL; /* MPP */
 	List	   *finalfuncName = NIL;
+	bool		finalfuncExtraArgs = false;
 	List	   *sortoperatorName = NIL;
 	TypeName   *baseType = NULL;
 	TypeName   *transType = NULL;
 	char	   *initval = NULL;
-	Oid		   *aggArgTypes;
 	int			numArgs;
+	int			numDirectArgs = 0;
+	oidvector  *parameterTypes;
+	ArrayType  *allParameterTypes;
+	ArrayType  *parameterModes;
+	ArrayType  *parameterNames;
+	List	   *parameterDefaults;
+	Oid			variadicArgType;
 	Oid			transTypeId;
 	ListCell   *pl;
+	List	   *orig_args = args;
 
 	/* Convert list of names to a name and namespace */
 	aggNamespace = QualifiedNameGetCreationNamespace(name, &aggName);
@@ -76,6 +89,19 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
 					   get_namespace_name(aggNamespace));
 
+	/* Deconstruct the output of the aggr_args grammar production */
+	if (!oldstyle)
+	{
+		Assert(list_length(args) == 2);
+		numDirectArgs = intVal(lsecond(args));
+		if (numDirectArgs >= 0)
+			aggKind = AGGKIND_ORDERED_SET;
+		else
+			numDirectArgs = 0;
+		args = (List *) linitial(args);
+	}
+
+	/* Examine aggregate's definition clauses */
 	foreach(pl, parameters)
 	{
 		DefElem    *defel = (DefElem *) lfirst(pl);
@@ -90,10 +116,23 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 			transfuncName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "finalfunc") == 0)
 			finalfuncName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "finalfunc_extra") == 0)
+			finalfuncExtraArgs = defGetBoolean(defel);
 		else if (pg_strcasecmp(defel->defname, "sortop") == 0)
 			sortoperatorName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "basetype") == 0)
 			baseType = defGetTypeName(defel);
+		else if (pg_strcasecmp(defel->defname, "hypothetical") == 0)
+		{
+			if (defGetBoolean(defel))
+			{
+				if (aggKind == AGGKIND_NORMAL)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+							 errmsg("only ordered-set aggregates can be hypothetical")));
+				aggKind = AGGKIND_HYPOTHETICAL;
+			}
+		}
 		else if (pg_strcasecmp(defel->defname, "stype") == 0)
 			transType = defGetTypeName(defel);
 		else if (pg_strcasecmp(defel->defname, "stype1") == 0)
@@ -126,7 +165,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	/*
 	 * MPP: Ordered aggregates do not support prefuncs
 	 */
-	if (ordered && prelimfuncName != NIL)
+	if (aggKind == AGGKIND_ORDERED_SET && prelimfuncName != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("ordered aggregate prefunc is not supported")));
@@ -143,6 +182,8 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		 * Historically we allowed the command to look like basetype = 'ANY'
 		 * so we must do a case-insensitive comparison for the name ANY. Ugh.
 		 */
+		Oid			aggArgTypes[1];
+
 		if (baseType == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
@@ -151,22 +192,27 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		if (pg_strcasecmp(TypeNameToString(baseType), "ANY") == 0)
 		{
 			numArgs = 0;
-			aggArgTypes = NULL;
+			aggArgTypes[0] = InvalidOid;
 		}
 		else
 		{
 			numArgs = 1;
-			aggArgTypes = (Oid *) palloc(sizeof(Oid));
 			aggArgTypes[0] = typenameTypeId(NULL, baseType, NULL);
 		}
+		parameterTypes = buildoidvector(aggArgTypes, numArgs);
+		allParameterTypes = NULL;
+		parameterModes = NULL;
+		parameterNames = NULL;
+		parameterDefaults = NIL;
+		variadicArgType = InvalidOid;
 	}
 	else
 	{
 		/*
-		 * New style: args is a list of TypeNames (possibly zero of 'em).
+		 * New style: args is a list of FunctionParameters (possibly zero of
+		 * 'em).  We share functioncmds.c's code for processing them.
 		 */
-		ListCell   *lc;
-		int			i = 0;
+		Oid			requiredResultType;
 
 		if (baseType != NULL)
 			ereport(ERROR,
@@ -174,13 +220,21 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 					 errmsg("basetype is redundant with aggregate input type specification")));
 
 		numArgs = list_length(args);
-		aggArgTypes = (Oid *) palloc(sizeof(Oid) * numArgs);
-		foreach(lc, args)
-		{
-			TypeName   *curTypeName = (TypeName *) lfirst(lc);
-
-			aggArgTypes[i++] = typenameTypeId(NULL, curTypeName, NULL);
-		}
+		interpret_function_parameter_list(args,
+										  InvalidOid,
+										  true, /* is an aggregate */
+										  queryString,
+										  &parameterTypes,
+										  &allParameterTypes,
+										  &parameterModes,
+										  &parameterNames,
+										  &parameterDefaults,
+										  &variadicArgType,
+										  &requiredResultType);
+		/* Parameter defaults are not currently allowed by the grammar */
+		Assert(parameterDefaults == NIL);
+		/* There shouldn't have been any OUT parameters, either */
+		Assert(requiredResultType == InvalidOid);
 	}
 
 	/*
@@ -188,7 +242,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 *
 	 * transtype can't be a pseudo-type, since we need to be able to store
 	 * values of the transtype.  However, we can allow polymorphic transtype
-	 * in some cases (AggregateCreate will check).  Also, we allow "internal"
+	 * in some cases (AggregateCreate will check).	Also, we allow "internal"
 	 * for functions that want to pass pointers to private data structures;
 	 * but allow that only to superusers, since you could crash the system (or
 	 * worse) by connecting up incompatible internal-using functions in an
@@ -212,15 +266,22 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 */
 	AggregateCreate(aggName,	/* aggregate name */
 					aggNamespace,		/* namespace */
-					aggArgTypes,	/* input data type(s) */
+					aggKind,
 					numArgs,
+					numDirectArgs,
+					parameterTypes,
+					PointerGetDatum(allParameterTypes),
+					PointerGetDatum(parameterModes),
+					PointerGetDatum(parameterNames),
+					parameterDefaults,
+					variadicArgType,
 					transfuncName,		/* step function name */
 					prelimfuncName,		/* prelim function name */
 					finalfuncName,		/* final function name */
+					finalfuncExtraArgs,
 					sortoperatorName,	/* sort operator name */
 					transTypeId,	/* transition data type */
-					initval,		/* initial condition */
-					ordered);		/* ordered aggregates */
+					initval);		/* initial condition */
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -228,9 +289,8 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		stmt->kind = OBJECT_AGGREGATE;
 		stmt->oldstyle = oldstyle;  
 		stmt->defnames = name;
-		stmt->args = args;
+		stmt->args = orig_args;
 		stmt->definition = parameters;
-		stmt->ordered = ordered;
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|

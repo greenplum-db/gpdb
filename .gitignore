@@ -40,10 +40,16 @@ Release
 pgsql.sln
 cscope.*
 build.sh
+.cproject
+.project
+.settings/
+.vscode/
+GPATH
+GRTAGS
+GTAGS
 
 # Local excludes in root directory
 /GNUmakefile
 /config.log
 /config.status
 /VERSION
-

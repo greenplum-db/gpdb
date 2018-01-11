@@ -21,12 +21,12 @@ INSERT INTO DATE_TBL VALUES ('2038-04-08');
 INSERT INTO DATE_TBL VALUES ('2039-04-09');
 INSERT INTO DATE_TBL VALUES ('2040-04-10');
 
-SELECT f1 AS "Fifteen" FROM DATE_TBL ORDER BY 1;
+SELECT f1 AS "Fifteen" FROM DATE_TBL;
 
-SELECT f1 AS "Nine" FROM DATE_TBL WHERE f1 < '2000-01-01' ORDER BY 1;
+SELECT f1 AS "Nine" FROM DATE_TBL WHERE f1 < '2000-01-01';
 
 SELECT f1 AS "Three" FROM DATE_TBL
-  WHERE f1 BETWEEN '2000-01-01' AND '2001-01-01' ORDER BY 1;
+  WHERE f1 BETWEEN '2000-01-01' AND '2001-01-01';
 
 --
 -- Check all the documented input formats
@@ -193,9 +193,9 @@ RESET datestyle;
 -- Leave most of it for the horology tests
 --
 
-SELECT f1 - date '2000-01-01' AS "Days From 2K" FROM DATE_TBL ORDER BY 1;
+SELECT f1 - date '2000-01-01' AS "Days From 2K" FROM DATE_TBL;
 
-SELECT f1 - date 'epoch' AS "Days From Epoch" FROM DATE_TBL ORDER BY 1;
+SELECT f1 - date 'epoch' AS "Days From Epoch" FROM DATE_TBL;
 
 SELECT date 'yesterday' - date 'today' AS "One day";
 
@@ -269,3 +269,10 @@ SELECT DATE_TRUNC('CENTURY', DATE '0055-08-10 BC'); -- 0100-01-01 BC
 SELECT DATE_TRUNC('DECADE', DATE '1993-12-25'); -- 1990-01-01
 SELECT DATE_TRUNC('DECADE', DATE '0004-12-25'); -- 0001-01-01 BC
 SELECT DATE_TRUNC('DECADE', DATE '0002-12-31 BC'); -- 0011-01-01 BC
+--
+-- test infinity
+--
+select 'infinity'::date, '-infinity'::date;
+select 'infinity'::date > 'today'::date as t;
+select '-infinity'::date < 'today'::date as t;
+select isfinite('infinity'::date), isfinite('-infinity'::date), isfinite('today'::date);

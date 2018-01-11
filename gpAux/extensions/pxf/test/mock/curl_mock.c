@@ -1,5 +1,5 @@
 /* mock functions for curl.h */
-CURL_EXTERN CURLcode
+CURLcode
 curl_easy_setopt(CURL* curl, CURLoption option, ...)
 {
     check_expected(curl);
@@ -8,7 +8,7 @@ curl_easy_setopt(CURL* curl, CURLoption option, ...)
     return (CURLcode) mock();
 }
 
-CURL_EXTERN CURL*
+CURL*
 curl_easy_init(void)
 {
     return (CURL*) mock();
@@ -27,7 +27,7 @@ CURLM* curl_multi_init(void)
     return (CURLM*) mock();
 }
 
-CURL_EXTERN CURLMcode
+CURLMcode
 curl_multi_add_handle(CURLM* multi_handle, CURL* curl_handle)
 {
     check_expected(multi_handle);
@@ -35,7 +35,7 @@ curl_multi_add_handle(CURLM* multi_handle, CURL* curl_handle)
     return (CURLMcode) mock();
 }
 
-CURL_EXTERN CURLMcode
+CURLMcode
 curl_multi_perform(CURLM* multi_handle, int* running_handles)
 {
     check_expected(multi_handle);
@@ -44,7 +44,7 @@ curl_multi_perform(CURLM* multi_handle, int* running_handles)
     return (CURLMcode) mock();
 }
 
-CURL_EXTERN CURLMcode
+CURLMcode
 curl_multi_fdset(CURLM* multi_handle, fd_set* read_fd_set, fd_set* write_fd_set, fd_set* exc_fd_set, int* max_fd)
 {
     check_expected(multi_handle);

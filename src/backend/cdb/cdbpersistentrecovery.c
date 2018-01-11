@@ -2,7 +2,12 @@
  *
  * cdbpersistentrecovery.c
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbpersistentrecovery.c
  *
  *-------------------------------------------------------------------------
  */
@@ -12,50 +17,50 @@
 #include <sys/stat.h>
 
 #include "postgres.h"
-#include "cdb/cdbdoublylinked.h"
+
+#include "access/clog.h"
+#include "access/genam.h"
+#include "access/heapam.h"
 #include "access/persistentfilesysobjname.h"
-#include "catalog/pg_class.h"
-#include "catalog/pg_namespace.h"
+#include "access/transam.h"
+#include "access/twophase.h"
+#include "access/xact.h"
+#include "access/xlog_internal.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_authid.h"
-#include "catalog/pg_tablespace.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_namespace.h"
 #include "catalog/gp_persistent.h"
+#include "catalog/pg_tablespace.h"
+#include "cdb/cdbdirectopen.h"
+#include "cdb/cdbdoublylinked.h"
+#include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbpersistentrecovery.h"
-#include "access/heapam.h"
-#include "catalog/pg_tablespace.h"
-#include "access/xlog_internal.h"
-#include "catalog/catalog.h"
-#include "cdb/cdbdoublylinked.h"
-#include "utils/hsearch.h"
-#include "access/genam.h"
-#include "access/heapam.h"
-#include "access/transam.h"
-#include "cdb/cdbdirectopen.h"
-#include "utils/guc.h"
-#include "storage/smgr.h"
-#include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbresynchronizechangetracking.h"
-#include "access/twophase.h"
-#include "access/clog.h"
+#include "storage/smgr.h"
+#include "utils/guc.h"
+#include "utils/hsearch.h"
+#include "utils/visibility_summary.h"
 
 static bool
 PersistentRecovery_RedoRelationExists(
-	ItemPointer		persistentTid,
-	
-	int64 			persistentSerialNum,
-	
-	RelFileNode 	*relFileNode);	
+									  ItemPointer persistentTid,
+
+									  int64 persistentSerialNum,
+
+									  RelFileNode *relFileNode);
 
 typedef struct XactEntryData
 {
-	TransactionId	xid;
+	TransactionId xid;
 
-	XactInfoKind	infoKind;
+	XactInfoKind infoKind;
 
-	DoublyLinkedHead	fsObjEntryList;
+	DoublyLinkedHead fsObjEntryList;
 } XactEntryData;
 typedef XactEntryData *XactEntry;
 
@@ -87,8 +92,8 @@ static HTAB *xactHashTable = NULL;
 static void
 PersistentRecovery_XactHashTableInit(void)
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -101,22 +106,23 @@ PersistentRecovery_XactHashTableInit(void)
 	xactHashTable = hash_create("XactEntry", 10, &info, hash_flags);
 }
 
-static XactEntry PersistentRecovery_FindOrCreateXactEntry(
-	TransactionId	xid,
+static XactEntry
+PersistentRecovery_FindOrCreateXactEntry(
+										 TransactionId xid,
 
-	bool			*found)
+										 bool *found)
 {
-	XactEntry xactEntry;
+	XactEntry	xactEntry;
 
 	if (xactHashTable == NULL)
 		PersistentRecovery_XactHashTableInit();
 
-	xactEntry = 
-			(XactEntry) 
-					hash_search(xactHashTable,
-								(void *) &xid,
-								HASH_ENTER,
-								found);
+	xactEntry =
+		(XactEntry)
+		hash_search(xactHashTable,
+					(void *) &xid,
+					HASH_ENTER,
+					found);
 
 	if (!*found)
 	{
@@ -127,20 +133,21 @@ static XactEntry PersistentRecovery_FindOrCreateXactEntry(
 }
 
 #if suppress
-static XactEntry PersistentRecovery_FindXactEntry(
-	TransactionId	xid)
+static XactEntry
+PersistentRecovery_FindXactEntry(
+								 TransactionId xid)
 {
-	XactEntry xactEntry;
-	bool found;
+	XactEntry	xactEntry;
+	bool		found;
 
-	Assert (xactHashTable != NULL);
+	Assert(xactHashTable != NULL);
 
-	xactEntry = 
-			(XactEntry) 
-					hash_search(xactHashTable,
-								(void *) &xid,
-								HASH_FIND,
-								&found);
+	xactEntry =
+		(XactEntry)
+		hash_search(xactHashTable,
+					(void *) &xid,
+					HASH_FIND,
+					&found);
 	if (!found)
 		return NULL;
 
@@ -150,31 +157,31 @@ static XactEntry PersistentRecovery_FindXactEntry(
 
 typedef struct FsObjEntryKey
 {
-	ItemPointerData				persistentTid;
+	ItemPointerData persistentTid;
 } FsObjEntryKey;
 
 typedef struct FsObjEntryData
 {
-	FsObjEntryKey				key;
+	FsObjEntryKey key;
 
-	PersistentFileSysObjName	fsObjName;
+	PersistentFileSysObjName fsObjName;
 
 	PersistentFileSysRelStorageMgr relStorageMgr;
 
-	int64						persistentSerialNum;
-	
-	PersistentFileSysState		state;
+	int64		persistentSerialNum;
+
+	PersistentFileSysState state;
 
 	MirroredObjectExistenceState mirrorExistenceState;
 
-	TransactionId				xid;
+	TransactionId xid;
 
-	bool						updateNeeded;
-	bool foundInTable;
+	bool		updateNeeded;
+	bool		foundInTable;
 
 	PersistentFileSysObjStateChangeResult stateChangeResult;
-	
-	DoubleLinks					xactLinks;
+
+	DoubleLinks xactLinks;
 
 } FsObjEntryData;
 typedef FsObjEntryData *FsObjEntry;
@@ -182,29 +189,29 @@ typedef FsObjEntryData *FsObjEntry;
 static char *
 FsObjEntryToBuffer(char *buffer, int maxBufferLen, FsObjEntry fsObjEntry)
 {
-	int snprintfResult;
+	int			snprintfResult;
 
-	if (fsObjEntry->state != PersistentFileSysState_Free)	
-		snprintfResult = 
+	if (fsObjEntry->state != PersistentFileSysState_Free)
+		snprintfResult =
 			snprintf(
-				buffer,
-				maxBufferLen,
-				"%s: PS:'%s' MES:'%s' Xact:%u RelSMgr:'%s' PSN:" INT64_FORMAT " TID:%s",
-				PersistentFileSysObjName_TypeAndObjectName(&fsObjEntry->fsObjName),
-				PersistentFileSysObjState_Name(fsObjEntry->state),
-				MirroredObjectExistenceState_Name(fsObjEntry->mirrorExistenceState),
-				fsObjEntry->xid,
-				PersistentFileSysRelStorageMgr_Name(fsObjEntry->relStorageMgr),
-				fsObjEntry->persistentSerialNum,
-				ItemPointerToString(&fsObjEntry->key.persistentTid));
+					 buffer,
+					 maxBufferLen,
+					 "%s: PS:'%s' MES:'%s' Xact:%u RelSMgr:'%s' PSN:" INT64_FORMAT " TID:%s",
+					 PersistentFileSysObjName_TypeAndObjectName(&fsObjEntry->fsObjName),
+					 PersistentFileSysObjState_Name(fsObjEntry->state),
+					 MirroredObjectExistenceState_Name(fsObjEntry->mirrorExistenceState),
+					 fsObjEntry->xid,
+					 PersistentFileSysRelStorageMgr_Name(fsObjEntry->relStorageMgr),
+					 fsObjEntry->persistentSerialNum,
+					 ItemPointerToString(&fsObjEntry->key.persistentTid));
 	else
-		snprintfResult = 
+		snprintfResult =
 			snprintf(
-				buffer,
-				maxBufferLen,
-			    "Free entry as PSN:" INT64_FORMAT ", TID:%s",
-				fsObjEntry->persistentSerialNum,
-				ItemPointerToString(&fsObjEntry->key.persistentTid));
+					 buffer,
+					 maxBufferLen,
+					 "Free entry as PSN:" INT64_FORMAT ", TID:%s",
+					 fsObjEntry->persistentSerialNum,
+					 ItemPointerToString(&fsObjEntry->key.persistentTid));
 
 	Assert(snprintfResult >= 0);
 	Assert(snprintfResult < maxBufferLen);
@@ -233,14 +240,14 @@ static HTAB **fsObjHashTable = NULL;
 static void
 PersistentRecovery_FsObjHashTableInit(void)
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	PersistentFsObjType fsObjType;
 
-	char name[20];
+	char		name[20];
 
-	fsObjHashTable = (HTAB**)palloc(CountPersistentFsObjType * sizeof(HTAB*));
+	fsObjHashTable = (HTAB **) palloc(CountPersistentFsObjType * sizeof(HTAB *));
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -251,25 +258,26 @@ PersistentRecovery_FsObjHashTableInit(void)
 	hash_flags = (HASH_ELEM | HASH_FUNCTION);
 
 	for (fsObjType = PersistentFsObjType_First;
-	     fsObjType <= PersistentFsObjType_Last;
+		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
- 	{
- 		sprintf(name, "FsObjEntry_%d", fsObjType);
+	{
+		sprintf(name, "FsObjEntry_%d", fsObjType);
 		fsObjHashTable[fsObjType] = hash_create(name, 10, &info, hash_flags);
- 	}
+	}
 
 }
 
-static FsObjEntry PersistentRecovery_FindOrCreateFsObjEntry(
-	PersistentFsObjType fsObjType,
-	
-	ItemPointer			persistentTid,
+static FsObjEntry
+PersistentRecovery_FindOrCreateFsObjEntry(
+										  PersistentFsObjType fsObjType,
 
-	bool				*found)
+										  ItemPointer persistentTid,
+
+										  bool *found)
 {
-	FsObjEntry fsObjEntry;
+	FsObjEntry	fsObjEntry;
 
-	FsObjEntryKey	key;
+	FsObjEntryKey key;
 
 	if (fsObjHashTable == NULL)
 		PersistentRecovery_FsObjHashTableInit();
@@ -277,12 +285,12 @@ static FsObjEntry PersistentRecovery_FindOrCreateFsObjEntry(
 	MemSet(&key, 0, sizeof(FsObjEntryKey));
 	key.persistentTid = *persistentTid;
 
-	fsObjEntry = 
-				(FsObjEntry) 
-						hash_search(fsObjHashTable[fsObjType],
-									(void *) &key,
-									HASH_ENTER,
-									found);
+	fsObjEntry =
+		(FsObjEntry)
+		hash_search(fsObjHashTable[fsObjType],
+					(void *) &key,
+					HASH_ENTER,
+					found);
 
 	Assert(ItemPointerCompare(&fsObjEntry->key.persistentTid, persistentTid) == 0);
 
@@ -303,16 +311,17 @@ static FsObjEntry PersistentRecovery_FindOrCreateFsObjEntry(
 	return fsObjEntry;
 }
 
-static FsObjEntry PersistentRecovery_FindFsObjEntry(
-	PersistentFsObjType fsObjType,
-	
-	ItemPointer			persistentTid)
+static FsObjEntry
+PersistentRecovery_FindFsObjEntry(
+								  PersistentFsObjType fsObjType,
+
+								  ItemPointer persistentTid)
 {
-	FsObjEntry fsObjEntry;
+	FsObjEntry	fsObjEntry;
 
-	FsObjEntryKey	key;
+	FsObjEntryKey key;
 
-	bool found;
+	bool		found;
 
 	if (fsObjHashTable == NULL)
 		return NULL;
@@ -320,40 +329,41 @@ static FsObjEntry PersistentRecovery_FindFsObjEntry(
 	MemSet(&key, 0, sizeof(FsObjEntryKey));
 	key.persistentTid = *persistentTid;
 
-	fsObjEntry = 
-				(FsObjEntry) 
-						hash_search(fsObjHashTable[fsObjType],
-									(void *) &key,
-									HASH_FIND,
-									&found);
+	fsObjEntry =
+		(FsObjEntry)
+		hash_search(fsObjHashTable[fsObjType],
+					(void *) &key,
+					HASH_FIND,
+					&found);
 	if (!found)
 		return NULL;
 
 	return fsObjEntry;
 }
 
-static void PersistentRecovery_AddEndXactFsObj(
-	TransactionId 						xid,
+static void
+PersistentRecovery_AddEndXactFsObj(
+								   TransactionId xid,
 
-	XactInfoKind						infoKind,
+								   XactInfoKind infoKind,
 
-	PersistentEndXactFileSysActionInfo	*fileSysActionInfo,
+								   PersistentEndXactFileSysActionInfo *fileSysActionInfo,
 
-	PersistentFileSysState				state)
+								   PersistentFileSysState state)
 {
-	FsObjEntry 	fsObjEntry;
+	FsObjEntry	fsObjEntry;
 	FsObjEntryData prevFsObjEntry;
 
-	bool found;
+	bool		found;
 
 	/*
 	 * Create Persistent Change entry keyed on TID.
 	 */
-	fsObjEntry = 
+	fsObjEntry =
 		PersistentRecovery_FindOrCreateFsObjEntry(
-									fileSysActionInfo->fsObjName.type, 
-									&fileSysActionInfo->persistentTid, 
-									&found);
+												  fileSysActionInfo->fsObjName.type,
+												  &fileSysActionInfo->persistentTid,
+												  &found);
 	if (found)
 	{
 		memcpy(&prevFsObjEntry, fsObjEntry, sizeof(FsObjEntryData));
@@ -372,19 +382,19 @@ static void PersistentRecovery_AddEndXactFsObj(
 	}
 	else
 	{
-		// Not a 'Relation File'.
+		/* Not a 'Relation File'. */
 		fsObjEntry->relStorageMgr = PersistentFileSysRelStorageMgr_None;
 	}
-		
+
 	fsObjEntry->persistentSerialNum = fileSysActionInfo->persistentSerialNum;
 	fsObjEntry->xid = xid;
 	fsObjEntry->state = state;
 
 	if (found)
 	{
-		if (! Disable_persistent_recovery_logging)
-			elog(LOG, 
-			     "%s Record (transaction %u): Overwritting %s with %s",
+		if (!Disable_persistent_recovery_logging)
+			elog(LOG,
+				 "%s Record (transaction %u): Overwritting %s with %s",
 				 XactInfoKind_Name(infoKind),
 				 xid,
 				 FsObjEntryToString(&prevFsObjEntry),
@@ -393,8 +403,8 @@ static void PersistentRecovery_AddEndXactFsObj(
 	else
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-			     "%s Record (transaction %u): Adding %s",
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "%s Record (transaction %u): Adding %s",
 				 XactInfoKind_Name(infoKind),
 				 xid,
 				 FsObjEntryToString(fsObjEntry));
@@ -403,24 +413,24 @@ static void PersistentRecovery_AddEndXactFsObj(
 
 typedef struct AoMirrorResyncEofsEntryKey
 {
-	ItemPointerData				persistentTid;
+	ItemPointerData persistentTid;
 } AoMirrorResyncEofsEntryKey;
 
 typedef struct AoMirrorResyncEofsEntryData
 {
-	AoMirrorResyncEofsEntryKey	key;
+	AoMirrorResyncEofsEntryKey key;
 
-	RelFileNode					relFileNode;
+	RelFileNode relFileNode;
 
-	int32						segmentFileNum;
+	int32		segmentFileNum;
 
-	int64						persistentSerialNum;
+	int64		persistentSerialNum;
 
-	TransactionId				xid;
+	TransactionId xid;
 
-	int64						mirrorLossEof;
+	int64		mirrorLossEof;
 
-	int64						mirrorNewEof;
+	int64		mirrorNewEof;
 
 } AoMirrorResyncEofsEntryData;
 typedef AoMirrorResyncEofsEntryData *AoMirrorResyncEofsEntry;
@@ -428,23 +438,23 @@ typedef AoMirrorResyncEofsEntryData *AoMirrorResyncEofsEntry;
 static char *
 AoMirrorResyncEofsEntryToBuffer(char *buffer, int maxBufferLen, AoMirrorResyncEofsEntry eofsEntry)
 {
-	int snprintfResult;
+	int			snprintfResult;
 
 	snprintfResult =
 		snprintf(
-			buffer,
-			maxBufferLen,
-		    "AO rel %u/%u/%u segfile#:%d Xact:%u MlossEOF:" INT64_FORMAT " MnewEOF:" INT64_FORMAT " PSN:" INT64_FORMAT " TID:'%s' eofsEntAddr:%p",
-			eofsEntry->relFileNode.spcNode,
-			eofsEntry->relFileNode.dbNode,
-			eofsEntry->relFileNode.relNode,
-			eofsEntry->segmentFileNum,
-			eofsEntry->xid,
-			eofsEntry->mirrorLossEof,
-			eofsEntry->mirrorNewEof,
-			eofsEntry->persistentSerialNum,
-			ItemPointerToString(&eofsEntry->key.persistentTid),
-			eofsEntry);
+				 buffer,
+				 maxBufferLen,
+				 "AO rel %u/%u/%u segfile#:%d Xact:%u MlossEOF:" INT64_FORMAT " MnewEOF:" INT64_FORMAT " PSN:" INT64_FORMAT " TID:'%s' eofsEntAddr:%p",
+				 eofsEntry->relFileNode.spcNode,
+				 eofsEntry->relFileNode.dbNode,
+				 eofsEntry->relFileNode.relNode,
+				 eofsEntry->segmentFileNum,
+				 eofsEntry->xid,
+				 eofsEntry->mirrorLossEof,
+				 eofsEntry->mirrorNewEof,
+				 eofsEntry->persistentSerialNum,
+				 ItemPointerToString(&eofsEntry->key.persistentTid),
+				 eofsEntry);
 
 	Assert(snprintfResult >= 0);
 	Assert(snprintfResult < maxBufferLen);
@@ -473,8 +483,8 @@ static HTAB *recoveryAppendOnlyMirrorResyncEofsTable = NULL;
 static void
 PersistentRecovery_RecoveryAppendOnlyMirrorResyncEofsTableInit(void)
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -487,15 +497,16 @@ PersistentRecovery_RecoveryAppendOnlyMirrorResyncEofsTableInit(void)
 	recoveryAppendOnlyMirrorResyncEofsTable = hash_create("Recovery AO EOFs", 10, &info, hash_flags);
 }
 
-static void PersistentRecovery_AddAppendOnlyMirrorResyncEofs(
-	TransactionId 								xid,
-	PersistentEndXactAppendOnlyMirrorResyncEofs	*eofs)
+static void
+PersistentRecovery_AddAppendOnlyMirrorResyncEofs(
+												 TransactionId xid,
+												 PersistentEndXactAppendOnlyMirrorResyncEofs *eofs)
 {
-	AoMirrorResyncEofsEntryKey	key;
+	AoMirrorResyncEofsEntryKey key;
 
 	AoMirrorResyncEofsEntry eofsEntry;
 
-	bool found;
+	bool		found;
 
 	AoMirrorResyncEofsEntryData prevEofsEntry;
 
@@ -505,12 +516,12 @@ static void PersistentRecovery_AddAppendOnlyMirrorResyncEofs(
 	MemSet(&key, 0, sizeof(FsObjEntryKey));
 	key.persistentTid = eofs->persistentTid;
 
-	eofsEntry = 
-		(AoMirrorResyncEofsEntry) 
-						hash_search(recoveryAppendOnlyMirrorResyncEofsTable,
-									(void *) &key,
-									HASH_ENTER,
-									&found);
+	eofsEntry =
+		(AoMirrorResyncEofsEntry)
+		hash_search(recoveryAppendOnlyMirrorResyncEofsTable,
+					(void *) &key,
+					HASH_ENTER,
+					&found);
 	if (found)
 	{
 		memcpy(&prevEofsEntry, eofsEntry, sizeof(AoMirrorResyncEofsEntryData));
@@ -525,53 +536,54 @@ static void PersistentRecovery_AddAppendOnlyMirrorResyncEofs(
 
 	if (found)
 	{
-		if (! Disable_persistent_recovery_logging)
-			elog(LOG, 
-			     "Commit REDO: Overwritting %s with %s",
+		if (!Disable_persistent_recovery_logging)
+			elog(LOG,
+				 "Commit REDO: Overwritting %s with %s",
 				 AoMirrorResyncEofsEntryToString(&prevEofsEntry),
 				 AoMirrorResyncEofsEntryToString2(eofsEntry));
 	}
 	else
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-			     "Commit REDO: Adding %s",
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "Commit REDO: Adding %s",
 				 AoMirrorResyncEofsEntryToString(eofsEntry));
 	}
 }
 
 bool
 PersistentRecovery_ShouldHandlePass1XLogRec(
-	XLogRecPtr		*beginLoc,
+											XLogRecPtr *beginLoc,
 
-	XLogRecPtr 		*lsn,
-	
-	XLogRecord 		*record)
+											XLogRecPtr *lsn,
+
+											XLogRecord *record)
 {
-	int					relationChangeInfoArrayCount;
-	int					arrlen = ChangeTracking_GetInfoArrayDesiredMaxLength(record->xl_rmid, 
-																			 record->xl_info);
-	RelationChangeInfo 	relationChangeInfoArray[arrlen];
-	
+	int			relationChangeInfoArrayCount;
+	int			arrlen = ChangeTracking_GetInfoArrayDesiredMaxLength(record->xl_rmid,
+																	 record->xl_info);
+	RelationChangeInfo relationChangeInfoArray[arrlen];
+
 	if (Debug_persistent_recovery_print)
 		ChangeTracking_PrintRelationChangeInfo(
-											record->xl_rmid,
-											record->xl_info,
-											(void*)XLogRecGetData(record), 
-											lsn,
-											/* weAreGeneratingXLogNow */ false,
-											/* printSkipIssuesOnly */ false);
+											   record->xl_rmid,
+											   record->xl_info,
+											   (void *) XLogRecGetData(record),
+											   lsn,
+											    /* weAreGeneratingXLogNow */ false,
+											    /* printSkipIssuesOnly */ false);
 
 	/*
-	 * Gather vital peristence information from the XLOG record about relations ONLY.
+	 * Gather vital peristence information from the XLOG record about
+	 * relations ONLY.
 	 */
 	ChangeTracking_GetRelationChangeInfoFromXlog(
-									  record->xl_rmid,
-									  record->xl_info,
-									  (void*)XLogRecGetData(record), 
-									  relationChangeInfoArray,
-									  &relationChangeInfoArrayCount,
-									  arrlen);
+												 record->xl_rmid,
+												 record->xl_info,
+												 (void *) XLogRecGetData(record),
+												 relationChangeInfoArray,
+												 &relationChangeInfoArrayCount,
+												 arrlen);
 	if (relationChangeInfoArrayCount == 0)
 	{
 		/*
@@ -584,14 +596,14 @@ PersistentRecovery_ShouldHandlePass1XLogRec(
 		RelFileNode *xlogRelFileNode;
 
 		xlogRelFileNode = &relationChangeInfoArray[0].relFileNode;
-		
-		if(RelFileNode_IsEmpty(xlogRelFileNode))
+
+		if (RelFileNode_IsEmpty(xlogRelFileNode))
 			elog(ERROR, "Invalid RelFileNode (0,0,0)");
-		
+
 		if (GpPersistent_IsPersistentRelation(xlogRelFileNode->relNode))
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "PersistentRecovery_ShouldHandlePass1XLogRec: persistent meta-data (returning true) %u/%u/%u",
 					 xlogRelFileNode->spcNode,
 					 xlogRelFileNode->dbNode,
@@ -601,7 +613,7 @@ PersistentRecovery_ShouldHandlePass1XLogRec(
 		else
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "PersistentRecovery_ShouldHandlePass1XLogRec: regular table (returning false) %u/%u/%u",
 					 xlogRelFileNode->spcNode,
 					 xlogRelFileNode->dbNode,
@@ -610,23 +622,24 @@ PersistentRecovery_ShouldHandlePass1XLogRec(
 		}
 	}
 
-	return false;	// Not reached.
+	return false;
+	/* Not reached. */
 }
 
 void
 PersistentRecovery_HandlePass2XLogRec(
-	XLogRecPtr		*beginLoc,
+									  XLogRecPtr *beginLoc,
 
-	XLogRecPtr 		*lsn,
-	
-	XLogRecord 		*record)
+									  XLogRecPtr *lsn,
+
+									  XLogRecord *record)
 {
-	RmgrId rmid = record->xl_rmid;
+	RmgrId		rmid = record->xl_rmid;
 
 	if (rmid == RM_HEAP_ID)
 	{
 		RelFileNode relFileNode;
-		
+
 		if (!heap_getrelfilenode(record, &relFileNode))
 			elog(ERROR, "No relfilenode");
 
@@ -643,52 +656,52 @@ PersistentRecovery_HandlePass2XLogRec(
 	{
 		TransactionId xid;
 
-		XactEntry xactEntry;
-		bool found;
-		
+		XactEntry	xactEntry;
+		bool		found;
+
 		PersistentEndXactRecObjects persistentObjects;
 		TransactionId *subXids;
-		int subXidCount;
+		int			subXidCount;
 		XactInfoKind infoKind;
-		int i;
+		int			i;
 		PersistentFileSysState newState;
 
 		/*
 		 * The XLOG record is for transaction module...
 		 */
 		if (!xact_redo_get_info(
-							record,
-							&infoKind,
-							&xid,
-							&persistentObjects,
-							&subXids,
-							&subXidCount))
+								record,
+								&infoKind,
+								&xid,
+								&persistentObjects,
+								&subXids,
+								&subXidCount))
 			return;
 
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "%s Record (transaction %u)",
 				 XactInfoKind_Name(infoKind),
 				 xid);
-		
+
 		/*
-		 * We keep track of committed, aborted, and prepared transactions so 'Create Pending'
-		 * objects can be attached to these transaction entries and not get automatically
-		 * aborted by Crash Recovery.
+		 * We keep track of committed, aborted, and prepared transactions so
+		 * 'Create Pending' objects can be attached to these transaction
+		 * entries and not get automatically aborted by Crash Recovery.
 		 */
-		xactEntry = 
+		xactEntry =
 			PersistentRecovery_FindOrCreateXactEntry(xid, &found);
 		xactEntry->infoKind = infoKind;
-		
+
 		if (infoKind == XACT_INFOKIND_COMMIT)
 		{
 			for (i = 0; i < persistentObjects.typed.fileSysActionInfosCount; i++)
 			{
-				PersistentEndXactFileSysActionInfo	*fileSysActionInfo =
-							&persistentObjects.typed.fileSysActionInfos[i];
+				PersistentEndXactFileSysActionInfo *fileSysActionInfo =
+				&persistentObjects.typed.fileSysActionInfos[i];
 
 				PersistentEndXactFileSysAction action;
-				
+
 				action = fileSysActionInfo->action;
 
 				switch (action)
@@ -705,33 +718,34 @@ PersistentRecovery_HandlePass2XLogRec(
 					default:
 						elog(ERROR, "Unexpected persistent end transaction file-system action: %d",
 							 action);
-						newState = PersistentFileSysState_Free;		// Not reached.
+						newState = PersistentFileSysState_Free;
+						/* Not reached. */
 						break;
 				}
-			
+
 				PersistentRecovery_AddEndXactFsObj(
-												xid,
-												XACT_INFOKIND_COMMIT,
-												fileSysActionInfo,
-												newState);
+												   xid,
+												   XACT_INFOKIND_COMMIT,
+												   fileSysActionInfo,
+												   newState);
 			}
 
 			for (i = 0; i < persistentObjects.typed.appendOnlyMirrorResyncEofsCount; i++)
 			{
-				PersistentEndXactAppendOnlyMirrorResyncEofs *eofs = 
-							&persistentObjects.typed.appendOnlyMirrorResyncEofs[i];
+				PersistentEndXactAppendOnlyMirrorResyncEofs *eofs =
+				&persistentObjects.typed.appendOnlyMirrorResyncEofs[i];
 
 				PersistentRecovery_AddAppendOnlyMirrorResyncEofs(
-																xid,
-																eofs);
+																 xid,
+																 eofs);
 			}
 		}
 		else if (infoKind == XACT_INFOKIND_ABORT)
 		{
 			for (i = 0; i < persistentObjects.typed.fileSysActionInfosCount; i++)
 			{
-				PersistentEndXactFileSysActionInfo	*fileSysActionInfo =
-							&persistentObjects.typed.fileSysActionInfos[i];
+				PersistentEndXactFileSysActionInfo *fileSysActionInfo =
+				&persistentObjects.typed.fileSysActionInfos[i];
 
 				PersistentEndXactFileSysAction action;
 
@@ -750,14 +764,15 @@ PersistentRecovery_HandlePass2XLogRec(
 					default:
 						elog(ERROR, "Unexpected persistent end transaction file-system action: %d",
 							 action);
-						newState = PersistentFileSysState_Free;		// Not reached.
+						newState = PersistentFileSysState_Free;
+						/* Not reached. */
 				}
 
 				PersistentRecovery_AddEndXactFsObj(
-												xid,
-												XACT_INFOKIND_ABORT,
-												fileSysActionInfo,
-												newState);
+												   xid,
+												   XACT_INFOKIND_ABORT,
+												   fileSysActionInfo,
+												   newState);
 			}
 		}
 		else
@@ -765,8 +780,8 @@ PersistentRecovery_HandlePass2XLogRec(
 			Assert(infoKind == XACT_INFOKIND_PREPARE);
 
 			/*
-			 * Since we don't know if this transaction will commit or abort, we
-			 * only keep the transaction entry.
+			 * Since we don't know if this transaction will commit or abort,
+			 * we only keep the transaction entry.
 			 */
 		}
 	}
@@ -775,67 +790,69 @@ PersistentRecovery_HandlePass2XLogRec(
 
 bool
 PersistentRecovery_ShouldHandlePass3XLogRec(
-	XLogRecPtr		*beginLoc,
-	XLogRecPtr 		*lsn,
-	XLogRecord 		*record)
+											XLogRecPtr *beginLoc,
+											XLogRecPtr *lsn,
+											XLogRecord *record)
 {
-	int					relationChangeInfoArrayCount;
-	int					arrlen = ChangeTracking_GetInfoArrayDesiredMaxLength(record->xl_rmid,
-																			 record->xl_info);
-	RelationChangeInfo 	relationChangeInfoArray[arrlen];
-	
+	int			relationChangeInfoArrayCount;
+	int			arrlen = ChangeTracking_GetInfoArrayDesiredMaxLength(record->xl_rmid,
+																	 record->xl_info);
+	RelationChangeInfo relationChangeInfoArray[arrlen];
+
 	RelFileNode xlogRelFileNode;
 	ItemPointerData xlogPersistentTid;
-	int64 xlogPersistentSerialNum;
+	int64		xlogPersistentSerialNum;
 
-	bool exists;
+	bool		exists;
 
 	if (Debug_persistent_recovery_print)
 		ChangeTracking_PrintRelationChangeInfo(
-											record->xl_rmid,
-											record->xl_info,
-											(void*)XLogRecGetData(record), 
-											lsn,
-											/* weAreGeneratingXLogNow */ false,
-											/* printSkipIssuesOnly */ false);
+											   record->xl_rmid,
+											   record->xl_info,
+											   (void *) XLogRecGetData(record),
+											   lsn,
+											    /* weAreGeneratingXLogNow */ false,
+											    /* printSkipIssuesOnly */ false);
 
 	/*
-	 * Gather vital peristence information from the XLOG record about relations ONLY.
+	 * Gather vital peristence information from the XLOG record about
+	 * relations ONLY.
 	 */
 	ChangeTracking_GetRelationChangeInfoFromXlog(
-									  record->xl_rmid,
-									  record->xl_info,
-									  (void*)XLogRecGetData(record), 
-									  relationChangeInfoArray,
-									  &relationChangeInfoArrayCount,
-									  arrlen);
+												 record->xl_rmid,
+												 record->xl_info,
+												 (void *) XLogRecGetData(record),
+												 relationChangeInfoArray,
+												 &relationChangeInfoArrayCount,
+												 arrlen);
 
 	if (relationChangeInfoArrayCount == 0)
 	{
 		/*
-		 * Special case truncate because it is not considered a FileRep "page change"....
+		 * Special case truncate because it is not considered a FileRep "page
+		 * change"....
 		 */
 		if (record->xl_rmid == RM_SMGR_ID)
 		{
 			if (!smgrgetpersistentinfo(
-									record,
-									&xlogRelFileNode,
-									&xlogPersistentTid,
-									&xlogPersistentSerialNum))
+									   record,
+									   &xlogRelFileNode,
+									   &xlogPersistentTid,
+									   &xlogPersistentSerialNum))
 			{
 				if (Debug_persistent_recovery_print)
-					elog(PersistentRecovery_DebugPrintLevel(), 
+					elog(PersistentRecovery_DebugPrintLevel(),
 						 "PersistentRecovery_ShouldHandlePass3XLogRec: truncate %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
-						  xlogRelFileNode.spcNode,
-						  xlogRelFileNode.dbNode,
-						  xlogRelFileNode.relNode,
-						  xlogPersistentSerialNum,
-						  ItemPointerToString(&xlogPersistentTid));
+						 xlogRelFileNode.spcNode,
+						 xlogRelFileNode.dbNode,
+						 xlogRelFileNode.relNode,
+						 xlogPersistentSerialNum,
+						 ItemPointerToString(&xlogPersistentTid));
 
 				return true;
 			}
 
-			// Otherwise, fall through with persistent information.
+			/* Otherwise, fall through with persistent information. */
 		}
 		else
 		{
@@ -843,7 +860,7 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 			 * A non-data change XLOG record.
 			 */
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "PersistentRecovery_ShouldHandlePass3XLogRec: non-data change XLOG record");
 
 			return true;
@@ -856,11 +873,11 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 		xlogPersistentTid = relationChangeInfoArray[0].persistentTid;
 		xlogPersistentSerialNum = relationChangeInfoArray[0].persistentSerialNum;
 	}
-	
+
 	if (GpPersistent_IsPersistentRelation(xlogRelFileNode.relNode))
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_ShouldHandlePass3XLogRec: skip persistent meta-data %u/%u/%u",
 				 xlogRelFileNode.spcNode,
 				 xlogRelFileNode.dbNode,
@@ -871,7 +888,7 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 	if (GpPersistent_SkipXLogInfo(xlogRelFileNode.relNode))
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_ShouldHandlePass3XLogRec: other special relation %u/%u/%u",
 				 xlogRelFileNode.spcNode,
 				 xlogRelFileNode.dbNode,
@@ -881,7 +898,8 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 
 	if (PersistentStore_IsZeroTid(&xlogPersistentTid))
 	{
-		int level = ERROR;
+		int			level = ERROR;
+
 		if (gp_persistent_statechange_suppress_error)
 		{
 			level = WARNING;
@@ -893,31 +911,31 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 	 * Further qualify using the RelFileNode.
 	 */
 	exists = PersistentRecovery_RedoRelationExists(
-												&xlogPersistentTid,
-												xlogPersistentSerialNum,
-												&xlogRelFileNode);
+												   &xlogPersistentTid,
+												   xlogPersistentSerialNum,
+												   &xlogRelFileNode);
 
 	if (exists)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_ShouldHandlePass3XLogRec: match %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
-				  xlogRelFileNode.spcNode,
-				  xlogRelFileNode.dbNode,
-				  xlogRelFileNode.relNode,
-				  xlogPersistentSerialNum,
-				  ItemPointerToString(&xlogPersistentTid));
+				 xlogRelFileNode.spcNode,
+				 xlogRelFileNode.dbNode,
+				 xlogRelFileNode.relNode,
+				 xlogPersistentSerialNum,
+				 ItemPointerToString(&xlogPersistentTid));
 	}
 	else
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_ShouldHandlePass3XLogRec: relation has been dropped or the create aborted %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
-				  xlogRelFileNode.spcNode,
-				  xlogRelFileNode.dbNode,
-				  xlogRelFileNode.relNode,
-				  xlogPersistentSerialNum,
-				  ItemPointerToString(&xlogPersistentTid));
+				 xlogRelFileNode.spcNode,
+				 xlogRelFileNode.dbNode,
+				 xlogRelFileNode.relNode,
+				 xlogPersistentSerialNum,
+				 ItemPointerToString(&xlogPersistentTid));
 	}
 
 	return exists;
@@ -927,17 +945,17 @@ static void
 PersistentRecovery_PrintXactAndFsObjs(void)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	XactEntry xactEntry;
-	FsObjEntry fsObjEntry;
+	XactEntry	xactEntry;
+	FsObjEntry	fsObjEntry;
 
 	elog(LOG, "Entering PersistentRecovery_PrintXactAndFsObjs");
 	if (xactHashTable == NULL)
 	{
-		elog(LOG, 
+		elog(LOG,
 			 "Entering PersistentRecovery_PrintXactAndFsObjs -- no entries");
 		return;
 	}
-	
+
 	hash_seq_init(&iterateStatus, xactHashTable);
 	while (true)
 	{
@@ -949,19 +967,19 @@ PersistentRecovery_PrintXactAndFsObjs(void)
 			 xactEntry->xid,
 			 XactInfoKind_Name(xactEntry->infoKind));
 
-		fsObjEntry = 
+		fsObjEntry =
 			(FsObjEntry) DoublyLinkedHead_First(
-									offsetof(FsObjEntryData, xactLinks),
-									&xactEntry->fsObjEntryList);
+												offsetof(FsObjEntryData, xactLinks),
+												&xactEntry->fsObjEntryList);
 		while (fsObjEntry != NULL)
 		{
 			elog(LOG, "FsObj: %s", FsObjEntryToString(fsObjEntry));
 
-			fsObjEntry = 
+			fsObjEntry =
 				(FsObjEntry) DoublyLinkedHead_Next(
-										offsetof(FsObjEntryData, xactLinks),
-										&xactEntry->fsObjEntryList,
-										fsObjEntry);
+												   offsetof(FsObjEntryData, xactLinks),
+												   &xactEntry->fsObjEntryList,
+												   fsObjEntry);
 		}
 	}
 	elog(LOG, "Exiting PersistentRecovery_PrintXactAndFsObjs");
@@ -976,11 +994,11 @@ PersistentRecovery_PrintAoMirrorResyncEofs(void)
 	elog(LOG, "Entering PersistentRecovery_PrintAoMirrorResyncEofs");
 	if (recoveryAppendOnlyMirrorResyncEofsTable == NULL)
 	{
-		elog(LOG, 
+		elog(LOG,
 			 "Entering PersistentRecovery_PrintAoMirrorResyncEofs -- no entries");
 		return;
 	}
-	
+
 	hash_seq_init(&iterateStatus, recoveryAppendOnlyMirrorResyncEofsTable);
 	while (true)
 	{
@@ -993,38 +1011,38 @@ PersistentRecovery_PrintAoMirrorResyncEofs(void)
 	elog(LOG, "Exiting PersistentRecovery_PrintAoMirrorResyncEofs");
 }
 
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
 
 
 static void
 PersistentRecovery_AddScanEntry(
-	PersistentFsObjType 	fsObjType,
+								PersistentFsObjType fsObjType,
 
-	ItemPointer				persistentTid,
+								ItemPointer persistentTid,
 
-	PersistentFileSysObjName	*fsObjName,
+								PersistentFileSysObjName *fsObjName,
 
-	PersistentFileSysRelStorageMgr relStorageMgr,
+								PersistentFileSysRelStorageMgr relStorageMgr,
 
-	PersistentFileSysState	state,
-	
-	MirroredObjectExistenceState mirrorExistenceState,
+								PersistentFileSysState state,
 
-	TransactionId			parentXid,
-	
-	int64					persistentSerialNum)
+								MirroredObjectExistenceState mirrorExistenceState,
+
+								TransactionId parentXid,
+
+								int64 persistentSerialNum)
 {
-	FsObjEntry fsObjEntry;
-	bool found;
+	FsObjEntry	fsObjEntry;
+	bool		found;
 
 	/*
 	 * Create Persistent Change entry.
 	 */
-	fsObjEntry = 
+	fsObjEntry =
 		PersistentRecovery_FindOrCreateFsObjEntry(
-										fsObjType,
-										persistentTid,
-										&found);
+												  fsObjType,
+												  persistentTid,
+												  &found);
 	fsObjEntry->foundInTable = true;
 
 	if (!found)
@@ -1036,8 +1054,8 @@ PersistentRecovery_AddScanEntry(
 		fsObjEntry->state = state;
 		fsObjEntry->mirrorExistenceState = mirrorExistenceState;
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-			     "Scan REDO: Add %s", FsObjEntryToString(fsObjEntry));
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "Scan REDO: Add %s", FsObjEntryToString(fsObjEntry));
 		return;
 	}
 
@@ -1045,9 +1063,9 @@ PersistentRecovery_AddScanEntry(
 	{
 		if (fsObjEntry->state < state)
 		{
-			if (! Disable_persistent_recovery_logging)
-				elog(LOG, 
-				     "Scan REDO: Newer %s than %s state, transaction %u",
+			if (!Disable_persistent_recovery_logging)
+				elog(LOG,
+					 "Scan REDO: Newer %s than %s state, transaction %u",
 					 FsObjEntryToString(fsObjEntry),
 					 PersistentFileSysObjState_Name(state),
 					 parentXid);
@@ -1059,8 +1077,8 @@ PersistentRecovery_AddScanEntry(
 		else if (fsObjEntry->state > state)
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-				     "Scan REDO: Update %s to state '%s', transaction %u, serial number " INT64_FORMAT,
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "Scan REDO: Update %s to state '%s', transaction %u, serial number " INT64_FORMAT,
 					 FsObjEntryToString(fsObjEntry),
 					 PersistentFileSysObjState_Name(state),
 					 parentXid,
@@ -1070,22 +1088,23 @@ PersistentRecovery_AddScanEntry(
 		}
 		else
 		{
-				/*
-				* During crash recovery when we drop objects, we should skip the objects whose
-				* mirror existence state is MirrorDropRemains. It will be dropped during resync
-				*/
-				fsObjEntry->mirrorExistenceState = mirrorExistenceState;
-				if (! Disable_persistent_recovery_logging)
-					elog(LOG,
-						"Scan REDO: PT State is same. Updated the mirror existence state for %s",
-						FsObjEntryToString(fsObjEntry));
+			/*
+			 * During crash recovery when we drop objects, we should skip the
+			 * objects whose mirror existence state is MirrorDropRemains. It
+			 * will be dropped during resync
+			 */
+			fsObjEntry->mirrorExistenceState = mirrorExistenceState;
+			if (!Disable_persistent_recovery_logging)
+				elog(LOG,
+					 "Scan REDO: PT State is same. Updated the mirror existence state for %s",
+					 FsObjEntryToString(fsObjEntry));
 		}
 	}
 	else if (fsObjEntry->persistentSerialNum < persistentSerialNum)
 	{
-		if (! Disable_persistent_recovery_logging)
-			elog(LOG, 
-			     "Scan REDO: Overwriting obsolete %s with '%s', relation storage manager '%s', state '%s', transaction %u, serial number " INT64_FORMAT,
+		if (!Disable_persistent_recovery_logging)
+			elog(LOG,
+				 "Scan REDO: Overwriting obsolete %s with '%s', relation storage manager '%s', state '%s', transaction %u, serial number " INT64_FORMAT,
 				 FsObjEntryToString(fsObjEntry),
 				 PersistentFileSysObjName_TypeAndObjectName(fsObjName),
 				 PersistentFileSysRelStorageMgr_Name(relStorageMgr),
@@ -1102,9 +1121,9 @@ PersistentRecovery_AddScanEntry(
 	}
 	else
 	{
-		if (! Disable_persistent_recovery_logging)
-			elog(LOG, 
-			     "Scan REDO: Wrong state %s, persistentSerialNum " INT64_FORMAT, 
+		if (!Disable_persistent_recovery_logging)
+			elog(LOG,
+				 "Scan REDO: Wrong state %s, persistentSerialNum " INT64_FORMAT,
 				 FsObjEntryToString(fsObjEntry),
 				 persistentSerialNum);
 	}
@@ -1112,41 +1131,42 @@ PersistentRecovery_AddScanEntry(
 
 static int	persistentRecoveryCount = 0;
 
-static void PersistentRecovery_ScanTuple(
-	PersistentFsObjType 	fsObjType,
-	ItemPointer 			persistentTid,
-	int64					persistentSerialNum,
-	Datum					*values)
+static void
+PersistentRecovery_ScanTuple(
+							 PersistentFsObjType fsObjType,
+							 ItemPointer persistentTid,
+							 int64 persistentSerialNum,
+							 Datum *values)
 {
-	PersistentFileSysObjName	fsObjName;
-	
-	PersistentFileSysState	state;
+	PersistentFileSysObjName fsObjName;
 
-	MirroredObjectExistenceState		mirrorExistenceState;
+	PersistentFileSysState state;
+
+	MirroredObjectExistenceState mirrorExistenceState;
 
 	PersistentFileSysRelStorageMgr relStorageMgr;
 
-	TransactionId			parentXid;
-	int64					serialNum;
+	TransactionId parentXid;
+	int64		serialNum;
 
 	GpPersistent_GetCommonValues(
-							fsObjType,
-							values,
-							&fsObjName,
-							&state,
-							&mirrorExistenceState,
-							&parentXid,
-							&serialNum);
+								 fsObjType,
+								 values,
+								 &fsObjName,
+								 &state,
+								 &mirrorExistenceState,
+								 &parentXid,
+								 &serialNum);
 	Assert(serialNum == persistentSerialNum);
 
 	if (state != PersistentFileSysState_Free &&
 		fsObjType == PersistentFsObjType_RelationFile)
 	{
-		relStorageMgr = 
+		relStorageMgr =
 			(PersistentFileSysRelStorageMgr)
-							DatumGetInt16(
-									values[Anum_gp_persistent_relation_node_relation_storage_manager - 1]);
-		
+			DatumGetInt16(
+						  values[Anum_gp_persistent_relation_node_relation_storage_manager - 1]);
+
 		if (!PersistentFileSysRelStorageMgr_IsValid(relStorageMgr))
 			elog(ERROR, "Relation storage manager for persistent '%s' for Crash Recovery is invalid (%d)",
 				 PersistentFileSysObjName_TypeAndObjectName(&fsObjName),
@@ -1154,76 +1174,76 @@ static void PersistentRecovery_ScanTuple(
 	}
 	else
 	{
-		// 'Free' entry or not a 'Relation File'.
+		/* 'Free' entry or not a 'Relation File'. */
 		relStorageMgr = PersistentFileSysRelStorageMgr_None;
 	}
-	
+
 	PersistentRecovery_AddScanEntry(
-							fsObjType,
-							persistentTid,
-							&fsObjName,
-							relStorageMgr,
-							state,
-							mirrorExistenceState,
-							parentXid,
-							persistentSerialNum);
+									fsObjType,
+									persistentTid,
+									&fsObjName,
+									relStorageMgr,
+									state,
+									mirrorExistenceState,
+									parentXid,
+									persistentSerialNum);
 
 	persistentRecoveryCount++;
 }
 
 static void
 PersistentRecovery_ScanType(
-	PersistentFsObjType fsObjType)
+							PersistentFsObjType fsObjType)
 {
 	PersistentFileSysObjData *fileSysObjData;
-	PersistentFileSysObjSharedData	*fileSysObjSharedData;
+	PersistentFileSysObjSharedData *fileSysObjSharedData;
 
 	PersistentStoreScan storeScan;
 
-	Datum *values;
-	 
-	ItemPointerData			 persistentTid;
-	int64					 persistentSerialNum;
+	Datum	   *values;
+
+	ItemPointerData persistentTid;
+	int64		persistentSerialNum;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_ScanType %s",
-		     PersistentFileSysObjName_TypeName(fsObjType));
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_ScanType %s",
+			 PersistentFileSysObjName_TypeName(fsObjType));
 
 	persistentRecoveryCount = 0;
 
 	PersistentFileSysObj_GetDataPtrs(
-								fsObjType,
-								&fileSysObjData,
-								&fileSysObjSharedData);
-		 
-	values = (Datum*)palloc(fileSysObjData->storeData.numAttributes * sizeof(Datum));
-		 
+									 fsObjType,
+									 &fileSysObjData,
+									 &fileSysObjSharedData);
+
+	values = (Datum *) palloc(fileSysObjData->storeData.numAttributes * sizeof(Datum));
+
 	PersistentStore_BeginScan(
-						&fileSysObjData->storeData,
-						&fileSysObjSharedData->storeSharedData,
-						&storeScan);
+							  &fileSysObjData->storeData,
+							  &fileSysObjSharedData->storeSharedData,
+							  &storeScan);
 
 	while (PersistentStore_GetNext(
-							&storeScan,
-							values,
-							&persistentTid,
-							&persistentSerialNum))
+								   &storeScan,
+								   values,
+								   &persistentTid,
+								   &persistentSerialNum))
 	{
 		PersistentRecovery_ScanTuple(
-								fsObjType,
-								&persistentTid,
-								persistentSerialNum,
-								values);
+									 fsObjType,
+									 &persistentTid,
+									 persistentSerialNum,
+									 values);
 	}
 
 	pfree(values);
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_ScanType %s, count %d",
-		     PersistentFileSysObjName_TypeName(fsObjType),
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_ScanType %s, count %d",
+			 PersistentFileSysObjName_TypeName(fsObjType),
+			 persistentRecoveryCount);
 }
 
 void
@@ -1232,131 +1252,132 @@ PersistentRecovery_Scan(void)
 	PersistentFsObjType fsObjType;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_Scan");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_Scan");
 
-	for (fsObjType = PersistentFsObjType_First; 
+	for (fsObjType = PersistentFsObjType_First;
 		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
-	 	PersistentRecovery_ScanType(fsObjType);
+		PersistentRecovery_ScanType(fsObjType);
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_Scan");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_Scan");
 }
 
 static void
 PersistentRecovery_AttachFsObjTypeToXact(
-	PersistentFsObjType fsObjType)
+										 PersistentFsObjType fsObjType)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	FsObjEntry fsObjEntry;
-	XactEntry xactEntry;
-	bool found;
+	FsObjEntry	fsObjEntry;
+	XactEntry	xactEntry;
+	bool		found;
 
-	Assert (fsObjHashTable != NULL);
-	
+	Assert(fsObjHashTable != NULL);
+
 	hash_seq_init(&iterateStatus, fsObjHashTable[fsObjType]);
 
 	while (true)
 	{
-		fsObjEntry = 
-				(FsObjEntry)
-						hash_seq_search(&iterateStatus);
+		fsObjEntry =
+			(FsObjEntry)
+			hash_seq_search(&iterateStatus);
 		if (fsObjEntry == NULL)
 			break;
 
 		if (fsObjEntry->xid == InvalidTransactionId)
 			continue;
 
-		xactEntry = 
+		xactEntry =
 			PersistentRecovery_FindOrCreateXactEntry(
-											fsObjEntry->xid, 
-											&found);
+													 fsObjEntry->xid,
+													 &found);
 		if (!found)
 			xactEntry->infoKind = XACT_INFOKIND_NONE;
 
 		DoublyLinkedHead_AddFirst(
-						offsetof(FsObjEntryData, xactLinks),
-						&xactEntry->fsObjEntryList,
-						fsObjEntry);
+								  offsetof(FsObjEntryData, xactLinks),
+								  &xactEntry->fsObjEntryList,
+								  fsObjEntry);
 	}
 }
 
 typedef struct RecordCrashTransactionAbortRecordErrContext
 {
-	TransactionId 		xid;
+	TransactionId xid;
 
-	PersistentEndXactFileSysActionInfo	*fileSysActionInfos;
-	
-	int createPendingCount;
+	PersistentEndXactFileSysActionInfo *fileSysActionInfos;
+
+	int			createPendingCount;
 } RecordCrashTransactionAbortRecordErrContext;
 
-static void PersistentRecovery_RecordCrashTransactionAbortRecordErrContext(void *arg)
+static void
+PersistentRecovery_RecordCrashTransactionAbortRecordErrContext(void *arg)
 {
-	RecordCrashTransactionAbortRecordErrContext	*errContext = (RecordCrashTransactionAbortRecordErrContext*) arg;
+	RecordCrashTransactionAbortRecordErrContext *errContext = (RecordCrashTransactionAbortRecordErrContext *) arg;
 
-	PersistentEndXactFileSysActionInfo	*firstFileSysActionInfo;
+	PersistentEndXactFileSysActionInfo *firstFileSysActionInfo;
 
 	Assert(errContext->createPendingCount > 0);
 	firstFileSysActionInfo = &errContext->fileSysActionInfos[0];
 
-	errcontext( 
-		 "Record abort transaction record for crashed transaction %u with %d 'Create Pending' file-system objects "
-		 "(first file-system object %s, persistent serial number " INT64_FORMAT ", TID %s)",
-		 errContext->xid,
-		 errContext->createPendingCount,
-		 PersistentFileSysObjName_TypeAndObjectName(&firstFileSysActionInfo->fsObjName),
-		 firstFileSysActionInfo->persistentSerialNum,
-		 ItemPointerToString(&firstFileSysActionInfo->persistentTid));
+	errcontext(
+			   "Record abort transaction record for crashed transaction %u with %d 'Create Pending' file-system objects "
+			   "(first file-system object %s, persistent serial number " INT64_FORMAT ", TID %s)",
+			   errContext->xid,
+			   errContext->createPendingCount,
+			   PersistentFileSysObjName_TypeAndObjectName(&firstFileSysActionInfo->fsObjName),
+			   firstFileSysActionInfo->persistentSerialNum,
+			   ItemPointerToString(&firstFileSysActionInfo->persistentTid));
 }
 
 static void
 PersistentRecovery_HandlePrepareBeforeCheckpoint(void)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	XactEntry xactEntry;
+	XactEntry	xactEntry;
 
 	if (Debug_persistent_recovery_print)
 	{
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_HandlePrepareBeforeCheckpoint");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_HandlePrepareBeforeCheckpoint");
 	}
 
 	if (xactHashTable == NULL)
 	{
 		if (Debug_persistent_recovery_print)
 		{
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "Entering PersistentRecovery_HandlePrepareBeforeCheckpoint -- no entries");
 		}
 		return;
 	}
-	
+
 	hash_seq_init(&iterateStatus, xactHashTable);
 
 	while (true)
 	{
-		xactEntry = 
-				(XactEntry)
-						hash_seq_search(&iterateStatus);
+		xactEntry =
+			(XactEntry)
+			hash_seq_search(&iterateStatus);
 		if (xactEntry == NULL)
 			break;
 
 		if (xactEntry->infoKind == XACT_INFOKIND_NONE)
 		{
-			XLogRecPtr preparedLoc;
+			XLogRecPtr	preparedLoc;
 
 			if (TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(
-																		xactEntry->xid,
-																		&preparedLoc,
-																		"PersistentRecovery_HandlePrepareBeforeCheckpoint"))
+																			  xactEntry->xid,
+																			  &preparedLoc,
+																			  "PersistentRecovery_HandlePrepareBeforeCheckpoint"))
 			{
 				xactEntry->infoKind = XACT_INFOKIND_PREPARE;
 
-				if ( ! Disable_persistent_recovery_logging)
+				if (!Disable_persistent_recovery_logging)
 				{
-					elog(LOG, 
+					elog(LOG,
 						 "Prepare Before Checkpoint: Transaction %u (None) found and marked prepared (location %s)",
 						 xactEntry->xid,
 						 XLogLocationToString(&preparedLoc));
@@ -1366,7 +1387,7 @@ PersistentRecovery_HandlePrepareBeforeCheckpoint(void)
 			{
 				if (Debug_persistent_recovery_print)
 				{
-					elog(PersistentRecovery_DebugPrintLevel(), 
+					elog(PersistentRecovery_DebugPrintLevel(),
 						 "Prepare Before Checkpoint: Transaction %u (None) not found in checkpoint prepared list",
 						 xactEntry->xid);
 				}
@@ -1376,18 +1397,18 @@ PersistentRecovery_HandlePrepareBeforeCheckpoint(void)
 		{
 			if (Debug_persistent_recovery_print)
 			{
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "Prepare Before Checkpoint: Transaction %u (%s)",
 					 xactEntry->xid,
 					 XactInfoKind_Name(xactEntry->infoKind));
 			}
 		}
 	}
-	
+
 	if (Debug_persistent_recovery_print)
 	{
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_HandlePrepareBeforeCheckpoint");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_HandlePrepareBeforeCheckpoint");
 	}
 
 }
@@ -1453,34 +1474,34 @@ PersistentRecovery_CrashAbort(void)
 	PersistentFsObjType fsObjType;
 
 	HASH_SEQ_STATUS iterateStatus;
-	FsObjEntry fsObjEntry;
-	XactEntry xactEntry;
-	int xactCount;
+	FsObjEntry	fsObjEntry;
+	XactEntry	xactEntry;
+	int			xactCount;
 
 	ErrorContextCallback errcontext;
 
 	RecordCrashTransactionAbortRecordErrContext recordCrashTransactionAbortRecordErrContext;
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_CrashAbort");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_CrashAbort");
 
 	if (fsObjHashTable == NULL)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-			     "Exiting PersistentRecovery_CrashAbort (no relation hash table)");
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "Exiting PersistentRecovery_CrashAbort (no relation hash table)");
 		return;
 	}
 
-	for (fsObjType = PersistentFsObjType_First; 
+	for (fsObjType = PersistentFsObjType_First;
 		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
 		PersistentRecovery_AttachFsObjTypeToXact(fsObjType);
 
 	PersistentRecovery_HandlePrepareBeforeCheckpoint();
 
-	if (! Disable_persistent_recovery_logging)
+	if (!Disable_persistent_recovery_logging)
 	{
 		PersistentRecovery_PrintXactAndFsObjs();
 		PersistentRecovery_PrintAoMirrorResyncEofs();
@@ -1491,16 +1512,16 @@ PersistentRecovery_CrashAbort(void)
 	xactCount = 0;
 	while (true)
 	{
-		bool needsAbort;
-		int createPendingCount;
-		int e;
-		PersistentEndXactFileSysActionInfo	*fileSysActionInfos;
+		bool		needsAbort;
+		int			createPendingCount;
+		int			e;
+		PersistentEndXactFileSysActionInfo *fileSysActionInfos;
 		PersistentEndXactRecObjects persistentObjects;
-		bool abortSuccessfullyRecorded;
+		bool		abortSuccessfullyRecorded;
 
-		xactEntry = 
-				(XactEntry)
-						hash_seq_search(&iterateStatus);
+		xactEntry =
+			(XactEntry)
+			hash_seq_search(&iterateStatus);
 		if (xactEntry == NULL)
 			break;
 
@@ -1513,14 +1534,16 @@ PersistentRecovery_CrashAbort(void)
 				   xactEntry->infoKind == XACT_INFOKIND_ABORT);
 
 			/*
-			 * If it is Prepared, we don't know yet what to do with the transaction.
+			 * If it is Prepared, we don't know yet what to do with the
+			 * transaction.
 			 *
-			 * If it is known Committed or Aborted because we found an XLOG Commit or
-			 * or Abort, we may have updates that will be handled later.
+			 * If it is known Committed or Aborted because we found an XLOG
+			 * Commit or or Abort, we may have updates that will be handled
+			 * later.
 			 */
 
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "PersistentRecovery_CrashAbort: Skipping transaction %u (state '%s')",
 					 xactEntry->xid,
 					 XactInfoKind_Name(xactEntry->infoKind));
@@ -1528,50 +1551,54 @@ PersistentRecovery_CrashAbort(void)
 			continue;
 		}
 
-		/* If checkpoint happened after Recording COMMIT, xactHashTable won't know the Status of the xact, 
-		 * since no REDO records corresponding to the same would be looked into.
-		 * But its incorrect without consulting CLOG to consider ABORTing the xact based on having CREATE_PENDING entry in PT
-		 * Hence should check CLOG to verify if it was COMMITTED.
-		 * If we don't perform this step, the recovery later would try to mark COMMITED Xact Aborted, 
-		 * seeing Create-Pending entry associated with the Xact.
+		/*
+		 * If checkpoint happened after Recording COMMIT, xactHashTable won't
+		 * know the Status of the xact, since no REDO records corresponding to
+		 * the same would be looked into. But its incorrect without consulting
+		 * CLOG to consider ABORTing the xact based on having CREATE_PENDING
+		 * entry in PT Hence should check CLOG to verify if it was COMMITTED.
+		 * If we don't perform this step, the recovery later would try to mark
+		 * COMMITED Xact Aborted, seeing Create-Pending entry associated with
+		 * the Xact.
 		 */
-		bool validStatus = false;
+		bool		validStatus = false;
 
-		XidStatus status = InRecoveryTransactionIdGetStatus(xactEntry->xid, &validStatus);
+		XidStatus	status = InRecoveryTransactionIdGetStatus(xactEntry->xid, &validStatus);
+
 		if ((validStatus == true) && (status != 0) && (status == TRANSACTION_STATUS_COMMITTED))
 		{
 			xactEntry->infoKind = XACT_INFOKIND_COMMIT;
 
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-						"PersistentRecovery_CrashAbort: Found transaction as COMMITTED in clog, transaction %u (state '%s')",
-						xactEntry->xid,
-						XactInfoKind_Name(xactEntry->infoKind));
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "PersistentRecovery_CrashAbort: Found transaction as COMMITTED in clog, transaction %u (state '%s')",
+					 xactEntry->xid,
+					 XactInfoKind_Name(xactEntry->infoKind));
 
-			fsObjEntry = 
+			fsObjEntry =
 				(FsObjEntry) DoublyLinkedHead_First(
-						offsetof(FsObjEntryData, xactLinks),
-						&xactEntry->fsObjEntryList);
+													offsetof(FsObjEntryData, xactLinks),
+													&xactEntry->fsObjEntryList);
 
 			while (fsObjEntry != NULL)
 			{
 				if (fsObjEntry->state == PersistentFileSysState_BulkLoadCreatePending ||
-						fsObjEntry->state == PersistentFileSysState_CreatePending)
+					fsObjEntry->state == PersistentFileSysState_CreatePending)
 				{
 					if (Debug_persistent_recovery_print)
-						elog(PersistentRecovery_DebugPrintLevel(), 
-								"PersistentRecovery_CrashAbort: Set state of %s to 'Created'", 
-								FsObjEntryToString(fsObjEntry));
+						elog(PersistentRecovery_DebugPrintLevel(),
+							 "PersistentRecovery_CrashAbort: Set state of %s to 'Created'",
+							 FsObjEntryToString(fsObjEntry));
 
 					fsObjEntry->updateNeeded = true;
 					fsObjEntry->state = PersistentFileSysState_Created;
 				}
 
-				fsObjEntry = 
+				fsObjEntry =
 					(FsObjEntry) DoublyLinkedHead_Next(
-							offsetof(FsObjEntryData, xactLinks),
-							&xactEntry->fsObjEntryList,
-							fsObjEntry);
+													   offsetof(FsObjEntryData, xactLinks),
+													   &xactEntry->fsObjEntryList,
+													   fsObjEntry);
 			}
 			continue;
 		}
@@ -1581,18 +1608,18 @@ PersistentRecovery_CrashAbort(void)
 		 * persistent node states.
 		 */
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_CrashAbort: Checking transaction %u (state '%s')",
 				 xactEntry->xid,
 				 XactInfoKind_Name(xactEntry->infoKind));
 
 		needsAbort = false;
 
-		fsObjEntry = 
+		fsObjEntry =
 			(FsObjEntry) DoublyLinkedHead_First(
-									offsetof(FsObjEntryData, xactLinks),
-									&xactEntry->fsObjEntryList);
-									
+												offsetof(FsObjEntryData, xactLinks),
+												&xactEntry->fsObjEntryList);
+
 		createPendingCount = 0;
 		while (fsObjEntry != NULL)
 		{
@@ -1600,11 +1627,11 @@ PersistentRecovery_CrashAbort(void)
 				fsObjEntry->state == PersistentFileSysState_CreatePending)
 			{
 				needsAbort = true;
-				
-				if (! Disable_persistent_recovery_logging)
-					elog(LOG, 
- 						 "Needs-Abort REDO: (New state 'Aborting Create') %s",
- 						 FsObjEntryToString(fsObjEntry));
+
+				if (!Disable_persistent_recovery_logging)
+					elog(LOG,
+						 "Needs-Abort REDO: (New state 'Aborting Create') %s",
+						 FsObjEntryToString(fsObjEntry));
 
 				createPendingCount++;
 			}
@@ -1616,17 +1643,17 @@ PersistentRecovery_CrashAbort(void)
 				break;
 			}
 
-			fsObjEntry = 
+			fsObjEntry =
 				(FsObjEntry) DoublyLinkedHead_Next(
-										offsetof(FsObjEntryData, xactLinks),
-										&xactEntry->fsObjEntryList,
-										fsObjEntry);
+												   offsetof(FsObjEntryData, xactLinks),
+												   &xactEntry->fsObjEntryList,
+												   fsObjEntry);
 		}
 
 		if (!needsAbort)
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
+				elog(PersistentRecovery_DebugPrintLevel(),
 					 "PersistentRecovery_CrashAbort: Skipping transaction %u due to no 'Create Pending' objects",
 					 xactEntry->xid);
 
@@ -1635,19 +1662,19 @@ PersistentRecovery_CrashAbort(void)
 		}
 
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_CrashAbort: Found %d 'Create Pending' persistent file-system objects for transaction %u",
 				 createPendingCount,
 				 xactEntry->xid);
 
-		fileSysActionInfos = 
-			(PersistentEndXactFileSysActionInfo*)
-				palloc0(createPendingCount * sizeof(PersistentEndXactFileSysActionInfo));
-		
-		fsObjEntry = 
+		fileSysActionInfos =
+			(PersistentEndXactFileSysActionInfo *)
+			palloc0(createPendingCount * sizeof(PersistentEndXactFileSysActionInfo));
+
+		fsObjEntry =
 			(FsObjEntry) DoublyLinkedHead_First(
-									offsetof(FsObjEntryData, xactLinks),
-									&xactEntry->fsObjEntryList);
+												offsetof(FsObjEntryData, xactLinks),
+												&xactEntry->fsObjEntryList);
 		e = 0;
 		while (fsObjEntry != NULL)
 		{
@@ -1664,21 +1691,21 @@ PersistentRecovery_CrashAbort(void)
 				e++;
 			}
 
-			fsObjEntry = 
+			fsObjEntry =
 				(FsObjEntry) DoublyLinkedHead_Next(
-										offsetof(FsObjEntryData, xactLinks),
-										&xactEntry->fsObjEntryList,
-										fsObjEntry);
+												   offsetof(FsObjEntryData, xactLinks),
+												   &xactEntry->fsObjEntryList,
+												   fsObjEntry);
 		}
 
 		PersistentEndXactRec_Init(&persistentObjects);
 		PersistentEndXactRec_AddFileSysActionInfos(
-										&persistentObjects,
-										EndXactRecKind_Abort,
-										fileSysActionInfos, 
-										createPendingCount);
+												   &persistentObjects,
+												   EndXactRecKind_Abort,
+												   fileSysActionInfos,
+												   createPendingCount);
 
-		
+
 		/* Setup error traceback support for ereport() */
 		recordCrashTransactionAbortRecordErrContext.xid = xactEntry->xid;
 		recordCrashTransactionAbortRecordErrContext.fileSysActionInfos = fileSysActionInfos;
@@ -1693,18 +1720,18 @@ PersistentRecovery_CrashAbort(void)
 
 		abortSuccessfullyRecorded =
 			RecordCrashTransactionAbortRecord(
-									xactEntry->xid, 
-									&persistentObjects);
-		
+											  xactEntry->xid,
+											  &persistentObjects);
+
 		/* Pop the error context stack */
 		error_context_stack = errcontext.previous;
-		
+
 		pfree(fileSysActionInfos);
 
-		fsObjEntry = 
+		fsObjEntry =
 			(FsObjEntry) DoublyLinkedHead_First(
-									offsetof(FsObjEntryData, xactLinks),
-									&xactEntry->fsObjEntryList);
+												offsetof(FsObjEntryData, xactLinks),
+												&xactEntry->fsObjEntryList);
 
 		while (fsObjEntry != NULL)
 		{
@@ -1712,9 +1739,9 @@ PersistentRecovery_CrashAbort(void)
 				fsObjEntry->state == PersistentFileSysState_CreatePending)
 			{
 				if (Debug_persistent_recovery_print)
-					elog(PersistentRecovery_DebugPrintLevel(), 
-					     "PersistentRecovery_CrashAbort: Set state of %s to 'Aborting Create'", 
-					     FsObjEntryToString(fsObjEntry));
+					elog(PersistentRecovery_DebugPrintLevel(),
+						 "PersistentRecovery_CrashAbort: Set state of %s to 'Aborting Create'",
+						 FsObjEntryToString(fsObjEntry));
 
 				if (abortSuccessfullyRecorded)
 				{
@@ -1731,33 +1758,33 @@ PersistentRecovery_CrashAbort(void)
 				elog(ERROR, "Unexpected persistent file-system state: %d",
 					 fsObjEntry->state);
 
-			fsObjEntry = 
+			fsObjEntry =
 				(FsObjEntry) DoublyLinkedHead_Next(
-										offsetof(FsObjEntryData, xactLinks),
-										&xactEntry->fsObjEntryList,
-										fsObjEntry);
+												   offsetof(FsObjEntryData, xactLinks),
+												   &xactEntry->fsObjEntryList,
+												   fsObjEntry);
 		}
 
 	}
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
+		elog(PersistentRecovery_DebugPrintLevel(),
 			 "Exiting PersistentRecovery_CrashAbort (transaction count %d)", xactCount);
 }
 
 
 static void
 PersistentRecovery_UpdateType(
-	PersistentFsObjType fsObjType)
+							  PersistentFsObjType fsObjType)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	FsObjEntry fsObjEntry;
-	PersistentFileSysState	state;
-	
+	FsObjEntry	fsObjEntry;
+	PersistentFileSysState state;
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_UpdateType %s",
-		     PersistentFileSysObjName_TypeName(fsObjType));
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_UpdateType %s",
+			 PersistentFileSysObjName_TypeName(fsObjType));
 
 	hash_seq_init(&iterateStatus, fsObjHashTable[fsObjType]);
 
@@ -1765,9 +1792,9 @@ PersistentRecovery_UpdateType(
 
 	while (true)
 	{
-		fsObjEntry = 
-				(FsObjEntry)
-						hash_seq_search(&iterateStatus);
+		fsObjEntry =
+			(FsObjEntry)
+			hash_seq_search(&iterateStatus);
 		if (fsObjEntry == NULL)
 			break;
 
@@ -1775,10 +1802,10 @@ PersistentRecovery_UpdateType(
 		{
 			persistentRecoveryCount++;
 
-			if (! Disable_persistent_recovery_logging)
+			if (!Disable_persistent_recovery_logging)
 			{
 				elog(LOG,
-				     "End-Xact-Update-Needed REDO [%d]: %s", persistentRecoveryCount, FsObjEntryToString(fsObjEntry));
+					 "End-Xact-Update-Needed REDO [%d]: %s", persistentRecoveryCount, FsObjEntryToString(fsObjEntry));
 			}
 
 			state = fsObjEntry->state;
@@ -1786,28 +1813,28 @@ PersistentRecovery_UpdateType(
 			{
 				case PersistentFileSysState_Created:
 					PersistentFileSysObj_Created(
-									&fsObjEntry->fsObjName,
-									&fsObjEntry->key.persistentTid,
-									fsObjEntry->persistentSerialNum,
-									/* retryPossible */ false);
+												 &fsObjEntry->fsObjName,
+												 &fsObjEntry->key.persistentTid,
+												 fsObjEntry->persistentSerialNum,
+												  /* retryPossible */ false);
 					break;
-				
+
 				case PersistentFileSysState_AbortingCreate:
 					fsObjEntry->stateChangeResult =
 						PersistentFileSysObj_MarkAbortingCreate(
-									&fsObjEntry->fsObjName,
-									&fsObjEntry->key.persistentTid,
-									fsObjEntry->persistentSerialNum,
-									/* retryPossible */ false);
+																&fsObjEntry->fsObjName,
+																&fsObjEntry->key.persistentTid,
+																fsObjEntry->persistentSerialNum,
+																 /* retryPossible */ false);
 					break;
 
 				case PersistentFileSysState_DropPending:
 					fsObjEntry->stateChangeResult =
 						PersistentFileSysObj_MarkDropPending(
-									&fsObjEntry->fsObjName,
-									&fsObjEntry->key.persistentTid,
-									fsObjEntry->persistentSerialNum,
-									/* retryPossible */ false);
+															 &fsObjEntry->fsObjName,
+															 &fsObjEntry->key.persistentTid,
+															 fsObjEntry->persistentSerialNum,
+															  /* retryPossible */ false);
 					break;
 				default:
 					elog(ERROR, "Unexpected persistent file-system state: %d",
@@ -1815,12 +1842,12 @@ PersistentRecovery_UpdateType(
 			}
 		}
 	}
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_UpdateType %s, count %d",
-		     PersistentFileSysObjName_TypeName(fsObjType),
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_UpdateType %s, count %d",
+			 PersistentFileSysObjName_TypeName(fsObjType),
+			 persistentRecoveryCount);
 }
 
 /*
@@ -1842,39 +1869,39 @@ PersistentRecovery_Update(void)
 	PersistentFsObjType fsObjType;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_Update");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_Update");
 
 	if (fsObjHashTable == NULL)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "Exiting PersistentRecovery_Update (no relation hash table)");
 		return;
 	}
 
-	for (fsObjType = PersistentFsObjType_First; 
+	for (fsObjType = PersistentFsObjType_First;
 		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
-	 	PersistentRecovery_UpdateType(fsObjType);
-	
+		PersistentRecovery_UpdateType(fsObjType);
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
+		elog(PersistentRecovery_DebugPrintLevel(),
 			 "Exiting PersistentRecovery_Update");
 }
 
 static void
 PersistentRecovery_DropType(
-	PersistentFsObjType fsObjType)
+							PersistentFsObjType fsObjType)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	FsObjEntry fsObjEntry;
-	PersistentFileSysState	state;
+	FsObjEntry	fsObjEntry;
+	PersistentFileSysState state;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_DropType %s",
-		     PersistentFileSysObjName_TypeName(fsObjType));
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_DropType %s",
+			 PersistentFileSysObjName_TypeName(fsObjType));
 
 	hash_seq_init(&iterateStatus, fsObjHashTable[fsObjType]);
 
@@ -1882,21 +1909,21 @@ PersistentRecovery_DropType(
 
 	while (true)
 	{
-		fsObjEntry = 
-				(FsObjEntry)
-						hash_seq_search(&iterateStatus);
+		fsObjEntry =
+			(FsObjEntry)
+			hash_seq_search(&iterateStatus);
 		if (fsObjEntry == NULL)
 			break;
 
 		state = fsObjEntry->state;
-		
+
 		if (state == PersistentFileSysState_AbortingCreate ||
 			state == PersistentFileSysState_DropPending)
 		{
 
-			if (! fsObjEntry->foundInTable)
+			if (!fsObjEntry->foundInTable)
 			{
-				if (! Disable_persistent_recovery_logging)
+				if (!Disable_persistent_recovery_logging)
 				{
 					elog(LOG, "Crash recovery skipping drop %s as tuple TID %s deleted in table",
 						 FsObjEntryToString(fsObjEntry),
@@ -1909,15 +1936,15 @@ PersistentRecovery_DropType(
 			{
 				if (fsObjEntry->stateChangeResult == PersistentFileSysObjStateChangeResult_ErrorSuppressed)
 				{
-					elog(WARNING, 
-						 "Crash recovery skipping drop for %s with State-Change result '%s'", 
+					elog(WARNING,
+						 "Crash recovery skipping drop for %s with State-Change result '%s'",
 						 FsObjEntryToString(fsObjEntry),
 						 PersistentFileSysObjStateChangeResult_Name(fsObjEntry->stateChangeResult));
 				}
-				else if (! Disable_persistent_recovery_logging)
+				else if (!Disable_persistent_recovery_logging)
 				{
-					elog(LOG, 
-						 "Recovery Drop: Skipping drop for %s with State-Change result '%s'", 
+					elog(LOG,
+						 "Recovery Drop: Skipping drop for %s with State-Change result '%s'",
 						 FsObjEntryToString(fsObjEntry),
 						 PersistentFileSysObjStateChangeResult_Name(fsObjEntry->stateChangeResult));
 				}
@@ -1927,40 +1954,40 @@ PersistentRecovery_DropType(
 			if (fsObjEntry->mirrorExistenceState == MirroredObjectExistenceState_OnlyMirrorDropRemains)
 			{
 				/* This file-system object will be dropped during resync */
-				if(Debug_persistent_recovery_print)
+				if (Debug_persistent_recovery_print)
 					elog(PersistentRecovery_DebugPrintLevel(),
-						"Skipping drop for %s as only mirror drop remains", FsObjEntryToString(fsObjEntry));
+						 "Skipping drop for %s as only mirror drop remains", FsObjEntryToString(fsObjEntry));
 				continue;
 			}
 
 			persistentRecoveryCount++;
 
-			elog(LOG, "Recovery Drop [%d]: %s", 
-				persistentRecoveryCount, FsObjEntryToString(fsObjEntry));
+			elog(LOG, "Recovery Drop [%d]: %s",
+				 persistentRecoveryCount, FsObjEntryToString(fsObjEntry));
 
 			if (fsObjType == PersistentFsObjType_RelationFile &&
 				!PersistentFileSysRelStorageMgr_IsValid(fsObjEntry->relStorageMgr))
 				elog(ERROR, "Relation storage manager for persistent '%s' for Crash Recovery is invalid (%d)",
 					 PersistentFileSysObjName_TypeAndObjectName(&fsObjEntry->fsObjName),
 					 fsObjEntry->relStorageMgr);
-			
+
 			PersistentFileSysObj_DropObject(
-							&fsObjEntry->fsObjName,
-							fsObjEntry->relStorageMgr,
-							/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-							&fsObjEntry->key.persistentTid,
-							fsObjEntry->persistentSerialNum,
-							/* ignoreNonExistence */ true,
-							Debug_persistent_recovery_print,
-							PersistentRecovery_DebugPrintLevel());
+											&fsObjEntry->fsObjName,
+											fsObjEntry->relStorageMgr,
+											 /* relationName, as don't know here */ NULL,
+											&fsObjEntry->key.persistentTid,
+											fsObjEntry->persistentSerialNum,
+											 /* ignoreNonExistence */ true,
+											Debug_persistent_recovery_print,
+											PersistentRecovery_DebugPrintLevel());
 		}
 	}
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_DropType %s, count %d",
-		     PersistentFileSysObjName_TypeName(fsObjType),
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_DropType %s, count %d",
+			 PersistentFileSysObjName_TypeName(fsObjType),
+			 persistentRecoveryCount);
 }
 
 /*
@@ -1979,17 +2006,17 @@ PersistentRecovery_Drop(void)
 	PersistentFsObjType fsObjType;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_Scan");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_Scan");
 
-	for (fsObjType = PersistentFsObjType_First; 
+	for (fsObjType = PersistentFsObjType_First;
 		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
-	 	PersistentRecovery_DropType(fsObjType);
+		PersistentRecovery_DropType(fsObjType);
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_Scan");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_Scan");
 }
 
 /*
@@ -2026,45 +2053,45 @@ PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs(void)
 	HASH_SEQ_STATUS iterateStatus;
 	AoMirrorResyncEofsEntry eofsEntry;
 
-	FsObjEntry fsObjEntry;
+	FsObjEntry	fsObjEntry;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs");
 
 	if (recoveryAppendOnlyMirrorResyncEofsTable == NULL)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "Entering PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs -- no entries");
 		return;
 	}
-	
+
 	persistentRecoveryCount = 0;
 
 	hash_seq_init(&iterateStatus, recoveryAppendOnlyMirrorResyncEofsTable);
 
 	while (true)
 	{
-		bool mirrorCatchupRequired;
+		bool		mirrorCatchupRequired;
 
-		eofsEntry = 
+		eofsEntry =
 			(AoMirrorResyncEofsEntry)
-						hash_seq_search(&iterateStatus);
+			hash_seq_search(&iterateStatus);
 		if (eofsEntry == NULL)
 			break;
 
 		persistentRecoveryCount++;
 
 		fsObjEntry =
-				PersistentRecovery_FindFsObjEntry(
-									PersistentFsObjType_RelationFile,
-									&eofsEntry->key.persistentTid);
+			PersistentRecovery_FindFsObjEntry(
+											  PersistentFsObjType_RelationFile,
+											  &eofsEntry->key.persistentTid);
 		if (fsObjEntry == NULL)
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-				     "Update Append-Only EOFs REDO: %s has no persistent entry (i.e. update is obsolete)",
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "Update Append-Only EOFs REDO: %s has no persistent entry (i.e. update is obsolete)",
 					 AoMirrorResyncEofsEntryToString(eofsEntry));
 			continue;
 		}
@@ -2072,8 +2099,8 @@ PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs(void)
 		if (fsObjEntry->state != PersistentFileSysState_Created)
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-				     "Update Append-Only EOFs REDO: %s has persistent entry %s in non-Created state",
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "Update Append-Only EOFs REDO: %s has persistent entry %s in non-Created state",
 					 AoMirrorResyncEofsEntryToString(eofsEntry),
 					 FsObjEntryToString(fsObjEntry));
 			continue;
@@ -2082,8 +2109,8 @@ PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs(void)
 		if (fsObjEntry->persistentSerialNum > eofsEntry->persistentSerialNum)
 		{
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-				     "Update Append-Only EOFs REDO: %s is superceeded by newer persistent entry %s",
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "Update Append-Only EOFs REDO: %s is superceeded by newer persistent entry %s",
 					 AoMirrorResyncEofsEntryToString(eofsEntry),
 					 FsObjEntryToString(fsObjEntry));
 			continue;
@@ -2093,7 +2120,7 @@ PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs(void)
 				 "Update Append-Only EOFs REDO: %s is newer than persistent entry %s",
 				 AoMirrorResyncEofsEntryToString(eofsEntry),
 				 FsObjEntryToString(fsObjEntry));
-		
+
 		if (eofsEntry->mirrorLossEof == INT64CONST(-1))
 		{
 			mirrorCatchupRequired = true;
@@ -2106,71 +2133,71 @@ PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs(void)
 					 eofsEntry->mirrorNewEof);
 			mirrorCatchupRequired = false;
 		}
-		
+
 		PersistentFileSysObj_UpdateAppendOnlyMirrorResyncEofs(
-														&eofsEntry->relFileNode,
-														eofsEntry->segmentFileNum,
-														&eofsEntry->key.persistentTid,
-														eofsEntry->persistentSerialNum,
-														mirrorCatchupRequired,
-														eofsEntry->mirrorNewEof,
-														/* recovery */ true,
-														/* flushToXLog */ false);
-		
+															  &eofsEntry->relFileNode,
+															  eofsEntry->segmentFileNum,
+															  &eofsEntry->key.persistentTid,
+															  eofsEntry->persistentSerialNum,
+															  mirrorCatchupRequired,
+															  eofsEntry->mirrorNewEof,
+															   /* recovery */ true,
+															   /* flushToXLog */ false);
+
 	}
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs count %d",
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_UpdateAppendOnlyMirrorResyncEofs count %d",
+			 persistentRecoveryCount);
 
 }
 
 typedef struct RedoRelationEntryDataKey
 {
 
-	ItemPointerData	persistentTid;
+	ItemPointerData persistentTid;
 
 } RedoRelationEntryDataKey;
 
 typedef struct RedoRelationEntryData
 {
-	RedoRelationEntryDataKey	key;
+	RedoRelationEntryDataKey key;
 
-	RelFileNode		relFileNode;
+	RelFileNode relFileNode;
 
-	int64			persistentSerialNum;
+	int64		persistentSerialNum;
 
-	// UNDONE: mirrorExistence
+	/* UNDONE: mirrorExistence */
 } RedoRelationEntryData;
 typedef RedoRelationEntryData *RedoRelationEntry;
 
 void
 PersistentRecovery_SerializeRedoRelationFile(
-	int redoRelationFile)
+											 int redoRelationFile)
 {
 	HASH_SEQ_STATUS iterateStatus;
-	FsObjEntry fsObjEntry;
+	FsObjEntry	fsObjEntry;
 
 	RedoRelationEntryData redoRelationEntryData;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_SerializeRedoRelationFile");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_SerializeRedoRelationFile");
 
 	hash_seq_init(
-			&iterateStatus, 
-			fsObjHashTable[PersistentFsObjType_RelationFile]);
+				  &iterateStatus,
+				  fsObjHashTable[PersistentFsObjType_RelationFile]);
 
 	persistentRecoveryCount = 0;
 
 	while (true)
 	{
-		int writeLen;
+		int			writeLen;
 
-		fsObjEntry = 
-				(FsObjEntry)
-						hash_seq_search(&iterateStatus);
+		fsObjEntry =
+			(FsObjEntry)
+			hash_seq_search(&iterateStatus);
 		if (fsObjEntry == NULL)
 			break;
 
@@ -2183,9 +2210,10 @@ PersistentRecovery_SerializeRedoRelationFile(
 			   fsObjEntry->state == PersistentFileSysState_CreatePending ||
 			   fsObjEntry->state == PersistentFileSysState_Created);
 
-		MemSet(&redoRelationEntryData.key, 0, sizeof(RedoRelationEntryDataKey));	// Zero out any padding.
+		MemSet(&redoRelationEntryData.key, 0, sizeof(RedoRelationEntryDataKey));
+		/* Zero out any padding. */
 		redoRelationEntryData.key.persistentTid = fsObjEntry->key.persistentTid;
-		
+
 		redoRelationEntryData.relFileNode = PersistentFileSysObjName_GetRelFileNode(&fsObjEntry->fsObjName);
 		redoRelationEntryData.persistentSerialNum = fsObjEntry->persistentSerialNum;
 
@@ -2197,30 +2225,30 @@ PersistentRecovery_SerializeRedoRelationFile(
 					 errmsg("could not write redo relation file : %m")));
 		}
 		persistentRecoveryCount++;
-		
+
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_SerializeRedoRelationFile: %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
-			     redoRelationEntryData.relFileNode.spcNode,
-			     redoRelationEntryData.relFileNode.dbNode,
-			     redoRelationEntryData.relFileNode.relNode,
-			     redoRelationEntryData.persistentSerialNum,
-			     ItemPointerToString(&redoRelationEntryData.key.persistentTid));
+				 redoRelationEntryData.relFileNode.spcNode,
+				 redoRelationEntryData.relFileNode.dbNode,
+				 redoRelationEntryData.relFileNode.relNode,
+				 redoRelationEntryData.persistentSerialNum,
+				 ItemPointerToString(&redoRelationEntryData.key.persistentTid));
 	}
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_SerializeRedoRelationFile count %d",
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_SerializeRedoRelationFile count %d",
+			 persistentRecoveryCount);
 }
 
-static HTAB* redoRelationHashTable = NULL;
+static HTAB *redoRelationHashTable = NULL;
 
 static void
 PersistentRecovery_RedoRelationHashTableInit(void)
 {
-	HASHCTL			info;
-	int				hash_flags;
+	HASHCTL		info;
+	int			hash_flags;
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
@@ -2235,48 +2263,48 @@ PersistentRecovery_RedoRelationHashTableInit(void)
 
 static RedoRelationEntry
 PersistentRecovery_CreateRedoRelationEntry(
-	RedoRelationEntry redoRelationEntry)
+										   RedoRelationEntry redoRelationEntry)
 {
 	RedoRelationEntry entry;
 
-	bool found;
+	bool		found;
 
-	if(RelFileNode_IsEmpty(&redoRelationEntry->relFileNode))
+	if (RelFileNode_IsEmpty(&redoRelationEntry->relFileNode))
 		elog(ERROR, "Invalid RelFileNode (0,0,0)");
 
 	if (redoRelationHashTable == NULL)
 		PersistentRecovery_RedoRelationHashTableInit();
 
-	entry = 
-			(RedoRelationEntry) 
-					hash_search(redoRelationHashTable,
-								(void *) &redoRelationEntry->key,
-								HASH_ENTER,
-								&found);
+	entry =
+		(RedoRelationEntry)
+		hash_search(redoRelationHashTable,
+					(void *) &redoRelationEntry->key,
+					HASH_ENTER,
+					&found);
 
 	if (found)
 	{
 		Assert(entry != NULL);
-		elog(ERROR, 
+		elog(ERROR,
 			 "Duplicate redo relation entry: existing (%u/%u/%u, serial number " INT64_FORMAT ", TID %s), "
 			 "new (%u/%u/%u, serial number " INT64_FORMAT ", TID %s)",
-		     entry->relFileNode.spcNode,
-		     entry->relFileNode.dbNode,
-		     entry->relFileNode.relNode,
+			 entry->relFileNode.spcNode,
+			 entry->relFileNode.dbNode,
+			 entry->relFileNode.relNode,
 			 entry->persistentSerialNum,
-		     ItemPointerToString(&entry->key.persistentTid),
+			 ItemPointerToString(&entry->key.persistentTid),
 			 redoRelationEntry->relFileNode.spcNode,
 			 redoRelationEntry->relFileNode.dbNode,
 			 redoRelationEntry->relFileNode.relNode,
-		     redoRelationEntry->persistentSerialNum,
-		     ItemPointerToString2(&redoRelationEntry->key.persistentTid));
+			 redoRelationEntry->persistentSerialNum,
+			 ItemPointerToString2(&redoRelationEntry->key.persistentTid));
 	}
 
 	entry->relFileNode = redoRelationEntry->relFileNode;
 	entry->persistentSerialNum = redoRelationEntry->persistentSerialNum;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
+		elog(PersistentRecovery_DebugPrintLevel(),
 			 "Created redo relation entry: %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
 			 entry->relFileNode.spcNode,
 			 entry->relFileNode.dbNode,
@@ -2289,13 +2317,13 @@ PersistentRecovery_CreateRedoRelationEntry(
 
 static RedoRelationEntry
 PersistentRecovery_FindRedoRelationEntry(
-	ItemPointer 	persistentTid)
+										 ItemPointer persistentTid)
 {
 	RedoRelationEntryDataKey key;
 
 	RedoRelationEntry foundEntry;
 
-	bool found;
+	bool		found;
 
 	if (redoRelationHashTable == NULL)
 		PersistentRecovery_RedoRelationHashTableInit();
@@ -2304,12 +2332,12 @@ PersistentRecovery_FindRedoRelationEntry(
 	MemSet(&key, 0, sizeof(RedoRelationEntryDataKey));
 	key.persistentTid = *persistentTid;
 
-	foundEntry = 
-			(RedoRelationEntry) 
-					hash_search(redoRelationHashTable,
-								(void *) &key,
-								HASH_FIND,
-								&found);
+	foundEntry =
+		(RedoRelationEntry)
+		hash_search(redoRelationHashTable,
+					(void *) &key,
+					HASH_FIND,
+					&found);
 	if (!found)
 		return NULL;
 
@@ -2319,17 +2347,17 @@ PersistentRecovery_FindRedoRelationEntry(
 
 void
 PersistentRecovery_DeserializeRedoRelationFile(
-	int redoRelationFile)
+											   int redoRelationFile)
 {
 	RedoRelationEntryData redoRelationEntryData;
 
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Entering PersistentRecovery_DeserializeRedoRelationFile");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Entering PersistentRecovery_DeserializeRedoRelationFile");
 
-	while(true)
+	while (true)
 	{
-		int readLen;
+		int			readLen;
 
 		errno = 0;
 		readLen = read(redoRelationFile, &redoRelationEntryData, sizeof(RedoRelationEntryData));
@@ -2338,42 +2366,42 @@ PersistentRecovery_DeserializeRedoRelationFile(
 			break;
 		else if (readLen != sizeof(RedoRelationEntryData) && errno == 0)
 			elog(ERROR, "Bad redo relation entry length (expected %d and found %d)",
-			     (int)sizeof(RedoRelationEntryData), readLen);
+				 (int) sizeof(RedoRelationEntryData), readLen);
 		else if (errno != 0)
 		{
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("error reading redo relation file: %m")));
 		}
-		
-		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-				 "PersistentRecovery_DeserializeRedoRelationFile: %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
-			     redoRelationEntryData.relFileNode.spcNode,
-			     redoRelationEntryData.relFileNode.dbNode,
-			     redoRelationEntryData.relFileNode.relNode,
-			     redoRelationEntryData.persistentSerialNum,
-			     ItemPointerToString(&redoRelationEntryData.key.persistentTid));
 
-		if(RelFileNode_IsEmpty(&redoRelationEntryData.relFileNode))
+		if (Debug_persistent_recovery_print)
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "PersistentRecovery_DeserializeRedoRelationFile: %u/%u/%u, serial number " INT64_FORMAT ", TID %s",
+				 redoRelationEntryData.relFileNode.spcNode,
+				 redoRelationEntryData.relFileNode.dbNode,
+				 redoRelationEntryData.relFileNode.relNode,
+				 redoRelationEntryData.persistentSerialNum,
+				 ItemPointerToString(&redoRelationEntryData.key.persistentTid));
+
+		if (RelFileNode_IsEmpty(&redoRelationEntryData.relFileNode))
 			elog(ERROR, "Invalid RelFileNode (0,0,0)");
 
 		PersistentRecovery_CreateRedoRelationEntry(&redoRelationEntryData);
 	}
-	
+
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-		     "Exiting PersistentRecovery_DeserializeRedoRelationFile count %d",
-		     persistentRecoveryCount);
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "Exiting PersistentRecovery_DeserializeRedoRelationFile count %d",
+			 persistentRecoveryCount);
 }
 
 static bool
 PersistentRecovery_RedoRelationExists(
-	ItemPointer		persistentTid,
-	
-	int64 			persistentSerialNum,
-	
-	RelFileNode 	*relFileNode)	
+									  ItemPointer persistentTid,
+
+									  int64 persistentSerialNum,
+
+									  RelFileNode *relFileNode)
 {
 	RedoRelationEntry redoRelationEntry;
 
@@ -2381,7 +2409,7 @@ PersistentRecovery_RedoRelationExists(
 	if (redoRelationEntry == NULL)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_RedoRelationExists: TID %s is not in the currently 'Created' set (serial number " INT64_FORMAT ", %u/%u/%u)",
 				 ItemPointerToString(persistentTid),
 				 persistentSerialNum,
@@ -2393,7 +2421,7 @@ PersistentRecovery_RedoRelationExists(
 	if (redoRelationEntry->persistentSerialNum != persistentSerialNum)
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
+			elog(PersistentRecovery_DebugPrintLevel(),
 				 "PersistentRecovery_RedoRelationExists: TID %s entry from the 'Created' set has different serial number (serial number " INT64_FORMAT ", %u/%u/%u) indicating XLOG for persistent obsolete file-system object (obsolete serial number " INT64_FORMAT ", %u/%u/%u)",
 				 ItemPointerToString(persistentTid),
 				 redoRelationEntry->persistentSerialNum,
@@ -2401,12 +2429,11 @@ PersistentRecovery_RedoRelationExists(
 				 redoRelationEntry->relFileNode.dbNode,
 				 redoRelationEntry->relFileNode.relNode,
 				 persistentSerialNum,
- 				 relFileNode->spcNode,
- 				 relFileNode->dbNode,
- 				 relFileNode->relNode);
+				 relFileNode->spcNode,
+				 relFileNode->dbNode,
+				 relFileNode->relNode);
 		return false;
 	}
 
 	return true;
 }
-

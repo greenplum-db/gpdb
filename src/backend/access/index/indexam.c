@@ -8,20 +8,20 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.101.2.1 2008/09/11 14:01:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.114 2009/06/11 14:48:54 momjian Exp $
  *
  * INTERFACE ROUTINES
  *		index_open		- open an index relation by relation OID
  *		index_close		- close an index relation
  *		index_beginscan - start a scan of an index with amgettuple
- *		index_beginscan_multi - start a scan of an index with amgetmulti
+ *		index_beginscan_bitmap - start a scan of an index with amgetbitmap
  *		index_rescan	- restart a scan of an index
  *		index_endscan	- end a scan
  *		index_insert	- insert an index tuple into a relation
  *		index_markpos	- mark a scan position
  *		index_restrpos	- restore a scan position
  *		index_getnext	- get the next tuple from a scan
- *		index_getmulti	- get the next bitmap from a scan
+ *		index_getbitmap - get all tuples from a scan
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_getprocid - get a support procedure OID
@@ -62,11 +62,14 @@
 
 #include "postgres.h"
 
-#include "access/genam.h"
-#include "access/heapam.h"
+#include "access/relscan.h"
 #include "access/transam.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
+#include "utils/tqual.h"
 
 
 /* ----------------------------------------------------------------
@@ -218,36 +221,12 @@ index_insert(Relation indexRelation,
  * index_beginscan - start a scan of an index with amgettuple
  *
  * Caller must be holding suitable locks on the heap and the index.
- *
- * Note: heapRelation may be NULL if there is no intention of calling
- * index_getnext on this scan; index_getnext_indexitem will not use the
- * heapRelation link (nor the snapshot).  However, the caller had better
- * be holding some kind of lock on the heap relation in any case, to ensure
- * no one deletes it (or the index) out from under us.	Caller must also
- * be holding a lock on the index.
  */
 IndexScanDesc
 index_beginscan(Relation heapRelation,
 				Relation indexRelation,
 				Snapshot snapshot,
 				int nkeys, ScanKey key)
-{
-	return index_beginscan_generic(heapRelation, indexRelation,
-			snapshot, nkeys, key, false /* isMultiscan */);
-}
-
-/*
- * index_beginscan_generic - start a scan of an index
- * 							with amgetmulti
- *
- * As above, caller had better be holding some lock on the parent heap
- * relation, even though it's not explicitly mentioned here.
- */
-IndexScanDesc
-index_beginscan_generic(Relation heapRelation,
-						Relation indexRelation,
-						Snapshot snapshot,
-						int nkeys, ScanKey key, bool isMultiscan)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 
@@ -258,10 +237,9 @@ index_beginscan_generic(Relation heapRelation,
 	scan = index_beginscan_internal(indexRelation, nkeys, key);
 
 	/*
-	 * Save additional parameters into the scandesc.  Everything else was
-	 * set up by RelationGetIndexScan.
+	 * Save additional parameters into the scandesc.  Everything else was set
+	 * up by RelationGetIndexScan.
 	 */
-	scan->is_multiscan = isMultiscan;
 	scan->heapRelation = heapRelation;
 	scan->xs_snapshot = snapshot;
 
@@ -270,6 +248,29 @@ index_beginscan_generic(Relation heapRelation,
 	return scan;
 }
 
+/*
+ * index_beginscan_bitmap - start a scan of an index with amgetbitmap
+ *
+ * As above, caller had better be holding some lock on the parent heap
+ * relation, even though it's not explicitly mentioned here.
+ */
+IndexScanDesc
+index_beginscan_bitmap(Relation indexRelation,
+					   Snapshot snapshot,
+					   int nkeys, ScanKey key)
+{
+	IndexScanDesc scan;
+
+	scan = index_beginscan_internal(indexRelation, nkeys, key);
+
+	/*
+	 * Save additional parameters into the scandesc.  Everything else was set
+	 * up by RelationGetIndexScan.
+	 */
+	scan->xs_snapshot = snapshot;
+
+	return scan;
+}
 
 /*
  * index_beginscan_internal --- common code for index_beginscan variants
@@ -421,6 +422,10 @@ index_restrpos(IndexScanDesc scan)
  * snapshot, or NULL if no more matching tuples exist.	On success,
  * the buffer containing the heap tuple is pinned (the pin will be dropped
  * at the next index_getnext or index_endscan).
+ *
+ * Note: caller must check scan->xs_recheck, and perform rechecking of the
+ * scan keys if required.  We do not do that here because we don't have
+ * enough information to do it efficiently in the general case.
  * ----------------
  */
 HeapTuple
@@ -434,6 +439,8 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 
 	SCAN_CHECKS;
 	GET_SCAN_PROCEDURE(amgettuple);
+
+	Assert(TransactionIdIsValid(RecentGlobalXmin));
 
 	/*
 	 * We always reset xs_hot_dead; if we are here then either we are just
@@ -478,7 +485,9 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 
 			/*
 			 * The AM's gettuple proc finds the next index entry matching the
-			 * scan keys, and puts the TID in xs_ctup.t_self (ie, *tid).
+			 * scan keys, and puts the TID in xs_ctup.t_self (ie, *tid). It
+			 * should also set scan->xs_recheck, though we pay no attention to
+			 * that here.
 			 */
 			found = DatumGetBool(FunctionCall2(procedure,
 											   PointerGetDatum(scan),
@@ -665,71 +674,31 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 }
 
 /* ----------------
- *		index_getnext_indexitem - get the next index tuple from a scan
- *
- * Finds the next index tuple satisfying the scan keys.  Note that the
- * corresponding heap tuple is not accessed, and thus no time qual (snapshot)
- * check is done, other than the index AM's internal check for killed tuples
- * (which most callers of this routine will probably want to suppress by
- * setting scan->ignore_killed_tuples = false).
- *
- * On success (TRUE return), the heap TID of the found index entry is in
- * scan->xs_ctup.t_self.  scan->xs_cbuf is untouched.
- * ----------------
- */
-bool
-index_getnext_indexitem(IndexScanDesc scan,
-						ScanDirection direction)
-{
-	FmgrInfo   *procedure;
-	bool		found;
-
-	SCAN_CHECKS;
-	GET_SCAN_PROCEDURE(amgettuple);
-
-	/* just make sure this is false... */
-	scan->kill_prior_tuple = false;
-
-	/*
-	 * have the am's gettuple proc do all the work.
-	 */
-	found = DatumGetBool(FunctionCall2(procedure,
-									   PointerGetDatum(scan),
-									   Int32GetDatum(direction)));
-
-	if (found)
-		pgstat_count_index_tuples(scan->indexRelation, 1);
-
-	return found;
-}
-
-/* ----------------
- *		index_getmulti - get the next bitmap from an index scan.
+ *		index_getbitmap - get all tuples at once from an index scan
  *
  *		it invokes am's getmulti function to get a bitmap. If am is an on-disk
  *		bitmap index access method (see bitmap.h), then a StreamBitmap is
- *		returned; a HashBitmap otherwise. Note that an index am's getmulti
+ *		returned; a TIDBitmap otherwise. Note that an index am's getmulti
  *		function can assume that the bitmap that it's given as argument is of
  *		the same type as what the function constructs itself.
  * ----------------
  */
 Node *
-index_getmulti(IndexScanDesc scan, Node *bitmap)
+index_getbitmap(IndexScanDesc scan, Node *bitmap)
 {
 	FmgrInfo   *procedure;
 	Node		*bm;
 
 	SCAN_CHECKS;
-	GET_SCAN_PROCEDURE(amgetmulti);
+	GET_SCAN_PROCEDURE(amgetbitmap);
 
 	/* just make sure this is false... */
 	scan->kill_prior_tuple = false;
 
 	/*
-	 * have the am's getmulti proc do all the work.
-	 * index_beginscan_multi already set up fn_getmulti.
+	 * have the am's getbitmap proc do all the work.
 	 */
-	bm = (Node *)DatumGetPointer(FunctionCall2(procedure,
+	bm = (Node *) DatumGetPointer(FunctionCall2(procedure,
 									  PointerGetDatum(scan),
 									  PointerGetDatum(bitmap)));
 
