@@ -593,13 +593,19 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     These are valid parameters.<ul id="ul_dsz_j4w_gcb">
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
                         The value is an integer that specifies the amount of memory in MB. </li>
-                      <li><codeph>use_network</codeph> - Set the type of networking for
+                      <li><codeph>use_container_network</codeph> - Set the type of networking for
                         communication between the container and Greenplum Database. The value is
                         either <codeph>yes</codeph>, use TCP, or <codeph>no</codeph> use IPC. The
                         default is <codeph>no</codeph>, use IPC.</li>
-                      <li><codeph>logs</codeph> - Enable or disable Docker logging. The value is
-                        either <codeph>enable</codeph> (enable logging) or <codeph>disable</codeph>
-                        (disable logging, the default). </li>
+                      <li><codeph>use_container_logging'</codeph> - Enable or disable Docker
+                        logging. The value is either <codeph>yes</codeph> (enable logging) or
+                          <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
+                          Database server configuration parameter <codeph><xref
+                              href="../config_params/guc-list.xml#log_min_messages"
+                              >log_min_messages</xref></codeph> controls the log level. The default
+                          log level is <codeph>warning</codeph>. For information about PL/Container
+                          log information, see <xref href="#plc_notes" format="dita"
+                          >Notes</xref>.</p></li>
                     </ul></pd>
                 </plentry>
                 <plentry>
@@ -730,7 +736,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               settings for memory and network.
                 <codeblock>plcontainer runtime-add -r runtime2 -i test_image2:0.1 -l r \
   -v /host_dir2/shared2:/container_dir2/shared2:ro \
-  -s memory_mb=512 -s use_network=yes</codeblock><p>The
+  -s memory_mb=512 -s use_container_network=yes</codeblock><p>The
                 utility displays progress information on the command line as it adds the runtime
                 configuration to the configuration file and distributes the updated configuration to
                 all instances.</p></li>
@@ -790,15 +796,15 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         &lt;command>/clientdir/pyclient.sh&lt;/command>
         &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
         &lt;setting memory_mb="512"/>
-        &lt;setting use_network="yes"/>
-        &lt;setting logs="enable"/>
+        &lt;setting use_container_network="yes"/>
+        &lt;setting use_container_logging="yes"/>
     &lt;/runtime>
     &lt;runtime>
         &lt;id>plc_r_example&lt;/id>
         &lt;image>pivotaldata/plcontainer_r_without_clients:0.2&lt;/image>
         &lt;command>/clientdir/rclient.sh&lt;/command>
         &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
-        &lt;setting logs="enable"/>
+        &lt;setting use_container_logging="yes"/>
     &lt;/runtime>
     &lt;runtime>
 &lt;/configuration></codeblock></p>
@@ -818,7 +824,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pt>id</pt>
                   <pd>Required. The value is used to reference a Docker container from a
                     PL/Container user-defined function. The <codeph>id</codeph> value must be unique
-                    in the configuration. </pd>
+                    in the configuration. The <codeph>id</codeph> must start with a character or
+                    digit (a-z, A-Z, or 0-9) and can contain characters, digits, or the characters
+                      <codeph>_</codeph> (underscore), <codeph>.</codeph> (period), or
+                      <codeph>-</codeph> (dash).</pd>
                   <pd>The <codeph>id</codeph> specifies which Docker image to use when PL/Container
                     creates a Docker container to execute a user-defined function. </pd>
                 </plentry>
@@ -893,28 +902,34 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     Each <codeph>setting</codeph> element contains one attribute. The element
                     attribute specifies logging, memory, or networking information. For example,
                     this element enables
-                    logging.<codeblock>&lt;setting logs="enable"/></codeblock></pd>
+                    logging.<codeblock>&lt;setting use_container_logging="yes"/></codeblock></pd>
                   <pd>These are the valid attributes.<parml>
                       <plentry>
-                        <pt>logs="{enable | disable}"</pt>
-                        <pd>Enables or disables Docker logging for the container. The attribute
-                            <codeph>logs="enable"</codeph> enables logging. The attribute
-                            <codeph>logs="disable"</codeph> disables logging (the default). </pd>
-                        <pd>On Red Hat 7 or CentOS 7 systems, the log is sent to the
-                            <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the
-                          log is sent to the <codeph>syslogd</codeph> service. </pd>
-                      </plentry>
-                      <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
-                        <pd>Optional. The value specifies the amount of memory, in MB, that a
-                          container is allowed to use. Each container is started with this amount of
-                          RAM and twice the amount of swap space. The container memory consumption
-                          is limited by the host system <codeph>cgroups</codeph> configuration,
-                          which means in case of memory overcommit, the container is killed by the
+                        <pd>The value specifies the amount of memory, in MB, that a container is
+                          allowed to use. Each container is started with this amount of RAM and
+                          twice the amount of swap space. The container memory consumption is
+                          limited by the host system <codeph>cgroups</codeph> configuration, which
+                          means in case of memory overcommit, the container is killed by the
                           system.</pd>
                       </plentry>
                       <plentry>
-                        <pt>use_network="{yes | no}"</pt>
+                        <pt> use_container_logging="{yes | no}"</pt>
+                        <pd>Enables or disables Docker logging for the container. The attribute
+                          value <codeph>yes</codeph> enables logging. The attribute value
+                            <codeph>no</codeph> disables logging (the default). </pd>
+                        <pd>The Greenplum Database server configuration parameter <codeph><xref
+                              href="../config_params/guc-list.xml#log_min_messages"
+                              >log_min_messages</xref></codeph> controls the PL/Container log level.
+                          The default log level is <codeph>warning</codeph>. For information about
+                          PL/Container log information, see <xref href="#plc_notes" format="dita"
+                            >Notes</xref>.</pd>
+                        <pd>On Red Hat 7 or CentOS 7 systems, the PL/Container log information is
+                          sent to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6
+                          systems, the log is sent to the <codeph>syslogd</codeph> service. </pd>
+                      </plentry>
+                      <plentry>
+                        <pt>use_container_network="{yes | no}"</pt>
                         <pd>The value can be either <codeph>yes</codeph> or <codeph>no</codeph> to
                           specify whether to use TCP (the value <codeph>yes</codeph>) or IPC (the
                           value <codeph>no</codeph>) for communication between the Greenplum
@@ -964,7 +979,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
 &lt;configuration></codeblock>
       </body>
     </topic>
-    <topic id="topic_oyl_zv3_kw">
+    <topic id="plc_notes">
       <title>Notes</title>
       <body>
         <ul id="ul_j4g_vgs_wbb">
@@ -979,6 +994,16 @@ $$ LANGUAGE plcontainer;</codeblock></p>
        AND f.fsname = 'pg_system';</codeblock><p>A
               sample PL/Container configuration file is in
                 <codeph>$GPHOME/share/postgresql/plcontainer</codeph>. </p></li>
+          <li>When Greenplum Database executes a PL/Container UDF, Query Executer (QE) processes
+            start Docker containers and reuse them as needed. After a certain amount of idle time, a
+            QE process quits and destroys its Docker containers. You can control the amount of idle
+            time with the Greenplum Database server configuration parameter <codeph><xref
+                href="../config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
+                >gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle time might help
+            with Docker container reuse and avoid the overhead of creating and starting a Docker
+              container.<note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph>
+              value, might affect performance due to resource issues. The parameter also controls
+              the freeing of Greenplum Database resources other than Docker containers.</note></li>
           <li>In some cases, when PL/Container is running in a high concurrency environment, the
             Docker daemon hangs with log entries that indicate a memory shortage. This can happen
             even when the system seems to have adequate free memory.<p>The issue seems to be
@@ -1003,6 +1028,27 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the
               Docker base device size, the size must be set on all Greenplum Database
             hosts.</p></li>
+          <li>When PL/Container logging is enabled, you can set the log level with the Greenplum
+            Database server configuration parameter <codeph><xref
+                href="../config_params/guc-list.xml#log_min_messages"
+              >log_min_messages</xref></codeph>. The default log level is <codeph>warning</codeph>.
+            The parameter controls the PL/Container log level and also controls the Greenplum
+            Database log level.<ul id="ul_knd_jhl_mcb">
+              <li>The PL/Container log information is the information from the UDF that is run in
+                the Docker container. On Red Hat 7 or CentOS 7 systems, the PL/Container log
+                information is sent to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS
+                6 systems, the log information is sent to the <codeph>syslogd</codeph> service. The
+                PL/Container log information is sent to the log file of the host were the Docker
+                container runs. </li>
+              <li>The Greenplum Database log information is sent to log file on the Greenplum
+                Database master.</li>
+            </ul><p>When testing or troubleshooting a PL/Container you can change the log level with
+              the <codeph>SET</codeph> command change the Greenplum Database log level. This example
+              sets the log level to
+              <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock><note>The
+              parameter <codeph>log_min_messages</codeph> controls both the Greenplum Database and
+              PL/Container logging, increasing the log level might affect Greenplum Database
+              performance even if a PL/Container UDF is not running.</note></li>
         </ul>
       </body>
     </topic>
