@@ -588,18 +588,19 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pt>{<b>-s</b> | <b>--setting</b>}
                       <varname>param</varname>=<varname>value</varname></pt>
                   <pd>Optional. Specify a setting to add to the runtime configuration information.
-                    You can specify this option multiple times. The parameter is the XML attribute
-                    of the <codeph>setting</codeph> element in the PL/Container configuration file.
-                    These are valid parameters.<ul id="ul_dsz_j4w_gcb">
+                    You can specify this option multiple times. The setting applies to the runtime
+                    configuration specified by the <varname>runtime_id</varname>. The parameter is
+                    the XML attribute of the <codeph>setting</codeph> element in the PL/Container
+                    configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
                         The value is an integer that specifies the amount of memory in MB. </li>
                       <li><codeph>use_container_network</codeph> - Set the type of networking for
                         communication between the container and Greenplum Database. The value is
                         either <codeph>yes</codeph>, use TCP, or <codeph>no</codeph> use IPC. The
                         default is <codeph>no</codeph>, use IPC.</li>
-                      <li><codeph>use_container_logging'</codeph> - Enable or disable Docker
-                        logging. The value is either <codeph>yes</codeph> (enable logging) or
-                          <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
+                      <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging
+                        for the container. The value is either <codeph>yes</codeph> (enable logging)
+                        or <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
                           Database server configuration parameter <codeph><xref
                               href="../config_params/guc-list.xml#log_min_messages"
                               >log_min_messages</xref></codeph> controls the log level. The default
@@ -906,17 +907,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>These are the valid attributes.<parml>
                       <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
-                        <pd>The value specifies the amount of memory, in MB, that a container is
-                          allowed to use. Each container is started with this amount of RAM and
-                          twice the amount of swap space. The container memory consumption is
-                          limited by the host system <codeph>cgroups</codeph> configuration, which
-                          means in case of memory overcommit, the container is killed by the
+                        <pd>Optional. The value specifies the amount of memory, in MB, that a
+                          container is allowed to use. Each container is started with this amount of
+                          RAM and twice the amount of swap space. The container memory consumption
+                          is limited by the host system <codeph>cgroups</codeph> configuration,
+                          which means in case of memory overcommit, the container is killed by the
                           system.</pd>
                       </plentry>
                       <plentry>
                         <pt> use_container_logging="{yes | no}"</pt>
-                        <pd>Enables or disables Docker logging for the container. The attribute
-                          value <codeph>yes</codeph> enables logging. The attribute value
+                        <pd>Optional. Enables or disables Docker logging for the container. The
+                          attribute value <codeph>yes</codeph> enables logging. The attribute value
                             <codeph>no</codeph> disables logging (the default). </pd>
                         <pd>The Greenplum Database server configuration parameter <codeph><xref
                               href="../config_params/guc-list.xml#log_min_messages"
@@ -924,17 +925,20 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                           The default log level is <codeph>warning</codeph>. For information about
                           PL/Container log information, see <xref href="#plc_notes" format="dita"
                             >Notes</xref>.</pd>
-                        <pd>On Red Hat 7 or CentOS 7 systems, the PL/Container log information is
-                          sent to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6
-                          systems, the log is sent to the <codeph>syslogd</codeph> service. </pd>
+                        <pd>
+                          <p>By default, the PL/Container log information is sent to a system
+                            service. On Red Hat 7 or CentOS 7 systems, the log information is sent
+                            to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6
+                            systems, the log is sent to the <codeph>syslogd</codeph> service. </p>
+                        </pd>
                       </plentry>
                       <plentry>
                         <pt>use_container_network="{yes | no}"</pt>
-                        <pd>The value can be either <codeph>yes</codeph> or <codeph>no</codeph> to
-                          specify whether to use TCP (the value <codeph>yes</codeph>) or IPC (the
-                          value <codeph>no</codeph>) for communication between the Greenplum
-                          Database process and the Docker container process. The default is
-                            <codeph>no</codeph> use IPC.</pd>
+                        <pd>Optional. The value can be either <codeph>yes</codeph> or
+                            <codeph>no</codeph> to specify whether to use TCP (the value
+                            <codeph>yes</codeph>) or IPC (the value <codeph>no</codeph>) for
+                          communication between the Greenplum Database process and the Docker
+                          container process. The default is <codeph>no</codeph> use IPC.</pd>
                       </plentry>
                     </parml></pd>
                 </plentry>
@@ -1034,18 +1038,21 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               >log_min_messages</xref></codeph>. The default log level is <codeph>warning</codeph>.
             The parameter controls the PL/Container log level and also controls the Greenplum
             Database log level.<ul id="ul_knd_jhl_mcb">
+              <li>PL/Container logging is enabled or disabled for each runtime ID with the
+                  <codeph>setting</codeph> attribute <codeph>use_container_logging</codeph>. The
+                default is no logging. </li>
               <li>The PL/Container log information is the information from the UDF that is run in
-                the Docker container. On Red Hat 7 or CentOS 7 systems, the PL/Container log
-                information is sent to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS
-                6 systems, the log information is sent to the <codeph>syslogd</codeph> service. The
-                PL/Container log information is sent to the log file of the host were the Docker
-                container runs. </li>
+                the Docker container. By default, the PL/Container log information is sent to a
+                system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the
+                  <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the log
+                information is sent to the <codeph>syslogd</codeph> service. The PL/Container log
+                information is sent to the log file of the host were the Docker container runs. </li>
               <li>The Greenplum Database log information is sent to log file on the Greenplum
                 Database master.</li>
-            </ul><p>When testing or troubleshooting a PL/Container you can change the log level with
-              the <codeph>SET</codeph> command change the Greenplum Database log level. This example
-              sets the log level to
-              <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock><note>The
+            </ul><p>When testing or troubleshooting a PL/Container UDF, you can change the Greenplum
+              Database log level with the <codeph>SET</codeph> command. You can set the parameter in
+              the session before you run your PL/Container UDF. This example sets the log level to
+                <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock><note>The
               parameter <codeph>log_min_messages</codeph> controls both the Greenplum Database and
               PL/Container logging, increasing the log level might affect Greenplum Database
               performance even if a PL/Container UDF is not running.</note></li>
