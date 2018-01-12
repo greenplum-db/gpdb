@@ -1209,6 +1209,12 @@ class GpArray:
         return dbs
 
     # --------------------------------------------------------------------
+    def getExpansionSegPairList(self):
+        """Returns a list of all SegmentPair objects that make up the new segments
+        of an expansion"""
+        return self.expansionSegmentPairs
+
+    # --------------------------------------------------------------------
     def getSegmentContainingDb(self, db):
         for segPair in self.segmentPairs:
             for segDb in segPair.get_dbs():

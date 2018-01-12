@@ -774,9 +774,15 @@ class SegmentTemplate:
         self.pool.check_results()
 
         self.logger.info('Configuring new segments (mirror)')
-        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
-                                                                             primaryMirror='mirror')
+        #new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
+        #                                                                     primaryMirror='mirror')
+        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewMirrorSegment(self.gparray.getExpansionSegPairList())
         for host in iter(new_segment_info):
+            # FIXME: we're only validating for the mirror at the moment. We
+            # probably counted on filerep to populate the mirror filerep
+            # internal syncing.
+            # This will probably need to be updated such that the mirror goes up
+            # here as well? instead of just creating the directory.
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,

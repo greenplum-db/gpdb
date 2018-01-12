@@ -17,7 +17,7 @@ from gppylib.gp_dbid import writeGpDbidFile
 from time import sleep
 from gppylib.operations.buildMirrorSegments import gDatabaseDirectories, gDatabaseFiles
 
-description = (""" 
+description = ("""
 
 Configure segment directories for installation into a pre-existing GPDB array.
 
@@ -41,7 +41,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                     verbose, validationOnly, writeGpDbidFileOnly):
+                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -54,6 +54,8 @@ class ConfExpSegCmd(Command):
         self.verbose = verbose
         self.useLighterDirectoryValidation = useLighterDirectoryValidation
         self.isPrimary = isPrimary
+        self.syncWithSegmentHostname = syncWithSegmentHostname
+        self.syncWithSegmentPort = syncWithSegmentPort
 
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
@@ -122,8 +124,36 @@ class ConfExpSegCmd(Command):
                         self.set_results(CommandResult(1, '', e, True, False))
                         raise
 
-                    if self.validationOnly:
-                        self.set_results(CommandResult(0, '', '', True, False))
+                    # FIXME: This part needs to be revisted
+                    #if self.validationOnly:
+                    #    self.set_results(CommandResult(0, '', '', True, False))
+                    #    return
+
+                    if not self.isPrimary:
+                        # Create a mirror based on the primary
+                        # We exclude certain unnecessary directories from being copied as they will greatly
+                        # slow down the speed of gpinitstandby if containing a lot of data
+                        cmd_str = ' '.join(['pg_basebackup',
+                                            '-x', '-R',
+                                            '-c', 'fast',
+                                            '-E', './pg_log',
+                                            '-E', './db_dumps',
+                                            '-E', './gpperfmon/data',
+                                            '-E', './gpperfmon/logs',
+                                            '-D', self.datadir,
+                                            '-h', self.syncWithSegmentHostname,
+                                            '-p', str(self.syncWithSegmentPort)])
+                        cmd = base.Command('pg_basebackup',
+                                        cmd_str,
+                                        ctxt=base.REMOTE, #needs update
+                                        remoteHost=options.standby_host) #needs update
+                        try:
+                            cmd.run(validate=True)
+                        except Exception, e:
+                            self.set_results(CommandResult(1,'',e,True,False))
+                            raise
+
+                        logger.info("ran pg_backbackup: %s" % cmd.cmdStr)
                         return
 
                     logger.info("Create or update data directories for new segment")
@@ -171,7 +201,7 @@ class ConfExpSegCmd(Command):
                         stopCmd.run(validateAfter=True)
                     except:
                         pass
-                    
+
         except Exception, e:
             self.set_results(CommandResult(1, '', e, True, False))
             if self.verbose:
@@ -191,7 +221,7 @@ def getOidDirLists(oidDirs):
         dirList.append(oidDirs[i])
         i = i + 1
     return oidList, dirList
-        
+
 
 def parseargs():
     parser = OptParser(option_class=OptChecker,
@@ -199,9 +229,9 @@ def parseargs():
                 version='%prog version $Revision: $')
     parser.set_usage('%prog is a utility script used by gpexpand, gprecoverseg, and gpaddmirrors and is not intended to be run separately.')
     parser.remove_option('-h')
-    
+
     parser.add_option('-v','--verbose', action='store_true', help='debug output.')
-    parser.add_option('-c', '--confinfo', type='string')                        
+    parser.add_option('-c', '--confinfo', type='string')
     parser.add_option('-t', '--tarfile', type='string')
     parser.add_option('-n', '--newsegments', action='store_true')
     parser.add_option('-B', '--batch-size', type='int', default=DEFAULT_BATCH_SIZE, metavar='<batch_size>')
@@ -209,7 +239,7 @@ def parseargs():
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
-    
+
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
@@ -259,17 +289,22 @@ try:
     (options, args, seg_info) = parseargs()
     if options.verbose:
         gplog.enable_verbose_logging()
-        
+
     logger.info("Starting gpconfigurenewsegment with args: %s" % ' '.join(sys.argv[1:]))
-    
+
     pool = WorkerPool(numWorkers=options.batch_size)
-    
+
     for seg in seg_info:
         dataDir = seg[0]
         port = seg[1]
         isPrimary = seg[2] == "true"
         directoryValidationLevel = seg[3] == "true"
         dbid = int(seg[4])
+
+        # These variables should not be used if it's a primary
+        # they will be junk data passed through the config.
+        primaryHostName = seg[5]
+        primarySegmentPort = int(seg[6])
 
         cmd = ConfExpSegCmd( name = 'Configure segment directory'
                            , cmdstr = ' '.join(sys.argv)
@@ -280,6 +315,8 @@ try:
                            , tarfile = options.tarfile
                            , useLighterDirectoryValidation = directoryValidationLevel
                            , isPrimary = isPrimary
+                           , syncWithSegmentHostname = primaryHostName
+                           , syncWithSegmentPort = primarySegmentPort
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly
                            , writeGpDbidFileOnly = options.writeGpidFileOnly
