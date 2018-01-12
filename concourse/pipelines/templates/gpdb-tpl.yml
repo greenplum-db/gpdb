@@ -501,7 +501,7 @@ resources:
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: pxf_artifacts/gpdb_branch_master/stable/pxf.tar.gz
+    versioned_file: pxf_artifacts/prod/pxf_branch_master/stable/pxf.tar.gz
 
 - name: bin_gpdb_segwalrep_centos6
   type: s3
