@@ -19,6 +19,7 @@
 #include "access/attnum.h"
 #include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/lsyscache.h"
 
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
@@ -182,11 +183,11 @@ namespace gpdb {
 			char elmalign, Datum **elemsp, bool **nullsp, int *nelemsp);
 
 	// attribute stats slot
-	bool FGetAttrStatsSlot(HeapTuple statstuple, Oid atttype, int32 atttypmod, int reqkind,
-			Oid reqop, Datum **values, int *nvalues, float4 **numbers, int *nnumbers);
+	bool FGetAttrStatsSlot(AttStatsSlot *sslot, HeapTuple statstuple, int reqkind,
+			Oid reqop, int flags);
 
 	// free attribute stats slot
-	void FreeAttrStatsSlot(Oid atttype, Datum *values, int nvalues, float4 *numbers, int nnumbers);
+	void FreeAttrStatsSlot(AttStatsSlot *sslot);
 
 	// attribute statistics
 	HeapTuple HtAttrStats(Oid relid, AttrNumber attnum);

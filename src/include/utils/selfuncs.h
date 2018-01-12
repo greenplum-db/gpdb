@@ -73,8 +73,8 @@ typedef struct VariableStatData
 	double		numdistinctFromPrimaryKey; /* this is the numdistinct as estimated from the primary key relation. If this is < 0, then it is ignored. */
 	void		(*freefunc) (HeapTuple tuple);	/* how to free statsTuple */
 	Oid			vartype;		/* exposed type of expression */
-	Oid			atttype;		/* type to pass to get_attstatsslot */
-	int32		atttypmod;		/* typmod to pass to get_attstatsslot */
+	Oid			atttype;		/* actual type (after stripping relabel) */
+	int32		atttypmod;		/* actual typmod (after stripping relabel) */
 	bool		isunique;		/* true if matched to a unique index */
 } VariableStatData;
 

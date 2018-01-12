@@ -2425,33 +2425,32 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 		return CDXLColStats::PdxlcolstatsDummy(pmp, pmdidColStats, pmdnameCol, dWidth);
 	}
 
+	// histogram values extracted from the pg_statistic tuple for a given column
+	AttStatsSlot histSlot;
 
-	Datum	   *pdrgdatumMCVValues = NULL;
-	int			iNumMCVValues = 0;
-	float4	   *pdrgfMCVFrequencies = NULL;
-	int			iNumMCVFrequencies = 0;
-	Datum		*pdrgdatumHistValues = NULL;
-	int			iNumHistValues = 0;
+	// most common values and their frequencies extracted from the pg_statistic
+	// tuple for a given column
+	AttStatsSlot mcvSlot;
 
 	(void)	gpdb::FGetAttrStatsSlot
 			(
+					&mcvSlot,
 					heaptupleStats,
-					oidAttType,
-					-1,
 					STATISTIC_KIND_MCV,
 					InvalidOid,
-					&pdrgdatumMCVValues, &iNumMCVValues,
-					&pdrgfMCVFrequencies, &iNumMCVFrequencies
+					ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS
 			);
 
-	if (iNumMCVValues != iNumMCVFrequencies)
+	if (mcvSlot.nvalues != mcvSlot.nnumbers)
 	{
-		// if the number of MCVs and number of MCFs do not match, we discard the MCVs and MCFs
-		gpdb::FreeAttrStatsSlot(oidAttType, pdrgdatumMCVValues, iNumMCVValues, pdrgfMCVFrequencies, iNumMCVFrequencies);
-		iNumMCVValues = 0;
-		iNumMCVFrequencies = 0;
-		pdrgdatumMCVValues = NULL;
-		pdrgfMCVFrequencies = NULL;
+		// if the number of MCVs(nvalues) and number of MCFs(nnumbers) do not match, we discard the MCVs and MCFs
+		gpdb::FreeAttrStatsSlot(&mcvSlot);
+		mcvSlot.numbers = NULL;
+		mcvSlot.values = NULL;
+		mcvSlot.values_arr = NULL;
+		mcvSlot.numbers_arr = NULL;
+		mcvSlot.nnumbers = 0;
+		mcvSlot.nvalues = 0;
 
 		char msgbuf[NAMEDATALEN * 2 + 100];
 		snprintf(msgbuf, sizeof(msgbuf), "The number of most common values and frequencies do not match on column %ls of table %ls.",
@@ -2474,7 +2473,7 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 	}
 
 	// fix mcv and null frequencies (sometimes they can add up to more than 1.0)
-	NormalizeFrequencies(pdrgfMCVFrequencies, (ULONG) iNumMCVValues, &dNullFrequency);
+	NormalizeFrequencies(mcvSlot.numbers, (ULONG) mcvSlot.nvalues, &dNullFrequency);
 
 	// column width
 	CDouble dWidth = CDouble(fpsStats->stawidth);
@@ -2494,21 +2493,20 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	// total MCV frequency
 	CDouble dMCFSum = 0.0;
-	for (int i = 0; i < iNumMCVValues; i++)
+	for (int i = 0; i < mcvSlot.nvalues; i++)
 	{
-		dMCFSum = dMCFSum + CDouble(pdrgfMCVFrequencies[i]);
+		dMCFSum = dMCFSum + CDouble(mcvSlot.numbers[i]);
 	}
 
 	// get histogram datums from pg_statistic entry
 	(void) gpdb::FGetAttrStatsSlot
 			(
+					&histSlot,
 					heaptupleStats,
-					oidAttType,
-					-1,
 					STATISTIC_KIND_HISTOGRAM,
 					InvalidOid,
-					&pdrgdatumHistValues, &iNumHistValues,
-					NULL, NULL);
+					ATTSTATSSLOT_VALUES
+			);
 
 	CDouble dNDVBuckets(0.0);
 	CDouble dFreqBuckets(0.0);
@@ -2527,11 +2525,11 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 		 oidAttType,
 		 dDistinct,
 		 dNullFrequency,
-		 pdrgdatumMCVValues,
-		 pdrgfMCVFrequencies,
-		 ULONG(iNumMCVValues),
-		 pdrgdatumHistValues,
-		 ULONG(iNumHistValues)
+		 mcvSlot.values,
+		 mcvSlot.numbers,
+		 ULONG(mcvSlot.nvalues),
+		 histSlot.values,
+		 ULONG(histSlot.nvalues)
 		 );
 
 		GPOS_ASSERT(NULL != pdrgpdxlbucketTransformed);
@@ -2561,8 +2559,8 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 	}
 
 	// free up allocated datum and float4 arrays
-	gpdb::FreeAttrStatsSlot(oidAttType, pdrgdatumMCVValues, iNumMCVValues, pdrgfMCVFrequencies, iNumMCVFrequencies);
-	gpdb::FreeAttrStatsSlot(oidAttType, pdrgdatumHistValues, iNumHistValues, NULL, 0);
+	gpdb::FreeAttrStatsSlot(&mcvSlot);
+	gpdb::FreeAttrStatsSlot(&histSlot);
 
 	gpdb::FreeHeapTuple(heaptupleStats);
 
