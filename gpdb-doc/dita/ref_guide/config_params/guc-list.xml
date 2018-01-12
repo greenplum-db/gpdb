@@ -4172,8 +4172,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1"
-                >cdh<p>hadoop</p><p>hdp</p><p>mpr</p></entry>
+              <entry colname="col1">cdh<p>hadoop</p><p>hdp</p><p>mpr</p></entry>
               <entry colname="col2">hadoop</entry>
               <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
@@ -6647,6 +6646,9 @@
     <body>
       <p>Controls which message levels are written to the server log. Each level includes all the
         levels that follow it. The later the level, the fewer messages are sent to the log.</p>
+      <p>If the Greenplum Database PL/Container extension is installed. This parameter also controls
+        the PL/Container log level. For information about the extension, see  <xref
+          href="../extensions/pl_container.xml"/>.</p>
       <table id="log_min_messages_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
