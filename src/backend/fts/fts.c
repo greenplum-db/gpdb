@@ -902,28 +902,6 @@ CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 	return NULL;
 }
 
-
-/*
- * Notify postmaster to shut down due to inconsistent segment state
- */
-void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror)
-{
-	FtsRequestMasterShutdown();
-
-	elog(FATAL, "FTS: detected invalid state for content=%d: "
-			    "primary (dbid=%d, mode='%c', status='%c'), "
-			    "mirror (dbid=%d, mode='%c', status='%c'), "
-			    "shutting down master.",
-			    primary->segindex,
-			    primary->dbid,
-			    primary->mode,
-			    primary->status,
-			    mirror->dbid,
-			    mirror->mode,
-			    mirror->status
-			    );
-}
-
 /*
  * Request the fault-prober to suspend probes -- no fault actions will
  * be taken based on in-flight probes until the prober is unpaused.

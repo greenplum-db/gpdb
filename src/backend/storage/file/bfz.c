@@ -9,7 +9,6 @@
 #include "cdb/cdbvars.h"
 #include "utils/workfile_mgr.h"
 #include "storage/fd.h"
-#include "postmaster/primary_mirror_mode.h"
 
 typedef pg_crc32 BFZ_CHECKSUM_TYPE;
 

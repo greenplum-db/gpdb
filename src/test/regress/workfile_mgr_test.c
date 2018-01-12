@@ -23,7 +23,6 @@
 #include "executor/execWorkfile.h"
 #include "miscadmin.h"
 #include "port/atomics.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "storage/bfz.h"
 #include "storage/buffile.h"
 #include "utils/builtins.h"

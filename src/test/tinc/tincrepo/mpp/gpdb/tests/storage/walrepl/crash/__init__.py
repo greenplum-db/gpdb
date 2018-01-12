@@ -166,7 +166,7 @@ class WalReplKillProcessTestCase(TINCTestCase):
        activate_stdby = GpactivateStandby()
        stdby_mdd = activate_stdby.get_standby_dd()
        stdby_port = activate_stdby.get_standby_port()
-       cmd="pg_ctl -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 0 -E' start &"%(stdby_mdd, stdby_port, stdby_dbid)
+       cmd="pg_ctl -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E' start &"%(stdby_mdd, stdby_port, stdby_dbid)
        self.run_remote(stdby_host,cmd,stdby_port,stdby_mdd)
        
 

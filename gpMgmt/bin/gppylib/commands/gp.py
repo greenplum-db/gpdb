@@ -148,11 +148,11 @@ class PgCtlBackendOptions(CmdArgs):
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -E'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M mirror --gp_contentid=1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment(1))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
@@ -188,16 +188,15 @@ class PgCtlBackendOptions(CmdArgs):
         """
         @param seqserver: start with seqserver?
         """
-        self.extend(["-i", "-M", "master", "--gp_contentid=-1"])
+        self.extend(["-i", "--gp_contentid=-1"])
         if seqserver: self.append("-E")
         return self
 
-    def set_segment(self, mode, content):
+    def set_segment(self, content):
         """
-        @param mode: mirroring mode
         @param content: content id
         """
-        self.extend(["-i", "-M", "mirrorless", "--gp_contentid="+str(content)])
+        self.extend(["-i", "--gp_contentid="+str(content)])
         return self
 
     #
@@ -368,7 +367,7 @@ class SegmentStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
-        b.set_segment(mirrormode, content)
+        b.set_segment(content)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
 
@@ -391,158 +390,6 @@ class SegmentStart(Command):
     def remote(name, remoteHost, gpdb, numContentsInCluster, era, mirrormode, utilityMode=False):
         cmd=SegmentStart(name, gpdb, numContentsInCluster, era, mirrormode, utilityMode, ctxt=REMOTE, remoteHost=remoteHost)
         cmd.run(validateAfter=True)
-
-
-#-----------------------------------------------
-class SendFilerepTransitionMessage(Command):
-
-    # see gpmirrortransition.c and primary_mirror_transition_client.h
-    TRANSITION_ERRCODE_SUCCESS                             = 0
-    TRANSITION_ERRCODE_ERROR_UNSPECIFIED                   = 1
-    TRANSITION_ERRCODE_ERROR_SERVER_DID_NOT_RETURN_DATA    = 10
-    TRANSITION_ERRCODE_ERROR_PROTOCOL_VIOLATED             = 11
-    TRANSITION_ERRCODE_ERROR_HOST_LOOKUP_FAILED            = 12
-    TRANSITION_ERRCODE_ERROR_INVALID_ARGUMENT              = 13
-    TRANSITION_ERRCODE_ERROR_READING_INPUT                 = 14
-    TRANSITION_ERRCODE_ERROR_SOCKET                        = 15
-
-    #
-    # note: this should be cleaned up -- there are two hosts involved,
-    #   the host on which to run gp_primarymirror, AND the host to pass to gp_primarymirror -h
-    #
-    # Right now, it uses the same for both which is pretty wrong for anything but a local context.
-    #
-    def __init__(self, name, inputFile, port=None,ctxt=LOCAL, remoteHost=None, dataDir=None):
-        if not remoteHost:
-            remoteHost = "localhost"
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s -i %s' % (remoteHost,port,inputFile)
-        self.dataDir = dataDir
-        Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
-
-    @staticmethod
-    def local(name,inputFile,port=None,remoteHost=None):
-        cmd=SendFilerepTransitionMessage(name, inputFile, port, LOCAL, remoteHost)
-        cmd.run(validateAfter=True)
-        return cmd
-
-    @staticmethod
-    def buildTransitionMessageCommand(transitionData, dir, port):
-        dbData = transitionData["dbsByPort"][int(port)]
-        targetMode = dbData["targetMode"]
-
-        argsArr = []
-        argsArr.append(targetMode)
-        if targetMode == 'mirror' or targetMode == 'primary':
-            mode = dbData["mode"]
-            if mode == 'r' and dbData["fullResyncFlag"]:
-                # full resync requested, convert 'r' to 'f'
-                argsArr.append( 'f' )
-            else:
-                # otherwise, pass the mode through
-                argsArr.append( dbData["mode"])
-            argsArr.append( dbData["hostName"])
-            argsArr.append( "%d" % dbData["hostPort"])
-            argsArr.append( dbData["peerName"])
-            argsArr.append( "%d" % dbData["peerPort"])
-            argsArr.append( "%d" % dbData["peerPMPort"])
-
-        #
-        # write arguments to input file.  We will leave this file around.  It can be useful for debugging
-        #
-        inputFile = os.path.join( dir, "gp_pmtransition_args" )
-        writeLinesToFile(inputFile, argsArr)
-
-        return SendFilerepTransitionMessage("Changing seg at dir %s" % dir, inputFile, port=port, dataDir=dir)
-
-class SendFilerepTransitionStatusMessage(Command):
-    def __init__(self, name, msg, dataDir=None, port=None,ctxt=LOCAL, remoteHost=None):
-        if not remoteHost:
-            remoteHost = "localhost"
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s' % (remoteHost,port)
-        self.dataDir = dataDir
-
-        logger.debug("Sending msg %s and cmdStr %s" % (msg, self.cmdStr))
-
-        Command.__init__(self, name, self.cmdStr, ctxt, remoteHost, stdin=msg)
-
-    def unpackSuccessLine(self):
-        """
-        After run() has been called on this cmd, call this to find the "Success" data in the output
-
-        That line is returned if successful, otherwise None is returned
-        """
-        res = self.get_results()
-        if res.rc != 0:
-            logger.warn("Error getting data stdout:\"%s\"  stderr:\"%s\"" % \
-                        (res.stdout.replace("\n", " "), res.stderr.replace("\n", " ")))
-            return None
-        else:
-            logger.info("Result: stdout:\"%s\"  stderr:\"%s\"" % \
-                        (res.stdout.replace("\n", " "), res.stderr.replace("\n", " ")))
-
-            line = res.stderr
-            if line.startswith("Success:"):
-                line = line[len("Success:"):]
-            return line
-
-#-----------------------------------------------
-class SendFilerepVerifyMessage(Command):
-
-    DEFAULT_IGNORE_FILES = [
-        'pg_internal.init', 'pgstat.stat', 'pga_hba.conf',
-        'pg_ident.conf', 'pg_fsm.cache', 'gp_dbid', 'gp_pmtransitions_args',
-        'gp_dump', 'postgresql.conf', 'postmaster.log', 'postmaster.opts',
-        'postmaser.pids', 'postgresql.conf.bak', 'core',  'wet_execute.tbl',
-        'recovery.done']
-
-    DEFAULT_IGNORE_DIRS = [
-        'pgsql_tmp', 'pg_xlog', 'pg_log', 'pg_stat_tmp', 'pg_changetracking', 'pg_verify', 'db_dumps', 'pg_utilitymodedtmredo', 'gpperfmon'
-    ]
-
-    def __init__(self, name, host, port, token, full=None, verify_file=None, verify_dir=None,
-                 abort=None, suspend=None, resume=None, ignore_dir=None, ignore_file=None,
-                 results=None, results_level=None, ctxt=LOCAL, remoteHost=None):
-        """
-        Sends gp_verify message to backend to either start or get results of a
-        mirror verification.
-        """
-
-        self.host = host
-        self.port = port
-
-        msg_contents = ['gp_verify']
-
-        ## The ordering of the following appends is critical.  Do not rearrange without
-        ## an associated change in gp_primarymirror
-
-        # full
-        msg_contents.append('true') if full else msg_contents.append('')
-        # verify_file
-        msg_contents.append(verify_file) if verify_file else msg_contents.append('')
-        # verify_dir
-        msg_contents.append(verify_dir) if verify_dir else msg_contents.append('')
-        # token
-        msg_contents.append(token)
-        # abort
-        msg_contents.append('true') if abort else msg_contents.append('')
-        # suspend
-        msg_contents.append('true') if suspend else msg_contents.append('')
-        # resume
-        msg_contents.append('true') if resume else msg_contents.append('')
-        # ignore_directory
-        ignore_dir_list = SendFilerepVerifyMessage.DEFAULT_IGNORE_DIRS + (ignore_dir.split(',') if ignore_dir else [])
-        msg_contents.append(','.join(ignore_dir_list))
-        # ignore_file
-        ignore_file_list = SendFilerepVerifyMessage.DEFAULT_IGNORE_FILES + (ignore_file.split(',') if ignore_file else [])
-        msg_contents.append(','.join(ignore_file_list))
-        # resultslevel
-        msg_contents.append(str(results_level)) if results_level else msg_contents.append('')
-
-        logger.debug("gp_verify message sent to %s:%s:\n%s" % (host, port, "\n".join(msg_contents)))
-
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s' % (host, port)
-        Command.__init__(self, name, self.cmdStr, ctxt, remoteHost, stdin="\n".join(msg_contents))
-
 
 #-----------------------------------------------
 class SegmentStop(Command):

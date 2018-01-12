@@ -175,7 +175,7 @@ ProcGlobalSemas(void)
  * pointers must be propagated specially for EXEC_BACKEND operation.
  */
 void
-InitProcGlobal(int mppLocalProcessCounter)
+InitProcGlobal(void)
 {
 	PGPROC	   *procs;
 	int			i;
@@ -203,7 +203,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 
 	ProcGlobal->spins_per_delay = DEFAULT_SPINS_PER_DELAY;
 
-	ProcGlobal->mppLocalProcessCounter = mppLocalProcessCounter;
+	ProcGlobal->mppLocalProcessCounter = 0;
 
 	/*
 	 * Pre-create the PGPROC structures and create a semaphore for each.
@@ -2071,18 +2071,6 @@ ResLockWaitCancel(void)
 	PGSemaphoreReset(&MyProc->sem);
 
 	return;
-}
-
-bool ProcGetMppLocalProcessCounter(int *mppLocalProcessCounter)
-{
-	Assert(mppLocalProcessCounter != NULL);
-
-	if (ProcGlobal == NULL)
-		return false;
-
-	*mppLocalProcessCounter = ProcGlobal->mppLocalProcessCounter;
-
-	return true;
 }
 
 bool ProcCanSetMppSessionId(void)

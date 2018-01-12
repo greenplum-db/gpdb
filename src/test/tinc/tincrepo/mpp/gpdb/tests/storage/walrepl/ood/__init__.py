@@ -55,7 +55,7 @@ class OODClass(MPPTestCase):
     def restart_standby(self):
         sdby_host =  self.config.get_master_standbyhost()
         stdby_dbid = self.get_standby_dbid()
-        cmd="pg_ctl -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 0 -E' start &"%(self.sdby_mdd, self.pgport, stdby_dbid)
+        cmd="pg_ctl -D %s -o '-p %s --gp_dbid=%s --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E' start &"%(self.sdby_mdd, self.pgport, stdby_dbid)
         self.assertTrue(self.gp.run_remote(sdby_host,cmd, self.pgport, self.sdby_mdd))
         self.assertTrue(self.verify.check_standby_processes())
 
