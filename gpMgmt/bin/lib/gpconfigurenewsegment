@@ -143,12 +143,9 @@ class ConfExpSegCmd(Command):
                                             '-D', self.datadir,
                                             '-h', self.syncWithSegmentHostname,
                                             '-p', str(self.syncWithSegmentPort)])
-                        cmd = base.Command('pg_basebackup',
-                                        cmd_str,
-                                        ctxt=base.REMOTE, #needs update
-                                        remoteHost=options.standby_host) #needs update
+                        cmd = Command('pg_basebackup', cmd_str)
                         try:
-                            cmd.run(validate=True)
+                            cmd.run(validateAfter=True)
                         except Exception, e:
                             self.set_results(CommandResult(1,'',e,True,False))
                             raise
