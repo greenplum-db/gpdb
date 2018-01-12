@@ -645,23 +645,16 @@ SyncRepWakeQueue(bool all, int mode)
  * if synchronous_standby_names is unset.  It's safe to check the current value
  * without the lock, because it's only ever updated by one process.  But we
  * must take the lock to change it.
- *
- * In Postgres, the SyncRepLock is taken inside this function since only the
- * Checkpointer process calls this function.
- *
- * In GPDB, the SyncRepLock is taken outside this function because FTS probe
- * handler will also call this function to bypass sending a SIGHUP to
- * Checkpointer process for configuration reload.
  */
 void
 SyncRepUpdateSyncStandbysDefined(void)
 {
 	bool		sync_standbys_defined = SyncStandbysDefined();
 
-	Assert(LWLockHeldByMe(SyncRepLock));
-
 	if (sync_standbys_defined != WalSndCtl->sync_standbys_defined)
 	{
+		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
+
 		/*
 		 * If synchronous_standby_names has been reset to empty, it's futile
 		 * for backends to continue to waiting.  Since the user no longer
@@ -683,6 +676,8 @@ SyncRepUpdateSyncStandbysDefined(void)
 		 * the queue (and never wake up).  This prevents that.
 		 */
 		WalSndCtl->sync_standbys_defined = sync_standbys_defined;
+
+		LWLockRelease(SyncRepLock);
 	}
 }
 

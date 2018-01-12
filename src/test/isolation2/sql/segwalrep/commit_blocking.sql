@@ -26,6 +26,13 @@ $$ language plpythonu;
 create table segwalrep_commit_blocking (a int) distributed by (a);
 insert into segwalrep_commit_blocking values (1);
 
+-- WALREP_FIXME: we don't wait for the GUC to propagate to the ftsprobe process; it's
+-- possible that one final probe could get through after we shut down the mirror
+-- in the next line and throw off the test (since if the mirror is marked down,
+-- the primary won't block). As a temporary nasty hack, try to reduce possible
+-- flake by issuing a probe manually, which will delay the next one by a minute.
+select gp_request_fts_probe_scan();
+
 -- turn off fts
 ! gpconfig -c gp_fts_probe_pause -v true --masteronly --skipvalidation;
 1U: select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=-1 and c.dbid = f.fsedbid), 'reload', NULL, NULL);

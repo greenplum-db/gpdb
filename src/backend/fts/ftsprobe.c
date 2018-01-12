@@ -215,10 +215,6 @@ ftsReceive(FtsConnectionInfo *ftsInfo)
 	 */
 	if (strcmp(ftsInfo->message, FTS_MSG_PROBE) == 0)
 		probeRecordResponse(ftsInfo, lastResult);
-	/* Primary must have syncrep disabled in response to SYNCREP_OFF message. */
-	AssertImply(strcmp(ftsInfo->message, FTS_MSG_SYNCREP_OFF) == 0,
-				PQgetvalue(lastResult, 0, Anum_fts_message_response_is_syncrep_enabled) != NULL &&
-				*(PQgetvalue(lastResult, 0, Anum_fts_message_response_is_syncrep_enabled)) == false);
 
 	return true;
 }
