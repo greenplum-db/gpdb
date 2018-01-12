@@ -577,16 +577,12 @@ gpdb::PlExtractNodesExpression
 void
 gpdb::FreeAttrStatsSlot
 	(
-	Oid atttype,
-	Datum *pValues,
-	int iValues,
-	float4 *pNumbers,
-	int iNumbers
+	AttStatsSlot *sslot
 	)
 {
 	GP_WRAP_START;
 	{
-		free_attstatsslot(atttype, pValues, iValues, pNumbers, iNumbers);
+		free_attstatsslot(sslot);
 		return;
 	}
 	GP_WRAP_END;
@@ -774,20 +770,16 @@ gpdb::OidArrayType
 bool
 gpdb::FGetAttrStatsSlot
 	(
+	AttStatsSlot *sslot,
 	HeapTuple statstuple,
-	Oid atttype,
-	int32 atttypmod,
 	int iReqKind,
 	Oid reqop,
-	Datum **ppValues,
-	int *iValues,
-	float4 **ppfNumbers,
-	int *piNumbers
+	int flags
 	)
 {
 	GP_WRAP_START;
 	{
-		return get_attstatsslot(statstuple, atttype, atttypmod, iReqKind, reqop, ppValues, iValues, ppfNumbers, piNumbers);
+		return get_attstatsslot(sslot, statstuple, iReqKind, reqop, flags);
 	}
 	GP_WRAP_END;
 	return false;
