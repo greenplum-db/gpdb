@@ -224,8 +224,9 @@ $ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -crea
     <title>Filtering the Contents of a Backup or Restore</title>
     <body>
       <p><codeph>gpbackup</codeph> backs up all schemas and tables in the specified database, unless
-        you exclude or include individual schema or table objects. You can filter the database
-        schemas that are backed up by using either the <codeph>-include-schema</codeph> or
+        you exclude or include individual schema or table objects with schema level or table level
+        filter options.</p>
+      <p> The schema level options are <codeph>-include-schema</codeph> or
           <codeph>-exclude-schema</codeph> command-line options to <codeph>gpbackup</codeph>. For
         example, if the "demo" database includes only two schemas, "wikipedia" and "twitter," both
         of the following commands back up only the "wikipedia"
@@ -235,11 +236,12 @@ $ <b>gpbackup -dbname demo -exclude-schema twitter</b></codeblock></p>
           <codeph>gpbackup</codeph>
         <i>or</i> multiple <codeph>-exclude-schema</codeph> options. For
         example:<codeblock>$ <b>gpbackup -dbname demo -include-schema wikipedia -include-schema twitter</b></codeblock></p>
-      <p>To filter the individual tables that are included in a backup set, create a list of
-        qualified table names in a text file to use for including or excluding the tables from a
-        backup. Each line in the text file must define a single table using the format
-          <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
-        lines. For example:<codeblock>wikipedia.articles
+      <p>To filter the individual tables that are included in a backup set, or excluded from a
+        backup set, specify individual tables, or create a list of qualified table names in a text
+        file. When listing tables in a file, each line in the text file must define a single table
+        using the format <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not
+        include trailing lines. For
+        example:<codeblock>wikipedia.articles
 twitter.message</codeblock></p>
       <p>If a table or schema name uses any character other than a lowercase letter, number, or an
         underscore character, then you must include that name in double quotes. For
@@ -251,6 +253,12 @@ water.tonic</codeblock></p>
           <codeph>gpbackup</codeph> options <codeph>-include-table-file</codeph> and
           <codeph>-exclude-table-file</codeph>. For
         example:<codeblock>$ <b>gpbackup -dbname demo -include-table-file /home/gpadmin/table-list.txt</b></codeblock></p>
+      <p>You can combine table and schema level filter options for a backup. This example uses
+          <codeph>-include-schema</codeph> with <codeph>-exclude-table</codeph> to back up a schema
+        except for a single table. </p>
+      <codeblock>$ <b>gpbackup -dbname demo -include-schema mydata -exclude-table mydata.addresses</b></codeblock>
+      <p>However, you cannot use the schema level option <codeph>-exclude-schema</codeph> with a
+        table filtering option such as <codeph>-include-table</codeph>.</p>
       <section id="section_ddf_gyn_5bb">
         <title>Filtering by Leaf Partition</title>
         <p>By default, <codeph>gpbackup</codeph> creates one file for each table on a segment. You
