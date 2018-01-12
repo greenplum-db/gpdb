@@ -1722,13 +1722,13 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 
 		if (GpPolicyFetch(CurrentMemoryContext, singleOid)->ptype == POLICYTYPE_ENTRY)
 		{
-			appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
-					"from pg_class c where c.oid=%d", singleOid);
+			appendStringInfo(&sqlstmt, "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] "
+					"from pg_catalog.pg_class c where c.oid=%d", singleOid);
 		}
 		else
 		{
-			appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
-					"from gp_dist_random('pg_class') c where c.oid=%d", singleOid);
+			appendStringInfo(&sqlstmt, "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] "
+					"from pg_catalog.gp_dist_random('pg_class') c where c.oid=%d", singleOid);
 		}
 
 		if (SPI_OK_CONNECT != SPI_connect())
@@ -1786,13 +1786,13 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 
 	if (GpPolicyFetch(CurrentMemoryContext, RelationGetRelid(onerel))->ptype == POLICYTYPE_ENTRY)
 	{
-		appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
-						 "from pg_class c where c.oid=%d", RelationGetRelid(indrel));
+		appendStringInfo(&sqlstmt, "select pg_catalog.sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::catalog.float4[] "
+						 "from catalog.pg_class c where c.oid=%d", RelationGetRelid(indrel));
 	}
 	else
 	{
-		appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
-						 "from gp_dist_random('pg_class') c where c.oid=%d", RelationGetRelid(indrel));
+		appendStringInfo(&sqlstmt, "select catalog.sum(catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::catalog.float4[] "
+						 "from catalog.gp_dist_random('pg_class') c where c.oid=%d", RelationGetRelid(indrel));
 	}
 
 	if (SPI_OK_CONNECT != SPI_connect())
