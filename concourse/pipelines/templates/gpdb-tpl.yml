@@ -445,7 +445,7 @@ resources:
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: pxf_artifacts/prod/pxf_branch_master/stable/pxf.tar.gz
+    versioned_file: pxf_artifacts/prod/gpdb_branch_master/stable/pxf.tar.gz
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
