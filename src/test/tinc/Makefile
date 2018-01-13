@@ -24,7 +24,13 @@ tincmmgrregress:
 	@echo regression test tincmmgr
 	make -C tincmmgr regress
 
-TESTER=tinc.py
+TESTER= \
+	export PGDATABASE=gptest && \
+	export TINCHOME=$(PWD) && \
+	export TINCREPOHOME=$(TINCHOME)/tincrepo && \
+	export PYTHONPATH=$(TINCHOME):$(TINCHOME)/ext:$(PYTHONPATH):$(TINCREPOHOME) && \
+	export PATH=$(TINCHOME):$(TINCHOME)/ext:$(TINCHOME)/ext/unittest2:$(TINCHOME)/sbin/:$(PATH) && \
+	tinc.py
 
 DISCOVER=discover
 
