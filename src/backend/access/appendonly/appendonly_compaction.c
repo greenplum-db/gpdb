@@ -50,20 +50,38 @@
 /*
  * Drops a segment file.
  *
+ * Actually, we just truncate the segfile to 0 bytes, to reclaim the space.
+ * Before GPDB 6, we used to remove the file, but with WAL replication, we
+ * no longer have a convenient function to remove a single segment of a
+ * relation. An empty file is as almost as good as a non-existent file. If
+ * the relation is dropped later, the code in mdunlink() will remove all
+ * segments, including any empty ones we've left behind.
  */
 static void
-AppendOnlyCompaction_DropSegmentFile(Relation aorel,
-									 int segno)
+AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 {
+	char		filenamepath[MAXPGPATH];
+	int32		fileSegNo;
+	File		fd;
+
+	Assert(RelationIsAoRows(aorel));
+
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Drop segment file: segno %d", segno);
 
-	// WALREP_FIXME: smgrunlink() or something here.
-#if 0
-	MirroredFileSysObj_ScheduleDropAppendOnlyFile(&aorel->rd_node,
-												  segno,
-												  RelationGetRelationName(aorel));
-#endif
+	/* Open and truncate the relation segfile beyond its eof */
+	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
+
+	fd = OpenAOSegmentFile(aorel, filenamepath, fileSegNo, 0);
+	if (fd >= 0)
+	{
+		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0);
+		CloseAOSegmentFile(fd);
+	}
+	else
+	{
+		elog(LOG, "could not truncate segfile %s, because it does not exist", filenamepath);
+	}
 }
 
 /*
