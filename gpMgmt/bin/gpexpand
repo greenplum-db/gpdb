@@ -756,6 +756,44 @@ class SegmentTemplate:
         self.pool.join()
         self.pool.check_results()
 
+    def _start_new_primary_segments(self):
+        newSegments = self.gparray.getExpansionSegDbList()
+        for seg in newSegments:
+            if seg.isSegmentMirror() == True:
+                continue
+            """ Start all the new segments in utilty mode. """
+            segStartCmd = SegmentStart(
+                name="Starting new segment dbid %s on host %s." % (str(seg.getSegmentDbId()), seg.getSegmentHostName())
+                , gpdb=seg
+                , numContentsInCluster=0  # Starting seg on it's own.
+                , era=None
+                , mirrormode=MIRROR_MODE_MIRRORLESS
+                , utilityMode=True
+                , ctxt=REMOTE
+                , remoteHost=seg.getSegmentHostName()
+                , noWait=False
+                , timeout=SEGMENT_TIMEOUT_DEFAULT)
+            self.pool.addCommand(segStartCmd)
+        self.pool.join()
+        self.pool.check_results()
+
+    def _stop_new_primary_segments(self):
+        newSegments = self.gparray.getExpansionSegDbList()
+        for seg in newSegments:
+            if seg.isSegmentMirror() == True:
+                continue
+            segStopCmd = SegmentStop(
+                name="Stopping new segment dbid %s on host %s." % (str(seg.getSegmentDbId), seg.getSegmentHostName())
+                , dataDir=seg.getSegmentDataDirectory()
+                , mode='smart'
+                , nowait=False
+                , ctxt=REMOTE
+                , remoteHost=seg.getSegmentHostName()
+            )
+            self.pool.addCommand(segStopCmd)
+        self.pool.join()
+        self.pool.check_results()
+
     def _configure_new_segments(self):
         """Configures new segments.  This includes modifying the postgresql.conf file
         and setting up the gp_id table"""
@@ -773,15 +811,12 @@ class SegmentTemplate:
         self.pool.join()
         self.pool.check_results()
 
+        self._start_new_primary_segments()
+
         self.logger.info('Configuring new segments (mirror)')
-        #new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
-        #                                                                     primaryMirror='mirror')
         new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewMirrorSegment(self.gparray.getExpansionSegPairList())
         for host in iter(new_segment_info):
-            # FIXME: we're only validating for the mirror at the moment. We
-            # probably counted on filerep to populate the mirror filerep
-            # internal syncing.
-            # This will probably need to be updated such that the mirror goes up
+            # FIXME: This will probably need to be updated such that the mirror goes up
             # here as well? instead of just creating the directory.
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
@@ -791,6 +826,8 @@ class SegmentTemplate:
 
         self.pool.join()
         self.pool.check_results()
+
+        self._stop_new_primary_segments()
 
     def _fixup_template(self):
         """Copies postgresql.conf and pg_hba.conf files from a valid segment on the system.
@@ -1588,6 +1625,11 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
                 self.pool.check_results()
                 self.pool.getCompletedItems()
+
+        # FIXME: This is the ideal spot as to when we add the mirrors.
+        # It's fine if we added them into gp_segment_configuration and be marked
+        # down. The new primaries needs to be running when calling
+        # pg_basebackup
 
         """
         Stop all the new segments.

@@ -203,13 +203,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         # gp_add_segment_primary() will update the mode and status.
 
         # get the newly added segment's content id
-        # MPP-12393 et al WARNING: there is an unusual side effect going on here.
-        # Although gp_add_segment_primary() executed by __callSegmentAdd() above returns
-        # the dbId of the new row in gp_segment_configuration, the following
-        # select from gp_segment_configuration can return 0 rows if the updates
-        # done by __updateSegmentModeStatus()
-        # are not done first.  Don't change the order of these operations unless you
-        # understand why gp_add_segment_primary() behaves as it does.
         sql = "select content from pg_catalog.gp_segment_configuration where dbId = %s" % self.__toSqlIntValue(seg.getSegmentDbId())
         logger.debug(sql)
         sqlResult = self.__fetchSingleOutputRow(conn, sql)

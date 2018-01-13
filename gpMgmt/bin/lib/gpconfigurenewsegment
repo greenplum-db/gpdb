@@ -146,6 +146,7 @@ class ConfExpSegCmd(Command):
                         cmd = Command('pg_basebackup', cmd_str)
                         try:
                             cmd.run(validateAfter=True)
+                            self.set_results(CommandResult(0, '', '', True, False))
                         except Exception, e:
                             self.set_results(CommandResult(1,'',e,True,False))
                             raise
