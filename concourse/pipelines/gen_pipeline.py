@@ -132,9 +132,11 @@ if __name__ == "__main__":
         print "Validate Pipeline Release Jobs"
         print "----------------------------------------------------------------------"
         try:
+            env = os.environ.copy()
+            env['PIPELINE_FILE'] = ARGS.output_filename
             subprocess.check_call(["python",
                                    "../scripts/validate_pipeline_release_jobs.py"],
-                                  env={"PIPELINE_FILE":ARGS.output_filename})
+                                  env=env)
         except subprocess.CalledProcessError:
             exit(1)
 
