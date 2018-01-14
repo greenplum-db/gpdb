@@ -183,7 +183,7 @@ function _main() {
       # require `./configure --with-zlib`.
       unittest_check_gpdb
   fi
-  if [ "${TARGET_OS}" != "win32" -a "${SKIP_PXF}" != "true" ] ; then
+  if [ "${EXTRACT_PXF}" == "true" ] ; then
       # Bundle PXF server
       tar -xzf pxf_tarball/pxf.tar.gz -C ${GREENPLUM_INSTALL_DIR}
   fi
