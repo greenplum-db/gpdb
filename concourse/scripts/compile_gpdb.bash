@@ -182,6 +182,8 @@ function _main() {
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.
       unittest_check_gpdb
+  fi
+  if [ "${TARGET_OS}" != "win32" -a "${SKIP_PXF}" != "true" ] ; then
       # Bundle PXF server
       tar -xzf pxf_tarball/pxf.tar.gz -C ${GREENPLUM_INSTALL_DIR}
   fi
