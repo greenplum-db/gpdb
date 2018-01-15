@@ -203,8 +203,8 @@ create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01'),
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2008-03-01') 
 every (interval '10 days'));
 
 drop table ggg cascade;
@@ -226,8 +226,8 @@ create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') exclusive end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') exclusive end (date '2008-03-01') 
 every (interval '10 days'));
 
 drop table ggg cascade;
@@ -477,7 +477,7 @@ partition by list (gender)
 subpartition by range (year)
 subpartition template (
 start (date '2001-01-01')
-end (date '2006-01-01') every (interval '1 year')) (
+end (date '2003-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );

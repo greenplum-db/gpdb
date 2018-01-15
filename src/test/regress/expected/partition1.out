@@ -295,8 +295,8 @@ create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01'),
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2008-03-01') 
 every (interval '10 days'));
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
@@ -355,8 +355,8 @@ create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') exclusive end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') exclusive end (date '2008-03-01') 
 every (interval '10 days'));
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
@@ -801,22 +801,16 @@ partition by list (gender)
 subpartition by range (year)
 subpartition template (
 start (date '2001-01-01')
-end (date '2006-01-01') every (interval '1 year')) (
+end (date '2003-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_1" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_2" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_3" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_4" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_5" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_1" for table "rank2_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_2" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_3" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_4" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_5" for table "rank2_1_prt_girls"
 drop table rank1 cascade;
 drop table rank2 cascade;
 -- alter table testing

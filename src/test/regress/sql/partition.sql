@@ -60,55 +60,34 @@ drop table region;
 -- exchange
 -- 1) test all sanity checking
 
--- policies are different
 create table foo_p (i int, j int) distributed by (i)
 partition by range(j)
 (start(1) end(10) every(1));
-create table bar_p (i int, j int) distributed by (j);
+
+-- policies are different
+create table bar_p_diff_pol (i int, j int) distributed by (j);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_pol;
 
 -- random policy vs. hash policy
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-create table bar_p (i int, j int) distributed randomly;
+create table bar_p_rand_pol (i int, j int) distributed randomly;
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_rand_pol;
 
 -- different number of columns
-create table foo_p (i int, j int, k text) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-create table bar_p (i int, j int) distributed by (i);
+create table bar_p_diff_col (i int, j int, k int) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_col;
 
 -- different types
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-create table bar_p (i int, j int8) distributed by (i);
+create table bar_p_diff_typ (i int, j int8) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_typ;
 
 -- different column names
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-create table bar_p (i int, m int) distributed by (i);
+create table bar_p_diff_colnam (i int, m int) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_colnam;
 
 -- still different schema, but more than one level partitioning
 CREATE TABLE two_level_pt(a int, b int, c int)
@@ -128,9 +107,6 @@ ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
 
 -- different owner 
 create role part_role;
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
 create table bar_p (i int, j int) distributed by (i);
 set session authorization part_role;
 -- should fail
@@ -184,27 +160,18 @@ create table barparent(i int, j int) distributed by (i);
 create table bar_p () inherits(barparent);
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
 drop table bar_p;
 drop table barparent;
 
 -- non-partition table involved in inheritance
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-
 create table bar_p(i int, j int) distributed by (i);
 create table barchild () inherits(bar_p);
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
-drop table foo_p;
 drop table barchild;
 drop table bar_p;
--- rules on non-partition table
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
 
+-- rules on non-partition table
 create table bar_p(i int, j int) distributed by (i);
 create table baz_p(i int, j int) distributed by (i);
 create rule bar_baz as on insert to bar_p do instead insert into baz_p
@@ -418,6 +385,15 @@ drop table sto_ao_ao;
 drop table exh_ao_ao;
 -- XXX: not yet: VALIDATE parameter
 
+-- Exchange a partition with an external table; ensure that we require to use
+-- WITHOUT VALIDATION and that the new partition won't be included in TRUNCATE
+create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
+create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
+alter table foo_p exchange partition for(rank(3)) with table bar_p;
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+truncate foo_p;
+drop table foo_p;
+drop table bar_p;
 
 -- Check for overflow of circular data types like time
 -- Should fail
