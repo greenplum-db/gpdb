@@ -128,101 +128,43 @@ DETAIL: Key (r_regionkey)=(7) already exists.
 drop table region;
 -- exchange
 -- 1) test all sanity checking
+create table foo_p (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(10) every(1));
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
+NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 -- policies are different
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-create table bar_p (i int, j int) distributed by (j);
+create table bar_p_diff_pol (i int, j int) distributed by (j);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-ERROR:  distribution policy for "bar_p" must be the same as that for "foo_p"
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_pol;
+ERROR:  distribution policy for "bar_p_diff_pol" must be the same as that for "foo_p"
 -- random policy vs. hash policy
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-create table bar_p (i int, j int) distributed randomly;
+create table bar_p_rand_pol (i int, j int) distributed randomly;
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-ERROR:  distribution policy for "bar_p" must be the same as that for "foo_p"
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_rand_pol;
+ERROR:  distribution policy for "bar_p_rand_pol" must be the same as that for "foo_p"
 -- different number of columns
-create table foo_p (i int, j int, k text) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-create table bar_p (i int, j int) distributed by (i);
+create table bar_p_diff_col (i int, j int, k int) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-ERROR:  relation "bar_p" must have the same number columns as relation "foo_p"
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_col;
+ERROR:  relation "bar_p_diff_col" must have the same number columns as relation "foo_p"
 -- different types
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-create table bar_p (i int, j int8) distributed by (i);
+create table bar_p_diff_typ (i int, j int8) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_typ;
 ERROR:  type mismatch for attribute "j"
-drop table foo_p;
-drop table bar_p;
 -- different column names
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-create table bar_p (i int, m int) distributed by (i);
+create table bar_p_diff_colnam (i int, m int) distributed by (i);
 -- should fail
-alter table foo_p exchange partition for(rank(6)) with table bar_p;
-ERROR:  relation "bar_p" must have the same column names and column order as "foo_p"
-drop table foo_p;
-drop table bar_p;
+alter table foo_p exchange partition for(rank(6)) with table bar_p_diff_colnam;
+ERROR:  relation "bar_p_diff_colnam" must have the same column names and column order as "foo_p"
 -- still different schema, but more than one level partitioning
 CREATE TABLE two_level_pt(a int, b int, c int)
 DISTRIBUTED BY (a)
@@ -243,18 +185,6 @@ ERROR:  relation "candidate_for_leaf" must have the same column names and column
 -- different owner 
 create role part_role;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p (i int, j int) distributed by (i);
 set session authorization part_role;
 -- should fail
@@ -347,44 +277,18 @@ NOTICE:  Table has parent, setting distribution columns to match parent table
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  cannot exchange table "bar_p" as it inherits other table(s)
-drop table foo_p;
 drop table bar_p;
 drop table barparent;
 -- non-partition table involved in inheritance
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p(i int, j int) distributed by (i);
 create table barchild () inherits(bar_p);
 NOTICE:  Table has parent, setting distribution columns to match parent table
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  cannot EXCHANGE table "bar_p" as it has child table(s)
-drop table foo_p;
 drop table barchild;
 drop table bar_p;
 -- rules on non-partition table
-create table foo_p (i int, j int) distributed by (i)
-partition by range(j)
-(start(1) end(10) every(1));
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_1" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_2" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_3" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_4" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_5" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
-NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p(i int, j int) distributed by (i);
 create table baz_p(i int, j int) distributed by (i);
 create rule bar_baz as on insert to bar_p do instead insert into baz_p

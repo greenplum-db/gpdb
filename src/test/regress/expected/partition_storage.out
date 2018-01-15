@@ -14,12 +14,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_ghi" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_dft" for table "pt_heap_tab"
 --Create indexes on the table
  -- Partial index
---start_ignore
-drop index if exists heap_idx1 cascade;
-NOTICE:  index "heap_idx1" does not exist, skipping
-drop index if exists heap_idx2 cascade;
-NOTICE:  index "heap_idx2" does not exist, skipping
---end_ignore
  create index heap_idx1 on pt_heap_tab(a) where c > 10;
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_abc"
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_def"
@@ -87,11 +81,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_xyz2" for table "
 
 --Exchange partition
  -- Create candidate table
---start_ignore
-drop table if exists heap_can cascade;
-drop table if exists ao_can cascade;
-drop table if exists co_can cascade;
---end_ignore
  create table heap_can(like pt_heap_tab);  
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table ao_can(like pt_heap_tab) with (appendonly=true);   
@@ -174,12 +163,6 @@ Distributed by: (a)
  alter table pt_heap_tab drop partition jkl;
  truncate table pt_heap_tab;
 --Further create some more indexes
---start_ignore
-drop index if exists heap_idx3 cascade;
-NOTICE:  index "heap_idx3" does not exist, skipping
-drop index if exists heap_idx4 cascade;
-NOTICE:  index "heap_idx4" does not exist, skipping
---end_ignore
  create index heap_idx3 on pt_heap_tab(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_mno"
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_abc2"
@@ -210,9 +193,6 @@ NOTICE:  dropped partition "dft" for relation "pt_heap_tab"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_uvw" for table "pt_heap_tab"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_dft" for table "pt_heap_tab"
 --Create an AO table with partitions ( having diff storage parameters)
---start_ignore
- drop table if exists pt_ao_tab cascade;
---end_ignore
  Create table  pt_ao_tab(a int, b text, c int , d int, e numeric,success bool) with ( appendonly=true )
  distributed by (a)
  partition by list(b)
@@ -228,12 +208,6 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_1_prt_ghi" for table "pt_
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_1_prt_dft" for table "pt_ao_tab"
 --Create indexes on the table
  -- Partial index
---start_ignore
-drop index if exists ao_idx1 cascade;
-NOTICE:  index "ao_idx1" does not exist, skipping
-drop index if exists ao_idx2 cascade;
-NOTICE:  index "ao_idx2" does not exist, skipping
---end_ignore
  create index ao_idx1 on pt_ao_tab(a) where c > 10;
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_abc"
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_def"
@@ -390,12 +364,6 @@ Distributed by: (a)
  alter table pt_ao_tab drop partition jkl;
  truncate table pt_ao_tab;
 --Further create some more indexes
---start_ignore
-drop index if exists ao_idx4 cascade;
-NOTICE:  index "ao_idx4" does not exist, skipping
-drop index if exists ao_idx3 cascade;
-NOTICE:  index "ao_idx3" does not exist, skipping
---end_ignore
  create index ao_idx3 on pt_ao_tab(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_mno"
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_abc1"
@@ -656,12 +624,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_3" for table 
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_4" for table "pt_heap_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_5" for table "pt_heap_tab_rng"
 -- Create indexes on the table
---start_ignore
-drop index if exists heap_rng_idx1 cascade;
-NOTICE:  index "heap_rng_idx1" does not exist, skipping
-drop index if exists heap_rng_idx2 cascade;
-NOTICE:  index "heap_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index heap_rng_idx1 on pt_heap_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_dft"
@@ -805,12 +767,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists heap_rng_idx4 cascade;
-NOTICE:  index "heap_rng_idx4" does not exist, skipping
-drop index if exists heap_rng_idx3 cascade;
-NOTICE:  index "heap_rng_idx3" does not exist, skipping
---end_ignore
  create index heap_rng_idx3 on pt_heap_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_3"
@@ -863,12 +819,6 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_3" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_4" for table "pt_ao_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_5" for table "pt_ao_tab_rng"
 --Create indexes on the table
---start_ignore
-drop index if exists ao_rng_idx1 cascade;
-NOTICE:  index "ao_rng_idx1" does not exist, skipping
-drop index if exists ao_rng_idx2 cascade;
-NOTICE:  index "ao_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index ao_rng_idx1 on pt_ao_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_dft"
@@ -1012,12 +962,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists ao_rng_idx4 cascade;
-NOTICE:  index "ao_rng_idx4" does not exist, skipping
-drop index if exists ao_rng_idx3 cascade;
-NOTICE:  index "ao_rng_idx3" does not exist, skipping
---end_ignore
  create index ao_rng_idx3 on pt_ao_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_3"
@@ -1070,12 +1014,6 @@ NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_3" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_4" for table "pt_co_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_5" for table "pt_co_tab_rng"
 --Create indexes on the table
---start_ignore
-drop index if exists co_rng_idx1 cascade;
-NOTICE:  index "co_rng_idx1" does not exist, skipping
-drop index if exists co_rng_idx2 cascade;
-NOTICE:  index "co_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index co_rng_idx1 on pt_co_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_dft"
@@ -1219,12 +1157,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists co_rng_idx4 cascade;
-NOTICE:  index "co_rng_idx4" does not exist, skipping
-drop index if exists co_rng_idx3 cascade;
-NOTICE:  index "co_rng_idx3" does not exist, skipping
---end_ignore
  create index co_rng_idx3 on pt_co_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_3"
