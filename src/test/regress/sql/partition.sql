@@ -418,6 +418,15 @@ drop table sto_ao_ao;
 drop table exh_ao_ao;
 -- XXX: not yet: VALIDATE parameter
 
+-- Exchange a partition with an external table; ensure that we require to use
+-- WITHOUT VALIDATION and that the new partition won't be included in TRUNCATE
+create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
+create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
+alter table foo_p exchange partition for(rank(3)) with table bar_p;
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+truncate foo_p;
+drop table foo_p;
+drop table bar_p;
 
 -- Check for overflow of circular data types like time
 -- Should fail

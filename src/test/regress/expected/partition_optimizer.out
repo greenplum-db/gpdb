@@ -803,6 +803,18 @@ ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has chil
 drop table sto_ao_ao;
 drop table exh_ao_ao;
 -- XXX: not yet: VALIDATE parameter
+-- Exchange a partition with an external table; ensure that we require to use
+-- WITHOUT VALIDATION and that the new partition won't be included in TRUNCATE
+create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
+create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
+alter table foo_p exchange partition for(rank(3)) with table bar_p;
+ERROR:  validation of external tables not supported
+HINT:  Use WITHOUT VALIDATION.
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+truncate foo_p;
+ERROR:  "foo_p_1_prt_3" is an external relation and can't be truncated
+drop table foo_p;
+drop table bar_p;
 -- Check for overflow of circular data types like time
 -- Should fail
 CREATE TABLE TIME_TBL_HOUR_2 (f1 time(2)) distributed by (f1)
