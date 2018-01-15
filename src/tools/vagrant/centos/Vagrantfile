@@ -25,6 +25,8 @@ Vagrant.configure(2) do |config|
     end
   end
 
+  config.vm.network "forwarded_port", guest: 15432, host: 5433
+
   config.vm.define("gpdb") do |gpdb|
     gpdb.vm.provision "shell", path: "vagrant-setup.sh"
     gpdb.vm.provision "shell", path: "vagrant-configure-os.sh"
@@ -35,6 +37,6 @@ Vagrant.configure(2) do |config|
   config.vm.define("gpdb_without_gporca") do |gpdb_without_gporca|
     gpdb_without_gporca.vm.provision "shell", path: "vagrant-setup.sh"
     gpdb_without_gporca.vm.provision "shell", path: "vagrant-configure-os.sh"
-    gpdb_without_gporca.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false
+    gpdb_without_gporca.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false, args: "--disable-orca"
   end
 end

@@ -19,6 +19,7 @@ sudo yum -y install htop
 sudo yum -y install perl-Env
 sudo yum -y install ccache
 sudo yum -y install libffi-devel
+sudo yum -y install libxml2-devel
 wget https://bootstrap.pypa.io/get-pip.py
 sudo python get-pip.py
 sudo pip install psutil lockfile paramiko setuptools
