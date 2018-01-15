@@ -167,12 +167,12 @@
         <plentry>
           <pt><b>-include-table</b>
             <varname>schema.table</varname></pt>
-          <pd>Optional. Specifies a table include in the backup. The table must be in the format
+          <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
             character other than a lowercase letter, number, or an underscore character, then you
             must include that name in double quotes. You can specify this option multiple times. You
             cannot combine this option with a schema filtering option such as
-              <codeph>-include-schema</codeph>, or another table filtering options such as
+              <codeph>-include-schema</codeph>, or another table filtering option such as
               <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
@@ -191,8 +191,8 @@
             lines. If a table or schema name uses any character other than a lowercase letter,
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the backup set. You cannot combine
-            this option a with schema filtering option such as <codeph>-include-schema</codeph>, or
-            another table filtering options such as <codeph>-exclude-table-file</codeph>.</pd>
+            this option with a schema filtering option such as <codeph>-include-schema</codeph>, or
+            another table filtering option such as <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
               <codeph>-leaf-partition-data</codeph> option. </pd>
