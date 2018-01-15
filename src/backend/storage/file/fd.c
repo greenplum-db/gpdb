@@ -79,7 +79,6 @@
 #include "utils/resowner.h"
 #include "utils/workfile_mgr.h"
 #include "utils/faultinjector.h"
-#include "postmaster/primary_mirror_mode.h"
 
 // Provide some indirection here in case we have problems with lseek and
 // 64 bits on some platforms

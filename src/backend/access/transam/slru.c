@@ -58,7 +58,6 @@
 #include "storage/shmem.h"
 #include "miscadmin.h"
 
-
 /*
  * Define segment size.  A page is the same BLCKSZ as is used everywhere
  * else in Postgres.  The segment size can be chosen somewhat arbitrarily;

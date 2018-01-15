@@ -17,8 +17,7 @@ unittest-check:
 	$(MAKE) -C pg_dump/test check
 
 DIRS = initdb pg_basebackup pg_ctl pg_dump \
-	psql scripts pg_config pg_controldata pg_resetxlog \
-	gpmirrortransition
+	psql scripts pg_config pg_controldata pg_resetxlog
 
 ifeq ($(PORTNAME), win32)
 DIRS+=pgevent

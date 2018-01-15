@@ -232,7 +232,7 @@ extern volatile bool cancel_from_timeout;
  */
 extern int	ProcGlobalSemas(void);
 extern Size ProcGlobalShmemSize(void);
-extern void InitProcGlobal(int mppLocalProcessCounter);
+extern void InitProcGlobal(void);
 extern void InitProcess(void);
 extern void InitProcessPhase2(void);
 extern void InitAuxiliaryProcess(void);
@@ -257,7 +257,6 @@ extern bool DisableClientWaitTimeoutInterrupt(void);
 extern int ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet);
 
 extern void ResLockWaitCancel(void);
-extern bool ProcGetMppLocalProcessCounter(int *mppLocalProcessCounter);
 extern bool ProcCanSetMppSessionId(void);
 extern void ProcNewMppSessionId(int *newSessionId);
 
