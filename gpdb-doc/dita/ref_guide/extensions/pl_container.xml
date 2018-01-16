@@ -205,7 +205,7 @@
         images on the local host.</p>
       <p>This command adds information to the PL/Container configuration file so that PL/Container
         can access the Docker image to create a Docker
-        container.<codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer:devel -l python</codeblock></p>
+        container.<codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python</codeblock></p>
       <p>The utility displays progress information as it updates the PL/Container configuration file
         on the Greenplum Database instances.</p>
       <p>You can view the PL/Container configuration information with the <codeph>plcontainer
