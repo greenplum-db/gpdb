@@ -321,7 +321,8 @@ typedef enum
 	PM_RECOVERY_CONSISTENT,		/* consistent recovery mode */
 	PM_RUN,						/* normal "database is alive" state */
 	PM_WAIT_BACKUP,				/* waiting for online backup mode to end */
-	PM_WAIT_BACKENDS,			/* waiting for live backends to exit */
+	PM_WAIT_REGULAR_BACKENDS,	/* waiting for live backends to exit, but not seqserver (GPDB-specific) */
+	PM_WAIT_BACKENDS,			/* waiting for live backends to exit (including seqserver) */
 	PM_SHUTDOWN,				/* waiting for bgwriter to do shutdown ckpt */
 	PM_SHUTDOWN_2,				/* waiting for archiver to finish */
 	PM_WAIT_DEAD_END,			/* waiting for dead_end children to exit */
@@ -335,10 +336,8 @@ static PMState pmState = PM_INIT;
 typedef enum PMSUBPROC_FLAGS
 {
 	PMSUBPROC_FLAG_QD 					= 0x1,
-	PMSUBPROC_FLAG_STANDBY 				= 0x2,
 	PMSUBPROC_FLAG_QE 					= 0x4,
 	PMSUBPROC_FLAG_QD_AND_QE 			= (PMSUBPROC_FLAG_QD|PMSUBPROC_FLAG_QE),
-	PMSUBPROC_FLAG_STOP_AFTER_BGWRITER 	= 0x8,
 } PMSUBPROC_FLAGS;
 
 
@@ -2549,6 +2548,11 @@ pmdie(SIGNAL_ARGS)
 				/* and the walwriter too */
 				if (WalWriterPID != 0)
 					signal_child(WalWriterPID, SIGTERM);
+				/*
+				 * Note: We don't kill the seqserver yet. It might be needed
+				 * by running backends. We will kill that after all the live
+				 * backends have exited.
+				 */
 				pmState = PM_WAIT_BACKUP;
 			}
 
@@ -2581,6 +2585,9 @@ pmdie(SIGNAL_ARGS)
 				signal_child(BgWriterPID, SIGTERM);
 			if (WalReceiverPID != 0)
 				signal_child(WalReceiverPID, SIGTERM);
+			/* The GPDB-specific service processes use SIGUSR2 for shutdown. */
+			/* WALREP_FIXME: should switch to using SIGTERM for consistency */
+			StopServices(0, SIGUSR2);
 			if (pmState == PM_RECOVERY)
 			{
 				/*
@@ -2593,6 +2600,7 @@ pmdie(SIGNAL_ARGS)
 			}
 			if (pmState == PM_RUN ||
 				pmState == PM_WAIT_BACKUP ||
+				pmState == PM_WAIT_REGULAR_BACKENDS ||
 				pmState == PM_WAIT_BACKENDS ||
 				pmState == PM_RECOVERY_CONSISTENT)
 			{
@@ -2853,16 +2861,30 @@ reaper(SIGNAL_ARGS)
 			continue;
 
 		/*
-		 * Was it the bgwriter?
+		 * Was it the bgwriter?  Normal exit can be ignored; we'll start a new
+		 * one at the next iteration of the postmaster's main loop, if
+		 * necessary.  Any other exit condition is treated as a crash.
 		 */
 		if (pid == BgWriterPID)
 		{
 			BgWriterPID = 0;
+			if (!EXIT_STATUS_0(exitstatus))
+				HandleChildCrash(pid, exitstatus,
+								 _("background writer process"));
+			continue;
+		}
+
+		/*
+		 * Was it the checkpointer?
+		 */
+		if (pid == CheckpointerPID)
+		{
+			CheckpointerPID = 0;
 			if (EXIT_STATUS_0(exitstatus) && pmState == PM_SHUTDOWN)
 			{
 				/*
-				 * OK, we saw normal exit of the bgwriter after it's been told
-				 * to shut down.  We expect that it wrote a shutdown
+				 * OK, we saw normal exit of the checkpointer after it's been
+				 * told to shut down.  We expect that it wrote a shutdown
 				 * checkpoint.  (If for some reason it didn't, recovery will
 				 * occur on next postmaster start.)
 				 *
@@ -2871,19 +2893,22 @@ reaper(SIGNAL_ARGS)
 				 * have dead_end children to wait for.
 				 *
 				 * If we have an archiver subprocess, tell it to do a last
-				 * archive cycle and quit; otherwise we can go directly to
-				 * PM_WAIT_DEAD_END state.
+				 * archive cycle and quit. Likewise, if we have walsender
+				 * processes, tell them to send any remaining WAL and quit.
 				 */
 				Assert(Shutdown > NoShutdown);
 
+				/* Waken archiver for the last time */
 				if (PgArchPID != 0)
-				{
-					/* Waken archiver for the last time */
 					signal_child(PgArchPID, SIGUSR2);
-					pmState = PM_SHUTDOWN_2;
-				}
-				else
-					pmState = PM_WAIT_DEAD_END;
+
+				/*
+				 * Waken walsenders for the last time. No regular backends
+				 * should be around anymore.
+				 */
+				SignalChildren(SIGUSR2);
+
+				pmState = PM_SHUTDOWN_2;
 
 				/*
 				 * We can also shut down the stats collector now; there's
@@ -2895,28 +2920,13 @@ reaper(SIGNAL_ARGS)
 			else
 			{
 				/*
-				 * Any unexpected exit of the bgwriter (including FATAL exit)
-				 * is treated as a crash.
+				 * Any unexpected exit of the checkpointer (including FATAL
+				 * exit) is treated as a crash.
 				 */
 				HandleChildCrash(pid, exitstatus,
-								 _("background writer process"));
+								 _("checkpointer process"));
 			}
 
-			continue;
-		}
-
-		/*
-		 * Was it the checkpointer process?  Normal or FATAL exit can be
-		 * ignored; we'll start a new one at the next iteration of the
-		 * postmaster's main loop, if necessary.  Any other exit condition
-		 * is treated as a crash.
-		 */
-		if (pid == CheckpointerPID)
-		{
-			CheckpointerPID = 0;
-			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus))
-				HandleChildCrash(pid, exitstatus,
-								 _("checkpointer process"));
 			continue;
 		}
 
@@ -3344,6 +3354,7 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		pmState == PM_RECOVERY_CONSISTENT ||
 		pmState == PM_RUN ||
 		pmState == PM_WAIT_BACKUP ||
+		pmState == PM_WAIT_REGULAR_BACKENDS ||
 		pmState == PM_SHUTDOWN)
 		pmState = PM_WAIT_BACKENDS;
 }
@@ -3423,7 +3434,22 @@ PostmasterStateMachine(void)
 		 * PM_WAIT_BACKUP state ends when online backup mode is not active.
 		 */
 		if (!BackupInProgress())
+		{
+			pmState = PM_WAIT_REGULAR_BACKENDS;
+		}
+	}
+
+	if (pmState == PM_WAIT_REGULAR_BACKENDS)
+	{
+		/*
+		 */
+		if (CountChildren(BACKEND_TYPE_NORMAL | BACKEND_TYPE_AUTOVAC) == 0)
+		{
+			/* The GPDB-specific service processes use SIGUSR2 for shutdown. */
+			/* WALREP_FIXME: should switch to using SIGTERM for consistency */
+			StopServices(0, SIGUSR2);
 			pmState = PM_WAIT_BACKENDS;
+		}
 	}
 
 	/*
@@ -3500,6 +3526,24 @@ PostmasterStateMachine(void)
 						signal_child(PgStatPID, SIGQUIT);
 				}
 			}
+		}
+	}
+
+	if (pmState == PM_SHUTDOWN_2)
+	{
+		/*
+		 * PM_SHUTDOWN_2 state ends when there's no other children than
+		 * dead_end children left. There shouldn't be any regular backends
+		 * left by now anyway; what we're really waiting for is walsenders and
+		 * archiver.
+		 *
+		 * Walreceiver should normally be dead by now, but not when a fast
+		 * shutdown is performed during recovery.
+		 */
+		if (PgArchPID == 0 && CountChildren(BACKEND_TYPE_ALL) == 0 &&
+			WalReceiverPID == 0)
+		{
+			pmState = PM_WAIT_DEAD_END;
 		}
 	}
 

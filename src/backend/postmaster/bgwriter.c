@@ -119,12 +119,12 @@ BackgroundWriterMain(void)
 	 */
 	pqsignal(SIGHUP, BgSigHupHandler);	/* set flag to read config file */
 	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGTERM, SIG_IGN); /* ignore SIGTERM */
+	pqsignal(SIGTERM, ReqShutdownHandler);		/* shutdown */
 	pqsignal(SIGQUIT, quickdie);		/* hard crash time: nothing bg-writer specific, just use the standard */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, SIG_IGN); /* reserve for ProcSignal */
-	pqsignal(SIGUSR2, ReqShutdownHandler);		/* request shutdown */
+	pqsignal(SIGUSR2, SIG_IGN);
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
@@ -330,7 +330,7 @@ BgSigHupHandler(SIGNAL_ARGS)
 	got_SIGHUP = true;
 }
 
-/* SIGUSR2: set flag to run a shutdown checkpoint and exit */
+/* SIGTERM: set flag to shutdown and exit */
 static void
 ReqShutdownHandler(SIGNAL_ARGS)
 {
