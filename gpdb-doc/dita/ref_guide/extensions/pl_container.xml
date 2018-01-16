@@ -64,8 +64,8 @@
   <topic id="topic_tcm_htd_gw">
     <title>PL/Container Docker Images</title>
     <body>
-      <p>Pivotal provides two Docker images for customers, a Python image and an R image that are
-        available from Pivotal Network at <xref
+      <p>A PL/Python image and a PL/R image are available from the Greenplum Database product
+        download site of Pivotal Network at <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
           >https://network.pivotal.io/</xref>.</p>
       <ul id="ul_epg_t2v_qbb">
