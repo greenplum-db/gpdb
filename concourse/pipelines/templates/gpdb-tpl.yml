@@ -2,7 +2,6 @@
 {% set cs_walrep_suites = ['walrep_1',
                            'walrep_2'] %}
 {% set cs_pg_twophase_suites = ['pg_twophase'] %}
-{% set cs_crash_recovery_suite = ['crash_recovery_schema_topology'] %}
 
 {% set MM_1_suites = ['gprecoverseg',
                       'gpcheckcat'] %}
@@ -83,8 +82,7 @@ groups:
   ## --------------------------------------------------------------------
   - gate_cs_start
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
   - cs_[[ test_name ]]
 {% endfor %}
   - storage
@@ -209,8 +207,7 @@ groups:
   jobs:
   - gate_cs_start
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
   - cs_[[ test_name ]]
 {% endfor %}
   - storage
@@ -1685,22 +1682,6 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-{% for test_name in cs_crash_recovery_suite %}
-- name: cs_[[ test_name ]]
-  plan:
-  - aggregate: *cs_ccp_aggregate_cluster_start
-  - put: terraform
-    <<: *cs_ccp_terraform_params
-  - task: gen_cluster
-    <<: *cs_ccp_gen_cluster_params
-  - task: run_tests
-    <<: *cs_ccp_run_tests_params
-    params:
-      TINC_TARGET: [[ test_name ]]
-  ensure:
-    <<: *set_failed
-
-{% endfor %}
 
 - name: storage
   plan:
@@ -1771,8 +1752,7 @@ jobs:
     - get: gpdb_src
       passed: &gate_cs_passed
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
       - cs_[[ test_name ]]
 {% endfor %}
       - storage
@@ -2621,8 +2601,7 @@ jobs:
     - storage
     - segwalrep_mirrorless_centos6
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
     - cs_[[ test_name ]]
 {% endfor %}
     - QP_memory-accounting

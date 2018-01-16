@@ -124,12 +124,6 @@ fts_transitions_part02:
 fts_transitions_part03:
 	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_03
 
-crash_recovery_schema_topology:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_crash_recovery_schema_topology.py \
-	-p test_reindex_pg_class.py
-
 runaway_query:
 	$(TESTER) \
 		resource_management.runaway_query.runaway_query_scenario.test_runaway_query_scenario.RQTScenarioTestCase \
