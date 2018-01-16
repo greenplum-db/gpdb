@@ -132,9 +132,11 @@ select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
 select gp_inject_fault('process_startup_packet', 'segv', 2);
+select cleanupAllGangs();
 --start_ignore
 select 'trigger fault' from gp_dist_random('gp_id');
 --end_ignore
+select pg_sleep(1); -- small delay to make sure the postmaster has noticed the child death.
 
 -- should success after retry
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -152,16 +154,20 @@ select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
 select gp_inject_fault('process_startup_packet', 'segv', 2);
-select gp_inject_fault('quickdie', 'suspend', 2);
+select gp_inject_fault('quickdie', 'sleep', '', '', '', 1, 5, 2::smallint);
+select cleanupAllGangs();
 --start_ignore
 select 'trigger fault' from gp_dist_random('gp_id');
 --end_ignore
+select pg_sleep(1); -- small delay to make sure the postmaster has noticed the child death.
 
--- should failed after 2 times
+-- should fail after 2 retries
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('quickdie', 'resume', 2);
+-- Wait for the quickdie() sleep to time out, and the server to restart.
+select pg_sleep(5);
+set gp_gang_creation_retry_count to 100;
 select gp_inject_fault('process_startup_packet', 'reset', 2);
 select gp_inject_fault('quickdie', 'reset', 2);
 
@@ -191,6 +197,7 @@ select cleanupAllGangs();
 
 -- segment 0 report an error when get a request 
 select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
+select cleanupAllGangs();
 
 -- expect failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -208,6 +215,7 @@ select cleanupAllGangs();
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- segment 0 report an error when get the second request (reader gang creation request)
 select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 0, 2::smallint);
+select cleanupAllGangs();
 
 -- expect failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -228,16 +236,14 @@ select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 set gp_segment_connect_timeout to 1;
 select cleanupAllGangs();
 
-select gp_inject_fault('process_startup_packet', 'suspend', 2);
+select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 5, 2::smallint);
 
 -- expect timeout failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('process_startup_packet', 'resume', 2);
-select gp_inject_fault('process_startup_packet', 'reset', 2);
-
 set gp_segment_connect_timeout to 0;
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 select cleanupAllGangs();
 
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 1, 2::smallint);

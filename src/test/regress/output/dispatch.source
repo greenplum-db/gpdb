@@ -95,7 +95,7 @@ HINT:  Size controlled by gp_max_plan_size
 -- during backend initialization
 --
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11034)
  gp_inject_fault 
 -----------------
  t
@@ -103,7 +103,7 @@ NOTICE:  Success:
 
 -- inject a 'skip' fault before QE sends its motion_listener
 select gp_inject_fault('send_qe_details_init_backend', 'skip', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11034)
  gp_inject_fault 
 -----------------
  t
@@ -114,10 +114,10 @@ NOTICE:  Success:
 -- verify failure will be reported
 SELECT 1 FROM gp_dist_random('gp_id');
 ERROR:  failed to acquire resources on one or more segments
-DETAIL:  Internal error: No motion listener port (seg0 127.0.0.1:25432)
+DETAIL:  Internal error: No motion listener port (seg0 127.0.0.1:40000)
 -- reset fault injector
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11048)
  gp_inject_fault 
 -----------------
  t
@@ -178,8 +178,14 @@ select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
 select gp_inject_fault('process_startup_packet', 'segv', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11062)
  gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select cleanupAllGangs();
+ cleanupallgangs 
 -----------------
  t
 (1 row)
@@ -190,8 +196,14 @@ ERROR:  failed to acquire resources on one or more segments
 DETAIL:  server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
- (seg0 127.0.0.1:25432)
+ (seg0 127.0.0.1:40000)
 --end_ignore
+select pg_sleep(1); -- small delay to make sure the postmaster has noticed the child death.
+ pg_sleep 
+----------
+ 
+(1 row)
+
 -- should success after retry
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
@@ -201,7 +213,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 (1 row)
 
 select gp_inject_fault('process_startup_packet', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11092)
  gp_inject_fault 
 -----------------
  t
@@ -221,15 +233,21 @@ select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
 select gp_inject_fault('process_startup_packet', 'segv', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11116)
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('quickdie', 'suspend', 2);
-NOTICE:  Success:
+select gp_inject_fault('quickdie', 'sleep', '', '', '', 1, 5, 2::smallint);
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11116)
  gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select cleanupAllGangs();
+ cleanupallgangs 
 -----------------
  t
 (1 row)
@@ -240,29 +258,36 @@ ERROR:  failed to acquire resources on one or more segments
 DETAIL:  server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
- (seg0 127.0.0.1:25432)
+ (seg0 127.0.0.1:40000)
 --end_ignore
--- should failed after 2 times
+select pg_sleep(1); -- small delay to make sure the postmaster has noticed the child death.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+-- should fail after 2 retries
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  segments is in recovery mode
-select gp_inject_fault('quickdie', 'resume', 2);
-NOTICE:  Success:
- gp_inject_fault 
------------------
- t
+-- Wait for the quickdie() sleep to time out, and the server to restart.
+select pg_sleep(5);
+ pg_sleep 
+----------
+ 
 (1 row)
 
+set gp_gang_creation_retry_count to 100;
 select gp_inject_fault('process_startup_packet', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11186)
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
 select gp_inject_fault('quickdie', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11186)
  gp_inject_fault 
 -----------------
  t
@@ -316,8 +341,14 @@ select cleanupAllGangs();
 
 -- segment 0 report an error when get a request 
 select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11221)
  gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select cleanupAllGangs();
+ cleanupallgangs 
 -----------------
  t
 (1 row)
@@ -327,7 +358,7 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  FATAL:  fault triggered, fault name:'send_qe_details_init_backend' fault type:'error'
- (seg0 127.0.0.1:25432)
+ (seg0 127.0.0.1:40000)
 -- expect no resuable gang exist
 select * from hasGangsExist();
  hasgangsexist 
@@ -350,7 +381,7 @@ select cleanupAllGangs();
 (1 row)
 
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11272)
  gp_inject_fault 
 -----------------
  t
@@ -358,8 +389,14 @@ NOTICE:  Success:
 
 -- segment 0 report an error when get the second request (reader gang creation request)
 select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 0, 2::smallint);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11272)
  gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select cleanupAllGangs();
+ cleanupallgangs 
 -----------------
  t
 (1 row)
@@ -369,7 +406,7 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  FATAL:  fault triggered, fault name:'send_qe_details_init_backend' fault type:'error'
- (seg0 127.0.0.1:25432)
+ (seg0 127.0.0.1:40000)
 -- expect resuable gang exist
 select * from hasGangsExist();
  hasgangsexist 
@@ -385,7 +422,7 @@ select sum(case when hasBackendsExist(0)='t' then 1 else 0 end) > 0 as hasbacken
 (1 row)
 
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11284)
  gp_inject_fault 
 -----------------
  t
@@ -402,8 +439,8 @@ select cleanupAllGangs();
  t
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'suspend', 2);
-NOTICE:  Success:
+select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 5, 2::smallint);
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
  gp_inject_fault 
 -----------------
  t
@@ -414,22 +451,15 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  timeout expired
- (seg0 127.0.0.1:25432)
-select gp_inject_fault('process_startup_packet', 'resume', 2);
-NOTICE:  Success:
- gp_inject_fault 
------------------
- t
-(1 row)
-
-select gp_inject_fault('process_startup_packet', 'reset', 2);
-NOTICE:  Success:
- gp_inject_fault 
------------------
- t
-(1 row)
-
+ (seg0 127.0.0.1:40000)
 set gp_segment_connect_timeout to 0;
+select gp_inject_fault('process_startup_packet', 'reset', 2);
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select cleanupAllGangs();
  cleanupallgangs 
 -----------------
@@ -437,7 +467,7 @@ select cleanupAllGangs();
 (1 row)
 
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 1, 2::smallint);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11337)
  gp_inject_fault 
 -----------------
  t
@@ -452,7 +482,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 (1 row)
 
 select gp_inject_fault('process_startup_packet', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11337)
  gp_inject_fault 
 -----------------
  t
@@ -487,7 +517,7 @@ SET gp_log_gang = 'debug';
 CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'gangRaiseInfo' LANGUAGE C;
 SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
-INFO:  testing hook function MPPnoticeReceiver  (seg0 slice1 127.0.0.1:25432 pid=92553)
+INFO:  testing hook function MPPnoticeReceiver  (seg0 slice1 127.0.0.1:40000 pid=11337)
 DETAIL:  this test aims at covering code paths not hit before
 HINT:  no special hint
 CONTEXT:  PL/C function defined in regress.c
@@ -527,7 +557,7 @@ AS '@abs_builddir@/regress@DLSUFFIX@', 'numActiveMotionConns' LANGUAGE C;
 CREATE TABLE foo_test AS SELECT i AS c1 FROM generate_series(1, 10) i;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 SELECT c1/0 FROM foo_test WHERE c1 = 1;
-ERROR:  division by zero  (seg1 slice1 11.111.111.116:25433 pid=166651)
+ERROR:  division by zero  (seg0 slice1 127.0.0.1:40000 pid=11337)
 SELECT numActiveMotionConns();
  numactivemotionconns 
 ----------------------
