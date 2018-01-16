@@ -3132,10 +3132,6 @@ CleanupBackend(int pid,
  *
  * The objectives here are to clean up our local state about the child
  * process, and to signal all other remaining children to quickdie.
- *
- * @param pid the pid of the crashed child, or -1 if don't know the pid and don't want to log the failed child (this
- *            can happen when the filerep controller process signals us to reset, or when a primary/mirror peer
- *            signals us to reset)
  */
 static void
 HandleChildCrash(int pid, int exitstatus, const char *procname)
@@ -3439,7 +3435,7 @@ PostmasterStateMachine(void)
 			(CheckpointerPID == 0 || !FatalError) &&
 			WalWriterPID == 0 &&
 			AutoVacPID == 0 &&
-			ServiceProcessesExist(0))
+			!ServiceProcessesExist(0))
 		{
 			if (FatalError)
 			{
