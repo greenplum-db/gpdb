@@ -1,0 +1,25 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/sles-gpdb-dev
+    tag: 11-beta
+
+inputs:
+- name: gpdb_src
+- name: bin_gpdb
+
+outputs:
+
+params:
+  MAKE_TEST_COMMAND: ""
+  BLDWRAP_POSTGRES_CONF_ADDONS: ""
+  TEST_OS: ""
+  CONFIGURE_FLAGS: ""
+  WITH_MIRRORS:
+
+run:
+  path: gpdb_src/concourse/scripts/ic_gpdb.bash
