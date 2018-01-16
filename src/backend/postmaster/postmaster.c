@@ -1260,6 +1260,17 @@ PostmasterMain(int argc, char *argv[])
 	whereToSendOutput = DestNone;
 
 	/*
+	 * Initialize stats collection subsystem (this does NOT start the
+	 * collector process!)
+	 */
+	pgstat_init();
+
+	/*
+	 * Initialize the autovacuum subsystem (again, no process start yet)
+	 */
+	autovac_init();
+
+	/*
 	 * Load configuration files for client authentication.
 	 */
 	if (!load_hba())
