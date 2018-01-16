@@ -463,6 +463,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           log. A FATAL message causes Greenplum Database session to be closed and transaction to be
           rolled back.</li>
       </ul>
+      <p>PL/Container does not support this PL/R feature:<ul id="ul_wjk_dgb_4cb">
+          <li> Multi-dimensional arrays.</li>
+        </ul></p>
       <p>For information about PL/R, see <xref href="pl_r.xml#topic1"/>.</p>
       <p>For information about the <codeph>pg.spi</codeph> methods, see <xref
           href="http://www.joeconway.com/plr/doc/plr-spi-rsupport-funcs-normal.html" format="html"
