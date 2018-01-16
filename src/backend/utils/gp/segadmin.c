@@ -567,7 +567,7 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 
 	new.db.dbid = get_availableDbId();
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
-	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_DOWN;
+	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
 	new.db.role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 	new.db.preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 
