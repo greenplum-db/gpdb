@@ -49,7 +49,7 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	bool		proisstrict;	/* strict with respect to NULLs? */
 	bool		proretset;		/* returns a set? */
 	char		provolatile;	/* see PROVOLATILE_ categories below */
-	int2		pronargs;		/* number of arguments */
+	int2		pronargs;		/*  of arguments */
 	int2		pronargdefaults;	/* number of arguments with defaults */
 	Oid			prorettype;		/* OID of result type */
 
@@ -2366,6 +2366,9 @@ DATA(insert OID = 2289 (  pg_options_to_table		PGNSP PGUID 12 1 3 0 f f f t t s 
 DESCR("convert generic options array to name/value table");
 
 DATA(insert OID = 1619 (  pg_typeof				PGNSP PGUID 12 1 0 0 f f f f f s 1 0 2206 "2276" _null_ _null_ _null_ _null_  pg_typeof _null_ _null_ _null_ ));
+DESCR("returns the type of the argument");
+
+DATA(insert OID = 7305 (  gp_tablespace_path	PGNSP PGUID 12 1 0 0 f f f f f s 2 0 2275 "25 23" _null_ _null_ _null_ _null_  gp_tablespace_path _null_ _null_ _null_ ));
 DESCR("returns the type of the argument");
 
 /* Generic referential integrity constraint triggers */

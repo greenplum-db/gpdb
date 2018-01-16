@@ -105,7 +105,7 @@ tablespace_version_directory(void)
 {
 	static char path[MAXPGPATH];
 
-	snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
+	snprintf(path, MAXPGPATH, "%s%d", GP_TABLESPACE_VERSION_PREFIX, GpIdentity.dbid);
 
 	return path;
 }

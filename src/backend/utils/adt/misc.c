@@ -25,6 +25,7 @@
 #include "catalog/pg_tablespace.h"
 #include "commands/dbcommands.h"
 #include "funcapi.h"
+#include "fmgr.h"
 #include "miscadmin.h"
 #include "parser/keywords.h"
 #include "postmaster/syslogger.h"
@@ -33,6 +34,7 @@
 #include "storage/procarray.h"
 #include "utils/backend_cancel.h"
 #include "utils/builtins.h"
+#include "utils/palloc.h"
 #include "tcop/tcopprot.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
@@ -486,4 +488,26 @@ Datum
 pg_typeof(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_OID(get_fn_expr_argtype(fcinfo->flinfo, 0));
+}
+
+/*
+ * Get GPDB tablespace path.
+ * For example: /tmp/myspc/GPDB_8.4_301801031_db1, where /tmp/myspc is spclocation in
+ * pg_tablespace, and ending 1 is the dbid.
+ */
+Datum
+gp_tablespace_path(PG_FUNCTION_ARGS)
+{
+	char		tblspace_path[MAXPGPATH];
+	const char	*spclocation = text_to_cstring(PG_GETARG_CSTRING(0));
+	int32_t		dbid = PG_GETARG_INT32(1);
+	int			ret;
+	ret = snprintf(tblspace_path, sizeof(tblspace_path),
+				   "%s/%s%d", spclocation, GP_TABLESPACE_VERSION_PREFIX, dbid);
+
+	if (ret >= sizeof(tblspace_path))
+		elog(ERROR, "%s/%s%d is too long than path length limit: %d",
+			 spclocation, GP_TABLESPACE_VERSION_PREFIX, dbid, MAXPGPATH);
+
+	PG_RETURN_CSTRING(pstrdup(tblspace_path));
 }
