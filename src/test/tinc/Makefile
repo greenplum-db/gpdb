@@ -83,46 +83,11 @@ walrep_2:
 	-q "class!=DDLTestCase" \
 	-q "class!=DMLTestCase"
 
-# cs-filerep-end-to-end
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/cs-filerep-end-to-end
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-filerep_end_to_end_full_primary:
-	$(TESTER) mpp.gpdb.tests.storage.filerep_end_to_end.test_filerep_e2e.FilerepE2EScenarioTestCase.test_full_primary
-
-filerep_end_to_end_incr_primary:
-	$(TESTER) mpp.gpdb.tests.storage.filerep_end_to_end.test_filerep_e2e.FilerepE2EScenarioTestCase.test_incr_primary
-
-filerep_end_to_end_full_mirror:
-	$(TESTER) mpp.gpdb.tests.storage.filerep_end_to_end.test_filerep_e2e.FilerepE2EScenarioTestCase.test_full_mirror
-
-filerep_end_to_end_incr_mirror:
-	$(TESTER) mpp.gpdb.tests.storage.filerep_end_to_end.test_filerep_e2e.FilerepE2EScenarioTestCase.test_incr_mirror
-
 test_pg_twophase:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
 	-p test_pg_twophase.py \
 	-p test_switch.py
-
-# cs-fts
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/cs-fts
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-fts_transitions_part01:
-	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_01
-
-fts_transitions_part02:
-	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_02
-
-fts_transitions_part03:
-	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_03
 
 runaway_query:
 	$(TESTER) \
