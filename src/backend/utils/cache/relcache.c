@@ -1701,7 +1701,15 @@ RelationDecrementReferenceCount(Relation rel)
 {
 	if (rel->rd_refcnt <= 0)
 	{
+		/*
+		 * In CI intermittently ERROR is seen. To help debug the issue, just
+		 * for debug builds elevating ERROR to PANIC.
+		 */
+#ifdef USE_ASSERT_CHECKING
+		elog(PANIC,
+#else
 		elog(ERROR,
+#endif
 			 "Relation decrement reference count found relation %u/%u/%u with bad count (reference count %d)",
 			 rel->rd_node.spcNode,
 			 rel->rd_node.dbNode,
