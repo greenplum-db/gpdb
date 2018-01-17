@@ -701,10 +701,20 @@ resources:
   type: s3
   source:
     access_key_id: {{gpdb4-bucket-access-key-id}}
-    bucket: {{netbackup_installer_bucket}}
+    bucket: {{dpm_bucket}}
     region_name: {{aws-region}}
     secret_access_key: {{gpdb4-bucket-secret-access-key}}
     versioned_file: netbackup-installation/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz
+
+# Resource used for DDBoost test
+- name: ddboost_rpm
+  type: s3
+  source:
+    access_key_id: {{gpdb4-bucket-access-key-id}}
+    bucket: {{dpm_bucket}}
+    region_name: {{aws-region}}
+    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    versioned_file: compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
 
 {% endif %}
 - name: reduced-frequency-trigger
@@ -2326,6 +2336,8 @@ jobs:
       passed: [gate_dpm_start]
     - get: centos-gpdb-dev-6
       tags: ["ddboost"]
+    - get: ddboost_rpm
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
@@ -2350,6 +2362,7 @@ jobs:
        - name: ccp_src
        - name: gpdb_src
        - name: cluster_env_files
+       - name: ddboost_rpm
       image_resource:
         type: docker-image
         source:
@@ -2363,6 +2376,8 @@ jobs:
           set -ex
           ccp_src/aws/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
     on_failure:
@@ -2395,6 +2410,8 @@ jobs:
       passed: [gate_dpm_start]
     - get: centos-gpdb-dev-6
       tags: ["ddboost"]
+    - get: ddboost_rpm
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
@@ -2419,6 +2436,7 @@ jobs:
        - name: ccp_src
        - name: gpdb_src
        - name: cluster_env_files
+       - name: ddboost_rpm
       image_resource:
         type: docker-image
         source:
@@ -2432,6 +2450,8 @@ jobs:
           set -ex
           ccp_src/aws/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
     on_failure:
@@ -2464,6 +2484,8 @@ jobs:
       passed: [gate_dpm_start]
     - get: centos-gpdb-dev-6
       tags: ["ddboost"]
+    - get: ddboost_rpm
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
@@ -2488,6 +2510,7 @@ jobs:
        - name: ccp_src
        - name: gpdb_src
        - name: cluster_env_files
+       - name: ddboost_rpm
       image_resource:
         type: docker-image
         source:
@@ -2501,6 +2524,8 @@ jobs:
           set -ex
           ccp_src/aws/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
+          scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
           source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
     on_failure:
