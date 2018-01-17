@@ -40,7 +40,7 @@
         <title>Data Skew</title>
     <body>
         <p>Data skew may be caused by uneven data distribution due to the wrong choice of distribution
-          keys or small batch table insert or copy operations. Present at the table level, data
+          keys or single tuple table insert or copy operations. Present at the table level, data
           skew, is often the root cause of poor query performance and out of memory conditions.
           Skewed data affects scan (read) performance, but it also affects all other query execution
           operations, for instance, joins and group by operations. </p>
@@ -73,10 +73,10 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
             <title>Considerations for Randomly Distributed Tables</title>
             <p>When you create a table with random distribution (<codeph>DISTRIBUTED RANDOMLY</codeph>),
               Greenplum Database distributes the data you insert or copy into the table in a
-              round-robin fashion. Because Greenplum Database starts a new instance of a 
-              round-robin cycle for each insert or copy operation, singleton inserts into a 
-              randomly distributed table may result in data skew. Data from bulk inserts is
-              more evenly distributed.</p>
+              round-robin fashion. Greenplum Database starts a new instance of a round-robin
+              cycle for each insert or copy operation. As such, single tuple inserts into a
+              randomly distributed table are assigned to the first segment and will result
+              in data skew. Greenplum Database more evenly distributes data from bulk inserts.</p>
           </section>
         </body>
       </topic>
