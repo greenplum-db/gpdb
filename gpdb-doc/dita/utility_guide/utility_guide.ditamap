@@ -25,9 +25,7 @@
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
             <topicref href="admin_utilities/gpmfr.xml"/>
-            <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
--->
             <topicref href="admin_utilities/gpperfmon_install.xml"/>
             <topicref href="admin_utilities/gppkg.xml"/>
             <topicref href="admin_utilities/gprecoverseg.xml"/>
