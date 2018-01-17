@@ -6647,7 +6647,7 @@
       <p>Controls which message levels are written to the server log. Each level includes all the
         levels that follow it. The later the level, the fewer messages are sent to the log.</p>
       <p>If the Greenplum Database PL/Container extension is installed. This parameter also controls
-        the PL/Container log level. For information about the extension, see  <xref
+        the PL/Container log level. For information about the extension, see <xref
           href="../extensions/pl_container.xml"/>.</p>
       <table id="log_min_messages_table">
         <tgroup cols="3">
@@ -8363,7 +8363,7 @@
             <row>
               <entry colname="col1">string</entry>
               <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>restart</p><p>superuser</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>

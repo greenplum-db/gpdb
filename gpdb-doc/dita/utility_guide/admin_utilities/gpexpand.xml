@@ -28,14 +28,16 @@
         <li id="kt137989">You are logged in as the Greenplum Database superuser
             (<codeph>gpadmin</codeph>).</li>
         <li id="kt136978">The new segment hosts have been installed and configured as per the
-          existing segment hosts. This involves:<ul id="ul_att_m1q_n4"><li id="kt138636">Configuring
-              the hardware and OS</li><li id="kt138640">Installing the Greenplum software</li><li id="kt138641">Creating the
-                <codeph>gpadmin</codeph> user account</li><li id="kt138642">Exchanging SSH keys.
-            </li></ul></li>
+          existing segment hosts. This involves:<ul id="ul_att_m1q_n4">
+            <li id="kt138636">Configuring the hardware and OS</li>
+            <li id="kt138640">Installing the Greenplum software</li>
+            <li id="kt138641">Creating the <codeph>gpadmin</codeph> user account</li>
+            <li id="kt138642">Exchanging SSH keys. </li>
+          </ul></li>
         <li id="kt137052">Enough disk space on your segment hosts to temporarily hold a copy of your
           largest table. </li>
-        <li>When redistributing data, Greenplum Database must be running in production
-          mode. Greenplum Database cannot be restricted mode or in master mode. The
+        <li>When redistributing data, Greenplum Database must be running in production mode.
+          Greenplum Database cannot be restricted mode or in master mode. The
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
           specified to start Greenplum Database. </li>
       </ul>
@@ -61,9 +63,8 @@
             RANDOMLY</codeph>. The original distribution policies are later restored in the
           redistribution phase.</li>
       </ul>
-      <note>Data redistribution should
-          be performed during low-use hours. Redistribution can divided into batches over an
-          extended period.</note>
+      <note>Data redistribution should be performed during low-use hours. Redistribution can divided
+        into batches over an extended period.</note>
       <p>To begin the redistribution phase, you must run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options. Until the
         specified end time or duration is reached, the utility will redistribute tables in the
@@ -71,13 +72,12 @@
         rebalance the tables across new segments, and to set tables to their original distribution
         policy. If <codeph>gpexpand</codeph> completes the reorganization of all tables before the
         specified duration, it displays a success message and ends.</p>
-      <note>This utility uses secure shell (SSH) connections between systems to
-         perform its tasks. In large Greenplum Database deployments, cloud deployments,
-         or deployments with a large number of segments per host, this utility may
-         exceed the host's maximum threshold for unauthenticated connections.
-         Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter
-         to increase this threshold. For more information about SSH configuration
-         options, refer to the SSH documentation for your Linux distribution.</note>
+      <note>This utility uses secure shell (SSH) connections between systems to perform its tasks.
+        In large Greenplum Database deployments, cloud deployments, or deployments with a large
+        number of segments per host, this utility may exceed the host's maximum threshold for
+        unauthenticated connections. Consider updating the SSH <codeph>MaxStartups</codeph>
+        configuration parameter to increase this threshold. For more information about SSH
+        configuration options, refer to the SSH documentation for your Linux distribution.</note>
     </section>
     <section id="section5">
       <title>Options</title>
@@ -219,10 +219,10 @@ dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varn
     <section id="section7">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="gpssh-exkeys.xml#topic1"/>
-        </codeph>
-      </p>
+        <codeph><xref href="gpssh-exkeys.xml#topic1"/></codeph>, <xref
+          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum System</xref>
+        <ph otherprops="op-print">in the <cite>Greenplum Database Administrator
+        Guide</cite></ph></p>
     </section>
   </body>
 </topic>
