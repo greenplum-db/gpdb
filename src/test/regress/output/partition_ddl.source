@@ -338,11 +338,14 @@ select count(*) from mpp3283_nation;
 
 copy mpp3283_nation to '/dev/null' delimiter '|';
 drop table mpp3283_nation;
-CREATE TABLE mpp3240(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
+-- Check that DROP TABLE still works, after adding a default partition.
+CREATE TABLE mpp3240(a int, b int, c int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 alter table mpp3240 add default partition default_part;
 drop table mpp3240;
+-- Check that after dropping a partition, you can create a new partition with
+-- the same name.
 CREATE TABLE mpp3259 (
         unique1         int4,
         unique2         int4,
@@ -361,7 +364,7 @@ CREATE TABLE mpp3259 (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-( partition aa start (0) end (1000) every (100), default partition default_part );
+( partition aa start (0) end (500) every (100), default partition default_part );
 alter table mpp3259 drop partition default_part;
 alter table mpp3259 add default partition default_part;
 insert into mpp3259 (unique1) values (100001);
@@ -378,23 +381,10 @@ select * from mpp3259_1_prt_default_part;
 (1 row)
 
 drop table mpp3259;
+-- Check that DROP PARTITION for (n) gives sensible error if there is no matching partition.
 CREATE TABLE mpp3265 (
         unique1         int4,
-        unique2         int4,
-        two                     int4,
-        four            int4,
-        ten                     int4,
-        twenty          int4,
-        hundred         int4,
-        thousand        int4,
-        twothousand     int4,
-        fivethous       int4,
-        tenthous        int4,
-        odd                     int4,
-        even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
+        unique2         int4
 ) partition by range (unique1)
 ( partition aa start (0) end (500),
   partition bb start (500) end (1000),
@@ -2047,10 +2037,10 @@ Inherits: mpp2564_transactions_1_prt_9
 Distributed randomly
 
 DROP TABLE mpp2564_transactions;
-CREATE TABLE mpp3363(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
+-- Check that DEFAULT can be used as partition's name with ALTER TABLE ADD PARTITION. (MPP-3363)
+CREATE TABLE mpp3363(a int, b int, c int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
--- MPP-3363
+( partition aa start (1) end (3) every (1) );
 alter table mpp3363 add default partition default;
 ERROR:  syntax error at or near "default"
 LINE 1: alter table mpp3363 add default partition default;
@@ -2064,50 +2054,35 @@ drop table mpp3363;
 -- 1 level partition
 CREATE TABLE mpp3059(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059';
- tablename | partitionlevel | partitiontablename | partitionname | partitionrank |              partitionboundary              
------------+----------------+--------------------+---------------+---------------+---------------------------------------------
+ tablename | partitionlevel | partitiontablename | partitionname | partitionrank |             partitionboundary              
+-----------+----------------+--------------------+---------------+---------------+--------------------------------------------
  mpp3059   |              0 | mpp3059_1_prt_aa_1 | aa_1          |             1 | PARTITION aa_1 START (1) END (2) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_2 | aa_2          |             2 | PARTITION aa_2 START (2) END (3) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_3 | aa_3          |             3 | PARTITION aa_3 START (3) END (4) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_4 | aa_4          |             4 | PARTITION aa_4 START (4) END (5) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_5 | aa_5          |             5 | PARTITION aa_5 START (5) END (6) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_6 | aa_6          |             6 | PARTITION aa_6 START (6) END (7) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_7 | aa_7          |             7 | PARTITION aa_7 START (7) END (8) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_8 | aa_8          |             8 | PARTITION aa_8 START (8) END (9) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_9 | aa_9          |             9 | PARTITION aa_9 START (9) END (10) EVERY (1)
-(9 rows)
+(4 rows)
 
 alter table mpp3059 rename to mpp3059_rename; 
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059_rename';
-   tablename    | partitionlevel |    partitiontablename     | partitionname | partitionrank |              partitionboundary              
-----------------+----------------+---------------------------+---------------+---------------+---------------------------------------------
+   tablename    | partitionlevel |    partitiontablename     | partitionname | partitionrank |             partitionboundary              
+----------------+----------------+---------------------------+---------------+---------------+--------------------------------------------
  mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_1 | aa_1          |             1 | PARTITION aa_1 START (1) END (2) EVERY (1)
  mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_2 | aa_2          |             2 | PARTITION aa_2 START (2) END (3) EVERY (1)
  mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_3 | aa_3          |             3 | PARTITION aa_3 START (3) END (4) EVERY (1)
  mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_4 | aa_4          |             4 | PARTITION aa_4 START (4) END (5) EVERY (1)
- mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_5 | aa_5          |             5 | PARTITION aa_5 START (5) END (6) EVERY (1)
- mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_6 | aa_6          |             6 | PARTITION aa_6 START (6) END (7) EVERY (1)
- mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_7 | aa_7          |             7 | PARTITION aa_7 START (7) END (8) EVERY (1)
- mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_8 | aa_8          |             8 | PARTITION aa_8 START (8) END (9) EVERY (1)
- mpp3059_rename |              0 | mpp3059_rename_1_prt_aa_9 | aa_9          |             9 | PARTITION aa_9 START (9) END (10) EVERY (1)
-(9 rows)
+(4 rows)
 
 alter table mpp3059_rename rename to mpp3059; 
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059';
- tablename | partitionlevel | partitiontablename | partitionname | partitionrank |              partitionboundary              
------------+----------------+--------------------+---------------+---------------+---------------------------------------------
+ tablename | partitionlevel | partitiontablename | partitionname | partitionrank |             partitionboundary              
+-----------+----------------+--------------------+---------------+---------------+--------------------------------------------
  mpp3059   |              0 | mpp3059_1_prt_aa_1 | aa_1          |             1 | PARTITION aa_1 START (1) END (2) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_2 | aa_2          |             2 | PARTITION aa_2 START (2) END (3) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_3 | aa_3          |             3 | PARTITION aa_3 START (3) END (4) EVERY (1)
  mpp3059   |              0 | mpp3059_1_prt_aa_4 | aa_4          |             4 | PARTITION aa_4 START (4) END (5) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_5 | aa_5          |             5 | PARTITION aa_5 START (5) END (6) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_6 | aa_6          |             6 | PARTITION aa_6 START (6) END (7) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_7 | aa_7          |             7 | PARTITION aa_7 START (7) END (8) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_8 | aa_8          |             8 | PARTITION aa_8 START (8) END (9) EVERY (1)
- mpp3059   |              0 | mpp3059_1_prt_aa_9 | aa_9          |             9 | PARTITION aa_9 START (9) END (10) EVERY (1)
-(9 rows)
+(4 rows)
 
 -- 2 level partition
 CREATE TABLE mpp3059a (
@@ -2128,123 +2103,43 @@ CREATE TABLE mpp3059a (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-subpartition by range (unique2) subpartition template ( start (0) end (1000) every (100) )
-( start (0) end (1000) every (100));
+subpartition by range (unique2) subpartition template ( start (0) end (500) every (100) )
+( start (0) end (500) every (100));
 alter table mpp3059a rename to mpp3059a_rename; 
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059a_rename';
-    tablename    | partitionlevel |        partitiontablename         | partitionname | partitionrank |         partitionboundary          
------------------+----------------+-----------------------------------+---------------+---------------+------------------------------------
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_1           |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_2           |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_3           |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_4           |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_5           |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_6           |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_7           |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_8           |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_9           |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              0 | mpp3059a_rename_1_prt_10          |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_1  |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_2  |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_3  |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_4  |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_5  |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_6  |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_7  |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_8  |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_9  |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_10_2_prt_10 |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_6_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_7_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_8_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_1   |               |             1 | START (0) END (100) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_2   |               |             2 | START (100) END (200) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_3   |               |             3 | START (200) END (300) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_4   |               |             4 | START (300) END (400) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_5   |               |             5 | START (400) END (500) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_6   |               |             6 | START (500) END (600) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_7   |               |             7 | START (600) END (700) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_8   |               |             8 | START (700) END (800) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_9   |               |             9 | START (800) END (900) EVERY (100)
- mpp3059a_rename |              1 | mpp3059a_rename_1_prt_9_2_prt_10  |               |            10 | START (900) END (1000) EVERY (100)
-(110 rows)
+    tablename    | partitionlevel |       partitiontablename        | partitionname | partitionrank |         partitionboundary         
+-----------------+----------------+---------------------------------+---------------+---------------+-----------------------------------
+ mpp3059a_rename |              0 | mpp3059a_rename_1_prt_1         |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              0 | mpp3059a_rename_1_prt_2         |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              0 | mpp3059a_rename_1_prt_3         |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              0 | mpp3059a_rename_1_prt_4         |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              0 | mpp3059a_rename_1_prt_5         |               |             5 | START (400) END (500) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_1 |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_2 |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_3 |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_4 |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_1_2_prt_5 |               |             5 | START (400) END (500) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_1 |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_2 |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_3 |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_4 |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_2_2_prt_5 |               |             5 | START (400) END (500) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_1 |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_2 |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_3 |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_4 |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_3_2_prt_5 |               |             5 | START (400) END (500) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_1 |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_2 |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_3 |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_4 |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_4_2_prt_5 |               |             5 | START (400) END (500) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_1 |               |             1 | START (0) END (100) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_2 |               |             2 | START (100) END (200) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_3 |               |             3 | START (200) END (300) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_4 |               |             4 | START (300) END (400) EVERY (100)
+ mpp3059a_rename |              1 | mpp3059a_rename_1_prt_5_2_prt_5 |               |             5 | START (400) END (500) EVERY (100)
+(30 rows)
 
 create table mpp3216a (id int, rank int, year int, gender char(1), count int) distributed by (id); 
 create table mpp3216 (like mpp3216a) partition by range (year) ( start (2001) end (2006) every (1));
@@ -2490,9 +2385,10 @@ alter table mpp3375a drop partition;
 alter table mpp3375a drop partition default_part;
 drop table mpp3375a;
 drop table mpp3375;
-CREATE TABLE mpp3241(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
+-- Check that a negative number can be used in START, without quotes.
+CREATE TABLE mpp3241(a int, b int, c int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 alter table mpp3241 add partition zz start (-1) end (0);
 DROP TABLE mpp3241;
 set enable_partition_rules = off;
@@ -3005,35 +2901,30 @@ drop table mpp3260;
 drop table mpp3260a;
 CREATE TABLE mpp3080_int8(q1 int8, q2 int8)
 partition by range (q1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_float4 (f1  float4)
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_float8(i INT DEFAULT 1, f1 float8)
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_floatreal(i INT DEFAULT 1, f1 float(24))
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_floatdouble(i INT DEFAULT 1, f1 float(53))
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_numeric (id int4, val numeric(210,10))
 partition by range (val)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 CREATE TABLE mpp3080_numericbig (id int4, val numeric(1000,800))
 partition by range (val)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 -- order 1,5
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary 
   from pg_partitions where tablename like 'mpp3080%' order by tablename;
-      tablename      | partitionlevel |     partitiontablename      | partitionname | partitionrank |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               partitionboundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
----------------------+----------------+-----------------------------+---------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- mpp3080_float4      |              0 | mpp3080_float4_1_prt_9      |               |             9 | START (9::real) END (10::real) EVERY (1::double precision)
- mpp3080_float4      |              0 | mpp3080_float4_1_prt_8      |               |             8 | START (8::real) END (9::real) EVERY (1::double precision)
- mpp3080_float4      |              0 | mpp3080_float4_1_prt_7      |               |             7 | START (7::real) END (8::real) EVERY (1::double precision)
- mpp3080_float4      |              0 | mpp3080_float4_1_prt_6      |               |             6 | START (6::real) END (7::real) EVERY (1::double precision)
- mpp3080_float4      |              0 | mpp3080_float4_1_prt_5      |               |             5 | START (5::real) END (6::real) EVERY (1::double precision)
+      tablename      | partitionlevel |     partitiontablename      | partitionname | partitionrank |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              partitionboundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+---------------------+----------------+-----------------------------+---------------+---------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  mpp3080_float4      |              0 | mpp3080_float4_1_prt_4      |               |             4 | START (4::real) END (5::real) EVERY (1::double precision)
  mpp3080_float4      |              0 | mpp3080_float4_1_prt_3      |               |             3 | START (3::real) END (4::real) EVERY (1::double precision)
  mpp3080_float4      |              0 | mpp3080_float4_1_prt_2      |               |             2 | START (2::real) END (3::real) EVERY (1::double precision)
@@ -3042,57 +2933,27 @@ select tablename, partitionlevel, partitiontablename, partitionname, partitionra
  mpp3080_float8      |              0 | mpp3080_float8_1_prt_2      |               |             2 | START (2::double precision) END (3::double precision) EVERY (1::double precision)
  mpp3080_float8      |              0 | mpp3080_float8_1_prt_3      |               |             3 | START (3::double precision) END (4::double precision) EVERY (1::double precision)
  mpp3080_float8      |              0 | mpp3080_float8_1_prt_4      |               |             4 | START (4::double precision) END (5::double precision) EVERY (1::double precision)
- mpp3080_float8      |              0 | mpp3080_float8_1_prt_5      |               |             5 | START (5::double precision) END (6::double precision) EVERY (1::double precision)
- mpp3080_float8      |              0 | mpp3080_float8_1_prt_6      |               |             6 | START (6::double precision) END (7::double precision) EVERY (1::double precision)
- mpp3080_float8      |              0 | mpp3080_float8_1_prt_7      |               |             7 | START (7::double precision) END (8::double precision) EVERY (1::double precision)
- mpp3080_float8      |              0 | mpp3080_float8_1_prt_8      |               |             8 | START (8::double precision) END (9::double precision) EVERY (1::double precision)
- mpp3080_float8      |              0 | mpp3080_float8_1_prt_9      |               |             9 | START (9::double precision) END (10::double precision) EVERY (1::double precision)
  mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_1 |               |             1 | START (1::double precision) END (2::double precision) EVERY (1::double precision)
  mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_2 |               |             2 | START (2::double precision) END (3::double precision) EVERY (1::double precision)
  mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_3 |               |             3 | START (3::double precision) END (4::double precision) EVERY (1::double precision)
  mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_4 |               |             4 | START (4::double precision) END (5::double precision) EVERY (1::double precision)
- mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_5 |               |             5 | START (5::double precision) END (6::double precision) EVERY (1::double precision)
- mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_6 |               |             6 | START (6::double precision) END (7::double precision) EVERY (1::double precision)
- mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_7 |               |             7 | START (7::double precision) END (8::double precision) EVERY (1::double precision)
- mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_8 |               |             8 | START (8::double precision) END (9::double precision) EVERY (1::double precision)
- mpp3080_floatdouble |              0 | mpp3080_floatdouble_1_prt_9 |               |             9 | START (9::double precision) END (10::double precision) EVERY (1::double precision)
  mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_1   |               |             1 | START (1::real) END (2::real) EVERY (1::double precision)
  mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_2   |               |             2 | START (2::real) END (3::real) EVERY (1::double precision)
  mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_3   |               |             3 | START (3::real) END (4::real) EVERY (1::double precision)
  mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_4   |               |             4 | START (4::real) END (5::real) EVERY (1::double precision)
- mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_5   |               |             5 | START (5::real) END (6::real) EVERY (1::double precision)
- mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_6   |               |             6 | START (6::real) END (7::real) EVERY (1::double precision)
- mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_7   |               |             7 | START (7::real) END (8::real) EVERY (1::double precision)
- mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_8   |               |             8 | START (8::real) END (9::real) EVERY (1::double precision)
- mpp3080_floatreal   |              0 | mpp3080_floatreal_1_prt_9   |               |             9 | START (9::real) END (10::real) EVERY (1::double precision)
- mpp3080_int8        |              0 | mpp3080_int8_1_prt_9        |               |             9 | START (9::bigint) END (10::bigint) EVERY (1)
- mpp3080_int8        |              0 | mpp3080_int8_1_prt_8        |               |             8 | START (8::bigint) END (9::bigint) EVERY (1)
- mpp3080_int8        |              0 | mpp3080_int8_1_prt_7        |               |             7 | START (7::bigint) END (8::bigint) EVERY (1)
- mpp3080_int8        |              0 | mpp3080_int8_1_prt_6        |               |             6 | START (6::bigint) END (7::bigint) EVERY (1)
- mpp3080_int8        |              0 | mpp3080_int8_1_prt_5        |               |             5 | START (5::bigint) END (6::bigint) EVERY (1)
  mpp3080_int8        |              0 | mpp3080_int8_1_prt_4        |               |             4 | START (4::bigint) END (5::bigint) EVERY (1)
  mpp3080_int8        |              0 | mpp3080_int8_1_prt_3        |               |             3 | START (3::bigint) END (4::bigint) EVERY (1)
  mpp3080_int8        |              0 | mpp3080_int8_1_prt_2        |               |             2 | START (2::bigint) END (3::bigint) EVERY (1)
  mpp3080_int8        |              0 | mpp3080_int8_1_prt_1        |               |             1 | START (1::bigint) END (2::bigint) EVERY (1)
- mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_9     |               |             9 | START (9.0000000000::numeric(210,10)) END (10.0000000000::numeric(210,10)) EVERY (1::numeric)
- mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_8     |               |             8 | START (8.0000000000::numeric(210,10)) END (9.0000000000::numeric(210,10)) EVERY (1::numeric)
- mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_7     |               |             7 | START (7.0000000000::numeric(210,10)) END (8.0000000000::numeric(210,10)) EVERY (1::numeric)
- mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_6     |               |             6 | START (6.0000000000::numeric(210,10)) END (7.0000000000::numeric(210,10)) EVERY (1::numeric)
- mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_5     |               |             5 | START (5.0000000000::numeric(210,10)) END (6.0000000000::numeric(210,10)) EVERY (1::numeric)
  mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_4     |               |             4 | START (4.0000000000::numeric(210,10)) END (5.0000000000::numeric(210,10)) EVERY (1::numeric)
  mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_3     |               |             3 | START (3.0000000000::numeric(210,10)) END (4.0000000000::numeric(210,10)) EVERY (1::numeric)
  mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_2     |               |             2 | START (2.0000000000::numeric(210,10)) END (3.0000000000::numeric(210,10)) EVERY (1::numeric)
  mpp3080_numeric     |              0 | mpp3080_numeric_1_prt_1     |               |             1 | START (1.0000000000::numeric(210,10)) END (2.0000000000::numeric(210,10)) EVERY (1::numeric)
- mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_9  |               |             9 | START (9.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (10.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
- mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_8  |               |             8 | START (8.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (9.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
- mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_7  |               |             7 | START (7.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (8.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
- mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_6  |               |             6 | START (6.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (7.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
- mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_5  |               |             5 | START (5.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (6.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
  mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_4  |               |             4 | START (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (5.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
  mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_3  |               |             3 | START (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (4.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
  mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_2  |               |             2 | START (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (3.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
  mpp3080_numericbig  |              0 | mpp3080_numericbig_1_prt_1  |               |             1 | START (1.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) END (2.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000::numeric(1000,800)) EVERY (1::numeric)
-(63 rows)
+(28 rows)
 
 drop table mpp3080_int8;
 drop table mpp3080_float4;
