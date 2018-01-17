@@ -56,6 +56,8 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
+  - icw_tests_pxf
+  - icw_tests_gphdfs_centos
   - QP_memory-accounting
 {% endif %}
 {% if 'centos6' in os_types or 'ubuntu16' in os_types %}
@@ -121,13 +123,6 @@ groups:
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
   - gate_dpm_end
-{% endif %}
-{% if "UD" in test_sections %}
-  ## --------------------------------------------------------------------
-  - gate_ud_start
-  - regression_tests_pxf
-  - regression_tests_gphdfs_centos
-  - gate_ud_end
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -260,17 +255,6 @@ groups:
   - gate_dpm_end
 
 {% endif %}
-{% if "UD" in test_sections %}
-## ======================================================================
-
-- name: G:UD
-  jobs:
-  - gate_ud_start
-  - regression_tests_pxf
-  - regression_tests_gphdfs_centos
-  - gate_ud_end
-
-{% endif %}
 ## ======================================================================
 ##                                           _                         
 ##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___ 
@@ -378,7 +362,6 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
-{% if "UD" in test_sections %}
 - name: pxf_infra_src
   type: git
   source:
@@ -386,7 +369,6 @@ resources:
     private_key: {{pxf_infra-git-key}}
     uri: {{pxf_infra-git-remote}}
 
-{% endif %}
 {% if "ubuntu16" in os_types %}
 - name: debian_release
   type: git
@@ -434,6 +416,18 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+{% if pipeline_type == "prod" %}
+- name: bin_gpdb_centos6_stable
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos6/gpdb_branch_master/stable/bin_gpdb.tar.gz
+
+{% endif %}
 
 - name: pxf_tarball
   type: s3
@@ -556,7 +550,6 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if "UD" in test_sections %}
 - name: singlecluster
   type: s3
   source:
@@ -566,7 +559,6 @@ resources:
     region_name: {{aws-region}}
     versioned_file: singlecluster/singlecluster-HDP.tar.gz
 
-{% endif %}
 {% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
 - name: nightly-trigger
   type: time
@@ -1278,6 +1270,48 @@ jobs:
       TEST_OS: "centos"
       CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: icw_tests_pxf
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: singlecluster
+      trigger: [[ test_trigger ]]
+    - get: pxf_tarball
+      trigger: [[ test_trigger ]]
+    - get: pxf_infra_src
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-6
+  - task: test_pxf
+    file: pxf_infra_src/concourse/test_pxf.yml
+    image: centos-gpdb-dev-6
+    params:
+      GROUP: smoke
+      HADOOP_CLIENT: TAR
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
+- name: icw_tests_gphdfs_centos
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_gphdfs
+    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
+    image: centos-gpdb-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
 {% endif %}
 {% if "centos7" in os_types %}
 - name: icw_gporca_centos7
@@ -1535,6 +1569,8 @@ jobs:
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
       - QP_memory-accounting
+      - icw_tests_pxf
+      - icw_tests_gphdfs_centos
 {% endif %}
 {% if 'centos6' in os_types or 'ubuntu16' in os_types %}
       - icw_extensions_gpcloud
@@ -1552,6 +1588,11 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
+{% if pipeline_type == "prod" %}
+  - put: bin_gpdb_centos6_stable
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+{% endif %}
 
 {% endif %}
 {% if "CS" in test_sections %}
@@ -2475,93 +2516,7 @@ jobs:
       - DPM_gptransfer
 
 {% endif %}
-{% if "UD" in test_sections %}
-## ======================================================================
-##  _   _ ____  
-## | | | |  _ \ 
-## | | | | | | |
-## | |_| | |_| |
-##  \___/|____/ 
-## ======================================================================
 
-- name: gate_ud_start
-  plan:
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 5 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - gate_compile_end
-      trigger: true
-    - get: bin_gpdb_centos6
-      passed:
-      - gate_compile_end
-{% if "centos7" in os_types %}
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-{% endif %}
-
-- name: regression_tests_pxf
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-    - get: singlecluster
-      trigger: [[ test_trigger ]]
-    - get: pxf_tarball
-      trigger: [[ test_trigger ]]
-    - get: pxf_infra_src
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - task: test_pxf
-    file: pxf_infra_src/concourse/test_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: smoke
-      HADOOP_CLIENT: TAR
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_gphdfs_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_gphdfs
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-dev-6
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: gate_ud_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - regression_tests_pxf
-      - regression_tests_gphdfs_centos
-      trigger: true
-
-{% endif %}
 {% if pipeline_type == "prod" %}
 ## ======================================================================
 ##  ____      _                     
@@ -2605,8 +2560,8 @@ jobs:
     - cs_[[ test_name ]]
 {% endfor %}
     - QP_memory-accounting
-    - regression_tests_gphdfs_centos
-    - regression_tests_pxf
+    - icw_tests_gphdfs_centos
+    - icw_tests_pxf
 {% for test_name in MM_1_suites +
                     MM_2_suites +
                     MM_gpexpand_suites %}
