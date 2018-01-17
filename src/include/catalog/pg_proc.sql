@@ -555,3 +555,5 @@
  CREATE FUNCTION complex_lte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_lte' WITH (OID=3595, DESCRIPTION="less than or equal");
  
  CREATE FUNCTION complex_gte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_gte' WITH (OID=3596, DESCRIPTION="greater than or equal");
+
+ CREATE FUNCTION gp_tablespace_path(text, int4) RETURNS text  LANGUAGE internal IMMUTABLE STRICT AS 'gp_tablespace_path' WITH (OID=3597, DESCRIPTION="gp_tablespace_path");

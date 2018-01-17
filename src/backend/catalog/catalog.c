@@ -103,11 +103,7 @@ forkname_to_number(char *forkName)
 const char *
 tablespace_version_directory(void)
 {
-	static char path[MAXPGPATH];
-
-	snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
-
-	return path;
+	return get_tablespace_version_directory(GpIdentity.dbid);
 }
 
 /*
@@ -810,4 +806,14 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared)
 	elog(DEBUG1, "Calling GetNewRelFileNode returns new relfilenode = %d", rnode.relNode);
 
 	return rnode.relNode;
+}
+
+const char *
+get_tablespace_version_directory(int4 dbid)
+{
+	static char path[MAXPGPATH];
+
+	snprintf(path, MAXPGPATH, "%s%d", GP_TABLESPACE_VERSION_PREFIX, dbid);
+
+	return path;
 }

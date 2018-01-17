@@ -31,6 +31,8 @@
 #define GP_TABLESPACE_VERSION_DIRECTORY	"GPDB_" PG_MAJORVERSION "_" \
 									CppAsString2(CATALOG_VERSION_NO)
 
+#define GP_TABLESPACE_VERSION_PREFIX GP_TABLESPACE_VERSION_DIRECTORY "_db"
+
 extern const char *forkNames[];
 extern ForkNumber forkname_to_number(char *forkName);
 
@@ -62,5 +64,6 @@ extern Oid GetNewSequenceRelationOid(Relation relation);
 extern Oid GetNewRelFileNode(Oid reltablespace, bool relisshared);
 
 const char *tablespace_version_directory(void);
+const char *get_tablespace_version_directory(int4 dbid);
 
 #endif   /* CATALOG_H */
