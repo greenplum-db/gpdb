@@ -596,14 +596,8 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 	for (i = 0; i < wait_seconds; i++)
 	{
 		ret = PQping(connstr);
-
-		/*
-		 * In addition to OK/NO_ATTEMPT, we finish checking once it's started
-		 * as mirror or quiescent, which tells we can now send transition
-		 * message to postmaster.
-		 */
 		if (ret == PQPING_OK || ret == PQPING_NO_ATTEMPT ||
-			ret == PQPING_MIRROR_OR_QUIESCENT || ret == PQPING_MIRROR_READY)
+			ret == PQPING_MIRROR_READY)
 			break;
 
 #if defined(WIN32)
@@ -802,10 +796,6 @@ do_start(void)
 			case PQPING_MIRROR_READY:
 				print_msg(_(" done\n"));
 				print_msg(_("server started in mirror mode\n"));
-				break;
-			case PQPING_MIRROR_OR_QUIESCENT:
-				print_msg(_(" done\n"));
-				print_msg(_("server started in mirror or quiescent mode\n"));
 				break;
 			case PQPING_NO_RESPONSE:
 				print_msg(_(" stopped waiting\n"));

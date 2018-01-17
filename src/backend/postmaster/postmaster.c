@@ -263,9 +263,7 @@ static pid_t StartupPID = 0,
 
 static int	Shutdown = NoShutdown;
 
-/* T if recovering from a backend crash, up to the point of resetting shared memory and starting up again
- * (or going into quiescent mode if it's a primary/mirror that has reset) */
-static bool FatalError = false;
+static bool FatalError = false; /* T if recovering from backend crash */
 static bool RecoveryError = false;		/* T if WAL recovery failed */
 
 /*

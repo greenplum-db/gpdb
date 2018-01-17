@@ -117,7 +117,6 @@ typedef enum
 	PQPING_REJECT,				/* server is alive but rejecting connections */
 	PQPING_NO_RESPONSE,			/* could not establish connection */
 	PQPING_NO_ATTEMPT,			/* connection not attempted (bad params) */
-	PQPING_MIRROR_OR_QUIESCENT,	/* server is in mirror or quiescent */
 	PQPING_MIRROR_READY         /* mirror completed startup sequence */
 } PGPing;
 

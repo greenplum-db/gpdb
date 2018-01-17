@@ -2743,15 +2743,9 @@ internal_ping(PGconn *conn)
 	if (strlen(conn->last_sqlstate) != 5)
 		return PQPING_NO_RESPONSE;
 
-	/*
-	 * Report postmaster is ready to accept transition message. (this is
-	 * mainly for pg_ctl to start segment.)
-	 */
 	last_sqlstate = MAKE_SQLSTATE(conn->last_sqlstate[0], conn->last_sqlstate[1],
 								  conn->last_sqlstate[2], conn->last_sqlstate[3],
 								  conn->last_sqlstate[4]);
-	if (last_sqlstate == ERRCODE_MIRROR_OR_QUIESCENT)
-		return PQPING_MIRROR_OR_QUIESCENT;
 
 	if (last_sqlstate == ERRCODE_MIRROR_READY)
 		return PQPING_MIRROR_READY;

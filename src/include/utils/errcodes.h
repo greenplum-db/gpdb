@@ -357,7 +357,6 @@
 #define ERRCODE_ADMIN_SHUTDOWN				MAKE_SQLSTATE('5','7', 'P','0','1')
 #define ERRCODE_CRASH_SHUTDOWN				MAKE_SQLSTATE('5','7', 'P','0','2')
 #define ERRCODE_CANNOT_CONNECT_NOW			MAKE_SQLSTATE('5','7', 'P','0','3')
-#define ERRCODE_MIRROR_OR_QUIESCENT			MAKE_SQLSTATE('5','7', 'M','0','1')
 #define ERRCODE_MIRROR_READY				MAKE_SQLSTATE('5','7', 'M','0','2')
 
 /* Class 58 - System Error (class borrowed from DB2) */
