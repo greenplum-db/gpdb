@@ -69,12 +69,16 @@ class StandbyVerify(object):
                     pg_stat_replication
              """)
 
-    def check_gp_segment_config(self):
+    def check_gp_segment_config(self, datadir = None):
         ''' Check for the new entry in gp_segment_configuration'''
         sm_count = PSQL.run_sql_command("select count(*) from gp_segment_configuration where content='-1' and role='m';", flags='-q -t', dbname='postgres')
         if int(sm_count.strip()) != 1:
             return False
         tinctest.logger.info('A new entry is added for standby in gp_segment_configuration')
+        result = PSQL.run_sql_command("select datadir from gp_segment_configuration " 
+                                       "where content='-1' and role='m';", flags='-q -t', dbname='postgres')
+        if datadir is not None and datadir != result.strip():
+            return False
         return True
 
     def check_pg_stat_replication(self):
@@ -133,4 +137,7 @@ class StandbyVerify(object):
         if len(standby_processes) != len(process_list):
             return False
         tinctest.logger.info('All the standby processes are present at standby host''')
+        return True
+
+    def check_standby_tablespace(self):
         return True

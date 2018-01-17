@@ -22,6 +22,7 @@ import pexpect as pexpect
 
 import tinctest
 from tinctest.lib import local_path
+from gppylib.commands import base
 from gppylib.commands.base import Command
 from mpp.lib.config import GPDBConfig
 from mpp.lib.PSQL import PSQL
@@ -54,9 +55,10 @@ class GpinitStandby(object):
             return False
         return True
 
-    def verify_gpinitstandby(self, primary_pid):  
+    def verify_gpinitstandby(self, primary_pid, datadir):
         '''Verify the presence of standby in recovery mode '''
-        if (self.stdby.check_gp_segment_config()) and (self.stdby.check_pg_stat_replication()) and (self.stdby.check_standby_processes())and self.compare_primary_pid(primary_pid) :
+        tinctest.logger.info("verify standby...")
+        if self.stdby.check_gp_segment_config(datadir) and self.stdby.check_pg_stat_replication() and self.stdby.check_standby_processes() and self.compare_primary_pid(primary_pid) :
             return True
         return False
 
@@ -146,3 +148,10 @@ class GpinitStandby(object):
             return False
         child.close()
         return True
+
+    def check_dir_exist_on_standby(self, standby, location):
+        cmd = Command(name='Make directory on standby before running the command', cmdStr='ls -l %s' % location, ctxt=base.REMOTE, remoteHost=standby)
+        tinctest.logger.info('%s' % cmd)
+        cmd.run(validateAfter=True)
+        result = cmd.get_results()
+        return result.rc !=0
