@@ -537,18 +537,17 @@ gp_replica_check(PG_FUNCTION_ARGS)
 	DIR *mirrordir = AllocateDir(mirrordirpath);
 
 	/*
-	 * Checkpoint and wait until the standby has replayed it.
+	 * Checkpoint, so that all the changes are on disk.
 	 *
-	 * XXX: There is currently no guarantee or wait that the standby has
-	 * performed a restartpoint based on the checkpoint record, so this is
-	 * not very robust.
+	 * XXX: There is currently no guarantee that the standby has performed a
+	 * restartpoint based on the checkpoint record. If it hasn't, any recent
+	 * changes are not visible to us in the standby yet, and the file
+	 * comparison will find that the files don't match. That's OK, we will
+	 * issue a new checkpoint, wait, and retry a few times, so the standby
+	 * should converge to the same state as the master eventually, hopefully
+	 * before we give up.
 	 */
-	if (!sync_wait())
-	{
-		ereport(WARNING,
-				(errmsg("unable to obtain start synced LSN values between primary and mirror")));
-		PG_RETURN_BOOL(false);
-	}
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 	/* Store information from pg_class for each relfilenode */
 	HTAB *relfilenode_map = get_relfilenode_map();
