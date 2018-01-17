@@ -6448,20 +6448,8 @@ UpdateCatalogForStandbyPromotion(void)
 	 */
 	InitBufferPoolBackend();
 
-	/* heap access requires the rel-cache.
-	 *
-	 * Pass 2 uses heap API to insert/update/delete from persistent
-	 * tables.  In order to use the heap API, RelationDescriptor is
-	 * required.  In pass 2, persistent tables are accessed using
-	 * DirectOpen API to obtain the RelationDescriptor.  Hence, we
-	 * don't need to load full relcache as in
-	 * RelationCacheInitializePhase3().
-	 *
-	 * However, there is cache invalidation logic within heap API
-	 * needs basic data structures for catalog cache to be
-	 * initialized.  Hence, we need to do RelationCacheInitialize(),
-	 * InitCatalogCache(), and RelationCacheInitializePhase2()
-	 * before StartupXLOG_Pass2().
+	/*
+	 * heap access requires the rel-cache.
 	 *
 	 * Pass 4 needs RelationCacheInitializePhase3() to do catalog
 	 * validation, after xlog replay is complete.

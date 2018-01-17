@@ -145,17 +145,6 @@ DATA(insert OID = 1259 (  pg_class		PGNSP 83 PGUID 0 1259 0 0 0 0 0 f f f r h 26
 DESCR("");
 
 
-/*
- * pg_class table values for FormData_pg_class.
- */
-#define Class_pg_class \
-  {"pg_class"}, PG_CATALOG_NAMESPACE, PG_CLASS_RELTYPE_OID, BOOTSTRAP_SUPERUSERID, 0, \
-               RelationRelationId, GLOBALTABLESPACE_OID, \
-               0, 0, 0, 0, false, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_class, \
-               0, true, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
-
-
-
 #define		  RELKIND_INDEX			  'i'		/* secondary index */
 #define		  RELKIND_RELATION		  'r'		/* ordinary cataloged heap */
 #define		  RELKIND_SEQUENCE		  'S'		/* SEQUENCE relation */

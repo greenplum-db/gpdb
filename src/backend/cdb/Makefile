@@ -18,7 +18,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
        cdbappendonlystorageread.o cdbappendonlystoragewrite.o \
 	   cdbbufferedappend.o cdbbufferedread.o \
 	   cdbcat.o cdbcopy.o \
-	   cdbdirectopen.o \
 	   cdbdistributedsnapshot.o \
 	   cdbdistributedxid.o cdbdistributedxacts.o \
 	   cdbdoublylinked.o \

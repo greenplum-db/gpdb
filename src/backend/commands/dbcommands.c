@@ -70,7 +70,6 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdirectopen.h"
 
 #include "utils/pg_rusage.h"
 
