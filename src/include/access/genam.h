@@ -117,6 +117,7 @@ extern void index_endscan(IndexScanDesc scan);
 extern void index_markpos(IndexScanDesc scan);
 extern void index_restrpos(IndexScanDesc scan);
 extern HeapTuple index_getnext(IndexScanDesc scan, ScanDirection direction);
+extern bool index_getnext_indexitem(IndexScanDesc scan, ScanDirection direction);
 extern Node *index_getbitmap(IndexScanDesc scan, Node *bitmap);
 
 extern IndexBulkDeleteResult *index_bulk_delete(IndexVacuumInfo *info,

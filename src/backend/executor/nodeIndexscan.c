@@ -26,14 +26,18 @@
 
 #include "access/genam.h"
 #include "access/nbtree.h"
+#include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
 #include "optimizer/clauses.h"
+#include "parser/parsetree.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 
 /* ----------------------------------------------------------------
  *		IndexNext
@@ -52,6 +56,7 @@ IndexNext(IndexScanState *node)
 	Index		scanrelid;
 	HeapTuple	tuple;
 	TupleTableSlot *slot;
+	char relstorage;
 
 	/*
 	 * extract necessary information from index scan node
@@ -115,33 +120,74 @@ IndexNext(IndexScanState *node)
 	}
 
 	/*
-	 * ok, now that we have what we need, fetch the next tuple.
+	 * first of all, we need to check the storage type of the this relation.
 	 */
-	while ((tuple = index_getnext(scandesc, direction)) != NULL)
+	relstorage = get_rel_relstorage(getrelid(scanrelid, estate->es_range_table));
+	if ((RELSTORAGE_AOROWS != relstorage) && (RELSTORAGE_AOCOLS != relstorage))
 	{
-		/*
-		 * Store the scanned tuple in the scan tuple slot of the scan state.
-		 * Note: we pass 'false' because tuples returned by amgetnext are
-		 * pointers onto disk pages and must not be pfree()'d.
-		 */
-		ExecStoreHeapTuple(tuple,	/* tuple to store */
-					   slot,	/* slot to store in */
-					   scandesc->xs_cbuf,		/* buffer containing tuple */
-					   false);	/* don't pfree */
-
-		/*
-		 * If the index was lossy, we have to recheck the index quals using
-		 * the real tuple.
-		 */
-		if (scandesc->xs_recheck)
+		while ((tuple = index_getnext(scandesc, direction)) != NULL)
 		{
-			econtext->ecxt_scantuple = slot;
-			ResetExprContext(econtext);
-			if (!ExecQual(node->indexqualorig, econtext, false))
-				continue;		/* nope, so ask index for another one */
-		}
+			/*
+			 * Store the scanned tuple in the scan tuple slot of the scan state.
+			 * Note: we pass 'false' because tuples returned by amgetnext are
+			 * pointers onto disk pages and must not be pfree()'d.
+			 */
+			ExecStoreHeapTuple(tuple,	/* tuple to store */
+					   	   slot,	/* slot to store in */
+						   scandesc->xs_cbuf,		/* buffer containing tuple */
+						   false);	/* don't pfree */
 
-		return slot;
+			/*
+			 * If the index was lossy, we have to recheck the index quals using
+			 * the real tuple.
+			 */
+			if (scandesc->xs_recheck)
+			{
+				econtext->ecxt_scantuple = slot;
+				ResetExprContext(econtext);
+				if (!ExecQual(node->indexqualorig, econtext, false))
+					continue;		/* nope, so ask index for another one */
+			}
+
+			return slot;
+		}
+	}
+	else
+	{
+		while (index_getnext_indexitem(scandesc, direction))
+		{
+			AOTupleId aoTid;
+			tbm_convert_appendonly_tid_out(&(scandesc->xs_ctup.t_self), &aoTid);
+			if (RELSTORAGE_AOROWS == relstorage)
+			{
+				Assert(node->iss_AOFetchDesc);
+				appendonly_fetch(node->iss_AOFetchDesc, &aoTid, slot);
+			}
+			else
+			{
+				Assert(node->iss_AOCSFetchDesc);
+				aocs_fetch(node->iss_AOCSFetchDesc, &aoTid, slot);
+			}
+
+			if (TupIsNull(slot))
+			{
+				continue;
+			}
+
+			/*
+			 * If the index was lossy, we have to recheck the index quals using
+			 * the real tuple.
+			 */
+			if (scandesc->xs_recheck)
+			{
+				econtext->ecxt_scantuple = slot;
+				ResetExprContext(econtext);
+				if (!ExecQual(node->indexqualorig, econtext, false))
+					continue;		/* nope, so ask index for another one */
+			}
+
+			return slot;
+		}
 	}
 
 	if (!node->ss.ps.delayEagerFree)
@@ -517,6 +563,7 @@ ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
 {
 	IndexScanState *indexstate;
 	bool		relistarget;
+	char relstorage;
 
 	/*
 	 * create state structure
@@ -645,6 +692,68 @@ ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
 											   indexstate->iss_NumScanKeys,
 											   indexstate->iss_ScanKeys);
 
+	/*
+	 * Initialize fetch descriptor for Append-Only tables.
+	 */
+	relstorage = get_rel_relstorage(getrelid(node->scan.scanrelid, estate->es_range_table));
+	if (RELSTORAGE_AOROWS == relstorage)
+	{
+		Snapshot appendOnlyMetaDataSnapshot = estate->es_snapshot;
+		if (SnapshotAny == appendOnlyMetaDataSnapshot)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+		indexstate->iss_AOFetchDesc =
+								appendonly_fetch_init(currentRelation,
+													estate->es_snapshot,
+													appendOnlyMetaDataSnapshot);
+	}
+	else if (RELSTORAGE_AOCOLS == relstorage)
+	{
+		bool *proj;
+		int colno;
+		Snapshot appendOnlyMetaDataSnapshot = estate->es_snapshot;
+		if (SnapshotAny == appendOnlyMetaDataSnapshot)
+		{
+			/*
+			 * the append-only meta data should never be fetched with
+			 * SnapshotAny as bogus results are returned.
+			 */
+			appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+		}
+
+		/*
+		 * Obtain the projection.
+		 */
+		Assert(currentRelation->rd_att != NULL);
+
+		proj = (bool *)palloc0(sizeof(bool) * currentRelation->rd_att->natts);
+
+		GetNeededColumnsForScan((Node *) node->scan.plan.targetlist, proj, currentRelation->rd_att->natts);
+		GetNeededColumnsForScan((Node *) node->scan.plan.qual, proj, currentRelation->rd_att->natts);
+
+		for (colno = 0; colno < currentRelation->rd_att->natts; colno++)
+		{
+			if (proj[colno])
+				break;
+		}
+
+		/*
+		 * At least project one column. Since the tids stored in the index may not have
+		 * a corresponding tuple any more (because of previous crashes, for example), we
+		 * need to read the tuple to make sure.
+		 */
+		if (colno == currentRelation->rd_att->natts)
+			proj[0] = true;
+
+		indexstate->iss_AOCSFetchDesc =
+								aocs_fetch_init(currentRelation, estate->es_snapshot,
+										appendOnlyMetaDataSnapshot, proj);
+	}
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
 	 * then this node is not eager free safe.
@@ -1107,5 +1216,17 @@ ExecEagerFreeIndexScan(IndexScanState *node)
 	{
 		index_endscan(node->iss_ScanDesc);
 		node->iss_ScanDesc = NULL;
+	}
+	if (node->iss_AOFetchDesc != NULL)
+	{
+		appendonly_fetch_finish(node->iss_AOFetchDesc);
+		pfree(node->iss_AOFetchDesc);
+		node->iss_AOFetchDesc = NULL;
+	}
+	if (node->iss_AOCSFetchDesc != NULL)
+	{
+		aocs_fetch_finish(node->iss_AOCSFetchDesc);
+		pfree(node->iss_AOCSFetchDesc);
+		node->iss_AOCSFetchDesc = NULL;
 	}
 }

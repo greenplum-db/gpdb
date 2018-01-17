@@ -368,9 +368,16 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 * The appendonlyam.c module will optimize fetches in TID order by keeping
 	 * the last decompressed block between fetch calls.
 	 */
-	if (rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->relstorage == RELSTORAGE_AOCOLS)
-		indexpathlist = NIL;
+	/*
+	 * Through introducing one GUC, we can control whether to use index scan
+	 * for Append-Only tables.
+	 */
+	if (!root->config->gp_enable_appendonly_indexscan)
+	{
+		if (rel->relstorage == RELSTORAGE_AOROWS ||
+				rel->relstorage == RELSTORAGE_AOCOLS)
+			indexpathlist = NIL;
+	}
 
 	if (indexpathlist && root->config->enable_indexscan)
 		pathlist = list_concat(pathlist, indexpathlist);

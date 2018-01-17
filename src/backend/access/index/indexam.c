@@ -645,6 +645,40 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 }
 
 /* ----------------
+ * 		index_getnext_indexitem - get the next index tuple from a scan
+ *
+ * Finds the next index tuple satisfying the scan keys. Note that the
+ * corresponding heap tuple is not accessed, and thus no time qual (snapshot)
+ * check is done, other than the index AM's internal check for killed tuples
+ * (which most callers of this routine will probably want to suppress by
+ * setting scan->ignore_killed_tuples = false).
+ *
+ * On success (TRUE return), the heap TID of the found index entry is in
+ * scan->xs_ctup.t_self, scan->xs_cbuf is untouched.
+ */
+bool
+index_getnext_indexitem(IndexScanDesc scan, ScanDirection direction)
+{
+	FmgrInfo *procedure;
+	bool found;
+
+	SCAN_CHECKS;
+	GET_SCAN_PROCEDURE(amgettuple);
+
+	/* just make sure this is false... */
+	scan->kill_prior_tuple = false;
+
+	/*
+	 * have the am's gettuple proc do all the work.
+	 */
+	found = DatumGetBool(FunctionCall2(procedure,
+									PointerGetDatum(scan),
+									Int32GetDatum(direction)));
+
+	return found;
+}
+
+/* ----------------
  *		index_getbitmap - get all tuples at once from an index scan
  *
  *		it invokes am's getmulti function to get a bitmap. If am is an on-disk

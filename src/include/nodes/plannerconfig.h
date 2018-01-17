@@ -24,6 +24,7 @@ typedef struct PlannerConfig
 	bool		enable_mergejoin;
 	bool		enable_hashjoin;
 	bool        gp_enable_hashjoin_size_heuristic;
+	bool		gp_enable_appendonly_indexscan;
 	bool		gp_enable_fallback_plan;
 	bool        gp_enable_predicate_propagation;
 	bool		mpp_trying_fallback_plan;

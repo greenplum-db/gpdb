@@ -480,13 +480,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 
 				splan->scan.scanrelid += rtoffset;
 
-#ifdef USE_ASSERT_CHECKING
-				RangeTblEntry *rte = rt_fetch(splan->scan.scanrelid, glob->finalrtable);
-				char relstorage = get_rel_relstorage(rte->relid);
-				Assert(relstorage != RELSTORAGE_AOROWS &&
-					   relstorage != RELSTORAGE_AOCOLS);
-#endif
-
 				splan->scan.plan.targetlist =
 					fix_scan_list(glob, splan->scan.plan.targetlist, rtoffset);
 				splan->scan.plan.qual =

@@ -532,6 +532,7 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->enable_mergejoin = enable_mergejoin;
 	c1->enable_hashjoin = enable_hashjoin;
 	c1->gp_enable_hashjoin_size_heuristic = gp_enable_hashjoin_size_heuristic;
+	c1->gp_enable_appendonly_indexscan = gp_enable_appendonly_indexscan;
 	c1->gp_enable_fallback_plan = gp_enable_fallback_plan;
 	c1->gp_enable_predicate_propagation = gp_enable_predicate_propagation;
 	c1->mpp_trying_fallback_plan = false;

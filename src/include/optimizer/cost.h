@@ -82,6 +82,7 @@ extern int	constraint_exclusion;
 
 extern Cost disable_cost;
 
+extern bool gp_enable_appendonly_indexscan;
 extern bool gp_enable_hashjoin_size_heuristic;          /*CDB*/
 extern bool gp_enable_fallback_plan;
 extern bool gp_enable_predicate_propagation;

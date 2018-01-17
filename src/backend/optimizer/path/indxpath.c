@@ -1917,9 +1917,12 @@ best_inner_indexscan(PlannerInfo *root, RelOptInfo *rel,
 		indexpaths = NIL;
 
 	/* Exclude plain index paths if the relation is an append-only relation. */
-	if (rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->relstorage == RELSTORAGE_AOCOLS)
-		indexpaths = NIL;
+	if (!root->config->gp_enable_appendonly_indexscan)
+	{
+		if (rel->relstorage == RELSTORAGE_AOROWS ||
+				rel->relstorage == RELSTORAGE_AOCOLS)
+			indexpaths = NIL;
+	}
 
 	/*
 	 * If we found anything usable, generate a BitmapHeapPath for the most
