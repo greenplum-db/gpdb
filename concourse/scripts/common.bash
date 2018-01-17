@@ -9,6 +9,14 @@ function set_env() {
     export TIMEFORMAT=$'\e[4;33mIt took %R seconds to complete this step\e[0m';
 }
 
+function symlink_build_dir() {
+  local target_base_dir=$1
+  local cwd=$2
+  if [ ! -d ${target_base_dir} ]; then
+    ln -sfv ${cwd} ${target_base_dir}
+  fi
+}
+
 ## ----------------------------------------------------------------------
 ## Test functions
 ## ----------------------------------------------------------------------
@@ -19,6 +27,8 @@ function install_gpdb() {
 }
 
 function configure() {
+  # Use /home/build instead of /tmp/build/xyz... when navigating inside the container
+  symlink_build_dir "/home/build" $(pwd)
   source /opt/gcc_env.sh
   pushd gpdb_src
       # The full set of configure options which were used for building the
