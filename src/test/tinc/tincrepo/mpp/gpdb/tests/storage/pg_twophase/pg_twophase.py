@@ -51,8 +51,7 @@ class PgtwoPhaseTestCase(ScenarioTestCase, MPPTestCase):
     def tearDown(self):
         # Note: We don't destroy the tablespaces. We'll rather leave them around, so that
         # they can be reused by subsequent tests.
-        port = os.getenv('PGPORT')
-        self.filereputil.inject_fault(f='checkpoint', y='reset', r='primary', o='0', p=port)
+        self.filereputil.inject_fault(f='checkpoint', y='reset', r='primary', o='0')
         super(PgtwoPhaseTestCase,self).tearDown()
 
     def execute_split_sqls(self, skip_state, cluster_state, ddl_type, fault_type, crash_type):

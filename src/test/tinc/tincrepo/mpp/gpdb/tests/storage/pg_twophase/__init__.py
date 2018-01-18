@@ -47,10 +47,10 @@ class PgtwoPhaseClass(MPPTestCase):
         self.port = os.getenv('PGPORT')
         super(PgtwoPhaseClass,self).__init__(methodName)
 
-    def invoke_fault(self, fault_name, type, role='mirror', port=None, occurence=None, sleeptime=None, seg_id=None):
+    def invoke_fault(self, fault_name, type, role='mirror', occurence=0, sleeptime=0, seg_id=None):
         ''' Reset the fault and then issue the fault with the given type'''
-        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
-        self.filereputil.inject_fault(f=fault_name, y=type, r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y=type, r=role, o=occurence, sleeptime=sleeptime, seg_id=seg_id)
         tinctest.logger.info('Successfully injected fault_name : %s fault_type : %s' % (fault_name, type))
 
     def inject_fault(self, fault_type):
@@ -58,26 +58,26 @@ class PgtwoPhaseClass(MPPTestCase):
         @param fault_type : type of fault to ne suspended
         '''
         if fault_type == 'end_prepare_two_phase_sleep':
-            self.filereputil.inject_fault(f='end_prepare_two_phase_sleep', sleeptime='1000', y='sleep', r='primary', p=self.port)
+            self.filereputil.inject_fault(f='end_prepare_two_phase_sleep', sleeptime='1000', y='sleep', r='primary')
             tinctest.logger.info('Injected fault to sleep in end_prepare_two_phase')
 
         elif fault_type == 'abort':
             # In case of abort fault we need to include this error type fault also, to fake a situation where one of the segment is not responding back, which can make the master to trigger an abort transaction
-            self.invoke_fault('transaction_abort_after_distributed_prepared', 'error', port=self.port, occurence='0', seg_id='1')
+            self.invoke_fault('transaction_abort_after_distributed_prepared', 'error', occurence='0', seg_id='1')
 
-            self.invoke_fault('twophase_transaction_abort_prepared', 'suspend', role='primary', port=self.port, occurence='0')
+            self.invoke_fault('twophase_transaction_abort_prepared', 'suspend', role='primary', occurence='0')
 
         elif fault_type == 'commit':
-            self.invoke_fault('twophase_transaction_commit_prepared', 'suspend', role='primary', port=self.port, occurence='0')
+            self.invoke_fault('twophase_transaction_commit_prepared', 'suspend', role='primary', occurence='0')
 
         elif fault_type == 'dtm_broadcast_prepare':
-            self.invoke_fault('dtm_broadcast_prepare', 'suspend', seg_id = '1', port=self.port, occurence='0')
+            self.invoke_fault('dtm_broadcast_prepare', 'suspend', seg_id = '1', occurence='0')
 
         elif fault_type == 'dtm_broadcast_commit_prepared':
-            self.invoke_fault('dtm_broadcast_commit_prepared', 'suspend', seg_id = '1', port=self.port, occurence='0')
+            self.invoke_fault('dtm_broadcast_commit_prepared', 'suspend', seg_id = '1', occurence='0')
 
         elif fault_type == 'dtm_xlog_distributed_commit':
-            self.invoke_fault('dtm_xlog_distributed_commit', 'suspend', seg_id = '1', port=self.port, occurence='0')
+            self.invoke_fault('dtm_xlog_distributed_commit', 'suspend', seg_id = '1', occurence='0')
 
     def resume_faults(self, fault_type, cluster_state='sync'):
         '''
@@ -86,21 +86,21 @@ class PgtwoPhaseClass(MPPTestCase):
         '''
         tinctest.logger.info('coming to resume faults with xact %s' % fault_type) 
         if fault_type == 'abort':
-            self.filereputil.inject_fault(f='twophase_transaction_abort_prepared', y='resume', r='primary', p=self.port , o='0')
+            self.filereputil.inject_fault(f='twophase_transaction_abort_prepared', y='resume', r='primary', o='0')
             if cluster_state !='resync':
-                self.filereputil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset', p=self.port , o='0', seg_id='1')
+                self.filereputil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset', o='0', seg_id='1')
         elif fault_type == 'commit':
-            self.filereputil.inject_fault(f='twophase_transaction_commit_prepared', y='resume', r='primary', p=self.port , o='0')
+            self.filereputil.inject_fault(f='twophase_transaction_commit_prepared', y='resume', r='primary', o='0')
 
         elif fault_type == 'dtm_broadcast_prepare':
-            self.filereputil.inject_fault(f='dtm_broadcast_prepare', y='resume', seg_id = '1', p=self.port, o='0')
+            self.filereputil.inject_fault(f='dtm_broadcast_prepare', y='resume', seg_id = '1', o='0')
 
         elif fault_type == 'dtm_broadcast_commit_prepared':
             tinctest.logger.info('coming to if dtm_broadcast_commit_prepared')
-            self.filereputil.inject_fault(f='dtm_broadcast_commit_prepared', y='resume', seg_id = '1', p=self.port, o='0')
+            self.filereputil.inject_fault(f='dtm_broadcast_commit_prepared', y='resume', seg_id = '1', o='0')
 
         elif fault_type == 'dtm_xlog_distributed_commit':
-            self.filereputil.inject_fault(f='dtm_xlog_distributed_commit', y='resume', seg_id = '1', p=self.port, o='0')
+            self.filereputil.inject_fault(f='dtm_xlog_distributed_commit', y='resume', seg_id = '1', o='0')
 
         else:
             tinctest.logger.info('No faults to resume')
@@ -162,7 +162,7 @@ class PgtwoPhaseClass(MPPTestCase):
             (rc, num) = self.filereputil.wait_till_change_tracking_transition()
             tinctest.logger.info('Value of rc and num_down %s, %s' % (rc, num))
             if fault_type == 'abort' :
-                self.filereputil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset',p=self.port , o='0', seg_id='1')
+                self.filereputil.inject_fault(f='transaction_abort_after_distributed_prepared', y='reset', o='0', seg_id='1')
 
         if cluster_state == 'resync':
             if not self.gprecover.wait_till_insync_transition():
@@ -225,7 +225,7 @@ class PgtwoPhaseClass(MPPTestCase):
             self.invoke_fault('filerep_resync', 'suspend', role='primary')
 
             if checkpoint == 'skip':
-                self.invoke_fault('filerep_transition_to_sync_before_checkpoint', 'suspend', role='primary', port=self.port, occurence='0')
+                self.invoke_fault('filerep_transition_to_sync_before_checkpoint', 'suspend', role='primary', occurence='0')
             rc = self.gprecover.incremental()
             if not rc:
                 raise Exception('Gprecvoerseg failed')
@@ -233,7 +233,7 @@ class PgtwoPhaseClass(MPPTestCase):
 
         PSQL.run_sql_command('CHECKPOINT;', dbname='postgres')
         if checkpoint == 'skip':
-            self.invoke_fault('checkpoint', 'skip', role='primary', port= self.port, occurence='0')
+            self.invoke_fault('checkpoint', 'skip', role='primary', occurence='0')
         self.inject_fault(fault_type)
 
         # Can't do it after filerep_resync resume as gets stuck due to
