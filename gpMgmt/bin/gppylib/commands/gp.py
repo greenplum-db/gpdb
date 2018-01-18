@@ -364,17 +364,12 @@ class SegmentStart(Command):
         content = gpdb.getSegmentContentId()
         port    = gpdb.getSegmentPort()
         datadir = gpdb.getSegmentDataDirectory()
-        role    = gpdb.getSegmentRole()
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
         b.set_segment(mirrormode, content)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
-
-        # mirror will be in recovery mode so pg_ctl -w flag won't work
-        if role == gparray.ROLE_MIRROR:
-            noWait = True
 
         # build pg_ctl command
         c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, not noWait, timeout)
