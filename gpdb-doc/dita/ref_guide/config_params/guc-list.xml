@@ -174,12 +174,6 @@
               <xref href="#gp_autostats_on_change_threshold"/>
             </li>
             <li>
-              <xref href="#gp_backup_directIO"/>
-            </li>
-            <li>
-              <xref href="#gp_backup_directIO_read_chunk_mb"/>
-            </li>
-            <li>
               <xref href="#gp_cached_segworkers_threshold"/>
             </li>
             <li>
@@ -2512,66 +2506,6 @@
               <entry colname="col1">integer</entry>
               <entry colname="col2">2147483647</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_backup_directIO">
-    <title>gp_backup_directIO</title>
-    <body>
-      <p>Direct I/O allows Greenplum Database to bypass the buffering of memory within the file
-        system cache for backup. When Direct I/O is used for a file, data is transferred directly
-        from the disk to the application buffer, without the use of the file buffer cache.</p>
-      <p>Direct I/O is supported only on Red Hat Enterprise Linux, CentOS, and SUSE. </p>
-      <table id="gp_backup_directIO_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">on, off</entry>
-              <entry colname="col2">off</entry>
-              <entry colname="col3">local<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_backup_directIO_read_chunk_mb">
-    <title>gp_backup_directIO_read_chunk_mb</title>
-    <body>
-      <p>Sets the chunk size in MB when Direct I/O is enabled with <xref href="#gp_backup_directIO"
-          format="dita"/>. The default chunk size is 20MB.</p>
-      <p>The default value is the optimal setting. Decreasing it will increase the backup time and
-        increasing it will result in little change to backup time.</p>
-      <table id="gp_backup_directIO_read_chunk_mb_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">1-200</entry>
-              <entry colname="col2">20 MB</entry>
-              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

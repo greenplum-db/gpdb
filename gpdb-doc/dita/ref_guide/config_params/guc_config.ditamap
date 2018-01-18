@@ -61,8 +61,6 @@
             <topicref href="guc-list.xml#gp_autostats_mode"/>
             <topicref href="guc-list.xml#gp_autostats_mode_in_functions"/>
             <topicref href="guc-list.xml#gp_autostats_on_change_threshold"/>
-            <topicref href="guc-list.xml#gp_backup_directIO"/>
-            <topicref href="guc-list.xml#gp_backup_directIO_read_chunk_mb"/>
             <topicref href="guc-list.xml#gp_cached_segworkers_threshold"/>
             <topicref href="guc-list.xml#gp_command_count"/>
             <topicref href="guc-list.xml#gp_connection_send_timeout"/>

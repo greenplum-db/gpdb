@@ -240,22 +240,6 @@ extern bool Debug_print_slice_table;
 extern bool Debug_resource_group;
 
 /*
- * gp_backup_directIO
- *
- * when set to 'true' the dump with direct I\O is enabled
- */
-extern bool gp_backup_directIO;
-
-
-/*
- * gp_backup_directIO_readChunk
- *
- *  This parameter controls the readChunk that is used during directI\O backup
- *  The value of this parameter is in megabyte
- */
-extern int gp_backup_directIO_read_chunk_mb;
-
-/*
  * gp_external_enable_exec
  *
  * when set to 'true' external tables that were defined with an EXECUTE
@@ -355,8 +339,6 @@ extern int32 gp_subtrans_warn_limit;
 
 extern bool assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source);
 
-extern char *gp_fault_action_string;	/* Use by guc.c as user defined fault
-										 * action */
 extern bool gp_set_read_only;
 
 extern const char *role_to_string(GpRoleValue role);
@@ -838,14 +820,6 @@ extern int gp_segworker_relative_priority;
 
 /*  Max size of dispatched plans; 0 if no limit */
 extern int gp_max_plan_size;
-
-/* The maximum number of times on average that the hybrid hashed aggregation
- * algorithm will plan to spill an input row to disk before including it in
- * an aggregation.  Increasing this parameter will cause the planner to choose
- * hybrid hashed aggregation at lower settings of work_mem than it otherwise
- * would.
- */
-extern double gp_hashagg_rewrite_limit;
 
 /* If we use two stage hashagg, we can stream the bottom half */
 extern bool gp_hashagg_streambottom;

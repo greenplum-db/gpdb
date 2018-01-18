@@ -551,5 +551,3 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 #------------------------------------------------------------------------------
 
 #custom_variable_classes = ''			# list of custom variable class names
-gp_backup_directIO = off				# enable\disable dump with direct IO
-gp_backup_directIO_read_chunk_mb = 20	# Size of read Chunk buffer in directIO dump (in MB)

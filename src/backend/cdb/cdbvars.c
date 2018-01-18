@@ -52,7 +52,6 @@
 GpRoleValue Gp_role;			/* Role paid by this Greenplum Database
 								 * backend */
 char	   *gp_role_string;		/* Staging area for guc.c */
-char	   *gp_fault_action_string; /* Staging area for guc.c */
 bool		gp_set_read_only;	/* Staging area for guc.c */
 
 GpRoleValue Gp_session_role;	/* Role paid by this Greenplum Database
@@ -75,12 +74,6 @@ bool		Debug_print_prelim_plan;	/* Shall we log argument of
 bool		Debug_print_slice_table;	/* Shall we log the slice table? */
 
 bool		Debug_resource_group;	/* Shall we log the resource group? */
-
-bool		gp_backup_directIO = false; /* disable\enable direct I/O dump */
-
-int			gp_backup_directIO_read_chunk_mb = 20;	/* size of readChunk
-													 * buffer for directIO
-													 * dump */
 
 bool		gp_external_enable_exec = true; /* allow ext tables with EXECUTE */
 
@@ -241,12 +234,6 @@ int			gp_udpic_network_disable_ipv6 = 0;
 uint32		gp_interconnect_id = 0;
 
 /* --------------------------------------------------------------------------------------------------
- * Resource management
- */
-
-double		gp_hashagg_respill_bias = 1;
-
-/* --------------------------------------------------------------------------------------------------
  * Greenplum Optimizer GUCs
  */
 
@@ -268,9 +255,6 @@ int			gp_hashagg_groups_per_bucket = 5;
 /* default value to 0, which means we do not try to control number of spill batches */
 int			gp_hashagg_spillbatch_min = 0;
 int			gp_hashagg_spillbatch_max = 0;
-
-/* hash join to use bloom filter: default to 0, means not used */
-int			gp_hashjoin_bloomfilter = 0;
 
 /* Analyzing aid */
 int			gp_motion_slice_noop = 0;

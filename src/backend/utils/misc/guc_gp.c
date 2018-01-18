@@ -1175,15 +1175,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_backup_directIO", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable direct IO dump"),
-			NULL
-		},
-		&gp_backup_directIO,
-		false, NULL, NULL
-	},
-
-	{
 		{"gp_external_enable_exec", PGC_POSTMASTER, EXTERNAL_TABLES,
 			gettext_noop("Enable selecting from an external table with an EXECUTE clause."),
 			NULL
@@ -3814,15 +3805,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_backup_directIO_read_chunk_mb", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Size of read Chunk buffer in directIO dump (in MB)"),
-			NULL,
-		},
-		&gp_backup_directIO_read_chunk_mb,
-		20, 1, 200, NULL, NULL
-	},
-
-	{
 		{"gp_email_connect_timeout", PGC_SUSET, LOGGING,
 			gettext_noop("Sets the amount of time (in secs) after which SMTP sockets would timeout"),
 			NULL,
@@ -4268,16 +4250,6 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_role_string,
 		"dispatch", assign_gp_role, show_gp_role
-	},
-
-	{
-		{"gp_fault_action", PGC_POSTMASTER, DEFUNCT_OPTIONS,
-			gettext_noop("Sets the fault action for fault tolerance management."),
-			gettext_noop("Valid values are CONTINUE, READONLY, and SHUTDOWN."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_fault_action_string,
-		"continue", NULL, NULL
 	},
 
 	{
