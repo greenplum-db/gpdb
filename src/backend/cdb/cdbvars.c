@@ -779,7 +779,9 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSourc
 		newtype = RESOURCE_MANAGER_POLICY_GROUP;
 	}
 	else
-		elog(ERROR, "unknown resource manager policy: current policy is '%s'", gpvars_show_gp_resource_manager_policy());
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid value for resource manager policy")));
 
 	if (doit)
 	{
@@ -821,7 +823,10 @@ gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute_
 	{
 		if (newval >= max_statement_mem)
 		{
-			elog(ERROR, "Invalid input for statement_mem. Must be less than max_statement_mem (%d kB).", max_statement_mem);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
+							max_statement_mem)));
 		}
 
 		statement_mem = newval;
