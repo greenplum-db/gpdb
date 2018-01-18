@@ -460,6 +460,7 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
+{% if "UD" in test_sections %}
 - name: pxf_tarball
   type: s3
   source:
@@ -469,6 +470,7 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: pxf_artifacts/prod/gpdb_branch_5X_STABLE/stable/pxf.tar.gz
 
+{% endif %}
 - name: compiled_bits_ubuntu16
   type: s3
   source:
