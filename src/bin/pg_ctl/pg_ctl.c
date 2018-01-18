@@ -603,7 +603,7 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 		 * message to postmaster.
 		 */
 		if (ret == PQPING_OK || ret == PQPING_NO_ATTEMPT ||
-			ret == PQPING_MIRROR_OR_QUIESCENT)
+			ret == PQPING_MIRROR_OR_QUIESCENT || ret == PQPING_MIRROR_READY)
 			break;
 
 #if defined(WIN32)

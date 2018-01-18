@@ -114,6 +114,7 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
 /* This too */
 #define ERRCODE_CANNOT_CONNECT_NOW "57P03"
 #define ERRCODE_MIRROR_OR_QUIESCENT "57M01"
+#define ERRCODE_MIRROR_READY "57M02"
 
 /*
  * fall back options if they are not specified by arguments or defined
@@ -2754,6 +2755,9 @@ internal_ping(PGconn *conn)
 	 */
 	if (strcmp(conn->last_sqlstate, ERRCODE_MIRROR_OR_QUIESCENT) == 0)
 		return PQPING_MIRROR_OR_QUIESCENT;
+
+	if (strcmp(conn->last_sqlstate, ERRCODE_MIRROR_READY) == 0)
+		return PQPING_MIRROR_READY;
 
 	/*
 	 * Report PQPING_REJECT if server says it's not accepting connections. (We

@@ -155,7 +155,7 @@ void FtsProbeMain(int argc, char *argv[]);
 #endif
 
 bool am_mirror = false;
-
+bool pm_launch_walreceiver = false;
 
 /*
  * List of active backends (or child processes anyway; we don't actually
@@ -2837,6 +2837,17 @@ retry1:
 			 * Do we want to just remove this case entirely? */
 			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
+		case CAC_MIRROR_READY:
+			if (am_ftshandler)
+			{
+				Assert(am_mirror);
+				break;
+			}
+			ereport(FATAL,
+					(errcode(ERRCODE_MIRROR_READY),
+					 errSendAlert(true),
+					 errmsg(POSTMASTER_IN_RECOVERY_MSG)));
+			break;
 		case CAC_OK:
 			break;
 	}
@@ -3544,6 +3555,13 @@ canAcceptConnections(void)
 		if (isQuiescentMode(&mirrorMode))
 			return CAC_MIRROR_OR_QUIESCENT;
 
+		/*
+		 * If the wal receiver has been launched at least once, return that
+		 * the mirror is ready.
+		 */
+		if (pm_launch_walreceiver)
+			return CAC_MIRROR_READY;
+
 		if (!FatalError &&
 			(pmState == PM_STARTUP ||
 			 pmState == PM_RECOVERY ||
@@ -4062,6 +4080,9 @@ do_reaper()
 			 */
 			FatalError = false;
 			pmState = PM_RUN;
+
+			/* Unset this since we are in normal operation */
+			pm_launch_walreceiver = false;
 
 			/*
 			 * Load the flat authorization file into postmaster's cache. The
@@ -6825,6 +6846,9 @@ sigusr1_handler(SIGNAL_ARGS)
 	{
 		/* Startup Process wants us to start the walreceiver process. */
 		WalReceiverPID = StartWalReceiver();
+
+		/* wal receiver has been launched */
+		pm_launch_walreceiver = true;
 	}
 
 	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER))
