@@ -34,6 +34,10 @@ class PgtwoPhaseTestCase(ScenarioTestCase, MPPTestCase):
         super(PgtwoPhaseTestCase,self).__init__(methodName)
     
     def setUp(self):
+        results={'rc':-1, 'stdout':'', 'stderr':''}
+        PSQL.run_sql_command("create extension gp_inject_fault", results=results)
+        if 'already exists' not in results['stderr']:
+            assert results['rc'] == 0
         if (PSQL.run_sql_command("select count(*) from pg_tablespace WHERE spcname = 'twophase_test_ts'", flags ='-q -t').strip() == '0'):
             if not os.path.exists('/tmp/twophase_test_ts'):
                 os.mkdir('/tmp/twophase_test_ts')
@@ -51,8 +55,7 @@ class PgtwoPhaseTestCase(ScenarioTestCase, MPPTestCase):
     def tearDown(self):
         # Note: We don't destroy the tablespaces. We'll rather leave them around, so that
         # they can be reused by subsequent tests.
-        port = os.getenv('PGPORT')
-        self.filereputil.inject_fault(f='checkpoint', y='reset', r='primary', o='0', p=port)
+        self.filereputil.inject_fault(f='checkpoint', y='reset', r='primary', o='0')
         super(PgtwoPhaseTestCase,self).tearDown()
 
     def execute_split_sqls(self, skip_state, cluster_state, ddl_type, fault_type, crash_type):

@@ -32,7 +32,6 @@
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "utils/faultinjector.h"
 #include "utils/gp_alloc.h"
 #include "utils/tuplesort.h"

@@ -27,7 +27,6 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbfts.h"
 #include "executor/spi.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 
@@ -700,7 +699,7 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 		new.db.port = PG_GETARG_INT32(3);
 
 	add_segment_config_entry(GpIdentity.dbid, &new);
-
+	
 	heap_close(gprel, NoLock);
 
 	PG_RETURN_INT16(new.db.dbid);
@@ -840,13 +839,6 @@ gp_activate_standby(void)
 						   PG_FUNCNAME_MACRO);
 
 	catalog_activate_standby(olddbid, newdbid);
-
-	/*
-	 * Tell postmaster to change dbid to the new one.  This should come last
-	 * after completing catalog change, as the new value will reside after
-	 * transaction abort or PANIC.
-	 */
-	primaryMirrorSetNewDbid(newdbid);
 
 	/* done */
 	return true;

@@ -54,13 +54,9 @@ end;
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -78,9 +74,9 @@ checkpoint;
 -- Skip checkpoints.
 select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -91,9 +87,9 @@ NOTICE:  Success:
 -- Suspend bgwriter.
 select gp_inject_fault('fault_in_background_writer_main', 'suspend', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -136,9 +132,9 @@ select sum(num_dirty('fsync_test2'::regclass)) > 0 as passed
 -- Flush all dirty pages by BgBufferSync()
 select gp_inject_fault('bg_buffer_sync_default_logic', 'skip', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -149,9 +145,9 @@ NOTICE:  Success:
 -- Resume bgwriter.
 select gp_inject_fault('fault_in_background_writer_main', 'resume', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -178,9 +174,9 @@ select wait_for_bgwriter('fsync_test2'::regclass, 25) as passed;
 -- Inject fault to count relfiles fsync'ed by checkpointer.
 select gp_inject_fault('fsync_counter', 'skip', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -191,9 +187,9 @@ NOTICE:  Success:
 -- Resume checkpoints.
 select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid)
 from gp_segment_configuration where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t
@@ -214,7 +210,7 @@ select dirty_buffers() from gp_dist_random('gp_id')
 -- fsync_test1 and fsync_test2 tables. `num times hit` is corresponding
 -- to the number of files synced by `fsync_counter` fault type.
 select gp_inject_fault('fsync_counter', 'status', '', '', '', 0, 0, 2::smallint);
-NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'0' fault injection state:'triggered'  num times hit:'5'
+NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' occurrence:'-1' sleep time:'0' fault injection state:'triggered'  num times hit:'5'  (seg0 127.0.1.1:25432 pid=24489)
  gp_inject_fault 
 -----------------
  t
@@ -223,13 +219,9 @@ NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' 
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=24489)
+NOTICE:  Success:  (seg1 127.0.1.1:25433 pid=24490)
+NOTICE:  Success:  (seg2 127.0.1.1:25434 pid=24491)
  gp_inject_fault 
 -----------------
  t

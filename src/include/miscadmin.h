@@ -489,8 +489,6 @@ typedef enum
 	CheckpointerProcess,
 	WalWriterProcess,
 	WalReceiverProcess,
-	FilerepProcess,
-	FilerepResetPeerProcess
 } AuxProcType;
 
 extern AuxProcType MyAuxProcType; /* bootstrap.c */

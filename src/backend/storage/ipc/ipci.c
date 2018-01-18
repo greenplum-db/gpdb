@@ -31,7 +31,6 @@
 #include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
 #include "postmaster/postmaster.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "postmaster/seqserver.h"
 #include "replication/walsender.h"
 #include "replication/walreceiver.h"
@@ -153,7 +152,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, SInvalShmemSize());
 		size = add_size(size, PMSignalShmemSize());
 		size = add_size(size, ProcSignalShmemSize());
-		size = add_size(size, primaryMirrorModeShmemSize());
 		//size = add_size(size, AutoVacuumShmemSize());
 		size = add_size(size, FtsShmemSize());
 		size = add_size(size, tmShmemSize());
@@ -239,8 +237,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	InitShmemIndex();
 
-	primaryMirrorModeShmemInit();
-
 	/*
 	 * Set up xlog, clog, and buffers
 	 */
@@ -270,11 +266,11 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	ResManagerShmemInit();
 
+	/*
+	 * Set up process table
+	 */
 	if (!IsUnderPostmaster)
-	{
-		/* Set up process table */
-		InitProcGlobal(PostmasterGetMppLocalProcessCounter());
-	}
+		InitProcGlobal();
 
 	/* Initialize SessionState shared memory array */
 	SessionState_ShmemInit();

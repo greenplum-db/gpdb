@@ -108,12 +108,10 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
 
 #undef ERRCODE_INVALID_PASSWORD
 #undef ERRCODE_CANNOT_CONNECT_NOW
-#undef ERRCODE_MIRROR_OR_QUIESCENT
 /* This is part of the protocol so just define it */
 #define ERRCODE_INVALID_PASSWORD "28P01"
 /* This too */
 #define ERRCODE_CANNOT_CONNECT_NOW "57P03"
-#define ERRCODE_MIRROR_OR_QUIESCENT "57M01"
 
 /*
  * fall back options if they are not specified by arguments or defined
@@ -2747,13 +2745,6 @@ internal_ping(PGconn *conn)
 	 */
 	if (strlen(conn->last_sqlstate) != 5)
 		return PQPING_NO_RESPONSE;
-
-	/*
-	 * Report postmaster is ready to accept transition message. (this is
-	 * mainly for pg_ctl to start segment.)
-	 */
-	if (strcmp(conn->last_sqlstate, ERRCODE_MIRROR_OR_QUIESCENT) == 0)
-		return PQPING_MIRROR_OR_QUIESCENT;
 
 	/*
 	 * Report PQPING_REJECT if server says it's not accepting connections. (We

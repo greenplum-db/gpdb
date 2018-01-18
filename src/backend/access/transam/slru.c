@@ -58,7 +58,6 @@
 #include "storage/shmem.h"
 #include "miscadmin.h"
 
-#include "postmaster/primary_mirror_mode.h"
 #include "libpq/md5.h"
 
 

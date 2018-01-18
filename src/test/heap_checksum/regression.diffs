@@ -1,0 +1,54 @@
+--- /Users/apraveen/workspace/gpdb/src/test/heap_checksum/expected/heap_checksum_corruption.out	2018-01-17 16:26:22.000000000 -0800
++++ /Users/apraveen/workspace/gpdb/src/test/heap_checksum/results/heap_checksum_corruption.out	2018-01-17 16:26:22.000000000 -0800
+@@ -103,7 +103,7 @@
+ SHOW data_checksums;
+  data_checksums 
+ ----------------
+- on
++ off
+ (1 row)
+ 
+ --  Corrupt a heap table
+@@ -202,9 +202,6 @@
+ -- skip all further checkpoint
+ select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+ NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+  gp_inject_fault 
+ -----------------
+  t
+@@ -243,9 +240,6 @@
+ -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
+ select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'panic', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+ NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+  gp_inject_fault 
+ -----------------
+  t
+@@ -270,9 +264,6 @@
+ -- reset the fault injector
+ select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+ NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+  gp_inject_fault 
+ -----------------
+  t
+@@ -283,9 +274,6 @@
+ 
+ select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+ NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+-NOTICE:  Success:
+  gp_inject_fault 
+ -----------------
+  t
+
+======================================================================
+

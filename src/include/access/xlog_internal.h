@@ -21,7 +21,6 @@
 #include "pgtime.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
-#include "postmaster/primary_mirror_mode.h"
 
 
 /*
