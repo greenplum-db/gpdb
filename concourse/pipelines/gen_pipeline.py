@@ -107,7 +107,7 @@ if __name__ == "__main__":
     PARSER.add_argument('-a', '--test_sections',
                         action='store',
                         dest='test_sections',
-                        choices=['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD'],
+                        choices=['ICW', 'CS', 'MPP', 'MM', 'DPM'],
                         default=['ICW'],
                         nargs='+',
                         help='Select tests sections to run')
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-        ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD']
+        ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM']
         print "======================================================================"
         print "Validate Pipeline Release Jobs"
         print "----------------------------------------------------------------------"
