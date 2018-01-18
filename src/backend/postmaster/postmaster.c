@@ -2841,7 +2841,10 @@ retry1:
 			break;
 	}
 
-	SIMPLE_FAULT_INJECTOR(ProcessStartupPacketFault);
+	if (!am_ftshandler)
+	{
+		SIMPLE_FAULT_INJECTOR(ProcessStartupPacketFault);
+	}
 
 	return STATUS_OK;
 }
