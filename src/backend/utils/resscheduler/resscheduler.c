@@ -49,11 +49,10 @@
 /*
  * GUC variables.
  */
-char                		*gp_resqueue_memory_policy_str = NULL;
-ResManagerMemoryPolicy     	gp_resqueue_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
-bool						gp_log_resqueue_memory = false;
-int							gp_resqueue_memory_policy_auto_fixed_mem;
-bool						gp_resqueue_print_operator_memory_limits = false;
+int 	gp_resqueue_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
+bool	gp_log_resqueue_memory = false;
+int		gp_resqueue_memory_policy_auto_fixed_mem;
+bool	gp_resqueue_print_operator_memory_limits = false;
 
 
 int		MaxResourceQueues;						/* Max # of queues. */

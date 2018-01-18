@@ -313,7 +313,7 @@ int			gp_workfile_type_hashjoin = 0;
 /* Gpmon */
 bool		gp_enable_gpperfmon = false;
 int			gp_gpperfmon_send_interval = 1;
-GpperfmonLogAlertLevel gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_NONE;
+int			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_NONE;
 
 /* Enable single-slice single-row inserts ?*/
 bool		gp_enable_fast_sri = true;
@@ -331,9 +331,9 @@ bool		gp_fts_probe_pause = false;
 bool		coredump_on_memerror = false;
 
 /* Experimental feature for MPP-4082. Please read doc before setting this guc */
-GpAutoStatsModeValue gp_autostats_mode;
+int			gp_autostats_mode;
 char	   *gp_autostats_mode_string;
-GpAutoStatsModeValue gp_autostats_mode_in_functions;
+int			gp_autostats_mode_in_functions;
 char	   *gp_autostats_mode_in_functions_string;
 int			gp_autostats_on_change_threshold = 100000;
 bool		log_autostats = true;
@@ -679,7 +679,7 @@ show_gp_connections_per_thread(void)
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-GpVars_Verbosity gp_log_gang;
+int gp_log_gang;
 
 /*
  * gp_log_fts (string)
@@ -693,7 +693,7 @@ GpVars_Verbosity gp_log_gang;
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-GpVars_Verbosity gp_log_fts;
+int gp_log_fts;
 
 /*
  * gp_log_interconnect (string)
@@ -707,363 +707,10 @@ GpVars_Verbosity gp_log_fts;
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-GpVars_Verbosity gp_log_interconnect;
+int gp_log_interconnect;
 
 /*
- * gpvars_string_to_verbosity
- */
-static GpVars_Verbosity
-gpvars_string_to_verbosity(const char *s)
-{
-	GpVars_Verbosity result;
-
-	if (!s ||
-		!s[0] ||
-		!pg_strcasecmp("terse", s))
-		result = GPVARS_VERBOSITY_TERSE;
-	else if (!pg_strcasecmp("off", s))
-		result = GPVARS_VERBOSITY_OFF;
-	else if (!pg_strcasecmp("verbose", s))
-		result = GPVARS_VERBOSITY_VERBOSE;
-	else if (!pg_strcasecmp("debug", s))
-		result = GPVARS_VERBOSITY_DEBUG;
-	else
-		result = GPVARS_VERBOSITY_UNDEFINED;
-	return result;
-}								/* gpvars_string_to_verbosity */
-
-/*
- * gpvars_verbosity_to_string
- */
-static const char *
-gpvars_verbosity_to_string(GpVars_Verbosity verbosity)
-{
-	switch (verbosity)
-	{
-		case GPVARS_VERBOSITY_OFF:
-			return "off";
-		case GPVARS_VERBOSITY_TERSE:
-			return "terse";
-		case GPVARS_VERBOSITY_VERBOSE:
-			return "verbose";
-		case GPVARS_VERBOSITY_DEBUG:
-			return "debug";
-		default:
-			return "*undefined*";
-	}
-}								/* gpvars_verbosity_to_string */
-
-/*
- * gpperfmon_log_alert_level_to_string
- */
-const char *
-gpperfmon_log_alert_level_to_string(GpperfmonLogAlertLevel level)
-{
-	switch (level)
-	{
-		case GPPERFMON_LOG_ALERT_LEVEL_NONE:
-			return "none";
-		case GPPERFMON_LOG_ALERT_LEVEL_WARNING:
-			return "warning";
-		case GPPERFMON_LOG_ALERT_LEVEL_ERROR:
-			return "error";
-		case GPPERFMON_LOG_ALERT_LEVEL_FATAL:
-			return "fatal";
-		case GPPERFMON_LOG_ALERT_LEVEL_PANIC:
-			return "panic";
-		default:
-			return "*undefined*";
-	}
-}
-
-/*
- * gpperfmon_log_alert_level_from_string
- */
-GpperfmonLogAlertLevel
-gpperfmon_log_alert_level_from_string(const char *level_string)
-{
-	if (strcasecmp(level_string, "warning") == 0)
-	{
-		return GPPERFMON_LOG_ALERT_LEVEL_WARNING;
-	}
-	if (strcasecmp(level_string, "error") == 0)
-	{
-		return GPPERFMON_LOG_ALERT_LEVEL_ERROR;
-	}
-	if (strcasecmp(level_string, "fatal") == 0)
-	{
-		return GPPERFMON_LOG_ALERT_LEVEL_FATAL;
-	}
-	if (strcasecmp(level_string, "panic") == 0)
-	{
-		return GPPERFMON_LOG_ALERT_LEVEL_PANIC;
-	}
-	return GPPERFMON_LOG_ALERT_LEVEL_NONE;
-}
-
-/*
- * gpvars_assign_gp_log_gangs
- * gpvars_show_gp_log_gangs
- */
-const char *
-gpvars_assign_gp_log_gang(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	GpVars_Verbosity v = gpvars_string_to_verbosity(newval);
-
-	if (v == GPVARS_VERBOSITY_UNDEFINED)
-		return NULL;
-	if (doit)
-		gp_log_gang = v;
-	return newval;
-}								/* gpvars_assign_gp_log_gangs */
-
-const char *
-gpvars_show_gp_log_gang(void)
-{
-	return gpvars_verbosity_to_string(gp_log_gang);
-}								/* gpvars_show_gp_log_gangs */
-
-/*
- * gpvars_assign_gp_log_fts
- * gpvars_show_gp_log_fts
- */
-const char *
-gpvars_assign_gp_log_fts(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	GpVars_Verbosity v = gpvars_string_to_verbosity(newval);
-
-	if (v == GPVARS_VERBOSITY_UNDEFINED)
-		return NULL;
-	if (doit)
-		gp_log_fts = v;
-	return newval;
-}								/* gpvars_assign_gp_log_fts */
-
-const char *
-gpvars_show_gp_log_fts(void)
-{
-	return gpvars_verbosity_to_string(gp_log_fts);
-}								/* gpvars_show_gp_log_fts */
-
-/*
- * gpvars_assign_gp_log_interconnect
- * gpvars_show_gp_log_interconnect
- */
-const char *
-gpvars_assign_gp_log_interconnect(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	GpVars_Verbosity v = gpvars_string_to_verbosity(newval);
-
-	if (v == GPVARS_VERBOSITY_UNDEFINED)
-		return NULL;
-	if (doit)
-		gp_log_interconnect = v;
-	return newval;
-}								/* gpvars_assign_gp_log_interconnect */
-
-const char *
-gpvars_show_gp_log_interconnect(void)
-{
-	return gpvars_verbosity_to_string(gp_log_interconnect);
-}								/* gpvars_show_gp_log_interconnect */
-
-
-/*
- * gpvars_assign_gp_interconnect_type
- * gpvars_show_gp_interconnect_type
- */
-const char *
-gpvars_assign_gp_interconnect_type(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	int			newtype = 0;
-
-	if (newval == NULL || newval[0] == 0 ||
-		!pg_strcasecmp("udpifc", newval))
-		newtype = INTERCONNECT_TYPE_UDPIFC;
-	else if (!pg_strcasecmp("tcp", newval))
-		newtype = INTERCONNECT_TYPE_TCP;
-	else
-		elog(ERROR, "Unknown interconnect type. (current type is '%s')", gpvars_show_gp_interconnect_type());
-
-	if (doit)
-	{
-		Gp_interconnect_type = newtype;
-	}
-
-	return newval;
-}								/* gpvars_assign_gp_log_interconnect */
-
-const char *
-gpvars_show_gp_interconnect_type(void)
-{
-	switch (Gp_interconnect_type)
-	{
-		case INTERCONNECT_TYPE_TCP:
-			return "TCP";
-		case INTERCONNECT_TYPE_UDPIFC:
-		default:
-			return "UDPIFC";
-	}
-}								/* gpvars_show_gp_log_interconnect */
-
-/*
- * gpvars_assign_gp_interconnect_fc_method
- * gpvars_show_gp_interconnect_fc_method
- */
-const char *
-gpvars_assign_gp_interconnect_fc_method(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	int			newmethod = 0;
-
-	if (newval == NULL || newval[0] == 0 ||
-		!pg_strcasecmp("capacity", newval))
-		newmethod = INTERCONNECT_FC_METHOD_CAPACITY;
-	else if (!pg_strcasecmp("loss", newval))
-		newmethod = INTERCONNECT_FC_METHOD_LOSS;
-	else
-		elog(ERROR, "Unknown interconnect flow control method. (current method is '%s')", gpvars_show_gp_interconnect_fc_method());
-
-	if (doit)
-	{
-		Gp_interconnect_fc_method = newmethod;
-	}
-
-	return newval;
-}								/* gpvars_assign_gp_interconnect_fc_method */
-
-const char *
-gpvars_show_gp_interconnect_fc_method(void)
-{
-	switch (Gp_interconnect_fc_method)
-	{
-		case INTERCONNECT_FC_METHOD_CAPACITY:
-			return "CAPACITY";
-		case INTERCONNECT_FC_METHOD_LOSS:
-			return "LOSS";
-		default:
-			return "CAPACITY";
-	}
-}								/* gpvars_show_gp_interconnect_fc_method */
-
-/*
- * Parse the string value of gp_autostats_mode and gp_autostats_mode_in_functions
- */
-static int
-gpvars_parse_gp_autostats_mode(const char *newval, bool inFunctions)
-{
-	int			newtype = 0;
-
-	if (newval == NULL || newval[0] == 0 ||
-		!pg_strcasecmp("none", newval))
-	{
-		newtype = GP_AUTOSTATS_NONE;
-	}
-	else if (!pg_strcasecmp("on_change", newval) || !pg_strcasecmp("onchange", newval))
-	{
-		newtype = GP_AUTOSTATS_ON_CHANGE;
-	}
-	else if (!pg_strcasecmp("on_no_stats", newval))
-	{
-		newtype = GP_AUTOSTATS_ON_NO_STATS;
-	}
-	else
-	{
-		const char *autostats_mode_string;
-
-		if (inFunctions)
-		{
-			autostats_mode_string = gpvars_show_gp_autostats_mode_in_functions();
-		}
-		else
-		{
-			autostats_mode_string = gpvars_show_gp_autostats_mode();
-		}
-		elog(ERROR, "Unknown autostats mode. (current type is '%s')", autostats_mode_string);
-	}
-
-	return newtype;
-}
-
-/*
- * gpvars_assign_gp_autostats_mode
- * gpvars_show_gp_autostats_mode
- */
-const char *
-gpvars_assign_gp_autostats_mode(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	int			newtype = gpvars_parse_gp_autostats_mode(newval, false /* inFunctions */ );
-
-	if (doit)
-	{
-		gp_autostats_mode = newtype;
-	}
-
-	return newval;
-}
-
-/*
- * Common function to show the value of the gp_autostats_mode
- * and gp_autostats_mode_in_functions GUCs
- */
-static const char *
-gpvars_show_gp_autostats_mode_common(bool inFunctions)
-{
-	GpAutoStatsModeValue autostats_mode;
-
-	if (inFunctions)
-	{
-		autostats_mode = gp_autostats_mode_in_functions;
-	}
-	else
-	{
-		autostats_mode = gp_autostats_mode;
-	}
-	switch (autostats_mode)
-	{
-		case GP_AUTOSTATS_NONE:
-			return "NONE";
-		case GP_AUTOSTATS_ON_CHANGE:
-			return "ON_CHANGE";
-		case GP_AUTOSTATS_ON_NO_STATS:
-			return "ON_NO_STATS";
-		default:
-			return "NONE";
-	}
-}
-
-const char *
-gpvars_show_gp_autostats_mode(void)
-{
-	return gpvars_show_gp_autostats_mode_common(false /* inFunctions */ );
-}
-
-/*
- * gpvars_assign_gp_autostats_mode_in_functions
- * gpvars_show_gp_autostats_mode_in_functions
- */
-
-const char *
-gpvars_assign_gp_autostats_mode_in_functions(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	bool		inFunctions = true;
-	int			newtype = gpvars_parse_gp_autostats_mode(newval, inFunctions);
-
-	if (doit)
-	{
-		gp_autostats_mode_in_functions = newtype;
-	}
-
-	return newval;
-}
-
-
-const char *
-gpvars_show_gp_autostats_mode_in_functions(void)
-{
-	return gpvars_show_gp_autostats_mode_common(true /* inFunctions */ );
-}
-
-/* gp_enable_gpperfmon and gp_gpperfmon_send_interval are GUCs that we'd like
+ * gp_enable_gpperfmon and gp_gpperfmon_send_interval are GUCs that we'd like
  * to have propagate from master to segments but we don't want non-super users
  * to be able to set it.  Unfortunately, as long as we use libpq to connect to
  * the segments its hard to create a clean way of doing this.
@@ -1111,46 +758,6 @@ gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source
 	}
 
 	return true;
-}
-
-const char *
-gpvars_assign_gp_gpperfmon_log_alert_level(const char *newval, bool doit, GucSource source)
-{
-	if (doit)
-	{
-		if (!pg_strcasecmp(newval, "none"))
-		{
-			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_NONE;
-		}
-		else if (!pg_strcasecmp(newval, "warning"))
-		{
-			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_WARNING;
-		}
-		else if (!pg_strcasecmp(newval, "error"))
-		{
-			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_ERROR;
-		}
-		else if (!pg_strcasecmp(newval, "fatal"))
-		{
-			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_FATAL;
-		}
-		else if (!pg_strcasecmp(newval, "panic"))
-		{
-			gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_PANIC;
-		}
-		else
-		{
-			elog(ERROR, "Unknown log alert level '%s'. (current value is '%s')", newval, gpperfmon_log_alert_level_to_string(gpperfmon_log_alert_level));
-		}
-	}
-
-	return newval;
-}
-
-const char *
-gpvars_show_gp_gpperfmon_log_alert_level(void)
-{
-	return gpperfmon_log_alert_level_to_string(gpperfmon_log_alert_level);
 }
 
 /*
@@ -1201,89 +808,6 @@ gpvars_show_gp_resource_manager_policy(void)
 		default:
 			Assert(!"unexpected resource manager policy");
 			return "unknown";
-	}
-}
-
-/*
- * gpvars_assign_gp_resqueue_memory_policy
- * gpvars_show_gp_resqueue_memory_policy
- */
-const char *
-gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	ResManagerMemoryPolicy newtype = RESMANAGER_MEMORY_POLICY_NONE;
-
-	if (newval == NULL || newval[0] == 0 ||
-		!pg_strcasecmp("none", newval))
-		newtype = RESMANAGER_MEMORY_POLICY_NONE;
-	else if (!pg_strcasecmp("auto", newval))
-		newtype = RESMANAGER_MEMORY_POLICY_AUTO;
-	else if (!pg_strcasecmp("eager_free", newval))
-		newtype = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
-	else
-		elog(ERROR, "unknown resource queue memory policy: current policy is '%s'", gpvars_show_gp_resqueue_memory_policy());
-
-	if (doit)
-	{
-		gp_resqueue_memory_policy = newtype;
-	}
-
-	return newval;
-}
-
-const char *
-gpvars_show_gp_resqueue_memory_policy(void)
-{
-	switch (gp_resqueue_memory_policy)
-	{
-		case RESMANAGER_MEMORY_POLICY_NONE:
-			return "none";
-		case RESMANAGER_MEMORY_POLICY_AUTO:
-			return "auto";
-		case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
-			return "eager_free";
-		default:
-			elog(ERROR, "Invalid resource queue memory policy");
-	}
-}
-
-/*
- * gpvars_assign_gp_resgroup_memory_policy
- * gpvars_show_gp_resgroup_memory_policy
- */
-const char *
-gpvars_assign_gp_resgroup_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
-{
-	ResManagerMemoryPolicy newtype = RESMANAGER_MEMORY_POLICY_NONE;
-
-	if (newval == NULL)
-		elog(ERROR, "unknown resource group memory policy: current policy is '%s'", gpvars_show_gp_resgroup_memory_policy());
-	else if (!pg_strcasecmp("auto", newval))
-		newtype = RESMANAGER_MEMORY_POLICY_AUTO;
-	else if (!pg_strcasecmp("eager_free", newval))
-		newtype = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
-	else
-		elog(ERROR, "unknown resource group memory policy: current policy is '%s'", gpvars_show_gp_resgroup_memory_policy());
-
-	if (doit)
-	{
-		gp_resgroup_memory_policy = newtype;
-	}
-
-	return newval;
-}
-
-const char *
-gpvars_show_gp_resgroup_memory_policy(void)
-{
-	switch (gp_resgroup_memory_policy)
-	{
-		case RESMANAGER_MEMORY_POLICY_AUTO:
-			return "auto";
-		case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
-			return "eager_free";
-		default:
-			elog(ERROR, "Invalid resource group memory policy");
 	}
 }
 

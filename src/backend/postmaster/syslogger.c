@@ -1472,10 +1472,11 @@ static void set_write_to_alert_log(const char *severity)
 {
     if (alert_log_level_opened)
     {
-        GpperfmonLogAlertLevel alert_level =
-            gpperfmon_log_alert_level_from_string(severity);
-        // gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
-        // because alert_log_level_opened is true; 
+        GpperfmonLogAlertLevel alert_level = lookup_loglevel_by_name(severity);
+        /*
+         * gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
+         * because alert_log_level_opened is true
+         */
         if (alert_level >= gpperfmon_log_alert_level)
         {
             write_to_alert_log = true;

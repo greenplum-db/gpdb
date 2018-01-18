@@ -358,20 +358,20 @@ CREATE TABLE tbl_truncate_load (c1 int, c2 int) DISTRIBUTED BY (c1);
 SELECT current_setting('gp_autostats_mode');
  current_setting 
 -----------------
- ON_NO_STATS
+ on_no_stats
 (1 row)
 
 SELECT current_setting('gp_autostats_mode_in_functions');
  current_setting 
 -----------------
- NONE
+ none
 (1 row)
 
 -- test function with GUC value for gp_autostats_mode_in_functions as ON_NO_STATS
 SELECT set_config('gp_autostats_mode_in_functions', 'ON_NO_STATS', False);
  set_config  
 -------------
- ON_NO_STATS
+ on_no_stats
 (1 row)
 
 TRUNCATE TABLE tbl_truncate_load;
@@ -418,7 +418,7 @@ SELECT count(*) FROM tbl_truncate_load;
 SELECT set_config('gp_autostats_mode_in_functions', 'NONE', False);
  set_config 
 ------------
- NONE
+ none
 (1 row)
 
 TRUNCATE TABLE tbl_truncate_load;

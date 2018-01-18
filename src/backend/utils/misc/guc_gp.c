@@ -237,11 +237,6 @@ char	   *gp_snmp_use_inform_or_trap;
 char	   *gp_snmp_debug_log;
 #endif
 
-static char *gp_log_gang_str;
-static char *gp_log_fts_str;
-static char *gp_log_interconnect_str;
-static char *gp_interconnect_type_str;
-static char *gp_interconnect_fc_method_str;
 static char *gp_resource_manager_str;
 
 /*
@@ -269,7 +264,6 @@ double		gp_resource_group_memory_limit;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
-static char *gpperfmon_log_alert_level_str;
 
 /* Perfmon debug GUC */
 bool		gp_perfmon_print_packet_info;
@@ -544,9 +538,53 @@ static const struct config_enum_entry debug_dtm_action_target_options[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry gp_autostats_modes[] = {
+	{"none", GP_AUTOSTATS_NONE},
+	{"on_change", GP_AUTOSTATS_ON_CHANGE},
+	{"onchange", GP_AUTOSTATS_ON_CHANGE},
+	{"on_no_stats", GP_AUTOSTATS_ON_NO_STATS},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_interconnect_fc_methods[] = {
+	{"loss", INTERCONNECT_FC_METHOD_LOSS},
+	{"capacity", INTERCONNECT_FC_METHOD_CAPACITY},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_interconnect_types[] = {
+	{"udpifc", INTERCONNECT_TYPE_UDPIFC},
+	{"tcp", INTERCONNECT_TYPE_TCP},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_log_verbosity[] = {
+	{"terse", GPVARS_VERBOSITY_TERSE},
+	{"off", GPVARS_VERBOSITY_OFF},
+	{"verbose", GPVARS_VERBOSITY_VERBOSE},
+	{"debug", GPVARS_VERBOSITY_DEBUG},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_resqueue_memory_policies[] = {
+	{"none", RESMANAGER_MEMORY_POLICY_NONE},
+	{"auto", RESMANAGER_MEMORY_POLICY_AUTO},
+	{"eager_free", RESMANAGER_MEMORY_POLICY_EAGER_FREE},
+	{NULL, 0}
+};
+
 static const struct config_enum_entry gp_workfile_type_hashjoin_options[] = {
 	{"bfz", BFZ},
 	{"buffile", BUFFILE},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
+	{"none", GPPERFMON_LOG_ALERT_LEVEL_NONE},
+	{"warning", GPPERFMON_LOG_ALERT_LEVEL_WARNING},
+	{"error", GPPERFMON_LOG_ALERT_LEVEL_ERROR},
+	{"fatal", GPPERFMON_LOG_ALERT_LEVEL_FATAL},
+	{"panic", GPPERFMON_LOG_ALERT_LEVEL_PANIC},
 	{NULL, 0}
 };
 
@@ -4185,15 +4223,6 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gpperfmon_log_alert_level", PGC_USERSET, LOGGING,
-			gettext_noop("Specify the log alert level used by gpperfmon."),
-			gettext_noop("Valid values are 'none', 'warning', 'error', 'fatal', 'panic'.")
-		},
-		&gpperfmon_log_alert_level_str,
-		"none", gpvars_assign_gp_gpperfmon_log_alert_level, gpvars_show_gp_gpperfmon_log_alert_level
-	},
-
-	{
 		{"memory_profiler_run_id", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set the unique run ID for memory profiling"),
 			gettext_noop("Any string is acceptable"),
@@ -4253,56 +4282,6 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_log_gang", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to worker process creation and management."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_gang_str,
-		"off", gpvars_assign_gp_log_gang, gpvars_show_gp_log_gang
-	},
-
-	{
-		{"gp_log_fts", PGC_SIGHUP, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to fault probing."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_fts_str,
-		"terse", gpvars_assign_gp_log_fts, gpvars_show_gp_log_fts
-	},
-
-	{
-		{"gp_log_interconnect", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to connections between worker processes."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_interconnect_str,
-		"terse", gpvars_assign_gp_log_interconnect, gpvars_show_gp_log_interconnect
-	},
-
-	{
-		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
-			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Valid values are \"tcp\" and \"udpifc\"."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_interconnect_type_str,
-		"udpifc", gpvars_assign_gp_interconnect_type, gpvars_show_gp_interconnect_type
-	},
-
-	{
-		{"gp_interconnect_fc_method", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Sets the flow control method used for UDP interconnect."),
-			gettext_noop("Valid values are \"capacity\" and \"loss\"."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_interconnect_fc_method_str,
-		"loss", gpvars_assign_gp_interconnect_fc_method, gpvars_show_gp_interconnect_fc_method
-	},
-
-	{
 		{"gp_qd_hostname", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Shows the QD Hostname. Blank when run on the QD"),
 			NULL,
@@ -4321,22 +4300,7 @@ struct config_string ConfigureNamesString_gp[] =
 		&Debug_dtm_action_sql_command_tag,
 		"", NULL, NULL
 	},
-	{
-		{"gp_autostats_mode", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the autostats mode."),
-			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
-		},
-		&gp_autostats_mode_string,
-		"none", gpvars_assign_gp_autostats_mode, gpvars_show_gp_autostats_mode
-	},
-	{
-		{"gp_autostats_mode_in_functions", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the autostats mode for statements in procedural language functions."),
-			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
-		},
-		&gp_autostats_mode_in_functions_string,
-		"none", gpvars_assign_gp_autostats_mode_in_functions, gpvars_show_gp_autostats_mode_in_functions
-	},
+
 	{
 		{"gp_resqueue_priority_default_value", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Default weight when one cannot be associated with a statement."),
@@ -4459,24 +4423,6 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&pljava_classpath,
 		"", NULL, NULL
-	},
-
-	{
-		{"gp_resqueue_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are NONE, AUTO, EAGER_FREE.")
-		},
-		&gp_resqueue_memory_policy_str,
-		"none", gpvars_assign_gp_resqueue_memory_policy, gpvars_show_gp_resqueue_memory_policy
-	},
-
-	{
-		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are AUTO, EAGER_FREE.")
-		},
-		&gp_resgroup_memory_policy_str,
-		"eager_free", gpvars_assign_gp_resgroup_memory_policy, gpvars_show_gp_resgroup_memory_policy
 	},
 
 	{
@@ -4693,6 +4639,83 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
+		{"gp_autostats_mode", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the autostats mode."),
+			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
+		},
+		&gp_autostats_mode,
+		GP_AUTOSTATS_NONE, gp_autostats_modes, NULL, NULL
+	},
+
+	{
+		{"gp_autostats_mode_in_functions", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the autostats mode for statements in procedural language functions."),
+			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
+		},
+		&gp_autostats_mode_in_functions,
+		GP_AUTOSTATS_NONE, gp_autostats_modes, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_fc_method", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Sets the flow control method used for UDP interconnect."),
+			gettext_noop("Valid values are \"capacity\" and \"loss\"."),
+			GUC_GPDB_ADDOPT
+		},
+		&Gp_interconnect_fc_method,
+		INTERCONNECT_FC_METHOD_LOSS, gp_interconnect_fc_methods, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
+			gettext_noop("Sets the protocol used for inter-node communication."),
+			gettext_noop("Valid values are \"tcp\" and \"udpifc\"."),
+			GUC_GPDB_ADDOPT
+		},
+		&Gp_interconnect_type,
+		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types, NULL, NULL
+	},
+
+	{
+		{"gp_log_fts", PGC_SIGHUP, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to fault probing."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_fts,
+		GPVARS_VERBOSITY_TERSE, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_log_gang", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to worker process creation and management."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_gang,
+		GPVARS_VERBOSITY_OFF, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_log_interconnect", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to connections between worker processes."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_interconnect,
+		GPVARS_VERBOSITY_TERSE, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_resqueue_memory_policy", PGC_SUSET, RESOURCES_MGM,
+			gettext_noop("Sets the policy for memory allocation of queries."),
+			gettext_noop("Valid values are NONE, AUTO, EAGER_FREE.")
+		},
+		&gp_resqueue_memory_policy,
+		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies, NULL, NULL
+	},
+
+	{
 		{"gp_workfile_type_hashjoin", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Specify the type of work files to use for executing hash join plans."),
 			gettext_noop("Valid values are \"BFZ\", \"BUFFILE\"."),
@@ -4700,6 +4723,15 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&gp_workfile_type_hashjoin,
 		BFZ, gp_workfile_type_hashjoin_options, NULL, NULL
+	},
+
+	{
+		{"gpperfmon_log_alert_level", PGC_USERSET, LOGGING,
+			gettext_noop("Specify the log alert level used by gpperfmon."),
+			gettext_noop("Valid values are 'none', 'warning', 'error', 'fatal', 'panic'.")
+		},
+		&gpperfmon_log_alert_level,
+		GPPERFMON_LOG_ALERT_LEVEL_NONE, gp_gpperfmon_log_alert_level, NULL, NULL
 	},
 
 	{
@@ -5374,4 +5406,47 @@ set_gp_replication_config(const char *name, const char *value)
 	PG_END_TRY();
 
 	LWLockRelease(GpReplicationConfigFileLock);
+}
+
+/*
+ * lookup_loglevel_by_name
+ *
+ * Return the enum value for the specified name. This is a specialized version
+ * of config_enum_lookup_by_value() for use by syslogger.c where the severity
+ * is matched with perfmon log alert levels.
+ */
+GpperfmonLogAlertLevel
+lookup_loglevel_by_name(const char *name)
+{
+	const struct config_enum_entry *entry;
+
+	for (entry = gp_gpperfmon_log_alert_level; entry && entry->name; entry++)
+	{
+		if (pg_strcasecmp(entry->name, name) == 0)
+			return entry->val;
+	}
+
+	return GPPERFMON_LOG_ALERT_LEVEL_NONE;
+}
+
+/*
+ * lookup_autostats_mode_by_value
+ *
+ * Return the string value name for the specified value. This is essentially a
+ * specialized version of config_enum_lookup_by_value() for use by autostats.c
+ * debugging code.
+ */
+const char *
+lookup_autostats_mode_by_value(GpAutoStatsModeValue val)
+{
+	const struct config_enum_entry *entry;
+
+	for (entry = gp_autostats_modes; entry && entry->name; entry++)
+	{
+		if (entry->val == val)
+			return entry->name;
+	}
+
+	elog(ERROR, "could not find autostats mode %d", val);
+	return NULL;				/* silence compiler */
 }

@@ -290,7 +290,7 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 	if (!policyCheck)
 	{
 		elog(DEBUG3, "In mode %s, command %s on (dboid,tableoid)=(%d,%d) modifying " UINT64_FORMAT " tuples did not issue Auto-ANALYZE.",
-			 gpvars_show_gp_autostats_mode(),
+			 lookup_autostats_mode_by_value(actual_gp_autostats_mode),
 			 autostats_cmdtype_to_string(cmdType),
 			 MyDatabaseId,
 			 relationOid,
@@ -301,18 +301,8 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 
 	if (log_autostats)
 	{
-		const char *autostats_mode;
-
-		if (inFunction)
-		{
-			autostats_mode = gpvars_show_gp_autostats_mode_in_functions();
-		}
-		else
-		{
-			autostats_mode = gpvars_show_gp_autostats_mode();
-		}
 		elog(LOG, "In mode %s, command %s on (dboid,tableoid)=(%d,%d) modifying " UINT64_FORMAT " tuples caused Auto-ANALYZE.",
-			 autostats_mode,
+			 lookup_autostats_mode_by_value(actual_gp_autostats_mode),
 			 autostats_cmdtype_to_string(cmdType),
 			 MyDatabaseId,
 			 relationOid,
