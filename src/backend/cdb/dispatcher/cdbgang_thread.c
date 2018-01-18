@@ -224,8 +224,7 @@ create_gang_retry:
 	/* there'er failed connections */
 
 	/* FTS shows some segment DBs are down, destroy all gangs. */
-	if (isFTSEnabled() &&
-		FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
+	if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
 	{
 		appendPQExpBuffer(&create_gang_error, "FTS detected one or more segments are down\n");
 		goto exit;

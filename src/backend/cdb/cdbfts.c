@@ -43,7 +43,6 @@
 #define MASTER_SEGMENT_ID -1
 
 FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
-volatile bool *ftsEnabled;
 volatile bool *ftsShutdownMaster;
 static LWLockId ftsControlLock;
 
@@ -80,7 +79,6 @@ FtsShmemInit(void)
 
 	/* Initialize locks and shared memory area */
 
-	ftsEnabled = &shared->ftsEnabled;
 	ftsShutdownMaster = &shared->ftsShutdownMaster;
 	ftsControlLock = shared->ControlLock;
 
@@ -107,7 +105,6 @@ FtsShmemInit(void)
 		shared->fts_probe_info.fts_statusVersion = 0;
 		shared->fts_probe_info.fts_status_initialized = false;
 
-		shared->ftsEnabled = true;	/* ??? */
 		shared->ftsShutdownMaster = false;
 	}
 }
@@ -262,8 +259,6 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 	int			i = 0;
 	bool		forceRescan = true;
 
-	Assert(isFTSEnabled());
-
 	for (i = 0; i < size; i++)
 	{
 		CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
@@ -288,9 +283,6 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 void
 FtsCondSetTxnReadOnly(bool *XactFlag)
 {
-	if (!isFTSEnabled())
-		return;
-
 	if (*ftsReadOnlyFlag && Gp_role != GP_ROLE_UTILITY)
 		*XactFlag = true;
 }

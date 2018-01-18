@@ -473,13 +473,6 @@ buildGangDefinition(GangType type, int gang_id, int size, int content)
 		cdb_component_dbs->total_segment_dbs <= 0)
 		insist_log(false, "schema not populated while building segworker group");
 
-	/* if mirroring is not configured */
-	if (cdb_component_dbs->total_segment_dbs == cdb_component_dbs->total_segments)
-	{
-		ELOG_DISPATCHER_DEBUG("building Gang: mirroring not configured");
-		disableFTS();
-	}
-
 	perGangContext = AllocSetContextCreate(GangContext, "Per Gang Context",
 										   ALLOCSET_DEFAULT_MINSIZE,
 										   ALLOCSET_DEFAULT_INITSIZE,

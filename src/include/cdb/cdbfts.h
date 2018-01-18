@@ -45,7 +45,6 @@ typedef struct FtsProbeInfo
 
 typedef struct FtsControlBlock
 {
-	bool		ftsEnabled;
 	bool		ftsShutdownMaster;
 
 	LWLockId	ControlLock;
@@ -57,13 +56,7 @@ typedef struct FtsControlBlock
 
 }	FtsControlBlock;
 
-extern volatile bool *ftsEnabled;
-
 extern FtsProbeInfo *ftsProbeInfo;
-
-#define isFTSEnabled() (ftsEnabled != NULL && *ftsEnabled)
-
-#define disableFTS() (*ftsEnabled = false)
 
 extern int	FtsShmemSize(void);
 extern void FtsShmemInit(void);
