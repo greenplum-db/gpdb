@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -177,6 +177,8 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n    - SCHEMA: "+externalSchema)
     f.write("\n   PRELOAD:")
     f.write("\n    - REUSE_TABLES: "+reuse_flag)
+    if staging_table:
+        f.write("\n    - STAGING_TABLE: "+staging_table)
     f.write("\n")
     f.close()
 
@@ -423,7 +425,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,25):
+        for num in range(1,29):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -617,6 +619,46 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('large_file.csv','data_file.csv')
         write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='90000000',externalSchema='test')
         self.doTest(24)
+    def test_25_gpload_ext_staging_table(self):
+        "25  gpload reuse ext_staging_table if it is configured"
+        file = mkpath('setup.sql')
+        runfile(file)
+        f = open(mkpath('query25.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+        f.close()
+        copy_data('external_file_13.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table')
+        self.doTest(25)
+    def test_26_gpload_ext_staging_table_with_externalschema(self):
+        "26  gpload reuse ext_staging_table if it is configured with externalschema"
+        file = mkpath('setup.sql')
+        runfile(file)
+        f = open(mkpath('query26.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+        f.close()
+        copy_data('external_file_13.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table',externalSchema='test')
+        self.doTest(26)
+    def test_27_gpload_ext_staging_table_with_externalschema(self):
+        "27  gpload reuse ext_staging_table if it is configured with externalschema"
+        file = mkpath('setup.sql')
+        runfile(file)
+        f = open(mkpath('query27.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'")
+        f.close()
+        copy_data('external_file_13.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='test.csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='staging_table',externalSchema="'%'")
+        self.doTest(27)
+    def test_28_gpload_ext_staging_table_with_dot(self):
+        "28  gpload reuse ext_staging_table if it is configured with dot"
+        file = mkpath('setup.sql')
+        runfile(file)
+        f = open(mkpath('query28.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from test.csvtable;'")
+        f.close()
+        copy_data('external_file_13.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='test.csvtable',format='csv',delimiter="','",log_errors=True,error_limit='10',staging_table='t.staging_table')
+        self.doTest(28)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

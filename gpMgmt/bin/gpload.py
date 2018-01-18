@@ -122,6 +122,7 @@ valid_tokens = {
     "preload": {'parse_children': True, 'parent': 'gpload'},
     "truncate": {'parse_children': False, 'parent': 'preload'},
     "reuse_tables": {'parse_children': False, 'parent': 'preload'},
+    "staging_table": {'parse_children': False, 'parent': 'preload'},
     "sql": {'parse_children': True, 'parent': 'gpload'},
     "before": {'parse_children': False, 'parent': 'sql'},
     "after": {'parse_children': False, 'parent': 'sql'},
@@ -2245,24 +2246,49 @@ class gpload:
         # the one that we need to use. It must have identical attributes,
         # external location, format, and encoding specifications.
         if self.reuse_tables == True:
-            # process the single quotes in order to successfully find an existing external table to reuse.
-            self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
-            sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
+            if self.staging_table:
+                if '.' in self.staging_table:
+                    self.log(self.ERROR, "Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table")
+                self.extTableName = quote_unident(self.staging_table) 
+                if self.extSchemaName is None:
+                    sql = """SELECT n.nspname as Schema,
+                            c.relname as Name
+                        FROM pg_catalog.pg_class c
+                            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                        WHERE c.relkind IN ('r','v','S','')
+                            AND c.relstorage IN ('h', 'a', 'c','x','v','')
+                            AND n.nspname <> 'pg_catalog'
+                            AND n.nspname <> 'information_schema'
+                            AND n.nspname !~ '^pg_toast'
+                            AND c.relname = '%s'
+                            AND pg_catalog.pg_table_is_visible(c.oid)
+                        ORDER BY 1,2;""" % self.extTableName
+                else:
+                    sql = "select * from pg_catalog.pg_tables where schemaname = '%s' and tablename = '%s'" % (quote_unident(self.extSchemaName),  self.extTableName)
+                result = self.db.query(sql.encode('utf-8')).getresult()
+                if len(result) > 0:
+                    self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)
+                    self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
+                    return
+            else:
+                # process the single quotes in order to successfully find an existing external table to reuse.
+                self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
+                sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
                     limitStr, from_cols, self.extSchemaName, self.log_errors)
-            resultList = self.db.query(sql.encode('utf-8')).getresult()
-            if len(resultList) > 0:
-                # found an external table to reuse. no need to create one. we're done here.
-                self.extTableName = (resultList[0])[0]
-                self.extSchemaTable = self.extTableName
-                self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
-                return
+                resultList = self.db.query(sql.encode('utf-8')).getresult()
+                if len(resultList) > 0:
+                    # found an external table to reuse. no need to create one. we're done here.
+                    self.extTableName = (resultList[0])[0]
+                    self.extSchemaTable = self.extTableName
+                    self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
+                    return
 
-            # didn't find an existing external table suitable for reuse. Format a reusable
-            # name and issue a CREATE EXTERNAL TABLE on it. Hopefully we can use it next time
-            # around
+                # didn't find an existing external table suitable for reuse. Format a reusable
+                # name and issue a CREATE EXTERNAL TABLE on it. Hopefully we can use it next time
+                # around
 
-            self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
-            self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.get_ext_schematable(self.extSchemaName, self.extTableName))
+                self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
+                self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.get_ext_schematable(self.extSchemaName, self.extTableName))
 
         # process the single quotes in order to successfully create an external table.
         self.formatOpts = self.formatOpts.replace("'\''","E'\\''")
@@ -2646,6 +2672,7 @@ class gpload:
         if preload:
             truncate = self.getconfig('gpload:preload:truncate',bool,False)
             self.reuse_tables = self.getconfig('gpload:preload:reuse_tables',bool,False)
+            self.staging_table = self.getconfig('gpload:preload:staging_table', unicode, default=None)
         if self.error_table:
             self.log_errors = True
             self.reuse_tables = True

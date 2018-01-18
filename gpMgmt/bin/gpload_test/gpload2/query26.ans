@@ -1,0 +1,22 @@
+2018-01-17 21:36:48|INFO|gpload session started 2018-01-17 21:36:48
+2018-01-17 21:36:48|INFO|setting schema 'public' for table 'csvtable'
+2018-01-17 21:36:48|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/lhl/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-01-17 21:36:48|INFO|running time: 0.09 seconds
+2018-01-17 21:36:48|INFO|rows Inserted          = 2
+2018-01-17 21:36:48|INFO|rows Updated           = 0
+2018-01-17 21:36:48|INFO|data formatting errors = 0
+2018-01-17 21:36:48|INFO|gpload succeeded
+2018-01-17 21:36:48|INFO|gpload session started 2018-01-17 21:36:48
+2018-01-17 21:36:48|INFO|setting schema 'public' for table 'csvtable'
+2018-01-17 21:36:48|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/lhl/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-01-17 21:36:48|INFO|reusing external staging table test.staging_table
+2018-01-17 21:36:48|INFO|running time: 0.08 seconds
+2018-01-17 21:36:48|INFO|rows Inserted          = 2
+2018-01-17 21:36:48|INFO|rows Updated           = 0
+2018-01-17 21:36:48|INFO|data formatting errors = 0
+2018-01-17 21:36:48|INFO|gpload succeeded
+ count 
+-------
+     4
+(1 row)
+

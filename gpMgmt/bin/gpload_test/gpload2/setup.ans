@@ -5,6 +5,8 @@ CREATE DATABASE
 You are now connected to database "reuse_gptest" as user "gpadmin".
 CREATE SCHEMA test;
 CREATE SCHEMA
+DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;
+DROP EXTERNAL TABLE
 DROP TABLE IF EXISTS texttable;
 NOTICE:  table "texttable" does not exist, skipping
 DROP TABLE
@@ -17,6 +19,10 @@ CREATE TABLE texttable (
             n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);
 CREATE TABLE
 CREATE TABLE csvtable (
+	    year int, make text, model text, decription text, price decimal)
+            DISTRIBUTED BY (year);
+CREATE TABLE
+CREATE TABLE test.csvtable (
 	    year int, make text, model text, decription text, price decimal)
             DISTRIBUTED BY (year);
 CREATE TABLE

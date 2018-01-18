@@ -1,0 +1,19 @@
+2018-01-18 04:07:25|INFO|gpload session started 2018-01-18 04:07:25
+2018-01-18 04:07:25|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/lhl/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-01-18 04:07:25|ERROR|Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table
+2018-01-18 04:07:25|INFO|rows Inserted          = 0
+2018-01-18 04:07:25|INFO|rows Updated           = 0
+2018-01-18 04:07:25|INFO|data formatting errors = 0
+2018-01-18 04:07:25|INFO|gpload failed
+2018-01-18 04:07:25|INFO|gpload session started 2018-01-18 04:07:25
+2018-01-18 04:07:25|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/lhl/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2018-01-18 04:07:25|ERROR|Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table
+2018-01-18 04:07:25|INFO|rows Inserted          = 0
+2018-01-18 04:07:25|INFO|rows Updated           = 0
+2018-01-18 04:07:25|INFO|data formatting errors = 0
+2018-01-18 04:07:25|INFO|gpload failed
+ count 
+-------
+     0
+(1 row)
+
