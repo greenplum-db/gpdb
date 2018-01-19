@@ -184,5 +184,7 @@ main(int argc, char* argv[])
 		unit_test(test_HandleFtsWalRepPromoteMirror),
 		unit_test(test_HandleFtsWalRepPromotePrimary)
 	};
+
+	MemoryContextInit();
 	return run_tests(tests);
 }
