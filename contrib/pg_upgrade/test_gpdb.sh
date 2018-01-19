@@ -34,6 +34,11 @@ mirrors=0
 # in pg_dump/pg_upgrade wrt Oid synchronization
 smoketest=0
 
+# For debugging purposes it can be handy to keep the temporary directory around
+# after the test. If set to 1 the directory isn't removed when the testscript
+# exits
+retain_tempdir=0
+
 # Not all platforms have a realpath binary in PATH, most notably macOS doesn't,
 # so provide an alternative implementation. Returns an absolute path in the
 # variable reference passed as the first parameter.  Code inspired by:
@@ -72,8 +77,10 @@ restore_cluster()
 	rm -f clusterConfigFile
 	rm -f gpdemo-env.sh
 	
-	# Remove the temporary cluster
-	rm -rf "$temp_root"
+	# Remove the temporary cluster if requested
+	if (( !$retain_tempdir )) ; then
+		rm -rf "$temp_root"
+	fi
 }
 
 upgrade_qd()
@@ -122,13 +129,14 @@ usage()
 	echo " -k           Add checksums to new cluster"
 	echo " -K           Remove checksums during upgrade"
 	echo " -m           Upgrade mirrors"
+	echo " -r           Retain temporary directory after test"
 	exit 0
 }
 
 # Main
 temp_root=`pwd`/tmp_check
 
-while getopts ":o:b:sCkKm" opt; do
+while getopts ":o:b:sCkKmr" opt; do
 	case ${opt} in
 		o )
 			realpath OLD_DATADIR "${OPTARG}"
@@ -154,6 +162,9 @@ while getopts ":o:b:sCkKm" opt; do
 			;;
 		m )
 			mirrors=1
+			;;
+		r )
+			retain_tempdir=1
 			;;
 		* )
 			usage
