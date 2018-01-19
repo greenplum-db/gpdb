@@ -166,14 +166,6 @@ static Datum string_to_datum(const char *str, Oid datatype);
 static Const *string_to_const(const char *str, Oid datatype);
 static Const *string_to_bytea_const(const char *str, size_t str_len);
 
-static Selectivity
-mcv_selectivity_cdb(VariableStatData   *vardata,
-                    FmgrInfo           *opproc,
-				    Datum               constval,
-                    bool                varonleft,
-				    Selectivity        *sumcommonp,     /* OUT */
-                    double             *nvaluesp);      /* OUT */
-
 
 /*
  *		eqsel			- Selectivity of "=" for any data types.
@@ -551,24 +543,14 @@ scalarineqsel(PlannerInfo *root, Oid operator, bool isgt,
  * total population is returned into *sumcommonp.  Zeroes are returned
  * if there is no MCV list.
  *
- * CDB: The number of MCVs is returned into *nvaluesp.
  */
-double
-mcv_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
-				Datum constval, bool varonleft,
-				double *sumcommonp)
-{
-    return mcv_selectivity_cdb(vardata, opproc, constval, varonleft,
-                               sumcommonp, NULL);
-}
 
-static Selectivity
-mcv_selectivity_cdb(VariableStatData   *vardata,
+double
+mcv_selectivity(VariableStatData   *vardata,
                     FmgrInfo           *opproc,
 				    Datum               constval,
                     bool                varonleft,
-				    Selectivity        *sumcommonp,     /* OUT */
-                    double             *nvaluesp)       /* OUT */
+				    double        *sumcommonp)     /* OUT */
 {
 	double		mcv_selec,
 				sumcommon;
@@ -600,8 +582,6 @@ mcv_selectivity_cdb(VariableStatData   *vardata,
 	}
 
 	*sumcommonp = sumcommon;
-	if (nvaluesp)
-		*nvaluesp = sslot.nvalues;
 	return mcv_selec;
 }
 
