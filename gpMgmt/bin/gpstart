@@ -759,6 +759,8 @@ class GpStart:
 
         msg = None
         try:
+            self.dburl.retries = 4
+            self.dburl.timeout = 15
             masterconn = dbconn.connect(self.dburl)
             masterconn.close()
 
