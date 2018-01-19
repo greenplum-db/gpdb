@@ -17,7 +17,7 @@ from gppylib.gp_dbid import writeGpDbidFile
 from time import sleep
 from gppylib.operations.buildMirrorSegments import gDatabaseDirectories, gDatabaseFiles
 
-description = (""" 
+description = ("""
 
 Configure segment directories for installation into a pre-existing GPDB array.
 
@@ -41,7 +41,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                    filespaceOids, filespaceDirs, verbose, validationOnly, writeGpDbidFileOnly):
+                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -53,9 +53,9 @@ class ConfExpSegCmd(Command):
         self.tarfile = tarfile
         self.verbose = verbose
         self.useLighterDirectoryValidation = useLighterDirectoryValidation
-        self.filespaceOids = filespaceOids
-        self.filespaceDirs = filespaceDirs
         self.isPrimary = isPrimary
+        self.syncWithSegmentHostname = syncWithSegmentHostname
+        self.syncWithSegmentPort = syncWithSegmentPort
 
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
@@ -66,39 +66,34 @@ class ConfExpSegCmd(Command):
         self.writeGpDbidFileOnly = writeGpDbidFileOnly
         Command.__init__(self, name, cmdstr)
 
-    def validatePath(self, path, isSystemFilespaceDir):
+    def validatePath(self, path):
         """
         Raises ValidationException when a validation problem is detected
         """
 
         if not os.path.exists(os.path.dirname(path)):
+            logger.info("gpconfigurenewsegment:validatePath path %s does not exist" % path)
             raise ValidationException("Parent directory for %s directory '%s' does not exist" %
-                    ( "system data" if isSystemFilespaceDir else "filespace", path) )
+                    ("system data", path))
 
         if not os.path.exists(path):
-            #
+            # FIXME: This needs to change with walrep?
             # dir doesn't exist is okay -- other scripts, or filerep mirroring code, will create it
             #
             return
 
         if self.useLighterDirectoryValidation:
 
-            if isSystemFilespaceDir:
-                # validate that we don't contain database directories or files
-                for toCheck in gDatabaseDirectories:
-                    if toCheck != "pg_log": # it's okay to have pg_log -- to save old logs around to look at
-                        if os.path.exists(os.path.join(path, toCheck)):
-                            raise ValidationException("Segment directory '%s' contains directory %s but should not!" %
-                                        (path, toCheck))
-                for toCheck in gDatabaseFiles:
+            # validate that we don't contain database directories or files
+            for toCheck in gDatabaseDirectories:
+                if toCheck != "pg_log": # it's okay to have pg_log -- to save old logs around to look at
                     if os.path.exists(os.path.join(path, toCheck)):
-                        raise ValidationException("Segment directory '%s' contains file %s but should not!" %
+                        raise ValidationException("Segment directory '%s' contains directory %s but should not!" %
                                     (path, toCheck))
-            else:
-
-                for name in os.listdir( path ):
-                    if name[0] in "0123456789": # the database files here will have  
-                        raise ValidationException("Filespace directory contains invalid file(s): '%s'" % path)
+            for toCheck in gDatabaseFiles:
+                if os.path.exists(os.path.join(path, toCheck)):
+                    raise ValidationException("Segment directory '%s' contains file %s but should not!" %
+                                              (path, toCheck))
         else:
             # it better be empty
             if len(os.listdir(path)) != 0:
@@ -109,27 +104,6 @@ class ConfExpSegCmd(Command):
             os.chmod(path, 0700)
         else:
             os.mkdir(path, 0700)
-            
-    def fixupFilespaces(self):
-        """
-        This method will take file spaces stored in the system data directory and put them in their proper locations.
-        """
-        if self.filespaceOids == None:
-            return
-        try:
-            logger.info("copy filespaces to their locations")
-           # only on primary do we create it -- otherwise, mirroring code creates it on replay
-            filespaceDataDir = self.datadir + "/" + DESTINATION_FILE_SPACES_DIRECTORY
-            i = 0
-            for i in range(len(self.filespaceOids)):
-                sourceDir = filespaceDataDir + "/" + str(self.filespaceOids[i])
-                targetDir = self.filespaceDirs[i]
-                cpCmd = unix.LocalDirCopy("copy filespace from %s to %s" % (sourceDir, targetDir), sourceDir, targetDir)
-                cpCmd.run(validateAfter=True)
-            unix.RemoveDirectory.local("remove filespace template after copy to proper location", filespaceDataDir)
-        except Exception, e:
-            self.set_results(CommandResult(1, '', e, True, False))
-            raise
 
     def run(self):
         try:
@@ -141,9 +115,7 @@ class ConfExpSegCmd(Command):
                     # make directories, extract template update postgresql.conf
                     logger.info("Validate data directories for new segment")
                     try:
-                        self.validatePath(self.datadir, True)
-                        for path in self.filespaceDirs:
-                            self.validatePath(path, False)
+                        self.validatePath(self.datadir)
                     except ValidationException, e:
                         msg = "for segment with port %s: %s" %  (self.port, e.getMessage())
                         self.set_results(CommandResult(1, '', msg, True, False))
@@ -152,17 +124,39 @@ class ConfExpSegCmd(Command):
                         self.set_results(CommandResult(1, '', e, True, False))
                         raise
 
-                    if self.validationOnly:
-                        self.set_results(CommandResult(0, '', '', True, False))
+                    # FIXME: This part needs to be revisted
+                    #if self.validationOnly:
+                    #    self.set_results(CommandResult(0, '', '', True, False))
+                    #    return
+
+                    if not self.isPrimary:
+                        # Create a mirror based on the primary
+                        # We exclude certain unnecessary directories from being copied as they will greatly
+                        # slow down the speed of gpinitstandby if containing a lot of data
+                        cmd_str = ' '.join(['pg_basebackup',
+                                            '-x', '-R',
+                                            '-c', 'fast',
+                                            '-E', './pg_log',
+                                            '-E', './db_dumps',
+                                            '-E', './gpperfmon/data',
+                                            '-E', './gpperfmon/logs',
+                                            '-D', self.datadir,
+                                            '-h', self.syncWithSegmentHostname,
+                                            '-p', str(self.syncWithSegmentPort)])
+                        cmd = Command('pg_basebackup', cmd_str)
+                        try:
+                            cmd.run(validateAfter=True)
+                            self.set_results(CommandResult(0, '', '', True, False))
+                        except Exception, e:
+                            self.set_results(CommandResult(1,'',e,True,False))
+                            raise
+
+                        logger.info("ran pg_backbackup: %s" % cmd.cmdStr)
                         return
 
                     logger.info("Create or update data directories for new segment")
                     try:
                         self.makeOrUpdatePathAsNeeded(self.datadir)
-                        if self.isPrimary:
-                            # only on primary do we create it -- otherwise, mirroring code creates it on replay
-                            for path in self.filespaceDirs:
-                                self.makeOrUpdatePathAsNeeded(path)
                     except Exception, e:
                         self.set_results(CommandResult(1,'',e,True,False))
                         raise
@@ -176,10 +170,6 @@ class ConfExpSegCmd(Command):
                         self.set_results(extractTarCmd.get_results())
                         logger.error(extractTarCmd.get_results())
                         raise
-
-                    if self.isPrimary:
-                        # only on primary do we create it -- otherwise, mirroring code creates it on replay
-                        self.fixupFilespaces()
 
                     logger.info("create gp_dbid file for segment")
                     writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
@@ -209,7 +199,7 @@ class ConfExpSegCmd(Command):
                         stopCmd.run(validateAfter=True)
                     except:
                         pass
-                    
+
         except Exception, e:
             self.set_results(CommandResult(1, '', e, True, False))
             if self.verbose:
@@ -229,7 +219,7 @@ def getOidDirLists(oidDirs):
         dirList.append(oidDirs[i])
         i = i + 1
     return oidList, dirList
-        
+
 
 def parseargs():
     parser = OptParser(option_class=OptChecker,
@@ -237,9 +227,9 @@ def parseargs():
                 version='%prog version $Revision: $')
     parser.set_usage('%prog is a utility script used by gpexpand, gprecoverseg, and gpaddmirrors and is not intended to be run separately.')
     parser.remove_option('-h')
-    
+
     parser.add_option('-v','--verbose', action='store_true', help='debug output.')
-    parser.add_option('-c', '--confinfo', type='string')                        
+    parser.add_option('-c', '--confinfo', type='string')
     parser.add_option('-t', '--tarfile', type='string')
     parser.add_option('-n', '--newsegments', action='store_true')
     parser.add_option('-B', '--batch-size', type='int', default=DEFAULT_BATCH_SIZE, metavar='<batch_size>')
@@ -247,7 +237,7 @@ def parseargs():
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
-    
+
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
@@ -297,18 +287,22 @@ try:
     (options, args, seg_info) = parseargs()
     if options.verbose:
         gplog.enable_verbose_logging()
-        
+
     logger.info("Starting gpconfigurenewsegment with args: %s" % ' '.join(sys.argv[1:]))
-    
+
     pool = WorkerPool(numWorkers=options.batch_size)
-    
+
     for seg in seg_info:
         dataDir = seg[0]
         port = seg[1]
         isPrimary = seg[2] == "true"
         directoryValidationLevel = seg[3] == "true"
         dbid = int(seg[4])
-        filespaceOids, filespaceDirs = getOidDirLists(seg[5:])
+
+        # These variables should not be used if it's a primary
+        # they will be junk data passed through the config.
+        primaryHostName = seg[5]
+        primarySegmentPort = int(seg[6])
 
         cmd = ConfExpSegCmd( name = 'Configure segment directory'
                            , cmdstr = ' '.join(sys.argv)
@@ -319,8 +313,8 @@ try:
                            , tarfile = options.tarfile
                            , useLighterDirectoryValidation = directoryValidationLevel
                            , isPrimary = isPrimary
-                           , filespaceOids = filespaceOids
-                           , filespaceDirs = filespaceDirs
+                           , syncWithSegmentHostname = primaryHostName
+                           , syncWithSegmentPort = primarySegmentPort
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly
                            , writeGpDbidFileOnly = options.writeGpidFileOnly

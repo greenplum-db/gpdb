@@ -2558,16 +2558,15 @@ if (1)
 	# to get file system location and port number
 
 	$psql_str .= " -c \' ".
-		"select f.fselocation as fselocation, " .
-		"g.port " .
-		"from pg_filespace_entry f, gp_segment_configuration g " .
-		"where f.fsedbid = 1 and g.dbid = 1  \' ";
+		"select port, datadir " .
+		"from gp_segment_configuration " .
+		"where dbid = 1  \' ";
 
 	my $tabdef = `$psql_str`;
-	my $fseloc = tablelizer($tabdef);
+	my $port_and_datadir = tablelizer($tabdef);
 
 	pod2usage(-msg => "\nERROR: Could not connect to database.  Please check connect string.\n\n",
-			  -exitstatus => 1) unless (defined($fseloc));
+			  -exitstatus => 1) unless (defined($port_and_datadir));
 	my $strtime = ctime();
 	$strtime =~ s/ /_/g;
 	$strtime =~ s/:/-/g;
@@ -2576,7 +2575,7 @@ if (1)
 	print "Timestamp used in filenames for this run \"", $fselochsh, "\"\n\n";
 
 	# XXX XXX: port number!
-	$glob_port = $fseloc->[0]->{port};
+	$glob_port = $port_and_datadir->[0]->{port};
 
 	$psql_str = $glob_psql_str;
 
@@ -2637,7 +2636,7 @@ if (1)
 
 	$psql_str .= $glob_connect if (defined($glob_connect));
 
-	my $arr = `pg_controldata $fseloc->[0]->{fselocation}`;
+	my $arr = `pg_controldata $port_and_datadir->[0]->{datadir}`;
 	my @lines = split(/\n/, $arr);
 	my %pairs = map { my ($key, $value) = split(/:\s+/); {$key => $value} } @lines;
 
@@ -2646,7 +2645,7 @@ if (1)
 	$psql_str .= " -c \' checkpoint \'" ;
 	$tabdef = `$psql_str`;
 
-	$arr = `pg_controldata $fseloc->[0]->{fselocation}`;
+	$arr = `pg_controldata $port_and_datadir->[0]->{datadir}`;
 	@lines = split(/\n/, $arr);
 	my %pairs_post = map { my ($key, $value) = split(/:\s+/); {$key => $value} } @lines;
 
@@ -2665,11 +2664,11 @@ if (1)
 
 	# Fetch the latest clog file and copy it at temp location to compare at end of tool
 	# if any diference is found means IO was performed while tool was running, which invalidates the results.
-	my @clog_list = `ls -t $fseloc->[0]->{fselocation}/pg_clog`;
+	my @clog_list = `ls -t $port_and_datadir->[0]->{datadir}/pg_clog`;
 	chomp($clog_list[0]);
 	my $prev_clog_file=$clog_list[0];
-	my $ret = `cp $fseloc->[0]->{fselocation}/pg_clog/${prev_clog_file} /tmp/${fselochsh}_clog.${prev_clog_file}`;
-	warn "Failed to copy file \"$fseloc->[0]->{fselocation}/pg_clog/${prev_clog_file}\", ERROR: $ret" if ($ret);
+	my $ret = `cp $port_and_datadir->[0]->{datadir}/pg_clog/${prev_clog_file} /tmp/${fselochsh}_clog.${prev_clog_file}`;
+	warn "Failed to copy file \"$port_and_datadir->[0]->{datadir}/pg_clog/${prev_clog_file}\", ERROR: $ret" if ($ret);
 
 	my $do_mm_skip = 0;
 	# MPP-10881: separate validation check for standby master
@@ -3320,12 +3319,12 @@ pg_xlog
 		print "Please upload the same along with OUTPUT and FIX file while opening bug ticket.\n";
 		printdivider();
 
-		@clog_list = `ls -t $fseloc->[0]->{fselocation}/pg_clog`;
+		@clog_list = `ls -t $port_and_datadir->[0]->{datadir}/pg_clog`;
 		chomp($clog_list[0]);
 		if (($prev_clog_file ne $clog_list[0]) or 
-			(length(`$glob_diff -b $fseloc->[0]->{fselocation}/pg_clog/$clog_list[0] /tmp/${fselochsh}_clog.$prev_clog_file`)))
+			(length(`$glob_diff -b $port_and_datadir->[0]->{datadir}/pg_clog/$clog_list[0] /tmp/${fselochsh}_clog.$prev_clog_file`)))
 		{
-			print "PreClogName=\"/tmp/${fselochsh}_clog.$prev_clog_file\", PostClogName=\"$fseloc->[0]->{fselocation}/pg_clog/$clog_list[0]\"";
+			print "PreClogName=\"/tmp/${fselochsh}_clog.$prev_clog_file\", PostClogName=\"$port_and_datadir->[0]->{datadir}/pg_clog/$clog_list[0]\"";
 			print "\nNOTE: Write happened to CLOG file while tool was running, indicating IO was perfomed on DB";
 			print "\nSince this tool requires no IO activity, above results reported cannot be trusted.\n";
 			printdivider();
