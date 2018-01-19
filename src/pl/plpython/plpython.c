@@ -410,10 +410,16 @@ static PyObject *PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndi
 
 static PyObject *PLyDict_FromTuple(PLyTypeInfo *, HeapTuple, TupleDesc);
 
-static Datum PLyObject_ToBool(PLyObToDatum *, int32, PyObject *, bool inarray);
-static Datum PLyObject_ToBytea(PLyObToDatum *, int32, PyObject *, bool inarray);
-static Datum PLyObject_ToComposite(PLyObToDatum *, int32, PyObject *, bool inarray);
-static Datum PLyObject_ToDatum(PLyObToDatum *, int32, PyObject *, bool inarray);
+static Datum PLyObject_ToBool(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToBytea(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToNumeric(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToInt16(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToInt32(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToInt64(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToFloat4(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToFloat8(PLyObToDatum *arg, int32 tymod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static Datum PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static void PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
 							int *dims, int ndim, int dim,
@@ -2352,6 +2358,24 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 			case BOOLOID:
 				arg->func = PLyObject_ToBool;
 				break;
+			case INT2OID:
+				arg->func = PLyObject_ToInt16;
+				break;
+			case INT4OID:
+				arg->func = PLyObject_ToInt32;
+				break;
+			case INT8OID:
+				arg->func = PLyObject_ToInt64;
+				break;
+			case FLOAT4OID:
+				arg->func = PLyObject_ToFloat4;
+				break;
+			case FLOAT8OID:
+				arg->func = PLyObject_ToFloat8;
+				break;
+			case NUMERICOID:
+				arg->func = PLyObject_ToNumeric;
+				break;
 			case BYTEAOID:
 				arg->func = PLyObject_ToBytea;
 				break;
@@ -2757,6 +2781,112 @@ PLyObject_ToBool(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 
 	//if (get_typtype(arg->typoid) == TYPTYPE_DOMAIN)
 	//	domain_check(rv, false, arg->typoid, &arg->typfunc.fn_extra, arg->typfunc.fn_mcxt);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Int16 Datum
+ */
+static Datum
+PLyObject_ToInt16(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+
+	Assert(plrv != Py_None);
+	if (PyInt_Check(plrv) || PyLong_Check(plrv))
+		rv = Int16GetDatum((int16)PyInt_AsLong(plrv));
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Int32 Datum
+ */
+static Datum
+PLyObject_ToInt32(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+
+	Assert(plrv != Py_None);
+	if (PyInt_Check(plrv) || PyLong_Check(plrv))
+		rv = Int32GetDatum((int32)PyInt_AsLong(plrv));
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Int64 Datum
+ */
+static Datum
+PLyObject_ToInt64(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+
+	Assert(plrv != Py_None);
+	if (PyInt_Check(plrv) || PyLong_Check(plrv))
+		rv = Int64GetDatum((int64)PyInt_AsLong(plrv));
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Float4 Datum
+ */
+static Datum
+PLyObject_ToFloat4(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+
+	Assert(plrv != Py_None);
+	if (PyFloat_Check(plrv))
+		rv = Float4GetDatum((float)PyFloat_AsDouble(plrv));
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Float8 Datum
+ */
+static Datum
+PLyObject_ToFloat8(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+
+	Assert(plrv != Py_None);
+	if (PyFloat_Check(plrv))
+		rv = Float8GetDatum((double)PyFloat_AsDouble(plrv));
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
+
+	return rv;
+}
+
+/*
+ * Convert a Python object to a PostgreSQL Numeric Datum
+ */
+static Datum
+PLyObject_ToNumeric(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	Datum		rv;
+	Datum 		fdatum;
+
+	Assert(plrv != Py_None);
+	if (PyFloat_Check(plrv))
+	{
+		fdatum = Float8GetDatum((double)PyFloat_AsDouble(plrv));
+		rv = DirectFunctionCall1(float8_numeric, fdatum);
+	}
+	else
+		rv = PLyObject_ToDatum(arg, typmod, plrv, inarray);
 
 	return rv;
 }
