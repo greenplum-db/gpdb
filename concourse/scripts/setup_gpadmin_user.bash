@@ -8,7 +8,10 @@ setup_ssh_for_user() {
   local home_dir
   home_dir=$(eval echo "~${user}")
 
-  mkdir -p "${home_dir}"/.ssh
+  if [ -f "${home_dir}/.ssh/id_rsa" ]; then
+    return
+  fi
+  mkdir -p "${home_dir}/.ssh"
   touch "${home_dir}/.ssh/authorized_keys" "${home_dir}/.ssh/known_hosts" "${home_dir}/.ssh/config"
   ssh-keygen -t rsa -N "" -f "${home_dir}/.ssh/id_rsa"
   cat "${home_dir}/.ssh/id_rsa.pub" >> "${home_dir}/.ssh/authorized_keys"
