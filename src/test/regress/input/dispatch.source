@@ -10,6 +10,10 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/DETAIL:  Internal error: No motion listener port/
 -- end_matchsubs
 
+-- skip FTS probes always
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_inject_fault('fts_probe', 'status', 1);
+
 -- Test quoting of GUC values and database names when they're sent to segments
 set client_min_messages='warning';
 DROP DATABASE IF EXISTS "funny""db'with\\quotes";
@@ -331,3 +335,7 @@ select * from gp_dist_random('gp_id')
 select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
 select * from gp_dist_random('gp_id')
 	where gpname > (select * from repeat('sssss', 10000000));
+
+-- resume FTS probes
+select gp_inject_fault('fts_probe', 'reset', 1);
+
