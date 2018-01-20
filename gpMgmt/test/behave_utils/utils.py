@@ -699,11 +699,6 @@ def get_master_hostname(dbname='template1'):
     return getRows(dbname, master_hostname_sql)
 
 
-def get_hosts_and_datadirs(dbname='template1'):
-    get_hosts_and_datadirs_sql = "SELECT hostname, fselocation FROM gp_segment_configuration, pg_filespace_entry WHERE fsedbid = dbid AND role='p';"
-    return getRows(dbname, get_hosts_and_datadirs_sql)
-
-
 def get_hosts(dbname='template1'):
     get_hosts_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE role='p';"
     return getRows(dbname, get_hosts_sql)
