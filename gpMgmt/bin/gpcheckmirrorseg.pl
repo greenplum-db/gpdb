@@ -2554,7 +2554,7 @@ if (1)
 	$psql_str .= $glob_connect
         if (defined($glob_connect));
 
-	# select from gp_segment_configuration and pg_filespace_entry,
+	# select from gp_segment_configuration
 	# to get file system location and port number
 
 	$psql_str .= " -c \' ".
@@ -2582,38 +2582,28 @@ if (1)
 	$psql_str .= $glob_connect
         if (defined($glob_connect));
 
-	# select from gp_segment_configuration and pg_filespace_entry,
+	# select from gp_segment_configuration,
 	# constructing a single row for each primary/mirror pair
 
 	$psql_str .= " -c \' ".
 		"select gscp.content, " .
 		"gscp.hostname as phostname, gscp.address as paddress, " .
-		"fep.fselocation as ploc, " .
+		"gscp.datadir as ploc, " .
 		"gscm.hostname as mhostname, gscm.address as maddress, " .
-		"fem.fselocation as mloc, " .
-		"pfs.oid fsoid, " .
-		"pfs.fsname, " .
+		"gscm.datadir as mloc, " .
 		"gscp.mode, " .
 		"gscp.status, " .
 		"gscm.mode as mmode, " .
 		"gscp.status as mstatus " .
 		"from " .
-		"gp_segment_configuration gscp, pg_filespace_entry fep, " .
-		"gp_segment_configuration gscm, pg_filespace_entry fem, " .
-		"pg_filespace pfs " .
+		"gp_segment_configuration gscp," .
+		"gp_segment_configuration gscm" .
 		"where " .
-		"fep.fsedbid=gscp.dbid " . # and gscp.content > -1 " .
-		"and " .
-		"fem.fsedbid=gscm.dbid " . # and gscm.content > -1 " .
-		"and " .
-		# match the filespace ids
-		"fem.fsefsoid = fep.fsefsoid " . 
-		"and gscp.content = gscm.content " .
+		"gscp.content = gscm.content " .
 		# use "dollar-quoting" to avoid dealing with nested single-quotes:
 		# $q$p$q$ is equivalent to 'p'
 		"and gscp.role =  " .  '$q$p$q$ ' .
-		"and gscm.role =  " .  '$q$m$q$ ' .
-		"and pfs.oid = fep.fsefsoid " ;
+		"and gscm.role =  " .  '$q$m$q$ ' ;
 
 	# MPP-9883, MPP-9891: run integrity check only for desired segments
 	$psql_str .= " and gscp.content in ( " . 

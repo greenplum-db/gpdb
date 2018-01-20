@@ -28,8 +28,6 @@ Used by at least gpexpand, gprecoverseg, and gpaddmirrors
 DEFAULT_BATCH_SIZE=8
 EXECNAME = os.path.split(__file__)[-1]
 
-DESTINATION_FILE_SPACES_DIRECTORY = "fs_directory"
-
 class ValidationException(Exception):
 
     def __init__(self, msg):
