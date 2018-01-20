@@ -136,9 +136,6 @@ static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNum
 static void analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 					 BufferAccessStrategy bstrategy);
 
-static bool needs_sample(VacAttrStats **vacattrstats, int attr_cnt);
-static bool leaf_parts_analyzed(VacAttrStats *stats);
-
 /*
  *	analyze_rel() -- analyze one relation
  */
@@ -3149,64 +3146,6 @@ compute_scalar_stats(VacAttrStatsP stats,
 }
 
 /*
- *	needs_sample() -- checks if the analyze requires sampling the actual data
- */
-static bool
-needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
-{
-	Assert(vacattrstats != NULL);
-	int i;
-	for (i = 0; i < attr_cnt; i++)
-	{
-		Assert(vacattrstats[i] != NULL);
-		if(!vacattrstats[i]->merge_stats)
-			return true;
-	}
-	return false;
-}
-
-/*
- *	leaf_parts_analyzed() -- checks if all the leaf partitions analyzed
- *
- *	We use this to determine if all the leaf partitions are analyzed and
- *	the statistics are in place to be able to merge and generate meaningful
- *	statistics for the root partition. If one partition is analyzed but the
- *	other is not, root statistics will be bogus if we continue merging.
- */
-static bool
-leaf_parts_analyzed(VacAttrStats *stats)
-{
-	PartitionNode *pn = get_parts(stats->attr->attrelid, 0 /*level*/ ,
-								  0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
-	Assert(pn);
-
-	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
-	int numPartitions = list_length(oid_list);
-	bool all_parts_empty = true;
-	int i;
-	for (i = 0; i < numPartitions; i++)
-	{
-		Oid partRelid = list_nth_oid(oid_list,i);
-		float4 relTuples = get_rel_reltuples(partRelid);
-		if (relTuples == 0.0)
-			continue;
-		HeapTuple heaptupleStats = get_att_stats(list_nth_oid(oid_list, i), stats->attr->attnum);
-		all_parts_empty = false;
-
-		// if there is no colstats
-		if (!HeapTupleIsValid(heaptupleStats))
-		{
-			return false;
-		}
-		heap_freetuple(heaptupleStats);
-	}
-	if(all_parts_empty)
-		return false;
-
-	return true;
-}
-
-/*
  *	merge_leaf_stats() -- merge leaf stats for the root
  *
  *	We use this when we can find "=" and "<" operators for the datatype.
@@ -3254,6 +3193,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 	}
 
 	int numPartitions = list_length(oid_list);
+	MemoryContext old_context;
+
+	HeapTuple *heaptupleStats = (HeapTuple *)palloc(numPartitions * sizeof(HeapTuple *));
 
 	// NDV calculations
 	int colAvgWidth = 0;
@@ -3269,13 +3211,13 @@ merge_leaf_stats(VacAttrStatsP stats,
 		colAvgWidth = colAvgWidth + get_attavgwidth(relid, stats->attr->attnum) * relTuples[i];
 		nullCount = nullCount + get_attnullfrac(relid, stats->attr->attnum) * relTuples[i];
 
-		HeapTuple heaptupleStats = get_att_stats(relid, stats->attr->attnum);
+		heaptupleStats[i] = get_att_stats(relid, stats->attr->attnum);
 		// if there is no colstats
-		if (!HeapTupleIsValid(heaptupleStats))
+		if (!HeapTupleIsValid(heaptupleStats[i]))
 		{
 			continue;
 		}
-		Form_pg_statistic fpsStats = (Form_pg_statistic) GETSTRUCT(heaptupleStats);
+		Form_pg_statistic fpsStats = (Form_pg_statistic) GETSTRUCT(heaptupleStats[i]);
 		if (fpsStats->stadistinct < 0.0 && allDistinct)
 		{
 			continue;
@@ -3285,17 +3227,15 @@ merge_leaf_stats(VacAttrStatsP stats,
 			allDistinct = false;
 		}
 
-		Datum *values;
-		int nvalues = 0;
+		AttStatsSlot hllSlot;
+		get_attstatsslot(&hllSlot, heaptupleStats[i], STATISTIC_KIND_HLL, InvalidOid, ATTSTATSSLOT_VALUES);
 
-		get_attstatsslot(heaptupleStats, InvalidOid, 0, STATISTIC_KIND_HLL, InvalidOid, &values, &nvalues, NULL, NULL);
-		if(nvalues > 0)
+		if(hllSlot.nvalues > 0)
 		{
-			hllcounters[i] = (HLLCounter) DatumGetByteaP(values[0]);
+			hllcounters[i] = (HLLCounter) DatumGetByteaP(hllSlot.values[0]);
 			finalHLL = hyperloglog_merge(finalHLL, hllcounters[i]);
-			free_attstatsslot(InvalidOid, values, nvalues, NULL, NULL);
+			free_attstatsslot(&hllSlot);
 		}
-		heap_freetuple(heaptupleStats);
 	}
 
 	if (allDistinct)
@@ -3319,13 +3259,13 @@ merge_leaf_stats(VacAttrStatsP stats,
 	stats->stanullfrac = (float4)nullCount / (float4)totalTuples;
 
 	// MCV calculations
-	MemoryContext old_context;
-
 	old_context = MemoryContextSwitchTo(stats->anl_context);
 
 	void *resultMCV[2];
 	int num_mcv = aggregate_leaf_partition_MCVs(stats->attr->attrelid,
 												stats->attr->attnum,
+												heaptupleStats,
+												relTuples,
 												default_statistics_target,
 												resultMCV);
 	MemoryContextSwitchTo(old_context);
@@ -3346,6 +3286,8 @@ merge_leaf_stats(VacAttrStatsP stats,
 	void *resultHistogram[1];
 	int num_hist = aggregate_leaf_partition_histograms(stats->attr->attrelid,
 													   stats->attr->attnum,
+													   heaptupleStats,
+													   relTuples,
 													   default_statistics_target,
 													   resultHistogram);
 	MemoryContextSwitchTo(old_context);
@@ -3356,6 +3298,14 @@ merge_leaf_stats(VacAttrStatsP stats,
 		stats->stavalues[1] = (Datum *) resultHistogram[0];
 		stats->numvalues[1] = num_hist;
 	}
+
+	for (i = 0; i < numPartitions; i++)
+	{
+		if(HeapTupleIsValid(heaptupleStats[i]))
+			heap_freetuple(heaptupleStats[i]);
+	}
+	pfree(heaptupleStats);
+	pfree(relTuples);
 }
 /*
  * qsort_arg comparator for sorting ScalarItems
