@@ -740,8 +740,6 @@ INCLUDES
 HAVE_CXX11
 enable_gpcloud
 enable_mapreduce
-enable_netbackup
-enable_ddboost
 enable_snmp
 enable_orca
 autodepend
@@ -863,8 +861,6 @@ enable_debugntuplestore
 enable_testutils
 enable_orca
 enable_snmp
-enable_ddboost
-enable_netbackup
 enable_mapreduce
 enable_gpcloud
 enable_thread_safety
@@ -1549,8 +1545,6 @@ Optional Features:
   --enable-testutils      enable testing utilities
   --disable-orca          disable ORCA optimizer
   --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
-  --enable-ddboost        enable DD Boost support
-  --enable-netbackup      enable NetBackup support
   --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-gpcloud       disable gpcloud support
   --disable-thread-safety do not make client libraries thread-safe
@@ -6310,72 +6304,6 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with snmp... $enable_snmp" >&5
 $as_echo "checking whether to build with snmp... $enable_snmp" >&6; }
-
-
-#
-# --enable-ddboost enables DD Boost support
-#
-
-pgac_args="$pgac_args enable_ddboost"
-
-# Check whether --enable-ddboost was given.
-if test "${enable_ddboost+set}" = set; then :
-  enableval=$enable_ddboost;
-  case $enableval in
-    yes)
-
-$as_echo "#define USE_DDBOOST 1" >>confdefs.h
-
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-ddboost option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_ddboost=no
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with DD Boost support... $enable_ddboost" >&5
-$as_echo "checking whether to build with DD Boost support... $enable_ddboost" >&6; }
-
-
-#
-# --enable-netbackup enables NetBackup support
-#
-
-pgac_args="$pgac_args enable_netbackup"
-
-# Check whether --enable-netbackup was given.
-if test "${enable_netbackup+set}" = set; then :
-  enableval=$enable_netbackup;
-  case $enableval in
-    yes)
-
-$as_echo "#define USE_NETBACKUP 1" >>confdefs.h
-
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-netbackup option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_netbackup=no
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with NetBackup support... $enable_netbackup" >&5
-$as_echo "checking whether to build with NetBackup support... $enable_netbackup" >&6; }
 
 
 #
@@ -11969,53 +11897,6 @@ fi
 fi
 
 
-# Check for DD Boost
-if test "$enable_ddboost" = yes ; then
-  _LIBS="$LIBS"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lDDBoost" >&5
-$as_echo_n "checking for main in -lDDBoost... " >&6; }
-if ${ac_cv_lib_DDBoost_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lDDBoost  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_DDBoost_main=yes
-else
-  ac_cv_lib_DDBoost_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_DDBoost_main" >&5
-$as_echo "$ac_cv_lib_DDBoost_main" >&6; }
-if test "x$ac_cv_lib_DDBoost_main" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBDDBOOST 1
-_ACEOF
-
-  LIBS="-lDDBoost $LIBS"
-
-else
-  as_fn_error $? "library 'DDBoost' is required for DD Boost support" "$LINENO" 5
-fi
-
-  LIBS="$_LIBS"
-fi
-
 # Check for Greenplum Query Optimizer (orca) libraries.
 if test "$enable_orca" = yes; then
 
@@ -12908,17 +12789,6 @@ if test "x$ac_cv_header_DNSServiceDiscovery_DNSServiceDiscovery_h" = xyes; then 
 
 else
   as_fn_error $? "header file <DNSServiceDiscovery/DNSServiceDiscovery.h> is required for Bonjour" "$LINENO" 5
-fi
-
-
-fi
-
-if test "$enable_ddboost" = yes ; then
-  ac_fn_c_check_header_mongrel "$LINENO" "ddp_api.h" "ac_cv_header_ddp_api_h" "$ac_includes_default"
-if test "x$ac_cv_header_ddp_api_h" = xyes; then :
-
-else
-  as_fn_error $? "header file <ddp_api.h> is required for DD Boost" "$LINENO" 5
 fi
 
 

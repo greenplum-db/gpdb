@@ -918,9 +918,6 @@
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 
-/* Define to 1 to build with NetBackup capabilities. (--enable-netbackup) */
-#undef USE_NETBACKUP
-
 /* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
 
