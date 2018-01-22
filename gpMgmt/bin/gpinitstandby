@@ -21,6 +21,7 @@ try:
     from gppylib.gp_dbid import GpDbidFile
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
     from gppylib.operations.package import SyncPackages
+    from gppylib.commands.pg import PgBaseBackup
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -689,20 +690,9 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
     # here in the data directory here already, and teach pg_basebackup to
     # map the per-dbid directories to the new dbid.
     
-    # We exclude certain unnecessary directories from being copied as they will greatly
-    # slow down the speed of gpinitstandby if containing a lot of data
-    cmd_str = ' '.join(['pg_basebackup',
-                        '-x', '-R',
-                        '-c', 'fast',
-                        '-E', './pg_log',
-                        '-E', './db_dumps',
-                        '-E', './gpperfmon/data',
-                        '-E', './gpperfmon/logs',
-                        '-D', standby_datadir,
-                        '-h', array.master.getSegmentHostName(),
-                        '-p', str(array.master.getSegmentPort())])
-    cmd = base.Command('pg_basebackup',
-                       cmd_str,
+    cmd = PgBaseBackup(pgdata=standby_datadir,
+                       host=array.master.getSegmentHostName(),
+                       port=str(array.master.getSegmentPort()),
                        ctxt=base.REMOTE,
                        remoteHost=options.standby_host)
     try:

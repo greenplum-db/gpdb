@@ -6,6 +6,7 @@ from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRE
 
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.commands.gp import ModifyPostgresqlConfSetting, SegmentStart, SegmentStop
+from gppylib.commands.pg import PgBaseBackup
 from gppylib.db import dbconn
 from gppylib.commands import unix
 from gppylib.commands.pg import DbStatus
@@ -71,8 +72,7 @@ class ConfExpSegCmd(Command):
 
         if not os.path.exists(os.path.dirname(path)):
             logger.info("gpconfigurenewsegment:validatePath path %s does not exist" % path)
-            raise ValidationException("Parent directory for %s directory '%s' does not exist" %
-                    ("system data", path))
+            raise ValidationException("Parent directory for system data directory '%s' does not exist" % path)
 
         if not os.path.exists(path):
             return
@@ -125,19 +125,9 @@ class ConfExpSegCmd(Command):
 
                     if not self.isPrimary:
                         # Create a mirror based on the primary
-                        # We exclude certain unnecessary directories from being copied as they will greatly
-                        # slow down the speed of gpinitstandby if containing a lot of data
-                        cmd_str = ' '.join(['pg_basebackup',
-                                            '-x', '-R',
-                                            '-c', 'fast',
-                                            '-E', './pg_log',
-                                            '-E', './db_dumps',
-                                            '-E', './gpperfmon/data',
-                                            '-E', './gpperfmon/logs',
-                                            '-D', self.datadir,
-                                            '-h', self.syncWithSegmentHostname,
-                                            '-p', str(self.syncWithSegmentPort)])
-                        cmd = Command('pg_basebackup', cmd_str)
+                        cmd = PgBaseBackup(pgdata=self.datadir,
+                                           host=self.syncWithSegmentHostname,
+                                           port=str(self.syncWithSegmentPort))
                         try:
                             cmd.run(validateAfter=True)
                             self.set_results(CommandResult(0, '', '', True, False))

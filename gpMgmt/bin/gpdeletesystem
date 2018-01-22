@@ -186,6 +186,12 @@ def check_for_dump_files(options):
     logger.info('Checking for database dump files...')
     return gp.GpDumpDirsExist.local('check for dump dirs', options.master_data_dir)
 
+def getTablespaceDirs():
+    sqlcmd = "select spclocation FROM pg_tablespace where spcname != 'pg_default' and spcname != 'pg_global'"
+    with dbconn.connect(dbconn.DbURL()) as conn:
+        tablespaces = dbconn.execSQL(conn, sqlcmd).fetchall()
+
+    return [row[0] for row in tablespaces]
 
 # -------------------------------------------------------------------------
 # delete_system() - deletes a GPDB system
@@ -206,13 +212,12 @@ def delete_cluster(options):
     dburl = dbconn.DbURL(port=options.pgport)
     try:
         array = gparray.GpArray.initFromCatalog(dburl, True)
+        tablespaceDirs = getTablespaceDirs()
     except Exception, ex:
         raise GpDeleteSystemException('Failed to get database configuration: %s' % ex.__str__())
     # get all segdbs
     segments = array.getDbList()
 
-    # getSegmentsByHostName(segments)
-    segdbs_by_host = gparray.GpArray.getSegmentsByHostName(segments)
     standby = array.standbyMaster
 
     # Display the options
@@ -232,6 +237,25 @@ def delete_cluster(options):
 
     # From this point on we don't want ctrl-c to happen
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    # create pool
+    pool = base.WorkerPool(numWorkers=options.batch_size)
+
+    logger.info('Deleting tablespace directories...')
+    # getSegmentsByHostName(segments)
+    segmentHosts = gparray.GpArray.getSegmentsByHostName(segments).keys()
+    for segmentHost in segmentHosts:
+        for tablespaceDir in tablespaceDirs:
+            logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
+                                                                  tablespaceDir))
+            cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,
+                                       ctxt=base.REMOTE, remoteHost=segmentHost)
+            pool.addCommand(cmd)
+
+    logger.info('Waiting for worker threads to delete tablespace dirs...')
+    pool.join()
+    pool.haltWork()
+    pool.joinWorkers()
 
     # create pool
     pool = base.WorkerPool(numWorkers=options.batch_size)

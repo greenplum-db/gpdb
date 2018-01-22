@@ -759,7 +759,7 @@ class SegmentTemplate:
     def _start_new_primary_segments(self):
         newSegments = self.gparray.getExpansionSegDbList()
         for seg in newSegments:
-            if seg.isSegmentMirror() == True:
+            if seg.isSegmentMirror():
                 continue
             """ Start all the new segments in utilty mode. """
             segStartCmd = SegmentStart(
@@ -771,7 +771,7 @@ class SegmentTemplate:
                 , utilityMode=True
                 , ctxt=REMOTE
                 , remoteHost=seg.getSegmentHostName()
-                , noWait=False
+                , pg_ctl_wait=True
                 , timeout=SEGMENT_TIMEOUT_DEFAULT)
             self.pool.addCommand(segStartCmd)
         self.pool.join()
@@ -815,8 +815,11 @@ class SegmentTemplate:
 
         self.logger.info('Configuring new segments (mirror)')
 
+        # This loop enriches segments which are mirrors with two fields, primaryHostname and primarySegmentPort.
         mirrorsList = []
         for segPair in self.gparray.getExpansionSegPairList():
+            if segPair.mirrorDB is None:
+                continue
             mirror = segPair.mirrorDB
             mirror.primaryHostname = segPair.primaryDB.getSegmentHostName()
             mirror.primarySegmentPort = segPair.primaryDB.getSegmentPort()
@@ -828,7 +831,7 @@ class SegmentTemplate:
             segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
-                                            ctxt=REMOTE, remoteHost=host, validationOnly=True)
+                                            ctxt=REMOTE, remoteHost=host, validationOnly=False)
             self.pool.addCommand(segCfgCmd)
 
         self.pool.join()
@@ -1596,7 +1599,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 , utilityMode=True
                 , ctxt=REMOTE
                 , remoteHost=seg.getSegmentHostName()
-                , noWait=False
+                , pg_ctl_wait=True
                 , timeout=SEGMENT_TIMEOUT_DEFAULT)
             self.pool.addCommand(segStartCmd)
         self.pool.join()

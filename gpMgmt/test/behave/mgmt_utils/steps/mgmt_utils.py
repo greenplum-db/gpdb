@@ -1349,7 +1349,7 @@ def impl(context, seg):
                                , utilityMode=False
                                , ctxt=REMOTE
                                , remoteHost=hostname
-                               , noWait=False
+                               , pg_ctl_wait=True
                                , timeout=300)
     segStartCmd.run(validateAfter=True)
 
