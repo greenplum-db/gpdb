@@ -109,24 +109,25 @@ HandleFtsWalRepProbe(void)
 		false, /* RequestRetry */
 	};
 
-	GetMirrorStatus(&response);
-
-	/*
-	 * We check response.IsSyncRepEnabled even though syncrep is again checked
-	 * later in the set function to avoid acquiring the SyncRepLock again.
-	 */
-	if (response.IsMirrorUp && !response.IsSyncRepEnabled)
+	if (am_mirror)
 	{
-		SetSyncStandbysDefined();
-		/* Syncrep is enabled now, so respond accordingly. */
-		response.IsSyncRepEnabled = true;
-	}
-	else if (!response.IsMirrorUp && am_mirror)
-	{
-		Assert(!response.IsInSync);
-		Assert(!response.IsSyncRepEnabled);
 		response.IsRoleMirror = true;
 		elog(LOG, "received probe message while acting as mirror");
+	}
+	else
+	{
+		GetMirrorStatus(&response);
+
+		/*
+		 * We check response.IsSyncRepEnabled even though syncrep is again checked
+		 * later in the set function to avoid acquiring the SyncRepLock again.
+		 */
+		if (response.IsMirrorUp && !response.IsSyncRepEnabled)
+		{
+			SetSyncStandbysDefined();
+			/* Syncrep is enabled now, so respond accordingly. */
+			response.IsSyncRepEnabled = true;
+		}
 	}
 
 	SendFtsResponse(&response, FTS_MSG_PROBE);
