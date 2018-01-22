@@ -21,12 +21,15 @@
 #include "libpq-fe.h"
 #include "pgtar.h"
 #include "pqexpbuffer.h"
+#include "catalog/catalog.h"
 
 #include <unistd.h>
 #include <dirent.h>
+#include <regex.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <assert.h>
 
 #ifdef HAVE_LIBZ
 #include <zlib.h>
@@ -37,6 +40,7 @@
 #include "receivelog.h"
 #include "streamutil.h"
 
+#define GP_TABLESPACE_PATH_PATTERN	"(.*)" GP_TABLESPACE_VERSION_PREFIX "([[:digit:]]+)" "(.*)"
 
 /* Global options */
 char	   *basedir = NULL;
@@ -53,6 +57,10 @@ int			standby_message_timeout = 10 * 1000;		/* 10 sec = default */
 #define MAX_EXCLUDE 255
 int			num_exclude = 0;
 char	   *excludes[MAX_EXCLUDE];
+int			target_dbid = -1;
+char		tablespace_path_buf[MAXPGPATH];
+regex_t		table_space_pattern_reg;
+
 
 /* Progress counters */
 static uint64 totalsize;
@@ -81,7 +89,7 @@ static PQExpBuffer recoveryconfcontents = NULL;
 
 /* Function headers */
 static void usage(void);
-static void verify_dir_is_empty_or_create(char *dirname);
+static void verify_dir_is_empty_or_create(char *dirname, bool error_on_nonempty);
 static void progress_report(int tablespacenum, const char *filename);
 
 static void ReceiveTarFile(PGconn *conn, PGresult *res, int rownum);
@@ -92,6 +100,7 @@ static void BaseBackup(void);
 
 static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
 					 bool segment_finished);
+
 
 #ifdef HAVE_LIBZ
 static const char *
@@ -143,9 +152,9 @@ usage(void)
 	printf(_("  -w, --no-password      never prompt for password\n"));
 	printf(_("  -W, --password         force password prompt (should happen automatically)\n"));
 	printf(_("  -E, --exclude          exclude path names\n"));
+	printf(_("  --target-dbid=DBID     target dbid for tablespace path\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
-
 
 /*
  * Called in the background process every time data is received.
@@ -304,8 +313,10 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 	/* Get a second connection */
 	param->bgconn = GetConnection();
 	if (!param->bgconn)
+	{
 		/* Error message already written in GetConnection() */
 		exit(1);
+	}
 
 	/*
 	 * Always in plain format, so we can write to basedir/pg_xlog. But the
@@ -313,7 +324,7 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 	 * created before we start.
 	 */
 	snprintf(param->xlogdir, sizeof(param->xlogdir), "%s/pg_xlog", basedir);
-	verify_dir_is_empty_or_create(param->xlogdir);
+	verify_dir_is_empty_or_create(param->xlogdir, true /* error_on_nonempty */);
 
 	/*
 	 * Start a child process and tell it to start streaming. On Unix, this is
@@ -353,7 +364,7 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
  * be give and the process ended.
  */
 static void
-verify_dir_is_empty_or_create(char *dirname)
+verify_dir_is_empty_or_create(char *dirname, bool error_on_nonempty)
 {
 	switch (pg_check_dir(dirname))
 	{
@@ -377,14 +388,18 @@ verify_dir_is_empty_or_create(char *dirname)
 			 */
 			return;
 		case 2:
-
 			/*
 			 * Exists, not empty
 			 */
-			fprintf(stderr,
-					_("%s: directory \"%s\" exists but is not empty\n"),
-					progname, dirname);
-			disconnect_and_exit(1);
+			if (error_on_nonempty)
+			{
+
+				fprintf(stderr,
+						_("%s: directory \"%s\" exists but is not empty\n"),
+						progname, dirname);
+				disconnect_and_exit(1);
+			}
+			return;
 		case -1:
 
 			/*
@@ -396,6 +411,76 @@ verify_dir_is_empty_or_create(char *dirname)
 	}
 }
 
+/*
+ * Replace tablespace path with target_dbid, so it could work with new standby.
+ * For instance, the tablespace passed from primary is:
+ * /data/myspc/GPDB_8.4_301801031_db1, we need to convert it to
+ * /data/myspc/GPDB_8.4_301801031_db9, where 9 is the standby dbid, which is passed
+ * by other utilities, like gpinitstandby.
+ */
+static const char*
+get_tablespace_path_check(const char *primary_tablespace_path)
+{
+	int			rtn;
+	regmatch_t	reg_match[4];	/* (/data/myspc/)GPDB_8.4_301801031_db(1)(/10342/12423) */
+	size_t		offset = 0;
+
+	if (target_dbid < 0)
+		return primary_tablespace_path;
+
+	if (strlen(primary_tablespace_path) >= MAXPGPATH)
+		goto path_too_long_fail;
+
+	rtn = regexec(&table_space_pattern_reg,
+				  primary_tablespace_path,
+				  sizeof(reg_match) / sizeof(regmatch_t), reg_match, REG_NOTBOL);
+	if (rtn)
+	{
+		char	ebuf[128];
+
+		regerror(rtn, &table_space_pattern_reg, ebuf, sizeof(ebuf));
+		fprintf(stderr,
+				_("%s: failed to replace tablespace (target dbid = %d) with pattern \"%s\":%s\n"),
+				primary_tablespace_path, target_dbid, GP_TABLESPACE_PATH_PATTERN, ebuf);
+
+		disconnect_and_exit(1);
+	}
+
+	memcpy(tablespace_path_buf,
+		   &primary_tablespace_path[reg_match[1].rm_so],
+		   reg_match[1].rm_eo - reg_match[1].rm_so);
+	offset += reg_match[1].rm_eo - reg_match[1].rm_so;
+	memcpy(tablespace_path_buf, GP_TABLESPACE_VERSION_PREFIX, sizeof(GP_TABLESPACE_VERSION_PREFIX));
+	offset += strlen(GP_TABLESPACE_VERSION_PREFIX);
+
+	rtn = snprintf(&tablespace_path_buf[offset], MAXPGPATH - offset, "%d", target_dbid);
+
+	if (rtn >= MAXPGPATH - offset)
+		goto path_too_long_fail;
+
+	verify_dir_is_empty_or_create(tablespace_path_buf, true /* error_on_nonempty */);
+	offset += rtn;
+
+	if (MAXPGPATH - offset <= reg_match[3].rm_eo - reg_match[3].rm_so)
+		goto path_too_long_fail;
+
+	memcpy(&tablespace_path_buf[offset],
+		   &primary_tablespace_path[reg_match[3].rm_so],
+		   reg_match[3].rm_eo - reg_match[3].rm_so);
+
+	offset += reg_match[3].rm_eo - reg_match[3].rm_so;
+
+	tablespace_path_buf[offset] = '\0';
+
+	return tablespace_path_buf;
+
+path_too_long_fail:
+
+	fprintf(stderr,
+			_("%s: tablespace path length too long: %d with target dbid: %d\n"),
+			primary_tablespace_path, MAXPGPATH, target_dbid);
+	disconnect_and_exit(1);
+}
 
 /*
  * Print a progress report based on the global variables. If verbose output
@@ -585,7 +670,9 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 		if (compresslevel != 0)
 		{
 			snprintf(filename, sizeof(filename), "%s/%s.tar.gz", basedir,
-					 PQgetvalue(res, rownum, 0));
+					 (basetablespace ?
+					  PQgetvalue(res, rownum, 0) :
+					  get_tablespace_path_check(PQgetvalue(res, rownum, 0))));
 			ztarfile = gzopen(filename, "wb");
 			if (gzsetparams(ztarfile, compresslevel,
 							Z_DEFAULT_STRATEGY) != Z_OK)
@@ -600,7 +687,9 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 #endif
 		{
 			snprintf(filename, sizeof(filename), "%s/%s.tar", basedir,
-					 PQgetvalue(res, rownum, 0));
+					 (basetablespace ?
+					  PQgetvalue(res, rownum, 0) :
+					  get_tablespace_path_check(PQgetvalue(res, rownum, 0))));
 			tarfile = fopen(filename, "wb");
 		}
 	}
@@ -952,7 +1041,9 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 			 * First part of header is zero terminated filename
 			 */
 			snprintf(filename, sizeof(filename), "%s/%s", current_path,
-					 copybuf);
+					 (basetablespace ?
+					  copybuf :
+					  get_tablespace_path_check(copybuf)));
 			if (filename[strlen(filename) - 1] == '/')
 			{
 				/*
@@ -1449,7 +1540,7 @@ BaseBackup(void)
 		 * we do anything anyway.
 		 */
 		if (format == 'p' && !PQgetisnull(res, i, 1))
-			verify_dir_is_empty_or_create(PQgetvalue(res, i, 1));
+			verify_dir_is_empty_or_create(PQgetvalue(res, i, 1), false /* error_on_nonempty */);
 	}
 
 	/*
@@ -1628,7 +1719,6 @@ BaseBackup(void)
 		fprintf(stderr, "%s: base backup completed\n", progname);
 }
 
-
 int
 main(int argc, char **argv)
 {
@@ -1654,11 +1744,13 @@ main(int argc, char **argv)
 		{"verbose", no_argument, NULL, 'v'},
 		{"progress", no_argument, NULL, 'P'},
 		{"exclude", required_argument, NULL, 'E'},
+		{"target-dbid", required_argument, NULL, 't'},
 		{NULL, 0, NULL, 0}
 	};
 	int			c;
 
 	int			option_index;
+	int			rtn;
 
 	progname = get_progname(argv[0]);
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_basebackup"));
@@ -1813,6 +1905,9 @@ main(int argc, char **argv)
 
 				excludes[num_exclude++] = xstrdup(optarg);
 				break;
+			case 't':
+				target_dbid = atoi(optarg);
+				break;
 			default:
 
 				/*
@@ -1886,10 +1981,24 @@ main(int argc, char **argv)
 	 * backups, always require the directory. For tar backups, require it
 	 * unless we are writing to stdout.
 	 */
+	/*
+	 * GPDB: We don't need to check whether target empty or not because we
+	 * embed dbid in the path.
+	 */
 	if (format == 'p' || strcmp(basedir, "-") != 0)
-		verify_dir_is_empty_or_create(basedir);
+		verify_dir_is_empty_or_create(basedir, false /* error_on_nonempty */);
+
+	/* there would be dot in GP_TABLESPACE_PATH_PATTERN, but it is fine for regex match */
+	rtn = regcomp(&table_space_pattern_reg,
+				  GP_TABLESPACE_PATH_PATTERN,
+				  REG_EXTENDED);
+
+
+	assert(!rtn);
 
 	BaseBackup();
+
+	regfree(&table_space_pattern_reg);
 
 	return 0;
 }
