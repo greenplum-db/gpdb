@@ -3814,13 +3814,15 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	PQExpBuffer delqry;
 	PQExpBuffer asPart;
 	PGresult   *res;
-	char	   *funcsig;
+	char       *funcsig;                /* identity signature */
+	char       *funcfullsig;            /* full signature */
 	char	   *funcsig_tag;
 	int			ntups;
 	char	   *proretset;
 	char	   *prosrc;
 	char	   *probin;
 	char       *funcargs;
+	char	   *funciargs;
 	char       *funcresult;
 	char	   *proallargtypes;
 	char	   *proargmodes;
@@ -3860,6 +3862,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		appendPQExpBuffer(query,
 						  "SELECT proretset, prosrc, probin, "
 						  "pg_catalog.pg_get_function_arguments(oid) as funcargs, "
+						  "pg_catalog.pg_get_function_identity_arguments(oid) as funciargs, "
 						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
 						  "provolatile, proisstrict, prosecdef, prodataaccess, "
 						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
@@ -3898,6 +3901,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	if (isGE50)
 	{
 		funcargs = PQgetvalue(res, 0, PQfnumber(res, "funcargs"));
+		funciargs = PQgetvalue(res, 0, PQfnumber(res, "funciargs"));
 		funcresult = PQgetvalue(res, 0, PQfnumber(res, "funcresult"));
 		proallargtypes = proargmodes = proargnames = NULL;
 	}
@@ -3906,7 +3910,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		proallargtypes = PQgetvalue(res, 0, PQfnumber(res, "proallargtypes"));
 		proargmodes = PQgetvalue(res, 0, PQfnumber(res, "proargmodes"));
 		proargnames = PQgetvalue(res, 0, PQfnumber(res, "proargnames"));
-		funcargs = funcresult = NULL;
+		funcargs = funciargs = funcresult = NULL;
 	}
 	provolatile = PQgetvalue(res, 0, PQfnumber(res, "provolatile"));
 	proisstrict = PQgetvalue(res, 0, PQfnumber(res, "proisstrict"));
@@ -3999,10 +4003,18 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	}
 
 	if (funcargs)
-		funcsig = format_function_arguments(finfo, funcargs);
+	{
+		/* GPDB 5.0 orlater; we rely on server-side code for most of the work */
+		funcfullsig = format_function_arguments(finfo, funcargs);
+		funcsig = format_function_arguments(finfo, funciargs);
+	}
 	else
+	{
+		/* pre-GPDB 5.0, do it ourselves */
 		funcsig = format_function_arguments_old(finfo, nallargs, allargtypes,
 												argmodes, argnames);
+		funcfullsig = funcsig;
+	}
 	funcsig_tag = format_function_signature(finfo, false);
 
 	/*
@@ -4012,7 +4024,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 					  fmtId(finfo->dobj.namespace->dobj.name),
 					  funcsig);
 
-	appendPQExpBuffer(q, "CREATE FUNCTION %s ", funcsig);
+	appendPQExpBuffer(q, "CREATE FUNCTION %s ", funcfullsig);
 
 	if (funcresult)
 		appendPQExpBuffer(q, "RETURNS %s", funcresult);
