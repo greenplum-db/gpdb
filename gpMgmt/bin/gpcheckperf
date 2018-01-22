@@ -188,7 +188,6 @@ def parseMemorySize(line):
     except Exception, err:
         print 'Error: ' + err
         sys.exit(-1)
-        return 0
 
 
 #############
@@ -315,7 +314,8 @@ def run(cmd):
     if GV.opt['-v'] and out and out != '': print out
 
     if out and out.find('Permission denied') >= 0 and out.find('publickey') >= 0:
-        if not GV.opt['-v']: print out
+        if not GV.opt['-v']:
+            print out
         print 'Please use gpssh-exkeys to exchange keys ...'
         sys.exit(1)
 
@@ -336,13 +336,13 @@ def runTeardown():
     dirs = ''
     for d in GV.opt['-d']: dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
     try:
-        (ok, out) = gpssh('rm -rf ' + dirs)
+        gpssh('rm -rf ' + dirs)
     except:
         pass
 
     try:
         if GV.opt['--net']:
-            (ok, out) = gpssh(killall(GV.opt['--netserver']))
+            gpssh(killall(GV.opt['--netserver']))
     except:
         pass
 
@@ -455,7 +455,7 @@ def runDiskWriteTest(multidd):
     if GV.opt['-S']: cmd = cmd + (' -S %d' % GV.opt['-S'])
     (ok, out) = gpssh(cmd)
     if not ok:
-        sys.exit('[Error] command failed: ' + cmd)
+        sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
 
 
@@ -473,7 +473,7 @@ def runDiskReadTest(multidd):
     if GV.opt['-S']: cmd = cmd + (' -S %d' % GV.opt['-S'])
     (ok, out) = gpssh(cmd)
     if not ok:
-        sys.exit('[Error] command failed: ' + cmd)
+        sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
 
 
@@ -484,9 +484,10 @@ def runStreamTest():
     print '--  STREAM TEST'
     print '--------------------'
 
-    rmtPath = copyExecOver('stream')
-    (ok, out) = gpssh(rmtPath)
-    if not ok: sys.exit('[Error] command failed: ' + rmtPath)
+    cmd = copyExecOver('stream')
+    (ok, out) = gpssh(cmd)
+    if not ok:
+        sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     out = StringIO.StringIO(out)
     result = {}
     for line in out:
