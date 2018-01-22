@@ -150,8 +150,8 @@ class GpinitStandby(object):
         return True
 
     def check_dir_exist_on_standby(self, standby, location):
-        cmd = Command(name='Make directory on standby before running the command', cmdStr='ls -l %s' % location, ctxt=base.REMOTE, remoteHost=standby)
-        tinctest.logger.info('%s' % cmd)
+        tinctest.logger.info('standby host %s,tablespace location %s' % (standby, location))
+        cmd = Command(name='check directory if exists on standby', cmdStr='ls -l %s' % location, ctxt=base.REMOTE, remoteHost=standby)
         cmd.run(validateAfter=True)
         result = cmd.get_results()
-        return result.rc !=0
+        return result.rc ==0

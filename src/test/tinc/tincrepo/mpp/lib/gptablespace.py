@@ -39,10 +39,10 @@ class Gptablespace(object):
         @return dir: standby tablespace directory
         '''
         sql_cmd = "SELECT dbid from gp_segment_configuration where content = -1 and role = 'm'";
-        dbid = int(PSQL.run_sql_command(sql_cmd, flags = '-t -q -c', dbname='postgres'))
-        sql_cmd = ("SELECT gp_tablespace_path(spclocation, %d) FROM pg_tablespace WHERE spcname <> %s") % (dbid, tablespace)
-        dir = PSQL.run_sql_command(sql_cmd, flags = '-t -q', dbname='postgres')
-        return dir
+        dbid = int(PSQL.run_sql_command(sql_cmd, flags = '-t -q ', dbname='postgres'))
+        sql_cmd = ("SELECT gp_tablespace_path(spclocation, %d) FROM pg_tablespace WHERE spcname='%s'") % (dbid, tablespace)
+        tbl_dir = PSQL.run_sql_command(sql_cmd, flags = '-t -q', dbname='postgres')
+        return tbl_dir
 
     def exists(self, tablespace):
         '''
@@ -50,7 +50,7 @@ class Gptablespace(object):
         @param tablespace:tablespace name
         @return True or False
         '''
-        fs_out = PSQL.run_sql_command("select count(*) from pg_tablespace where spcname='%s'" % tablespace, flags = '-t -q', dbname='postgres')
+        fs_out = PSQL.run_sql_command("select count(*) from pg_tablespace where spcname='%s'" % tablespace, flags='-t -q', dbname='postgres')
         if int(fs_out.strip()) > 0:
             return True
         return False
@@ -67,7 +67,16 @@ class Gptablespace(object):
         for record in self.config.record:
             cmd = "gpssh -h %s -e 'rm -rf %s; mkdir -p %s'"  % (record.hostname, loc, loc)
             run_shell_command(cmd)
-        tinctest.logger.info('create tablespace %s' % tablespace)
-        sql_cmd = 'create tablespace %s location \'%s\'' % (tablespace, loc)
-        PSQL.run_sql_command(sql_cmd, flags = '-t -q -c', dbname='postgres')
+        sql_cmd = ('create tablespace %s location \'%s\'') % (tablespace, loc)
+        PSQL.run_sql_command(sql_cmd, flags='-t -q ', dbname='postgres')
 
+    def cleanup_tablespace(self, tablespace, dbname):
+        tsoid = PSQL.run_sql_command("SELECT oid FROM pg_tablespace where spcname = '%s'" % tablespace,
+                                    flags='-t -q ', dbname=dbname)
+        tables = PSQL.run_sql_command("SELECT relname FROM pg_class WHERE reltablespace = %s AND relkind = 'r'" % tsoid,
+                                    flags='-t -q ', dbname=dbname)
+        if len(tables) > 0:
+            PSQL.run_sql_command("DROP TABLE {0}".format(','.join(tables.strip().splitlines())),
+                                flags='-t -q ', dbname=dbname)
+        sql_cmd = "DROP TABLESPACE %s" % tablespace
+        PSQL.run_sql_command(sql_cmd, flags='-t -q ', dbname=dbname)
