@@ -2000,7 +2000,7 @@ eqjoinsel_inner(Oid operator,
 	{
 		HeapTuple tp = getStatsTuple(vardata1);
 		stats1 = (Form_pg_statistic) GETSTRUCT(tp);
-		have_mcvs1 = get_attstatsslot(&sslot1, vardata1->statsTuple,
+		have_mcvs1 = get_attstatsslot(&sslot1, tp,
 									  STATISTIC_KIND_MCV, InvalidOid,
 							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 
@@ -2010,7 +2010,7 @@ eqjoinsel_inner(Oid operator,
 	{
 		HeapTuple tp = getStatsTuple(vardata2);
 		stats2 = (Form_pg_statistic) GETSTRUCT(tp);
-		have_mcvs2 = get_attstatsslot(&sslot2, vardata2->statsTuple,
+		have_mcvs2 = get_attstatsslot(&sslot2, tp,
 									  STATISTIC_KIND_MCV, InvalidOid,
 							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 	}
