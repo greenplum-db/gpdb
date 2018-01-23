@@ -1374,6 +1374,7 @@ jobs:
 
 - name: gate_cs_start
   plan:
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -1608,6 +1609,7 @@ jobs:
 
 - name: gate_mpp_start
   plan:
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -1823,6 +1825,7 @@ jobs:
 
 - name: gate_mm_start
   plan:
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2180,6 +2183,7 @@ jobs:
 
 - name: gate_dpm_start
   plan:
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2417,6 +2421,7 @@ jobs:
 
 - name: gate_ud_start
   plan:
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
