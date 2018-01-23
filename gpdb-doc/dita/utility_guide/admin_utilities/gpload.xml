@@ -216,6 +216,7 @@
               <varname>target_column_name</varname>: <varname>source_column_name</varname> | '<varname>expression</varname>'
    <xref href="#topic1/cfpreload" format="dita">PRELOAD</xref>:
     - <xref href="#topic1/cftruncate" format="dita">TRUNCATE</xref>: true | false
+    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: <varname>external_table_name</varname>
     - <xref href="#topic1/cfreusetables" format="dita">REUSE_TABLES</xref>: true | false
    <xref href="#topic1/cfsql" format="dita">SQL</xref>:
     - <xref href="#topic1/cfbefore" format="dita">BEFORE</xref>: "<varname>sql_command</varname>"
@@ -734,6 +735,34 @@
                                     all rows in the target table prior to loading it.</pd>
                             </plentry>
                             <plentry>
+                                <pt id="cfstagetbl">STAGING_TABLE</pt>
+                                <pd>Optional. Specify a table name to use as the temporary external
+                                    table that is used by <codeph>gpfdist</codeph> during a
+                                        <codeph>gpload</codeph> operation. <codeph>REUSE_TABLES:
+                                        true</codeph> must also specified. If
+                                        <codeph>REUSE_TABLES</codeph> is false or not specified,
+                                        <codeph>STAGING_TABLE</codeph> is ignored.</pd>
+                                <pd>If <varname>external_table_name</varname> contains a period (.),
+                                        <codeph>gpload</codeph> returns an error.</pd>
+                                <pd><codeph>gpload</codeph> uses the value of <codeph><xref
+                                            href="#topic1/cfschema" format="dita"
+                                        >SCHEMA</xref></codeph> in the <codeph>EXTERNAL</codeph>
+                                    section as the schema for the
+                                        <varname>external_table_name</varname>. If the
+                                        <codeph>SCHEMA</codeph> value is <codeph>%</codeph>,
+                                        <varname>external_table_name</varname> is created in same
+                                    schema as the <xref href="#topic1/cftable" format="dita"
+                                        >TABLE</xref> in the <codeph>OUTPUT</codeph> section (the
+                                    target table being loaded into). </pd>
+                                <pd>If <codeph>SCHEMA</codeph> is not set,
+                                        <varname>external_table_name</varname> is created in the
+                                        <codeph>PUBLIC</codeph> schema. </pd>
+                                <pd>If the <varname>external_table_name</varname> exists, the
+                                    utility uses the existing table. The utility returns an error if
+                                    the table schema is not the same as the a
+                                        <codeph>OUTPUT</codeph> table.</pd>
+                            </plentry>
+                            <plentry>
                                 <pt id="cfreusetables">REUSE_TABLES</pt>
                                 <pd>Optional. If set to true, <codeph>gpload</codeph> will not drop
                                     the external table objects and staging table objects it creates.
@@ -747,6 +776,10 @@
                                     If <codeph>REUSE_TABLES: true</codeph> is not specified,
                                     formatting error information is deleted after the
                                         <codeph>gpload</codeph> operation.</pd>
+                                <pd>If the <varname>external_table_name</varname> exists, the
+                                    utility uses the existing table. The utility returns an error if
+                                    the table schema does not match the <codeph>OUTPUT</codeph>
+                                    table schema.</pd>
                             </plentry>
                         </parml></pd>
                 </plentry>
