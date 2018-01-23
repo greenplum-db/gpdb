@@ -436,6 +436,17 @@ resources:
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
 {% endif %}
+{% if pipeline_type == "prod" %}
+- name: bin_gpdb_centos6_icw_green
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos6/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
+
+{% endif %}
 {% if "UD" in test_sections %}
 - name: pxf_tarball
   type: s3
@@ -1554,6 +1565,11 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
+{% if pipeline_type == "prod" %}
+  - put: bin_gpdb_centos6_icw_green
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+{% endif %}
 
 {% endif %}
 {% if "CS" in test_sections %}
