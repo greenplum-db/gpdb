@@ -27,9 +27,9 @@ tincmmgrregress:
 TESTER= \
 	export PGDATABASE=gptest && \
 	export TINCHOME=$(PWD) && \
-	export TINCREPOHOME=$(TINCHOME)/tincrepo && \
-	export PYTHONPATH=$(TINCHOME):$(TINCHOME)/ext:$(PYTHONPATH):$(TINCREPOHOME) && \
-	export PATH=$(TINCHOME):$(TINCHOME)/ext:$(TINCHOME)/ext/unittest2:$(TINCHOME)/sbin/:$(PATH) && \
+	export TINCREPOHOME=$(PWD)/tincrepo && \
+	export PYTHONPATH=$(PWD):$(PWD)/ext:$(PYTHONPATH):$(PWD)/tincrepo && \
+	export PATH=$(PWD):$(PWD)/ext:$(PWD)/ext/unittest2:$(PWD)/sbin/:$(PATH) && \
 	tinc.py
 
 DISCOVER=discover
