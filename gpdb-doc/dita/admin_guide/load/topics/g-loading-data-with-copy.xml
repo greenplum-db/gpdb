@@ -53,7 +53,7 @@
          <codeph>COPY FROM STDIN</codeph> uses the Standard Input channel and feeds data directly
          into the <codeph>postgres</codeph> backend. After the <codeph>COPY FROM STDIN</codeph>
          command started, the backend will accept lines of data until a single line only contains
-         a backslash-period (\.).</p> psql is wrapping all of this into the handy
+         a backslash-period (\.). psql is wrapping all of this into the handy
          <codeph>\copy</codeph> command.</p>
       <p>
           <codeblock>\copy <i>table_name</i> FROM <i>filename</i>;</codeblock>
@@ -77,7 +77,7 @@
       </p>
       <p>By default, the default client encoding is used, this can be changed with the
          <codeph>ENCODING</codeph> option. This is useful if data is coming from another operating
-         system.
+         system.</p>
       <p>
           <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (ENCODING 'latin1');</codeblock>
       </p>
