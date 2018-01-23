@@ -448,11 +448,11 @@ select relname, reltuples, relpages from pg_class where relname like 'p3_sales%'
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
  schemaname |             tablename              | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
 ------------+------------------------------------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
- public     | p3_sales                           | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           1
- public     | p3_sales                           | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
- public     | p3_sales                           | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
- public     | p3_sales                           | region  |         0 |         4 |       -0.5 | {usa}            | {1}               |                  |           1
- public     | p3_sales                           | year    |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           1
+ public     | p3_sales                           | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           
+ public     | p3_sales                           | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           
+ public     | p3_sales                           | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           
+ public     | p3_sales                           | region  |         0 |         4 |       -0.5 | {usa}            | {1}               |                  |           
+ public     | p3_sales                           | year    |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           
  public     | p3_sales_1_prt_2_2_prt_2_3_prt_usa | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           1
  public     | p3_sales_1_prt_2_2_prt_2_3_prt_usa | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
  public     | p3_sales_1_prt_2_2_prt_2_3_prt_usa | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
@@ -555,11 +555,11 @@ select relname, reltuples, relpages from pg_class where relname like 'p3_sales%'
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
  schemaname |             tablename              | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
 ------------+------------------------------------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
- public     | p3_sales                           | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           1
- public     | p3_sales                           | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
- public     | p3_sales                           | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
- public     | p3_sales                           | region  |         0 |         4 |       -0.5 | {usa}            | {1}               |                  |           1
- public     | p3_sales                           | year    |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           1
+ public     | p3_sales                           | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           
+ public     | p3_sales                           | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           
+ public     | p3_sales                           | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           
+ public     | p3_sales                           | region  |         0 |         4 |       -0.5 | {usa}            | {1}               |                  |           
+ public     | p3_sales                           | year    |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           
  public     | p3_sales_1_prt_2                   | day     |         0 |         4 |       -0.5 | {20}             | {1}               |                  |           1
  public     | p3_sales_1_prt_2                   | id      |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
  public     | p3_sales_1_prt_2                   | month   |         0 |         4 |       -0.5 | {1}              | {1}               |                  |           1
