@@ -42,7 +42,7 @@
    </body>
   </topic>
   <topic id="topic3" xml:lang="en">
-    <title>Loading Data Using \copy</title>
+    <title>Loading Data Using \copy in psql</title>
     <body>
       <p>Do not confuse the psql <codeph>\copy</codeph> command with the <codeph>COPY</codeph> SQL
          command. The <codeph>\copy</codeph> invokes a regular <codeph>COPY FROM STDIN</codeph>
@@ -53,7 +53,8 @@
          <codeph>COPY FROM STDIN</codeph> uses the Standard Input channel and feeds data directly
          into the <codeph>postgres</codeph> backend. After the <codeph>COPY FROM STDIN</codeph>
          command started, the backend will accept lines of data until a single line only contains
-         a backslash-period (\.).</p>
+         a backslash-period (\.).</p> psql is wrapping all of this into the handy
+         <codeph>\copy</codeph> command.
       <p>
           <codeblock>\copy <i>table_name</i> FROM <i>filename</i>;</codeblock>
       </p>
