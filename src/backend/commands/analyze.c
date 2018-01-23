@@ -2801,6 +2801,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 		else
 			stats->stawidth = stats->attrtype->typlen;
 
+		stats->stahll->nmultiples = nmultiple;
+		stats->stahll->ndistinct = ndistinct;
+		stats->stahll->samplerows = samplerows;
+
 		if (nmultiple == 0)
 		{
 			/* If we found no repeated values, assume it's a unique column */
@@ -3169,11 +3173,17 @@ merge_leaf_stats(VacAttrStatsP stats,
 
 	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
 	StdAnalyzeData *mystats = (StdAnalyzeData *)stats->extra_data;
+	int numPartitions = list_length(oid_list);
 
 	ListCell *lc;
-	float *relTuples = (float *) palloc(sizeof(float) * list_length(oid_list));
+	float *relTuples = (float *) palloc(sizeof(float) * numPartitions);
+	float *nDistincts = (float *) palloc(sizeof(float) * numPartitions);
+	float *nMultiples = (float *) palloc(sizeof(float) * numPartitions);
 	int relNum = 0;
 	float totalTuples = 0;
+	float nDistinct_upper_bound = 0;
+	float nmultiple = 0;
+	samplerows = 0;
 
 	foreach(lc, oid_list)
 	{
@@ -3191,8 +3201,8 @@ merge_leaf_stats(VacAttrStatsP stats,
 		}
 		ReleaseSysCache(pkStatsTuple);
 	}
+	totalrows = totalTuples;
 
-	int numPartitions = list_length(oid_list);
 	MemoryContext old_context;
 
 	HeapTuple *heaptupleStats = (HeapTuple *)palloc(numPartitions * sizeof(HeapTuple *));
@@ -3211,6 +3221,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 		colAvgWidth = colAvgWidth + get_attavgwidth(relid, stats->attr->attnum) * relTuples[i];
 		nullCount = nullCount + get_attnullfrac(relid, stats->attr->attnum) * relTuples[i];
 
+		nDistincts[i] = 0.0;
+		nMultiples[i] = 0.0;
+
 		heaptupleStats[i] = get_att_stats(relid, stats->attr->attnum);
 		// if there is no colstats
 		if (!HeapTupleIsValid(heaptupleStats[i]))
@@ -3218,8 +3231,10 @@ merge_leaf_stats(VacAttrStatsP stats,
 			continue;
 		}
 		Form_pg_statistic fpsStats = (Form_pg_statistic) GETSTRUCT(heaptupleStats[i]);
-		if (fpsStats->stadistinct < 0.0 && allDistinct)
+		if (fpsStats->stadistinct <= -1.0 && allDistinct)
 		{
+			nDistincts[i] = relTuples[i];
+			nDistinct_upper_bound += nDistincts[i];
 			continue;
 		}
 		else
@@ -3234,20 +3249,74 @@ merge_leaf_stats(VacAttrStatsP stats,
 		{
 			hllcounters[i] = (HLLCounter) DatumGetByteaP(hllSlot.values[0]);
 			finalHLL = hyperloglog_merge(finalHLL, hllcounters[i]);
+			nDistincts[i] = hllcounters[i]->ndistinct;
+			nMultiples[i] = hllcounters[i]->nmultiples;
+			samplerows += hllcounters[i]->samplerows;
+			nDistinct_upper_bound += nDistincts[i];
+			nmultiple += nMultiples[i];
 			free_attstatsslot(&hllSlot);
 		}
 	}
 
-	if (allDistinct)
-		ndistinct = -1.0;
+
 
 	if (finalHLL != NULL && !allDistinct)
+	{
 		ndistinct = hyperloglog_get_estimate(finalHLL);
-
+		nmultiple = (ndistinct * nmultiple) / nDistinct_upper_bound;
+	}
 	pfree(hllcounters);
 
 	if (ndistinct == 0.0)
 		return;
+
+	if (allDistinct)
+	{
+		/* If we found no repeated values, assume it's a unique column */
+		ndistinct = -1.0;
+	}
+	else if ((int)nmultiple == (int)ndistinct)
+	{
+		/*
+		 * Every value in the sample appeared more than once.  Assume the
+		 * column has just these values.
+		 */
+	}
+	else
+	{
+		/*----------
+		 * Estimate the number of distinct values using the estimator
+		 * proposed by Haas and Stokes in IBM Research Report RJ 10025:
+		 *		n*d / (n - f1 + f1*n/N)
+		 * where f1 is the number of distinct values that occurred
+		 * exactly once in our sample of n rows (from a total of N),
+		 * and d is the total number of distinct values in the sample.
+		 * This is their Duj1 estimator; the other estimators they
+		 * recommend are considerably more complex, and are numerically
+		 * very unstable when n is much smaller than N.
+		 *
+		 * Overwidth values are assumed to have been distinct.
+		 *----------
+		 */
+		int			f1 = ndistinct - nmultiple;
+		int			d = f1 + nmultiple;
+		double		numer,
+		denom,
+		stadistinct;
+
+		numer = (double) samplerows *(double) d;
+
+		denom = (double) (samplerows - f1) +
+		(double) f1 *(double) samplerows / totalrows;
+
+		stadistinct = numer / denom;
+		/* Clamp to sane range in case of roundoff error */
+		if (stadistinct < (double) d)
+			stadistinct = (double) d;
+		if (stadistinct > totalrows)
+			stadistinct = totalrows;
+		ndistinct = floor(stadistinct + 0.5);
+	}
 
 	if (ndistinct > 0.1 * totalTuples)
 		ndistinct = -(ndistinct / totalTuples);

@@ -113,7 +113,16 @@ typedef struct HLLData {
     /* The current index of the sparse encoded data array. Also when -1 used
      * as a flag for dense encoded counters */
     int32_t idx;
- 
+
+	/* Number of multiples counted during the scan */
+	int32_t nmultiples;
+
+	/* Actual distinct value in the sample */
+	int32_t ndistinct;
+
+	/* Sample size which based on this counter is created */
+	int32_t samplerows;
+
     /* largest observed 'rho' for each of the 'm' buckets (uses the very same 
      * trick  as in the varlena type in include/c.h where additional memory 
      * is palloc'ed and treated as part of the data array ) */
