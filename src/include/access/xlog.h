@@ -253,7 +253,6 @@ extern uint64 GetSystemIdentifier(void);
 extern bool DataChecksumsEnabled(void);
 extern Size XLOGShmemSize(void);
 extern void XLOGShmemInit(void);
-extern void XLogStartupInit(void);
 extern void BootStrapXLOG(void);
 extern void StartupXLOG(void);
 extern bool XLogStartupMultipleRecoveryPassesNeeded(void);
