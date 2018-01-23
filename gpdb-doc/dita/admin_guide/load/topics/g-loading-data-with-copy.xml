@@ -48,13 +48,13 @@
          command. The <codeph>\copy</codeph> invokes a regular <codeph>COPY FROM STDIN</codeph>
          and sends the data from the psql client to the backend. Therefore any file must reside on
          the host where the psql client runs, and must be accessible to the user which runs the
-         client.
-         To avoid the problem of copying the data file to the master host before loading the data,
+         client.</p>
+      <p>To avoid the problem of copying the data file to the master host before loading the data,
          <codeph>COPY FROM STDIN</codeph> uses the Standard Input channel and feeds data directly
          into the <codeph>postgres</codeph> backend. After the <codeph>COPY FROM STDIN</codeph>
          command started, the backend will accept lines of data until a single line only contains
          a backslash-period (\.).</p> psql is wrapping all of this into the handy
-         <codeph>\copy</codeph> command.
+         <codeph>\copy</codeph> command.</p>
       <p>
           <codeblock>\copy <i>table_name</i> FROM <i>filename</i>;</codeblock>
       </p>
@@ -63,11 +63,23 @@
   <topic id="topic4" xml:lang="en">
     <title>Input Format</title>
     <body>
-      <p><codeph>COPY FROM STDIN</codeph> accepts a <codeph>FORMAT</codeph> parameter, which
-         specifies the format of the input data. The possible values are <codeph>TEXT</codeph>,
+      <p><codeph>COPY FROM</codeph> accepts a <codeph>FORMAT</codeph> parameter, which specifies
+         the format of the input data. The possible values are <codeph>TEXT</codeph>,
          <codeph>CSV</codeph> (Comma Separated Values), and <codeph>BINARY</codeph>.</p>
       <p>
-          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH FORMAT csv;</codeblock>
+          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (FORMAT csv);</codeblock>
+      </p>
+      <p>The <codeph>FORMAT csv</codeph> will read comma-separated values. The
+         <codeph>FORMAT text</codeph> by default uses tabulators to separate the values, the
+         <codeph>DELIMITER</codeph> option specifies a different character as value delimiter.</p>
+      <p>
+          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (FORMAT text, DELIMITER '|');</codeblock>
+      </p>
+      <p>By default, the default client encoding is used, this can be changed with the
+         <codeph>ENCODING</codeph> option. This is useful if data is coming from another operating
+         system.
+      <p>
+          <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH (ENCODING 'latin1');</codeblock>
       </p>
    </body>
   </topic>
