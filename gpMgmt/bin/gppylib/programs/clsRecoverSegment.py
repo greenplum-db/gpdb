@@ -561,118 +561,6 @@ class GpRecoverSegmentProgram:
             res = dbconn.execSQL(conn, "SELECT datname FROM PG_DATABASE WHERE datname != 'template0'")
         return res.fetchall()
 
-
-    """
-    The method uses gp_primarymirror to get the status of all the segments which are up and running.
-    It checks to see if the segmentState field in the output is "Ready" or "ChangeTrackingDisabled".
-    If even one of the segments is not able to connect, then we fail.
-    """
-
-    def _check_segment_state_for_connection(self, confProvider):
-        self.logger.info('Checking if segments are ready to connect')
-        gpArray = confProvider.loadSystemConfig(useUtilityMode=True)
-        segments = [seg for seg in gpArray.getDbList() if
-                    seg.isSegmentUp() and not seg.isSegmentMaster() and not seg.isSegmentStandby()]
-        for seg in segments:
-            cmd = gp.SendFilerepTransitionStatusMessage(name='Get segment status',
-                                                        msg=gp.SEGMENT_STATUS_GET_STATUS,
-                                                        dataDir=seg.getSegmentDataDirectory(),
-                                                        port=seg.getSegmentPort(),
-                                                        ctxt=gp.REMOTE,
-                                                        remoteHost=seg.getSegmentHostName())
-            self.__pool.addCommand(cmd)
-        self.__pool.join()
-
-        for item in self.__pool.getCompletedItems():
-            result = item.get_results()
-            if 'segmentState: Ready' not in result.stderr and 'segmentState: ChangeTrackingDisabled' not in result.stderr:
-                raise Exception('Not ready to connect to database %s' % result.stderr)
-
-    """
-    When a primary segment goes down and its mirror has not yet failed over to Change Tracking,
-    If we try to start a transaction it will fail. This results in the python scripts which try
-    to run queries return a confusing error message. The solution here is to use gp_primarymirror
-    to check the status of all the primary segments and make sure they are in "Ready" state. If
-    they are not, then we retry for a maximum of 5 times before giving up.
-    """
-
-    def _check_database_connection(self, confProvider):
-        retry = 0
-        MAX_RETRIES = 5
-        while retry < MAX_RETRIES:
-            try:
-                self._check_segment_state_for_connection(confProvider)
-            except Exception as e:
-                self.logger.debug('Encountered error %s' % str(e))
-                self.logger.info('Unable to connect to database. Retrying %s' % (retry + 1))
-            else:
-                return True
-            retry += 1
-            time.sleep(5)
-        return False
-
-    def check_segment_state_ready_for_recovery(self, segmentList, dbsMap):
-        # Make sure gpArray and segments are in agreement on current state of system.
-        # Make sure segment state is ready for recovery
-        getVersionCmds = {}
-        for seg in segmentList:
-            if seg.isSegmentQD() == True:
-                continue
-            if seg.isSegmentModeInChangeLogging() == False:
-                continue
-            cmd = gp.SendFilerepTransitionStatusMessage(name="Get segment status information"
-                                                        , msg=gp.SEGMENT_STATUS_GET_STATUS
-                                                        , dataDir=seg.getSegmentDataDirectory()
-                                                        , port=seg.getSegmentPort()
-                                                        , ctxt=gp.REMOTE
-                                                        , remoteHost=seg.getSegmentHostName()
-                                                        )
-            getVersionCmds[seg.getSegmentDbId()] = cmd
-            self.__pool.addCommand(cmd)
-        self.__pool.join()
-
-        # We can not check to see if the command was successful or not, because gp_primarymirror always returns a non-zero result.
-        # That is just the way gp_primarymirror was designed.
-
-        segmentStates = {}
-        for dbid in getVersionCmds:
-            cmd = getVersionCmds[dbid]
-            mode = None
-            segmentState = None
-            dataState = None
-            try:
-                lines = str(cmd.get_results().stderr).split("\n")
-                while not lines[0].startswith('mode: '):
-                    self.logger.info(lines.pop(0))
-                mode = lines[0].split(": ")[1].strip()
-                segmentState = lines[1].split(": ")[1].strip()
-                dataState = lines[2].split(": ")[1].strip()
-            except:
-                self.logger.warning("Problem getting Segment state dbid = %s, results = %s." % (
-                    str(dbid), str(cmd.get_results().stderr)))
-                continue
-
-            db = dbsMap[dbid]
-            if gparray.ROLE_TO_MODE_MAP[db.getSegmentRole()] != mode:
-                raise Exception(
-                    "Inconsistency in catalog and segment Role/Mode. Catalog Role = %s. Segment Mode = %s." % (
-                        db.getSegmentRole(), mode))
-            if gparray.MODE_TO_DATA_STATE_MAP[db.getSegmentMode()] != dataState:
-                raise Exception(
-                    "Inconsistency in catalog and segment Mode/DataState. Catalog Mode = %s. Segment DataState = %s." % (
-                        db.getSegmentMode(), dataState))
-            if segmentState != gparray.SEGMENT_STATE_READY and segmentState != gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED:
-                if segmentState == gparray.SEGMENT_STATE_INITIALIZATION or segmentState == gparray.SEGMENT_STATE_IN_CHANGE_TRACKING_TRANSITION:
-                    raise Exception(
-                        "Segment is not ready for recovery dbid = %s, segmentState = %s. Retry recovery in a few moments" % (
-                            str(db.getSegmentDbId()), segmentState))
-                else:
-                    raise Exception("Segment is in unexpected state. dbid = %s, segmentState = %s." % (
-                        str(db.getSegmentDbId()), segmentState))
-
-            segmentStates[dbid] = segmentState
-        return segmentStates
-
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
             raise ProgramArgumentValidationException(
@@ -695,9 +583,6 @@ class GpRecoverSegmentProgram:
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
 
         confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
-
-        if not self._check_database_connection(confProvider):
-            raise Exception('Unable to connect to database and start transaction')
 
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
 
