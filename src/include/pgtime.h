@@ -54,13 +54,19 @@ extern int pg_next_dst_boundary(const pg_time_t *timep,
 					 long int *after_gmtoff,
 					 int *after_isdst,
 					 const pg_tz *tz);
+extern bool pg_interpret_timezone_abbrev(const char *abbrev,
+                             const pg_time_t *timep,
+                             long int *gmtoff,
+                             int *isdst,
+                             const pg_tz *tz);
 extern size_t pg_strftime(char *s, size_t max, const char *format,
 			const struct pg_tm * tm);
 
 extern void pg_timezone_pre_initialize(void);
 extern void pg_timezone_initialize(void);
 extern pg_tz *pg_tzset(const char *tzname);
-extern bool tz_acceptable(pg_tz *tz);
+extern pg_tz *pg_tzset_offset(long gmtoffset);
+extern bool pg_tz_acceptable(pg_tz *tz);
 extern bool pg_get_timezone_offset(const pg_tz *tz, long int *gmtoff);
 extern const char *pg_get_timezone_name(pg_tz *tz);
 
@@ -70,7 +76,20 @@ extern void pg_tzenumerate_end(pg_tzenum *dir);
 
 extern pg_tz *session_timezone;
 extern pg_tz *log_timezone;
-extern pg_tz *gmt_timezone;
+/*
+ * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 has been merged.
+ * gmt_timezone has been made obsolete with log_timezone being set by
+ * pg_timezone_initialize(), but in order to avoid merge conflicts in
+ * the code the callers are still allowed to use gmt_timezone.
+ */
+#define gmt_timezone log_timezone
+
+/*
+ * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 is merged. This
+ * function was renamed but callers are left unchanged to avoid merge
+ * conflicts.
+ */
+#define tz_acceptable(X) pg_tz_acceptable(X)
 
 /* Maximum length of a timezone name (not including trailing null) */
 #define TZ_STRLEN_MAX 255

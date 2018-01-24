@@ -7,35 +7,21 @@
 # src/timezone/tznames/Antarctica.txt
 #
 
-CLST   -10800 D  # Chile Summer Time
-                 #     (America/Santiago)
-                 #     (Antarctica/Palmer)
-CLT    -14400    # Chile Time
-                 #     (America/Santiago)
-                 #     (Antarctica/Palmer)
-DAVT    25200    # Davis Time (Antarctica)
-                 #     (Antarctica/Davis)
-DDUT    36000    # Dumont-d`Urville Time (Antarctica)
-                 #     (Antarctica/DumontDUrville)
-MAWT    18000    # Mawson Time (Antarctica) (caution: this used to mean 21600)
-                 #     (Antarctica/Mawson)
-MIST    39600    # Macquarie Island Time
-                 #     (Antarctica/Macquarie)
+AWST    28800    # Australian Western Standard Time
+                 #     (Antarctica/Casey)
+                 #     (Australia/Perth)
+CLST   -10800 D  # Chile Summer Time (obsolete)
+CLT    America/Santiago  # Chile Time (obsolete)
+DAVT    Antarctica/Davis  # Davis Time (Antarctica) (obsolete)
+DDUT    36000    # Dumont-d`Urville Time (Antarctica) (obsolete)
+MAWT    Antarctica/Mawson  # Mawson Time (Antarctica) (obsolete)
+MIST    39600    # Macquarie Island Time (obsolete)
 NZDT    46800 D  # New Zealand Daylight Time
                  #     (Antarctica/McMurdo)
                  #     (Pacific/Auckland)
 NZST    43200    # New Zealand Standard Time
                  #     (Antarctica/McMurdo)
                  #     (Pacific/Auckland)
-ROTT   -10800    # Rothera Time
-                 #     (Antarctica/Rothera)
-SYOT    10800    # Syowa Time
-                 #     (Antarctica/Syowa)
-VOST    21600    # Vostok time
-                 #     (Antarctica/Vostok)
-# CONFLICT! WST is not unique
-# Other timezones:
-#  - WST: West Samoa Time
-WST     28800    # Western Standard Time (Australia)
-                 #     (Antarctica/Casey)
-                 #     (Australia/Perth)
+ROTT   -10800    # Rothera Time (obsolete)
+SYOT    10800    # Syowa Time (obsolete)
+VOST    21600    # Vostok time (obsolete)

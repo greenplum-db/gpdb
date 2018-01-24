@@ -3357,17 +3357,12 @@ InitializeGUCOptions(void)
 	int			i;
 	char	   *env;
 	long		stack_rlimit;
-	/*
-	 * Before log_line_prefix could possibly receive a nonempty setting, make
-	 * sure that timezone processing is minimally alive (see elog.c).
-	 */
-	pg_timezone_pre_initialize();
 
 	/*
 	 * Before log_line_prefix could possibly receive a nonempty setting, make
 	 * sure that timezone processing is minimally alive (see elog.c).
 	 */
-	pg_timezone_pre_initialize();
+	pg_timezone_initialize();
 
 	/*
 	 * Build sorted array of all GUC variables.

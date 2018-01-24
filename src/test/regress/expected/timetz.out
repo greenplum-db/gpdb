@@ -131,14 +131,6 @@ SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Sh
  Sat Aug 09 08:52:00 2014 CST
 (1 row)
 
--- verify some newly added timezones
-set timezone = 'Asia/Khandyga';
-SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Khandyga;
-           khandyga            
--------------------------------
- Sat Aug 09 10:52:00 2014 YAKT
-(1 row)
-
 -- Casablanca time has changed in new timezone db lets verify it
 set timezone = 'Africa/Casablanca';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Casablanca;
