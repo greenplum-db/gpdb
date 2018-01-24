@@ -4,6 +4,7 @@ test: commit_transaction_block_checkpoint
 test: master_panic_after_phase1_commit
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
+test: vacuum_full_recently_dead_tuple_due_to_distributed_snapshot
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

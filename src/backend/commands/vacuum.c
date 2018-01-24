@@ -3793,8 +3793,10 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 			 * separately movable chain, ignoring any intervening DEAD ones.
 			 */
 			if (((tuple.t_data->t_infomask & HEAP_UPDATED) &&
-				 !TransactionIdPrecedes(HeapTupleHeaderGetXmin(tuple.t_data),
-										OldestXmin)) ||
+				 (!TransactionIdPrecedes(HeapTupleHeaderGetXmin(tuple.t_data),
+										 OldestXmin) ||
+				  (!(tuple.t_data->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) &&
+				   localXidSatisfiesAnyDistributedSnapshot(HeapTupleHeaderGetXmin(tuple.t_data))))) ||
 				(!(tuple.t_data->t_infomask & (HEAP_XMAX_INVALID |
 											   HEAP_IS_LOCKED)) &&
 				 !(ItemPointerEquals(&(tuple.t_self),
@@ -3982,8 +3984,10 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 
 					/* Done if at beginning of chain */
 					if (!(tp.t_data->t_infomask & HEAP_UPDATED) ||
-					 TransactionIdPrecedes(HeapTupleHeaderGetXmin(tp.t_data),
-										   OldestXmin))
+						(TransactionIdPrecedes(HeapTupleHeaderGetXmin(tp.t_data),
+											   OldestXmin) &&
+						 ((tuple.t_data->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) ||
+							 !localXidSatisfiesAnyDistributedSnapshot(HeapTupleHeaderGetXmin(tp.t_data)))))
 						break;	/* out of check-all-items loop */
 
 					/* Move to tuple with prior row version */
