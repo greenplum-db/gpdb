@@ -3212,7 +3212,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 	int nullCount = 0;
 	HLLCounter *hllcounters = (HLLCounter *) palloc(numPartitions * sizeof(HLLCounter));
 	HLLCounter finalHLL = NULL;
-	int i;
+	int i, j;
 	double ndistinct = 0.0;
 	bool allDistinct = true;
 	for (i = 0; i < numPartitions; i++)
@@ -3258,13 +3258,32 @@ merge_leaf_stats(VacAttrStatsP stats,
 		}
 	}
 
-
-
 	if (finalHLL != NULL && !allDistinct)
 	{
 		ndistinct = hyperloglog_get_estimate(finalHLL);
 		nmultiple = (ndistinct * nmultiple) / nDistinct_upper_bound;
+
+		int nUnique = 0;
+		for (i = 0; i < numPartitions; i++)
+		{
+			HLLCounter finalHLL_temp = NULL;
+			for (j = 0; j < numPartitions; j++)
+			{
+				if (i != j && hllcounters[i] != NULL)
+				{
+					finalHLL_temp = hyperloglog_merge(finalHLL_temp, hllcounters[i]);
+				}
+			}
+			nUnique += ndistinct - hyperloglog_get_estimate(finalHLL_temp);
+		}
+		nmultiple += ndistinct - nUnique;
+
+		if (nmultiple < 0)
+		{
+			nmultiple = 0;
+		}
 	}
+
 	pfree(hllcounters);
 
 	if (ndistinct == 0.0)
