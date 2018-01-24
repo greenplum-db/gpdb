@@ -35,8 +35,6 @@ typedef struct FtsProbeInfo
 	volatile uint32		fts_probePid;
 	volatile uint64		fts_probeScanRequested;
 	volatile uint64		fts_statusVersion;
-	volatile bool		fts_pauseProbes;
-	volatile bool		fts_discardResults;
 	volatile bool       fts_status_initialized;
 	volatile uint8		fts_status[FTS_MAX_DBS];
 } FtsProbeInfo;

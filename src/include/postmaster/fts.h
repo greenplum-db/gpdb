@@ -177,9 +177,6 @@ extern void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbC
 extern bool FtsMasterShutdownRequested(void);
 extern void FtsRequestMasterShutdown(void);
 
-/* Interface for setting FTS GUCs */
-extern bool gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source);
-
 /*
  * If master has requested FTS to shutdown.
  */

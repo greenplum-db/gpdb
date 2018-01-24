@@ -14,8 +14,6 @@ returns text as $$
     elif command == 'start':
         opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
         cmd = cmd + '-o "%s" start' % opts
-    elif command == 'reload':
-        cmd = cmd + 'reload'
     else:
         return 'Invalid command input'
 
@@ -32,16 +30,14 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 create table segwalrep_commit_blocking (a int) distributed by (a);
 insert into segwalrep_commit_blocking values (1);
 
--- WALREP_FIXME: we don't wait for the GUC to propagate to the ftsprobe process; it's
--- possible that one final probe could get through after we shut down the mirror
--- in the next line and throw off the test (since if the mirror is marked down,
--- the primary won't block). As a temporary nasty hack, try to reduce possible
--- flake by issuing a probe manually, which will delay the next one by a minute.
+-- skip FTS probes always
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('fts_probe', 'reset', 1);
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+-- force scan to trigger the fault
 select gp_request_fts_probe_scan();
-
--- turn off fts
-! gpconfig -c gp_fts_probe_pause -v true --masteronly --skipvalidation;
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
+-- verify the failure should be triggered once
+select gp_inject_fault('fts_probe', 'status', 1);
 
 -- stop a mirror and show commit on dbid 2 will block
 -1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);
@@ -71,9 +67,8 @@ select gp_request_fts_probe_scan();
 -- should unblock and commit now that mirror is back up and in-sync
 3<:
 
--- turn on fts
-! gpconfig -c gp_fts_probe_pause -v false --masteronly --skipvalidation;
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
+-- resume FTS probes
+select gp_inject_fault('fts_probe', 'reset', 1);
 
 -- everything should be back to normal
 4: insert into segwalrep_commit_blocking select i from generate_series(1,10)i;

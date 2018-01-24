@@ -81,6 +81,7 @@ bool am_ftshandler = false;
  */
 
 static bool am_ftsprobe = false;
+static bool skipFtsProbe = false;
 
 static volatile bool shutdown_requested = false;
 static volatile bool fullscan_requested = false;
@@ -783,11 +784,12 @@ void FtsLoop()
 
 		probe_start_time = time(NULL);
 
-		ftsLock();
+		skipFtsProbe = false;
 
-		/* atomically clear cancel flag and check pause flag */
-		bool pauseProbes = ftsProbeInfo->fts_pauseProbes;
-		ftsProbeInfo->fts_discardResults = false;
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR(FtsProbe) == FaultInjectorTypeSkip)
+			skipFtsProbe = true;
+#endif
 
 		/* make sure the probeScanRequested is set before SIGINT sent to FTS */
 		if (fullscan_requested)
@@ -795,12 +797,10 @@ void FtsLoop()
 			Assert(ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion);
 		}
 
-		ftsUnlock();
-
-		if (pauseProbes)
+		if (skipFtsProbe)
 		{
 			if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-				elog(LOG, "skipping probe, we're paused.");
+				elog(LOG, "skipping FTS probes");
 			if (fullscan_requested)
 			{
 				ftsProbeInfo->fts_statusVersion++;
@@ -904,7 +904,7 @@ void FtsLoop()
 bool
 FtsIsActive(void)
 {
-	return (!ftsProbeInfo->fts_discardResults && !shutdown_requested);
+	return (!skipFtsProbe && !shutdown_requested);
 }
 
 bool
@@ -941,7 +941,6 @@ CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 	return NULL;
 }
 
-
 /*
  * Notify postmaster to shut down due to inconsistent segment state
  */
@@ -961,35 +960,4 @@ void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponen
 			    mirror->mode,
 			    mirror->status
 			    );
-}
-
-/*
- * Request the fault-prober to suspend probes -- no fault actions will
- * be taken based on in-flight probes until the prober is unpaused.
- */
-bool
-gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
-{
-	if (doit)
-	{
-		/*
-		 * We only want to do fancy stuff on the master (where we have a
-		 * prober).
-		 */
-		if (am_ftsprobe && ftsProbeInfo && Gp_segment == -1)
-		{
-			/*
-			 * fts_pauseProbes is externally set/cleared; fts_cancelProbes is
-			 * externally set and cleared by FTS
-			 */
-			ftsLock();
-
-			ftsProbeInfo->fts_pauseProbes = newval;
-			ftsProbeInfo->fts_discardResults = ftsProbeInfo->fts_discardResults || newval;
-			ftsUnlock();
-		}
-		gp_fts_probe_pause = newval;
-	}
-
-	return true;
 }

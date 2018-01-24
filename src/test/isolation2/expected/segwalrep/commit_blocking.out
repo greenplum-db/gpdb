@@ -6,7 +6,7 @@ CREATE
 -- end_ignore
 
 create or replace function pg_ctl(datadir text, command text, port int, contentid int) returns text as $$ import subprocess 
-cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts elif command == 'reload': cmd = cmd + 'reload' else: return 'Invalid command input' 
+cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts else: return 'Invalid command input' 
 return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
 CREATE
 
@@ -31,26 +31,30 @@ CREATE
 insert into segwalrep_commit_blocking values (1);
 INSERT 1
 
--- WALREP_FIXME: we don't wait for the GUC to propagate to the ftsprobe process; it's
--- possible that one final probe could get through after we shut down the mirror
--- in the next line and throw off the test (since if the mirror is marked down,
--- the primary won't block). As a temporary nasty hack, try to reduce possible
--- flake by issuing a probe manually, which will delay the next one by a minute.
+-- skip FTS probes always
+create extension if not exists gp_inject_fault;
+CREATE
+select gp_inject_fault('fts_probe', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+-- force scan to trigger the fault
 select gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
 -------------------------
 t                        
 (1 row)
-
--- turn off fts
-! gpconfig -c gp_fts_probe_pause -v true --masteronly --skipvalidation;
-20180104:13:17:57:019143 gpconfig:station1:csteam-[INFO]:-completed successfully with parameters '-c gp_fts_probe_pause -v true --masteronly --skipvalidation'
-
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
-pg_ctl          
-----------------
-server signaled
-
+-- verify the failure should be triggered once
+select gp_inject_fault('fts_probe', 'status', 1);
+gp_inject_fault
+---------------
+t              
 (1 row)
 
 -- stop a mirror and show commit on dbid 2 will block
@@ -111,15 +115,11 @@ server starting
 3<:  <... completed>
 COMMIT
 
--- turn on fts
-! gpconfig -c gp_fts_probe_pause -v false --masteronly --skipvalidation;
-20180104:13:18:02:019373 gpconfig:station1:csteam-[INFO]:-completed successfully with parameters '-c gp_fts_probe_pause -v false --masteronly --skipvalidation'
-
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
-pg_ctl          
-----------------
-server signaled
-
+-- resume FTS probes
+select gp_inject_fault('fts_probe', 'reset', 1);
+gp_inject_fault
+---------------
+t              
 (1 row)
 
 -- everything should be back to normal
