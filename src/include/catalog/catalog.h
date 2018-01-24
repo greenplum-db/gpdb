@@ -28,7 +28,7 @@
  * This constant has been renamed so that we catch and know to modify all
  * upstream uses of TABLESPACE_VERSION_DIRECTORY.
  */
-#define GP_TABLESPACE_VERSION_DIRECTORY	"GPDB_" PG_MAJORVERSION "_" \
+#define GP_TABLESPACE_VERSION_DIRECTORY	"GPDB_" GP_MAJORVERSION "_" \
 									CppAsString2(CATALOG_VERSION_NO)
 
 extern const char *forkNames[];
