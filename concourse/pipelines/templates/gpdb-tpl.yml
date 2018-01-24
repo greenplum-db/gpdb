@@ -386,7 +386,7 @@ resources:
     private_key: {{pxf_infra-git-key}}
     uri: {{pxf_infra-git-remote}}
 
-- name: centos-gpdb-dev-pxf-hdp
+- name: centos6-gpdb-dev-pxf-hdp
   type: docker-image
   source:
     repository: pivotaldata/gpdb-dev
@@ -562,17 +562,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
-
-{% endif %}
-{% if "UD" in test_sections %}
-- name: singlecluster
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    secret_access_key: {{bucket-secret-access-key}}
-    bucket: {{pxf-aws-bucket-name}}
-    region_name: {{aws-region}}
-    versioned_file: singlecluster/singlecluster-HDP.tar.gz
 
 {% endif %}
 {% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
@@ -2530,10 +2519,10 @@ jobs:
     - get: pxf_tarball
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
-    - get: centos-gpdb-dev-pxf-hdp
+    - get: centos6-gpdb-dev-pxf-hdp
   - task: test_pxf
     file: pxf_infra_src/concourse/test_pxf.yml
-    image: centos-gpdb-dev-pxf-hdp
+    image: centos6-gpdb-dev-pxf-hdp
     params:
       GROUP: smoke
       HADOOP_CLIENT: HDP
