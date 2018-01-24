@@ -386,6 +386,12 @@ resources:
     private_key: {{pxf_infra-git-key}}
     uri: {{pxf_infra-git-remote}}
 
+- name: centos-gpdb-dev-pxf-hdp
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb-dev
+    tag: centos6-pxf-hdp-server
+
 {% endif %}
 {% if "ubuntu16" in os_types %}
 - name: debian_release
@@ -2521,19 +2527,16 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [gate_ud_start]
       trigger: [[ test_trigger ]]
-    - get: singlecluster
-      trigger: [[ test_trigger ]]
     - get: pxf_tarball
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
+    - get: centos-gpdb-dev-pxf-hdp
   - task: test_pxf
     file: pxf_infra_src/concourse/test_pxf.yml
-    image: centos-gpdb-dev-6
+    image: centos-gpdb-dev-pxf-hdp
     params:
       GROUP: smoke
-      HADOOP_CLIENT: TAR
+      HADOOP_CLIENT: HDP
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
