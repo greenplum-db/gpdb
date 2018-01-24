@@ -7,6 +7,11 @@ from test.behave_utils.utils import drop_database_if_exists, start_database_if_n
 from gppylib.db import dbconn
 
 def before_feature(context, feature):
+
+    # we should be able to run gpexpand without having a cluster initialized
+    if 'gpexpand' in feature.tags:
+        return
+
     drop_database_if_exists(context, 'testdb')
     drop_database_if_exists(context, 'bkdb')
     drop_database_if_exists(context, 'fullbkdb')
@@ -54,21 +59,18 @@ def after_feature(context, feature):
         context.conn.close()
 
 def before_scenario(context, scenario):
+    if 'gpexpand' in context.feature.tags:
+        return
+
     if 'analyzedb' not in context.feature.tags:
-        master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-        fn = os.path.join(master_data_dir, 'dirty_hack.txt')
-        if os.path.exists(fn):
-            os.remove(fn)
         start_database_if_not_started(context)
         drop_database_if_exists(context, 'testdb')
 
 def after_scenario(context, scenario):
+    if 'gpexpand' in context.feature.tags:
+        return
+
     if 'analyzedb' not in context.feature.tags:
-        master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-        fn = os.path.join(master_data_dir, 'dirty_hack.txt')
-        if os.path.exists(fn):
-            #os.remove(fn)
-            pass
         start_database_if_not_started(context)
 
         home_dir = os.path.expanduser('~')

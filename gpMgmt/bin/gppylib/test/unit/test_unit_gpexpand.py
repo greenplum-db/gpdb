@@ -9,6 +9,8 @@ from gppylib.db import catalog
 from gppylib.gplog import *
 from gppylib.system.configurationInterface import GpConfigurationProvider
 from gppylib.system.environment import GpMasterEnvironment
+import io
+import sys
 
 class GpExpand(GpTestCase):
     def setUp(self):
@@ -32,6 +34,7 @@ class GpExpand(GpTestCase):
         self.apply_patches([
             patch('gpexpand.GpArray.initFromCatalog', return_value=self.gparray),
             patch('__builtin__.open', mock_open(), create=True),
+            patch('__builtin__.raw_input'),
             patch('gpexpand.PgControlData', return_value=Mock()),
             patch('gpexpand.copy.deepcopy', return_value=Mock()),
             patch('gpexpand.dbconn.execSQL', return_value=FakeCursor()),
@@ -49,6 +52,7 @@ class GpExpand(GpTestCase):
             patch('gpexpand.get_default_logger', return_value=self.subject.logger),
             patch('gpexpand.HeapChecksum'),
         ])
+        self.raw_input_mock = self.get_mock_from_apply_patch("raw_input")
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch("getConfigurationProvider")
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.previous_master_data_directory = os.getenv('MASTER_DATA_DIRECTORY', '')
@@ -113,6 +117,28 @@ class GpExpand(GpTestCase):
         self.subject.logger.info.assert_any_call("Heap checksum setting consistent across cluster")
         self.subject.logger.error.assert_called_with("gpexpand failed: Invalid input file: No expansion "
                                                                   "segments defined \n\nExiting...")
+
+    #
+    # unit tests for interview_setup()
+    #
+    def test_user_aborts(self):
+        self.raw_input_mock.return_value = "N"
+        with self.assertRaises(SystemExit):
+            self.subject.interview_setup(self.gparray, self.options)
+        self.subject.logger.info.assert_any_call("User Aborted. Exiting...")
+
+    def test_nonstandard_gpArray_user_aborts(self):
+        self.raw_input_mock.side_effect = ["Y", "N"]
+        self.gparray.isStandardArray = Mock(return_value=(False, ""))
+        with patch('sys.stdout', new=io.BytesIO()) as mock_stdout:
+            with self.assertRaises(SystemExit):
+                self.subject.interview_setup(self.gparray, self.options)
+            self.assertIn('The current system appears to be non-standard.', mock_stdout.getvalue())
+
+        self.subject.logger.info.assert_any_call("User Aborted. Exiting...")
+    #
+    # end tests for interview_setup()
+    #
 
     def createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(

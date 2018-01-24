@@ -958,6 +958,7 @@ Feature: gptransfer tests
 
     Scenario: gptransfer leaf partition -> non exist db
         Given the gptransfer test is initialized
+        And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.sales_1_prt_p1_2_prt_1"
