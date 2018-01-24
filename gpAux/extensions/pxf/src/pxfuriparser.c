@@ -240,7 +240,7 @@ GPHDUri_parse_option(char *pair, GPHDUri *uri)
 
 	char	   *x_gp_key = normalize_key_name(option_data->key);
 
-	if (strcmp(x_gp_key, "X-GP-PROFILE") == 0)
+	if (strcmp(x_gp_key, "X-GP-OPTIONS-PROFILE") == 0)
 		uri->profile = pstrdup(option_data->value);
 	pfree(x_gp_key);
 
