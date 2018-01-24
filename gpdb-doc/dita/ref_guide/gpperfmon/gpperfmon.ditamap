@@ -4,7 +4,6 @@
     <topicref href="dbref.xml" navtitle="The gpperfmon Database">
         <topicref href="db-database.xml" type="topic"/>
         <topicref href="db-diskspace.xml" type="topic"/>
-        <topicref href="db-filerep.xml" type="topic"/>
         <topicref href="db-interface-stats.xml" type="topic"/>
         <topicref href="db-log-alert.xml" type="topic"/>
         <topicref href="db-queries.xml" type="topic"/>
