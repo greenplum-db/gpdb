@@ -213,6 +213,7 @@
                 <xref href="guc-list.xml#gp_workfile_limit_per_segment" type="section"
                   >gp_workfile_limit_per_segment</xref>
               </p>
+              <p><xref href="guc-list.xml#maintenance_work_mem" format="dita"/></p>
               <p>
                 <xref href="guc-list.xml#max_stack_depth" type="section">max_stack_depth</xref>
               </p>
