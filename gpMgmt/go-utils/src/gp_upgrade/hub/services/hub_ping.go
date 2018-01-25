@@ -1,12 +1,13 @@
 package services
 
 import (
+	pb "gp_upgrade/idl"
+
 	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
 	"golang.org/x/net/context"
-	pb "gp_upgrade/idl"
 )
 
-func (s *cliToHubListenerImpl) Ping(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) Ping(ctx context.Context,
 	in *pb.PingRequest) (*pb.PingReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting Ping")

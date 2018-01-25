@@ -25,7 +25,7 @@ var _ = Describe("status", func() {
 		It("Explodes if the hub isn't up", func() {
 			killHub()
 			statusSession := runCommand("status", "upgrade")
-			expectedErrorOutput := `ERROR - Unable to connect to hub`
+			expectedErrorOutput := `Unable to connect to hub:`
 			Eventually(statusSession.Err).Should(gbytes.Say(expectedErrorOutput))
 			Eventually(statusSession).Should(Exit(1))
 		})

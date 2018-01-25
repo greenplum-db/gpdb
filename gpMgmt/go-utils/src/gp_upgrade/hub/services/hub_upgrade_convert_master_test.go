@@ -36,7 +36,7 @@ func TestHelperProcess(t *testing.T) {
 	fmt.Fprintf(os.Stdout, mockedOutput)
 }
 
-var _ bool = Describe("hub", func() {
+var _ = Describe("hub", func() {
 	var (
 		mockedOutput     string
 		mockedExitStatus int

@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (s *cliToHubListenerImpl) PrepareInitCluster(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) PrepareInitCluster(ctx context.Context,
 	in *pb.PrepareInitClusterRequest) (*pb.PrepareInitClusterReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting PrepareInitCluster()")

@@ -7,20 +7,25 @@ import (
 	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = Describe("reporter", func() {
+var _ = Describe("Reporter", func() {
 
 	var (
-		client *mockpb.MockCliToHubClient
-		ctrl   *gomock.Controller
+		spyClient *spyCliToHubClient
+		spyLogger *spyLogger
+		reporter  *commanders.Reporter
+		client    *mockpb.MockCliToHubClient
+		ctrl      *gomock.Controller
 	)
 
 	BeforeEach(func() {
+		spyClient = newSpyCliToHubClient()
+		spyLogger = newSpyLogger()
+		reporter = commanders.NewReporter(spyClient, spyLogger)
 		ctrl = gomock.NewController(GinkgoT())
 		client = mockpb.NewMockCliToHubClient(ctrl)
 	})
@@ -29,48 +34,65 @@ var _ = Describe("reporter", func() {
 		defer ctrl.Finish()
 	})
 
-	Describe("OverallUpgradeStatus", func() {
-		It("prints out status when hub rpc returns something normal", func() {
-			//testLogger, testStdout, testStderr, testLogfile := testutils.SetupTestLogger()
-			_, testStdout, _, _ := testutils.SetupTestLogger()
-			fakeCheckStepStatus := &pb.UpgradeStepStatus{
-				Step:   pb.UpgradeSteps_CHECK_CONFIG,
-				Status: pb.StepStatus_RUNNING,
-			}
-			fakeSegInstallStepStatus := &pb.UpgradeStepStatus{
-				Step:   pb.UpgradeSteps_SEGINSTALL,
-				Status: pb.StepStatus_PENDING,
-			}
-			fakeStatusUpgradeReply := &pb.StatusUpgradeReply{}
-			fakeStatusUpgradeReply.ListOfUpgradeStepStatuses =
-				append(fakeStatusUpgradeReply.ListOfUpgradeStepStatuses,
-					fakeCheckStepStatus, fakeSegInstallStepStatus)
-
-			client.EXPECT().StatusUpgrade(
-				gomock.Any(),
-				&pb.StatusUpgradeRequest{},
-			).Return(fakeStatusUpgradeReply, nil)
-
-			reporter := commanders.NewReporter(client)
-			err := reporter.OverallUpgradeStatus()
-			Expect(err).To(BeNil())
-			Eventually(testStdout).Should(gbytes.Say("RUNNING - Configuration Check"))
-			Eventually(testStdout).Should(gbytes.Say("PENDING - Install binaries on segments"))
-		})
-
-		It("prints out an error when connection cannot be established to the hub", func() {
-			_, _, testStderr, _ := testutils.SetupTestLogger()
-			client.EXPECT().StatusUpgrade(
-				gomock.Any(),
-				&pb.StatusUpgradeRequest{},
-			).Return(nil, errors.New("Force failure connection"))
-
-			reporter := commanders.NewReporter(client)
-			err := reporter.OverallUpgradeStatus()
-			Expect(err).ToNot(BeNil())
-			Eventually(testStderr).Should(gbytes.Say("ERROR - Unable to connect to hub"))
-
-		})
+	It("makes a call to StatusUpgrade", func() {
+		err := reporter.OverallUpgradeStatus()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(spyClient.statusUpgradeCount).To(Equal(1))
 	})
 
+	It("returns an error upon a failure", func() {
+		spyClient.err = errors.New("some error")
+		err := reporter.OverallUpgradeStatus()
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("sends all the right messages to the logger in the right order when reply contains multiple step-statuses", func() {
+		spyClient.statusUpgradeReply = &pb.StatusUpgradeReply{
+			ListOfUpgradeStepStatuses: []*pb.UpgradeStepStatus{
+				{Step: pb.UpgradeSteps_PREPARE_INIT_CLUSTER, Status: pb.StepStatus_RUNNING},
+				{Step: pb.UpgradeSteps_MASTERUPGRADE, Status: pb.StepStatus_PENDING},
+			},
+		}
+		err := reporter.OverallUpgradeStatus()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(spyLogger.infoCount).To(Equal(2))
+		Expect(spyLogger.messages).To(Equal([]string{
+			"RUNNING - Initialize upgrade target cluster",
+			"PENDING - Run pg_upgrade on master",
+		}))
+	})
+
+	DescribeTable("UpgradeStep Messages, basic cases where hub might return only one status",
+		func(step pb.UpgradeSteps, status pb.StepStatus, expected string) {
+			spyClient.statusUpgradeReply = &pb.StatusUpgradeReply{
+				[]*pb.UpgradeStepStatus{
+					{Step: step, Status: status},
+				},
+			}
+			err := reporter.OverallUpgradeStatus()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(spyLogger.messages).To(Equal([]string{
+				expected,
+			}))
+		},
+		Entry("unknown step", pb.UpgradeSteps_UNKNOWN_STEP, pb.StepStatus_PENDING, "PENDING - Unknown step"),
+		Entry("configuration check", pb.UpgradeSteps_CHECK_CONFIG, pb.StepStatus_RUNNING, "RUNNING - Configuration Check"),
+		Entry("install binaries on segments", pb.UpgradeSteps_SEGINSTALL, pb.StepStatus_COMPLETE, "COMPLETE - Install binaries on segments"),
+		Entry("prepare init cluster", pb.UpgradeSteps_PREPARE_INIT_CLUSTER, pb.StepStatus_FAILED, "FAILED - Initialize upgrade target cluster"),
+		Entry("upgrade on master", pb.UpgradeSteps_MASTERUPGRADE, pb.StepStatus_PENDING, "PENDING - Run pg_upgrade on master"),
+		Entry("shutdown cluster", pb.UpgradeSteps_STOPPED_CLUSTER, pb.StepStatus_PENDING, "PENDING - Shutdown clusters"),
+	)
+
 })
+
+type spyLogger struct {
+	infoCount int
+	messages  []string
+}
+
+func newSpyLogger() *spyLogger { return &spyLogger{} }
+
+func (sl *spyLogger) Info(msg string, _ ...interface{}) {
+	sl.infoCount++
+	sl.messages = append(sl.messages, msg)
+}

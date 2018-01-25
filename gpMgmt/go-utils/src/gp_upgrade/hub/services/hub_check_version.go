@@ -2,17 +2,18 @@ package services
 
 import (
 	"errors"
-	"github.com/cppforlife/go-semi-semantic/version"
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
-	"github.com/jmoiron/sqlx"
-	"golang.org/x/net/context"
 	"gp_upgrade/db"
 	pb "gp_upgrade/idl"
 	"gp_upgrade/utils"
 	"regexp"
+
+	"github.com/cppforlife/go-semi-semantic/version"
+	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	"github.com/jmoiron/sqlx"
+	"golang.org/x/net/context"
 )
 
-func (s *cliToHubListenerImpl) CheckVersion(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) CheckVersion(ctx context.Context,
 	in *pb.CheckVersionRequest) (*pb.CheckVersionReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting CheckVersion")

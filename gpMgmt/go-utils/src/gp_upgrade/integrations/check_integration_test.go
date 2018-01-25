@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
 )
 
@@ -42,6 +43,19 @@ var _ = Describe("check", func() {
 			Expect(len(reader.GetSegmentConfiguration())).To(BeNumerically(">", 1))
 
 			// should there be something checking the version file being laid down as well?
+		})
+	})
+
+	Describe("seginstall", func() {
+		It("updates status PENDING to COMPLETE if successful", func() {
+			statusSessionPending := runCommand("status", "upgrade")
+			Eventually(statusSessionPending).Should(gbytes.Say("PENDING - Install binaries on segments"))
+
+			session := runCommand("check", "seginstall")
+			Eventually(session).Should(Exit(0))
+
+			//statusSession := runCommand("status", "upgrade")
+			//Eventually(statusSession).Should(gbytes.Say("COMPLETE - Install binaries on segments"))
 		})
 	})
 })

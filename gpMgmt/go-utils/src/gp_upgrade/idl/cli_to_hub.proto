@@ -6,6 +6,7 @@ service CliToHub {
     rpc Ping(PingRequest) returns (PingReply) {}
     rpc StatusUpgrade(StatusUpgradeRequest) returns (StatusUpgradeReply) {}
     rpc CheckConfig(CheckConfigRequest) returns (CheckConfigReply) {}
+    rpc CheckSeginstall(CheckSeginstallRequest) returns (CheckSeginstallReply) {}
     rpc CheckObjectCount(CheckObjectCountRequest) returns (CheckObjectCountReply) {}
     rpc CheckVersion(CheckVersionRequest) returns (CheckVersionReply) {}
     rpc CheckDiskUsage(CheckDiskUsageRequest) returns (CheckDiskUsageReply) {}
@@ -46,7 +47,6 @@ enum StepStatus {
     FAILED = 4;
 }
 
-
 message CheckConfigRequest {
     int32 dbPort = 1;
 }
@@ -55,6 +55,9 @@ message CheckConfigRequest {
 message CheckConfigReply {
     string configStatus  = 1;
 }
+
+message CheckSeginstallRequest {}
+message CheckSeginstallReply {}
 
 message CountPerDb {
     string DbName = 1;

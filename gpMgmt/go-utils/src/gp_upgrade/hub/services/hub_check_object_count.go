@@ -1,16 +1,17 @@
 package services
 
 import (
+	"gp_upgrade/db"
+	pb "gp_upgrade/idl"
+	"gp_upgrade/utils"
+
 	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
-	"gp_upgrade/db"
-	pb "gp_upgrade/idl"
-	"gp_upgrade/utils"
 )
 
-func (s *cliToHubListenerImpl) CheckObjectCount(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) CheckObjectCount(ctx context.Context,
 	in *pb.CheckObjectCountRequest) (*pb.CheckObjectCountReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting CheckObjectCount")

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (s *cliToHubListenerImpl) CheckConfig(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) CheckConfig(ctx context.Context,
 	in *pb.CheckConfigRequest) (*pb.CheckConfigReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting CheckConfig()")

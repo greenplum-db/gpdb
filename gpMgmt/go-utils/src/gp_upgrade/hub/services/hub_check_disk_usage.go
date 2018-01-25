@@ -17,7 +17,7 @@ const (
 	diskUsageWarningLimit = 80
 )
 
-func (s *cliToHubListenerImpl) CheckDiskUsage(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) CheckDiskUsage(ctx context.Context,
 	in *pb.CheckDiskUsageRequest) (*pb.CheckDiskUsageReply, error) {
 
 	gpbackupUtils.GetLogger().Info("starting CheckDiskUsage")

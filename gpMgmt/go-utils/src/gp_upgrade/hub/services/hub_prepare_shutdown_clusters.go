@@ -1,8 +1,9 @@
 package services
 
 import (
-	"github.com/pkg/errors"
 	pb "gp_upgrade/idl"
+
+	"github.com/pkg/errors"
 
 	"golang.org/x/net/context"
 
@@ -11,7 +12,7 @@ import (
 	"path"
 )
 
-func (s *cliToHubListenerImpl) PrepareShutdownClusters(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) PrepareShutdownClusters(ctx context.Context,
 	in *pb.PrepareShutdownClustersRequest) (*pb.PrepareShutdownClustersReply, error) {
 	s.logger.Info <- fmt.Sprintf("starting PrepareShutdownClusters()")
 

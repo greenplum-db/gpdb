@@ -89,6 +89,24 @@ func (mr *MockCliToHubClientMockRecorder) CheckConfig(ctx, in interface{}, opts 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckConfig", reflect.TypeOf((*MockCliToHubClient)(nil).CheckConfig), varargs...)
 }
 
+// CheckSeginstall mocks base method
+func (m *MockCliToHubClient) CheckSeginstall(ctx context.Context, in *CheckSeginstallRequest, opts ...grpc.CallOption) (*CheckSeginstallReply, error) {
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CheckSeginstall", varargs...)
+	ret0, _ := ret[0].(*CheckSeginstallReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckSeginstall indicates an expected call of CheckSeginstall
+func (mr *MockCliToHubClientMockRecorder) CheckSeginstall(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSeginstall", reflect.TypeOf((*MockCliToHubClient)(nil).CheckSeginstall), varargs...)
+}
+
 // CheckObjectCount mocks base method
 func (m *MockCliToHubClient) CheckObjectCount(ctx context.Context, in *CheckObjectCountRequest, opts ...grpc.CallOption) (*CheckObjectCountReply, error) {
 	varargs := []interface{}{ctx, in}
@@ -257,6 +275,19 @@ func (m *MockCliToHubServer) CheckConfig(arg0 context.Context, arg1 *CheckConfig
 // CheckConfig indicates an expected call of CheckConfig
 func (mr *MockCliToHubServerMockRecorder) CheckConfig(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckConfig", reflect.TypeOf((*MockCliToHubServer)(nil).CheckConfig), arg0, arg1)
+}
+
+// CheckSeginstall mocks base method
+func (m *MockCliToHubServer) CheckSeginstall(arg0 context.Context, arg1 *CheckSeginstallRequest) (*CheckSeginstallReply, error) {
+	ret := m.ctrl.Call(m, "CheckSeginstall", arg0, arg1)
+	ret0, _ := ret[0].(*CheckSeginstallReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckSeginstall indicates an expected call of CheckSeginstall
+func (mr *MockCliToHubServerMockRecorder) CheckSeginstall(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSeginstall", reflect.TypeOf((*MockCliToHubServer)(nil).CheckSeginstall), arg0, arg1)
 }
 
 // CheckObjectCount mocks base method

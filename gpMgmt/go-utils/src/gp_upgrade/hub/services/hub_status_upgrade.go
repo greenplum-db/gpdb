@@ -13,21 +13,23 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (s *cliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb.StatusUpgradeRequest) (*pb.StatusUpgradeReply, error) {
+func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb.StatusUpgradeRequest) (*pb.StatusUpgradeReply, error) {
 	gpbackupUtils.GetLogger().Info("starting StatusUpgrade")
 	demoStepStatus := &pb.UpgradeStepStatus{
 		Step:   pb.UpgradeSteps_CHECK_CONFIG,
 		Status: pb.StepStatus_PENDING,
 	}
-	demoSeginstallStatus := &pb.UpgradeStepStatus{
-		Step:   pb.UpgradeSteps_SEGINSTALL,
-		Status: pb.StepStatus_PENDING,
-	}
+
 	prepareInitStatus, _ := GetPrepareNewClusterConfigStatus()
 
 	homeDirectory := os.Getenv("HOME")
 	if homeDirectory == "" {
 		return nil, errors.New("Could not find the HOME environment")
+	}
+
+	seginstallStatus := &pb.UpgradeStepStatus{
+		Step:   pb.UpgradeSteps_SEGINSTALL,
+		Status: pb.StepStatus_PENDING,
 	}
 
 	gpstopStatePath := filepath.Join(homeDirectory, ".gp_upgrade/gpstop")
@@ -40,7 +42,7 @@ func (s *cliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb.StatusU
 	masterUpgradeStatus, _ := convertMaster.GetStatus()
 
 	reply := &pb.StatusUpgradeReply{}
-	reply.ListOfUpgradeStepStatuses = append(reply.ListOfUpgradeStepStatuses, demoStepStatus, demoSeginstallStatus, prepareInitStatus, shutdownClustersStatus, masterUpgradeStatus)
+	reply.ListOfUpgradeStepStatuses = append(reply.ListOfUpgradeStepStatuses, demoStepStatus, seginstallStatus, prepareInitStatus, shutdownClustersStatus, masterUpgradeStatus)
 	return reply, nil
 }
 

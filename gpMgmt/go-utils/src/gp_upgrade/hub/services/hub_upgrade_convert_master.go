@@ -18,7 +18,7 @@ var (
 	GetMasterDataDirs = getMasterDataDirs
 )
 
-func (s *cliToHubListenerImpl) UpgradeConvertMaster(ctx context.Context,
+func (s *CatchAllCliToHubListenerImpl) UpgradeConvertMaster(ctx context.Context,
 	in *pb.UpgradeConvertMasterRequest) (*pb.UpgradeConvertMasterReply, error) {
 
 	gpbackupUtils.GetLogger().Info("Starting master upgrade")
