@@ -1,19 +1,19 @@
---- By design, every boolean query (which doesn't error out) in this test must return true.
---- For reference, 2011-08-30 was a Tuesday!
----
+-- By design, every boolean query (which doesn't error out) in this test must return true.
+-- For reference, 2011-08-30 was a Tuesday!
+--
 CREATE FUNCTION check_auth_time_constraints(cstring, timestamptz)
     RETURNS bool
     AS '@abs_builddir@/regress@DLSUFFIX@'
     LANGUAGE C IMMUTABLE STRICT NO SQL;
 
----
---- invalid timestamp should error out
----
+--
+-- invalid timestamp should error out
+--
 SELECT check_auth_time_constraints('abc', '5');
 
----
---- basic day level constraints
----
+--
+-- basic day level constraints
+--
 CREATE ROLE abc DENY DAY 2;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-29 23:59:59');
@@ -23,9 +23,9 @@ SELECT NOT check_auth_time_constraints('abc', '2011-08-30 23:59:59');
 SELECT check_auth_time_constraints('abc', '2011-08-31 00:00:00');
 DROP ROLE abc;
 
----
---- basic time level constraints
---- 
+--
+-- basic time level constraints
+--
 CREATE ROLE abc WITH LOGIN DENY DAY 'Saturday';
 DROP ROLE abc;
 CREATE ROLE abc DENY DAY 2 TIME '13:15:34';
@@ -35,9 +35,9 @@ SELECT NOT check_auth_time_constraints('abc', '2011-08-30 13:15:34');
 SELECT check_auth_time_constraints('abc', '2011-08-30 13:15:35');
 DROP ROLE abc;
 
----
---- some similar CREATE ROLE coverage
----
+--
+-- some similar CREATE ROLE coverage
+--
 CREATE ROLE abc DENY BETWEEN DAY 2 AND DAY 3;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-29 23:59:59');
@@ -70,9 +70,9 @@ SELECT NOT check_auth_time_constraints('abc', '2011-08-31 11:34:53');
 SELECT check_auth_time_constraints('abc', '2011-08-31 11:34:54');
 DROP ROLE abc;
 
----
---- ALTER ROLE grammar coverage (some repetition here)
----
+--
+-- ALTER ROLE grammar coverage (some repetition here)
+--
 CREATE ROLE abc;
 ALTER ROLE abc DENY DAY 2;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
@@ -127,9 +127,9 @@ SELECT NOT check_auth_time_constraints('abc', '2011-08-31 11:34:53');
 SELECT check_auth_time_constraints('abc', '2011-08-31 11:34:54');
 DROP ROLE abc;
 
----
---- very minimal coverage of CREATE USER and ALTER USER
----
+--
+-- very minimal coverage of CREATE USER and ALTER USER
+--
 CREATE USER abc DENY DAY 2;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 select NOT check_auth_time_constraints('abc', '2011-08-30 12:00:00');
@@ -139,9 +139,9 @@ select NOT check_auth_time_constraints('abc', '2011-08-31 12:00:00');
 ALTER USER abc DROP DENY FOR DAY 2 TIME '12:00:00';
 DROP USER abc;
 
----
---- CREATE ROLE w/ multiple deny specifications
----
+--
+-- CREATE ROLE w/ multiple deny specifications
+--
 CREATE ROLE abc DENY DAY 0 DENY DAY 2 DENY BETWEEN DAY 4 AND DAY 5 TIME '13:00:00';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-27 23:59:59');
@@ -158,9 +158,9 @@ SELECT NOT check_auth_time_constraints('abc', '2011-09-02 13:00:00');
 SELECT check_auth_time_constraints('abc', '2011-09-02 13:00:01');
 DROP ROLE abc;
 
----
---- ALTER ROLE w/ multiple deny specifications
----
+--
+-- ALTER ROLE w/ multiple deny specifications
+--
 CREATE ROLE abc;
 ALTER ROLE abc DENY DAY 0 DENY DAY 2 DENY BETWEEN DAY 4 AND DAY 5 TIME '13:00:00';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
@@ -178,10 +178,10 @@ SELECT NOT check_auth_time_constraints('abc', '2011-09-02 13:00:00');
 SELECT check_auth_time_constraints('abc', '2011-09-02 13:00:01');
 DROP ROLE abc;
 
----
---- ALTER ROLE DROP
---- This syntax drops any rule that *overlaps* with the specified point/interval.
----
+--
+-- ALTER ROLE DROP
+-- This syntax drops any rule that *overlaps* with the specified point/interval.
+--
 CREATE ROLE abc DENY DAY 2;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT NOT check_auth_time_constraints('abc', '2011-08-30 12:00:00');
@@ -207,33 +207,33 @@ ALTER ROLE abc DENY DAY 0 DENY DAY 1;
 ALTER ROLE abc DROP DENY FOR DAY 2;
 DROP ROLE abc;
 
----
---- ALTER ROLE w/ multiple deny and drop specifications
---- This should error out, as the expected behavior isn't quite intuitive.
----
+--
+-- ALTER ROLE w/ multiple deny and drop specifications
+-- This should error out, as the expected behavior isn't quite intuitive.
+--
 CREATE ROLE abc;
 ALTER ROLE abc DENY DAY 0 DENY DAY 1 DENY DAY 2 DROP DENY FOR DAY 1;
 DROP ROLE abc;
 
----
---- DROP ROLE must release associated auth. constraints
----
+--
+-- DROP ROLE must release associated auth. constraints
+--
 CREATE ROLE abc DENY DAY 0 DENY DAY 1 DENY DAY 3 TIME '3:00 PM';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 DROP ROLE abc;
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 
----
---- Wrap-around intervals
----
+--
+-- Wrap-around intervals
+--
 CREATE ROLE abc DENY BETWEEN DAY 6 TIME '12:00:00' AND DAY 0;
 CREATE ROLE abc;
 ALTER ROLE abc DENY BETWEEN DAY 5 AND DAY 1;
 DROP ROLE abc;
 
----
---- English days of week
----
+--
+-- English days of week
+--
 CREATE ROLE abc DENY BETWEEN DAY 'Tuesday' TIME '12:00:00' AND DAY 2 TIME '1:00 PM';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-30 11:59:59');
@@ -242,21 +242,21 @@ SELECT NOT check_auth_time_constraints('abc', '2011-08-30 13:00:00');
 SELECT check_auth_time_constraints('abc', '2011-08-30 13:00:01');
 DROP ROLE abc;
 
----
---- English days of week (negative)
----
+--
+-- English days of week (negative)
+--
 CREATE ROLE abc DENY DAY 'Monkey' TIME '12:00:00';
 CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
 CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:65 AM' AND DAY 'Monday' TIME '12:00 PM';
 CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '-01:00' AND DAY 'Monday' TIME '06:00 PM';
 CREATE ROLE abc DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
 
----
---- What is '24:00:00'? Apparently, '2011-08-30 24:00:00' == '2011-08-31 00:00:00'.
---- But interpreted as a sole time value, '24:00:00' != '00:00:00' and
---- '24:00:00' > '23:59:59'. So, the following three queries should evaluate to true.
---- In other words, there is no way for the current time to ever be '24:00:00'.
----
+--
+-- What is '24:00:00'? Apparently, '2011-08-30 24:00:00' == '2011-08-31 00:00:00'.
+-- But interpreted as a sole time value, '24:00:00' != '00:00:00' and
+-- '24:00:00' > '23:59:59'. So, the following three queries should evaluate to true.
+-- In other words, there is no way for the current time to ever be '24:00:00'.
+--
 CREATE ROLE abc DENY DAY 2 TIME '24:00:00';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-30 23:59:59');
@@ -265,9 +265,9 @@ SELECT check_auth_time_constraints('abc', '2011-08-31 00:00:00');
 DROP ROLE abc;
 
 
----
---- Inheritance of time constraints (negative)
----
+--
+-- Inheritance of time constraints (negative)
+--
 CREATE ROLE abc DENY BETWEEN DAY 0 AND DAY 6;
 SELECT NOT check_auth_time_constraints('abc', '2011-08-31 12:00:00');
 CREATE ROLE foo IN ROLE abc;
@@ -275,9 +275,9 @@ SELECT check_auth_time_constraints('foo', '2011-08-31 12:00:00');
 DROP ROLE foo;
 DROP ROLE abc;
 
----
---- Exercise catalog DML and pg_auth_time_constraint trigger
----
+--
+-- Exercise catalog DML and pg_auth_time_constraint trigger
+--
 SET allow_system_table_mods = dml;
 CREATE ROLE abc;
 insert into pg_auth_time_constraint (select oid, 2, '12:00:00', 3, '12:00:00' from pg_authid where rolname = 'abc');
@@ -300,9 +300,9 @@ SELECT check_auth_time_constraints('abc', '2011-08-31 00:00:00');
 DROP ROLE abc;
 RESET allow_system_table_mods;
 
----
---- Superuser testing across CREATE ROLE, ALTER ROLE, and trigger
----
+--
+-- Superuser testing across CREATE ROLE, ALTER ROLE, and trigger
+--
 
 create role abc with login nosuperuser nocreaterole;
 drop role abc;
