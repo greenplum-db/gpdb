@@ -3062,7 +3062,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 			slot_idx++;
 		}
 
-		if(stats->stahll != NULL)
+		if(stats->stahll != NULL && rel_part_status(stats->attr->attrelid) == PART_STATUS_INTERIOR)
 		{
 			MemoryContext old_context;
 			Datum *hll_values;
@@ -3297,14 +3297,13 @@ merge_leaf_stats(VacAttrStatsP stats,
 	}
 
 	pfree(hllcounters);
+	pfree(hllcounters2);
 
 	if (allDistinct)
 	{
 		/* If we found no repeated values, assume it's a unique column */
 		ndistinct = -1.0;
 	}
-	else if (ndistinct == 0.0)
-		return;
 	else if ((int)nmultiple >= (int)ndistinct)
 	{
 		/*
