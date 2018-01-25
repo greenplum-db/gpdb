@@ -3509,64 +3509,6 @@ static void
 _printTocEntry(ArchiveHandle *AH, TocEntry *te, bool isData)
 {
 	RestoreOptions *ropt = AH->public.ropt;
-	/*
-	 * Avoid dumping the public schema, as it will already be created ...
-	 * unless we are using --clean mode, in which case it's been deleted and
-	 * we'd better recreate it.  Likewise for its comment, if any.
-	 *
-	 * GPDB: we have to recreate the public schema during binary upgrade so
-	 * that we can maintain its OID from the old cluster
-	 */
-	if (!ropt->dropSchema && !ropt->binary_upgrade)
-	{
-		if (strcmp(te->desc, "SCHEMA") == 0 &&
-			strcmp(te->tag, "public") == 0)
-			return;
-		if (strcmp(te->desc, "COMMENT") == 0 &&
-			strcmp(te->tag, "SCHEMA public") == 0)
-			return;
-	}
-
-#if 0
-	/*
-	 * Some items, including
-	 * CONSTRAINT, INDEX , RULE, TRIGGER, FK_CONSTRAINT
-	 * and any check constraints (if dumped separately)
-	 * must be created AFTER the data is loaded, and are in that order
-	 *
-	 * if fSpec is null, we are outputting to stdout, so we don't have the ability
-	 * to switch files
-	 */
-	if (AH->fSpec != NULL)
-	{
-		static int	secondfile = 0;
-
-		if ((!secondfile) &&
-		   (strcmp(te->desc, "CONSTRAINT") == 0 ||
-			strcmp(te->desc, "INDEX") == 0 ||
-			strcmp(te->desc, "RULE") == 0 ||
-			strcmp(te->desc, "TRIGGER") == 0 ||
-			strcmp(te->desc, "FK_CONSTRAINT") == 0))
-		{
-			OutputContext dummy =
-			{
-				NULL,			/* OF */
-				0,				/* gzOut */
-			};
-			char *secondfilename = (char *)malloc(strlen(AH->fSpec) + strlen("_after_data"));
-
-			strcpy(secondfilename,AH->fSpec);
-			strcat(secondfilename,"_after_data");
-
-			ResetOutput(AH, dummy);
-			AH->currSchema[0] = '\0';
-			/* Switch to second output file */
-			SetOutput(AH, secondfilename, false);
-			_selectTablespace(AH, "");
-			secondfile = true;
-		}
-	}
-#endif
 
 	/* Select owner, schema, and tablespace as necessary */
 	_becomeOwner(AH, te);
