@@ -165,9 +165,9 @@ dumpOptionsFromRestoreOptions(RestoreOptions *ropt)
 	dopt->outputNoTablespaces = ropt->noTablespace;
 	dopt->disable_triggers = ropt->disable_triggers;
 	dopt->use_setsessauth = ropt->use_setsessauth;
-
 	dopt->disable_dollar_quoting = ropt->disable_dollar_quoting;
 	dopt->dump_inserts = ropt->dump_inserts;
+	dopt->no_comments = ropt->no_comments;
 	dopt->no_security_labels = ropt->no_security_labels;
 	dopt->lockWaitTimeout = ropt->lockWaitTimeout;
 	dopt->include_everything = ropt->include_everything;
@@ -2896,7 +2896,11 @@ _tocEntryRequired(TocEntry *te, teSection curSection, ArchiveHandle *AH)
 	if (ropt->aclsSkip && _tocEntryIsACL(te))
 		return 0;
 
-	/* If it's a security labels, maybe ignore it */
+	/* If it's a comment, maybe ignore it */
+	if (ropt->no_comments && strcmp(te->desc, "COMMENT") == 0)
+		return 0;
+
+	/* If it's a security label, maybe ignore it */
 	if (ropt->no_security_labels && strcmp(te->desc, "SECURITY LABEL") == 0)
 		return 0;
 

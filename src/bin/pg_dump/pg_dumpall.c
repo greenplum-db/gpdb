@@ -89,6 +89,7 @@ static int	if_exists = 0;
 static int	inserts = 0;
 static int	no_tablespaces = 0;
 static int	use_setsessauth = 0;
+static int	no_comments = 0;
 static int	no_security_labels = 0;
 static int	no_unlogged_table_data = 0;
 static int	no_role_passwords = 0;
@@ -146,6 +147,8 @@ main(int argc, char *argv[])
 		{"quote-all-identifiers", no_argument, &quote_all_identifiers, 1},
 		{"role", required_argument, NULL, 3},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
+		{"no-comments", no_argument, &no_comments, 1},
+		{"no-role-passwords", no_argument, &no_role_passwords, 1},
 		{"no-security-labels", no_argument, &no_security_labels, 1},
 		{"no-sync", no_argument, NULL, 4},
 		{"no-unlogged-table-data", no_argument, &no_unlogged_table_data, 1},
@@ -449,6 +452,8 @@ main(int argc, char *argv[])
 		appendPQExpBufferStr(pgdumpopts, " --quote-all-identifiers");
 	if (use_setsessauth)
 		appendPQExpBufferStr(pgdumpopts, " --use-set-session-authorization");
+	if (no_comments)
+		appendPQExpBufferStr(pgdumpopts, " --no-comments");
 	if (no_security_labels)
 		appendPQExpBufferStr(pgdumpopts, " --no-security-labels");
 	if (no_unlogged_table_data)
@@ -697,6 +702,7 @@ help(void)
 	printf(_("  --disable-triggers           disable triggers during data-only restore\n"));
 	printf(_("  --if-exists                  use IF EXISTS when dropping objects\n"));
 	printf(_("  --inserts                    dump data as INSERT commands, rather than COPY\n"));
+	printf(_("  --no-comments                do not dump comments\n"));
 	printf(_("  --no-security-labels         do not dump security label assignments\n"));
 	printf(_("  --no-sync                    do not wait for changes to be written safely to disk\n"));
 	printf(_("  --no-tablespaces             do not dump tablespace assignments\n"));
@@ -1378,7 +1384,7 @@ dumpRoles(PGconn *conn)
 
 		appendPQExpBufferStr(buf, ";\n");
 
-		if (!PQgetisnull(res, i, i_rolcomment))
+		if (!no_comments && !PQgetisnull(res, i, i_rolcomment))
 		{
 			appendPQExpBuffer(buf, "COMMENT ON ROLE %s IS ", fmtId(rolename));
 			appendStringLiteralConn(buf, PQgetvalue(res, i, i_rolcomment), conn);
@@ -1729,8 +1735,7 @@ dumpTablespaces(PGconn *conn)
 			exit_nicely(1);
 		}
 
-		/* Set comments */
-		if (spccomment && strlen(spccomment))
+		if (!no_comments && spccomment && spccomment[0] != '\0')
 		{
 			appendPQExpBuffer(buf, "COMMENT ON TABLESPACE %s IS ", fspcname);
 			appendStringLiteralConn(buf, spccomment, conn);
