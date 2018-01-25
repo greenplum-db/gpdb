@@ -850,6 +850,13 @@ main(int argc, char **argv)
 #endif
 
 	/*
+	 * If emitting an archive format, we always want to emit a DATABASE item,
+	 * in case --create is specified at pg_restore time.
+	 */
+	if (!plainText)
+		dopt.outputCreateDB = 1;
+
+	/*
 	 * On Windows we can only have at most MAXIMUM_WAIT_OBJECTS (= 64 usually)
 	 * parallel jobs because that's the maximum limit for the
 	 * WaitForMultipleObjects() call.
@@ -1087,8 +1094,8 @@ main(int argc, char **argv)
 	dumpStdStrings(fout);
 	dumpSearchPath(fout);
 
-	/* The database item is always next, unless we don't want it at all */
-	if (dopt.include_everything && !dopt.dataOnly)
+	/* The database items are always next, unless we don't want them at all */
+	if (dopt.outputCreateDB)
 		dumpDatabase(fout);
 
 	int binfo_index = -1;
