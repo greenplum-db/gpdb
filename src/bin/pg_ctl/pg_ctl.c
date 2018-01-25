@@ -799,6 +799,10 @@ do_start(void)
 				print_msg(_(" stopped waiting\n"));
 				print_msg(_("server is still starting up\n"));
 				break;
+			case PQPING_MIRROR_READY:
+				print_msg(_(" done\n"));
+				print_msg(_("server started in mirror mode\n"));
+				break;
 			case PQPING_MIRROR_OR_QUIESCENT:
 				print_msg(_(" done\n"));
 				print_msg(_("server started in mirror or quiescent mode\n"));
