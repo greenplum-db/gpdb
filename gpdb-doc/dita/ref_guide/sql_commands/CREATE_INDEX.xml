@@ -9,16 +9,16 @@
                         <title>Synopsis</title>
                         <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX <varname>name</varname> ON <varname>table</varname>
        [USING btree|bitmap|gist|gin]
-       ( {<varname>column</varname> | (<varname>expression</varname>)} [<varname>opclass</varname>] [, ...] )
+       ( {<varname>column</varname> | (<varname>expression</varname>)} [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
        [ WITH ( FILLFACTOR = <varname>value</varname> ) ]
        [TABLESPACE <varname>tablespace</varname>]
        [WHERE <varname>predicate</varname>]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>
-                        <p><codeph>CREATE INDEX</codeph> constructs an index on the specified table.
-                                Indexes are primarily used to enhance database performance (though
-                                inappropriate use can result in slower performance). </p>
+                        <p><codeph>CREATE INDEX</codeph> constructs a named index on the specified
+                                table. Indexes are primarily used to enhance database performance
+                                (though inappropriate use can result in slower performance). </p>
                         <p>The key field(s) for the index are specified as column names, or
                                 alternatively as expressions written in parentheses. Multiple fields
                                 can be specified if the index method supports multicolumn
@@ -132,6 +132,27 @@
                                                 index.</pd>
                                 </plentry>
                                 <plentry>
+                                        <pt>ASC</pt>
+                                        <pd>Specifies ascending sort order (which is the
+                                                default).</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>DESC</pt>
+                                        <pd>Specifies descending sort order.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>NULLS FIRST</pt>
+                                        <pd>Specifies that nulls sort before non-nulls. This is the
+                                                default when <codeph>DESC</codeph> is
+                                                specified.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt>NULLS LAST</pt>
+                                        <pd>Specifies that nulls sort after non-nulls. This is the
+                                                default when <codeph>DESC</codeph> is not
+                                                specified.</pd>
+                                </plentry>
+                                <plentry>
                                         <pt>FILLFACTOR</pt>
                                         <pd>The fillfactor for an index is a percentage that
                                                 determines how full the index method will try to
@@ -168,6 +189,57 @@
                 </section>
                 <section id="section5">
                         <title>Notes</title>
+                        <note class="- topic/note " type="warning">Hash index operations are not
+                                presently WAL-logged, so hash indexes might need to be rebuilt with
+                                        <codeph>REINDEX</codeph> after a database crash if there
+                                were unwritten changes. Also, changes to hash indexes are not
+                                replicated over warm standby replication after the initial base
+                                backup, so they give wrong answers to queries that subsequently use
+                                them. For these reasons, hash index use is presently
+                                discouraged.</note>
+                        <p>Currently, only the B-tree, GiST and GIN index methods support
+                                multicolumn indexes. Up to 32 fields can be specified by default.
+                                Only B-tree currently supports unique indexes.</p>
+                        <p>An <i>operator class</i> can be specified for each column of an index.
+                                The operator class identifies the operators to be used by the index
+                                for that column. For example, a B-tree index on four-byte integers
+                                would use the int4_ops class; this operator class includes
+                                comparison functions for four-byte integers. In practice the default
+                                operator class for the column's data type is usually sufficient. The
+                                main point of having operator classes is that for some data types,
+                                there could be more than one meaningful ordering. For example, we
+                                might want to sort a complex-number data type either by absolute
+                                value or by real part. We could do this by defining two operator
+                                classes for the data type and then selecting the proper class when
+                                making an index. </p>
+                        <p>For index methods that support ordered scans (currently, only B-tree),
+                                the optional clauses <codeph>ASC</codeph>, <codeph>DESC</codeph>,
+                                        <codeph>NULLS FIRST</codeph>, and/or <codeph>NULLS
+                                        LAST</codeph> can be specified to modify the sort ordering
+                                of the index. Since an ordered index can be scanned either forward
+                                or backward, it is not normally useful to create a single-column
+                                        <codeph>DESC</codeph> index — that sort ordering is already
+                                available with a regular index. The value of these options is that
+                                multicolumn indexes can be created that match the sort ordering
+                                requested by a mixed-ordering query, such as <codeph>SELECT ...
+                                        ORDER BY x ASC, y DESC</codeph>. The <codeph>NULLS</codeph>
+                                options are useful if you need to support "nulls sort low" behavior,
+                                rather than the default "nulls sort high", in queries that depend on
+                                indexes to avoid sorting steps.</p>
+                        <p>For most index methods, the speed of creating an index is dependent on
+                                the setting of <codeph>maintenance_work_mem</codeph>. Larger values
+                                will reduce the time needed for index creation, so long as you don't
+                                make it larger than the amount of memory really available, which
+                                would drive the machine into swapping. For hash indexes, the value
+                                of <codeph>effective_cache_size</codeph> is also relevant to index
+                                creation time. Greenplum Database uses one of two different hash
+                                index creation methods depending on whether the estimated index size
+                                is more or less than <codeph>effective_cache_size</codeph>. For best
+                                results, make sure that this parameter is also set to something
+                                reflective of available memory, and be careful that the sum of
+                                        <codeph>maintenance_work_mem</codeph> and
+                                        <codeph>effective_cache_size</codeph> is less than the
+                                machine's RAM less whatever space is needed by other programs.</p>
                         <p>When an index is created on a partitioned table, the index is propagated
                                 to all the child tables created by Greenplum Database. Creating an
                                 index on a table that is created by Greenplum Database for use by a
