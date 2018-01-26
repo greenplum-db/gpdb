@@ -19,6 +19,7 @@ from gppylib.commands.base import Command
 
 from mpp.models import MPPTestCase
 from mpp.lib.PSQL import PSQL
+from mpp.lib.filerep_util import Filerepe2e_Util
 from tinctest.lib import Gpdiff
 import unittest2 as unittest
 
@@ -30,7 +31,7 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 gpdiff_init_file = os.path.join(base_dir, "sql", "init_file")
 
 class UAO_FaultInjection_TestCase(MPPTestCase):
-    
+
     def get_sql_files(self, name):
         sql_file = os.path.join(
             base_dir, "sql", name + ".sql");    
@@ -48,17 +49,14 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
             os.mkdir(os.path.dirname(out_file1))
 
         PSQL.run_sql_file(setup_file)
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-        gpfaultinjector.run()
+
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
         result1 = Gpdiff.are_files_equal(out_file1, ans_file1, match_sub=[gpdiff_init_file])
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -72,22 +70,18 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_cleanup_phase_master2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
         result1 = Gpdiff.are_files_equal(out_file1, ans_file1, match_sub=[gpdiff_init_file])
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -101,14 +95,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_cleanup_phase_master_with_aocs2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -116,8 +107,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -131,14 +121,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_cleanup_phase_master_with_ao2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -146,9 +132,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
-
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=1)
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
 
@@ -161,14 +145,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_cleanup_phase_seg_with_ao2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -176,8 +157,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -191,14 +171,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_cleanup_phase_seg_with_aocs2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_cleanup_phase -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -206,8 +183,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_cleanup_phase', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -223,17 +199,14 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
             os.mkdir(os.path.dirname(out_file1))
 
         PSQL.run_sql_file(setup_file)
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-        gpfaultinjector.run()
+
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
         result1 = Gpdiff.are_files_equal(out_file1, ans_file1, match_sub=[gpdiff_init_file])
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -247,22 +220,18 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_drop_master2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
         result1 = Gpdiff.are_files_equal(out_file1, ans_file1, match_sub=[gpdiff_init_file])
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -276,14 +245,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_drop_master_with_aocs2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -291,8 +256,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -306,14 +270,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_drop_master_with_ao2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_master_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_master_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -321,8 +281,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_master_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -336,14 +295,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_drop_seg_with_ao2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -351,8 +306,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -366,14 +320,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_before_drop_seg_with_aocs2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 1'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=1)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -381,8 +331,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=1)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -396,14 +345,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_compaction_vacuum2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f compaction_before_segmentfile_drop -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
 
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -411,8 +357,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='compaction_before_segmentfile_drop', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -430,17 +375,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         # We set the fault in appendonly_update and appendonly_insert
         # because planner will go through appendonly_update and ORCA
         # will do appendonly_delete and appendonly_insert
-        set_fault_in_seg_panic_update = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_update -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset_update = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_update -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_panic_insert = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset_insert = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic_update)
-        gpfaultinjector.run()
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic_insert)
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='appendonly_update', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -448,10 +387,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset_update)
-        gpfaultinjector.run()
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset_insert)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='appendonly_update', y='reset', seg_id=2)
+	filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -469,17 +406,11 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         # We set the fault in appendonly_update and appendonly_insert
         # because planner will go through appendonly_update and ORCA
         # will do appendonly_delete and appendonly_insert
-        set_fault_in_seg_panic_update = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_update -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset_update = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_update -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_panic_insert = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset_insert = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic_update)
-        gpfaultinjector.run()
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic_insert)
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='appendonly_update', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -487,10 +418,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset_update)
-        gpfaultinjector.run()
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset_insert)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='appendonly_update', y='reset', seg_id=2)
+	filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -504,14 +433,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uaocs_crash_update2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -519,8 +444,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -534,14 +458,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_update2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -549,8 +469,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -564,14 +483,10 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
         (sql_file2, out_file2, ans_file2) = self.get_sql_files("uao_crash_vacuum2")
         if not os.path.exists(os.path.dirname(out_file1)):
             os.mkdir(os.path.dirname(out_file1))
-        set_fault_in_seg_panic = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y panic --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        set_fault_in_seg_reset = 'source %s/greenplum_path.sh;gpfaultinjector -p %s -f appendonly_insert -t foo -y reset --seg_dbid 2'  % (os.getenv('GPHOME'), os.getenv('PGPORT'))
-        cmd_type = 'fault injector'
 
         PSQL.run_sql_file(setup_file)
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_panic)
-
-        gpfaultinjector.run()
+        filereputil = Filerepe2e_Util()
+        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -579,8 +494,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        gpfaultinjector = Command(cmd_type, set_fault_in_seg_reset)
-        gpfaultinjector.run()
+        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
