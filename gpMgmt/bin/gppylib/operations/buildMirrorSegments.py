@@ -296,15 +296,6 @@ class GpMirrorListToBuild:
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
-            self.__logger.info("Updating configuration with new mirrors")
-            configInterface.getConfigurationProvider().updateSystemConfig(
-                gpArray,
-                "%s: segment config for resync" % programName,
-                dbIdToForceMirrorRemoveAdd=fullResyncMirrorDbIds,
-                useUtilityMode=False,
-                allowPrimary=False
-            )
-
             MPP_12038_fault_injection()
 
             self.__logger.info("Updating mirrors")
@@ -313,29 +304,7 @@ class GpMirrorListToBuild:
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
 
-            self.__logger.info("Updating configuration to mark mirrors up")
-            for seg in mirrorsToStart:
-                seg.setSegmentStatus(gparray.STATUS_UP)
-            for seg in primariesToConvert:
-                seg.setSegmentMode(gparray.MODE_RESYNCHRONIZATION)
-            configInterface.getConfigurationProvider().updateSystemConfig(
-                gpArray,
-                "%s: segment resync marking mirrors up and primaries resync" % programName,
-                dbIdToForceMirrorRemoveAdd={},
-                useUtilityMode=True,
-                allowPrimary=False
-            )
-
             MPP_12038_fault_injection()
-
-            #
-            # note: converting the primaries may take a really long time to complete because of initializing
-            #       resynchronization
-            #
-            self.__logger.info("Updating primaries")
-            self.__convertAllPrimaries(gpEnv, gpArray, primariesToConvert, convertPrimaryUsingFullResync)
-
-            self.__logger.info("Done updating primaries")
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -739,7 +708,7 @@ class GpMirrorListToBuild:
         era = read_era(gpEnv.getMasterDataDir(), logger=self.__logger)
 
         segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments,
-                                                                               startSegments.START_AS_PRIMARY_OR_MIRROR,
+                                                                               startSegments.START_AS_MIRRORLESS,
                                                                                era)
         start_all_successfull = len(segmentStartResult.getFailedSegmentObjs()) == 0
         for failure in segmentStartResult.getFailedSegmentObjs():
@@ -750,17 +719,6 @@ class GpMirrorListToBuild:
                 failedSeg, failureReason))
 
         return start_all_successfull
-
-    def __convertAllPrimaries(self, gpEnv, gpArray, segments, convertUsingFullResync):
-        segmentStartResult = self.__createStartSegmentsOp(gpEnv).transitionSegments(gpArray, segments,
-                                                                                    convertUsingFullResync,
-                                                                                    startSegments.MIRROR_MODE_PRIMARY)
-        for failure in segmentStartResult.getFailedSegmentObjs():
-            failedSeg = failure.getSegment()
-            failureReason = failure.getReason()
-            self.__logger.warn("Failed to inform primary segment of updated mirroring state.  Segment: %s: REASON: %s" % (
-            failedSeg, failureReason))
-
 
 class GpCleanupSegmentDirectoryDirective:
     def __init__(self, segment):

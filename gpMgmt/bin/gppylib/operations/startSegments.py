@@ -229,7 +229,6 @@ class StartSegmentsOperation:
             # error code 0 mean all good, 1 means it ran but at least one thing failed
                 cmdout = cmd.get_results().stdout
                 lines=cmdout.split('\n')
-
                 for line in lines:
                     if line.startswith("STATUS"):
                         fields=line.split('--')

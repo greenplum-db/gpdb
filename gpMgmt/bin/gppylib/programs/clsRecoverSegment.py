@@ -240,32 +240,19 @@ class GpRecoverSegmentProgram:
 
         peersForFailedSegments = self.findAndValidatePeersForFailedSegments(gpArray, failedSegments)
 
-        segmentStates = self.check_segment_state_ready_for_recovery(gpArray.getSegDbList(), gpArray.getSegDbMap())
-
         segs = []
-        segs_in_change_tracking_disabled = []
         segs_with_persistent_mirroring_disabled = []
         for index, failedSegment in enumerate(failedSegments):
             peerForFailedSegment = peersForFailedSegments[index]
 
             peerForFailedSegmentDbId = peerForFailedSegment.getSegmentDbId()
-            if not self.__options.forceFullResynchronization and self.is_segment_mirror_state_mismatched(gpArray,
-                                                                                                         peerForFailedSegment):
-                segs_with_persistent_mirroring_disabled.append(peerForFailedSegmentDbId)
-            elif (not self.__options.forceFullResynchronization and
-                          peerForFailedSegmentDbId in segmentStates and
-                      self.check_segment_change_tracking_disabled_state(segmentStates[peerForFailedSegmentDbId])):
+            segs.append(GpMirrorToBuild(failedSegment, peerForFailedSegment, failoverSegments[index],
+                                        self.__options.forceFullResynchronization))
 
-                segs_in_change_tracking_disabled.append(peerForFailedSegmentDbId)
-            else:
-                segs.append(GpMirrorToBuild(failedSegment, peerForFailedSegment, failoverSegments[index],
-                                            self.__options.forceFullResynchronization))
-
-        self._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
         self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
 
-        return segs_in_change_tracking_disabled, GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
-                                                                     self.__options.parallelDegree)
+        return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
+                                   self.__options.parallelDegree)
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -376,10 +363,7 @@ class GpRecoverSegmentProgram:
 
         forceFull = self.__options.forceFullResynchronization
 
-        segmentStates = self.check_segment_state_ready_for_recovery(gpArray.getSegDbList(), gpArray.getSegDbMap())
-
         segs = []
-        segs_in_change_tracking_disabled = []
         segs_with_persistent_mirroring_disabled = []
         for i in range(len(failedSegments)):
 
@@ -397,58 +381,22 @@ class GpRecoverSegmentProgram:
                 port = portAssigner.findAndReservePort(newRecoverHost, newRecoverAddress)
                 failoverSegment.setSegmentPort(port)
 
-            if not forceFull and self.is_segment_mirror_state_mismatched(gpArray, liveSegment):
-                segs_with_persistent_mirroring_disabled.append(liveSegment.getSegmentDbId())
+            segs.append(GpMirrorToBuild(failedSegment, liveSegment, failoverSegment, forceFull))
 
-            elif (not forceFull and liveSegment.getSegmentDbId() in segmentStates and
-                      self.check_segment_change_tracking_disabled_state(segmentStates[liveSegment.getSegmentDbId()])):
-
-                segs_in_change_tracking_disabled.append(liveSegment.getSegmentDbId())
-
-            else:
-                segs.append(GpMirrorToBuild(failedSegment, liveSegment, failoverSegment, forceFull))
-
-        self._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
         self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
 
-        return segs_in_change_tracking_disabled, GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
-                                                                     self.__options.parallelDegree,
-                                                                     interfaceHostnameWarnings)
-
-    def _output_segments_in_change_tracking_disabled(self, segs_in_change_tracking_disabled=None):
-        if segs_in_change_tracking_disabled:
-            self.logger.warn(
-                'Segments with dbid %s in change tracking disabled state, need to run recoverseg with -F option.' %
-                (' ,'.join(str(seg_id) for seg_id in segs_in_change_tracking_disabled)))
-
-    def check_segment_change_tracking_disabled_state(self, segmentState):
-        if segmentState == gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED:
-            return True
-        return False
+        return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
+                                   self.__options.parallelDegree,
+                                   interfaceHostnameWarnings)
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
             self.logger.warn('Segments with dbid %s not recovered; persistent mirroring state is disabled.' %
                              (', '.join(str(seg_id) for seg_id in segs_persistent_mirroring_disabled)))
 
-    def is_segment_mirror_state_mismatched(self, gpArray, segment):
-        if gpArray.hasMirrors:
-            # Determines whether cluster has mirrors
-            with dbconn.connect(dbconn.DbURL()) as conn:
-                res = dbconn.execSQL(conn,
-                                     "SELECT mirror_existence_state "
-                                     "from gp_dist_random('gp_persistent_relation_node') "
-                                     "where gp_segment_id=%s group by 1;" % segment.getSegmentContentId()).fetchall()
-                # For a mirrored system, there should not be any mirror_existance_state entries with no mirrors.
-                # If any exist, the segment contains a PT inconsistency.
-                for state in res:
-                    if state[0] == 1:  # 1 is the mirror_existence_state representing no mirrors
-                        return True
-        return False
-
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
-            return None, GpSegmentRebalanceOperation(gpEnv, gpArray)
+            return GpSegmentRebalanceOperation(gpEnv, gpArray)
         elif self.__options.recoveryConfigFile is not None:
             return self.getRecoveryActionsFromConfigFile(gpArray)
         else:
@@ -586,8 +534,6 @@ class GpRecoverSegmentProgram:
 
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
 
-        self.check_segment_state_ready_for_recovery(gpArray.getSegDbList(), gpArray.getSegDbMap())
-
         if not gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded(
                 'GPDB Mirroring replication is not configured for this Greenplum Database instance.')
@@ -622,7 +568,7 @@ class GpRecoverSegmentProgram:
         existing_hosts = set(gpArray.getHostList())
 
         # figure out what needs to be done
-        mirrorsUnableToBuild, mirrorBuilder = self.getRecoveryActionsBasedOnOptions(gpEnv, gpArray)
+        mirrorBuilder = self.getRecoveryActionsBasedOnOptions(gpEnv, gpArray)
 
         if self.__options.outputSampleConfigFile is not None:
             # just output config file and done
@@ -655,7 +601,7 @@ class GpRecoverSegmentProgram:
                 self.logger.info("Use gpstate -e to check the resynchronization progress.")
                 self.logger.info("******************************************************************")
 
-        elif len(mirrorBuilder.getMirrorsToBuild()) == 0 and not mirrorsUnableToBuild:
+        elif len(mirrorBuilder.getMirrorsToBuild()) == 0:
             self.logger.info('No segments to recover')
         else:
             mirrorBuilder.checkForPortAndDirectoryConflicts(gpArray)
@@ -680,13 +626,21 @@ class GpRecoverSegmentProgram:
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                                               len(mirrorBuilder.getMirrorsToBuild()), True)
 
+            self.trigger_fts_probe(gpArray)
+
             self.logger.info("******************************************************************")
-            self.logger.info("Updating segments for resynchronization is completed.")
-            self.logger.info("For segments updated successfully, resynchronization will continue in the background.")
-            self.logger.info("Use  gpstate -s  to check the resynchronization progress.")
+            self.logger.info("Updating segments for streaming is completed.")
+            self.logger.info("For segments updated successfully, streaming will continue in the background.")
+            self.logger.info("Use  gpstate -s  to check the streaming progress.")
             self.logger.info("******************************************************************")
 
         sys.exit(0)
+
+    def trigger_fts_probe(self, gpArray):
+        self.logger.info('Triggering FTS probe')
+        with dbconn.connect(dbconn.DbURL()) as conn:
+            res = dbconn.execSQL(conn, "SELECT gp_request_fts_probe_scan()")
+        return res.fetchall()
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
