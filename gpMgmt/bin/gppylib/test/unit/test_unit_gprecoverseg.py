@@ -40,6 +40,9 @@ class GpRecoversegTestCase(GpTestCase):
             config_file.write("")
 
         self.conn = Mock()
+        self.conn.__enter__ = Mock(return_value=(Mock(), None))
+        self.conn.__exit__ = Mock(return_value=None)
+
         self.cursor = FakeCursor()
         self.db_singleton = Mock()
 

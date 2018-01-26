@@ -65,21 +65,6 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         # such as  self.subject._GpRecoverSegmentProgram__pool = mock_pool
         self.subject._GpRecoverSegmentProgram__pool = self.worker_pool
 
-    def test_output_segments_in_change_tracking_disabled_should_print_failed_segments(self):
-        segs_in_change_tracking_disabled = {2: 'ChangeTrackingDisabled', 4: 'ChangeTrackingDisabled'}
-        self.subject._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
-        self.subject.logger.warn.assert_called_once_with(
-            'Segments with dbid 2 ,4 in change tracking disabled state, need to run recoverseg with -F option.')
-
-    def test_check_segment_change_tracking_disabled_state_return_true(self):
-        res = self.subject.check_segment_change_tracking_disabled_state(
-            gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED)
-        self.assertEquals(res, True)
-
-    def test_check_segment_change_tracking_disabled_state_return_false(self):
-        res = self.subject.check_segment_change_tracking_disabled_state(gparray.SEGMENT_STATE_READY)
-        self.assertEquals(res, False)
-
     def test_output_segments_with_persistent_mirroring_disabled_should_print_failed_segments(self):
         segs_with_persistent_mirroring_disabled = [0, 1]
         self.subject._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
@@ -90,35 +75,6 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
         segs_with_persistent_mirroring_disabled = []
         self.subject._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
         assert not self.subject.logger.warn.called
-
-    def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self):
-        self.execSqlResult.fetchall.return_value = [[3], [1]]
-        gparray_mock = Mock(spec=GpArray)
-        gparray_mock.hasMirrors = True
-
-        segment_mock = Mock(spec=Segment)
-        segment_mock.getSegmentContentId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertTrue(mismatched)
-
-    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self):
-        self.execSqlResult.fetchall.return_value = [[3]]
-        gparray_mock = Mock(spec=GpArray)
-        gparray_mock.hasMirrors = True
-
-        segment_mock = Mock(spec=Segment)
-        segment_mock.getSegmentContentId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertFalse(mismatched)
-
-    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self):
-        gparray_mock = Mock(spec=GpArray)
-        gparray_mock.hasMirrors = False
-
-        segment_mock = Mock(spec=Segment)
-        segment_mock.getSegmentDbId.return_value = 0
-        mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
-        self.assertFalse(mismatched)
 
     ############################################################
     # Private
