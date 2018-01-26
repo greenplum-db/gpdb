@@ -153,7 +153,7 @@
                                                 specified.</pd>
                                 </plentry>
                                 <plentry>
-                                        <pt>storage_parameter</pt>
+                                        <pt><varname>storage_parameter</varname></pt>
                                         <pd>
                                                 <p>The name of an index-method-specific storage
                                                   parameter. Each index method has its own set of
