@@ -1,12 +1,6 @@
-test: pg_terminate_backend
-test: deadlock_under_entry_db_singleton
-test: starve_case
+test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+
 test: commit_transaction_block_checkpoint
-test: pg_views_concurrent_drop
-test: resource_queue
-test: alter_blocks_for_update_and_viceversa
-test: reader_waits_for_lock
-test: drop_rename
 test: master_panic_after_phase1_commit
 
 test: setup
