@@ -62,7 +62,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
 
         self.gpArrayMock = MagicMock(spec=GpArray)
-        self.gpArrayMock.getDbList.side_effect = [[], [self.primary0], [self.primary0]]
+        self.gpArrayMock.getDbList.side_effect = [[self.primary0], [self.primary0], [self.primary0]]
         self.gpArrayMock.hasMirrors = True
         self.gpArrayMock.isStandardArray.return_value = (True, None)
         self.gpArrayMock.master = self.gparray.master
