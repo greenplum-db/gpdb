@@ -769,7 +769,6 @@ segment_config_activate_standby(int16 standbydbid, int16 newdbid)
 		elog(ERROR, "cannot find standby, dbid %i", standbydbid);
 
 	tuple = heap_copytuple(tuple);
-	((Form_gp_segment_configuration) GETSTRUCT(tuple))->dbid = newdbid;
 	((Form_gp_segment_configuration) GETSTRUCT(tuple))->role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 	((Form_gp_segment_configuration) GETSTRUCT(tuple))->preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 
