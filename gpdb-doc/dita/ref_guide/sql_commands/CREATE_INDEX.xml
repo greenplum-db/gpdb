@@ -10,7 +10,7 @@
                         <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX <varname>name</varname> ON <varname>table</varname>
        [USING btree|bitmap|gist|gin]
        ( {<varname>column</varname> | (<varname>expression</varname>)} [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
-       [ WITH ( FILLFACTOR = <varname>value</varname> ) ]
+       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> ) ]
        [TABLESPACE <varname>tablespace</varname>]
        [WHERE <varname>predicate</varname>]</codeblock>
                 </section>
@@ -153,15 +153,25 @@
                                                 specified.</pd>
                                 </plentry>
                                 <plentry>
-                                        <pt>FILLFACTOR</pt>
-                                        <pd>The fillfactor for an index is a percentage that
-                                                determines how full the index method will try to
-                                                pack index pages. For B-trees, leaf pages are filled
-                                                to this percentage during initial index build, and
-                                                also when extending the index at the right (largest
-                                                key values). If pages subsequently become completely
-                                                full, they will be split, leading to gradual
-                                                degradation in the index's efficiency. </pd>
+                                        <pt>storage_parameter</pt>
+                                        <pd>
+                                                <p>The name of an index-method-specific storage
+                                                  parameter. Each index method has its own set of
+                                                  allowed storage parameters. B-tree and GiST index
+                                                  methods all accept a single parameter,
+                                                  <codeph>FILLFACTOR</codeph>. GIN indexes accept a
+                                                  different parameter,
+                                                  <codeph>FASTUPDATE</codeph>.</p>
+                                        </pd>
+                                        <pd>The <codeph>FILLFACTOR</codeph> for an index is a
+                                                percentage that determines how full the index method
+                                                will try to pack index pages. For B-trees, leaf
+                                                pages are filled to this percentage during initial
+                                                index build, and also when extending the index at
+                                                the right (largest key values). If pages
+                                                subsequently become completely full, they will be
+                                                split, leading to gradual degradation in the index's
+                                                efficiency. </pd>
                                         <pd>B-trees use a default fillfactor of 90, but any value
                                                 from 10 to 100 can be selected. If the table is
                                                 static then fillfactor 100 is best to minimize the
@@ -171,6 +181,20 @@
                                                 use fillfactor in different but roughly analogous
                                                 ways; the default fillfactor varies between methods.
                                         </pd>
+                                        <pd><codeph>FASTUPDATE</codeph> is a Boolean parameter that
+                                                disables or enables the GIN index fast update
+                                                technique. A value of ON enables fast update (the
+                                                default), and OFF disables it. See <xref
+                                                  href="https://www.postgresql.org/docs/8.4/static/gin-implementation.html#GIN-FAST-UPDATE"
+                                                  format="html" scope="external">GIN fast update
+                                                  technique</xref> in the PostgreSQL documentation
+                                                for more information.<note>Turning
+                                                  <codeph>FASTUPDATE</codeph> off via <codeph>ALTER
+                                                  INDEX</codeph> prevents future insertions from
+                                                  going into the list of pending index entries, but
+                                                  does not in itself flush previous entries. You
+                                                  might want to VACUUM the table afterward to ensure
+                                                  the pending list is emptied.</note></pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
