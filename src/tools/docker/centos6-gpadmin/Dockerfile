@@ -1,4 +1,6 @@
-FROM pivotaldata/gpdb-dev:centos6
+ARG REPO_OWNER=pivotaldata
+
+FROM ${REPO_OWNER}/gpdb-dev:centos6
 
 # create user gpadmin since GPDB cannot run under root
 RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
