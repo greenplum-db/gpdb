@@ -5,7 +5,6 @@
 /*
  * Full name of the HEADER KEY expected by the PXF service
  * Converts input string to upper case and prepends "X-GP-" string
- *
  */
 char *
 normalize_key_name(const char *key)
@@ -17,15 +16,7 @@ normalize_key_name(const char *key)
 				 errmsg("internal error in pxfutils.c:normalize_key_name. Parameter key is null or empty.")));
 	}
 
-	StringInfoData formatter;
-
-	initStringInfo(&formatter);
-	char	   *upperCasedKey = str_toupper(pstrdup(key), strlen(key));
-
-	appendStringInfo(&formatter, "X-GP-%s", upperCasedKey);
-	pfree(upperCasedKey);
-
-	return formatter.data;
+	return psprintf("X-GP-%s", str_toupper(pstrdup(key), strlen(key)));
 }
 
 /*
@@ -38,27 +29,17 @@ TypeOidGetTypename(Oid typid)
 
 	Assert(OidIsValid(typid));
 
-	HeapTuple	typtup;
-	Form_pg_type typform;
-
-	typtup = SearchSysCache(TYPEOID,
+	HeapTuple	typtup = SearchSysCache(TYPEOID,
 							ObjectIdGetDatum(typid),
 							0, 0, 0);
 	if (!HeapTupleIsValid(typtup))
 		elog(ERROR, "cache lookup failed for type %u", typid);
 
-	typform = (Form_pg_type) GETSTRUCT(typtup);
-
-	char	   *typname = NameStr(typform->typname);
-
-	StringInfoData tname;
-
-	initStringInfo(&tname);
-	appendStringInfo(&tname, "%s", typname);
-
+	Form_pg_type typform = (Form_pg_type) GETSTRUCT(typtup);
+	char	   *typname = psprintf("%s", NameStr(typform->typname));
 	ReleaseSysCache(typtup);
 
-	return tname.data;
+	return typname;
 }
 
 /* Concatenate multiple literal strings using stringinfo */

@@ -8,9 +8,11 @@ setup_ssh_for_user() {
   local home_dir
   home_dir=$(eval echo "~${user}")
 
-  mkdir -p "${home_dir}"/.ssh
+  mkdir -p "${home_dir}/.ssh"
   touch "${home_dir}/.ssh/authorized_keys" "${home_dir}/.ssh/known_hosts" "${home_dir}/.ssh/config"
-  ssh-keygen -t rsa -N "" -f "${home_dir}/.ssh/id_rsa"
+  if [ ! -f "${home_dir}/.ssh/id_rsa" ]; then
+    ssh-keygen -t rsa -N "" -f "${home_dir}/.ssh/id_rsa"
+  fi
   cat "${home_dir}/.ssh/id_rsa.pub" >> "${home_dir}/.ssh/authorized_keys"
   chmod 0600 "${home_dir}/.ssh/authorized_keys"
   cat << 'NOROAMING' >> "${home_dir}/.ssh/config"

@@ -1597,9 +1597,10 @@ CTranslatorQueryToDXL::PdxlnWindow
 																		GPOS_NEW(m_pmp) CDXLColRef
 																					(
 																					m_pmp,
-																					GPOS_NEW(m_pmp) CMDName(m_pmp, pmdnameAlias->Pstr()), ulColId
-																					),
-																		GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node*) pte->expr))
+																					GPOS_NEW(m_pmp) CMDName(m_pmp, pmdnameAlias->Pstr()),
+																					ulColId,
+																					GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node*) pte->expr))
+																					)
 																		)
 															);
 				pdxlnPrElNew->AddChild(pdxlnPrElNewChild);
@@ -3918,12 +3919,12 @@ CTranslatorQueryToDXL::PdrgpdxlnConstructOutputCols
 		const ULONG ulColId = CTranslatorUtils::UlColId(ulResNo, phmiulAttnoColId);
 
 		// create a column reference
-		CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulColId);
+		IMDId *pmdidType = GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType( (Node*) pte->expr));
+		CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulColId, pmdidType);
 		CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent
 												(
 												m_pmp,
-												pdxlcr,
-												GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType( (Node*) pte->expr))
+												pdxlcr
 												);
 
 		// create the DXL node holding the scalar ident operator

@@ -741,6 +741,7 @@ FaultInjector_NewHashEntry(
 			case InterconnectStopAckIsLost:
 			case SendQEDetailsInitBackend:
 			case ExecutorRunHighProcessed:
+			case FtsProbe:
 
 				break;
 			default:

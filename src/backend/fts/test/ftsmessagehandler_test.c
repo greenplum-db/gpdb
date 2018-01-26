@@ -123,10 +123,6 @@ test_HandleFtsWalRepProbeMirror(void **state)
 	mockresponse.IsRoleMirror     = false;
 	mockresponse.RequestRetry     = false;
 
-	expect_any(GetMirrorStatus, response);
-	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
-	will_be_called(GetMirrorStatus);
-
 	/* expect the IsRoleMirror changed to reflect the global variable */
 	am_mirror = true;
 	mockresponse.IsRoleMirror = true;
@@ -188,5 +184,7 @@ main(int argc, char* argv[])
 		unit_test(test_HandleFtsWalRepPromoteMirror),
 		unit_test(test_HandleFtsWalRepPromotePrimary)
 	};
+
+	MemoryContextInit();
 	return run_tests(tests);
 }

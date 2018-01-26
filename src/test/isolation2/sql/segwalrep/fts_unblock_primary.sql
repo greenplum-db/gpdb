@@ -31,8 +31,6 @@ returns text as $$
     elif command == 'start':
         opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
         cmd = cmd + '-o "%s" start' % opts
-    elif command == 'reload':
-        cmd = cmd + 'reload'
     else:
         return 'Invalid command input'
 
@@ -50,9 +48,14 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 create table fts_unblock_primary (a int) distributed by (a);
 insert into fts_unblock_primary values (1);
 
--- turn off fts
-! gpconfig -c gp_fts_probe_pause -v true --masteronly --skipvalidation;
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
+-- skip FTS probes always
+create extension if not exists gp_inject_fault;
+select gp_inject_fault('fts_probe', 'reset', 1);
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+-- force scan to trigger the fault
+select gp_request_fts_probe_scan();
+-- verify the failure should be triggered once
+select gp_inject_fault('fts_probe', 'status', 1);
 
 -- stop a mirror
 -1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'stop', NULL, NULL);
@@ -65,9 +68,8 @@ insert into fts_unblock_primary values (1);
 -- this should not block due to direct dispatch to primary with active synced mirror
 insert into fts_unblock_primary values (3);
 
--- turn on fts
-! gpconfig -c gp_fts_probe_pause -v false --masteronly --skipvalidation;
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL);
+-- resume FTS probes
+select gp_inject_fault('fts_probe', 'reset', 1);
 
 --trigger fts probe and check to see primary marked n/u and mirror n/d
 select gp_request_fts_probe_scan();

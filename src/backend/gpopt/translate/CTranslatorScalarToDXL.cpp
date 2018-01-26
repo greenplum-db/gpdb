@@ -167,14 +167,19 @@ CTranslatorScalarToDXL::PdxlnScIdFromVar
 	CMDName *pmdname = GPOS_NEW(m_pmp) CMDName(m_pmp, pstr);
 
 	// create a column reference for the given var
-	CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulId);
+	CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef
+												(
+												m_pmp,
+												pmdname,
+												ulId,
+												GPOS_NEW(m_pmp) CMDIdGPDB(pvar->vartype)
+												);
 
 	// create the scalar ident operator
 	CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent
 													(
 													m_pmp,
-													pdxlcr,
-													GPOS_NEW(m_pmp) CMDIdGPDB(pvar->vartype)
+													pdxlcr
 													);
 
 	// create the DXL node holding the scalar ident operator
@@ -1498,9 +1503,9 @@ CTranslatorScalarToDXL::PdxlnWindowFrameEdgeVal
 																(
 																m_pmp,
 																GPOS_NEW(m_pmp) CMDName(m_pmp, &strUnnamedCol),
-																ulPrElId
-																),
-													GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(pnode)))
+																ulPrElId,
+																GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType(const_cast<Node*>(pnode)))
+																)
 													);
 
 		pdxlnVal = GPOS_NEW(m_pmp) CDXLNode(m_pmp, pdxlopIdent);

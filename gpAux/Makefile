@@ -586,7 +586,7 @@ LOADERS_FILESET_BINEXT = $(strip $(tmpLOADERS_FILESET_BINEXT))
 BLD_PYTHON_FILESET=.
 aix5_ppc_32_PYTHON_FILESET=bin/python* lib/python* include/python*
 aix5_ppc_64_PYTHON_FILESET=bin/python* lib/python* include/python*
-aix7_ppc_64_PYTHON_FILESET=bin/python* lib/python* lib64/python* include/python*
+aix7_ppc_64_PYTHON_FILESET=bin/python* lib/*python* lib64/*python* include/python*
 ifneq "$($(BLD_ARCH)_PYTHON_FILESET)" ""
 BLD_PYTHON_FILESET=$($(BLD_ARCH)_PYTHON_FILESET)
 endif
@@ -596,7 +596,7 @@ BLD_OS=Windows
 else
 BLD_OS:=$(shell uname -s)
 endif
-AIX_LOADERS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so*
+AIX_LOADERS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
 Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dylib libcom_err.*.dylib libldap_r-*.dylib libk5crypto.*.dylib libkrb5support.*.dylib liblber-*.dylib libyaml*.dylib
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
 Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libkrb5.so* libcom_err.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libgssapi_krb5.so* libyaml*so*
@@ -610,6 +610,9 @@ LOADERS_FILESET_LIB = $(strip $(tmpLOADERS_FILESET_LIB))
 hpux_ia64_LOADERS_LIBS_GCC=libgcc_s.so libgcc_s.so.0
 hpux_ia64_LOADERS_LIBS_GCC_LOC=/opt/hp-gcc/lib/hpux64
 
+aix7_ppc_64_LOADERS_LIBS_GCC=libgcc_s.a
+aix7_ppc_64_LOADERS_LIBS_GCC_LOC=/opt/freeware/lib/gcc/powerpc-ibm-aix7.1.0.0/4.8.5/ppc64/
+
 FILESET_LIB_GCC=$($(BLD_ARCH)_LOADERS_LIBS_GCC)
 FILESET_LIB_GCC_LOC=$($(BLD_ARCH)_LOADERS_LIBS_GCC_LOC)
 
@@ -619,9 +622,6 @@ aix7_ppc_64_LOADERS_LIBS_PERZL=libcrypto.a libssl.a
 
 aix5_ppc_32_LOADERS_LIBS_PERZL_LOC=/opt/freeware/lib
 aix5_ppc_64_LOADERS_LIBS_PERZL_LOC=/opt/pware64/lib
-aix7_ppc_64_LOADERS_LIBS_PERZL_LOC=$(BLD_TOP)/ext/aix7_ppc_64/lib
-
-aix7_ppc_64_LOADERS_LIBS_PERZL=libcrypto.a libssl.a
 aix7_ppc_64_LOADERS_LIBS_PERZL_LOC=$(BLD_TOP)/ext/aix7_ppc_64/lib
 
 LOADERS_FILESET_LIB_PERZL=$($(BLD_ARCH)_LOADERS_LIBS_PERZL)

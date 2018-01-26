@@ -81,9 +81,10 @@ bool am_ftshandler = false;
  */
 
 static bool am_ftsprobe = false;
+static bool skipFtsProbe = false;
 
 static volatile bool shutdown_requested = false;
-static volatile bool rescan_requested = false;
+static volatile bool fullscan_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
 static char *probeDatabase = "postgres";
@@ -186,11 +187,11 @@ sigHupHandler(SIGNAL_ARGS)
 	got_SIGHUP = true;
 }
 
-/* SIGINT: set flag to run an fts full-scan */
+/* SIGINT: set flag to indicate a FTS scan is requested */
 static void
-ReqFtsFullScan(SIGNAL_ARGS)
+sigIntHandler(SIGNAL_ARGS)
 {
-	rescan_requested = true;
+	fullscan_requested = true;
 }
 
 /*
@@ -223,12 +224,7 @@ ftsMain(int argc, char *argv[])
 	 * reread postgresql.conf if requested
 	 */
 	pqsignal(SIGHUP, sigHupHandler);
-
-	/*
-	 * Presently, SIGINT will lead to autovacuum shutdown, because that's how
-	 * we handle ereport(ERROR).  It could be improved however.
-	 */
-	pqsignal(SIGINT, ReqFtsFullScan);		/* request full-scan */
+	pqsignal(SIGINT, sigIntHandler);
 	pqsignal(SIGTERM, die);
 	pqsignal(SIGQUIT, quickdie); /* we don't do any ftsprobe specific cleanup, just use the standard. */
 	pqsignal(SIGALRM, handle_sig_alarm);
@@ -759,7 +755,7 @@ FtsWalRepSetupMessageContext(fts_context *context)
 static
 void FtsLoop()
 {
-	bool	updated_probe_state, processing_fullscan;
+	bool	updated_probe_state;
 	MemoryContext probeContext = NULL, oldContext = NULL;
 	time_t elapsed,	probe_start_time;
 	CdbComponentDatabases *cdbs = NULL;
@@ -788,18 +784,29 @@ void FtsLoop()
 
 		probe_start_time = time(NULL);
 
-		ftsLock();
+		skipFtsProbe = false;
 
-		/* atomically clear cancel flag and check pause flag */
-		bool pauseProbes = ftsProbeInfo->fts_pauseProbes;
-		ftsProbeInfo->fts_discardResults = false;
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR(FtsProbe) == FaultInjectorTypeSkip)
+			skipFtsProbe = true;
+#endif
 
-		ftsUnlock();
+		/* make sure the probeScanRequested is set before SIGINT sent to FTS */
+		if (fullscan_requested)
+		{
+			Assert(ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion);
+		}
 
-		if (pauseProbes)
+		if (skipFtsProbe)
 		{
 			if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
-				elog(LOG, "skipping probe, we're paused.");
+				elog(LOG, "skipping FTS probes");
+			if (fullscan_requested)
+			{
+				ftsProbeInfo->fts_statusVersion++;
+				if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
+					elog(LOG, "skipping fullscan, since probe is skipped.");
+			}
 			goto prober_sleep;
 		}
 
@@ -808,11 +815,6 @@ void FtsLoop()
 			freeCdbComponentDatabases(cdbs);
 			cdbs = NULL;
 		}
-
-		if (ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)
-			processing_fullscan = true;
-		else
-			processing_fullscan = false;
 
 		/* Need a transaction to access the catalogs */
 		StartTransactionCommand();
@@ -828,16 +830,15 @@ void FtsLoop()
 		if (!has_mirrors)
 		{
 			/* The dispatcher could have requested a scan so just ignore it and unblock the dispatcher */
-			if (processing_fullscan)
+			if (fullscan_requested)
 			{
-				ftsProbeInfo->fts_statusVersion = ftsProbeInfo->fts_statusVersion + 1;
-				rescan_requested = false;
+				ftsProbeInfo->fts_statusVersion++;
 			}
 			goto prober_sleep;
 		}
 
 		elog(DEBUG3, "FTS: starting %s scan with %d segments and %d contents",
-			 (processing_fullscan ? "full " : ""),
+			 (fullscan_requested ? "full " : ""),
 			 cdbs->total_segment_dbs,
 			 cdbs->total_segments);
 
@@ -871,33 +872,18 @@ void FtsLoop()
 		}
 
 		/*
-		 * If we're not processing a full-scan, but one has been requested; we start over.
-		 */
-		if (!processing_fullscan &&
-			ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)
-			continue;
-
-		/*
 		 * bump the version (this also serves as an acknowledgement to
 		 * a probe-request).
 		 */
-		if (updated_probe_state || processing_fullscan)
+		if (updated_probe_state || fullscan_requested)
 		{
-			ftsProbeInfo->fts_statusVersion = ftsProbeInfo->fts_statusVersion + 1;
-			rescan_requested = false;
-		}
-
-		/* if no full-scan has been requested, we can sleep. */
-		if (ftsProbeInfo->fts_probeScanRequested >= ftsProbeInfo->fts_statusVersion)
-		{
-			/* we need to do a probe immediately */
-			elog(LOG, "FTS: skipping sleep, requested version: %d, current version: %d.",
-				 (int)ftsProbeInfo->fts_probeScanRequested, (int)ftsProbeInfo->fts_statusVersion);
-			continue;
+			ftsProbeInfo->fts_statusVersion++;
 		}
 
 	prober_sleep:
 		{
+			fullscan_requested = false;
+
 			/* check if we need to sleep before starting next iteration */
 			elapsed = time(NULL) - probe_start_time;
 			if (elapsed < gp_fts_probe_interval && !shutdown_requested)
@@ -918,7 +904,7 @@ void FtsLoop()
 bool
 FtsIsActive(void)
 {
-	return (!ftsProbeInfo->fts_discardResults && !shutdown_requested);
+	return (!skipFtsProbe && !shutdown_requested);
 }
 
 bool
@@ -955,7 +941,6 @@ CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 	return NULL;
 }
 
-
 /*
  * Notify postmaster to shut down due to inconsistent segment state
  */
@@ -975,35 +960,4 @@ void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponen
 			    mirror->mode,
 			    mirror->status
 			    );
-}
-
-/*
- * Request the fault-prober to suspend probes -- no fault actions will
- * be taken based on in-flight probes until the prober is unpaused.
- */
-bool
-gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
-{
-	if (doit)
-	{
-		/*
-		 * We only want to do fancy stuff on the master (where we have a
-		 * prober).
-		 */
-		if (am_ftsprobe && ftsProbeInfo && Gp_segment == -1)
-		{
-			/*
-			 * fts_pauseProbes is externally set/cleared; fts_cancelProbes is
-			 * externally set and cleared by FTS
-			 */
-			ftsLock();
-
-			ftsProbeInfo->fts_pauseProbes = newval;
-			ftsProbeInfo->fts_discardResults = ftsProbeInfo->fts_discardResults || newval;
-			ftsUnlock();
-		}
-		gp_fts_probe_pause = newval;
-	}
-
-	return true;
 }

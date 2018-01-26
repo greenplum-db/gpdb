@@ -295,11 +295,6 @@ extern int gp_safefswritesize;
  */
 extern bool Gp_write_shared_snapshot;
 
-/*
- * Request a pause to the fault-prober.
- */
-extern bool gp_fts_probe_pause;
-
 extern int gp_fts_transition_retries;
 extern int gp_fts_transition_timeout;
 

@@ -128,17 +128,6 @@ if __name__ == "__main__":
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
         ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD']
-        print "======================================================================"
-        print "Validate Pipeline Release Jobs"
-        print "----------------------------------------------------------------------"
-        try:
-            env = os.environ.copy()
-            env['PIPELINE_FILE'] = ARGS.output_filename
-            subprocess.check_call(["python",
-                                   "../scripts/validate_pipeline_release_jobs.py"],
-                                  env=env)
-        except subprocess.CalledProcessError:
-            exit(1)
 
     if ARGS.pipeline_type != 'prod' and ARGS.output_filename == 'gpdb_master-generated.yml':
         ARGS.output_filename = 'gpdb-' + ARGS.pipeline_type + '-' + ARGS.user + '.yml'
@@ -177,6 +166,20 @@ if __name__ == "__main__":
         MSG += '    -v tf-bucket-path=dev/' + ARGS.pipeline_type + '/ \\\n'
         MSG += '    -v bucket-name=gpdb5-concourse-builds-dev\n'
 
+    create_pipeline()
+
+    if ARGS.pipeline_type == 'prod':
+        print "======================================================================"
+        print "Validate Pipeline Release Jobs"
+        print "----------------------------------------------------------------------"
+        try:
+            env = os.environ.copy()
+            env['PIPELINE_FILE'] = ARGS.output_filename
+            subprocess.check_call(["python",
+                                   "../scripts/validate_pipeline_release_jobs.py"],
+                                  env=env)
+        except subprocess.CalledProcessError:
+            exit(1)
+
     print MSG
 
-    create_pipeline()

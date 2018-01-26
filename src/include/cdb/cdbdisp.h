@@ -129,10 +129,11 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode)
  *
  * Return Values:
  *   Return NULL If one or more QEs got Error in which case qeErrorMsg contain
- *   QE error messages.
+ *   QE error messages and qeErrorCode the thrown ERRCODE.
  */
 struct CdbDispatchResults *
-cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErrorMsg);
+cdbdisp_getDispatchResults(struct CdbDispatcherState *ds,
+						   StringInfoData *qeErrorMsg, int *qeErrorCode);
 
 /*
  * Wait for all QEs to finish, then report any errors from the given

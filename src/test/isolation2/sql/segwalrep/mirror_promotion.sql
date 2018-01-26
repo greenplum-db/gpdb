@@ -12,8 +12,6 @@ returns text as $$
     elif command == 'start':
         opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
         cmd = cmd + '-o "%s" start' % opts
-    elif command == 'reload':
-        cmd = cmd + 'reload'
     else:
         return 'Invalid command input'
 

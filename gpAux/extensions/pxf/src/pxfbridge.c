@@ -19,9 +19,6 @@
  */
 
 #include "pxfbridge.h"
-#include "pxfheaders.h"
-#include "pxffragment.h"
-#include "pxfutils.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 

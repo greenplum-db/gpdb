@@ -90,8 +90,13 @@
 /* threaded thing. 
  * Caller beware: ereport and elog can only be called from main thread.
  */
+#ifdef WIN32
+#include "pthread-win32.h"
+extern DWORD main_tid;
+#else
 #include <pthread.h>
 extern pthread_t main_tid;
+#endif
 #ifndef _WIN32
 #define mythread() ((unsigned long) pthread_self())
 #define mainthread() ((unsigned long) main_tid)

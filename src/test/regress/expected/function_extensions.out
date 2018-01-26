@@ -386,3 +386,21 @@ alter function test_srf() EXECUTE ON ANY;
 
 DROP FUNCTION test_srf();
 DROP ROLE srftestuser;
+-- Test error propagation from segments
+CREATE TABLE uniq_test(id int primary key);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "uniq_test_pkey" for table "uniq_test"
+CREATE OR REPLACE FUNCTION trigger_unique() RETURNS void AS $$
+BEGIN
+	INSERT INTO uniq_test VALUES (1);
+	INSERT INTO uniq_test VALUES (1);
+	EXCEPTION WHEN unique_violation THEN
+		raise notice 'unique_violation';
+END;
+$$ LANGUAGE plpgsql volatile;
+SELECT trigger_unique();
+NOTICE:  unique_violation
+ trigger_unique 
+----------------
+ 
+(1 row)
+

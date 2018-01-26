@@ -67,7 +67,7 @@ void
 test_get_authority(void **state)
 {
 	char	*authority = get_authority();
-	assert_string_equal(authority, "localhost:51200");
+	assert_string_equal(authority, "localhost:5888");
 	pfree(authority);
 }
 

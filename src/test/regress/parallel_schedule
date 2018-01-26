@@ -142,6 +142,4 @@ test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid c
 #test: stats
 
 # run tablespace by itself
-# Disabled because tablespaces live in filespaces in GPDB, so the syntax
-# is quite different.
 test: tablespace

@@ -180,7 +180,7 @@ class Segment:
     #
     def equalIgnoringModeAndStatus(self, other):
         """
-        Return true if none of the "core" attributes (e.g. filespace)
+        Return true if none of the "core" attributes
           of two segments differ, false otherwise.
 
         This method is used by updateSystemConfig() to know when a catalog
@@ -249,7 +249,6 @@ class Segment:
         port            = int(tup[8])
         datadir         = tup[9]  # from the gp_segment_config table
 
-        # Initialize segment without filespace information
         gpdb = Segment(content         = content,
                     preferred_role  = preferred_role,
                     dbid            = dbid,
@@ -287,7 +286,7 @@ class Segment:
         Create a tempate given the information in this Segment.
         """
 
-        # Make sure we have enough room in the dstDir to fit the segment and its filespaces.
+        # Make sure we have enough room in the dstDir to fit the segment.
         duCmd = DiskUsage( name = "srcDir"
                            , directory = dstDir
                            )
@@ -390,13 +389,6 @@ class Segment:
     def getSegmentDataDirectory(self):
         """
         Return the primary datadirectory location for the segment.
-
-        Note: the datadirectory is just one of the filespace locations
-        associated with the segment, calling code should be carefull not
-        to assume that this is the only directory location for this segment.
-
-        Todo: evaluate callers of this function to see if they should really
-        be dealing with a list of filespaces.
         """
         return checkNotNone("dataDirectory", self.datadir)
 
@@ -1035,7 +1027,6 @@ class GpArray:
         ORDER BY content, preferred_role DESC
         ''')
 
-        # Todo: add checks that all segments should have the same filespaces?
         recoveredSegmentDbids = []
         segments = []
         seg = None

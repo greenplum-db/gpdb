@@ -34,7 +34,7 @@
 #include "mock/pxffragment_mock.c"
 
 const char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
-const char *uri_param = "pxf://localhost:51200/tmp/dummy1";
+const char *uri_param = "pxf://localhost:5888/tmp/dummy1";
 
 void
 test_pxfprotocol_validate_urls(void **state)

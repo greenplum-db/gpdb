@@ -21,10 +21,10 @@
 #ifndef _PXFBRIDGE_H
 #define _PXFBRIDGE_H
 
-#include "pxfuriparser.h"
 #include "libchurl.h"
+#include "pxffragment.h"
+#include "pxfuriparser.h"
 
-#include "postgres.h"
 #include "cdb/cdbvars.h"
 #include "nodes/pg_list.h"
 

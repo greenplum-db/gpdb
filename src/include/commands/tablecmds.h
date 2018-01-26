@@ -27,7 +27,7 @@
 /* Struct describing one new constraint to check in ALTER Phase 3 scan.
  *
  * Note: new NOT NULL constraints are handled differently.
- * Also note: This structure is shared only to allow colloboration with
+ * Also note: This structure is shared only to allow collaboration with
  * partitioning-related functions in cdbpartition.c.  Most items like this
  * are local to tablecmds.c.
  */

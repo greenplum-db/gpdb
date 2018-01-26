@@ -653,7 +653,6 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	Expr *pexprTestExpr = PexprSubplanTestExpr(pdxlop->PdxlnTestExpr(), slink, pmapcidvar, &plparamIds);
 
 	const DrgPdxlcr *pdrgdxlcrOuterRefs = pdxlop->DrgdxlcrOuterRefs();
-	const DrgPmdid *pdrgmdidOuterRefs = pdxlop->DrgmdidOuterRefs();
 
 	const ULONG ulLen = pdrgdxlcrOuterRefs->UlLength();
 
@@ -663,8 +662,8 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	// insert new outer ref mappings in the subplan translate context
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		IMDId *pmdid = (*pdrgmdidOuterRefs)[ul];
 		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
+		IMDId *pmdid = pdxlcr->PmdidType();
 		ULONG ulColid = pdxlcr->UlID();
 
 		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
@@ -842,45 +841,44 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 //---------------------------------------------------------------------------
 void
 CTranslatorDXLToScalar::TranslateSubplanParams
-        (
-        SubPlan *psubplan,
-        CDXLTranslateContext *pdxltrctx,
-        const DrgPdxlcr *pdrgdxlcrOuterRefs,
-        CMappingColIdVar *pmapcidvar
-        )
+	(
+	SubPlan *psubplan,
+	CDXLTranslateContext *pdxltrctx,
+	const DrgPdxlcr *pdrgdxlcrOuterRefs,
+	CMappingColIdVar *pmapcidvar
+	)
 {
-        GPOS_ASSERT(NULL != psubplan);
-        GPOS_ASSERT(NULL != pdxltrctx);
-        GPOS_ASSERT(NULL != pdrgdxlcrOuterRefs);
-        GPOS_ASSERT(NULL != pmapcidvar);
+	GPOS_ASSERT(NULL != psubplan);
+	GPOS_ASSERT(NULL != pdxltrctx);
+	GPOS_ASSERT(NULL != pdrgdxlcrOuterRefs);
+	GPOS_ASSERT(NULL != pmapcidvar);
 
-        // Create the PARAM and ARG nodes
-        const ULONG ulSize = pdrgdxlcrOuterRefs->UlLength();
-        for (ULONG ul = 0; ul < ulSize; ul++)
-        {
-                CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
-                pdxlcr->AddRef();
-                const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->Pmecolidparamid(pdxlcr->UlID());
+	// Create the PARAM and ARG nodes
+	const ULONG ulSize = pdrgdxlcrOuterRefs->UlLength();
+	for (ULONG ul = 0; ul < ulSize; ul++)
+	{
+		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
+		pdxlcr->AddRef();
+		const CMappingElementColIdParamId *pmecolidparamid = pdxltrctx->Pmecolidparamid(pdxlcr->UlID());
 
-                Param *pparam = PparamFromMapping(pmecolidparamid);
-                psubplan->parParam = gpdb::PlAppendInt(psubplan->parParam, pparam->paramid);
+		Param *pparam = PparamFromMapping(pmecolidparamid);
+		psubplan->parParam = gpdb::PlAppendInt(psubplan->parParam, pparam->paramid);
 
-                IMDId *pmdidType = pmecolidparamid->PmdidType();
-                pmdidType->AddRef();
+		GPOS_ASSERT(pmecolidparamid->PmdidType()->FEquals(pdxlcr->PmdidType()));
 
-                CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr, pmdidType);
-                Expr *parg = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlopIdent);
+		CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr);
+		Expr *parg = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlopIdent);
 
-                // not found in mapping, it must be an external parameter
-                if (NULL == parg)
-                {
-                        parg = (Expr*) PparamFromMapping(pmecolidparamid);
-                        GPOS_ASSERT(NULL != parg);
-                }
+		// not found in mapping, it must be an external parameter
+		if (NULL == parg)
+		{
+			parg = (Expr*) PparamFromMapping(pmecolidparamid);
+			GPOS_ASSERT(NULL != parg);
+		}
 
-                pdxlopIdent->Release();
-                psubplan->args = gpdb::PlAppendElement(psubplan->args, parg);
-        }
+		pdxlopIdent->Release();
+		psubplan->args = gpdb::PlAppendElement(psubplan->args, parg);
+	}
 
 }
 

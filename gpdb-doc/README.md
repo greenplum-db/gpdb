@@ -25,14 +25,23 @@ For Greenplum Database, a preconfigured **book** is provided in the `/gpdb-doc/b
 ## Prerequisites
 
 * Ruby version 2.3.0 or higher.
+* We recommend using a ruby version manager such as rvm.
 * Ruby [bundler](http://bundler.io/) installed for gem package management.
 * Java 1.7 or higher
 * Ant
 * DITA Open Toolkit (DITA-OT) 1.7.5 Full-easy-install package ([.zip](https://sourceforge.net/projects/dita-ot/files/DITA-OT%20Stable%20Release/DITA%20Open%20Toolkit%201.7/DITA-OT1.7.5_full_easy_install_bin.zip/download) or [.tar.gz](https://sourceforge.net/projects/dita-ot/files/DITA-OT%20Stable%20Release/DITA%20Open%20Toolkit%201.7/DITA-OT1.7.5_full_easy_install_bin.tar.gz/download)). Uncompress the DITA-OT to a local directory.
 * An environment variable, `PATH_TO_DITA_OT_LIBRARY`, that points to your local DITA-OT installation. For example, if you installed the DITA_OT to `/Users/gpdb-user/DITA-OT1.7.5`:
-
     ``` bash
-$ export PATH_TO_DITA_OT_LIBRARY=/Users/gpdb-user/DITA-OT1.7.5
+    $ export PATH_TO_DITA_OT_LIBRARY=/Users/gpdb-user/DITA-OT1.7.5
+    ```
+
+### For mac users 
+```
+    gem install bundler
+    brew install ant
+    brew install v8
+    gem install therubyracer
+    gem install libv8 -v '3.16.14.7' -- --with-system-v8
 ```
 
 <a name="building"></a>
@@ -41,28 +50,26 @@ $ export PATH_TO_DITA_OT_LIBRARY=/Users/gpdb-user/DITA-OT1.7.5
 1. Change to the `/gpdb-doc/book` directory of this repo.
 
 2. Install bookbinder and its dependent gems. Make sure you are in the `book` directory and enter:
-
     ``` bash
-$ bundle install
-```
+    $ bundle install
+    ```
 
 3. The installed `config.yml` file configures the Greenplum Database book for building from your local source files.  Build the output HTML files by executing the command:
-
     ``` bash
-$ bundle exec bookbinder bind local
-```
+    $ bundle exec bookbinder bind local
+    ```
 
    Bookbinder converts the XML source into HTML, and puts the final output in the `final_app` directory.
   
 5. The `final_app` directory stages the HTML into a web application that you can view using the rack gem. To view the documentation build:
 
     ``` bash
-$ cd final_app
-$ bundle install
-$ rackup
-```
+    $ cd final_app
+    $ bundle install
+    $ rackup
+    ```
 
-   Your local documentation is now available for viewing at[http://localhost:9292](http://localhost:9292)
+6. Your local documentation is now available for viewing at[http://localhost:9292](http://localhost:9292)
 
 <a name="publishing"></a>
 ## Publishing the Documentation

@@ -100,8 +100,6 @@ FtsShmemInit(void)
 		shared->ftsAdminRequestedRO = gp_set_read_only;
 
 		shared->fts_probe_info.fts_probePid = 0;
-		shared->fts_probe_info.fts_pauseProbes = false;
-		shared->fts_probe_info.fts_discardResults = false;
 		shared->fts_probe_info.fts_statusVersion = 0;
 		shared->fts_probe_info.fts_status_initialized = false;
 

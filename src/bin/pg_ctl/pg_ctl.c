@@ -603,7 +603,7 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 		 * message to postmaster.
 		 */
 		if (ret == PQPING_OK || ret == PQPING_NO_ATTEMPT ||
-			ret == PQPING_MIRROR_OR_QUIESCENT)
+			ret == PQPING_MIRROR_OR_QUIESCENT || ret == PQPING_MIRROR_READY)
 			break;
 
 #if defined(WIN32)
@@ -798,6 +798,10 @@ do_start(void)
 			case PQPING_REJECT:
 				print_msg(_(" stopped waiting\n"));
 				print_msg(_("server is still starting up\n"));
+				break;
+			case PQPING_MIRROR_READY:
+				print_msg(_(" done\n"));
+				print_msg(_("server started in mirror mode\n"));
 				break;
 			case PQPING_MIRROR_OR_QUIESCENT:
 				print_msg(_(" done\n"));
