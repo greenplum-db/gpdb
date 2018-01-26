@@ -189,14 +189,6 @@
                 </section>
                 <section id="section5">
                         <title>Notes</title>
-                        <note class="- topic/note " type="warning">Hash index operations are not
-                                presently WAL-logged, so hash indexes might need to be rebuilt with
-                                        <codeph>REINDEX</codeph> after a database crash if there
-                                were unwritten changes. Also, changes to hash indexes are not
-                                replicated over warm standby replication after the initial base
-                                backup, so they give wrong answers to queries that subsequently use
-                                them. For these reasons, hash index use is presently
-                                discouraged.</note>
                         <p>Currently, only the B-tree, GiST and GIN index methods support
                                 multicolumn indexes. Up to 32 fields can be specified by default.
                                 Only B-tree currently supports unique indexes.</p>
@@ -230,16 +222,7 @@
                                 the setting of <codeph>maintenance_work_mem</codeph>. Larger values
                                 will reduce the time needed for index creation, so long as you don't
                                 make it larger than the amount of memory really available, which
-                                would drive the machine into swapping. For hash indexes, the value
-                                of <codeph>effective_cache_size</codeph> is also relevant to index
-                                creation time. Greenplum Database uses one of two different hash
-                                index creation methods depending on whether the estimated index size
-                                is more or less than <codeph>effective_cache_size</codeph>. For best
-                                results, make sure that this parameter is also set to something
-                                reflective of available memory, and be careful that the sum of
-                                        <codeph>maintenance_work_mem</codeph> and
-                                        <codeph>effective_cache_size</codeph> is less than the
-                                machine's RAM less whatever space is needed by other programs.</p>
+                                would drive the machine into swapping.</p>
                         <p>When an index is created on a partitioned table, the index is propagated
                                 to all the child tables created by Greenplum Database. Creating an
                                 index on a table that is created by Greenplum Database for use by a
