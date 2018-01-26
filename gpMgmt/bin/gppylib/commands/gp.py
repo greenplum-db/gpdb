@@ -1036,17 +1036,17 @@ class GpCleanSegmentDirectories(Command):
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 #-----------------------------------------------
-class GpDumpDirsExist(Command):
+class GpDirsExist(Command):
     """
     Checks if gp_dump* directories exist in the given directory
     """
-    def __init__(self, name, baseDir, ctxt=LOCAL, remoteHost=None):
-        cmdStr = "find %s -name '*dump*' -print" % baseDir
+    def __init__(self, name, baseDir, dirName, ctxt=LOCAL, remoteHost=None):
+        cmdStr = "find %s -name %s -print" % (baseDir, dirName)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
-    def local(name, baseDir):
-        cmd = GpDumpDirsExist(name, baseDir)
+    def local(name, baseDir, dirName):
+        cmd = GpDirsExist(name, baseDir=baseDir, dirName=dirName)
         cmd.run(validateAfter=True)
         dirCount = len(cmd.get_results().stdout.split('\n'))
         # This is > 1 because the command output will terminate with \n
