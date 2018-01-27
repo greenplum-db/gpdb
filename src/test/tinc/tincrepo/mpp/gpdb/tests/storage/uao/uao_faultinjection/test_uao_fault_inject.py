@@ -378,8 +378,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.run_sql_file(setup_file)
         filereputil = Filerepe2e_Util()
-        filereputil.inject_fault(f='appendonly_update', y='panic', seg_id=2)
-        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_update', y='panic', table='foo', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -387,8 +387,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        filereputil.inject_fault(f='appendonly_update', y='reset', seg_id=2)
-	filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
+        filereputil.inject_fault(f='appendonly_update', y='reset', table='foo', seg_id=2)
+	filereputil.inject_fault(f='appendonly_insert', y='reset', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -409,8 +409,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.run_sql_file(setup_file)
         filereputil = Filerepe2e_Util()
-        filereputil.inject_fault(f='appendonly_update', y='panic', seg_id=2)
-        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_update', y='panic', table='foo', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -418,8 +418,8 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        filereputil.inject_fault(f='appendonly_update', y='reset', seg_id=2)
-	filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
+        filereputil.inject_fault(f='appendonly_update', y='reset', table='foo', seg_id=2)
+	filereputil.inject_fault(f='appendonly_insert', y='reset', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -436,7 +436,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.run_sql_file(setup_file)
         filereputil = Filerepe2e_Util()
-        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -444,7 +444,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='reset', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -461,7 +461,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.run_sql_file(setup_file)
         filereputil = Filerepe2e_Util()
-        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -469,7 +469,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='reset', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
@@ -486,7 +486,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.run_sql_file(setup_file)
         filereputil = Filerepe2e_Util()
-        filereputil.inject_fault(f='appendonly_insert', y='panic', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='panic', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file1, out_file=out_file1)
     
@@ -494,7 +494,7 @@ class UAO_FaultInjection_TestCase(MPPTestCase):
 
         PSQL.wait_for_database_up();
 
-        filereputil.inject_fault(f='appendonly_insert', y='reset', seg_id=2)
+        filereputil.inject_fault(f='appendonly_insert', y='reset', table='foo', seg_id=2)
 
         PSQL.run_sql_file(sql_file2, out_file=out_file2)
         result2 = Gpdiff.are_files_equal(out_file2, ans_file2, match_sub=[gpdiff_init_file])
