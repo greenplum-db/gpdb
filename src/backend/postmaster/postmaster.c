@@ -2546,6 +2546,23 @@ pmdie(SIGNAL_ARGS)
 					(errmsg("received smart shutdown request"),
 					 errSendAlert(true)));
 
+			if (pmState == PM_STARTUP)
+			{
+				/*
+				 * If this is a standby or mirror, clean-up the startup and
+				 * walreceiver processes.
+				 */
+				if (StartupPID != 0)
+					signal_child(StartupPID, SIGTERM);
+				if (WalReceiverPID != 0)
+					signal_child(WalReceiverPID, SIGTERM);
+
+				/*
+				 * Keep the PM_STARTUP and let the PostmasterStateMachine handle
+				 * state transition after Startup and WalReceiver die.
+				 */
+			}
+
 			if (pmState == PM_RUN || pmState == PM_RECOVERY ||
 				pmState == PM_RECOVERY_CONSISTENT)
 			{
@@ -3437,6 +3454,15 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 static void
 PostmasterStateMachine(void)
 {
+	/*
+	 * This state transition to handle master standby or mirrors receives a
+	 * smart shutdown, no need to wait any additional backends.
+	 */
+	if (pmState == PM_STARTUP && StartupPID == 0 && WalReceiverPID == 0)
+	{
+		pmState = PM_WAIT_DEAD_END;
+	}
+
 	if (pmState == PM_WAIT_BACKUP)
 	{
 		/*
