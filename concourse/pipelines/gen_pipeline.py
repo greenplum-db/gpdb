@@ -32,11 +32,11 @@ import subprocess
 
 from jinja2 import Environment, FileSystemLoader
 
-PATH = os.path.dirname(os.path.abspath(__file__))
+PIPELINES_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEMPLATE_ENVIRONMENT = Environment(
     autoescape=False,
-    loader=FileSystemLoader(os.path.join(PATH, 'templates')),
+    loader=FileSystemLoader(os.path.join(PIPELINES_DIR, 'templates')),
     trim_blocks=True,
     lstrip_blocks=True,
     variable_start_string='[[', # 'default {{ has conflict with pipeline syntax'
@@ -70,13 +70,14 @@ def create_pipeline():
         'test_trigger': test_trigger
     }
 
-    with open(ARGS.output_filename, 'w') as output:
+    with open(ARGS.output_filepath, 'w') as output:
         yml = render_template('pipeline_header.yml', context)
         output.write(yml)
 
-    with open(ARGS.output_filename, 'a') as output:
+    with open(ARGS.output_filepath, 'a') as output:
         yml = render_template(ARGS.template_filename, context)
         output.write(yml)
+
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(
@@ -87,13 +88,14 @@ if __name__ == "__main__":
                         action='store',
                         dest='template_filename',
                         default="gpdb-tpl.yml",
-                        help='Template filename to use.')
+                        help='Name of template to use, in templates/')
 
+    default_output_filename = "gpdb_master-generated.yml"
     PARSER.add_argument('-o', '--output',
                         action='store',
-                        dest='output_filename',
-                        default="gpdb_master-generated.yml",
-                        help='Output filename')
+                        dest='output_filepath',
+                        default=os.path.join(PIPELINES_DIR, default_output_filename),
+                        help='Output filepath')
 
     PARSER.add_argument('-O', '--os_types',
                         action='store',
@@ -134,13 +136,15 @@ if __name__ == "__main__":
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
         ARGS.test_sections = ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD']
 
-    if ARGS.pipeline_type != 'prod' and ARGS.output_filename == 'gpdb_master-generated.yml':
-        ARGS.output_filename = 'gpdb-' + ARGS.pipeline_type + '-' + ARGS.user + '.yml'
+    # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
+    if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:
+        default_dev_output_filename = 'gpdb-' + ARGS.pipeline_type + '-' + ARGS.user + '.yml'
+        ARGS.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     MSG = '\n'
     MSG += '======================================================================\n'
     MSG += '  Generate Pipeline type: .. : %s\n' % ARGS.pipeline_type
-    MSG += '  Pipeline file ............ : %s\n' % ARGS.output_filename
+    MSG += '  Pipeline file ............ : %s\n' % ARGS.output_filepath
     MSG += '  Template file ............ : %s\n' % ARGS.template_filename
     MSG += '  OS Types ................. : %s\n' % ARGS.os_types
     MSG += '  Test sections ............ : %s\n' % ARGS.test_sections
@@ -151,26 +155,27 @@ if __name__ == "__main__":
         MSG += 'fly -t gpdb-prod \\\n'
         MSG += '    set-pipeline \\\n'
         MSG += '    -p gpdb_master \\\n'
-        MSG += '    -c %s \\\n' % ARGS.output_filename
+        MSG += '    -c %s \\\n' % ARGS.output_filepath
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml\n\n'
         MSG += 'fly -t gpdb-prod \\\n'
         MSG += '    set-pipeline \\\n'
         MSG += '    -p gpdb_master_without_asserts \\\n'
-        MSG += '    -c %s \\\n' % ARGS.output_filename
+        MSG += '    -c %s \\\n' % ARGS.output_filepath
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml\n' # pylint: disable=line-too-long
     else:
         MSG += 'NOTE: You can set the developer pipeline with the following:\n\n'
         MSG += 'fly -t gpdb-dev \\\n'
         MSG += '    set-pipeline \\\n'
-        MSG += '    -p %s \\\n' % ARGS.output_filename.rsplit('.', 1)[0]
-        MSG += '    -c %s \\\n' % ARGS.output_filename
+        MSG += '    -p %s \\\n' % os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
+        MSG += '    -c %s \\\n' % ARGS.output_filepath
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
         MSG += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
         MSG += '    -v tf-bucket-path=dev/' + ARGS.pipeline_type + '/ \\\n'
-        MSG += '    -v bucket-name=gpdb5-concourse-builds-dev\n'
-        MSG += '    -v gpdb-git-branch=<the-three-point-line>\n'
+        MSG += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
+        MSG += '    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \\\n'
+        MSG += '    -v gpdb-git-branch=<branch-name>\n'
 
     create_pipeline()
 
@@ -180,10 +185,9 @@ if __name__ == "__main__":
         print "----------------------------------------------------------------------"
         try:
             env = os.environ.copy()
-            env['PIPELINE_FILE'] = ARGS.output_filename
-            subprocess.check_call(["python",
-                                   "../scripts/validate_pipeline_release_jobs.py"],
-                                  env=env)
+            env['PIPELINE_FILE'] = ARGS.output_filepath
+            validator_script = os.path.join(PIPELINES_DIR, "../scripts/validate_pipeline_release_jobs.py")
+            subprocess.check_call(["python", validator_script], env=env)
         except subprocess.CalledProcessError:
             exit(1)
 
