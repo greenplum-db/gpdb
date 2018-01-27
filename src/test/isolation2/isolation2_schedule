@@ -107,3 +107,5 @@ test: segwalrep/mirror_promotion
 # Tests for crash recovery
 test: crash_recovery
 test: crash_recovery_redundant_dtx
+test: uao_crash_compaction_row
+test: uao_crash_compaction_column

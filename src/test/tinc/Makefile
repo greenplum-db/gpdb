@@ -54,8 +54,7 @@ aocoalter_catalog_loaders:
 
 storage_uao_and_transactionmanagement:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s storage/transaction_management \
-	-s storage/uao
+	-s storage/transaction_management
 
 # WALREP_FIXME: there are no "peristent" tests anymore. Rename this
 # target, and fix concourse pipelines accordingly.
