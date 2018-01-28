@@ -119,9 +119,12 @@ class Filerepe2e_Util():
         poll =0
         while(poll < max_cycle):
             (ok, out) = self.inject_fault(f=fault_name, y='status', r=role, seg_id=seg_id)
+            tinctest.logger.info('Fault inject_fault output  %s ' % (out))
             poll +=1
             for line in out.splitlines():
+                tinctest.logger.info('Fault %s is %s line %s' % (fault_name,status, line))
                 if line.find(fault_name) > 0 and line.find(status) > 0 :
+                    tinctest.logger.info('Fault %s is %s line found %s' % (fault_name,status, line))
                     if num_times_hit and line.find("num times hit:'%d'" % num_times_hit) < 0 :
                         tinctest.logger.info('Fault not hit num of times %d line %s ' % (num_times_hit,line))
                         continue

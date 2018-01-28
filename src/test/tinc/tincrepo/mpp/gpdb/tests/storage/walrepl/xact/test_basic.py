@@ -21,11 +21,9 @@ from gppylib.commands.base import Command
 from tinctest import logger
 from mpp.lib.PSQL import PSQL
 from mpp.models import MPPTestCase
-
+from mpp.lib.filerep_util import Filerepe2e_Util
 from mpp.gpdb.tests.storage.walrepl import lib as walrepl
 import mpp.gpdb.tests.storage.walrepl.run
-
-from mpp.gpdb.tests.storage.walrepl.lib.fault import *
 
 import os
 import re
@@ -41,9 +39,10 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
     def tearDown(self):
         self.standby.remove_catalog_standby("")
         super(xansrep, self).tearDown()
-        #self.reset_fault('all')
-        Gpfault().reset_fault('transaction_abort_after_distributed_prepared')
-        Gpfault().reset_fault('dtm_broadcast_commit_prepared')
+        fault_injector = Filerepe2e_Util()
+        fault_injector.inject_fault(f='transaction_abort_after_distributed_prepared',
+                                 y='reset', seg_id=1)
+        fault_injector.inject_fault(f='dtm_broadcast_commit_prepared', y='reset', seg_id=1)
 
     def run_sql(self, sql, port=os.environ.get('PGPORT', 5432)):
         return subprocess.Popen(['psql',
@@ -80,7 +79,6 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
                              'select * from generate_series(1, 1000)')
 
         Command('remove standby', 'gpinitstandby -ra').run()
-	fault = Gpfault()
 
         # 1. Initial setup
         res = self.standby.create()
@@ -92,10 +90,9 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         num_walsender = self.wait_for_walsender()
         self.assertEqual(num_walsender, 1)
 
+        fault_injector = Filerepe2e_Util()
         # 2. Inject fault at commit prepared state
-        result = fault.suspend_at('dtm_broadcast_commit_prepared')
-        logger.info(result.stdout)
-        self.assertEqual(result.rc, 0, result.stdout)
+        fault_injector.inject_fault(f='dtm_broadcast_commit_prepared', y='suspend', seg_id=1)
 
         # 3. Now execute a transaction and commit it. The backend is expected
         #    to be blocked.
@@ -106,14 +103,15 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
                             'select * from xansrep_dummy')
 
         logger.info('Check if suspend fault is hit after commit...')
-        triggered = fault.wait_triggered('dtm_broadcast_commit_prepared')
+        triggered = fault_injector.check_fault_status(
+            fault_name='dtm_broadcast_commit_prepared',
+            seg_id=1,
+            status='triggered')
+
         self.assertTrue(triggered, 'Fault was not triggered')
 
         # 4. Inject fault at prepared state
-        result = fault.suspend_at(
-                    'transaction_abort_after_distributed_prepared')
-        logger.info(result.stdout)
-        self.assertEqual(result.rc, 0, result.stdout)
+        fault_injector.inject_fault(f='transaction_abort_after_distributed_prepared', y='suspend', seg_id=1)
 
         # 5. Now execute a transaction and commit it. The backend is expected
         #    to be blocked.
@@ -123,8 +121,11 @@ class xansrep(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTestCase):
         proc = self.run_sql('create table xansrep_prepare (a int)')
 
         logger.info('Check if suspend fault is hit ...')
-        triggered = fault.wait_triggered(
-                    'transaction_abort_after_distributed_prepared')
+        triggered = fault_injector.check_fault_status(
+            fault_name='transaction_abort_after_distributed_prepared',
+            seg_id=1,
+            status='triggered')
+        
         self.assertTrue(triggered, 'Fault was not triggered')
 
         # 6. Promote standby
