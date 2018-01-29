@@ -1994,8 +1994,9 @@ DoCopy(const CopyStmt *stmt, const char *queryString)
 	{
 		if (!(!cstate->on_segment && Gp_role == GP_ROLE_EXECUTE))
 		{
-			if (cstate->is_program)
+			if (cstate->is_program && cstate->program_pipes)
 			{
+				kill(cstate->program_pipes->pid, 9);
 				close_program_pipes(cstate, false);
 			}
 		}
@@ -8162,6 +8163,12 @@ close_program_pipes(CopyState cstate, bool ifThrow)
 	{
 		fclose(cstate->copy_file);
 		cstate->copy_file = NULL;
+	}
+
+	/* just return if pipes not created, like when relation does not exist */
+	if (!cstate->program_pipes)
+	{
+		return;
 	}
 
 	if (kill(cstate->program_pipes->pid, 0) == 0) /* process exists */
