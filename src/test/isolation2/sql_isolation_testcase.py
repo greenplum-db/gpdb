@@ -37,7 +37,10 @@ def is_digit(n):
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
-        self.command_pattern = re.compile(r"^(-?\d+)([&\\<\\>Uq]*?)\:(.*)")
+        # The re.S flag makes the "." in the regex match newlines.
+        # When matched against a command in process_command(), all
+        # lines in the command are matched and sent as SQL query.
+        self.command_pattern = re.compile(r"^(-?\d+)([&\\<\\>Uq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
