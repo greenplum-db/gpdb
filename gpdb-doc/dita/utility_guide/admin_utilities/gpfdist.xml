@@ -7,8 +7,8 @@
     <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-l</b> <varname>log_file</varname>] [<b>-t</b> <varname>timeout</varname>] 
-   [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>]
+      <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-P</b> <varname>last_http_port</varname>] [<b>-l</b> <varname>log_file</varname>]
+   [<b>-t</b> <varname>timeout</varname>] [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>]
    [<b>--ssl</b> <varname>certificate_path</varname> [<b>--sslclean</b> <varname>wait_time</varname>] ]
    [<b>-c</b> <varname>config.yml</varname>]
 
@@ -71,6 +71,13 @@
           <pt>-p <varname>http_port</varname></pt>
           <pd>The HTTP port on which <codeph>gpfdist</codeph> will serve files. Defaults to
             8080.</pd>
+        </plentry>
+        <plentry>
+          <pt>-P <varname>last_http_port</varname></pt>
+          <pd>The last port number in a range of HTTP port numbers (<varname>http_port</varname>
+            to <varname>last_http_port</varname>, inclusive) on which <codeph>gpfdist</codeph>
+            will attempt to serve files. <codeph>gpfdist</codeph> serves the files on the
+            first port number in the range to which it successfully binds.</pd>
         </plentry>
         <plentry>
           <pt>-t <varname>timeout</varname></pt>
