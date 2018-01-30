@@ -22,7 +22,7 @@
 #include "storage/lock.h"
 #include "utils/relcache.h"
 #include "utils/tqual.h"
-
+#include "utils/hyperloglog_counter.h"
 
 /*----------
  * ANALYZE builds one of these structs for each attribute (column) that is
@@ -95,6 +95,7 @@ typedef struct VacAttrStats
 	int			numvalues[STATISTIC_NUM_SLOTS];
 	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
 
+	HLLCounter stahll;
 	/*
 	 * These fields describe the stavalues[n] element types. They will be
 	 * initialized to be the same as the column's that's underlying the slot,
@@ -117,6 +118,7 @@ typedef struct VacAttrStats
 	Datum	   *exprvals;		/* access info for index fetch function */
 	bool	   *exprnulls;
 	int			rowstride;
+	bool		merge_stats;
 } VacAttrStats;
 
 /*

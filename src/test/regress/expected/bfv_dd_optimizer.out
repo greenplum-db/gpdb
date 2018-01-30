@@ -518,8 +518,6 @@ CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oi
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48693"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_bitmap_idx as Ta  limit 7500 "
-INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48927"
 -- bitmap indexes on partitioned tables
 select * from dd_singlecol_part_bitmap_idx where a=1 and b=0;
@@ -752,8 +750,6 @@ CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oi
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49145"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx as Ta  limit 7500 "
-INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49379"
 analyze dd_singlecol_part_idx2;
 INFO:  Dispatch command to ALL contents
@@ -788,8 +784,6 @@ INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49672"
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49538"
-INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx2 as Ta  limit 7500 "
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49772"
 -- indexes on partitioned tables

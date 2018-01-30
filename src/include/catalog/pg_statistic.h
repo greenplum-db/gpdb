@@ -265,6 +265,8 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_MCELEM  4
 
+#define STATISTIC_KIND_HLL  5
+
 /*
  * The CATALOG definition has to refer to the type of log_time as
  * "timestamptz" (lower case) so that bootstrap mode recognizes it.  But

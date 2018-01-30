@@ -3129,6 +3129,32 @@ get_attavgwidth(Oid relid, AttrNumber attnum)
 }
 
 /*
+ * get_attnullfrac
+ *
+ *	  Given the table and attribute number of a column, get the null
+ *	  fraction of entries in the column.  Return zero if no data.
+ */
+float4
+get_attnullfrac(Oid relid, AttrNumber attnum)
+{
+	HeapTuple	tp;
+	float4		stanullfrac;
+
+	tp = SearchSysCache(STATRELATT,
+						ObjectIdGetDatum(relid),
+						Int16GetDatum(attnum),
+						0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		stanullfrac = ((Form_pg_statistic) GETSTRUCT(tp))->stanullfrac;
+		ReleaseSysCache(tp);
+		if (stanullfrac > 0.0)
+			return stanullfrac;
+	}
+	return 0.0;
+}
+
+/*
  * get_attstatsslot
  *
  *		Extract the contents of a "slot" of a pg_statistic tuple.
