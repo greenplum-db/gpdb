@@ -19,6 +19,13 @@ BEGIN
 CREATE
 2&: commit;  <waiting ...>
 
+-- wait for the fault to trigger since following checkpoint could be faster
+select gp_inject_fault('twophase_transaction_commit_prepared', 'wait_until_triggered', '', '', '', 1, 0, 3);
+gp_inject_fault
+---------------
+t                     
+(1 row)
+
 -- do checkpoint on segment content 1 in utility mode, and it should block
 1U&: checkpoint;  <waiting ...>
 
@@ -51,6 +58,13 @@ BEGIN
 2: drop table t_commit_transaction_block_checkpoint;
 DROP
 2&: commit;  <waiting ...>
+
+-- wait for the fault to trigger since following checkpoint could be faster
+select gp_inject_fault('onephase_transaction_commit', 'wait_until_triggered', '', '', '', 1, 0, 1);
+gp_inject_fault
+---------------
+t                     
+(1 row)
 
 -- do checkpoint on master in utility mode, and it should block
 -1U&: checkpoint;  <waiting ...>
