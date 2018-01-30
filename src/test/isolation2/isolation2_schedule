@@ -10,6 +10,7 @@ test: reader_waits_for_lock
 test: drop_rename
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
+test: instr_in_shmem_cleanup
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

@@ -202,5 +202,6 @@ test: psql_gp_commands pg_resetxlog
 
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
+test: instr_in_shmem_cleanup
 
 # end of tests
