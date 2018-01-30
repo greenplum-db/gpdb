@@ -37,6 +37,8 @@ dependencies :
 		go get github.com/pkg/errors
 		go get google.golang.org/grpc
 		go get github.com/golang/mock/gomock
+		go get github.com/jmoiron/sqlx
+		go get github.com/lib/pq
 		go get github.com/cloudfoundry/gosigar
 		go get gopkg.in/DATA-DOG/go-sqlmock.v1
 # Counterfeiter is not a proper dependency of the app. It is only used occasionally to generate a test class that
