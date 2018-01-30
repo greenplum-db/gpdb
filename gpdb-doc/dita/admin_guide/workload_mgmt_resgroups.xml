@@ -313,10 +313,9 @@ sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
               the <codeph>cgroup</codeph> mount point.</p>
           </li>
           <li>Verify that you set up the Greenplum Database cgroups configuration correctly by
-            running the following commands. Replace <varname>cgroup_mount_point</varname> with the
-            mount point you identified in the previous step: <codeblock>ls -l <i>cgroup_mount_point</i>/cpu/gpdb
-ls -l <i>cgroup_mount_point</i>/cpuacct/gpdb
-        </codeblock>
+            running the following commands. Replace &lt;cgroup_mount_point&gt; with the
+            mount point that you identified in the previous step: <codeblock>ls -l &lt;cgroup_mount_point&gt;/cpu/gpdb
+ls -l &lt;cgroup_mount_point&gt;/cpuacct/gpdb</codeblock>
             <p>If these directories exist and are owned by <codeph>gpadmin:gpadmin</codeph>, you
               have successfully configured cgroups for Greenplum Database CPU resource
               management.</p>
