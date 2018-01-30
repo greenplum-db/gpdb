@@ -363,51 +363,6 @@ class GpMirrorListToBuild:
             unix.MakeDirectory("create blank directory for segment", subDir).run(validateAfter=True)
             unix.Chmod.local('set permissions on blank dir', subDir, '0700')
 
-    def __buildTarFileForTransfer(self, gpEnv, masterSegment, sampleSegment, newSegments):
-        """
-        Returns the file for the tarfile that should be transferred and used
-         for building the blank segment
-
-        """
-        masterDir = gpEnv.getMasterDataDir()
-
-        # note that this tempdir will be left around on the system (this is what other scripts do currently)
-        tempDir = gp.createTempDirectoryName(gpEnv.getMasterDataDir(), "gpbuildingsegment")
-        unix.MakeDirectory("create temp directory for segment", tempDir).run(validateAfter=True)
-
-        schemaDir = tempDir + "/schema"
-        unix.MakeDirectory("create temp schema directory for segment", schemaDir).run(validateAfter=True)
-        unix.Chmod.local('set permissions on schema dir', schemaDir, '0700')  # set perms so postgres can start
-
-        #
-        # Copy remote files from the sample segment to the master
-        #
-        for toCopyFromRemote in ["postgresql.conf", "pg_hba.conf"]:
-            cmd = gp.RemoteCopy('copying %s from a segment' % toCopyFromRemote,
-                                os.path.join(sampleSegment.getSegmentDataDirectory(), toCopyFromRemote),
-                                masterSegment.getSegmentHostName(), schemaDir, ctxt=base.REMOTE,
-                                remoteHost=sampleSegment.getSegmentAddress())
-            cmd.run(validateAfter=True)
-
-        appendNewEntriesToHbaFile(schemaDir + "/pg_hba.conf", newSegments)
-
-        #
-        # Use the master's version of other files, and build
-        #
-        self.__createEmptyDirectories(schemaDir, gDatabaseDirectories)
-        self.__createEmptyDirectories(schemaDir, gDatabaseSubDirectories)
-        self.__copyFiles(masterDir, schemaDir, ["PG_VERSION", "pg_ident.conf"])
-
-        #
-        # Build final tar
-        #
-        tarFileName = "gp_emptySegmentSchema.tar"
-        tarFile = tempDir + "/" + tarFileName
-        cmd = gp.CreateTar('gpbuildingmirrorsegment tar segment template', schemaDir, tarFile)
-        cmd.run(validateAfter=True)
-
-        return (tempDir, tarFile, tarFileName)
-
     def __copySegmentDirectories(self, gpEnv, gpArray, directives):
         """
         directives should be composed of GpCopySegmentDirectoryDirective values
@@ -415,22 +370,27 @@ class GpMirrorListToBuild:
         if len(directives) == 0:
             return
 
-        srcSegments = [d.getSrcSegment() for d in directives]
-        destSegments = [d.getDestSegment() for d in directives]
-        isTargetReusedLocation = [d.isTargetReusedLocation() for d in directives]
+        srcSegments = []
+        destSegments = []
+        isTargetReusedLocation = []
+        for directive in directives:
+            srcSegment = directive.getSrcSegment()
+            destSegment = directive.getDestSegment()
+            destSegment.primaryHostname = srcSegment.getSegmentHostName()
+            destSegment.primarySegmentPort = srcSegment.getSegmentPort()
+
+            srcSegments.append(srcSegment)
+            destSegments.append(destSegment)
+            isTargetReusedLocation.append(directive.isTargetReusedLocation())
+
         destSegmentByHost = GpArray.getSegmentsByHostName(destSegments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(destSegments, isTargetReusedLocation)
-
-        self.__logger.info('Building template directory')
-        (tempDir, blankTarFile, tarFileName) = self.__buildTarFileForTransfer(gpEnv, gpArray.master, srcSegments[0],
-                                                                              destSegments)
 
         def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             return gp.ConfigureNewSegment(cmdLabel,
                                           segmentInfo,
-                                          tarFile=tarFileName,
                                           newSegments=True,
                                           verbose=gplog.logging_is_verbose(),
                                           batchSize=self.__parallelDegree,
@@ -465,16 +425,6 @@ class GpMirrorListToBuild:
             raise ExceptionNoStackTraceNeeded("\n" + ("\n".join(validationErrors)))
 
         #
-        # copy tar from master to target hosts
-        #
-        self.__logger.info('Copying template directory file')
-        cmds = []
-        for hostName in destSegmentByHost.keys():
-            cmds.append(gp.RemoteCopy("copy segment tar", blankTarFile, hostName, tarFileName))
-
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "building and transferring basic segment directory")
-
-        #
         # unpack and configure new segments
         #
         self.__logger.info('Configuring new segments')
@@ -502,20 +452,6 @@ class GpMirrorListToBuild:
                                   recursive=True)
                         cmd.run(validateAfter=True)
                         break
-
-        #
-        # Clean up copied tar from each remote host
-        #
-        self.__logger.info('Cleaning files')
-        cmds = []
-        for hostName, segments in destSegmentByHost.iteritems():
-            cmds.append(unix.RemoveFile('remove tar file', tarFileName, ctxt=gp.REMOTE, remoteHost=hostName))
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "cleaning up tar file on segment hosts")
-
-        #
-        # clean up the local temp directory
-        #
-        unix.RemoveDirectory.local('remove temp directory', tempDir)
 
     def _get_running_postgres_segments(self, segments):
         running_segments = []

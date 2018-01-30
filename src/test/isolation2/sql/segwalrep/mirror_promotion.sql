@@ -37,7 +37,7 @@ where content = 0;
 0Uq:
 
 -- fully recover the failed primary as new mirror
-!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+!\retcode gprecoverseg -aF;
 
 -- expect: to see the new rebuilt mirror up and in sync
 select content, preferred_role, role, status, mode
@@ -60,7 +60,7 @@ where content = 0;
 0U: select 1;
 
 -- now, let's fully recover the mirror
-!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+!\retcode gprecoverseg -aF;
 
 -- now, the content 0 primary and mirror should be at their preferred role
 -- and up and in-sync
