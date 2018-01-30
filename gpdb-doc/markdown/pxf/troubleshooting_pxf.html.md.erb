@@ -31,7 +31,7 @@ The following table describes some errors you may encounter while using PXF:
 | Invalid URI pxf://\<path-to-data\>: missing options section | **Cause**: The `LOCATION` URI does not include the profile or other required options.<br>**Remedy**: Provide the profile and required options in the URI. |
 | org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exist. <br>**Remedy**: Provide the path to an existing HDFS file. |
 | NoSuchObjectException(message:\<schema\>.\<hivetable\> table not found) | **Cause**: The Hive table you specified with \<schema\>.\<hivetable\> does not exist. <br>**Remedy**: Provide the name of an existing Hive table. |
-| Failed to connect to \<segment-host\> port 51200: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Remedy**: Restart PXF on \<segment-host\>. |
+| Failed to connect to \<segment-host\> port 5888: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Remedy**: Restart PXF on \<segment-host\>. |
 | *ERROR*: failed to acquire resources on one or more segments<br>*DETAIL*:  could not connect to server: Connection refused<br>&nbsp;&nbsp;&nbsp;&nbsp;Is the server running on host "\<segment-host\>" and accepting<br>&nbsp;&nbsp;&nbsp;&nbsp;TCP/IP connections on port 40000?(seg\<N\> \<segment-host\>:40000) | **Cause**: The Greenplum Database segment host \<segment-host\> is down.
 
 ## <a id="pxf-logging"></a>PXF Logging
@@ -91,7 +91,7 @@ dbname=# SELECT * FROM hdfstest;
 ...
 DEBUG2:  churl http header: cell #19: X-GP-URL-HOST: seghost1  (seg0 slice1 127.0.0.1:40000 pid=3981)
 CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
-DEBUG2:  churl http header: cell #20: X-GP-URL-PORT: 51200  (seg0 slice1 127.0.0.1:40000 pid=3981)
+DEBUG2:  churl http header: cell #20: X-GP-URL-PORT: 5888  (seg0 slice1 127.0.0.1:40000 pid=3981)
 CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
 DEBUG2:  churl http header: cell #21: X-GP-DATA-DIR: data/dir/hdfsfile  (seg0 slice1 127.0.0.1:40000 pid=3981)
 CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple

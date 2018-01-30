@@ -144,6 +144,12 @@
                 EXTERNAL TABLE</codeph> command specifies the host address and port number for the
               Hadoop namenode service. </entry>
           </row>
+          <row>
+            <entry>Greenplum Platform Extension Framework (PXF)</entry>
+            <entry>TCP 5888</entry>
+            <entry>The PXF Java service runs on port number 5888 on each Greenplum Database
+              segment host.</entry>
+          </row>
           <row otherprops="pivotal">
             <entry morerows="2">Greenplum Workload Manager (GP-WLM)</entry>
             <entry>TCP 4369, epmd</entry>
