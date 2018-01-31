@@ -2594,6 +2594,156 @@ SELECT * from gp_toolkit.__gp_stat_bgwriter_on_segments()
 UNION ALL
 SELECT * from gp_toolkit.__gp_stat_bgwriter_on_master();
 
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_all_indexes_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_all_indexes results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_all_indexes_t
+AS
+(
+ dbseg int,
+ relid oid,
+ indexrelid oid,
+ schemaname name,
+ relname name,
+ indexrelname name,
+ idx_scan bigint,
+ idx_tup_read bigint,
+ idx_tup_fetch bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_indexes_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_all_indexes for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_indexes_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_stat_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_indexes_on_master
+--
+-- @doc:
+--        returns set of pg_stat_all_indexes for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_indexes_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_stat_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_all_indexes
+--
+-- @doc:
+--        presented unified view of pg_stat_all_indexes for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_all_indexes
+AS
+SELECT * from gp_toolkit.__gp_stat_all_indexes_on_segments()
+UNION ALL
+SELECT * from gp_toolkit.__gp_stat_all_indexes_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_statio_all_indexes_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_statio_all_indexes results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_statio_all_indexes_t
+AS
+(
+ dbseg int,
+ relid oid,
+ indexrelid oid,
+ schemaname name,
+ relname name,
+ indexrelname name,
+ idx_blks_read bigint,
+ idx_blks_hit bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_indexes_on_segments
+--
+-- @doc:
+--        returns set of pg_statio_all_indexes for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_indexes_on_segments()
+RETURNS SETOF gp_toolkit.gp_statio_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_statio_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_indexes_on_master
+--
+-- @doc:
+--        returns set of pg_statio_all_indexes for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_indexes_on_master()
+RETURNS SETOF gp_toolkit.gp_statio_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_statio_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_statio_all_indexes
+--
+-- @doc:
+--        presented unified view of pg_statio_all_indexes for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_statio_all_indexes
+AS
+SELECT * from gp_toolkit.__gp_statio_all_indexes_on_segments()
+UNION ALL
+SELECT * from gp_toolkit.__gp_statio_all_indexes_on_master();
+
+
 -- Finalize install
 COMMIT;
 
