@@ -52,15 +52,10 @@ aocoalter_catalog_loaders:
 	-s catalog/oid_inconsistency \
 	-s catalog/udf_exception_handling
 
-storage_uao_and_transactionmanagement:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s storage/transaction_management
-
-# WALREP_FIXME: there are no "peristent" tests anymore. Rename this
-# target, and fix concourse pipelines accordingly.
-storage_persistent_accessmethods_and_vacuum:
+storage_accessmethods_and_vacuum:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
 	-s access_methods \
+	-s storage/transaction_management \
 	-s vacuum \
 	-q "class!=XidlimitsTests"
 
