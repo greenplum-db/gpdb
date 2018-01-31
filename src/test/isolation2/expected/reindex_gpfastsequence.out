@@ -1,0 +1,73 @@
+-- Test concurrent reindex gp_fastsequence and insert on an AO table
+
+create table test_fastseqence ( a int, b char(20)) with (appendonly = true, orientation=column);
+CREATE
+create index test_fastseqence_idx on test_fastseqence(b);
+CREATE
+insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
+INSERT 100
+
+create extension if not exists gp_inject_fault;
+CREATE
+
+select gp_inject_fault('reindex_relation', 'suspend', 2);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- The reindex_relation fault should be hit
+1&: reindex table gp_fastsequence;  <waiting ...>
+2: select gp_inject_fault('reindex_relation', 'wait_until_triggered', 2);
+gp_inject_fault
+---------------
+t              
+(1 row)
+-- The insert should for reindex in session 1
+2&: insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;  <waiting ...>
+
+select gp_inject_fault('reindex_relation', 'reset', 2);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+1<:  <... completed>
+REINDEX
+2<:  <... completed>
+INSERT 100
+
+-- Validate that gp_fastsequence works as expected after reindex
+SELECT 1 AS oid_same_on_all_segs from gp_dist_random('pg_class') WHERE relname = 'gp_fastsequence_objid_objmod_index' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+oid_same_on_all_segs
+--------------------
+1                   
+(1 row)
+
+select last_sequence from gp_dist_random('gp_fastsequence') where objid = (select segrelid from pg_appendonly where relid = (select oid from pg_class where relname = 'test_fastseqence'));
+last_sequence
+-------------
+0            
+200          
+0            
+200          
+0            
+200          
+(6 rows)
+
+insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
+INSERT 100
+
+select last_sequence from gp_dist_random('gp_fastsequence') where objid = (select segrelid from pg_appendonly where relid = (select oid from pg_class where relname = 'test_fastseqence'));
+last_sequence
+-------------
+0            
+300          
+0            
+300          
+0            
+300          
+(6 rows)
+
+-- Final validation should be performed by gpcheckcat, which runs at
+-- the end of ICW in CI.
