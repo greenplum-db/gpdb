@@ -590,6 +590,16 @@ SELECT user_relns() AS user_relns
  gp_skew_coefficients
  gp_skew_details_t
  gp_skew_idle_fractions
+ gp_stat_all_tables
+ gp_stat_all_tables_t
+ gp_stat_bgwriter
+ gp_stat_bgwriter_t
+ gp_stat_database
+ gp_stat_database_t
+ gp_stat_replication
+ gp_stat_replication_t
+ gp_statio_all_tables
+ gp_statio_all_tables_t
  gp_stats_missing
  gp_table_indexes
  gp_workfile_entries
@@ -656,7 +666,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(152 rows)
+(162 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 
