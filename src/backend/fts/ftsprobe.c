@@ -782,6 +782,18 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 					  probeRole,
 					  probeMode);
 		}
+
+		/*
+		 * The segment responded to the probe in the middle of postmaster
+		 * reset so mark the probe dead, wait a couple seconds for the primary
+		 * to finish, and attempt to retry the probe.
+		 */
+		if (role == PMModeUninitialized && mode == DataStateNotInitialized)
+		{
+			probeInfo->segmentStatus = PROBE_DEAD;
+			pg_usleep(2 * USECS_PER_SEC);
+			return false;
+		}
 	}
 
 	/* check if segment reported a fault */
