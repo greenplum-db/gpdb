@@ -5,6 +5,11 @@
 
 set gp_enable_sequential_window_plans to true;
 
+-- start_ignore
+create schema olap_window_seq;
+set search_path to olap_window_seq, public;
+-- end_ignore
+
 ---- 1 -- Null window specification -- OVER () ----
 
 select row_number() over (), cn,pn,vn 
@@ -1547,8 +1552,8 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
        sum(n) over(order by d range between current row and interval '1 day' following),
        avg(n) over(order by d range between current row and interval '1 day' following), n from olap_window_seq_test;
 
--- This test examines the case that a statement invokes multiple lead functions, 
--- which are not sorted regarding the rows that they use and projected attributes are varlen. 
+-- This test examines the case that a statement invokes multiple lead functions,
+-- which are not sorted regarding the rows that they use and projected attributes are varlen.
 DROP TABLE IF EXISTS empsalary;
 CREATE TABLE empsalary(
   depname varchar,
@@ -1561,15 +1566,15 @@ INSERT INTO empsalary VALUES('develop', 8, '6000', '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, '5200', '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, '4500', '2008/01/01');
 
--- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one 
--- gets data from one tuple ahead again.  
+-- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one
+-- gets data from one tuple ahead again.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
 
--- Lead functions are in order. 
+-- Lead functions are in order.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
@@ -1607,7 +1612,7 @@ INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
 
--- Similar to the first statement using int. 
+-- Similar to the first statement using int.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
@@ -1660,7 +1665,7 @@ create table foo (a int, b int) distributed by (a);
 create table bar (c int, d int) distributed by (c);
 insert into foo select i,i from generate_series(1,10) i;
 insert into bar select i,i from generate_series(1,10) i;
-set optimizer_segments to 1; 
+set optimizer_segments to 1;
 SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
 
 reset optimizer_segments;

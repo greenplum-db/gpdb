@@ -25,12 +25,12 @@ from sale; -- mvd 1->1
 select rank() over (), * 
 from sale; --error - order by req'd
 ERROR:  window function "rank" requires a window specification with an ordering clause
-LINE 1: select rank() over (), * 
+LINE 1: select rank() over (), *
                ^
 select dense_rank() over (), * 
 from sale; --error - order by order by req'd
 ERROR:  window function "dense_rank" requires a window specification with an ordering clause
-LINE 1: select dense_rank() over (), * 
+LINE 1: select dense_rank() over (), *
                ^
 -- 2 -- Plan trivial windows over various input plan types ----
 select row_number() over (), pn, cn, vn, dt, qty, prc
@@ -262,12 +262,12 @@ from sale; -- mvd 2,3->1
 select rank() over (partition by cn), cn, pn 
 from sale; --error - rank requires ordering
 ERROR:  window function "rank" requires a window specification with an ordering clause
-LINE 1: select rank() over (partition by cn), cn, pn 
+LINE 1: select rank() over (partition by cn), cn, pn
                ^
 select dense_rank() over (partition by cn), cn, pn 
 from sale; --error - dense_rank requires ordering
 ERROR:  window function "dense_rank" requires a window specification with an ordering clause
-LINE 1: select dense_rank() over (partition by cn), cn, pn 
+LINE 1: select dense_rank() over (partition by cn), cn, pn
                ^
 select row_number() over (partition by pname, cname), pname, cname
 from sale s, customer c, product p 
@@ -2024,7 +2024,7 @@ SELECT sale.pn,sale.cn,sale.prc,
 -- Check LEAD()
 -- sanity tests
 select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lead' order by 1,2;
-     proname      |    proargtypes    
+     proname      |    proargtypes
 ------------------+-------------------
  lead_any         | 2281 2277
  lead_any         | 2281 2277 20
@@ -2205,7 +2205,7 @@ order by 1, 2, 3;
 -- Check LAG()
 -- sanity tests
 select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.winfunc = p.oid and w.winfnoid = p2.oid and p2.proname = 'lag' order by 1,2;
-     proname     |    proargtypes    
+     proname     |    proargtypes
 -----------------+-------------------
  lag_any         | 2281 2277
  lag_any         | 2281 2277 20
@@ -7502,11 +7502,11 @@ create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
 \d v1
-      View "public.v1"
- Column |  Type  | Modifiers 
+      View "olap_window_seq.v1"
+ Column |  Type  | Modifiers
 --------+--------+-----------
- dt     | date   | 
- sum    | bigint | 
+ dt     | date   |
+ sum    | bigint |
 View definition:
  SELECT "Window".dt, sum("Window".cn) OVER(
   ORDER BY "Window".att_3 RANGE "Window".att_3 PRECEDING) AS sum
@@ -7837,7 +7837,7 @@ order by 1,2,3;
 
 -- MPP-4840
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
-                                  QUERY PLAN                                   
+                                  QUERY PLAN
 -------------------------------------------------------------------------------
  HashAggregate  (cost=0.03..0.04 rows=1 width=8)
    Group By: n
@@ -8306,7 +8306,7 @@ create table foo (a int, b int) distributed by (a);
 create table bar (c int, d int) distributed by (c);
 insert into foo select i,i from generate_series(1,10) i;
 insert into bar select i,i from generate_series(1,10) i;
-set optimizer_segments to 1; 
+set optimizer_segments to 1;
 SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
  c  | d  | e  
 ----+----+----
@@ -8340,7 +8340,7 @@ insert into window_preds values(6,7,8);
 -- end_ignore
 -- for planner qual k = 1 should not be pushed down in the subquery as it has window refs at top level of subquery. orca is able to push down the predicate to appropriate node
 explain select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
-                                             QUERY PLAN                                             
+                                             QUERY PLAN
 ----------------------------------------------------------------------------------------------------
  Subquery Scan t  (cost=0.00..2.11 rows=1 width=8)
    Filter: t.k = 3
@@ -8358,14 +8358,14 @@ explain select k from ( select row_number() over()+2 as k from window_preds unio
 (13 rows)
 
 select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
- k 
+ k
 ---
  3
  3
 (2 rows)
 
 explain insert into window_preds select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
-                                                   QUERY PLAN                                                   
+                                                   QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------
  Insert (slice0; segments: 3)  (rows=1 width=8)
    ->  Redistribute Motion 1:3  (slice3; segments: 1)  (cost=0.00..2.11 rows=1 width=8)
@@ -8387,7 +8387,7 @@ explain insert into window_preds select k from ( select row_number() over()+2 as
 
 insert into window_preds select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
 explain SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() OVER() AS k FROM window_preds union all SELECT ROW_NUMBER() OVER() AS k FROM window_preds) AS t WHERE t.k = 1 limit 1;
-                                                      QUERY PLAN                                                      
+                                                      QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------
  Limit  (cost=2.06..2.72 rows=1 width=8)
    ->  Nested Loop  (cost=2.06..4.25 rows=4 width=8)
@@ -8414,13 +8414,13 @@ explain SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() O
 (22 rows)
 
 SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() OVER() AS k FROM window_preds union all SELECT ROW_NUMBER() OVER() AS k FROM window_preds) AS t WHERE t.k = 1 limit 1;
- k 
+ k
 ---
  1
 (1 row)
 
 explain with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where j = 1;
-                                                      QUERY PLAN                                                      
+                                                      QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..0.04 rows=1 width=12)
    ->  Subquery Scan cte  (cost=0.00..0.04 rows=1 width=12)
@@ -8449,7 +8449,7 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where j = 1;
 -- qual k = 1 should be pushed down
 explain select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
-                                                QUERY PLAN                                                
+                                                QUERY PLAN
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..2.07 rows=2 width=4)
    ->  Append  (cost=0.00..2.07 rows=1 width=4)
@@ -8466,7 +8466,7 @@ explain select k from ( select k from (select row_number() over() as k from wind
 (12 rows)
 
 select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
- k 
+ k
 ---
  1
  1
@@ -8494,7 +8494,7 @@ select k from ( select k from (select row_number() over() as k from window_preds
 (23 rows)
 
 explain insert into window_preds select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
-                                                      QUERY PLAN                                                      
+                                                      QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------
  Insert (slice0; segments: 3)  (rows=1 width=8)
    ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..2.10 rows=1 width=8)
@@ -8548,7 +8548,7 @@ insert into window_preds with CTE as (select i, row_number() over (partition by 
 -- This is a GPDB extension, not implemented in PostgreSQL.
 --
 select dt, pn, count(distinct pn) over (partition by dt) from sale;
-     dt     | pn  | count 
+     dt     | pn  | count
 ------------+-----+-------
  01-01-1401 | 100 |     1
  03-01-1401 | 200 |     1
@@ -8565,7 +8565,7 @@ select dt, pn, count(distinct pn) over (partition by dt) from sale;
 (12 rows)
 
 select dt, pn, count(distinct pn) over (partition by dt), sum(distinct pn) over (partition by dt) from sale;
-     dt     | pn  | count | sum  
+     dt     | pn  | count | sum
 ------------+-----+-------+------
  01-01-1401 | 100 |     1 |  100
  03-01-1401 | 200 |     1 |  200
@@ -8582,7 +8582,7 @@ select dt, pn, count(distinct pn) over (partition by dt), sum(distinct pn) over 
 (12 rows)
 
 select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
-     dt     | pn  | sum  | sum  
+     dt     | pn  | sum  | sum
 ------------+-----+------+------
  01-01-1401 | 100 |  100 |  100
  03-01-1401 | 200 |  200 |  200
@@ -8600,7 +8600,7 @@ select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition 
 
 -- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
 select pcolor, pname, count(distinct pname) over (partition by pcolor) from product;
-  pcolor   |   pname   | count 
+  pcolor   |   pname   | count
 -----------+-----------+-------
  Black     | Dream     |     2
  Black     | Sword     |     2
@@ -8636,10 +8636,10 @@ ERROR:  DISTINCT is supported only for single-argument aggregates
 -- Test deparsing (for \d+ and pg_dump)
 create view distinct_windowagg_view as select sum(distinct g/2) OVER (partition by g/4) from generate_series (1, 5) g;
 \d+ distinct_windowagg_view
-        View "public.distinct_windowagg_view"
- Column |  Type  | Modifiers | Storage | Description 
+   View "olap_window_seq.distinct_windowagg_view"
+ Column |  Type  | Modifiers | Storage | Description
 --------+--------+-----------+---------+-------------
- sum    | bigint |           | plain   | 
+ sum    | bigint |           | plain   |
 View definition:
  SELECT sum(DISTINCT g.g / 2) OVER (
  PARTITION BY g.g / 4) AS sum
@@ -8677,7 +8677,7 @@ NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_6_2_prt_usa
 NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_6_2_prt_other_regions" for table "window_part_sales_1_prt_6"
 -- When there is no PARTITION BY in the window function, we do not want to push down any of the filter predicates.
 EXPLAIN WITH cte as (SELECT *, row_number() over () FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
-                                                                           QUERY PLAN                                                                            
+                                                                           QUERY PLAN
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
  Subquery Scan cte  (cost=0.00..14010.00 rows=324 width=48)
    Filter: cte.date > '03-01-2011'::date AND cte.region = 'usa'::text
@@ -8703,7 +8703,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over () FROM window_part_sales) SELE
 
 -- If there is a PARTITION BY in the window function, we can push down ONLY the predicates that match the PARTITION BY column.
 EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
-                                                                          QUERY PLAN                                                                          
+                                                                          QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------------------------------------------------
  Subquery Scan cte  (cost=0.00..12.61 rows=187 width=48)
    Filter: cte.date > '03-01-2011'::date
@@ -8742,7 +8742,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY region) FROM wind
 
 -- When both columns in the filter predicates are in the window function, it is possible to push both down.
 EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
-                                                                               QUERY PLAN                                                                                
+                                                                               QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..4.31 rows=216 width=48)
    ->  Subquery Scan cte  (cost=0.00..4.31 rows=72 width=48)
@@ -8776,7 +8776,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
 
 -- When the column in the filter predicates is also present in the window function, it is possible to push it down.
 EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE region = 'usa';
-                                                                                QUERY PLAN                                                                                
+                                                                                QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..11.21 rows=561 width=48)
    ->  Subquery Scan cte  (cost=0.00..11.21 rows=187 width=48)
@@ -8818,7 +8818,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
 
 -- When there is a disjunct in the filter predicates, it is not possible to push down either into the window function.
 EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' OR region = 'usa';
-                                                                                 QUERY PLAN                                                                                 
+                                                                                 QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..3743.47 rows=187174 width=48)
    ->  Subquery Scan cte  (cost=0.00..3743.47 rows=62392 width=48)

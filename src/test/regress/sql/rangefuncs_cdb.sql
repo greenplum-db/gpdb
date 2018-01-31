@@ -1,4 +1,8 @@
 SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
+-- start_ignore
+create schema rangefuns_cdb;
+set search_path to rangefuncs_cdb, public;
+-- end_ignore
 
 DROP TABLE IF EXISTS foo;
 
