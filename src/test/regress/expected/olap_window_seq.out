@@ -7369,7 +7369,7 @@ create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
 \d+ v1
-                  View "public.v1"
+              View "olap_window_seq.v1"
  Column |  Type  | Modifiers | Storage | Description 
 --------+--------+-----------+---------+-------------
  dt     | date   |           | plain   | 

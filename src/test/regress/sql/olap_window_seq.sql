@@ -3,6 +3,11 @@
 --
 -- Changes here should also be made to olap_window_seq.sql
 
+-- start_ignore
+create schema olap_window_seq;
+set search_path to olap_window_seq, public;
+-- end_ignore
+
 ---- 1 -- Null window specification -- OVER () ----
 
 select row_number() over (), cn,pn,vn 
