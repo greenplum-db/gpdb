@@ -2744,6 +2744,78 @@ UNION ALL
 SELECT * from gp_toolkit.__gp_statio_all_indexes_on_master();
 
 
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_statio_all_sequences_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_statio_all_sequences results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_statio_all_sequences_t
+AS
+(
+ dbseg int,
+ relid oid,
+ schemaname name,
+ relname name,
+ blks_read bigint,
+ blks_hit bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_sequences_on_segments
+--
+-- @doc:
+--        returns set of pg_statio_all_sequences for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_sequences_on_segments()
+RETURNS SETOF gp_toolkit.gp_statio_all_sequences_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_statio_all_sequences;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_sequences_on_master
+--
+-- @doc:
+--        returns set of pg_statio_all_sequences for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_sequences_on_master()
+RETURNS SETOF gp_toolkit.gp_statio_all_sequences_t
+AS
+$$
+    SELECT gp_execution_segment(), * FROM pg_statio_all_sequences;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_statio_all_sequences
+--
+-- @doc:
+--        presented unified view of pg_statio_all_sequences for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_statio_all_sequences
+AS
+SELECT * from gp_toolkit.__gp_statio_all_sequences_on_segments()
+UNION ALL
+SELECT * from gp_toolkit.__gp_statio_all_sequences_on_master();
+
 -- Finalize install
 COMMIT;
 

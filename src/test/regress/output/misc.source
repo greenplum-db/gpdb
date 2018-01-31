@@ -602,6 +602,8 @@ SELECT user_relns() AS user_relns
  gp_stat_replication_t
  gp_statio_all_indexes
  gp_statio_all_indexes_t
+ gp_statio_all_sequences
+ gp_statio_all_sequences_t
  gp_statio_all_tables
  gp_statio_all_tables_t
  gp_stats_missing
