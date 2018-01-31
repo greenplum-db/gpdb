@@ -429,11 +429,12 @@ gpstart
           </tbody>
         </tgroup>
       </table>
-      <p>Keep in mind that the <codeph>admin_group</codeph> and <codeph>default_group</codeph>
-        <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph> values contribute to 
-        the total percentages on a segment host. You may find that you need to adjust these
-        limits for <codeph>admin_group</codeph> and/or <codeph>default_group</codeph>
-        as you create and add new resource groups to your Greenplum Database deployment.</p>
+      <p>Keep in mind that the <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph>
+        values for the default resource groups <codeph>admin_group</codeph> and
+        <codeph>default_group</codeph> contribute to the total percentages on a segment host.
+        You may find that you need to adjust these limits for <codeph>admin_group</codeph>
+        and/or <codeph>default_group</codeph> as you create and add new resource groups to
+        your Greenplum Database deployment.</p>
     </body>
   </topic>
 
