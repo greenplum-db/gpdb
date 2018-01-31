@@ -201,7 +201,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 				CompactionBeforeSegmentFileDropPhase,
 				DDLNotSpecified,
 				"",	// databaseName
-				""); // tableName
+				RelationGetRelationName(onerel)); // tableName
 	}
 	if (vacummStatement_IsInAppendOnlyCleanupPhase(vacstmt))
 	{
@@ -209,7 +209,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 				CompactionBeforeCleanupPhase,
 				DDLNotSpecified,
 				"",	// databaseName
-				""); // tableName
+				RelationGetRelationName(onerel)); // tableName
 	}
 #endif
 
