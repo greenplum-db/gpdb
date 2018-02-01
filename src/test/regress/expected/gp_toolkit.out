@@ -546,39 +546,39 @@ select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
 -- if we get results and not errors the queries should be driving
 -- down into the pg_* version of these
 select count(*) > 0 from gp_toolkit.gp_stat_database;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 select count(*) > 0 from gp_toolkit.gp_stat_all_tables;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 select count(*) > 0 from gp_toolkit.gp_statio_all_tables;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 select count(*) > 0 from gp_toolkit.gp_stat_all_indexes;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 select count(*) > 0 from gp_toolkit.gp_statio_all_indexes;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 select count(*) > 0 from gp_toolkit.gp_stat_bgwriter;
-?column?
+ ?column?
 ----------
-t
+ t
 (1 row)
 
 -----------------------------------
