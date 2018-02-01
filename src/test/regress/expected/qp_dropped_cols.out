@@ -42,13 +42,12 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_char SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
  a    | a    | c    |    2
  g    | g    | a    |    0
- g    | g    | b    |    1
+ g    | g    | c    |    1
 (3 rows)
 
 DELETE FROM mpp21090_changedistpolicy_dml_pttab_char WHERE col3 ='c';
@@ -56,8 +55,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
  g    | g    | a    |    0
- g    | g    | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_decimal;
@@ -100,13 +98,12 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_decimal SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
  1.00 | 1.00 | c    |    2
  2.00 | 2.00 | a    |    0
- 2.00 | 2.00 | b    |    1
+ 2.00 | 2.00 | c    |    1
 (3 rows)
 
 DELETE FROM mpp21090_changedistpolicy_dml_pttab_decimal WHERE col3 ='c';
@@ -114,8 +111,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
  2.00 | 2.00 | a    |    0
- 2.00 | 2.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_int4;
@@ -158,13 +154,12 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_int4 SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  10000000 | 10000000 | c    |    2
  20000000 | 20000000 | a    |    0
- 20000000 | 20000000 | b    |    1
+ 20000000 | 20000000 | c    |    1
 (3 rows)
 
 DELETE FROM mpp21090_changedistpolicy_dml_pttab_int4 WHERE col3 ='c';
@@ -172,8 +167,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  20000000 | 20000000 | a    |    0
- 20000000 | 20000000 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_int8;
@@ -216,12 +210,11 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_int8 SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
   200000000000000000 |  200000000000000000 | a    |    0
-  200000000000000000 |  200000000000000000 | b    |    1
+  200000000000000000 |  200000000000000000 | c    |    1
  1000000000000000000 | 1000000000000000000 | c    |    2
 (3 rows)
 
@@ -230,8 +223,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
         col1        |        col2        | col3 | col5 
 --------------------+--------------------+------+------
  200000000000000000 | 200000000000000000 | a    |    0
- 200000000000000000 | 200000000000000000 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_interval;
@@ -274,12 +266,11 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_interval SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  00:00:10 | 00:00:10 | a    |    0
- 00:00:10 | 00:00:10 | b    |    1
+ 00:00:10 | 00:00:10 | c    |    1
  11:00:00 | 11:00:00 | c    |    2
 (3 rows)
 
@@ -288,8 +279,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  00:00:10 | 00:00:10 | a    |    0
- 00:00:10 | 00:00:10 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_numeric;
@@ -332,13 +322,12 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_changedistpolicy_dml_pttab_numeric SET col3 ='c' WHERE col3 ='b';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  1.000000 | 1.000000 | c    |    2
  2.000000 | 2.000000 | a    |    0
- 2.000000 | 2.000000 | b    |    1
+ 2.000000 | 2.000000 | c    |    1
 (3 rows)
 
 DELETE FROM mpp21090_changedistpolicy_dml_pttab_numeric WHERE col3 ='c';
@@ -346,8 +335,7 @@ SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  2.000000 | 2.000000 | a    |    0
- 2.000000 | 2.000000 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_char;
@@ -386,13 +374,12 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_char SET col1 = '-' WHERE col2 = 'z' AND col1 = 'z';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
+ -    | z    | b    | 
  x    | x    | a    | 
  x    | x    | c    | x
- z    | z    | b    | 
 (3 rows)
 
 -- Update partition key
@@ -400,9 +387,9 @@ UPDATE mpp21090_defpt_dropcol_addcol_dml_char SET col2 = '-' WHERE col2 = 'z' AN
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
+ -    | -    | b    | 
  x    | x    | a    | 
  x    | x    | c    | x
- z    | z    | b    | 
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_char WHERE col2 = '-';
@@ -411,8 +398,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
 ------+------+------+------
  x    | x    | a    | 
  x    | x    | c    | x
- z    | z    | b    | 
-(3 rows)
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_decimal;
@@ -451,33 +437,31 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_decimal SET col1 = 1.00 WHERE col2 = 35.00 AND col1 = 35.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |     
-  2.00 |  2.00 | c    | 2.00
- 35.00 | 35.00 | b    |     
+ col1 | col2  | col3 | col5 
+------+-------+------+------
+ 1.00 | 35.00 | b    |     
+ 2.00 |  2.00 | a    |     
+ 2.00 |  2.00 | c    | 2.00
 (3 rows)
 
 -- Update partition key
 UPDATE mpp21090_defpt_dropcol_addcol_dml_decimal SET col2 = 1.00 WHERE col2 = 35.00 AND col1 = 1.00;
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |     
-  2.00 |  2.00 | c    | 2.00
- 35.00 | 35.00 | b    |     
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 1.00 | 1.00 | b    |     
+ 2.00 | 2.00 | a    |     
+ 2.00 | 2.00 | c    | 2.00
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_decimal WHERE col2 = 1.00;
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |     
-  2.00 |  2.00 | c    | 2.00
- 35.00 | 35.00 | b    |     
-(3 rows)
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 2.00 | 2.00 | a    |     
+ 2.00 | 2.00 | c    | 2.00
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_int4;
@@ -516,13 +500,12 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_int4 SET col1 = 10000000 WHERE col2 = 35000000 AND col1 = 35000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
+ 10000000 | 35000000 | b    |         
  20000000 | 20000000 | a    |         
  20000000 | 20000000 | c    | 20000000
- 35000000 | 35000000 | b    |         
 (3 rows)
 
 -- Update partition key
@@ -530,9 +513,9 @@ UPDATE mpp21090_defpt_dropcol_addcol_dml_int4 SET col2 = 10000000 WHERE col2 = 3
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
+ 10000000 | 10000000 | b    |         
  20000000 | 20000000 | a    |         
  20000000 | 20000000 | c    | 20000000
- 35000000 | 35000000 | b    |         
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_int4 WHERE col2 = 10000000;
@@ -541,8 +524,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
 ----------+----------+------+----------
  20000000 | 20000000 | a    |         
  20000000 | 20000000 | c    | 20000000
- 35000000 | 35000000 | b    |         
-(3 rows)
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_int8;
@@ -581,13 +563,12 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_int8 SET col1 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 3500000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 |        col5         
 ---------------------+---------------------+------+---------------------
+ 1000000000000000000 | 3500000000000000000 | b    |                    
  2000000000000000000 | 2000000000000000000 | a    |                    
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
- 3500000000000000000 | 3500000000000000000 | b    |                    
 (3 rows)
 
 -- Update partition key
@@ -595,9 +576,9 @@ UPDATE mpp21090_defpt_dropcol_addcol_dml_int8 SET col2 = 1000000000000000000 WHE
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 |        col5         
 ---------------------+---------------------+------+---------------------
+ 1000000000000000000 | 1000000000000000000 | b    |                    
  2000000000000000000 | 2000000000000000000 | a    |                    
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
- 3500000000000000000 | 3500000000000000000 | b    |                    
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_int8 WHERE col2 = 1000000000000000000;
@@ -606,8 +587,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
 ---------------------+---------------------+------+---------------------
  2000000000000000000 | 2000000000000000000 | a    |                    
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
- 3500000000000000000 | 3500000000000000000 | b    |                    
-(3 rows)
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_interval;
@@ -646,13 +626,12 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_interval SET col1 = '12 hours' WHERE col2 = '14 hours' AND col1 = '14 hours';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
  01:00:00 | 01:00:00 | a    | 
  01:00:00 | 01:00:00 | c    | 01:00:00
- 14:00:00 | 14:00:00 | b    | 
+ 12:00:00 | 14:00:00 | b    | 
 (3 rows)
 
 -- Update partition key
@@ -662,7 +641,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
 ----------+----------+------+----------
  01:00:00 | 01:00:00 | a    | 
  01:00:00 | 01:00:00 | c    | 01:00:00
- 14:00:00 | 14:00:00 | b    | 
+ 12:00:00 | 12:00:00 | b    | 
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_interval WHERE col2 = '12 hours';
@@ -671,8 +650,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
 ----------+----------+------+----------
  01:00:00 | 01:00:00 | a    | 
  01:00:00 | 01:00:00 | c    | 01:00:00
- 14:00:00 | 14:00:00 | b    | 
-(3 rows)
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_numeric;
@@ -711,33 +689,31 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_numeric SET col1 = 1.000000 WHERE col2 = 35.000000 AND col1 = 35.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 |   col5   
------------+-----------+------+----------
-  2.000000 |  2.000000 | a    |         
-  2.000000 |  2.000000 | c    | 2.000000
- 35.000000 | 35.000000 | b    |         
+   col1   |   col2    | col3 |   col5   
+----------+-----------+------+----------
+ 1.000000 | 35.000000 | b    |         
+ 2.000000 |  2.000000 | a    |         
+ 2.000000 |  2.000000 | c    | 2.000000
 (3 rows)
 
 -- Update partition key
 UPDATE mpp21090_defpt_dropcol_addcol_dml_numeric SET col2 = 1.000000 WHERE col2 = 35.000000 AND col1 = 1.000000;
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 |   col5   
------------+-----------+------+----------
-  2.000000 |  2.000000 | a    |         
-  2.000000 |  2.000000 | c    | 2.000000
- 35.000000 | 35.000000 | b    |         
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 1.000000 | 1.000000 | b    |         
+ 2.000000 | 2.000000 | a    |         
+ 2.000000 | 2.000000 | c    | 2.000000
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_numeric WHERE col2 = 1.000000;
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 |   col5   
------------+-----------+------+----------
-  2.000000 |  2.000000 | a    |         
-  2.000000 |  2.000000 | c    | 2.000000
- 35.000000 | 35.000000 | b    |         
-(3 rows)
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 2.000000 | 2.000000 | a    |         
+ 2.000000 | 2.000000 | c    | 2.000000
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_text;
@@ -776,13 +752,12 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
 (3 rows)
 
 UPDATE mpp21090_defpt_dropcol_addcol_dml_text SET col1 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'xyz';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
        col1       |       col2       | col3 |       col5       
 ------------------+------------------+------+------------------
  abcdefghijklmnop | abcdefghijklmnop | a    | 
  abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
- xyz              | xyz              | b    | 
+ qrstuvwxyz       | xyz              | b    | 
 (3 rows)
 
 -- Update partition key
@@ -792,7 +767,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
 ------------------+------------------+------+------------------
  abcdefghijklmnop | abcdefghijklmnop | a    | 
  abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
- xyz              | xyz              | b    | 
+ qrstuvwxyz       | qrstuvwxyz       | b    | 
 (3 rows)
 
 DELETE FROM mpp21090_defpt_dropcol_addcol_dml_text WHERE col2 = 'qrstuvwxyz';
@@ -801,8 +776,7 @@ SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
 ------------------+------------------+------+------------------
  abcdefghijklmnop | abcdefghijklmnop | a    | 
  abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
- xyz              | xyz              | b    | 
-(3 rows)
+(2 rows)
 
 -- TEST
 DROP TABLE IF EXISTS dropped_col_tab;
@@ -892,14 +866,13 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    |    1
  x    | x    | a    |   10
  x    | x    | b    |   10
  x    | x    | c    |    1
+ z    | a    | e    |    1
 (4 rows)
 
 -- Update partition key
@@ -907,19 +880,19 @@ UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_char SET col2 = 'z' WHERE col2 = '
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    |    1
  x    | x    | a    |   10
  x    | x    | b    |   10
  x    | x    | c    |    1
+ z    | z    | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_char WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    |    1
  x    | x    | a    |   10
  x    | x    | c    |    1
+ z    | z    | e    |    1
 (3 rows)
 
 -- TEST
@@ -981,34 +954,33 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | b    |   10
- 2.00 | 2.00 | c    |    1
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |   10
+  2.00 | 2.00 | b    |   10
+  2.00 | 2.00 | c    |    1
+ 35.00 | 1.00 | e    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_decimal SET col2 = 35.00 WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | b    |   10
- 2.00 | 2.00 | c    |    1
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    |   10
+  2.00 |  2.00 | b    |   10
+  2.00 |  2.00 | c    |    1
+ 35.00 | 35.00 | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_decimal WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | c    |    1
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    |   10
+  2.00 |  2.00 | c    |    1
+ 35.00 | 35.00 | e    |    1
 (3 rows)
 
 -- TEST
@@ -1070,14 +1042,13 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_int4 SET col1 = 35000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | e    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | b    |   10
  20000000 | 20000000 | c    |    1
+ 35000000 | 10000000 | e    |    1
 (4 rows)
 
 -- Update partition key
@@ -1085,19 +1056,19 @@ UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_int4 SET col2 = 35000000 WHERE col
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | e    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | b    |   10
  20000000 | 20000000 | c    |    1
+ 35000000 | 35000000 | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_int4 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | e    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | c    |    1
+ 35000000 | 35000000 | e    |    1
 (3 rows)
 
 -- TEST
@@ -1159,14 +1130,13 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | e    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | b    |   10
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 |  100000000000000000 | e    |    1
 (4 rows)
 
 -- Update partition key
@@ -1174,19 +1144,19 @@ UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_int8 SET col2 = 350000000000000000
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | e    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | b    |   10
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 | 3500000000000000000 | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_int8 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | e    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 | 3500000000000000000 | e    |    1
 (3 rows)
 
 -- TEST
@@ -1248,14 +1218,13 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | e    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | b    |   10
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 00:00:01 | e    |    1
 (4 rows)
 
 -- Update partition key
@@ -1263,19 +1232,19 @@ UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_interval SET col2 = '14 hours' WHE
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | e    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | b    |   10
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 14:00:00 | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_interval WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | e    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 14:00:00 | e    |    1
 (3 rows)
 
 -- TEST
@@ -1337,34 +1306,33 @@ SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | e    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | b    |   10
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |   10
+  2.000000 | 2.000000 | b    |   10
+  2.000000 | 2.000000 | c    |    1
+ 35.000000 | 1.000000 | e    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitdefpt_dml_numeric SET col2 = 35.000000 WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | e    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | b    |   10
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2    | col3 | col5 
+-----------+-----------+------+------
+  2.000000 |  2.000000 | a    |   10
+  2.000000 |  2.000000 | b    |   10
+  2.000000 |  2.000000 | c    |    1
+ 35.000000 | 35.000000 | e    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitdefpt_dml_numeric WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitdefpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | e    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2    | col3 | col5 
+-----------+-----------+------+------
+  2.000000 |  2.000000 | a    |   10
+  2.000000 |  2.000000 | c    |    1
+ 35.000000 | 35.000000 | e    |    1
 (3 rows)
 
 -- TEST
@@ -1425,34 +1393,34 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | d    |    1
  x    | x    | a    |   10
  x    | x    | b    |    0
  x    | x    | c    |    1
+ z    | a    | d    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_char SET col2 ='x'  WHERE col2 = 'a' AND col1 = 'z';
+ERROR:  moving tuple from partition "mpp21090_dropcol_addcol_splitpt_dml_char_1_prt_partsplitone" to partition "mpp21090_dropcol_addcol_splitpt_dml_char_1_prt_partthree" not supported  (seg1 10.152.10.75:25433 pid=7636)
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | d    |    1
  x    | x    | a    |   10
  x    | x    | b    |    0
  x    | x    | c    |    1
+ z    | a    | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_char WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | d    |    1
  x    | x    | a    |   10
  x    | x    | c    |    1
+ z    | a    | d    |    1
 (3 rows)
 
 -- TEST
@@ -1513,34 +1481,33 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | d    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | b    |    0
- 2.00 | 2.00 | c    |    1
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |   10
+  2.00 | 2.00 | b    |    0
+  2.00 | 2.00 | c    |    1
+ 35.00 | 1.00 | d    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_decimal SET col2 =2.00  WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | d    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | b    |    0
- 2.00 | 2.00 | c    |    1
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |   10
+  2.00 | 2.00 | b    |    0
+  2.00 | 2.00 | c    |    1
+ 35.00 | 2.00 | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_decimal WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | d    |    1
- 2.00 | 2.00 | a    |   10
- 2.00 | 2.00 | c    |    1
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |   10
+  2.00 | 2.00 | c    |    1
+ 35.00 | 2.00 | d    |    1
 (3 rows)
 
 -- TEST
@@ -1601,14 +1568,13 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_int4 SET col1 = 35000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | d    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | b    |    0
  20000000 | 20000000 | c    |    1
+ 35000000 | 10000000 | d    |    1
 (4 rows)
 
 -- Update partition key
@@ -1616,19 +1582,19 @@ UPDATE mpp21090_dropcol_addcol_splitpt_dml_int4 SET col2 =20000000  WHERE col2 =
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | d    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | b    |    0
  20000000 | 20000000 | c    |    1
+ 35000000 | 20000000 | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_int4 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | d    |    1
  20000000 | 20000000 | a    |   10
  20000000 | 20000000 | c    |    1
+ 35000000 | 20000000 | d    |    1
 (3 rows)
 
 -- TEST
@@ -1689,34 +1655,34 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | d    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | b    |    0
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 |  100000000000000000 | d    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_int8 SET col2 =2000000000000000000  WHERE col2 = 100000000000000000 AND col1 = 3500000000000000000;
+ERROR:  moving tuple from partition "mpp21090_dropcol_addcol_splitpt_dml_int8_1_prt_partsplitone" to partition "mpp21090_dropcol_addcol_splitpt_dml_int8_1_prt_parttwo" not supported  (seg1 10.152.10.75:25433 pid=7636)
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | d    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | b    |    0
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 |  100000000000000000 | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_int8 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | d    |    1
  2000000000000000000 | 2000000000000000000 | a    |   10
  2000000000000000000 | 2000000000000000000 | c    |    1
+ 3500000000000000000 |  100000000000000000 | d    |    1
 (3 rows)
 
 -- TEST
@@ -1777,34 +1743,34 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | d    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | b    |    0
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 00:00:01 | d    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_interval SET col2 ='1 hour'  WHERE col2 = '1 sec' AND col1 = '14 hours';
+ERROR:  moving tuple from partition "mpp21090_dropcol_addcol_splitpt_dml_interval_1_prt_partsplitone" to partition "mpp21090_dropcol_addcol_splitpt_dml_interval_1_prt_partthree" not supported  (seg0 10.152.10.75:25432 pid=7634)
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | d    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | b    |    0
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 00:00:01 | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_interval WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | d    |    1
  01:00:00 | 01:00:00 | a    |   10
  01:00:00 | 01:00:00 | c    |    1
+ 14:00:00 | 00:00:01 | d    |    1
 (3 rows)
 
 -- TEST
@@ -1865,34 +1831,33 @@ SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | d    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | b    |    0
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |   10
+  2.000000 | 2.000000 | b    |    0
+  2.000000 | 2.000000 | c    |    1
+ 35.000000 | 1.000000 | d    |    1
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_addcol_splitpt_dml_numeric SET col2 =2.000000  WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | d    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | b    |    0
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |   10
+  2.000000 | 2.000000 | b    |    0
+  2.000000 | 2.000000 | c    |    1
+ 35.000000 | 2.000000 | d    |    1
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_addcol_splitpt_dml_numeric WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_addcol_splitpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | d    |    1
- 2.000000 | 2.000000 | a    |   10
- 2.000000 | 2.000000 | c    |    1
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |   10
+  2.000000 | 2.000000 | c    |    1
+ 35.000000 | 2.000000 | d    |    1
 (3 rows)
 
 -- TEST
@@ -1921,11 +1886,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4=False WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 | col4 | col5 
 ------+------+------+------
-    1 | a    | t    |    1
+    1 | a    | f    |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -1958,11 +1922,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4='-' WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 | col4 | col5 
 ------+------+------+------
-    1 | a    | z    |    1
+    1 | a    | -    |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -1995,11 +1958,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4=1.00 WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 | col4 | col5 
 ------+------+------+------
-    1 | a    | 2.00 |    1
+    1 | a    | 1.00 |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2032,11 +1994,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4=1000000000 WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 |    col4    | col5 
 ------+------+------------+------
-    1 | a    | 2000000000 |    1
+    1 | a    | 1000000000 |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2069,11 +2030,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4=1000000000000000000 WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 |        col4         | col5 
 ------+------+---------------------+------
-    1 | a    | 2000000000000000000 |    1
+    1 | a    | 1000000000000000000 |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2106,11 +2066,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4='1 hour' WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
- col1 | col3 | col4  | col5 
-------+------+-------+------
-    1 | a    | 1 day |    1
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | 01:00:00 |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2143,11 +2102,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4=1.000000 WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
  col1 | col3 |   col4   | col5 
 ------+------+----------+------
-    1 | a    | 2.000000 |    1
+    1 | a    | 1.000000 |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2180,11 +2138,10 @@ CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE oidtab SET col4='qrstuvwxyz' WHERE col3 = 'a' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM oidtab ORDER BY 1,2,3,4;
- col1 | col3 |       col4       | col5 
-------+------+------------------+------
-    1 | a    | abcdefghijklmnop |    1
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | qrstuvwxyz |    1
 (1 row)
 
 SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
@@ -2252,14 +2209,13 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_char ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    | x
  x    | x    | a    | x
  x    | x    | b    | x
  x    | x    | c    | x
+ z    | a    | e    | x
 (4 rows)
 
 -- Update partition key
@@ -2267,19 +2223,19 @@ UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_char SET col2 = 'z' WHERE col2 = '
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    | x
  x    | x    | a    | x
  x    | x    | b    | x
  x    | x    | c    | x
+ z    | z    | e    | x
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_char WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | e    | x
  x    | x    | a    | x
  x    | x    | c    | x
+ z    | z    | e    | x
 (3 rows)
 
 -- TEST
@@ -2341,34 +2297,33 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_decimal ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    | 2.00
- 2.00 | 2.00 | a    | 2.00
- 2.00 | 2.00 | b    | 2.00
- 2.00 | 2.00 | c    | 2.00
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    | 2.00
+  2.00 | 2.00 | b    | 2.00
+  2.00 | 2.00 | c    | 2.00
+ 35.00 | 1.00 | e    | 2.00
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_decimal SET col2 = 35.00 WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    | 2.00
- 2.00 | 2.00 | a    | 2.00
- 2.00 | 2.00 | b    | 2.00
- 2.00 | 2.00 | c    | 2.00
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    | 2.00
+  2.00 |  2.00 | b    | 2.00
+  2.00 |  2.00 | c    | 2.00
+ 35.00 | 35.00 | e    | 2.00
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_decimal WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | e    | 2.00
- 2.00 | 2.00 | a    | 2.00
- 2.00 | 2.00 | c    | 2.00
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    | 2.00
+  2.00 |  2.00 | c    | 2.00
+ 35.00 | 35.00 | e    | 2.00
 (3 rows)
 
 -- TEST
@@ -2430,14 +2385,13 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int4 ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_int4 SET col1 = 35000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 10000000 | 10000000 | e    | 20000000
  20000000 | 20000000 | a    | 20000000
  20000000 | 20000000 | b    | 20000000
  20000000 | 20000000 | c    | 20000000
+ 35000000 | 10000000 | e    | 20000000
 (4 rows)
 
 -- Update partition key
@@ -2445,19 +2399,19 @@ UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_int4 SET col2 = 35000000 WHERE col
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 10000000 | 10000000 | e    | 20000000
  20000000 | 20000000 | a    | 20000000
  20000000 | 20000000 | b    | 20000000
  20000000 | 20000000 | c    | 20000000
+ 35000000 | 35000000 | e    | 20000000
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_int4 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 10000000 | 10000000 | e    | 20000000
  20000000 | 20000000 | a    | 20000000
  20000000 | 20000000 | c    | 20000000
+ 35000000 | 35000000 | e    | 20000000
 (3 rows)
 
 -- TEST
@@ -2519,14 +2473,13 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int8 ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 |        col5         
 ---------------------+---------------------+------+---------------------
-  100000000000000000 |  100000000000000000 | e    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | a    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | b    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+ 3500000000000000000 |  100000000000000000 | e    | 2000000000000000000
 (4 rows)
 
 -- Update partition key
@@ -2534,19 +2487,19 @@ UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_int8 SET col2 = 350000000000000000
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 |        col5         
 ---------------------+---------------------+------+---------------------
-  100000000000000000 |  100000000000000000 | e    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | a    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | b    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+ 3500000000000000000 | 3500000000000000000 | e    | 2000000000000000000
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_int8 WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 |        col5         
 ---------------------+---------------------+------+---------------------
-  100000000000000000 |  100000000000000000 | e    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | a    | 2000000000000000000
  2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+ 3500000000000000000 | 3500000000000000000 | e    | 2000000000000000000
 (3 rows)
 
 -- TEST
@@ -2608,14 +2561,13 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_interval ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 00:00:01 | 00:00:01 | e    | 01:00:00
  01:00:00 | 01:00:00 | a    | 01:00:00
  01:00:00 | 01:00:00 | b    | 01:00:00
  01:00:00 | 01:00:00 | c    | 01:00:00
+ 14:00:00 | 00:00:01 | e    | 01:00:00
 (4 rows)
 
 -- Update partition key
@@ -2623,19 +2575,19 @@ UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_interval SET col2 = '14 hours' WHE
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 00:00:01 | 00:00:01 | e    | 01:00:00
  01:00:00 | 01:00:00 | a    | 01:00:00
  01:00:00 | 01:00:00 | b    | 01:00:00
  01:00:00 | 01:00:00 | c    | 01:00:00
+ 14:00:00 | 14:00:00 | e    | 01:00:00
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_interval WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 |   col5   
 ----------+----------+------+----------
- 00:00:01 | 00:00:01 | e    | 01:00:00
  01:00:00 | 01:00:00 | a    | 01:00:00
  01:00:00 | 01:00:00 | c    | 01:00:00
+ 14:00:00 | 14:00:00 | e    | 01:00:00
 (3 rows)
 
 -- TEST
@@ -2697,34 +2649,33 @@ SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_numeric ORDER BY 1,2,3,4;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 |   col5   
-----------+----------+------+----------
- 1.000000 | 1.000000 | e    | 2.000000
- 2.000000 | 2.000000 | a    | 2.000000
- 2.000000 | 2.000000 | b    | 2.000000
- 2.000000 | 2.000000 | c    | 2.000000
+   col1    |   col2   | col3 |   col5   
+-----------+----------+------+----------
+  2.000000 | 2.000000 | a    | 2.000000
+  2.000000 | 2.000000 | b    | 2.000000
+  2.000000 | 2.000000 | c    | 2.000000
+ 35.000000 | 1.000000 | e    | 2.000000
 (4 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitdefpt_addcol_dml_numeric SET col2 = 35.000000 WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 |   col5   
-----------+----------+------+----------
- 1.000000 | 1.000000 | e    | 2.000000
- 2.000000 | 2.000000 | a    | 2.000000
- 2.000000 | 2.000000 | b    | 2.000000
- 2.000000 | 2.000000 | c    | 2.000000
+   col1    |   col2    | col3 |   col5   
+-----------+-----------+------+----------
+  2.000000 |  2.000000 | a    | 2.000000
+  2.000000 |  2.000000 | b    | 2.000000
+  2.000000 |  2.000000 | c    | 2.000000
+ 35.000000 | 35.000000 | e    | 2.000000
 (4 rows)
 
 DELETE FROM mpp21090_dropcol_splitdefpt_addcol_dml_numeric WHERE col3='b';
 SELECT * FROM mpp21090_dropcol_splitdefpt_addcol_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 |   col5   
-----------+----------+------+----------
- 1.000000 | 1.000000 | e    | 2.000000
- 2.000000 | 2.000000 | a    | 2.000000
- 2.000000 | 2.000000 | c    | 2.000000
+   col1    |   col2    | col3 |   col5   
+-----------+-----------+------+----------
+  2.000000 |  2.000000 | a    | 2.000000
+  2.000000 |  2.000000 | c    | 2.000000
+ 35.000000 | 35.000000 | e    | 2.000000
 (3 rows)
 
 -- TEST
@@ -2767,12 +2718,11 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  x    | x    | a    |    0
+ z    | a    | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -2780,8 +2730,8 @@ UPDATE mpp21090_dropcol_splitdfpt_dml_char SET col2 = 'z' WHERE col2 = 'a' AND c
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  x    | x    | a    |    0
+ z    | z    | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_char WHERE col3='b';
@@ -2831,21 +2781,20 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |    0
+ 35.00 | 1.00 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitdfpt_dml_decimal SET col2 = 35.00 WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    |    0
+ 35.00 | 35.00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_decimal WHERE col3='b';
@@ -2895,12 +2844,11 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_int4 SET col1 = 35000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
+ 35000000 | 10000000 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -2908,8 +2856,8 @@ UPDATE mpp21090_dropcol_splitdfpt_dml_int4 SET col2 = 35000000 WHERE col2 = 1000
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
+ 35000000 | 35000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_int4 WHERE col3='b';
@@ -2959,12 +2907,11 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
+ 3500000000000000000 |  100000000000000000 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -2972,8 +2919,8 @@ UPDATE mpp21090_dropcol_splitdfpt_dml_int8 SET col2 = 3500000000000000000 WHERE 
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
+ 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_int8 WHERE col3='b';
@@ -3023,12 +2970,11 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  01:00:00 | 01:00:00 | a    |    0
+ 14:00:00 | 00:00:01 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -3036,8 +2982,8 @@ UPDATE mpp21090_dropcol_splitdfpt_dml_interval SET col2 = '14 hours' WHERE col2 
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  01:00:00 | 01:00:00 | a    |    0
+ 14:00:00 | 14:00:00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_interval WHERE col3='b';
@@ -3087,21 +3033,20 @@ SELECT * FROM mpp21090_dropcol_splitdfpt_dml_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitdfpt_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |    0
+ 35.000000 | 1.000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitdfpt_dml_numeric SET col2 = 35.000000 WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_splitdfpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2    | col3 | col5 
+-----------+-----------+------+------
+  2.000000 |  2.000000 | a    |    0
+ 35.000000 | 35.000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitdfpt_dml_numeric WHERE col3='b';
@@ -3150,21 +3095,21 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  x    | x    | a    |    0
+ z    | a    | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_dml_char SET col2 ='x'  WHERE col2 = 'a' AND col1 = 'z';
+ERROR:  moving tuple from partition "mpp21090_dropcol_splitpt_dml_char_1_prt_partsplitone" to partition "mpp21090_dropcol_splitpt_dml_char_1_prt_partthree" not supported  (seg1 10.152.10.75:25433 pid=7636)
 SELECT * FROM mpp21090_dropcol_splitpt_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  x    | x    | a    |    0
+ z    | a    | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_char WHERE col3='b';
@@ -3213,21 +3158,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |    0
+ 35.00 | 1.00 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_dml_decimal SET col2 =2.00  WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_splitpt_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |    0
+ 35.00 | 2.00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_decimal WHERE col3='b';
@@ -3276,12 +3220,11 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_int4 SET col1 = 35000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
+ 35000000 | 10000000 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -3289,8 +3232,8 @@ UPDATE mpp21090_dropcol_splitpt_dml_int4 SET col2 =20000000  WHERE col2 = 100000
 SELECT * FROM mpp21090_dropcol_splitpt_dml_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
+ 35000000 | 20000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_int4 WHERE col3='b';
@@ -3339,21 +3282,21 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
+ 3500000000000000000 |  100000000000000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_dml_int8 SET col2 =2000000000000000000  WHERE col2 = 100000000000000000 AND col1 = 3500000000000000000;
+ERROR:  moving tuple from partition "mpp21090_dropcol_splitpt_dml_int8_1_prt_partsplitone" to partition "mpp21090_dropcol_splitpt_dml_int8_1_prt_parttwo" not supported  (seg1 10.152.10.75:25433 pid=7636)
 SELECT * FROM mpp21090_dropcol_splitpt_dml_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
-  100000000000000000 |  100000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
+ 3500000000000000000 |  100000000000000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_int8 WHERE col3='b';
@@ -3402,21 +3345,21 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  01:00:00 | 01:00:00 | a    |    0
+ 14:00:00 | 00:00:01 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_dml_interval SET col2 ='1 hour'  WHERE col2 = '1 sec' AND col1 = '14 hours';
+ERROR:  moving tuple from partition "mpp21090_dropcol_splitpt_dml_interval_1_prt_partsplitone" to partition "mpp21090_dropcol_splitpt_dml_interval_1_prt_partthree" not supported  (seg0 10.152.10.75:25432 pid=7634)
 SELECT * FROM mpp21090_dropcol_splitpt_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  01:00:00 | 01:00:00 | a    |    0
+ 14:00:00 | 00:00:01 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_interval WHERE col3='b';
@@ -3465,21 +3408,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_dml_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |    0
+ 35.000000 | 1.000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_dml_numeric SET col2 =2.000000  WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_splitpt_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |    0
+ 35.000000 | 2.000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_dml_numeric WHERE col3='b';
@@ -3534,12 +3476,11 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_char SET col1 = 'z' WHERE col2 = 'a' AND col1 = 'a';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  g    | g    | a    |    0
+ z    | a    | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -3547,8 +3488,8 @@ UPDATE mpp21090_dropcol_splitpt_idx_dml_char SET col2 ='g'  WHERE col2 = 'a' AND
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
- a    | a    | b    |    1
  g    | g    | a    |    0
+ z    | g    | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_char WHERE col3='b';
@@ -3603,21 +3544,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_decimal SET col1 = 35.00 WHERE col2 = 1.00 AND col1 = 1.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |    0
+ 35.00 | 1.00 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_decimal SET col2 =2.00  WHERE col2 = 1.00 AND col1 = 35.00;
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_decimal ORDER BY 1,2,3;
- col1 | col2 | col3 | col5 
-------+------+------+------
- 1.00 | 1.00 | b    |    1
- 2.00 | 2.00 | a    |    0
+ col1  | col2 | col3 | col5 
+-------+------+------+------
+  2.00 | 2.00 | a    |    0
+ 35.00 | 2.00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_decimal WHERE col3='b';
@@ -3672,21 +3612,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_int4 SET col1 = 350000000 WHERE col2 = 10000000 AND col1 = 10000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int4 ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 10000000 | 10000000 | b    |    1
- 20000000 | 20000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  20000000 | 20000000 | a    |    0
+ 350000000 | 10000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_int4 SET col2 =20000000  WHERE col2 = 10000000 AND col1 = 350000000;
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int4 ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 10000000 | 10000000 | b    |    1
- 20000000 | 20000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  20000000 | 20000000 | a    |    0
+ 350000000 | 20000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_int4 WHERE col3='b';
@@ -3741,21 +3680,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_int8 SET col1 = 3500000000000000000 WHERE col2 = 100000000000000000 AND col1 = 100000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int8 ORDER BY 1,2,3;
-        col1        |        col2        | col3 | col5 
---------------------+--------------------+------+------
- 100000000000000000 | 100000000000000000 | b    |    1
- 200000000000000000 | 200000000000000000 | a    |    0
+        col1         |        col2        | col3 | col5 
+---------------------+--------------------+------+------
+  200000000000000000 | 200000000000000000 | a    |    0
+ 3500000000000000000 | 100000000000000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_int8 SET col2 =200000000000000000  WHERE col2 = 100000000000000000 AND col1 = 3500000000000000000;
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_int8 ORDER BY 1,2,3;
-        col1        |        col2        | col3 | col5 
---------------------+--------------------+------+------
- 100000000000000000 | 100000000000000000 | b    |    1
- 200000000000000000 | 200000000000000000 | a    |    0
+        col1         |        col2        | col3 | col5 
+---------------------+--------------------+------+------
+  200000000000000000 | 200000000000000000 | a    |    0
+ 3500000000000000000 | 200000000000000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_int8 WHERE col3='b';
@@ -3810,12 +3748,11 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_interval SET col1 = '14 hours' WHERE col2 = '1 sec' AND col1 = '1 sec';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  00:00:10 | 00:00:10 | a    |    0
+ 14:00:00 | 00:00:01 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -3823,8 +3760,8 @@ UPDATE mpp21090_dropcol_splitpt_idx_dml_interval SET col2 ='10 secs'  WHERE col2
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
- 00:00:01 | 00:00:01 | b    |    1
  00:00:10 | 00:00:10 | a    |    0
+ 14:00:00 | 00:00:10 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_interval WHERE col3='b';
@@ -3879,21 +3816,20 @@ SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_numeric SET col1 = 35.000000 WHERE col2 = 1.000000 AND col1 = 1.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |    0
+ 35.000000 | 1.000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_dropcol_splitpt_idx_dml_numeric SET col2 =2.000000  WHERE col2 = 1.000000 AND col1 = 35.000000;
 SELECT * FROM mpp21090_dropcol_splitpt_idx_dml_numeric ORDER BY 1,2,3;
-   col1   |   col2   | col3 | col5 
-----------+----------+------+------
- 1.000000 | 1.000000 | b    |    1
- 2.000000 | 2.000000 | a    |    0
+   col1    |   col2   | col3 | col5 
+-----------+----------+------+------
+  2.000000 | 2.000000 | a    |    0
+ 35.000000 | 2.000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_dropcol_splitpt_idx_dml_numeric WHERE col3='b';
@@ -4922,12 +4858,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_boolean WHERE col3='c';
@@ -4935,8 +4870,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_boolean;
@@ -4964,12 +4898,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_boolean WHERE col3='c';
@@ -4977,8 +4910,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_boolean;
@@ -5006,12 +4938,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_boolean WHERE col3='c';
@@ -5019,8 +4950,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_boolean ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_char;
@@ -5049,12 +4979,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_char WHERE col3='c';
@@ -5062,8 +4991,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_char;
@@ -5091,12 +5019,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_char WHERE col3='c';
@@ -5104,8 +5031,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_char;
@@ -5133,12 +5059,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_char WHERE col3='c';
@@ -5146,8 +5071,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_char ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_decimal;
@@ -5176,12 +5100,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_decimal WHERE col3='c';
@@ -5189,8 +5112,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_decimal;
@@ -5218,12 +5140,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_decimal WHERE col3='c';
@@ -5231,8 +5152,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_decimal;
@@ -5260,12 +5180,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_decimal WHERE col3='c';
@@ -5273,8 +5192,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_decimal ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int4;
@@ -5303,12 +5221,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int4 WHERE col3='c';
@@ -5316,8 +5233,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int4;
@@ -5345,12 +5261,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int4 WHERE col3='c';
@@ -5358,8 +5273,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int4;
@@ -5387,12 +5301,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int4 WHERE col3='c';
@@ -5400,8 +5313,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int4 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int8;
@@ -5430,12 +5342,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int8 WHERE col3='c';
@@ -5443,8 +5354,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int8;
@@ -5472,12 +5382,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int8 WHERE col3='c';
@@ -5485,8 +5394,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_int8;
@@ -5514,12 +5422,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_int8 WHERE col3='c';
@@ -5527,8 +5434,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_int8 ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_interval;
@@ -5557,12 +5463,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_interval WHERE col3='c';
@@ -5570,8 +5475,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_interval;
@@ -5599,12 +5503,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_interval WHERE col3='c';
@@ -5612,8 +5515,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_interval;
@@ -5641,12 +5543,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_interval WHERE col3='c';
@@ -5654,8 +5555,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_interval ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_numeric;
@@ -5684,12 +5584,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_numeric WHERE col3='c';
@@ -5697,8 +5596,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_numeric;
@@ -5726,12 +5624,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_numeric WHERE col3='c';
@@ -5739,8 +5636,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_numeric;
@@ -5768,12 +5664,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_numeric WHERE col3='c';
@@ -5781,8 +5676,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_numeric ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_text;
@@ -5811,12 +5705,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_text WHERE col3='c';
@@ -5824,8 +5717,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_text;
@@ -5853,12 +5745,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_text WHERE col3='c';
@@ -5866,8 +5757,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_firstcol_dml_text;
@@ -5895,12 +5785,11 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_firstcol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
+ 1.00 | c    | 2014-01-02 |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_firstcol_dml_text WHERE col3='c';
@@ -5908,8 +5797,7 @@ SELECT * FROM mpp21090_drop_firstcol_dml_text ORDER BY 1,2,3,4;
  col2 | col3 |    col4    | col5 
 ------+------+------------+------
  0.00 | a    | 2014-01-01 |    0
- 1.00 | b    | 2014-01-02 |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_boolean;
@@ -5938,12 +5826,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_boolean WHERE col3='c';
@@ -5951,8 +5838,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_boolean;
@@ -5980,12 +5866,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_boolean WHERE col3='c';
@@ -5993,8 +5878,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_boolean;
@@ -6022,12 +5906,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_boolean WHERE col3='c';
@@ -6035,8 +5918,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_char;
@@ -6065,12 +5947,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_char WHERE col3='c';
@@ -6078,8 +5959,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_char;
@@ -6107,12 +5987,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_char WHERE col3='c';
@@ -6120,8 +5999,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_char;
@@ -6149,12 +6027,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_char WHERE col3='c';
@@ -6162,8 +6039,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_decimal;
@@ -6192,12 +6068,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_decimal WHERE col3='c';
@@ -6205,8 +6080,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_decimal;
@@ -6234,12 +6108,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_decimal WHERE col3='c';
@@ -6247,8 +6120,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_decimal;
@@ -6276,12 +6148,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_decimal WHERE col3='c';
@@ -6289,8 +6160,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int4;
@@ -6319,12 +6189,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int4 WHERE col3='c';
@@ -6332,8 +6201,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int4;
@@ -6361,12 +6229,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int4 WHERE col3='c';
@@ -6374,8 +6241,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int4;
@@ -6403,12 +6269,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int4 WHERE col3='c';
@@ -6416,8 +6281,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int8;
@@ -6446,12 +6310,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int8 WHERE col3='c';
@@ -6459,8 +6322,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int8;
@@ -6488,12 +6350,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int8 WHERE col3='c';
@@ -6501,8 +6362,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_int8;
@@ -6530,12 +6390,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_int8 WHERE col3='c';
@@ -6543,8 +6402,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_interval;
@@ -6573,12 +6431,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_interval WHERE col3='c';
@@ -6586,8 +6443,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_interval;
@@ -6615,12 +6471,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_interval WHERE col3='c';
@@ -6628,8 +6483,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_interval;
@@ -6657,12 +6511,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_interval WHERE col3='c';
@@ -6670,8 +6523,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_numeric;
@@ -6700,12 +6552,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_numeric WHERE col3='c';
@@ -6713,8 +6564,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_numeric;
@@ -6742,12 +6592,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_numeric WHERE col3='c';
@@ -6755,8 +6604,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_numeric;
@@ -6784,12 +6632,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_numeric WHERE col3='c';
@@ -6797,8 +6644,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_text;
@@ -6827,12 +6673,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_text SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_text WHERE col3='c';
@@ -6840,8 +6685,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_text;
@@ -6869,12 +6713,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_text SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_text WHERE col3='c';
@@ -6882,8 +6725,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_dml_text;
@@ -6911,12 +6753,11 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_dml_text SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_dml_text WHERE col3='c';
@@ -6924,8 +6765,7 @@ SELECT * FROM mpp21090_drop_lastcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_char;
@@ -6957,12 +6797,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_char WHERE col3='c';
@@ -6970,8 +6809,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_char;
@@ -7002,12 +6840,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_char WHERE col3='c';
@@ -7015,8 +6852,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_char;
@@ -7047,12 +6883,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_char SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_char WHERE col3='c';
@@ -7060,8 +6895,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_decimal;
@@ -7093,12 +6927,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_decimal WHERE col3='c';
@@ -7106,8 +6939,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_decimal;
@@ -7138,12 +6970,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_decimal WHERE col3='c';
@@ -7151,8 +6982,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_decimal;
@@ -7183,12 +7013,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_decimal SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_decimal WHERE col3='c';
@@ -7196,8 +7025,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int4;
@@ -7229,12 +7057,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int4 WHERE col3='c';
@@ -7242,8 +7069,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int4;
@@ -7274,12 +7100,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int4 WHERE col3='c';
@@ -7287,8 +7112,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int4;
@@ -7319,12 +7143,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int4 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int4 WHERE col3='c';
@@ -7332,8 +7155,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int8;
@@ -7365,12 +7187,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int8 WHERE col3='c';
@@ -7378,8 +7199,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int8;
@@ -7410,12 +7230,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int8 WHERE col3='c';
@@ -7423,8 +7242,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_int8;
@@ -7455,12 +7273,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_int8 SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_int8 WHERE col3='c';
@@ -7468,8 +7285,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_interval;
@@ -7501,12 +7317,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_interval WHERE col3='c';
@@ -7514,8 +7329,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_interval;
@@ -7546,12 +7360,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_interval WHERE col3='c';
@@ -7559,8 +7372,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_interval;
@@ -7591,12 +7403,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_interval SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_interval WHERE col3='c';
@@ -7604,8 +7415,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_numeric;
@@ -7637,12 +7447,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_numeric WHERE col3='c';
@@ -7650,8 +7459,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_numeric;
@@ -7682,12 +7490,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_numeric WHERE col3='c';
@@ -7695,8 +7502,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_lastcol_index_dml_numeric;
@@ -7727,12 +7533,11 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_lastcol_index_dml_numeric SET col3='c' WHERE col3 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 DELETE FROM mpp21090_drop_lastcol_index_dml_numeric WHERE col3='c';
@@ -7740,8 +7545,7 @@ SELECT * FROM mpp21090_drop_lastcol_index_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col3 |    col4    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_midcol_dml_boolean;
@@ -7771,12 +7575,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_boolean SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7806,12 +7609,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_boolean SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7841,12 +7643,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_boolean SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_boolean ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7877,12 +7678,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_char SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7912,12 +7712,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_char SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7947,12 +7746,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_char SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_char ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -7983,12 +7781,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_decimal SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8018,12 +7815,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_decimal SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8053,12 +7849,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_decimal SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_decimal ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8089,12 +7884,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int4 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8124,12 +7918,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int4 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8159,12 +7952,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int4 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int4 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8195,12 +7987,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int8 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8230,12 +8021,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int8 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8265,12 +8055,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_int8 SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_int8 ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8301,12 +8090,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_interval SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8336,12 +8124,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_interval SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8371,12 +8158,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_interval SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_interval ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8407,12 +8193,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_numeric SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8442,12 +8227,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_numeric SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8477,12 +8261,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_numeric SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_numeric ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8513,12 +8296,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_text SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8548,12 +8330,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_text SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8583,12 +8364,11 @@ SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
 (2 rows)
 
 UPDATE mpp21090_drop_midcol_dml_text SET col4='c' WHERE col4 = 'b' AND col1 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_midcol_dml_text ORDER BY 1,2,3,4;
  col1 | col2 | col4 |    col5    
 ------+------+------+------------
     0 | 0.00 | a    | 2014-01-01
-    1 | 1.00 | b    | 2014-01-02
+    1 | 1.00 | c    | 2014-01-02
 (2 rows)
 
 -- TEST
@@ -8619,12 +8399,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_boolean WHERE col3='c';
@@ -8632,8 +8411,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_boolean;
@@ -8662,12 +8440,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_boolean WHERE col3='c';
@@ -8675,8 +8452,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_boolean;
@@ -8705,12 +8481,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_boolean WHERE col3='c';
@@ -8718,8 +8493,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_boolean ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_char;
@@ -8749,12 +8523,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_char WHERE col3='c';
@@ -8762,8 +8535,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_char;
@@ -8792,12 +8564,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_char WHERE col3='c';
@@ -8805,8 +8576,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_char;
@@ -8835,12 +8605,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_char WHERE col3='c';
@@ -8848,8 +8617,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_char ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_decimal;
@@ -8879,12 +8647,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_decimal WHERE col3='c';
@@ -8892,8 +8659,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_decimal;
@@ -8922,12 +8688,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_decimal WHERE col3='c';
@@ -8935,8 +8700,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_decimal;
@@ -8965,12 +8729,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_decimal WHERE col3='c';
@@ -8978,8 +8741,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_decimal ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int4;
@@ -9009,12 +8771,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int4 WHERE col3='c';
@@ -9022,8 +8783,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int4;
@@ -9052,12 +8812,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int4 WHERE col3='c';
@@ -9065,8 +8824,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int4;
@@ -9095,12 +8853,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int4 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int4 WHERE col3='c';
@@ -9108,8 +8865,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int4 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int8;
@@ -9139,12 +8895,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int8 WHERE col3='c';
@@ -9152,8 +8907,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int8;
@@ -9182,12 +8936,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int8 WHERE col3='c';
@@ -9195,8 +8948,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_int8;
@@ -9225,12 +8977,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_int8 SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_int8 WHERE col3='c';
@@ -9238,8 +8989,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_int8 ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_interval;
@@ -9269,12 +9019,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_interval WHERE col3='c';
@@ -9282,8 +9031,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_interval;
@@ -9312,12 +9060,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_interval WHERE col3='c';
@@ -9325,8 +9072,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_interval;
@@ -9355,12 +9101,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_interval SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_interval WHERE col3='c';
@@ -9368,8 +9113,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_interval ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_numeric;
@@ -9399,12 +9143,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_numeric WHERE col3='c';
@@ -9412,8 +9155,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_numeric;
@@ -9442,12 +9184,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_numeric WHERE col3='c';
@@ -9455,8 +9196,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_numeric;
@@ -9485,12 +9225,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_numeric SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_numeric WHERE col3='c';
@@ -9498,8 +9237,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_numeric ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_text;
@@ -9529,12 +9267,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_text WHERE col3='c';
@@ -9542,8 +9279,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_text;
@@ -9572,12 +9308,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_text WHERE col3='c';
@@ -9585,8 +9320,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_drop_multicol_dml_text;
@@ -9615,12 +9349,11 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
 (2 rows)
 
 UPDATE mpp21090_drop_multicol_dml_text SET col3='c' WHERE col3 = 'b' AND col5 = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
+ 1.00 | c    |    1
 (2 rows)
 
 DELETE FROM mpp21090_drop_multicol_dml_text WHERE col3='c';
@@ -9628,8 +9361,7 @@ SELECT * FROM mpp21090_drop_multicol_dml_text ORDER BY 1,2,3;
  col2 | col3 | col5 
 ------+------+------
  0.00 | a    |    0
- 1.00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_addcol_addpt_dropcol_char;
@@ -13015,12 +12747,11 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_char SET col1 = '-' WHERE col2 = 'z' AND col1 = 'z';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col4 
 ------+------+------+------
+ -    | z    | b    |    1
  x    | x    | a    |    0
- z    | z    | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13028,8 +12759,8 @@ UPDATE mpp21090_pttab_droplastcol_addpt_char SET col2 = '-' WHERE col2 = 'z' AND
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col4 
 ------+------+------+------
+ -    | -    | b    |    1
  x    | x    | a    |    0
- z    | z    | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_char WHERE col2 = '-';
@@ -13037,8 +12768,7 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col4 
 ------+------+------+------
  x    | x    | a    |    0
- z    | z    | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_droplastcol_addpt_decimal;
@@ -13071,29 +12801,29 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_decimal SET col1 = 1.00 WHERE col2 = 35.00 AND col1 = 35.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col4 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col4 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_droplastcol_addpt_decimal SET col2 = 1.00 WHERE col2 = 35.00 AND col1 = 1.00;
+ERROR:  moving tuple from partition "mpp21090_pttab_droplastcol_addpt_decimal_1_prt_partfour" to partition "mpp21090_pttab_droplastcol_addpt_decimal_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col4 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col4 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_decimal WHERE col2 = 1.00;
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col4 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col4 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 -- TEST
@@ -13127,12 +12857,11 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_int4 SET col1 = 10000000 WHERE col2 = 35000000 AND col1 = 35000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
+ 10000000 | 35000000 | b    |    1
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13140,8 +12869,8 @@ UPDATE mpp21090_pttab_droplastcol_addpt_int4 SET col2 = 10000000 WHERE col2 = 35
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
+ 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_int4 WHERE col2 = 10000000;
@@ -13149,8 +12878,7 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_droplastcol_addpt_int8;
@@ -13183,29 +12911,29 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_int8 SET col1 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 3500000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col4 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_droplastcol_addpt_int8 SET col2 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 1000000000000000000;
+ERROR:  moving tuple from partition "mpp21090_pttab_droplastcol_addpt_int8_1_prt_partfour" to partition "mpp21090_pttab_droplastcol_addpt_int8_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col4 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_int8 WHERE col2 = 1000000000000000000;
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col4 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 -- TEST
@@ -13239,12 +12967,11 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_interval SET col1 = '12 hours' WHERE col2 = '14 hours' AND col1 = '14 hours';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
+ 12:00:00 | 14:00:00 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13253,7 +12980,7 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
+ 12:00:00 | 12:00:00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_interval WHERE col2 = '12 hours';
@@ -13261,8 +12988,7 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col4 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_droplastcol_addpt_numeric;
@@ -13295,29 +13021,29 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_numeric SET col1 = 1.000000 WHERE col2 = 35.000000 AND col1 = 35.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col4 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col4 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_droplastcol_addpt_numeric SET col2 = 1.000000 WHERE col2 = 35.000000 AND col1 = 1.000000;
+ERROR:  moving tuple from partition "mpp21090_pttab_droplastcol_addpt_numeric_1_prt_partfour" to partition "mpp21090_pttab_droplastcol_addpt_numeric_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col4 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col4 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_numeric WHERE col2 = 1.000000;
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col4 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col4 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 -- TEST
@@ -13351,21 +13077,21 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_text ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_droplastcol_addpt_text SET col1 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'xyz';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col4 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_droplastcol_addpt_text SET col2 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'qrstuvwxyz';
+ERROR:  moving tuple from partition "mpp21090_pttab_droplastcol_addpt_text_1_prt_partfour" to partition "mpp21090_pttab_droplastcol_addpt_text_1_prt_parttwo" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_droplastcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col4 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_droplastcol_addpt_text WHERE col2 = 'qrstuvwxyz';
@@ -13373,7 +13099,7 @@ SELECT * FROM mpp21090_pttab_droplastcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col4 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 -- TEST
@@ -13406,12 +13132,11 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_char ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_char SET col1 = '-' WHERE col2 = 'z' AND col1 = 'z';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
+ -    | z    | b    |    1
  x    | x    | a    |    0
- z    | z    | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13419,8 +13144,8 @@ UPDATE mpp21090_pttab_dropmidcol_addpt_char SET col2 = '-' WHERE col2 = 'z' AND 
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
+ -    | -    | b    |    1
  x    | x    | a    |    0
- z    | z    | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_char WHERE col2 = '-';
@@ -13428,8 +13153,7 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_char ORDER BY 1,2,3;
  col1 | col2 | col3 | col5 
 ------+------+------+------
  x    | x    | a    |    0
- z    | z    | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_dropmidcol_addpt_decimal;
@@ -13461,29 +13185,29 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_decimal ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_decimal SET col1 = 1.00 WHERE col2 = 35.00 AND col1 = 35.00;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col5 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_dropmidcol_addpt_decimal SET col2 = 1.00 WHERE col2 = 35.00 AND col1 = 1.00;
+ERROR:  moving tuple from partition "mpp21090_pttab_dropmidcol_addpt_decimal_1_prt_partfour" to partition "mpp21090_pttab_dropmidcol_addpt_decimal_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col5 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_decimal WHERE col2 = 1.00;
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_decimal ORDER BY 1,2,3;
- col1  | col2  | col3 | col5 
--------+-------+------+------
-  2.00 |  2.00 | a    |    0
- 35.00 | 35.00 | b    |    1
+ col1 | col2  | col3 | col5 
+------+-------+------+------
+ 1.00 | 35.00 | b    |    1
+ 2.00 |  2.00 | a    |    0
 (2 rows)
 
 -- TEST
@@ -13516,12 +13240,11 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int4 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_int4 SET col1 = 10000000 WHERE col2 = 35000000 AND col1 = 35000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
+ 10000000 | 35000000 | b    |    1
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13529,8 +13252,8 @@ UPDATE mpp21090_pttab_dropmidcol_addpt_int4 SET col2 = 10000000 WHERE col2 = 350
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
+ 10000000 | 10000000 | b    |    1
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_int4 WHERE col2 = 10000000;
@@ -13538,8 +13261,7 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int4 ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  20000000 | 20000000 | a    |    0
- 35000000 | 35000000 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_dropmidcol_addpt_int8;
@@ -13571,29 +13293,29 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int8 ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_int8 SET col1 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 3500000000000000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_dropmidcol_addpt_int8 SET col2 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 1000000000000000000;
+ERROR:  moving tuple from partition "mpp21090_pttab_dropmidcol_addpt_int8_1_prt_partfour" to partition "mpp21090_pttab_dropmidcol_addpt_int8_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_int8 WHERE col2 = 1000000000000000000;
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_int8 ORDER BY 1,2,3;
         col1         |        col2         | col3 | col5 
 ---------------------+---------------------+------+------
+ 1000000000000000000 | 3500000000000000000 | b    |    1
  2000000000000000000 | 2000000000000000000 | a    |    0
- 3500000000000000000 | 3500000000000000000 | b    |    1
 (2 rows)
 
 -- TEST
@@ -13626,12 +13348,11 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_interval ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_interval SET col1 = '12 hours' WHERE col2 = '14 hours' AND col1 = '14 hours';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
+ 12:00:00 | 14:00:00 | b    |    1
 (2 rows)
 
 -- Update partition key
@@ -13640,7 +13361,7 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
+ 12:00:00 | 12:00:00 | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_interval WHERE col2 = '12 hours';
@@ -13648,8 +13369,7 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_interval ORDER BY 1,2,3;
    col1   |   col2   | col3 | col5 
 ----------+----------+------+------
  01:00:00 | 01:00:00 | a    |    0
- 14:00:00 | 14:00:00 | b    |    1
-(2 rows)
+(1 row)
 
 -- TEST
 DROP TABLE IF EXISTS mpp21090_pttab_dropmidcol_addpt_numeric;
@@ -13681,29 +13401,29 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_numeric ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_numeric SET col1 = 1.000000 WHERE col2 = 35.000000 AND col1 = 35.000000;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col5 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col5 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_dropmidcol_addpt_numeric SET col2 = 1.000000 WHERE col2 = 35.000000 AND col1 = 1.000000;
+ERROR:  moving tuple from partition "mpp21090_pttab_dropmidcol_addpt_numeric_1_prt_partfour" to partition "mpp21090_pttab_dropmidcol_addpt_numeric_1_prt_partone" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col5 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col5 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_numeric WHERE col2 = 1.000000;
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_numeric ORDER BY 1,2,3;
-   col1    |   col2    | col3 | col5 
------------+-----------+------+------
-  2.000000 |  2.000000 | a    |    0
- 35.000000 | 35.000000 | b    |    1
+   col1   |   col2    | col3 | col5 
+----------+-----------+------+------
+ 1.000000 | 35.000000 | b    |    1
+ 2.000000 |  2.000000 | a    |    0
 (2 rows)
 
 -- TEST
@@ -13736,21 +13456,21 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_text ORDER BY 1,2,3;
 
 -- Update distribution key
 UPDATE mpp21090_pttab_dropmidcol_addpt_text SET col1 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'xyz';
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col5 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 -- Update partition key
 UPDATE mpp21090_pttab_dropmidcol_addpt_text SET col2 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'qrstuvwxyz';
+ERROR:  moving tuple from partition "mpp21090_pttab_dropmidcol_addpt_text_1_prt_partfour" to partition "mpp21090_pttab_dropmidcol_addpt_text_1_prt_parttwo" not supported  (seg0 10.152.10.75:25432 pid=5459)
 SELECT * FROM mpp21090_pttab_dropmidcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col5 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 DELETE FROM mpp21090_pttab_dropmidcol_addpt_text WHERE col2 = 'qrstuvwxyz';
@@ -13758,7 +13478,7 @@ SELECT * FROM mpp21090_pttab_dropmidcol_addpt_text ORDER BY 1,2,3;
        col1       |       col2       | col3 | col5 
 ------------------+------------------+------+------
  abcdefghijklmnop | abcdefghijklmnop | a    |    0
- xyz              | xyz              | b    |    1
+ qrstuvwxyz       | xyz              | b    |    1
 (2 rows)
 
 -- TEST

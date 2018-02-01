@@ -43,7 +43,7 @@ NOTICE:  CREATE TABLE will create partition "mpp3061_1_prt_3" for table "mpp3061
 NOTICE:  CREATE TABLE will create partition "mpp3061_1_prt_4" for table "mpp3061"
 insert into mpp3061 values(1);
 update mpp3061 set i = 2 where i = 1;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ERROR:  moving tuple from partition "mpp3061_1_prt_1" to partition "mpp3061_1_prt_2" not supported
 drop table mpp3061;
 --
 -- Tests if it produces SIGSEGV from "select from partition_table group by rollup or cube function"

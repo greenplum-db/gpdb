@@ -346,10 +346,13 @@ typedef struct ModifyTable
 	Plan		plan;
 	CmdType		operation;		/* INSERT, UPDATE, or DELETE */
 	List	   *resultRelations;	/* integer list of RT indexes */
-	List	   *plans;			/* plan(s) producing source data */
-	List	   *returningLists; /* per-target-table RETURNING tlists */
-	List	   *rowMarks;		/* PlanRowMarks (non-locking only) */
-	int			epqParam;		/* ID of Param for EvalPlanQual re-eval */
+	List	   *plans;				/* plan(s) producing source data */
+	List	   *returningLists;		/* per-target-table RETURNING tlists */
+	List	   *rowMarks;			/* PlanRowMarks (non-locking only) */
+	int			epqParam;			/* ID of Param for EvalPlanQual re-eval */
+	List	   *action_col_idxes;
+	List	   *ctid_col_idxes;
+	List	   *oid_col_idxes;
 } ModifyTable;
 
 /* ----------------

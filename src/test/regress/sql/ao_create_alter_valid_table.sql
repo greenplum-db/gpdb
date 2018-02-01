@@ -39,7 +39,6 @@ create table bar_ao (a int);
 
 --invalid operations
 -- start_ignore
-update foo_ao set a=5;
 delete from foo_ao;
 -- end_ignore
 

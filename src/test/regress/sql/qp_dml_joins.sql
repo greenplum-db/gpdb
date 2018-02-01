@@ -1456,9 +1456,9 @@ rollback;
 --Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
-SELECT SUM(a) FROM dml_heap_pt_r;
-UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a;
-SELECT SUM(a) FROM dml_heap_pt_r;
+begin;
+UPDATE dml_heap_pt_p SET a = dml_heap_pt_p.b % 2 FROM dml_heap_pt_r WHERE dml_heap_pt_p.b::int = dml_heap_pt_r.b::int and dml_heap_pt_p.a = dml_heap_pt_r.a and dml_heap_pt_p.b = 63;
+rollback;
 
 --Update on table with composite distribution key
 begin;
