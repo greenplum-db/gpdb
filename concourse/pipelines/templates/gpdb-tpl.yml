@@ -751,8 +751,6 @@ cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
   image: centos-gpdb-dev-6
   on_success:
     <<: *ccp_destroy
-  on_failure:
-    <<: *set_failed
 
 ## ======================================================================
 ##    _       _         
@@ -1356,8 +1354,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
       # platform is necessary to generate correct ssh config
       platform: sles12
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
@@ -1367,8 +1363,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1404,8 +1398,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
       # platform is necessary to generate correct ssh config
       platform: sles12
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
@@ -1415,8 +1407,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1658,8 +1648,6 @@ jobs:
       TINC_TARGET: [[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1702,8 +1690,6 @@ jobs:
       TINC_TARGET: test_[[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1860,8 +1846,6 @@ jobs:
           ssh -t centos@mdw << 'SSH_CMD'
             sudo yum --cacheonly list installed kernel-devel-$(uname -r)
           SSH_CMD
-    on_failure:
-      <<: *set_failed
   - task: run_tests
     <<: *cs_ccp_run_tests_params
     params:
@@ -1903,8 +1887,6 @@ jobs:
       TEST_OS: centos6
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1944,8 +1926,6 @@ jobs:
       TEST_OS: centos7
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1988,8 +1968,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2095,8 +2073,6 @@ jobs:
       BEHAVE_FLAGS: --tags=gppkg
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2138,8 +2114,6 @@ jobs:
       BEHAVE_FLAGS: --tags=[[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2226,8 +2200,6 @@ jobs:
     tags: ["ccp"]
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    on_failure:
-      <<: *set_failed
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -2237,8 +2209,6 @@ jobs:
       CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2330,8 +2300,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2351,17 +2319,6 @@ jobs:
           gpdb_binary: gpdb4_binary
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -2391,8 +2348,6 @@ jobs:
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
       <<: *ccp_destroy_2_cluster
-    on_failure:
-      <<: *set_failed_2_cluster
   ensure:
     <<: *set_failed_2_cluster
 
@@ -2427,8 +2382,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2447,17 +2400,6 @@ jobs:
           terraform: terraform2
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -2487,8 +2429,6 @@ jobs:
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
       <<: *ccp_destroy_2_cluster
-    on_failure:
-      <<: *set_failed_2_cluster
   ensure:
     <<: *set_failed_2_cluster
 
