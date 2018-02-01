@@ -37,7 +37,7 @@
       Some persistent connections are established when the database starts up and other transient
       connections are created during operations such as query execution. Transient connections for
       query execution processes, data movement, and statistics collection use available ports in the
-      range 1025 to 65535 with both TCP and UDP protocols. </p>
+      range 10000 to 65535 with both TCP and UDP protocols. </p>
     <p>Some add-on products and services that work with Greenplum Database have additional
       networking requirements. The following table lists ports and protocols used within the
       Greenplum cluster, and includes services and applications that integrate with Greenplum
@@ -81,7 +81,7 @@
           </row>
           <row>
             <entry>Greenplum Database Interconnect</entry>
-            <entry>UDP 1025-65535, dynamically allocated</entry>
+            <entry>UDP 10000-65535, dynamically allocated</entry>
             <entry>The Interconnect transports database tuples between Greenplum segments during
               query execution. </entry>
           </row>
@@ -94,7 +94,7 @@
           </row>
           <row>
             <entry>Standby master replicator</entry>
-            <entry>TCP 1025-65535, gpsyncmaster</entry>
+            <entry>TCP 10000-65535, gpsyncmaster</entry>
             <entry>The <codeph>gpsyncmaster</codeph> process on the master host establishes a
               connection to the secondary master host to replicate the master's log to the standby
               master. </entry>
