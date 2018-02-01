@@ -6994,13 +6994,12 @@
         parameter, <xref href="#max_prepared_transactions" format="dita"/> must be increased as
         well. For more information about limiting concurrent connections, see "Configuring Client
         Authentication" in the <i>Greenplum Database Administrator Guide</i>.</p>
-      <p>Increasing this parameter may cause Greenplum Database to request more shared memory.
-        Increasing this parameter might cause Greenplum Database to request more shared memory. See
+      <p>Increasing this parameter might cause Greenplum Database to request more shared memory. See
           <xref href="#shared_buffers" format="dita"/> for information about Greenplum server
         instance shared memory buffers. If this value is increased, <xref href="#shared_buffers"
           format="dita"/> and the kernel parameter <codeph>SHMMAX</codeph> might also need to be
-        increased. Also, parameters that depend shared memory such as <xref href="#max_fsm_pages"/>
-        might need to be changed.</p>
+        increased. Also, parameters that depend on shared memory such as <xref href="#max_fsm_pages"
+        /> might need to be changed.</p>
       <table id="max_connections_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7060,7 +7059,7 @@
       <p>Sets the maximum number of disk pages for which free space will be tracked in the shared
         free-space map. Six bytes of shared memory are consumed for each page slot. If this value is
         increased, <xref href="#shared_buffers" format="dita"/> and the kernel parameter
-          <codeph>SHMMAX</codeph> might also need to be increased. Also, parameters that depend
+          <codeph>SHMMAX</codeph> might also need to be increased. Also, parameters that depend on
         shared memory such as <xref href="#max_connections"/> might need to be changed.</p>
       <table id="max_fsm_pages_table">
         <tgroup cols="3">
