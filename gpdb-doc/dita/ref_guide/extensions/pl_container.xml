@@ -354,6 +354,14 @@ gp_segment_id | plcontainer_show_local_config
     <topic id="topic9" xml:lang="en">
       <title id="pz215232">Examples</title>
       <body>
+        <p>The values in the <codeph># container</codeph> lines of the examples,
+            <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are the
+            <codeph>id</codeph> XML elements defined in the <codeph>plcontainer_config.xml</codeph>
+          file. The <codeph>id</codeph> element is mapped to the <codeph>image</codeph> element that
+          specifies the Docker image to be started. If you configured PL/Container with a different
+          ID, change the value of the <codeph># container</codeph> line. For information about
+          configuring PL/Container and viewing the configuration settings, see <xref
+            href="#topic_sk1_gdq_dw" format="dita"/>.</p>
         <p>This is an example of PL/Python function that runs using the
             <codeph>plc_python_shared</codeph>
           container:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
@@ -366,11 +374,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
 # container: plc_r_shared
 return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
-        <p>The values in the <codeph># container</codeph> lines of the examples,
-            <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are the
-            <codeph>id</codeph> XML elements defined in the <codeph>plcontainer_config.xml</codeph>
-          file. The <codeph>id</codeph> element is mapped to the <codeph>image</codeph> element that
-          specifies the Docker image to be started. </p>
         <p>If the <codeph># container</codeph> line in a UDF specifies an ID that is not in the
           PL/Container configuration file, Greenplum Database returns an error when you try to
           execute the UDF.</p>
@@ -1131,6 +1134,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <ol id="ol_lrx_zb2_rbb">
           <li>Install EPEL package<codeblock>sudo yum -y install epel-release</codeblock></li>
           <li>Install Docker<codeblock>sudo yum -y install docker-io</codeblock></li>
+          <li>Create a docker group<codeblock>sudo groupadd docker</codeblock></li>
           <li>Start Docker<codeblock>sudo service docker start</codeblock></li>
           <li>To give access to the Docker daemon and docker commands, assign the Greenplum Database
             administrator (gpadmin) to the group
