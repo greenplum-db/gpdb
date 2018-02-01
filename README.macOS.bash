@@ -87,7 +87,7 @@ EOF
 # Step: GOPATH for Golang
 cat >> ~/.bash_profile << EOF
 export GOPATH=\$HOME/go:\$HOME/workspace/gpdb/gpMgmt/go-utils
-export PATH=\$GOPATH/bin:\$PATH
+export PATH=\$HOME/go/bin:\$HOME/workspace/gpdb/gpMgmt/go-utils/bin:\$PATH
 EOF
 
 # Step: speed up compile time (optional)
