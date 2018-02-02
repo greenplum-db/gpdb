@@ -1957,7 +1957,7 @@ FROM (
         if self._fast_mode:
             distributed_clause = self._get_distributed_by()
             wext_sql = \
-                '''CREATE WRITABLE EXTERNAL WEB TABLE gptransfer.%s (LIKE \"%s\".\"%s\")
+                '''CREATE WRITABLE EXTERNAL WEB TABLE gptransfer.\"%s\" (LIKE \"%s\".\"%s\")
                    EXECUTE 'cat > %s.$GP_SEGMENT_ID'
                    FORMAT '%s'
                 ''' % (self._wext_name,
@@ -1972,7 +1972,7 @@ FROM (
             wext_sql += """ ENCODING 'UTF8' %s""" % distributed_clause
         else:
             wext_sql = \
-                '''CREATE WRITABLE EXTERNAL TABLE gptransfer.%s ( LIKE \"%s\".\"%s\")
+                '''CREATE WRITABLE EXTERNAL TABLE gptransfer.\"%s\" ( LIKE \"%s\".\"%s\")
                    LOCATION (%s)
                    FORMAT '%s' ''' \
                 % (self._wext_name,
@@ -1997,7 +1997,7 @@ FROM (
                      self._table_pair.dest)
         urls = ','.join(["'%s'" % url for url in self._ext_gpfdist_urls])
         ext_sql = \
-            """CREATE EXTERNAL TABLE gptransfer.%s (LIKE \"%s\".\"%s\")
+            """CREATE EXTERNAL TABLE gptransfer.\"%s\" (LIKE \"%s\".\"%s\")
                LOCATION(%s)
                FORMAT '%s' """ \
             % (self._ext_name,
@@ -2207,7 +2207,7 @@ FROM (
         """
         cur = None
         try:
-            query = """INSERT INTO gptransfer.%s SELECT * FROM \"%s\".\"%s\"""" \
+            query = """INSERT INTO gptransfer.\"%s\" SELECT * FROM \"%s\".\"%s\"""" \
                     % (self._wext_name,
                        self._table_pair.source.schema,
                        self._table_pair.source.table)
@@ -2236,7 +2236,7 @@ FROM (
         """
         cur = None
         try:
-            query = """INSERT INTO \"%s\".\"%s\" SELECT * FROM gptransfer.%s""" \
+            query = """INSERT INTO \"%s\".\"%s\" SELECT * FROM gptransfer.\"%s\"""" \
                     % (self._table_pair.dest.schema,
                        self._table_pair.dest.table,
                        self._ext_name)
@@ -2270,7 +2270,7 @@ FROM (
             logger.debug(
                 'Dropping writable external table for source table %s...',
                 self._table_pair.source)
-            drop_wext_sql = """DROP EXTERNAL WEB TABLE gptransfer.%s""" \
+            drop_wext_sql = """DROP EXTERNAL WEB TABLE gptransfer.\"%s\"""" \
                             % (self._wext_name)
             cur = execSQL(self._src_conn, drop_wext_sql)
             cur.close()
@@ -2286,7 +2286,7 @@ FROM (
         try:
             logger.debug('Dropping external table for destination table %s...',
                          self._table_pair.dest)
-            drop_ext_sql = """DROP EXTERNAL TABLE gptransfer.%s""" \
+            drop_ext_sql = """DROP EXTERNAL TABLE gptransfer.\"%s\"""" \
                            % (self._ext_name)
             cur = execSQL(self._dest_conn, drop_ext_sql)
             cur.close()
@@ -2448,7 +2448,8 @@ class GpTransferTable(object):
     def _is_identifier_supported(self, identifier):
         """
         Verify that the characters of identifier starts with a-z, or A-Z or underscore,
-        followed by lower or upper case (a-z, A-Z), or digits(0-9), or underscore (_)
+        followed by lower or upper case (a-z, A-Z), or digits (0-9), or
+        underscore (_), or dot (.).
         """
 
         if not ((identifier[0:1] >= 'a' and identifier[0:1] <= 'z') or
@@ -2460,7 +2461,7 @@ class GpTransferTable(object):
             if not ((c >= 'a' and c <= 'z') or
                         (c >= 'A' and c <= 'Z') or
                         (c >= '0' and c <= '9') or
-                        (c == '_')):
+                        (c == '_') or (c == '.')):
                 return False
         return True
 
@@ -3871,7 +3872,7 @@ class GpTransfer(object):
                                        table_obj.schema, SCHEMA_DELIMITER, table_obj.table))
             logger.error('Found unsupported identifiers')
             logger.error('Valid identifiers must start with a-z, or A-Z or underscore followed by a-z, '
-                         'or A-Z, or 0-9, or underscore')
+                         'or A-Z, or 0-9, or underscore, or dot')
             logger.error('A list of these tables has been written to the file %s', GPTRANSFER_FAILED_TABLES_FILE)
             sys.exit(1)
 

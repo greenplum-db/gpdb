@@ -398,6 +398,16 @@ Feature: gptransfer tests
         Then gptransfer should return a return code of 2
         And gptransfer should print "missing from map file" to stdout
 
+    Scenario: gptransfer dot in table name
+        Given the gptransfer test is initialized
+        And the user runs "psql -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'create table "tt.dot"(i int)' gptransfer_testdb1"
+        And the user runs "psql -d gptransfer_testdb1 -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'insert into "tt.dot" select * from generate_series(0,99)'"
+        And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that there is a "heap" table "public.tt.dot" in "gptransfer_testdb1"
+        And verify that table "tt.dot" in "gptransfer_testdb1" has "100" rows
+
+
     @unsupported_identifiers
     Scenario: gptransfer unsupported identifiers in table name
         Given the gptransfer test is initialized
