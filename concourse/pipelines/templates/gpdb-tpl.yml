@@ -691,7 +691,7 @@ resources:
     bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: release/gpdb5/postgis-2.1.5-gp5-rhel6-x86_64.gppkg
+    regexp: release/gpdb5/postgis-(.*)-gp5-rhel6-x86_64.gppkg
 
 - name: postgis_gppkg_centos7
   type: s3
@@ -700,7 +700,7 @@ resources:
     bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: release/gpdb5/postgis-2.1.5-gp5-rhel7-x86_64.gppkg
+    regexp: release/gpdb5/postgis-(.*)-gp5-rhel7-x86_64.gppkg
 
 {% endif %}
 {% if "DPM" in test_sections %}
