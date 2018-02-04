@@ -23,22 +23,14 @@ import tinctest
 from tinctest.lib import local_path, Gpdiff
 from mpp.lib.PSQL import PSQL
 from gppylib.commands.base import Command
-from mpp.lib.gpstart import GpStart
-from mpp.lib.gpstop import GpStop
 from mpp.models import MPPTestCase
-from mpp.lib.gpConfig import GpConfig
-
 
 class UDFExceptionHandling(MPPTestCase):
     
     def __init__(self):
-        self.gpstart = GpStart()
-        self.gpstop = GpStop()
-        self.config = GpConfig()
         self.port = os.getenv('PGPORT')
         self.gphome = (os.getenv('GPHOME'))
         self.base_dir = os.path.dirname(sys.modules[self.__class__.__module__].__file__)
-
 
     def get_sql_files(self, sql_file_name):
         sql_file = os.path.join( self.base_dir, "sql", sql_file_name + ".sql");    
@@ -56,38 +48,29 @@ class UDFExceptionHandling(MPPTestCase):
         PSQL.run_sql_file(filename,out_file=out_file)
 
     def set_protocol_conf( self, debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_protocol,debug_dtm_action,debug_dtm_action_nestinglevel): 
-        tinctest.logger.info('Configuring debug config parameters') 
         self.set_guc('debug_dtm_action_segment', debug_dtm_action_segment)
-        tinctest.logger.info('Configuring debug_dtm_action_segment = %s ' % debug_dtm_action_segment)
         self.set_guc('debug_dtm_action_target', debug_dtm_action_target)
-        tinctest.logger.info('Configuring debug_dtm_action_target = %s ' % debug_dtm_action_target)
         self.set_guc('debug_dtm_action_protocol', debug_dtm_action_protocol)
-        tinctest.logger.info('Configuring debug_dtm_action_protocol = %s ' % debug_dtm_action_protocol)
         self.set_guc('debug_dtm_action', debug_dtm_action)
-        tinctest.logger.info('Configuring debug_dtm_action = %s ' % debug_dtm_action)
         self.set_guc('debug_dtm_action_nestinglevel', debug_dtm_action_nestinglevel)
-        tinctest.logger.info('Configuring debug_dtm_action_nestinglevel = %s ' % debug_dtm_action_nestinglevel)
+        self.reload_conf()
         
     def set_sql_conf( self, debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_sql_command_tag,debug_dtm_action,debug_dtm_action_nestinglevel): 
-        tinctest.logger.info('Configuring debug config parameters') 
         self.set_guc('debug_dtm_action_segment', debug_dtm_action_segment)
-        tinctest.logger.info('Configuring debug_dtm_action_segment = %s ' % debug_dtm_action_segment)
         self.set_guc('debug_dtm_action_target', debug_dtm_action_target)
-        tinctest.logger.info('Configuring debug_dtm_action_target = %s ' % debug_dtm_action_target)
         self.set_guc('debug_dtm_action_sql_command_tag', debug_dtm_action_sql_command_tag)
-        tinctest.logger.info('Configuring debug_dtm_action_sql_command_tag = %s ' % debug_dtm_action_sql_command_tag)
         self.set_guc('debug_dtm_action', debug_dtm_action)
-        tinctest.logger.info('Configuring debug_dtm_action = %s ' % debug_dtm_action)
         self.set_guc('debug_dtm_action_nestinglevel', debug_dtm_action_nestinglevel)
-        tinctest.logger.info('Configuring debug_dtm_action_nestinglevel = %s ' % debug_dtm_action_nestinglevel)
+        self.reload_conf()
 
     def set_guc(self, guc_name, guc_value):
         # Set the guc value
-        tinctest.logger.info('Configuring ' + guc_name +' ...')
         cmd_str='source ' + self.gphome+ '/greenplum_path.sh;gpconfig -c ' + guc_name + ' -v ' +guc_value +' --skipvalidation'
         cmd=Command("gpconfig " ,cmd_str) 
         cmd.run()
         self.assertTrue(int(cmd.get_results().rc) == 0,cmd_str)
+
+    def reload_conf(self):
         # Load the new value to the db
         tinctest.logger.info('gpstop -u to reload config files...')
         cmd_str2='source '+ self.gphome+ '/greenplum_path.sh;gpstop -u'
@@ -95,9 +78,7 @@ class UDFExceptionHandling(MPPTestCase):
         cmd.run()
         self.assertTrue(int(cmd.get_results().rc) == 0,cmd_str2)
  
-
-
-    def reset_protocol_conf( self):
+    def reset_protocol_conf(self):
         # Unset the guc value
         tinctest.logger.info('Reset debug config parameters...Begin') 
         self.set_guc('debug_dtm_action_segment', '0')
@@ -106,9 +87,9 @@ class UDFExceptionHandling(MPPTestCase):
         self.set_guc('debug_dtm_action', 'none')
         self.set_guc('debug_dtm_action_nestinglevel','0')
         self.set_guc('debug_dtm_action_sql_command_tag','none')
-        tinctest.logger.info('Reset debug config parameters...End') 
+        self.reload_conf()
+        tinctest.logger.info('Reset debug config parameters...End')    
 
-    
     def get_output_file(self, debug_dtm_action_segment,debug_dtm_action_target, debug_dtm_action_protocol, debug_dtm_action, debug_dtm_action_nestinglevel):
         file_name='_seg'+debug_dtm_action_segment
         if debug_dtm_action_target == 'protocol':
@@ -133,7 +114,6 @@ class UDFExceptionHandling(MPPTestCase):
         tinctest.logger.info('Test ans and out file name : %s ' % file_name)
         return file_name
 
-
     def run_test(self, debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_protocol, debug_dtm_action, debug_dtm_action_nestinglevel):
         file_name =''
         file_name = 'protocol'+self.get_output_file(debug_dtm_action_segment,debug_dtm_action_target,debug_dtm_action_protocol, debug_dtm_action, debug_dtm_action_nestinglevel) 
@@ -151,4 +131,3 @@ class UDFExceptionHandling(MPPTestCase):
         cmd.run()
         self.assertTrue(int(cmd.get_results().rc) == 0,cmd_str)
         self.validate_sql(ans_file,out_file2)
-        

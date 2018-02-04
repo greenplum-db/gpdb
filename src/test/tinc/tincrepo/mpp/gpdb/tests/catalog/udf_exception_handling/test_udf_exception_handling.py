@@ -111,64 +111,44 @@ class UDFTestCase(ScenarioTestCase, MPPTestCase):
         tinctest.logger.info( 'debug_dtm_action_nestinglevel: %s ' % debug_dtm_action_nestinglevel)
         tinctest.logger.info("\n ===============================================")
 
-        self.udf_obj.reset_protocol_conf()
         if debug_dtm_action_target == 'protocol':
             self.udf_obj.set_protocol_conf(debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_protocol,debug_dtm_action,debug_dtm_action_nestinglevel)
             self.udf_obj.run_test(debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_protocol,debug_dtm_action,debug_dtm_action_nestinglevel)
         if debug_dtm_action_target == 'sql':
             self.udf_obj.set_sql_conf(debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_sql_command_tag,debug_dtm_action,debug_dtm_action_nestinglevel)
             self.udf_obj.run_test(debug_dtm_action_segment, debug_dtm_action_target, debug_dtm_action_sql_command_tag,debug_dtm_action,debug_dtm_action_nestinglevel)
-        
+        self.udf_obj.reset_protocol_conf()
+
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {
              '01_protocol_seg0_subtxnbegin_failbegcmd_nstlvl0': ['0','protocol','subtransaction_begin','fail_begin_command','0'],
              '02_protocol_seg0_subtxnbegin_failbegcmd_nstlvl3': ['0','protocol','subtransaction_begin','fail_begin_command','3'],
-             '03_protocol_seg0_subtxnbegin_failbegcmd_nstlvl4': ['0','protocol','subtransaction_begin','fail_begin_command','4'],
 
              '04_protocol_seg0_subtxnrollbk_failbegcmd_nstlvl0': ['0','protocol','subtransaction_rollback','fail_begin_command','0'],
              '05_protocol_seg0_subtxnrollbk_failbegcmd_nstlvl3': ['0','protocol','subtransaction_rollback','fail_begin_command','3'],
-             '06_protocol_seg0_subtxnrollbk_failbegcmd_nstlvl4': ['0','protocol','subtransaction_rollback','fail_begin_command','4'],
 
              '07_protocol_seg0_subtxnrelse_failbegcmd_nstlvl0': ['0','protocol','subtransaction_release','fail_begin_command','0'], 
              '08_protocol_seg0_subtxnrelse_failbegcmd_nstlvl4': ['0','protocol','subtransaction_release','fail_begin_command','4'],
-             '09_protocol_seg0_subtxnrelse_failbegcmd_nstlvl5': ['0','protocol','subtransaction_release','fail_begin_command','5'],
 
              '10_protocol_seg0_subtxnbegin_failendcmd_nstlvl0': ['0','protocol','subtransaction_begin','fail_end_command','0'],
              '11_protocol_seg0_subtxnbegin_failendcmd_nstlvl3': ['0','protocol','subtransaction_begin','fail_end_command','3'],
-             '12_protocol_seg0_subtxnbegin_failendcmd_nstlvl4': ['0','protocol','subtransaction_begin','fail_end_command','4'],
 
              '13_protocol_seg0_subtxnrollbk_failendcmd_nstlvl0': ['0','protocol','subtransaction_rollback','fail_end_command','0'],
              '14_protocol_seg0_subtxnrollbk_failendcmd_nstlvl3': ['0','protocol','subtransaction_rollback','fail_end_command','3'],
-             '15_protocol_seg0_subtxnrollbk_failendcmd_nstlvl4': ['0','protocol','subtransaction_rollback','fail_end_command','4'],
 
              '16_protocol_seg0_subtxnrelse_failendcmd_nstlvl0': ['0','protocol','subtransaction_release','fail_end_command','0'],
              '17_protocol_seg0_subtxnrelse_failendcmd_nstlvl4': ['0','protocol','subtransaction_release','fail_end_command','4'],
-             '18_protocol_seg0_subtxnrelse_failendcmd_nstlvl5': ['0','protocol','subtransaction_release','fail_end_command','5'],
-
-             '19_protocol_seg0_subtxnbegin_panicbegcmd_nstlvl0': ['0','protocol','subtransaction_begin','panic_begin_command','0'],
-             '20_protocol_seg0_subtxnbegin_panicbegcmd_nstlvl3': ['0','protocol','subtransaction_begin','panic_begin_command','3'],
-             '21_protocol_seg0_subtxnbegin_panicbegcmd_nstlvl4': ['0','protocol','subtransaction_begin','panic_begin_command','4'],
-
-             '22_protocol_seg0_subtxnrollbk_panicbegcmd_nstlvl0': ['0','protocol','subtransaction_rollback','panic_begin_command','0'],
-             '23_protocol_seg0_subtxnrollbk_panicbegcmd_nstlvl3': ['0','protocol','subtransaction_rollback','panic_begin_command','3'],
-             '24_protocol_seg0_subtxnrollbk_panicbegcmd_nstlvl4': ['0','protocol','subtransaction_rollback','panic_begin_command','4'],
-
-             '25_protocol_seg0_subtxnrelse_panicbegcmd_nstlvl0': ['0','protocol','subtransaction_release','panic_begin_command','0'], 
-             '26_protocol_seg0_subtxnrelse_panicbegcmd_nstlvl4': ['0','protocol','subtransaction_release','panic_begin_command','4'],
-             '27_protocol_seg0_subtxnrelse_panicbegcmd_nstlvl5': ['0','protocol','subtransaction_release','panic_begin_command','5'],
 
              '28_protocol_seg1_subtxnbegin_panicbegcmd_nstlvl0': ['1','protocol','subtransaction_begin','panic_begin_command','0'],
              '29_protocol_seg1_subtxnbegin_panicbegcmd_nstlvl3': ['1','protocol','subtransaction_begin','panic_begin_command','3'],
-             '30_protocol_seg1_subtxnbegin_panicbegcmd_nstlvl4': ['1','protocol','subtransaction_begin','panic_begin_command','4'],
 
              '31_protocol_seg1_subtxnrollbk_panicbegcmd_nstlvl0': ['1','protocol','subtransaction_rollback','panic_begin_command','0'],
              '32_protocol_seg1_subtxnrollbk_panicbegcmd_nstlvl3': ['1','protocol','subtransaction_rollback','panic_begin_command','3'],
-             '33_protocol_seg1_subtxnrollbk_panicbegcmd_nstlvl4': ['1','protocol','subtransaction_rollback','panic_begin_command','4'],
 
              '34_protocol_seg1_subtxnrelse_panicbegcmd_nstlvl0': ['1','protocol','subtransaction_release','panic_begin_command','0'], 
              '35_protocol_seg1_subtxnrelse_panicbegcmd_nstlvl4': ['1','protocol','subtransaction_release','panic_begin_command','4'],
-             '36_protocol_seg1_subtxnrelse_panicbegcmd_nstlvl5': ['1','protocol','subtransaction_release','panic_begin_command','5'],
+
              '37_sql_seg0_subtxnbegin_failbegcmd_nstlvl0': ['0','sql','"\'MPPEXEC UPDATE\'"','fail_begin_command','0'],
              '38_sql_seg0_subtxnbegin_failbegcmd_nstlvl0': ['0','sql','"\'MPPEXEC UPDATE\'"','fail_end_command','0']
             }
