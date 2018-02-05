@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 multidd - run multiple dd concurrently to determine disk throughput
 
 Usage: multidd {-i infile} {-o outfile} [-B blocksz] [-S filesz]
@@ -14,115 +14,132 @@ Usage: multidd {-i infile} {-o outfile} [-B blocksz] [-S filesz]
 	Multiple -i and -o arguments may be specified but they must pair up.
 
 	e.g. multidd -i /dev/zero -o /dbfast1/ddtest -B 8kb -S 2gb
-'''
+"""
 
-import sys, os, getopt, math
+import getopt
+import math
+import os
+import sys
 
-################
+
 def usage(exitarg):
     print __doc__
     sys.exit(exitarg)
 
 
-################
 def run(cmd):
     f = None
     ok = False
     out = None
     try:
-	f = os.popen(cmd)
-	out = f.read()
-	ok = not f.close()
+        f = os.popen(cmd)
+        out = f.read()
+        ok = not f.close()
     except:
-	f.close()
-	ok = False
-    return (ok, out)
+        f.close()
+        ok = False
+    return ok, out
 
-################
+
 def getPlatform():
-    if sys.platform.find('linux') >= 0: return 'linux'
-    if sys.platform.find('darwin') >= 0: return 'darwin'
-    if sys.platform.find('sunos5') >= 0: return 'sunos5'
+    if sys.platform.find('linux') >= 0:
+        return 'linux'
+    if sys.platform.find('darwin') >= 0:
+        return 'darwin'
+    if sys.platform.find('sunos5') >= 0:
+        return 'sunos5'
     return '?'
 
-################
+
 def getMemory():
     if getPlatform() == 'linux':
-	ok, out = run("sh -c 'cat /proc/meminfo | grep MemTotal'")
-	if not ok: return '?'
-	list = out.strip().split(' ')
-	val = int(list[len(list) - 2])
-	factor = list[len(list) - 1]
-	if factor == 'kB': return val * 1024
-	return '?'
+        ok, out = run("sh -c 'cat /proc/meminfo | grep MemTotal'")
+        if not ok:
+            return '?'
+        mem_string_list = out.strip().split(' ')
+        val = int(mem_string_list[len(mem_string_list) - 2])
+        factor = mem_string_list[len(mem_string_list) - 1]
+        if factor == 'kB':
+            return val * 1024
+        return '?'
 
     if getPlatform() == 'darwin':
-	ok, out = run("sysctl hw.physmem")
-	if not ok: return '?'
-	list = out.strip().split(' ')
-	val = int(list[1])
-	return val
-	
+        ok, out = run("sysctl hw.physmem")
+        if not ok:
+            return '?'
+        mem_string_list = out.strip().split(' ')
+        val = int(mem_string_list[1])
+        return val
+
     if getPlatform() == 'sunos5':
-	ok, out = run("sh -c \"/usr/sbin/prtconf | awk '/^Memory/{print}'\"")
-	if not ok: return '?'
-	list = out.strip().split(' ')
-	val = int(list[2])
-	factor = list[3]
-	if factor == 'Megabytes': return val * 1024 * 1024
-	return '?'
+        ok, out = run("sh -c \"/usr/sbin/prtconf | awk '/^Memory/{print}'\"")
+        if not ok:
+            return '?'
+        mem_string_list = out.strip().split(' ')
+        val = int(mem_string_list[2])
+        factor = mem_string_list[3]
+        if factor == 'Megabytes':
+            return val * 1024 * 1024
+        return '?'
 
     return '?'
 
-################
+
 def parseMemorySize(line):
     factor = 1
     try:
-	line = line.strip().upper()
-	if line.endswith('B'): line = line[:-1]
-	if line.endswith('G'): factor = 1024 * 1024 * 1024
-	elif line.endswith('M'): factor = 1024 * 1024
-	elif line.endswith('K'): factor = 1024
-	if factor > 1: line = line[:-1]
-	return int(line) * factor
+        line = line.strip().upper()
+        if line.endswith('B'):
+            line = line[:-1]
+        if line.endswith('G'):
+            factor = 1024 * 1024 * 1024
+        elif line.endswith('M'):
+            factor = 1024 * 1024
+        elif line.endswith('K'):
+            factor = 1024
+        if factor > 1:
+            line = line[:-1]
+        return int(line) * factor
     except:
-	return 0
+        return 0
 
-opt = {}
-opt['-i'] = []
-opt['-o'] = []
-opt['-B'] = parseMemorySize('8KB')
-opt['-S'] = 0
 
-################
 def parseCommandLine():
     global opt
     try:
-	(options, args) = getopt.getopt(sys.argv[1:], '?i:o:B:S:')
+        (options, args) = getopt.getopt(sys.argv[1:], '?i:o:B:S:')
     except:
-	e = sys.exc_info()
-	usage('Error: %s %s' % (e[0], e[1]))
+        e = sys.exc_info()
+        usage('Error: %s %s' % (e[0], e[1]))
 
     for (switch, val) in options:
-	if (switch == '-?'): 
-	    usage(0)
-	elif (switch[1] in 'io'):
-	    opt[switch].append(val)
-	elif (switch[1] in 'BS'):
-	    opt[switch] = parseMemorySize(val)
+        if switch == '-?':
+            usage(0)
+        elif switch[1] in 'io':
+            opt[switch].append(val)
+        elif switch[1] in 'BS':
+            opt[switch] = parseMemorySize(val)
 
-    if opt['-S'] == '?': sys.exit('Error: unable to obtain system RAM size')
-    if opt['-S'] < 0: usage('Error: invalid -S filesz parameter')
-    if opt['-B'] <= 0: usage('Error: invalid -B blocksz parameter')
-    if opt['-B'] > 1024*1024: usage('Error: maximum 1MB for -B parameter')
-    if len(opt['-i']) != len(opt['-o']): usage('Error: -i and -o parameters must pair up')
-    if len(opt['-i']) == 0: usage('Error: missing -i and -o parameters')
+    if opt['-S'] == '?':
+        sys.exit('Error: unable to obtain system RAM size')
+    if opt['-S'] < 0:
+        usage('Error: invalid -S filesz parameter')
+    if opt['-B'] <= 0:
+        usage('Error: invalid -B blocksz parameter')
+    if opt['-B'] > 1024 * 1024:
+        usage('Error: maximum 1MB for -B parameter')
+    if len(opt['-i']) != len(opt['-o']):
+        usage('Error: -i and -o parameters must pair up')
+    if len(opt['-i']) == 0:
+        usage('Error: missing -i and -o parameters')
 
 
-################
+opt = {'-i': [], '-o': [], '-B': parseMemorySize('8KB'), '-S': 0}
 parseCommandLine()
-if opt['-S'] == 0: opt['-S'] = getMemory() * 2
-if opt['-S'] < opt['-B']: opt['-S'] = opt['-B']
+if opt['-S'] == 0:
+    opt['-S'] = getMemory() * 2
+if opt['-S'] < opt['-B']:
+    opt['-S'] = opt['-B']
 cmd = []
 pfile = []
 blocksz = opt['-B']
@@ -141,14 +158,16 @@ for c in cmd:
 for f in pfile:
     ok = False
     try:
-	print f.read()
-	ok = not f.close()
-	f = None
+        print f.read()
+        ok = not f.close()
+        f = None
     except:
-	if f: f.close()
-	ok = False
+        if f:
+            f.close()
+        ok = False
 
-    if not ok: sys.exit(1)
+    if not ok:
+        sys.exit(1)
 
 os.system('sync')
 print 'multidd total bytes ', totalBytes
