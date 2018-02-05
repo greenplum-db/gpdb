@@ -31,6 +31,7 @@ Usage: gpcheckperf <options>
     --netperf  : use netperf instead of gpnetbenchServer/gpnetbenchClient
 """
 
+import datetime
 import os
 import sys
 
@@ -113,8 +114,9 @@ def gpscp(src, dst):
             c.append(h)
     c.append(src)
     c.append(dst)
-    if GV.opt['-v']: print '[Info]', strcmd(c)
-    p = subprocess.Popen(c, stdout=subprocess.PIPE)
+    if GV.opt['-v']:
+        print '[Info]', strcmd(c)
+    p = subprocess.Popen(c, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     out = p.stdout.read(-1)
     rc = p.wait()
     return not rc, out
@@ -292,22 +294,15 @@ def parseCommandLine():
     print strcmd(sys.argv)
 
 
-#############
 def run(cmd):
-    f = None
-    ok = False
-    out = ''
     try:
-        try:
-            if GV.opt['-v']: print '[Info]', cmd
-            f = os.popen(cmd)
-            out = f.read()
-            ok = not f.close()
-            f = None
-        except KeyboardInterrupt:
-            raise
-    finally:
-        if f: f.close()
+        if GV.opt['-v']:
+            print '[Info]', cmd
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        out = p.stdout.read(-1)
+        ok = p.wait()
+    except KeyboardInterrupt:
+        raise
 
     if GV.opt['-v'] and out and out != '':
         print out
@@ -352,7 +347,7 @@ def runTeardown():
 def runSetup():
     if GV.opt['-v']:
         print '--------------------'
-        print '  SETUP'
+        print '  SETUP %s' % datetime.datetime.now().isoformat()
         print '--------------------'
     okCount = 0
     try:
@@ -408,11 +403,13 @@ def copyExecOver(fname):
         sys.exit('[Exit] file not executable: ' + path)
 
     (ok, out) = gpscp(path, '=:%s' % target)
-    if not ok: sys.exit('[Error] command failed: gpscp %s =:%s' % (path, target))
+    if not ok:
+        sys.exit('[Error] command failed: gpscp %s =:%s with output: %s' % (path, target, out))
 
     # chmod +x file
     (ok, out) = gpssh('chmod a+rx %s' % target)
-    if not ok: sys.exit('[Error] command failed: chmod a+rx %s' % target)
+    if not ok:
+        sys.exit('[Error] command failed: chmod a+rx %s with output: %s' % (target, out))
 
     return target
 
@@ -757,13 +754,14 @@ def get_host_map(hostlist):
     for host in hostlist:
         cmd = ['ssh', '-o', 'BatchMode yes', '-o', 'StrictHostKeyChecking no', host, 'hostname']
 
+        proc = None
         try:
             if GV.opt['-v']: print '[Info]', strcmd(cmd)
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            out = proc.stdout.read(-1)
             rc = proc.wait()
             if rc:
-                raise Exception('ssh error with the following command:\n%s' % cmd)
-            out = proc.stdout.read(-1)
+                raise Exception('ssh error with the following command:\n%s with output: %s' % (cmd, out))
             seglist[host] = out.strip()
         except KeyboardInterrupt:
             killProc(proc)
@@ -959,7 +957,7 @@ try:
     finally:
         print
         print '===================='
-        print '==  RESULT'
+        print '==  RESULT %s' % datetime.datetime.now().isoformat()
         print '===================='
 
         if diskWriteResult:
