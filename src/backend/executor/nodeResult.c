@@ -421,7 +421,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 	ExecAssignProjectionInfo(&resstate->ps, NULL);
 
 	if (!IsResManagerMemoryPolicyNone()
-			&& IsResultMemoryIntesive(node))
+			&& IsResultMemoryIntensive(node))
 	{
 		SPI_ReserveMemory(((Plan *)node)->operatorMemKB * 1024L);
 	}

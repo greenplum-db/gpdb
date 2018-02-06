@@ -55,7 +55,7 @@ extern uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOp
 /**
  * Is result node memory intensive?
  */
-extern bool IsResultMemoryIntesive(Result *res);
+extern bool IsResultMemoryIntensive(Result *res);
 
 /**
  * Is operator memory intensive

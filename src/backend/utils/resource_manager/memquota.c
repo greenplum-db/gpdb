@@ -210,7 +210,7 @@ IsBlockingOperator(Node *node)
  * Is a result node memory intensive? It is if it contains function calls.
  */
 bool
-IsResultMemoryIntesive(Result *res)
+IsResultMemoryIntensive(Result *res)
 {
 
 	List *funcNodes = extract_nodes(NULL /* glob */,
@@ -257,7 +257,7 @@ IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt)
 		case T_Result:
 			{
 				Result *res = (Result *) node;
-				return IsResultMemoryIntesive(res);
+				return IsResultMemoryIntensive(res);
 			}
 		default:
 			return false;
