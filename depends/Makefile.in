@@ -13,7 +13,7 @@ default: orca
 	${CONAN_CMD} remote add gpdb-oss https://api.bintray.com/conan/greenplum-db/gpdb-oss;
 
 orca: conanfile_orca.txt .conan/conan.conf
-	${CONAN_CMD} install --build=missing conanfile_orca.txt
+	${CONAN_CMD} install --build=missing -f conanfile_orca.txt
 	@echo
 	@echo "==================================================================="
 	@echo "Orca can now be installed on the local system using \"make install\""
