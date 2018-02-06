@@ -26,7 +26,10 @@ func (s *CatchAllCliToHubListenerImpl) CheckDiskUsage(ctx context.Context,
 	// We don't care whether this the old json vs the new json because we're
 	// just checking the hosts anyways.
 	reader.OfOldClusterConfig()
-	hostnames := reader.GetHostnames()
+	hostnames, err := reader.GetHostnames()
+	if err != nil {
+		return nil, err
+	}
 	var clients []configutils.ClientAndHostname
 	for i := 0; i < len(hostnames); i++ {
 		conn, err := grpc.Dial(hostnames[i]+":"+port, grpc.WithInsecure())

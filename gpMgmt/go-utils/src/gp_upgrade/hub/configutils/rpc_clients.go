@@ -2,8 +2,9 @@ package configutils
 
 import (
 	"fmt"
-	"google.golang.org/grpc"
 	pb "gp_upgrade/idl"
+
+	"google.golang.org/grpc"
 )
 
 const (
@@ -21,7 +22,7 @@ type RPCClients struct{}
 
 func (helper RPCClients) GetRPCClients() []ClientAndHostname {
 	reader := Reader{}
-	hostnames := reader.GetHostnames()
+	hostnames, _ := reader.GetHostnames()
 	var clients []ClientAndHostname
 	for i := 0; i < len(hostnames); i++ {
 		conn, err := grpc.Dial(hostnames[i]+":"+port, grpc.WithInsecure())

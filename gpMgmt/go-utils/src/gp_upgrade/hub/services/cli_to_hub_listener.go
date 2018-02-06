@@ -2,6 +2,7 @@ package services
 
 import (
 	"gp_upgrade/hub/cluster"
+	"gp_upgrade/hub/configutils"
 	"gp_upgrade/hub/logger"
 )
 
@@ -9,6 +10,9 @@ func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *Cli
 	impl := &CliToHubListenerImpl{}
 	impl.CatchAllCliToHubListenerImpl.logger = logger
 	impl.CatchAllCliToHubListenerImpl.clusterPair = pair
+	configReader := configutils.NewReader()
+	configReader.OfOldClusterConfig()
+	impl.Bootstrapper.hostnameGetter = configReader
 	return impl
 }
 

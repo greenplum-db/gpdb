@@ -48,6 +48,7 @@ var _ = Describe("check", func() {
 
 	Describe("seginstall", func() {
 		It("updates status PENDING to COMPLETE if successful", func() {
+			runCommand("check", "config")
 			statusSessionPending := runCommand("status", "upgrade")
 			Eventually(statusSessionPending).Should(gbytes.Say("PENDING - Install binaries on segments"))
 

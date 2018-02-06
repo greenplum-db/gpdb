@@ -55,9 +55,12 @@ func (reader Reader) GetPortForSegment(segmentDbid int) int {
 	return result
 }
 
-func (reader Reader) GetHostnames() []string {
+func (reader Reader) GetHostnames() ([]string, error) {
 	if len(reader.config) == 0 {
-		reader.Read()
+		err := reader.Read()
+		if err != nil {
+			return nil, err
+		}
 	}
 	hostnamesSeen := make(map[string]bool)
 	for i := 0; i < len(reader.config); i++ {
@@ -70,7 +73,7 @@ func (reader Reader) GetHostnames() []string {
 	for k := range hostnamesSeen {
 		hostnames = append(hostnames, k)
 	}
-	return hostnames
+	return hostnames, nil
 }
 
 func (reader Reader) GetSegmentConfiguration() SegmentConfiguration {
