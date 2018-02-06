@@ -292,7 +292,6 @@ static bool PolicyAutoPrelimWalker(Node *node, PolicyAutoContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 	if (is_plan_node(node))
 	{
@@ -322,7 +321,6 @@ static bool PolicyAutoAssignWalker(Node *node, PolicyAutoContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	if (is_plan_node(node))
@@ -770,7 +768,6 @@ PolicyEagerFreePrelimWalker(Node *node, PolicyEagerFreeContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	OperatorGroupNode *parentGroupNode = NULL;
@@ -849,7 +846,6 @@ PolicyEagerFreeAssignWalker(Node *node, PolicyEagerFreeContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	const uint64 nonMemIntenseOpMemKB = (uint64)(*gp_resmanager_memory_policy_auto_fixed_mem);
