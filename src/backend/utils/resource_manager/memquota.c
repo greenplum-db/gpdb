@@ -800,7 +800,7 @@ PolicyEagerFreePrelimWalker(Node *node, PolicyEagerFreeContext *context)
 	Assert(!result);
 
 	/*
-	 * If this node is the top nodoe in a group, at this point, we should have all info about
+	 * If this node is the top node in a group, at this point, we should have all info about
 	 * its child groups. We then calculate the maximum number of potential concurrently
 	 * active memory-intensive operators and non-memory-intensive operators in all
 	 * child groups.
