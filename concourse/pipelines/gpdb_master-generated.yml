@@ -1527,18 +1527,10 @@ jobs:
       passed: [gate_cs_start]
       trigger: true
     - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: aocoalter_catalog_loaders
+    - task: storage
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
-        MAKE_TEST_COMMAND: aocoalter_catalog_loaders
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-    - task: storage_persistent_accessmethods_and_vacuum
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_accessmethods_and_vacuum
+        MAKE_TEST_COMMAND: storage
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
       image: centos-gpdb-dev-6
