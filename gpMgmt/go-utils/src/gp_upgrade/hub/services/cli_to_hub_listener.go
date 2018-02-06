@@ -11,8 +11,9 @@ func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *Cli
 	impl.CatchAllCliToHubListenerImpl.logger = logger
 	impl.CatchAllCliToHubListenerImpl.clusterPair = pair
 	configReader := configutils.NewReader()
-	configReader.OfOldClusterConfig()
+	configReader.OfOldClusterConfig() // refactor opportunity -- don't use this pattern, use different types or separate functions for old/new or set the config path at reader initialization time
 	impl.Bootstrapper.hostnameGetter = configReader
+	impl.Bootstrapper.softwareVerifier = NewClusterSsher(NewChecklistWriterImpl())
 	return impl
 }
 

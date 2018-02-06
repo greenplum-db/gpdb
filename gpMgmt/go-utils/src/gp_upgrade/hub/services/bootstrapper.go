@@ -9,16 +9,22 @@ import (
 )
 
 type Bootstrapper struct {
-	hostnameGetter HostnameGetter
+	hostnameGetter   HostnameGetter
+	softwareVerifier SoftwareVerifier
 }
 
 type HostnameGetter interface {
 	GetHostnames() ([]string, error)
 }
 
-func NewBootstrapper(hg HostnameGetter) *Bootstrapper {
+type SoftwareVerifier interface {
+	VerifySoftware(hosts []string)
+}
+
+func NewBootstrapper(hg HostnameGetter, s SoftwareVerifier) *Bootstrapper {
 	return &Bootstrapper{
-		hostnameGetter: hg,
+		hostnameGetter:   hg,
+		softwareVerifier: s,
 	}
 }
 
@@ -34,6 +40,8 @@ func (s *Bootstrapper) CheckSeginstall(ctx context.Context,
 	if len(clusterHostnames) == 0 {
 		return nil, errors.New("No cluster config found, did you forget to run gp_upgrade check config?")
 	}
+
+	go s.softwareVerifier.VerifySoftware(clusterHostnames)
 
 	successReply := &pb.CheckSeginstallReply{}
 	return successReply, nil
