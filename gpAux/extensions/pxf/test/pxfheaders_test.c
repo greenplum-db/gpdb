@@ -113,7 +113,7 @@ test_build_http_headers(void **state)
 
 	expect_string(normalize_key_name, key, "key2");
 	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-KEY2"));
-	expect_headers_append(headers, "X-GP-OPTION-KEY2", "value2");
+	expect_headers_append(headers, "X-GP-OPTIONS-KEY2", "value2");
 
 	expect_headers_append(headers, "X-GP-URI", gphd_uri->uri);
 	expect_headers_append(headers, "X-GP-HAS-FILTER", "0");
