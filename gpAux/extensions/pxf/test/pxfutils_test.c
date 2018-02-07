@@ -14,11 +14,11 @@ test_normalize_key_name(void **state)
 {
 	char	   *replaced = normalize_key_name("bar");
 
-	assert_string_equal(replaced, "X-GP-BAR");
+	assert_string_equal(replaced, "X-GP-OPTIONS-BAR");
 	pfree(replaced);
 
 	replaced = normalize_key_name("FOO");
-	assert_string_equal(replaced, "X-GP-FOO");
+	assert_string_equal(replaced, "X-GP-OPTIONS-FOO");
 	pfree(replaced);
 
 	/* test null string */
