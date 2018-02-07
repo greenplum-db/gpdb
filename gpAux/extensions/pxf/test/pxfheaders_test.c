@@ -59,12 +59,12 @@ test_build_http_headers(void **state)
 
 	OptionData *option_data1 = (OptionData *) palloc0(sizeof(OptionData));
 
-	option_data1->key = "option1-key";
-	option_data1->value = "option1-value";
+	option_data1->key = "key1";
+	option_data1->value = "value1";
 	OptionData *option_data2 = (OptionData *) palloc0(sizeof(OptionData));
 
-	option_data2->key = "option2-key";
-	option_data2->value = "option2-value";
+	option_data2->key = "key2";
+	option_data2->value = "value2";
 	gphd_uri->options = list_make2(option_data1, option_data2);
 
 	tuple.natts = 0;
@@ -107,13 +107,13 @@ test_build_http_headers(void **state)
 	expect_headers_append(headers, "X-GP-DATA-DIR", gphd_uri->data);
 
 
-	expect_string(normalize_key_name, key, "option1-key");
-	will_return(normalize_key_name, pstrdup("X-GP-OPTION1-KEY"));
-	expect_headers_append(headers, "X-GP-OPTION1-KEY", "option1-value");
+	expect_string(normalize_key_name, key, "key1");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-KEY1"));
+	expect_headers_append(headers, "X-GP-OPTIONS-KEY1", "value1");
 
-	expect_string(normalize_key_name, key, "option2-key");
-	will_return(normalize_key_name, pstrdup("X-GP-OPTION2-KEY"));
-	expect_headers_append(headers, "X-GP-OPTION2-KEY", "option2-value");
+	expect_string(normalize_key_name, key, "key2");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-KEY2"));
+	expect_headers_append(headers, "X-GP-OPTIONS-KEY2", "value2");
 
 	expect_headers_append(headers, "X-GP-URI", gphd_uri->uri);
 	expect_headers_append(headers, "X-GP-HAS-FILTER", "0");
