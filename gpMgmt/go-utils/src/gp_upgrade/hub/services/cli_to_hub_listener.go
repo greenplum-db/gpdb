@@ -4,6 +4,9 @@ import (
 	"gp_upgrade/hub/cluster"
 	"gp_upgrade/hub/configutils"
 	"gp_upgrade/hub/logger"
+	"gp_upgrade/hub/upgradestatus"
+	"os"
+	"path/filepath"
 )
 
 func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *CliToHubListenerImpl {
@@ -13,7 +16,8 @@ func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *Cli
 	configReader := configutils.NewReader()
 	configReader.OfOldClusterConfig() // refactor opportunity -- don't use this pattern, use different types or separate functions for old/new or set the config path at reader initialization time
 	impl.Bootstrapper.hostnameGetter = configReader
-	impl.Bootstrapper.softwareVerifier = NewClusterSsher(NewChecklistWriterImpl())
+	gpUpgradeDir := filepath.Join(os.Getenv("HOME"), ".gp_upgrade")
+	impl.Bootstrapper.softwareVerifier = NewClusterSsher(upgradestatus.NewChecklistManager(gpUpgradeDir), logger)
 	return impl
 }
 

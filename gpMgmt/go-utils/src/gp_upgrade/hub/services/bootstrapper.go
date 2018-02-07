@@ -34,10 +34,7 @@ func (s *Bootstrapper) CheckSeginstall(ctx context.Context,
 	//gpbackupUtils.GetLogger().Info("starting CheckSeginstall()")
 	//
 	clusterHostnames, err := s.hostnameGetter.GetHostnames()
-	if err != nil {
-		return nil, err
-	}
-	if len(clusterHostnames) == 0 {
+	if err != nil || len(clusterHostnames) == 0 {
 		return nil, errors.New("No cluster config found, did you forget to run gp_upgrade check config?")
 	}
 

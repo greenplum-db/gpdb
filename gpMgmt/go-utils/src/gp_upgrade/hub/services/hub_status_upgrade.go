@@ -27,10 +27,9 @@ func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb
 		return nil, errors.New("Could not find the HOME environment")
 	}
 
-	seginstallStatus := &pb.UpgradeStepStatus{
-		Step:   pb.UpgradeSteps_SEGINSTALL,
-		Status: pb.StepStatus_PENDING,
-	}
+	seginstallStatePath := filepath.Join(homeDirectory, ".gp_upgrade/seginstall")
+	seginstallState := upgradestatus.NewSeginstall(seginstallStatePath)
+	seginstallStatus, _ := seginstallState.GetStatus()
 
 	gpstopStatePath := filepath.Join(homeDirectory, ".gp_upgrade/gpstop")
 	clusterPair := upgradestatus.NewShutDownClusters(gpstopStatePath)

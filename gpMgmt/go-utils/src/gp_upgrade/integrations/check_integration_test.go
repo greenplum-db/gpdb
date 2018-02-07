@@ -55,8 +55,8 @@ var _ = Describe("check", func() {
 			session := runCommand("check", "seginstall")
 			Eventually(session).Should(Exit(0))
 
-			//statusSession := runCommand("status", "upgrade")
-			//Eventually(statusSession).Should(gbytes.Say("COMPLETE - Install binaries on segments"))
+			statusSession := runCommand("status", "upgrade")
+			Eventually(statusSession).Should(gbytes.Say("RUNNING - Install binaries on segments"))
 		})
 	})
 })
