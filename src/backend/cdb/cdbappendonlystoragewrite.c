@@ -1263,7 +1263,6 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 {
 	uint8	   *header;
 	uint8	   *dataBuffer;
-	int32		dataRoundedUpLen = 0;	/* Shutup compiler. */
 	int32		dataBufferWithOverrrunLen;
 	PGFunction *cfns = storageWrite->compression_functions;
 	PGFunction	compressor;
@@ -1295,12 +1294,11 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 	 * Compress into the BufferedAppend buffer after the large header (and
 	 * optional checksum, etc.
 	 */
-	(void) gp_trycompress_new(
-							  sourceData,
+	(void) gp_trycompress_new(sourceData,
 							  sourceLen,
 							  dataBuffer,
 							  dataBufferWithOverrrunLen,
-			sourceLen, //Limit compression to be no more than the input size.
+							  sourceLen, //Limit compression to be no more than the input size.
 							  compressedLen,
 							  storageWrite->storageAttributes.compressLevel,
 							  compressor,
@@ -1317,127 +1315,76 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 	 * The best solution to this seems to be to make the threshold at which we
 	 * compress data user configurable.
 	 */
-	if (*compressedLen < sourceLen)
-	{
-		/*
-		 * Compression successful.
-		 */
-		dataRoundedUpLen = AOStorage_RoundUp(*compressedLen, storageWrite->formatVersion);
-
-		AOStorage_ZeroPad(
-						  dataBuffer,
-						  *compressedLen,
-						  dataRoundedUpLen);
-
-		switch (storageWrite->getBufferAoHeaderKind)
-		{
-			case AoHeaderKind_SmallContent:
-
-				/*
-				 * Make the header and compute the checksum if necessary.
-				 */
-				AppendOnlyStorageFormat_MakeSmallContentHeader
-					(header,
-					 storageWrite->storageAttributes.checksum,
-					 storageWrite->isFirstRowNumSet,
-					 storageWrite->formatVersion,
-					 storageWrite->firstRowNum,
-					 executorBlockKind,
-					 itemCount,
-					 sourceLen,
-					 *compressedLen);
-				break;
-
-			case AoHeaderKind_BulkDenseContent:
-
-				/*
-				 * Make the header and compute the checksum if necessary.
-				 */
-				AppendOnlyStorageFormat_MakeBulkDenseContentHeader
-					(header,
-					 storageWrite->storageAttributes.checksum,
-					 storageWrite->isFirstRowNumSet,
-					 storageWrite->formatVersion,
-					 storageWrite->firstRowNum,
-					 executorBlockKind,
-					 itemCount,
-					 sourceLen,
-					 *compressedLen);
-				break;
-
-			default:
-				elog(ERROR, "Unexpected Append-Only header kind %d",
-					 storageWrite->getBufferAoHeaderKind);
-				break;
-		}
-
-		if (Debug_appendonly_print_storage_headers)
-		{
-			AppendOnlyStorageWrite_LogBlockHeader(storageWrite,
-												  BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
-												  header);
-		}
-
-		elogif(Debug_appendonly_print_insert, LOG,
-			   "Append-only insert finished compressed block for table '%s' "
-			   "(segment file '%s', header offset in file " INT64_FORMAT ", "
-			   "length = %d, compressed length %d, item count %d, block count " INT64_FORMAT ")",
-			   storageWrite->relationName,
-			   storageWrite->segmentFileName,
-		  BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
-			   sourceLen,
-			   *compressedLen,
-			   itemCount,
-			   storageWrite->bufferCount);
-	}
-	else
-	{
-		/*
-		 * Unable to compress the data to smaller the input size. Solution:
-		 * Indicate in the header we are storing an non-compressed block.
-		 */
-		*compressedLen = 0;
-
-		dataRoundedUpLen = AOStorage_RoundUp(sourceLen, storageWrite->formatVersion);
-
-		/*
-		 * Copy non-compressed data in after the header information.
-		 */
+	int32 dataLen = *compressedLen;
+	if (*compressedLen >= sourceLen) {
+		dataLen = sourceLen;
 		memcpy(dataBuffer, sourceData, sourceLen);
+		*compressedLen = 0;
+	}
+	int32 dataRoundedUpLen = AOStorage_RoundUp(dataLen, storageWrite->formatVersion);
+	AOStorage_ZeroPad(dataBuffer, dataLen, dataRoundedUpLen);
+	switch (storageWrite->getBufferAoHeaderKind)
+	{
+		case AoHeaderKind_SmallContent:
 
-		AOStorage_ZeroPad(dataBuffer, sourceLen, dataRoundedUpLen);
+			/*
+			 * Make the header and compute the checksum if necessary.
+			 */
+			AppendOnlyStorageFormat_MakeSmallContentHeader
+				(header,
+				 storageWrite->storageAttributes.checksum,
+				 storageWrite->isFirstRowNumSet,
+				 storageWrite->formatVersion,
+				 storageWrite->firstRowNum,
+				 executorBlockKind,
+				 itemCount,
+				 sourceLen,
+				 *compressedLen);
+			break;
 
-		/*
-		 * Make the header and compute the checksum if necessary.
-		 */
-		AppendOnlyStorageFormat_MakeSmallContentHeader
-			(header,
-			 storageWrite->storageAttributes.checksum,
-			 storageWrite->isFirstRowNumSet,
-			 storageWrite->formatVersion,
-			 storageWrite->firstRowNum,
-			 executorBlockKind,
-			 itemCount,
+		case AoHeaderKind_BulkDenseContent:
+
+			/*
+			 * Make the header and compute the checksum if necessary.
+			 */
+			AppendOnlyStorageFormat_MakeBulkDenseContentHeader
+				(header,
+				 storageWrite->storageAttributes.checksum,
+				 storageWrite->isFirstRowNumSet,
+				 storageWrite->formatVersion,
+				 storageWrite->firstRowNum,
+				 executorBlockKind,
+				 itemCount,
+				 sourceLen,
+				 *compressedLen);
+			break;
+
+		default:
+			elog(ERROR, "Unexpected Append-Only header kind %d",
+				 storageWrite->getBufferAoHeaderKind);
+			break;
+	}
+
+	if (Debug_appendonly_print_storage_headers)
+	{
+		AppendOnlyStorageWrite_LogBlockHeader(storageWrite,
+											  BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
+											  header);
+	}
+
+	if (Debug_appendonly_print_insert) {
+		elog(LOG,
+			 "Append-only insert block for table '%s' stored %s "
+				"(segment file '%s', header offset in file " INT64_FORMAT ", "
+				"source length = %d, result length %d item count %d, block count " INT64_FORMAT ")",
+			 storageWrite->relationName,
+			 (*compressedLen > 0) ? "compressed" : "uncompressed (couldn't compress)",
+			 storageWrite->segmentFileName,
+			 BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
 			 sourceLen,
-			  /* compressedLen */ 0);
-
-		if (Debug_appendonly_print_storage_headers)
-		{
-			AppendOnlyStorageWrite_LogBlockHeader(storageWrite,
-												  BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
-												  header);
-		}
-
-		elogif(Debug_appendonly_print_insert, LOG,
-			   "Append-only insert could not compress block for table '%s' smaller -- non-compressed block stored "
-			   "(segment file '%s', header offset in file " INT64_FORMAT ", "
-			   "length = %d, item count %d, block count " INT64_FORMAT ")",
-			   storageWrite->relationName,
-			   storageWrite->segmentFileName,
-		  BufferedAppendCurrentBufferPosition(&storageWrite->bufferedAppend),
-			   sourceLen,
-			   itemCount,
-			   storageWrite->bufferCount);
+			 dataLen,
+			 itemCount,
+			 storageWrite->bufferCount);
 	}
 
 	*bufferLen = storageWrite->currentCompleteHeaderLen + dataRoundedUpLen;
