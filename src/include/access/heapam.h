@@ -55,6 +55,7 @@ typedef enum
 } LockTupleWaitType;
 
 /* in heap/heapam.c */
+extern Relation dynamic_external_relation_open(Oid relationId, Oid castRelid, LOCKMODE lockmode);
 extern Relation relation_open(Oid relationId, LOCKMODE lockmode);
 extern Relation try_relation_open(Oid relationId, LOCKMODE lockmode, 
 								  bool noWait);

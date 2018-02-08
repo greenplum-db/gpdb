@@ -946,7 +946,7 @@ ExecOpenScanExternalRelation(EState *estate, Index scanrelid)
 	rtentry = rt_fetch(scanrelid, estate->es_range_table);
 	reloid = rtentry->relid;
 
-	return relation_open(reloid, NoLock);
+	return dynamic_external_relation_open(reloid, rtentry->castRelid, NoLock);
 }
 
 /* ----------------------------------------------------------------

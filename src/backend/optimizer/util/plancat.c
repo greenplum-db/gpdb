@@ -102,15 +102,15 @@ static void get_external_relation_info(Relation relation, RelOptInfo *rel);
  * important for it.
  */
 void
-get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
+get_relation_info(PlannerInfo *root, RangeTblEntry *rte, bool inhparent,
 				  RelOptInfo *rel)
 {
 	Index		varno = rel->relid;
-	Relation	relation;
+	Relation	relation, castRel=NULL;
 	bool		hasindex;
 	List	   *indexinfos = NIL;
 	bool		needs_longlock;
-
+	Oid         relationObjectId = rte->relid;
 	/*
 	 * We need not lock the relation since it was already locked, either by
 	 * the rewriter or when expand_inherited_rtentry() added it to the query's
@@ -118,6 +118,14 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 	 */
 	relation = heap_open(relationObjectId, NoLock);
 	needs_longlock = rel_needs_long_lock(relationObjectId);
+
+
+	if(RelationIsExternal(relation)&&rte->castRelid!=InvalidOid)
+	{
+		castRel = heap_open(rte->castRelid, NoLock);
+		CopyDynExtTableAttListFromCastRel(relation, castRel->rd_att);
+		heap_close(castRel, NoLock);
+	}
 
 	rel->min_attr = FirstLowInvalidHeapAttributeNumber + 1;
 	rel->max_attr = RelationGetNumberOfAttributes(relation);

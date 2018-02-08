@@ -3,6 +3,7 @@
 #include "funcapi.h"
 
 #include "access/extprotocol.h"
+#include "commands/defrem.h"
 #include "catalog/pg_proc.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
@@ -47,10 +48,10 @@ static void check_ext_options(const FunctionCallInfo fcinfo)
         List *options = exttbl->options;
 
         foreach(cell, options) {
-                Value *value = (Value *) lfirst(cell);
-                char *key = value->val.str;
-
-                if (key && strcasestr(key, "database") && !strcasestr(key, "greenplum")) {
+				DefElem *def = (DefElem *) lfirst(cell);
+				/* report error if the value of OPTION "database" is not "greenplum") */
+                if (def->defname != NULL && pg_strcasecmp(def->defname, "database") == 0
+	                && pg_strcasecmp(defGetString(def), "greenplum") != 0) {
                         ereport(ERROR, (0, errmsg("This is greenplum.")));
                 }
         }

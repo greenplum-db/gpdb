@@ -1964,6 +1964,7 @@ create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
 
 	rte = makeNode(RangeTblEntry);
 	rte->rtekind = RTE_CTE;
+	rte->castRelid = InvalidOid;
 	rte->ctename = pstrdup(buf);
 	rte->ctelevelsup = 0;
 	rte->self_reference = false;

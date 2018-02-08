@@ -16,8 +16,10 @@
 #ifndef PG_EXTTABLE_H
 #define PG_EXTTABLE_H
 
+#include "access/tupdesc.h"
 #include "catalog/genbki.h"
 #include "nodes/pg_list.h"
+#include "utils/relcache.h"
 
 /*
  * pg_exttable definition.
@@ -118,11 +120,15 @@ extern ExtTableEntry *GetExtTableEntry(Oid relid);
 extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 
 extern void RemoveExtTableEntry(Oid relid);
+extern bool CheckDynamicOptionForExtTab(Relation ext_rel);
+extern void CopyDynExtTableAttListFromCastRel(Relation, TupleDesc);
 
 #define fmttype_is_custom(c) (c == 'b' || c == 'a' || c == 'p')
 #define fmttype_is_avro(c) (c == 'a')
 #define fmttype_is_parquet(c) (c == 'p')
 #define fmttype_is_text(c)   (c == 't')
 #define fmttype_is_csv(c)    (c == 'c')
+
+#define DYNAMIC_EXT_TBL_OPTION "dynamic_schema"
 
 #endif /* PG_EXTTABLE_H */

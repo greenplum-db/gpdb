@@ -1439,6 +1439,7 @@ CQueryMutators::PqueryConvertToDerivedTable
 	prte->subquery = pqueryDrvd;
 	prte->inFromCl = true;
 	prte->subquery->cteList = NIL;
+	prte->castRelid = InvalidOid;
 
 	if (NULL != pnodeHavingQual)
 	{

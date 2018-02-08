@@ -1292,7 +1292,7 @@ CTranslatorDXLToPlStmt::PrteFromDXLTVF
 
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
 	prte->rtekind = RTE_FUNCTION;
-
+	prte->castRelid = InvalidOid;
 	FuncExpr *pfuncexpr = MakeNode(FuncExpr);
 
 	pfuncexpr->funcid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();
@@ -1367,6 +1367,7 @@ CTranslatorDXLToPlStmt::PrteFromDXLValueScan
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
 
 	prte->relid = InvalidOid;
+	prte->castRelid = InvalidOid;
 	prte->subquery = NULL;
 	prte->rtekind = RTE_VALUES;
 	prte->inh = false;			/* never true for values RTEs */
@@ -2579,6 +2580,7 @@ CTranslatorDXLToPlStmt::PsubqscanFromDXLSubqScan
 	// create an rtable entry for the subquery scan
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
 	prte->rtekind = RTE_SUBQUERY;
+	prte->castRelid = InvalidOid;
 
 	Alias *palias = MakeNode(Alias);
 	palias->colnames = NIL;
@@ -4214,6 +4216,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 	GPOS_ASSERT(InvalidOid != oid);
 
 	prte->relid = oid;
+	prte->castRelid = InvalidOid;
 	prte->checkAsUser = pdxltabdesc->UlExecuteAsUser();
 	prte->requiredPerms |= ACL_NO_RIGHTS;
 

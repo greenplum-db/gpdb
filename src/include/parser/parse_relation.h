@@ -54,6 +54,13 @@ extern void markVarForSelectPriv(ParseState *pstate, Var *var,
 					 RangeTblEntry *rte);
 extern Relation parserOpenTable(ParseState *pstate, const RangeVar *relation,
 				int lockmode, bool nowait, bool *lockUpgraded);
+extern
+RangeTblEntry * addRangeTableEntryForDynamicExtTab(ParseState *pstate,
+								   RangeVar *relation,
+								   Alias *alias,
+								   bool inh,
+								   bool inFromCl,
+								   RangeVar *castRel);
 extern RangeTblEntry *addRangeTableEntry(ParseState *pstate,
 				   RangeVar *relation,
 				   Alias *alias,

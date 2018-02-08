@@ -19,6 +19,7 @@ GPTest.pm
 /results/
 /log/
 
+data/dynamic_schema.csv
 data/wet_csv?.tbl
 data/wet_text?.tbl
 data/wet_syntax?.tbl

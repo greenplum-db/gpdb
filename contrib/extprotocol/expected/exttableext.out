@@ -10,7 +10,7 @@ NOTICE:  table "exttabtest_options_r" does not exist, skipping
     SELECT * FROM exttabtest_options_r
     EXCEPT ALL
     SELECT * FROM exttabtest;
-ERROR:  This is greenplum. (gpextprotocol.c:54)
+ERROR:  This is greenplum. (gpextprotocol.c:55)
 DETAIL:  External table exttabtest_options_r, file demoprot://exttabtest.txt
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
 NOTICE:  table "exttabtest_w" does not exist, skipping
@@ -1635,7 +1635,7 @@ ERROR:  protocol "demoprot" does not exist  (seg0 slice1 rh55-qavm55:7532 pid=18
     -- However demoprot implementation prevents using any other protocol name than "demoprot"
     -- therefore the error is expected.
     select count(*) from exttabtest_r_new;
-ERROR:  internal error: demoprot called with a different protocol (demoprot_new) (gpextprotocol.c:106)  (seg0 slice1 rh55-qavm55:7532 pid=18394) (cdbdisp.c:1453)
+ERROR:  internal error: demoprot called with a different protocol (demoprot_new) (gpextprotocol.c:107)  (seg0 slice1 rh55-qavm55:7532 pid=18394) (cdbdisp.c:1453)
 DETAIL:  External table exttabtest_r_new, file demoprot_new://exttabtest.txt
     -- Rename protocol name back to demoprot
     ALTER PROTOCOL demoprot_new RENAME to demoprot;

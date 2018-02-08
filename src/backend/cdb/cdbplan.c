@@ -1002,6 +1002,7 @@ package_plan_as_rte(Query *query, Plan *plan, Alias *eref, List *pathkeys)
 	rte = makeNode(RangeTblEntry);
 	rte->rtekind = RTE_SUBQUERY;
 	rte->subquery = subquery;
+	rte->castRelid = InvalidOid;
 	rte->eref = eref;
 	rte->subquery_plan = plan;
 	rte->subquery_rtable = subquery->rtable;

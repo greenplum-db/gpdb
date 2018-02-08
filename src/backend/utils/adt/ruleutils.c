@@ -2039,6 +2039,7 @@ deparse_context_for(const char *aliasname, Oid relid)
 	rte = makeNode(RangeTblEntry);
 	rte->rtekind = RTE_RELATION;
 	rte->relid = relid;
+	rte->castRelid = InvalidOid;
 	rte->eref = makeAlias(aliasname, NIL);
 	rte->inh = false;
 	rte->inFromCl = true;

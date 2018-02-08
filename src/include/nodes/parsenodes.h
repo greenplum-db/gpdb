@@ -22,6 +22,7 @@
 #ifndef PARSENODES_H
 #define PARSENODES_H
 
+#include "access/tupdesc.h"
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
 #include "nodes/value.h"
@@ -722,6 +723,8 @@ typedef struct RangeTblEntry
 	 * Fields valid for a plain relation RTE (else zero):
 	 */
 	Oid			relid;			/* OID of the relation */
+
+	Oid         castRelid;				 /* For dynamic external table to cast it's attribute list to */
 
 	/*
 	 * Fields valid for a subquery RTE (else NULL):

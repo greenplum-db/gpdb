@@ -985,6 +985,7 @@ _readRangeTblEntry(void)
 		case RTE_RELATION:
 		case RTE_SPECIAL:
 			READ_OID_FIELD(relid);
+			READ_OID_FIELD(castRelid);
 			break;
 		case RTE_SUBQUERY:
 			READ_NODE_FIELD(subquery);

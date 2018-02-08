@@ -27,7 +27,7 @@ typedef void (*get_relation_info_hook_type) (PlannerInfo *root,
 extern PGDLLIMPORT get_relation_info_hook_type get_relation_info_hook;
 
 
-extern void get_relation_info(PlannerInfo *root, Oid relationObjectId,
+extern void get_relation_info(PlannerInfo *root, RangeTblEntry *rte,
 				  bool inhparent, RelOptInfo *rel);
 
 extern void estimate_rel_size(Relation rel, int32 *attr_widths,

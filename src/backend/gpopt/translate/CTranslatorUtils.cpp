@@ -131,6 +131,12 @@ CTranslatorUtils::Pdxltabdesc
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Query over external partitions"));
 	}
 
+	if (prte->castRelid != InvalidOid)
+	{
+		// fall back to the planner for queries over external table with dynamic schema
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Query over external table with dynamic schema"));
+	}
+
 	CMDIdGPDB *pmdid = GPOS_NEW(pmp) CMDIdGPDB(oidRel);
 
 	const IMDRelation *pmdrel = pmda->Pmdrel(pmdid);

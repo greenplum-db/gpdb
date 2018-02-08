@@ -26,7 +26,9 @@
 #include "access/reloptions.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "commands/defrem.h"
 #include "mb/pg_wchar.h"
+#include "nodes/makefuncs.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -34,6 +36,7 @@
 #include "utils/tqual.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/inval.h"
 #include "utils/uri.h"
 #include "miscadmin.h"
 
@@ -357,7 +360,6 @@ GetExtTableEntryIfExists(Oid relid)
 		Datum	   *elems;
 		int			nelems;
 		int			i;
-		char	   *option_str;
 
 		deconstruct_array(DatumGetArrayTypeP(options),
 						  TEXTOID, -1, false, 'i',
@@ -365,10 +367,19 @@ GetExtTableEntryIfExists(Oid relid)
 
 		for (i = 0; i < nelems; i++)
 		{
-			option_str = TextDatumGetCString(elems[i]);
+			/* parse option with format key=value */
+			char       *s;
+			char       *p;
+			Node       *val = NULL;
 
-			/* append to a list of Value nodes, size nelems */
-			extentry->options = lappend(extentry->options, makeString(option_str));
+			s = TextDatumGetCString(elems[i]);
+			p = strchr(s, '=');
+			if (p)
+			{
+				*p++ = '\0';
+				val = (Node *) makeString(pstrdup(p));
+			}
+			extentry->options = lappend(extentry->options, makeDefElem(pstrdup(s), val));
 		}
 	}
 
@@ -477,4 +488,55 @@ RemoveExtTableEntry(Oid relid)
 	/* Finish up scan and close exttable catalog. */
 	systable_endscan(scan);
 	heap_close(pg_exttable_rel, NoLock);
+}
+
+/**
+ * Dynamic External table which has OPTIONS (dynamic_schema 'true') when 'CREATE EXTERNAL TABLE',
+ * This function Check whether a external table has the option 'dynamic_schema' in pg_exttable.
+ */
+bool
+CheckDynamicOptionForExtTab(Relation ext_rel)
+{
+	Assert(RelationIsExternal(ext_rel));
+
+	ListCell *cell;
+	ExtTableEntry *exttbl = GetExtTableEntry(ext_rel->rd_id);
+	List *options = exttbl->options;
+
+	foreach(cell, options)
+	{
+		DefElem *def = (DefElem *) lfirst(cell);
+
+		if (def->defname != NULL && pg_strcasecmp(def->defname, DYNAMIC_EXT_TBL_OPTION) == 0
+				&& pg_strcasecmp(defGetString(def), "true") == 0)
+		{
+			return TRUE;
+		}
+	}
+}
+/**
+ *  Dynamic External table can be used in the pseudo table function:
+ *         GP_DYNAMIC_EXTTBL_AS_TBL(('external_tbl', 'cast_tbl'));
+ *  In this scenario, this function is called to auto replace external_tab's attribute list by the case_tab's.
+ */
+void
+CopyDynExtTableAttListFromCastRel(Relation ext_rel, TupleDesc target_rel)
+{
+	if(target_rel == NULL)
+		return;
+
+	if (!RelationIsExternal(ext_rel))
+		return;
+
+	if(CheckDynamicOptionForExtTab(ext_rel))
+	{
+		ext_rel->rd_isLocalBuf = true;
+		ext_rel->rd_att->natts = target_rel->natts;
+		ext_rel->rd_att->attrs = target_rel->attrs;
+		ext_rel->rd_att->constr= target_rel->constr;
+
+		ext_rel->rd_rel->relnatts = target_rel->natts;
+
+		CacheInvalidateRelcache(ext_rel);
+	}
 }

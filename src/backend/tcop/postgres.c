@@ -41,6 +41,7 @@
 #endif
 
 #include <pthread.h>
+#include <utils/builtins.h>
 
 #include "access/distributedlog.h"
 #include "access/printtup.h"

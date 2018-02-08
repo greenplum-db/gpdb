@@ -2267,6 +2267,7 @@ _copyRangeTblEntry(RangeTblEntry *from)
 
 	COPY_SCALAR_FIELD(rtekind);
 	COPY_SCALAR_FIELD(relid);
+	COPY_SCALAR_FIELD(castRelid);
 	COPY_NODE_FIELD(subquery);
 	COPY_SCALAR_FIELD(jointype);
 	COPY_NODE_FIELD(joinaliasvars);
@@ -2296,7 +2297,7 @@ _copyRangeTblEntry(RangeTblEntry *from)
 	COPY_NODE_FIELD(ctecoltypmods);
 
 	COPY_SCALAR_FIELD(forceDistRandom);
-    COPY_NODE_FIELD(pseudocols);                /*CDB*/
+	COPY_NODE_FIELD(pseudocols);                /*CDB*/
 
 	return newnode;
 }

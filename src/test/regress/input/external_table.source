@@ -24,6 +24,10 @@
 -- m/ERROR\:\s+external table .* command ended with .*cat\: cannot open.*/i
 -- s/cat\: cannot open (.*)$/cat\: $1\: NO SUCH FILE/
 --
+-- # remove code line number in Error message
+-- m/.+GP_DYNAMIC_EXTTBL_AS_TBL\(\).+\(.*\.c:\d+\)/
+-- s/\s+\(parse_relation.c:\d+\)//
+--
 -- end_matchsubs
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 
@@ -55,12 +59,17 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- --------------------------------------
 DROP TABLE IF EXISTS REG_REGION;
 DROP TABLE IF EXISTS tableless_heap;
+DROP TABLE IF EXISTS dyn_schema_t1;
+DROP TABLE IF EXISTS dyn_schema_t2;
 DROP TABLE IF EXISTS errlog_save;
 DROP TABLE IF EXISTS exttab_insert_1;
 DROP TABLE IF EXISTS exttab_ctas_1;
 DROP TABLE IF EXISTS exttab_constraints_insert_1;
 
 DROP EXTERNAL TABLE IF EXISTS tableless_ext;
+DROP EXTERNAL TABLE IF EXISTS dyn_schema_ext1;
+DROP EXTERNAL TABLE IF EXISTS dyn_schema_ext2;
+DROP EXTERNAL TABLE IF EXISTS dyn_schema_ext3;
 DROP EXTERNAL TABLE IF EXISTS ret_too_many_uris;
 DROP EXTERNAL TABLE IF EXISTS wet_too_many_uris;
 DROP EXTERNAL TABLE IF EXISTS exttab_basic_1;
@@ -313,8 +322,72 @@ select * from tableless_ext;
 SELECT gp_truncate_error_log('*.*');
 SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 
+-- Test for dynamic schema external table
 
---
+-- 1. Prepare the testing data
+create table dyn_schema_t1 (a int, b int);
+insert into dyn_schema_t1 select a,a from generate_series(1,10) as a;
+COPY dyn_schema_t1 to '@abs_srcdir@/data/dynamic_schema.csv' CSV;
+
+-- normal external table, the same schema with dyn_schema_t1 heap table 
+create external table dyn_schema_ext1(a int, b int)
+location ('file://@hostname@@abs_srcdir@/data/dynamic_schema.csv')
+format 'csv';
+
+-- normal external table, not the same schema with dyn_schema_t1 heap table 
+create external table dyn_schema_ext2(a int)
+location ('file://@hostname@@abs_srcdir@/data/dynamic_schema.csv')
+format 'csv';
+
+-- test: dynamic_schema conflict with column definition 
+create external table dyn_schema_ext3(a int)
+location ('file://@hostname@@abs_srcdir@/data/dynamic_schema.csv')
+format 'csv' OPTIONS (dynamic_schema 'true'); -- Error for dynamic_schema conflict with column definition
+
+-- test: dynamic schema
+create external table dyn_schema_ext3()
+location ('file://@hostname@@abs_srcdir@/data/dynamic_schema.csv')
+format 'csv' OPTIONS (dynamic_schema 'true'); -- OK
+
+-- 2. test: select query
+SELECT count(*) FROM dyn_schema_ext1;
+SELECT count(*) FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext2', 'dyn_schema_t1'); -- ERROR:  Only external table with OPTIONS (dynamic_schema 'true') works for GP_DYNAMIC_EXTTBL_AS_TBL() 
+SELECT count(*) FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t1'); -- ok
+SELECT count(*) FROM GP_DYNAMIC_EXTTBL_AS_TBL('public.dyn_schema_ext3', 'public.dyn_schema_t1'); -- ok, check table name with schema
+
+-- 3. test: cast to different type
+create table dyn_schema_t2 (c1 char(8), c2 char(8));
+SELECT count(*) FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t2'); -- ok
+-- test: multiple calling GP_DYNAMIC_EXTTBL_AS_TBL with differnt parameter.
+SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t1') AS tab1, GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t2') AS tab2;
+
+-- 4. test: add one more column
+create table dyn_schema_t3 (a int, b int, c int);
+insert into dyn_schema_t3 select a,a,a from generate_series(1,10) as a;
+COPY dyn_schema_t3 to '@abs_srcdir@/data/dynamic_schema.csv' CSV;
+SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t3');
+COPY dyn_schema_t1 to '@abs_srcdir@/data/dynamic_schema.csv' CSV;
+
+-- 5. test: insert ... select ...
+INSERT INTO dyn_schema_t1 SELECT * FROM dyn_schema_ext1;
+SELECT count(*) FROM dyn_schema_t1;
+INSERT INTO dyn_schema_t1 SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext2', 'dyn_schema_t1'); -- ERROR:  Only external table with OPTIONS (dynamic_schema 'true') works for GP_DYNAMIC_EXTTBL_AS_TBL() 
+SELECT count(*) FROM dyn_schema_t1;
+INSERT INTO dyn_schema_t1 SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t1'); -- work because dyn_schema_ext auto changed to use tableless_heap column list
+SELECT count(*) FROM dyn_schema_t1;
+INSERT INTO dyn_schema_t2 SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t2'); -- work because dyn_schema_ext auto changed to use tableless_heap column list
+SELECT count(*) FROM dyn_schema_t2;
+
+-- 6. test: schema change in a transaction
+BEGIN;
+TRUNCATE dyn_schema_t1;
+INSERT INTO dyn_schema_t1 SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t1'); 
+SELECT * FROM dyn_schema_t1;
+ALTER TABLE dyn_schema_t1 ALTER COLUMN b TYPE char(8);
+INSERT INTO dyn_schema_t1 SELECT * FROM GP_DYNAMIC_EXTTBL_AS_TBL('dyn_schema_ext3', 'dyn_schema_t1'); 
+SELECT * FROM dyn_schema_t1;
+COMMIT;
+
 -- These fail because there are more locations than there are segments.
 --
 -- As written, if you have a large enough cluster, with more than 20

@@ -52,6 +52,7 @@
 #include "access/xact.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
+#include "catalog/pg_exttable.h"
 #include "catalog/namespace.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -854,6 +855,24 @@ heapgettup_pagemode(HeapScanDesc scan,
 	}
 }
 
+Relation
+dynamic_external_relation_open(Oid relationId, Oid castRelid, LOCKMODE lockmode)
+{
+	Relation	r;
+
+
+	r = relation_open(relationId, lockmode);
+	Assert(RelationIsExternal(r));
+
+	if(castRelid!=InvalidOid)
+	{
+		Relation r2 = relation_open(castRelid, NoLock);
+		CopyDynExtTableAttListFromCastRel(r, r2->rd_att);
+		relation_close(r2, NoLock);
+	}
+
+	return r;
+}
 
 /* ----------------------------------------------------------------
  *					 heap access method interface

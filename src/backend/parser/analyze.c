@@ -925,6 +925,7 @@ transformGroupedWindows(Query *qry)
 	rte = makeNode(RangeTblEntry);
 	rte->rtekind = RTE_SUBQUERY;
 	rte->subquery = subq;
+	rte->castRelid = InvalidOid;
 	rte->alias = NULL; /* fill in later */
 	rte->eref = NULL; /* fill in later */
 	rte->inFromCl = true;

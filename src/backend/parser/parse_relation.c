@@ -22,8 +22,10 @@
 #include "access/sysattr.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_exttable.h"
 #include "catalog/pg_proc_callback.h"
 #include "catalog/pg_type.h"
+#include "cdb/cdbvars.h"
 #include "funcapi.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -48,7 +50,7 @@ static RangeTblEntry *scanNameSpaceForRelid(ParseState *pstate, Oid relid,
 static void markRTEForSelectPriv(ParseState *pstate, RangeTblEntry *rte,
 					 int rtindex, AttrNumber col);
 static LockingClause *getLockingClause(ParseState *pstate, char *refname);
-static void expandRelation(Oid relid, Alias *eref,
+static void expandRelation(Oid relid, Oid castRelid, Alias *eref,
 			   int rtindex, int sublevels_up,
 			   int location, bool include_dropped,
 			   List **colnames, List **colvars);
@@ -342,6 +344,10 @@ checkNameSpaceConflicts(ParseState *pstate, List *namespace1,
 				rte2->rtekind == RTE_RELATION && rte2->alias == NULL &&
 				rte1->relid != rte2->relid)
 				continue;		/* no conflict per SQL92 rule */
+			if (rte1->rtekind == RTE_RELATION && rte1->alias == NULL &&
+					rte2->rtekind == RTE_RELATION && rte2->alias == NULL &&
+					rte1->castRelid != rte2->castRelid)
+				continue;        /* no conflict if use different param2 for GP_DYNAMIC_EXTTBL_AS_TBL('exttab', 'param2'); */
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_ALIAS),
 					 errmsg("table name \"%s\" specified more than once",
@@ -890,6 +896,7 @@ parserOpenTable(ParseState *pstate, const RangeVar *relation,
 	return rel;
 }
 
+
 /*
  * Add an entry for a relation to the pstate's range table (p_rtable).
  *
@@ -899,19 +906,20 @@ parserOpenTable(ParseState *pstate, const RangeVar *relation,
  * Note: formerly this checked for refname conflicts, but that's wrong.
  * Caller is responsible for checking for conflicts in the appropriate scope.
  */
-RangeTblEntry *
-addRangeTableEntry(ParseState *pstate,
-				   RangeVar *relation,
-				   Alias *alias,
-				   bool inh,
-				   bool inFromCl)
+static RangeTblEntry *
+addRangeTableEntry_internal(ParseState *pstate,
+		RangeVar *relation,
+		Alias *alias,
+		bool inh,
+		bool inFromCl,
+		RangeVar *castRelRV)
 {
 	RangeTblEntry *rte = makeNode(RangeTblEntry);
 	char	   *refname = alias ? alias->aliasname : relation->relname;
 	LOCKMODE	lockmode = AccessShareLock;
 	bool		nowait = false;
 	LockingClause *locking;
-	Relation	rel;
+	Relation	rel, castRel=NULL;
 	ParseCallbackState pcbstate;
 
 	/*
@@ -938,17 +946,32 @@ addRangeTableEntry(ParseState *pstate,
 	rte->relid = RelationGetRelid(rel);
 	rte->alias = alias;
 	rte->rtekind = RTE_RELATION;
+	rte->castRelid = InvalidOid;
 
 	/* external tables don't allow inheritance */
 	if (RelationIsExternal(rel))
+	{
 		inh = false;
+		if(castRelRV)
+		{
+			if(!CheckDynamicOptionForExtTab(rel))
+				elog(ERROR, "Only external table with OPTIONS (%s 'true') works for %s().", DYNAMIC_EXT_TBL_OPTION, GP_DYNAMIC_EXTTBL_AS_TBL);
+
+			castRel = parserOpenTable(pstate, castRelRV, NoLock, nowait, NULL);
+			rte->castRelid = castRel->rd_id;
+		}
+	}
+	else if(castRelRV)
+	{
+		elog(ERROR, "The first arg for %s() should be external table.", GP_DYNAMIC_EXTTBL_AS_TBL);
+	}
 
 	/*
 	 * Build the list of effective column names using user-supplied aliases
 	 * and/or actual column names.
 	 */
 	rte->eref = makeAlias(refname, NIL);
-	buildRelationAliases(rel->rd_att, alias, rte->eref);
+	buildRelationAliases(castRelRV?castRel->rd_att:rel->rd_att, alias, rte->eref);
 
 	/*
 	 * Drop the rel refcount, but keep the access lock till end of transaction
@@ -956,6 +979,8 @@ addRangeTableEntry(ParseState *pstate,
 	 * underneath us.
 	 */
 	heap_close(rel, NoLock);
+	if(castRel)
+		heap_close(castRel, NoLock);
 
 	/*----------
 	 * Flags:
@@ -985,6 +1010,26 @@ addRangeTableEntry(ParseState *pstate,
 	return rte;
 }
 
+RangeTblEntry *
+addRangeTableEntryForDynamicExtTab(ParseState *pstate,
+				   RangeVar *relation,
+				   Alias *alias,
+				   bool inh,
+				   bool inFromCl,
+				   RangeVar *castRel)
+{
+	return addRangeTableEntry_internal(pstate, relation, alias, inh, inFromCl, castRel);
+}
+
+RangeTblEntry *
+addRangeTableEntry(ParseState *pstate,
+				RangeVar *relation,
+				Alias *alias,
+				bool inh,
+				bool inFromCl)
+{
+	return addRangeTableEntry_internal(pstate, relation, alias, inh, inFromCl, NULL);
+}
 /*
  * Add an entry for a relation to the pstate's range table (p_rtable).
  *
@@ -1004,6 +1049,7 @@ addRangeTableEntryForRelation(ParseState *pstate,
 	rte->rtekind = RTE_RELATION;
 	rte->alias = alias;
 	rte->relid = RelationGetRelid(rel);
+	rte->castRelid = InvalidOid;
 
 	/*
 	 * Build the list of effective column names using user-supplied aliases
@@ -1061,6 +1107,7 @@ addRangeTableEntryForSubquery(ParseState *pstate,
 
 	rte->rtekind = RTE_SUBQUERY;
 	rte->relid = InvalidOid;
+	rte->castRelid = InvalidOid;
 	rte->subquery = subquery;
 	rte->alias = alias;
 
@@ -1143,6 +1190,7 @@ addRangeTableEntryForFunction(ParseState *pstate,
 
 	rte->rtekind = RTE_FUNCTION;
 	rte->relid = InvalidOid;
+	rte->castRelid = InvalidOid;
 	rte->subquery = NULL;
 	rte->funcexpr = funcexpr;
 	rte->funccoltypes = NIL;
@@ -1388,6 +1436,7 @@ addRangeTableEntryForValues(ParseState *pstate,
 
 	rte->rtekind = RTE_VALUES;
 	rte->relid = InvalidOid;
+	rte->castRelid = InvalidOid;
 	rte->subquery = NULL;
 	rte->values_lists = exprs;
 	rte->alias = alias;
@@ -1470,6 +1519,7 @@ addRangeTableEntryForJoin(ParseState *pstate,
 
 	rte->rtekind = RTE_JOIN;
 	rte->relid = InvalidOid;
+	rte->castRelid = InvalidOid;
 	rte->subquery = NULL;
 	rte->jointype = jointype;
 	rte->joinaliasvars = aliasvars;
@@ -1537,6 +1587,7 @@ addRangeTableEntryForCTE(ParseState *pstate,
 	rte->rtekind = RTE_CTE;
 	rte->ctename = cte->ctename;
 	rte->ctelevelsup = levelsup;
+	rte->castRelid = InvalidOid;
 
 	/* Self-reference if and only if CTE's parse analysis isn't completed */
 	rte->self_reference = !IsA(cte->ctequery, Query);
@@ -1842,7 +1893,7 @@ expandRTE(RangeTblEntry *rte, int rtindex, int sublevels_up,
 	{
 		case RTE_RELATION:
 			/* Ordinary relation RTE */
-			expandRelation(rte->relid, rte->eref,
+			expandRelation(rte->relid, rte->castRelid,  rte->eref,
 						   rtindex, sublevels_up, location,
 						   include_dropped, colnames, colvars);
 			break;
@@ -2098,18 +2149,28 @@ expandRTE(RangeTblEntry *rte, int rtindex, int sublevels_up,
  * expandRelation -- expandRTE subroutine
  */
 static void
-expandRelation(Oid relid, Alias *eref, int rtindex, int sublevels_up,
+expandRelation(Oid relid, Oid castRelid, Alias *eref, int rtindex, int sublevels_up,
 			   int location, bool include_dropped,
 			   List **colnames, List **colvars)
 {
-	Relation	rel;
+	Relation	rel, castRel=NULL;
+	bool needCastRel = false;
 
 	/* Get the tupledesc and turn it over to expandTupleDesc */
 	rel = relation_open(relid, AccessShareLock);
-	expandTupleDesc(rel->rd_att, eref, rtindex, sublevels_up,
+	needCastRel = (RelationIsExternal(rel) && castRelid!=InvalidOid); //only external table support dynamic
+	if(needCastRel)
+	{
+		castRel = relation_open(castRelid, NoLock);
+	}
+	expandTupleDesc((needCastRel)?castRel->rd_att:rel->rd_att, eref, rtindex, sublevels_up,
 					location, include_dropped,
 					colnames, colvars);
 	relation_close(rel, AccessShareLock);
+	if(needCastRel)
+	{
+		relation_close(castRel, NoLock);
+	}
 }
 
 /*
