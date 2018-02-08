@@ -320,7 +320,6 @@ typedef enum NodeTag
 
     /* Tags for MPP planner nodes (relation.h) */
     T_CdbMotionPath = 580,
-    T_CdbRelDedupInfo,
     T_CdbRelColumnInfo,
 
 	/*
@@ -698,25 +697,31 @@ typedef enum JoinType
 	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
 	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row is
 	 * guaranteed to be null-extended.
-     *
-     * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
-     * JOIN_UNIQUE_INNER.  The definitions are retained in case they
-     * might be referenced in the source code of user-defined
-     * selectivity functions brought over from PostgreSQL.
 	 */
 	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
 	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
 	JOIN_LASJ_NOTIN,			/* Left Anti Semi Join with Not-In semantics:
 									If any NULL values are produced by inner side,
 									return no join results. Otherwise, same as LASJ */
-	JOIN_REVERSE_IN,			/* at most one result per inner row */
 
 	/*
 	 * These codes are used internally in the planner, but are not supported
 	 * by the executor (nor, indeed, by most of the planner).
 	 */
 	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
-	JOIN_UNIQUE_INNER			/* RHS path must be made unique */
+	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
+
+	/*
+	 * GDPB: Like JOIN_UNIQUE_OUTER/INNER, these codes are used internally
+	 * in the planner, but are not supported by the executor or by most of the
+	 * planner. A JOIN_DEDUP_SEMI join indicates a semi-join, but to be
+	 * implemented by performing a normal inner join, and eliminating the
+	 * duplicates with a UniquePath above the join. That can be useful in
+	 * an MPP enviroment, if performing the join as an inner join avoids
+	 * moving the larger of the two relations.
+	 */
+	JOIN_DEDUP_SEMI,			/* inner join, LHS path must be made unique afterwards */
+	JOIN_DEDUP_SEMI_REVERSE		/* inner join, RHS path must be made unique afterwards */
 
 	/*
 	 * We might need additional join types someday.

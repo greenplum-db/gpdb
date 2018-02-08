@@ -442,8 +442,5 @@ SET allow_system_table_mods='DML';
 -- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
 UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='bfv_statistic.test_broken_stats'::regclass AND staattnum=2;
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
- a | b | a | b 
----+---+---+---
-(0 rows)
-
+ERROR:  invalid MCV array of type integer, for attribute of type text (selfuncs.c:4577)
 RESET allow_system_table_mods;

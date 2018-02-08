@@ -1944,7 +1944,6 @@ _outUniquePath(StringInfo str, UniquePath *node)
 	WRITE_FLOAT_FIELD(rows, "%.0f");
     WRITE_BOOL_FIELD(must_repartition);                 /*CDB*/
     WRITE_BITMAPSET_FIELD(distinct_on_rowid_relids);    /*CDB*/
-	WRITE_NODE_FIELD(distinct_on_exprs);                /*CDB*/
 
 	WRITE_NODE_FIELD(subpath);
 }
@@ -2064,7 +2063,6 @@ _outRelOptInfo(StringInfo str, RelOptInfo *node)
 	/* WRITE_NODE_FIELD(pathlist);              */
 	/* WRITE_NODE_FIELD(cheapest_startup_path); */
 	/* WRITE_NODE_FIELD(cheapest_total_path);   */
-	WRITE_NODE_FIELD(dedup_info);
 	WRITE_UINT_FIELD(relid);
 	WRITE_ENUM_FIELD(rtekind, RTEKind);
 	WRITE_INT_FIELD(min_attr);
@@ -2141,22 +2139,6 @@ _outCdbRelColumnInfo(StringInfo str, CdbRelColumnInfo *node)
 	WRITE_NODE_FIELD(defexpr);
 }
 #endif /* COMPILING_BINARY_FUNCS */
-
-static void
-_outCdbRelDedupInfo(StringInfo str, CdbRelDedupInfo *node)
-{
-	WRITE_NODE_TYPE("CdbRelDedupInfo");
-
-	WRITE_BITMAPSET_FIELD(prejoin_dedup_subqrelids);
-	WRITE_BITMAPSET_FIELD(spent_subqrelids);
-	WRITE_BOOL_FIELD(try_postjoin_dedup);
-	WRITE_BOOL_FIELD(no_more_subqueries);
-	WRITE_NODE_FIELD(join_unique_ininfo);
-	/* Skip writing Path ptrs to avoid endless recursion */
-	/* WRITE_NODE_FIELD(later_dedup_pathlist);  */
-	/* WRITE_NODE_FIELD(cheapest_startup_path); */
-	/* WRITE_NODE_FIELD(cheapest_total_path);   */
-}
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
@@ -2273,10 +2255,6 @@ _outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
 	WRITE_BOOL_FIELD(lhs_strict);
 	WRITE_BOOL_FIELD(delay_upper_joins);
 	WRITE_NODE_FIELD(join_quals);
-	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
-	WRITE_BOOL_FIELD(consider_dedup);	/*CDB*/
-	WRITE_NODE_FIELD(semi_operators);
-	WRITE_NODE_FIELD(semi_rhs_exprs);
 }
 
 static void
@@ -4715,9 +4693,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_CdbRelColumnInfo:
 				_outCdbRelColumnInfo(str, obj);
-				break;
-			case T_CdbRelDedupInfo:
-				_outCdbRelDedupInfo(str, obj);
 				break;
 			case T_EquivalenceClass:
 				_outEquivalenceClass(str, obj);

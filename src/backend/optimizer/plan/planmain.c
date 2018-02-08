@@ -285,17 +285,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	Insist(final_rel->cheapest_startup_path);
 
 	/*
-	 * CDB: Subquery duplicate suppression should be all finished by now.
-	 *
-	 * CDB TODO: If query has DISTINCT, GROUP BY with just MIN/MAX aggs, or
-	 * LIMIT 1, consider paths in which subquery duplicate suppression has
-	 * not been completed.  (Would have to change set_cheapest_dedup() to not
-	 * discard them.)
-	 */
-	Insist(final_rel->cheapest_startup_path->subq_complete &&
-		   final_rel->cheapest_total_path->subq_complete);
-
-	/*
 	 * If there's grouping going on, estimate the number of result groups. We
 	 * couldn't do this any earlier because it depends on relation size
 	 * estimates that were set up above.
@@ -532,9 +521,7 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->enable_mergejoin = enable_mergejoin;
 	c1->enable_hashjoin = enable_hashjoin;
 	c1->gp_enable_hashjoin_size_heuristic = gp_enable_hashjoin_size_heuristic;
-	c1->gp_enable_fallback_plan = gp_enable_fallback_plan;
 	c1->gp_enable_predicate_propagation = gp_enable_predicate_propagation;
-	c1->mpp_trying_fallback_plan = false;
 	c1->constraint_exclusion = constraint_exclusion;
 
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;

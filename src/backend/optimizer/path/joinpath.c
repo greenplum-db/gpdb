@@ -35,11 +35,10 @@ static void match_unsorted_outer(PlannerInfo *root, RelOptInfo *joinrel,
 					 List *restrictlist, List *mergeclause_list,
 					 JoinType jointype, SpecialJoinInfo *sjinfo);
 static void hash_inner_and_outer(PlannerInfo *root, RelOptInfo *joinrel,
-					 Path *outerpath, Path *innerpath,
+					 RelOptInfo *outerrel, RelOptInfo *innerrel,
 					 List *restrictlist,
-					 List *mergeclause_list,    /*CDB*/
-					 List *hashclause_list,     /*CDB*/
-					 JoinType jointype, SpecialJoinInfo *sjinfo);
+					 JoinType jointype, SpecialJoinInfo *sjinfo,
+					 List *mergeclause_list /*CDB*/ );
 static Path *best_appendrel_indexscan(PlannerInfo *root, RelOptInfo *rel,
 						 RelOptInfo *outer_rel, JoinType jointype);
 static List *select_mergejoin_clauses(PlannerInfo *root,
@@ -48,11 +47,6 @@ static List *select_mergejoin_clauses(PlannerInfo *root,
 						 RelOptInfo *innerrel,
 						 List *restrictlist,
 						 JoinType jointype);
-
-static List *hashclauses_for_join(List *restrictlist,
-					 RelOptInfo *outerrel,
-					 RelOptInfo *innerrel,
-					 JoinType jointype);
 
 /*
  * add_paths_to_joinrel
@@ -87,7 +81,6 @@ add_paths_to_joinrel(PlannerInfo *root,
 					 List *restrictlist)
 {
 	List	   *mergeclause_list = NIL;
-    List       *hashclause_list;
 
     Assert(outerrel->pathlist &&
            outerrel->cheapest_startup_path &&
@@ -120,10 +113,7 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * 1. Consider mergejoin paths where both relations must be explicitly
 	 * sorted.
 	 */
-	if ((root->config->enable_mergejoin ||
-        root->config->mpp_trying_fallback_plan ||
-		jointype == JOIN_FULL) &&
-		jointype != JOIN_LASJ_NOTIN)
+	if (jointype != JOIN_LASJ_NOTIN)
 	    sort_inner_and_outer(root, joinrel, outerrel, innerrel,
 						     restrictlist, mergeclause_list, jointype, sjinfo);
 
@@ -160,36 +150,10 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * outer paths.  There's no need to consider any but the
 	 * cheapest-total-cost inner path, however.
 	 */
-	if (root->config->enable_hashjoin
-			|| root->config->mpp_trying_fallback_plan)
-    {
-	    hashclause_list = hashclauses_for_join(restrictlist,
-                                               outerrel,
-                                               innerrel,
-                                               jointype);
-		if (hashclause_list)
-        {
-            hash_inner_and_outer(root,
-                                 joinrel,
-                                 outerrel->cheapest_total_path,
-                                 innerrel->cheapest_total_path,
-							     restrictlist,
-                                 mergeclause_list,
-                                 hashclause_list,
-                                 jointype,
-								 sjinfo);
-            if (outerrel->cheapest_startup_path != outerrel->cheapest_total_path)
-                hash_inner_and_outer(root,
-                                     joinrel,
-                                     outerrel->cheapest_startup_path,
-                                     innerrel->cheapest_total_path,
-							         restrictlist,
-                                     mergeclause_list,
-                                     hashclause_list,
-                                     jointype,
-									 sjinfo);
-        }
-    }
+	if (root->config->enable_hashjoin)
+		hash_inner_and_outer(root, joinrel, outerrel, innerrel,
+							 restrictlist, jointype, sjinfo,
+							 mergeclause_list);
 }
 
 /*
@@ -222,6 +186,10 @@ sort_inner_and_outer(PlannerInfo *root,
 	Path	   *inner_path;
 	List	   *all_pathkeys;
 	ListCell   *l;
+	JoinType	save_jointype = jointype;
+
+	if (jointype == JOIN_DEDUP_SEMI || jointype == JOIN_DEDUP_SEMI_REVERSE)
+		jointype = JOIN_INNER;
 
 	/*
 	 * If we are doing a right or full join, we must use *all* the
@@ -231,8 +199,11 @@ sort_inner_and_outer(PlannerInfo *root,
 	{
 		case JOIN_INNER:
 		case JOIN_LEFT:
+		case JOIN_SEMI:
 		case JOIN_ANTI:
 		case JOIN_LASJ_NOTIN:
+		case JOIN_UNIQUE_OUTER:
+		case JOIN_UNIQUE_INNER:
 			useallclauses = false;
 			break;
 		case JOIN_RIGHT:
@@ -256,6 +227,20 @@ sort_inner_and_outer(PlannerInfo *root,
 	 */
 	outer_path = outerrel->cheapest_total_path;
 	inner_path = innerrel->cheapest_total_path;
+	if (jointype == JOIN_UNIQUE_OUTER)
+	{
+		outer_path = (Path *) create_unique_path(root, outerrel,
+												 outer_path, sjinfo);
+		Assert(outer_path);
+		jointype = JOIN_INNER;
+	}
+	else if (jointype == JOIN_UNIQUE_INNER)
+	{
+		inner_path = (Path *) create_unique_path(root, innerrel,
+												 inner_path, sjinfo);
+		Assert(inner_path);
+		jointype = JOIN_INNER;
+	}
 
 	/*
 	 * Each possible ordering of the available mergejoin clauses will generate
@@ -330,7 +315,7 @@ sort_inner_and_outer(PlannerInfo *root,
 		 * properly.  create_mergejoin_path will detect that case and suppress
 		 * an explicit sort step, so we needn't do so here.
 		 */
-		add_path(root, joinrel, (Path *)
+		cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 				 create_mergejoin_path(root,
 									   joinrel,
 									   jointype,
@@ -390,6 +375,7 @@ match_unsorted_outer(PlannerInfo *root,
 					 JoinType jointype,
 					 SpecialJoinInfo *sjinfo)
 {
+	JoinType	save_jointype = jointype;
 	bool		nestjoinOK;
 	bool		useallclauses;
 	Path	   *inner_cheapest_startup = innerrel->cheapest_startup_path;
@@ -398,6 +384,9 @@ match_unsorted_outer(PlannerInfo *root,
 	Path	   *index_cheapest_startup = NULL;
 	Path	   *index_cheapest_total = NULL;
 	ListCell   *l;
+
+	if (jointype == JOIN_DEDUP_SEMI || jointype == JOIN_DEDUP_SEMI_REVERSE)
+		jointype = JOIN_INNER;
 
 	/*
 	 * Nestloop only supports inner, left, semi, and anti joins.  Also, if we
@@ -435,11 +424,18 @@ match_unsorted_outer(PlannerInfo *root,
 			break;
 	}
 
-	if (!root->config->enable_nestloop
-			&& !root->config->mpp_trying_fallback_plan)
-		nestjoinOK = false;
-
-	if (nestjoinOK)
+	/*
+	 * If we need to unique-ify the inner path, we will consider only the
+	 * cheapest inner.
+	 */
+	if (save_jointype == JOIN_UNIQUE_INNER)
+	{
+		inner_cheapest_total = (Path *)
+			create_unique_path(root, innerrel, inner_cheapest_total, sjinfo);
+		Assert(inner_cheapest_total);
+		inner_cheapest_startup = inner_cheapest_total;
+	}
+	else if (nestjoinOK)
 	{
 		bool    materialize_inner = true;
 
@@ -496,6 +492,19 @@ match_unsorted_outer(PlannerInfo *root,
 		int			sortkeycnt;
 
 		/*
+		 * If we need to unique-ify the outer path, it's pointless to consider
+		 * any but the cheapest outer.
+		 */
+		if (save_jointype == JOIN_UNIQUE_OUTER)
+		{
+			if (outerpath != outerrel->cheapest_total_path)
+				continue;
+			outerpath = (Path *) create_unique_path(root, outerrel,
+													outerpath, sjinfo);
+			Assert(outerpath);
+		}
+
+		/*
 		 * The result will have this sort order (even if it is implemented as
 		 * a nestloop, and even if some of the mergeclauses are implemented by
 		 * qpquals rather than as true mergeclauses):
@@ -515,7 +524,7 @@ match_unsorted_outer(PlannerInfo *root,
 			 * cheapest-startup-cost inner path, and the cheapest innerjoin
 			 * indexpaths.
 			 */
-	        add_path(root, joinrel, (Path *)
+	        cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 					 create_nestloop_path(root,
 										  joinrel,
 										  jointype,
@@ -526,7 +535,7 @@ match_unsorted_outer(PlannerInfo *root,
                                           mergeclause_list,         /*CDB*/
 										  merge_pathkeys));
 			if (matpath != NULL)
-				add_path(root, joinrel, (Path *)
+				cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -537,7 +546,7 @@ match_unsorted_outer(PlannerInfo *root,
                                               mergeclause_list,     /*CDB*/
 											  merge_pathkeys));
 			if (inner_cheapest_startup != inner_cheapest_total)
-				add_path(root, joinrel, (Path *)
+				cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -548,7 +557,7 @@ match_unsorted_outer(PlannerInfo *root,
                                               mergeclause_list,     /*CDB*/
 											  merge_pathkeys));
 			if (index_cheapest_total != NULL)
-				add_path(root, joinrel, (Path *)
+				cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -560,7 +569,7 @@ match_unsorted_outer(PlannerInfo *root,
 											  merge_pathkeys));
 			if (index_cheapest_startup != NULL &&
 				index_cheapest_startup != index_cheapest_total)
-				add_path(root, joinrel, (Path *)
+				cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -573,7 +582,7 @@ match_unsorted_outer(PlannerInfo *root,
 		}
 
 		/* Can't do anything else if outer path needs to be unique'd */
-		if (IsA(outerpath, UniquePath))     /* CDB - is this still needed? */
+		if (save_jointype == JOIN_UNIQUE_OUTER)
 			continue;
 
 		/* Look for useful mergeclauses (if any) */
@@ -591,10 +600,7 @@ match_unsorted_outer(PlannerInfo *root,
 		 * supports FULL JOIN, it's necessary to generate a clauseless
 		 * mergejoin path instead.
 		 */
-		if (mergeclauses == NIL
-				|| (!root->config->enable_mergejoin
-						&& !root->config->mpp_trying_fallback_plan)
-			)
+		if (mergeclauses == NIL)
 		{
 			if (jointype == JOIN_FULL)
 				 /* okay to try for mergejoin */ ;
@@ -619,7 +625,7 @@ match_unsorted_outer(PlannerInfo *root,
 		 * create_mergejoin_path will do the right thing if
 		 * inner_cheapest_total is already correctly sorted.)
 		 */
-		add_path(root, joinrel, (Path *)
+		cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 				 create_mergejoin_path(root,
 									   joinrel,
 									   jointype,
@@ -634,7 +640,7 @@ match_unsorted_outer(PlannerInfo *root,
 									   innersortkeys));
 
 		/* Can't do anything else if inner path needs to be unique'd */
-		if (IsA(inner_cheapest_total, UniquePath))  /* CDB - still need this? */
+		if (save_jointype == JOIN_UNIQUE_INNER)
 			continue;
 
 		/*
@@ -713,7 +719,7 @@ match_unsorted_outer(PlannerInfo *root,
 				else
 					newclauses = mergeclauses;
 
-				add_path(root, joinrel, (Path *)
+				cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 						 create_mergejoin_path(root,
 											   joinrel,
 											   jointype,
@@ -759,7 +765,7 @@ match_unsorted_outer(PlannerInfo *root,
 							newclauses = mergeclauses;
 					}
 
-					add_path(root, joinrel, (Path *)
+					cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
 							 create_mergejoin_path(root,
 												   joinrel,
 												   jointype,
@@ -785,15 +791,37 @@ match_unsorted_outer(PlannerInfo *root,
 	}
 }
 
-static List *
-hashclauses_for_join(List *restrictlist,
+/*
+ * hash_inner_and_outer
+ *	  Create hashjoin join paths by explicitly hashing both the outer and
+ *	  inner keys of each available hash clause.
+ *
+ * 'joinrel' is the join relation
+ * 'outerrel' is the outer join relation
+ * 'innerrel' is the inner join relation
+ * 'restrictlist' contains all of the RestrictInfo nodes for restriction
+ *		clauses that apply to this join
+ * 'jointype' is the type of join to do
+ * 'sjinfo' is extra info about the join for selectivity estimation
+ */
+static void
+hash_inner_and_outer(PlannerInfo *root,
+					 RelOptInfo *joinrel,
 					 RelOptInfo *outerrel,
 					 RelOptInfo *innerrel,
-					 JoinType jointype)
+					 List *restrictlist,
+					 JoinType jointype,
+					 SpecialJoinInfo *sjinfo,
+                     List *mergeclause_list     /*CDB*/
+	)
 {
 	bool		isouterjoin;
+	List	   *hashclauses;
 	ListCell   *l;
-	List	   *clauses = NIL;
+	JoinType	save_jointype = jointype;
+
+	if (jointype == JOIN_DEDUP_SEMI || jointype == JOIN_DEDUP_SEMI_REVERSE)
+		jointype = JOIN_INNER;
 
 	/*
 	 * Hash only supports inner and left joins.
@@ -812,7 +840,7 @@ hashclauses_for_join(List *restrictlist,
 			isouterjoin = true;
 			break;
 		default:
-			return NULL;
+			return;
 	}
 
 	/*
@@ -822,6 +850,7 @@ hashclauses_for_join(List *restrictlist,
 	 * Scan the join's restrictinfo list to find hashjoinable clauses that are
 	 * usable with this pair of sub-relations.
 	 */
+	hashclauses = NIL;
 	foreach(l, restrictlist)
 	{
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
@@ -864,80 +893,62 @@ hashclauses_for_join(List *restrictlist,
 		else
 			continue;			/* no good for these input relations */
 
-		clauses = lappend(clauses, restrictinfo);
+		hashclauses = lappend(hashclauses, restrictinfo);
 	}
 
-	return clauses;
+	if (hashclauses)
+	{
+		/*
+		 * We consider both the cheapest-total-cost and cheapest-startup-cost
+		 * outer paths.  There's no need to consider any but the
+		 * cheapest-total-cost inner path, however.
+		 */
+		Path	   *cheapest_startup_outer = outerrel->cheapest_startup_path;
+		Path	   *cheapest_total_outer = outerrel->cheapest_total_path;
+		Path	   *cheapest_total_inner = innerrel->cheapest_total_path;
+
+		/* Unique-ify if need be */
+		if (jointype == JOIN_UNIQUE_OUTER)
+		{
+			cheapest_total_outer = (Path *)
+				create_unique_path(root, outerrel,
+								   cheapest_total_outer, sjinfo);
+			Assert(cheapest_total_outer);
+			cheapest_startup_outer = cheapest_total_outer;
+			jointype = JOIN_INNER;
+		}
+		else if (jointype == JOIN_UNIQUE_INNER)
+		{
+			cheapest_total_inner = (Path *)
+				create_unique_path(root, innerrel,
+								   cheapest_total_inner, sjinfo);
+			Assert(cheapest_total_inner);
+			jointype = JOIN_INNER;
+		}
+
+		cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
+				 create_hashjoin_path(root,
+									  joinrel,
+									  jointype,
+									  sjinfo,
+									  cheapest_total_outer,
+									  cheapest_total_inner,
+									  restrictlist,
+									  mergeclause_list,
+									  hashclauses));
+		if (cheapest_startup_outer != cheapest_total_outer)
+			cdb_add_join_path(root, joinrel, save_jointype, (JoinPath *)
+					 create_hashjoin_path(root,
+										  joinrel,
+										  jointype,
+										  sjinfo,
+										  cheapest_startup_outer,
+										  cheapest_total_inner,
+										  restrictlist,
+										  mergeclause_list,
+										  hashclauses));
+	}
 }
-
-/*
- * hash_inner_and_outer
- *	  Create hashjoin join paths by explicitly hashing both the outer and
- *	  inner keys of each available hash clause.
- *
- * 'joinrel' is the join relation
- * 'restrictlist' contains all of the RestrictInfo nodes for restriction
- *		clauses that apply to this join
- * 'jointype' is the type of join to do
- * 'sjinfo' is extra info about the join for selectivity estimation
- */
-static void
-hash_inner_and_outer(PlannerInfo *root,
-					 RelOptInfo *joinrel,
-                     Path *outerpath,
-                     Path *innerpath,
-					 List *restrictlist,
-                     List *mergeclause_list,    /*CDB*/
-                     List *hashclause_list,     /*CDB*/
-					 JoinType jointype,
-					 SpecialJoinInfo *sjinfo)
-{
-    HashPath   *hjpath;
-
-	/*
-	 * Hashjoin only supports inner, left, semi, and anti joins.
-	 */
-    Assert(jointype == JOIN_INNER || jointype == JOIN_LEFT || jointype == JOIN_LASJ_NOTIN || jointype == JOIN_ANTI);
-    Assert(hashclause_list);
-
-    /*
-     * Consider hash join between the given outer path and inner path.
-     */
-    hjpath = create_hashjoin_path(root,
-								  joinrel,
-								  jointype,
-								  sjinfo,
-								  outerpath,
-								  innerpath,
-								  restrictlist,
-                                  mergeclause_list,
-								  hashclause_list);
-    if (!hjpath)
-        return;
-
-    /*
-     * CDB: If gp_enable_hashjoin_size_heuristic is set, disallow inner
-     * joins where the inner rel is the larger of the two inputs.
-     *
-     * Note create_hashjoin_path() has to precede this so we can get
-     * the right jointype (in case of subquery dedup) and row count
-     * (in case Broadcast Motion is inserted above an input path).
-     */
-    if (hjpath->jpath.jointype == JOIN_INNER &&
-    		root->config->gp_enable_hashjoin_size_heuristic &&
-        !root->config->mpp_trying_fallback_plan)
-    {
-        double  outersize = ExecHashRowSize(outerpath->parent->width) *
-                                cdbpath_rows(root, hjpath->jpath.outerjoinpath);
-        double  innersize = ExecHashRowSize(innerpath->parent->width) *
-                                cdbpath_rows(root, hjpath->jpath.innerjoinpath);
-
-        if (outersize >= innersize)
-            add_path(root, joinrel, (Path *)hjpath);
-    }
-    else
-        add_path(root, joinrel, (Path *)hjpath);
-}                               /* hash_inner_and_outer */
 
 /*
  * best_appendrel_indexscan

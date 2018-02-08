@@ -321,7 +321,6 @@ bool		dml_ignore_target_partition_check = false;
 
 /* Planner gucs */
 bool		gp_enable_hashjoin_size_heuristic = false;
-bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
@@ -660,16 +659,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_enable_hashjoin_size_heuristic,
 		false, NULL, NULL
-	},
-	{
-		{"gp_enable_fallback_plan", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Plan types which are not enabled may be used when a "
-						 "query would be infeasible without them."),
-			gettext_noop("If false, planner rejects queries that cannot be "
-						 "satisfied using only the enabled plan types.")
-		},
-		&gp_enable_fallback_plan,
-		true, NULL, NULL
 	},
 	{
 		{"gp_enable_direct_dispatch", PGC_USERSET, QUERY_TUNING_METHOD,

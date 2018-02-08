@@ -573,9 +573,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 */
 	AssertImply(parse->jointree->fromlist, list_length(parse->jointree->fromlist) == 1);
 
-	/* CDB: Stash current query level's relids before pulling up subqueries. */
-	root->currlevel_relids = get_relids_in_jointree((Node *) parse->jointree, false);
-
 	/*
 	 * Look for ANY and EXISTS SubLinks in WHERE and JOIN/ON clauses, and try
 	 * to transform them into joins.  Note that this step does not descend
@@ -632,16 +629,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * subqueries.
 	 */
 	expand_inherited_tables(root);
-
-	/* CDB: If parent RTE belongs to current query level, children do too. */
-	foreach(l, root->append_rel_list)
-	{
-		AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(l);
-
-		if (bms_is_member(appinfo->parent_relid, root->currlevel_relids))
-			root->currlevel_relids = bms_add_member(root->currlevel_relids,
-													appinfo->child_relid);
-	}
 
 	/*
 	 * Set hasHavingQual to remember if HAVING clause is present.  Needed
@@ -3353,7 +3340,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	Path		sorted_p;
 
 	/* Prefer sorting when enable_hashagg is off */
-	if (!enable_hashagg)
+	if (!root->config->enable_hashagg)
 		return false;
 
 	/*

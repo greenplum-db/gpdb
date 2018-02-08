@@ -88,7 +88,6 @@ static void recurse_push_qual(Node *setOp, Query *topquery,
 #ifdef _MSC_VER
 __declspec(noreturn)
 #endif
-static void cdb_no_path_for_query(void) __attribute__((__noreturn__));
 
 
 /*
@@ -131,11 +130,6 @@ make_one_rel(PlannerInfo *root, List *joinlist)
 	 * Generate access paths for the entire join tree.
 	 */
 	rel = make_rel_from_joinlist(root, joinlist);
-
-	/* CDB: No path might be found if user set enable_xxx = off */
-	if (!rel ||
-		!rel->cheapest_total_path)
-		cdb_no_path_for_query();	/* raise error - no return */
 
 	/*
 	 * The result should join all and only the query's base rels.
@@ -261,12 +255,7 @@ set_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 static void
 set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-	List	   *pathlist = NIL;
-	List	   *indexpathlist = NIL;
-	List	   *bitmappathlist = NIL;
-	List	   *tidpathlist = NIL;
 	Path	   *seqpath = NULL;
-	ListCell   *cell;
 
 	/*
 	 * If we can prove we don't need to scan the rel via constraint exclusion,
@@ -301,10 +290,6 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		set_baserel_size_estimates(root, rel);
 	}
 
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
-
 	/*
 	 * Generate paths and add them to the rel's pathlist.
 	 *
@@ -317,6 +302,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 * paths in a temporary list, then add them.
 	 */
 
+	/* Consider sequential scan */
 	/* early exit for external and append only relations */
 	switch (rel->relstorage)
 	{
@@ -353,59 +339,19 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			return;
 	}
 
-	/* Consider sequential scan */
-	if (root->config->enable_seqscan)
-		pathlist = lappend(pathlist, seqpath);
-
 	/* Consider index and bitmap scans */
-	create_index_paths(root, rel,
-					   &indexpathlist, &bitmappathlist);
+	create_index_paths(root, rel);
+
+	/* we can add the seqscan path now */
+	add_path(root, rel, seqpath);
 
 	/*
-	 * Random access to Append-Only is slow because AO doesn't use the buffer
-	 * pool and we want to avoid decompressing blocks multiple times.  So,
-	 * only consider bitmap paths because they are processed in TID order.
-	 * The appendonlyam.c module will optimize fetches in TID order by keeping
-	 * the last decompressed block between fetch calls.
+	 * Consider TID scans
+	 *
+	 * Only heap tables support TidScans, currently. Not AO or CO tables.
 	 */
-	if (rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->relstorage == RELSTORAGE_AOCOLS)
-		indexpathlist = NIL;
-
-	if (indexpathlist && root->config->enable_indexscan)
-		pathlist = list_concat(pathlist, indexpathlist);
-	if (bitmappathlist && root->config->enable_bitmapscan)
-		pathlist = list_concat(pathlist, bitmappathlist);
-
-	/* Consider TID scans */
-	create_tidscan_paths(root, rel, &tidpathlist);
-
-	/*
-	 * AO and CO tables do not currently support TidScans. Disable TidScan
-	 * path for such tables
-	 */
-	if (rel->relstorage == RELSTORAGE_AOROWS ||
-		rel->relstorage == RELSTORAGE_AOCOLS)
-		tidpathlist = NIL;
-
-	if (tidpathlist && root->config->enable_tidscan)
-		pathlist = list_concat(pathlist, tidpathlist);
-
-	/* If no enabled path was found, consider disabled paths. */
-	if (!pathlist)
-	{
-		pathlist = lappend(pathlist, seqpath);
-		if (root->config->gp_enable_fallback_plan)
-		{
-			pathlist = list_concat(pathlist, indexpathlist);
-			pathlist = list_concat(pathlist, bitmappathlist);
-			pathlist = list_concat(pathlist, tidpathlist);
-		}
-	}
-
-	/* Add them, now that we know whether the quals specify a unique key. */
-	foreach(cell, pathlist)
-		add_path(root, rel, (Path *) lfirst(cell));
+	if (rel->relstorage == RELSTORAGE_HEAP)
+		create_tidscan_paths(root, rel);
 
 	/* Now find the cheapest of the paths for this rel */
 	set_cheapest(root, rel);
@@ -782,10 +728,6 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	else
 		rel->tuples = rel->subplan->plan_rows;
 
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
-
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
 
@@ -813,10 +755,6 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
 	/* CDB: Could the function return more than one row? */
 	rel->onerow = !expression_returns_set(rte->funcexpr);
-
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
 	set_function_size_estimates(root, rel);
@@ -873,10 +811,6 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	/* Could the function return more than one row? */
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
-	/* Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
-
 	/* Mark rel with estimated output rows, width, etc */
 	set_table_function_size_estimates(root, rel);
 
@@ -900,10 +834,6 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/* CDB: Just one row? */
 	rel->onerow = (rel->tuples <= 1 &&
 				   !expression_returns_set((Node *) rte->values_lists));
-
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Generate appropriate path */
 	add_path(root, rel, create_valuesscan_path(root, rel, rte));
@@ -1207,11 +1137,6 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 			thisrel = NULL;		/* keep compiler quiet */
 		}
 
-		/* CDB: Fail if no path could be built due to set enable_xxx = off. */
-		if (!thisrel ||
-			!thisrel->cheapest_total_path)
-			return NULL;
-
 		initial_rels = lappend(initial_rels, thisrel);
 	}
 
@@ -1236,18 +1161,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 		if (join_search_hook)
 			return (*join_search_hook) (root, levels_needed, initial_rels);
 		else
-		{
-			RelOptInfo *rel;
-
-			rel = standard_join_search(root, levels_needed, initial_rels, false);
-			if (rel == NULL && root->config->gp_enable_fallback_plan)
-			{
-				root->join_rel_hash = NULL;
-				root->join_rel_list = NULL;
-				rel = standard_join_search(root, levels_needed, initial_rels, true);
-			}
-			return rel;
-		}
+			return standard_join_search(root, levels_needed, initial_rels);
 	}
 }
 
@@ -1281,13 +1195,11 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
  * original states of those data structures.  See geqo_eval() for an example.
  */
 RelOptInfo *
-standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, bool fallback)
+standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
 {
 	List	  **joinitems;
 	int			lev;
 	RelOptInfo *rel;
-
-	root->config->mpp_trying_fallback_plan = fallback;
 
 	/*
 	 * We employ a simple "dynamic programming" algorithm: we first find all
@@ -1305,9 +1217,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 
 	for (lev = 2; lev <= levels_needed; lev++)
 	{
-		ListCell   *w = NULL;
 		ListCell   *x;
-		ListCell   *y;
 
 		/*
 		 * Determine all possible pairs of relations to be joined at this
@@ -1319,35 +1229,36 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 		/*
 		 * Do cleanup work on each just-processed rel.
 		 */
-		for (x = list_head(joinitems[lev]); x; x = y)	/* cannot use foreach */
+		foreach(x, joinitems[lev])
 		{
-			y = lnext(x);
 			rel = (RelOptInfo *) lfirst(x);
 
 			/* Find and save the cheapest paths for this rel */
 			set_cheapest(root, rel);
 
-			/* CDB: Prune this rel if it has no path. */
-			if (!rel->cheapest_total_path)
-				joinitems[lev] = list_delete_cell(joinitems[lev], x, w);
+#if 0
+			/*
+			 * GPDB: If the cheapest path was of the disabled kind, deduct the
+			 * cost
+			 */
+			ListCell *plc;
 
-			/* Keep this rel. */
-			else
-				w = x;
+			foreach(plc, rel->pathlist)
+			{
+				Path *path = (Path *) lfirst(plc);
+
+				if (!enable_nestloop && IsA(path, NestPath))
+				{
+					path->startup_cost -= disable_cost;
+					path->total_cost -= disable_cost;
+				}
+			}
+#endif
 
 #ifdef OPTIMIZER_DEBUG
 			debug_print_rel(root, rel);
 #endif
 		}
-		/* If no paths found because enable_xxx=false, enable all & retry. */
-		if (!joinitems[lev] &&
-			root->config->gp_enable_fallback_plan &&
-			!root->config->mpp_trying_fallback_plan)
-		{
-			root->config->mpp_trying_fallback_plan = true;
-			lev--;
-		}
-
 	}
 
 	/*
@@ -1829,31 +1740,6 @@ recurse_push_qual(Node *setOp, Query *topquery,
 			 (int) nodeTag(setOp));
 	}
 }
-
-/*
- * cdb_no_path_for_query
- *
- * Raise error when the set of allowable paths for a query is empty.
- * Does not return.
- */
-void
-cdb_no_path_for_query(void)
-{
-	char	   *settings;
-
-	settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_no_plan);
-
-	if (*settings)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
-				 errmsg("Query requires a feature that has been disabled by a configuration setting."),
-				 errdetail("Could not devise a query plan for the given query."),
-				 errhint("Current settings:  %s", settings)));
-	}
-	else
-		elog(ERROR, "Could not devise a query plan for the given query.");
-}	/* cdb_no_path_for_query */
 
 
 

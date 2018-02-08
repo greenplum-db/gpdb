@@ -854,10 +854,6 @@ _equalSpecialJoinInfo(SpecialJoinInfo *a, SpecialJoinInfo *b)
 	COMPARE_SCALAR_FIELD(lhs_strict);
 	COMPARE_SCALAR_FIELD(delay_upper_joins);
 	COMPARE_NODE_FIELD(join_quals);
-	COMPARE_SCALAR_FIELD(try_join_unique);	/* CDB */
-	COMPARE_SCALAR_FIELD(consider_dedup);		/* CDB */
-	COMPARE_NODE_FIELD(semi_operators);
-	COMPARE_NODE_FIELD(semi_rhs_exprs);
 
 	return true;
 }

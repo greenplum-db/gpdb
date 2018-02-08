@@ -28,14 +28,6 @@ static List *make_rels_by_clause_joins(PlannerInfo *root,
 static List *make_rels_by_clauseless_joins(PlannerInfo *root,
 							  RelOptInfo *old_rel,
 							  ListCell *other_rels);
-static void
-cdb_add_subquery_join_paths(PlannerInfo    *root,
-					        RelOptInfo     *joinrel,
-					        RelOptInfo     *rel1,
-					        RelOptInfo     *rel2,
-					        JoinType        jointype,
-					        List           *restrictlist,
-							SpecialJoinInfo *sjinfo);
 static bool has_join_restriction(PlannerInfo *root, RelOptInfo *rel);
 static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
 static bool is_dummy_rel(RelOptInfo *rel);
@@ -360,6 +352,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 {
 	SpecialJoinInfo *match_sjinfo;
 	bool		reversed;
+	bool		unique_ified;
 	bool		is_valid_inner;
 	ListCell   *l;
 
@@ -377,6 +370,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 	 */
 	match_sjinfo = NULL;
 	reversed = false;
+	unique_ified = false;
 	is_valid_inner = true;
 
 	foreach(l, root->join_info_list)
@@ -409,6 +403,22 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			continue;
 
 		/*
+		 * If it's a semijoin and we already joined the RHS to any other
+		 * rels within either input, then we must have unique-ified the RHS
+		 * at that point (see below).  Therefore the semijoin is no longer
+		 * relevant in this join path.
+		 */
+		if (sjinfo->jointype == JOIN_SEMI)
+		{
+			if (bms_is_subset(sjinfo->syn_righthand, rel1->relids) &&
+				!bms_equal(sjinfo->syn_righthand, rel1->relids))
+				continue;
+			if (bms_is_subset(sjinfo->syn_righthand, rel2->relids) &&
+				!bms_equal(sjinfo->syn_righthand, rel2->relids))
+				continue;
+		}
+
+		/*
 		 * If one input contains min_lefthand and the other contains
 		 * min_righthand, then we can perform the SJ at this join.
 		 *
@@ -430,8 +440,10 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			match_sjinfo = sjinfo;
 			reversed = true;
 		}
-		else if (sjinfo->consider_dedup &&
-			bms_equal(sjinfo->syn_righthand, rel2->relids))
+		else if (sjinfo->jointype == JOIN_SEMI &&
+				 bms_equal(sjinfo->syn_righthand, rel2->relids) &&
+				 create_unique_path(root, rel2, rel2->cheapest_total_path,
+									sjinfo) != NULL)
 		{
 			/*----------
 			 * For a semijoin, we can join the RHS to anything else by
@@ -455,20 +467,23 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			 * with whether the join is good strategy.
 			 *----------
 			 */
-
 			if (match_sjinfo)
 				return false;	/* invalid join path */
 			match_sjinfo = sjinfo;
 			reversed = false;
+			unique_ified = true;
 		}
-		else if (sjinfo->consider_dedup &&
-			bms_equal(sjinfo->syn_righthand, rel1->relids))
+		else if (sjinfo->jointype == JOIN_SEMI &&
+				 bms_equal(sjinfo->syn_righthand, rel1->relids) &&
+				 create_unique_path(root, rel1, rel1->cheapest_total_path,
+									sjinfo) != NULL)
 		{
 			/* Reversed semijoin case */
 			if (match_sjinfo)
 				return false;	/* invalid join path */
 			match_sjinfo = sjinfo;
 			reversed = true;
+			unique_ified = true;
 		}
 		else
 		{
@@ -495,31 +510,27 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			 * We assume that make_outerjoininfo() set things up correctly
 			 * so that we'll only match to some SJ if the join is valid.
 			 * Set flag here to check at bottom of loop.
-			 *
-			 * For a semijoin, assume it's okay if either side fully contains
-			 * the RHS (per the unique-ification case above).
 			 *----------
 			 */
-			if (!sjinfo->consider_dedup &&
+			if (sjinfo->jointype != JOIN_SEMI &&
 				bms_overlap(rel1->relids, sjinfo->min_righthand) &&
 				bms_overlap(rel2->relids, sjinfo->min_righthand))
 			{
 				/* seems OK */
 				Assert(!bms_overlap(joinrelids, sjinfo->min_lefthand));
 			}
-			else if (sjinfo->consider_dedup &&
-				(bms_is_subset(sjinfo->syn_righthand, rel1->relids) ||
-				bms_is_subset(sjinfo->syn_righthand, rel2->relids)))
-			{
-				/* seems OK */
-			}
 			else
 				is_valid_inner = false;
 		}
 	}
 
-	/* Fail if violated some SJ's RHS and didn't match to another SJ */
-	if (match_sjinfo == NULL && !is_valid_inner)
+	/*
+	 * Fail if violated some SJ's RHS and didn't match to another SJ.
+	 * However, "matching" to a semijoin we are implementing by
+	 * unique-ification doesn't count (think: it's really an inner join).
+	 */
+	if (!is_valid_inner &&
+		(match_sjinfo == NULL || unique_ified))
 		return false;			/* invalid join path */
 
 	/* Otherwise, it's a valid join */
@@ -601,21 +612,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 		sjinfo->lhs_strict = false;
 		sjinfo->delay_upper_joins = false;
 		sjinfo->join_quals = NIL;
-		sjinfo->semi_operators = NIL;
-		sjinfo->semi_rhs_exprs = NIL;
 	}
-
-	/*
-	 * For semi joins, we generate JOIN_INNER paths and perform duplicate
-	 * suppression if necessary. This happends in cdb_set_cheapest_dedup().
-	 * Upstream handles this differently by generating JOIN_UNIQUE_INNER &
-	 * JOIN_UNIQUE_OUTER paths; however these jointypes are obsolete for us.
-	 * Set the jointype to JOIN_INNER from here onwards; the jointype
-	 * will be set back to JOIN_SEMI in cdb_jointype_to_join_semi()
-	 * when we finalize the join path.
-	 */
-	if (sjinfo->jointype == JOIN_SEMI)
-		sjinfo->jointype = JOIN_INNER;
 
 	/*
 	 * Find or build the join RelOptInfo, and compute the restrictlist that
@@ -630,52 +627,6 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	 */
 	if (is_dummy_rel(joinrel))
 	{
-		bms_free(joinrelids);
-		return joinrel;
-	}
-
-    /*
-     * CDB: Consider plans in which an upstream subquery's duplicate
-     * suppression is either postponed yet further downstream, or subsumed
-     * in this join by the use of the JOIN_SEMI technique on behalf of another
-     * subquery.
-     */
-    if ((rel1->dedup_info && rel1->dedup_info->later_dedup_pathlist) ||
-        (rel2->dedup_info && rel2->dedup_info->later_dedup_pathlist))
-	{
-		/* Reversed jointype is useful when rel2 becomes outer and rel1 is inner. */
-		JoinType jointype = sjinfo->jointype;
-
-		switch(jointype)
-		{
-			case JOIN_ANTI:
-			case JOIN_LASJ_NOTIN:
-				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
-											restrictlist, sjinfo);
-				break;
-			case JOIN_LEFT:
-				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
-											restrictlist, sjinfo);
-				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, JOIN_RIGHT,
-											restrictlist, sjinfo);
-				break;
-			case JOIN_RIGHT:
-				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
-											restrictlist, sjinfo);
-				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, JOIN_LEFT,
-											restrictlist, sjinfo);
-				break;
-			case JOIN_INNER:
-			case JOIN_FULL:
-				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
-											restrictlist, sjinfo);
-				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, jointype,
-											restrictlist, sjinfo);
-				break;
-			default:
-				elog(ERROR, "unrecognized join type: %d", (int) sjinfo->jointype);
-				break;
-		}
 		bms_free(joinrelids);
 		return joinrel;
 	}
@@ -760,6 +711,17 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 				add_paths_to_joinrel(root, joinrel, rel1, rel2,
 									 JOIN_SEMI, sjinfo,
 									 restrictlist);
+
+				/*
+				 * In GPDB, also try a path, where we perform a normal inner
+				 * join, and eliminate duplicates afterwards.
+				 */
+				add_paths_to_joinrel(root, joinrel, rel1, rel2,
+									 JOIN_DEDUP_SEMI, sjinfo,
+									 restrictlist);
+				add_paths_to_joinrel(root, joinrel, rel2, rel1,
+									 JOIN_DEDUP_SEMI_REVERSE, sjinfo,
+									 restrictlist);
 			}
 
 			/*
@@ -771,7 +733,8 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 			 * anyway to be sure.)
 			 */
 			if (bms_equal(sjinfo->syn_righthand, rel2->relids) &&
-				sjinfo->consider_dedup)
+				create_unique_path(root, rel2, rel2->cheapest_total_path,
+								   sjinfo) != NULL)
 			{
 				add_paths_to_joinrel(root, joinrel, rel1, rel2,
 									 JOIN_UNIQUE_INNER, sjinfo,
@@ -805,125 +768,6 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 
 	return joinrel;
 }
-
-
-/*
- * cdb_add_subquery_join_paths
- *
- * Each input rel may have a special pathlist containing paths in which some
- * flattened subqueries have been completely evaluated except for duplicate
- * suppression.  Here we consider joins taking input from those paths.  By
- * postponing duplicate suppression until additional subqueries are brought
- * into the join, a single duplicate suppression can cover multiple subqueries.
- */
-void
-cdb_add_subquery_join_paths(PlannerInfo    *root,
-					        RelOptInfo     *joinrel,
-					        RelOptInfo     *rel1,
-					        RelOptInfo     *rel2,
-					        JoinType        jointype,
-					        List           *restrictlist,
-							SpecialJoinInfo *sjinfo)
-{
-	CdbRelDedupInfo    *dedup1 = rel1->dedup_info;
-	CdbRelDedupInfo    *dedup2 = rel2->dedup_info;
-	List               *save1_pathlist;
-	Path               *save1_cheapest_startup;
-	Path               *save1_cheapest_total;
-	List               *save2_pathlist;
-	Path               *save2_cheapest_startup;
-	Path               *save2_cheapest_total;
-	bool				consider_rel1_later_path, consider_rel2_later_path;
-
-	consider_rel1_later_path = dedup1 && dedup1->later_dedup_pathlist;
-	consider_rel2_later_path = dedup2 && dedup2->later_dedup_pathlist;
-
-	/* Consider joins between rel1's main paths and rel2's main paths always */
-	if (rel1->pathlist && rel2->pathlist)
-	{
-		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-	}
-
-	/* Consider joins between rel2's main paths and rel1's later_dedup paths. */
-	if (rel2->pathlist && consider_rel1_later_path)
-	{
-		/* Save rel1's main pathlist ptrs. */
-		save1_pathlist = rel1->pathlist;
-		save1_cheapest_startup = rel1->cheapest_startup_path;
-		save1_cheapest_total = rel1->cheapest_total_path;
-
-		/* Swap in rel1's later_dedup_pathlist. */
-		rel1->pathlist = dedup1->later_dedup_pathlist;
-		rel1->cheapest_startup_path = dedup1->cheapest_startup_path;
-		rel1->cheapest_total_path = dedup1->cheapest_total_path;
-
-		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-
-		/* Restore rel1's main pathlist ptrs. */
-		rel1->pathlist = save1_pathlist;
-		rel1->cheapest_startup_path = save1_cheapest_startup;
-		rel1->cheapest_total_path = save1_cheapest_total;
-	}
-
-	/* Consider joins between rel1's main paths and rel2's later_dedup paths. */
-	if (rel1->pathlist && consider_rel2_later_path)
-	{
-		/* Save rel2's main pathlist ptrs. */
-		save2_pathlist = rel2->pathlist;
-		save2_cheapest_startup = rel2->cheapest_startup_path;
-		save2_cheapest_total = rel2->cheapest_total_path;
-
-		/* Swap in rel2's later_dedup_pathlist. */
-		rel2->pathlist = dedup2->later_dedup_pathlist;
-		rel2->cheapest_startup_path = dedup2->cheapest_startup_path;
-		rel2->cheapest_total_path = dedup2->cheapest_total_path;
-
-		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-
-		/* Restore rel2's main pathlist ptrs. */
-		rel2->pathlist = save2_pathlist;
-		rel2->cheapest_startup_path = save2_cheapest_startup;
-		rel2->cheapest_total_path = save2_cheapest_total;
-	}
-
-	/* Consider joins between later_dedup paths of both rel1 and rel2. */
-	if (consider_rel1_later_path && consider_rel2_later_path)
-	{
-		/* Save rel1's main pathlist ptrs. */
-		save1_pathlist = rel1->pathlist;
-		save1_cheapest_startup = rel1->cheapest_startup_path;
-		save1_cheapest_total = rel1->cheapest_total_path;
-
-		/* Swap in rel1's later_dedup_pathlist. */
-		rel1->pathlist = dedup1->later_dedup_pathlist;
-		rel1->cheapest_startup_path = dedup1->cheapest_startup_path;
-		rel1->cheapest_total_path = dedup1->cheapest_total_path;
-
-		/* Save rel2's main pathlist ptrs. */
-		save2_pathlist = rel2->pathlist;
-		save2_cheapest_startup = rel2->cheapest_startup_path;
-		save2_cheapest_total = rel2->cheapest_total_path;
-
-		/* Swap in rel2's later_dedup_pathlist. */
-		rel2->pathlist = dedup2->later_dedup_pathlist;
-		rel2->cheapest_startup_path = dedup2->cheapest_startup_path;
-		rel2->cheapest_total_path = dedup2->cheapest_total_path;
-
-		/* Consider joins between later_dedup paths of both rel1 and rel2. */
-		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-
-		/* Restore rel1's main pathlist ptrs. */
-		rel1->pathlist = save1_pathlist;
-		rel1->cheapest_startup_path = save1_cheapest_startup;
-		rel1->cheapest_total_path = save1_cheapest_total;
-
-		/* Restore rel2's main pathlist ptrs. */
-		rel2->pathlist = save2_pathlist;
-		rel2->cheapest_startup_path = save2_cheapest_startup;
-		rel2->cheapest_total_path = save2_cheapest_total;
-	}
-}
-
 
 /*
  * have_join_order_restriction
@@ -994,25 +838,6 @@ have_join_order_restriction(PlannerInfo *root,
 		/* Likewise for the LHS. */
 		if (bms_overlap(sjinfo->min_lefthand, rel1->relids) &&
 			bms_overlap(sjinfo->min_lefthand, rel2->relids))
-		{
-			result = true;
-			break;
-		}
-
-		/*
-		 * In CDB, unlike PostgreSQL, flattened subqueries do not restrict the
-		 * join sequence; we aren't in danger of being unable to join all the
-		 * tables.  Still, an early cross-product (clauseless join) might
-		 * sometimes enable the consideration of pre-join duplicate elimination
-		 * (JOIN_SEMI or JOIN_UNIQUE).  Someday we should consider a well-chosen
-		 * set of early cross products.  For now, limit the search space by
-		 * means of a simple heuristic.
-		 */
-
-		if (sjinfo->consider_dedup && (bms_is_subset(rel1->relids, sjinfo->min_righthand) &&
-			bms_is_subset(rel2->relids, sjinfo->min_righthand) &&
-			bms_num_members(rel1->relids) + bms_num_members(rel2->relids) ==
-			bms_num_members(sjinfo->min_righthand)))
 		{
 			result = true;
 			break;
@@ -1157,9 +982,6 @@ mark_dummy_rel(PlannerInfo *root, RelOptInfo *rel)
 
 	/* Set up the dummy path */
 	add_path(root, rel, (Path *) create_append_path(root, rel, NIL));
-
-	/* The dummy path doesn't need deduplication */
-	rel->dedup_info = NULL;
 
 	/* Set or update cheapest_total_path */
 	set_cheapest(root, rel);

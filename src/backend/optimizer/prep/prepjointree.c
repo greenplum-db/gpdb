@@ -784,17 +784,12 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	{
 		subroot->list_cteplaninfo = init_list_cteplaninfo(list_length(subroot->parse->cteList));
 	}
-
-    /* CDB: Stash subquery jointree relids before flattening subqueries. */
-    subroot->currlevel_relids = get_relids_in_jointree((Node *)subquery->jointree, false);
     
     /* Ensure that jointree has been normalized. See normalize_query_jointree_mutator() */
     AssertImply(subquery->jointree->fromlist, list_length(subquery->jointree->fromlist) == 1);
     
     subroot->config = CopyPlannerConfig(root->config);
 	subroot->config->honor_order_by = false;
-	/* CDB: Clear fallback */
-	subroot->config->mpp_trying_fallback_plan = false;
 
 	/*
 	 * Pull up any SubLinks within the subquery's quals, so that we don't
@@ -846,16 +841,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 		 */
 		return jtnode;
 	}
-
-    /* CDB: If parent RTE belongs to subquery's query level, children do too. */
-    foreach (lc, subroot->append_rel_list)
-    {
-        AppendRelInfo  *appinfo = (AppendRelInfo *) lfirst(lc);
-
-        if (bms_is_member(appinfo->parent_relid, subroot->currlevel_relids))
-            subroot->currlevel_relids = bms_add_member(subroot->currlevel_relids,
-                                                       appinfo->child_relid);
-    }
 
 	/*
 	 * Adjust level-0 varnos in subquery so that we can append its rangetable
@@ -996,20 +981,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * adjusted the marker rtindexes, so just concat the lists.)
 	 */
 	parse->rowMarks = list_concat(parse->rowMarks, subquery->rowMarks);
-
-    /*
-     * CDB: Fix current query level's FROM clause relid set if the subquery
-     * was in the FROM clause of current query (not a flattened sublink).
-     */
-    if (bms_is_member(varno, root->currlevel_relids))
-    {
-        int     subrelid;
-
-        root->currlevel_relids = bms_del_member(root->currlevel_relids, varno);
-        bms_foreach(subrelid, subroot->currlevel_relids)
-            root->currlevel_relids = bms_add_member(root->currlevel_relids,
-                                                    subrelid + rtoffset);
-    }
 
 	/*
 	 * We also have to fix the relid sets of any PlaceHolderVar nodes in the

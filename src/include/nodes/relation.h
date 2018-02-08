@@ -214,10 +214,6 @@ typedef struct PlannerInfo
 
 	List       *list_cteplaninfo; /* list of CtePlannerInfo, one for each CTE */
 
-    /* Jointree result is a subset of the cross product of these relids... */
-	Relids		currlevel_relids;	/* CDB: all relids of current query level,
-									 * omitting any pulled-up subquery relids */
-
 	/*
 	 * Outer join info
 	 */
@@ -481,7 +477,6 @@ typedef struct RelOptInfo
 	struct Path *cheapest_startup_path;
 	struct Path *cheapest_total_path;
 	struct Path *cheapest_unique_path;
-	struct CdbRelDedupInfo *dedup_info; /* subquery dup removal info, or NULL */
 
 	/* information about a base rel (not set for join rels!) */
 	Index		relid;
@@ -612,54 +607,6 @@ typedef struct CdbRelColumnInfo
 	int32	    attr_width;             /* expected #bytes for column value */
     char        colname[NAMEDATALEN+1]; /* name for EXPLAIN */
 } CdbRelColumnInfo;
-
-
-/*
- * CdbRelDedupInfo
- *
- * One of these hangs off each RelOptInfo entry whose paths might need
- * special treatment for duplicate suppression for flattened subqueries.
- */
-typedef struct CdbRelDedupInfo
-{
-	NodeTag		type;                   /* T_CdbRelDedupInfo */
-
-    Relids      prejoin_dedup_subqrelids;
-                                        /* relids of subqueries' own (righthand)
-                                         * tables for those subqueries that have
-                                         * all of their own tables present in
-                                         * this rel.
-                                         */
-    Relids      spent_subqrelids;       /* set of subquery relids that are
-                                         * inputs to this rel but won't be
-                                         * referenced again downstream (i.e.,
-                                         * are not mentioned in reltargetlist).
-                                         * Can use JOIN_SEMI when inner relids
-                                         * are a subset of spent_subq_relids.
-                                         */
-    bool        try_postjoin_dedup;     /* true => this rel includes all inputs
-                                         * required (including lefthand and
-                                         * correlating inputs as well as the
-                                         * subqueries' own tables) to fully
-                                         * evaluate the subqueries indicated by
-                                         * prejoin_dedup_subqrelids.
-                                         */
-    bool        no_more_subqueries;     /* true => this rel includes all inputs
-                                         * required for all flattened subqueries
-                                         * of the current query level.
-                                         */
-    struct SpecialJoinInfo   *join_unique_ininfo;
-                                        /* uncorrelated "= ANY" subquery with
-                                         * exactly the same relids as this rel.
-                                         */
-    List       *later_dedup_pathlist;   /* List of Path.  Contains paths which
-                                         * yield this rel but lack duplicate
-                                         * suppression which is to occur later.
-                                         * Their subq_complete flags are false.
-                                         */
-	struct Path *cheapest_startup_path; /* cheapest of later_dedup_pathlist */
-	struct Path *cheapest_total_path;   /* cheapest of later_dedup_pathlist */
-} CdbRelDedupInfo;
 
 /*
  * EquivalenceClasses
@@ -826,11 +773,6 @@ typedef struct Path
                                  *    without a slackening operator above it */
 	
 	bool		rescannable;    /* CDB: true => path can accept ExecRescan call
-                                 */
-    bool        subq_complete;  /* CDB: true => there is no flattened subquery
-                                 *  having all of its tables present in this rel
-                                 *  but still needing duplicate suppression.
-                                 *  Set by add_path().
                                  */
 	List	   *pathkeys;		/* sort ordering of path's output */
 	/* pathkeys is a List of PathKey nodes; see above */
@@ -1114,10 +1056,6 @@ typedef struct UniquePath
 	List	   *in_operators;	/* equality operators of the IN clause */
 	List	   *uniq_exprs;		/* expressions to be made unique */
 	double		rows;			/* estimated number of result tuples */
-    List       *distinct_on_exprs;
-                                /* CDB: list of exprs to be uniqueified */
-    List       *distinct_on_eq_operators;
-                                /* CDB: equality operator OIDs for exprs */
     Relids      distinct_on_rowid_relids;
                                 /* CDB: set of relids whose row ids are to be
                                  * uniqueified.
@@ -1548,21 +1486,6 @@ typedef struct SpecialJoinInfo
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;		/* can't commute with upper RHS */
 	List	   *join_quals;		/* join quals, in implicit-AND list format */
-
-	bool		try_join_unique;
-								/* CDB: true => comparison is equality op and
-								 *  subquery is not correlated.  Ok to consider
-								 *  JOIN_UNIQUE method of duplicate suppression.
-								 */
-	bool		consider_dedup;	/* true => Denotes this SpecialJoinInfo was
-								 * constructed for IN or EXISTS sublink which
-								 * got pulled into JOIN_SEMI. If we choose to
-								 * go ahead with INNER JOIN path for this JOIN_SEMI
-								 * then we MAY need to deduplicate the join result.
-								 */
-	List		*semi_operators; /* OIDs of equality join operators */
-	List		*semi_rhs_exprs; /* righthand-side expressions of these ops */
-
 } SpecialJoinInfo;
 
 /*

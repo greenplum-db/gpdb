@@ -70,7 +70,6 @@ static bool check_outerjoin_delay(PlannerInfo *root, Relids *relids_p,
 static bool check_equivalence_delay(PlannerInfo *root,
 						RestrictInfo *restrictinfo);
 static bool check_redundant_nullability_qual(PlannerInfo *root, Node *clause);
-static void compute_semijoin_info(SpecialJoinInfo* sjinfo, PlannerInfo* root);
 
 
 /*****************************************************************************
@@ -696,12 +695,7 @@ make_outerjoininfo(PlannerInfo *root,
 	sjinfo->delay_upper_joins = false;
 	sjinfo->join_quals = clause;
 
-	/* If we chose to take inner join path for this semi join then we MAY
-	 * need to deduplicate the join result.
-	 */
-	sjinfo->consider_dedup = jointype == JOIN_SEMI ? true : false;
-	sjinfo->try_join_unique = false;
-
+	/* If it's a full join, no need to be very smart */
 	if (jointype == JOIN_FULL)
 	{
 		sjinfo->min_lefthand = bms_copy(left_rels);
@@ -852,143 +846,7 @@ make_outerjoininfo(PlannerInfo *root,
 	sjinfo->min_lefthand = min_lefthand;
 	sjinfo->min_righthand = min_righthand;
 
-	compute_semijoin_info(sjinfo, root);
-
 	return sjinfo;
-}
-
-/*
- * compute_semijoin_info
- *	  Fill semijoin-related fields of a new SpecialJoinInfo
- */
-static void
-compute_semijoin_info(SpecialJoinInfo* sjinfo, PlannerInfo* root)
-{
-	List	   *semi_operators;
-	List	   *semi_rhs_exprs;
-	List	   *in_vars;
-	Relids fixed_lefthand = NULL;
-	ListCell   *lc;
-
-	sjinfo->semi_operators = NIL;
-	sjinfo->semi_rhs_exprs = NIL;
-
-	/* Nothing more to do if it's not a semijoin */
-	if (sjinfo->jointype != JOIN_SEMI)
-		return;
-
-	/*
-	 * Uncorrelated "=ANY" or EXISTS subqueries can use JOIN_UNIQUE dedup technique
-	 * Prepare information for pre-join deduplication here which is later used
-	 * by cdb_make_rel_dedup_info()
-	 */
-	semi_operators = NIL;
-	semi_rhs_exprs = NIL;
-	foreach(lc, sjinfo->join_quals)
-	{
-		Node* qual = lfirst(lc);
-		OpExpr	*op;
-		Oid		opno;
-		List	*opfamilies;
-		List	*opstrats;
-		Node	   *left_expr;
-		Node	   *right_expr;
-		Relids		left_varnos;
-		Relids		right_varnos;
-		Relids		all_varnos;
-
-		/*
-		 * We should not come here when sublink contains volatile functions
-		 * All the sublink pull up functions bail out if there is a volatile
-		 * function in sublink's testexpr.
-		 */
-		Assert(!contain_volatile_functions((Node *) qual));
-
-		if (!IsA(qual, OpExpr) ||
-				list_length(((OpExpr *)qual)->args) != 2)
-		{
-			/* No, but does it reference both sides? */
-			all_varnos = pull_varnos(qual);
-			if (!bms_overlap(all_varnos, sjinfo->syn_righthand) ||
-					bms_is_subset(all_varnos, sjinfo->syn_righthand))
-			{
-				/* Clause refers to only one rel, so ignore it */
-				continue;
-			}
-			/* Non-operator clause referencing both sides, must punt */
-			return;
-		}
-
-		/* Otherwise it is an OpExpr */
-		op = (OpExpr *) qual;
-		opno = op->opno;
-		left_expr = linitial(op->args);
-		right_expr = lsecond(op->args);
-		left_varnos = pull_varnos(left_expr);
-		right_varnos = pull_varnos(right_expr);
-		all_varnos = bms_union(left_varnos, right_varnos);
-
-		/* Does it reference both sides? */
-		if (!bms_overlap(all_varnos, sjinfo->syn_righthand) ||
-				bms_is_subset(all_varnos, sjinfo->syn_righthand))
-		{
-
-			/* Clause refers to only one rel, so ignore it */
-			continue;
-		}
-
-		get_op_btree_interpretation(opno, &opfamilies, &opstrats);
-
-		/* check rel membership of arguments */
-		if (!bms_is_empty(right_varnos) &&
-				bms_is_subset(right_varnos, sjinfo->syn_righthand) &&
-				!bms_overlap(left_varnos, sjinfo->syn_righthand) &&
-				list_member_int(opstrats, ROWCOMPARE_EQ))
-		{
-			/* right_expr is RHS only & op is good -> OK to do dedup */
-			semi_operators = lappend_oid(semi_operators, opno);
-			semi_rhs_exprs = lappend(semi_rhs_exprs, copyObject(right_expr));
-			sjinfo->try_join_unique = true;
-		}
-	}
-
-	if (semi_rhs_exprs == NIL)
-		return;
-
-	sjinfo->semi_rhs_exprs = semi_rhs_exprs;
-	sjinfo->semi_operators = semi_operators;
-
-	/*
-	 * If the lefthand side of qual is an inherited relation, then
-	 * cdb_make_rel_dedup_info() expects relids of parent base rels and not
-	 * the child relids. Replace them appropriately here.
-	 */
-	foreach(lc, root->append_rel_list)
-	{
-		AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(lc);
-
-		if (bms_is_member(appinfo->child_relid, sjinfo->min_lefthand))
-		{
-			fixed_lefthand = bms_add_member(fixed_lefthand, appinfo->parent_relid);
-		}
-	}
-
-	/*
-	 * We need the IN/EXISTS's righthand-side vars to be available at the join,
-	 * in case we try to unique-ify the subselect's outputs.
-	 * Add targetlist entries for each var needed sub_targetlist we computed above.
-	 */
-	// GPDB_84_MERGE_FIXME: Should we include placeholder vars as well in pull_var_clause?
-	in_vars = pull_var_clause((Node *) sjinfo->semi_rhs_exprs,
-							  PVC_RECURSE_AGGREGATES,
-							  PVC_REJECT_PLACEHOLDERS);
-
-	if (in_vars != NIL)
-	{
-		add_vars_to_targetlist(root, in_vars,
-				bms_union(fixed_lefthand, sjinfo->min_righthand));
-		list_free(in_vars);
-	}
 }
 
 
