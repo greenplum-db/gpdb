@@ -357,12 +357,13 @@ public.sales_1_prt_dec17</codeblock>
       <p>To have <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> send out status email
         notifications, you must place a file named <codeph>gp_email_contacts.yaml</codeph> in the
         home directory of the user running <codeph>gpbackup</codeph> or <codeph>gpbackup</codeph> in
-        the same directory as the utilities (<codeph>$GPHOME/bin</codeph>). The utilities issue a
+        the same directory as the utilities (<codeph>$GPHOME/bin</codeph>). A utility issues a
         message if it cannot locate a <codeph>gp_email_contacts.yaml</codeph> file in either
         location. If both locations contain a <codeph>.yaml</codeph> file, the utility uses the file
         in user <codeph>$HOME</codeph>. </p>
-      <p>The email subject line include the utility name and timestamp and the name of the Greenplum
-        Database master. This is an example subject line for a <codeph>gpbackup</codeph> email.</p>
+      <p>The email subject line includes the utility name, timestamp, status, and the name of the
+        Greenplum Database master. This is an example subject line for a <codeph>gpbackup</codeph>
+        email.</p>
       <p>
         <codeblock>gpbackup 20180202133601 on gp-master completed</codeblock>
       </p>
@@ -384,10 +385,16 @@ public.sales_1_prt_dec17</codeblock>
         <codeblock><xref href="#topic_uq5_v5v_scb/contacts_yml" format="dita">contacts</xref>:
   <xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita">gpbackup</xref>:
   - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
-    <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>: [success | failure]
+    <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
+         <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
+         <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]
+         <xref href="#topic_uq5_v5v_scb/failure_yml" format="dita">failure</xref>: [true | false]
   <xref href="#topic_uq5_v5v_scb/gprestore_yml" format="dita">gprestore</xref>:
-  - <xref href="#topic_uq5_v5v_scb/address_res_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
-    <xref href="#topic_uq5_v5v_scb/status_res_yml" format="dita">status</xref>: [success | failure]</codeblock>
+  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
+    <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
+         <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
+         <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]
+         <xref href="#topic_uq5_v5v_scb/failure_yml" format="dita">failure</xref>: [true | false]</codeblock>
         <section>
           <title>Email YAML File Sections</title>
           <parml>
@@ -409,12 +416,35 @@ public.sales_1_prt_dec17</codeblock>
                         <plentry>
                           <pt id="status_yml"><b>status</b></pt>
                           <pd>Optional. Specify when the utility sends an email to the specified
-                            email address. The default is to send an email on either a successful or
-                            failed operation.</pd>
-                          <pd>If the value is <codeph>success</codeph>, an email is sent to the
-                            specified email address only when the operation completes successfully.
-                            If the value is <codeph>failure</codeph>, an email is sent to the
-                            specified email address only when the operation fails.</pd>
+                            email address. The default is to send an email on either a successful
+                            (with or without errors) or failed operation.</pd>
+                          <pd>You can configure email notification to send an email only if a backup
+                            or restore operation is successful or fails. At least one of these
+                            parameters must be specified and each parameter can appear at most once. <parml>
+                              <plentry>
+                                <pt id="success_yml"><b>success</b></pt>
+                                <pd>Optional. Specify if an email is sent if the operation completes
+                                  without errors. If the value is <codeph>true</codeph>, an email is
+                                  sent if the operation completes without errors. If the value is
+                                    <codeph>false</codeph> (the default), an email is not sent.
+                                </pd>
+                              </plentry>
+                              <plentry>
+                                <pt id="success1_yml"><b>success_with_errors</b></pt>
+                                <pd>Optional. Specify if an email is sent if the operation completes
+                                  with errors. If the value is <codeph>true</codeph>, an email is
+                                  sent if the operation completes with errors. If the value is
+                                    <codeph>false</codeph> (the default), an email is not sent.
+                                </pd>
+                              </plentry>
+                              <plentry>
+                                <pt id="failure_yml"><b>failure</b></pt>
+                                <pd>Optional. Specify if an email is sent if the operation fails. If
+                                  the value is <codeph>true</codeph>, an email is sent if the
+                                  operation fails. If the value is <codeph>false</codeph> (the
+                                  default), an email is not sent. </pd>
+                              </plentry>
+                            </parml></pd>
                         </plentry>
                       </parml></pd>
                   </plentry>
@@ -425,7 +455,7 @@ public.sales_1_prt_dec17</codeblock>
               <pd>Optional. Begins the <codeph>gprestore</codeph> email section. This section
                 contains the <codeph><xref href="#topic_uq5_v5v_scb/address_yml" format="dita"
                     >address</xref></codeph> and <codeph><xref href="#topic_uq5_v5v_scb/status_yml"
-                    format="dita">status</xref></codeph> parameters that are used to send email
+                    format="dita">status</xref></codeph> parameters that are used to send an email
                 notification after a <codeph>gprestore</codeph> operation. The syntax is the same as
                 the <codeph><xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita"
                     >gpbackup</xref></codeph> section.</pd>
@@ -435,7 +465,8 @@ public.sales_1_prt_dec17</codeblock>
         <section>
           <title>Examples</title>
           <p>This example YAML file specifies two email recipients for backup operations. Emails are
-            sent for either a successful or failed backup operation.</p>
+            sent whenever a backup operation completes successfully, completes with errors, or
+            fails.</p>
           <codeblock>contacts:
   gpbackup:
   - address: gpadmin@example.com
@@ -444,16 +475,23 @@ public.sales_1_prt_dec17</codeblock>
             success or failure of an operation. For a backup operation, an email is sent to a
             different address depending on the success or failure of the backup operation. For a
             restore operation, an email is sent to <codeph>gpadmin@example.com</codeph> only when
-            the operation
-            succeeds.<codeblock>contacts
+            the operation succeeds or completes with errors, and is sent to
+              <codeph>my_dba@example.com</codeph> for any backup
+            operation.<codeblock>contacts
   backup:
   - address: gpadmin@example.com
-    status: success
+    status:
+      success:true
   - address: my_dba@example.com
-    status: failure
+    status:
+      success_with_errors: true
+      failure: true
   restore:
   - address: gpadmin@example.com
-    status: success</codeblock></p>
+    status:
+      success: true
+      success_with_errors: true
+  - address: my_dba@example.com</codeblock></p>
         </section>
       </body>
     </topic>
@@ -502,9 +540,9 @@ public.sales_1_prt_dec17</codeblock>
                     <li>Roles</li>
                     <li><codeph>GRANT</codeph> assignments of roles to databases</li>
                   </ul><p><b>Note:</b> Global metadata is not restored by default. You must include
-                    the <codeph>-globals</codeph> options to <codeph>gprestore</codeph> to restore
-                    global metadata.</p>Database-specific objects that must be created <i>before</i>
-                  to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
+                    the <codeph>-globals</codeph> option to the <codeph>gprestore</codeph> command
+                    to restore global metadata.</p>Database-specific objects that must be created
+                    <i>before</i> to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
                     <li>Session-level configuration parameter settings (GUCs)</li>
                     <li>Schemas</li>
                     <li>Procedural language extensions</li>
@@ -519,7 +557,7 @@ public.sales_1_prt_dec17</codeblock>
                     <li>Casts</li>
                     <li>Views</li>
                     <li>Constraints</li>
-                  </ul>Database-specific objects that must be created <i>after</i> to restoring the
+                  </ul>Database-specific objects that must be created <i>after</i> restoring the
                   actual data include:<ul id="ul_br4_wsv_scb">
                     <li dir="ltr">Indexes</li>
                     <li dir="ltr">Rules</li>

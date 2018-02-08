@@ -45,11 +45,11 @@
         all backup files from the Greenplum Database master and segment hosts to an absolute path
         for later use. Additional options are provided to filter the backup set in order to include
         or exclude specific tables.</p><p>Each <codeph>gpbackup</codeph> task uses a single
-        transaction on the Greenplum database master host. Utility-mode connections are created for
+        transaction on the Greenplum Database master host. Utility-mode connections are created for
         each segment host, which perform the associated <codeph>COPY ... ON SEGMENT</codeph>
         operations in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on
         each table that is backed up.</p>When a back up operation completes,
-        <codeph>gpbackup</codeph> returns a a status code. See <xref
+        <codeph>gpbackup</codeph> returns a status code. See <xref
         href="#topic_dyz_d5j_tbb/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph> can
         send status email notifications after a back up operation completes. You specify when the
         utility sends the mail and the email recipients in a configuration file. See <xref
@@ -262,7 +262,7 @@
       <title>Return Codes</title>
       <p>One of these codes is returned after <codeph>gpbackup</codeph> completes.<ul
           id="ul_hhb_sqp_n4">
-          <li><b>0</b> – Backup completed with no problems </li>
+          <li><b>0</b> – Backup completed with no problems.</li>
           <li><b>1</b> – Backup completed with non-fatal errors. See log file for more
             information.</li>
           <li><b>2</b> – Backup failed with a fatal error. See log file for more information.</li>

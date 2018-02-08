@@ -49,7 +49,7 @@
         operations.</p>
       <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
         are restored from a backup set. </p>
-      <p>When a rest9re operation completes, <codeph>gprestore</codeph> returns a a status code. See
+      <p>When a restore operation completes, <codeph>gprestore</codeph> returns a a status code. See
           <xref href="#topic_phj_g5j_tbb/return_codes" format="dita"/>.</p>
       <p><codeph>gprestore</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
@@ -190,7 +190,7 @@
       <title>Return Codes</title>
       <p>One of these codes is returned after <codeph>gprestore</codeph> completes.<ul
           id="ul_hhb_sqp_n4">
-          <li><b>0</b> – Restore completed with no problems </li>
+          <li><b>0</b> – Restore completed with no problems.</li>
           <li><b>1</b> – Restore completed with non-fatal errors. See log file for more
             information.</li>
           <li><b>2</b> – Restore failed with a fatal error. See log file for more information.</li>
