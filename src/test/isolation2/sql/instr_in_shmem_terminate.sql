@@ -57,31 +57,35 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 
 CREATE TABLE foo AS SELECT i a, i b FROM generate_series(1, 10) i;
 
--- expect this query terminated by 'test pg_terminate_backend'
+-- this query will be terminated by 'test pg_terminate_backend'
 1&:EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;
--- extract the pid for the previous query
+-- terminate above query
 SELECT pg_terminate_backend(procpid, 'test pg_terminate_backend')
 FROM pg_stat_activity WHERE current_query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT%' ORDER BY procpid LIMIT 1;
+-- start_ignore
 1<:
 1q:
+-- end_ignore
 
--- query backend to ensure no PANIC on postmaster
-SELECT count(*) FROM foo;
+-- query backend to ensure no PANIC on postmaster and wait cleanup done
+SELECT count(*) FROM foo, pg_sleep(2);
 
 -- Expected result is 1 row, means only current query in instrument slots,
 -- If more than one row returned, means previous test has leaked slots.
 SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
 
--- expect this query cancelled by 'test pg_cancel_backend'
+-- this query will be cancelled by 'test pg_cancel_backend'
 2&:EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;
--- extract the pid for the previous query
+-- cancel above query
 SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend')
 FROM pg_stat_activity WHERE current_query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT%' ORDER BY procpid LIMIT 1;
+-- start_ignore
 2<:
 2q:
+-- end_ignore
 
--- query backend to ensure no PANIC on postmaster
-SELECT count(*) FROM foo;
+-- query backend to ensure no PANIC on postmaster and wait cleanup done
+SELECT count(*) FROM foo, pg_sleep(2);
 
 -- Expected result is 1 row, means only current query in instrument slots,
 -- If more than one row returned, means previous test has leaked slots.
