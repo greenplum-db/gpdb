@@ -396,9 +396,39 @@ set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=colu
 select * into select_into_heap_to from select_into_heap_from;
 select relname, relstorage, reloptions from pg_class where relname='select_into_heap_to';
 select count(*) from select_into_heap_to;
+-- Also check CTAS works fine
+create table ctas_ao_from_heap as select * from select_into_heap_from;
+select relname, relstorage, reloptions from pg_class where relname='ctas_ao_from_heap';
+select count(*) from ctas_ao_from_heap;
+
+RESET gp_default_storage_options;
+create table dsp_partition1(i int, j int, k int) with(appendonly=true) partition by range(i) (start(1) end(10) every(5));
+Insert into dsp_partition1 select i, i+1, i+2 from generate_series(1,9) i;
+select count(*) from dsp_partition1;
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
+       where relid in (select oid from pg_class where relname  like 'dsp_partition1%') order by columnstore;
+set gp_default_storage_options="appendonly=true, orientation=column";
+-- Add partition
+alter table dsp_partition1 add partition p3 start(11) end(15);
+alter table dsp_partition1 add partition p4 start(16) end(18) with(appendonly=false);
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+-- Split partition
+alter table dsp_partition1 split partition for (rank(2)) at (7) into (partition split_p1, partition split_p2);
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+RESET gp_default_storage_options;
 
 -- cleanup
 \c postgres
 drop database dsp1;
 drop database dsp2;
 drop database dsp3;
+
+-- start_matchsubs
+-- m/.*\[ERROR\]*/
+-- s/.*\[ERROR\]/[ERROR]/gm
+-- end_matchsubs
+\!gpconfig -c gp_default_storage_options -v 'appendonly=true' --masteronly
+\!gpconfig -c gp_default_storage_options -v 'appendonly=true' -m 'appendonly=false'
+
+\!gpconfig -s gp_default_storage_options
