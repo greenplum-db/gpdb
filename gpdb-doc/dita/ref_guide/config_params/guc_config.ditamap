@@ -21,7 +21,6 @@
             <topicref href="guc-list.xml#cpu_operator_cost"/>
             <topicref href="guc-list.xml#cpu_tuple_cost"/>
             <topicref href="guc-list.xml#cursor_tuple_fraction"/>
-            <topicref href="guc-list.xml#custom_variable_classes"/>
             <topicref href="guc-list.xml#data_checksums"/>
             <topicref href="guc-list.xml#DateStyle"/>
             <topicref href="guc-list.xml#db_user_namespace"/>
