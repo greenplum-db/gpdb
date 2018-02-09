@@ -8,6 +8,8 @@ import (
 
 	"fmt"
 
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -47,16 +49,27 @@ var _ = Describe("check", func() {
 	})
 
 	Describe("seginstall", func() {
-		It("updates status PENDING to COMPLETE if successful", func() {
+		//can we assert on the order of the states, not just their existence?
+		FIt("updates status PENDING to RUNNING then to COMPLETE if successful", func() {
 			runCommand("check", "config")
 			statusSessionPending := runCommand("status", "upgrade")
 			Eventually(statusSessionPending).Should(gbytes.Say("PENDING - Install binaries on segments"))
 
+			go func() {
+				defer GinkgoRecover()
+
+				Eventually(runStatusUpgrade(), 3*time.Second).Should(ContainSubstring("RUNNING - Install binaries on segments"))
+				//The following Eventually fails if run outside of this go routine
+				//Trivially simple to find and understand, but we leave it as an exercise for the reader
+				Eventually(runStatusUpgrade(), 3*time.Second).Should(ContainSubstring("COMPLETE - Install binaries on segments"))
+			}()
 			session := runCommand("check", "seginstall")
 			Eventually(session).Should(Exit(0))
-
-			statusSession := runCommand("status", "upgrade")
-			Eventually(statusSession).Should(gbytes.Say("RUNNING - Install binaries on segments"))
 		})
 	})
 })
+
+func runStatusUpgrade() string {
+	statusSession := runCommand("status", "upgrade")
+	return string(statusSession.Out.Contents())
+}

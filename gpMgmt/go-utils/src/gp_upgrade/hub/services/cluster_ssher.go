@@ -1,8 +1,11 @@
 package services
 
 import (
+	"fmt"
 	"gp_upgrade/hub/logger"
 	"gp_upgrade/utils"
+	"os"
+	"path/filepath"
 )
 
 type ClusterSsher struct {
@@ -27,11 +30,23 @@ func (c *ClusterSsher) VerifySoftware(hostnames []string) {
 	if err != nil {
 		c.logger.Error <- err.Error()
 	}
+	//default assumption: GPDB is installed on the same path on all hosts in cluster
+	//we're looking for gp_upgrade_agent as proof that the new binary is installed
+	//TODO: if this finds nothing, should we err out? do a fallback check based on $GPHOME?
+	hubPath, _ := os.Executable()
+	agentPath := filepath.Join(filepath.Dir(hubPath), "gp_upgrade_agent")
 	var anyFailed = false
 	for _, hostname := range hostnames {
-		_, err := utils.System.ExecCmdOutput("ssh", hostname)
+		_, err := utils.System.ExecCmdOutput("ssh",
+			"-o",
+			"StrictHostKeyChecking=no",
+			hostname,
+			"ls",
+			agentPath,
+		)
 		if err != nil {
 			c.logger.Error <- err.Error()
+			c.logger.Error <- fmt.Sprintf("ssh failed to %s for %s", hostname, agentPath)
 			anyFailed = true
 		}
 	}
