@@ -67,7 +67,7 @@
           <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>. Database objects are backed up
         for the database you specify with the <codeph>-dbname</codeph> option. Global objects
         (Greenplum Database system objects) are also backed up by default, but they are restored
-        only if you include the <codeph>-globals</codeph> option to
+        only if you include the <codeph>-with-globals</codeph> option to
           <codeph>gprestore</codeph>.<table frame="all" rowsep="1" colsep="1" id="table_vqq_3rj_tbb">
           <title>Objects that are backed up and restored</title>
           <tgroup cols="2">
@@ -76,7 +76,8 @@
             <thead>
               <row>
                 <entry>Database (for database specified with <codeph>-dbname</codeph>)</entry>
-                <entry>Global (requires the <codeph>-globals</codeph> option to restore)</entry>
+                <entry>Global (requires the <codeph>-with-globals</codeph> option to
+                  restore)</entry>
               </row>
             </thead>
             <tbody>
@@ -208,7 +209,7 @@ $ <b>gprestore -backup-dir /home/gpadmin/backups/ -timestamp 20171103153156 -cre
 ...
 20171103:15:51:17 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Post-data metadata restore complete</codeblock></p>
         <p><codeph>gprestore</codeph> does not attempt to restore global metadata for the Greenplum
-          System by default. If this is required, include the <codeph>-globals</codeph>
+          System by default. If this is required, include the <codeph>-with-globals</codeph>
           argument.</p>
         <p>By default, <codeph>gprestore</codeph> uses 1 connection to restore table data. If you
           have a large backup set, you can improve performance of the restore by increasing the
@@ -540,9 +541,9 @@ public.sales_1_prt_dec17</codeblock>
                     <li>Roles</li>
                     <li><codeph>GRANT</codeph> assignments of roles to databases</li>
                   </ul><p><b>Note:</b> Global metadata is not restored by default. You must include
-                    the <codeph>-globals</codeph> option to the <codeph>gprestore</codeph> command
-                    to restore global metadata.</p>Database-specific objects that must be created
-                    <i>before</i> to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
+                    the <codeph>-with-globals</codeph> option to the <codeph>gprestore</codeph>
+                    command to restore global metadata.</p>Database-specific objects that must be
+                  created <i>before</i> to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
                     <li>Session-level configuration parameter settings (GUCs)</li>
                     <li>Schemas</li>
                     <li>Procedural language extensions</li>

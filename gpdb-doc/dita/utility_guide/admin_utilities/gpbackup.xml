@@ -33,7 +33,7 @@
         tables. For example, you can combine schema level and table level options to back up all the
         tables in a schema except for a single table. </p><p>By default, <codeph>gpbackup</codeph>
         backs up objects in the specified database as well as global Greenplum Database system
-        objects. You can optionally supply the <codeph>-globals</codeph> option with
+        objects. You can optionally supply the <codeph>-with-globals</codeph> option with
           <codeph>gprestore</codeph> to restore global objects. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
         information.</p><p><codeph>gpbackup</codeph> stores the object metadata files and DDL files
