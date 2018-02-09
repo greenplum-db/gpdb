@@ -106,25 +106,52 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.logger.info.assert_any_call('Ensuring that shared memory is cleaned up for stopped segments')
         self.assertEquals(self.logger.warning.call_count, 0)
 
+    @patch('gppylib.db.dbconn.execSQL')
+    @patch('gppylib.db.dbconn.connect')
     @patch('gppylib.operations.buildMirrorSegments.read_era')
     @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_succeeds(self, mock1, mock2):
+    def test_startAll_succeeds(self, mock1, mock2, mock3, mock4):
+        segment = Segment(0, 'm', 5, 'm', 'n', 'd', 'localhost',
+                          'localhost', 25345, '/tmp/datadir')
         result = StartSegmentsResult()
         result.getFailedSegmentObjs()
         mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
+        mock4.return_value.fetchall.return_value = []
+        result, sync_error = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [segment])
         self.assertTrue(result)
+        self.assertTrue(sync_error == None)
 
+    @patch('gppylib.db.dbconn.execSQL')
+    @patch('gppylib.db.dbconn.connect')
     @patch('gppylib.operations.buildMirrorSegments.read_era')
     @patch('gppylib.operations.startSegments.StartSegmentsOperation')
-    def test_startAll_fails(self, mock1, mock2):
+    def test_startAll_sync_error(self, mock1, mock2, mock3, mock4):
+        segment = Segment(0, 'm', 5, 'm', 'n', 'd', 'localhost',
+                          'localhost', 25345, '/tmp/datadir')
+        result = StartSegmentsResult()
+        result.getFailedSegmentObjs()
+        mock1.return_value.startSegments.return_value = result
+        mock4.return_value.fetchall.side_effect=[[], [[0]]]
+        result, sync_error = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [segment])
+        self.assertFalse(result)
+        self.assertEquals(cmp(sync_error, [0]), 0)
+
+    @patch('gppylib.db.dbconn.execSQL')
+    @patch('gppylib.db.dbconn.connect')
+    @patch('gppylib.operations.buildMirrorSegments.read_era')
+    @patch('gppylib.operations.startSegments.StartSegmentsOperation')
+    def test_startAll_fails(self, mock1, mock2, mock3, mock4):
+        segment = Segment(0, 'm', 5, 'm', 'n', 'd', 'localhost',
+                          'localhost', 25345, '/tmp/datadir')
         result = StartSegmentsResult()
         failed_segment = Segment.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         result.addFailure(failed_segment, 'reason', 'reasoncode')
         mock1.return_value.startSegments.return_value = result
-        result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
+        mock4.return_value.fetchall.return_value=[[0]]
+        result, start_error = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [segment])
         self.assertFalse(result)
+        self.assertEquals(cmp(start_error, [0]), 0)
         self.logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
                                          'Segment: sdw1:/data/primary0:content=0:dbid=2:mode=s:status=u: REASON: reason')
 
