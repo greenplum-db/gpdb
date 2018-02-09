@@ -263,6 +263,8 @@ def impl(context, env_var):
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')
 def impl(context, command):
+    # replace \" to " for behave feature file need to escape " to \"
+    command = command.replace('\\\"','"')
     run_gpcommand(context, command)
 
 
