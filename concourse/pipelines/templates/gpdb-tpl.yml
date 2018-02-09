@@ -3167,7 +3167,6 @@ jobs:
   plan:
   - aggregate:
     - get: madlib_ci
-      trigger: [[ test_trigger ]]
     - get: gpdb_src
       passed:
       - gate_advanced_analytics_start
