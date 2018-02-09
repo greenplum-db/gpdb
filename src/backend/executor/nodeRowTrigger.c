@@ -592,13 +592,6 @@ ExecEndRowTrigger(RowTriggerState *node)
 	EndPlanStateGpmonPkt(&node->ps);
 }
 
-/* Return number of TupleTableSlots used by RowTrigger node.*/
-int
-ExecCountSlotsRowTrigger(RowTrigger *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + ROWTRIGGER_NSLOTS;
-}
-
 /* Tracing execution for GP Monitor. */
 void
 initGpmonPktForRowTrigger(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)

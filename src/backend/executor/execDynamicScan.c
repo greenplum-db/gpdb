@@ -540,16 +540,6 @@ DynamicScan_ReScan(ScanState *scanState, ExprContext *exprCtxt)
 		stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
 	}
 
-	EState *estate = scanState->ps.state;
-	Index scanrelid = ((Scan *)(scanState->ps.plan))->scanrelid;
-
-	/* If this is re-scanning of PlanQual ... */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		estate->es_evTupleNull[scanrelid - 1] = false;
-	}
-
 	/* Notify controller about the request for rescan */
 	DynamicScan_Controller(scanState, SCAN_RESCAN, NULL /* PartitionInitMethod */,
 			NULL /* PartitionEndMethod */, NULL /* PartitionReScanMethod */);

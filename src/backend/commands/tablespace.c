@@ -51,7 +51,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.61 2009/01/22 20:16:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.63 2009/11/10 18:53:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

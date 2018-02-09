@@ -374,7 +374,7 @@ FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 psql:sql/qp_with_functional.sql:242: ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg1 slice1 127.0.0.1:25433 pid=32057)
 DETAIL:  
-SQL statement "UPDATE foobar SET d = d+1 WHERE c =  $1 "
+SQL statement "UPDATE foobar SET d = d+1 WHERE c = $1"
 PL/pgSQL function "cte_func1" line 2 at SQL statement
 -- @description test15e: CTE with a user-defined function [STABLE READS SQL DATA]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
@@ -394,7 +394,7 @@ FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 psql:sql/qp_with_functional.sql:260: ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional_inlining.foobar"  (seg0 slice1 127.0.0.1:25432 pid=53270)
 DETAIL:  
-SQL statement "SELECT d FROM foobar WHERE c =  $1  LIMIT 1"
+SQL statement "SELECT d FROM foobar WHERE c = $1 LIMIT 1"
 PL/pgSQL function "cte_func1" line 4 at SQL statement
 -- @description test15g: CTE with a user-defined function [VOLATILE NO SQL]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int 
@@ -457,7 +457,7 @@ FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional.foobar"
 DETAIL:  
-SQL statement "SELECT d FROM foobar WHERE c =  $1  LIMIT 1"
+SQL statement "SELECT d FROM foobar WHERE c = $1 LIMIT 1"
 PL/pgSQL function "cte_func1" line 4 at SQL statement
 -- @description test15j: CTE with a user-defined function [VOLATILE MODIFIES SQL DATA]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int 
@@ -475,7 +475,7 @@ FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement
 DETAIL:  
-SQL statement "UPDATE foobar SET d = d+1 WHERE c =  $1 "
+SQL statement "UPDATE foobar SET d = d+1 WHERE c = $1"
 PL/pgSQL function "cte_func1" line 2 at SQL statement
 -- @description test16a: CTE within a user-defined function
 -- Hide Traceback and error context information. This can throw a different
@@ -517,7 +517,11 @@ WITH v(a, b) AS (SELECT cte_func2() as a, b FROM foo WHERE b < 5)
 SELECT * from v ORDER BY 1;
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_with_functional.foo"
 DETAIL:  
-SQL statement "SELECT  (SELECT COUNT(*) FROM (WITH v AS (SELECT a, b FROM foo WHERE b < 9), w AS (SELECT * FROM v WHERE a < 5) SELECT v1.a, w1.b b1, w2.b b2 FROM v AS v1, v as v2, w AS w1, w AS w2 WHERE v1.a = v2.b)foo)"
+SQL statement "SELECT (SELECT COUNT(*) FROM (WITH v AS (SELECT a, b FROM foo WHERE b < 9),
+w AS (SELECT * FROM v WHERE a < 5)
+SELECT v1.a, w1.b b1, w2.b b2
+FROM v AS v1, v as v2, w AS w1, w AS w2
+WHERE v1.a = v2.b)foo)"
 PL/pgSQL function "cte_func2" line 4 at RETURN
 -- @description test17a: CTE and views [View with a single CTE]
 DROP VIEW IF EXISTS cte_view;

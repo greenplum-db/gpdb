@@ -163,8 +163,6 @@ typedef struct
 #define MAX_FILES		128		/* max number of SQL script files allowed */
 #define SHELL_COMMAND_SIZE	256	/* maximum size allowed for shell command */
 
-#define MAX_FILES		128		/* max number of SQL script files allowed */
-
 /*
  * structures used in custom query mode
  */

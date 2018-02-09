@@ -175,9 +175,9 @@ SELECT argisnullfunc(0), argisnullfunc(NULL);
 (1 row)
 
 SELECT byteafunc1(E'\\244\\233abc');
- byteafunc1  
--------------
- \245\233abc
+  byteafunc1  
+--------------
+ \xa59b616263
 (1 row)
 
 SELECT numericfunc1(1000);

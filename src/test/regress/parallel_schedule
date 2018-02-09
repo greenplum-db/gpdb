@@ -1,9 +1,14 @@
 # ----------
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.55 2009/01/27 12:40:15 petere Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.57 2009/08/24 03:10:16 tgl Exp $
 #
 # By convention, we put no more than twenty tests in any one parallel group;
 # this limits the number of connections needed to run the tests.
 # ----------
+
+# run tablespace by itself, and first, because it forces a checkpoint;
+# we'd prefer not to have checkpoints later in the tests because that
+# interferes with crash-recovery testing.
+test: tablespace
 
 # ----------
 # The first group of parallel tests
@@ -101,7 +106,7 @@ test: misc
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window json
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap json
 
 # GPDB_84_MERGE_FIXME: While disabling this was not really an effect of the 8.4
 # merge, it was done a long time ago, it's time to revisit this so we can re-
@@ -140,6 +145,3 @@ test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid c
 # GUCs stats_block_level and stats_row_level, which have been removed from
 # GPDB.
 #test: stats
-
-# run tablespace by itself
-test: tablespace

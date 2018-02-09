@@ -29,7 +29,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.121 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.124 2009/11/16 21:32:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -186,7 +186,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration > 0)
 		starttime = GetCurrentTimestamp();
 
-	if (vacstmt->verbose)
+	if (vacstmt->options & VACOPT_VERBOSE)
 		elevel = INFO;
 	else
 		elevel = DEBUG2;
@@ -296,7 +296,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	/* report results to the stats collector, too */
 	pgstat_report_vacuum(RelationGetRelid(onerel),
 						 onerel->rd_rel->relisshared,
-						 vacstmt->analyze,
+						 (vacstmt->options & VACOPT_ANALYZE) != 0,
 						 vacrelstats->new_rel_tuples);
 
 	if (gp_indexcheck_vacuum == INDEX_CHECK_ALL ||
@@ -424,7 +424,7 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 		/* report results to the stats collector, too */
 		pgstat_report_vacuum(RelationGetRelid(onerel),
 							 onerel->rd_rel->relisshared,
-							 vacstmt->analyze,
+							 (vacstmt->options & VACOPT_ANALYZE),
 							 vacrelstats->new_rel_tuples);
 	}
 }
@@ -1393,15 +1393,15 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 			if (RelationIsAoRows(aorel))
 			{
 				AppendOnlyCompact(aorel,
-					vacstmt->appendonly_compaction_segno,
-					insert_segno, vacstmt->full);
+								  vacstmt->appendonly_compaction_segno,
+								  insert_segno, (vacstmt->options & VACOPT_FULL));
 			}
 			else
 			{
 				Assert(RelationIsAoCols(aorel));
 				AOCSCompact(aorel,
-					vacstmt->appendonly_compaction_segno,
-					insert_segno, vacstmt->full);
+							vacstmt->appendonly_compaction_segno,
+							insert_segno, (vacstmt->options & VACOPT_FULL));
 			}
 		}
 	}

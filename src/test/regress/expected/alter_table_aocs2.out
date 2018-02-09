@@ -492,7 +492,7 @@ select count(*) as added_col5 from pg_attribute pa, pg_class pc where pa.attreli
 -- @description AOCO multivarblock table : add column with constraint and default value non NULL
 -- Negative test
 alter table multivarblock_tab add column added_col66 int CONSTRAINT multivarblock_tab_check1 CHECK (added_col66 < 10)  default 30;
-ERROR:  check constraint "multivarblock_tab_check1" is violated  (seg1 rh55-qa02.sanmateo.greenplum.com:30000 pid=8212)
+ERROR:  check constraint "multivarblock_tab_check1" is violated by some row  (seg1 rh55-qa02.sanmateo.greenplum.com:30000 pid=8212)
 select count(*) as added_col66 from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='multivarblock_tab' and attname='added_col66';
  added_col66 
 -------------

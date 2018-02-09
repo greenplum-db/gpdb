@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.103 2009/01/01 17:23:41 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.106 2009/10/12 18:10:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,8 +27,10 @@
 #include "executor/nodeHashjoin.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeLimit.h"
+#include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
 #include "executor/nodeMergejoin.h"
+#include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
 #include "executor/nodeResult.h"
@@ -135,6 +137,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 	{
 		case T_ResultState:
 			ExecReScanResult((ResultState *) node, exprCtxt);
+			break;
+
+		case T_ModifyTableState:
+			ExecReScanModifyTable((ModifyTableState *) node, exprCtxt);
 			break;
 
 		case T_AppendState:
@@ -269,6 +275,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 
 		case T_SetOpState:
 			ExecReScanSetOp((SetOpState *) node, exprCtxt);
+			break;
+
+		case T_LockRowsState:
+			ExecReScanLockRows((LockRowsState *) node, exprCtxt);
 			break;
 
 		case T_LimitState:
@@ -551,8 +561,9 @@ ExecSupportsBackwardScan(Plan *node)
 			/* these don't evaluate tlist */
 			return true;
 
+		case T_LockRows:
 		case T_Limit:
-			/* doesn't evaluate tlist */
+			/* these don't evaluate tlist */
 			return ExecSupportsBackwardScan(outerPlan(node));
 
 		default:
@@ -869,4 +880,32 @@ IndexSupportsBackwardScan(Oid indexid)
 	ReleaseSysCache(ht_am);
 
 	return result;
+}
+
+/*
+ * ExecMaterializesOutput - does a plan type materialize its output?
+ *
+ * Returns true if the plan node type is one that automatically materializes
+ * its output (typically by keeping it in a tuplestore).  For such plans,
+ * a rescan without any parameter change will have zero startup cost and
+ * very low per-tuple cost.
+ */
+bool
+ExecMaterializesOutput(NodeTag plantype)
+{
+	switch (plantype)
+	{
+		case T_Material:
+		case T_FunctionScan:
+		case T_CteScan:
+		case T_WorkTableScan:
+		case T_Sort:
+		case T_ShareInputScan:
+			return true;
+
+		default:
+			break;
+	}
+
+	return false;
 }

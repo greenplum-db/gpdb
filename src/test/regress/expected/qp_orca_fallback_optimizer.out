@@ -9,7 +9,7 @@ explain insert into constr_tab values (1,2,3);
 INFO:  GPORCA failed to produce a plan, falling back to planner
                    QUERY PLAN                   
 ------------------------------------------------
- Insert (slice0; segments: 1)  (rows=1 width=0)
+ Insert (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Settings:  optimizer=on
  Optimizer status: legacy query optimizer

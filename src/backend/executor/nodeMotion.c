@@ -1039,18 +1039,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 #define MOTION_NSLOTS 1
 
 /* ----------------------------------------------------------------
- *		ExecCountSlotsMotion
- * ----------------------------------------------------------------
- */
-int
-ExecCountSlotsMotion(Motion * node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) +
-		MOTION_NSLOTS;
-}
-
-/* ----------------------------------------------------------------
  *		ExecEndMotion(node)
  * ----------------------------------------------------------------
  */

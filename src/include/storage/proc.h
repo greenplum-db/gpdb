@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.112 2009/02/23 09:28:50 heikki Exp $
+ * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.114 2009/08/31 19:41:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -106,7 +106,9 @@ struct PGPROC
 	 */
 	LocalDistribXactData localDistribXactData;
 
-	int			pid;			/* This backend's process id, or 0 */
+	int			pid;			/* Backend's process ID; 0 if prepared xact */
+
+	/* These fields are zero while a backend is still starting up: */
 	BackendId	backendId;		/* This backend's backend ID (if assigned) */
 	Oid			databaseId;		/* OID of database this backend is using */
 	Oid			roleId;			/* OID of role using this backend */
@@ -210,12 +212,14 @@ typedef struct PROC_HDR
  * We set aside some extra PGPROC structures for auxiliary processes,
  * ie things that aren't full-fledged backends but need shmem access.
  *
- * Background writer, checkpointer, WAL writer, and autovacuum launcher run
- * during normal operation. Startup process also consumes one slot, but WAL
- * writer and autovacuum launcher are launched only after it has exited (4
- * slots).
+ * Background writer and WAL writer run during normal operation. Startup
+ * process also consumes one slot, but WAL writer is launched only after
+ * startup has exited, so we only need 2 slots.
+ *
+ * In GPDB, we have some extra processes.
+ * GDPB_90_MERGE_FIXME: count them correctly. 10 is an exaggeration.
  */
-#define NUM_AUXILIARY_PROCS	 14
+#define NUM_AUXILIARY_PROCS		(/* PG */ 2 + /* GPDB */ 10)
 
 
 /* configurable options */

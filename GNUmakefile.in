@@ -1,7 +1,7 @@
 #
 # PostgreSQL top level makefile
 #
-# $PostgreSQL: pgsql/GNUmakefile.in,v 1.50 2009/01/15 01:53:49 momjian Exp $
+# $PostgreSQL: pgsql/GNUmakefile.in,v 1.55 2009/11/03 21:28:10 petere Exp $
 #
 
 subdir =
@@ -34,6 +34,9 @@ all:
 	$(MAKE) -C gpAux/platform all
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
+html man:
+	$(MAKE) -C doc $@
+
 install:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C src $@
@@ -60,7 +63,7 @@ install:
 	$(MAKE) -C gpAux/platform $@
 	@echo "Greenplum Database installation complete."
 
-installdirs uninstall:
+installdirs uninstall coverage:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C src $@
 	$(MAKE) -C config $@
@@ -195,34 +198,11 @@ GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 
 ##########################################################################
 
-coverage:
-	$(MAKE) -C src/backend $@
-
-.PHONY: coverage-html
-coverage-html: coverage
-	rm -rf coverage
-	mkdir coverage
-	$(GENHTML) --show-details --legend --output-directory=coverage --title=PostgreSQL --num-spaces=4 --prefix=$(abs_top_srcdir)/src `find src/backend -name lcov.info -print`
-
-ifeq ($(enable_coverage),yes)
-clean distclean maintainer-clean: clean-coverage-local
-.PHONY: clean-coverage-local
-clean-coverage-local:
-	rm -rf coverage
-endif
-
-
-##########################################################################
-
 distdir	= postgresql-$(VERSION)
 dummy	= =install=
 garbage = =*  "#"*  ."#"*  *~*  *.orig  *.rej  core  postgresql-*
 
 dist: $(distdir).tar.gz $(distdir).tar.bz2
-ifeq ($(split-dist), yes)
-dist: postgresql-base-$(VERSION).tar.gz postgresql-docs-$(VERSION).tar.gz postgresql-opt-$(VERSION).tar.gz postgresql-test-$(VERSION).tar.gz 
-endif
-dist:
 	rm -rf $(distdir)
 
 $(distdir).tar: distdir
@@ -230,24 +210,8 @@ $(distdir).tar: distdir
 
 .INTERMEDIATE: $(distdir).tar
 
-opt_files = \
-	src/tools src/tutorial \
-	$(addprefix src/pl/, plperl plpython tcl)
-
-docs_files =
-
-postgresql-base-$(VERSION).tar: distdir
-	$(TAR) -c $(addprefix --exclude $(distdir)/, $(docs_files) $(opt_files) src/test) \
-	  -f $@ $(distdir)
-
-postgresql-docs-$(VERSION).tar: distdir
-	$(TAR) cf $@ $(addprefix $(distdir)/, $(docs_files))
-
-postgresql-opt-$(VERSION).tar: distdir
-	$(TAR) cf $@ $(addprefix $(distdir)/, $(opt_files))
-
-postgresql-test-$(VERSION).tar: distdir
-	$(TAR) cf $@ $(distdir)/src/test
+distdir-location:
+	@echo $(distdir)
 
 distdir:
 	rm -rf $(distdir)* $(dummy)

@@ -696,60 +696,60 @@ SELECT dblink_build_sql_delete('test_dropped', '2', 1,
  DELETE FROM test_dropped WHERE id = '2'
 (1 row)
 
- -- test nested query for GPDB
- CREATE TEMPORARY TABLE result AS
- (SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t1(f1 int, f2 text, f3 text[]))
- UNION
- (SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 < 3') as t2(f1 int, f2 text, f3 text[]))
- UNION
- (SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t3(f1 int, f2 text, f3 text[]))
- ORDER by f1;
- SELECT * FROM result;
-  f1 | f2 |     f3
- ----+----+------------
-   0 | a  | {a0,b0,c0}
-   1 | b  | {a1,b1,c1}
-   2 | c  | {a2,b2,c2}
-   3 | d  | {a3,b3,c3}
-   4 | e  | {a4,b4,c4}
-   5 | f  | {a5,b5,c5}
-   6 | g  | {a6,b6,c6}
- (7 rows)
+-- test nested query for GPDB
+CREATE TEMPORARY TABLE result AS
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t1(f1 int, f2 text, f3 text[]))
+UNION
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 < 3') as t2(f1 int, f2 text, f3 text[]))
+UNION
+(SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t3(f1 int, f2 text, f3 text[]))
+ORDER by f1;
+SELECT * FROM result;
+ f1 | f2 |     f3     
+----+----+------------
+  0 | a  | {a0,b0,c0}
+  1 | b  | {a1,b1,c1}
+  2 | c  | {a2,b2,c2}
+  3 | d  | {a3,b3,c3}
+  4 | e  | {a4,b4,c4}
+  5 | f  | {a5,b5,c5}
+  6 | g  | {a6,b6,c6}
+(7 rows)
 
- DROP TABLE result;
- CREATE TEMPORARY TABLE result (f1 int, f2 text, f3 text[]);
- INSERT INTO result SELECT * FROM dblink ('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[]);
- SELECT * FROM result;
-  f1 | f2 |      f3
- ----+----+---------------
-   0 | a  | {a0,b0,c0}
-   1 | b  | {a1,b1,c1}
-   2 | c  | {a2,b2,c2}
-   3 | d  | {a3,b3,c3}
-   4 | e  | {a4,b4,c4}
-   5 | f  | {a5,b5,c5}
-   6 | g  | {a6,b6,c6}
-   7 | h  | {a7,b7,c7}
-   8 | i  | {a8,b8,c8}
-   9 | j  | {a9,b9,c9}
-  10 | k  | {a10,b10,c10}
- (11 rows)
+DROP TABLE result;
+CREATE TEMPORARY TABLE result (f1 int, f2 text, f3 text[]);
+INSERT INTO result SELECT * FROM dblink ('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[]);
+SELECT * FROM result;
+ f1 | f2 |      f3       
+----+----+---------------
+  0 | a  | {a0,b0,c0}
+  1 | b  | {a1,b1,c1}
+  2 | c  | {a2,b2,c2}
+  3 | d  | {a3,b3,c3}
+  4 | e  | {a4,b4,c4}
+  5 | f  | {a5,b5,c5}
+  6 | g  | {a6,b6,c6}
+  7 | h  | {a7,b7,c7}
+  8 | i  | {a8,b8,c8}
+  9 | j  | {a9,b9,c9}
+ 10 | k  | {a10,b10,c10}
+(11 rows)
 
- SELECT * FROM (SELECT * FROM dblink('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[])) AS t1;
-  f1 | f2 |      f3
- ----+----+---------------
-   0 | a  | {a0,b0,c0}
-   1 | b  | {a1,b1,c1}
-   2 | c  | {a2,b2,c2}
-   3 | d  | {a3,b3,c3}
-   4 | e  | {a4,b4,c4}
-   5 | f  | {a5,b5,c5}
-   6 | g  | {a6,b6,c6}
-   7 | h  | {a7,b7,c7}
-   8 | i  | {a8,b8,c8}
-   9 | j  | {a9,b9,c9}
-  10 | k  | {a10,b10,c10}
- (11 rows)
+SELECT * FROM (SELECT * FROM dblink('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[])) AS t1;
+ f1 | f2 |      f3       
+----+----+---------------
+  0 | a  | {a0,b0,c0}
+  1 | b  | {a1,b1,c1}
+  2 | c  | {a2,b2,c2}
+  3 | d  | {a3,b3,c3}
+  4 | e  | {a4,b4,c4}
+  5 | f  | {a5,b5,c5}
+  6 | g  | {a6,b6,c6}
+  7 | h  | {a7,b7,c7}
+  8 | i  | {a8,b8,c8}
+  9 | j  | {a9,b9,c9}
+ 10 | k  | {a10,b10,c10}
+(11 rows)
 
 -- test foreign data wrapper functionality
 CREATE ROLE dblink_regression_test;
@@ -793,3 +793,54 @@ DROP USER dblink_regression_test;
 DROP USER MAPPING FOR public SERVER fdtest;
 DROP SERVER fdtest;
 DROP FOREIGN DATA WRAPPER postgresql;
+-- test asynchronous notifications
+SELECT dblink_connect('dbname=contrib_regression');
+ dblink_connect 
+----------------
+ OK
+(1 row)
+
+--should return listen
+SELECT dblink_exec('LISTEN regression');
+ dblink_exec 
+-------------
+ LISTEN
+(1 row)
+
+--should return listen
+SELECT dblink_exec('LISTEN foobar');
+ dblink_exec 
+-------------
+ LISTEN
+(1 row)
+
+SELECT dblink_exec('NOTIFY regression');
+ dblink_exec 
+-------------
+ NOTIFY
+(1 row)
+
+SELECT dblink_exec('NOTIFY foobar');
+ dblink_exec 
+-------------
+ NOTIFY
+(1 row)
+
+SELECT notify_name, be_pid = (select t.be_pid from dblink('select pg_backend_pid()') as t(be_pid int)) AS is_self_notify, extra from dblink_get_notify();
+ notify_name | is_self_notify | extra 
+-------------+----------------+-------
+ regression  | t              | 
+ foobar      | t              | 
+(2 rows)
+
+SELECT * from dblink_get_notify();
+ notify_name | be_pid | extra 
+-------------+--------+-------
+(0 rows)
+
+SELECT dblink_disconnect();
+ dblink_disconnect 
+-------------------
+ OK
+(1 row)
+

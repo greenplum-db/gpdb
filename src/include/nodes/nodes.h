@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.223 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.231 2009/10/26 02:26:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -61,6 +61,7 @@ typedef enum NodeTag
 	 */
 	T_Result,
 	T_Plan_Start = T_Result,
+	T_ModifyTable,
 	T_Append,
 	T_RecursiveUnion,
 	T_Sequence,
@@ -96,6 +97,7 @@ typedef enum NodeTag
 	T_Unique,
 	T_Hash,
 	T_SetOp,
+	T_LockRows,
 	T_Limit,
 	T_Motion,
 	T_ShareInputScan,
@@ -106,7 +108,8 @@ typedef enum NodeTag
 	T_AssertOp,
 	T_PartitionSelector,
 	T_Plan_End,
-	/* this one isn't a subclass of Plan: */
+	/* these aren't subclasses of Plan: */
+	T_PlanRowMark,
 	T_PlanInvalItem,
 
 	/*
@@ -122,6 +125,7 @@ typedef enum NodeTag
 	 * It will take the form of IndexScan, SeqScan, etc.
 	 */
 	T_ResultState,
+	T_ModifyTableState,
 	T_AppendState,
 	T_RecursiveUnionState,
 	T_SequenceState,
@@ -157,6 +161,7 @@ typedef enum NodeTag
 	T_UniqueState,
 	T_HashState,
 	T_SetOpState,
+	T_LockRowsState,
 	T_LimitState,
 	T_MotionState,
 	T_ShareInputScanState,
@@ -187,6 +192,7 @@ typedef enum NodeTag
 	T_WindowFunc,
 	T_ArrayRef,
 	T_FuncExpr,
+	T_NamedArgExpr,
 	T_OpExpr,
 	T_DistinctExpr,
 	T_ScalarArrayOpExpr,
@@ -301,7 +307,6 @@ typedef enum NodeTag
 	T_ResultPath,
 	T_MaterialPath,
 	T_UniquePath,
-	T_CtePath,
 	T_EquivalenceClass,
 	T_EquivalenceMember,
 	T_PathKey,
@@ -361,6 +366,7 @@ typedef enum NodeTag
 	T_SetOperationStmt,
 	T_GrantStmt,
 	T_GrantRoleStmt,
+	T_AlterDefaultPrivilegesStmt,
 	T_ClosePortalStmt,
 	T_ClusterStmt,
 	T_CopyStmt,
@@ -495,9 +501,8 @@ typedef enum NodeTag
 	T_RangeTblEntry,
 	T_GroupingClause,
 	T_GroupingFunc,
-	T_WindowClause,
 	T_SortGroupClause,
-	T_FkConstraint,
+	T_WindowClause,
 	T_PrivGrantee,
 	T_FuncWithArgs,
 	T_AccessPriv,
@@ -529,8 +534,8 @@ typedef enum NodeTag
 	T_TriggerData = 950,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
 	T_WindowObjectData,			/* private in nodeWindowAgg.c */
-	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
 	T_TIDBitmap,				/* in nodes/tidbitmap.h */
+	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
     T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */

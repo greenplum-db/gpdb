@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.208 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.212 2009/12/15 04:57:47 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,8 +57,7 @@ static int	_SPI_connected = -1;
 static int	_SPI_curid = -1;
 
 static Portal SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
-						 Datum *Values, const char *Nulls,
-						 bool read_only, int pflags);
+						 ParamListInfo paramLI, bool read_only);
 
 static void _SPI_prepare_plan(const char *src, SPIPlanPtr plan,
 				  ParamListInfo boundParams);
@@ -427,6 +426,28 @@ SPI_execp(SPIPlanPtr plan, Datum *Values, const char *Nulls, int64 tcount)
 	return SPI_execute_plan(plan, Values, Nulls, false, tcount);
 }
 
+/* Execute a previously prepared plan */
+int
+SPI_execute_plan_with_paramlist(SPIPlanPtr plan, ParamListInfo params,
+								bool read_only, long tcount)
+{
+	int			res;
+
+	if (plan == NULL || plan->magic != _SPI_PLAN_MAGIC || tcount < 0)
+		return SPI_ERROR_ARGUMENT;
+
+	res = _SPI_begin_call(true);
+	if (res < 0)
+		return res;
+
+	res = _SPI_execute_plan(plan, params,
+							InvalidSnapshot, InvalidSnapshot,
+							read_only, true, tcount);
+
+	_SPI_end_call(true);
+	return res;
+}
+
 /*
  * SPI_execute_snapshot -- identical to SPI_execute_plan, except that we allow
  * the caller to specify exactly which snapshots to use, which will be
@@ -503,6 +524,8 @@ SPI_execute_with_args(const char *src,
 	plan.cursor_options = 0;
 	plan.nargs = nargs;
 	plan.argtypes = argtypes;
+	plan.parserSetup = NULL;
+	plan.parserSetupArg = NULL;
 
 	/*
 	 * Add this to be compatible with current version of GPDB
@@ -557,6 +580,45 @@ SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes,
 	plan.cursor_options = cursorOptions;
 	plan.nargs = nargs;
 	plan.argtypes = argtypes;
+	plan.parserSetup = NULL;
+	plan.parserSetupArg = NULL;
+
+	_SPI_prepare_plan(src, &plan, NULL);
+
+	/* copy plan to procedure context */
+	result = _SPI_copy_plan(&plan, _SPI_current->procCxt);
+
+	_SPI_end_call(true);
+
+	return result;
+}
+
+SPIPlanPtr
+SPI_prepare_params(const char *src,
+				   ParserSetupHook parserSetup,
+				   void *parserSetupArg,
+				   int cursorOptions)
+{
+	_SPI_plan	plan;
+	SPIPlanPtr	result;
+
+	if (src == NULL)
+	{
+		SPI_result = SPI_ERROR_ARGUMENT;
+		return NULL;
+	}
+
+	SPI_result = _SPI_begin_call(true);
+	if (SPI_result < 0)
+		return NULL;
+
+	memset(&plan, 0, sizeof(_SPI_plan));
+	plan.magic = _SPI_PLAN_MAGIC;
+	plan.cursor_options = cursorOptions;
+	plan.nargs = 0;
+	plan.argtypes = NULL;
+	plan.parserSetup = parserSetup;
+	plan.parserSetupArg = parserSetupArg;
 
 	_SPI_prepare_plan(src, &plan, NULL);
 
@@ -982,8 +1044,21 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 				Datum *Values, const char *Nulls,
 				bool read_only)
 {
-	return SPI_cursor_open_internal(name, plan, Values, Nulls,
-									read_only, 0);
+	Portal		portal;
+	ParamListInfo paramLI;
+
+	/* build transient ParamListInfo in caller's context */
+	paramLI = _SPI_convert_params(plan->nargs, plan->argtypes,
+								  Values, Nulls,
+								  0);
+
+	portal = SPI_cursor_open_internal(name, plan, paramLI, read_only);
+
+	/* done with the transient ParamListInfo */
+	if (paramLI)
+		pfree(paramLI);
+
+	return portal;
 }
 
 
@@ -1020,6 +1095,8 @@ SPI_cursor_open_with_args(const char *name,
 	plan.cursor_options = cursorOptions;
 	plan.nargs = nargs;
 	plan.argtypes = argtypes;
+	plan.parserSetup = NULL;
+	plan.parserSetupArg = NULL;
 
 	/*
 	 * Add this to be compatible with current version of GPDB
@@ -1030,6 +1107,7 @@ SPI_cursor_open_with_args(const char *name,
 	 */
 	plan.plancxt = NULL;
 
+	/* build transient ParamListInfo in executor context */
 	paramLI = _SPI_convert_params(nargs, argtypes,
 								  Values, Nulls,
 								  PARAM_FLAG_CONST);
@@ -1044,8 +1122,7 @@ SPI_cursor_open_with_args(const char *name,
 	/* SPI_cursor_open_internal must be called in procedure memory context */
 	_SPI_procmem();
 
-	result = SPI_cursor_open_internal(name, &plan, Values, Nulls,
-									  read_only, PARAM_FLAG_CONST);
+	result = SPI_cursor_open_internal(name, &plan, paramLI, read_only);
 
 	/* And clean up */
 	_SPI_curid++;
@@ -1056,24 +1133,35 @@ SPI_cursor_open_with_args(const char *name,
 
 
 /*
+ * SPI_cursor_open_with_paramlist()
+ *
+ *	Same as SPI_cursor_open except that parameters (if any) are passed
+ *	as a ParamListInfo, which supports dynamic parameter set determination
+ */
+Portal
+SPI_cursor_open_with_paramlist(const char *name, SPIPlanPtr plan,
+							   ParamListInfo params, bool read_only)
+{
+	return SPI_cursor_open_internal(name, plan, params, read_only);
+}
+
+
+/*
  * SPI_cursor_open_internal()
  *
- *	Common code for SPI_cursor_open and SPI_cursor_open_with_args
+ *	Common code for SPI_cursor_open variants
  */
 static Portal
 SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
-						 Datum *Values, const char *Nulls,
-						 bool read_only, int pflags)
+						 ParamListInfo paramLI, bool read_only)
 {
 	CachedPlanSource *plansource;
 	CachedPlan *cplan;
 	List	   *stmt_list;
 	char	   *query_string;
-	ParamListInfo paramLI;
 	Snapshot	snapshot;
 	MemoryContext oldcontext;
 	Portal		portal;
-	int			k;
 
 	/*
 	 * Check that the plan is something the Portal code will special-case as
@@ -1119,54 +1207,15 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 		portal = CreatePortal(name, false, false);
 	}
 
-	/*
-	 * Prepare to copy stuff into the portal's memory context.  We do all this
-	 * copying first, because it could possibly fail (out-of-memory) and we
-	 * don't want a failure to occur between RevalidateCachedPlan and
-	 * PortalDefineQuery; that would result in leaking our plancache refcount.
-	 */
-	oldcontext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
-
 	/* Copy the plan's query string into the portal */
-	query_string = pstrdup(plansource->query_string);
+	query_string = MemoryContextStrdup(PortalGetHeapMemory(portal),
+									   plansource->query_string);
 
-	/* If the plan has parameters, copy them into the portal */
-	if (plan->nargs > 0)
-	{
-		/* sizeof(ParamListInfoData) includes the first array element */
-		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-								 (plan->nargs - 1) *sizeof(ParamExternData));
-		paramLI->numParams = plan->nargs;
-
-		for (k = 0; k < plan->nargs; k++)
-		{
-			ParamExternData *prm = &paramLI->params[k];
-
-			prm->ptype = plan->argtypes[k];
-			prm->pflags = pflags;
-			prm->isnull = (Nulls && Nulls[k] == 'n');
-			if (prm->isnull)
-			{
-				/* nulls just copy */
-				prm->value = Values[k];
-			}
-			else
-			{
-				/* pass-by-ref values must be copied into portal context */
-				int16		paramTypLen;
-				bool		paramTypByVal;
-
-				get_typlenbyval(prm->ptype, &paramTypLen, &paramTypByVal);
-				prm->value = datumCopy(Values[k],
-									   paramTypByVal, paramTypLen);
-			}
-		}
-	}
-	else
-		paramLI = NULL;
-
-	MemoryContextSwitchTo(oldcontext);
-
+	/*
+	 * Note: we mustn't have any failure occur between RevalidateCachedPlan
+	 * and PortalDefineQuery; that would result in leaking our plancache
+	 * refcount.
+	 */
 	if (plan->saved)
 	{
 		/* Replan if needed, and increment plan refcount for portal */
@@ -1254,16 +1303,26 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 		}
 	}
 
-	/*
-	 * Set up the snapshot to use.	(PortalStart will do PushActiveSnapshot,
-	 * so we skip that here.)
-	 */
+	/* Set up the snapshot to use. */
 	if (read_only)
 		snapshot = GetActiveSnapshot();
 	else
 	{
 		CommandCounterIncrement();
 		snapshot = GetTransactionSnapshot();
+	}
+
+	/*
+	 * If the plan has parameters, copy them into the portal.  Note that
+	 * this must be done after revalidating the plan, because in dynamic
+	 * parameter cases the set of parameters could have changed during
+	 * re-parsing.
+	 */
+	if (paramLI)
+	{
+		oldcontext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
+		paramLI = copyParamList(paramLI);
+		MemoryContextSwitchTo(oldcontext);
 	}
 
 	/*
@@ -1645,11 +1704,12 @@ spi_printtup(TupleTableSlot *slot, DestReceiver *self)
 /*
  * Parse and plan a querystring.
  *
- * At entry, plan->argtypes, plan->nargs, and plan->cursor_options must be
- * valid.  If boundParams isn't NULL then it represents parameter values
- * that are made available to the planner (as either estimates or hard values
- * depending on their PARAM_FLAG_CONST marking).  The boundParams had better
- * match the param types embedded in the plan!
+ * At entry, plan->argtypes and plan->nargs (or alternatively plan->parserSetup
+ * and plan->parserSetupArg) must be valid, as must plan->cursor_options.
+ * If boundParams isn't NULL then it represents parameter values that are made
+ * available to the planner (as either estimates or hard values depending on
+ * their PARAM_FLAG_CONST marking).  The boundParams had better match the
+ * param type information embedded in the plan!
  *
  * Results are stored into *plan (specifically, plan->plancache_list).
  * Note however that the result trees are all in CurrentMemoryContext
@@ -1662,8 +1722,6 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 	List	   *plancache_list;
 	ListCell   *list_item;
 	ErrorContextCallback spierrcontext;
-	Oid		   *argtypes = plan->argtypes;
-	int			nargs = plan->nargs;
 	int			cursor_options = plan->cursor_options;
 
 	/*
@@ -1680,8 +1738,8 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 	raw_parsetree_list = pg_parse_query(src);
 
 	/*
-	 * Do parse analysis and rule rewrite for each raw parsetree, then cons up
-	 * a phony plancache entry for each one.
+	 * Do parse analysis, rule rewrite, and planning for each raw parsetree,
+	 * then cons up a phony plancache entry for each one.
 	 */
 	plancache_list = NIL;
 
@@ -1692,9 +1750,27 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 		CachedPlanSource *plansource;
 		CachedPlan *cplan;
 
-		/* Need a copyObject here to keep parser from modifying raw tree */
-		stmt_list = pg_analyze_and_rewrite(copyObject(parsetree),
-										   src, argtypes, nargs);
+		/*
+		 * Parameter datatypes are driven by parserSetup hook if provided,
+		 * otherwise we use the fixed parameter list.
+		 */
+		if (plan->parserSetup != NULL)
+		{
+			Assert(plan->nargs == 0);
+			/* Need a copyObject here to keep parser from modifying raw tree */
+			stmt_list = pg_analyze_and_rewrite_params(copyObject(parsetree),
+													  src,
+													  plan->parserSetup,
+													  plan->parserSetupArg);
+		}
+		else
+		{
+			/* Need a copyObject here to keep parser from modifying raw tree */
+			stmt_list = pg_analyze_and_rewrite(copyObject(parsetree),
+											   src,
+											   plan->argtypes,
+											   plan->nargs);
+		}
 
 		{
 			ListCell *lc;
@@ -1723,8 +1799,10 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 		/* cast-away-const here is a bit ugly, but there's no reason to copy */
 		plansource->query_string = (char *) src;
 		plansource->commandTag = CreateCommandTag(parsetree);
-		plansource->param_types = argtypes;
-		plansource->num_params = nargs;
+		plansource->param_types = plan->argtypes;
+		plansource->num_params = plan->nargs;
+		plansource->parserSetup = plan->parserSetup;
+		plansource->parserSetupArg = plan->parserSetupArg;
 		plansource->fully_planned = true;
 		plansource->fixed_result = false;
 		/* no need to set search_path, generation or saved_xmin */
@@ -1903,7 +1981,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 										plansource->query_string,
 										snap, crosscheck_snapshot,
 										dest,
-										paramLI, INSTRUMENT_NONE);
+										paramLI, 0);
 
 				/* GPDB hook for collecting query info */
 				if (query_info_collect_hook)
@@ -2022,7 +2100,7 @@ fail:
 }
 
 /*
- * Convert query parameters to form wanted by planner and executor
+ * Convert arrays of query parameters to form wanted by planner and executor
  */
 static ParamListInfo
 _SPI_convert_params(int nargs, Oid *argtypes,
@@ -2038,6 +2116,11 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 		/* sizeof(ParamListInfoData) includes the first array element */
 		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
 									   (nargs - 1) *sizeof(ParamExternData));
+		/* we have static list of params, so no hooks needed */
+		paramLI->paramFetch = NULL;
+		paramLI->paramFetchArg = NULL;
+		paramLI->parserSetup = NULL;
+		paramLI->parserSetupArg = NULL;
 		paramLI->numParams = nargs;
 
 		for (i = 0; i < nargs; i++)
@@ -2151,19 +2234,19 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		 * support is finished, the queryTree field will be gone.
 		 */
 		case CMD_INSERT:
-			if (queryDesc->plannedstmt->returningLists)
+			if (queryDesc->plannedstmt->hasReturning)
 				res = SPI_OK_INSERT_RETURNING;
 			else
 				res = SPI_OK_INSERT;
 			break;
 		case CMD_DELETE:
-			if (queryDesc->plannedstmt->returningLists)
+			if (queryDesc->plannedstmt->hasReturning)
 				res = SPI_OK_DELETE_RETURNING;
 			else
 				res = SPI_OK_DELETE;
 			break;
 		case CMD_UPDATE:
-			if (queryDesc->plannedstmt->returningLists)
+			if (queryDesc->plannedstmt->hasReturning)
 				res = SPI_OK_UPDATE_RETURNING;
 			else
 				res = SPI_OK_UPDATE;
@@ -2203,7 +2286,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		_SPI_current->processed = queryDesc->estate->es_processed;
 		_SPI_current->lastoid = queryDesc->estate->es_lastoid;
 		
-		if ((res == SPI_OK_SELECT || queryDesc->plannedstmt->returningLists) &&
+		if ((res == SPI_OK_SELECT || queryDesc->plannedstmt->hasReturning) &&
 			queryDesc->dest->mydest == DestSPI)
 		{
 			/*
@@ -2448,6 +2531,8 @@ _SPI_copy_plan(SPIPlanPtr plan, MemoryContext parentcxt)
 	}
 	else
 		newplan->argtypes = NULL;
+	newplan->parserSetup = plan->parserSetup;
+	newplan->parserSetupArg = plan->parserSetupArg;
 
 	foreach(lc, plan->plancache_list)
 	{
@@ -2467,6 +2552,8 @@ _SPI_copy_plan(SPIPlanPtr plan, MemoryContext parentcxt)
 		newsource->commandTag = plansource->commandTag;
 		newsource->param_types = newplan->argtypes;
 		newsource->num_params = newplan->nargs;
+		newsource->parserSetup = newplan->parserSetup;
+		newsource->parserSetupArg = newplan->parserSetupArg;
 		newsource->fully_planned = plansource->fully_planned;
 		newsource->fixed_result = plansource->fixed_result;
 		/* no need to worry about seach_path, generation or saved_xmin */
@@ -2524,6 +2611,8 @@ _SPI_save_plan(SPIPlanPtr plan)
 	}
 	else
 		newplan->argtypes = NULL;
+	newplan->parserSetup = plan->parserSetup;
+	newplan->parserSetupArg = plan->parserSetupArg;
 
 	foreach(lc, plan->plancache_list)
 	{
@@ -2544,6 +2633,10 @@ _SPI_save_plan(SPIPlanPtr plan)
 									 cplan->stmt_list,
 									 true,
 									 false);
+		if (newplan->parserSetup != NULL)
+			CachedPlanSetParserHook(newsource,
+									newplan->parserSetup,
+									newplan->parserSetupArg);
 
 		newplan->plancache_list = lappend(newplan->plancache_list, newsource);
 	}

@@ -30,7 +30,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.62 2009/06/26 20:29:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.64 2009/12/16 22:55:33 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -115,7 +115,7 @@ BackgroundWriterMain(void)
 	 * tell us it's okay to shut down (via SIGUSR2).
 	 *
 	 * SIGUSR1 is presently unused; keep it spare in case someday we want this
-	 * process to participate in ProcSignal messaging.
+	 * process to participate in ProcSignal signalling.
 	 */
 	pqsignal(SIGHUP, BgSigHupHandler);	/* set flag to read config file */
 	pqsignal(SIGINT, SIG_IGN);
@@ -136,11 +136,7 @@ BackgroundWriterMain(void)
 	pqsignal(SIGWINCH, SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
-#ifdef HAVE_SIGPROCMASK
 	sigdelset(&BlockSig, SIGQUIT);
-#else
-	BlockSig &= ~(sigmask(SIGQUIT));
-#endif
 
 	/*
 	 * Create a resource owner to keep track of our resources (currently only

@@ -31,4 +31,4 @@ set statement_mem="5MB";
 set gp_resqueue_print_operator_memory_limits=on;
 set gp_enable_mk_sort=off; 
 
-select isSpilling('explain analyze select i1,i2 from testsort order by i2'); 
+select isSpilling('explain (analyze, verbose) select i1,i2 from testsort order by i2');

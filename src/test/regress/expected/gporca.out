@@ -3427,15 +3427,15 @@ select * from orca.r left outer join orca.s on (r.a=s.c and r.b<s.d) where s.d i
 -- explain Hash Join with 'IS NOT DISTINCT FROM' join condition
 -- force_explain
 explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
-                                         QUERY PLAN
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.33..46.83 rows=31 width=16)
-   ->  Nested Loop  (cost=2.33..46.83 rows=11 width=16)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..35.80 rows=31 width=16)
+   ->  Nested Loop  (cost=0.00..35.80 rows=11 width=16)
          Join Filter: NOT r.a IS DISTINCT FROM s.c
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.00 rows=20 width=8)
-               ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
-         ->  Materialize  (cost=2.33..2.63 rows=10 width=8)
-               ->  Seq Scan on s  (cost=0.00..2.30 rows=10 width=8)
+         ->  Seq Scan on s  (cost=0.00..2.30 rows=10 width=8)
+         ->  Materialize  (cost=0.00..5.20 rows=20 width=8)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.00 rows=20 width=8)
+                     ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
  Settings:  optimizer=off; optimizer_segments=3
  Optimizer status: legacy query optimizer
 (9 rows)

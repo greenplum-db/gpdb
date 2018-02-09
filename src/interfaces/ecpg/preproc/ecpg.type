@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/ecpg.type,v 1.1 2008/11/14 10:03:33 meskes Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/ecpg.type,v 1.4 2009/11/26 15:06:47 meskes Exp $ */
 %type <str> ECPGAllocateDescr
 %type <str> ECPGCKeywords
 %type <str> ECPGColId
@@ -30,11 +30,10 @@
 %type <str> ECPGVar
 %type <str> ECPGVarDeclaration
 %type <str> ECPGWhenever
-%type <str> ECPGunreserved
-%type <str> ECPGunreserved_con
 %type <str> ECPGunreserved_interval
 %type <str> UsingConst
 %type <str> UsingValue
+%type <str> all_unreserved_keyword
 %type <str> c_anything
 %type <str> c_args
 %type <str> c_list
@@ -43,8 +42,10 @@
 %type <str> c_term
 %type <str> c_thing
 %type <str> char_variable
+%type <str> char_civar
 %type <str> civar
 %type <str> civarind
+%type <str> ColId
 %type <str> ColLabel
 %type <str> connect_options
 %type <str> connection_object
@@ -75,6 +76,7 @@
 %type <str> opt_bit_field
 %type <str> opt_connection_name
 %type <str> opt_database_name
+%type <str> opt_ecpg_into
 %type <str> opt_ecpg_using
 %type <str> opt_initializer
 %type <str> opt_options
@@ -90,7 +92,6 @@
 %type <str> precision
 %type <str> prepared_name
 %type <str> quoted_ident_stringvar
-%type <str> RuleStmt
 %type <str> s_struct_union
 %type <str> server
 %type <str> server_name
@@ -102,7 +103,7 @@
 %type <str> struct_union_type_with_symbol
 %type <str> symbol
 %type <str> type_declaration
-%type <str> unreserved_keyword 
+%type <str> type_function_name
 %type <str> user_name
 %type <str> using_descriptor
 %type <str> var_declaration

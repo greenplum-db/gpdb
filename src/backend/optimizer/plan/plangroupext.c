@@ -971,7 +971,7 @@ add_append_node(PlannerInfo *root, List *subplans, GroupExtContext *context)
 		}
 		
 		/* Append all agg_plans together */
-		result_plan = (Plan *)make_append(subplans, false, context->tlist);
+		result_plan = (Plan *) make_append(subplans, context->tlist);
 		mark_append_locus(result_plan, optype); /* Mark the plan result locus. */
 
 		/* set the final pathkey to NIL */
@@ -1653,7 +1653,8 @@ plan_append_aggs_with_rewrite(PlannerInfo *root,
 												 NIL,
 												 list_length(final_query->rtable),
 												 agg_plan,
-												 final_query->rtable);
+												 final_query->rtable,
+												 final_query->rowMarks);
 			mark_passthru_locus(agg_plan, true, true);
 			pfree(resno_map);
 		}
@@ -2278,11 +2279,12 @@ plan_list_rollup_plans(PlannerInfo *root,
 			final_query->rtable = lappend(final_query->rtable, newrte);
 			subquery_tlist = generate_subquery_tlist(list_length(final_query->rtable),
 													 rollup_plan->targetlist, true, &resno_map);
-			rollup_plan = (Plan *)make_subqueryscan(root, subquery_tlist,
-													NIL,
-													list_length(final_query->rtable),
-													rollup_plan,
-													root->parse->rtable);
+			rollup_plan = (Plan *) make_subqueryscan(root, subquery_tlist,
+													 NIL,
+													 list_length(final_query->rtable),
+													 rollup_plan,
+													 root->parse->rtable,
+													 root->parse->rowMarks);
 			mark_passthru_locus(rollup_plan, true, true);
 			pfree(resno_map);
 		}
@@ -2305,7 +2307,7 @@ plan_list_rollup_plans(PlannerInfo *root,
 		}
 
 		/* Append all rollup_plans together */
-		result_plan = (Plan *)make_append(rollup_plans, false, context->tlist);
+		result_plan = (Plan *) make_append(rollup_plans, context->tlist);
 		mark_append_locus(result_plan, optype); /* Mark the plan result locus. */
 
 		/* set the final pathkey to NIL */

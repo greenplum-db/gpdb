@@ -260,8 +260,8 @@ SELECT * FROM copy_regression_text3 ORDER BY b;
  a single backslash \ in col a      | 4 | c text data | d text data | e text data
  c:\\file\data\neew\path            | 5 | c text data | d text data | e text data
  the at sign: @                     | 6 | c text data | d text data | e text data
- an embedded linefeed sequence      | 7 | c text data | d text data | e text data
- in column a                                                          
+ an embedded linefeed sequence     +| 7 | c text data | d text data | e text data
+ in column a                        |   |             |             | 
  a single backslash \ in col a      | 8 | c text data | d text data | e text data
 (8 rows)
 
@@ -318,17 +318,17 @@ SELECT * FROM copy_regression_csv3 ORDER BY b;
  an embedded delimiter (comma), is printed         | 01 | c  csv data | d  csv data | e  csv data 
  an embedded quote (doubleq)" is printed           | 02 | c  csv data | d  csv data | e  csv data 
  an embedded escape \ is printed                   | 03 | c  csv data | d  csv data | e  csv data
- an embedded line feed                             | 04 | c  csv data | d  csv data | e  csv data
- is printed                                                                           
+ an embedded line feed                            +| 04 | c  csv data | d  csv data | e  csv data
+ is printed                                        |    |             |             | 
  an embedded delimiter (tab)      is printed       | 05 | c  csv data | d  csv data | e  csv data 
  an embedded quote or escape (doubleq)" is printed | 06 | c  csv data | d  csv data | e  csv data 
- an embedded line feed                             | 07 | c  csv data | d  csv data | e  csv data
- is printed                                                                           
+ an embedded line feed                            +| 07 | c  csv data | d  csv data | e  csv data
+ is printed                                        |    |             |             | 
  an embedded delimiter (pipe)| is printed          | 08 | c  csv data | d  csv data | e  csv data 
  an embedded quote (semicolon); is printed         | 09 | c  csv data | d  csv data | e  csv data 
  an embedded escape (asterisk)* is printed         | 10 | c  csv data | d  csv data | e  csv data
- an embedded line feed                             | 11 | c  csv data | d  csv data | e  csv data
- is printed                                                                           
+ an embedded line feed                            +| 11 | c  csv data | d  csv data | e  csv data
+ is printed                                        |    |             |             | 
  an embedded single quote ' here                   | 12 | c csv data  | d csv data  | e csv data 
  an embedded single quote ' here                   | 13 | c csv data  | d csv data  | e csv data 
  an embedded backslash \ here                      | 14 | c csv data  | d csv data  | e csv data 
@@ -560,24 +560,24 @@ SELECT * FROM errcopy;
 SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
  relname |                        errmsg                         |    rawdata    
 ---------+-------------------------------------------------------+---------------
- errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text    
-                                                                 : 
- errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text 
-                                                                 : 
+ errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text   +
+         |                                                       | 
+ errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text+
+         |                                                       | 
 (9 rows)
 
 -- reject one row with extra column, one row with fewer columns
@@ -607,10 +607,10 @@ SELECT * FROM errcopy ORDER BY a;
 SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
  relname |                errmsg                 | rawdata 
 ---------+---------------------------------------+---------
- errcopy | missing data for column "c"           | 4,4     
-                                                 : 
- errcopy | extra data after last expected column | 5,5,5,5 
-                                                 : 
+ errcopy | missing data for column "c"           | 4,4    +
+         |                                       | 
+ errcopy | extra data after last expected column | 5,5,5,5+
+         |                                       | 
 (2 rows)
 
 -- metacharacter

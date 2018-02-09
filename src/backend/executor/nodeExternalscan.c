@@ -172,6 +172,16 @@ ExternalNext(ExternalScanState *node)
 	return slot;
 }
 
+/*
+ * ExternalRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+static bool
+ExternalRecheck(ExternalScanState *node, TupleTableSlot *slot)
+{
+	/* There are no access-method-specific conditions to recheck. */
+	return true;
+}
+
 /* ----------------------------------------------------------------
 *		ExecExternalScan(node)
 *
@@ -188,7 +198,9 @@ ExecExternalScan(ExternalScanState *node)
 	/*
 	 * use SeqNext as access method
 	 */
-	return ExecScan(&node->ss, (ExecScanAccessMtd) ExternalNext);
+	return ExecScan(&node->ss,
+					(ExecScanAccessMtd) ExternalNext,
+					(ExecScanRecheckMtd) ExternalRecheck);
 }
 
 
@@ -281,15 +293,6 @@ ExecInitExternalScan(ExternalScan *node, EState *estate, int eflags)
 	return externalstate;
 }
 
-
-int
-ExecCountSlotsExternalScan(ExternalScan *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-	ExecCountSlotsNode(innerPlan(node)) +
-	EXTSCAN_NSLOTS;
-}
-
 /* ----------------------------------------------------------------
 *		ExecEndExternalScan
 *
@@ -369,21 +372,7 @@ ExecStopExternalScan(ExternalScanState *node)
 void
 ExecExternalReScan(ExternalScanState *node, ExprContext *exprCtxt)
 {
-	EState	   *estate;
-	Index		scanrelid;
-	FileScanDesc fileScan;
-
-	estate = node->ss.ps.state;
-	scanrelid = ((SeqScan *) node->ss.ps.plan)->scanrelid;
-
-	/* If this is re-scanning of PlanQual ... */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		estate->es_evTupleNull[scanrelid - 1] = false;
-		return;
-	}
-	fileScan = node->ess_ScanDesc;
+	FileScanDesc fileScan = node->ess_ScanDesc;
 
 	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 

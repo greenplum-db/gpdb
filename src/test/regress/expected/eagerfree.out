@@ -84,7 +84,7 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
          Rows out:  3 rows at destination with 855 ms to first row, 926 ms to end, start offset by 0.423 ms.
          ->  Aggregate  (cost=24194.46..24194.47 rows=1 width=8)
                Rows out:  Avg 1.0 rows x 3 workers.  Max 1 rows (seg0) with 866 ms to end, start offset by 1.300 ms.
-               ->  Subquery Scan tmp  (cost=21639.28..23938.94 rows=34069 width=0)
+               ->  Subquery Scan on tmp  (cost=21639.28..23938.94 rows=34069 width=0)
                      Rows out:  Avg 44444.3 rows x 3 workers.  Max 44568 rows (seg0) with 748 ms to first row, 847 ms to end, start offset by 1.301 ms.
                      ->  HashAggregate  (cost=21639.28..22916.87 rows=34069 width=48)
                            Group By: bigt.i, bigt.t, bigt.d
@@ -1455,7 +1455,7 @@ where i < (select count(*) from smallt where smallt.i = smallt2.i);
          Join Filter: smallt2.i < "Expr_SUBQUERY".csq_c1
          ->  Seq Scan on smallt2  (cost=0.00..2.50 rows=17 width=15)
          ->  Hash  (cost=5.02..5.02 rows=4 width=12)
-               ->  Subquery Scan "Expr_SUBQUERY"  (cost=4.75..5.02 rows=4 width=12)
+               ->  Subquery Scan on "Expr_SUBQUERY"  (cost=4.75..5.02 rows=4 width=12)
                      ->  HashAggregate  (cost=4.75..4.92 rows=4 width=12)
                            Filter: smallt.i < count(*)
                            Group By: smallt.i
@@ -1897,29 +1897,22 @@ and smallt.d = '2011-01-04'::date;
 
 explain analyze select smallt.* from smallt, smallt2 where smallt.i = smallt2.i and smallt2.d = '2011-01-04'::date
 and smallt.d = '2011-01-04'::date;
-                                                                              QUERY PLAN                                                                              
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=796.37..1787.32 rows=4 width=15)
-   Rows out:  20 rows at destination with 0.767 ms to first row, 0.777 ms to end, start offset by 0.527 ms.
-   ->  Nested Loop  (cost=796.37..1787.32 rows=2 width=15)
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1791.33 rows=4 width=15) (actual time=0.423..0.431 rows=20 loops=1)
+   ->  Nested Loop  (cost=0.00..1791.33 rows=2 width=15) (actual time=0.060..0.116 rows=20 loops=1)
          Join Filter: smallt.i = smallt2.i
-         Rows out:  20 rows (seg1) with 0.131 ms to first row, 0.268 ms to end, start offset by 0.898 ms.
-         ->  Index Scan using smallt2_d_idx on smallt2  (cost=0.00..990.51 rows=2 width=4)
+         ->  Index Scan using smallt_d_idx on smallt  (cost=0.00..800.33 rows=2 width=15) (actual time=0.007..0.012 rows=5 loops=1)
                Index Cond: d = '01-04-2011'::date
-               Rows out:  4 rows (seg1) with 0.018 ms to first row, 0.030 ms to end, start offset by 0.898 ms.
-         ->  Materialize  (cost=796.37..796.42 rows=2 width=15)
-               Rows out:  20 rows (seg1) with 0.108 ms to first row, 0.127 ms to end of 4 scans, start offset by 1.086 ms.
-               ->  Index Scan using smallt_d_idx on smallt  (cost=0.00..796.36 rows=2 width=15)
+         ->  Materialize  (cost=0.00..990.59 rows=2 width=4) (actual time=0.010..0.012 rows=4 loops=5)
+               ->  Index Scan using smallt2_d_idx on smallt2  (cost=0.00..990.51 rows=2 width=4) (actual time=0.005..0.009 rows=4 loops=1)
                      Index Cond: d = '01-04-2011'::date
-                     Rows out:  5 rows (seg1) with 0.019 ms to first row, 0.029 ms to end, start offset by 0.998 ms.
- Slice statistics:
-   (slice0)    Executor memory: 163K bytes.
-   (slice1)    Executor memory: 189K bytes avg x 3 workers, 206K bytes max (seg1).
- Statement statistics:
-   Memory used: 128000K bytes
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=on; optimizer_segments=3
- Total runtime: 1.742 ms
-(20 rows)
+   (slice0)    Executor memory: 437K bytes.
+   (slice1)    Executor memory: 217K bytes avg x 3 workers, 238K bytes max (seg1).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 1.021 ms
+(13 rows)
 
 -- BitmapScan
 -- start_ignore

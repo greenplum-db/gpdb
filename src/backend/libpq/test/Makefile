@@ -15,4 +15,5 @@ pqcomm.t: \
 auth.t: \
 	$(MOCK_DIR)/backend/libpq/hba_mock.o \
 	$(MOCK_DIR)/backend/utils/adt/timestamp_mock.o \
+	$(MOCK_DIR)/backend/utils/cache/syscache_mock.o \
 	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o

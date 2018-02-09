@@ -35,8 +35,10 @@ INSERT INTO vactst SELECT * FROM vactst;
 INSERT INTO vactst(i) VALUES (0);
 SELECT count(*) FROM vactst;
 DELETE FROM vactst WHERE i != 0;
-VACUUM FULL vactst;
+VACUUM (FULL) vactst;
 DELETE FROM vactst;
 SELECT i FROM vactst ORDER BY 1;
+
+VACUUM (FULL, FREEZE) vactst;
 
 DROP TABLE vactst;

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.28 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.29 2009/08/27 17:18:44 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -115,7 +115,7 @@ static relopt_int intRelOpts[] =
 			"Minimum number of tuple updates or deletes prior to vacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		50, 0, INT_MAX
+		-1, 0, INT_MAX
 	},
 	{
 		{
@@ -123,7 +123,7 @@ static relopt_int intRelOpts[] =
 			"Minimum number of tuple inserts, updates or deletes prior to analyze",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		50, 0, INT_MAX
+		-1, 0, INT_MAX
 	},
 	{
 		{
@@ -131,7 +131,7 @@ static relopt_int intRelOpts[] =
 			"Vacuum cost delay in milliseconds, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		20, 0, 100
+		-1, 0, 100
 	},
 	{
 		{
@@ -139,7 +139,7 @@ static relopt_int intRelOpts[] =
 			"Vacuum cost amount available before napping, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		200, 1, 10000
+		-1, 1, 10000
 	},
 	{
 		{
@@ -147,7 +147,7 @@ static relopt_int intRelOpts[] =
 			"Minimum age at which VACUUM should freeze a table row, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		100000000, 0, 1000000000
+		-1, 0, 1000000000
 	},
 	{
 		{
@@ -155,14 +155,14 @@ static relopt_int intRelOpts[] =
 			"Age at which to autovacuum a table to prevent transaction ID wraparound",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		200000000, 100000000, 2000000000
+		-1, 100000000, 2000000000
 	},
 	{
 		{
 			"autovacuum_freeze_table_age",
 			"Age at which VACUUM should perform a full table sweep to replace old Xid values with FrozenXID",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
-		}, 150000000, 0, 2000000000
+		}, -1, 0, 2000000000
 	},
 	/* list terminator */
 	{{NULL}}
@@ -176,7 +176,7 @@ static relopt_real realRelOpts[] =
 			"Number of tuple updates or deletes prior to vacuum as a fraction of reltuples",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		0.2, 0.0, 100.0
+		-1, 0.0, 100.0
 	},
 	{
 		{
@@ -184,7 +184,7 @@ static relopt_real realRelOpts[] =
 			"Number of tuple inserts, updates or deletes prior to analyze as a fraction of reltuples",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		0.1, 0.0, 100.0
+		-1, 0.0, 100.0
 	},
 	/* list terminator */
 	{{NULL}}

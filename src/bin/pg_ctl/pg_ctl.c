@@ -4,7 +4,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/pg_ctl/pg_ctl.c,v 1.111 2009/06/11 14:49:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_ctl/pg_ctl.c,v 1.117 2009/12/15 00:17:50 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -14,7 +14,7 @@
  * Need this to get defines for restricted tokens and jobs. And it
  * has to be set before any header from the Win32 API is loaded.
  */
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0501
 #endif
 
 #include "postgres_fe.h"
@@ -62,6 +62,7 @@ typedef enum
 typedef enum
 {
 	NO_COMMAND = 0,
+	INIT_COMMAND,
 	START_COMMAND,
 	STOP_COMMAND,
 	RESTART_COMMAND,
@@ -88,7 +89,7 @@ static char *pgdata_opt = NULL;
 static char *post_opts = NULL;
 static const char *progname;
 static char *log_file = NULL;
-static char *postgres_path = NULL;
+static char *exec_path = NULL;
 static char *wrapper = NULL;
 static char *wrapper_args = NULL;
 static char *register_servicename = "PostgreSQL";		/* FIXME: + version ID? */
@@ -108,6 +109,7 @@ static void do_advice(void);
 static void do_help(void);
 static void set_mode(char *modeopt);
 static void set_sig(char *signame);
+static void do_init(void);
 static void do_start(void);
 static void do_stop(void);
 static void do_restart(void);
@@ -444,13 +446,13 @@ start_postmaster(void)
 	if (log_file != NULL)
 	{
 		snprintf(formatstr, MAXPGPATH, SYSTEMQUOTE "\"%s\" %s%s < \"%s\" >> \"%s\" 2>&1 &" SYSTEMQUOTE,
-				 postgres_path, pgdata_opt, post_opts,
+				 exec_path, pgdata_opt, post_opts,
 				 DEVNULL, log_file);
 	}
 	else
 	{
 		snprintf(formatstr, MAXPGPATH, SYSTEMQUOTE "\"%s\" %s%s < \"%s\" 2>&1 &" SYSTEMQUOTE,
-				 postgres_path, pgdata_opt, post_opts, DEVNULL);
+				 exec_path, pgdata_opt, post_opts, DEVNULL);
 	}
 
 	strncat(cmd, formatstr, MAXPGPATH - strlen(cmd) - 1);
@@ -467,10 +469,10 @@ start_postmaster(void)
 
 	if (log_file != NULL)
 		snprintf(cmd, MAXPGPATH, "CMD /C " SYSTEMQUOTE "\"%s\" %s%s < \"%s\" >> \"%s\" 2>&1" SYSTEMQUOTE,
-				 postgres_path, pgdata_opt, post_opts, DEVNULL, log_file);
+				 exec_path, pgdata_opt, post_opts, DEVNULL, log_file);
 	else
 		snprintf(cmd, MAXPGPATH, "CMD /C " SYSTEMQUOTE "\"%s\" %s%s < \"%s\" 2>&1" SYSTEMQUOTE,
-				 postgres_path, pgdata_opt, post_opts, DEVNULL);
+				 exec_path, pgdata_opt, post_opts, DEVNULL);
 
 	if (!CreateRestrictedProcess(cmd, &pi, false))
 		return GetLastError();
@@ -690,13 +692,73 @@ read_post_opts(void)
 										 * name */
 					post_opts = strdup(arg1 + 1); /* point past whitespace */
 				}
-				if (postgres_path == NULL)
-					postgres_path = strdup(optline);
+				if (exec_path == NULL)
+					exec_path = strdup(optline);
 			}
 
 			/* Free the results of readfile. */
 			free_readfile(optlines);
 		}
+	}
+}
+
+static char *
+find_other_exec_or_die(const char *argv0, const char *target, const char *versionstr)
+{
+	int			ret;
+	char	   *found_path;
+
+	found_path = pg_malloc(MAXPGPATH);
+
+	if ((ret = find_other_exec(argv0, target, versionstr, found_path)) < 0)
+	{
+		char		full_path[MAXPGPATH];
+
+		if (find_my_exec(argv0, full_path) < 0)
+			strlcpy(full_path, progname, sizeof(full_path));
+
+		if (ret == -1)
+			write_stderr(_("The program \"%s\" is needed by %s "
+						   "but was not found in the\n"
+						   "same directory as \"%s\".\n"
+						   "Check your installation.\n"),
+						 target, progname, full_path);
+		else
+			write_stderr(_("The program \"%s\" was found by \"%s\"\n"
+						   "but was not the same version as %s.\n"
+						   "Check your installation.\n"),
+						 target, full_path, progname);
+		exit(1);
+	}
+
+	return found_path;
+}
+
+static void
+do_init(void)
+{
+	char cmd[MAXPGPATH];
+
+	if (exec_path == NULL)
+		exec_path = find_other_exec_or_die(argv0, "initdb", "initdb (PostgreSQL) " PG_VERSION "\n");
+
+	if (pgdata_opt == NULL)
+		pgdata_opt = "";
+
+	if (post_opts == NULL)
+		post_opts = "";
+
+	if (!silent_mode)
+		snprintf(cmd, MAXPGPATH, SYSTEMQUOTE "\"%s\" %s%s" SYSTEMQUOTE,
+				 exec_path, pgdata_opt, post_opts);
+	else
+		snprintf(cmd, MAXPGPATH, SYSTEMQUOTE "\"%s\" %s%s > \"%s\"" SYSTEMQUOTE,
+				 exec_path, pgdata_opt, post_opts, DEVNULL);
+	
+	if (system(cmd) != 0)
+	{
+		write_stderr(_("%s: database system initialization failed\n"), progname);
+		exit(1);
 	}
 }
 
@@ -722,40 +784,27 @@ do_start(void)
 	if (ctl_command == RESTART_COMMAND || pgdata_opt == NULL)
 		pgdata_opt = "";
 
-	if (postgres_path == NULL)
-	{
-		char	   *postmaster_path;
-		int			ret;
-
-		postmaster_path = pg_malloc(MAXPGPATH);
-
-		if ((ret = find_other_exec(argv0, "postgres", PG_BACKEND_VERSIONSTR,
-								   postmaster_path)) < 0)
-		{
-			char		full_path[MAXPGPATH];
-
-			if (find_my_exec(argv0, full_path) < 0)
-				strlcpy(full_path, progname, sizeof(full_path));
-
-			if (ret == -1)
-				write_stderr(_("The program \"postgres\" is needed by %s "
-							   "but was not found in the\n"
-							   "same directory as \"%s\".\n"
-							   "Check your installation.\n"),
-							 progname, full_path);
-			else
-				write_stderr(_("The program \"postgres\" was found by \"%s\"\n"
-							   "but was not the same version as %s.\n"
-							   "Check your installation.\n"),
-							 full_path, progname);
-			exit(1);
-		}
-		postgres_path = postmaster_path;
-	}
+	if (exec_path == NULL)
+		exec_path = find_other_exec_or_die(argv0, "postgres", PG_BACKEND_VERSIONSTR);
 
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
 	if (allow_core_files)
 		unlimit_core_size();
+#endif
+
+	/*
+	 * If possible, tell the postmaster our parent shell's PID (see the
+	 * comments in CreateLockFile() for motivation).  Windows hasn't got
+	 * getppid() unfortunately.
+	 */
+#ifndef WIN32
+	{
+		static char env_var[32];
+
+		snprintf(env_var, sizeof(env_var), "PG_GRANDPARENT_PID=%d",
+				 (int) getppid());
+		putenv(env_var);
+	}
 #endif
 
 	exitcode = start_postmaster();
@@ -1565,7 +1614,7 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, bool as_ser
 	}
 
 #ifndef __CYGWIN__
-    AddUserToTokenDacl(restrictedToken);
+	AddUserToTokenDacl(restrictedToken);
 #endif
 
 	r = CreateProcessAsUser(restrictedToken, NULL, cmd, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, processInfo);
@@ -1698,6 +1747,7 @@ do_help(void)
 	printf(_("%s is a utility to start, stop, restart, reload configuration files,\n"
 			 "report the status of a PostgreSQL server, or signal a PostgreSQL process.\n\n"), progname);
 	printf(_("Usage:\n"));
+	printf(_("  %s init[db]               [-D DATADIR] [-s] [-o \"OPTIONS\"]\n"), progname);
 	printf(_("  %s start   [-w] [-t SECS] [-D DATADIR] [-s] [-l FILENAME] [-o \"OPTIONS\"]\n"), progname);
 	printf(_("  %s stop    [-W] [-t SECS] [-D DATADIR] [-s] [-m SHUTDOWN-MODE]\n"), progname);
 	printf(_("  %s restart [-w] [-t SECS] [-D DATADIR] [-s] [-m SHUTDOWN-MODE]\n"
@@ -1731,7 +1781,7 @@ do_help(void)
 #endif
 	printf(_("  -l, --log FILENAME     write (or append) server log to FILENAME\n"));
 	printf(_("  -o OPTIONS             command line options to pass to postgres\n"
-			 "                         (PostgreSQL server executable)\n"));
+			 "                         (PostgreSQL server executable) or initdb\n"));
 	printf(_("  -p PATH-TO-POSTGRES    normally not necessary\n"));
 	printf(_("\nOptions for stop or restart:\n"));
 	printf(_("  -m SHUTDOWN-MODE   can be \"smart\", \"fast\", or \"immediate\"\n"));
@@ -1940,7 +1990,7 @@ main(int argc, char **argv)
 					post_opts = xstrdup(optarg);
 					break;
 				case 'p':
-					postgres_path = xstrdup(optarg);
+					exec_path = xstrdup(optarg);
 					break;
 				case 'P':
 					register_password = xstrdup(optarg);
@@ -2001,7 +2051,10 @@ main(int argc, char **argv)
 				exit(1);
 			}
 
-			if (strcmp(argv[optind], "start") == 0)
+			if (strcmp(argv[optind], "init") == 0
+				|| strcmp(argv[optind], "initdb") == 0)
+				ctl_command = INIT_COMMAND;
+			else if (strcmp(argv[optind], "start") == 0)
 				ctl_command = START_COMMAND;
 			else if (strcmp(argv[optind], "stop") == 0)
 				ctl_command = STOP_COMMAND;
@@ -2102,6 +2155,9 @@ main(int argc, char **argv)
 
 	switch (ctl_command)
 	{
+		case INIT_COMMAND:
+			do_init();
+			break;
 		case STATUS_COMMAND:
 			do_status();
 			break;

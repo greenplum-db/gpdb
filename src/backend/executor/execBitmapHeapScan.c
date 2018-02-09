@@ -196,6 +196,29 @@ BitmapHeapScanNext(ScanState *scanState)
 }
 
 /*
+ * BitmapHeapScanRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+bool
+BitmapHeapScanRecheck(ScanState *scanstate, TupleTableSlot *slot)
+{
+	BitmapHeapScanState *node = (BitmapHeapScanState *) scanstate;
+	ExprContext *econtext;
+
+	/*
+	 * extract necessary information from index scan node
+	 */
+	econtext = node->ss.ps.ps_ExprContext;
+
+	/* Does the tuple meet the original qual conditions? */
+	econtext->ecxt_scantuple = slot;
+
+	ResetExprContext(econtext);
+
+	return ExecQual(node->bitmapqualorig, econtext, false);
+}
+
+
+/*
  * Prepares for a re-scan.
  */
 void

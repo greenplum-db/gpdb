@@ -821,6 +821,8 @@ SELECT * FROM dup('xyz'::text);
 -- equivalent specification
 CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
+ERROR:  cannot change name of input parameter "f1"
+HINT:  Use DROP FUNCTION first.
 SELECT dup(22);
       dup       
 ----------------

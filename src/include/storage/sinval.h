@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/sinval.h,v 1.52 2009/06/11 14:49:12 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/sinval.h,v 1.53 2009/07/31 20:26:23 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

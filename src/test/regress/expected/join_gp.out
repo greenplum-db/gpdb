@@ -145,17 +145,18 @@ set optimizer_segments=2;
 explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=3.28..7.08 rows=4 width=24)
-   ->  Nested Loop  (cost=3.28..7.08 rows=2 width=24)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..9.14 rows=4 width=24)
+   ->  Nested Loop  (cost=0.00..9.14 rows=2 width=24)
          Join Filter: t1.x <= t2.x
-         ->  Seq Scan on t2  (cost=0.00..3.75 rows=1 width=12)
-               Filter: 100 <= x AND y <= x AND y = 100
-         ->  Materialize  (cost=3.28..3.30 rows=1 width=12)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.28 rows=1 width=12)
-                     ->  Seq Scan on t1  (cost=0.00..3.25 rows=1 width=12)
-                           Filter: x = 100
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer_segments=2
-(10 rows)
+         ->  Seq Scan on t1  (cost=0.00..4.25 rows=1 width=12)
+               Filter: x = 100
+         ->  Materialize  (cost=0.00..4.85 rows=1 width=12)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.79 rows=1 width=12)
+                     ->  Seq Scan on t2  (cost=0.00..4.75 rows=1 width=12)
+                           Filter: 100 <= x AND y <= x AND y = 100
+ Settings:  optimizer=off; optimizer_segments=2
+ Optimizer status: legacy query optimizer
+(11 rows)
 
 reset optimizer_segments;
 select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;

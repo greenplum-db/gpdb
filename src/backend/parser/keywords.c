@@ -8,16 +8,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/keywords.c,v 1.212 2009/03/08 16:53:30 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/keywords.c,v 1.214 2009/07/14 20:24:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "nodes/nodes.h"
-#include "nodes/parsenodes.h"
-#include "parser/keywords.h"
-#include "parser/gram.h"
+#include "parser/gramparse.h"
 
 #define PG_KEYWORD(a,b,c) {a,b,c},
 
@@ -26,5 +23,4 @@ const ScanKeyword ScanKeywords[] = {
 #include "parser/kwlist.h"
 };
 
-/* End of ScanKeywords, for use in kwlookup.c and elsewhere */
-const ScanKeyword *LastScanKeyword = endof(ScanKeywords);
+const int	NumScanKeywords = lengthof(ScanKeywords);

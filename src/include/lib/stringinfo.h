@@ -10,7 +10,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/lib/stringinfo.h,v 1.36 2009/01/01 17:23:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/lib/stringinfo.h,v 1.37 2009/07/24 21:08:42 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -134,10 +134,10 @@ extern void appendStringInfoChar(StringInfo str, char ch);
 	 (void)((str)->data[(str)->len] = (ch), (str)->data[++(str)->len] = '\0'))
 
 /*------------------------
- * appendStringInfoFill
- * Append a single byte, repeated 0 or more times, to str.
+ * appendStringInfoSpaces
+ * Append a given number of spaces to str.
  */
-extern void appendStringInfoFill(StringInfo str, int occurrences, char ch);
+extern void appendStringInfoSpaces(StringInfo str, int count);
 
 /*------------------------
  * appendBinaryStringInfo

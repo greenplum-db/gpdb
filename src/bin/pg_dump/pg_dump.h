@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.154 2009/06/11 14:49:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.159 2009/10/09 21:02:56 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -119,6 +119,7 @@ typedef enum
 	DO_TSCONFIG,
 	DO_FDW,
 	DO_FOREIGN_SERVER,
+	DO_DEFAULT_ACL,
 	DO_BLOBS,
 	DO_BLOB_COMMENTS,
 	DO_EXTPROTOCOL,
@@ -301,6 +302,7 @@ typedef struct _tableInfo
 	char	  **atttypnames;	/* attribute type names */
 	int		   *atttypmod;		/* type-specific type modifiers */
 	int		   *attstattarget;	/* attribute statistics targets */
+	float4	   *attdistinct;	/* override ndistinct calculation */
 	char	   *attstorage;		/* attribute storage scheme */
 	char	   *typstorage;		/* type storage scheme */
 	bool	   *attisdropped;	/* true if attr is dropped; don't dump it */
@@ -379,12 +381,16 @@ typedef struct _triggerInfo
 	char		tgenabled;
 	bool		tgdeferrable;
 	bool		tginitdeferred;
+	char	   *tgdef;
 } TriggerInfo;
 
 /*
  * struct ConstraintInfo is used for all constraint types.	However we
  * use a different objType for foreign key constraints, to make it easier
  * to sort them the way we want.
+ *
+ * Note: condeferrable and condeferred are currently only valid for
+ * unique/primary-key constraints.  Otherwise that info is in condef.
  */
 typedef struct _constraintInfo
 {
@@ -395,6 +401,8 @@ typedef struct _constraintInfo
 	char	   *condef;			/* definition, if CHECK or FOREIGN KEY */
 	Oid			confrelid;		/* referenced table, if FOREIGN KEY */
 	DumpId		conindex;		/* identifies associated index if any */
+	bool		condeferrable;	/* TRUE if constraint is DEFERRABLE */
+	bool		condeferred;	/* TRUE if constraint is INITIALLY DEFERRED */
 	bool		conislocal;		/* TRUE if constraint has local definition */
 	bool		separate;		/* TRUE if must dump as separate item */
 } ConstraintInfo;
@@ -478,6 +486,14 @@ typedef struct _foreignServerInfo
 	char	   *srvacl;
 	char	   *srvoptions;
 } ForeignServerInfo;
+
+typedef struct _defaultACLInfo
+{
+	DumpableObject dobj;
+	char	   *defaclrole;
+	char	    defaclobjtype;
+	char	   *defaclacl;
+} DefaultACLInfo;
 
 /*
  * We build an array of these with an entry for each object that is an
@@ -591,10 +607,10 @@ extern TSTemplateInfo *getTSTemplates(int *numTSTemplates);
 extern TSConfigInfo *getTSConfigurations(int *numTSConfigs);
 extern FdwInfo *getForeignDataWrappers(int *numForeignDataWrappers);
 extern ForeignServerInfo *getForeignServers(int *numForeignServers);
+extern DefaultACLInfo *getDefaultACLs(int *numDefaultACLs);
 extern void getExtensionMembership(ExtensionInfo extinfo[], int numExtensions);
 extern void processExtensionTables(ExtensionInfo extinfo[], int numExtensions);
 
 extern bool	testExtProtocolSupport(void);
-
 
 #endif   /* PG_DUMP_H */

@@ -367,8 +367,8 @@ saveHistory(char *fname, int max_lines, bool appendFlag, bool encodeFlag)
 #if defined(HAVE_HISTORY_TRUNCATE_FILE) && defined(HAVE_APPEND_HISTORY)
 		if (appendFlag)
 		{
-			int			nlines;
-			int			fd;
+			int		nlines;
+			int		fd;
 
 			/* truncate previous entries if needed */
 			if (max_lines >= 0)
@@ -396,7 +396,7 @@ saveHistory(char *fname, int max_lines, bool appendFlag, bool encodeFlag)
 			/* truncate what we have ... */
 			if (max_lines >= 0)
 				stifle_history(max_lines);
-			/* ... and overwrite file.	Tough luck for concurrent sessions. */
+			/* ... and overwrite file.  Tough luck for concurrent sessions. */
 			errno = 0;
 			(void) write_history(fname);
 			if (errno == 0)

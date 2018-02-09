@@ -51,15 +51,15 @@ SELECT * FROM myview ORDER BY a,b;
 select pg_get_viewdef('myview',true); 
                                    pg_get_viewdef                                    
 -------------------------------------------------------------------------------------
-  SELECT mytable.a, mytable.b,                                                       
-         CASE mytable.a                                                              
-             WHEN IS NOT DISTINCT FROM mytable.b THEN (mytable.b * 10)::numeric      
-             WHEN IS NOT DISTINCT FROM mytable.b + 1 THEN (mytable.b * 100)::numeric 
-             WHEN mytable.b - 1 THEN (mytable.b * 1000)::numeric                     
-             WHEN mytable.b * 10 THEN (mytable.b * 10000)::numeric                   
-             WHEN negate(mytable.b) THEN mytable.b::numeric * (-1.0)                 
-             ELSE mytable.b::numeric                                                 
-         END AS newb                                                                 
+  SELECT mytable.a, mytable.b,                                                      +
+         CASE mytable.a                                                             +
+             WHEN IS NOT DISTINCT FROM mytable.b THEN (mytable.b * 10)::numeric     +
+             WHEN IS NOT DISTINCT FROM mytable.b + 1 THEN (mytable.b * 100)::numeric+
+             WHEN mytable.b - 1 THEN (mytable.b * 1000)::numeric                    +
+             WHEN mytable.b * 10 THEN (mytable.b * 10000)::numeric                  +
+             WHEN negate(mytable.b) THEN mytable.b::numeric * (-1.0)                +
+             ELSE mytable.b::numeric                                                +
+         END AS newb                                                                +
     FROM mytable;
 (1 row)
 
@@ -235,18 +235,18 @@ SELECT * FROM myview ORDER BY id, location;
 select pg_get_viewdef('myview',true); 
                            pg_get_viewdef                           
 --------------------------------------------------------------------
-  SELECT products.id, products.name, products.price,                
-         CASE products.id                                           
-             WHEN IS NOT DISTINCT FROM 1 THEN 'Southlake'::text     
-             WHEN IS NOT DISTINCT FROM 2 THEN 'San Francisco'::text 
-             WHEN IS NOT DISTINCT FROM 3 THEN 'New Jersey'::text    
-             WHEN IS NOT DISTINCT FROM 4 THEN 'Seattle'::text       
-             WHEN IS NOT DISTINCT FROM 5 THEN 'Portland'::text      
-             WHEN IS NOT DISTINCT FROM 6 THEN 'San Francisco'::text 
-             WHEN IS NOT DISTINCT FROM 7 THEN 'Portland'::text      
-             ELSE 'Non domestic'::text                              
-         END AS location                                            
-    FROM products                                                   
+  SELECT products.id, products.name, products.price,               +
+         CASE products.id                                          +
+             WHEN IS NOT DISTINCT FROM 1 THEN 'Southlake'::text    +
+             WHEN IS NOT DISTINCT FROM 2 THEN 'San Francisco'::text+
+             WHEN IS NOT DISTINCT FROM 3 THEN 'New Jersey'::text   +
+             WHEN IS NOT DISTINCT FROM 4 THEN 'Seattle'::text      +
+             WHEN IS NOT DISTINCT FROM 5 THEN 'Portland'::text     +
+             WHEN IS NOT DISTINCT FROM 6 THEN 'San Francisco'::text+
+             WHEN IS NOT DISTINCT FROM 7 THEN 'Portland'::text     +
+             ELSE 'Non domestic'::text                             +
+         END AS location                                           +
+    FROM products                                                  +
    WHERE products.id < 100;
 (1 row)
 

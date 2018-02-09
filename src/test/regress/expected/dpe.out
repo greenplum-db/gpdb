@@ -634,7 +634,7 @@ explain select count(*) from
  Aggregate  (cost=43.99..44.00 rows=1 width=8)
    ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=43.93..43.97 rows=1 width=8)
          ->  Aggregate  (cost=43.93..43.94 rows=1 width=8)
-               ->  Subquery Scan foo  (cost=1.13..43.66 rows=36 width=0)
+               ->  Subquery Scan on foo  (cost=1.13..43.66 rows=36 width=0)
                      ->  Append  (cost=1.13..42.58 rows=36 width=50)
                            ->  Hash Join  (cost=1.13..20.61 rows=18 width=50)
                                  Hash Cond: dpe_single.pt.ptid = dpe_single.t.tid
@@ -2493,7 +2493,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                ->  Partition Selector for pat (dynamic scan id: 1)  (cost=1.02..1.09 rows=1 width=16)
                      Filter: jpat.b
                      ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=1.02..1.09 rows=2 width=16)
-                           ->  Subquery Scan jpat  (cost=1.02..1.06 rows=1 width=16)
+                           ->  Subquery Scan on jpat  (cost=1.02..1.06 rows=1 width=16)
                                  ->  WindowAgg  (cost=1.02..1.05 rows=1 width=8)
                                        Order By: dpe_bugs.jpat.a
                                        ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.04 rows=1 width=8)

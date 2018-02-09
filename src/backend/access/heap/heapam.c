@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.277 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.278 2009/08/24 02:18:31 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -4841,7 +4841,7 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	blkno = ItemPointerGetBlockNumber(&(xlrec->target.tid));
 
 	/*
-	 * The visibility map always needs to be updated, even if the heap page is
+	 * The visibility map may need to be fixed even if the heap page is
 	 * already up-to-date.
 	 */
 	if (xlrec->all_visible_cleared)
@@ -4930,7 +4930,7 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	blkno = ItemPointerGetBlockNumber(&(xlrec->target.tid));
 
 	/*
-	 * The visibility map always needs to be updated, even if the heap page is
+	 * The visibility map may need to be fixed even if the heap page is
 	 * already up-to-date.
 	 */
 	if (xlrec->all_visible_cleared)
@@ -5050,7 +5050,7 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 	Size		freespace;
 
 	/*
-	 * The visibility map always needs to be updated, even if the heap page is
+	 * The visibility map may need to be fixed even if the heap page is
 	 * already up-to-date.
 	 */
 	if (xlrec->all_visible_cleared)
@@ -5143,7 +5143,7 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 newt:;
 
 	/*
-	 * The visibility map always needs to be updated, even if the heap page is
+	 * The visibility map may need to be fixed even if the heap page is
 	 * already up-to-date.
 	 */
 	if (xlrec->new_all_visible_cleared)

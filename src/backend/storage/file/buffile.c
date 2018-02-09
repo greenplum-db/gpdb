@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.34 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.35 2009/12/15 04:57:47 rhaas Exp $
  *
  * NOTES:
  *
@@ -32,6 +32,7 @@
 
 #include "postgres.h"
 
+#include "executor/instrument.h"
 #include "storage/fd.h"
 #include "storage/buffile.h"
 #include "storage/buf_internals.h"
@@ -241,7 +242,7 @@ BufFileLoadBuffer(BufFile *file, void* buffer, size_t bufsize)
 
 	/* we choose not to advance curOffset here */
 
-	BufFileReadCount++;
+	pgBufferUsage.temp_blks_read++;
 
 	return nb;
 }
@@ -289,7 +290,7 @@ BufFileDumpBuffer(BufFile *file, const void* buffer, Size nbytes)
 		file->offset += wrote;
 		wpos += wrote;
 
-		BufFileWriteCount++;
+		pgBufferUsage.temp_blks_written++;
 	}
 	file->dirty = false;
 

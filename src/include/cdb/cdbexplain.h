@@ -120,43 +120,6 @@ struct CdbExplain_ShowStatCtx *
 cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
                               instr_time        querystarttime);
 
-/*
- * cdbexplain_showExecStats
- *    Called by qDisp process to format a node's EXPLAIN ANALYZE statistics.
- *
- * 'planstate' is the node whose statistics are to be displayed.
- * 'str' is the output buffer.
- * 'ctx' is a CdbExplain_ShowStatCtx object which was created by
- *      calling cdbexplain_showExecStatsBegin().
- */
-void
-cdbexplain_showExecStats(struct PlanState              *planstate,
-                         struct StringInfoData         *str,
-                         int                            indent,
-                         struct CdbExplain_ShowStatCtx *ctx);
-
-
-/*
- * cdbexplain_showExecStatsEnd
- *    Called by qDisp process to format the overall statistics for a query
- *    into the caller's buffer.
- *
- * 'ctx' is the CdbExplain_ShowStatCtx object which was created by a call to
- *      cdbexplain_showExecStatsBegin() and contains statistics which have
- *      been accumulated over a series of calls to cdbexplain_showExecStats().
- *      Invalid on return (it is freed).
- * 'str' is the output buffer.
- *
- * This doesn't free the CdbExplain_ShowStatCtx object or buffers, because
- * shortly afterwards the caller is expected to destroy the 'explaincxt'
- * MemoryContext which was passed to cdbexplain_showExecStatsBegin(), thus
- * freeing all at once.
- */
-void
-cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
-							struct CdbExplain_ShowStatCtx  *showstatctx,
-                            struct StringInfoData          *str,
-                            struct EState                  *estate);
 
 
 #endif   /* CDBEXPLAIN_H */

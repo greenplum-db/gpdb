@@ -30,6 +30,7 @@ typedef struct ParamWalkerContext
 								 * plan_tree_walker/mutator */
 	List	   *params;
 	Bitmapset  *wtParams;
+	Bitmapset  *epqParams;
 } ParamWalkerContext;
 
 static bool param_walker(Node *node, ParamWalkerContext *context);
@@ -230,6 +231,7 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 	exec_init_plan_tree_base(&context.base, stmt);
 	context.params = NIL;
 	context.wtParams = NULL;
+	context.epqParams = NULL;
 	param_walker((Node *) plan, &context);
 
 	/*
@@ -268,7 +270,8 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 		}
 	}
 
-	if (context.params == NIL && bms_num_members(context.wtParams) < nIntPrm)
+	if (context.params == NIL &&
+		bms_num_members(context.wtParams) + bms_num_members(context.epqParams) < nIntPrm)
 	{
 		/*
 		 * We apparently have an initplan with no corresponding parameter.
@@ -303,11 +306,22 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 
 		augPrm->params[j].ptype = paramType;
 		augPrm->params[j].isnull = intPrm[i].isnull;
+		augPrm->params[j].pflags = 0;
 		augPrm->params[j].value = intPrm[i].value;
 
 		j++;
 	}
 
+	/*
+	 * Set number of params. Note that we don't copy the hook functions from
+	 * the original ParamListInfo, on purpose. The code that set the hooks
+	 * might get confused, if we called the hook with a different ParamListInfo
+	 * struct, with more parameters, than it originally set the hook on.
+	 * (PL/pgSQL has an assertion for the number of params, at least.)
+	 * This function is used just before serializing all the parameters,
+	 * and the caller has already "fetched" any parameters it can, so we don't
+	 * really need the hook anymore, anyway.
+	 */
 	augPrm->numParams = j;
 
 	list_free(context.params);
@@ -380,6 +394,16 @@ param_walker(Node *node, ParamWalkerContext *context)
 		WorkTableScan *wt = (WorkTableScan *) node;
 
 		context->wtParams = bms_add_member(context->wtParams, wt->wtParam);
+	}
+	else if (IsA(node, ModifyTable))
+	{
+		ModifyTable	*mt	= (ModifyTable *) node;
+		context->epqParams = bms_add_member(context->epqParams, mt->epqParam);
+	}
+	else if (IsA(node, LockRows))
+	{
+		LockRows	*lr = (LockRows*) node;
+		context->epqParams = bms_add_member(context->epqParams, lr->epqParam);
 	}
 	return plan_tree_walker(node, param_walker, context);
 }

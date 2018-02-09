@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/builtins.h,v 1.332 2009/03/09 14:34:34 petere Exp $
+ * $PostgreSQL: pgsql/src/include/utils/builtins.h,v 1.341 2009/10/21 20:38:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -49,6 +49,12 @@ extern Datum has_table_privilege_id_name(PG_FUNCTION_ARGS);
 extern Datum has_table_privilege_id_id(PG_FUNCTION_ARGS);
 extern Datum has_table_privilege_name(PG_FUNCTION_ARGS);
 extern Datum has_table_privilege_id(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_name_name(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_name_id(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_id_name(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_id_id(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_name(PG_FUNCTION_ARGS);
+extern Datum has_sequence_privilege_id(PG_FUNCTION_ARGS);
 extern Datum has_database_privilege_name_name(PG_FUNCTION_ARGS);
 extern Datum has_database_privilege_name_id(PG_FUNCTION_ARGS);
 extern Datum has_database_privilege_id_name(PG_FUNCTION_ARGS);
@@ -134,6 +140,13 @@ extern Datum char_text(PG_FUNCTION_ARGS);
 /* domains.c */
 extern Datum domain_in(PG_FUNCTION_ARGS);
 extern Datum domain_recv(PG_FUNCTION_ARGS);
+extern void domain_check(Datum value, bool isnull, Oid domainType, void **extra, MemoryContext mcxt);
+
+/* encode.c */
+extern Datum binary_encode(PG_FUNCTION_ARGS);
+extern Datum binary_decode(PG_FUNCTION_ARGS);
+extern unsigned hex_encode(const char *src, unsigned len, char *dst);
+extern unsigned hex_decode(const char *src, unsigned len, char *dst);
 
 /* encode.c */
 extern Datum binary_encode(PG_FUNCTION_ARGS);
@@ -564,7 +577,6 @@ extern Datum regexp_split_to_table(PG_FUNCTION_ARGS);
 extern Datum regexp_split_to_table_no_flags(PG_FUNCTION_ARGS);
 extern Datum regexp_split_to_array(PG_FUNCTION_ARGS);
 extern Datum regexp_split_to_array_no_flags(PG_FUNCTION_ARGS);
-extern bool regex_flavor_is_basic(void);
 extern char *regexp_fixed_prefix(text *text_re, bool case_insensitive,
 								 bool *exact);
 
@@ -631,6 +643,7 @@ extern Datum pg_get_indexdef_ext(PG_FUNCTION_ARGS);
 extern char *pg_get_indexdef_string(Oid indexrelid);
 extern char *pg_get_indexdef_columns(Oid indexrelid, bool pretty);
 extern Datum pg_get_triggerdef(PG_FUNCTION_ARGS);
+extern Datum pg_get_triggerdef_ext(PG_FUNCTION_ARGS);
 extern Datum pg_get_constraintdef(PG_FUNCTION_ARGS);
 extern Datum pg_get_constraintdef_ext(PG_FUNCTION_ARGS);
 extern char *pg_get_constraintdef_string(Oid constraintId);
@@ -1057,6 +1070,7 @@ extern Datum pg_convert(PG_FUNCTION_ARGS);
 extern Datum pg_convert_to(PG_FUNCTION_ARGS);
 extern Datum pg_convert_from(PG_FUNCTION_ARGS);
 extern Datum length_in_encoding(PG_FUNCTION_ARGS);
+extern Datum pg_encoding_max_length_sql(PG_FUNCTION_ARGS);
 
 /* format_type.c */
 extern Datum format_type(PG_FUNCTION_ARGS);
@@ -1136,6 +1150,9 @@ extern Datum window_nth_value(PG_FUNCTION_ARGS);
 
 /* access/transam/twophase.c */
 extern Datum pg_prepared_xact(PG_FUNCTION_ARGS);
+
+/* commands/constraint.c */
+extern Datum unique_key_recheck(PG_FUNCTION_ARGS);
 
 /* commands/extension.c */
 extern Datum pg_available_extensions(PG_FUNCTION_ARGS);

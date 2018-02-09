@@ -360,15 +360,24 @@ fix_placeholder_input_needed_levels(PlannerInfo *root)
 			list_free(vars);
 		}
 	}
+}
 
-	/*
-	 * Now, if any placeholder can be computed at a base rel and is needed
-	 * above it, add it to that rel's targetlist.  (This is essentially the
-	 * same logic as in add_placeholders_to_joinrel, but we can't do that part
-	 * until joinrels are formed.)	We have to do this as a separate step
-	 * because the ph_needed values aren't stable until the previous loop
-	 * finishes.
-	 */
+/*
+ * add_placeholders_to_base_rels
+ *		Add any required PlaceHolderVars to base rels' targetlists.
+ *
+ * If any placeholder can be computed at a base rel and is needed above it,
+ * add it to that rel's targetlist.  We have to do this separately from
+ * fix_placeholder_eval_levels() because join removal happens in between,
+ * and can change the ph_eval_at sets.  There is essentially the same logic
+ * in add_placeholders_to_joinrel, but we can't do that part until joinrels
+ * are formed.
+ */
+void
+add_placeholders_to_base_rels(PlannerInfo *root)
+{
+	ListCell   *lc;
+
 	foreach(lc, root->placeholder_list)
 	{
 		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);

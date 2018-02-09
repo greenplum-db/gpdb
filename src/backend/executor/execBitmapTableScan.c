@@ -46,16 +46,17 @@ getBitmapTableScanMethod(TableType tableType)
 	static const ScanMethod scanMethods[] =
 	{
 		{
-			&BitmapHeapScanNext, &BitmapHeapScanBegin, &BitmapHeapScanEnd,
+			&BitmapHeapScanNext, &BitmapHeapScanRecheck, &BitmapHeapScanBegin, &BitmapHeapScanEnd,
 			&BitmapHeapScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
 		},
+		// GPDB_90_MERGE_FIXME: should we have rechecks for AO / AOCS scans?
 		{
-			&BitmapAOScanNext, &BitmapAOScanBegin, &BitmapAOScanEnd,
+			&BitmapAOScanNext, NULL, &BitmapAOScanBegin, &BitmapAOScanEnd,
 			&BitmapAOScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
 		},
 		{
 			/* The same set of methods serve both AO and AOCO scans */
-			&BitmapAOScanNext, &BitmapAOScanBegin, &BitmapAOScanEnd,
+			&BitmapAOScanNext, NULL, &BitmapAOScanBegin, &BitmapAOScanEnd,
 			&BitmapAOScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
 		}
 	};
@@ -88,42 +89,7 @@ freeBitmapState(BitmapTableScanState *scanstate)
 static TupleTableSlot*
 BitmapTableScanPlanQualTuple(BitmapTableScanState *node)
 {
-	EState	   *estate = node->ss.ps.state;
-	Index		scanrelid = ((BitmapTableScan *) node->ss.ps.plan)->scan.scanrelid;
-	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 	TupleTableSlot *slot = node->ss.ss_ScanTupleSlot;
-
-	/*
-	 * Check if we are evaluating PlanQual for tuple of this relation.
-	 * Additional checking is not good, but no other way for now. We could
-	 * introduce new nodes for this case and handle IndexScan --> NewNode
-	 * switching in Init/ReScan plan...
-	 */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		if (estate->es_evTupleNull[scanrelid - 1])
-		{
-			return ExecClearTuple(slot);
-		}
-
-		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
-
-		/* Does the tuple meet the original qual conditions? */
-		econtext->ecxt_scantuple = slot;
-
-		ResetExprContext(econtext);
-
-		if (!ExecQual(node->bitmapqualorig, econtext, false))
-		{
-			ExecClearTuple(slot);		/* would not be returned by scan */
-		}
-
-		/* Flag for the next call that no more tuples */
-		estate->es_evTupleNull[scanrelid - 1] = true;
-
-		return slot;
-	}
 
 	return ExecClearTuple(slot);
 }
@@ -337,7 +303,11 @@ BitmapTableScanFetchNext(ScanState *node)
 		/* If we have exhausted the current bitmap page, fetch the next one */
 		if (!scanState->needNewBitmapPage || fetchNextBitmapPage(scanState))
 		{
-			slot = ExecScan(&scanState->ss, (ExecScanAccessMtd) getBitmapTableScanMethod(scanState->ss.tableType)->accessMethod);
+			const ScanMethod *scanMethods = getBitmapTableScanMethod(scanState->ss.tableType);
+
+			slot = ExecScan(&scanState->ss,
+							scanMethods->accessMethod,
+							scanMethods->recheckMethod);
 		}
 		else
 		{

@@ -30,7 +30,7 @@ Execute on: all segments
 
 -- Can successfully query the ext table, as long as the different column data types are compatible.
 -- However notice the switch between col_a and col_b, col_c and col_d, and n1, n2, and n3.
-select * from tbl_ext_fixedwidth  order by col_a;
+select * from tbl_ext_fixedwidth;
  col_a | col_b | col_c | col_d | n1 | n2 | n3 
 -------+-------+-------+-------+----+----+----
  b     | a     | d     | c     |  2 |  3 |  1

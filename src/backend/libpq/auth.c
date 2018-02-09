@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.183 2009/06/25 11:30:08 mha Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.188 2009/12/12 21:35:21 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,6 +29,9 @@
 #include <unistd.h>
 #include <stddef.h>
 
+#include "catalog/indexing.h"
+#include "catalog/pg_authid.h"
+#include "catalog/pg_auth_time_constraint.h"
 #include "cdb/cdbvars.h"
 #include "libpq/auth.h"
 #include "libpq/crypt.h"
@@ -42,8 +45,12 @@
 #include "replication/walsender.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"
+#include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/relcache.h"
+#include "utils/syscache.h"
 #include "utils/timestamp.h"
+#include "utils/tqual.h"
 /*#include "replication/walsender.h"*/
 #include "storage/ipc.h"
 
@@ -209,6 +216,21 @@ static int	pg_SSPI_recvauth(Port *port);
 #endif
 static int	CheckRADIUSAuth(Port *port);
 
+
+/*
+ * Maximum accepted size of GSS and SSPI authentication tokens.
+ *
+ * Kerberos tickets are usually quite small, but the TGTs issued by Windows
+ * domain controllers include an authorization field known as the Privilege
+ * Attribute Certificate (PAC), which contains the user's Windows permissions
+ * (group memberships etc.). The PAC is copied into all tickets obtained on
+ * the basis of this TGT (even those issued by Unix realms which the Windows
+ * realm trusts), and can be several kB in size. The maximum token size
+ * accepted by Windows systems is determined by the MaxAuthToken Windows
+ * registry setting. Microsoft recommends that it is not set higher than
+ * 65535 bytes, so that seems like a reasonable limit for us as well.
+ */
+#define PG_MAX_AUTH_TOKEN_LENGTH	65535
 
 /*
  * Maximum accepted size of GSS and SSPI authentication tokens.
@@ -722,10 +744,13 @@ ClientAuthentication(Port *port)
 	}
 
 	if (status == STATUS_OK)
-		if (!CheckAuthTimeConstraints(port->user_name))
+	{
+		if (CheckAuthTimeConstraints(port->user_name) != STATUS_OK)
 			ereport(FATAL,
 					 (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-					  errmsg("authentication failed for user \"%s\": login not permitted at this time", port->user_name)));
+					  errmsg("authentication failed for user \"%s\": login not permitted at this time",
+							 port->user_name)));
+	}
 
 	if (status == STATUS_OK)
 		sendAuthRequest(port, AUTH_REQ_OK);
@@ -971,11 +996,6 @@ pg_krb5_recvauth(Port *port)
 	char	   *kusername;
 	char	   *cp;
 
-	/* GPDB: Because we are still using the old flatfile method of getting roles, safest to check here if the role exists */
-	/* Not sure if this is necessary, PG took this test out when getting rid of the pg_authid flatfile */
-	if (get_role_line(port->user_name) == NULL)
-		return STATUS_ERROR;
-
 	ret = pg_krb5_init(port);
 	if (ret != STATUS_OK)
 		return ret;
@@ -1142,48 +1162,52 @@ pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 static int
 check_valid_until_for_gssapi(Port *port)
 {
-	int         retval = 0;  
-	char        *valuntil = NULL;
-	char        *shadow_pass = NULL;
-	List        **line = NULL;
-	ListCell    *token = NULL;
-
-	if ((line = get_role_line(port->user_name)) == NULL)
-		return STATUS_ERROR;
-
-	/* Skip over rolename */
-	token = list_head(*line);
-	Assert(token != NULL);
-	if (token)
-		token = lnext(token);
-
-	if (token)
-	{        
-		shadow_pass = (char *) lfirst(token);
-		token = lnext(token);
-		if (token)
-			valuntil = (char *) lfirst(token);
-	}    
-
-	/* Validuntil attribute is not set.
-	 * No time constraint on the user to access the database.
+	/*
+	 * GPDB_90_MERGE_FIXME: this logic is copied from hashed_passwd_verify;
+	 * double-check it (especially the lack of password checks, which we may
+	 * need here) and consolidate it somehow so we don't fall out of sync.
 	 */
-	if (valuntil == NULL || *valuntil == '\0')
+	int			retval = STATUS_ERROR;
+	TimestampTz vuntil = 0;
+	HeapTuple	roleTup;
+	Datum		datum;
+	bool		isnull;
+
+	/*
+	 * Disable immediate interrupts while doing database access.  (Note
+	 * we don't bother to turn this back on if we hit one of the failure
+	 * conditions, since we can expect we'll just exit right away anyway.)
+	 */
+	ImmediateInterruptOK = false;
+
+	/* Get role info from pg_authid */
+	roleTup = SearchSysCache(AUTHNAME,
+							 PointerGetDatum(port->user_name),
+							 0, 0, 0);
+	if (!HeapTupleIsValid(roleTup))
+		return STATUS_ERROR;					/* no such user */
+
+	datum = SysCacheGetAttr(AUTHNAME, roleTup,
+							Anum_pg_authid_rolvaliduntil, &isnull);
+	if (!isnull)
+		vuntil = DatumGetTimestampTz(datum);
+
+	ReleaseSysCache(roleTup);
+
+	/* Re-enable immediate response to SIGTERM/SIGINT/timeout interrupts */
+	ImmediateInterruptOK = true;
+	/* And don't forget to detect one that already arrived */
+	CHECK_FOR_INTERRUPTS();
+
+	/*
+	 * Now check to be sure we are not past rolvaliduntil
+	 */
+	if (isnull)
 		retval = STATUS_OK;
-	else 
-	{       
-		TimestampTz vuntil;
-
-		vuntil = DatumGetTimestampTz(DirectFunctionCall3(timestamptz_in,
-								CStringGetDatum(valuntil),
-								ObjectIdGetDatum(InvalidOid),
-								Int32GetDatum(-1)));
-
-		if (vuntil < GetCurrentTimestamp())
-			retval = STATUS_ERROR;
-		else
-			retval = STATUS_OK;
-	}
+	else if (vuntil < GetCurrentTimestamp())
+		retval = STATUS_ERROR;
+	else
+		retval = STATUS_OK;
 
 	return retval;
 }
@@ -2161,10 +2185,6 @@ authident(hbaPort *port)
 {
 	char		ident_user[IDENT_USERNAME_MAX + 1];
 
-	/* GPDB: Because we are still using the old flatfile method of getting roles, safest to check here if the role exists */
-	if (get_role_line(port->user_name) == NULL)
-		return STATUS_ERROR;
-
 	switch (port->raddr.addr.ss_family)
 	{
 		case AF_INET:
@@ -2704,13 +2724,13 @@ CheckLDAPAuth(Port *port)
 	{
 		fulluser = palloc((port->hba->ldapprefix ? strlen(port->hba->ldapprefix) : 0) +
 						  strlen(port->user_name) +
-				(port->hba->ldapsuffix ? strlen(port->hba->ldapsuffix) : 0) +
+						  (port->hba->ldapsuffix ? strlen(port->hba->ldapsuffix) : 0) +
 						  1);
 
 		sprintf(fulluser, "%s%s%s",
-			 port->hba->ldapprefix ? port->hba->ldapprefix : "",
-			 port->user_name,
-			 port->hba->ldapsuffix ? port->hba->ldapsuffix : "");
+				 port->hba->ldapprefix ? port->hba->ldapprefix : "",
+				 port->user_name,
+				 port->hba->ldapsuffix ? port->hba->ldapsuffix : "");
 	}
 
 	r = ldap_simple_bind_s(ldap, fulluser, passwd);
@@ -3218,7 +3238,7 @@ timestamptz_to_point(TimestampTz in, authPoint *out)
  *
  * Invokes check_auth_time_constraints_internal against the current timestamp
  */
-bool
+int
 CheckAuthTimeConstraints(char *rolname) 
 {
 	if (gp_auth_time_override_str != NULL && gp_auth_time_override_str[0] != '\0')
@@ -3238,58 +3258,111 @@ CheckAuthTimeConstraints(char *rolname)
  * Called out as separate function to facilitate unit testing, where the provided
  * timestamp is likely to be hardcoded for deterministic test runs
  *
- * Returns false iff it finds an interval that contains timestamp from among the
- * entries of pg_auth_time_constraint that pertain to rolname
+ * Returns STATUS_ERROR iff it finds an interval that contains timestamp from
+ * among the entries of pg_auth_time_constraint that pertain to rolname
  */
-bool
+int
 check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 {
-	List  	  		*role_intervals = get_role_intervals(rolname);
-
-	if (role_intervals == NIL)
-		return true;
-
-	List   	   		*row;
-	ListCell   		*line, *cell;
-	char   	   		*temp;
-	authInterval	given;
+	Oid				roleId;
+	Relation		reltimeconstr;
+	ScanKeyData 	entry[1];
+	SysScanDesc 	scan;
+	HeapTuple		roleTup;
+	HeapTuple		tuple;
 	authPoint 		now;
+	int				status;
 
 	timestamptz_to_point(timestamp, &now);
-	
-	foreach (line, role_intervals) 
-	{
-		row = lfirst(line);
-		/* 
-		 * Each row of role_intervals is a List of 5 records
-		 * <rolname> <startday> <starttime> <endday> <endtime> 
-	 	 */
-		cell = list_head(row);
-		cell = lnext(cell);			/* skip first entry in record, which is rolname */
-		temp = lfirst(cell);
-		given.start.day = pg_atoi(temp, sizeof(int16), 0);
 
-		cell = lnext(cell);
-		temp = lfirst(cell);
-		given.start.time = DatumGetTimeADT(DirectFunctionCall1(time_in,
-										   CStringGetDatum(temp)));
-		
-		cell = lnext(cell);
-		temp = lfirst(cell);
-		given.end.day = pg_atoi(temp, sizeof(int16), 0);
-	
-		cell = lnext(cell);
-		temp = lfirst(cell);
-		given.end.time = DatumGetTimeADT(DirectFunctionCall1(time_in,
-										 CStringGetDatum(temp)));
+	/*
+	 * Disable immediate interrupts while doing database access.  (Note
+	 * we don't bother to turn this back on if we hit one of the failure
+	 * conditions, since we can expect we'll just exit right away anyway.)
+	 */
+	ImmediateInterruptOK = false;
+
+	/* Look up this user in pg_authid. */
+	roleTup = SearchSysCache(AUTHNAME, CStringGetDatum(rolname), 0, 0, 0);
+	if (!HeapTupleIsValid(roleTup))
+	{
+		/*
+		 * No such user. We don't error out here; it's up to other
+		 * authentication steps to deny access to nonexistent roles.
+		 */
+		return STATUS_OK;
+	}
+
+	if (((Form_pg_authid) GETSTRUCT(roleTup))->rolsuper)
+		ereport(WARNING,
+				(errmsg("time constraints added on superuser role")));
+
+	roleId = HeapTupleGetOid(roleTup);
+
+	ReleaseSysCache(roleTup);
+	/* Walk pg_auth_time_constraint for entries belonging to this user. */
+	reltimeconstr = heap_open(AuthTimeConstraintRelationId, AccessShareLock);
+
+	ScanKeyInit(&entry[0],
+				Anum_pg_auth_time_constraint_authid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(roleId));
+
+	/*
+	 * Since this is called during authentication, we have to make sure we don't
+	 * use the index unless it's already been built. See GetDatabaseTuple for
+	 * another example of this sort of logic.
+	 */
+	scan = systable_beginscan(reltimeconstr, AuthTimeConstraintAuthIdIndexId,
+							  criticalSharedRelcachesBuilt, SnapshotNow, 1,
+							  entry);
+
+	/*
+	 * Check each denied interval to see if the current timestamp is part of it.
+	 */
+	status = STATUS_OK;
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	{
+		Form_pg_auth_time_constraint constraint_tuple;
+		Datum 			datum;
+		bool			isnull;
+		authInterval	given;
+
+		constraint_tuple = (Form_pg_auth_time_constraint) GETSTRUCT(tuple);
+		Assert(constraint_tuple->authid == roleId);
+
+		/* Retrieve the start of the interval. */
+		datum = heap_getattr(tuple, Anum_pg_auth_time_constraint_start_time,
+							 RelationGetDescr(reltimeconstr), &isnull);
+		Assert(!isnull);
+
+		given.start.day = constraint_tuple->start_day;
+		given.start.time = DatumGetTimeADT(datum);
+
+		/* Repeat for the end. */
+		datum = heap_getattr(tuple, Anum_pg_auth_time_constraint_end_time,
+							 RelationGetDescr(reltimeconstr), &isnull);
+		Assert(!isnull);
+
+		given.end.day = constraint_tuple->end_day;
+		given.end.time = DatumGetTimeADT(datum);
 
 		if (interval_contains(&given, &now))
 		{
-			list_free(role_intervals);
-			return false;
+			status = STATUS_ERROR;
+			break;
 		}
 	}
+
+	/* Clean up. */
+	systable_endscan(scan);
+	heap_close(reltimeconstr, AccessShareLock);
+
+	/* Re-enable immediate response to SIGTERM/SIGINT/timeout interrupts */
+	ImmediateInterruptOK = true;
+	/* And don't forget to detect one that already arrived */
+	CHECK_FOR_INTERRUPTS();
 	
-	list_free(role_intervals);
-	return true;
+	return status;
 }

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.189 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.194 2009/12/15 17:57:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -699,7 +699,8 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 	/*
 	 * Analyze and transform the subquery.
 	 */
-	query = parse_sub_analyze(r->subquery, pstate);
+	query = parse_sub_analyze(r->subquery, pstate, NULL,
+							  getLockedRefname(pstate, r->alias->aliasname));
 
 	/* Restore state */
 	pstate->p_expr_kind = EXPR_KIND_NONE;
@@ -1688,8 +1689,7 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 	 * 2. IntegerConstant
 	 *	  This means to use the n'th item in the existing target list.
 	 *	  Note that it would make no sense to order/group/distinct by an
-	 *	  actual constant, so this does not create a conflict with our
-	 *	  extension to order/group by an expression.
+	 *	  actual constant, so this does not create a conflict with SQL99.
 	 *	  GROUP BY column-number is not allowed by SQL92, but since
 	 *	  the standard has no other behavior defined for this syntax,
 	 *	  we may as well accept this common extension.
@@ -2142,6 +2142,9 @@ make_group_clause(TargetEntry *tle, List *targetlist,
  *
  * GROUP BY items will be added to the targetlist (as resjunk columns)
  * if not already present, so the targetlist must be passed by reference.
+ *
+ * This is also used for window PARTITION BY clauses (which act almost the
+ * same, but are always interpreted per SQL99 rules).
  */
 List *
 transformGroupClause(ParseState *pstate, List *grouplist,

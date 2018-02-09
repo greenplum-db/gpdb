@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/relation.h,v 1.173 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/relation.h,v 1.180 2009/11/28 00:46:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -100,9 +100,13 @@ typedef struct PlannerGlobal
 
 	List	   *subrtables;		/* Rangetables for SubPlan nodes */
 
+	List	   *subrowmarks;	/* PlanRowMarks for SubPlan nodes */
+
 	Bitmapset  *rewindPlanIDs;	/* indices of subplans that require REWIND */
 
 	List	   *finalrtable;	/* "flat" rangetable for executor */
+
+	List	   *finalrowmarks;	/* "flat" list of PlanRowMarks */
 
 	List	   *relationOids;	/* OIDs of relations the plan depends on */
 
@@ -195,9 +199,17 @@ typedef struct PlannerInfo
 	List	   *join_rel_list;	/* list of join-relation RelOptInfos */
 	struct HTAB *join_rel_hash; /* optional hashtable for join relations */
 
-	List	   *resultRelations;	/* integer list of RT indexes, or NIL */
+	/*
+	 * When doing a dynamic-programming-style join search, join_rel_level[k]
+	 * is a list of all join-relation RelOptInfos of level k, and
+	 * join_cur_level is the current level.  New join-relation RelOptInfos
+	 * are automatically added to the join_rel_level[join_cur_level] list.
+	 * join_rel_level is NULL if not in use.
+	 */
+	List	  **join_rel_level;	/* lists of join-relation RelOptInfos */
+	int			join_cur_level;	/* index of list being extended */
 
-	List	   *returningLists; /* list of lists of TargetEntry, or NIL */
+	List	   *resultRelations;	/* integer list of RT indexes, or NIL */
 
 	List	   *init_plans;		/* init SubPlans for query */
 
@@ -232,6 +244,8 @@ typedef struct PlannerInfo
 
 	List	   *append_rel_list;	/* list of AppendRelInfos */
 
+	List	   *rowMarks;		/* list of PlanRowMarks */
+
 	List	   *placeholder_list;		/* list of PlaceHolderInfos */
 
 	List	   *query_pathkeys; /* desired pathkeys for query_planner(), and
@@ -263,6 +277,9 @@ typedef struct PlannerInfo
 	PlannerConfig *config;		/* Planner configuration */
 
 	List	   *dynamicScans;	/* DynamicScanInfos */
+
+	/* optional private data for join_search_hook, e.g., GEQO */
+	void	   *join_search_private;
 } PlannerInfo;
 
 /*----------
@@ -322,6 +339,14 @@ static inline struct List *planner_subplan_get_rtable(struct PlannerInfo *root, 
 	return (List *) list_nth(root->glob->subrtables, subplan->plan_id - 1);
 }
 
+/**
+ * Fetch the rowmarks list for a subplan
+ */
+static inline struct List *planner_subplan_get_rowmarks(struct PlannerInfo *root, SubPlan *subplan)
+{
+	return (List *) list_nth(root->glob->subrowmarks, subplan->plan_id - 1);
+}
+
 /*
  * Rewrite the Plan associated with a SubPlan node during planning.
  */
@@ -349,7 +374,9 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *
  * We also have "other rels", which are like base rels in that they refer to
  * single RT indexes; but they are not part of the join tree, and are given
- * a different RelOptKind to identify them.
+ * a different RelOptKind to identify them.  Lastly, there is a RelOptKind
+ * for "dead" relations, which are base rels that we have proven we don't
+ * need to join after all.
  *
  * Currently the only kind of otherrels are those made for member relations
  * of an "append relation", that is an inheritance set or UNION ALL subquery.
@@ -406,6 +433,7 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *		tuples - number of tuples in relation (not considering restrictions)
  *		subplan - plan for subquery (NULL if it's not a subquery)
  *		subrtable - rangetable for subquery (NIL if it's not a subquery)
+ *		subrowmark - rowmarks for subquery (NIL if it's not a subquery)
  *
  *		Note: for a subquery, tuples and subplan are not set immediately
  *		upon creation of the RelOptInfo object; they are filled in when
@@ -454,7 +482,8 @@ typedef enum RelOptKind
 {
 	RELOPT_BASEREL,
 	RELOPT_JOINREL,
-	RELOPT_OTHER_MEMBER_REL
+	RELOPT_OTHER_MEMBER_REL,
+	RELOPT_DEADREL
 } RelOptKind;
 
 typedef struct RelOptInfo
@@ -493,6 +522,7 @@ typedef struct RelOptInfo
     bool        cdb_default_stats_used; /* true if ANALYZE needed */
 	struct Plan *subplan;		/* if subquery */
 	List	   *subrtable;		/* if subquery */
+	List	   *subrowmark;		/* if subquery */
 
 	/* used by external scan */
 	struct ExtTableEntry *extEntry;
@@ -1103,6 +1133,14 @@ typedef JoinPath NestPath;
 /*
  * A mergejoin path has these fields.
  *
+ * Unlike other path types, a MergePath node doesn't represent just a single
+ * run-time plan node: it can represent up to four.  Aside from the MergeJoin
+ * node itself, there can be a Sort node for the outer input, a Sort node
+ * for the inner input, and/or a Material node for the inner input.  We could
+ * represent these nodes by separate path nodes, but considering how many
+ * different merge paths are investigated during a complex join problem,
+ * it seems better to avoid unnecessary palloc overhead.
+ *
  * path_mergeclauses lists the clauses (in the form of RestrictInfos)
  * that will be used in the merge.
  *
@@ -1114,15 +1152,19 @@ typedef JoinPath NestPath;
  * outersortkeys (resp. innersortkeys) is NIL if the outer path
  * (resp. inner path) is already ordered appropriately for the
  * mergejoin.  If it is not NIL then it is a PathKeys list describing
- * the ordering that must be created by an explicit sort step.
+ * the ordering that must be created by an explicit Sort node.
+ *
+ * materialize_inner is TRUE if a Material node should be placed atop the
+ * inner input.  This may appear with or without an inner Sort step.
  */
 
 typedef struct MergePath
 {
 	JoinPath	jpath;
 	List	   *path_mergeclauses;		/* join clauses to be used for merge */
-	List	   *outersortkeys;	/* keys for explicit sort, if any */
-	List	   *innersortkeys;	/* keys for explicit sort, if any */
+	List	   *outersortkeys;			/* keys for explicit sort, if any */
+	List	   *innersortkeys;			/* keys for explicit sort, if any */
+	bool		materialize_inner;		/* add Materialize to inner? */
 } MergePath;
 
 /*

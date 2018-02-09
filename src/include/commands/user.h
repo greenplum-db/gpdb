@@ -4,7 +4,7 @@
  *	  Commands for manipulating roles (formerly called users).
  *
  *
- * $PostgreSQL: pgsql/src/include/commands/user.h,v 1.30 2006/10/04 00:30:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/user.h,v 1.31 2009/11/18 21:57:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

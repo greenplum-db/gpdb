@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/globals.c,v 1.108 2009/05/05 19:59:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/globals.c,v 1.110 2009/08/31 19:41:00 tgl Exp $
  *
  * NOTES
  *	  Globals used all over the place should be declared here and not
@@ -24,7 +24,7 @@
 #include "storage/backendid.h"
 
 
-ProtocolVersion FrontendProtocol = PG_PROTOCOL_LATEST;
+ProtocolVersion FrontendProtocol;
 
 volatile bool InterruptPending = false;
 volatile bool QueryCancelPending = false;
@@ -118,8 +118,8 @@ int			maintenance_work_mem = 65536;
 
 /*
  * Primary determinants of sizes of shared-memory structures.  MaxBackends is
- * MaxConnections + autovacuum_max_workers (it is computed by the GUC assign
- * hook):
+ * MaxConnections + autovacuum_max_workers + 1 (it is computed by the GUC
+ * assign hooks for those variables):
  */
 int			NBuffers = 4096;
 int			MaxBackends = 200;

@@ -4334,7 +4334,8 @@ add_subqueryscan(PlannerInfo *root, List **p_pathkeys,
 										 NIL,
 										 varno, /* scanrelid (= varno) */
 										 subplan,
-										 subquery->rtable);
+										 subquery->rtable,
+										 subquery->rowMarks);
 
 	mark_passthru_locus(subplan, true, true);
 

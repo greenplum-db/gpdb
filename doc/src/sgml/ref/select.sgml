@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.122 2009/05/03 20:45:43 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.128 2009/10/28 14:55:37 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -71,7 +71,7 @@ where <replaceable class="parameter">window_specification</replaceable> can be:
            <replaceable class="parameter">expression</replaceable> FOLLOWING
            UNBOUNDED FOLLOWING
 
-where <replaceable class="parameter">from_item</replaceable> can be one of:
+<phrase>where <replaceable class="parameter">from_item</replaceable> can be one of:</phrase>
 
     [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ] [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
     ( <replaceable class="parameter">select</replaceable> ) [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ]
@@ -631,15 +631,22 @@ WINDOW <replaceable class="parameter">window_name</replaceable> AS ( <replaceabl
 
    <para>
     The elements of the <literal>PARTITION BY</> list are interpreted in
-    the same fashion as elements of a
-    <xref linkend="sql-groupby" endterm="sql-groupby-title">, and
-    the elements of the <literal>ORDER BY</> list are interpreted in the
-    same fashion as elements of an
-    <xref linkend="sql-orderby" endterm="sql-orderby-title">.
-    The only difference is that these expressions can contain aggregate
+    much the same fashion as elements of a
+    <xref linkend="sql-groupby" endterm="sql-groupby-title">, except that
+    they are always simple expressions and never the name or number of an
+    output column.
+    Another difference is that these expressions can contain aggregate
     function calls, which are not allowed in a regular <literal>GROUP BY</>
     clause.  They are allowed here because windowing occurs after grouping
     and aggregation.
+   </para>
+
+   <para>
+    Similarly, the elements of the <literal>ORDER BY</> list are interpreted
+    in much the same fashion as elements of an
+    <xref linkend="sql-orderby" endterm="sql-orderby-title">, except that
+    the expressions are always taken as simple expressions and never the name
+    or number of an output column.
    </para>
 
    <para>
@@ -1041,14 +1048,15 @@ OFFSET <replaceable class="parameter">start</replaceable>
 
    <para>
     SQL:2008 introduced a different syntax to achieve the same thing,
-    which PostgreSQL also supports.  It is:
+    which <productname>PostgreSQL</> also supports.  It is:
 <synopsis>
 OFFSET <replaceable class="parameter">start</replaceable> { ROW | ROWS }
 FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { ROW | ROWS } ONLY
 </synopsis>
-    Both clauses are optional, but if present
-    the <literal>OFFSET</literal> clause must come before
-    the <literal>FETCH</literal> clause.  <literal>ROW</literal>
+    According to the standard, the <literal>OFFSET</literal> clause must come
+    before the <literal>FETCH</literal> clause if both are present; but
+    <productname>PostgreSQL</> is laxer and allows either order.
+    <literal>ROW</literal>
     and <literal>ROWS</literal> as well as <literal>FIRST</literal>
     and <literal>NEXT</literal> are noise words that don't influence
     the effects of these clauses.  In this syntax, when using expressions
@@ -1120,20 +1128,10 @@ FOR SHARE [ OF <replaceable class="parameter">table_name</replaceable> [, ...] ]
     has already locked a selected row or rows, <command>SELECT FOR
     UPDATE</command> will wait for the other transaction to complete,
     and will then lock and return the updated row (or no row, if the
-    row was deleted).  For further discussion see <xref
+    row was deleted).  Within a <literal>SERIALIZABLE</> transaction,
+    however, an error will be thrown if a row to be locked has changed
+    since the transaction started.  For further discussion see <xref
     linkend="mvcc">.
-   </para>
-
-   <para>
-    To prevent the operation from waiting for other transactions to commit,
-    use the <literal>NOWAIT</> option.  <command>SELECT FOR UPDATE
-    NOWAIT</command> reports an error, rather than waiting, if a selected row
-    cannot be locked immediately.  Note that <literal>NOWAIT</> applies only
-    to the row-level lock(s) &mdash; the required <literal>ROW SHARE</literal>
-    table-level lock is still taken in the ordinary way (see
-    <xref linkend="mvcc">).  You can use the <literal>NOWAIT</> option of
-    <xref linkend="sql-lock" endterm="sql-lock-title">
-    if you need to acquire the table-level lock without waiting.
    </para>
 
    <para>
@@ -1146,15 +1144,33 @@ FOR SHARE [ OF <replaceable class="parameter">table_name</replaceable> [, ...] ]
    </para>
 
    <para>
+    To prevent the operation from waiting for other transactions to commit,
+    use the <literal>NOWAIT</> option.  With <literal>NOWAIT</>, the statement
+    reports an error, rather than waiting, if a selected row
+    cannot be locked immediately.  Note that <literal>NOWAIT</> applies only
+    to the row-level lock(s) &mdash; the required <literal>ROW SHARE</literal>
+    table-level lock is still taken in the ordinary way (see
+    <xref linkend="mvcc">).  You can use
+    <xref linkend="sql-lock" endterm="sql-lock-title">
+    with the <literal>NOWAIT</> option first,
+    if you need to acquire the table-level lock without waiting.
+   </para>
+
+   <para>
     If specific tables are named in <literal>FOR UPDATE</literal>
     or <literal>FOR SHARE</literal>,
     then only rows coming from those tables are locked; any other
     tables used in the <command>SELECT</command> are simply read as
     usual.  A <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal>
-    clause without a table list affects all tables used in the command.
+    clause without a table list affects all tables used in the statement.
     If <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal> is
     applied to a view or sub-query, it affects all tables used in
     the view or sub-query.
+    However, <literal>FOR UPDATE</literal>/<literal>FOR SHARE</literal>
+    do not apply to <literal>WITH</> queries referenced by the primary query.
+    If you want row locking to occur within a <literal>WITH</> query, specify
+    <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal> within the
+    <literal>WITH</> query.
    </para>
 
    <para>
@@ -1172,6 +1188,36 @@ FOR SHARE [ OF <replaceable class="parameter">table_name</replaceable> [, ...] ]
     <literal>FOR UPDATE</literal> and <literal>FOR SHARE</literal> cannot be
     used in contexts where returned rows cannot be clearly identified with
     individual table rows; for example they cannot be used with aggregation.
+   </para>
+
+   <para>
+    When <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal>
+    appears at the top level of a <command>SELECT</> query, the rows that
+    are locked are exactly those that are returned by the query; in the
+    case of a join query, the rows locked are those that contribute to
+    returned join rows.  In addition, rows that satisfied the query
+    conditions as of the query snapshot will be locked, although they
+    will not be returned if they have since been updated to not satisfy
+    the query conditions.  If a <literal>LIMIT</> is used, locking stops
+    once enough rows have been returned to satisfy the limit (but note that
+    rows skipped over by <literal>OFFSET</> will get locked).  Similarly,
+    if <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal>
+    is used in a cursor's query, only rows actually fetched or stepped past
+    by the cursor will be locked.
+   </para>
+
+   <para>
+    When <literal>FOR UPDATE</literal> or <literal>FOR SHARE</literal>
+    appears in a sub-<command>SELECT</>, the rows locked are those
+    returned to the outer query by the sub-query.  This might involve
+    fewer rows than inspection of the sub-query alone would suggest,
+    since conditions from the outer query might be used to optimize
+    execution of the sub-query.  For example,
+<programlisting>
+SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss WHERE col1 = 5;
+</programlisting>
+    will lock only rows having <literal>col1 = 5</>, even though that
+    condition is not textually within the sub-query.
    </para>
 
   <caution>
@@ -1200,30 +1246,26 @@ ROLLBACK TO s;
 
   <caution>
    <para>
-    It is possible for a <command>SELECT</> command using both
-    <literal>LIMIT</literal> and <literal>FOR UPDATE/SHARE</literal>
-    clauses to return fewer rows than specified by <literal>LIMIT</literal>.
-    This is because <literal>LIMIT</> is applied first.  The command
-    selects the specified number of rows,
-    but might then block trying to obtain a lock on one or more of them.
-    Once the <literal>SELECT</> unblocks, the row might have been deleted
-    or updated so that it does not meet the query <literal>WHERE</> condition
-    anymore, in which case it will not be returned.
-   </para>
-  </caution>
-
-  <caution>
-   <para>
-    Similarly, it is possible for a <command>SELECT</> command
-    using <literal>ORDER BY</literal> and <literal>FOR
-    UPDATE/SHARE</literal> to return rows out of order.  This is
-    because <literal>ORDER BY</> is applied first.  The command
-    orders the result, but might then block trying to obtain a lock
-    on one or more of the rows.  Once the <literal>SELECT</>
-    unblocks, one of the ordered columns might have been modified
-    and be returned out of order.  A workaround is to perform
-    <command>SELECT ... FOR UPDATE/SHARE</> and then <command>SELECT
-    ... ORDER BY</>.
+    It is possible for a <command>SELECT</> command using <literal>ORDER
+    BY</literal> and <literal>FOR UPDATE/SHARE</literal> to return rows out of
+    order.  This is because <literal>ORDER BY</> is applied first.
+    The command sorts the result, but might then block trying to obtain a lock
+    on one or more of the rows.  Once the <literal>SELECT</> unblocks, some
+    of the ordering column values might have been modified, leading to those
+    rows appearing to be out of order (though they are in order in terms
+    of the original column values).  This can be worked around at need by
+    placing the <literal>FOR UPDATE/SHARE</literal> clause in a sub-query,
+    for example
+<programlisting>
+SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss ORDER BY column1;
+</programlisting>
+    Note that this will result in locking all rows of <structname>mytable</>,
+    whereas <literal>FOR UPDATE</> at the top level would lock only the
+    actually returned rows.  This can make for a significant performance
+    difference, particularly if the <literal>ORDER BY</> is combined with
+    <literal>LIMIT</> or other restrictions.  So this technique is recommended
+    only if concurrent updates of the ordering columns are expected and a
+    strictly sorted result is required.
    </para>
   </caution>
   </refsect2>
@@ -1479,12 +1521,7 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
     <productname>PostgreSQL</productname> releases prior to
     8.1 would accept queries of this form, and add an implicit entry
     to the query's <literal>FROM</literal> clause for each table
-    referenced by the query. This is no longer the default behavior,
-    because it does not comply with the SQL standard, and is
-    considered by many to be error-prone. For compatibility with
-    applications that rely on this behavior the <xref
-    linkend="guc-add-missing-from"> configuration variable can be
-    enabled.
+    referenced by the query. This is no longer allowed.
    </para>
   </refsect2>
 
@@ -1569,12 +1606,25 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
     used by <productname>MySQL</productname>.  The SQL:2008 standard
     has introduced the clauses <literal>OFFSET ... FETCH {FIRST|NEXT}
     ...</literal> for the same functionality, as shown above
-    in <xref linkend="sql-limit" endterm="sql-limit-title">, and this
+    in <xref linkend="sql-limit" endterm="sql-limit-title">.  This
     syntax is also used by <productname>IBM DB2</productname>.
     (Applications written for <productname>Oracle</productname>
     frequently use a workaround involving the automatically
-    generated <literal>rownum</literal> column, not available in
+    generated <literal>rownum</literal> column, which is not available in
     PostgreSQL, to implement the effects of these clauses.)
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>FOR UPDATE</> and <literal>FOR SHARE</></title>
+
+   <para>
+    Although <literal>FOR UPDATE</> appears in the SQL standard, the
+    standard allows it only as an option of <command>DECLARE CURSOR</>.
+    <productname>PostgreSQL</productname> allows it in any <command>SELECT</>
+    query as well as in sub-<command>SELECT</>s, but this is an extension.
+    The <literal>FOR SHARE</> variant, and the <literal>NOWAIT</> option,
+    do not appear in the standard.
    </para>
   </refsect2>
 

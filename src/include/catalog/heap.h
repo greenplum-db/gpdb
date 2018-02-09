@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/heap.h,v 1.91 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/heap.h,v 1.94 2009/10/05 19:24:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,6 +67,7 @@ extern Oid heap_create_with_catalog(const char *relname,
 						 Oid relnamespace,
 						 Oid reltablespace,
 						 Oid relid,
+						 Oid reltypeid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
 						 List *cooked_constraints,
@@ -79,12 +80,15 @@ extern Oid heap_create_with_catalog(const char *relname,
 						 OnCommitAction oncommit,
                          const struct GpPolicy *policy,    /* MPP */
 						 Datum reloptions,
+						 bool use_user_acl,
 						 bool allow_system_table_mods,
 						 bool valid_opts);
 
 extern void heap_drop_with_catalog(Oid relid);
 
 extern void heap_truncate(List *relids);
+
+extern void heap_truncate_one_rel(Relation rel);
 
 extern void heap_truncate_check_FKs(List *relations, bool tempTables);
 
@@ -97,6 +101,7 @@ extern void InsertPgAttributeTuple(Relation pg_attribute_rel,
 extern void InsertPgClassTuple(Relation pg_class_desc,
 				   Relation new_rel_desc,
 				   Oid new_rel_oid,
+				   Datum relacl,
 				   Datum reloptions);
 
 extern List *AddRelationNewConstraints(Relation rel,

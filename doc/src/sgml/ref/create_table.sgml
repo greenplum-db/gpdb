@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_table.sgml,v 1.114 2009/02/12 13:25:33 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_table.sgml,v 1.120 2009/12/07 05:22:21 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -293,6 +293,10 @@ Where column_reference_storage_directive is:
       will always be chosen for it.
      </para>
 
+     <para>
+      Column <literal>STORAGE</> settings are also copied from parent tables.
+     </para>
+
 <!--
      <para>
       <productname>PostgreSQL</> automatically allows the
@@ -310,7 +314,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>LIKE <replaceable>parent_table</replaceable> [ { INCLUDING | EXCLUDING } { DEFAULTS | CONSTRAINTS | INDEXES } ]</literal></term>
+    <term><literal>LIKE <replaceable>parent_table</replaceable> [ <replaceable>like_option</replaceable> ... ]</literal></term>
     <listitem>
      <para>
       The <literal>LIKE</literal> clause specifies a table from which
@@ -344,8 +348,27 @@ Where column_reference_storage_directive is:
       specified.
      </para>
      <para>
-      Note also that unlike <literal>INHERITS</literal>, copied columns and
-      constraints are not merged with similarly named columns and constraints.
+      <literal>STORAGE</> settings for the copied column definitions will only
+      be copied if <literal>INCLUDING STORAGE</literal> is specified.  The
+      default behavior is to exclude <literal>STORAGE</> settings, resulting
+      in the copied columns in the new table having type-specific default
+      settings.  For more on <literal>STORAGE</> settings, see
+      <xref linkend="storage-toast">.
+     </para>
+     <para>
+      Comments for the copied columns, constraints, and indexes
+      will only be copied if <literal>INCLUDING COMMENTS</literal>
+      is specified. The default behavior is to exclude comments, resulting in
+      the copied columns and constraints in the new table having no comments.
+     </para>
+     <para>
+      <literal>INCLUDING ALL</literal> is an abbreviated form of
+      <literal>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS</literal>.
+     </para>
+     <para>
+      Note also that unlike <literal>INHERITS</literal>, columns and
+      constraints copied by <literal>LIKE</> are not merged with similarly
+      named columns and constraints.
       If the same name is specified explicitly or in another
       <literal>LIKE</literal> clause, an error is signalled.
      </para>
@@ -395,6 +418,29 @@ Where column_reference_storage_directive is:
       This clause is only provided for compatibility with
       non-standard SQL databases.  Its use is discouraged in new
       applications.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>CHECK ( <replaceable class="PARAMETER">expression</replaceable> )</literal></term>
+    <listitem>
+     <para>
+      The <literal>CHECK</> clause specifies an expression producing a
+      Boolean result which new or updated rows must satisfy for an
+      insert or update operation to succeed.  Expressions evaluating
+      to TRUE or UNKNOWN succeed.  Should any row of an insert or
+      update operation produce a FALSE result an error exception is
+      raised and the insert or update does not alter the database.  A
+      check constraint specified as a column constraint should
+      reference that column's value only, while an expression
+      appearing in a table constraint can reference multiple columns.
+     </para>
+
+     <para>
+      Currently, <literal>CHECK</literal> expressions cannot contain
+      subqueries nor refer to variables other than columns of the
+      current row.
      </para>
     </listitem>
    </varlistentry>
@@ -455,28 +501,53 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>CHECK ( <replaceable class="PARAMETER">expression</replaceable> )</literal></term>
+    <term><literal>EXCLUDE [ USING <replaceable class="parameter">index_method</replaceable> ] ( <replaceable class="parameter">exclude_element</replaceable> WITH <replaceable class="parameter">operator</replaceable> [, ... ] ) <replaceable class="parameter">index_parameters</replaceable> [ WHERE ( <replaceable class="parameter">predicate</replaceable> ) ]</literal></term>
     <listitem>
      <para>
-      The <literal>CHECK</> clause specifies an expression producing a
-      Boolean result which new or updated rows must satisfy for an
-      insert or update operation to succeed.  Expressions evaluating
-      to TRUE or UNKNOWN succeed.  Should any row of an insert or
-      update operation produce a FALSE result an error exception is
-      raised and the insert or update does not alter the database.  A
-      check constraint specified as a column constraint should
-      reference that column's value only, while an expression
-      appearing in a table constraint can reference multiple columns.
+      The <literal>EXCLUDE</> clause defines an exclusion
+      constraint, which guarantees that if
+      any two rows are compared on the specified column(s) or
+      expression(s) using the specified operator(s), not all of these
+      comparisons will return <literal>TRUE</>.  If all of the
+      specified operators test for equality, this is equivalent to a
+      <literal>UNIQUE</> constraint, although an ordinary unique constraint
+      will be faster.  However, exclusion constraints can specify
+      constraints that are more general than simple equality.
+      For example, you can specify a constraint that
+      no two rows in the table contain overlapping circles
+      (see <xref linkend="datatype-geometric">) by using the
+      <literal>&&</> operator.
      </para>
 
      <para>
-      Currently, <literal>CHECK</literal> expressions cannot contain
-      subqueries nor refer to variables other than columns of the
-      current row.
+      Exclusion constraints are implemented using
+      an index, so each specified operator must be associated with an
+      appropriate operator class
+      (see <xref linkend="indexes-opclass">) for the index access
+      method <replaceable>index_method</>.
+      The operators are required to be commutative.
+      Each <replaceable class="parameter">exclude_element</replaceable>
+      can optionally specify an operator class and/or ordering options;
+      these are described fully under
+      <xref linkend="sql-createindex" endterm="sql-createindex-title">.
+     </para>
+
+     <para>
+      The access method must support <literal>amgettuple</> (see <xref
+      linkend="indexam">); at present this means <acronym>GIN</>
+      cannot be used.  Although it's allowed, there is little point in using
+      btree or hash indexes with an exclusion constraint, because this
+      does nothing that an ordinary unique constraint doesn't do better.
+      So in practice the access method will always be <acronym>GiST</>.
+     </para>
+
+     <para>
+      The <replaceable class="parameter">predicate</> allows you to specify an
+      exclusion constraint on a subset of the table; internally this creates a
+      partial index. Note that parentheses are required around the predicate.
      </para>
     </listitem>
    </varlistentry>
-
 
    <varlistentry>
     <term><literal>REFERENCES <replaceable class="parameter">reftable</replaceable> [ ( <replaceable class="parameter">refcolumn</replaceable> ) ] [ MATCH <replaceable class="parameter">matchtype</replaceable> ] [ ON DELETE <replaceable class="parameter">action</replaceable> ] [ ON UPDATE <replaceable class="parameter">action</replaceable> ]</literal> (column constraint)</term>
@@ -495,11 +566,10 @@ Where column_reference_storage_directive is:
       contain values that match values in the referenced
       column(s) of some row of the referenced table.  If <replaceable
       class="parameter">refcolumn</replaceable> is omitted, the
-      primary key of the <replaceable
-      class="parameter">reftable</replaceable> is used.  The
-      referenced columns must be the columns of a unique or primary
-      key constraint in the referenced table.  Note that foreign key
-      constraints cannot be defined between temporary tables and
+      primary key of the <replaceable class="parameter">reftable</replaceable>
+      is used.  The referenced columns must be the columns of a non-deferrable
+      unique or primary key constraint in the referenced table.  Note that
+      foreign key constraints cannot be defined between temporary tables and
       permanent tables.
      </para>
 
@@ -606,9 +676,12 @@ Where column_reference_storage_directive is:
       after every command.  Checking of constraints that are
       deferrable can be postponed until the end of the transaction
       (using the <xref linkend="sql-set-constraints" endterm="sql-set-constraints-title"> command).
-      <literal>NOT DEFERRABLE</literal> is the default.  Only foreign
-      key constraints currently accept this clause.  All other
-      constraint types are not deferrable.
+      <literal>NOT DEFERRABLE</literal> is the default.
+      Currently, only <literal>UNIQUE</>, <literal>PRIMARY KEY</>,
+      <literal>EXCLUDE</>, and
+      <literal>REFERENCES</> (foreign key) constraints accept this
+      clause.  <literal>NOT NULL</> and <literal>CHECK</> constraints are not
+      deferrable.
      </para>
     </listitem>
    </varlistentry>
@@ -743,8 +816,8 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
       This clause allows selection of the tablespace in which the index
-      associated with a <literal>UNIQUE</literal> or <literal>PRIMARY
-      KEY</literal> constraint will be created.
+      associated with a <literal>UNIQUE</literal>, <literal>PRIMARY
+      KEY</literal>, or <literal>EXCLUDE</> constraint will be created.
       If not specified,
       <xref linkend="guc-default-tablespace"> is consulted, or
       <xref linkend="guc-temp-tablespaces"> if the table is temporary.
@@ -763,12 +836,13 @@ Where column_reference_storage_directive is:
 
    <para>
     The <literal>WITH</> clause can specify <firstterm>storage parameters</>
-    for tables, and for indexes associated with a <literal>UNIQUE</literal> or
-    <literal>PRIMARY KEY</literal> constraint.  Storage parameters for
+    for tables, and for indexes associated with a <literal>UNIQUE</literal>,
+    <literal>PRIMARY KEY</literal>, or <literal>EXCLUDE</> constraint.
+    Storage parameters for
     indexes are documented in <xref linkend="SQL-CREATEINDEX"
     endterm="sql-createindex-title">.  The storage parameters currently
-    available for tables are listed below.  For each parameter, there is an
-    additional, identically named parameter, prefixed with
+    available for tables are listed below.  For each parameter, unless noted,
+    there is an additional, identically named parameter, prefixed with
     <literal>toast.</literal> which can be used to control the behavior of the
     supplementary storage table, if any; see <xref linkend="storage-toast">.
     Note that the supplementary storage table inherits the
@@ -779,7 +853,7 @@ Where column_reference_storage_directive is:
    <variablelist>
 
    <varlistentry>
-    <term><literal>fillfactor</>, <literal>toast.fillfactor</literal> (<type>integer</>)</term>
+    <term><literal>fillfactor</> (<type>integer</>)</term>
     <listitem>
      <para>
       The fillfactor for a table is a percentage between 10 and 100.
@@ -791,7 +865,8 @@ Where column_reference_storage_directive is:
       original, which is more efficient than placing it on a different page.
       For a table whose entries are never updated, complete packing is the
       best choice, but in heavily updated tables smaller fillfactors are
-      appropriate.
+      appropriate.  This parameter cannot be set for the supplementary
+      storage table.
      </para>
     </listitem>
    </varlistentry>
@@ -802,14 +877,14 @@ Where column_reference_storage_directive is:
      <para>
      Enables or disables the autovacuum daemon on a particular table.
      If true, the autovacuum daemon will initiate a <command>VACUUM</> operation
-     on a particular table when the number of updated or deleted tuples exceeds 
-     <literal>autovacuum_vacuum_threshold</> plus 
-     <literal>autovacuum_vacuum_scale_factor</> times the number of live tuples 
+     on a particular table when the number of updated or deleted tuples exceeds
+     <literal>autovacuum_vacuum_threshold</> plus
+     <literal>autovacuum_vacuum_scale_factor</> times the number of live tuples
      currently estimated to be in the relation.
      Similarly, it will initiate an <command>ANALYZE</> operation when the
      number of inserted, updated or deleted tuples exceeds
-     <literal>autovacuum_analyze_threshold</> plus 
-     <literal>autovacuum_analyze_scale_factor</> times the number of live tuples 
+     <literal>autovacuum_analyze_threshold</> plus
+     <literal>autovacuum_analyze_scale_factor</> times the number of live tuples
      currently estimated to be in the relation.
      If false, this table will not be autovacuumed, except to prevent
      transaction Id wraparound. See <xref linkend="vacuum-for-wraparound"> for
@@ -825,7 +900,7 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
      Minimum number of updated or deleted tuples before initiate a
-     <command>VACUUM</> operation on a particular table. 
+     <command>VACUUM</> operation on a particular table.
      </para>
     </listitem>
    </varlistentry>
@@ -884,7 +959,7 @@ Where column_reference_storage_directive is:
      <para>
      Custom <xref linkend="guc-vacuum-freeze-min-age"> parameter. Note that
      autovacuum will ignore attempts to set a per-table
-     <literal>autovacuum_freeze_min_age</> larger than the half system-wide 
+     <literal>autovacuum_freeze_min_age</> larger than the half system-wide
      <xref linkend="guc-autovacuum-freeze-max-age"> setting.
      </para>
     </listitem>
@@ -905,7 +980,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>autovacuum_freeze_table_age</literal> (<type>integer</type>)</term>
+    <term><literal>autovacuum_freeze_table_age</literal>, <literal>toast.autovacuum_freeze_table_age</literal> (<type>integer</type>)</term>
     <listitem>
      <para>
       Custom <xref linkend="guc-vacuum-freeze-table-age"> parameter.
@@ -1147,6 +1222,18 @@ WITH (fillfactor=70);
   </para>
 
   <para>
+   Create table <structname>circles</> with an exclusion
+   constraint that prevents any two circles from overlapping:
+
+<programlisting>
+CREATE TABLE circles (
+    c circle,
+    EXCLUDE USING gist (c WITH &&)
+);
+</programlisting>
+  </para>
+
+  <para>
    Create table <structname>cinemas</> in tablespace <structname>diskvol1</>:
 
 <programlisting>
@@ -1213,6 +1300,23 @@ CREATE TABLE cinemas (
   </refsect2>
 
   <refsect2>
+   <title>Non-deferred Uniqueness Constraints</title>
+
+   <para>
+    When a <literal>UNIQUE</> or <literal>PRIMARY KEY</> constraint is
+    not deferrable, <productname>PostgreSQL</productname> checks for
+    uniqueness immediately whenever a row is inserted or modified.
+    The SQL standard says that uniqueness should be enforced only at
+    the end of the statement; this makes a difference when, for example,
+    a single command updates multiple key values.  To obtain
+    standard-compliant behavior, declare the constraint as
+    <literal>DEFERRABLE</> but not deferred (i.e., <literal>INITIALLY
+    IMMEDIATE</>).  Be aware that this can be significantly slower than
+    immediate uniqueness checking.
+   </para>
+  </refsect2>
+
+  <refsect2>
    <title>Column Check Constraints</title>
 
    <para>
@@ -1221,6 +1325,15 @@ CREATE TABLE cinemas (
     table constraints can refer to multiple columns.
     <productname>PostgreSQL</productname> does not enforce this
     restriction; it treats column and table check constraints alike.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>EXCLUDE</literal> Constraint</title>
+
+   <para>
+    The <literal>EXCLUDE</> constraint type is a
+    <productname>PostgreSQL</productname> extension.
    </para>
   </refsect2>
 

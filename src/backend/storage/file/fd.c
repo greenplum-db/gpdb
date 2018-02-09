@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.149 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.151 2009/12/03 11:03:28 heikki Exp $
  *
  * NOTES:
  *
@@ -1642,6 +1642,20 @@ FileTruncate(File file, int64 offset)
 	return returnCode;
 }
 
+/*
+ * Return the pathname associated with an open file.
+ *
+ * The returned string points to an internal buffer, which is valid until
+ * the file is closed.
+ */
+char *
+FilePathName(File file)
+{
+	Assert(FileIsValid(file));
+
+	return VfdCache[file].fileName;
+}
+
 
 /*
  * Routines that want to use stdio (ie, FILE*) should use AllocateFile
@@ -2187,6 +2201,7 @@ CleanupTempFiles(bool isProcExit)
 
 	workfile_mgr_cleanup();
 
+	/* Clean up "allocated" stdio files and dirs. */
 	while (numAllocatedDescs > 0)
 		FreeDesc(&allocatedDescs[0]);
 }

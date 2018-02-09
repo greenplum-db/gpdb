@@ -220,25 +220,25 @@ COPY main_table (a,b) FROM stdin;
 
 CREATE FUNCTION trigger_func() RETURNS trigger LANGUAGE plpgsql NO SQL AS '
 BEGIN
-	RAISE NOTICE ''trigger_func() called: action = %, when = %, level = %'', TG_OP, TG_WHEN, TG_LEVEL;
+	RAISE NOTICE ''trigger_func(%) called: action = %, when = %, level = %'', TG_ARGV[0], TG_OP, TG_WHEN, TG_LEVEL;
 	RETURN NULL;
 END;';
 
 CREATE TRIGGER before_ins_stmt_trig BEFORE INSERT ON main_table
-FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func();
+FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('before_ins_stmt');
 
 CREATE TRIGGER after_ins_stmt_trig AFTER INSERT ON main_table
-FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func();
+FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('after_ins_stmt');
 
 --
 -- if neither 'FOR EACH ROW' nor 'FOR EACH STATEMENT' was specified,
 -- CREATE TRIGGER should default to 'FOR EACH STATEMENT'
 --
-CREATE TRIGGER before_upd_stmt_trig AFTER UPDATE ON main_table
-EXECUTE PROCEDURE trigger_func();
+CREATE TRIGGER after_upd_stmt_trig AFTER UPDATE ON main_table
+EXECUTE PROCEDURE trigger_func('after_upd_stmt');
 
-CREATE TRIGGER before_upd_row_trig AFTER UPDATE ON main_table
-FOR EACH ROW EXECUTE PROCEDURE trigger_func();
+CREATE TRIGGER after_upd_row_trig AFTER UPDATE ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_row');
 
 INSERT INTO main_table DEFAULT VALUES;
 
@@ -253,6 +253,91 @@ COPY main_table (a, b) FROM stdin;
 \.
 
 SELECT * FROM main_table ORDER BY a, b;
+
+--
+-- test triggers with WHEN clause
+--
+
+CREATE TRIGGER modified_a BEFORE UPDATE OF a ON main_table
+FOR EACH ROW WHEN (OLD.a <> NEW.a) EXECUTE PROCEDURE trigger_func('modified_a');
+CREATE TRIGGER modified_any BEFORE UPDATE OF a ON main_table
+FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*) EXECUTE PROCEDURE trigger_func('modified_any');
+CREATE TRIGGER insert_a AFTER INSERT ON main_table
+FOR EACH ROW WHEN (NEW.a = 123) EXECUTE PROCEDURE trigger_func('insert_a');
+CREATE TRIGGER delete_a AFTER DELETE ON main_table
+FOR EACH ROW WHEN (OLD.a = 123) EXECUTE PROCEDURE trigger_func('delete_a');
+CREATE TRIGGER insert_when BEFORE INSERT ON main_table
+FOR EACH STATEMENT WHEN (true) EXECUTE PROCEDURE trigger_func('insert_when');
+CREATE TRIGGER delete_when AFTER DELETE ON main_table
+FOR EACH STATEMENT WHEN (true) EXECUTE PROCEDURE trigger_func('delete_when');
+INSERT INTO main_table (a) VALUES (123), (456);
+COPY main_table FROM stdin;
+123	999
+456	999
+\.
+DELETE FROM main_table WHERE a IN (123, 456);
+UPDATE main_table SET a = 50, b = 60;
+SELECT * FROM main_table ORDER BY a, b;
+SELECT pg_get_triggerdef(oid, true) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'modified_a';
+SELECT pg_get_triggerdef(oid, false) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'modified_a';
+SELECT pg_get_triggerdef(oid, true) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'modified_any';
+DROP TRIGGER modified_a ON main_table;
+DROP TRIGGER modified_any ON main_table;
+DROP TRIGGER insert_a ON main_table;
+DROP TRIGGER delete_a ON main_table;
+DROP TRIGGER insert_when ON main_table;
+DROP TRIGGER delete_when ON main_table;
+
+-- Test column-level triggers
+DROP TRIGGER after_upd_row_trig ON main_table;
+
+CREATE TRIGGER before_upd_a_row_trig BEFORE UPDATE OF a ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('before_upd_a_row');
+CREATE TRIGGER after_upd_b_row_trig AFTER UPDATE OF b ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_b_row');
+CREATE TRIGGER after_upd_a_b_row_trig AFTER UPDATE OF a, b ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_a_b_row');
+
+CREATE TRIGGER before_upd_a_stmt_trig BEFORE UPDATE OF a ON main_table
+FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('before_upd_a_stmt');
+CREATE TRIGGER after_upd_b_stmt_trig AFTER UPDATE OF b ON main_table
+FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('after_upd_b_stmt');
+
+SELECT pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'after_upd_a_b_row_trig';
+SELECT pg_get_triggerdef(oid, true) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'after_upd_a_b_row_trig';
+
+UPDATE main_table SET a = 50;
+UPDATE main_table SET b = 10;
+
+-- bogus cases
+CREATE TRIGGER error_upd_and_col BEFORE UPDATE OR UPDATE OF a ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('error_upd_and_col');
+CREATE TRIGGER error_upd_a_a BEFORE UPDATE OF a, a ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('error_upd_a_a');
+CREATE TRIGGER error_ins_a BEFORE INSERT OF a ON main_table
+FOR EACH ROW EXECUTE PROCEDURE trigger_func('error_ins_a');
+CREATE TRIGGER error_ins_when BEFORE INSERT OR UPDATE ON main_table
+FOR EACH ROW WHEN (OLD.a <> NEW.a)
+EXECUTE PROCEDURE trigger_func('error_ins_old');
+CREATE TRIGGER error_del_when BEFORE DELETE OR UPDATE ON main_table
+FOR EACH ROW WHEN (OLD.a <> NEW.a)
+EXECUTE PROCEDURE trigger_func('error_del_new');
+CREATE TRIGGER error_del_when BEFORE INSERT OR UPDATE ON main_table
+FOR EACH ROW WHEN (NEW.tableoid <> 0)
+EXECUTE PROCEDURE trigger_func('error_when_sys_column');
+CREATE TRIGGER error_stmt_when BEFORE UPDATE OF a ON main_table
+FOR EACH STATEMENT WHEN (OLD.* IS DISTINCT FROM NEW.*)
+EXECUTE PROCEDURE trigger_func('error_stmt_when');
+
+-- check dependency restrictions
+ALTER TABLE main_table DROP COLUMN b;
+-- this should succeed, but we'll roll it back to keep the triggers around
+begin;
+DROP TRIGGER after_upd_a_b_row_trig ON main_table;
+DROP TRIGGER after_upd_b_row_trig ON main_table;
+DROP TRIGGER after_upd_b_stmt_trig ON main_table;
+ALTER TABLE main_table DROP COLUMN b;
+rollback;
 
 -- Test enable/disable triggers
 
@@ -416,6 +501,36 @@ DROP TABLE trigger_test;
 
 DROP FUNCTION mytrigger();
 
+-- Test snapshot management in serializable transactions involving triggers
+-- per bug report in 6bc73d4c0910042358k3d1adff3qa36f8df75198ecea@mail.gmail.com
+CREATE FUNCTION serializable_update_trig() RETURNS trigger LANGUAGE plpgsql AS
+$$
+declare
+	rec record;
+begin
+	new.description = 'updated in trigger';
+	return new;
+end;
+$$;
+
+CREATE TABLE serializable_update_tab (
+	id int,
+	filler  text,
+	description text
+);
+
+CREATE TRIGGER serializable_update_trig BEFORE UPDATE ON serializable_update_tab
+	FOR EACH ROW EXECUTE PROCEDURE serializable_update_trig();
+
+INSERT INTO serializable_update_tab SELECT a, repeat('xyzxz', 100), 'new'
+	FROM generate_series(1, 50) a;
+
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+UPDATE serializable_update_tab SET description = 'no no', id = 1 WHERE id = 1;
+COMMIT;
+SELECT description FROM serializable_update_tab WHERE id = 1;
+DROP TABLE serializable_update_tab;
 
 -- minimal update trigger
 

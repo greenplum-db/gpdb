@@ -443,7 +443,7 @@ exec_command(const char *cmd,
 
 					if (pattern)
 						pattern2 = psql_scan_slash_option(scan_state,
-													  OT_NORMAL, NULL, true);
+														  OT_NORMAL, NULL, true);
 					success = listDbRoleSettings(pattern, pattern2);
 				}
 				else

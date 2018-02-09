@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.150 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.155 2009/11/16 18:04:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -116,6 +116,10 @@ static Var *search_indexed_tlist_for_var(Var *var,
 static Var *search_indexed_tlist_for_non_var(Node *node,
 								 indexed_tlist *itlist,
 								 Index newvarno);
+static Var *search_indexed_tlist_for_sortgroupref(Node *node,
+									  Index sortgroupref,
+									  indexed_tlist *itlist,
+									  Index newvarno);
 static List *fix_join_expr(PlannerGlobal *glob,
 			  List *clauses,
 			  indexed_tlist *outer_itlist,
@@ -335,12 +339,14 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
  *	glob: global data for planner run
  *	plan: the topmost node of the plan
  *	rtable: the rangetable for the current subquery
+ *	rowmarks: the PlanRowMark list for the current subquery
  *
  * The return value is normally the same Plan node passed in, but can be
  * different when the passed-in Plan is a SubqueryScan we decide isn't needed.
  *
- * The flattened rangetable entries are appended to glob->finalrtable, and
- * plan dependencies are appended to glob->relationOids (for relations)
+ * The flattened rangetable entries are appended to glob->finalrtable,
+ * and we also append rowmarks entries to glob->finalrowmarks.
+ * Plan dependencies are appended to glob->relationOids (for relations)
  * and glob->invalItems (for everything else).
  *
  * Notice that we modify Plan nodes in-place, but use expression_tree_mutator
@@ -349,7 +355,8 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
  * it's not so safe to assume that for expression tree nodes.
  */
 Plan *
-set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
+set_plan_references(PlannerGlobal *glob, Plan *plan,
+					List *rtable, List *rowmarks)
 {
 	int			rtoffset = list_length(glob->finalrtable);
 	ListCell   *lc;
@@ -367,7 +374,8 @@ set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
 	 * needed by the executor; this reduces the storage space and copying cost
 	 * for cached plans.  We keep only the alias and eref Alias fields, which
 	 * are needed by EXPLAIN, and the selectedCols and modifiedCols bitmaps,
-	 * which are needed for executor-startup permissions checking.
+	 * which are needed for executor-startup permissions checking and for
+	 * trigger event checking.
 	 */
 	foreach(lc, rtable)
 	{
@@ -399,6 +407,27 @@ set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
 		if (newrte->rtekind == RTE_RELATION)
 			glob->relationOids = lappend_oid(glob->relationOids,
 											 newrte->relid);
+	}
+
+	/*
+	 * Adjust RT indexes of PlanRowMarks and add to final rowmarks list
+	 */
+	foreach(lc, rowmarks)
+	{
+		PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+		PlanRowMark *newrc;
+
+		Assert(IsA(rc, PlanRowMark));
+
+		/* flat copy is enough since all fields are scalars */
+		newrc = (PlanRowMark *) palloc(sizeof(PlanRowMark));
+		memcpy(newrc, rc, sizeof(PlanRowMark));
+
+		/* adjust indexes */
+		newrc->rti += rtoffset;
+		newrc->prti += rtoffset;
+
+		glob->finalrowmarks = lappend(glob->finalrowmarks, newrc);
 	}
 
 	/* Now fix the Plan tree */
@@ -610,15 +639,18 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 											   rtoffset);
 		case T_TableFunctionScan:
 			{
-				TableFunctionScan	*tplan	   = (TableFunctionScan *) plan;
-				Plan				*subplan   = tplan->scan.plan.lefttree;
-				List				*subrtable = tplan->subrtable;
+				TableFunctionScan *tplan	   = (TableFunctionScan *) plan;
+				Plan	   *subplan   = tplan->scan.plan.lefttree;
+				List	   *subrtable = tplan->subrtable;
 
 				if (cdb_expr_requires_full_eval((Node *)plan->targetlist))
 					return cdb_insert_result_node(glob, plan, rtoffset);
 
 				/* recursively process the subplan */
-				plan->lefttree = set_plan_references(glob, subplan, subrtable);
+				/* GPDB_90_MERGE_FIXME: How about rowmarks here? Do we need to stash them
+				 * in TableFunctionScan? */
+				plan->lefttree = set_plan_references(glob, subplan,
+													 subrtable, NIL);
 
 				/* subrtable is no longer needed in the plan tree */
 				tplan->subrtable = NIL;
@@ -789,6 +821,27 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			}
 			break;
 			
+		case T_LockRows:
+			{
+				LockRows   *splan = (LockRows *) plan;
+
+				/*
+				 * Like the plan types above, LockRows doesn't evaluate its
+				 * tlist or quals.  But we have to fix up the RT indexes
+				 * in its rowmarks.
+				 */
+				set_dummy_tlist_references(plan, rtoffset);
+				Assert(splan->plan.qual == NIL);
+
+				foreach(l, splan->rowMarks)
+				{
+					PlanRowMark *rc = (PlanRowMark *) lfirst(l);
+
+					rc->rti += rtoffset;
+					rc->prti += rtoffset;
+				}
+			}
+			break;
 		case T_Limit:
 			{
 				Limit	   *splan = (Limit *) plan;
@@ -865,6 +918,36 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			break;
 		case T_Repeat:
 			set_upper_references(glob, plan, rtoffset);
+			break;
+		case T_ModifyTable:
+			{
+				ModifyTable *splan = (ModifyTable *) plan;
+
+				/*
+				 * planner.c already called set_returning_clause_references,
+				 * so we should not process either the targetlist or the
+				 * returningLists.
+				 */
+				Assert(splan->plan.qual == NIL);
+
+				foreach(l, splan->resultRelations)
+				{
+					lfirst_int(l) += rtoffset;
+				}
+				foreach(l, splan->rowMarks)
+				{
+					PlanRowMark *rc = (PlanRowMark *) lfirst(l);
+
+					rc->rti += rtoffset;
+					rc->prti += rtoffset;
+				}
+				foreach(l, splan->plans)
+				{
+					lfirst(l) = set_plan_refs(glob,
+											  (Plan *) lfirst(l),
+											  rtoffset);
+				}
+			}
 			break;
 		case T_Append:
 			{
@@ -990,10 +1073,12 @@ set_subqueryscan_references(PlannerGlobal *glob,
 	Plan	   *result;
 
 	/* First, recursively process the subplan */
-	plan->subplan = set_plan_references(glob, plan->subplan, plan->subrtable);
+	plan->subplan = set_plan_references(glob, plan->subplan,
+										plan->subrtable, plan->subrowmark);
 
-	/* subrtable is no longer needed in the plan tree */
+	/* subrtable/subrowmark are no longer needed in the plan tree */
 	plan->subrtable = NIL;
+	plan->subrowmark = NIL;
 
 	if (trivial_subqueryscan(plan))
 	{
@@ -1024,6 +1109,9 @@ set_subqueryscan_references(PlannerGlobal *glob,
 			ctle->resorigtbl = ptle->resorigtbl;
 			ctle->resorigcol = ptle->resorigcol;
 		}
+
+		/* Honor the flow of the SubqueryScan, by copying it to the subplan. */
+		result->flow = plan->scan.plan.flow;
 	}
 	else
 	{
@@ -1640,10 +1728,27 @@ set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				IsA(tle->expr, GroupId))
 			newexpr = copyObject(tle->expr);
 		else
-			newexpr = fix_upper_expr(glob,
-					(Node *) tle->expr,
-					subplan_itlist,
-					rtoffset);
+		{
+			/* If it's a non-Var sort/group item, first try to match by sortref */
+			if (tle->ressortgroupref != 0 && !IsA(tle->expr, Var))
+			{
+				newexpr = (Node *)
+					search_indexed_tlist_for_sortgroupref((Node *) tle->expr,
+														  tle->ressortgroupref,
+														  subplan_itlist,
+														  OUTER);
+				if (!newexpr)
+					newexpr = fix_upper_expr(glob,
+											 (Node *) tle->expr,
+											 subplan_itlist,
+											 rtoffset);
+			}
+			else
+				newexpr = fix_upper_expr(glob,
+										 (Node *) tle->expr,
+										 subplan_itlist,
+										 rtoffset);
+		}
 		tle = flatCopyTargetEntry(tle);
 		tle->expr = (Expr *) newexpr;
 		output_targetlist = lappend(output_targetlist, tle);
@@ -1897,6 +2002,49 @@ search_indexed_tlist_for_non_var(Node *node,
 		newvar->varnoold = 0;	/* wasn't ever a plain Var */
 		newvar->varoattno = 0;
 		return newvar;
+	}
+	return NULL;				/* no match */
+}
+
+/*
+ * search_indexed_tlist_for_sortgroupref --- find a sort/group expression
+ *		(which is assumed not to be just a Var)
+ *
+ * If a match is found, return a Var constructed to reference the tlist item.
+ * If no match, return NULL.
+ *
+ * This is needed to ensure that we select the right subplan TLE in cases
+ * where there are multiple textually-equal()-but-volatile sort expressions.
+ * And it's also faster than search_indexed_tlist_for_non_var.
+ */
+static Var *
+search_indexed_tlist_for_sortgroupref(Node *node,
+									  Index sortgroupref,
+									  indexed_tlist *itlist,
+									  Index newvarno)
+{
+	ListCell   *lc;
+
+	foreach(lc, itlist->tlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+		/* The equal() check should be redundant, but let's be paranoid */
+		if (tle->ressortgroupref == sortgroupref &&
+			equal(node, tle->expr))
+		{
+			/* Found a matching subplan output expression */
+			Var		   *newvar;
+
+			newvar = makeVar(newvarno,
+							 tle->resno,
+							 exprType((Node *) tle->expr),
+							 exprTypmod((Node *) tle->expr),
+							 0);
+			newvar->varnoold = 0;	/* wasn't ever a plain Var */
+			newvar->varoattno = 0;
+			return newvar;
+		}
 	}
 	return NULL;				/* no match */
 }
@@ -2250,7 +2398,7 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
  *
  * If the query involves more than just the result table, we have to
  * adjust any Vars that refer to other tables to reference junk tlist
- * entries in the top plan's targetlist.  Vars referencing the result
+ * entries in the top subplan's targetlist.  Vars referencing the result
  * table should be left alone, however (the executor will evaluate them
  * using the actual heap tuple, after firing triggers if any).	In the
  * adjusted RETURNING list, result-table Vars will still have their
@@ -2260,8 +2408,8 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
  * glob->relationOids.
  *
  * 'rlist': the RETURNING targetlist to be fixed
- * 'topplan': the top Plan node for the query (not yet passed through
- *		set_plan_references)
+ * 'topplan': the top subplan node that will be just below the ModifyTable
+ *		node (note it's not yet passed through set_plan_references)
  * 'resultRelation': RT index of the associated result relation
  *
  * Note: we assume that result relations will have rtoffset zero, that is,

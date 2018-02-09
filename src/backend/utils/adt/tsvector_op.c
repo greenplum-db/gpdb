@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.23 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.25 2009/10/13 14:33:14 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -692,7 +692,7 @@ TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
 	if (curitem->type == QI_VAL)
 		return chkcond(checkval, (QueryOperand *) curitem);
 
-	switch (curitem->operator.oper)
+	switch (curitem->qoperator.oper)
 	{
 		case OP_NOT:
 			if (calcnot)
@@ -700,19 +700,19 @@ TS_execute(QueryItem *curitem, void *checkval, bool calcnot,
 			else
 				return true;
 		case OP_AND:
-			if (TS_execute(curitem + curitem->operator.left, checkval, calcnot, chkcond))
+			if (TS_execute(curitem + curitem->qoperator.left, checkval, calcnot, chkcond))
 				return TS_execute(curitem + 1, checkval, calcnot, chkcond);
 			else
 				return false;
 
 		case OP_OR:
-			if (TS_execute(curitem + curitem->operator.left, checkval, calcnot, chkcond))
+			if (TS_execute(curitem + curitem->qoperator.left, checkval, calcnot, chkcond))
 				return true;
 			else
 				return TS_execute(curitem + 1, checkval, calcnot, chkcond);
 
 		default:
-			elog(ERROR, "unrecognized operator: %d", curitem->operator.oper);
+			elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
 	}
 
 	/* not reachable, but keep compiler quiet */
@@ -983,17 +983,21 @@ ts_setup_firstcall(FunctionCallInfo fcinfo, FuncCallContext *funcctx,
 
 	node = stat->root;
 	/* find leftmost value */
-	for (;;)
-	{
-		stat->stack[stat->stackpos] = node;
-		if (node->left)
+	if (node == NULL)
+		stat->stack[stat->stackpos] = NULL;
+	else
+		for (;;)
 		{
-			stat->stackpos++;
-			node = node->left;
+			stat->stack[stat->stackpos] = node;
+			if (node->left)
+			{
+				stat->stackpos++;
+				node = node->left;
+			}
+			else
+				break;
 		}
-		else
-			break;
-	}
+	Assert(stat->stackpos <= stat->maxdepth);
 
 	tupdesc = CreateTemplateTupleDesc(3, false);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "word",
@@ -1039,6 +1043,7 @@ walkStatEntryTree(TSVectorStat *stat)
 			else
 				break;
 		}
+		Assert(stat->stackpos <= stat->maxdepth);
 	}
 	else
 	{

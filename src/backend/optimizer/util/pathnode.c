@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.152 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.155 2009/11/15 02:45:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1272,6 +1272,7 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
 
 	cost_material(&pathnode->path,
 				  root,
+				  subpath->startup_cost,
 				  subpath->total_cost,
 				  cdbpath_rows(root, subpath),
 				  rel->width);
@@ -2557,64 +2558,6 @@ create_mergejoin_path(PlannerInfo *root,
 
     pathnode = makeNode(MergePath);
 
-	/*
-	 * If we are not sorting the inner path, we may need a materialize node to
-	 * ensure it can be marked/restored.
-	 *
-	 * Since the inner side must be ordered, and only Sorts and IndexScans can
-	 * create order to begin with, and they both support mark/restore, you
-	 * might think there's no problem --- but you'd be wrong.  Nestloop and
-	 * merge joins can *preserve* the order of their inputs, so they can be
-	 * selected as the input of a mergejoin, and they don't support
-	 * mark/restore at present.
-	 *
-	 * Note: Sort supports mark/restore, so no materialize is really needed in
-	 * that case; but one may be desirable anyway to optimize the sort.
-	 * However, since we aren't representing the sort step separately in the
-	 * Path tree, we can't explicitly represent the materialize either. So
-	 * that case is not handled here.  Instead, cost_mergejoin has to factor
-	 * in the cost and create_mergejoin_plan has to add the plan node.
-	 */
-	if (!ExecSupportsMarkRestore(inner_path->pathtype))
-	{
-		/*
-		 * The inner side does not support mark/restore capability.
-		 * Check whether a sort node will be inserted later, and if that is not the case,
-		 * add a materialize node.
-		 * */
-		bool need_sort = false;
-		if (innersortkeys != NIL)
-		{
-			/* Check whether all sort keys are constants. If that is the case,
-			 * no sort node is needed.
-			 * The check is essentially the same as the one performed later in the
-			 * make_sort_from_pathkeys() function (optimizer/plan/createplan.c),
-			 * which decides whether a sort node is to be added.
-			*/
-			ListCell   *sortkeycell;
-
-			foreach(sortkeycell, innersortkeys)
-			{
-				PathKey	   *keysublist = (PathKey *) lfirst(sortkeycell);
-
-			    if (!CdbPathkeyEqualsConstant(keysublist))
-			    {
-			    	/* sort key is not a constant - sort will be added later */
-			    	need_sort = true;
-			    	break;
-			    }
-			}
-		}
-		// else: innersortkeys == NIL -> no sort node will be added
-
-		if (!need_sort)
-		{
-			/* no sort node will be added - add a materialize node */
-			inner_path = (Path *)
-							create_material_path(root, inner_path->parent, inner_path);
-		}
-	}
-
 	pathnode->jpath.path.pathtype = T_MergeJoin;
 	pathnode->jpath.path.parent = joinrel;
 	pathnode->jpath.jointype = jointype;
@@ -2631,6 +2574,7 @@ create_mergejoin_path(PlannerInfo *root,
 	pathnode->path_mergeclauses = mergeclauses;
 	pathnode->outersortkeys = outersortkeys;
 	pathnode->innersortkeys = innersortkeys;
+	/* pathnode->materialize_inner will be set by cost_mergejoin */
 
 	cost_mergejoin(pathnode, root, sjinfo);
 

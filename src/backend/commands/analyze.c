@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.139 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.143 2009/12/09 21:57:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -194,7 +194,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	int			save_nestlevel;
 	RowIndexes	**colLargeRowIndexes;
 
-	if (vacstmt->verbose)
+	if (vacstmt->options & VACOPT_VERBOSE)
 		elevel = INFO;
 	else
 		elevel = DEBUG2;
@@ -232,7 +232,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		  (pg_database_ownercheck(MyDatabaseId, GetUserId()) && !onerel->rd_rel->relisshared)))
 	{
 		/* No need for a WARNING if we already complained during VACUUM */
-		if (!vacstmt->vacuum)
+		if (!(vacstmt->options & VACOPT_VACUUM))
 		{
 			if (onerel->rd_rel->relisshared)
 				ereport(WARNING,
@@ -258,7 +258,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	if (onerel->rd_rel->relkind != RELKIND_RELATION || RelationIsExternal(onerel))
 	{
 		/* No need for a WARNING if we already complained during VACUUM */
-		if (!vacstmt->vacuum)
+		if (!(vacstmt->options & VACOPT_VACUUM))
 			ereport(WARNING,
 					(errmsg("skipping \"%s\" --- cannot analyze indexes, views, external tables, or special system tables",
 							RelationGetRelationName(onerel))));
@@ -452,7 +452,9 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * Acquire the sample rows
 	 */
 	numrows = acquire_sample_rows_by_query(onerel, attr_cnt, vacattrstats, &rows, targrows,
-										   &totalrows, &totaldeadrows, &totalpages, vacstmt->rootonly, colLargeRowIndexes);
+										   &totalrows, &totaldeadrows, &totalpages,
+										   (vacstmt->options & VACOPT_ROOTONLY) != 0,
+										   colLargeRowIndexes);
 
 	/*
 	 * Compute the statistics.	Temporary results during the calculations for
@@ -521,6 +523,11 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 				stats->stadistinct = 0.0;		/* "unknown" */
 			}
 			stats->rows = rows; // Reset to original rows
+
+			/* If attdistinct is set, override with that value */
+			if (stats->attr->attdistinct != 0)
+				stats->stadistinct = stats->attr->attdistinct;
+
 			MemoryContextResetAndDeleteChildren(col_context);
 		}
 
@@ -568,7 +575,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * VACUUM ANALYZE, don't overwrite the accurate count already inserted by
 	 * VACUUM.
 	 */
-	if (!vacstmt->vacuum)
+	if (!(vacstmt->options & VACOPT_VACUUM))
 	{
 		for (ind = 0; ind < nindexes; ind++)
 		{
@@ -623,7 +630,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	}
 
 	/* If this isn't part of VACUUM ANALYZE, let index AMs do cleanup */
-	if (!vacstmt->vacuum)
+	if (!(vacstmt->options & VACOPT_VACUUM))
 	{
 		for (ind = 0; ind < nindexes; ind++)
 		{
@@ -834,6 +841,9 @@ compute_index_stats(Relation onerel, double totalrows,
 										 ind_fetch_func,
 										 numindexrows,
 										 totalindexrows);
+				/* If attdistinct is set, override with that value */
+				if (stats->attr->attdistinct != 0)
+					stats->stadistinct = stats->attr->attdistinct;
 				MemoryContextResetAndDeleteChildren(col_context);
 			}
 		}

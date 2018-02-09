@@ -9,7 +9,8 @@
  * relation in the correct order.  For both UPDATE and DELETE queries,
  * we need a junk targetlist entry holding the CTID attribute --- the
  * executor relies on this to find the tuple to be replaced/deleted.
- * We may also need junk tlist entries for Vars used in the RETURNING list.
+ * We may also need junk tlist entries for Vars used in the RETURNING list
+ * and row ID information needed for EvalPlanQual checking.
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
@@ -18,7 +19,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.96 2009/04/19 19:46:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.98 2009/10/26 02:26:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +37,6 @@
 #include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
-#include "parser/analyze.h"
 #include "parser/parsetree.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
@@ -63,6 +63,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	int			result_relation = parse->resultRelation;
 	List	   *range_table = parse->rtable;
 	CmdType		command_type = parse->commandType;
+	ListCell   *lc;
 
 	/*
 	 * Sanity check: if there is a result relation, it'd better be a real
@@ -148,69 +149,63 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 		tlist = supplement_simply_updatable_targetlist(range_table, tlist);
 
 	/*
-	 * Add TID targets for rels selected FOR UPDATE/SHARE.	The executor uses
-	 * the TID to know which rows to lock, much as for UPDATE or DELETE.
+	 * Add necessary junk columns for rowmarked rels.  These values are
+	 * needed for locking of rels selected FOR UPDATE/SHARE, and to do
+	 * EvalPlanQual rechecking.  While we are at it, store these junk attnos
+	 * in the PlanRowMark list so that we don't have to redetermine them
+	 * at runtime.
 	 */
-	if (parse->rowMarks)
+	foreach(lc, root->rowMarks)
 	{
-		ListCell   *l;
+		PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+		Var		   *var;
+		char		resname[32];
+		TargetEntry *tle;
+		RangeTblEntry  *rte;
+		Relation    relation;
+		bool        isdistributed = false;
 
-		/*
-		 * We've got trouble if the FOR UPDATE/SHARE appears inside grouping,
-		 * since grouping renders a reference to individual tuple CTIDs
-		 * invalid.  This is also checked at parse time, but that's
-		 * insufficient because of rule substitution, query pullup, etc.
-		 */
-		CheckSelectLocking(parse);
-
-		/*
-		 * Currently the executor only supports FOR UPDATE/SHARE at top level
-		 */
-		if (root->query_level > 1)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("SELECT FOR UPDATE/SHARE is not allowed in subqueries")));
-
-		foreach(l, parse->rowMarks)
+		/* CDB: Don't try to fetch CTIDs for distributed relation. */
+		rte = rt_fetch(rc->rti, parse->rtable);
+		if (rte->rtekind == RTE_RELATION)
 		{
-			RowMarkClause *rc = (RowMarkClause *) lfirst(l);
-			Var		   *var;
-			char	   *resname;
-			TargetEntry *tle;
-            RangeTblEntry  *rte;
-            Relation    relation;
-            bool        isdistributed = false;
-
-            /* CDB: Don't try to fetch CTIDs for distributed relation. */
-            rte = rt_fetch(rc->rti, parse->rtable);
-            relation = heap_open(rte->relid, NoLock);
-            if (relation->rd_cdbpolicy &&
-                relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
-                isdistributed = true;
-            heap_close(relation, NoLock);
-            if (isdistributed)
-                continue;
-
-			/* ignore child rels */
-			if (rc->rti != rc->prti)
+			relation = heap_open(rte->relid, NoLock);
+			if (relation->rd_cdbpolicy &&
+				relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+				isdistributed = true;
+			heap_close(relation, NoLock);
+			if (isdistributed)
 				continue;
+		}
 
-			/* always need the ctid */
+		/* child rels should just use the same junk attrs as their parents */
+		if (rc->rti != rc->prti)
+		{
+			PlanRowMark *prc = get_plan_rowmark(root->rowMarks, rc->prti);
+
+			/* parent should have appeared earlier in list */
+			if (prc == NULL || prc->toidAttNo == InvalidAttrNumber)
+				elog(ERROR, "parent PlanRowMark not processed yet");
+			rc->ctidAttNo = prc->ctidAttNo;
+			rc->toidAttNo = prc->toidAttNo;
+			continue;
+		}
+
+		if (rc->markType != ROW_MARK_COPY)
+		{
+			/* It's a regular table, so fetch its TID */
 			var = makeVar(rc->rti,
 						  SelfItemPointerAttributeNumber,
 						  TIDOID,
 						  -1,
 						  0);
-
-			resname = (char *) palloc(32);
-			snprintf(resname, 32, "ctid%u", rc->rti);
-
+			snprintf(resname, sizeof(resname), "ctid%u", rc->rti);
 			tle = makeTargetEntry((Expr *) var,
 								  list_length(tlist) + 1,
-								  resname,
+								  pstrdup(resname),
 								  true);
-
 			tlist = lappend(tlist, tle);
+			rc->ctidAttNo = tle->resno;
 
 			/* if parent of inheritance tree, need the tableoid too */
 			if (rc->isParent)
@@ -220,17 +215,30 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 							  OIDOID,
 							  -1,
 							  0);
-
-				resname = (char *) palloc(32);
-				snprintf(resname, 32, "tableoid%u", rc->rti);
-
+				snprintf(resname, sizeof(resname), "tableoid%u", rc->rti);
 				tle = makeTargetEntry((Expr *) var,
 									  list_length(tlist) + 1,
-									  resname,
+									  pstrdup(resname),
 									  true);
-
 				tlist = lappend(tlist, tle);
+				rc->toidAttNo = tle->resno;
 			}
+		}
+		else
+		{
+			/* Not a table, so we need the whole row as a junk var */
+			var = makeVar(rc->rti,
+						  InvalidAttrNumber,
+						  RECORDOID,
+						  -1,
+						  0);
+			snprintf(resname, sizeof(resname), "wholerow%u", rc->rti);
+			tle = makeTargetEntry((Expr *) var,
+								  list_length(tlist) + 1,
+								  pstrdup(resname),
+								  true);
+			tlist = lappend(tlist, tle);
+			rc->wholeAttNo = tle->resno;
 		}
 	}
 
@@ -452,6 +460,27 @@ expand_targetlist(List *tlist, int command_type,
 	heap_close(rel, NoLock);
 
 	return new_tlist;
+}
+
+
+/*
+ * Locate PlanRowMark for given RT index, or return NULL if none
+ *
+ * This probably ought to be elsewhere, but there's no very good place
+ */
+PlanRowMark *
+get_plan_rowmark(List *rowmarks, Index rtindex)
+{
+	ListCell   *l;
+
+	foreach(l, rowmarks)
+	{
+		PlanRowMark *rc = (PlanRowMark *) lfirst(l);
+
+		if (rc->rti == rtindex)
+			return rc;
+	}
+	return NULL;
 }
 
 

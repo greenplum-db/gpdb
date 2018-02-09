@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.211 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.215 2009/12/09 21:57:51 tgl Exp $
  *
  * NOTES
  *	  some of the information in this file should be moved to other files.
@@ -489,6 +489,8 @@ typedef enum
 	CheckpointerProcess,
 	WalWriterProcess,
 	WalReceiverProcess,
+
+	NUM_AUXPROCTYPES			/* Must be last! */
 } AuxProcType;
 
 extern AuxProcType MyAuxProcType; /* bootstrap.c */

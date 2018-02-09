@@ -200,9 +200,9 @@ INFO:  Dispatch command to SINGLE content
 
 select * from direct_test_type_bytea where x = 'greenplum';
 INFO:  Dispatch command to SINGLE content
-     x     
------------
- greenplum
+          x           
+----------------------
+ \x677265656e706c756d
 (1 row)
 
 -- TODO: this currently not directly dispatched (AGL-1246)

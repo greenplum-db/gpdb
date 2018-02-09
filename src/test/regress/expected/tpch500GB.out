@@ -2673,7 +2673,7 @@ order by
                      Hash Key: c_orders.c_count
                      ->  HashAggregate  (cost=62485083.98..62485083.98 rows=500 width=16)
                            Group By: c_orders.c_count
-                           ->  Subquery Scan c_orders  (cost=60283360.43..62117711.50 rows=36737248 width=8)
+                           ->  Subquery Scan on c_orders  (cost=60283360.43..62117711.50 rows=36737248 width=8)
                                  ->  HashAggregate  (cost=60283360.43..61382966.54 rows=36737248 width=12)
                                        Group By: customer.c_custkey
                                        ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=52476943.84..59000068.09 rows=36737248 width=12)
@@ -2785,7 +2785,7 @@ order by
            ->  Aggregate  (cost=59636709.51..59636709.52 rows=1 width=32)
                  ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=59636709.31..59636709.49 rows=1 width=32)
                        ->  Aggregate  (cost=59636709.31..59636709.32 rows=1 width=32)
-                             ->  Subquery Scan revenue0  (cost=59632274.91..59636265.87 rows=88688 width=32)
+                             ->  Subquery Scan on revenue0  (cost=59632274.91..59636265.87 rows=88688 width=32)
                                    ->  HashAggregate  (cost=59632274.91..59634492.11 rows=88688 width=36)
                                          Group By: tpch500gb.lineitem.l_suppkey
                                          ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=59625179.87..59629614.27 rows=88688 width=36)
@@ -2798,7 +2798,7 @@ order by
                Hash Cond: supplier.s_suppkey = revenue0.supplier_no
                ->  Seq Scan on supplier  (cost=0.00..76994.20 rows=2459260 width=71)
                ->  Hash  (cost=59894142.46..59894142.46 rows=88688 width=36)
-                     ->  Subquery Scan revenue0  (cost=59889264.62..59894142.46 rows=88688 width=36)
+                     ->  Subquery Scan on revenue0  (cost=59889264.62..59894142.46 rows=88688 width=36)
                            ->  HashAggregate  (cost=59889264.62..59892368.70 rows=88688 width=36)
                                  Filter: sum(partial_aggregation.unnamed_attr_2) = $0
                                  Group By: tpch500gb.lineitem.l_suppkey
@@ -2868,7 +2868,7 @@ order by
                            Hash Key: part.p_brand, part.p_type, part.p_size
                            ->  HashAggregate  (cost=13114180.91..13771259.51 rows=26283144 width=120)
                                  Group By: part.p_brand, part.p_type, part.p_size, partsupp.ps_suppkey
-                                 ->  Hash Left Anti Semi Join (Not-In)  (cost=3248727.04..12457102.30 rows=26283145 width=40)
+                                 ->  Hash Left Anti Semi (Not-In) Join  (cost=3248727.04..12457102.30 rows=26283145 width=40)
                                        Hash Cond: partsupp.ps_suppkey = "NotIn_SUBQUERY".s_suppkey
                                        ->  Hash Join  (cost=3158498.68..11708857.42 rows=26283150 width=40)
                                              Hash Cond: partsupp.ps_partkey = part.p_partkey
@@ -2879,7 +2879,7 @@ order by
                                                          Filter: p_brand <> 'Brand#15'::bpchar AND p_type::text !~~ 'LARGE BRUSHED%'::text AND (p_size = ANY ('{4,41,17,9,15,2,25,34}'::integer[]))
                                        ->  Hash  (cost=89734.75..89734.75 rows=19745 width=4)
                                              ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..89734.75 rows=19745 width=4)
-                                                   ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..89315.18 rows=1235 width=4)
+                                                   ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=0.00..89315.18 rows=1235 width=4)
                                                          ->  Seq Scan on supplier  (cost=0.00..89290.50 rows=1235 width=4)
                                                                Filter: s_comment::text ~~ '%Customer%Complaints%'::text
  Settings:  enable_mergejoin=on; enable_nestloop=on; gp_enable_agg_distinct=off; gp_segments_for_planner=16; gp_selectivity_damping_for_joins=off; gp_selectivity_damping_for_scans=off

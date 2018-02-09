@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.25 2009/06/11 14:49:07 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.26 2009/10/05 19:24:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,8 +23,8 @@ static const char *modulename = gettext_noop("sorter");
  * Objects are sorted by priority levels, and within an equal priority level
  * by OID.	(This is a relatively crude hack to provide semi-reasonable
  * behavior for old databases without full dependency info.)  Note: text
- * search and foreign-data objects can't really happen here, so the rather
- * bogus priorities for them don't matter.
+ * search, foreign-data, and default ACL objects can't really happen here,
+ * so the rather bogus priorities for them don't matter.
  */
 static const int oldObjectTypePriority[] =
 {
@@ -55,6 +55,7 @@ static const int oldObjectTypePriority[] =
 	5,							/* DO_TSCONFIG */
 	3,							/* DO_FDW */
 	4,							/* DO_FOREIGN_SERVER */
+	17,							/* DO_DEFAULT_ACL */
 	10,							/* DO_BLOBS */
 	11,							/* DO_BLOB_COMMENTS */
 	3,							/* DO_EXTPROTOCOL */
@@ -94,6 +95,7 @@ static const int newObjectTypePriority[] =
 	13,							/* DO_TSCONFIG */
 	14,							/* DO_FDW */
 	15,							/* DO_FOREIGN_SERVER */
+	27,							/* DO_DEFAULT_ACL */
 	20,							/* DO_BLOBS */
 	21,							/* DO_BLOB_COMMENTS */
 	/* GPDB_84_MERGE_FIXME: Are these priorities sensible? */
@@ -1158,6 +1160,11 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 		case DO_FOREIGN_SERVER:
 			snprintf(buf, bufsize,
 					 "FOREIGN SERVER %s  (ID %d OID %u)",
+					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
+		case DO_DEFAULT_ACL:
+			snprintf(buf, bufsize,
+					 "DEFAULT ACL %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
 		case DO_BLOBS:

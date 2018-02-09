@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.40 2009/06/11 14:48:58 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.44 2009/12/15 17:57:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,6 +68,9 @@ exprType(Node *expr)
 			break;
 		case T_FuncExpr:
 			type = ((FuncExpr *) expr)->funcresulttype;
+			break;
+		case T_NamedArgExpr:
+			type = exprType((Node *) ((NamedArgExpr *) expr)->arg);
 			break;
 		case T_OpExpr:
 			type = ((OpExpr *) expr)->opresulttype;
@@ -294,6 +297,8 @@ exprTypmod(Node *expr)
 					return coercedTypmod;
 			}
 			break;
+		case T_NamedArgExpr:
+			return exprTypmod((Node *) ((NamedArgExpr *) expr)->arg);
 		case T_SubLink:
 			{
 				SubLink    *sublink = (SubLink *) expr;
@@ -711,6 +716,15 @@ exprLocation(Node *expr)
 								  exprLocation((Node *) fexpr->args));
 			}
 			break;
+		case T_NamedArgExpr:
+			{
+				NamedArgExpr *na = (NamedArgExpr *) expr;
+
+				/* consider both argument name and value */
+				loc = leftmostLoc(na->location,
+								  exprLocation((Node *) na->arg));
+			}
+			break;
 		case T_OpExpr:
 		case T_DistinctExpr:	/* struct-equivalent to OpExpr */
 		case T_NullIfExpr:		/* struct-equivalent to OpExpr */
@@ -907,6 +921,7 @@ exprLocation(Node *expr)
 				FuncCall   *fc = (FuncCall *) expr;
 
 				/* consider both function name and leftmost arg */
+				/* (we assume any ORDER BY nodes must be to right of name) */
 				loc = leftmostLoc(fc->location,
 								  exprLocation((Node *) fc->args));
 			}
@@ -942,6 +957,9 @@ exprLocation(Node *expr)
 		case T_FunctionParameter:
 			/* just use typename's location */
 			loc = exprLocation((Node *) ((const FunctionParameter *) expr)->argType);
+			break;
+		case T_Constraint:
+			loc = ((Constraint *) expr)->location;
 			break;
 		case T_XmlSerialize:
 			/* XMLSERIALIZE keyword should always be the first thing */
@@ -1106,6 +1124,7 @@ expression_tree_walker(Node *node,
 		case T_SetToDefault:
 		case T_CurrentOfExpr:
 		case T_RangeTblRef:
+		case T_SortGroupClause:
 		case T_DMLActionExpr:
 		case T_PartSelectedExpr:
 		case T_PartDefaultExpr:
@@ -1128,6 +1147,9 @@ expression_tree_walker(Node *node,
 										   walker, context))
 					return true;
 				if (expression_tree_walker((Node *) expr->aggorder,
+										   walker, context))
+					return true;
+				if (expression_tree_walker((Node *) expr->aggdistinct,
 										   walker, context))
 					return true;
 				if (walker((Node *) expr->aggfilter, context))
@@ -1174,6 +1196,8 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
+		case T_NamedArgExpr:
+			return walker(((NamedArgExpr *) node)->arg, context);
 		case T_OpExpr:
 			{
 				OpExpr	   *expr = (OpExpr *) node;
@@ -1413,7 +1437,6 @@ expression_tree_walker(Node *node,
 			break;
 		case T_Grouping:
 		case T_GroupId:
-		case T_SortGroupClause: /* occurs in WindowClause lists */
 			{
 				/* do nothing */
 			}
@@ -1766,6 +1789,17 @@ expression_tree_mutator(Node *node,
 				return (Node *) newnode;
 			}
 			break;
+		case T_WindowFunc:
+			{
+				WindowFunc *wfunc = (WindowFunc *) node;
+				WindowFunc *newnode;
+
+				FLATCOPY(newnode, wfunc, WindowFunc);
+				MUTATE(newnode->args, wfunc->args, List *);
+				MUTATE(newnode->aggfilter, wfunc->aggfilter, Expr *);
+				return (Node *) newnode;
+			}
+			break;
 		case T_ArrayRef:
 			{
 				ArrayRef   *arrayref = (ArrayRef *) node;
@@ -1802,6 +1836,16 @@ expression_tree_mutator(Node *node,
 
 				/* The subquery already pulled up into the T_TableFunctionScan node */
 				newnode->subquery = (Node *) NULL;
+				return (Node *) newnode;
+			}
+			break;
+		case T_NamedArgExpr:
+			{
+				NamedArgExpr *nexpr = (NamedArgExpr *) node;
+				NamedArgExpr *newnode;
+
+				FLATCOPY(newnode, nexpr, NamedArgExpr);
+				MUTATE(newnode->arg, nexpr->arg, Expr *);
 				return (Node *) newnode;
 			}
 			break;
@@ -2206,17 +2250,6 @@ expression_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_WindowFunc:
-			{
-				WindowFunc *wfunc = (WindowFunc *) node;
-				WindowFunc *newnode;
-
-				FLATCOPY(newnode, wfunc, WindowFunc);
-				MUTATE(newnode->args, wfunc->args, List *);
-				MUTATE(newnode->aggfilter, wfunc->aggfilter, Expr *);
-				return (Node *) newnode;
-			}
-			break;
 		case T_GroupingFunc:
 			{
 				GroupingFunc *newnode;
@@ -2650,11 +2683,17 @@ bool
 
 				if (walker(fcall->args, context))
 					return true;
+				if (walker(fcall->agg_order, context))
+					return true;
 				if (walker(fcall->agg_filter, context))
+					return true;
+				if (walker(fcall->over, context))
 					return true;
 				/* function name is deemed uninteresting */
 			}
 			break;
+		case T_NamedArgExpr:
+			return walker(((NamedArgExpr *) node)->arg, context);
 		case T_A_Indices:
 			{
 				A_Indices  *indices = (A_Indices *) node;

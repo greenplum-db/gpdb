@@ -132,14 +132,6 @@ ExecEndBitmapTableScan(BitmapTableScanState *node)
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
-/* Returns the number of slots needed for this operator */
-int
-ExecCountSlotsBitmapTableScan(BitmapTableScan *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPTABLESCAN_NSLOTS;
-}
-
 /* Eagerly free memory held for scanning */
 void
 ExecEagerFreeBitmapTableScan(BitmapTableScanState *node)

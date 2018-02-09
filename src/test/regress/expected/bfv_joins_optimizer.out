@@ -625,7 +625,7 @@ explain select 1 as mrs_t1 where 1 <= ALL (select x from z);
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
  Result  (cost=0.00..882688.07 rows=1 width=4)
-   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=0.00..882688.07 rows=1 width=1)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=0.00..882688.07 rows=1 width=1)
          Join Filter: true
          ->  Result  (cost=0.00..0.00 rows=1 width=1)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=1)

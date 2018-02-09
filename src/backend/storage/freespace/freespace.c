@@ -307,7 +307,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
 	}
 
 	/* Truncate the unused FSM pages */
-	smgrtruncate(rel->rd_smgr, FSM_FORKNUM, new_nfsmblocks, rel->rd_istemp);
+	smgrtruncate(rel->rd_smgr, FSM_FORKNUM, new_nfsmblocks, rel->rd_isLocalBuf);
 
 	/*
 	 * Need to invalidate the relcache entry, because rd_fsm_nblocks seen by

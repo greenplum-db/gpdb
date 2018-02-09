@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/pg_standby/pg_standby.c,v 1.26 2009/06/25 19:33:25 tgl Exp $
+ * $PostgreSQL: pgsql/contrib/pg_standby/pg_standby.c,v 1.27 2009/11/04 12:51:30 heikki Exp $
  *
  *
  * pg_standby.c
@@ -564,6 +564,22 @@ main(int argc, char **argv)
 {
 	int			c;
 
+	progname = get_progname(argv[0]);
+
+	if (argc > 1)
+	{
+		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+		{
+			usage();
+			exit(0);
+		}
+		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+		{
+			puts("pg_standby (PostgreSQL) " PG_VERSION);
+			exit(0);
+		}
+	}
+
 #ifndef WIN32
 	/*
 	 * You can send SIGUSR1 to trigger failover.
@@ -572,15 +588,15 @@ main(int argc, char **argv)
 	 * action is to core dump, but we don't want that, so trap it and
 	 * commit suicide without core dump.
 	 *
-	 * We used to use SIGINT and SIGQUIT to trigger failover, but that
-	 * turned out to be a bad idea because postmaster uses SIGQUIT to
-	 * request immediate shutdown. We still trap SIGINT, but that may
-	 * change in a future release.
+	 * We used to use SIGINT and SIGQUIT to trigger failover, but that turned
+	 * out to be a bad idea because postmaster uses SIGQUIT to request
+	 * immediate shutdown. We still trap SIGINT, but that may change in a
+	 * future release.
 	 *
 	 * There's no way to trigger failover via signal on Windows.
 	 */
 	(void) signal(SIGUSR1, sighandler);
-	(void) signal(SIGINT, sighandler); /* deprecated, use SIGUSR1 */
+	(void) signal(SIGINT, sighandler);	/* deprecated, use SIGUSR1 */
 	(void) signal(SIGQUIT, sigquit_handler);
 #endif
 
@@ -754,9 +770,8 @@ main(int argc, char **argv)
 	 */
 	for (;;)
 	{
-		if (sleeptime <= 60)
-			pg_usleep(sleeptime * 1000000L);
-
+		/* Check for trigger file or signal first */
+		CheckForExternalTrigger();
 #ifndef WIN32
 		if (signaled)
 		{
@@ -767,8 +782,16 @@ main(int argc, char **argv)
 				fflush(stderr);
 			}
 		}
-		else
 #endif
+
+		/*
+		 * Check for fast failover immediately, before checking if the
+		 * requested WAL file is available
+		 */
+		if (Failover == FastFailover)
+			exit(1);
+
+		if (CustomizableNextWALFileReady())
 		{
 			/*
 			 * Once we have restored this file successfully we can remove some

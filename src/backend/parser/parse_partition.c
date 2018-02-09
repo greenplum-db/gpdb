@@ -26,7 +26,6 @@
 #include "optimizer/clauses.h"
 #include "optimizer/walkers.h"
 #include "parser/analyze.h"
-#include "parser/gramparse.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_node.h"
@@ -296,7 +295,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 				if (lookup_opclass)
 				{
-					typeid = column->typeName->typid;
+					typeid = column->typeName->typeOid;
 
 					if (!OidIsValid(typeid))
 					{
@@ -304,7 +303,7 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 						typeid = typenameTypeId(pstate, column->typeName, &typmod);
 
-						column->typeName->typid = typeid;
+						column->typeName->typeOid = typeid;
 						column->typeName->typemod = typmod;
 					}
 				}
@@ -699,15 +698,10 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 				if (pConstraint)
 				{
-					StringInfoData sid;
 					Constraint *pCon = makeNode(Constraint);
 
-					initStringInfo(&sid);
-
-					appendStringInfo(&sid, "%s_%s", relname, "check");
-
 					pCon->contype = CONSTR_CHECK;
-					pCon->name = sid.data;
+					pCon->conname = psprintf("%s_check", relname);
 					pCon->raw_expr = pConstraint;
 					pCon->cooked_expr = NULL;
 					pCon->indexspace = NULL;
@@ -2592,9 +2586,9 @@ preprocess_range_spec(partValidationState *vstate)
 			if (strcmp(column->colname, colname) == 0)
 			{
 				found = true;
-				if (!OidIsValid(column->typeName->typid))
+				if (!OidIsValid(column->typeName->typeOid))
 				{
-					column->typeName->typid =
+					column->typeName->typeOid =
 						typenameTypeId(vstate->pstate, column->typeName,
 									   &column->typeName->typemod);
 				}
@@ -2741,13 +2735,13 @@ preprocess_range_spec(partValidationState *vstate)
 						Oid			newrtypeId;
 
 						/* first, make sure we can build up an operator */
-						optup = oper(pstate, opname, typ->typid, rtypeId,
+						optup = oper(pstate, opname, typ->typeOid, rtypeId,
 									 true, -1);
 						if (!HeapTupleIsValid(optup))
 							ereport(ERROR,
 									(errcode(ERRCODE_SYNTAX_ERROR),
 									 errmsg("could not identify operator for partitioning operation between type \"%s\" and type \"%s\"",
-											format_type_be(typ->typid),
+											format_type_be(typ->typeOid),
 											format_type_be(rtypeId)),
 									 errhint("Add an explicit cast to the partitioning parameters")));
 
@@ -4262,9 +4256,9 @@ validate_list_partition(partValidationState *vstate)
 			if (strcmp(column->colname, colname) == 0)
 			{
 				found = true;
-				if (!OidIsValid(column->typeName->typid))
+				if (!OidIsValid(column->typeName->typeOid))
 				{
-					column->typeName->typid
+					column->typeName->typeOid
 						= typenameTypeId(vstate->pstate, column->typeName,
 										 &column->typeName->typemod);
 				}
@@ -4653,7 +4647,7 @@ coerce_partition_value(Node *node, Oid typid, int32 typmod,
 
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("cannot coerce %s partition parameter %s to column type (%s)",
+				 errmsg("cannot coerce %s partition parameter %sto column type (%s)",
 						(partype == PARTTYP_LIST) ? "LIST" : "RANGE",
 						sid.data,
 						format_type_be(typid))));

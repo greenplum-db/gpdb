@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.107 2009/06/11 14:49:07 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.108 2009/10/05 19:24:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -106,6 +106,7 @@ getSchemaData(int *numTablesPtr)
 	int			numTSConfigs;
 	int			numForeignDataWrappers;
 	int			numForeignServers;
+	int			numDefaultACLs;
 
 	/*
 	 * We must read extensions and extension membership info first, because
@@ -205,6 +206,10 @@ getSchemaData(int *numTablesPtr)
 	if (g_verbose)
 		write_msg(NULL, "reading user-defined foreign servers\n");
 	getForeignServers(&numForeignServers);
+
+	if (g_verbose)
+		write_msg(NULL, "reading default privileges\n");
+	getDefaultACLs(&numDefaultACLs);
 
 	if (g_verbose)
 		write_msg(NULL, "reading user-defined conversions\n");

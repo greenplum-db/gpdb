@@ -5,6 +5,38 @@
 
 #include "../nodeSubplan.c"
 
+/*
+ * These functions are defined in explain_gp.c, which in turn is included
+ * from explain.c. Since the mocker.py utility has trouble mocking this
+ * structure, we include the relevant functions we need here instead.
+ */
+void cdbexplain_localExecStats(struct PlanState *planstate,
+						  struct CdbExplain_ShowStatCtx *showstatctx)
+{
+	check_expected(planstate);
+	check_expected(showstatctx);
+	mock();
+}
+
+void
+cdbexplain_recvExecStats(struct PlanState *planstate,
+						 struct CdbDispatchResults *dispatchResults,
+						 int sliceIndex,
+						 struct CdbExplain_ShowStatCtx *showstatctx)
+{
+	check_expected(planstate);
+	check_expected(dispatchResults);
+	check_expected(sliceIndex);
+	check_expected(showstatctx);
+	mock();
+}
+
+void
+cdbexplain_sendExecStats(QueryDesc *queryDesc)
+{
+	mock();
+}
+
 /* Function passed to testing framework
  * in order to force SetupInterconnect to fail */ 
 void

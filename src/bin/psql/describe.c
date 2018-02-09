@@ -935,7 +935,7 @@ listDefaultACLs(const char *pattern)
 	initPQExpBuffer(&buf);
 
 	printfPQExpBuffer(&buf,
-			   "SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS \"%s\",\n"
+					  "SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS \"%s\",\n"
 					  "  n.nspname AS \"%s\",\n"
 					  "  CASE d.defaclobjtype WHEN 'r' THEN '%s' WHEN 'S' THEN '%s' WHEN 'f' THEN '%s' END AS \"%s\",\n"
 					  "  ",
@@ -949,7 +949,7 @@ listDefaultACLs(const char *pattern)
 	printACLColumn(&buf, "d.defaclacl");
 
 	appendPQExpBuffer(&buf, "\nFROM pg_catalog.pg_default_acl d\n"
-					  "     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace\n");
+	   "     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace\n");
 
 	processSQLNamePattern(pset.db, &buf, pattern, false, false,
 						  NULL,
@@ -1275,7 +1275,7 @@ describeOneTableDetails(const char *schemaname,
 	char	  **ptr;
 	PQExpBufferData title;
 	PQExpBufferData tmpbuf;
-	int			cols = 0;
+	int			cols;
 	int			numrows = 0;
 	bool isGE42 = isGPDB4200OrLater();
 	struct
@@ -1287,6 +1287,7 @@ describeOneTableDetails(const char *schemaname,
 		bool		hasrules;
 		bool		hastriggers;
 		bool		hasoids;
+		bool		hasexclusion;
 		Oid			tablespace;
 		char	   *reloptions;
 		char	   *reloftype;
@@ -1743,7 +1744,7 @@ describeOneTableDetails(const char *schemaname,
 			appendPQExpBuffer(&buf,
 						"  false AS condeferrable, false AS condeferred,\n");
 		appendPQExpBuffer(&buf, "  a.amname, c2.relname, "
-					  "pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)\n"
+						  "pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)\n"
 						  "FROM pg_catalog.pg_index i, pg_catalog.pg_class c, pg_catalog.pg_class c2, pg_catalog.pg_am a\n"
 		  "WHERE i.indexrelid = c.oid AND c.oid = '%s' AND c.relam = a.oid\n"
 						  "AND i.indrelid = c2.oid",
@@ -2201,6 +2202,12 @@ describeOneTableDetails(const char *schemaname,
 
 					if (strcmp(PQgetvalue(result, i, 4), "t") != 0)
 						appendPQExpBuffer(&buf, " INVALID");
+
+					if (strcmp(PQgetvalue(result, i, 6), "t") == 0)
+						appendPQExpBuffer(&buf, " DEFERRABLE");
+
+					if (strcmp(PQgetvalue(result, i, 7), "t") == 0)
+						appendPQExpBuffer(&buf, " INITIALLY DEFERRED");
 
 					printTableAddFooter(&cont, buf.data);
 
@@ -3075,13 +3082,15 @@ add_role_attribute(PQExpBuffer buf, const char *const str)
 bool
 listDbRoleSettings(const char *pattern, const char *pattern2)
 {
-	PQExpBufferData buf;
-	PGresult   *res;
+	PQExpBufferData	buf;
+	PGresult	   *res;
 	printQueryOpt myopt = pset.popt;
 
 	initPQExpBuffer(&buf);
 
-	if (pset.sversion >= 90000)
+	// GPDB_90_MERGE_FIXME: change this to '90000' once we bump the version
+	// number
+	if (pset.sversion >= 80500)
 	{
 		/* ACHOI: havewhere is false */
 		bool		havewhere = false;
@@ -3102,7 +3111,7 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 	else
 	{
 		fprintf(pset.queryFout,
-		_("No per-database role settings support in this server version.\n"));
+				_("No per-database role settings support in this server version.\n"));
 		return false;
 	}
 
@@ -3130,6 +3139,7 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 	resetPQExpBuffer(&buf);
 	return true;
 }
+
 
 /*
  * listTables()

@@ -3596,8 +3596,8 @@ PQunescapeBytea(const unsigned char *strtext, size_t *retbuflen)
 		p = buffer;
 		while (*s)
 		{
-			char		v1,
-						v2;
+			char	v1,
+					v2;
 
 			/*
 			 * Bad input is silently ignored.  Note that this includes

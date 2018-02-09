@@ -487,6 +487,10 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 			case T_Append:
 				/* no change to dispatchInfo --> just iterate children */
 				break;
+			case T_LockRows:
+			case T_ModifyTable:
+				/* no change to dispatchInfo --> just iterate children */
+				break;
 			case T_BitmapAnd:
 			case T_BitmapOr:
 				/* no change to dispatchInfo --> just iterate children */

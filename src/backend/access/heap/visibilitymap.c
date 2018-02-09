@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/visibilitymap.c,v 1.5 2009/06/18 10:08:08 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/visibilitymap.c,v 1.6 2009/08/24 02:18:31 tgl Exp $
  *
  * INTERFACE ROUTINES
  *		visibilitymap_clear - clear a bit in the visibility map
@@ -364,7 +364,7 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
 	}
 
 	smgrtruncate(rel->rd_smgr, VISIBILITYMAP_FORKNUM, newnblocks,
-				 rel->rd_istemp);
+				 rel->rd_isLocalBuf);
 
 	/*
 	 * Need to invalidate the relcache entry, because rd_vm_nblocks seen by

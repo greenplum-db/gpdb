@@ -35,17 +35,6 @@ partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selec
 /* PartitionSelector Slots */
 #define PARTITIONSELECTOR_NSLOTS 1
 
-/* Return number of TupleTableSlots used by nodePartitionSelector.*/
-int
-ExecCountSlotsPartitionSelector(PartitionSelector *node)
-{
-	if (NULL != outerPlan(node))
-	{
-		return ExecCountSlotsNode(outerPlan(node)) + PARTITIONSELECTOR_NSLOTS;
-	}
-	return PARTITIONSELECTOR_NSLOTS;
-}
-
 void
 initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {

@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.389 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.398 2009/12/09 21:57:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -70,7 +70,6 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
-#include "utils/flatfiles.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/inval.h"
@@ -135,7 +134,7 @@ typedef VacPageListData *VacPageList;
  * Note: because t_ctid links can be stale (this would only occur if a prior
  * VACUUM crashed partway through), it is possible that new_tid points to an
  * empty slot or unrelated tuple.  We have to check the linkage as we follow
- * it, just as is done in EvalPlanQual.
+ * it, just as is done in EvalPlanQualFetch.
  */
 typedef struct VTupleLinkData
 {
@@ -367,7 +366,7 @@ void
 vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	   BufferAccessStrategy bstrategy, bool for_wraparound, bool isTopLevel)
 {
-	const char *stmttype = vacstmt->vacuum ? "VACUUM" : "ANALYZE";
+	const char *stmttype;
 	volatile MemoryContext anl_context = NULL;
 	volatile bool all_rels,
 				in_outer_xact,
@@ -375,12 +374,21 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	List	   *vacuum_relations;
 	List	   *analyze_relations;
 
-	if (vacstmt->vacuum && vacstmt->rootonly)
+	if ((vacstmt->options & VACOPT_VACUUM) &&
+		(vacstmt->options & VACOPT_ROOTONLY))
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("ROOTPARTITION option cannot be used together with VACUUM, try ANALYZE ROOTPARTITION")));
 
-	if (vacstmt->verbose)
+	/* sanity checks on options */
+	Assert(vacstmt->options & (VACOPT_VACUUM | VACOPT_ANALYZE));
+	Assert((vacstmt->options & VACOPT_VACUUM) ||
+		   !(vacstmt->options & (VACOPT_FULL | VACOPT_FREEZE)));
+	Assert((vacstmt->options & VACOPT_ANALYZE) || vacstmt->va_cols == NIL);
+
+	stmttype = (vacstmt->options & VACOPT_VACUUM) ? "VACUUM" : "ANALYZE";
+
+	if (vacstmt->options & VACOPT_VERBOSE)
 		elevel = INFO;
 	else
 		elevel = DEBUG2;
@@ -402,7 +410,7 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	 *
 	 * ANALYZE (without VACUUM) can run either way.
 	 */
-	if (vacstmt->vacuum)
+	if (vacstmt->options & VACOPT_VACUUM)
 	{
 		if (Gp_role == GP_ROLE_DISPATCH)
 			PreventTransactionChain(isTopLevel, stmttype);
@@ -415,7 +423,7 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	 * Send info about dead objects to the statistics collector, unless we are
 	 * in autovacuum --- autovacuum.c does this for itself.
 	 */
-	if (vacstmt->vacuum && !IsAutoVacuumWorkerProcess())
+	if ((vacstmt->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
 		pgstat_vacuum_stat();
 
 	/*
@@ -459,9 +467,9 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	 * contain all the OIDs of partition of a partitioned table except midlevel
 	 * partition unless GUC optimizer_analyze_midlevel_partition is set to on.
 	 */
-	if (vacstmt->vacuum)
+	if (vacstmt->options & VACOPT_VACUUM)
 		vacuum_relations = get_rel_oids(relid, vacstmt, stmttype);
-	if (vacstmt->analyze)
+	if (vacstmt->options & VACOPT_ANALYZE)
 		analyze_relations = get_rel_oids(relid, vacstmt, stmttype);
 
 	/*
@@ -478,11 +486,11 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	 * transaction block, and also in an autovacuum worker, use own
 	 * transactions so we can release locks sooner.
 	 */
-	if (vacstmt->vacuum)
+	if (vacstmt->options & VACOPT_VACUUM)
 		use_own_xacts = true;
 	else
 	{
-		Assert(vacstmt->analyze);
+		Assert(vacstmt->options & VACOPT_ANALYZE);
 		if (IsAutoVacuumWorkerProcess())
 			use_own_xacts = true;
 		else if (in_outer_xact)
@@ -539,7 +547,7 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 			vacstmt->appendonly_relation_empty = false;
 		}
 
-		if (vacstmt->vacuum)
+		if (vacstmt->options & VACOPT_VACUUM)
 		{
 			/*
 			 * Loop to process each selected relation which needs to be
@@ -553,14 +561,14 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 			}
 		}
 
-		if (vacstmt->analyze)
+		if (vacstmt->options & VACOPT_ANALYZE)
 		{
 			/*
 			 * If there are no partition tables in the database and ANALYZE
 			 * ROOTPARTITION ALL is executed, report a WARNING as no root
 			 * partitions are there to be analyzed
 			 */
-			if (vacstmt->rootonly && NIL == analyze_relations && !vacstmt->relation)
+			if ((vacstmt->options & VACOPT_ROOTONLY) && NIL == analyze_relations && !vacstmt->relation)
 			{
 				ereport(NOTICE,
 						(errmsg("there are no partitioned tables in database to ANALYZE ROOTPARTITION")));
@@ -626,7 +634,7 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 		StartTransactionCommand();
 	}
 
-	if (vacstmt->vacuum && !IsAutoVacuumWorkerProcess())
+	if ((vacstmt->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
 	{
 		/*
 		 * Update pg_database.datfrozenxid, and truncate pg_clog if possible.
@@ -963,8 +971,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	VacuumStatsContext stats_context;
 
 	vacstmt = copyObject(vacstmt);
-	vacstmt->analyze = false;
-	vacstmt->vacuum = true;
+	/* VACUUM, without ANALYZE */
+	vacstmt->options &= ~VACOPT_ANALYZE;
+	vacstmt->options |= VACOPT_VACUUM;
+	vacstmt->va_cols = NIL;		/* A plain VACUUM cannot list columns */
 
 	/*
 	 * We compact segment file by segment file.
@@ -1036,7 +1046,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 */
 		PushActiveSnapshot(GetTransactionSnapshot());
 
-		if (!vacstmt->full)
+		if (!(vacstmt->options & VACOPT_FULL))
 		{
 			/*
 			 * PostgreSQL does this:
@@ -1136,7 +1146,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 				 * to perform truncate is segment-local and QD cannot tell if
 				 * everyone can skip it.
 				 */
-				if (vacstmt->full)
+				if (vacstmt->options & VACOPT_FULL)
 				{
 					Assert(relationRound == 0 || relationRound == 1);
 					if (relationRound == 0)
@@ -1225,7 +1235,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 				 * If VACUUM FULL and in cleanup phase, perform two-step for
 				 * aux relations.
 				 */
-				if (vacstmt->full &&
+				if ((vacstmt->options & VACOPT_FULL) &&
 					vacstmt->appendonly_compaction_vacuum_cleanup)
 				{
 					if (truncatePhase)
@@ -1286,7 +1296,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			dispatchVacuum(vacstmt, &stats_context);
 		}
 
-		if (vacstmt->full)
+		if (vacstmt->options & VACOPT_FULL)
 			lmode = AccessExclusiveLock;
 		else if (RelationIsAoRows(onerel) || RelationIsAoCols(onerel))
 			lmode = AccessShareLock;
@@ -1352,10 +1362,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 					vsubtype = "AUTO";
 				else
 				{
-					if (vacstmt->full &&
+					if ((vacstmt->options & VACOPT_FULL) &&
 						(0 == vacstmt->freeze_min_age))
 						vsubtype = "FULL FREEZE";
-					else if (vacstmt->full)
+					else if ((vacstmt->options & VACOPT_FULL))
 						vsubtype = "FULL";
 					else if (0 == vacstmt->freeze_min_age)
 						vsubtype = "FREEZE";
@@ -1490,7 +1500,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 			relationOid = RangeVarGetRelid(vacstmt->relation, false);
 			PartStatus ps = rel_part_status(relationOid);
 
-			if (ps != PART_STATUS_ROOT && vacstmt->rootonly)
+			if (ps != PART_STATUS_ROOT && (vacstmt->options & VACOPT_ROOTONLY))
 			{
 				ereport(WARNING,
 						(errmsg("skipping \"%s\" --- cannot analyze a non-root partition using ANALYZE ROOTPARTITION",
@@ -1501,7 +1511,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 				PartitionNode *pn = get_parts(relationOid, 0 /*level*/ ,
 											  0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
 				Assert(pn);
-				if (!vacstmt->rootonly)
+				if (!(vacstmt->options & VACOPT_ROOTONLY))
 				{
 					oid_list = all_leaf_partition_relids(pn); /* all leaves */
 
@@ -1571,7 +1581,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 			candidateOid = HeapTupleGetOid(tuple);
 
 			/* Skip non root partition tables if ANALYZE ROOTPARTITION ALL is executed */
-			if (vacstmt->rootonly && !rel_is_partitioned(candidateOid))
+			if ((vacstmt->options & VACOPT_ROOTONLY) && !rel_is_partitioned(candidateOid))
 			{
 				continue;
 			}
@@ -1908,13 +1918,19 @@ vac_update_relstats(Relation relation,
 		 relid, pgcform->relpages, pgcform->reltuples);
 	/*
 	 * If we have discovered that there are no indexes, then there's no
-	 * primary key either.	This could be done more thoroughly...
+	 * primary key either, nor any exclusion constraints.  This could be done
+	 * more thoroughly...
 	 */
 	if (!hasindex)
 	{
 		if (pgcform->relhaspkey)
 		{
 			pgcform->relhaspkey = false;
+			dirty = true;
+		}
+		if (pgcform->relhasexclusion && pgcform->relkind != RELKIND_INDEX)
+		{
+			pgcform->relhasexclusion = false;
 			dirty = true;
 		}
 	}
@@ -2046,14 +2062,12 @@ vac_update_datfrozenxid(void)
 	heap_close(relation, RowExclusiveLock);
 
 	/*
-	 * If we were able to advance datfrozenxid, mark the flat-file copy of
-	 * pg_database for update at commit, and see if we can truncate pg_clog.
+	 * If we were able to advance datfrozenxid, see if we can truncate pg_clog.
+	 * Also do it if the shared XID-wrap-limit info is stale, since this
+	 * action will update that too.
 	 */
-	if (dirty)
-	{
-		database_file_update_needed();
+	if (dirty || ForceTransactionIdLimitUpdate())
 		vac_truncate_clog(newFrozenXid);
-	}
 }
 
 
@@ -2078,11 +2092,11 @@ vac_truncate_clog(TransactionId frozenXID)
 	Relation	relation;
 	HeapScanDesc scan;
 	HeapTuple	tuple;
-	NameData	oldest_datname;
+	Oid			oldest_datoid;
 	bool		frozenAlreadyWrapped = false;
 
-	/* init oldest_datname to sync with my frozenXID */
-	namestrcpy(&oldest_datname, get_database_name(MyDatabaseId));
+	/* init oldest_datoid to sync with my frozenXID */
+	oldest_datoid = MyDatabaseId;
 
 	/*
 	 * Scan pg_database to compute the minimum datfrozenxid
@@ -2117,7 +2131,7 @@ vac_truncate_clog(TransactionId frozenXID)
 			else if (TransactionIdPrecedes(dbform->datfrozenxid, frozenXID))
 			{
 				frozenXID = dbform->datfrozenxid;
-				namecpy(&oldest_datname, &dbform->datname);
+				oldest_datoid = HeapTupleGetOid(tuple);
 			}
 		}
 	}
@@ -2148,7 +2162,7 @@ vac_truncate_clog(TransactionId frozenXID)
 	 * Update the wrap limit for GetNewTransactionId.  Note: this function
 	 * will also signal the postmaster for an(other) autovac cycle if needed.
 	 */
-	SetTransactionIdLimit(frozenXID, &oldest_datname);
+	SetTransactionIdLimit(frozenXID, oldest_datoid);
 }
 
 
@@ -2217,7 +2231,7 @@ vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_s
 	/*
 	 * Do the actual work --- either FULL or "lazy" vacuum
 	 */
-	if (vacstmt->full)
+	if (vacstmt->options & VACOPT_FULL)
 		heldoff = full_vacuum_rel(onerel, vacstmt, updated_stats);
 	else
 		heldoff = lazy_vacuum_rel(onerel, vacstmt, vac_strategy, updated_stats);
@@ -2390,7 +2404,7 @@ static bool vacuum_appendonly_index_should_vacuum(Relation aoRelation,
 
 	pfree(totals);
 
-	if(hidden_tupcount > 0 || vacstmt->full)
+	if(hidden_tupcount > 0 || (vacstmt->options & VACOPT_FULL))
 	{
 		return true;
 	}
@@ -2430,7 +2444,7 @@ vacuum_appendonly_indexes(Relation aoRelation,
 			RelationGetRelationName(aoRelation));
 
 	/* Now open all indexes of the relation */
-	if (vacstmt->full)
+	if ((vacstmt->options & VACOPT_FULL))
 		vac_open_indexes(aoRelation, AccessExclusiveLock, &nindexes, &Irel);
 	else
 		vac_open_indexes(aoRelation, RowExclusiveLock, &nindexes, &Irel);
@@ -2473,7 +2487,7 @@ vacuum_appendonly_indexes(Relation aoRelation,
 			for (i = 0; i < nindexes; i++)
 			{
 				vacuum_appendonly_index(Irel[i], &vacuumIndexState, updated_stats,
-						rel_tuple_count, vacstmt->full);
+										rel_tuple_count, (vacstmt->options & VACOPT_FULL));
 			}
 			reindex_count++;
 		}
@@ -2481,7 +2495,7 @@ vacuum_appendonly_indexes(Relation aoRelation,
 		{
 			/* just scan indexes to update statistic */
 			for (i = 0; i < nindexes; i++)
-				scan_index(Irel[i], rel_tuple_count, updated_stats, vacstmt->full, true);
+				scan_index(Irel[i], rel_tuple_count, updated_stats, (vacstmt->options & VACOPT_FULL), true);
 		}
 	}
 
@@ -2552,7 +2566,7 @@ vacuum_heap_rel(Relation onerel, VacuumStmt *vacstmt,
 	save_disable_tuple_hints = gp_disable_tuple_hints;
 	PG_TRY();
 	{
-		if (vacstmt->full)
+		if ((vacstmt->options & VACOPT_FULL))
 			gp_disable_tuple_hints = false;
 
 		if (vacstmt->heap_truncate)
@@ -2749,8 +2763,10 @@ full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 						FreezeLimit, updated_stats);
 
 		/* report results to the stats collector, too */
-		pgstat_report_vacuum(RelationGetRelid(onerel), onerel->rd_rel->relisshared,
-						 vacstmt->analyze, vacrelstats->rel_tuples);
+		pgstat_report_vacuum(RelationGetRelid(onerel),
+							 onerel->rd_rel->relisshared,
+							 (vacstmt->options & VACOPT_ANALYZE) != 0,
+							 vacrelstats->rel_tuples);
 	}
 
 	pfree(vacrelstats);
@@ -5428,8 +5444,8 @@ dispatchVacuum(VacuumStmt *vacstmt, VacuumStatsContext *ctx)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(vacstmt);
-	Assert(vacstmt->vacuum);
-	Assert(!vacstmt->analyze);
+	Assert(vacstmt->options & VACOPT_VACUUM);
+	Assert(!(vacstmt->options & VACOPT_ANALYZE));
 
 	/* XXX: Some kinds of VACUUM assign a new relfilenode. bitmap indexes maybe? */
 	CdbDispatchUtilityStatement((Node *) vacstmt,
@@ -5477,7 +5493,7 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	 * upgrade it.
 	 */
 
-	if (isDropTransaction && !vacstmt->full)
+	if (isDropTransaction && !(vacstmt->options & VACOPT_FULL))
 	{
 		MyProc->inDropTransaction = true;
 		SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
@@ -5501,10 +5517,10 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 		lmode = AccessExclusiveLock;
 		dontWait = true;
 	}
-	else if (!vacstmt->vacuum)
+	else if (!(vacstmt->options & VACOPT_VACUUM))
 		lmode = ShareUpdateExclusiveLock;
 	else
-		lmode = vacstmt->full ? AccessExclusiveLock : ShareUpdateExclusiveLock;
+		lmode = (vacstmt->options & VACOPT_FULL) ? AccessExclusiveLock : ShareUpdateExclusiveLock;
 
 	/*
 	 * Open the relation and get the appropriate lock on it.
@@ -5579,7 +5595,7 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	/*
 	 * We can ANALYZE any table except pg_statistic. See update_attstats
 	 */
-	if (vacstmt->analyze && RelationGetRelid(onerel) == StatisticRelationId)
+	if ((vacstmt->options & VACOPT_ANALYZE) && RelationGetRelid(onerel) == StatisticRelationId)
 	{
 		relation_close(onerel, ShareUpdateExclusiveLock);
 		return NULL;

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/toasting.h,v 1.8 2009/06/11 20:46:11 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/toasting.h,v 1.10 2009/11/20 20:38:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,17 +48,18 @@ DECLARE_TOAST(pg_description, 2834, 2835);
 DECLARE_TOAST(pg_proc, 2836, 2837);
 DECLARE_TOAST(pg_rewrite, 2838, 2839);
 DECLARE_TOAST(pg_statistic, 2840, 2841);
+DECLARE_TOAST(pg_trigger, 2336, 2337);
 
 /* shared catalogs */
-DECLARE_TOAST(pg_authid, 2842, 2843);
-#define PgAuthidToastTable 2842
-#define PgAuthidToastIndex 2843
 DECLARE_TOAST(pg_database, 2844, 2845);
 #define PgDatabaseToastTable 2844
 #define PgDatabaseToastIndex 2845
 DECLARE_TOAST(pg_shdescription, 2846, 2847);
 #define PgShdescriptionToastTable 2846
 #define PgShdescriptionToastIndex 2847
+DECLARE_TOAST(pg_db_role_setting, 2966, 2967);
+#define PgDbRoleSettingToastTable 2966
+#define PgDbRoleSettingToastIndex 2967
 
 /* relation id: 5036 - gp_segment_configuration 20101122 */
 DECLARE_TOAST(gp_segment_configuration, 6092, 6093);

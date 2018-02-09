@@ -501,9 +501,9 @@ SELECT xpath('//loc:piece', '<local:data xmlns:local="http://127.0.0.1"><local:p
 SELECT xpath('//loc:piece', '<local:data xmlns:local="http://127.0.0.1" xmlns="http://127.0.0.2"><local:piece id="1"><internal>number one</internal><internal2/></local:piece><local:piece id="2" /></local:data>', ARRAY[ARRAY['loc', 'http://127.0.0.1']]);
                                         xpath                                         
 --------------------------------------------------------------------------------------
- {"<local:piece xmlns:local=\"http://127.0.0.1\" xmlns=\"http://127.0.0.2\" id=\"1\"> 
-   <internal>number one</internal>                                                    
-   <internal2/>                                                                       
+ {"<local:piece xmlns:local=\"http://127.0.0.1\" xmlns=\"http://127.0.0.2\" id=\"1\">+
+   <internal>number one</internal>                                                   +
+   <internal2/>                                                                      +
  </local:piece>","<local:piece xmlns:local=\"http://127.0.0.1\" id=\"2\"/>"}
 (1 row)
 

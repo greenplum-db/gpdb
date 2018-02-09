@@ -34,15 +34,15 @@ $$ LANGUAGE plpgsql VOLATILE;
 -- Query that runs the function on an additional non-QD master slice
 -- Include the EXPLAIN to ensure that this happens in the plan.
 EXPLAIN SELECT * FROM func1_nosql_vol(5), foo;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.30..1.37 rows=4 width=12)
-   ->  Nested Loop  (cost=0.30..1.37 rows=2 width=12)
-         ->  Seq Scan on foo  (cost=0.00..1.01 rows=1 width=8)
-         ->  Materialize  (cost=0.30..0.33 rows=1 width=4)
-               ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..0.30 rows=3 width=4)
-                     ->  Function Scan on func1_nosql_vol  (cost=0.00..0.26 rows=1 width=4)
- Settings:  optimizer=on
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.25..1.38 rows=4 width=12)
+   ->  Nested Loop  (cost=0.25..1.38 rows=2 width=12)
+         ->  Broadcast Motion 1:3  (slice1)  (cost=0.25..0.30 rows=3 width=4)
+               ->  Function Scan on func1_nosql_vol  (cost=0.25..0.26 rows=1 width=4)
+         ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
+               ->  Seq Scan on foo  (cost=0.00..1.01 rows=1 width=8)
+ Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (8 rows)
 

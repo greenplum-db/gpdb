@@ -1010,11 +1010,11 @@ SELECT pg_get_viewdef('my_view'::regclass);
 SELECT pg_get_viewdef('my_view'::regclass, true);
                 pg_get_viewdef                
 ----------------------------------------------
-  WITH my_sum(total) AS (                     
-          SELECT sum(with_test1.value) AS sum 
-            FROM with_test1                   
-         )                                    
-  SELECT my_sum.total                         
+  WITH my_sum(total) AS (                    +
+          SELECT sum(with_test1.value) AS sum+
+            FROM with_test1                  +
+         )                                   +
+  SELECT my_sum.total                        +
     FROM my_sum;
 (1 row)
 
@@ -1034,16 +1034,16 @@ SELECT pg_get_viewdef('my_view'::regclass);
 SELECT pg_get_viewdef('my_view'::regclass, true);
                     pg_get_viewdef                    
 ------------------------------------------------------
-  WITH my_sum(total) AS (                             
-          WITH my_group_sum(total) AS (               
-                  SELECT sum(with_test1.value) AS sum 
-                    FROM with_test1                   
-                   GROUP BY with_test1.i              
-                 )                                    
-          SELECT sum(my_group_sum.total) AS sum       
-            FROM my_group_sum                         
-         )                                            
-  SELECT my_sum.total                                 
+  WITH my_sum(total) AS (                            +
+          WITH my_group_sum(total) AS (              +
+                  SELECT sum(with_test1.value) AS sum+
+                    FROM with_test1                  +
+                   GROUP BY with_test1.i             +
+                 )                                   +
+          SELECT sum(my_group_sum.total) AS sum      +
+            FROM my_group_sum                        +
+         )                                           +
+  SELECT my_sum.total                                +
     FROM my_sum;
 (1 row)
 

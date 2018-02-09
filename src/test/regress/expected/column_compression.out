@@ -1955,34 +1955,34 @@ NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p1_2_prt_sp2" for table
 select pg_get_partition_def('ccddl'::regclass, true);
                                          pg_get_partition_def                                          
 -------------------------------------------------------------------------------------------------------
- PARTITION BY RANGE(i)                                                                                 
-           SUBPARTITION BY RANGE(j)                                                                    
-           (                                                                                           
-           PARTITION p1 START (1) END (2) WITH (appendonly=true, orientation=column)                   
-                     COLUMN i ENCODING (compresstype=none, blocksize=32768, compresslevel=0)           
-                     COLUMN j ENCODING (compresstype=none, blocksize=32768, compresslevel=0)           
-                   (                                                                                   
-                   SUBPARTITION sp1 START (1) END (2) WITH (appendonly=true, orientation=column)       
-                             COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)   
-                             COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0),  
-                   SUBPARTITION sp2 START (2) END (3) WITH (appendonly=true, orientation=column)       
-                             COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)   
-                             COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0)   
-                   )                                                                                   
+ PARTITION BY RANGE(i)                                                                                +
+           SUBPARTITION BY RANGE(j)                                                                   +
+           (                                                                                          +
+           PARTITION p1 START (1) END (2) WITH (appendonly=true, orientation=column)                  +
+                     COLUMN i ENCODING (compresstype=none, blocksize=32768, compresslevel=0)          +
+                     COLUMN j ENCODING (compresstype=none, blocksize=32768, compresslevel=0)          +
+                   (                                                                                  +
+                   SUBPARTITION sp1 START (1) END (2) WITH (appendonly=true, orientation=column)      +
+                             COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)  +
+                             COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0), +
+                   SUBPARTITION sp2 START (2) END (3) WITH (appendonly=true, orientation=column)      +
+                             COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)  +
+                             COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0)  +
+                   )                                                                                  +
            )
 (1 row)
 
 select pg_get_partition_template_def('ccddl'::regclass, true, false);
                             pg_get_partition_template_def                            
 -------------------------------------------------------------------------------------
- ALTER TABLE ccddl                                                                   
- SET SUBPARTITION TEMPLATE                                                           
-           (                                                                         
-           SUBPARTITION sp1 START (1) END (2),                                       
-           SUBPARTITION sp2 START (2) END (3),                                       
-           COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768),  
-           COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0)   
-           )                                                                         
+ ALTER TABLE ccddl                                                                  +
+ SET SUBPARTITION TEMPLATE                                                          +
+           (                                                                        +
+           SUBPARTITION sp1 START (1) END (2),                                      +
+           SUBPARTITION sp2 START (2) END (3),                                      +
+           COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768), +
+           COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0)  +
+           )                                                                        +
  
 (1 row)
 

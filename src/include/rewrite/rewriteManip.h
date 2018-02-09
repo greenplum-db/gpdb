@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/rewrite/rewriteManip.h,v 1.50 2009/06/11 14:49:12 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/rewrite/rewriteManip.h,v 1.51 2009/09/02 17:52:24 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,8 +18,10 @@
 
 
 typedef struct replace_rte_variables_context replace_rte_variables_context;
+
 typedef Node * (*replace_rte_variables_callback) (Var *var,
-													replace_rte_variables_context *context);
+									replace_rte_variables_context *context);
+
 struct replace_rte_variables_context
 {
 	replace_rte_variables_callback callback;	/* callback function */
@@ -57,12 +59,12 @@ extern int	locate_windowfunc(Node *node);
 extern bool checkExprHasSubLink(Node *node);
 
 extern Node *replace_rte_variables(Node *node,
-								   int target_varno, int sublevels_up,
-								   replace_rte_variables_callback callback,
-								   void *callback_arg,
-								   bool *outer_hasSubLinks);
+					  int target_varno, int sublevels_up,
+					  replace_rte_variables_callback callback,
+					  void *callback_arg,
+					  bool *outer_hasSubLinks);
 extern Node *replace_rte_variables_mutator(Node *node,
-											replace_rte_variables_context *context);
+							  replace_rte_variables_context *context);
 
 extern Node *map_variable_attnos(Node *node,
 					int target_varno, int sublevels_up,

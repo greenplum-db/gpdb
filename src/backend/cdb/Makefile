@@ -22,7 +22,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbdistributedxid.o cdbdistributedxacts.o \
 	   cdbdoublylinked.o \
 	   cdbdtxcontextinfo.o \
-	   cdbexplain.o \
 	   cdbfts.o \
 	   cdbgroup.o \
 	   cdbhash.o cdbheap.o \

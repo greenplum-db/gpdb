@@ -21,7 +21,10 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-majorversion=`echo $(PG_VERSION) | sed -e 's/^\([0-9]*\)\.\([0-9]*\).*/\1\2/g'`
+# GPDB_90_MERGE_FIXME: Force majorversion to 9.0. Revert this once we bump the
+# version number from 8.5devel to 9.0devel.
+majorversion=90
+#majorversion=`echo $(PG_VERSION) | sed -e 's/^\([0-9]*\)\.\([0-9]*\).*/\1\2/g'`
 
 xlogdump_oid2name.o: oid2name.txt
 

@@ -356,17 +356,17 @@ smgrnblocks(SMgrRelation reln, ForkNumber forknum)
  */
 void
 smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
-			 bool isTemp)
+			 bool isLocalBuf)
 {
 	/*
 	 * Get rid of any buffers for the about-to-be-deleted blocks. bufmgr will
 	 * just drop them without bothering to write the contents.
 	 */
-	DropRelFileNodeBuffers(reln->smgr_rnode, forknum, isTemp, nblocks);
+	DropRelFileNodeBuffers(reln->smgr_rnode, forknum, isLocalBuf, nblocks);
 
 	/* Do the truncation */
 	// GPDB_84_MERGE_FIXME: is allowedNotFound = false correct here?
-	mdtruncate(reln, forknum, nblocks, isTemp, false /* allowedNotFound */);
+	mdtruncate(reln, forknum, nblocks, isLocalBuf, false /* allowedNotFound */);
 }
 
 /*

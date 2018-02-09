@@ -83,12 +83,14 @@
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_default_acl.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
+#include "catalog/pg_largeobject_metadata.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -209,6 +211,15 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 				Form_pg_database datForm = (Form_pg_database) GETSTRUCT(tuple);
 
 				key.objname = (char *) NameStr(datForm->datname);
+				break;
+			}
+		case DefaultAclRelationId:
+			{
+				Form_pg_default_acl daclForm = (Form_pg_default_acl) GETSTRUCT(tuple);
+
+				key.keyOid1 = daclForm->defaclrole;
+				key.namespaceOid = daclForm->defaclnamespace;
+				key.keyOid2 = (Oid) daclForm->defaclobjtype;
 				break;
 			}
 		case EnumRelationId:
@@ -410,6 +421,16 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 		case PartitionRuleRelationId:
 			*exempt = true;
 			 break;
+
+		/*
+		 * Large objects don't work very consistently in GPDB. They are not
+		 * distributed in the segments, but rather stored in the master node.
+		 * Or actually, it depends on which node the lo_create() function
+		 * happens to run, which isn't very deterministic.
+		 */
+		case LargeObjectMetadataRelationId:
+			*exempt = true;
+			break;
 
 		 /*
 		  * These objects need to have their OIDs synchronized, but there is bespoken

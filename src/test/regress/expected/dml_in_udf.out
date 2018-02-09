@@ -171,11 +171,11 @@ $$ LANGUAGE 'plpgsql';
 CREATE TABLE dml_plperl_t2(i int) distributed by (i);
 SELECT dml_plperl_fn2(1,10);
 ERROR:  relation "errorhandlingtmptable" does not exist
-LINE 1: INSERT INTO errorhandlingtmpTABLE VALUES ('fjdk')
-                    ^
-QUERY:  INSERT INTO errorhandlingtmpTABLE VALUES ('fjdk')
+LINE 1: INSERT INTO  errorhandlingtmpTABLE VALUES ('fjdk')
+                     ^
+QUERY:  INSERT INTO  errorhandlingtmpTABLE VALUES ('fjdk')
 CONTEXT:  PL/pgSQL function "insert_wrong" line 2 at SQL statement
-SQL statement "SELECT  insert_wrong()"
+SQL statement "SELECT insert_wrong()"
 PL/pgSQL function "dml_plperl_fn2" line 6 at PERFORM
 SELECT COUNT(*) FROM dml_plperl_t2;
  count 

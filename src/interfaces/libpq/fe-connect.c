@@ -1836,9 +1836,9 @@ keep_going:						/* We will come back to here until there is
 					 * We have three methods of blocking SIGPIPE during
 					 * send() calls to this socket:
 					 *
-					 *	- setsockopt(sock, SO_NOSIGPIPE)
-					 *	- send(sock, ..., MSG_NOSIGNAL)
-					 *	- setting the signal mask to SIG_IGN during send()
+					 *  - setsockopt(sock, SO_NOSIGPIPE)
+					 *  - send(sock, ..., MSG_NOSIGNAL)
+					 *  - setting the signal mask to SIG_IGN during send()
 					 *
 					 * The third method requires three syscalls per send,
 					 * so we prefer either of the first two, but they are
@@ -1860,7 +1860,7 @@ keep_going:						/* We will come back to here until there is
 					conn->sigpipe_flag = true;
 #else
 					conn->sigpipe_flag = false;
-#endif   /* MSG_NOSIGNAL */
+#endif /* MSG_NOSIGNAL */
 
 #ifdef SO_NOSIGPIPE
 					optval = 1;
@@ -1870,7 +1870,7 @@ keep_going:						/* We will come back to here until there is
 						conn->sigpipe_so = true;
 						conn->sigpipe_flag = false;
 					}
-#endif   /* SO_NOSIGPIPE */
+#endif /* SO_NOSIGPIPE */
 
 					/*
 					 * Start/make connection.  This should not block, since we
@@ -1929,7 +1929,7 @@ keep_going:						/* We will come back to here until there is
 
 		case CONNECTION_STARTED:
 			{
-				socklen_t optlen = sizeof(optval);
+				ACCEPT_TYPE_ARG3 optlen = sizeof(optval);
 
 				/*
 				 * Write ready, since we've made it here, so the connection
@@ -2668,7 +2668,7 @@ keep_going:						/* We will come back to here until there is
 		default:
 			appendPQExpBuffer(&conn->errorMessage,
 							  libpq_gettext("invalid connection state %d, "
-							   "probably indicative of memory corruption\n"),
+								 "probably indicative of memory corruption\n"),
 							  conn->status);
 			goto error_return;
 	}
@@ -4125,18 +4125,18 @@ parseServiceFile(const char *serviceFile,
 				}
 #endif
 
-				key = line;
-				val = strchr(line, '=');
-				if (val == NULL)
-				{
-					printfPQExpBuffer(errorMessage,
-									  libpq_gettext("syntax error in service file \"%s\", line %d\n"),
-									  serviceFile,
-									  linenr);
-					fclose(f);
-					return 3;
-				}
-				*val++ = '\0';
+					key = line;
+					val = strchr(line, '=');
+					if (val == NULL)
+					{
+						printfPQExpBuffer(errorMessage,
+										  libpq_gettext("syntax error in service file \"%s\", line %d\n"),
+										  serviceFile,
+										  linenr);
+						fclose(f);
+						return 3;
+					}
+					*val++ = '\0';
 
 				/*
 				 * Set the parameter --- but don't override any previous

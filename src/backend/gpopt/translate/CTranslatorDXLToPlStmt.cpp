@@ -2929,10 +2929,6 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 	Plan *pplan = &(pappend->plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 
-	CDXLPhysicalAppend *pdxlopAppend = CDXLPhysicalAppend::PdxlopConvert(pdxlnAppend->Pdxlop());
-
-	pappend->isTarget = pdxlopAppend->FIsTarget();
-
 	// translate operator costs
 	TranslatePlanCosts
 		(

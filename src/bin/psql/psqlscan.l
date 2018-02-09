@@ -197,6 +197,7 @@ static void escape_variable(bool as_ident);
 %x xdolq
 %x xui
 %x xus
+%x xeu
 /* Additional exclusive states for psql only: lex backslash commands */
 %x xslashcmd
 %x xslasharg

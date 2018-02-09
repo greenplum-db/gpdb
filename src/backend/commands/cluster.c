@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.186 2009/06/11 20:46:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.188 2009/10/05 19:24:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -779,6 +779,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 										  RelationGetNamespace(OldHeap),
 										  NewTableSpace,
 										  InvalidOid,
+										  InvalidOid,
 										  OldHeap->rd_rel->relowner,
 										  tupdesc,
 										  NIL,
@@ -791,6 +792,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 										  ONCOMMIT_NOOP,
                                           NULL,                         /*CDB*/
 										  reloptions,
+										  false,
 										  allowSystemTableModsDDL,
 										  /* valid_opts */ true);
 

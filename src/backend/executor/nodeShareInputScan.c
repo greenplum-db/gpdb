@@ -48,17 +48,8 @@ typedef struct ShareInput_Lk_Context
 	char lkname_done[MAXPGPATH];
 } ShareInput_Lk_Context;
 
-static TupleTableSlot *ShareInputNext(ShareInputScanState *node);
 static void writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice);
 
-/* ------------------------------------------------------------------
- * 	ExecShareInputScan 
- * ------------------------------------------------------------------
- */
-TupleTableSlot *ExecShareInputScan(ShareInputScanState *node)
-{
-	return ExecScan(&node->ss, (ExecScanAccessMtd) ShareInputNext);
-}
 
 /*
  * init_tuplestore_state
@@ -144,12 +135,12 @@ init_tuplestore_state(ShareInputScanState *node)
 
 
 /* ------------------------------------------------------------------
- * ShareInputNext
+ * 	ExecShareInputScan
  * 	Retrieve a tuple from the ShareInputScan
  * ------------------------------------------------------------------
  */
-TupleTableSlot * 
-ShareInputNext(ShareInputScanState *node)
+TupleTableSlot *
+ExecShareInputScan(ShareInputScanState *node)
 {
 	EState *estate;
 	ScanDirection dir;
@@ -300,18 +291,6 @@ ExecSliceDependencyShareInputScan(ShareInputScanState *node)
 		node->share_lk_ctxt = shareinput_reader_waitready(sisc->share_id,
 			estate->es_plannedstmt->planGen);
 	}
-}
-
-/* ------------------------------------------------------------------
- * 	ExecCountSlotsShareInputScan 
- * ------------------------------------------------------------------
- */
-int 
-ExecCountSlotsShareInputScan(ShareInputScan* node)
-{
-#define SHAREINPUT_NSLOTS 2
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) 
-		+ SHAREINPUT_NSLOTS;
 }
 
 /* ------------------------------------------------------------------

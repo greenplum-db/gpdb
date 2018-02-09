@@ -115,8 +115,8 @@ select checkpoint_and_wait_for_replication_replay(200);
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);
                 pg_ctl                
 --------------------------------------
- waiting for server to shut down done 
- server stopped                       
+ waiting for server to shut down done+
+ server stopped                      +
  
 (1 row)
 
@@ -140,7 +140,7 @@ select move_xlog((select datadir || '/pg_xlog' from gp_segment_configuration c w
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
      pg_ctl      
 -----------------
- server starting 
+ server starting+
  
 (1 row)
 

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/analyze.h,v 1.40 2009/01/01 17:24:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/analyze.h,v 1.43 2009/10/28 14:55:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,7 +21,10 @@ extern Query *parse_analyze(Node *parseTree, const char *sourceText,
 			  Oid *paramTypes, int numParams);
 extern Query *parse_analyze_varparams(Node *parseTree, const char *sourceText,
 						Oid **paramTypes, int *numParams);
-extern Query *parse_sub_analyze(Node *parseTree, ParseState *parentParseState);
+
+extern Query *parse_sub_analyze(Node *parseTree, ParseState *parentParseState,
+								CommonTableExpr *parentCTE,
+								LockingClause *lockclause_from_parent);
 
 extern List *analyzeCreateSchemaStmt(CreateSchemaStmt *stmt);
 
@@ -31,7 +34,7 @@ extern bool analyze_requires_snapshot(Node *parseTree);
 
 extern void CheckSelectLocking(Query *qry);
 extern void applyLockingClause(Query *qry, Index rtindex,
-				   bool forUpdate, bool noWait);
+				   bool forUpdate, bool noWait, bool pushedDown);
 
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct

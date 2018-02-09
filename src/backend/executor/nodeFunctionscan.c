@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.52 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.54 2009/10/26 02:26:30 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -121,23 +121,31 @@ FunctionNext(FunctionScanState *node)
 	return slot;
 }
 
+/*
+ * FunctionRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+static bool
+FunctionRecheck(FunctionScanState *node, TupleTableSlot *slot)
+{
+	/* nothing to check */
+	return true;
+}
+
 /* ----------------------------------------------------------------
  *		ExecFunctionScan(node)
  *
  *		Scans the function sequentially and returns the next qualifying
  *		tuple.
- *		It calls the ExecScan() routine and passes it the access method
- *		which retrieves tuples sequentially.
- *
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
+ * ----------------------------------------------------------------
  */
-
 TupleTableSlot *
 ExecFunctionScan(FunctionScanState *node)
 {
-	/*
-	 * use FunctionNext as access method
-	 */
-	return ExecScan(&node->ss, (ExecScanAccessMtd) FunctionNext);
+	return ExecScan(&node->ss,
+					(ExecScanAccessMtd) FunctionNext,
+					(ExecScanRecheckMtd) FunctionRecheck);
 }
 
 /* ----------------------------------------------------------------
@@ -175,8 +183,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	 * create expression context for node
 	 */
 	ExecAssignExprContext(estate, &scanstate->ss.ps);
-
-#define FUNCTIONSCAN_NSLOTS 2
 
 	/*
 	 * tuple table initialization
@@ -271,14 +277,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	return scanstate;
 }
 
-int
-ExecCountSlotsFunctionScan(FunctionScan *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		FUNCTIONSCAN_NSLOTS;
-}
-
 /*
  * ExecFunctionScanExplainEnd
  *      Called before ExecutorEnd to finish EXPLAIN ANALYZE reporting.
@@ -292,7 +290,6 @@ ExecFunctionScanExplainEnd(PlanState *planstate, struct StringInfoData *buf __at
 {
 	ExecEagerFreeFunctionScan((FunctionScanState *) planstate);
 }                               /* ExecFunctionScanExplainEnd */
-
 
 /* ----------------------------------------------------------------
  *		ExecEndFunctionScan
@@ -329,7 +326,8 @@ void
 ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 {
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
-	/*node->ss.ps.ps_TupFromTlist = false;*/
+
+	ExecScanReScan(&node->ss);
 
 	/*
 	 * If we haven't materialized yet, just return.

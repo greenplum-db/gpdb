@@ -7882,7 +7882,7 @@ explain select n from ( select row_number() over () from (values (0)) as t(x) ) 
 -------------------------------------------------------------------------------
  HashAggregate  (cost=0.03..0.04 rows=1 width=8)
    Group By: r.n
-   ->  Subquery Scan r  (cost=0.00..0.02 rows=2 width=8)
+   ->  Subquery Scan on r  (cost=0.00..0.02 rows=2 width=8)
          ->  Window  (cost=0.00..0.01 rows=1 width=0)
                ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=1 width=0)
 (6 rows)

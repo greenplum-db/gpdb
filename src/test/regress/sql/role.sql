@@ -2,57 +2,57 @@
 -- ROLE
 --
 
--- MPP-15479: ALTER ROLE SET statement
-DROP ROLE IF EXISTS role_112911;
-CREATE ROLE role_112911 WITH LOGIN;
+--
+-- Test setting roles per-user and per user in a database.
+--
+-- This also covers an old bug with dispatching GUCs with units in ALTER ROLE
+-- statement (MPP-15479).
+--
+set client_min_messages to warning; -- suppress 'role does not exist' notices
+DROP ROLE IF EXISTS role_setting_test_1;
+DROP ROLE IF EXISTS role_setting_test_2;
+DROP ROLE IF EXISTS role_setting_test_3;
+DROP ROLE IF EXISTS role_setting_test_4;
+DROP ROLE IF EXISTS role_setting_test_5;
+DROP ROLE IF EXISTS role_setting_test_6;
+reset client_min_messages;
+CREATE ROLE role_setting_test_1 NOLOGIN;
+CREATE ROLE role_setting_test_2 NOLOGIN;
+CREATE ROLE role_setting_test_3 NOLOGIN;
+CREATE ROLE role_setting_test_4 NOLOGIN;
+CREATE ROLE role_setting_test_5 NOLOGIN;
+CREATE ROLE role_setting_test_6 NOLOGIN;
 CREATE SCHEMA common_schema;
 
-/* Alter Role Set statement_mem */
-ALTER ROLE role_112911 SET statement_mem TO '150MB';
-SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM pg_authid WHERE rolname = 'role_112911'
- UNION ALL
-SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
+/* Alter Role Set, with a GUC with units (statement_mem) and not (search_path) */
+ALTER ROLE role_setting_test_1 SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_1 SET search_path = common_schema;
+ALTER ROLE role_setting_test_2 IN DATABASE regression SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_2 IN DATABASE regression SET search_path = common_schema;
 
-/* Alter Role Set search_path */
-ALTER ROLE role_112911 SET search_path = common_schema;
-SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM pg_authid WHERE rolname = 'role_112911'
- UNION ALL
-SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
+/* Alter Role Reset */
+ALTER ROLE role_setting_test_3 SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_3 IN DATABASE regression SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_3 SET search_path = common_schema;
+ALTER ROLE role_setting_test_3 IN DATABASE regression SET search_path = common_schema;
 
-/* Alter Role Reset statement_mem */
-ALTER ROLE role_112911 RESET statement_mem;
-SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM pg_authid WHERE rolname = 'role_112911'
- UNION ALL
-SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
-
-/* Alter Role Set statement_mem */
-ALTER ROLE role_112911 SET statement_mem = 100000;
-SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM pg_authid WHERE rolname = 'role_112911'
- UNION ALL
-SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
+ALTER ROLE role_setting_test_3 RESET statement_mem;
+ALTER ROLE role_setting_test_3 IN DATABASE regression RESET search_path;
 
 /* Alter Role Reset All */
-ALTER ROLE role_112911 RESET ALL;
-SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM pg_authid WHERE rolname = 'role_112911'
- UNION ALL
-SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
-  FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
+ALTER ROLE role_setting_test_5 SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_5 IN DATABASE regression SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_6 SET statement_mem TO '150MB';
+ALTER ROLE role_setting_test_6 IN DATABASE regression SET statement_mem TO '150MB';
 
--- Set search_path to a non-existent schema. This used to (incorrectly)
--- print a NOTICE from each segment. (MPP-3068)
-alter role role_112911 set search_path to blahblah1;
+ALTER ROLE role_setting_test_5 RESET ALL;
+ALTER ROLE role_setting_test_6 IN DATABASE regression RESET ALL;
 
-DROP ROLE role_112911;
-DROP SCHEMA common_schema;
+\drds role_setting_test_*
+
+-- Note: Don't drop the test roles, so that they get tested with pg_dump/restore, too,
+-- if you dump the regression database.
+
 
 -- SHA-256 testing
 set password_hash_algorithm to "SHA-256";

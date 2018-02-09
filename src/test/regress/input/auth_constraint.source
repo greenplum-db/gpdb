@@ -325,6 +325,7 @@ drop role abc;
 create role abc superuser;
 SET allow_system_table_mods = dml;
 insert into pg_auth_time_constraint (select oid, 1, '00:00:00', 1, '24:00:00' from pg_authid where rolname = 'abc');
+SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
 DROP ROLE abc;
 RESET allow_system_table_mods;
 

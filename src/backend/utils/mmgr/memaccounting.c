@@ -548,26 +548,31 @@ MemoryAccounting_SaveToLog()
 }
 
 /*
- * Get string output of the current Optimizer Memory account. This is used only in
+ * Get memory information of the current Optimizer Memory account for EXPLAIN
  */
-void
-MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(StringInfoData *str)
+MemoryAccountExplain *
+MemoryAccounting_ExplainCurrentOptimizerAccountInfo(void)
 {
+	MemoryAccountIdType		shortLivingCount = shortLivingMemoryAccountArray->accountCount;
+	MemoryAccountIdType		shortLivingArrayIdx;
+	MemoryAccountExplain   *exp = NULL;
 
-	MemoryAccountIdType shortLivingCount = shortLivingMemoryAccountArray->accountCount;
-
-	for (MemoryAccountIdType shortLivingArrayIdx = 0; shortLivingArrayIdx < shortLivingCount; ++shortLivingArrayIdx)
+	for (shortLivingArrayIdx = 0; shortLivingArrayIdx < shortLivingCount; ++shortLivingArrayIdx)
 	{
 		MemoryAccount *shortLivingAccount = shortLivingMemoryAccountArray->allAccounts[shortLivingArrayIdx];
 		if (shortLivingAccount->ownerType == MEMORY_OWNER_TYPE_Optimizer)
 		{
-			appendStringInfo(str, "\n  ORCA Memory used: peak %.0fK bytes  allocated %.0fK bytes  freed %.0fK bytes ",
-							 ceil((double) shortLivingAccount->peak / 1024L),
-							 ceil((double) shortLivingAccount->allocated / 1024L),
-							 ceil((double) shortLivingAccount->freed / 1024L));
+			exp = palloc(sizeof(MemoryAccountExplain));
+
+			exp->peak = ceil((double) shortLivingAccount->peak / 1024L);
+			exp->allocated = ceil((double) shortLivingAccount->allocated / 1024L);
+			exp->freed = ceil((double) shortLivingAccount->freed / 1024L);
+
 			break;
 		}
 	}
+
+	return exp;
 }
 
 /*****************************************************************************
@@ -1022,7 +1027,7 @@ MemoryAccountToString(MemoryAccountTree *memoryAccountTreeNode, void *context, u
 
 	MemoryAccountSerializerCxt *memAccountCxt = (MemoryAccountSerializerCxt*) context;
 
-	appendStringInfoFill(memAccountCxt->buffer, 2 * depth, ' ');
+	appendStringInfoSpaces(memAccountCxt->buffer, 2 * depth);
 
 	Assert(memoryAccount->peak >= MemoryAccounting_GetBalance(memoryAccount));
 	/* We print only integer valued memory consumption, in standard GPDB KB unit */
@@ -1157,6 +1162,10 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_WindowAgg";
 	case MEMORY_OWNER_TYPE_Exec_Repeat:
 		return "X_Repeat";
+	case MEMORY_OWNER_TYPE_Exec_ModifyTable:
+		return "X_ModifyTable";
+	case MEMORY_OWNER_TYPE_Exec_LockRows:
+		return "X_LockRows";
 	case MEMORY_OWNER_TYPE_Exec_DML:
 		return "X_DML";
 	case MEMORY_OWNER_TYPE_Exec_SplitUpdate:

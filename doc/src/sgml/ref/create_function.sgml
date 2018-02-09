@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_function.sgml,v 1.84 2008/12/31 02:25:03 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_function.sgml,v 1.88 2009/10/08 02:39:14 tgl Exp $
 -->
 
 <refentry id="SQL-CREATEFUNCTION">
@@ -21,10 +21,10 @@ $PostgreSQL: pgsql/doc/src/sgml/ref/create_function.sgml,v 1.84 2008/12/31 02:25
  <refsynopsisdiv>
 <synopsis>
 CREATE [ OR REPLACE ] FUNCTION
-    <replaceable class="parameter">name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [ { DEFAULT | = } <replaceable class="parameter">defexpr</replaceable>] [, ...] ] )
-    [ RETURNS [SETOF] <replaceableclass="parameter">rettype</replaceable> |
-      | RETURNS TABLE ( <replaceable class="parameter">colname</replaceable> <replaceable class="parameter">coltype</replaceable> [, ...] ) ]
-  { LANGUAGE <replaceable class="parameter">langname</replaceable>
+    <replaceable class="parameter">name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [ { DEFAULT | = } <replaceable class="parameter">default_expr</replaceable> ] [, ...] ] )
+    [ RETURNS <replaceable class="parameter">rettype</replaceable>
+      | RETURNS TABLE ( <replaceable class="parameter">column_name</replaceable> <replaceable class="parameter">column_type</replaceable> [, ...] ) ]
+  { LANGUAGE <replaceable class="parameter">lang_name</replaceable>
     | WINDOW
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
@@ -66,7 +66,7 @@ CREATE [ OR REPLACE ] FUNCTION
    Also, <command>CREATE OR REPLACE FUNCTION</command> will not let
    you change the return type of an existing function.  To do that,
    you must drop and recreate the function.  (When using <literal>OUT</>
-   parameters, that means you cannot change the names or types of any
+   parameters, that means you cannot change the types of any
    <literal>OUT</> parameters except by dropping the function.)
   </para>
 
@@ -122,8 +122,11 @@ CREATE [ OR REPLACE ] FUNCTION
       <para>
        The name of an argument. Some languages (currently only PL/pgSQL) let
        you use the name in the function body.  For other languages the
-       name of an input argument is just extra documentation.  But the name
-       of an output argument is significant, since it defines the column
+       name of an input argument is just extra documentation, so far as
+       the function itself is concerned; but you can use input argument names
+       when calling a function to improve readability (see <xref
+       linkend="sql-syntax-calling-funcs">).  In any case, the name
+       of an output argument is significant, because it defines the column
        name in the result row type.  (If you omit the name for an output
        argument, the system will choose a default column name.)
       </para>
@@ -148,8 +151,8 @@ CREATE [ OR REPLACE ] FUNCTION
       <para>
        The type of a column is referenced by writing
        <literal><replaceable
-       class="parameter">tablename</replaceable>.<replaceable
-       class="parameter">columnname</replaceable>%TYPE</literal>.
+       class="parameter">table_name</replaceable>.<replaceable
+       class="parameter">column_name</replaceable>%TYPE</literal>.
        Using this feature can sometimes help make a function independent of
        changes to the definition of a table.
       </para>
@@ -157,7 +160,7 @@ CREATE [ OR REPLACE ] FUNCTION
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable class="parameter">defexpr</replaceable></term>
+     <term><replaceable class="parameter">default_expr</replaceable></term>
 
      <listitem>
       <para>
@@ -199,14 +202,14 @@ CREATE [ OR REPLACE ] FUNCTION
       <para>
        The type of a column is referenced by writing
        <literal><replaceable
-       class="parameter">tablename</replaceable>.<replaceable
-       class="parameter">columnname</replaceable>%TYPE</literal>.
+       class="parameter">table_name</replaceable>.<replaceable
+       class="parameter">column_name</replaceable>%TYPE</literal>.
       </para>
      </listitem>
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable class="parameter">colname</replaceable></term>
+     <term><replaceable class="parameter">column_name</replaceable></term>
 
      <listitem>
       <para>
@@ -219,7 +222,7 @@ CREATE [ OR REPLACE ] FUNCTION
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable class="parameter">coltype</replaceable></term>
+     <term><replaceable class="parameter">column_type</replaceable></term>
 
      <listitem>
       <para>
@@ -230,7 +233,7 @@ CREATE [ OR REPLACE ] FUNCTION
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable class="parameter">langname</replaceable></term>
+     <term><replaceable class="parameter">lang_name</replaceable></term>
 
      <listitem>
       <para>
@@ -569,6 +572,18 @@ CREATE FUNCTION foo(int, int default 42) ...
     do not change.  All other function properties are assigned the
     values specified or implied in the command.  You must own the function
     to replace it (this includes being a member of the owning role).
+   </para>
+
+   <para>
+    When replacing an existing function with <command>CREATE OR REPLACE
+    FUNCTION</>, there are restrictions on changing parameter names.
+    You cannot change the name already assigned to any input parameter
+    (although you can add names to parameters that had none before).
+    If there is more than one output parameter, you cannot change the
+    names of the output parameters, because that would change the
+    column names of the anonymous composite type that describes the
+    function's result.  These restrictions are made to ensure that
+    existing calls of the function do not stop working when it is replaced.
    </para>
 
  </refsect1>

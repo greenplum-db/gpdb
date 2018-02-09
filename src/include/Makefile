@@ -4,7 +4,7 @@
 #
 # 'make install' installs whole contents of src/include.
 #
-# $PostgreSQL: pgsql/src/include/Makefile,v 1.26 2008/08/29 13:02:32 petere Exp $
+# $PostgreSQL: pgsql/src/include/Makefile,v 1.29 2009/08/26 22:24:43 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -17,12 +17,14 @@ all: pg_config.h pg_config_os.h check_oids
 
 
 # Subdirectories containing headers for server-side dev
-SUBDIRS = access bootstrap catalog cdb commands executor gpmon lib libpq \
-	mb nodes optimizer parser postmaster regex replication rewrite storage tcop \
-	snowball snowball/libstemmer tsearch tsearch/dicts utils \
+SUBDIRS = access bootstrap catalog commands executor foreign lib libpq mb \
+	nodes optimizer parser postmaster regex replication rewrite storage \
+	tcop snowball snowball/libstemmer tsearch tsearch/dicts utils \
 	port port/atomics port/win32 port/win32_msvc port/win32_msvc/sys \
 	port/win32/arpa port/win32/netinet port/win32/sys \
 	portability
+
+SUBDIRS += cdb gpmon
 
 # Install all headers
 install: all installdirs

@@ -88,7 +88,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.167 2009/06/17 16:05:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.170 2009/12/15 17:57:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -125,7 +125,7 @@
  * AggStatePerAggData -- per-aggregate working state
  * AggStatePerGroupData - per-aggregate-per-group working state
  *
- * Definition moved to nodeAgg.c to provide visibility to execHHashagg.c
+ * Definition moved to nodeAgg.h to provide visibility to execHHashagg.c
  */
 
 
@@ -165,8 +165,6 @@ static void clear_agg_object(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_direct(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_hash_table(AggState *aggstate);
 static void ExecAggExplainEnd(PlanState *planstate, struct StringInfoData *buf);
-static int count_extra_agg_slots(Node *node);
-static bool count_extra_agg_slots_walker(Node *node, int *count);
 
 
 Datum
@@ -1746,7 +1744,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	 * structures and transition values.  NOTE: the details of what is stored
 	 * in aggcontext and what is stored in the regular per-query memory
 	 * context are driven by a simple decision: we want to reset the
-	 * aggcontext in ExecReScanAgg to recover no-longer-wanted space.
+	 * aggcontext at group boundaries (if not hashing) and in ExecReScanAgg
+	 * to recover no-longer-wanted space.
 	 */
 	aggstate->aggcontext =
 		AllocSetContextCreate(CurrentMemoryContext,
@@ -1754,8 +1753,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 							  ALLOCSET_DEFAULT_MINSIZE,
 							  ALLOCSET_DEFAULT_INITSIZE,
 							  ALLOCSET_DEFAULT_MAXSIZE);
-
-#define AGG_NSLOTS 3
 
 	/*
 	 * tuple table initialization
@@ -2283,31 +2280,6 @@ GetAggInitVal(Datum textInitVal, Oid transtype)
 	return initVal;
 }
 
-/*
- * Standard API to count tuple table slots used by an execution
- * instance of an Agg node.
- *
- * GPDB precomputes tuple table size, but use of projection means
- * aggregates use a slot.  Since the count is needed earlier, we
- * than the determination of then number of different aggregate
- * call that happens during initializaiton, we just count Aggref
- * nodes.  This may be an over count (in case some aggregate
- * calls are duplicated), but shouldn't be too bad.
- */
-int
-ExecCountSlotsAgg(Agg *node)
-{
-	int			nextraslots = 0;
-
-	nextraslots += count_extra_agg_slots((Node *) node->plan.targetlist);
-	nextraslots += count_extra_agg_slots((Node *) node->plan.qual);
-
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		nextraslots +			/* may be high due to duplicate Aggref nodes. */
-		AGG_NSLOTS;
-}
-
 void
 ExecEndAgg(AggState *node)
 {
@@ -2597,32 +2569,6 @@ get_grouping_groupid(TupleTableSlot *slot, int grping_attno)
 	grouping = DatumGetInt64(grping_datum);
 
 	return grouping;
-}
-
-/*
- * Subroutines for ExecCountSlotsAgg.
- */
-int
-count_extra_agg_slots(Node *node)
-{
-	int			count = 0;
-
-	count_extra_agg_slots_walker(node, &count);
-	return count;
-}
-
-bool
-count_extra_agg_slots_walker(Node *node, int *count)
-{
-	if (node == NULL)
-		return false;
-
-	if (IsA(node, Aggref))
-	{
-		(*count)++;
-	}
-
-	return expression_tree_walker(node, count_extra_agg_slots_walker, (void *) count);
 }
 
 void

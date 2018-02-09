@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.155 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.165 2009/12/15 04:57:48 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,6 +96,8 @@ extern void ExecMarkPos(PlanState *node);
 extern void ExecRestrPos(PlanState *node);
 extern bool ExecSupportsMarkRestore(NodeTag plantype);
 extern bool ExecSupportsBackwardScan(Plan *node);
+extern bool ExecMaterializesOutput(NodeTag plantype);
+
 extern void ExecEagerFree(PlanState *node);
 extern void ExecEagerFreeChildNodes(PlanState *node, bool subplanDone);
 
@@ -211,29 +213,6 @@ typedef struct AttrMap
 	AttrNumber attr_map[1];
 } AttrMap;
 
-/*
- * ScanMethod
- *   Methods that are relevant to support scans on various table types.
- */
-typedef struct ScanMethod
-{
-	/* Function that scans the table. */
-	TupleTableSlot *(*accessMethod)(ScanState *scanState);
-
-	/* Functions that initiate or terminate a scan. */
-	void (*beginScanMethod)(ScanState *scanState);
-	void (*endScanMethod)(ScanState *scanState);
-
-	/* Function that does rescan. */
-	void (*reScanMethod)(ScanState *scanState);
-
-	/* Function that does MarkPos in a scan. */
-	void (*markPosMethod)(ScanState *scanState);
-
-	/* Function that does RestroPos in a scan. */
-	void (*restrPosMethod)(ScanState *scanState);
-} ScanMethod;
-
 extern void ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void standard_ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void ExecutorRun(QueryDesc *queryDesc,
@@ -252,9 +231,23 @@ extern ResultRelInfo *ExecGetTriggerResultRel(EState *estate, Oid relid);
 extern bool ExecContextForcesOids(PlanState *planstate, bool *hasoids);
 extern void ExecConstraints(ResultRelInfo *resultRelInfo,
 				TupleTableSlot *slot, EState *estate);
-extern TupleTableSlot *EvalPlanQual(EState *estate, Index rti,
+extern TupleTableSlot *EvalPlanQual(EState *estate, EPQState *epqstate,
+			 Relation relation, Index rti,
 			 ItemPointer tid, TransactionId priorXmax);
-extern PlanState *ExecGetActivePlanTree(QueryDesc *queryDesc);
+extern HeapTuple EvalPlanQualFetch(EState *estate, Relation relation,
+				  int lockmode, ItemPointer tid, TransactionId priorXmax);
+extern void EvalPlanQualInit(EPQState *epqstate, EState *estate,
+							 Plan *subplan, int epqParam);
+extern void EvalPlanQualSetPlan(EPQState *epqstate, Plan *subplan);
+extern void EvalPlanQualAddRowMark(EPQState *epqstate, ExecRowMark *erm);
+extern void EvalPlanQualSetTuple(EPQState *epqstate, Index rti,
+								 HeapTuple tuple);
+extern HeapTuple EvalPlanQualGetTuple(EPQState *epqstate, Index rti);
+#define EvalPlanQualSetSlot(epqstate, slot)  ((epqstate)->origslot = (slot))
+extern void EvalPlanQualFetchRowMarks(EPQState *epqstate);
+extern TupleTableSlot *EvalPlanQualNext(EPQState *epqstate);
+extern void EvalPlanQualBegin(EPQState *epqstate, EState *parentestate);
+extern void EvalPlanQualEnd(EPQState *epqstate);
 extern DestReceiver *CreateIntoRelDestReceiver(void);
 
 extern Oid GetIntoRelOid(QueryDesc *queryDesc);
@@ -275,7 +268,6 @@ extern PlanState *ExecInitNode(Plan *node, EState *estate, int eflags);
 extern void ExecSliceDependencyNode(PlanState *node);
 extern TupleTableSlot *ExecProcNode(PlanState *node);
 extern Node *MultiExecProcNode(PlanState *node);
-extern int	ExecCountSlotsNode(Plan *node);
 extern void ExecEndNode(PlanState *node);
 
 void ExecSquelchNode(PlanState *node);
@@ -328,9 +320,37 @@ extern bool isJoinExprNull(List *joinExpr, ExprContext *econtext);
  * prototypes from functions in execScan.c
  */
 typedef TupleTableSlot *(*ExecScanAccessMtd) (ScanState *node);
+typedef bool (*ExecScanRecheckMtd) (ScanState *node, TupleTableSlot *slot);
 
-extern TupleTableSlot *ExecScan(ScanState *node, ExecScanAccessMtd accessMtd);
+
+/*
+ * ScanMethod
+ *   Methods that are relevant to support scans on various table types.
+ */
+typedef struct ScanMethod
+{
+	/* Function that scans the table. */
+	ExecScanAccessMtd accessMethod;
+	ExecScanRecheckMtd recheckMethod;
+
+	/* Functions that initiate or terminate a scan. */
+	void (*beginScanMethod)(ScanState *scanState);
+	void (*endScanMethod)(ScanState *scanState);
+
+	/* Function that does rescan. */
+	void (*reScanMethod)(ScanState *scanState);
+
+	/* Function that does MarkPos in a scan. */
+	void (*markPosMethod)(ScanState *scanState);
+
+	/* Function that does RestroPos in a scan. */
+	void (*restrPosMethod)(ScanState *scanState);
+} ScanMethod;
+
+extern TupleTableSlot *ExecScan(ScanState *node, ExecScanAccessMtd accessMtd,
+								ExecScanRecheckMtd recheckMtd);
 extern void ExecAssignScanProjectionInfo(ScanState *node);
+extern void ExecScanReScan(ScanState *node);
 extern void InitScanStateRelationDetails(ScanState *scanState, Plan *plan, EState *estate);
 extern void InitScanStateInternal(ScanState *scanState, Plan *plan,
 	EState *estate, int eflags, bool initCurrentRelation);
@@ -350,6 +370,7 @@ extern void MarkRestrNotAllowed(ScanState *scanState);
  * prototypes from functions in execHeapScan.c
  */
 extern TupleTableSlot *HeapScanNext(ScanState *scanState);
+extern bool HeapScanRecheck(ScanState *node, TupleTableSlot *slot);
 extern void BeginScanHeapRelation(ScanState *scanState);
 extern void EndScanHeapRelation(ScanState *scanState);
 extern void ReScanHeapRelation(ScanState *scanState);
@@ -376,6 +397,7 @@ extern void ReScanAOCSRelation(ScanState *scanState);
  * prototypes from functions in execBitmapHeapScan.c
  */
 extern TupleTableSlot *BitmapHeapScanNext(ScanState *scanState);
+extern bool BitmapHeapScanRecheck(ScanState *node, TupleTableSlot *slot);
 extern void BitmapHeapScanBegin(ScanState *scanState);
 extern void BitmapHeapScanEnd(ScanState *scanState);
 extern void BitmapHeapScanReScan(ScanState *scanState);
@@ -413,15 +435,13 @@ extern void UpdateChangedParamSet(PlanState *node, Bitmapset *newchg);
 
 typedef struct TupOutputState
 {
-	/* use "struct" here to allow forward reference */
-	struct AttInMetadata *metadata;
 	TupleTableSlot *slot;
 	DestReceiver *dest;
 } TupOutputState;
 
 extern TupOutputState *begin_tup_output_tupdesc(DestReceiver *dest,
 						 TupleDesc tupdesc);
-extern void do_tup_output(TupOutputState *tstate, char **values);
+extern void do_tup_output(TupOutputState *tstate, Datum *values, bool *isnull);
 extern void do_text_output_multiline(TupOutputState *tstate, char *text);
 extern void end_tup_output(TupOutputState *tstate);
 
@@ -430,11 +450,14 @@ extern void end_tup_output(TupOutputState *tstate);
  *
  * Should only be used with a single-TEXT-attribute tupdesc.
  */
-#define do_text_output_oneline(tstate, text_to_emit) \
+#define do_text_output_oneline(tstate, str_to_emit) \
 	do { \
-		char *values_[1]; \
-		values_[0] = (text_to_emit); \
-		do_tup_output(tstate, values_); \
+		Datum	values_[1]; \
+		bool	isnull_[1]; \
+		values_[0] = PointerGetDatum(cstring_to_text(str_to_emit)); \
+		isnull_[0] = false; \
+		do_tup_output(tstate, values_, isnull_); \
+		pfree(DatumGetPointer(values_[0])); \
 	} while (0)
 
 
@@ -446,7 +469,7 @@ extern void FreeExecutorState(EState *estate);
 extern void ClearPartitionState(EState *estate);
 extern ExprContext *CreateExprContext(EState *estate);
 extern ExprContext *CreateStandaloneExprContext(void);
-extern void FreeExprContext(ExprContext *econtext);
+extern void FreeExprContext(ExprContext *econtext, bool isCommit);
 extern void ReScanExprContext(ExprContext *econtext);
 extern void ResetExprContext(ExprContext *econtext);
 
@@ -492,8 +515,14 @@ extern void ExecCloseScanAppendOnlyRelation(Relation scanrel);
 
 extern void ExecOpenIndices(ResultRelInfo *resultRelInfo);
 extern void ExecCloseIndices(ResultRelInfo *resultRelInfo);
-extern void ExecInsertIndexTuples(TupleTableSlot *slot, ItemPointer tupleid,
-					  EState *estate, bool is_vacuum);
+extern List *ExecInsertIndexTuples(TupleTableSlot *slot, ItemPointer tupleid,
+					  EState *estate, bool is_vacuum_full);
+extern bool check_exclusion_constraint(Relation heap, Relation index,
+									   IndexInfo *indexInfo,
+									   ItemPointer tupleid,
+									   Datum *values, bool *isnull,
+									   EState *estate,
+									   bool newIndex, bool errorOK);
 
 extern void RegisterExprContextCallback(ExprContext *econtext,
 							ExprContextCallbackFunction function,

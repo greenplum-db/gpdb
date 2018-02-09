@@ -37,7 +37,7 @@ test__logfile_getname(void **state)
     alert_file_pattern = "alert_log";
     will_return(time, 12345);
 
-	log_timezone = pg_tzset("UTC");
+	log_timezone = pg_tzset("GMT");
 
 	alert_file_name = logfile_getname(time(NULL), NULL, "gpperfmon/logs", "alert_log-%F");
 	assert_true(strcmp(alert_file_name, "gpperfmon/logs/alert_log-1970-01-01") == 0);

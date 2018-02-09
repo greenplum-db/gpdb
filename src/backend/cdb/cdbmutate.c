@@ -99,15 +99,7 @@ static void add_slice_to_motion(Motion *motion,
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
 
-static void request_explicit_motion(Plan *plan, Index resultRelationIdx, List *rtable);
-
-static void request_explicit_motion_append(Append *append, List *resultRelationsIdx, List *rtable);
-
 static AttrNumber find_segid_column(List *tlist, Index relid);
-
-static bool doesUpdateAffectPartitionCols(PlannerInfo *root,
-							  Plan *plan,
-							  Query *query);
 
 static bool replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glob, bool fPop);
 
@@ -489,313 +481,11 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			break;
 
 		case CMD_INSERT:
-			{
-				switch (targetPolicyType)
-				{
-					case POLICYTYPE_PARTITIONED:
-						{
-							List	   *hashExpr = NIL;
-
-							/*
-							 * Make sure the top level flow is partitioned on
-							 * the partitioning key of the target relation.
-							 * Since this is an INSERT command, the target
-							 * list will correspond to the attributes of the
-							 * target relation in order.
-							 */
-
-
-							/* Is this plan an all-const insert ? */
-							if (gp_enable_fast_sri && IsA(plan, Result))
-							{
-								ListCell   *cell;
-								bool		typesOK = true;
-								PartitionNode *pn;
-								RangeTblEntry *rte;
-								Relation	rel;
-
-								rte = rt_fetch(query->resultRelation, query->rtable);
-								rel = relation_open(rte->relid, NoLock);
-
-								/* 1: See if it's partitioned */
-								pn = RelationBuildPartitionDesc(rel, false);
-
-								if (pn && !partition_policies_equal(targetPolicy, pn))
-								{
-									/*
-									 * 2: See if partitioning columns are
-									 * constant
-									 */
-									List	   *partatts = get_partition_attrs(pn);
-									ListCell   *lc;
-									bool		all_const = true;
-
-									foreach(lc, partatts)
-									{
-										List	   *tl = plan->targetlist;
-										ListCell   *cell;
-										AttrNumber	attnum = lfirst_int(lc);
-										bool		found = false;
-
-										foreach(cell, tl)
-										{
-											TargetEntry *tle = (TargetEntry *) lfirst(cell);
-
-											Assert(tle->expr);
-											if (tle->resno == attnum)
-											{
-												found = true;
-												if (!IsA(tle->expr, Const))
-													all_const = false;
-												break;
-											}
-										}
-										Assert(found);
-									}
-
-									/* 3: if not, mutate plan to make constant */
-									if (!all_const)
-										plan->targetlist = (List *)
-											planner_make_plan_constant(root, (Node *) plan->targetlist, true);
-
-									/* better be constant now */
-									if (allConstantValuesClause(plan))
-									{
-										bool	   *nulls;
-										Datum	   *values;
-										EState	   *estate = CreateExecutorState();
-										ResultRelInfo *rri;
-
-										/*
-										 * 4: build tuple, look up
-										 * partitioning key
-										 */
-										nulls = palloc0(sizeof(bool) * rel->rd_att->natts);
-										values = palloc(sizeof(Datum) * rel->rd_att->natts);
-
-										foreach(lc, partatts)
-										{
-											AttrNumber	attnum = lfirst_int(lc);
-											List	   *tl = plan->targetlist;
-											ListCell   *cell;
-
-											foreach(cell, tl)
-											{
-												TargetEntry *tle = (TargetEntry *) lfirst(cell);
-
-												Assert(tle->expr);
-
-												if (tle->resno == attnum)
-												{
-													Assert(IsA(tle->expr, Const));
-
-													nulls[attnum - 1] = ((Const *) tle->expr)->constisnull;
-													if (!nulls[attnum - 1])
-														values[attnum - 1] = ((Const *) tle->expr)->constvalue;
-												}
-											}
-										}
-										estate->es_result_partitions = pn;
-										estate->es_partition_state =
-											createPartitionState(estate->es_result_partitions, 1 /* resultPartSize */ );
-
-										rri = makeNode(ResultRelInfo);
-										rri->ri_RangeTableIndex = 1;	/* dummy */
-										rri->ri_RelationDesc = rel;
-
-										estate->es_result_relations = rri;
-										estate->es_num_result_relations = 1;
-										estate->es_result_relation_info = rri;
-										rri = values_get_partition(values, nulls, RelationGetDescr(rel),
-																   estate);
-
-										/*
-										 * 5: get target policy for
-										 * destination table
-										 */
-										targetPolicy = RelationGetPartitioningKey(rri->ri_RelationDesc);
-
-										if (targetPolicy->ptype != POLICYTYPE_PARTITIONED)
-											elog(ERROR, "policy must be partitioned");
-
-										ExecCloseIndices(rri);
-										heap_close(rri->ri_RelationDesc, NoLock);
-										FreeExecutorState(estate);
-									}
-
-								}
-								relation_close(rel, NoLock);
-
-								hashExpr = getExprListFromTargetList(plan->targetlist,
-																	 targetPolicy->nattrs,
-																	 targetPolicy->attrs,
-																	 true);
-								/* check the types. */
-								foreach(cell, hashExpr)
-								{
-									Expr	   *elem = NULL;
-									Oid			att_type = InvalidOid;
-
-									elem = (Expr *) lfirst(cell);
-									att_type = exprType((Node *) elem);
-									Assert(att_type != InvalidOid);
-									if (!isGreenplumDbHashable(att_type))
-									{
-										typesOK = false;
-										break;
-									}
-								}
-
-								/*
-								 * all constants in values clause -- no need
-								 * to repartition.
-								 */
-								if (typesOK && allConstantValuesClause(plan))
-								{
-									Result	   *rNode = (Result *) plan;
-									List	   *hList = NIL;
-									int			i;
-
-									/*
-									 * If this table has child tables, we need
-									 * to find out destination partition.
-									 *
-									 * See partition check above.
-									 */
-
-									/* build our list */
-									for (i = 0; i < targetPolicy->nattrs; i++)
-									{
-										Assert(targetPolicy->attrs[i] > 0);
-
-										hList = lappend_int(hList, targetPolicy->attrs[i]);
-									}
-
-									if (root->config->gp_enable_direct_dispatch)
-									{
-										directDispatchCalculateHash(plan, targetPolicy);
-
-										/*
-										 * we now either have a hash-code, or
-										 * we've marked the plan non-directed.
-										 */
-									}
-
-									rNode->hashFilter = true;
-									rNode->hashList = hList;
-
-									/* Build a partitioned flow */
-									plan->flow->flotype = FLOW_PARTITIONED;
-									plan->flow->locustype = CdbLocusType_Hashed;
-									plan->flow->hashExpr = hashExpr;
-								}
-							}
-
-							if (!hashExpr)
-								hashExpr = getExprListFromTargetList(plan->targetlist,
-																	 targetPolicy->nattrs,
-																	 targetPolicy->attrs,
-																	 true);
-
-							if (!repartitionPlan(plan, false, false, hashExpr))
-								ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-												errmsg("Cannot parallelize that INSERT yet")));
-							break;
-						}
-
-					case POLICYTYPE_ENTRY:
-						/* All's well if query result is already on the QD. */
-						if (plan->flow->flotype == FLOW_SINGLETON &&
-							plan->flow->segindex < 0)
-							break;
-
-						/*
-						 * Query result needs to be brought back to the QD.
-						 * Ask for motion to a single QE.  Later, apply_motion
-						 * will override that to bring it to the QD instead.
-						 */
-						if (!focusPlan(plan, false, false))
-							ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-											errmsg("Cannot parallelize that INSERT yet")));
-						break;
-
-					default:
-						Insist(0);
-				}
-			}
 			break;
 
 		case CMD_UPDATE:
 		case CMD_DELETE:
-			{
-				/* Distributed target table? */
-				if (targetPolicyType == POLICYTYPE_PARTITIONED)
-				{
-					/*
-					 * The planner does not support updating any of the
-					 * partitioning columns.
-					 */
-					if (query->commandType == CMD_UPDATE &&
-						doesUpdateAffectPartitionCols(root, plan, query))
-					{
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize an UPDATE statement that updates the distribution columns")));
-					}
-
-					if (IsA(plan, Append))
-					{
-						/* updating a partitioned table */
-						request_explicit_motion_append((Append *) plan, root->resultRelations, root->glob->finalrtable);
-					}
-					else
-					{
-						/* updating a non-partitioned table */
-						Assert(list_length(root->resultRelations) == 1);
-						int			relid = list_nth_int(root->resultRelations, 0);
-
-						Assert(relid > 0);
-						request_explicit_motion(plan, relid, root->glob->finalrtable);
-					}
-
-					needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
-				}
-
-				/* Target table is not distributed.  Must be in entry db. */
-				else
-				{
-					if (plan->flow->flotype == FLOW_PARTITIONED ||
-						plan->flow->flotype == FLOW_REPLICATED ||
-						(plan->flow->flotype == FLOW_SINGLETON && plan->flow->segindex != -1))
-					{
-						/*
-						 * target table is master-only but flow is
-						 * distributed: add a GatherMotion on top
-						 */
-
-						/* create a shallow copy of the plan flow */
-						Flow	   *flow = plan->flow;
-
-						plan->flow = (Flow *) palloc(sizeof(Flow));
-						*(plan->flow) = *flow;
-
-						/* save original flow information */
-						plan->flow->flow_before_req_move = flow;
-
-						/* request a GatherMotion node */
-						plan->flow->req_move = MOVEMENT_FOCUS;
-						plan->flow->hashExpr = NIL;
-						plan->flow->segindex = 0;
-					}
-					else
-					{
-						/*
-						 * Source is, presumably, a dispatcher singleton.
-						 */
-						plan->flow->req_move = MOVEMENT_NONE;
-					}
-					break;
-				}
-			}
+			needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
 			break;
 
 		default:
@@ -1360,7 +1050,7 @@ getExprListFromTargetList(List *tlist,
 /*
  * isAnyColChangedByUpdate
  */
-static bool
+bool
 isAnyColChangedByUpdate(Index targetvarno,
 						List *targetlist,
 						int nattrs,
@@ -1423,35 +1113,6 @@ request_explicit_motion(Plan *plan, Index resultRelationsIdx, List *rtable)
 	plan->flow->segidColIdx = segidColIdx;
 }
 
-/*
- * Request SegIdRedistribute motion node for an Append plan updating a partitioned
- * table
- */
-void
-request_explicit_motion_append(Append *append, List *resultRelationsIdx, List *rtable)
-{
-	Assert(IsA(append, Append));
-	Assert(list_length(append->appendplans) == list_length(resultRelationsIdx));
-
-	ListCell   *lcAppendPlan = NULL;
-	ListCell   *lcResultRel = NULL;
-
-	forboth(lcAppendPlan, append->appendplans,
-			lcResultRel, resultRelationsIdx)
-	{
-		/*
-		 * request a segid redistribute motion node to be put above each
-		 * append plan
-		 */
-		Plan	   *appendChildPlan = (Plan *) lfirst(lcAppendPlan);
-		int			relid = lfirst_int(lcResultRel);
-
-		Assert(relid > 0);
-		request_explicit_motion(appendChildPlan, relid, rtable);
-	}
-
-}
-
 
 /*
  * Find the index of the segid column of the requested relation (relid) in the
@@ -1488,80 +1149,6 @@ find_segid_column(List *tlist, Index relid)
 	/* no segid column found */
 	return -1;
 }
-
-/*
- * doesUpdateAffectPartitionCols
- */
-bool
-doesUpdateAffectPartitionCols(PlannerInfo *root,
-							  Plan *plan,
-							  Query *query)
-{
-	Append	   *append;
-	ListCell   *rticell;
-	ListCell   *plancell;
-	GpPolicy   *policy;
-
-	if (list_length(root->resultRelations) == 1)
-	{
-		RangeTblEntry *rte;
-		Relation	relation;
-		int			resultRelation = linitial_int(root->resultRelations);
-
-		rte = rt_fetch(resultRelation, query->rtable);
-		Assert(rte->rtekind == RTE_RELATION);
-
-		/* Get a copy of the rel's GpPolicy from the relcache. */
-		relation = relation_open(rte->relid, NoLock);
-		policy = RelationGetPartitioningKey(relation);
-		relation_close(relation, NoLock);
-
-
-		/*
-		 * Single target relation?
-		 */
-
-		return isAnyColChangedByUpdate(resultRelation,
-									   plan->targetlist,
-									   policy->nattrs,
-									   policy->attrs);
-	}
-
-	/*
-	 * Multiple target relations (inheritance)... Plan should have an Append
-	 * node on top, with a subplan per target.
-	 */
-	append = (Append *) plan;
-
-	Insist(IsA(append, Append) &&
-		   append->isTarget &&
-		   list_length(append->appendplans) == list_length(root->resultRelations));
-
-	forboth(rticell, root->resultRelations,
-			plancell, append->appendplans)
-	{
-		int			rti = lfirst_int(rticell);
-		Plan	   *subplan = (Plan *) lfirst(plancell);
-
-		RangeTblEntry *rte;
-		Relation	relation;
-
-		rte = rt_fetch(rti, query->rtable);
-		Assert(rte->rtekind == RTE_RELATION);
-
-		/* Get a copy of the rel's GpPolicy from the relcache. */
-		relation = relation_open(rte->relid, NoLock);
-		policy = RelationGetPartitioningKey(relation);
-		relation_close(relation, NoLock);
-
-		if (isAnyColChangedByUpdate(rti, subplan->targetlist, policy->nattrs, policy->attrs))
-			return true;
-	}
-
-	return false;
-}								/* doesUpdateAffectPartitionCols */
-
-
 
 /* ----------------------------------------------------------------------- *
  * cdbmutate_warn_ctid_without_segid() warns the user if the plan refers to a
@@ -1747,6 +1334,14 @@ shareinput_walker(SHAREINPUT_MUTATOR f, Node *node, PlannerGlobal *glob)
 			Append	   *app = (Append *) node;
 
 			foreach(cell, app->appendplans)
+				shareinput_walker(f, (Node *) lfirst(cell), glob);
+		}
+		else if (IsA(node, ModifyTable))
+		{
+			ListCell   *cell;
+			ModifyTable *mt = (ModifyTable *) node;
+
+			foreach(cell, mt->plans)
 				shareinput_walker(f, (Node *) lfirst(cell), glob);
 		}
 		else if (IsA(node, SubqueryScan))
@@ -3303,4 +2898,220 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 								 (void *) context);
 
 	return new_node;
+}
+
+
+/*
+ * sri_optimize_for_result
+ *
+ * Optimize for single-row-insertion for const result. If result is const, and
+ * result relation is partitioned, we could decide partition relation during
+ * plan time and replace targetPolicy by partition relation's targetPolicy.
+ * In addition, we don't need tuple distribution, but do filter on each writer
+ * segment.
+ *
+ * Inputs:
+ *
+ * root		PlannerInfo passed by caller
+ * plan		should always be result node
+ * rte		is the target relation entry
+ *
+ * Inputs/Outputs:
+ *
+ * targetPolicy(in/out) is the target relation policy, and would be replaced
+ * by partition relation.
+ * hashExpr is distribution expression of target relation, and would be
+ * replaced by partition relation.
+ */
+void
+sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
+						GpPolicy **targetPolicy, List **hashExpr)
+{
+	ListCell   *cell;
+	bool		typesOK = true;
+	PartitionNode *pn;
+	Relation	rel;
+
+	Insist(gp_enable_fast_sri && IsA(plan, Result));
+
+	/* Suppose caller already hold proper locks for relation. */
+	rel = relation_open(rte->relid, NoLock);
+
+	/* 1: See if it's partitioned */
+	pn = RelationBuildPartitionDesc(rel, false);
+
+	if (pn && !partition_policies_equal(*targetPolicy, pn))
+	{
+		/*
+		 * 2: See if partitioning columns are constant
+		 */
+		List	   *partatts = get_partition_attrs(pn);
+		ListCell   *lc;
+		bool		all_const = true;
+
+		foreach(lc, partatts)
+		{
+			List	   *tl = plan->targetlist;
+			ListCell   *cell;
+			AttrNumber	attnum = lfirst_int(lc);
+			bool		found = false;
+
+			foreach(cell, tl)
+			{
+				TargetEntry *tle = (TargetEntry *) lfirst(cell);
+
+				Assert(tle->expr);
+				if (tle->resno == attnum)
+				{
+					found = true;
+					if (!IsA(tle->expr, Const))
+						all_const = false;
+					break;
+				}
+			}
+			Assert(found);
+		}
+
+		/* 3: if not, mutate plan to make constant */
+		if (!all_const)
+			plan->targetlist = (List *)
+				planner_make_plan_constant(root, (Node *) plan->targetlist, true);
+
+		/* better be constant now */
+		if (allConstantValuesClause(plan))
+		{
+			bool	   *nulls;
+			Datum	   *values;
+			EState	   *estate = CreateExecutorState();
+			ResultRelInfo *rri;
+
+			/*
+			 * 4: build tuple, look up partitioning key
+			 */
+			nulls = palloc0(sizeof(bool) * rel->rd_att->natts);
+			values = palloc(sizeof(Datum) * rel->rd_att->natts);
+
+			foreach(lc, partatts)
+			{
+				AttrNumber	attnum = lfirst_int(lc);
+				List	   *tl = plan->targetlist;
+				ListCell   *cell;
+
+				foreach(cell, tl)
+				{
+					TargetEntry *tle = (TargetEntry *) lfirst(cell);
+
+					Assert(tle->expr);
+
+					if (tle->resno == attnum)
+					{
+						Assert(IsA(tle->expr, Const));
+
+						nulls[attnum - 1] = ((Const *) tle->expr)->constisnull;
+						if (!nulls[attnum - 1])
+							values[attnum - 1] = ((Const *) tle->expr)->constvalue;
+					}
+				}
+			}
+			estate->es_result_partitions = pn;
+			estate->es_partition_state =
+				createPartitionState(estate->es_result_partitions, 1 /* resultPartSize */ );
+
+			rri = makeNode(ResultRelInfo);
+			rri->ri_RangeTableIndex = 1;	/* dummy */
+			rri->ri_RelationDesc = rel;
+
+			estate->es_result_relations = rri;
+			estate->es_num_result_relations = 1;
+			estate->es_result_relation_info = rri;
+			rri = values_get_partition(values, nulls, RelationGetDescr(rel),
+									   estate);
+
+			/*
+			 * 5: get target policy for destination table
+			 */
+			*targetPolicy = RelationGetPartitioningKey(rri->ri_RelationDesc);
+
+			if ((*targetPolicy)->ptype != POLICYTYPE_PARTITIONED)
+				elog(ERROR, "policy must be partitioned");
+
+			ExecCloseIndices(rri);
+			heap_close(rri->ri_RelationDesc, NoLock);
+			FreeExecutorState(estate);
+		}
+
+	}
+	relation_close(rel, NoLock);
+
+	*hashExpr = getExprListFromTargetList(plan->targetlist,
+										 (*targetPolicy)->nattrs,
+										 (*targetPolicy)->attrs,
+										 false);
+	/* check the types. */
+	foreach(cell, *hashExpr)
+	{
+		Expr	   *elem = NULL;
+		Oid			att_type = InvalidOid;
+
+		elem = (Expr *) lfirst(cell);
+		att_type = exprType((Node *) elem);
+		Assert(att_type != InvalidOid);
+		if (!isGreenplumDbHashable(att_type))
+		{
+			typesOK = false;
+			break;
+		}
+	}
+
+	/*
+	 * If there is no distribution key, don't do direct dispatch.
+	 *
+	 * GPDB_90_MERGE_FIXME: Is that the right thing to do? Couldn't we
+	 * direct dispatch to any arbitrarily chosen segment, in that case?
+	 */
+	if ((*targetPolicy)->nattrs == 0)
+		typesOK = false;
+
+	/*
+	 * all constants in values clause -- no need to repartition.
+	 */
+	if (typesOK && allConstantValuesClause(plan))
+	{
+		Result	   *rNode = (Result *) plan;
+		List	   *hList = NIL;
+		int			i;
+
+		/*
+		 * If this table has child tables, we need to find out destination
+		 * partition.
+		 *
+		 * See partition check above.
+		 */
+
+		/* build our list */
+		for (i = 0; i < (*targetPolicy)->nattrs; i++)
+		{
+			Assert((*targetPolicy)->attrs[i] > 0);
+
+			hList = lappend_int(hList, (*targetPolicy)->attrs[i]);
+		}
+
+		if (root->config->gp_enable_direct_dispatch)
+		{
+			directDispatchCalculateHash(plan, *targetPolicy);
+
+			/*
+			 * we now either have a hash-code, or we've marked the plan
+			 * non-directed.
+			 */
+		}
+
+		rNode->hashFilter = true;
+		rNode->hashList = hList;
+
+		/* Build a partitioned flow */
+		plan->flow->flotype = FLOW_PARTITIONED;
+		plan->flow->locustype = CdbLocusType_Hashed;
+		plan->flow->hashExpr = *hashExpr;
+	}
 }

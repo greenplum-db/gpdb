@@ -115,6 +115,7 @@ CreateAOAuxiliaryTable(
 											     PG_AOSEGMENT_NAMESPACE,
 											     rel->rd_rel->reltablespace,
 											     InvalidOid,
+												 InvalidOid,
 											     rel->rd_rel->relowner,
 											     tupledesc,
 												 NIL,
@@ -127,6 +128,7 @@ CreateAOAuxiliaryTable(
 											     ONCOMMIT_NOOP,
 											     NULL, /* GP Policy */
 											     (Datum) 0,
+												 /* use_user_acl */ false,
 											     true,
 												 /* valid_opts */ false);
 
@@ -143,8 +145,8 @@ CreateAOAuxiliaryTable(
 										 BTREE_AM_OID,
 										 rel->rd_rel->reltablespace,
 										 classObjectId, coloptions, (Datum) 0,
-										 true, false, true, false,
-										 false, NULL);
+										 true, false, false, false,
+										 true, false, false, NULL);
 
 		/* Unlock target table -- no one can see it */
 		UnlockRelationOid(aoauxiliary_relid, ShareLock);

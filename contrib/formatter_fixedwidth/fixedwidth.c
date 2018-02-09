@@ -308,7 +308,7 @@ make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, Strin
 				(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
 				 errmsg("The size of the value cannot be bigger than the field size value: %s, size: %d, field_size %d",
 						value, sz, field_size)));
-	appendStringInfoFill(buf, field_size - sz, ' ');
+	appendStringInfoSpaces(buf, field_size - sz);
 
 	return buf->data;
 }

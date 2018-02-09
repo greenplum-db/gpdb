@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.164 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.169 2009/12/14 02:15:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -102,6 +102,7 @@ ProcedureCreate(const char *procedureName,
 	bool		internalOutParam = false;
 	Oid			variadicType = InvalidOid;
 	Oid			proowner = GetUserId();
+	Acl		   *proacl = NULL;
 	Relation	rel;
 	HeapTuple	tup;
 	HeapTuple	oldtup;
@@ -349,8 +350,7 @@ ProcedureCreate(const char *procedureName,
 		values[Anum_pg_proc_proconfig - 1] = proconfig;
 	else
 		nulls[Anum_pg_proc_proconfig - 1] = true;
-	/* start out with empty permissions */
-	nulls[Anum_pg_proc_proacl - 1] = true;
+	/* proacl will be determined later */
 	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
 	values[Anum_pg_proc_proexeclocation - 1] = CharGetDatum(proexeclocation);
 
@@ -368,6 +368,8 @@ ProcedureCreate(const char *procedureName,
 	{
 		/* There is one; okay to replace it? */
 		Form_pg_proc oldproc = (Form_pg_proc) GETSTRUCT(oldtup);
+		Datum		proargnames;
+		bool		isnull;
 		Oid oldOid = HeapTupleGetOid(oldtup);
 
 		if (!replace)
@@ -415,6 +417,49 @@ ProcedureCreate(const char *procedureName,
 		}
 
 		/*
+		 * If there were any named input parameters, check to make sure the
+		 * names have not been changed, as this could break existing calls.
+		 * We allow adding names to formerly unnamed parameters, though.
+		 */
+		proargnames = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+									  Anum_pg_proc_proargnames,
+									  &isnull);
+		if (!isnull)
+		{
+			Datum		proargmodes;
+			char	  **old_arg_names;
+			char	  **new_arg_names;
+			int			n_old_arg_names;
+			int			n_new_arg_names;
+			int			j;
+
+			proargmodes = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+										  Anum_pg_proc_proargmodes,
+										  &isnull);
+			if (isnull)
+				proargmodes = PointerGetDatum(NULL);	/* just to be sure */
+
+			n_old_arg_names = get_func_input_arg_names(proargnames,
+													   proargmodes,
+													   &old_arg_names);
+			n_new_arg_names = get_func_input_arg_names(parameterNames,
+													   parameterModes,
+													   &new_arg_names);
+			for (j = 0; j < n_old_arg_names; j++)
+			{
+				if (old_arg_names[j] == NULL)
+					continue;
+				if (j >= n_new_arg_names || new_arg_names[j] == NULL ||
+					strcmp(old_arg_names[j], new_arg_names[j]) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+							 errmsg("cannot change name of input parameter \"%s\"",
+									old_arg_names[j]),
+							 errhint("Use DROP FUNCTION first.")));
+			}
+		 }
+
+		/*
 		 * If there are existing defaults, check compatibility: redefinition
 		 * must not remove any defaults nor change their types.  (Removing a
 		 * default might cause a function to fail to satisfy an existing call.
@@ -425,7 +470,6 @@ ProcedureCreate(const char *procedureName,
 		if (oldproc->pronargdefaults != 0)
 		{
 			Datum		proargdefaults;
-			bool		isnull;
 			List	   *oldDefaults;
 			ListCell   *oldlc;
 			ListCell   *newlc;
@@ -557,6 +601,15 @@ ProcedureCreate(const char *procedureName,
 	else
 	{
 		/* Creating a new procedure */
+
+		/* First, get default permissions and set up proacl */
+		proacl = get_user_default_acl(ACL_OBJECT_FUNCTION, proowner,
+									  procNamespace);
+		if (proacl != NULL)
+			values[Anum_pg_proc_proacl - 1] = PointerGetDatum(proacl);
+		else
+			nulls[Anum_pg_proc_proacl - 1] = true;
+
 		tup = heap_form_tuple(tupDesc, values, nulls);
 		simple_heap_insert(rel, tup);
 		is_update = false;
@@ -628,6 +681,19 @@ ProcedureCreate(const char *procedureName,
 	/* dependency on owner */
 	if (!is_update)
 		recordDependencyOnOwner(ProcedureRelationId, retval, proowner);
+
+	/* dependency on any roles mentioned in ACL */
+	if (!is_update && proacl != NULL)
+	{
+		int			nnewmembers;
+		Oid		   *newmembers;
+
+		nnewmembers = aclmembers(proacl, &newmembers);
+		updateAclDependencies(ProcedureRelationId, retval, 0,
+							  proowner, true,
+							  0, NULL,
+							  nnewmembers, newmembers);
+	}
 
 	/* dependency on extension */
 	recordDependencyOnCurrentExtension(&myself, is_update);
@@ -862,7 +928,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 												  proc->pronargs);
 			(void) check_sql_fn_retval(funcoid, proc->prorettype,
 									   querytree_list,
-									   false, NULL);
+									   NULL, NULL);
 		}
 		else
 			querytree_list = pg_parse_query(prosrc);

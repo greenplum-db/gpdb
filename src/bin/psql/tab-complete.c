@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.184 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.188 2009/12/11 03:34:56 itagaki Exp $
  */
 
 /*----------------------------------------------------------------------
@@ -2589,8 +2589,8 @@ psql_completion(char *text, int start, int end)
 	{
 		static const char *const my_list[] =
 		{"format", "border", "expanded",
-			"null", "fieldsep", "tuples_only", "title", "tableattr",
-		"linestyle", "pager", "recordsep", NULL};
+		 "null", "fieldsep", "tuples_only", "title", "tableattr",
+		 "linestyle", "pager", "recordsep", NULL};
 
 		COMPLETE_WITH_LIST(my_list);
 	}

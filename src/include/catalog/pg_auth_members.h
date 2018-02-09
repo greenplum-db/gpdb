@@ -27,8 +27,9 @@
  * ----------------
  */
 #define AuthMemRelationId	1261
+#define AuthMemRelation_Rowtype_Id	2843
 
-CATALOG(pg_auth_members,1261) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(pg_auth_members,1261) BKI_SHARED_RELATION BKI_WITHOUT_OIDS BKI_ROWTYPE_OID(2843)
 {
 	Oid			roleid;			/* ID of a role */
 	Oid			member;			/* ID of a member of that role */
@@ -62,9 +63,9 @@ typedef FormData_pg_auth_members *Form_pg_auth_members;
 #define Anum_pg_auth_members_admin_option	4
 
 #define Schema_pg_auth_members \
-{1261, {"roleid"}      , 26, -1, 4, 1, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
-{1261, {"member"}      , 26, -1, 4, 2, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
-{1261, {"grantor"}     , 26, -1, 4, 3, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
-{1261, {"admin_option"}, 16, -1, 1, 4, 0, -1, -1, true, 'p' ,'c', true, false, false, true, 0}
+{1261, {"roleid"}      , 26, -1, 0, 4, 1, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
+{1261, {"member"}      , 26, -1, 0, 4, 2, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
+{1261, {"grantor"}     , 26, -1, 0, 4, 3, 0, -1, -1, true, 'p' ,'i', true, false, false, true, 0}, \
+{1261, {"admin_option"}, 16, -1, 0, 1, 4, 0, -1, -1, true, 'p' ,'c', true, false, false, true, 0}
 
 #endif   /* PG_AUTH_MEMBERS_H */

@@ -11,7 +11,7 @@
 #
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/tools/msvc/Genbki.pm,v 1.6 2009/01/01 17:24:05 momjian Exp $
+#    $PostgreSQL: pgsql/src/tools/msvc/Genbki.pm,v 1.8 2009/09/27 02:14:04 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -30,12 +30,12 @@ sub genbki
     my $version = shift;
     my $prefix = shift;
 
-    $version =~ /^(\d+\.\d+)/ || die "Bad format verison $version\n";
+    $version =~ /^(\d+\.\d+)/ || die "Bad format version $version\n";
     my $majorversion = $1;
 
     my $pgauthid = read_file("src/include/catalog/pg_authid.h");
     $pgauthid =~ /^#define\s+BOOTSTRAP_SUPERUSERID\s+(\d+)$/mg
-      || die "Could not read BOOTSTRAUP_SUPERUSERID from pg_authid.h\n";
+      || die "Could not read BOOTSTRAP_SUPERUSERID from pg_authid.h\n";
     my $bootstrapsuperuserid = $1;
 
     my $pgnamespace = read_file("src/include/catalog/pg_namespace.h");
@@ -77,6 +77,7 @@ sub genbki
     my $bootstrap = "";
     my $shared_relation = "";
     my $without_oids = "";
+    my $rowtype_oid = "";
     my $nc = 0;
     my $inside = 0;
     my @attr;
@@ -96,7 +97,7 @@ sub genbki
             {
                 $oid = 0;
             }
-            $data =~ s/\s{2,}/ /g;
+            $data =~ s/\s+/ /g;
             $bki .= $data . "\n";
         }
         elsif ($line =~ /^DESCR\("(.*)"\)\s*$/m)
@@ -122,7 +123,10 @@ sub genbki
             }
             my $u = $1?" unique":"";
             my @fields = split /,/,$2,3;
-            $fields[2] =~ s/\s{2,}/ /g;
+            $fields[0] =~ s/\s+//g;
+            $fields[1] =~ s/\s+//g;
+            $fields[2] =~ s/\s+/ /g;
+            $fields[2] =~ s/^\s+//;
             $bki .= "declare$u index $fields[0] $fields[1] $fields[2]\n";
         }
         elsif ($line =~ /^DECLARE_TOAST\((.*)\)\s*$/m)
@@ -133,13 +137,15 @@ sub genbki
                 $reln_open = 0;
             }
             my @fields = split /,/,$1;
+            $fields[1] =~ s/\s+//g;
+            $fields[2] =~ s/\s+//g;
             $bki .= "declare toast $fields[1] $fields[2] on $fields[0]\n";
         }
         elsif ($line =~ /^BUILD_INDICES/)
         {
             $bki .= "build indices\n";
         }
-        elsif ($line =~ /^CATALOG\((.*)\)(.*)\s*$/m)
+        elsif ($line =~ /^CATALOG\(([^)]*)\)(.*)\s*$/m)
         {
             if ($reln_open)
             {
@@ -150,18 +156,22 @@ sub genbki
             my @fields = split /,/,$1;
             $catalog = $fields[0];
             $oid = $fields[1];
-            $bootstrap=$shared_relation=$without_oids="";
+            $bootstrap=$shared_relation=$without_oids=$rowtype_oid="";
             if ($rest =~ /BKI_BOOTSTRAP/)
             {
-                $bootstrap = "bootstrap ";
+                $bootstrap = " bootstrap";
             }
             if ($rest =~ /BKI_SHARED_RELATION/)
             {
-                $shared_relation = "shared_relation ";
+                $shared_relation = " shared_relation";
             }
             if ($rest =~ /BKI_WITHOUT_OIDS/)
             {
-                $without_oids = "without_oids ";
+                $without_oids = " without_oids";
+            }
+            if ($rest =~ /BKI_ROWTYPE_OID\((\d+)\)/)
+            {
+                $rowtype_oid = " rowtype_oid $1";
             }
             $nc++;
             $inside = 1;
@@ -174,7 +184,7 @@ sub genbki
             {
 
                 # Last line
-                $bki .= "create $bootstrap$shared_relation$without_oids$catalog $oid\n (\n";
+                $bki .= "create $catalog $oid$bootstrap$shared_relation$without_oids$rowtype_oid\n (\n";
                 my $first = 1;
                 for (my $i = 0; $i <= $#attr; $i++)
                 {
@@ -184,7 +194,7 @@ sub genbki
                     }
                     else
                     {
-                        $bki .= ",\n";
+                        $bki .= " ,\n";
                     }
                     $bki .= " " . $attr[$i] . " = " . $types[$i];
                 }

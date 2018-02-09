@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinpath.c,v 1.122 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinpath.c,v 1.126 2009/09/19 17:48:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 
 #include <math.h>
 
+#include "executor/executor.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
@@ -99,8 +100,8 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * interested in doing a mergejoin.  However, mergejoin is currently our
 	 * only way of implementing full outer joins, so override mergejoin
 	 * disable if it's a full join.
-     *
-     * CDB: Always build mergeclause_list.  We need it for motion planning.
+	 *
+	 * CDB: Always build mergeclause_list.  We need it for motion planning.
 	 */
 	mergeclause_list = select_mergejoin_clauses(root,
 												joinrel,
@@ -160,6 +161,37 @@ add_paths_to_joinrel(PlannerInfo *root,
 							 restrictlist, jointype, sjinfo,
 							 mergeclause_list);
 	}
+}
+
+/*
+ * clause_sides_match_join
+ *	  Determine whether a join clause is of the right form to use in this join.
+ *
+ * We already know that the clause is a binary opclause referencing only the
+ * rels in the current join.  The point here is to check whether it has the
+ * form "outerrel_expr op innerrel_expr" or "innerrel_expr op outerrel_expr",
+ * rather than mixing outer and inner vars on either side.  If it matches,
+ * we set the transient flag outer_is_left to identify which side is which.
+ */
+static inline bool
+clause_sides_match_join(RestrictInfo *rinfo, RelOptInfo *outerrel,
+						RelOptInfo *innerrel)
+{
+	if (bms_is_subset(rinfo->left_relids, outerrel->relids) &&
+		bms_is_subset(rinfo->right_relids, innerrel->relids))
+	{
+		/* lefthand side is outer */
+		rinfo->outer_is_left = true;
+		return true;
+	}
+	else if (bms_is_subset(rinfo->left_relids, innerrel->relids) &&
+			 bms_is_subset(rinfo->right_relids, outerrel->relids))
+	{
+		/* righthand side is outer */
+		rinfo->outer_is_left = false;
+		return true;
+	}
+	return false;				/* no good for these input relations */
 }
 
 /*
@@ -447,29 +479,13 @@ match_unsorted_outer(PlannerInfo *root,
 	}
 	else if (nestjoinOK)
 	{
-		bool    materialize_inner = true;
-
 		/*
-		 * Consider materializing the cheapest inner path unless it is
-		 * cheaply rescannable.
-		 *
-		 * Unlike upstream we choose to materialize pretty much
-		 * everything on the inner side. The original change cited
-		 * performance as the reason.
+		 * Consider materializing the cheapest inner path, unless it is one
+		 * that materializes its output anyway.
 		 */
-		if (IsA(inner_cheapest_total, UniquePath))
-		{
-			UniquePath *unique_path = (UniquePath *)inner_cheapest_total;
-
-			if (unique_path->umethod == UNIQUE_PATH_SORT ||
-				unique_path->umethod == UNIQUE_PATH_HASH)
-				materialize_inner = false;
-		}
-		else if (inner_cheapest_total->pathtype == T_WorkTableScan)
-			materialize_inner = false;
-
-		if (materialize_inner)
-			matpath = (Path *)create_material_path(root, innerrel, inner_cheapest_total);
+		if (!ExecMaterializesOutput(inner_cheapest_total->pathtype))
+			matpath = (Path *)
+				create_material_path(root, innerrel, inner_cheapest_total);
 
 		/*
 		 * Get the best innerjoin indexpaths (if any) for this outer rel.
@@ -868,10 +884,6 @@ hash_inner_and_outer(PlannerInfo *root,
 	{
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
 
-		if (!restrictinfo->can_join ||
-			restrictinfo->hashjoinoperator == InvalidOid)
-			continue;			/* not hashjoinable */
-
 		/*
 		 * A qual like "(a = b) IS NOT FALSE" is treated as hashable in
 		 * check_hashjoinable(), for the benefit of LASJ joins. It will be
@@ -890,20 +902,14 @@ hash_inner_and_outer(PlannerInfo *root,
 		if (isouterjoin && restrictinfo->is_pushed_down)
 			continue;
 
+		if (!restrictinfo->can_join ||
+			restrictinfo->hashjoinoperator == InvalidOid)
+			continue;			/* not hashjoinable */
+
 		/*
-		 * Check if clause is usable with these input rels.
+		 * Check if clause has the form "outer op inner" or "inner op outer".
 		 */
-		if (bms_is_subset(restrictinfo->left_relids, outerrel->relids) &&
-			bms_is_subset(restrictinfo->right_relids, innerrel->relids))
-		{
-			/* righthand side is inner */
-		}
-		else if (bms_is_subset(restrictinfo->left_relids, innerrel->relids) &&
-				 bms_is_subset(restrictinfo->right_relids, outerrel->relids))
-		{
-			/* lefthand side is inner */
-		}
-		else
+		if (!clause_sides_match_join(restrictinfo, outerrel, innerrel))
 			continue;			/* no good for these input relations */
 
 		hashclauses = lappend(hashclauses, restrictinfo);
@@ -1079,23 +1085,9 @@ select_mergejoin_clauses(PlannerInfo *root,
 		}
 
 		/*
-		 * Check if clause is usable with these input rels.  All the vars
-		 * needed on each side of the clause must be available from one or the
-		 * other of the input rels.
+		 * Check if clause has the form "outer op inner" or "inner op outer".
 		 */
-		if (bms_is_subset(restrictinfo->left_relids, outerrel->relids) &&
-			bms_is_subset(restrictinfo->right_relids, innerrel->relids))
-		{
-			/* righthand side is inner */
-			restrictinfo->outer_is_left = true;
-		}
-		else if (bms_is_subset(restrictinfo->left_relids, innerrel->relids) &&
-				 bms_is_subset(restrictinfo->right_relids, outerrel->relids))
-		{
-			/* lefthand side is inner */
-			restrictinfo->outer_is_left = false;
-		}
-		else
+		if (!clause_sides_match_join(restrictinfo, outerrel, innerrel))
 		{
 			have_nonmergeable_joinclause = true;
 			continue;			/* no good for these input relations */

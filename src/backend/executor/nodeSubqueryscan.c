@@ -14,7 +14,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.40 2009/01/01 17:23:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.43 2009/10/26 02:26:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,20 +53,15 @@ SubqueryNext(SubqueryScanState *node)
 	TupleTableSlot *slot;
 
 	/*
-	 * We need not support EvalPlanQual here, since we are not scanning a real
-	 * relation.
-	 */
-
-	/*
 	 * Get the next tuple from the sub-query.
 	 */
 	slot = ExecProcNode(node->subplan);
 
 	/*
-	 * We just overwrite our ScanTupleSlot with the subplan's result slot,
-	 * rather than expending the cycles for ExecCopySlot().
+	 * We just return the subplan's result slot, rather than expending
+	 * extra cycles for ExecCopySlot().  (Our own ScanTupleSlot is used
+	 * only for EvalPlanQual rechecks.)
 	 */
-	node->ss.ss_ScanTupleSlot = slot;
 
     /*
      * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
@@ -80,23 +75,31 @@ SubqueryNext(SubqueryScanState *node)
 	return slot;
 }
 
+/*
+ * SubqueryRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+static bool
+SubqueryRecheck(SubqueryScanState *node, TupleTableSlot *slot)
+{
+	/* nothing to check */
+	return true;
+}
+
 /* ----------------------------------------------------------------
  *		ExecSubqueryScan(node)
  *
  *		Scans the subquery sequentially and returns the next qualifying
  *		tuple.
- *		It calls the ExecScan() routine and passes it the access method
- *		which retrieve tuples sequentially.
- *
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
+ * ----------------------------------------------------------------
  */
-
 TupleTableSlot *
 ExecSubqueryScan(SubqueryScanState *node)
 {
-	/*
-	 * use SubqueryNext as access method
-	 */
-	return ExecScan(&node->ss, (ExecScanAccessMtd) SubqueryNext);
+	return ExecScan(&node->ss,
+					(ExecScanAccessMtd) SubqueryNext,
+					(ExecScanRecheckMtd) SubqueryRecheck);
 }
 
 /* ----------------------------------------------------------------
@@ -113,11 +116,12 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 
 	/*
 	 * SubqueryScan should not have any "normal" children.	Also, if planner
-	 * left anything in subrtable, it's fishy.
+	 * left anything in subrtable/subrowmark, it's fishy.
 	 */
 	Assert(outerPlan(node) == NULL);
 	Assert(innerPlan(node) == NULL);
 	Assert(node->subrtable == NIL);
+	Assert(node->subrowmark == NIL);
 
 	/*
 	 * Since subquery nodes create its own executor state,
@@ -155,8 +159,6 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 	subquerystate->cdb_want_ctid = contain_ctid_var_reference(&node->scan);
 	ItemPointerSetInvalid(&subquerystate->cdb_fake_ctid);
 
-#define SUBQUERYSCAN_NSLOTS 2
-
 	/*
 	 * tuple table initialization
 	 */
@@ -183,15 +185,6 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 	return subquerystate;
 }
 
-int
-ExecCountSlotsSubqueryScan(SubqueryScan *node)
-{
-	Assert(outerPlan(node) == NULL);
-	Assert(innerPlan(node) == NULL);
-	return ExecCountSlotsNode(node->subplan) +
-		SUBQUERYSCAN_NSLOTS;
-}
-
 /* ----------------------------------------------------------------
  *		ExecEndSubqueryScan
  *
@@ -212,7 +205,7 @@ ExecEndSubqueryScan(SubqueryScanState *node)
 	if (node->ss.ss_ScanTupleSlot != NULL)
 	{
 		ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
-		node->ss.ss_ScanTupleSlot = NULL;	/* not ours to clear */
+		ExecClearTuple(node->ss.ss_ScanTupleSlot);
 	}
 
 	/* gpmon */
@@ -233,9 +226,7 @@ ExecEndSubqueryScan(SubqueryScanState *node)
 void
 ExecSubqueryReScan(SubqueryScanState *node, ExprContext *exprCtxt)
 {
-	EState	   *estate;
-
-	estate = node->ss.ps.state;
+	ExecScanReScan(&node->ss);
 
 	ItemPointerSet(&node->cdb_fake_ctid, 0, 0);
 
@@ -253,9 +244,6 @@ ExecSubqueryReScan(SubqueryScanState *node, ExprContext *exprCtxt)
 	 */
 	if (node->subplan->chgParam == NULL)
 		ExecReScan(node->subplan, NULL);
-
-	node->ss.ss_ScanTupleSlot = NULL;
-	/*node->ss.ps.ps_TupFromTlist = false;*/
 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }

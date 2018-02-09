@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/sequence.c,v 1.160 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/sequence.c,v 1.162 2009/10/13 00:53:07 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -166,6 +166,7 @@ DefineSequence(CreateSeqStmt *seq)
 		coldef->inhcount = 0;
 		coldef->is_local = true;
 		coldef->is_not_null = true;
+		coldef->storage = 0;
 		coldef->raw_default = NULL;
 		coldef->cooked_default = NULL;
 		coldef->constraints = NIL;

@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.149 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.152 2009/12/15 17:57:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -438,6 +438,29 @@ typedef struct FuncExpr
 	int			location;		/* token location, or -1 if unknown */
 	bool        is_tablefunc;   /* Is a TableFunction reference */
 } FuncExpr;
+
+/*
+ * NamedArgExpr - a named argument of a function
+ *
+ * This node type can only appear in the args list of a FuncCall or FuncExpr
+ * node.  We support pure positional call notation (no named arguments),
+ * named notation (all arguments are named), and mixed notation (unnamed
+ * arguments followed by named ones).
+ *
+ * Parse analysis sets argnumber to the positional index of the argument,
+ * but doesn't rearrange the argument list.
+ *
+ * The planner will convert argument lists to pure positional notation
+ * during expression preprocessing, so execution never sees a NamedArgExpr.
+ */
+typedef struct NamedArgExpr
+{
+	Expr		xpr;
+	Expr	   *arg;			/* the argument expression */
+	char	   *name;			/* the name */
+	int			argnumber;		/* argument's number in positional notation */
+	int			location;		/* argument name location, or -1 if unknown */
+} NamedArgExpr;
 
 /*
  * OpExpr - expression node for an operator invocation
@@ -1287,8 +1310,8 @@ typedef struct RangeTblRef
 /*----------
  * JoinExpr - for SQL JOIN expressions
  *
- * isNatural, using, and quals are interdependent.	The user can write only
- * one of NATURAL, USING(), or ON() (this is enforced by the grammar).
+ * isNatural, usingClause, and quals are interdependent.  The user can write
+ * only one of NATURAL, USING(), or ON() (this is enforced by the grammar).
  * If he writes NATURAL then parse analysis generates the equivalent USING()
  * list, and from that fills in "quals" with the right equality comparisons.
  * If he writes USING() then "quals" is filled with equality comparisons.

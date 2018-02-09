@@ -174,13 +174,7 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	splitupdatestate->deleteTuple = ExecInitExtraTupleSlot(estate);
 
 	/* New TupleDescriptor for output TupleTableSlots (old_values + new_values, ctid, gp_segment, action).*/
-	if (estate->es_result_relation_info != NULL &&
-		estate->es_result_relation_info->ri_RelationDesc != NULL &&
-		estate->es_result_relation_info->ri_RelationDesc->rd_rel != NULL &&
-		estate->es_result_relation_info->ri_RelationDesc->rd_rel->relhasoids)
-	{
-		has_oids = true;
-	}
+	ExecContextForcesOids((PlanState *) splitupdatestate, &has_oids);
 
 	TupleDesc tupDesc = ExecTypeFromTL(node->plan.targetlist, has_oids);
 	ExecSetSlotDescriptor(splitupdatestate->insertTuple, tupDesc);
@@ -215,13 +209,6 @@ ExecEndSplitUpdate(SplitUpdateState *node)
 	ExecClearTuple(node->deleteTuple);
 	ExecEndNode(outerPlanState(node));
 	EndPlanStateGpmonPkt(&node->ps);
-}
-
-/* Return number of TupleTableSlots used by SplitUpdate node.*/
-int
-ExecCountSlotsSplitUpdate(SplitUpdate *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + SPLITUPDATE_NSLOTS;
 }
 
 /* Tracing execution for GP Monitor. */

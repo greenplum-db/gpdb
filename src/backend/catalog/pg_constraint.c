@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_constraint.c,v 1.45 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_constraint.c,v 1.50 2009/12/07 05:22:21 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,6 +52,7 @@ CreateConstraintEntry(const char *constraintName,
 					  const int16 *constraintKey,
 					  int constraintNKeys,
 					  Oid domainId,
+					  Oid indexRelId,
 					  Oid foreignRelId,
 					  const int16 *foreignKey,
 					  const Oid *pfEqOp,
@@ -61,7 +62,7 @@ CreateConstraintEntry(const char *constraintName,
 					  char foreignUpdateType,
 					  char foreignDeleteType,
 					  char foreignMatchType,
-					  Oid indexRelId,
+					  const Oid *exclOp,
 					  Node *conExpr,
 					  const char *conBin,
 					  const char *conSrc,
@@ -78,6 +79,7 @@ CreateConstraintEntry(const char *constraintName,
 	ArrayType  *conpfeqopArray;
 	ArrayType  *conppeqopArray;
 	ArrayType  *conffeqopArray;
+	ArrayType  *conexclopArray;
 	NameData	cname;
 	int			i;
 	ObjectAddress conobject;
@@ -133,6 +135,19 @@ CreateConstraintEntry(const char *constraintName,
 		conffeqopArray = NULL;
 	}
 
+	if (exclOp != NULL)
+	{
+		Datum	   *opdatums;
+
+		opdatums = (Datum *) palloc(constraintNKeys * sizeof(Datum));
+		for (i = 0; i < constraintNKeys; i++)
+			opdatums[i] = ObjectIdGetDatum(exclOp[i]);
+		conexclopArray = construct_array(opdatums, constraintNKeys,
+										 OIDOID, sizeof(Oid), true, 'i');
+	}
+	else
+		conexclopArray = NULL;
+
 	/* initialize nulls and values */
 	for (i = 0; i < Natts_pg_constraint; i++)
 	{
@@ -147,6 +162,7 @@ CreateConstraintEntry(const char *constraintName,
 	values[Anum_pg_constraint_condeferred - 1] = BoolGetDatum(isDeferred);
 	values[Anum_pg_constraint_conrelid - 1] = ObjectIdGetDatum(relId);
 	values[Anum_pg_constraint_contypid - 1] = ObjectIdGetDatum(domainId);
+	values[Anum_pg_constraint_conindid - 1] = ObjectIdGetDatum(indexRelId);
 	values[Anum_pg_constraint_confrelid - 1] = ObjectIdGetDatum(foreignRelId);
 	values[Anum_pg_constraint_confupdtype - 1] = CharGetDatum(foreignUpdateType);
 	values[Anum_pg_constraint_confdeltype - 1] = CharGetDatum(foreignDeleteType);
@@ -178,6 +194,11 @@ CreateConstraintEntry(const char *constraintName,
 		values[Anum_pg_constraint_conffeqop - 1] = PointerGetDatum(conffeqopArray);
 	else
 		nulls[Anum_pg_constraint_conffeqop - 1] = true;
+
+	if (conexclopArray)
+		values[Anum_pg_constraint_conexclop - 1] = PointerGetDatum(conexclopArray);
+	else
+		nulls[Anum_pg_constraint_conexclop - 1] = true;
 
 	/*
 	 * initialize the binary form of the check constraint.
@@ -276,11 +297,13 @@ CreateConstraintEntry(const char *constraintName,
 		}
 	}
 
-	if (OidIsValid(indexRelId))
+	if (OidIsValid(indexRelId) && constraintType == CONSTRAINT_FOREIGN)
 	{
 		/*
 		 * Register normal dependency on the unique index that supports a
-		 * foreign-key constraint.
+		 * foreign-key constraint.  (Note: for indexes associated with
+		 * unique or primary-key constraints, the dependency runs the other
+		 * way, and is not made here.)
 		 */
 		ObjectAddress relobject;
 
@@ -320,6 +343,14 @@ CreateConstraintEntry(const char *constraintName,
 			}
 		}
 	}
+
+	/*
+	 * We don't bother to register dependencies on the exclusion operators
+	 * of an exclusion constraint.  We assume they are members of the opclass
+	 * supporting the index, so there's an indirect dependency via that.
+	 * (This would be pretty dicey for cross-type operators, but exclusion
+	 * operators can never be cross-type.)
+	 */
 
 	if (conExpr != NULL)
 	{
@@ -422,7 +453,7 @@ ConstraintNameIsUsed(ConstraintCategory conCat, Oid objId,
  */
 char *
 ChooseConstraintName(const char *name1, const char *name2,
-					 const char *label, Oid namespace,
+					 const char *label, Oid namespaceid,
 					 List *others)
 {
 	int			pass = 0;
@@ -464,7 +495,7 @@ ChooseConstraintName(const char *name1, const char *name2,
 			ScanKeyInit(&skey[1],
 						Anum_pg_constraint_connamespace,
 						BTEqualStrategyNumber, F_OIDEQ,
-						ObjectIdGetDatum(namespace));
+						ObjectIdGetDatum(namespaceid));
 
 			conscan = systable_beginscan(conDesc, ConstraintNameNspIndexId, true,
 										 SnapshotNow, 2, skey);
@@ -774,8 +805,8 @@ get_constraint_oid(Oid relid, const char *conname, bool missing_ok)
 			if (OidIsValid(conOid))
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("table \"%s\" has multiple constraints named \"%s\"",
-						get_rel_name(relid), conname)));
+						 errmsg("table \"%s\" has multiple constraints named \"%s\"",
+								get_rel_name(relid), conname)));
 			conOid = HeapTupleGetOid(tuple);
 		}
 	}

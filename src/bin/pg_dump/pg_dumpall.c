@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.126 2009/06/11 14:49:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.128 2009/10/07 22:14:24 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,8 +48,10 @@ static void dropDBs(PGconn *conn);
 static void dumpCreateDB(PGconn *conn);
 static void dumpDatabaseConfig(PGconn *conn, const char *dbname);
 static void dumpUserConfig(PGconn *conn, const char *username);
+static void dumpDbRoleConfig(PGconn *conn);
 static void makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
-					   const char *type, const char *name);
+					   const char *type, const char *name, const char *type2,
+					   const char *name2);
 static void dumpDatabases(PGconn *conn);
 static void dumpTimestamp(char *msg);
 static void doShellQuoting(PQExpBuffer buf, const char *str);
@@ -570,6 +572,13 @@ main(int argc, char *argv[])
 		/* Dump CREATE DATABASE commands */
 		if (!globals_only && !roles_only && !tablespaces_only)
 			dumpCreateDB(conn);
+
+		/* Dump role/database settings */
+		if (!tablespaces_only && !roles_only)
+		{
+			if (server_version >= 80500)
+				dumpDbRoleConfig(conn);
+		}
 	}
 
 	if (!globals_only && !roles_only && !tablespaces_only)
@@ -1388,7 +1397,7 @@ dumpTablespaces(PGconn *conn)
 		/* Build Acls */
 		if (!skip_acls &&
 			!buildACLCommands(fspcname, NULL, "TABLESPACE", spcacl, spcowner,
-							  server_version, buf))
+							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for tablespace \"%s\"\n"),
 					progname, spcacl, fspcname);
@@ -1642,7 +1651,7 @@ dumpCreateDB(PGconn *conn)
 
 		if (!skip_acls &&
 			!buildACLCommands(fdbname, NULL, "DATABASE", dbacl, dbowner,
-							  server_version, buf))
+							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for database \"%s\"\n"),
 					progname, dbacl, fdbname);
@@ -1677,15 +1686,24 @@ dumpDatabaseConfig(PGconn *conn, const char *dbname)
 	{
 		PGresult   *res;
 
-		printfPQExpBuffer(buf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
+		if (server_version >= 80500)
+			printfPQExpBuffer(buf, "SELECT setconfig[%d] FROM pg_db_role_setting WHERE "
+							  "setrole = 0 AND setdatabase = (SELECT oid FROM pg_database WHERE datname = ", count);
+		else
+			printfPQExpBuffer(buf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
 		appendStringLiteralConn(buf, dbname, conn);
+
+		if (server_version >= 80500)
+			appendPQExpBuffer(buf, ")");
+
 		appendPQExpBuffer(buf, ";");
 
 		res = executeQuery(conn, buf->data);
-		if (!PQgetisnull(res, 0, 0))
+		if (PQntuples(res) == 1 &&
+			!PQgetisnull(res, 0, 0))
 		{
 			makeAlterConfigCommand(conn, PQgetvalue(res, 0, 0),
-								   "DATABASE", dbname);
+								   "DATABASE", dbname, NULL, NULL);
 			PQclear(res);
 			count++;
 		}
@@ -1714,16 +1732,24 @@ dumpUserConfig(PGconn *conn, const char *username)
 	{
 		PGresult   *res;
 
-		printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
-
+		if (server_version >= 80500)
+			printfPQExpBuffer(buf, "SELECT setconfig[%d] FROM pg_db_role_setting WHERE "
+							  "setdatabase = 0 AND setrole = "
+							  "(SELECT oid FROM pg_authid WHERE rolname = ", count);
+		else if (server_version >= 80100)
+			printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
+		else
+			printfPQExpBuffer(buf, "SELECT useconfig[%d] FROM pg_shadow WHERE usename = ", count);
 		appendStringLiteralConn(buf, username, conn);
+		if (server_version >= 80500)
+			appendPQExpBuffer(buf, ")");
 
 		res = executeQuery(conn, buf->data);
 		if (PQntuples(res) == 1 &&
 			!PQgetisnull(res, 0, 0))
 		{
 			makeAlterConfigCommand(conn, PQgetvalue(res, 0, 0),
-								   "ROLE", username);
+								   "ROLE", username, NULL, NULL);
 			PQclear(res);
 			count++;
 		}
@@ -1738,13 +1764,47 @@ dumpUserConfig(PGconn *conn, const char *username)
 }
 
 
+/*
+ * Dump user-and-database-specific configuration
+ */
+static void
+dumpDbRoleConfig(PGconn *conn)
+{
+	PQExpBuffer	buf = createPQExpBuffer();
+	PGresult   *res;
+	int			i;
+
+	printfPQExpBuffer(buf, "SELECT rolname, datname, unnest(setconfig) "
+					  "FROM pg_db_role_setting, pg_authid, pg_database "
+					  "WHERE setrole = pg_authid.oid AND setdatabase = pg_database.oid");
+	res = executeQuery(conn, buf->data);
+
+	if (PQntuples(res) > 0)
+	{
+		fprintf(OPF, "--\n-- Per-Database Role Settings \n--\n\n");
+
+		for (i = 0; i < PQntuples(res); i++)
+		{
+			makeAlterConfigCommand(conn, PQgetvalue(res, i, 2),
+								   "ROLE", PQgetvalue(res, i, 0),
+								   "DATABASE", PQgetvalue(res, i, 1));
+		}
+
+		fprintf(OPF, "\n\n");
+	}
+
+	PQclear(res);
+	destroyPQExpBuffer(buf);
+}
+
 
 /*
  * Helper function for dumpXXXConfig().
  */
 static void
 makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
-					   const char *type, const char *name)
+					   const char *type, const char *name,
+					   const char *type2, const char *name2)
 {
 	char	   *pos;
 	char	   *mine;
@@ -1757,6 +1817,8 @@ makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
 
 	*pos = 0;
 	appendPQExpBuffer(buf, "ALTER %s %s ", type, fmtId(name));
+	if (type2 != NULL && name2 != NULL)
+		appendPQExpBuffer(buf, "IN %s %s ", type2, fmtId(name2));
 	appendPQExpBuffer(buf, "SET %s TO ", fmtId(mine));
 
 	/*

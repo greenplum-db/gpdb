@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.134 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.140 2009/12/19 00:47:57 momjian Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -587,6 +587,12 @@ DefineType(List *names, List *parameters)
 	 * now have TypeCreate do all the real work.
 	 */
 	typoid =
+		/*
+		 *	The pg_type.oid is stored in user tables as array elements
+		 *	(base types) in ArrayType and in composite types in
+		 *	DatumTupleFields.  This oid must be preserved by binary
+		 *	upgrades.
+		 */
 		TypeCreateWithOptions(InvalidOid,	/* no predetermined type OID */
 				   typeName,	/* type name */
 				   typeNamespace,		/* namespace */
@@ -954,22 +960,11 @@ DefineDomain(CreateDomainStmt *stmt)
 	 */
 	foreach(listptr, schema)
 	{
-		Node	   *newConstraint = lfirst(listptr);
-		Constraint *constr;
+		Constraint *constr = lfirst(listptr);
 
-		/* Check for unsupported constraint types */
-		if (IsA(newConstraint, FkConstraint))
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-				errmsg("foreign key constraints not possible for domains")));
-
-		/* otherwise it should be a plain Constraint */
-		if (!IsA(newConstraint, Constraint))
+		if (!IsA(constr, Constraint))
 			elog(ERROR, "unrecognized node type: %d",
-				 (int) nodeTag(newConstraint));
-
-		constr = (Constraint *) newConstraint;
-
+				 (int) nodeTag(constr));
 		switch (constr->contype)
 		{
 			case CONSTR_DEFAULT:
@@ -1082,6 +1077,18 @@ DefineDomain(CreateDomainStmt *stmt)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 				errmsg("primary key constraints not possible for domains")));
+				break;
+
+			case CONSTR_EXCLUSION:
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("exclusion constraints not possible for domains")));
+				break;
+
+			case CONSTR_FOREIGN:
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("foreign key constraints not possible for domains")));
 				break;
 
 			case CONSTR_ATTR_DEFERRABLE:
@@ -1389,7 +1396,7 @@ findTypeInputFunction(List *procname, Oid typeOid)
 	ereport(ERROR,
 			(errcode(ERRCODE_UNDEFINED_FUNCTION),
 			 errmsg("function %s does not exist",
-					func_signature_string(procname, 1, argList))));
+					func_signature_string(procname, 1, NIL, argList))));
 
 	return InvalidOid;			/* keep compiler quiet */
 }
@@ -1440,7 +1447,7 @@ findTypeOutputFunction(List *procname, Oid typeOid)
 	ereport(ERROR,
 			(errcode(ERRCODE_UNDEFINED_FUNCTION),
 			 errmsg("function %s does not exist",
-					func_signature_string(procname, 1, argList))));
+					func_signature_string(procname, 1, NIL, argList))));
 
 	return InvalidOid;			/* keep compiler quiet */
 }
@@ -1471,7 +1478,7 @@ findTypeReceiveFunction(List *procname, Oid typeOid)
 	ereport(ERROR,
 			(errcode(ERRCODE_UNDEFINED_FUNCTION),
 			 errmsg("function %s does not exist",
-					func_signature_string(procname, 1, argList))));
+					func_signature_string(procname, 1, NIL, argList))));
 
 	return InvalidOid;			/* keep compiler quiet */
 }
@@ -1494,7 +1501,7 @@ findTypeSendFunction(List *procname, Oid typeOid)
 	ereport(ERROR,
 			(errcode(ERRCODE_UNDEFINED_FUNCTION),
 			 errmsg("function %s does not exist",
-					func_signature_string(procname, 1, argList))));
+					func_signature_string(procname, 1, NIL, argList))));
 
 	return InvalidOid;			/* keep compiler quiet */
 }
@@ -1515,7 +1522,7 @@ findTypeTypmodinFunction(List *procname)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(procname, 1, argList))));
+						func_signature_string(procname, 1, NIL, argList))));
 
 	if (get_func_rettype(procOid) != INT4OID)
 		ereport(ERROR,
@@ -1542,7 +1549,7 @@ findTypeTypmodoutFunction(List *procname)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(procname, 1, argList))));
+						func_signature_string(procname, 1, NIL, argList))));
 
 	if (get_func_rettype(procOid) != CSTRINGOID)
 		ereport(ERROR,
@@ -1569,7 +1576,7 @@ findTypeAnalyzeFunction(List *procname, Oid typeOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(procname, 1, argList))));
+						func_signature_string(procname, 1, NIL, argList))));
 
 	if (get_func_rettype(procOid) != BOOLOID)
 		ereport(ERROR,
@@ -1983,13 +1990,6 @@ AlterDomainAddConstraint(List *names, Node *newConstraint)
 	/* Check it's a domain and check user has permission for ALTER DOMAIN */
 	checkDomainOwner(tup, typename);
 
-	/* Check for unsupported constraint types */
-	if (IsA(newConstraint, FkConstraint))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("foreign key constraints not possible for domains")));
-
-	/* otherwise it should be a plain Constraint */
 	if (!IsA(newConstraint, Constraint))
 		elog(ERROR, "unrecognized node type: %d",
 			 (int) nodeTag(newConstraint));
@@ -2012,6 +2012,18 @@ AlterDomainAddConstraint(List *names, Node *newConstraint)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 				errmsg("primary key constraints not possible for domains")));
+			break;
+
+		case CONSTR_EXCLUSION:
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("exclusion constraints not possible for domains")));
+			break;
+
+		case CONSTR_FOREIGN:
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("foreign key constraints not possible for domains")));
 			break;
 
 		case CONSTR_ATTR_DEFERRABLE:
@@ -2322,23 +2334,23 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 	/*
 	 * Assign or validate constraint name
 	 */
-	if (constr->name)
+	if (constr->conname)
 	{
 		if (ConstraintNameIsUsed(CONSTRAINT_DOMAIN,
 								 domainOid,
 								 domainNamespace,
-								 constr->name))
+								 constr->conname))
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("constraint \"%s\" for domain \"%s\" already exists",
-						constr->name, domainName)));
+						constr->conname, domainName)));
 	}
 	else
-		constr->name = ChooseConstraintName(domainName,
-											NULL,
-											"check",
-											domainNamespace,
-											NIL);
+		constr->conname = ChooseConstraintName(domainName,
+											   NULL,
+											   "check",
+											   domainNamespace,
+											   NIL);
 
 	/*
 	 * Convert the A_EXPR in raw_expr into an EXPR
@@ -2396,7 +2408,7 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 	/*
 	 * Store the constraint in pg_constraint
 	 */
-	CreateConstraintEntry(constr->name, /* Constraint Name */
+	CreateConstraintEntry(constr->conname,		/* Constraint Name */
 						  domainNamespace,		/* namespace */
 						  CONSTRAINT_CHECK,		/* Constraint Type */
 						  false,	/* Is Deferrable */
@@ -2405,6 +2417,7 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 						  NULL,
 						  0,
 						  domainOid,	/* domain constraint */
+						  InvalidOid,	/* no associated index */
 						  InvalidOid,	/* Foreign key fields */
 						  NULL,
 						  NULL,
@@ -2414,10 +2427,10 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 						  ' ',
 						  ' ',
 						  ' ',
-						  InvalidOid,
-						  expr, /* Tree form check constraint */
-						  ccbin,	/* Binary form check constraint */
-						  ccsrc,	/* Source form check constraint */
+						  NULL,	/* not an exclusion constraint */
+						  expr, /* Tree form of check constraint */
+						  ccbin,	/* Binary form of check constraint */
+						  ccsrc,	/* Source form of check constraint */
 						  true, /* is local */
 						  0);	/* inhcount */
 
