@@ -257,6 +257,8 @@ func main() {
 				os.Exit(1)
 			}
 
+			fmt.Println("Seginstall is underway. Use command \"gp_upgrade status upgrade\" " +
+				"to check its current status, and/or hub logs for possible errors.")
 		},
 	}
 

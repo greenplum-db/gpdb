@@ -25,10 +25,17 @@ func NewClusterSsher(cw ChecklistWriter, logger logger.LogEntry) *ClusterSsher {
 }
 
 func (c *ClusterSsher) VerifySoftware(hostnames []string) {
-	c.checklistWriter.ResetStateDir("seginstall")
-	err := c.checklistWriter.MarkInProgress("seginstall")
+	err := c.checklistWriter.ResetStateDir("seginstall")
 	if err != nil {
 		c.logger.Error <- err.Error()
+		//For MMVP, return here, but maybe should log more info
+		return
+	}
+	err = c.checklistWriter.MarkInProgress("seginstall")
+	if err != nil {
+		c.logger.Error <- err.Error()
+		//For MMVP, return here, but maybe should log more info
+		return
 	}
 	//default assumption: GPDB is installed on the same path on all hosts in cluster
 	//we're looking for gp_upgrade_agent as proof that the new binary is installed

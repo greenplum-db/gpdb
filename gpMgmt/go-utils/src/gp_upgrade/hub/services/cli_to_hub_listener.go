@@ -14,7 +14,9 @@ func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *Cli
 	impl.CatchAllCliToHubListenerImpl.logger = logger
 	impl.CatchAllCliToHubListenerImpl.clusterPair = pair
 	configReader := configutils.NewReader()
-	configReader.OfOldClusterConfig() // refactor opportunity -- don't use this pattern, use different types or separate functions for old/new or set the config path at reader initialization time
+	// refactor opportunity -- don't use this pattern,
+	// use different types or separate functions for old/new or set the config path at reader initialization time
+	configReader.OfOldClusterConfig()
 	impl.Bootstrapper.hostnameGetter = configReader
 	gpUpgradeDir := filepath.Join(os.Getenv("HOME"), ".gp_upgrade")
 	impl.Bootstrapper.softwareVerifier = NewClusterSsher(upgradestatus.NewChecklistManager(gpUpgradeDir), logger)

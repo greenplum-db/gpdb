@@ -8,8 +8,6 @@ import (
 
 	"fmt"
 
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -47,21 +45,33 @@ var _ = Describe("check", func() {
 		})
 	})
 
+	// `gp_backup check seginstall` verifies that the user has installed the software on all hosts
+	// As a single-node check, this test verifies the mechanics of the check, but would typically succeed.
+	// The implementation, however, uses the gp_upgrade_agent binary to verify installation. In real life,
+	// all the binaries, gp_upgrade_hub and gp_upgrade_agent included, would be alongside each other.
+	// But in our integration tests' context, only the necessary Golang code is compiled, and Ginkgo's default
+	// is to compile gp_upgrade_hub and gp_upgrade_agent in separate directories. As such, this test depends on the
+	// setup in `integrations_suite_test.go` to replicate the real-world scenario of "install binaries side-by-side".
+	//
+	// TODO: This test might be interesting to run multi-node; for that, figure out how "installation" should be done
 	Describe("seginstall", func() {
-		//can we assert on the order of the states, not just their existence?
 		It("updates status PENDING to RUNNING then to COMPLETE if successful", func() {
 			runCommand("check", "config")
 			Expect(runStatusUpgrade()).To(ContainSubstring("PENDING - Install binaries on segments"))
 
+			expectationsDuringCommandInFlight := make(chan bool)
+
+			go func() {
+				// TODO: Can this flake? if the in-progress window is shorter than the frequency of Eventually(), then yea
+				Eventually(runStatusUpgrade).Should(ContainSubstring("RUNNING - Install binaries on segments"))
+				expectationsDuringCommandInFlight <- true
+			}()
+
 			session := runCommand("check", "seginstall")
 			Eventually(session).Should(Exit(0))
+			<-expectationsDuringCommandInFlight
 
-			// in progress RUNNING state is covered in unit tests
-			//time.Sleep(1 * time.Second)
-			//statusSession := runCommand("status", "upgrade")
-			//Eventually(string(statusSession.Out.Contents()), 3*).To(ContainSubstring("COMPLETE - Install binaries on segments"))
-
-			Eventually(runStatusUpgrade, 2*time.Second).Should(ContainSubstring("COMPLETE - Install binaries on segments"))
+			Eventually(runStatusUpgrade).Should(ContainSubstring("COMPLETE - Install binaries on segments"))
 		})
 	})
 })
