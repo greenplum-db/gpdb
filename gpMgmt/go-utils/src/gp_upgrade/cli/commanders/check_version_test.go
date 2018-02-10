@@ -38,6 +38,7 @@ var _ bool = Describe("object count tests", func() {
 			request := commanders.NewVersionChecker(client)
 			err := request.Execute("localhost", 9999)
 			Expect(err).To(BeNil())
+			// this eventually should actually be an expect -- convert it
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("gp_upgrade: Version Compatibility Check [OK]\n"))
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("Check version request is processed."))
 		})
@@ -50,6 +51,7 @@ var _ bool = Describe("object count tests", func() {
 			request := commanders.NewVersionChecker(client)
 			err := request.Execute("localhost", 9999)
 			Expect(err).To(BeNil())
+			// this eventually should actually be an expect -- convert it
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("gp_upgrade: Version Compatibility Check [Failed]\n"))
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("Check version request is processed."))
 		})
@@ -63,6 +65,7 @@ var _ bool = Describe("object count tests", func() {
 			err := request.Execute("localhost", 9999)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).Should(ContainSubstring("something went wrong"))
+			// this eventually should actually be an expect -- convert it
 			Eventually(string(testStderr.Contents())).Should(ContainSubstring("ERROR - gRPC call to hub failed"))
 		})
 	})

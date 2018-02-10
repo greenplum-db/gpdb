@@ -23,6 +23,7 @@ var _ bool = Describe("hub", func() {
 		testutils.SetupTestLogger() // extend to capture the values in a var if future tests need it
 
 		homeDirectory := os.Getenv("HOME")
+		// convert this eventually to a Expect
 		Eventually(homeDirectory).Should(Not(Equal("")))
 		err := os.RemoveAll(filepath.Join(homeDirectory, "/.gp_upgrade/pg_upgrade"))
 		Expect(err).To(BeNil())

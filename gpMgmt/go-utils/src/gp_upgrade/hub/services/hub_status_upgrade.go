@@ -14,7 +14,9 @@ import (
 )
 
 func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb.StatusUpgradeRequest) (*pb.StatusUpgradeReply, error) {
-	gpbackupUtils.GetLogger().Info("starting StatusUpgrade")
+	logger := gpbackupUtils.GetLogger()
+	logger.Info("starting StatusUpgrade")
+
 	demoStepStatus := &pb.UpgradeStepStatus{
 		Step:   pb.UpgradeSteps_CHECK_CONFIG,
 		Status: pb.StepStatus_PENDING,
@@ -28,6 +30,7 @@ func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb
 	}
 
 	seginstallStatePath := filepath.Join(homeDirectory, ".gp_upgrade/seginstall")
+	logger.Debug("looking for seginstall State at %s", seginstallStatePath)
 	seginstallState := upgradestatus.NewSeginstall(seginstallStatePath)
 	seginstallStatus, _ := seginstallState.GetStatus()
 

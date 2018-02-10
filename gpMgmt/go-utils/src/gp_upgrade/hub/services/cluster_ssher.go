@@ -37,7 +37,7 @@ func (c *ClusterSsher) VerifySoftware(hostnames []string) {
 	agentPath := filepath.Join(filepath.Dir(hubPath), "gp_upgrade_agent")
 	var anyFailed = false
 	for _, hostname := range hostnames {
-		_, err := utils.System.ExecCmdOutput("ssh",
+		output, err := utils.System.ExecCmdCombinedOutput("ssh",
 			"-o",
 			"StrictHostKeyChecking=no",
 			hostname,
@@ -45,8 +45,8 @@ func (c *ClusterSsher) VerifySoftware(hostnames []string) {
 			agentPath,
 		)
 		if err != nil {
-			c.logger.Error <- err.Error()
-			c.logger.Error <- fmt.Sprintf("ssh failed to %s for %s", hostname, agentPath)
+			c.logger.Error <- string(output)
+			c.logger.Error <- fmt.Sprintf("didn't find %s on %s", agentPath, hostname)
 			anyFailed = true
 		}
 	}

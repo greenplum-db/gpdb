@@ -38,29 +38,31 @@ type SystemFunctions struct {
 	Stat        func(name string) (os.FileInfo, error)
 	//TODO consider other patterns here?
 	//first attempt at enabling us to mock exec.Command().Output()
-	ExecCmdOutput func(name string, args ...string) ([]byte, error)
-	ExecCommand   func(name string, arg ...string) *exec.Cmd
-	FilePathGlob  func(pattern string) ([]string, error)
+	ExecCmdOutput         func(name string, args ...string) ([]byte, error)
+	ExecCmdCombinedOutput func(name string, args ...string) ([]byte, error)
+	ExecCommand           func(name string, arg ...string) *exec.Cmd
+	FilePathGlob          func(pattern string) ([]string, error)
 }
 
 func InitializeSystemFunctions() *SystemFunctions {
 	return &SystemFunctions{
-		CurrentUser:   user.Current,
-		Getenv:        os.Getenv,
-		Getpid:        os.Getpid,
-		Hostname:      os.Hostname,
-		IsNotExist:    os.IsNotExist,
-		MkdirAll:      os.MkdirAll,
-		Now:           time.Now,
-		Open:          os.Open,
-		OpenFile:      os.OpenFile,
-		Remove:        os.Remove,
-		RemoveAll:     os.RemoveAll,
-		Stat:          os.Stat,
-		ExecCmdOutput: CommandOutput,
-		ExecCommand:   exec.Command,
-		FilePathGlob:  filepath.Glob,
-		ReadFile:      ioutil.ReadFile,
+		CurrentUser:           user.Current,
+		Getenv:                os.Getenv,
+		Getpid:                os.Getpid,
+		Hostname:              os.Hostname,
+		IsNotExist:            os.IsNotExist,
+		MkdirAll:              os.MkdirAll,
+		Now:                   time.Now,
+		Open:                  os.Open,
+		OpenFile:              os.OpenFile,
+		Remove:                os.Remove,
+		RemoveAll:             os.RemoveAll,
+		Stat:                  os.Stat,
+		ExecCmdOutput:         CommandOutput,
+		ExecCmdCombinedOutput: CommandCombinedOutput,
+		ExecCommand:           exec.Command,
+		FilePathGlob:          filepath.Glob,
+		ReadFile:              ioutil.ReadFile,
 	}
 }
 
@@ -87,4 +89,8 @@ func GetHost() (string, error) {
 
 func CommandOutput(name string, args ...string) ([]byte, error) {
 	return exec.Command(name, args...).Output()
+}
+
+func CommandCombinedOutput(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).CombinedOutput()
 }

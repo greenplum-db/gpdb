@@ -28,7 +28,7 @@ var _ = Describe("ClusterSsher", func() {
 		Expect(cw.stepsMarkedCompleted).ToNot(ContainElement("seginstall"))
 	})
 	It("indicates that it is in progress, completed on the hub filesystem", func() {
-		utils.System.ExecCmdOutput = func(name string, args ...string) ([]byte, error) {
+		utils.System.ExecCmdCombinedOutput = func(name string, args ...string) ([]byte, error) {
 			return []byte("completed"), nil
 		}
 		cw := newSpyChecklistWriter()

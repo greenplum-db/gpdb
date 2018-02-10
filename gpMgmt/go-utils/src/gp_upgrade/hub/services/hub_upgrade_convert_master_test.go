@@ -12,11 +12,12 @@ import (
 	"strconv"
 	"testing"
 
+	"gp_upgrade/hub/logger"
+
 	"github.com/greenplum-db/gpbackup/testutils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"gp_upgrade/hub/logger"
 )
 
 // TestHelperProcess isn't a real test. It's used as a helper process
@@ -54,8 +55,8 @@ var _ = Describe("hub", func() {
 	}
 	BeforeEach(func() {
 		testutils.SetupTestLogger() // extend to capture the values in a var if future tests need it
-
 		homeDirectory := os.Getenv("HOME")
+		// should be an expect not an eventually
 		Eventually(homeDirectory).Should(Not(Equal("")))
 		err := os.RemoveAll(filepath.Join(homeDirectory, "/.gp_upgrade/pg_upgrade"))
 		Expect(err).To(BeNil())

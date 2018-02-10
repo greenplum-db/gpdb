@@ -16,6 +16,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -29,6 +31,7 @@ func TestCommands(t *testing.T) {
 var (
 	cliBinaryPath            string
 	hubBinaryPath            string
+	agentBinaryPath          string
 	sshd                     *exec.Cmd
 	fixture_path             string
 	sshdPath                 string
@@ -43,6 +46,13 @@ var _ = BeforeSuite(func() {
 	hubBinaryPath, err = Build("gp_upgrade/hub")
 	Expect(err).NotTo(HaveOccurred())
 	hubDirectoryPath := path.Dir(hubBinaryPath)
+
+	agentBinaryPath, err = Build("gp_upgrade/agent")
+	Expect(err).NotTo(HaveOccurred())
+	// move the agent binary into the hub directory and rename to match expected name
+	renamedAgentBinaryPath := filepath.Join(hubDirectoryPath, "/gp_upgrade_agent")
+	err = os.Rename(agentBinaryPath, renamedAgentBinaryPath)
+	Expect(err).NotTo(HaveOccurred())
 
 	// hub gets built as "hub", but rename for integration tests that expect
 	// "gp_upgrade_hub" to be on the path
