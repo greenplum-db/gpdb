@@ -859,7 +859,7 @@ class Psql(Command):
 
         # Need to escape " for REMOTE or it'll interfere with ssh
         if ctxt == REMOTE:
-             cmdStr = cmdStr.replace('"', '\\"')
+             cmdStr = cmdStr.replace('\'', '\'\\\'\'')
         self.cmdStr=cmdStr
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
 

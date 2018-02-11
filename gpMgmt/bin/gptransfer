@@ -47,7 +47,7 @@ try:
     from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
-    from gppylib.utils import escapeDoubleQuoteInSQLString
+    from gppylib.utils import shellEscape, escapeDoubleQuoteInSQLString
     from pygresql.pg import DB
     from pygresql import pg
 except ImportError, import_exception:
@@ -835,7 +835,7 @@ def schema_exists_on_system(host, port, user, schema, databases=None):
     for database in databases:
         url = DbURL(host, port, database, user)
         conn = connect(url)
-        schema_exists = doesSchemaExist(conn, schema)
+        schema_exists = doesSchemaExist(conn, pg.escape_string(schema))
         conn.close()
         if schema_exists:
             return True
@@ -859,7 +859,7 @@ def drop_existing_schema_on_system(host, port, user, schema, databases=None):
     for database in databases:
         url = DbURL(host, port, database, user)
         conn = connect(url)
-        dropSchemaIfExist(conn, schema)
+        dropSchemaIfExist(conn, pg.escape_string(schema))
         conn.close()
 
 # --------------------------------------------------------------------------
@@ -1150,8 +1150,8 @@ class MD5MergeTableValidator(HashMergeTableValidator):
         self._pool.addCommand(self._dest_md5_cmd)
 
         TableValidator.__init__(self, work_dir, src_conn, dest_conn,
-                                sql % (src_schema, src_table, self._src_pipe),
-                                sql % (dest_schema, dest_table, self._dest_pipe))
+                                sql % (escapeDoubleQuoteInSQLString(src_schema), escapeDoubleQuoteInSQLString(src_table), self._src_pipe),
+                                sql % (escapeDoubleQuoteInSQLString(dest_schema), escapeDoubleQuoteInSQLString(dest_table), self._dest_pipe))
 
     def _compare(self):
         """
@@ -1246,8 +1246,8 @@ FROM %s.%s t ORDER BY hash) TO '%s'"""
         self._pool.addCommand(self._dest_sha256_cmd)
 
         TableValidator.__init__(self, work_dir, src_conn, dest_conn,
-                                sql % (src_schema, src_table, self._src_pipe),
-                                sql % (dest_schema, dest_table, self._dest_pipe))
+                                sql % (escapeDoubleQuoteInSQLString(src_schema), escapeDoubleQuoteInSQLString(src_table), self._src_pipe),
+                                sql % (escapeDoubleQuoteInSQLString(dest_schema), escapeDoubleQuoteInSQLString(dest_table), self._dest_pipe))
 
     def _compare(self):
         """
@@ -1370,8 +1370,7 @@ class CreateDB(Command):
 
 class GpCreateNamedPipe(Command):
     """
-    Command for creating a named pipe on *nix systems.
-    """
+    Command for creating a named pipe on *nix systems. """
 
     def __init__(self, name, fifo_name, ctxt=LOCAL, remoteHost=None):
         """
@@ -1395,7 +1394,7 @@ class GpCloseNamedPipe(Command):
         name: name of the command
         fifo_name: full path to the named pipe
         """
-        cmdStr = """python -c 'f = open("%s", "w+"); f.close()'""" % fifo_name
+        cmdStr = """python -c 'f = open('\\''%s'\\'', "w+"); f.close()'""" % fifo_name.replace(r"'", r"'\\\''")
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
@@ -1419,10 +1418,13 @@ class GpCreateGpfdist(Command):
         """
 
         self._data_file = data_file
+        directory = directory.replace('\'', '\'\\\'\'')
+        pid_file = pid_file.replace('\'', '\'\\\'\'')
+        log_file = log_file.replace('\'', '\'\\\'\'')
 
         cmdStr = \
-            'nohup gpfdist -d %s -p %d -P %d -m %d -t %d %s> %s 2>&1 < /dev/null & echo \\$! > ' \
-            '%s && bash -c "(sleep 1 && kill -0 \`cat %s 2> /dev/null\` && cat %s) || (cat %s >&2 && exit 1)"' % \
+            'nohup gpfdist -d \'%s\' -p %d -P %d -m %d -t %d %s> \'%s\' 2>&1 < /dev/null & echo $! > ' \
+            '\'%s\' && bash -c \'(sleep 1 && kill -0 `cat \'%s\' 2> /dev/null` && cat \'%s\') || (cat \'%s\' >&2 && exit 1)\'' % \
             (directory, port, last_port, max_line_length, timeout, verbosity, log_file, pid_file, pid_file, log_file, log_file)
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
@@ -1510,7 +1512,7 @@ while True:
         except:
             pass
 
-os.unlink(sys.argv[1])' %s %s""" % (pid_file, log_file)
+os.unlink(sys.argv[1])' \'%s\' \'%s\'""" % (pid_file.replace('\'', '\'\\\'\''), log_file.replace('\'', '\'\\\'\''))
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
@@ -1548,7 +1550,10 @@ class GpSchemaDump(Command):
                      % (host, port, user)
         else:
             cmdStr = 'pg_dump -s -x -O --gp-syntax -h %s -p %d -U %s -t ' \
-                     '\'\"%s\".\"%s\"\' %s' % (host, port, user, schema, table, database)
+                     '%s.%s %s' % (
+                         host, port, user, shellEscape(escapeDoubleQuoteInSQLString(schema)),
+                         shellEscape(escapeDoubleQuoteInSQLString(table)),
+                         database)
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
@@ -1812,8 +1817,8 @@ FROM (
  JOIN pg_namespace n ON (c.relnamespace = n.oid)
  WHERE nspname = '%s'
  AND relname = '%s'
- ORDER BY colorder;''' % (self._table_pair.source.schema,
-                           self._table_pair.source.table)
+ ORDER BY colorder;''' % (pg.escape_string(self._table_pair.source.schema),
+                           pg.escape_string(self._table_pair.source.table))
         try:
             cur = execSQL(self._src_conn, sql)
             attnames = cur.fetchall()
@@ -1857,9 +1862,9 @@ FROM (
         """
 
         logger.info('Dropping target table %s...', self._table_pair.dest)
-        cur = execSQL(self._dest_conn, 'DROP TABLE \"%s\".\"%s\"'
-                      % (self._table_pair.dest.schema,
-                         self._table_pair.dest.table))
+        cur = execSQL(self._dest_conn, 'DROP TABLE %s.%s'
+                      % (escapeDoubleQuoteInSQLString(self._table_pair.dest.schema),
+                         escapeDoubleQuoteInSQLString(self._table_pair.dest.table)))
         cur.close()
 
     def _get_source_table_schema(self):
@@ -1952,18 +1957,18 @@ FROM (
         logger.debug('Creating source writable external table for source '
                      'table %s...', self._table_pair.source)
 
-        urls = ','.join(["'%s'" % url for url in self._wext_gpfdist_urls])
+        urls = ','.join(["'%s'" % url.replace('\'', '\'\'') for url in self._wext_gpfdist_urls])
 
         if self._fast_mode:
             distributed_clause = self._get_distributed_by()
             wext_sql = \
-                '''CREATE WRITABLE EXTERNAL WEB TABLE gptransfer.%s (LIKE \"%s\".\"%s\")
-                   EXECUTE 'cat > %s.$GP_SEGMENT_ID'
+                '''CREATE WRITABLE EXTERNAL WEB TABLE gptransfer.%s (LIKE %s.%s)
+                   EXECUTE 'cat > ''%s''.$GP_SEGMENT_ID'
                    FORMAT '%s'
-                ''' % (self._wext_name,
-                       self._table_pair.source.schema,
-                       self._table_pair.source.table,
-                       self._pipe,
+                ''' % (escapeDoubleQuoteInSQLString(self._wext_name),
+                       escapeDoubleQuoteInSQLString(self._table_pair.source.schema),
+                       escapeDoubleQuoteInSQLString(self._table_pair.source.table),
+                       self._pipe.replace('\'', '\'\''),
                        self._format)
             if self._format.lower() == 'csv':
                 wext_sql += """ (DELIMITER AS ',' QUOTE AS E'%s')""" % self._quote
@@ -1972,12 +1977,12 @@ FROM (
             wext_sql += """ ENCODING 'UTF8' %s""" % distributed_clause
         else:
             wext_sql = \
-                '''CREATE WRITABLE EXTERNAL TABLE gptransfer.%s ( LIKE \"%s\".\"%s\")
+                '''CREATE WRITABLE EXTERNAL TABLE gptransfer.%s ( LIKE %s.%s)
                    LOCATION (%s)
                    FORMAT '%s' ''' \
-                % (self._wext_name,
-                   self._table_pair.source.schema,
-                   self._table_pair.source.table,
+                % (escapeDoubleQuoteInSQLString(self._wext_name),
+                   escapeDoubleQuoteInSQLString(self._table_pair.source.schema),
+                   escapeDoubleQuoteInSQLString(self._table_pair.source.table),
                    urls,
                    self._format)
             if self._format.lower() == 'csv':
@@ -1995,14 +2000,15 @@ FROM (
 
         logger.debug('Creating external table for destination table %s...',
                      self._table_pair.dest)
-        urls = ','.join(["'%s'" % url for url in self._ext_gpfdist_urls])
+        urls = ','.join(["'%s'" % url.replace('\'', '\'\'')
+                         for url in self._ext_gpfdist_urls])
         ext_sql = \
-            """CREATE EXTERNAL TABLE gptransfer.%s (LIKE \"%s\".\"%s\")
+            """CREATE EXTERNAL TABLE gptransfer.%s (LIKE %s.%s)
                LOCATION(%s)
                FORMAT '%s' """ \
-            % (self._ext_name,
-               self._table_pair.dest.schema,
-               self._table_pair.dest.table,
+            % (escapeDoubleQuoteInSQLString(self._ext_name),
+               escapeDoubleQuoteInSQLString(self._table_pair.dest.schema),
+               escapeDoubleQuoteInSQLString(self._table_pair.dest.table),
                urls,
                self._format)
         if self._format.lower() == 'csv':
@@ -2018,8 +2024,8 @@ FROM (
         """
 
         logger.info('Analyzing destination table %s...', self._table_pair.dest)
-        sql = 'ANALYZE \"%s\".\"%s\"' % (self._table_pair.dest.schema,
-                                         self._table_pair.dest.table)
+        sql = 'ANALYZE %s.%s' % (escapeDoubleQuoteInSQLString(self._table_pair.dest.schema),
+                                         escapeDoubleQuoteInSQLString(self._table_pair.dest.table))
         cur = execSQL(self._dest_conn, sql)
         cur.close()
 
@@ -2207,13 +2213,13 @@ FROM (
         """
         cur = None
         try:
-            query = """INSERT INTO gptransfer.%s SELECT * FROM \"%s\".\"%s\"""" \
-                    % (self._wext_name,
-                       self._table_pair.source.schema,
-                       self._table_pair.source.table)
+            query = """INSERT INTO gptransfer.%s SELECT * FROM %s.%s""" \
+                    % (escapeDoubleQuoteInSQLString(self._wext_name),
+                       escapeDoubleQuoteInSQLString(self._table_pair.source.schema),
+                       escapeDoubleQuoteInSQLString(self._table_pair.source.table))
             if self._exclusive_lock:
-                lock_query = "LOCK TABLE \"%s\".\"%s\" IN EXCLUSIVE MODE;" % \
-                             (self._table_pair.source.schema, self._table_pair.source.table)
+                lock_query = "LOCK TABLE %s.%s IN EXCLUSIVE MODE;" % \
+                             (escapeDoubleQuoteInSQLString(self._table_pair.source.schema), escapeDoubleQuoteInSQLString(self._table_pair.source.table))
                 execSQL(self._src_conn, lock_query)
 
             self._src_ready.set()
@@ -2236,13 +2242,13 @@ FROM (
         """
         cur = None
         try:
-            query = """INSERT INTO \"%s\".\"%s\" SELECT * FROM gptransfer.%s""" \
-                    % (self._table_pair.dest.schema,
-                       self._table_pair.dest.table,
-                       self._ext_name)
+            query = """INSERT INTO %s.%s SELECT * FROM gptransfer.%s""" \
+                    % (escapeDoubleQuoteInSQLString(self._table_pair.dest.schema),
+                       escapeDoubleQuoteInSQLString(self._table_pair.dest.table),
+                       escapeDoubleQuoteInSQLString(self._ext_name))
             if self._exclusive_lock:
-                lock_query = "LOCK TABLE \"%s\".\"%s\" IN EXCLUSIVE MODE" % \
-                             (self._table_pair.dest.schema, self._table_pair.dest.table)
+                lock_query = "LOCK TABLE %s.%s IN EXCLUSIVE MODE" % \
+                             (escapeDoubleQuoteInSQLString(self._table_pair.dest.schema), escapeDoubleQuoteInSQLString(self._table_pair.dest.table))
                 execSQL(self._dest_conn, lock_query)
 
             self._dest_ready.set()
@@ -2271,7 +2277,7 @@ FROM (
                 'Dropping writable external table for source table %s...',
                 self._table_pair.source)
             drop_wext_sql = """DROP EXTERNAL WEB TABLE gptransfer.%s""" \
-                            % (self._wext_name)
+                            % (escapeDoubleQuoteInSQLString(self._wext_name))
             cur = execSQL(self._src_conn, drop_wext_sql)
             cur.close()
         except:
@@ -2287,7 +2293,7 @@ FROM (
             logger.debug('Dropping external table for destination table %s...',
                          self._table_pair.dest)
             drop_ext_sql = """DROP EXTERNAL TABLE gptransfer.%s""" \
-                           % (self._ext_name)
+                           % (escapeDoubleQuoteInSQLString(self._ext_name))
             cur = execSQL(self._dest_conn, drop_ext_sql)
             cur.close()
         except:
@@ -2446,22 +2452,6 @@ class GpTransferTable(object):
                 self._is_identifier_supported(self.table))
 
     def _is_identifier_supported(self, identifier):
-        """
-        Verify that the characters of identifier starts with a-z, or A-Z or underscore,
-        followed by lower or upper case (a-z, A-Z), or digits(0-9), or underscore (_)
-        """
-
-        if not ((identifier[0:1] >= 'a' and identifier[0:1] <= 'z') or
-                    (identifier[0:1] >= 'A' and identifier[0:1] <= 'Z') or
-                        identifier[0:1] == '_'):
-            return False
-
-        for c in identifier:
-            if not ((c >= 'a' and c <= 'z') or
-                        (c >= 'A' and c <= 'Z') or
-                        (c >= '0' and c <= '9') or
-                        (c == '_')):
-                return False
         return True
 
 
@@ -2830,8 +2820,8 @@ class GpTransfer(object):
                 for schema in schemas:
                     logger.info('Creating schema %s in database %s...',
                                 schema, database)
-                    if not doesSchemaExist(conn, schema):
-                        execSQL(conn, 'CREATE SCHEMA \"%s\"' % schema)
+                    if not doesSchemaExist(conn, pg.escape_string(schema)):
+                        execSQL(conn, 'CREATE SCHEMA %s' % escapeDoubleQuoteInSQLString(schema))
                 conn.commit()
                 conn.close()
 

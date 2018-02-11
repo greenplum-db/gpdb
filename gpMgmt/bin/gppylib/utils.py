@@ -689,7 +689,7 @@ def shellEscape(string):
     """
     res = []
     for ch in string:
-        if ch in ['\\', '`', '$', '!', '"']:
+        if ch in ['\\', '`', '$', '!', '"', ' ', '#', '&', '\'', '(', ')', '*', ',', ';', '>', '<', '?', '[', ']', '^', '{', '}', '|']:
             res.append('\\')
         res.append(ch)
     return ''.join(res)
