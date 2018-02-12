@@ -376,11 +376,16 @@ public.sales_1_prt_dec17</codeblock>
     <topic id="topic_uq5_v5v_scb">
       <title>gpbackup and gprestore Email File Format </title>
       <body>
-        <p>The <codeph>gpbackup</codeph> email notification YAML file
+        <p>The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> email notification YAML file
             <codeph>gp_email_contacts.yaml</codeph> uses indentation (spaces) to determine the
           document hierarchy and the relationships of the sections to one another. The use of white
           space is significant. White space should not be used simply for formatting purposes, and
           tabs should not be used at all.</p>
+        <note>If the <codeph>status</codeph> parameters are not specified correctly, the utility
+          does not issue a warning. For example, if the <codeph>success</codeph> parameter is
+          misspelled and is set to <codeph>true</codeph>, a warning is not issued and an email is
+          not sent to the email address after a successful operation. To ensure email notification
+          is configured correctly, run tests with email notifications configured.</note>
         <p>This is the format of the <codeph>gp_email_contacts.yaml</codeph> YAML file for
             <codeph>gpbackup</codeph> email notifications: </p>
         <codeblock><xref href="#topic_uq5_v5v_scb/contacts_yml" format="dita">contacts</xref>:
@@ -417,11 +422,10 @@ public.sales_1_prt_dec17</codeblock>
                         <plentry>
                           <pt id="status_yml"><b>status</b></pt>
                           <pd>Optional. Specify when the utility sends an email to the specified
-                            email address. The default is to send an email on either a successful
-                            (with or without errors) or failed operation.</pd>
-                          <pd>You can configure email notification to send an email only if a backup
-                            or restore operation is successful or fails. At least one of these
-                            parameters must be specified and each parameter can appear at most once. <parml>
+                            email address. The default is to not send email notification.</pd>
+                          <pd>You specify sending email notification based on the completion status
+                            of a backup or restore operation. At least one of these parameters must
+                            be specified and each parameter can appear at most once. <parml>
                               <plentry>
                                 <pt id="success_yml"><b>success</b></pt>
                                 <pd>Optional. Specify if an email is sent if the operation completes
@@ -465,20 +469,12 @@ public.sales_1_prt_dec17</codeblock>
         </section>
         <section>
           <title>Examples</title>
-          <p>This example YAML file specifies two email recipients for backup operations. Emails are
-            sent whenever a backup operation completes successfully, completes with errors, or
-            fails.</p>
-          <codeblock>contacts:
-  gpbackup:
-  - address: gpadmin@example.com
-  - address: my_dba@example.com</codeblock>
           <p>This example YAML file specifies sending email to email addresses depending on the
             success or failure of an operation. For a backup operation, an email is sent to a
             different address depending on the success or failure of the backup operation. For a
             restore operation, an email is sent to <codeph>gpadmin@example.com</codeph> only when
-            the operation succeeds or completes with errors, and is sent to
-              <codeph>my_dba@example.com</codeph> for any backup
-            operation.<codeblock>contacts
+            the operation succeeds or completes with
+            errors.<codeblock>contacts
   backup:
   - address: gpadmin@example.com
     status:
@@ -491,8 +487,7 @@ public.sales_1_prt_dec17</codeblock>
   - address: gpadmin@example.com
     status:
       success: true
-      success_with_errors: true
-  - address: my_dba@example.com</codeblock></p>
+      success_with_errors: true</codeblock></p>
         </section>
       </body>
     </topic>
