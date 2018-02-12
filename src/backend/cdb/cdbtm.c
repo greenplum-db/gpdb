@@ -2474,7 +2474,7 @@ createDtxSnapshot(
 
 		elog(DTM_DEBUG5,
 			 "createDtxSnapshot added inProgressDistributedXid = %u to snapshot",
-			 ds->inProgressXidArray[count]);
+			 inProgressXid);
 	}
 
 	distribSnapshotId = (*shmNextSnapshotId)++;
