@@ -748,15 +748,6 @@ AS_IF([test "$enable_gpcloud" = yes],
 ]) # fi
 
 #
-# Enable segment WAL replication
-#
-PGAC_ARG_BOOL(enable, segwalrep, no, [  --enable-segwalrep      enable segment WAL replication ],
-              [AC_DEFINE([USE_SEGWALREP], 1,
-                         [Define to 1 to enable segment WAL replication. (--enable-segwalrep)])])
-AC_MSG_RESULT([checking whether to build with segment WAL replication... $enable_segwalrep])
-AC_SUBST(enable_segwalrep)
-
-#
 # Include directories
 #
 ac_save_IFS=$IFS
