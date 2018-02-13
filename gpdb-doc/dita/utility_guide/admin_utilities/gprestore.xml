@@ -92,6 +92,8 @@
         <plentry>
           <pt><b>-createdb</b></pt>
           <pd>Optional. Creates the database before restoring the database object metadata.</pd>
+          <pd>The database is created by cloning the empty standard system database
+              <codeph>template0</codeph>.</pd>
         </plentry>
       </parml>
       <parml>
