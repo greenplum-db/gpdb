@@ -336,12 +336,20 @@ removeDir(Oid group, const char *comp, bool unassign)
 		return true;
 	}
 
+retry:
 	if (unassign)
 		unassignGroup(group, comp, fddir);
 
 	if (rmdir(path))
 	{
 		int err = errno;
+
+		if (err == EBUSY && unassign)
+		{
+			elog(DEBUG1, "can't remove dir, will retry: %s: %s", path, strerror(err));
+			pg_usleep(1000);
+			goto retry;
+		}
 
 		close(fddir);
 
@@ -551,8 +559,29 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 static void
 getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
 {
+	char path[MAXPGPATH];
+	size_t pathsize = sizeof(path);
+
 	*cgram = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.limit_in_bytes");
-	*cgmemsw = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.memsw.limit_in_bytes");
+
+	/*
+	 * cgroup/memory/memory.memsw.limit_in_bytes is only available if
+	 * CONFIG_MEMCG_SWAP_ENABLED is on in kernel config or
+	 * swapaccount=1 in cmdline. Without this file we have to assume swap is
+	 * unlimited in container.
+	 */
+	buildPath(RESGROUP_ROOT_ID, "",
+			  "memory", "memory.memsw.limit_in_bytes", path, pathsize);
+	if (access(path, R_OK) == 0)
+	{
+		*cgmemsw = readInt64(RESGROUP_ROOT_ID, "",
+							 "memory", "memory.memsw.limit_in_bytes");
+	}
+	else
+	{
+		elog(LOG, "swap memory is unlimited");
+		*cgmemsw = (uint64) -1LL;
+	}
 }
 
 /* get vm.overcommit_ratio */

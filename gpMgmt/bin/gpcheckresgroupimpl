@@ -54,7 +54,6 @@ class cgroup(object):
         self.validate_permission("cpuacct/gpdb/cpuacct.stat", "r")
 
         self.validate_permission("memory/memory.limit_in_bytes", "r")
-        self.validate_permission("memory/memory.memsw.limit_in_bytes", "r")
 
     def die(self, msg):
         exit(self.impl + self.error_prefix + msg)

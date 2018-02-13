@@ -276,6 +276,11 @@ ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
 13q:
 14q:
 15q:
+-- start_ignore
+-- The 'q' command returns before the underlying segments all actually quit,
+-- so a following DROP command might fail.  Add a delay here as a workaround.
+SELECT pg_sleep(1);
+-- end_ignore
 
 --
 -- 8. increase concurrency from 0
