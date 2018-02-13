@@ -12130,11 +12130,9 @@ IsStandbyMode(void)
 static void
 GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg)
 {
-#ifndef USE_SEGWALREP
-	/* Only for MASTER check this GUC and act */
+  /* Only for MASTER check this GUC and act */
     if (GpIdentity.segindex == MASTER_CONTENT_ID)
     {
-#endif
 	/*
 	 * See if we have a live WAL sender and see if it has a
 	 * start xlog location (with active basebackup) or standby fsync location
@@ -12152,9 +12150,7 @@ GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg)
 		xlogCleanUpTo = recptr;
 
 	CheckKeepWalSegments(xlogCleanUpTo, _logId, _logSeg);
-#ifndef USE_SEGWALREP
-	}
-#endif
+    }
 }
 
 /*

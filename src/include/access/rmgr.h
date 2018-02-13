@@ -33,12 +33,5 @@ typedef uint8 RmgrId;
 #define RM_BITMAP_ID			16
 #define RM_DISTRIBUTEDLOG_ID	17
 #define RM_MMXLOG_ID			18
-
-#ifdef USE_SEGWALREP
-#define RM_APPEND_ONLY_ID		19
-#define RM_MAX_ID				RM_APPEND_ONLY_ID
-#else
 #define RM_MAX_ID               RM_MMXLOG_ID
-#endif      /* USE_SEGWALREP */
-
 #endif   /* RMGR_H */

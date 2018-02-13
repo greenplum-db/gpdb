@@ -590,11 +590,6 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 		case RM_DBASE_ID:
 		case RM_TBLSPC_ID:
 		case RM_MMXLOG_ID:
-
-#ifdef USE_SEGWALREP
-		case RM_APPEND_ONLY_ID:
-#endif		/* USE_SEGWALREP */
-
 			break;
 
 		/* 

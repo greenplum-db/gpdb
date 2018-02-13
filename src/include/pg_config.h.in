@@ -893,9 +893,6 @@
 /* Use replacement snprintf() functions. */
 #undef USE_REPL_SNPRINTF
 
-/* Define to 1 to enable segment WAL replication. (--enable-segwalrep) */
-#undef USE_SEGWALREP
-
 /* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
 #undef USE_SLICING_BY_8_CRC32C
 

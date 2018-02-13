@@ -34,15 +34,6 @@
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentrecovery.h"
 
-#ifdef USE_SEGWALREP
-#include "access/xlogutils.h"
-#include "cdb/cdbappendonlyam.h"
-
-
-static void insert_ao_xlog(MirroredAppendOnlyOpen *open, void *buffer,
-						   int32 bufferLen);
-#endif		/* USE_SEGWALREP */
-
 static void MirroredAppendOnly_SetUpMirrorAccess(
 	RelFileNode					*relFileNode,
 			/* The tablespace, database, and relation OIDs for the open. */
@@ -2203,12 +2194,6 @@ void MirroredAppendOnly_Append(
 	if (StorageManagerMirrorMode_DoPrimaryWork(open->mirrorMode) &&
 		!open->copyToMirror)
 	{
-
-#ifdef USE_SEGWALREP
-		/* Log each varblock to the XLog. */
-		insert_ao_xlog(open, buffer, bufferLen);
-#endif		/* USE_SEGWALREP */
-
 		errno = 0;
 
 		if ((int) FileWrite(open->primaryFile, buffer, bufferLen) != bufferLen)
@@ -2228,42 +2213,6 @@ void MirroredAppendOnly_Append(
 	*mirrorDataLossOccurred = open->mirrorDataLossOccurred;	// Keep reporting -- it may have occurred anytime during the open session.
 
 }
-
-#ifdef USE_SEGWALREP
-/*
- * Insert an AO XLOG/AOCO record
- */
-static void insert_ao_xlog(MirroredAppendOnlyOpen *open, void *buffer,
-						   int32 bufferLen)
-{
-	xl_ao_insert	xlaoinsert;
-	XLogRecData		rdata[2];
-
-	xlaoinsert.node = open->relFileNode;
-	xlaoinsert.segment_filenum = open->segmentFileNum;
-
-	/*
-	 * Using FileSeek to fetch the current write offset.
-	 * Passing 0 offset with SEEK_CUR avoids actual disk-io,
-	 * as it just returns from VFDCache the current file position value.
-	 * Make sure to populate this before the FileWrite call else the file
-	 * pointer has moved forward.
-	 */
-	xlaoinsert.offset = FileSeek(open->primaryFile, 0, SEEK_CUR);
-
-	rdata[0].data = (char*) &xlaoinsert;
-	rdata[0].len = SizeOfAOInsert;
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].next = &(rdata[1]);
-
-	rdata[1].data = (char*) buffer;
-	rdata[1].len = bufferLen;
-	rdata[1].buffer = InvalidBuffer;
-	rdata[1].next = NULL;
-
-	XLogInsert(RM_APPEND_ONLY_ID, XLOG_APPENDONLY_INSERT, rdata);
-}
-#endif		/* USE_SEGWALREP */
 
 // -----------------------------------------------------------------------------
 // Truncate
@@ -2370,75 +2319,3 @@ int MirroredAppendOnly_Read(
 	errno = 0;
 	return FileRead(open->primaryFile, buffer, bufferLen);
 }
-
-#ifdef USE_SEGWALREP
-void
-ao_xlog_insert(XLogRecord *record)
-{
-	char *primaryFilespaceLocation;
-	char *mirrorFilespaceLocation;
-	char dbPath[MAXPGPATH + 1];
-	char path[MAXPGPATH + 1];
-	int written_len;
-	int64 seek_offset;
-	File file;
-
-	xl_ao_insert *xlrec = (xl_ao_insert*) XLogRecGetData(record);
-	char *buffer = (char*)xlrec + SizeOfAOInsert;
-	uint32 len = record->xl_len - SizeOfAOInsert;
-
-	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-		xlrec->node.spcNode,
-		&primaryFilespaceLocation,
-		&mirrorFilespaceLocation);
-
-	FormDatabasePath(
-				dbPath,
-				primaryFilespaceLocation,
-				xlrec->node.spcNode,
-				xlrec->node.dbNode);
-
-	if (xlrec->segment_filenum == 0)
-		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->node.relNode);
-	else
-		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->node.relNode, xlrec->segment_filenum);
-
-	file = PathNameOpenFile(path, O_RDWR | PG_BINARY, 0600);
-	if (file < 0)
-	{
-		XLogAOSegmentFile(xlrec->node, xlrec->segment_filenum);
-		return;
-	}
-
-	seek_offset = FileSeek(file, xlrec->offset, SEEK_SET);
-	if (seek_offset != xlrec->offset)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("seeked to position " INT64_FORMAT " but expected to seek to position " INT64_FORMAT " in file \"%s\": %m",
-						seek_offset,
-						xlrec->offset,
-						path)));
-	}
-
-	written_len = FileWrite(file, buffer, len);
-	if (written_len < 0 || written_len != len)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("failed to write %d bytes in file \"%s\": %m",
-						len,
-						path)));
-	}
-
-	if (FileSync(file) != 0)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("failed to flush file \"%s\": %m",
-						path)));
-	}
-
-	FileClose(file);
-}
-#endif /* USE_SEGWALREP */

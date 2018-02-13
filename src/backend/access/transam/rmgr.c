@@ -45,9 +45,4 @@ const RmgrData RmgrTable[RM_MAX_ID + 1] = {
 	{"Bitmap", bitmap_redo, bitmap_desc, bitmap_xlog_startup, bitmap_xlog_cleanup, bitmap_safe_restartpoint},
 	{"DistributedLog", DistributedLog_redo, DistributedLog_desc, NULL, NULL, NULL},
 	{"Master Mirror Log Records", mmxlog_redo, mmxlog_desc, NULL, NULL, NULL},
-
-#ifdef USE_SEGWALREP
-	{"Appendonly Table Log Records", appendonly_redo, appendonly_desc, NULL, NULL, NULL}
-#endif		/* USE_SEGWALREP */
-
 };

@@ -30,11 +30,7 @@
 #define GpFaultStrategyRelationId	5039
 
 #define GpFaultStrategyMirrorLess		'n'
-#ifdef USE_SEGWALREP
-#define GpFaultStrategyWalRepMirrored	'w'
-#else
 #define GpFaultStrategyFileRepMirrored	'f'
-#endif
 
 CATALOG(gp_fault_strategy,5039) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
@@ -59,8 +55,5 @@ typedef FormData_gp_fault_strategy *Form_gp_fault_strategy;
 #define Anum_gp_fault_strategy_fault_strategy	1
 
 extern char get_gp_fault_strategy(void);
-#ifdef USE_SEGWALREP
-extern void update_gp_fault_strategy(char fault_strategy);
-#endif
 
 #endif /* _GP_FAULT_STRATEGY_ */

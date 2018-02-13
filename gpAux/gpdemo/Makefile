@@ -36,19 +36,8 @@ all:
 	$(MAKE) probe
 
 cluster create-demo-cluster:
-ifeq ($(enable_segwalrep), yes)
-	@WITH_MIRRORS=false ./demo_cluster.sh # will generate gpdemo-env.sh
-	@if [[ $(WITH_MIRRORS) == true ]]; then \
-	 	. ./gpdemo-env.sh; \
-	 	./gpsegwalrep.py init --host `hostname`; \
-	 	./gpsegwalrep.py start; \
-	 fi
-	@echo ""
-else
 	@./demo_cluster.sh
 	@echo ""
-endif
-
 probe:
 	@./probe_config.sh
 	@echo ""
@@ -64,4 +53,4 @@ clean destroy-demo-cluster:
 	@./demo_cluster.sh -d
 	@echo ""
 
-.PHONY: all cluster create-demo-cluster create-segwalrep-cluster probe clean check clean destroy-demo-cluster
+.PHONY: all cluster create-demo-cluster probe clean check clean destroy-demo-cluster

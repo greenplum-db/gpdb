@@ -372,24 +372,6 @@ extern HTSU_Result appendonly_update(
 		AOTupleId* aoTupleId,
 		AOTupleId* newAoTupleId);
 
-#ifdef USE_SEGWALREP
-#define XLOG_APPENDONLY_INSERT    0x00
-
-typedef struct xl_ao_insert
-{
-	/* meta data about the inserted block of AO data*/
-	RelFileNode node;
-	uint		segment_filenum;
-	int64		offset;
-		/* BLOCK DATA FOLLOWS AT END OF STRUCT */
-} xl_ao_insert;
-
-#define SizeOfAOInsert (offsetof(xl_ao_insert, offset) + sizeof(int64))
-
-extern void appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
-#endif  /* USE_SEGWALREP */
-
 extern void appendonly_update_finish(AppendOnlyUpdateDesc aoUpdateDesc);
 
 #endif   /* CDBAPPENDONLYAM_H */

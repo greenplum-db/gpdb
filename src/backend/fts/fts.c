@@ -585,11 +585,7 @@ probePublishUpdate(uint8 *probe_results)
 	bool update_found = false;
 	int i;
 
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
 	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
 
 	/* preprocess probe results to decide what is the current segment state */
 	FtsPreprocessProbeResultsFilerep(cdb_component_dbs, probe_results);
@@ -824,11 +820,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 	int i;
 	char desc[SQL_CMD_BUF_SIZE];
 
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
 	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
 
 	/*
 	 * Commit/abort transaction below will destroy
@@ -939,11 +931,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 bool
 FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo)
 {
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
 	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
 
 	if (SEGMENT_IS_ACTIVE_MIRROR(segInfo) && SEGMENT_IS_ALIVE(segInfo))
 		return true;

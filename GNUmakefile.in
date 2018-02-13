@@ -166,22 +166,8 @@ installcheck-world:
 	$(MAKE) -C src/interfaces/gppc installcheck
 	$(MAKE) -C src/test/kerberos installcheck
 	$(MAKE) -C gpMgmt/bin installcheck
-# The mirroring_matching test of gpcheckcat fails on a walrep cluster
-# because management tools do not yet understand the fault strategy
-# 'w'. Currently gpcheckcat does not allow us to exclude a single test
-# so we need to explicitly list all the tests.
-ifeq ($(enable_segwalrep), yes)
-	for test in "unique_index_violation" "duplicate" "missing_extraneous"\
-				"inconsistent" "foreign_key" "acl" "persistent" "pgclass"\
-				"namespace" "distribution_policy" "dependency" "owner"\
-				"part_integrity" "part_constraint" "duplicate_persistent";\
-	do \
-		gpcheckcat -R $$test -A;\
-	done;
-else
 	gpcheckcat -A
 	$(MAKE) -C contrib/pg_upgrade check
-endif
 
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@

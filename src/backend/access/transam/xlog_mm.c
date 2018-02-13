@@ -414,9 +414,6 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		 */
 		if (xlrec->segnum > 0)
 		{
-#ifdef USE_SEGWALREP
-			XLogAODropSegmentFile(rnode, xlrec->segnum);
-#endif
 			int primaryError;
 			MirroredAppendOnly_Drop(
 				&rnode,
@@ -577,14 +574,12 @@ emit_mmxlog_fs_record(mm_fs_obj_type type, Oid filespace,
 		/* no business here */
 		return false;
 
-#ifndef USE_SEGWALREP
 	/*
 	 * Only interesting on the master, if wal replication not enabled for
 	 * segments.
 	 */
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 		return false;
-#endif
 
 	master_dbid = GpIdentity.dbid;
 	mirror_dbid = GetStandbyDbid();

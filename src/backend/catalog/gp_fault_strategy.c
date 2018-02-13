@@ -39,48 +39,7 @@ get_gp_fault_strategy(void)
 
 	systable_endscan(sscan);
 	heap_close(rel, AccessShareLock);
-
-#ifdef USE_SEGWALREP
-	Assert(strategy == GpFaultStrategyMirrorLess || strategy == GpFaultStrategyWalRepMirrored);
-#else
 	Assert(strategy == GpFaultStrategyMirrorLess || strategy == GpFaultStrategyFileRepMirrored);
-#endif
 
 	return strategy;
 }
-
-#ifdef USE_SEGWALREP
-/*
- * Update the gp_fault_strategy if needed
- */
-void
-update_gp_fault_strategy(char fault_strategy)
-{
-	Relation rel;
-	HeapTuple tuple;
-	SysScanDesc sscan;
-	Form_gp_fault_strategy form;
-
-	rel = heap_open(GpFaultStrategyRelationId, AccessExclusiveLock);
-
-	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
-
-	/* there should only be one row in table */
-	tuple = systable_getnext(sscan);
-
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR, (errmsg("could not update gp_fault_strategy")));
-
-	tuple = heap_copytuple(tuple);
-	systable_endscan(sscan);
-
-	form = ((Form_gp_fault_strategy)GETSTRUCT(tuple));
-	if (form->fault_strategy != fault_strategy)
-	{
-		form->fault_strategy = fault_strategy;
-		simple_heap_update(rel, &tuple->t_self, tuple);
-	}
-
-	heap_close(rel, AccessExclusiveLock);
-}
-#endif

@@ -60,10 +60,6 @@ const char * const RM_names[RM_MAX_ID+1] = {
 #endif	/* PG_VERSION_NUM >=90200 */
 	"DistributedLog",			/* 17 */
 	"MasterMirrorLog",			/* 18 */
-
-#ifdef USE_SEGWALREP
-	"Appendonly"				/* 19 */
-#endif		/* USE_SEGWALREP */
 };
 
 /* copy from utils/timestamp.h */
@@ -1477,30 +1473,3 @@ print_rmgr_mmxlog(XLogRecPtr cur, XLogRecord *record, uint8 info)
 
 	print_rmgr_record(cur, record, buf);
 }
-
-#ifdef USE_SEGWALREP
-void
-print_rmgr_ao(XLogRecPtr cur, XLogRecord *record, uint8 info)
-{
-	char spaceName[NAMEDATALEN];
-	char dbName[NAMEDATALEN];
-	char relName[NAMEDATALEN];
-	char buf[1024];
-
-	xl_ao_insert xlrec;
-	uint64       len;
-
-	memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
-	len = record->xl_len - SizeOfAOInsert;
-
-	getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
-	getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
-	getRelName(xlrec.node.relNode, relName, sizeof(relName));
-
-	snprintf(buf, sizeof(buf), "insert: s/d/r:%s/%s/%s segfile/off:%u/%lu, len: %lu",
-			 spaceName, dbName, relName,
-			 xlrec.segment_filenum,
-			 xlrec.offset, len);
-	print_rmgr_record(cur, record, buf);
-}
-#endif		/* USE_SEGWALREP */

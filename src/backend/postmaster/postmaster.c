@@ -1188,14 +1188,10 @@ PostmasterMain(int argc, char *argv[])
  * This value of max_wal_senders will be inherited by all the child processes
  * through fork(). This value is used by XLogIsNeeded().
  */
-#ifdef USE_SEGWALREP
-		max_wal_senders = 1;
-#else
-	if ( GpIdentity.segindex == MASTER_CONTENT_ID)
-		max_wal_senders = 1;
-	else
-		max_wal_senders = 0;
-#endif
+    if ( GpIdentity.segindex == MASTER_CONTENT_ID)
+      max_wal_senders = 1;
+    else
+      max_wal_senders = 0;
 
 	if ( GpIdentity.numsegments < 0 )
 	{
@@ -3587,19 +3583,6 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	}
 }
 
-#ifdef USE_SEGWALREP
-static void
-sendPrimaryMirrorTransitionQuery()
-{
-	StringInfoData buf;
-
-	initStringInfo(&buf);
-
-	pq_beginmessage(&buf, '\0');
-	pq_endmessage(&buf);
-	pq_flush();
-}
-#else
 static void
 sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
 {
@@ -3617,7 +3600,6 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 	pq_endmessage(&buf);
 	pq_flush();
 }
-#endif
 
 /**
  * Called during startup packet processing.
@@ -3628,10 +3610,6 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 static void
 processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 {
-#ifdef USE_SEGWALREP
-	/* Send FTS probe response */
-	sendPrimaryMirrorTransitionQuery();
-#else
 	PrimaryMirrorTransitionPacket *transition = (PrimaryMirrorTransitionPacket *) pkt;
 	int length;
 
@@ -3714,7 +3692,6 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state, (uint32)d_state, (uint32)f_type);
 
 	return;
-#endif
 }
 
 /*
