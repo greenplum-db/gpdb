@@ -25,36 +25,6 @@ from mpp.models import MPPTestCase
 from tinctest.models.scenario import ScenarioTestCase
 from mpp.gpdb.tests.storage.lib.sql_isolation_testcase import SQLIsolationTestCase
 from mpp.lib.PSQL import PSQL
-from mpp.gpdb.tests.storage.vacuum.reindex import Reindex
-
-class ReindexTestCase(ScenarioTestCase, MPPTestCase):
-
-    def test_reindex_scenarios(self):
-        '''
-        This test currently verifies following situations --
-        1. Table dropped during reindex database should not fail. Drop table transaction will either succeed or
-        block. But in any case reindex database will proceed without failure.
-        2. Reindex table should be able to retain the system in consistent mode even if a new index is added
-        concurrently.
-        '''
-
-        list_setup = []
-        list_setup.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.reindex_stp")
-        self.test_case_scenario.append(list_setup, serial=True)
-
-        list_drop_table_reindex_db = []
-        list_drop_table_reindex_db.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.reindex_db")
-        list_drop_table_reindex_db.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.drop_obj")
-        self.test_case_scenario.append(list_drop_table_reindex_db, serial=False)
-
-        list_add_index_reindex_table = []
-        list_add_index_reindex_table.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.reindex_rel")
-        list_add_index_reindex_table.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.add_index")
-        self.test_case_scenario.append(list_add_index_reindex_table, serial=False)
-
-        list_verify = []
-        list_verify.append("mpp.gpdb.tests.storage.vacuum.reindex.scenario.test_scenario.reindex_verify")
-        self.test_case_scenario.append(list_verify, serial=True)
 
 class ReindexConcurrencyTestCase(SQLIsolationTestCase):
     '''
