@@ -817,20 +817,52 @@ ccp_gpdb4_gen_cluster_default_params_anchor: &ccp_gpdb4_gen_cluster_default_para
   BUCKET_PATH: clusters/
   BUCKET_NAME: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
 
-debug_sleep_anchor: &debug_sleep
+set_failed_anchor: &set_failed
   do:
-  - task: debug_sleep
+  - task: on_failure_set_failed
     tags: ["ccp"]
     config:
       platform: linux
       image_resource:
         type: docker-image
         source:
-          repository: alpine
-          tag: latest
+          repository: pivotaldata/ccp
+          tag: "7"
+      inputs:
+        - name: ccp_src
+        - name: terraform
       run:
-        path: 'sh'
-        args: ['-c', 'sleep {{ccp_debug_sleep}}']
+        path: 'ccp_src/aws/ccp_failed_test.sh'
+      params:
+        AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+        AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+        AWS_DEFAULT_REGION: {{tf-machine-region}}
+        BUCKET_PATH: clusters/
+        BUCKET_NAME: {{tf-bucket-name}}
+
+set_failed_anchor_2: &set_failed_2_cluster
+  do:
+  - *set_failed
+  - task: on_failure_set_failed
+    tags: ["ccp"]
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: pivotaldata/ccp
+          tag: "7"
+      inputs:
+        - name: ccp_src
+        - name: terraform2
+      run:
+        path: 'ccp_src/aws/ccp_failed_test.sh'
+      params:
+        AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+        AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+        AWS_DEFAULT_REGION: {{tf-machine-region}}
+        BUCKET_PATH: clusters/
+        BUCKET_NAME: {{tf-bucket-name}}
 
 dpm_debug_sleep_anchor: &dpm_debug_sleep
   do:
@@ -901,8 +933,8 @@ cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
   tags: ["ccp"]
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6
-  on_failure:
-    <<: *debug_sleep
+  on_success:
+    <<: *ccp_destroy
 
 ## ======================================================================
 ##    _       _         
@@ -1664,10 +1696,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TINC_TARGET: [[ test_name ]]
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 {% for test_name in cs_pg_twophase_suites %}
@@ -1707,10 +1739,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TINC_TARGET: test_[[ test_name ]]
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 {% for test_name in cs_crash_recovery_suite %}
@@ -1726,8 +1758,9 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: [[ test_name ]]
+    # ccp_destroy should be part of *cs_ccp_run_tests_params_anchor
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 - name: fts
@@ -1903,8 +1936,9 @@ jobs:
       TINC_TARGET: mpp_interconnect
       PRE_TEST_SCRIPT_USER: centos
       PRE_TEST_SCRIPT: sudo bash -c 'yum --cacheonly list installed kernel-devel-$(uname -r)'
+    # ccp_destroy should be part of *cs_ccp_run_tests_params_anchor
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: mpp_resource_group_centos6
   plan:
@@ -1941,10 +1975,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TEST_OS: centos6
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: mpp_resource_group_centos7
   plan:
@@ -1982,10 +2016,10 @@ jobs:
     image: centos-gpdb-dev-7
     params:
       TEST_OS: centos7
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: gate_mpp_end
   plan:
@@ -2074,10 +2108,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=[[ test_name ]]
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 - name: MM_gppkg
@@ -2121,10 +2155,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=gppkg
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: MM_gpcheck
   plan:
@@ -2239,8 +2273,6 @@ jobs:
           ccp_src/aws/setup_ssh_to_cluster.sh
           ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
                       bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
-    on_failure:
-      <<: *debug_sleep
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -2248,10 +2280,10 @@ jobs:
     params:
       TINC_TARGET: [[ test_name ]]
       CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 - name: gate_mm_end
@@ -2342,10 +2374,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: DPM_backup-restore_ddboost_part1
   plan:
@@ -2774,26 +2806,22 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
   - task: setup_gpdb5
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
     params:
       <<: *ccp_gen_cluster_default_params
     image: centos-gpdb-dev-6
-    on_failure:
-      <<: *debug_sleep
   - task: run_restore_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 - name: DPM_gptransfer-43x-to-5x
   plan:
@@ -2832,8 +2860,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2853,18 +2879,6 @@ jobs:
           gpdb_binary: gpdb4_binary
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          tags: ["ccp"]
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -2892,23 +2906,10 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
-    on_failure:
-      do:
-      - task: debug_sleep_2_cluster
-        tags: ["ccp"]
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source:
-              repository: alpine
-              tag: latest
-          run:
-            path: 'sh'
-            args: ['-c', 'sleep {{ccp_debug_sleep}}']
-  # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
+    on_success:
+      <<: *ccp_destroy_2_cluster
   ensure:
-    <<: *ccp_destroy_2_cluster
+    <<: *set_failed_2_cluster
 
 - name: DPM_gptransfer-5x-to-5x
   plan:
@@ -2942,8 +2943,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2962,18 +2961,6 @@ jobs:
           terraform: terraform2
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          tags: ["ccp"]
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -3001,23 +2988,10 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
-    on_failure:
-      do:
-      - task: debug_sleep_2_cluster
-        tags: ["ccp"]
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source:
-              repository: alpine
-              tag: latest
-          run:
-            path: 'sh'
-            args: ['-c', 'sleep {{ccp_debug_sleep}}']
-  # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
+    on_success:
+      <<: *ccp_destroy_2_cluster
   ensure:
-    <<: *ccp_destroy_2_cluster
+    <<: *set_failed_2_cluster
 
 - name: gate_dpm_end
   plan:
@@ -3301,10 +3275,10 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TINC_TARGET: [[ test_name ]]
-    on_failure:
-      <<: *debug_sleep
+    on_success:
+      <<: *ccp_destroy
   ensure:
-    <<: *ccp_destroy
+    <<: *set_failed
 
 {% endfor %}
 - name: gate_filerep_end
