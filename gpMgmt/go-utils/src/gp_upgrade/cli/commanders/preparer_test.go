@@ -7,7 +7,8 @@ import (
 	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -31,7 +32,7 @@ var _ = Describe("preparer", func() {
 
 	Describe("VerifyConnectivity", func() {
 		It("returns nil when hub answers PingRequest", func() {
-			testutils.SetupTestLogger()
+			testhelper.SetupTestLogger()
 
 			client.EXPECT().Ping(
 				gomock.Any(),
@@ -44,7 +45,7 @@ var _ = Describe("preparer", func() {
 		})
 
 		It("returns err when hub doesn't answer PingRequest", func() {
-			testutils.SetupTestLogger()
+			testhelper.SetupTestLogger()
 			commanders.NumberOfConnectionAttempt = 1
 
 			client.EXPECT().Ping(
@@ -57,7 +58,7 @@ var _ = Describe("preparer", func() {
 			Expect(err).ToNot(BeNil())
 		})
 		It("returns success if Ping eventually answers", func() {
-			testutils.SetupTestLogger()
+			testhelper.SetupTestLogger()
 
 			client.EXPECT().Ping(
 				gomock.Any(),
@@ -77,7 +78,7 @@ var _ = Describe("preparer", func() {
 
 	Describe("PrepareInitCluster", func() {
 		It("returns successfully if hub gets the request", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 			client.EXPECT().PrepareInitCluster(
 				gomock.Any(),
 				&pb.PrepareInitClusterRequest{DbPort: int32(11111)},
@@ -90,7 +91,7 @@ var _ = Describe("preparer", func() {
 	})
 	Describe("PrepareShutdownCluster", func() {
 		It("returns successfully", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 
 			client.EXPECT().PrepareShutdownClusters(
 				gomock.Any(),

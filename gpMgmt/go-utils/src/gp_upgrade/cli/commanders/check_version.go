@@ -4,7 +4,7 @@ import (
 	"context"
 	pb "gp_upgrade/idl"
 
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
 type VersionChecker struct {
@@ -18,19 +18,18 @@ func NewVersionChecker(client pb.CliToHubClient) VersionChecker {
 }
 
 func (req VersionChecker) Execute(masterHost string, dbPort int) error {
-	logger := gpbackupUtils.GetLogger()
 	resp, err := req.client.CheckVersion(context.Background(),
 		&pb.CheckVersionRequest{Host: masterHost, DbPort: int32(dbPort)})
 	if err != nil {
-		logger.Error("ERROR - gRPC call to hub failed")
+		gpbackupUtils.Error("ERROR - gRPC call to hub failed")
 		return err
 	}
 	if resp.IsVersionCompatible {
-		logger.Info("gp_upgrade: Version Compatibility Check [OK]\n")
+		gpbackupUtils.Info("gp_upgrade: Version Compatibility Check [OK]\n")
 	} else {
-		logger.Info("gp_upgrade: Version Compatibility Check [Failed]\n")
+		gpbackupUtils.Info("gp_upgrade: Version Compatibility Check [Failed]\n")
 	}
-	logger.Info("Check version request is processed.")
+	gpbackupUtils.Info("Check version request is processed.")
 
 	return nil
 }

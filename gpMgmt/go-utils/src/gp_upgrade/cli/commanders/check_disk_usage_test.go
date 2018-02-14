@@ -6,7 +6,7 @@ import (
 	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ var _ = Describe("object count tests", func() {
 	})
 	Describe("Execute", func() {
 		It("logs and returns error if connection to hub fails", func() {
-			_, _, _, testLogFile := testutils.SetupTestLogger()
+			_, _, testLogFile := testhelper.SetupTestLogger()
 
 			client.EXPECT().CheckDiskUsage(
 				gomock.Any(),
@@ -43,7 +43,7 @@ var _ = Describe("object count tests", func() {
 			Expect(string(testLogFile.Contents())).To(ContainSubstring("ERROR - gRPC call to hub failed"))
 		})
 		It("prints out the results of disk usage check from gRPC reply", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 
 			var expectedFilesystemsUsage []string
 			expectedFilesystemsUsage = append(expectedFilesystemsUsage, "diskspace check - hostC  - Couldn't connect")

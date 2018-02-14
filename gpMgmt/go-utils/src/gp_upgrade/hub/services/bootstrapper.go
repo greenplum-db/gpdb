@@ -31,7 +31,7 @@ func NewBootstrapper(hg HostnameGetter, s SoftwareVerifier) *Bootstrapper {
 func (s *Bootstrapper) CheckSeginstall(ctx context.Context,
 	in *pb.CheckSeginstallRequest) (*pb.CheckSeginstallReply, error) {
 	//
-	//gpbackupUtils.GetLogger().Info("starting CheckSeginstall()")
+	//gpbackupUtils.Info("starting CheckSeginstall()")
 	//
 	clusterHostnames, err := s.hostnameGetter.GetHostnames()
 	if err != nil || len(clusterHostnames) == 0 {

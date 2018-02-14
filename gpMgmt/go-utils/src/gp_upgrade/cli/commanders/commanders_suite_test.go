@@ -3,7 +3,7 @@ package commanders_test
 import (
 	"testing"
 
-	// gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	// gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

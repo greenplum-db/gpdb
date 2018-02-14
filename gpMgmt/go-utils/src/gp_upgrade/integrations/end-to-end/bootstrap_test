@@ -4,10 +4,15 @@ set -exo pipefail
 
 source /usr/local/greenplum-db-devel/greenplum_path.sh
 
+cd gpdb_src/gpAux/gpdemo
+make create-demo-cluster
+cd
+
 gp_upgrade prepare start-hub
 gp_upgrade status upgrade | grep "PENDING - Configuration Check"
 
 gp_upgrade status upgrade | grep "PENDING - Install binaries on segments"
+gp_upgrade check config
 gp_upgrade check seginstall
 sleep 2
 gp_upgrade status upgrade | grep "FAILED - Install binaries on segments"

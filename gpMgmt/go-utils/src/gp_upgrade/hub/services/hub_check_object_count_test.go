@@ -3,13 +3,14 @@ package services_test
 import (
 	"database/sql/driver"
 	"errors"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"gp_upgrade/db"
+	"gp_upgrade/hub/services"
+
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
-	"gp_upgrade/db"
-	"gp_upgrade/hub/services"
 )
 
 var _ bool = Describe("hub", func() {
@@ -22,7 +23,7 @@ var _ bool = Describe("hub", func() {
 	BeforeEach(func() {
 		dbConnector, mock = db.CreateMockDBConn()
 		dbConnector.Connect()
-		_, _, _, testLogFile = testutils.SetupTestLogger()
+		_, _, testLogFile = testhelper.SetupTestLogger()
 	})
 
 	AfterEach(func() {

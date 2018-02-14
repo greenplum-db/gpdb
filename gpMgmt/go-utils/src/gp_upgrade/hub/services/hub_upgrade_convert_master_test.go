@@ -14,7 +14,7 @@ import (
 
 	"gp_upgrade/hub/logger"
 
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -54,7 +54,7 @@ var _ = Describe("hub", func() {
 		return cmd
 	}
 	BeforeEach(func() {
-		testutils.SetupTestLogger() // extend to capture the values in a var if future tests need it
+		testhelper.SetupTestLogger() // extend to capture the values in a var if future tests need it
 		homeDirectory := os.Getenv("HOME")
 		// should be an expect not an eventually
 		Eventually(homeDirectory).Should(Not(Equal("")))
@@ -65,7 +65,7 @@ var _ = Describe("hub", func() {
 	Describe("ConvertMasterHub", func() {
 
 		It("Sends that convert master started successfully", func() {
-			_, testStdout, testStdErr, _ := testutils.SetupTestLogger()
+			testStdout, testStdErr, _ := testhelper.SetupTestLogger()
 			mockedExitStatus = 0
 			mockedOutput = `pg_upgrade running conversion:
 	Some pg_upgrade output here
@@ -93,7 +93,7 @@ var _ = Describe("hub", func() {
 		// This can't work because we don't have a good way to force a failure
 		// for Start? Will need to find a good way.
 		XIt("Sends a failure when pg_upgrade failed due to some issue", func() {
-			_, testStdout, testStdErr, _ := testutils.SetupTestLogger()
+			testStdout, testStdErr, _ := testhelper.SetupTestLogger()
 			mockedExitStatus = 1
 			mockedOutput = `pg_upgrade exploded!
 	Some kind of error message here that helps us understand what's going on

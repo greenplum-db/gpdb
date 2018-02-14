@@ -4,7 +4,7 @@ import (
 	pb "gp_upgrade/idl"
 	"gp_upgrade/utils"
 
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
 type ShutDownClusters struct {
@@ -25,7 +25,7 @@ func (s ShutDownClusters) GetStatus() (*pb.UpgradeStepStatus, error) {
 	gpstopStatePath := s.gpstopStatePath
 
 	if _, err := utils.System.Stat(gpstopStatePath); utils.System.IsNotExist(err) {
-		gpbackupUtils.GetLogger().Info("setting status to PENDING")
+		gpbackupUtils.Info("setting status to PENDING")
 		shutdownClustersStatus = &pb.UpgradeStepStatus{
 			Step:   pb.UpgradeSteps_STOPPED_CLUSTER,
 			Status: pb.StepStatus_PENDING,
@@ -39,7 +39,7 @@ func (s ShutDownClusters) GetStatus() (*pb.UpgradeStepStatus, error) {
 	 * for this state processing to work.
 	 */
 	if isGpstopRunning() && s.inProgressFilesExist(gpstopStatePath) {
-		gpbackupUtils.GetLogger().Info("setting status to RUNNING")
+		gpbackupUtils.Info("setting status to RUNNING")
 		shutdownClustersStatus = &pb.UpgradeStepStatus{
 			Step:   pb.UpgradeSteps_STOPPED_CLUSTER,
 			Status: pb.StepStatus_RUNNING,
@@ -48,7 +48,7 @@ func (s ShutDownClusters) GetStatus() (*pb.UpgradeStepStatus, error) {
 	}
 
 	if !s.inProgressFilesExist(gpstopStatePath) && s.IsStopComplete(gpstopStatePath) {
-		gpbackupUtils.GetLogger().Info("setting status to COMPLETE")
+		gpbackupUtils.Info("setting status to COMPLETE")
 		shutdownClustersStatus = &pb.UpgradeStepStatus{
 			Step:   pb.UpgradeSteps_STOPPED_CLUSTER,
 			Status: pb.StepStatus_COMPLETE,
@@ -56,7 +56,7 @@ func (s ShutDownClusters) GetStatus() (*pb.UpgradeStepStatus, error) {
 		return shutdownClustersStatus, nil
 	}
 
-	gpbackupUtils.GetLogger().Info("setting status to FAILED")
+	gpbackupUtils.Info("setting status to FAILED")
 	shutdownClustersStatus = &pb.UpgradeStepStatus{
 		Step:   pb.UpgradeSteps_STOPPED_CLUSTER,
 		Status: pb.StepStatus_FAILED,
@@ -81,7 +81,7 @@ func (s ShutDownClusters) inProgressFilesExist(gpstopStatePath string) bool {
 	}
 
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("err is: ", err)
+		gpbackupUtils.Error("err is: ", err)
 		return false
 	}
 
@@ -96,7 +96,7 @@ func (s ShutDownClusters) IsStopComplete(gpstopStatePath string) bool {
 	}
 
 	if completeErr != nil {
-		gpbackupUtils.GetLogger().Error(completeErr.Error())
+		gpbackupUtils.Error(completeErr.Error())
 		return false
 	}
 

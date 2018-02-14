@@ -5,10 +5,9 @@ import (
 	"gp_upgrade/hub/services"
 	"gp_upgrade/utils"
 
-	"github.com/greenplum-db/gpbackup/testutils"
-
 	"database/sql/driver"
 
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -29,7 +28,7 @@ var _ = Describe("hub", func() {
 		BeforeEach(func() {
 			dbConnector, mock = db.CreateMockDBConn()
 			dbConnector.Connect()
-			_, _, _, testLogFile = testutils.SetupTestLogger()
+			_, _, testLogFile = testhelper.SetupTestLogger()
 		})
 
 		AfterEach(func() {

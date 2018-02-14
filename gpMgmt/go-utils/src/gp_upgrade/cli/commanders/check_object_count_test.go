@@ -7,7 +7,7 @@ import (
 	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -31,7 +31,7 @@ var _ = Describe("object count tests", func() {
 	Describe("Execute", func() {
 		It("prints out that check object count request was processed", func() {
 			//testLogger, testStdout, testStderr, testLogfile := testutils.SetupTestLogger()
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 
 			fakeCountArray := []*pb.CountPerDb{}
 			fakeCountTemplate1 := &pb.CountPerDb{DbName: "template1", AoCount: 1, HeapCount: 2}
@@ -58,7 +58,7 @@ var _ = Describe("object count tests", func() {
 		})
 
 		It("prints out an error when connection cannot be established to the hub", func() {
-			_, _, testStderr, _ := testutils.SetupTestLogger()
+			_, testStderr, _ := testhelper.SetupTestLogger()
 			client.EXPECT().CheckObjectCount(
 				gomock.Any(),
 				&pb.CheckObjectCountRequest{DbPort: 9999},

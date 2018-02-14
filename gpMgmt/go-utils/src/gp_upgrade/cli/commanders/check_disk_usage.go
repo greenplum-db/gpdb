@@ -2,8 +2,9 @@ package commanders
 
 import (
 	"context"
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
 	pb "gp_upgrade/idl"
+
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 )
 
 type DiskUsageChecker struct {
@@ -15,18 +16,17 @@ func NewDiskUsageChecker(client pb.CliToHubClient) DiskUsageChecker {
 }
 
 func (req DiskUsageChecker) Execute(dbPort int) error {
-	logger := gpbackupUtils.GetLogger()
 	reply, err := req.client.CheckDiskUsage(context.Background(),
 		&pb.CheckDiskUsageRequest{})
 	if err != nil {
-		logger.Error("ERROR - gRPC call to hub failed")
+		gpbackupUtils.Error("ERROR - gRPC call to hub failed")
 		return err
 	}
 
 	//TODO: do we want to report results to the user earlier? Should we make a gRPC call per db?
 	for _, segmentFileSysUsage := range reply.SegmentFileSysUsage {
-		logger.Info(segmentFileSysUsage)
+		gpbackupUtils.Info(segmentFileSysUsage)
 	}
-	logger.Info("Check disk space request is processed.")
+	gpbackupUtils.Info("Check disk space request is processed.")
 	return nil
 }

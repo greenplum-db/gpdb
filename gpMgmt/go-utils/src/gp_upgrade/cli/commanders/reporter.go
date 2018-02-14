@@ -5,12 +5,12 @@ import (
 	"fmt"
 	pb "gp_upgrade/idl"
 
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/pkg/errors"
 )
 
 type Reporter struct {
 	client pb.CliToHubClient
-	logger Logger
 }
 
 // UpgradeStepsMessage encode the proper checklist item string to go with a step
@@ -31,10 +31,9 @@ var UpgradeStepsMessage = map[pb.UpgradeSteps]string{
 	pb.UpgradeSteps_STOPPED_CLUSTER:      "- Shutdown clusters",
 }
 
-func NewReporter(client pb.CliToHubClient, logger Logger) *Reporter {
+func NewReporter(client pb.CliToHubClient) *Reporter {
 	return &Reporter{
 		client: client,
-		logger: logger,
 	}
 }
 
@@ -49,12 +48,8 @@ func (r *Reporter) OverallUpgradeStatus() error {
 		upgradeStepStatus := reply.ListOfUpgradeStepStatuses[i]
 		reportString := fmt.Sprintf("%v %s", upgradeStepStatus.Status,
 			UpgradeStepsMessage[upgradeStepStatus.Step])
-		r.logger.Info(reportString)
+		gpbackupUtils.Info(reportString)
 	}
 
 	return nil
-}
-
-type Logger interface {
-	Info(string, ...interface{})
 }

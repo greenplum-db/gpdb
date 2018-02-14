@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 	"golang.org/x/net/context"
 )
 
@@ -21,7 +21,7 @@ var (
 func (s *CatchAllCliToHubListenerImpl) UpgradeConvertMaster(ctx context.Context,
 	in *pb.UpgradeConvertMasterRequest) (*pb.UpgradeConvertMasterReply, error) {
 
-	gpbackupUtils.GetLogger().Info("Starting master upgrade")
+	gpbackupUtils.Info("Starting master upgrade")
 	//need to remember where we ran, i.e. pathToUpgradeWD, b/c pg_upgrade generates some files that need to be copied to QE nodes later
 	//this is also where the 1.done, 2.inprogress ... files will be written
 	homeDirectory := os.Getenv("HOME")
@@ -32,7 +32,7 @@ func (s *CatchAllCliToHubListenerImpl) UpgradeConvertMaster(ctx context.Context,
 	gpUpgradeDirectory := homeDirectory + "/.gp_upgrade"
 	err := ConvertMaster(gpUpgradeDirectory+"/pg_upgrade", in.OldBinDir, in.NewBinDir)
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("%v", err)
+		gpbackupUtils.Error("%v", err)
 		return nil, err
 	}
 	return &pb.UpgradeConvertMasterReply{}, nil
@@ -41,7 +41,7 @@ func (s *CatchAllCliToHubListenerImpl) UpgradeConvertMaster(ctx context.Context,
 func ConvertMaster(pathToUpgradeWD string, oldBinDir string, newBinDir string) error {
 	err := os.Mkdir(pathToUpgradeWD, 0700)
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("mkdir %s failed: %v. Is there an pg_upgrade in progress?", pathToUpgradeWD, err)
+		gpbackupUtils.Error("mkdir %s failed: %v. Is there an pg_upgrade in progress?", pathToUpgradeWD, err)
 	}
 
 	pgUpgradeLog := filepath.Join(pathToUpgradeWD, "/pg_upgrade_master.log")
@@ -65,11 +65,11 @@ func ConvertMaster(pathToUpgradeWD string, oldBinDir string, newBinDir string) e
 	//TODO check the rc on this? keep a pid?
 	err = upgradeCommand.Start()
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("An error occured: %v", err)
+		gpbackupUtils.Error("An error occured: %v", err)
 		return err
 	}
-	gpbackupUtils.GetLogger().Info("Upgrade command: %v", upgradeCommand)
-	gpbackupUtils.GetLogger().Info("Found no errors when starting the upgrade")
+	gpbackupUtils.Info("Upgrade command: %v", upgradeCommand)
+	gpbackupUtils.Info("Found no errors when starting the upgrade")
 
 	return nil
 }
@@ -80,7 +80,7 @@ func getMasterDataDirs() (string, string, error) {
 	reader.OfOldClusterConfig()
 	err = reader.Read()
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("Unable to read the file: %v", err)
+		gpbackupUtils.Error("Unable to read the file: %v", err)
 		return "", "", err
 	}
 
@@ -93,7 +93,7 @@ func getMasterDataDirs() (string, string, error) {
 	reader.OfNewClusterConfig()
 	err = reader.Read()
 	if err != nil {
-		gpbackupUtils.GetLogger().Error("Unable to read the file: %v", err)
+		gpbackupUtils.Error("Unable to read the file: %v", err)
 		return "", "", err
 	}
 

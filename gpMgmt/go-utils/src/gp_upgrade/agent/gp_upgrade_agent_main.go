@@ -3,14 +3,15 @@ package main
 import (
 	"os"
 
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	"gp_upgrade/agent/services"
+	pb "gp_upgrade/idl"
+	"net"
+
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"gp_upgrade/agent/services"
-	pb "gp_upgrade/idl"
-	"net"
 )
 
 const (
@@ -43,7 +44,7 @@ func main() {
 			defer close(errorChannel)
 			lis, err := net.Listen("tcp", port)
 			if err != nil {
-				gpbackupUtils.GetLogger().Fatal(err, "failed to listen")
+				gpbackupUtils.Fatal(err, "failed to listen")
 				return err
 			}
 
@@ -53,7 +54,7 @@ func main() {
 			reflection.Register(server)
 			go func(myListener net.Listener) {
 				if err := server.Serve(myListener); err != nil {
-					gpbackupUtils.GetLogger().Fatal(err, "failed to serve", err)
+					gpbackupUtils.Fatal(err, "failed to serve", err)
 					errorChannel <- err
 				}
 
@@ -72,7 +73,7 @@ func main() {
 	RootCmd.PersistentFlags().StringVar(&logdir, "log-directory", "", "command_listener log directory")
 
 	if err := RootCmd.Execute(); err != nil {
-		gpbackupUtils.GetLogger().Error(err.Error())
+		gpbackupUtils.Error(err.Error())
 		os.Exit(1)
 	}
 }

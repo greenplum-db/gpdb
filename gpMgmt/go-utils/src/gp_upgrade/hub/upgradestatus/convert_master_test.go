@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -20,7 +20,7 @@ import (
 
 var _ bool = Describe("hub", func() {
 	BeforeEach(func() {
-		testutils.SetupTestLogger() // extend to capture the values in a var if future tests need it
+		testhelper.SetupTestLogger() // extend to capture the values in a var if future tests need it
 
 		homeDirectory := os.Getenv("HOME")
 		// convert this eventually to a Expect

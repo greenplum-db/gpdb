@@ -8,7 +8,7 @@ import (
 	pb "gp_upgrade/idl"
 	"gp_upgrade/utils"
 
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/pkg/errors"
 )
@@ -19,7 +19,7 @@ var _ = Describe("CommandListener", func() {
 		testLogFile *gbytes.Buffer
 	)
 	BeforeEach(func() {
-		_, _, _, testLogFile = testutils.SetupTestLogger()
+		_, _, testLogFile = testhelper.SetupTestLogger()
 
 	})
 

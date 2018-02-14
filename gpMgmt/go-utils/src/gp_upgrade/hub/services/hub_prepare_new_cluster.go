@@ -6,19 +6,19 @@ import (
 	pb "gp_upgrade/idl"
 	"gp_upgrade/utils"
 
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
 	"golang.org/x/net/context"
 )
 
 func (s *CatchAllCliToHubListenerImpl) PrepareInitCluster(ctx context.Context,
 	in *pb.PrepareInitClusterRequest) (*pb.PrepareInitClusterReply, error) {
 
-	gpbackupUtils.GetLogger().Info("starting PrepareInitCluster()")
+	gpbackupUtils.Info("starting PrepareInitCluster()")
 	dbConnector := db.NewDBConn("localhost", int(in.DbPort), "template1")
 	defer dbConnector.Close()
 	err := dbConnector.Connect()
 	if err != nil {
-		gpbackupUtils.GetLogger().Error(err.Error())
+		gpbackupUtils.Error(err.Error())
 		return nil, utils.DatabaseConnectionError{Parent: err}
 	}
 	databaseHandler := dbConnector.GetConn()
@@ -29,7 +29,7 @@ func (s *CatchAllCliToHubListenerImpl) PrepareInitCluster(ctx context.Context,
 	err = SaveQueryResultToJSON(databaseHandler, configQuery,
 		configutils.NewWriter(configutils.GetNewClusterConfigFilePath()))
 	if err != nil {
-		gpbackupUtils.GetLogger().Error(err.Error())
+		gpbackupUtils.Error(err.Error())
 		return nil, err
 	}
 	return &pb.PrepareInitClusterReply{}, nil

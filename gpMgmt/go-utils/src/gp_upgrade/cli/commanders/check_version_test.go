@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -30,7 +30,7 @@ var _ bool = Describe("object count tests", func() {
 	})
 	Describe("Execute", func() {
 		It("prints out version check is OK and that check version request was processed", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 			client.EXPECT().CheckVersion(
 				gomock.Any(),
 				&pb.CheckVersionRequest{DbPort: 9999, Host: "localhost"},
@@ -43,7 +43,7 @@ var _ bool = Describe("object count tests", func() {
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("Check version request is processed."))
 		})
 		It("prints out version check failed and that check version request was processed", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 			client.EXPECT().CheckVersion(
 				gomock.Any(),
 				&pb.CheckVersionRequest{DbPort: 9999, Host: "localhost"},
@@ -56,7 +56,7 @@ var _ bool = Describe("object count tests", func() {
 			Eventually(string(testStdout.Contents())).Should(ContainSubstring("Check version request is processed."))
 		})
 		It("prints out that it was unable to connect to hub", func() {
-			_, _, testStderr, _ := testutils.SetupTestLogger()
+			_, testStderr, _ := testhelper.SetupTestLogger()
 			client.EXPECT().CheckVersion(
 				gomock.Any(),
 				&pb.CheckVersionRequest{DbPort: 9999, Host: "localhost"},

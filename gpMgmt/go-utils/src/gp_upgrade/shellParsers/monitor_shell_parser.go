@@ -1,7 +1,7 @@
 package shellParsers
 
 //stdout, err := upgradeCommand.Output()
-//gpbackupUtils.GetLogger().Info("what is in here? " + string(stdout))
+//gpbackupUtils.Info("what is in here? " + string(stdout))
 
 import (
 	"regexp"

@@ -8,7 +8,8 @@ import (
 	"gp_upgrade/hub/services"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -23,10 +24,9 @@ var _ = Describe("object count tests", func() {
 	)
 
 	BeforeEach(func() {
-		testutils.SetupTestLogger()
 		ctrl = gomock.NewController(GinkgoT())
 		client = mockpb.NewMockCommandListenerClient(ctrl)
-		_, _, _, testLogFile = testutils.SetupTestLogger()
+		_, _, testLogFile = testhelper.SetupTestLogger()
 	})
 
 	AfterEach(func() {

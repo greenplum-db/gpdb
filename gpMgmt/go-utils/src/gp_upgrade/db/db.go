@@ -13,6 +13,7 @@ import (
 	"gp_upgrade/utils"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq" //_ import for the side effect of having postgres driver available
 )
 
 type Driver interface {

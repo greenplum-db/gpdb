@@ -7,25 +7,27 @@ import (
 	mockpb "gp_upgrade/mock_idl"
 
 	"github.com/golang/mock/gomock"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Reporter", func() {
 
 	var (
-		spyClient *spyCliToHubClient
-		spyLogger *spyLogger
-		reporter  *commanders.Reporter
-		client    *mockpb.MockCliToHubClient
-		ctrl      *gomock.Controller
+		spyClient   *spyCliToHubClient
+		testLogFile *gbytes.Buffer
+		reporter    *commanders.Reporter
+		client      *mockpb.MockCliToHubClient
+		ctrl        *gomock.Controller
 	)
 
 	BeforeEach(func() {
 		spyClient = newSpyCliToHubClient()
-		spyLogger = newSpyLogger()
-		reporter = commanders.NewReporter(spyClient, spyLogger)
+		_, _, testLogFile = testhelper.SetupTestLogger()
+		reporter = commanders.NewReporter(spyClient)
 		ctrl = gomock.NewController(GinkgoT())
 		client = mockpb.NewMockCliToHubClient(ctrl)
 	})
@@ -55,11 +57,8 @@ var _ = Describe("Reporter", func() {
 		}
 		err := reporter.OverallUpgradeStatus()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(spyLogger.infoCount).To(Equal(2))
-		Expect(spyLogger.messages).To(Equal([]string{
-			"RUNNING - Initialize upgrade target cluster",
-			"PENDING - Run pg_upgrade on master",
-		}))
+		Expect(testLogFile.Contents()).To(ContainSubstring("RUNNING - Initialize upgrade target cluster"))
+		Expect(testLogFile.Contents()).To(ContainSubstring("PENDING - Run pg_upgrade on master"))
 	})
 
 	DescribeTable("UpgradeStep Messages, basic cases where hub might return only one status",
@@ -71,9 +70,7 @@ var _ = Describe("Reporter", func() {
 			}
 			err := reporter.OverallUpgradeStatus()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(spyLogger.messages).To(Equal([]string{
-				expected,
-			}))
+			Expect(testLogFile.Contents()).To(ContainSubstring(expected))
 		},
 		Entry("unknown step", pb.UpgradeSteps_UNKNOWN_STEP, pb.StepStatus_PENDING, "PENDING - Unknown step"),
 		Entry("configuration check", pb.UpgradeSteps_CHECK_CONFIG, pb.StepStatus_RUNNING, "RUNNING - Configuration Check"),
@@ -84,15 +81,3 @@ var _ = Describe("Reporter", func() {
 	)
 
 })
-
-type spyLogger struct {
-	infoCount int
-	messages  []string
-}
-
-func newSpyLogger() *spyLogger { return &spyLogger{} }
-
-func (sl *spyLogger) Info(msg string, _ ...interface{}) {
-	sl.infoCount++
-	sl.messages = append(sl.messages, msg)
-}

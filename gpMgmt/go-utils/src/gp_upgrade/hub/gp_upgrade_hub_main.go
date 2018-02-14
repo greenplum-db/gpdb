@@ -11,11 +11,12 @@ import (
 	pb "gp_upgrade/idl"
 
 	"fmt"
-	gpbackupUtils "github.com/greenplum-db/gpbackup/utils"
-	"github.com/spf13/cobra"
 	hubLogger "gp_upgrade/hub/logger"
 	"os"
 	"runtime/debug"
+
+	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -34,12 +35,11 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.SetTraceback("all")
 			gpbackupUtils.InitializeLogging("gp_upgrade_hub", logdir)
-			logger := gpbackupUtils.GetLogger()
 			errorChannel := make(chan error)
 			defer close(errorChannel)
 			lis, err := net.Listen("tcp", cliToHubPort)
 			if err != nil {
-				logger.Fatal(err, "failed to listen")
+				gpbackupUtils.Fatal(err, "failed to listen")
 			}
 
 			channelLogger := hubLogger.LogEntry{Info: make(chan string), Error: make(chan string), Done: make(chan bool)}
@@ -50,7 +50,7 @@ func main() {
 			reflection.Register(server)
 			go func(myListener net.Listener) {
 				if err := server.Serve(myListener); err != nil {
-					logger.Fatal(err, "failed to serve", err)
+					gpbackupUtils.Fatal(err, "failed to serve", err)
 					errorChannel <- err
 				}
 
@@ -61,10 +61,10 @@ func main() {
 				for {
 					select {
 					case infoMsg := <-channelLogger.Info:
-						gpbackupUtils.GetLogger().Info(infoMsg)
+						gpbackupUtils.Info(infoMsg)
 					case errorMsg := <-channelLogger.Error:
 						fmt.Println("got error log")
-						gpbackupUtils.GetLogger().Error(errorMsg)
+						gpbackupUtils.Error(errorMsg)
 					}
 				}
 			}(channelLogger)
@@ -72,7 +72,7 @@ func main() {
 			select {
 			case err := <-errorChannel:
 				if err != nil {
-					logger.Fatal(err, "error during Listening")
+					gpbackupUtils.Fatal(err, "error during Listening")
 				}
 			}
 			return nil
@@ -82,7 +82,7 @@ func main() {
 	RootCmd.PersistentFlags().StringVar(&logdir, "log-directory", "", "gp_upgrade_hub log directory")
 
 	if err := RootCmd.Execute(); err != nil {
-		gpbackupUtils.GetLogger().Error(err.Error())
+		gpbackupUtils.Error(err.Error())
 		os.Exit(1)
 	}
 

@@ -8,7 +8,7 @@ import (
 	pb "gp_upgrade/idl"
 
 	"github.com/golang/mock/gomock"
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -32,7 +32,7 @@ var _ = Describe("reporter", func() {
 
 	Describe("ConvertMaster", func() {
 		It("Reports success when pg_upgrade started", func() {
-			_, testStdout, _, _ := testutils.SetupTestLogger()
+			testStdout, _, _ := testhelper.SetupTestLogger()
 			client.EXPECT().UpgradeConvertMaster(
 				gomock.Any(),
 				&pb.UpgradeConvertMasterRequest{},
@@ -43,7 +43,7 @@ var _ = Describe("reporter", func() {
 		})
 
 		It("reports failure when command fails to connect to the hub", func() {
-			_, _, testStderr, _ := testutils.SetupTestLogger()
+			_, testStderr, _ := testhelper.SetupTestLogger()
 			client.EXPECT().UpgradeConvertMaster(
 				gomock.Any(),
 				&pb.UpgradeConvertMasterRequest{},

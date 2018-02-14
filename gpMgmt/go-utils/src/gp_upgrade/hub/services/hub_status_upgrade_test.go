@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/greenplum-db/gpbackup/testutils"
+	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -19,7 +19,7 @@ import (
 
 var _ = Describe("hub", func() {
 	BeforeEach(func() {
-		testutils.SetupTestLogger() // extend to capture the values in a var if future tests need it
+		testhelper.SetupTestLogger() // extend to capture the values in a var if future tests need it
 	})
 	Describe("creates a reply", func() {
 		It("sends status messages under good condition", func() {
