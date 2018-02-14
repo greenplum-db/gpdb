@@ -1,0 +1,68 @@
+-- Dropping table while reindex database should not fail reindex
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+CREATE DATABASE reindexdb1 TEMPLATE template1;
+CREATE
+-- halt reindex after scanning the pg_class and getting the relids
+SELECT gp_inject_fault('reindex_db', 'suspend', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:@db_name reindexdb1: CREATE TABLE heap1(a INT, b INT);
+CREATE
+1&:REINDEX DATABASE reindexdb1;  <waiting ...>
+SELECT gp_inject_fault('reindex_db', 'wait_until_triggered', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+2:@db_name reindexdb1:DROP TABLE heap1;
+DROP
+SELECT gp_inject_fault('reindex_db', 'reset', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+-- reindex should complete fine
+1<:  <... completed>
+REINDEX
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- Adding index after scanning indexes for relation to reindex should
+-- not fail reindex
+BEGIN;
+BEGIN
+CREATE TABLE reindex_index1(a int, b int);
+CREATE
+CREATE INDEX reindex_index1_idx1 on reindex_index1 (b);
+CREATE
+insert into reindex_index1 select i,i+1 from generate_series(1, 10)i;
+INSERT 10
+COMMIT;
+COMMIT
+SELECT gp_inject_fault('reindex_relation', 'suspend', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+3&: REINDEX TABLE reindex_index1;  <waiting ...>
+SELECT gp_inject_fault('reindex_relation', 'wait_until_triggered', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+-- create one more index
+CREATE INDEX reindex_index1_idx2 on reindex_index1 (a);
+CREATE
+SELECT gp_inject_fault('reindex_relation', 'reset', '', '', '', 0, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+3<:  <... completed>
+REINDEX
+
+DROP DATABASE reindexdb1;
+DROP
