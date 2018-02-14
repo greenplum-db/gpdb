@@ -16,8 +16,9 @@ limitations under the License.
 """
 
 from mpp.models import SQLTestCase
-from mpp.gpdb.tests.storage.vacuum.reindex import Reindex
 from mpp.gpdb.tests.storage.GPDBStorageBaseTestCase import *
+from mpp.lib.filerep_util import Filerepe2e_Util
+from mpp.gpdb.tests.storage.vacuum.reindex import Reindex
 
 @tinctest.skipLoading("Test model. No tests loaded.")
 class reindex_stp(SQLTestCase):
@@ -41,8 +42,8 @@ class reindex_db(SQLTestCase):
 
     def setUp(self):
         super(reindex_db, self).setUp()
-        self.util = Reindex()
-        self.util.inject_fault(fault_ = "reindex_db", mode_ = "async", operation_ = "suspend", prim_mirr_ = "primary", seg_id_ = 1)
+        util = Filerepe2e_Util()
+        util.inject_fault(f="reindex_db", y="suspend", r="primary", seg_id=1)
 
 @tinctest.skipLoading("Test model. No tests loaded.")
 class drop_obj(SQLTestCase):
@@ -56,11 +57,11 @@ class drop_obj(SQLTestCase):
 
     def setUp(self):
         super(drop_obj, self).setUp()
-        self.util = Reindex()
-        self.util.check_fault_status(fault_name_ = "reindex_db", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+        self.util = Filerepe2e_Util()
+        self.util.check_fault_status(fault_name="reindex_db", status="triggered", seg_id=1, max_cycle=20)
 
     def tearDown(self):
-        self.util.inject_fault(operation_ = "reset", fault_ = "reindex_db", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
+        self.util.inject_fault(y="reset", f="reindex_db", r="primary", seg_id=1)
 
 @tinctest.skipLoading("Test model. No tests loaded.")
 class reindex_rel(SQLTestCase):
@@ -74,8 +75,8 @@ class reindex_rel(SQLTestCase):
 
     def setUp(self):
         super(reindex_rel, self).setUp()
-        self.util = Reindex()
-        self.util.inject_fault(fault_ = "reindex_relation", mode_ = "async", operation_ = "suspend", prim_mirr_ = "primary", seg_id_ = 1)
+        self.util = Filerepe2e_Util()
+        self.util.inject_fault(f="reindex_relation", y="suspend", r="primary", seg_id=1)
 
 @tinctest.skipLoading("Test model. No tests loaded.")
 class add_index(SQLTestCase):
@@ -89,11 +90,11 @@ class add_index(SQLTestCase):
 
     def setUp(self):
         super(add_index, self).setUp()
-        self.util = Reindex()
-        self.util.check_fault_status(fault_name_ = "reindex_relation", status_ = "triggered", seg_id_ = 1,  max_cycle_ = 20)
+        self.util = Filerepe2e_Util()
+        self.util.check_fault_status(fault_name="reindex_relation",status="triggered", seg_id=1, max_cycle=20)
 
     def tearDown(self):
-        self.util.inject_fault(operation_ = "reset", fault_ = "reindex_relation", mode_ = "async", prim_mirr_ = "primary", seg_id_ = 1)
+        self.util.inject_fault(y="reset", f="reindex_relation", r="primary", seg_id=1)
 
 @tinctest.skipLoading("Test model. No tests loaded.")
 class reindex_verify(SQLTestCase):
