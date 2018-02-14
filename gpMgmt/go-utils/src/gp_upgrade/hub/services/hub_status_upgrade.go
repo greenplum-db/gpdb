@@ -30,7 +30,7 @@ func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb
 
 	seginstallStatePath := filepath.Join(homeDirectory, ".gp_upgrade/seginstall")
 	gpbackupUtils.Debug("looking for seginstall State at %s", seginstallStatePath)
-	seginstallState := upgradestatus.NewSeginstall(seginstallStatePath)
+	seginstallState := upgradestatus.NewStateCheck(seginstallStatePath, pb.UpgradeSteps_SEGINSTALL)
 	seginstallStatus, _ := seginstallState.GetStatus()
 
 	gpstopStatePath := filepath.Join(homeDirectory, ".gp_upgrade/gpstop")
@@ -42,8 +42,13 @@ func (s *CatchAllCliToHubListenerImpl) StatusUpgrade(ctx context.Context, in *pb
 	shutdownClustersStatus, _ := clusterPair.GetStatus()
 	masterUpgradeStatus, _ := convertMaster.GetStatus()
 
+	startAgentsStatePath := filepath.Join(homeDirectory, ".gp_upgrade/start-agents")
+	prepareStartAgentsState := upgradestatus.NewStateCheck(startAgentsStatePath, pb.UpgradeSteps_PREPARE_START_AGENTS)
+	startAgentsStatus, _ := prepareStartAgentsState.GetStatus()
+
 	reply := &pb.StatusUpgradeReply{}
-	reply.ListOfUpgradeStepStatuses = append(reply.ListOfUpgradeStepStatuses, demoStepStatus, seginstallStatus, prepareInitStatus, shutdownClustersStatus, masterUpgradeStatus)
+	reply.ListOfUpgradeStepStatuses = append(reply.ListOfUpgradeStepStatuses, demoStepStatus, seginstallStatus,
+		prepareInitStatus, shutdownClustersStatus, masterUpgradeStatus, startAgentsStatus)
 	return reply, nil
 }
 

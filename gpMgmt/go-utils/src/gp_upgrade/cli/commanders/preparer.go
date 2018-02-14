@@ -75,6 +75,16 @@ func (p Preparer) VerifyConnectivity(client pb.CliToHubClient) error {
 	return err
 }
 
+func (p Preparer) StartAgents() error {
+	_, err := p.client.PrepareStartAgents(context.Background(), &pb.PrepareStartAgentsRequest{})
+	if err != nil {
+		return err
+	}
+
+	gpbackupUtils.Info("Started Agents in progress, check gp_upgrade_agent logs for details")
+	return nil
+}
+
 func HowManyHubsRunning() (int, error) {
 	howToLookForHub := `ps -ef | grep -c "[g]p_upgrade_hub"` // use square brackets to avoid finding yourself in matches
 	output, err := exec.Command("bash", "-c", howToLookForHub).Output()

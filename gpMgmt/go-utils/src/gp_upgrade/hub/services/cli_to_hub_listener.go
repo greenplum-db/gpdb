@@ -19,7 +19,7 @@ func NewCliToHubListener(logger logger.LogEntry, pair cluster.PairOperator) *Cli
 	configReader.OfOldClusterConfig()
 	impl.Bootstrapper.hostnameGetter = configReader
 	gpUpgradeDir := filepath.Join(os.Getenv("HOME"), ".gp_upgrade")
-	impl.Bootstrapper.softwareVerifier = NewClusterSsher(upgradestatus.NewChecklistManager(gpUpgradeDir), logger)
+	impl.Bootstrapper.remoteExecutor = NewClusterSsher(upgradestatus.NewChecklistManager(gpUpgradeDir), logger)
 	return impl
 }
 

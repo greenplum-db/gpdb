@@ -62,8 +62,10 @@ var _ = Describe("check", func() {
 			expectationsDuringCommandInFlight := make(chan bool)
 
 			go func() {
+				defer GinkgoRecover()
 				// TODO: Can this flake? if the in-progress window is shorter than the frequency of Eventually(), then yea
 				Eventually(runStatusUpgrade).Should(ContainSubstring("RUNNING - Install binaries on segments"))
+				//close channel here
 				expectationsDuringCommandInFlight <- true
 			}()
 
@@ -74,6 +76,7 @@ var _ = Describe("check", func() {
 			Eventually(runStatusUpgrade).Should(ContainSubstring("COMPLETE - Install binaries on segments"))
 		})
 	})
+
 })
 
 func runStatusUpgrade() string {

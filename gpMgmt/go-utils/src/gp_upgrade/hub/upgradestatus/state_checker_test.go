@@ -20,8 +20,8 @@ var _ = Describe("Upgradestatus/Seginstall", func() {
 		utils.System = utils.InitializeSystemFunctions()
 	})
 	It("Reports PENDING if no directory exists", func() {
-		seginstall := upgradestatus.NewSeginstall("/fake/path")
-		upgradeStepStatus, err := seginstall.GetStatus()
+		stateChecker := upgradestatus.NewStateCheck("/fake/path", pb.UpgradeSteps_SEGINSTALL)
+		upgradeStepStatus, err := stateChecker.GetStatus()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(upgradeStepStatus.Step).To(Equal(pb.UpgradeSteps_SEGINSTALL))
 		Expect(upgradeStepStatus.Status).To(Equal(pb.StepStatus_PENDING))
@@ -40,8 +40,8 @@ var _ = Describe("Upgradestatus/Seginstall", func() {
 			}
 			return nil, errors.New("didn't match expected glob pattern")
 		}
-		seginstall := upgradestatus.NewSeginstall(fakePath)
-		upgradeStepStatus, err := seginstall.GetStatus()
+		stateChecker := upgradestatus.NewStateCheck(fakePath, pb.UpgradeSteps_SEGINSTALL)
+		upgradeStepStatus, err := stateChecker.GetStatus()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(upgradeStepStatus.Step).To(Equal(pb.UpgradeSteps_SEGINSTALL))
 		Expect(upgradeStepStatus.Status).To(Equal(pb.StepStatus_RUNNING))
@@ -60,8 +60,8 @@ var _ = Describe("Upgradestatus/Seginstall", func() {
 			}
 			return nil, errors.New("didn't match expected glob pattern")
 		}
-		seginstall := upgradestatus.NewSeginstall(fakePath)
-		upgradeStepStatus, err := seginstall.GetStatus()
+		stateChecker := upgradestatus.NewStateCheck(fakePath, pb.UpgradeSteps_SEGINSTALL)
+		upgradeStepStatus, err := stateChecker.GetStatus()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(upgradeStepStatus.Step).To(Equal(pb.UpgradeSteps_SEGINSTALL))
 		Expect(upgradeStepStatus.Status).To(Equal(pb.StepStatus_FAILED))
@@ -82,8 +82,8 @@ var _ = Describe("Upgradestatus/Seginstall", func() {
 			}
 			return nil, errors.New("didn't match expected glob pattern")
 		}
-		seginstall := upgradestatus.NewSeginstall(overabundantDirectory)
-		upgradeStepStatus, err := seginstall.GetStatus()
+		stateChecker := upgradestatus.NewStateCheck(overabundantDirectory, pb.UpgradeSteps_SEGINSTALL)
+		upgradeStepStatus, err := stateChecker.GetStatus()
 
 		Expect(err).To(HaveOccurred())
 		Expect(upgradeStepStatus).To(BeNil())

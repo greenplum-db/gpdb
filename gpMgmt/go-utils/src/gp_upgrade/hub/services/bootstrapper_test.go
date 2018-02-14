@@ -12,38 +12,64 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("HubCheckSeginstall", func() {
-	It("returns a gRPC reply object, if the software verification gets underway asynch", func() {
-		spyConfigReader := newSpyConfigReader()
-		stubSoftwareVerifier := newStubSoftwareVerifier()
-		bootstrapper := services.NewBootstrapper(spyConfigReader, stubSoftwareVerifier)
-		spyConfigReader.failToGetHostnames = false
+var _ = Describe("Bootstrapper", func() {
+	var (
+		spyConfigReader    *spyConfigReader
+		stubRemoteExecutor *stubRemoteExecutor
+		bootstrapper       *services.Bootstrapper
+	)
+	BeforeEach(func() {
+		spyConfigReader = newSpyConfigReader()
+		stubRemoteExecutor = newStubRemoteExecutor()
+		bootstrapper = services.NewBootstrapper(spyConfigReader, stubRemoteExecutor)
+	})
+	Describe("CheckSeginstall", func() {
+		It("returns a gRPC reply object, if the software verification gets underway asynch", func() {
+			spyConfigReader.failToGetHostnames = false
 
-		_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(stubSoftwareVerifier.hosts).Should(Receive(Equal([]string{"somehost"})))
+			_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(stubRemoteExecutor.verifySoftwareHosts).Should(Receive(Equal([]string{"somehost"})))
+		})
+
+		It("returns an error if cluster config can't be read", func() {
+			spyConfigReader.failToGetHostnames = true
+
+			_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error if cluster config is empty", func() {
+			spyConfigReader.failToGetHostnames = false
+			spyConfigReader.hostnamesListEmpty = true
+
+			_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
-	It("returns an error if cluster config can't be read", func() {
-		spyConfigReader := newSpyConfigReader()
-		stubSoftwareVerifier := newStubSoftwareVerifier()
-		bootstrapper := services.NewBootstrapper(spyConfigReader, stubSoftwareVerifier)
-		spyConfigReader.failToGetHostnames = true
+	Describe("PrepareStartAgents", func() {
+		It("returns a gRPC object", func() {
+			reply, err := bootstrapper.PrepareStartAgents(nil, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(reply).ToNot(BeNil())
+			Eventually(stubRemoteExecutor.startHosts).Should(Receive(Equal([]string{"somehost"})))
+		})
+		It("returns an error if cluster config can't be read", func() {
+			spyConfigReader.failToGetHostnames = true
 
-		_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
-		Expect(err).To(HaveOccurred())
+			_, err := bootstrapper.PrepareStartAgents(nil, &pb.PrepareStartAgentsRequest{})
+			Expect(err).To(HaveOccurred())
+		})
+		It("returns an error if cluster config is empty", func() {
+			spyConfigReader.failToGetHostnames = false
+			spyConfigReader.hostnamesListEmpty = true
+
+			_, err := bootstrapper.PrepareStartAgents(nil, &pb.PrepareStartAgentsRequest{})
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
-	It("returns an error if cluster config is empty", func() {
-		spyConfigReader := newSpyConfigReader()
-		stubSoftwareVerifier := newStubSoftwareVerifier()
-		bootstrapper := services.NewBootstrapper(spyConfigReader, stubSoftwareVerifier)
-		spyConfigReader.failToGetHostnames = false
-		spyConfigReader.hostnamesListEmpty = true
-
-		_, err := bootstrapper.CheckSeginstall(nil, &pb.CheckSeginstallRequest{})
-		Expect(err).To(HaveOccurred())
-	})
 })
 
 type spyConfigReader struct {
@@ -69,16 +95,22 @@ func (scr *spyConfigReader) GetHostnames() ([]string, error) {
 	}
 }
 
-type stubSoftwareVerifier struct {
-	hosts chan []string
+type stubRemoteExecutor struct {
+	verifySoftwareHosts chan []string
+	startHosts          chan []string
 }
 
-func newStubSoftwareVerifier() *stubSoftwareVerifier {
-	return &stubSoftwareVerifier{
-		hosts: make(chan []string),
+func newStubRemoteExecutor() *stubRemoteExecutor {
+	return &stubRemoteExecutor{
+		verifySoftwareHosts: make(chan []string),
+		startHosts:          make(chan []string),
 	}
 }
 
-func (s *stubSoftwareVerifier) VerifySoftware(hosts []string) {
-	s.hosts <- hosts
+func (s *stubRemoteExecutor) VerifySoftware(hosts []string) {
+	s.verifySoftwareHosts <- hosts
+}
+
+func (a *stubRemoteExecutor) Start(hosts []string) {
+	a.startHosts <- hosts
 }

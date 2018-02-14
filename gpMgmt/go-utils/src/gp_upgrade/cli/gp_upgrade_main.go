@@ -122,6 +122,26 @@ func main() {
 	}
 	cmdPrepareSubInitCluster.PersistentFlags().IntVar(&newClusterDbPort, "port", -1, "port for Greenplum on new master")
 
+	var cmdPrepareSubStartAgents = &cobra.Command{
+		Use:   "start-agents",
+		Short: "start agents on segment hosts",
+		Long:  "start agents on all segments",
+		Run: func(cmd *cobra.Command, args []string) {
+			conn, connConfigErr := grpc.Dial("localhost:"+hubPort, grpc.WithInsecure())
+			if connConfigErr != nil {
+				gpbackupUtils.Error(connConfigErr.Error())
+				os.Exit(1)
+			}
+			client := pb.NewCliToHubClient(conn)
+			preparer := commanders.NewPreparer(client)
+			err := preparer.StartAgents()
+			if err != nil {
+				gpbackupUtils.Error(err.Error())
+				os.Exit(1)
+			}
+		},
+	}
+
 	var cmdStatus = &cobra.Command{
 		Use:   "status",
 		Short: "subcommands to show the status of a gp_upgrade",
@@ -311,6 +331,7 @@ func main() {
 	cmdPrepare.AddCommand(cmdPrepareSubStartHub)
 	cmdPrepare.AddCommand(cmdPrepareSubInitCluster)
 	cmdPrepare.AddCommand(cmdPrepareSubShutdownClusters)
+	cmdPrepare.AddCommand(cmdPrepareSubStartAgents)
 
 	// status subcommands
 	cmdStatus.AddCommand(cmdStatusSubUpgrade)

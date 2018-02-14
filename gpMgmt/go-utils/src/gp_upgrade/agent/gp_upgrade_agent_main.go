@@ -8,7 +8,6 @@ import (
 	"net"
 
 	gpbackupUtils "github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -28,17 +27,10 @@ func main() {
 	//}
 	var logdir string
 	var RootCmd = &cobra.Command{
-		Use:   "command_listener --log-directory [path]",
+		Use:   "gp_upgrade_agent ",
 		Short: "Start the Command Listener (blocks)",
 		Long:  `Start the Command Listener (blocks)`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if logdir == "" {
-				return errors.New("the required flag '--log-directory' was not specified")
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Do Stuff Here
 			gpbackupUtils.InitializeLogging("gp_upgrade_agent", logdir)
 			errorChannel := make(chan error)
 			defer close(errorChannel)

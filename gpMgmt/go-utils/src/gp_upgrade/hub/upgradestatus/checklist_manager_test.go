@@ -89,4 +89,73 @@ var _ = Describe("upgradestatus/ChecklistManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
+	Describe("MarkFailed", func() {
+		It("errors if in.progress file can't be removed", func() {
+			utils.System.Remove = func(string) error {
+				return errors.New("remove failed")
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkFailed("step")
+			Expect(err.Error()).To(ContainSubstring("remove failed"))
+		})
+		It("errors if failed file can't be created", func() {
+			utils.System.Remove = func(string) error {
+				return nil
+			}
+			utils.System.OpenFile = func(string, int, os.FileMode) (*os.File, error) {
+				return nil, errors.New("open file failed")
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkFailed("step")
+			Expect(err.Error()).To(ContainSubstring("open file failed"))
+		})
+		It("returns nil if nothing fails", func() {
+			utils.System.Remove = func(string) error {
+				return nil
+			}
+			utils.System.OpenFile = func(string, int, os.FileMode) (*os.File, error) {
+				return nil, nil
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkFailed("step")
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("MarkComplete", func() {
+		BeforeEach(func() {
+			utils.InitializeSystemFunctions()
+		})
+		It("errors if in.progress file can't be removed", func() {
+			utils.System.Remove = func(string) error {
+				return errors.New("remove failed")
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkFailed("step")
+			Expect(err.Error()).To(ContainSubstring("remove failed"))
+		})
+		It("errors if completed file can't be created", func() {
+			utils.System.Remove = func(string) error {
+				return nil
+			}
+			utils.System.OpenFile = func(string, int, os.FileMode) (*os.File, error) {
+				return nil, errors.New("open file failed")
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkComplete("step")
+			Expect(err.Error()).To(ContainSubstring("open file failed"))
+		})
+		It("returns nil if nothing fails", func() {
+			utils.System.Remove = func(string) error {
+				return nil
+			}
+			utils.System.OpenFile = func(string, int, os.FileMode) (*os.File, error) {
+				return nil, nil
+			}
+			cm := upgradestatus.NewChecklistManager("/some/random/dir")
+			err := cm.MarkComplete("step")
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
 })

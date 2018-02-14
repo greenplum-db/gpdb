@@ -215,6 +215,24 @@ func (mr *MockCliToHubClientMockRecorder) UpgradeConvertMaster(ctx, in interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeConvertMaster", reflect.TypeOf((*MockCliToHubClient)(nil).UpgradeConvertMaster), varargs...)
 }
 
+// PrepareStartAgents mocks base method
+func (m *MockCliToHubClient) PrepareStartAgents(ctx context.Context, in *PrepareStartAgentsRequest, opts ...grpc.CallOption) (*PrepareStartAgentsReply, error) {
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PrepareStartAgents", varargs...)
+	ret0, _ := ret[0].(*PrepareStartAgentsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrepareStartAgents indicates an expected call of PrepareStartAgents
+func (mr *MockCliToHubClientMockRecorder) PrepareStartAgents(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareStartAgents", reflect.TypeOf((*MockCliToHubClient)(nil).PrepareStartAgents), varargs...)
+}
+
 // MockCliToHubServer is a mock of CliToHubServer interface
 type MockCliToHubServer struct {
 	ctrl     *gomock.Controller
@@ -366,4 +384,17 @@ func (m *MockCliToHubServer) UpgradeConvertMaster(arg0 context.Context, arg1 *Up
 // UpgradeConvertMaster indicates an expected call of UpgradeConvertMaster
 func (mr *MockCliToHubServerMockRecorder) UpgradeConvertMaster(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeConvertMaster", reflect.TypeOf((*MockCliToHubServer)(nil).UpgradeConvertMaster), arg0, arg1)
+}
+
+// PrepareStartAgents mocks base method
+func (m *MockCliToHubServer) PrepareStartAgents(arg0 context.Context, arg1 *PrepareStartAgentsRequest) (*PrepareStartAgentsReply, error) {
+	ret := m.ctrl.Call(m, "PrepareStartAgents", arg0, arg1)
+	ret0, _ := ret[0].(*PrepareStartAgentsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrepareStartAgents indicates an expected call of PrepareStartAgents
+func (mr *MockCliToHubServerMockRecorder) PrepareStartAgents(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareStartAgents", reflect.TypeOf((*MockCliToHubServer)(nil).PrepareStartAgents), arg0, arg1)
 }
