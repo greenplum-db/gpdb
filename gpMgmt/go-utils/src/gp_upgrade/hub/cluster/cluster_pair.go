@@ -6,9 +6,8 @@ import (
 
 	"fmt"
 	"gp_upgrade/hub/logger"
-	"os"
+	"gp_upgrade/hub/upgradestatus"
 	"os/exec"
-	"path"
 )
 
 type PairOperator interface {
@@ -50,6 +49,10 @@ func (cp *Pair) Init(oldBinDir string, newBinDir string) error {
 }
 
 func (cp *Pair) StopEverything(pathToGpstopStateDir string, logger *logger.LogEntry) {
+	checklistManager := upgradestatus.NewChecklistManager(pathToGpstopStateDir)
+	checklistManager.ResetStateDir("gpstop.old")
+	checklistManager.ResetStateDir("gpstop.new")
+
 	oldGpstopShellArgs := fmt.Sprintf("PGPORT=%d && MASTER_DATA_DIRECTORY=%s && %s/gpstop -a",
 		cp.oldMasterPort, cp.oldMasterDataDirectory, cp.oldBinDir)
 	runOldStopCmd := utils.System.ExecCommand("bash", "-c", oldGpstopShellArgs)
@@ -58,12 +61,13 @@ func (cp *Pair) StopEverything(pathToGpstopStateDir string, logger *logger.LogEn
 		cp.newMasterDataDirectory, cp.newBinDir)
 	runNewStopCmd := utils.System.ExecCommand("bash", "-c", newGpstopShellArgs)
 
-	stopCluster(runOldStopCmd, "gpstop.old", pathToGpstopStateDir, logger)
-	stopCluster(runNewStopCmd, "gpstop.new", pathToGpstopStateDir, logger)
+	stopCluster(runOldStopCmd, "gpstop.old", logger, checklistManager)
+	stopCluster(runNewStopCmd, "gpstop.new", logger, checklistManager)
 }
 
-func stopCluster(stopCmd *exec.Cmd, baseName string, pathToGpstopStateDir string, logger *logger.LogEntry) {
-	err := recordRunningState(pathToGpstopStateDir, baseName)
+func stopCluster(stopCmd *exec.Cmd, baseName string, logger *logger.LogEntry,
+	stateManager *upgradestatus.ChecklistManager) {
+	err := stateManager.MarkInProgress(baseName)
 	if err != nil {
 		logger.Error <- err.Error()
 		return
@@ -75,40 +79,8 @@ func stopCluster(stopCmd *exec.Cmd, baseName string, pathToGpstopStateDir string
 
 	if err != nil {
 		logger.Error <- err.Error()
-		recordFailedState(pathToGpstopStateDir, baseName, logger)
+		stateManager.MarkFailed(baseName)
 		return
 	}
-	recordCompleteState(pathToGpstopStateDir, baseName, logger)
-}
-
-func recordCompleteState(pathToGpstopStateDir string, baseName string, logger *logger.LogEntry) {
-	_, err := utils.System.OpenFile(path.Join(pathToGpstopStateDir, fmt.Sprintf("%s.complete", baseName)), os.O_RDONLY|os.O_CREATE, 0700)
-	if err != nil {
-		logger.Error <- fmt.Sprintf("gpstop ran successfully, but couldn't create %s.complete file", baseName)
-		logger.Error <- err.Error()
-	}
-
-	err = utils.System.Remove(path.Join(pathToGpstopStateDir, fmt.Sprintf("%s.running", baseName)))
-	if err != nil {
-		logger.Error <- fmt.Sprintf("gpstop ran successfully, but couldn't remove %s.running file", baseName)
-		logger.Error <- err.Error()
-	}
-}
-
-func recordRunningState(pathToGpstopStateDir string, baseName string) error {
-	_, err := utils.System.OpenFile(path.Join(pathToGpstopStateDir, fmt.Sprintf("%s.running", baseName)), os.O_RDONLY|os.O_CREATE, 0700)
-	return err
-}
-
-func recordFailedState(pathToGpstopStateDir string, baseName string, logger *logger.LogEntry) {
-	_, err := utils.System.OpenFile(path.Join(pathToGpstopStateDir, fmt.Sprintf("%s.error", baseName)), os.O_RDONLY|os.O_CREATE, 0700)
-	if err != nil {
-		logger.Error <- err.Error()
-	}
-
-	err = utils.System.Remove(path.Join(pathToGpstopStateDir, fmt.Sprintf("%s.running", baseName)))
-	if err != nil {
-		logger.Error <- fmt.Sprintf("gpstop ran successfully, but couldn't remove %s.running file", baseName)
-		logger.Error <- err.Error()
-	}
+	stateManager.MarkComplete(baseName)
 }
