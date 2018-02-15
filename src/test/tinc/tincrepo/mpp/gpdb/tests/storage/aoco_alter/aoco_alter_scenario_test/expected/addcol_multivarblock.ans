@@ -1,8 +1,0 @@
-alter table multivarblock_tab add column a1 boolean DEFAULT false;
-ALTER TABLE
-select count(*) as a1  from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='multivarblock_tab' and attname='a1';
- a1 
-----
-  1
-(1 row)
-

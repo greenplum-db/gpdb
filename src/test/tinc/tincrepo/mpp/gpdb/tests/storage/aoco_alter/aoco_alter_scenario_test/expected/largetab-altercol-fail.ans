@@ -1,4 +1,0 @@
-alter table large_aoco_table add column add_text_col text default 'this is blah isflsdflsdf ddldl k sdkfmlksdfm lk flksdlslksdlsldkmslkdsdlsdf lskdmlsmfs lsdjlmdfdsfmlsdfkjdsfjn sjkd ksfksdfs lwioemdlksdlk  lskdflk lksdfj lksd msdl slkmlmlklskf llwewoweop  we dw skdkjsjdlwe wowe  lskdl eiwemslksdlkfwiesklslk jsdfkhsdkjfhjh ksdkjdfkjshkjsfksdjfskd kjsdhfsdhfkjsdfksdjfjdskfhksdhfkksjdhfksjdhfksdjhksjdhfksjdkfsjdfhksdhfkjsdkjfhksdjfksdhfksh' ||now() ;
-psql:/path/sql_file:1: WARNING:  Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.
-psql:/path/sql_file:1: NOTICE:  Retry of the distributed transaction 'Abort Prepared' broadcast succeeded to the segments for gid = 1402084958-0000000136.
-psql:/path/sql_file:1: ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1402084958-0000000136. (cdbtm.c:631)
