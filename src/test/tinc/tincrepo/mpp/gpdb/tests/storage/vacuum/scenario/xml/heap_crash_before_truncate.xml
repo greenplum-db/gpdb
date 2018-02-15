@@ -50,7 +50,7 @@ select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment
         <trigger><![CDATA[
 vacuum full vfheap;
 ERROR:  fault triggered, fault name:'vacuum_full_before_truncate' fault type:'panic' (seg0 haradh1-mac.local:40000 pid=15655) (cdbdisp.c:1526)
-ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:xxx)
+ERROR:  could not connect to segment: initialization of segworker group failed
         ]]></trigger>
         <post><![CDATA[
 select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;

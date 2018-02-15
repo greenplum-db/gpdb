@@ -51,11 +51,8 @@ class scenario_sql(SQLTestCase):
 @tinctest.skipLoading('scenario')
 class scenario_fault(MPPTestCase):
 
-    def setUp(self):
-        self.filereputil = Filerepe2e_Util()
-
     def inject(self, faultname, faulttype, segid):
-        self.filereputil.inject_fault(f=faultname, y=faulttype, seg_id=segid)
+        Filerepe2e_Util().inject_fault(f=faultname, y=faulttype, seg_id=segid)
 
     def check_connection(self):
         '''
