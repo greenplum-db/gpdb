@@ -327,6 +327,7 @@ resources:
 {% endif %}
 {% endif %}
 {% if "DPM" in test_sections %}
+# a second cluster for gptransfer tests
 - name: terraform2
   type: terraform
   source:
@@ -625,7 +626,7 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
-ccp_destroy_2_cluster_anchor: &ccp_destroy_2_cluster
+ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
   do:
   - *ccp_destroy
   - put: terraform2
@@ -670,7 +671,7 @@ set_failed_anchor: &set_failed
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
 
-set_failed_anchor_2: &set_failed_2_cluster
+set_failed_anchor_two_clusters: &set_failed_two_clusters
   do:
   - *set_failed
   - task: on_failure_set_failed
@@ -1843,6 +1844,7 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: mpp_interconnect
+    # ccp_destroy should be part of *cs_ccp_run_tests_params_anchor
   ensure:
     <<: *set_failed
 
@@ -2340,9 +2342,9 @@ jobs:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
-      <<: *ccp_destroy_2_cluster
+      <<: *ccp_destroy_two_clusters
   ensure:
-    <<: *set_failed_2_cluster
+    <<: *set_failed_two_clusters
 
 - name: DPM_gptransfer
   plan:
@@ -2421,9 +2423,9 @@ jobs:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
-      <<: *ccp_destroy_2_cluster
+      <<: *ccp_destroy_two_clusters
   ensure:
-    <<: *set_failed_2_cluster
+    <<: *set_failed_two_clusters
 
 - name: gate_dpm_end
   plan:
