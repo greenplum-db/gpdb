@@ -302,12 +302,23 @@ class GpMirrorListToBuild:
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
 
             self.__logger.info("Starting mirrors")
-            start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
+            start_all_successful, start_errors = self.__startAll(gpEnv, gpArray, mirrorsToStart)
 
             MPP_12038_fault_injection()
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
+        # if a mirror got a sync error or did not come up, stop it and suggest full recovery
+        if not start_all_successful and start_errors:
+            self.__logger.fatal("Issues starting up mirror segment(s): %s.",
+                                start_errors)
+            syncErrorStopDirectives = []
+            for stopDirective in toStopDirectives:
+                seg = stopDirective.getSegment()
+                if seg.getSegmentContentId() in start_errors:
+                    syncErrorStopDirectives.append(stopDirective)
+            self.__ensureStopped(gpEnv, syncErrorStopDirectives)
 
         return start_all_successful
 
@@ -646,7 +657,6 @@ class GpMirrorListToBuild:
         segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments,
                                                                                startSegments.START_AS_MIRRORLESS,
                                                                                era)
-        start_all_successfull = len(segmentStartResult.getFailedSegmentObjs()) == 0
         for failure in segmentStartResult.getFailedSegmentObjs():
             failedSeg = failure.getSegment()
             failureReason = failure.getReason()
@@ -654,7 +664,39 @@ class GpMirrorListToBuild:
                 "Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (
                 failedSeg, failureReason))
 
-        return start_all_successfull
+        # check if any of the mirrors got a sync error
+        start_segment_ids = [str(seg.getSegmentContentId()) for seg in segments]
+
+        null_check_result = []
+        null_check_cmd = "SELECT gp_segment_id FROM gp_stat_replication WHERE gp_segment_id IN (%s) AND sync_state IS NULL AND sync_error = 'none'" % ','.join(start_segment_ids)
+        sync_error_check_cmd = "SELECT gp_segment_id FROM gp_stat_replication WHERE gp_segment_id IN (%s) AND sync_error != 'none'" % ','.join(start_segment_ids)
+        retry_count = 1
+        max_retries = 200
+        with dbconn.connect(dbconn.DbURL()) as conn:
+            while (retry_count < max_retries):
+                res = dbconn.execSQL(conn, null_check_cmd)
+                null_check_result = [int(row[0]) for row in res.fetchall()]
+                if len(null_check_result) != 0:
+                    retry_count += 1
+                    continue
+
+                res = dbconn.execSQL(conn, sync_error_check_cmd)
+                sync_error_result = [int(row[0]) for row in res.fetchall()]
+                if  len(sync_error_result) != 0:
+                    return False, sync_error_result
+                else:
+                    break
+            else:
+                # retry count has been reached where WAL stream
+                # between the primary and mirror does not seem to have
+                # been established yet
+                missing_segments = []
+                for segment_id in start_segment_ids:
+                    if int(segment_id) in null_check_result:
+                        missing_segments.append(int(segment_id))
+                return False, missing_segments
+
+        return True, None
 
 class GpCleanupSegmentDirectoryDirective:
     def __init__(self, segment):

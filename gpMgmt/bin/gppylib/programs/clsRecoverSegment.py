@@ -621,6 +621,8 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+                self.trigger_fts_probe(gpArray)
+                self.logger.fatal("Full segment recovery may be required.")
                 sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
