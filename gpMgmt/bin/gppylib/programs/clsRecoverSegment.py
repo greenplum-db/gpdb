@@ -165,7 +165,7 @@ class GpRecoverSegmentProgram:
             for lineno, line in line_reader(f):
                 fixed, flexible = parse_gprecoverseg_line(filename, lineno, line)
                 rows.append(ParsedConfigFileRow(fixed, flexible, line))
-        fileData = ParsedConfigFile(rows)
+        fileData = ParsedConfigFile([], rows)
 
         allAddresses = [row.getFixedValuesMap()["newAddress"] for row in fileData.getRows()
                         if "newAddress" in row.getFixedValuesMap()]
