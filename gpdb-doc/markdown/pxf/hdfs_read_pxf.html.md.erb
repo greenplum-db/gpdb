@@ -112,7 +112,7 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, or `Json`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
 | FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value data.  |
-| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `Avro`, `Json`, and `Parquet` profiles. The `Avro` and `Json` `'CUSTOM'` `FORMAT`s require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
+| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `Avro`, `Json`, and `Parquet` profiles. The `Avro`, `Json`, and `Parquet` `'CUSTOM'` `FORMAT`s also require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
@@ -698,6 +698,14 @@ SELECT * FROM multiline_json_tbl;
 
 The PXF `Parquet` profile supports reading HDFS files that are stored in Parquet format.
 
+### <a id="profile_hdfsparquetoptions" class="no-quick-link"></a>Parquet-Specific Options
+
+The \<formatting-properties\> required by the `Parquet` profile include:
+
+| Keyword  | Syntax, Example | Description |
+|-------|--------------|-----------------------|
+| formatter    | `(formatter='pxfwritable_import')` | Must identify `pxfwritable_import`.|
+
 ### <a id="profile_hdfsparquetdatamap" class="no-quick-link"></a>Data Type Mapping
 
 To represent Parquet data types in Greenplum Database, map data values to Greenplum Database columns of the same type. The following table summarizes external mapping rules for Parquet data.
@@ -722,5 +730,5 @@ Use the following [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTER
 ``` sql
 postgres=# CREATE EXTERNAL TABLE pxf_parquet_file (location text, month text, number_of_orders int, total_sales double precision)
     LOCATION ('pxf://data/pxf_examples/pxf_hdfs_parquet.parq?PROFILE=Parquet')
-    FORMAT 'CUSTOM';
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
