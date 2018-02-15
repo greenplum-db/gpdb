@@ -8,7 +8,7 @@ With the default PXF configuration, you must explicitly configure each Hadoop da
 
 As an alternative, you can disable PXF user impersonation. With user impersonation disabled, PXF executes all Hadoop service requests as the PXF process owner (usually `gpadmin`). This behavior matches earlier releases of PXF, but provides no means to control access to Hadoop services for different Greenplum Database users in Hadoop. See [Configuring PXF User Impersonation](#pxf_cfg_proc) for information about disabling user impersonation.
 
-## <a id="pxf_cfg_proc"></a>Configuring PXF User Impersonation
+## <a id="pxf_cfg_proc"></a>Configure PXF User Impersonation
 
 Perform the following procedure to turn PXF user impersonation on or off in your Greenplum Database cluster. User impersonation is enabled by default.
 
@@ -43,47 +43,35 @@ Perform the following procedure to turn PXF user impersonation on or off in your
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
     ```
 
-## <a id="hadoop"></a>Configuring Hadoop Proxying
+## <a id="hadoop"></a>Configure Hadoop Proxying
 
-When PXF user personation is enabled, the Hadoop `core-site.xml` configuration file `hadoop.proxyuser.<name>.hosts` and `hadoop.proxyuser.<name>.groups` property values identify the HDFS hosts and HDFS groups that permit user impersonation for the operating system user `<name>`. 
+When PXF user personation is enabled (the default), you must configure the Hadoop `core-site.xml` configuration file permit user impersonation for PXF. Follow these steps:
 
-The following settings permit the `gpadmin` user to impersonate all HDFS groups on all HDFS hosts:
+1. Open the `core-site.xml` configuration file using a text editor, or use Ambari to add or edit the property values described in this procedure.
 
-``` xml
-<property>
-    <name>hadoop.proxyuser.gpadmin.hosts</name>
-    <value>*</value>
-</property>
-<property>
-    <name>hadoop.proxyuser.gpadmin.groups</name>
-    <value>*</value>
-</property>
-```
+2. Set the property `hadoop.proxyuser.<name>.hosts` to specify the list of PXF host names where proxy requests are permitted. Substitute `<name>` for the PXF user (generally `gpadmin`) and provide multiple hostnames in a comma-separated list.  For example:
 
-**Note:** After changing `core-site.xml` you must restart Hadoop for your changes to take effect.
+    ``` xml
+    <property>
+        <name>hadoop.proxyuser.gpadmin.hosts</name>
+        <value>pxfhost1,pxfhost2,pxfhost3</value>
+    </property>
+    ```
+3. Set the property `hadoop.proxyuser.<name>.groups` to specify the list of HDFS groups that PXF can impersonate. You should limit this list to only those groups that require access to HDFS data from PXF.  For example:
+
+    ``` xml
+    <property>
+        <name>hadoop.proxyuser.gpadmin.groups</name>
+        <value>group1,group2</value>
+    </property>
+    ```
+4. After changing `core-site.xml`, restart Hadoop for your changes to take effect.
 
 ## <a id="hive"></a>Hive User Impersonation
 
-Users can access Hive using either the MetaStore or HiveServer2 services. The PXF Hive connector uses the Hive MetaStore, which directly accessing the underlying HDFS files for a Hive table. No specific impersonation configuration is required on the Hive side, as the Hadoop proxy configuration in `core-site.xml` also applies to Hive access.
+The PXF Hive connector uses the Hive MetaStore to determine the HDFS locations of Hive tables, and then accesses the underlying HDFS files directly. No specific impersonation configuration is required for Hive, because the Hadoop proxy configuration in `core-site.xml` also applies to Hive access.
 
 
 ## <a id="hbase"></a>HBase User Impersonation
 
-HBase does not obtain proxy settings from `core-site.xml`, so you must apply those same settings to the HBase configuration file, and also enable the `hadoop.security.authorization` setting.  The following settings in `hbase-site.xml` permit the `gpadmin` user to impersonate all HDFS groups on all HBase hosts:
-
-``` xml
-<property>
-    <name>hadoop.proxyuser.gpadmin.hosts</name>
-    <value>*</value>
-</property>
-<property>
-    <name>hadoop.proxyuser.gpadmin.groups</name>
-    <value>*</value>
-</property>
-<property>
-    <name>hadoop.security.authorization</name>
-    <value>true</value>
-</property>
-```
-
-Restart HBase after making any changes to `hbase-site.xml`
+In order for user impersonation to work with HBase, you must enable the `AccessController` coprocessor in the HBase configuration and restart the cluster. See [61.3 Server-side Configuration for Simple User Access Operation](http://hbase.apache.org/book.html#hbase.secure.configuration) in the Apache HBase Reference Guide for the required `hbase-site.xml` configuration settings.
