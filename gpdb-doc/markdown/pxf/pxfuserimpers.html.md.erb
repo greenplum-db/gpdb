@@ -1,5 +1,5 @@
 ---
-title: About PXF User Impersonation
+title: Configuring User Impersonation and Proxying
 ---
 
 PXF accesses Hadoop services on behalf of Greenplum Database end users. By default, PXF tries to access data source services (HDFS, Hive, HBase) using the identity of the Greenplum Database user account that logs into Greenplum Database and performs an operation using a PXF connector profile. Keep in mind that PXF uses only the _login_ identity of the user when accessing Hadoop services. For example, if a user logs into Greenplum Database as the user `jane` and then execute `SET ROLE` or `SET SESSION AUTHORIZATION` to assume a different user identity, all PXF requests still use the identity `jane` to access Hadoop services. 

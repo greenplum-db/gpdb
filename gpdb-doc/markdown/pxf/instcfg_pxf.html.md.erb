@@ -2,6 +2,10 @@
 title: Installing and Configuring PXF
 ---
 
+PXF accesses Hadoop services on behalf of Greenplum Database end users. By default, PXF tries to access data source services (HDFS, Hive, HBase) using the identity of the Greenplum Database user account that logs into Greenplum Database. In order to support this functionality, you must configure proxy settings for Hadoop, as well as for Hive and HDFS if you intend to use those PXF connectors. Follow the procedures in:
+
+- **[Configuring User Impersonation and Proxying](pxfuserimpers.html)**
+
 The Greenplum Platform Extension Framework (PXF) provides connectors to Hadoop, Hive, and HBase data stores. To use these PXF connectors, you must install Hadoop, Hive, and HBase clients on each Greenplum Database segment host as described in this one-time installation and configuration procedure:
 
 - **[Installing and Configuring Hadoop Clients for PXF](client_instcfg.html)**
