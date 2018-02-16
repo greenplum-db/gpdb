@@ -109,12 +109,13 @@ ORDER BY 1 asc ;
                                  ->  Result  (cost=0.00..1378.65 rows=94594 width=8)
                                        ->  Nested Loop  (cost=0.00..1377.51 rows=94594 width=8)
                                              Join Filter: my_tq_agg_small.sym::bpchar = my_tt_agg_small.symbol AND my_tt_agg_small.event_ts >= my_tq_agg_small.ets AND my_tt_agg_small.event_ts < my_tq_agg_small.end_ts
-                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.29 rows=280 width=25)
-                                                   ->  Table Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
-                                             ->  Table Scan on my_tq_agg_small  (cost=0.00..431.04 rows=676 width=20)
- Settings:  enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=2
- Optimizer status: PQO version 2.32.0
-(19 rows)
+                                             ->  Table Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
+                                             ->  Materialize  (cost=0.00..431.16 rows=676 width=20)
+                                                   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=676 width=20)
+                                                         Hash Key: my_tq_agg_small.sym::bpchar
+                                                         ->  Table Scan on my_tq_agg_small  (cost=0.00..431.04 rows=676 width=20)
+ Optimizer: PQO version 2.54.5
+(20 rows)
 
 reset optimizer_segments;
 reset optimizer_nestloop_factor;
