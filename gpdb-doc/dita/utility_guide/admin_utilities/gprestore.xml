@@ -143,10 +143,6 @@
             letter, number, or an underscore character, then you must include that name in double
             quotes. If a table is not in the backup set, the restore operation fails. You cannot
             specify a leaf partition of a partitioned table.</pd>
-          <pd>When restoring a leaf partition, the partitioned table is also restored. You can
-            specify a leaf partition of a partitioned table only if the leaf partition was listed as
-            a table to be backed up. Otherwise, <codeph>gprestore</codeph> ignores the leaf
-            partition names. </pd>
           <pd>You cannot combine this option with the option <codeph>-exclude-schema</codeph>, or
             another a table filtering option such as <codeph>-include-table</codeph>.</pd>
         </plentry>
@@ -175,8 +171,8 @@
           <pd>Optional. Specifies a table to restore. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
             character other than a lowercase letter, number, or an underscore character, then you
-            must include that name in double quotes. You can specify this option multiple times.
-            You cannot specify a leaf partition of a partitioned table.</pd>
+            must include that name in double quotes. You can specify this option multiple times. You
+            cannot specify a leaf partition of a partitioned table.</pd>
           <pd>You cannot combine this option with a schema filtering option such as
               <codeph>-include-schema</codeph>, or another table filtering option such as
               <codeph>-exclude-table-file</codeph>.</pd>

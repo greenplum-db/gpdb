@@ -186,8 +186,8 @@ $ <b>find /home/gpadmin/backups/ -type f</b>
 /home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_report
 /home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_toc.yaml</codeblock></p>
       <p>When performing a backup operation, you can use the <codeph>--single-data-file</codeph> in
-        situations where the additional overhead multiple files might be prohibitive. For example,
-        if you use a third party storage solutions such as Data Domain with back ups.</p>
+        situations where the additional overhead of multiple files might be prohibitive. For
+        example, if you use a third party storage solution such as Data Domain with back ups.</p>
       <section>
         <title>Restoring from Backup</title>
         <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must use the
@@ -370,9 +370,9 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         data file per leaf partition when backing up a partitioned table. For example, this command
         generates one data file for each leaf
           partition:<codeblock>$ <b>gpbackup -dbname demo -include-table public.sales -leaf-partition-data</b></codeblock><p>When
-          a leaf partitions are backed up, the leaf partition data is backed up along with the
+          leaf partitions are backed up, the leaf partition data is backed up along with the
           metadata for the entire partitioned table.</p><note>You cannot use the
-            <codeph>-exclude-table-file</codeph> with <codeph>-leaf-partition-data</codeph>.
+            <codeph>-exclude-table-file</codeph> option with <codeph>-leaf-partition-data</codeph>.
           Although you can specify leaf partition names in a file specified with
             <codeph>-exclude-table-file</codeph>, <codeph>gpbackup</codeph> ignores the partition
           names.</note></section>
