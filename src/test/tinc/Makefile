@@ -46,11 +46,7 @@ storage_vacuum_xidlimits:
 	-s tincrepo/mpp/gpdb/tests/storage/vacuum/xidlimits
 
 storage:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
-	-s aoco_alter \
-	-s access_methods \
-	-s transaction_management \
-	-s vacuum \
+	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/storage/vacuum \
 	-q "class!=XidlimitsTests"
 
 # cs-walrepl-multinode
