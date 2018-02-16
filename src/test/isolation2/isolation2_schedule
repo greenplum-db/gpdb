@@ -2,7 +2,6 @@ test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_view
 
 test: reindex
 test: commit_transaction_block_checkpoint
-test: master_panic_after_phase1_commit
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
 test: vacuum_full_recently_dead_tuple_due_to_distributed_snapshot
@@ -108,6 +107,7 @@ test: segwalrep/mirror_promotion
 # Tests for crash recovery
 test: crash_recovery
 test: crash_recovery_redundant_dtx
+test: crash_recovery_dtm
 test: uao_crash_compaction_row
 test: uao_crash_compaction_column
 
