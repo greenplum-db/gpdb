@@ -4,6 +4,8 @@
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
+      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gpbackup -dbname</b> <varname>database_name</varname>
@@ -173,7 +175,8 @@
               <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
-              <codeph>-leaf-partition-data</codeph> option. </pd>
+              <codeph>-leaf-partition-data</codeph> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -192,7 +195,8 @@
             another table filtering option such as <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
-              <codeph>-leaf-partition-data</codeph> option. </pd>
+              <codeph>-leaf-partition-data</codeph> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>

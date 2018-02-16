@@ -7,13 +7,19 @@
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
       located in the Greenplum Database master host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
+      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
    [<b>-backup-dir</b> <varname>directory</varname>]
    [<b>-create-db</b>]
    [<b>-debug</b>]
+   [<b>-exclude-schema</b> <varname>schema_name</varname>]
+   [<b>-exclude-table</b> <varname>schema.table</varname>]
+   [<b>-exclude-table-file</b> <varname>file_name</varname>]
    [<b>-include-schema</b> <varname>schema_name</varname>]
+   [<b>-include-table</b> <varname>schema.table</varname>]
    [<b>-include-table-file</b> <varname>file_name</varname>]
    [<b>-jobs</b> <varname>int</varname>]
    [<b>-quiet</b>]
@@ -37,6 +43,12 @@
           <codeph>-create-db</codeph> option if the target database does not exist in the cluster.
         You can optionally restore a backup set to a different database by using the
           <codeph>-redirect-db</codeph> option.</p>
+      <p>When restoring a backup set that contains data from some leaf partitions of a partitioned
+        tables, the partitioned table is restored along with the data for the leaf partitions. For
+        example, you create a backup with the <codeph>gpbackup</codeph> option
+          <codeph>-include-table-file</codeph> and the text file lists some leaf partitions of a
+        partitioned table. Restoring the backup creates the partitioned table and restores the data
+        only for the leaf partitions listed in the file. </p>
       <p>Greenplum Database system objects are automatically included in a <codeph>gpbackup</codeph>
         backup set, but these objects are only restored if you include the
           <codeph>-with-globals</codeph> option to <codeph>gprestore</codeph>. Similarly, if you
@@ -48,9 +60,7 @@
         to restore table data. By default <codeph>gprestore</codeph> uses 1 connection, but you can
         increase this number with the <codeph>-jobs</codeph> option for large restore
         operations.</p>
-      <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
-        are restored from a backup set. </p>
-      <p>When a restore operation completes, <codeph>gprestore</codeph> returns a a status code. See
+      <p>When a restore operation completes, <codeph>gprestore</codeph> returns a status code. See
           <xref href="#topic_phj_g5j_tbb/return_codes" format="dita"/>.</p>
       <p><codeph>gprestore</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
@@ -104,6 +114,45 @@
       </parml>
       <parml>
         <plentry>
+          <pt><b>-exclude-schema</b>
+            <varname>schema_name</varname></pt>
+          <pd>Optional. Specifies a database schema to exclude from the restore operation. You can
+            specify this option multiple times to exclude multiple schemas. You cannot combine this
+            option with the option <codeph>-include-schema</codeph>, or a table filtering option
+            such as <codeph>-include-table</codeph>. </pd>
+        </plentry>
+        <plentry>
+          <pt><b>-exclude-table</b>
+            <varname>schema.table</varname></pt>
+          <pd>Optional. Specifies a table to exclude from the restore operation. The table must be
+            in the format <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema
+            name uses any character other than a lowercase letter, number, or an underscore
+            character, then you must include that name in double quotes. You can specify this option
+            multiple times. If the table is not in the backup set, the restore operation fails. You
+            cannot specify a leaf partition of a partitioned table.</pd>
+          <pd>You cannot combine this option with the option <codeph>-exclude-schema</codeph>, or
+            another a table filtering option such as <codeph>-include-table</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt><b>-exclude-table-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of tables to exclude from the
+            restore operation. Each line in the text file must define a single table using the
+            format <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include
+            trailing lines. If a table or schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. If a table is not in the backup set, the restore operation fails. You cannot
+            specify a leaf partition of a partitioned table.</pd>
+          <pd>When restoring a leaf partition, the partitioned table is also restored. You can
+            specify a leaf partition of a partitioned table only if the leaf partition was listed as
+            a table to be backed up. Otherwise, <codeph>gprestore</codeph> ignores the leaf
+            partition names. </pd>
+          <pd>You cannot combine this option with the option <codeph>-exclude-schema</codeph>, or
+            another a table filtering option such as <codeph>-include-table</codeph>.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
           <pt><b>-include-schema</b>
             <varname>schema_name</varname></pt>
           <pd>Optional. Specifies a database schema to restore. You can specify this option multiple
@@ -117,11 +166,21 @@
           <pd>You cannot use this option if the backup set uses a single data file for all tables on
             each segment (<codeph>gpbackup -single-data-file</codeph> option), or if objects in the
             backup set have dependencies on multiple schemas.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
-            for more information.</pd>
         </plentry>
       </parml>
       <parml>
+        <plentry>
+          <pt><b>-include-table</b>
+            <varname>schema.table</varname></pt>
+          <pd>Optional. Specifies a table to restore. The table must be in the format
+              <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
+            character other than a lowercase letter, number, or an underscore character, then you
+            must include that name in double quotes. You can specify this option multiple times.
+            You cannot specify a leaf partition of a partitioned table.</pd>
+          <pd>You cannot combine this option with a schema filtering option such as
+              <codeph>-include-schema</codeph>, or another table filtering option such as
+              <codeph>-exclude-table-file</codeph>.</pd>
+        </plentry>
         <plentry>
           <pt><b>-include-table-file</b>
             <varname>file_name</varname></pt>
@@ -130,7 +189,8 @@
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
             lines. If a table or schema name uses any character other than a lowercase letter,
             number, or an underscore character, then you must include that name in double quotes.
-            Any tables not listed in this file are omitted from the restore operation. </pd>
+            Any tables not listed in this file are omitted from the restore operation. You cannot
+            specify a leaf partition of a partitioned table.</pd>
           <pd>If you use the <codeph>-include-table-file</codeph> option, <codeph>gprestore</codeph>
             does not create roles or set the owner of the tables. The utility restores table indexes
             and rules. Triggers are also restored but are not supported in Greenplum Database.</pd>
