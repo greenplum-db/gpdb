@@ -447,8 +447,14 @@ DefineType(List *names, List *parameters)
 	/* Preassign array type OID so we can insert it in pg_type.typarray */
 	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 	{
-		array_oid = GetPreassignedOidForType(typeNamespace, array_type);
+		array_oid = GetPreassignedOidForType(typeNamespace, array_type, true);
 
+		/*
+		 * If we are expected to get a preassigned Oid but receive InvalidOid,
+		 * get a new Oid. This can happen during upgrades from GPDB4 to 5 where
+		 * array types over relation rowtypes were introduced so there are no
+		 * pre-existing array types to dump from the old cluster
+		 */
 		if (array_oid == InvalidOid && IsBinaryUpgrade)
 			array_oid = GetNewOid(pg_type);
 	}
@@ -1137,8 +1143,9 @@ DefineEnum(CreateEnumStmt *stmt)
 
 	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 	{
-		enumTypeOid = GetPreassignedOidForType(enumNamespace, enumName);
-		enumArrayOid = GetPreassignedOidForType(enumNamespace, enumArrayName);
+		enumTypeOid = GetPreassignedOidForType(enumNamespace, enumName, false);
+		enumArrayOid = GetPreassignedOidForType(enumNamespace, enumArrayName,
+											    false);
 	}
 	else
 	{
