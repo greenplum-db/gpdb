@@ -25,7 +25,8 @@ extern void AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog,
 			char *objname, Oid namespaceOid, Oid keyOid1, Oid keyOid2);
 extern Oid GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple);
 extern Oid GetPreassignedOidForRelation(Oid namespaceOid, const char *relname);
-extern Oid GetPreassignedOidForType(Oid namespaceOid, const char *typname);
+extern Oid GetPreassignedOidForType(Oid namespaceOid, const char *typname,
+									bool allowMissing);
 extern Oid GetPreassignedOidForDatabase(const char *datname);
 
 /* Functions used in binary upgrade */
