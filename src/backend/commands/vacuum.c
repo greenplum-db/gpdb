@@ -371,8 +371,8 @@ vacuum(VacuumStmt *vacstmt, Oid relid, bool do_toast,
 	volatile bool all_rels,
 				in_outer_xact,
 				use_own_xacts;
-	List	   *vacuum_relations;
-	List	   *analyze_relations;
+	List	   *vacuum_relations = NIL;
+	List	   *analyze_relations = NIL;
 
 	if ((vacstmt->options & VACOPT_VACUUM) &&
 		(vacstmt->options & VACOPT_ROOTONLY))
@@ -976,6 +976,8 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	vacstmt->options |= VACOPT_VACUUM;
 	vacstmt->va_cols = NIL;		/* A plain VACUUM cannot list columns */
 
+	stats_context.updated_stats = NIL;
+
 	/*
 	 * We compact segment file by segment file.
 	 * Therefore in some cases, we have multiple vacuum dispatches
@@ -1268,8 +1270,6 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			int 		i, nindexes;
 			bool 		has_bitmap = false;
 			Relation   *i_rel = NULL;
-
-			stats_context.updated_stats = NIL;
 
 			vac_open_indexes(onerel, AccessShareLock, &nindexes, &i_rel);
 			if (i_rel != NULL)
