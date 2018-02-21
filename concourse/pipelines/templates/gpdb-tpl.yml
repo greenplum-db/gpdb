@@ -692,7 +692,7 @@ resources:
     bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: {{postgis-gppkg-rhel6}}
+    versioned_file: {{postgis-gppkg-rhel6}}
 
 - name: postgis_gppkg_centos7
   type: s3
@@ -701,7 +701,7 @@ resources:
     bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: {{postgis-gppkg-rhel7}}
+    versioned_file: {{postgis-gppkg-rhel7}}
 
 {% endif %}
 {% if "DPM" in test_sections %}
