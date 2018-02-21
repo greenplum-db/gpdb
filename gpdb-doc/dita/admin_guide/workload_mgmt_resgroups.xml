@@ -189,11 +189,14 @@
           <title>Resource Group Memory Allotments</title>
           <image href="graphics/resgroupmem.png" id="image_iqn_dsl_wlrg"/>
         </fig></p>
-
       <p>When a query's memory usage exceeds the fixed per-transaction memory usage amount,
         Greenplum Database allocates available resource group shared memory to the query. The
         maximum amount of resource group memory available to a specific transaction slot is the sum
         of the transaction's fixed memory and the full resource group shared memory allotment.</p>
+      <note>Greenplum Database does not actively monitor transaction memory usage in resource
+        groups. A transaction submitted in a resource group will fail and exit if the memory
+        requested by the transaction exceeds the available fixed and shared memory in the
+        group.</note>
 
       <section id="topic833sp" xml:lang="en">
         <title>Query Operator Memory</title>
