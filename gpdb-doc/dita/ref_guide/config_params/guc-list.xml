@@ -9615,7 +9615,7 @@
             <row>
               <entry colname="col1">integer 32 - 131072 (32KB - 128MB)</entry>
               <entry colname="col2">64</entry>
-              <entry colname="col3">local<p>system</p><p>reload</p></entry>
+              <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
