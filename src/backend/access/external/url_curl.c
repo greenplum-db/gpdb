@@ -754,7 +754,7 @@ set_httpheader(URL_CURL_FILE *fcurl, const char *name, const char *value)
 		elog(ERROR, "set_httpheader name/value is too long. name = %s, value=%s",
 			 name, value);
 
-	sprintf(tmp, "%s: %s", name, value);
+	snprintf(tmp, sizeof(tmp), "%s: %s", name, value);
 
 	new_httpheader = curl_slist_append(fcurl->curl->x_httpheader, tmp);
 	if (new_httpheader == NULL)
