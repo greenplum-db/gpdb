@@ -702,6 +702,9 @@ GetPreassignedOidForRelation(Oid namespaceOid, const char *relname)
 			if (namespaceOid == PG_BITMAPINDEX_NAMESPACE)
 				return InvalidOid;
 
+			if (namespaceOid == PG_TOAST_NAMESPACE)
+				return InvalidOid;
+
 			if (namespaceOid == PG_AOSEGMENT_NAMESPACE)
 				return InvalidOid;
 		}
