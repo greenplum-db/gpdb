@@ -54,9 +54,6 @@
             <li>
               <xref href="#cursor_tuple_fraction"/>
             </li>
-            <li>
-              <xref href="#custom_variable_classes"/>
-            </li>
             <li><xref href="#data_checksums" format="dita"/></li>
             <li>
               <xref href="#DateStyle"/>
@@ -1273,35 +1270,6 @@
               <entry colname="col1">integer</entry>
               <entry colname="col2">1</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="custom_variable_classes">
-    <title>custom_variable_classes</title>
-    <body>
-      <p>Specifies one or several class names to be used for custom variables. A custom variable is
-        a variable not normally known to the server but used by some add-on modules. Such variables
-        must have names consisting of a class name, a dot, and a variable name.</p>
-      <table id="custom_variable_classes_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">comma-separated list of class names</entry>
-              <entry colname="col2">unset</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>

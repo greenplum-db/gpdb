@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.62 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.66 2009/10/31 01:41:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -73,6 +73,19 @@ typedef enum ParseExprKind
 
 
 /*
+ * Function signatures for parser hooks
+ */
+typedef struct ParseState ParseState;
+
+typedef Node * (*PreParseColumnRefHook) (ParseState *pstate, ColumnRef *cref);
+typedef Node * (*PostParseColumnRefHook) (ParseState *pstate, ColumnRef *cref, Node *var);
+typedef Node * (*ParseParamRefHook) (ParseState *pstate, ParamRef *pref);
+typedef Node * (*CoerceParamHook) (ParseState *pstate, Param *param,
+								   Oid targetTypeId, int32 targetTypeMod,
+								   int location);
+
+
+/*
  * State information used during parse analysis
  *
  * parentParseState: NULL in a top-level ParseState.  When parsing a subquery,
@@ -105,9 +118,8 @@ typedef enum ParseExprKind
  * This is different from p_relnamespace because a JOIN without an alias does
  * not hide the contained tables (so they must still be in p_relnamespace)
  * but it does hide their columns (unqualified references to the columns must
- * refer to the JOIN, not the member tables).  Also, we put POSTQUEL-style
- * implicit RTEs into p_relnamespace but not p_varnamespace, so that they
- * do not affect the set of columns available for unqualified references.
+ * refer to the JOIN, not the member tables).  Other special RTEs such as
+ * NEW/OLD for rules may also appear in just one of these lists.
  *
  * p_ctenamespace: list of CommonTableExprs (WITH items) that are visible
  * at the moment.  This is different from p_relnamespace because you have
@@ -116,22 +128,16 @@ typedef enum ParseExprKind
  * p_future_ctes: list of CommonTableExprs (WITH items) that are not yet
  * visible due to scope rules.	This is used to help improve error messages.
  *
+ * p_parent_cte: CommonTableExpr that immediately contains the current query,
+ * if any.
+ *
  * p_windowdefs: list of WindowDefs representing WINDOW and OVER clauses.
  * We collect these while transforming expressions and then transform them
  * afterwards (so that any resjunk tlist items needed for the sort/group
  * clauses end up at the end of the query tlist).  A WindowDef's location in
  * this list, counting from 1, is the winref number to use to reference it.
- *
- * p_paramtypes: an array of p_numparams type OIDs for $n parameter symbols
- * (zeroth entry in array corresponds to $1).  If p_variableparams is true, the
- * set of param types is not predetermined; in that case, a zero array entry
- * means that parameter number hasn't been seen, and UNKNOWNOID means the
- * parameter has been used but its type is not yet known.  NOTE: in a stack
- * of ParseStates, only the topmost ParseState contains paramtype info; but
- * we copy the p_variableparams flag down to the child nodes for speed in
- * coerce_type.
  */
-typedef struct ParseState
+struct ParseState
 {
 	struct ParseState *parentParseState;		/* stack link */
 	const char *p_sourcetext;	/* source text, or NULL if not available */
@@ -143,28 +149,38 @@ typedef struct ParseState
 	List	   *p_varnamespace; /* current namespace for columns */
 	List	   *p_ctenamespace; /* current namespace for common table exprs */
 	List	   *p_future_ctes;	/* common table exprs not yet in namespace */
+	CommonTableExpr *p_parent_cte;		/* this query's containing CTE */
 	List	   *p_windowdefs;	/* raw representations of window clauses */
 	ParseExprKind p_expr_kind;	/* what kind of expression we're parsing */
-	Oid		   *p_paramtypes;	/* OIDs of types for $n parameter symbols */
-	int			p_numparams;	/* allocated size of p_paramtypes[] */
 	int			p_next_resno;	/* next targetlist resno to assign */
 	List	   *p_locking_clause;		/* raw FOR UPDATE/FOR SHARE info */
 	Node	   *p_value_substitute;		/* what to replace VALUE with, if any */
-	bool		p_variableparams;
 	bool		p_hasAggs;
 	bool		p_hasWindowFuncs;
 	bool		p_hasSubLinks;
 	bool		p_is_insert;
 	bool		p_is_update;
+	LockingClause *p_lockclause_from_parent;
 	Relation	p_target_relation;
 	RangeTblEntry *p_target_rangetblentry;
+
 	struct HTAB *p_namecache;  /* parse state object name cache */
 	bool        p_hasTblValueExpr;
 	bool        p_hasDynamicFunction; /* function w/unstable return type */
 	bool		p_hasFuncsWithExecRestrictions; /* funcion with EXECUTE ON MASTER / ALL SEGMENTS */
 
 	List	   *p_grp_tles;
-} ParseState;
+
+	/*
+	 * Optional hook functions for parser callbacks.  These are null unless
+	 * set up by the caller of make_parsestate.
+	 */
+	PreParseColumnRefHook p_pre_columnref_hook;
+	PostParseColumnRefHook p_post_columnref_hook;
+	ParseParamRefHook p_paramref_hook;
+	CoerceParamHook p_coerce_param_hook;
+	void	   *p_ref_hook_state;	/* common passthrough link for above */
+};
 
 /* Support for parser_errposition_callback function */
 typedef struct ParseCallbackState

@@ -14,12 +14,12 @@ query = "select count(*) as nsegments from gp_segment_configuration where role='
 rv = plpy.execute(query)
 nsegments = int(rv[0]['nsegments'])
 rv = plpy.execute(explain_query)
-search_text = 'Work_mem used'
+search_text = 'spilling'
 result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         cur_row = int(workfile_created == nsegments)
@@ -39,8 +39,8 @@ set gp_resqueue_print_operator_memory_limits=on;
 -- the number of rows returned by the query varies depending on the number of segments, so
 -- only print the first 10
 select * from (select max(i1) from testhagg group by i2) foo order by 1 limit 10;
-select * from hashagg_spill.is_workfile_created('explain analyze select max(i1) from testhagg group by i2;');
-select * from hashagg_spill.is_workfile_created('explain analyze select max(i1) from testhagg group by i2 limit 45000;');
+select * from hashagg_spill.is_workfile_created('explain (analyze, verbose) select max(i1) from testhagg group by i2;');
+select * from hashagg_spill.is_workfile_created('explain (analyze, verbose) select max(i1) from testhagg group by i2 limit 45000;');
 
 
 -- Test HashAgg with increasing amount of overflows

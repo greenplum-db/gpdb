@@ -476,7 +476,11 @@ CTranslatorQueryToDXL::PdxlnFromQueryInternal()
 	// Since permissions are only checked during ExecutorStart, we lose track of the permissions required for the view and the select goes through successfully.
 	// We therefore need to check permissions before we go into optimization for all RTEs, including the ones not explicitly referred in the query, e.g. views.
 	CTranslatorUtils::CheckRTEPermissions(m_pquery->rtable);
-	
+
+	// RETURNING is not supported yet.
+	if (m_pquery->returningList)
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("RETURNING clause"));
+
 	CDXLNode *pdxlnChild = NULL;
 	HMIUl *phmiulSortGroupColsColId =  GPOS_NEW(m_pmp) HMIUl(m_pmp);
 	HMIUl *phmiulOutputCols = GPOS_NEW(m_pmp) HMIUl(m_pmp);
@@ -810,6 +814,7 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 											m_pidgtorCol->UlNextId(),
 											iResno /* iAttno */,
 											pmdid,
+											pdxlopIdent->ITypeModifier(),
 											false /* fDropped */
 											);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -1599,7 +1604,8 @@ CTranslatorQueryToDXL::PdxlnWindow
 																					m_pmp,
 																					GPOS_NEW(m_pmp) CMDName(m_pmp, pmdnameAlias->Pstr()),
 																					ulColId,
-																					GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node*) pte->expr))
+																					GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node*) pte->expr)),
+																					gpdb::IExprTypeMod((Node*) pte->expr)
 																					)
 																		)
 															);
@@ -2374,6 +2380,7 @@ CTranslatorQueryToDXL::PdxlnConstTableGet() const
 										m_pidgtorCol->UlNextId(),
 										1 /* iAttno */,
 										GPOS_NEW(m_pmp) CMDIdGPDB(pmdid->OidObjectId()),
+										IDefaultTypeModifier,
 										false /* fDropped */
 										);
 	pdrgpdxlcd->Append(pdxlcd);
@@ -3090,6 +3097,7 @@ CTranslatorQueryToDXL::PdxlnFromValues
 													ulColId,
 													ulColPos + 1 /* iAttno */,
 													GPOS_NEW(m_pmp) CMDIdGPDB(pconst->consttype),
+													pconst->consttypmod,
 													false /* fDropped */
 													);
 
@@ -3121,6 +3129,7 @@ CTranslatorQueryToDXL::PdxlnFromValues
 														ulColId,
 														ulColPos + 1 /* iAttno */,
 														GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType((Node*) pexpr)),
+														gpdb::IExprTypeMod((Node*) pexpr),
 														false /* fDropped */
 														);
 					pdrgpdxlcd->Append(pdxlcd);
@@ -3920,7 +3929,8 @@ CTranslatorQueryToDXL::PdrgpdxlnConstructOutputCols
 
 		// create a column reference
 		IMDId *pmdidType = GPOS_NEW(m_pmp) CMDIdGPDB(gpdb::OidExprType( (Node*) pte->expr));
-		CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulColId, pmdidType);
+		INT iTypeModifier = gpdb::IExprTypeMod((Node*) pte->expr);
+		CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulColId, pmdidType, iTypeModifier);
 		CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent
 												(
 												m_pmp,

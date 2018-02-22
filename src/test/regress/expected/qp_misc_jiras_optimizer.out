@@ -2242,7 +2242,11 @@ select count(*) from qp_misc_jiras.tbl7404_t1 where substr(x,0,2) in (select sub
 (1 row)
 
 select to_char(10, '999E99');
-ERROR:  "E" is not supported for function "to_char"
+ to_char 
+---------
+    E 10
+(1 row)
+
 create table qp_misc_jiras.tbl7616_test (a int, b text) with (appendonly=true, orientation=column) distributed by (a);
 insert into qp_misc_jiras.tbl7616_test select generate_series(1,1000), generate_series(1,1000);
 select count(a.*) from qp_misc_jiras.tbl7616_test a inner join qp_misc_jiras.tbl7616_test b using (a);
@@ -2964,11 +2968,11 @@ BEGIN
 	return out_dt;
 END;
 $$LANGUAGE plpgsql immutable;
-CREATE OR REPLACE FUNCTION mustan.f7( d date ) RETURNS DATE AS $$
+CREATE OR REPLACE FUNCTION mustan.f7( in_d date ) RETURNS DATE AS $$
 DECLARE
 	out_dt date;
 BEGIN
-	SELECT d INTO out_dt FROM mustan.test WHERE d=d;
+	SELECT d INTO out_dt FROM mustan.test WHERE d=in_d;
 	return out_dt;
 END;
 $$LANGUAGE plpgsql immutable;
@@ -3237,10 +3241,10 @@ NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_p1" for table "tbl825
 select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
                                        pg_get_partition_def                                       
 --------------------------------------------------------------------------------------------------
- PARTITION BY RANGE(b)                                                                            
-           (                                                                                      
-           START (1::double precision) END (100::double precision) EVERY (10::double precision),  
-           PARTITION p1 START (100::double precision) END (150::double precision)                 
+ PARTITION BY RANGE(b)                                                                           +
+           (                                                                                     +
+           START (1::double precision) END (100::double precision) EVERY (10::double precision), +
+           PARTITION p1 START (100::double precision) END (150::double precision)                +
            )
 (1 row)
 

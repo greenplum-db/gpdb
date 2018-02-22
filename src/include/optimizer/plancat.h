@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.54 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.55 2009/07/16 06:33:45 petere Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 DROP FUNCTION IF EXISTS spoof_next_xid(xid);
 CREATE FUNCTION spoof_next_xid(xid)
     RETURNS xid

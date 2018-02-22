@@ -1,4 +1,0 @@
--- @Description: Setting up the tables for Exception Handling test for SQL (Exception happening while update is done on table)
--- 
-update worker set salary = salary + 10;
-psql:/path/sql_file:1: ERROR:  Raise ERROR for debug_dtm_action = 2, commandTag = MPPEXEC UPDATE (seg0 rh55-qa01.sanmateo.greenplum.com:50000 pid=1043)

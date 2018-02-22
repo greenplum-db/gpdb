@@ -618,8 +618,12 @@ sub format_query_output
         push @{$outarr}, @{$equiv_expected_rows};
     }
 
-    # explain (if not in an equivalence region)
-    if (exists($directive->{explain}))
+    # EXPLAIN (if not in an equivalence region).
+    #
+    # EXPLAIN (COSTS OFF) output is *not* processed. The output with COSTS OFF
+    # shouldn't contain anything that varies across runs, and shouldn't need
+    # sanitizing.
+    if (exists($directive->{explain}) && $directive->{explain} ne 'costs_off')
     {
        format_explain($outarr, $directive);
        if ($glob_verbose)
@@ -1309,8 +1313,13 @@ sub atmsort_bigloop
                 $directive->{make_equiv_expected} = 1;
             }
 
+            # EXPLAIN (COSTS OFF) ...
+            if ($ini =~ m/explain\s*\(.*costs\s+off.*\)/i)
+            {
+                $directive->{explain} = "costs_off";
+            }
             # Note: \d is for the psql "describe"
-            if ($ini =~ m/(?:insert|update|delete|select|^\s*\\d|copy|execute)/i)
+            elsif ($ini =~ m/(?:insert|update|delete|select|^\s*\\d|copy|execute)/i)
             {
                 $copy_to_stdout_result = 0;
                 $has_order = 0;
@@ -1479,7 +1488,11 @@ sub atmsort_bigloop
                 #
                 # This isn't foolproof, and will get fooled by ORDER BYs in
                 # subqueries, for example. But it catches the commmon cases.
-                if (defined($sql_statement)
+                if (defined($directive->{explain}))
+                {
+                    $has_order = 1; # Do not reorder EXPLAIN output
+                }
+                elsif (defined($sql_statement)
                     && length($sql_statement)
                     && !defined($directive->{order_none})
                     # multiline match

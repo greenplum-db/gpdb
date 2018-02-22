@@ -964,6 +964,7 @@ create role abc deny day 1;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 alter role abc superuser;
 SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
+WARNING:  time constraints added on superuser role
  check_auth_time_constraints 
 -----------------------------
  t
@@ -973,7 +974,13 @@ drop role abc;
 create role abc superuser;
 SET allow_system_table_mods = dml;
 insert into pg_auth_time_constraint (select oid, 1, '00:00:00', 1, '24:00:00' from pg_authid where rolname = 'abc');
-WARNING:  time constraints are being added against superuser
+SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
+WARNING:  time constraints added on superuser role
+ check_auth_time_constraints 
+-----------------------------
+ f
+(1 row)
+
 DROP ROLE abc;
 RESET allow_system_table_mods;
 --

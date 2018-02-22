@@ -288,7 +288,7 @@ COMMIT
 segno|tupcount
 -----+--------
 1    |129     
-2    |  1     
+2    |1       
 (2 rows)
 1: insert into ao select generate_series(1,100000);
 INSERT 100000

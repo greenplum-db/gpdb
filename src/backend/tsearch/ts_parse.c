@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_parse.c,v 1.12 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_parse.c,v 1.15 2009/08/30 16:53:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,6 @@ typedef struct ParsedLex
 	int			type;
 	char	   *lemm;
 	int			lenlemm;
-	bool		resfollow;
 	struct ParsedLex *next;
 } ParsedLex;
 
@@ -188,6 +187,8 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 		while (ld->towork.head)
 		{
 			ParsedLex  *curVal = ld->towork.head;
+			char	   *curValLemm = curVal->lemm;
+			int	   		curValLenLemm = curVal->lenlemm;
 
 			map = ld->cfg->map + curVal->type;
 
@@ -203,12 +204,12 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 				dict = lookup_ts_dictionary_cache(map->dictIds[i]);
 
 				ld->dictState.isend = ld->dictState.getnext = false;
-				ld->dictState.private = NULL;
+				ld->dictState.private_state = NULL;
 				res = (TSLexeme *) DatumGetPointer(FunctionCall4(
 															 &(dict->lexize),
 											 PointerGetDatum(dict->dictData),
-											   PointerGetDatum(curVal->lemm),
-											  Int32GetDatum(curVal->lenlemm),
+											     PointerGetDatum(curValLemm),
+											    Int32GetDatum(curValLenLemm),
 											  PointerGetDatum(&ld->dictState)
 																 ));
 
@@ -229,6 +230,13 @@ LexizeExec(LexizeData *ld, ParsedLex **correspondLexem)
 
 				if (!res)		/* dictionary doesn't know this lexeme */
 					continue;
+
+				if ( res->flags & TSL_FILTER )
+				{
+					curValLemm = res->lexeme;
+					curValLenLemm = strlen(res->lexeme);
+					continue;
+				}
 
 				RemoveHead(ld);
 				setCorrLex(ld, correspondLexem);
@@ -463,18 +471,18 @@ hlfinditem(HeadlineParsedText *prs, TSQuery query, char *buf, int buflen)
 	for (i = 0; i < query->size; i++)
 	{
 		if (item->type == QI_VAL &&
-			tsCompareString(GETOPERAND(query) + item->operand.distance, item->operand.length,
-							buf, buflen, item->operand.prefix) == 0)
+			tsCompareString(GETOPERAND(query) + item->qoperand.distance, item->qoperand.length,
+							buf, buflen, item->qoperand.prefix) == 0)
 		{
 			if (word->item)
 			{
 				memcpy(&(prs->words[prs->curwords]), word, sizeof(HeadlineWordEntry));
-				prs->words[prs->curwords].item = &item->operand;
+				prs->words[prs->curwords].item = &item->qoperand;
 				prs->words[prs->curwords].repeated = 1;
 				prs->curwords++;
 			}
 			else
-				word->item = &item->operand;
+				word->item = &item->qoperand;
 		}
 		item++;
 	}

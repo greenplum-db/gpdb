@@ -37,7 +37,7 @@ INSERT INTO s3write_bulk_write_onmaster (date, time, status, sample1, sample2, v
         SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v
         FROM generate_series(1, 100000) as v;
 SELECT min(volume), max(volume), count(*) FROM s3write_bulk_read_onmaster;
- min |   max  |  count  
+ min |  max   | count  
 -----+--------+--------
    1 | 100000 | 100000
 (1 row)

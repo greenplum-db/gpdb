@@ -16,8 +16,8 @@ create or replace function test_xlog_ao(IN text, IN text, OUT xrecoff INT, OUT r
 CREATE OR REPLACE FUNCTION test_xlog_ao_wrapper(IN startpoints TEXT[])
 RETURNS TABLE (gp_segment_id INT, oid OID, relname name, 
 	       xrecoff TEXT, record_type TEXT, recordlen INT,
-	              spcNode OID, dbNode OID, relNode OID, segment_filenum INT,
-		             file_offset BIGINT) 
+	       spcNode OID, dbNode OID, relNode OID, segment_filenum INT,
+	       file_offset BIGINT) 
 EXECUTE ON ALL SEGMENTS AS
 $func$
 DECLARE

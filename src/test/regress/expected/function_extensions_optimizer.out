@@ -342,11 +342,11 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON MASTER;
@@ -354,11 +354,11 @@ alter function test_srf() EXECUTE ON MASTER;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | master     | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | master     | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ALL SEGMENTS;
@@ -366,11 +366,11 @@ alter function test_srf() EXECUTE ON ALL SEGMENTS;
                                                                               List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access |  Execute on  | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+--------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | all segments | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                        : begin                  
-                                                                                                                                        :   return next 'foo';   
-                                                                                                                                        : end;                   
-                                                                                                                                        :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | all segments | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |              |            |             |          | begin               +| 
+        |          |                  |                     |        |             |              |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |              |            |             |          | end;                +| 
+        |          |                  |                     |        |             |              |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ANY;
@@ -378,11 +378,11 @@ alter function test_srf() EXECUTE ON ANY;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 DROP FUNCTION test_srf();

@@ -25,29 +25,29 @@ extern TupleTableSlot *
 reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo);
 
 /*
- * In PostgreSQL, ExecInsert, ExecDelete and ExecUpdate are static in execMain.c.
+ * In PostgreSQL, ExecInsert, ExecDelete and ExecUpdate are static in nodeModifyTable.c.
  * In GPDB, they're exported.
  */
-extern void
+extern TupleTableSlot *
 ExecInsert(TupleTableSlot *slot,
-		   DestReceiver *dest,
+		   TupleTableSlot *planSlot,
 		   EState *estate,
 		   PlanGenerator planGen,
 		   bool isUpdate);
 
-extern void
+extern TupleTableSlot *
 ExecDelete(ItemPointer tupleid,
 		   TupleTableSlot *planSlot,
-		   DestReceiver *dest,
+		   EPQState *epqstate,
 		   EState *estate,
 		   PlanGenerator planGen,
 		   bool isUpdate);
 
-extern void
-ExecUpdate(TupleTableSlot *slot,
-		   ItemPointer tupleid,
+extern TupleTableSlot *
+ExecUpdate(ItemPointer tupleid,
+		   TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
-		   DestReceiver *dest,
+		   EPQState *epqstate,
 		   EState *estate);
 
 

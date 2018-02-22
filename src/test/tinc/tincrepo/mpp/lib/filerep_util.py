@@ -28,7 +28,12 @@ from mpp.lib.config import GPDBConfig
 class Filerepe2e_Util():
     """ 
         Util class for filerep
-    """ 
+    """
+
+    def __init__(self):
+        results = {'rc':-1, 'stdout':'', 'stderr':''}
+        PSQL.run_sql_command("create extension if not exists gp_inject_fault", results=results)
+        assert results['rc'] == 0
 
     def wait_till_change_tracking_transition(self,num_seg=None):
         """
@@ -54,15 +59,14 @@ class Filerepe2e_Util():
                raise Exception("Timed out: cluster not in change tracking")
         return (True,num_cl)
 
-    def inject_fault(self, y = None, f = None, r ='mirror', seg_id = None, H='ALL', m ='async', sleeptime = None,
-                     o =None, p=None, outfile=None, table = None, database = None):
+    def inject_fault(self, y = None, f = None, r ='mirror', seg_id = None, H='ALL', m ='async', sleeptime=0,
+                     o=0, table = '', database = ''):
         '''
         PURPOSE : 
             Inject the fault using gpfaultinjector
         @param 
             y : suspend/resume/reset/panic/fault
             f : Name of the faulti
-            outfile : output of the command is placed in this file
             rest_of_them : same as in gpfaultinjector help
         '''
         if (not y) or (not f) :
@@ -71,42 +75,35 @@ class Filerepe2e_Util():
         if(not os.getenv('MASTER_DATA_DIRECTORY')):
              raise Exception('MASTER_DATA_DIRECTORY environment variable is not set.')
         
-    
-        fault_cmd = "gpfaultinjector  -f %s -m %s -y %s " % (f, m, y )
-        if seg_id :
-            fault_cmd = fault_cmd + " -s %s" % seg_id
-        if sleeptime :
-            fault_cmd = fault_cmd + " -z %s" % sleeptime
-        if o != None:
-            fault_cmd = fault_cmd + " -o %s" % o
-        if p :
-            fault_cmd = fault_cmd + " -p %s" % p
-        if seg_id is None :
-            fault_cmd = fault_cmd + " -H %s -r %s" % (H, r)
-        if sleeptime :
-            fault_cmd = fault_cmd + " --sleep_time_s %s " % sleeptime
-        if table :
-            fault_cmd = fault_cmd + " -t %s " % table
-        if database :
-            fault_cmd = fault_cmd + " -D %s " % database
-        if outfile !=  None:
-            fault_cmd = fault_cmd + ">" +outfile 
-            
-        cmd = Command('fault_command', fault_cmd)
-        cmd.run()
-        result = cmd.get_results()
-        if result.rc != 0 and  y != 'status':
+        fault_cmd = ("select gp_inject_fault('{fault}', '{type}', '{ddl}', '{database}',"
+                     " '{table}', {occurrences}, {sleeptime}, {dbid})")
+        if seg_id is None:
+            fault_cmd = fault_cmd + " from gp_segment_configuration where role = '{role}'"
+            if r == 'mirror':
+                fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
+                                             occurrences=o, sleeptime=sleeptime, dbid='dbid', role='m')
+            elif r == 'primary':
+                fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
+                                             occurrences=o, sleeptime=sleeptime, dbid='dbid', role='p')
+            else:
+                assert False
+        else:
+            fault_sql = fault_cmd.format(fault=f, type=y, ddl='', database=database, table=table,
+                                         occurrences=o, sleeptime=sleeptime, dbid=seg_id)
+
+        results = {'rc':-1, 'stdout':'', 'stderr':''}
+        PSQL.run_sql_command(fault_sql, results=results)
+
+        if results['rc'] != 0 and  y != 'status':
             ok = False
-            out = result.stderr
         else:
             ok =  True
-            out = result.stdout
         
         if not ok and y != 'status':
-            raise Exception("Cmd %s Failed to inject fault %s to %s" % (fault_cmd, f,y))
+            raise Exception("Cmd %s Failed to inject fault %s to %s" % (fault_sql, f,y))
         else:
-            tinctest.logger.info('Injected fault %s ' % fault_cmd)
-            return (ok,out)
+            tinctest.logger.info('Injected fault %s ' % fault_sql)
+            return (ok, results['stdout'] + results['stderr'])
        
     
     def check_fault_status(self,fault_name = None, status = None, max_cycle=20, role='primary', seg_id=None, num_times_hit = None):
@@ -122,9 +119,12 @@ class Filerepe2e_Util():
         poll =0
         while(poll < max_cycle):
             (ok, out) = self.inject_fault(f=fault_name, y='status', r=role, seg_id=seg_id)
+            tinctest.logger.info('Fault inject_fault output  %s ' % (out))
             poll +=1
             for line in out.splitlines():
+                tinctest.logger.info('Fault %s is %s line %s' % (fault_name,status, line))
                 if line.find(fault_name) > 0 and line.find(status) > 0 :
+                    tinctest.logger.info('Fault %s is %s line found %s' % (fault_name,status, line))
                     if num_times_hit and line.find("num times hit:'%d'" % num_times_hit) < 0 :
                         tinctest.logger.info('Fault not hit num of times %d line %s ' % (num_times_hit,line))
                         continue

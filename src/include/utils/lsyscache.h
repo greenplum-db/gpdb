@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.128 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.129 2009/08/10 05:46:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -118,6 +118,7 @@ extern Oid get_trigger_funcid(Oid triggerid);
 extern int32 get_trigger_type(Oid triggerid);
 extern bool trigger_enabled(Oid triggerid);
 extern char *get_func_name(Oid funcid);
+extern Oid	get_func_namespace(Oid funcid);
 extern Oid	get_func_rettype(Oid funcid);
 extern void pfree_ptr_array(char **ptrarray, int nelements);
 extern List *get_func_output_arg_types(Oid funcid);

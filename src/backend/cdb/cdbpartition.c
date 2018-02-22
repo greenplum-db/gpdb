@@ -6553,10 +6553,9 @@ atpxPartAddList(Relation rel,
 	InhRelation *inh = makeNode(InhRelation);
 
 	inh->relation = copyObject(ct->relation);
-	inh->options = list_make3_int(
-								  CREATE_TABLE_LIKE_INCLUDING_DEFAULTS,
-								  CREATE_TABLE_LIKE_INCLUDING_CONSTRAINTS,
-								  CREATE_TABLE_LIKE_INCLUDING_INDEXES);
+	inh->options = CREATE_TABLE_LIKE_DEFAULTS
+		| CREATE_TABLE_LIKE_CONSTRAINTS
+		| CREATE_TABLE_LIKE_INDEXES;
 
 	/*
 	 * fill in remaining fields from parse time (gram.y): the new partition is
@@ -8408,6 +8407,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  nkeys,
 									  InvalidOid,
 									  InvalidOid,
+									  InvalidOid,
 									  NULL,
 									  NULL,
 									  NULL,
@@ -8416,7 +8416,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  ' ',
 									  ' ',
 									  ' ',
-									  InvalidOid,
+									  NULL,		/* exclOp */
 									  conexpr,
 									  conbin,
 									  consrc,
@@ -8458,6 +8458,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  keys,
 									  nkeys,
 									  InvalidOid,
+									  indexoid,
 									  con->confrelid,
 									  fkeys,
 									  NULL,
@@ -8467,7 +8468,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  con->confupdtype,
 									  con->confdeltype,
 									  con->confmatchtype,
-									  indexoid,
+									  NULL,		/* exclOp */
 									  NULL,		/* no check constraint */
 									  NULL,
 									  NULL,
@@ -8625,52 +8626,39 @@ fixCreateStmtForPartitionedTable(CreateStmt *stmt)
 					foreach(lc_con, cdef->constraints)
 					{
 						Node	   *conelt = lfirst(lc_con);
+						con = (Constraint *) conelt;
 
-						if (IsA(conelt, Constraint))
+						Assert(IsA(conelt, Constraint));
+
+						if (con->conname)
 						{
-							con = (Constraint *) conelt;
-
-							if (con->name)
-							{
-								used_names = lappend(used_names, con->name);
-								continue;
-							}
-							switch (con->contype)
-							{
-								case CONSTR_CHECK:
-									unnamed_cons = lappend(unnamed_cons, con);
-									unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
-									unnamed_cons_lbl = lappend(unnamed_cons_lbl, "check");
-									break;
-								case CONSTR_PRIMARY:
-									unnamed_cons = lappend(unnamed_cons, con);
-									unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
-									unnamed_cons_lbl = lappend(unnamed_cons_lbl, "pkey");
-									break;
-								case CONSTR_UNIQUE:
-									unnamed_cons = lappend(unnamed_cons, con);
-									unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
-									unnamed_cons_lbl = lappend(unnamed_cons_lbl, "key");
-									break;
-								default:
-									break;
-							}
+							used_names = lappend(used_names, con->conname);
+							continue;
 						}
-						else
+						switch (con->contype)
 						{
-							FkConstraint *fkcon = (FkConstraint *) conelt;
-
-							Insist(IsA(fkcon, FkConstraint));
-
-							if (fkcon->constr_name)
-							{
-								used_names = lappend(used_names, fkcon->constr_name);
-								continue;
-							}
-
-							unnamed_cons = lappend(unnamed_cons, fkcon);
-							unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
-							unnamed_cons_lbl = lappend(unnamed_cons_lbl, "fkey");
+							case CONSTR_CHECK:
+								unnamed_cons = lappend(unnamed_cons, con);
+								unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
+								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "check");
+								break;
+							case CONSTR_PRIMARY:
+								unnamed_cons = lappend(unnamed_cons, con);
+								unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
+								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "pkey");
+								break;
+							case CONSTR_UNIQUE:
+								unnamed_cons = lappend(unnamed_cons, con);
+								unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
+								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "key");
+								break;
+							case CONSTR_FOREIGN:
+								unnamed_cons = lappend(unnamed_cons, con);
+								unnamed_cons_col = lappend(unnamed_cons_col, cdef->colname);
+								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "fkey");
+								break;
+							default:
+								break;
 						}
 					}
 					break;
@@ -8679,9 +8667,9 @@ fixCreateStmtForPartitionedTable(CreateStmt *stmt)
 				{
 					con = (Constraint *) elt;
 
-					if (con->name)
+					if (con->conname)
 					{
-						used_names = lappend(used_names, con->name);
+						used_names = lappend(used_names, con->conname);
 					}
 					else
 					{
@@ -8702,23 +8690,13 @@ fixCreateStmtForPartitionedTable(CreateStmt *stmt)
 								unnamed_cons_col = lappend(unnamed_cons_col, no_name);
 								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "key");
 								break;
+							case CONSTR_FOREIGN:
+								unnamed_cons = lappend(unnamed_cons, con);
+								unnamed_cons_col = lappend(unnamed_cons_col, no_name);
+								unnamed_cons_lbl = lappend(unnamed_cons_lbl, "fkey");
 							default:
 								break;
 						}
-					}
-					break;
-				}
-			case T_FkConstraint:
-				{
-					FkConstraint *fkcon = (FkConstraint *) elt;
-
-					unnamed_cons = lappend(unnamed_cons, fkcon);
-					unnamed_cons_col = lappend(unnamed_cons_col, no_name);
-					unnamed_cons_lbl = lappend(unnamed_cons_lbl, "fkey");
-
-					if (fkcon->constr_name)
-					{
-						used_names = lappend(used_names, fkcon->constr_name);
 					}
 					break;
 				}
@@ -8737,42 +8715,19 @@ fixCreateStmtForPartitionedTable(CreateStmt *stmt)
 	{
 		char	   *label = list_nth(unnamed_cons_lbl, i);
 		char	   *colname = NULL;
-		Node	   *elt = list_nth(unnamed_cons, i);
+		Constraint *con = list_nth(unnamed_cons, i);
 
-		switch (nodeTag(elt))
-		{
-			case T_FkConstraint:
-				{
-					FkConstraint *fcon = list_nth(unnamed_cons, i);
+		Assert(IsA(con, Constraint));
 
-					fcon->constr_name =
-						ChooseConstraintNameForPartitionCreate(stmt->relation->relname,
-															   colname,
-															   label,
-															   used_names);
-					used_names = lappend(used_names, fcon->constr_name);
-					break;
-				}
+		/* Conventionally, no column name for PK. */
+		if (0 != strcmp(label, "pkey"))
+			colname = list_nth(unnamed_cons_col, i);
 
-			case T_Constraint:
-				{
-					Constraint *con = list_nth(unnamed_cons, i);
-
-					/* Conventionally, no column name for PK. */
-					if (0 != strcmp(label, "pkey"))
-						colname = list_nth(unnamed_cons_col, i);
-
-					con->name = ChooseConstraintNameForPartitionCreate(stmt->relation->relname,
-																	   colname,
-																	   label,
-																	   used_names);
-					used_names = lappend(used_names, con->name);
-
-					break;
-				}
-			default:
-				break;
-		}
+		con->conname = ChooseConstraintNameForPartitionCreate(stmt->relation->relname,
+															  colname,
+															  label,
+															  used_names);
+		used_names = lappend(used_names, con->conname);
 	}
 }
 

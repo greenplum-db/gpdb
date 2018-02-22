@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.64 2009/01/12 05:10:45 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.65 2009/08/05 18:01:54 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -64,18 +64,11 @@ extern int	max_files_per_process;
 /* Operations on virtual Files --- equivalent to Unix kernel file ops */
 extern File PathNameOpenFile(FileName fileName, int fileFlags, int fileMode);
 
-File
-OpenTemporaryFile(const char   *fileName,
-                  bool          makenameunique,
-                  bool          create,
-                  bool          delOnClose,
-                  bool          closeAtEOXact);
-
-File
-OpenNamedFile(const char   *fileName,
-                  bool          create,
-                  bool          delOnClose,
-                  bool          closeAtEOXact);
+extern File OpenNamedTemporaryFile(const char *fileName,
+								   bool create,
+								   bool delOnClose,
+								   bool interXact);
+extern File OpenTemporaryFile(bool interXact, const char *filePrefix);
 
 extern void FileClose(File file);
 extern int	FilePrefetch(File file, off_t offset, int amount);
@@ -85,6 +78,7 @@ extern int	FileSync(File file);
 extern int64 FileSeek(File file, int64 offset, int whence);
 extern int64 FileNonVirtualCurSeek(File file);
 extern int	FileTruncate(File file, int64 offset);
+extern char *FilePathName(File file);
 extern int64 FileDiskSize(File file);
 
 /* Operations that allow use of regular stdio --- USE WITH CAUTION */
@@ -125,10 +119,6 @@ extern int gp_retry_close(int fd);
 #define PG_TEMP_FILES_DIR "pgsql_tmp"
 #define PG_TEMP_FILE_PREFIX "pgsql_tmp"
 
-extern size_t GetTempFilePrefix(char * buf, size_t buflen, const char * fileName);
-
-// WALREP_FIXME: Need to chase all the places that use this, and replace them
-// with something that uses temp_tablespaces properly.
-#define getCurrentTempFilePath "base"
+extern char *GetTempFilePath(const char *filename, bool createdir);
 
 #endif   /* FD_H */

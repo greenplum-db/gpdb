@@ -95,103 +95,103 @@ select recurse(30, -2, false); -- committed
 
 select recurse(10, -3, true); -- aborted
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
-PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
-SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
-CONTEXT:  SQL statement "SELECT  recurse( $1 ,  $2 ,  $3 )"
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+NOTICE:  abort me -3
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+NOTICE:  abort me -3
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+SQL statement "SELECT recurse(i, value, abortme)"
+PL/pgSQL function "recurse" line 6 at PERFORM
+NOTICE:  abort me -3
+CONTEXT:  SQL statement "SELECT recurse(i, value, abortme)"
 PL/pgSQL function "recurse" line 6 at PERFORM
 NOTICE:  abort me -3
  recurse 

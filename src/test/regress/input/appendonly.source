@@ -323,6 +323,13 @@ SELECT oideq(oid,-1) FROM aowithoids; -- kind of stupid but checks that oid actu
 -- CREATE INDEX
 CREATE INDEX tenk_ao1_unique1 ON tenk_ao1 USING btree(unique1 int4_ops);
 
+-- Verify that the visimap and block-directory indexes have unique and
+-- primary key constraints on them
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
+
 drop table if exists ao;
 create table ao (i int, j int, k varchar) with(appendonly=true);
 insert into ao values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),

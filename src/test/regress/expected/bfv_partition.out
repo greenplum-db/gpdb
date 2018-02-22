@@ -768,9 +768,7 @@ NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_4" for table "mpp3466
 NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_5" for table "mpp3466"
 NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_6" for table "mpp3466"
 alter table mpp3466 split partition f at (3) into (partition f, partition new);
-ERROR:  syntax error at or near "new"
-LINE 1: ... split partition f at (3) into (partition f, partition new);
-                                                                  ^
+ERROR:  AT clause cannot be used when splitting a default RANGE partition
 drop table mpp3466;
 create table mpp3058 (a char(1), b date, d char(3))       
  distributed by (a)         
@@ -5420,12 +5418,12 @@ ALTER TABLE part_acl_test ADD PARTITION p2 VALUES (2);
                                                  Access privileges
     Schema     |          Name          | Type  |           Access privileges           | Column access privileges 
 ---------------+------------------------+-------+---------------------------------------+--------------------------
- bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
- bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
- bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
+ bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
+ bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
+ bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
 (3 rows)
 
 -- View dependencies

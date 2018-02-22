@@ -4,6 +4,5 @@ test: heap-serializable-vacuum-freeze
 test: heap-serializable-vacuum
 test: ao-serializable-read
 test: ao-serializable-vacuum
-test: ao-insert-eof
-test: create_index_hot
-test: udf-insert-deadlock
+
+test: ao-insert-eof create_index_hot udf-insert-deadlock

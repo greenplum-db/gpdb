@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/test/regress/pg_regress_main.c,v 1.6 2009/06/11 14:49:15 momjian Exp $
+ * $PostgreSQL: pgsql/src/test/regress/pg_regress_main.c,v 1.8 2009/11/25 20:26:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

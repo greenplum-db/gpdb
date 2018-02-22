@@ -657,6 +657,11 @@ namespace gpdb {
 		 (cell1) != NULL && (cell2) != NULL;						\
 		 (cell1) = lnext(cell1), (cell2) = lnext(cell2))
 
+#define ForThree(cell1, list1, cell2, list2, cell3, list3)							\
+	for ((cell1) = gpdb::PlcListHead(list1), (cell2) = gpdb::PlcListHead(list2), (cell3) = gpdb::PlcListHead(list3);	\
+		 (cell1) != NULL && (cell2) != NULL && (cell3) != NULL;						\
+		 (cell1) = lnext(cell1), (cell2) = lnext(cell2), (cell3) = lnext(cell3))
+
 #define ForEachWithCount(cell, list, counter) \
 	for ((cell) = gpdb::PlcListHead(list), (counter)=0; \
 	     (cell) != NULL; \

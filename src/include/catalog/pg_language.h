@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_language.h,v 1.34 2009/01/01 17:23:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_language.h,v 1.35 2009/09/22 23:43:41 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -36,7 +36,7 @@ CATALOG(pg_language,2612)
 	bool		lanpltrusted;	/* PL is trusted */
 	Oid			lanplcallfoid;	/* Call handler for PL */
 	Oid			laninline;		/* Optional anonymous-block handler function */
-	Oid			lanvalidator;	/* optional validation function */
+	Oid			lanvalidator;	/* Optional validation function */
 	aclitem		lanacl[1];		/* Access privileges */
 } FormData_pg_language;
 
@@ -71,13 +71,13 @@ typedef FormData_pg_language *Form_pg_language;
  * ----------------
  */
 
-DATA(insert OID = 12 ( "internal" PGUID f f 0 0 2246 _null_ ));
+DATA(insert OID = 12 ( "internal"	PGUID f f 0 0 2246 _null_ ));
 DESCR("built-in functions");
 #define INTERNALlanguageId 12
-DATA(insert OID = 13 ( "c" PGUID f f 0 0 2247 _null_ ));
+DATA(insert OID = 13 ( "c"			PGUID f f 0 0 2247 _null_ ));
 DESCR("dynamically-loaded C functions");
 #define ClanguageId 13
-DATA(insert OID = 14 ( "sql" PGUID f t 0 0 2248 _null_ ));
+DATA(insert OID = 14 ( "sql"		PGUID f t 0 0 2248 _null_ ));
 DESCR("SQL-language functions");
 #define SQLlanguageId 14
 

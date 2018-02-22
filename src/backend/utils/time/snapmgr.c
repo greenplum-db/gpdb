@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/snapmgr.c,v 1.10 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/snapmgr.c,v 1.12 2009/10/07 16:27:18 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -327,8 +327,9 @@ FreeSnapshot(Snapshot snapshot)
  * PushActiveSnapshot
  *		Set the given snapshot as the current active snapshot
  *
- * If this is the first use of this snapshot, create a new long-lived copy with
- * active refcount=1.  Otherwise, only increment the refcount.
+ * If the passed snapshot is a statically-allocated one, or it is possibly
+ * subject to a future command counter update, create a new long-lived copy
+ * with active refcount=1.  Otherwise, only increment the refcount.
  */
 void
 PushActiveSnapshot(Snapshot snap)
@@ -338,8 +339,16 @@ PushActiveSnapshot(Snapshot snap)
 	Assert(snap != InvalidSnapshot);
 
 	newactive = MemoryContextAlloc(TopTransactionContext, sizeof(ActiveSnapshotElt));
-	/* Static snapshot?  Create a persistent copy */
-	newactive->as_snap = snap->copied ? snap : CopySnapshot(snap);
+
+	/*
+	 * Checking SecondarySnapshot is probably useless here, but it seems better
+	 * to be sure.
+	 */
+	if (snap == CurrentSnapshot || snap == SecondarySnapshot || !snap->copied)
+		newactive->as_snap = CopySnapshot(snap);
+	else
+		newactive->as_snap = snap;
+
 	newactive->as_next = ActiveSnapshot;
 	newactive->as_level = GetCurrentTransactionNestLevel();
 

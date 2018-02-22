@@ -5,7 +5,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/droplang.c,v 1.31 2009/02/26 16:02:39 petere Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/droplang.c,v 1.32 2009/09/22 23:43:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 	executeCommand(conn, "SET search_path = pg_catalog;", progname, echo);
 
 	/*
-	 * Make sure the language is installed and find the OIDs of the 
+	 * Make sure the language is installed and find the OIDs of the
 	 * language support functions
 	 */
 	printfPQExpBuffer(&sql, "SELECT lanplcallfoid, laninline, lanvalidator "

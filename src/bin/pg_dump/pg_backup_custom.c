@@ -19,7 +19,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_custom.c,v 1.42 2009/06/11 14:49:07 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_custom.c,v 1.44 2009/08/24 14:15:09 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -54,7 +54,7 @@ static void _StartBlobs(ArchiveHandle *AH, TocEntry *te);
 static void _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid);
 static void _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid);
 static void _EndBlobs(ArchiveHandle *AH, TocEntry *te);
-static void _LoadBlobs(ArchiveHandle *AH);
+static void _LoadBlobs(ArchiveHandle *AH, bool drop);
 static void _Clone(ArchiveHandle *AH);
 static void _DeClone(ArchiveHandle *AH);
 
@@ -441,7 +441,6 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
 	int			id;
 	lclTocEntry *tctx = (lclTocEntry *) te->formatData;
 	int			blkType;
-	int			found = 0;
 
 	if (tctx->dataState == K_OFFSET_NO_DATA)
 		return;
@@ -449,8 +448,6 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
 	if (!ctx->hasSeek || tctx->dataState == K_OFFSET_POS_NOT_SET)
 	{
 		/* Skip over unnecessary blocks until we get the one we want. */
-
-		found = 0;
 
 		_readBlockHeader(AH, &blkType, &id);
 
@@ -501,7 +498,7 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
 			break;
 
 		case BLK_BLOBS:
-			_LoadBlobs(AH);
+			_LoadBlobs(AH, ropt->dropSchema);
 			break;
 
 		default:				/* Always have a default */
@@ -622,7 +619,7 @@ _PrintData(ArchiveHandle *AH)
 }
 
 static void
-_LoadBlobs(ArchiveHandle *AH)
+_LoadBlobs(ArchiveHandle *AH, bool drop)
 {
 	Oid			oid;
 
@@ -631,7 +628,7 @@ _LoadBlobs(ArchiveHandle *AH)
 	oid = ReadInt(AH);
 	while (oid != 0)
 	{
-		StartRestoreBlob(AH, oid);
+		StartRestoreBlob(AH, oid, drop);
 		_PrintData(AH);
 		EndRestoreBlob(AH, oid);
 		oid = ReadInt(AH);

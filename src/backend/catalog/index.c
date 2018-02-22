@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.318 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.326 2009/12/09 21:57:50 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -45,14 +45,18 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_tablespace.h"
+#include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
 #include "catalog/storage.h"
 #include "commands/tablecmds.h"
+#include "commands/trigger.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/var.h"
+#include "parser/parser.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
@@ -98,9 +102,14 @@ static void UpdateIndexRelation(Oid indexoid, Oid heapoid,
 					Oid *classOids,
 					int16 *coloptions,
 					bool primary,
+					bool immediate,
 					bool isvalid);
-static void index_update_stats(Relation rel, bool hasindex, bool isprimary,
+static void index_update_stats(Relation rel,
+				   bool hasindex, bool isprimary, bool hasexclusion,
 				   Oid reltoastidxid, double reltuples);
+static void IndexCheckExclusion(Relation heapRelation,
+					Relation indexRelation,
+					IndexInfo *indexInfo);
 static bool validate_index_callback(ItemPointer itemptr, void *opaque);
 static void validate_index_heapscan(Relation heapRelation,
 						Relation indexRelation,
@@ -222,6 +231,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			to->attnum = i + 1;
 
 			to->attstattarget = -1;
+			to->attdistinct = 0;
 			to->attcacheoff = -1;
 			to->attnotnull = false;
 			to->atthasdef = false;
@@ -408,6 +418,7 @@ UpdateIndexRelation(Oid indexoid,
 					Oid *classOids,
 					int16 *coloptions,
 					bool primary,
+					bool immediate,
 					bool isvalid)
 {
 	int2vector *indkey;
@@ -475,6 +486,7 @@ UpdateIndexRelation(Oid indexoid,
 	values[Anum_pg_index_indnatts - 1] = Int16GetDatum(indexInfo->ii_NumIndexAttrs);
 	values[Anum_pg_index_indisunique - 1] = BoolGetDatum(indexInfo->ii_Unique);
 	values[Anum_pg_index_indisprimary - 1] = BoolGetDatum(primary);
+	values[Anum_pg_index_indimmediate - 1] = BoolGetDatum(immediate);
 	values[Anum_pg_index_indisclustered - 1] = BoolGetDatum(false);
 	values[Anum_pg_index_indisvalid - 1] = BoolGetDatum(isvalid);
 	values[Anum_pg_index_indcheckxmin - 1] = BoolGetDatum(false);
@@ -524,6 +536,8 @@ UpdateIndexRelation(Oid indexoid,
  * reloptions: AM-specific options
  * isprimary: index is a PRIMARY KEY
  * isconstraint: index is owned by a PRIMARY KEY or UNIQUE constraint
+ * deferrable: constraint is DEFERRABLE
+ * initdeferred: constraint is INITIALLY DEFERRED
  * allow_system_table_mods: allow table to be a system catalog
  * skip_build: true to skip the index_build() step for the moment; caller
  *		must do it later (typically via reindex_index())
@@ -531,7 +545,7 @@ UpdateIndexRelation(Oid indexoid,
  *		will be marked "invalid" and the caller must take additional steps
  *		to fix it up.
  *
- * Returns OID of the created index.
+ * Returns the OID of the created index.
  */
 Oid
 index_create(Oid heapRelationId,
@@ -545,6 +559,8 @@ index_create(Oid heapRelationId,
 			 Datum reloptions,
 			 bool isprimary,
 			 bool isconstraint,
+			 bool deferrable,
+			 bool initdeferred,
 			 bool allow_system_table_mods,
 			 bool skip_build,
 			 bool concurrent,
@@ -555,9 +571,12 @@ index_create(Oid heapRelationId,
 	Relation	indexRelation;
 	TupleDesc	indexTupDesc;
 	bool		shared_relation;
+	bool		is_exclusion;
 	Oid			namespaceId;
 	int			i;
 	LOCKMODE	heap_lockmode;
+
+	is_exclusion = (indexInfo->ii_ExclusionOps != NULL);
 
 	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
 
@@ -599,6 +618,15 @@ index_create(Oid heapRelationId,
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("concurrent index creation on system catalog tables is not supported")));
+
+	/*
+	 * This case is currently not supported, but there's no way to ask for
+	 * it in the grammar anyway, so it can't happen.
+	 */
+	if (concurrent && is_exclusion)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg_internal("concurrent index creation for exclusion constraints is not supported")));
 
 	/*
 	 * We cannot allow indexing a shared relation after initdb (because
@@ -694,12 +722,14 @@ index_create(Oid heapRelationId,
 	indexRelation->rd_rel->relam = accessMethodObjectId;
 	indexRelation->rd_rel->relkind = RELKIND_INDEX;
 	indexRelation->rd_rel->relhasoids = false;
+	indexRelation->rd_rel->relhasexclusion = is_exclusion;
 
 	/*
 	 * store index's pg_class entry
 	 */
 	InsertPgClassTuple(pg_class, indexRelation,
 					   RelationGetRelid(indexRelation),
+					   (Datum) 0,
 					   reloptions);
 
 	/* done with pg_class */
@@ -763,7 +793,9 @@ index_create(Oid heapRelationId,
 	 * ----------------
 	 */
 	UpdateIndexRelation(indexRelationId, heapRelationId, indexInfo,
-						classObjectId, coloptions, isprimary, !concurrent);
+						classObjectId, coloptions, isprimary,
+						!deferrable,
+						!concurrent);
 
 	/*
 	 * Register constraint and dependencies for the index.
@@ -817,25 +849,29 @@ index_create(Oid heapRelationId,
 				constraintType = CONSTRAINT_PRIMARY;
 			else if (indexInfo->ii_Unique)
 				constraintType = CONSTRAINT_UNIQUE;
+			else if (is_exclusion)
+				constraintType = CONSTRAINT_EXCLUSION;
 			else
 			{
-				elog(ERROR, "constraint must be PRIMARY or UNIQUE");
+				elog(ERROR, "constraint must be PRIMARY, UNIQUE or EXCLUDE");
 				constraintType = 0;		/* keep compiler quiet */
 			}
 
-			/* Shouldn't have any expressions */
-			if (indexInfo->ii_Expressions)
+			/* primary/unique constraints shouldn't have any expressions */
+			if (indexInfo->ii_Expressions &&
+				constraintType != CONSTRAINT_EXCLUSION)
 				elog(ERROR, "constraints cannot have index expressions");
 
 			conOid = CreateConstraintEntry(constraintName,
 										   namespaceId,
 										   constraintType,
-										   false,		/* isDeferrable */
-										   false,		/* isDeferred */
+										   deferrable,
+										   initdeferred,
 										   heapRelationId,
 										   indexInfo->ii_KeyAttrNumbers,
 										   indexInfo->ii_NumIndexAttrs,
 										   InvalidOid,	/* no domain */
+										   indexRelationId,	/* index OID */
 										   InvalidOid,	/* no foreign key */
 										   NULL,
 										   NULL,
@@ -845,7 +881,7 @@ index_create(Oid heapRelationId,
 										   ' ',
 										   ' ',
 										   ' ',
-										   InvalidOid,	/* no associated index */
+										   indexInfo->ii_ExclusionOps,
 										   NULL,		/* no check constraint */
 										   NULL,
 										   NULL,
@@ -857,6 +893,42 @@ index_create(Oid heapRelationId,
 			referenced.objectSubId = 0;
 
 			recordDependencyOn(&myself, &referenced, DEPENDENCY_INTERNAL);
+
+			/*
+			 * If the constraint is deferrable, create the deferred uniqueness
+			 * checking trigger.  (The trigger will be given an internal
+			 * dependency on the constraint by CreateTrigger, so there's no
+			 * need to do anything more here.)
+			 */
+			if (deferrable)
+			{
+				RangeVar   *heapRel;
+				CreateTrigStmt *trigger;
+
+				heapRel = makeRangeVar(get_namespace_name(namespaceId),
+									   pstrdup(RelationGetRelationName(heapRelation)),
+									   -1);
+
+				trigger = makeNode(CreateTrigStmt);
+				trigger->trigname = pstrdup(indexRelationName);
+				trigger->relation = heapRel;
+				trigger->funcname = SystemFuncName("unique_key_recheck");
+				trigger->args = NIL;
+				trigger->before = false;
+				trigger->row = true;
+				trigger->events = TRIGGER_TYPE_INSERT | TRIGGER_TYPE_UPDATE;
+				trigger->columns = NIL;
+				trigger->whenClause = NULL;
+				trigger->isconstraint = true;
+				trigger->deferrable = true;
+				trigger->initdeferred = initdeferred;
+				trigger->constrrel = NULL;
+
+				(void) CreateTrigger(trigger, NULL, conOid, indexRelationId,
+									 isprimary ? "PK_ConstraintTrigger" :
+									 "Unique_ConstraintTrigger",
+									 false);
+			}
 		}
 		else
 		{
@@ -891,6 +963,10 @@ index_create(Oid heapRelationId,
 
 				recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
 			}
+
+			/* Non-constraint indexes can't be deferrable */
+			Assert(!deferrable);
+			Assert(!initdeferred);
 		}
 
 		/* Store dependency on operator classes */
@@ -922,6 +998,13 @@ index_create(Oid heapRelationId,
 											DEPENDENCY_NORMAL,
 											DEPENDENCY_AUTO);
 		}
+	}
+	else
+	{
+		/* Bootstrap mode - assert we weren't asked for constraint support */
+		Assert(!isconstraint);
+		Assert(!deferrable);
+		Assert(!initdeferred);
 	}
 
 	/*
@@ -963,6 +1046,7 @@ index_create(Oid heapRelationId,
 		index_update_stats(heapRelation,
 						   true,
 						   isprimary,
+						   is_exclusion,
 						   InvalidOid,
 						   heapRelation->rd_rel->reltuples);
 		/* Make the above update visible */
@@ -1142,6 +1226,21 @@ BuildIndexInfo(Relation index)
 	ii->ii_Predicate = RelationGetIndexPredicate(index);
 	ii->ii_PredicateState = NIL;
 
+	/* fetch exclusion constraint info if any */
+	if (index->rd_rel->relhasexclusion)
+	{
+		RelationGetExclusionInfo(index,
+								 &ii->ii_ExclusionOps,
+								 &ii->ii_ExclusionProcs,
+								 &ii->ii_ExclusionStrats);
+	}
+	else
+	{
+		ii->ii_ExclusionOps = NULL;
+		ii->ii_ExclusionProcs = NULL;
+		ii->ii_ExclusionStrats = NULL;
+	}
+
 	/* other info */
 	ii->ii_Unique = indexStruct->indisunique;
 	ii->ii_ReadyForInserts = IndexIsReady(indexStruct);
@@ -1239,6 +1338,7 @@ FormIndexDatum(struct IndexInfo *indexInfo,
  *
  * hasindex: set relhasindex to this value
  * isprimary: if true, set relhaspkey true; else no change
+ * hasexclusion: if true, set relhasexclusion true; else no change
  * reltoastidxid: if not InvalidOid, set reltoastidxid to this value;
  *		else no change
  * reltuples: set reltuples to this value
@@ -1254,7 +1354,8 @@ FormIndexDatum(struct IndexInfo *indexInfo,
  * expect a relcache flush to occur after REINDEX.
  */
 static void
-index_update_stats(Relation rel, bool hasindex, bool isprimary,
+index_update_stats(Relation rel,
+				   bool hasindex, bool isprimary, bool hasexclusion,
 				   Oid reltoastidxid, double reltuples)
 {
 	Oid			relid = RelationGetRelid(rel);
@@ -1292,8 +1393,9 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 	 * It is safe to use a non-transactional update even though our
 	 * transaction could still fail before committing.	Setting relhasindex
 	 * true is safe even if there are no indexes (VACUUM will eventually fix
-	 * it), and of course the relpages and reltuples counts are correct (or at
-	 * least more so than the old values) regardless.
+	 * it), likewise for relhaspkey and relhasexclusion.  And of course the
+	 * relpages and reltuples counts are correct (or at least more so than the
+	 * old values) regardless.
 	 */
 
 	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
@@ -1345,6 +1447,14 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 		if (!rd_rel->relhaspkey)
 		{
 			rd_rel->relhaspkey = true;
+			dirty = true;
+		}
+	}
+	if (hasexclusion)
+	{
+		if (!rd_rel->relhasexclusion)
+		{
+			rd_rel->relhasexclusion = true;
 			dirty = true;
 		}
 	}
@@ -1553,6 +1663,13 @@ index_build(Relation heapRelation,
 										 PointerGetDatum(indexInfo)));
 	Assert(PointerIsValid(stats));
 
+	/*
+	 * If it's for an exclusion constraint, make a second pass over the
+	 * heap to verify that the constraint is satisfied.
+	 */
+	if (indexInfo->ii_ExclusionOps != NULL)
+		IndexCheckExclusion(heapRelation, indexRelation, indexInfo);
+
 	/* Roll back any GUC changes executed by index functions */
 	AtEOXact_GUC(false, save_nestlevel);
 
@@ -1616,11 +1733,13 @@ index_build(Relation heapRelation,
 	index_update_stats(heapRelation,
 					   true,
 					   isprimary,
+					   (indexInfo->ii_ExclusionOps != NULL),
 					   (heapRelation->rd_rel->relkind == RELKIND_TOASTVALUE) ?
 					   RelationGetRelid(indexRelation) : InvalidOid,
 					   stats->heap_tuples);
 
 	index_update_stats(indexRelation,
+					   false,
 					   false,
 					   false,
 					   InvalidOid,
@@ -1640,15 +1759,14 @@ index_build(Relation heapRelation,
  * is scanned to find tuples that should be entered into the index.  Each
  * such tuple is passed to the AM's callback routine, which does the right
  * things to add it to the new index.  After we return, the AM's index
- * build procedure does whatever cleanup is needed; in particular, it should
- * close the heap and index relations.
+ * build procedure does whatever cleanup it needs.
  *
  * The total count of heap tuples is returned.	This is for updating pg_class
- * statistics.	(It's annoying not to be able to do that here, but we can't
- * do it until after the relation is closed.)  Note that the index AM itself
- * must keep track of the number of index tuples; we don't do so here because
- * the AM might reject some of the tuples for its own reasons, such as being
- * unable to store NULLs.
+ * statistics.	(It's annoying not to be able to do that here, but we want
+ * to merge that update with others; see index_update_stats.)  Note that the
+ * index AM itself must keep track of the number of index tuples; we don't do
+ * so here because the AM might reject some of the tuples for its own reasons,
+ * such as being unable to store NULLs.
  *
  * A side effect is to set indexInfo->ii_BrokenHotChain to true if we detect
  * any potentially broken HOT chains.  Currently, we set this if there are
@@ -2338,6 +2456,106 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 }
 
 /*
+ * IndexCheckExclusion - verify that a new exclusion constraint is satisfied
+ *
+ * When creating an exclusion constraint, we first build the index normally
+ * and then rescan the heap to check for conflicts.  We assume that we only
+ * need to validate tuples that are live according to SnapshotNow, and that
+ * these were correctly indexed even in the presence of broken HOT chains.
+ * This should be OK since we are holding at least ShareLock on the table,
+ * meaning there can be no uncommitted updates from other transactions.
+ * (Note: that wouldn't necessarily work for system catalogs, since many
+ * operations release write lock early on the system catalogs.)
+ */
+static void
+IndexCheckExclusion(Relation heapRelation,
+					Relation indexRelation,
+					IndexInfo *indexInfo)
+{
+	HeapScanDesc scan;
+	HeapTuple	heapTuple;
+	Datum		values[INDEX_MAX_KEYS];
+	bool		isnull[INDEX_MAX_KEYS];
+	List	   *predicate;
+	TupleTableSlot *slot;
+	EState	   *estate;
+	ExprContext *econtext;
+
+	/*
+	 * Need an EState for evaluation of index expressions and partial-index
+	 * predicates.	Also a slot to hold the current tuple.
+	 */
+	estate = CreateExecutorState();
+	econtext = GetPerTupleExprContext(estate);
+	slot = MakeSingleTupleTableSlot(RelationGetDescr(heapRelation));
+
+	/* Arrange for econtext's scan tuple to be the tuple under test */
+	econtext->ecxt_scantuple = slot;
+
+	/* Set up execution state for predicate, if any. */
+	predicate = (List *)
+		ExecPrepareExpr((Expr *) indexInfo->ii_Predicate,
+						estate);
+
+	/*
+	 * Scan all live tuples in the base relation.
+	 */
+	scan = heap_beginscan_strat(heapRelation,	/* relation */
+								SnapshotNow,	/* snapshot */
+								0,		/* number of keys */
+								NULL,	/* scan key */
+								true,	/* buffer access strategy OK */
+								true);	/* syncscan OK */
+
+	while ((heapTuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	{
+		CHECK_FOR_INTERRUPTS();
+
+		MemoryContextReset(econtext->ecxt_per_tuple_memory);
+
+		/* Set up for predicate or expression evaluation */
+		ExecStoreHeapTuple(heapTuple, slot, InvalidBuffer, false);
+
+		/*
+		 * In a partial index, ignore tuples that don't satisfy the predicate.
+		 */
+		if (predicate != NIL)
+		{
+			if (!ExecQual(predicate, econtext, false))
+				continue;
+		}
+
+		/*
+		 * Extract index column values, including computing expressions.
+		 */
+		FormIndexDatum(indexInfo,
+					   slot,
+					   estate,
+					   values,
+					   isnull);
+
+		/*
+		 * Check that this tuple has no conflicts.
+		 */
+		check_exclusion_constraint(heapRelation,
+								   indexRelation, indexInfo,
+								   &(heapTuple->t_self), values, isnull,
+								   estate, true, false);
+	}
+
+	heap_endscan(scan);
+
+	ExecDropSingleTupleTableSlot(slot);
+
+	FreeExecutorState(estate);
+
+	/* These may have been pointing to the now-gone estate */
+	indexInfo->ii_ExpressionsState = NIL;
+	indexInfo->ii_PredicateState = NIL;
+}
+
+
+/*
  * validate_index - support code for concurrent index builds
  *
  * We do a concurrent index build by first inserting the catalog entry for the
@@ -2700,7 +2918,8 @@ validate_index_heapscan(Relation heapRelation,
 						 isnull,
 						 &rootTuple,
 						 heapRelation,
-						 indexInfo->ii_Unique);
+						 indexInfo->ii_Unique ?
+						 UNIQUE_CHECK_YES : UNIQUE_CHECK_NO);
 
 			state->tups_inserted += 1;
 		}

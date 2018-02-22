@@ -14,12 +14,12 @@ query = "select count(*) as nsegments from gp_segment_configuration where role='
 rv = plpy.execute(query)
 nsegments = int(rv[0]['nsegments'])
 rv = plpy.execute(explain_query)
-search_text = 'Work_mem used'
+search_text = 'spilling'
 result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         cur_row = int(workfile_created == nsegments)
@@ -48,13 +48,13 @@ select avg(i3) from (
   where t1.i1 = t2.i2
 ) foo;
 
-select * from sisc_sort_spill.is_workfile_created('explain analyze
+select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2
 ;');
-select * from sisc_sort_spill.is_workfile_created('explain analyze
+select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2
   from ctesisc as t1, ctesisc as t2
@@ -70,14 +70,14 @@ select avg(i3) from (
   where t1.i1 = t2.i2
 ) foo;
 
-select * from sisc_sort_spill.is_workfile_created('explain analyze
+select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2
 ;');
 
-select * from sisc_sort_spill.is_workfile_created('explain analyze
+select * from sisc_sort_spill.is_workfile_created('explain (analyze, verbose)
   with ctesisc as (select * from testsisc order by i2)
   select t1.i3, t2.i2
   from ctesisc as t1, ctesisc as t2

@@ -40,6 +40,9 @@ class GpRecoversegTestCase(GpTestCase):
             config_file.write("")
 
         self.conn = Mock()
+        self.conn.__enter__ = Mock(return_value=(Mock(), None))
+        self.conn.__exit__ = Mock(return_value=None)
+
         self.cursor = FakeCursor()
         self.db_singleton = Mock()
 
@@ -59,7 +62,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
 
         self.gpArrayMock = MagicMock(spec=GpArray)
-        self.gpArrayMock.getDbList.side_effect = [[], [self.primary0], [self.primary0]]
+        self.gpArrayMock.getDbList.side_effect = [[self.primary0], [self.primary0], [self.primary0]]
         self.gpArrayMock.hasMirrors = True
         self.gpArrayMock.isStandardArray.return_value = (True, None)
         self.gpArrayMock.master = self.gparray.master

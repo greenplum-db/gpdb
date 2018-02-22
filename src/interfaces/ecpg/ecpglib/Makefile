@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/Makefile,v 1.59 2008/04/07 14:15:58 petere Exp $
+# $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/Makefile,v 1.64 2009/07/13 01:37:05 momjian Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ include $(top_builddir)/src/Makefile.global
 
 NAME= ecpg
 SO_MAJOR_VERSION= 6
-SO_MINOR_VERSION= 1
+SO_MINOR_VERSION= 2
 
 
 # The frontend doesn't need everything that's in LIBS, some are backend only

@@ -5,7 +5,7 @@ set optimizer=off;
 -- Clean up in case a prior regression run failed
 
 -- Suppress NOTICE messages when users/groups don't exist
-SET client_min_messages TO 'error';
+SET client_min_messages TO 'warning';
 
 DROP ROLE IF EXISTS regressgroup1;
 DROP ROLE IF EXISTS regressgroup2;
@@ -15,6 +15,9 @@ DROP ROLE IF EXISTS regressuser2;
 DROP ROLE IF EXISTS regressuser3;
 DROP ROLE IF EXISTS regressuser4;
 DROP ROLE IF EXISTS regressuser5;
+DROP ROLE IF EXISTS regressuser6;
+
+SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
 
 RESET client_min_messages;
 
@@ -35,7 +38,6 @@ ALTER GROUP regressgroup1 ADD USER regressuser4;
 ALTER GROUP regressgroup2 ADD USER regressuser2;	-- duplicate
 ALTER GROUP regressgroup2 DROP USER regressuser2;
 GRANT regressgroup2 TO regressuser4 WITH ADMIN OPTION;
-
 
 -- test owner privileges
 
@@ -277,9 +279,10 @@ GRANT SELECT(fx) ON atestc TO regressuser2;
 
 SET SESSION AUTHORIZATION regressuser2;
 SELECT fx FROM atestp2; -- ok
-SELECT fy FROM atestp2; -- fail, no privilege on atestc.fy
-SELECT atestp2 FROM atestp2; -- fail, no privilege on atestc.fy
-SELECT oid FROM atestp2; -- fail, no privilege on atestc.oid
+SELECT fy FROM atestp2; -- ok
+SELECT atestp2 FROM atestp2; -- ok
+SELECT oid FROM atestp2; -- ok
+SELECT fy FROM atestc; -- fail
 
 SET SESSION AUTHORIZATION regressuser1;
 GRANT SELECT(fy,oid) ON atestc TO regressuser2;
@@ -496,6 +499,205 @@ DROP FUNCTION dogrant_ok();
 REVOKE regressgroup2 FROM regressuser5;
 
 
+-- has_sequence_privilege tests
+\c -
+
+CREATE SEQUENCE x_seq;
+
+GRANT USAGE on x_seq to regressuser2;
+
+SELECT has_sequence_privilege('regressuser1', 'atest1', 'SELECT');
+SELECT has_sequence_privilege('regressuser1', 'x_seq', 'INSERT');
+SELECT has_sequence_privilege('regressuser1', 'x_seq', 'SELECT');
+
+SET SESSION AUTHORIZATION regressuser2;
+
+SELECT has_sequence_privilege('x_seq', 'USAGE');
+
+-- largeobject privilege tests
+\c -
+SET SESSION AUTHORIZATION regressuser1;
+
+SELECT lo_create(1001);
+SELECT lo_create(1002);
+SELECT lo_create(1003);
+SELECT lo_create(1004);
+SELECT lo_create(1005);
+
+GRANT ALL ON LARGE OBJECT 1001 TO PUBLIC;
+GRANT SELECT ON LARGE OBJECT 1003 TO regressuser2;
+GRANT SELECT,UPDATE ON LARGE OBJECT 1004 TO regressuser2;
+GRANT ALL ON LARGE OBJECT 1005 TO regressuser2;
+GRANT SELECT ON LARGE OBJECT 1005 TO regressuser2 WITH GRANT OPTION;
+
+GRANT SELECT, INSERT ON LARGE OBJECT 1001 TO PUBLIC;	-- to be failed
+GRANT SELECT, UPDATE ON LARGE OBJECT 1001 TO nosuchuser;	-- to be failed
+GRANT SELECT, UPDATE ON LARGE OBJECT  999 TO PUBLIC;	-- to be failed
+
+\c -
+SET SESSION AUTHORIZATION regressuser2;
+
+SELECT lo_create(2001);
+SELECT lo_create(2002);
+
+SELECT loread(lo_open(1001, x'40000'::int), 32);
+SELECT loread(lo_open(1002, x'40000'::int), 32);	-- to be denied
+SELECT loread(lo_open(1003, x'40000'::int), 32);
+SELECT loread(lo_open(1004, x'40000'::int), 32);
+
+SELECT lowrite(lo_open(1001, x'20000'::int), 'abcd');
+SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');	-- to be denied
+SELECT lowrite(lo_open(1003, x'20000'::int), 'abcd');	-- to be denied
+SELECT lowrite(lo_open(1004, x'20000'::int), 'abcd');
+
+GRANT SELECT ON LARGE OBJECT 1005 TO regressuser3;
+GRANT UPDATE ON LARGE OBJECT 1006 TO regressuser3;	-- to be denied
+REVOKE ALL ON LARGE OBJECT 2001, 2002 FROM PUBLIC;
+GRANT ALL ON LARGE OBJECT 2001 TO regressuser3;
+
+SELECT lo_unlink(1001);		-- to be denied
+SELECT lo_unlink(2002);
+
+\c -
+-- confirm ACL setting
+SELECT oid, pg_get_userbyid(lomowner) ownername, lomacl FROM pg_largeobject_metadata;
+
+SET SESSION AUTHORIZATION regressuser3;
+
+SELECT loread(lo_open(1001, x'40000'::int), 32);
+SELECT loread(lo_open(1003, x'40000'::int), 32);	-- to be denied
+SELECT loread(lo_open(1005, x'40000'::int), 32);
+
+SELECT lo_truncate(lo_open(1005, x'20000'::int), 10);	-- to be denied
+SELECT lo_truncate(lo_open(2001, x'20000'::int), 10);
+
+-- compatibility mode in largeobject permission
+\c -
+SET lo_compat_privileges = false;	-- default setting
+SET SESSION AUTHORIZATION regressuser4;
+
+SELECT loread(lo_open(1002, x'40000'::int), 32);	-- to be denied
+SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');	-- to be denied
+SELECT lo_truncate(lo_open(1002, x'20000'::int), 10);	-- to be denied
+SELECT lo_unlink(1002);					-- to be denied
+SELECT lo_export(1001, '/dev/null');			-- to be denied
+
+\c -
+SET lo_compat_privileges = true;	-- compatibility mode
+SET SESSION AUTHORIZATION regressuser4;
+
+SELECT loread(lo_open(1002, x'40000'::int), 32);
+SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');
+SELECT lo_truncate(lo_open(1002, x'20000'::int), 10);
+SELECT lo_unlink(1002);
+SELECT lo_export(1001, '/dev/null');			-- to be denied
+
+-- don't allow unpriv users to access pg_largeobject contents
+\c -
+SELECT * FROM pg_largeobject LIMIT 0;
+
+SET SESSION AUTHORIZATION regressuser1;
+SELECT * FROM pg_largeobject LIMIT 0;			-- to be denied
+
+-- test default ACLs
+\c -
+
+CREATE SCHEMA testns;
+GRANT ALL ON SCHEMA testns TO regressuser1;
+
+CREATE TABLE testns.acltest1 (x int);
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'SELECT'); -- no
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'INSERT'); -- no
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA testns GRANT SELECT ON TABLES TO public;
+
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'SELECT'); -- no
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'INSERT'); -- no
+
+DROP TABLE testns.acltest1;
+CREATE TABLE testns.acltest1 (x int);
+
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'SELECT'); -- yes
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'INSERT'); -- no
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA testns GRANT INSERT ON TABLES TO regressuser1;
+
+DROP TABLE testns.acltest1;
+CREATE TABLE testns.acltest1 (x int);
+
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'SELECT'); -- yes
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'INSERT'); -- yes
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA testns REVOKE INSERT ON TABLES FROM regressuser1;
+
+DROP TABLE testns.acltest1;
+CREATE TABLE testns.acltest1 (x int);
+
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'SELECT'); -- yes
+SELECT has_table_privilege('regressuser1', 'testns.acltest1', 'INSERT'); -- no
+
+ALTER DEFAULT PRIVILEGES FOR ROLE regressuser1 REVOKE EXECUTE ON FUNCTIONS FROM public;
+
+SET ROLE regressuser1;
+
+CREATE FUNCTION testns.foo() RETURNS int AS 'select 1' LANGUAGE sql;
+
+SELECT has_function_privilege('regressuser2', 'testns.foo()', 'EXECUTE'); -- no
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA testns GRANT EXECUTE ON FUNCTIONS to public;
+
+DROP FUNCTION testns.foo();
+CREATE FUNCTION testns.foo() RETURNS int AS 'select 1' LANGUAGE sql;
+
+SELECT has_function_privilege('regressuser2', 'testns.foo()', 'EXECUTE'); -- yes
+
+DROP FUNCTION testns.foo();
+
+RESET ROLE;
+
+SELECT count(*)
+  FROM pg_default_acl d LEFT JOIN pg_namespace n ON defaclnamespace = n.oid
+  WHERE nspname = 'testns';
+
+DROP SCHEMA testns CASCADE;
+
+SELECT d.*     -- check that entries went away
+  FROM pg_default_acl d LEFT JOIN pg_namespace n ON defaclnamespace = n.oid
+  WHERE nspname IS NULL AND defaclnamespace != 0;
+
+
+-- Grant on all objects of given type in a schema
+\c -
+
+CREATE SCHEMA testns;
+CREATE TABLE testns.t1 (f1 int);
+CREATE TABLE testns.t2 (f1 int);
+
+SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- false
+
+GRANT ALL ON ALL TABLES IN SCHEMA testns TO regressuser1;
+
+SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- true
+SELECT has_table_privilege('regressuser1', 'testns.t2', 'SELECT'); -- true
+
+REVOKE ALL ON ALL TABLES IN SCHEMA testns FROM regressuser1;
+
+SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- false
+SELECT has_table_privilege('regressuser1', 'testns.t2', 'SELECT'); -- false
+
+CREATE FUNCTION testns.testfunc(int) RETURNS int AS 'select 3 * $1;' LANGUAGE sql;
+
+SELECT has_function_privilege('regressuser1', 'testns.testfunc(int)', 'EXECUTE'); -- true by default
+
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA testns FROM PUBLIC;
+
+SELECT has_function_privilege('regressuser1', 'testns.testfunc(int)', 'EXECUTE'); -- false
+
+SET client_min_messages TO 'warning';
+DROP SCHEMA testns CASCADE;
+RESET client_min_messages;
+
+
 -- test that dependent privileges are revoked (or not) properly
 \c -
 
@@ -524,6 +726,8 @@ drop table dep_priv_test;
 
 \c
 
+drop sequence x_seq;
+
 DROP FUNCTION testfunc2(int);
 DROP FUNCTION testfunc4(boolean);
 
@@ -544,13 +748,18 @@ DROP TABLE atestc;
 DROP TABLE atestp1;
 DROP TABLE atestp2;
 
+SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
+
 DROP GROUP regressgroup1;
 DROP GROUP regressgroup2;
 
+-- these are needed to clean up permissions
 REVOKE USAGE ON LANGUAGE sql FROM regressuser1;
+DROP OWNED BY regressuser1;
+
 DROP USER regressuser1;
 DROP USER regressuser2;
 DROP USER regressuser3;
 DROP USER regressuser4;
 DROP USER regressuser5;
-reset optimizer;
+DROP USER regressuser6;

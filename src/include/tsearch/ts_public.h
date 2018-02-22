@@ -6,7 +6,7 @@
  *
  * Copyright (c) 1998-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/ts_public.h,v 1.14 2009/06/11 14:49:12 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tsearch/ts_public.h,v 1.16 2009/08/18 10:30:41 teodor Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -101,6 +101,7 @@ typedef struct
 
 #define TSL_ADDPOS		0x01
 #define TSL_PREFIX		0x02
+#define TSL_FILTER		0x04
 
 /*
  * Struct for supporting complex dictionaries like thesaurus.
@@ -111,7 +112,7 @@ typedef struct
 	bool		isend;			/* in: marks for lexize_info about text end is
 								 * reached */
 	bool		getnext;		/* out: dict wants next lexeme */
-	void	   *private;		/* internal dict state between calls with
+	void	   *private_state;	/* internal dict state between calls with
 								 * getnext == true */
 } DictSubState;
 

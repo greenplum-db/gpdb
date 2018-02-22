@@ -8,7 +8,7 @@ set optimizer_enable_dml_constraints = off;
 explain insert into constr_tab values (1,2,3);
                    QUERY PLAN                   
 ------------------------------------------------
- Insert (slice0; segments: 1)  (rows=1 width=0)
+ Insert (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Optimizer status: legacy query optimizer
 (3 rows)
@@ -17,7 +17,7 @@ set optimizer_enable_dml_constraints=on;
 explain insert into constr_tab values (1,2,3);
                    QUERY PLAN                   
 ------------------------------------------------
- Insert (slice0; segments: 1)  (rows=1 width=0)
+ Insert (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Optimizer status: legacy query optimizer
 (3 rows)

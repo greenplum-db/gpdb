@@ -150,12 +150,12 @@ _bitmap_create_lov_heapandindex(Relation rel,
   	heapid =
 		heap_create_with_catalog(lovHeapName, PG_BITMAPINDEX_NAMESPACE,
 								 rel->rd_rel->reltablespace,
-								 InvalidOid, rel->rd_rel->relowner,
+								 InvalidOid, InvalidOid, rel->rd_rel->relowner,
 								 tupDesc, NIL,
 								 /* relam */ InvalidOid, RELKIND_RELATION, RELSTORAGE_HEAP,
 								 rel->rd_rel->relisshared, false, 0,
 								 ONCOMMIT_NOOP, NULL /* GP Policy */,
-								 (Datum)0, true,
+								 (Datum)0, false, true,
 								 /* valid_opts */ true);
 	*lovHeapOid = heapid;
 
@@ -202,7 +202,12 @@ _bitmap_create_lov_heapandindex(Relation rel,
 	idxid = index_create(heapid, lovIndexName, InvalidOid,
 						 indexInfo, BTREE_AM_OID,
 						 rel->rd_rel->reltablespace,
-						 classObjectId, coloptions, 0, false, false, true,
+						 classObjectId, coloptions, (Datum) 0,
+						 /* isprimary */ false,
+						 /* isconstraint */ false,
+						 /* deferrable */ false,
+						 /* initdeferred */ false,
+						 /* allow_system_table_mods */ true,
 						 false, false, NULL);
 	*lovIndexOid = idxid;
 }

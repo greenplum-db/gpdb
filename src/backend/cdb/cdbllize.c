@@ -222,22 +222,6 @@ cdbparallelize(PlannerInfo *root,
 
 				if (policy)
 					pfree(policy);
-
-				/* RETURNING is not yet implemented for partitioned tables. */
-				if (query->returningList &&
-					context->resultSegments)
-				{
-					const char *cmd = (query->commandType == CMD_INSERT) ? "INSERT"
-					: (query->commandType == CMD_UPDATE) ? "UPDATE"
-					: "DELETE";
-
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-									errmsg("The RETURNING clause of the %s "
-										   "statement is not yet supported in "
-										   "this version of " PACKAGE_NAME ".",
-										   cmd)
-									));
-				}
 			}
 			break;
 
@@ -951,6 +935,8 @@ pull_up_Flow(Plan *plan, Plan *subplan)
 		Assert(subplan == plan->lefttree || subplan == plan->righttree);
 	else if (IsA(plan, Append))
 		Assert(list_member(((Append *) plan)->appendplans, subplan));
+	else if (IsA(plan, ModifyTable))
+		Assert(list_member(((ModifyTable *) plan)->plans, subplan));
 	else
 		Assert(subplan == plan->lefttree);
 

@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/bin/psql/Makefile,v 1.70 2010/07/05 18:54:38 tgl Exp $
+# $PostgreSQL: pgsql/src/bin/psql/Makefile,v 1.67 2009/11/10 23:12:13 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ sql_help.h: create_help.pl $(wildcard $(REFDOCDIR)/*.sgml)
 # psqlscan is compiled as part of mainloop
 mainloop.o: psqlscan.c
 
-$(srcdir)/psqlscan.c: psqlscan.l
+psqlscan.c: psqlscan.l
 ifdef FLEX
 	$(FLEX) $(FLEXFLAGS) -o'$(srcdir)/psqlscan.c' $<
 else

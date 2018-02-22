@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_trigger.h,v 1.33 2009/01/01 17:23:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_trigger.h,v 1.36 2009/11/20 20:38:11 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -26,10 +26,10 @@
  *		typedef struct FormData_pg_trigger
  *
  * Note: when tgconstraint is nonzero, tgisconstraint must be true, and
- * tgconstrname, tgconstrrelid, tgdeferrable, tginitdeferred are redundant
- * with the referenced pg_constraint entry.  The reason we keep these fields
- * is that we support "stand-alone" constraint triggers with no corresponding
- * pg_constraint entry.
+ * tgconstrname, tgconstrrelid, tgconstrindid, tgdeferrable, tginitdeferred
+ * are redundant with the referenced pg_constraint entry.  The reason we keep
+ * these fields is that we support "stand-alone" constraint triggers with no
+ * corresponding pg_constraint entry.
  * ----------------
  */
 #define TriggerRelationId  2620
@@ -46,14 +46,16 @@ CATALOG(pg_trigger,2620)
 	bool		tgisconstraint; /* trigger is a constraint trigger */
 	NameData	tgconstrname;	/* constraint name */
 	Oid			tgconstrrelid;	/* constraint's FROM table, if any */
+	Oid			tgconstrindid;	/* constraint's supporting index, if any */
 	Oid			tgconstraint;	/* owning pg_constraint entry, if any */
 	bool		tgdeferrable;	/* constraint trigger is deferrable */
 	bool		tginitdeferred; /* constraint trigger is deferred initially */
 	int2		tgnargs;		/* # of extra arguments in tgargs */
 
-	/* VARIABLE LENGTH FIELDS: */
-	int2vector	tgattr;			/* reserved for column-specific triggers */
+	/* VARIABLE LENGTH FIELDS (note: tgattr and tgargs must not be null) */
+	int2vector	tgattr;			/* column numbers, if trigger is on columns */
 	bytea		tgargs;			/* first\000second\000tgnargs\000 */
+	text		tgqual;			/* WHEN expression, or NULL if none */
 } FormData_pg_trigger;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -72,7 +74,7 @@ typedef FormData_pg_trigger *Form_pg_trigger;
  *		compiler constants for pg_trigger
  * ----------------
  */
-#define Natts_pg_trigger				14
+#define Natts_pg_trigger				16
 #define Anum_pg_trigger_tgrelid			1
 #define Anum_pg_trigger_tgname			2
 #define Anum_pg_trigger_tgfoid			3
@@ -81,12 +83,14 @@ typedef FormData_pg_trigger *Form_pg_trigger;
 #define Anum_pg_trigger_tgisconstraint	6
 #define Anum_pg_trigger_tgconstrname	7
 #define Anum_pg_trigger_tgconstrrelid	8
-#define Anum_pg_trigger_tgconstraint	9
-#define Anum_pg_trigger_tgdeferrable	10
-#define Anum_pg_trigger_tginitdeferred	11
-#define Anum_pg_trigger_tgnargs			12
-#define Anum_pg_trigger_tgattr			13
-#define Anum_pg_trigger_tgargs			14
+#define Anum_pg_trigger_tgconstrindid	9
+#define Anum_pg_trigger_tgconstraint	10
+#define Anum_pg_trigger_tgdeferrable	11
+#define Anum_pg_trigger_tginitdeferred	12
+#define Anum_pg_trigger_tgnargs			13
+#define Anum_pg_trigger_tgattr			14
+#define Anum_pg_trigger_tgargs			15
+#define Anum_pg_trigger_tgqual			16
 
 /* Bits within tgtype */
 #define TRIGGER_TYPE_ROW				(1 << 0)

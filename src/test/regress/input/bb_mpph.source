@@ -2068,11 +2068,11 @@ from
 	co_part p, 
 	(select p_partkey, min(ps_supplycost) as min_ps_cost 
 		from 
-			co_part, 
-			co_partsupp, 	
+			co_part,
+			co_partsupp,
 			co_supplier,
-			co_nation, 
-			co_region 
+			co_nation,
+			co_region
 		where 
 			p_partkey=ps_partkey 
 			and s_suppkey = ps_suppkey 

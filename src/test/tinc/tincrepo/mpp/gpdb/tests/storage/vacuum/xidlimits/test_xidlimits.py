@@ -76,7 +76,6 @@ class XidlimitsTests(MPPTestCase):
     @created 2013-02-12 00:00:00
     @modified 2013-02-12 00:00:00
     @tags vacuum xidlimits echo
-    @gucs gp_create_table_random_default_distribution=off
     """
     # Constants identifying the limit to exceed.
     WARN_LIMIT = 0
@@ -205,6 +204,12 @@ class XidlimitsTests(MPPTestCase):
         which the limit will be exceeded.
         """
         dburl = dbconn.DbURL(hostname=segdb.hostname, port=segdb.port)
+
+        # Run VACUUM, to make sure that the xidVacLimit in shared memory is set
+        # correctly, after cluster start. (It is only set on the first vacuum
+        # after startup.)
+        PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
+
         databases = []
         with dbconn.connect(dburl, utility=True) as conn:
             sql = "SELECT datname FROM pg_database WHERE datallowconn='t'"
@@ -220,9 +225,9 @@ class XidlimitsTests(MPPTestCase):
             datfxid, age = int(row[0]), int(row[1])
             sql = "SELECT get_next_xid()"
             current_xid = int(dbconn.execSQLForSingleton(conn, sql))
-        # Estimate of XIDs consumed by vacuum freeze operaiton on all databases.
+        # Estimate of XIDs consumed by vacuum freeze operation on all databases.
         vacuum_xids = len(databases) * 500
-        logger.info("Estimated xids for vacuume freeze: %d" % vacuum_xids)
+        logger.info("Estimated xids for vacuum freeze: %d" % vacuum_xids)
         if limit == self.WARN_LIMIT:
             target_age = (2**31) - stop_limit_guc - warn_limit_guc
             target_xid = xid_sum(datfxid, target_age)
@@ -417,6 +422,9 @@ class XidlimitsTests(MPPTestCase):
         # Create database newdb off template0.
         PSQL(sql_cmd="CREATE DATABASE newdb TEMPLATE template0").run(
             validateAfter=True)
+        # The xid limits in shared memory are only updated at a VACUUM,
+        # so run one now.
+        PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
         # newdb is now the oldest database, older than warn limit.
         self._basic_sanity_check("warn")
         # Ensure that vacuum freeze on newdb stops the warnings.
@@ -443,6 +451,9 @@ class XidlimitsTests(MPPTestCase):
         # newdb's age crosses stop limit and GPDB stops accepting commands.
         PSQL(sql_cmd="CREATE DATABASE newdb TEMPLATE template0").run(
             validateAfter=True)
+        # The xid limits in shared memory are only updated at a VACUUM,
+        # so run one now.
+        PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
         self._basic_sanity_check("error")
         # Reduce xid_stop_limit as per the standard procedure.
         self._reduce_stop_limit_guc(self.gparray.master, new_limit)
@@ -511,6 +522,9 @@ class XidlimitsTests(MPPTestCase):
         PSQL(sql_cmd="CREATE DATABASE newdb TEMPLATE template0").run(
             validateAfter=True)
         logger.info("newdb created off template0")
+        # The xid limits in shared memory are only updated at a VACUUM,
+        # so run one now.
+        PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
         # newdb is now the oldest database, older than warn limit.
         self._basic_sanity_check("warn_segment")
         # Ensure that vacuum freeze on newdb stops the warnings.
@@ -536,6 +550,9 @@ class XidlimitsTests(MPPTestCase):
         PSQL(sql_cmd="CREATE DATABASE newdb TEMPLATE template0").run(
             validateAfter=True)
         logger.info("newdb created off template0")
+        # The xid limits in shared memory are only updated at a VACUUM,
+        # so run one now.
+        PSQL(sql_cmd='VACUUM FREEZE', dbname='postgres', out_file='vacuum_postgres.out').run(validateAfter=True)
         # Ensure that utility connections to the segment fail with error.
         psql_args = {"PGOPTIONS":"-c 'gp_session_role=utility'",
                      "host":primary.hostname,

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/proclang.c,v 1.85 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/proclang.c,v 1.87 2009/09/22 23:43:37 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,8 +29,8 @@
 #include "commands/defrem.h"
 #include "commands/proclang.h"
 #include "miscadmin.h"
-#include "parser/gramparse.h"
 #include "parser/parse_func.h"
+#include "parser/parser.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -201,30 +201,30 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 			if (!OidIsValid(inlineOid))
 			{
 				inlineOid = ProcedureCreate(pltemplate->tmplinline,
-										 PG_CATALOG_NAMESPACE,
-										 false, /* replace */
-										 false, /* returnsSet */
-										 VOIDOID,
-										 ClanguageId,
-										 F_FMGR_C_VALIDATOR,
-										 InvalidOid, /* describeFuncOid */
-										 pltemplate->tmplinline,
-										 pltemplate->tmpllibrary,
-										 false, /* isAgg */
-										 false, /* isWin */
-										 false, /* security_definer */
-										 true, /* isStrict */
-										 PROVOLATILE_IMMUTABLE,
-										 buildoidvector(funcargtypes, 1),
-										 PointerGetDatum(NULL),
-										 PointerGetDatum(NULL),
-										 PointerGetDatum(NULL),
-										 NIL,
-										 PointerGetDatum(NULL),
-										 1,
-										 0,
-										 PRODATAACCESS_NONE,
-										 PROEXECLOCATION_ANY);
+											PG_CATALOG_NAMESPACE,
+											false, /* replace */
+											false, /* returnsSet */
+											VOIDOID,
+											ClanguageId,
+											F_FMGR_C_VALIDATOR,
+											InvalidOid, /* describeFuncOid */
+											pltemplate->tmplinline,
+											pltemplate->tmpllibrary,
+											false, /* isAgg */
+											false, /* isWin */
+											false, /* security_definer */
+											true, /* isStrict */
+											PROVOLATILE_IMMUTABLE,
+											buildoidvector(funcargtypes, 1),
+											PointerGetDatum(NULL),
+											PointerGetDatum(NULL),
+											PointerGetDatum(NULL),
+											NIL,
+											PointerGetDatum(NULL),
+											1,
+											0,
+											PRODATAACCESS_NONE,
+											PROEXECLOCATION_ANY);
 
 			}
 		}
@@ -256,7 +256,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 										 false, /* isWindowFunc */
 										 false, /* security_definer */
 										 true, /* isStrict */
-										 PROVOLATILE_IMMUTABLE,
+										 PROVOLATILE_VOLATILE,
 										 buildoidvector(funcargtypes, 1),
 										 PointerGetDatum(NULL),
 										 PointerGetDatum(NULL),

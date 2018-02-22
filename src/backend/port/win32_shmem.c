@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/win32_shmem.c,v 1.11 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/win32_shmem.c,v 1.12 2009/07/24 20:12:42 mha Exp $
  *
  *-------------------------------------------------------------------------
  */

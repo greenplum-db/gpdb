@@ -63,33 +63,6 @@ HeapScanNext(ScanState *scanState)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	/*
-	 * Check if we are evaluating PlanQual for tuple of this relation.
-	 * Additional checking is not good, but no other way for now. We could
-	 * introduce new nodes for this case and handle SeqScan --> NewNode
-	 * switching in Init/ReScan plan...
-	 */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		if (estate->es_evTupleNull[scanrelid - 1])
-		{
-			return ExecClearTuple(slot);
-		}
-
-		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
-
-		/*
-		 * Note that unlike IndexScan, SeqScan never uses keys in
-		 * heap_beginscan (and this is very bad) - so, here we do not check
-		 * the keys.
-		 */
-
-		/* Flag for the next call that no more tuples */
-		estate->es_evTupleNull[scanrelid - 1] = true;
-		return slot;
-	}
-
-	/*
 	 * get the next tuple from the access methods
 	 */
 	if (node->opaque->ss_heapTupleData.bot == node->opaque->ss_heapTupleData.top &&
@@ -140,6 +113,21 @@ HeapScanNext(ScanState *scanState)
 	}
 
 	return slot;
+}
+
+
+/*
+ * HeapScanRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+bool
+HeapScanRecheck(ScanState *node, TupleTableSlot *slot)
+{
+	/*
+	 * Note that unlike IndexScan, SeqScan never use keys in
+	 * heap_beginscan (and this is very bad) - so, here we do not check
+	 * are keys ok or not.
+	 */
+	return true;
 }
 
 void

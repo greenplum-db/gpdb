@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/makefuncs.h,v 1.68 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/makefuncs.h,v 1.69 2009/07/16 06:33:45 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -60,7 +60,7 @@ extern RangeVar *makeRangeVar(char *schemaname, char *relname, int location);
 
 extern TypeName *makeTypeName(char *typnam);
 extern TypeName *makeTypeNameFromNameList(List *names);
-extern TypeName *makeTypeNameFromOid(Oid typid, int32 typmod);
+extern TypeName *makeTypeNameFromOid(Oid typeOid, int32 typmod);
 
 extern FuncExpr *makeFuncExpr(Oid funcid, Oid rettype,
 			 List *args, CoercionForm fformat);

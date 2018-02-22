@@ -15,7 +15,7 @@ CREATE WRITABLE EXTERNAL TABLE s3write_ret2wet_write_new (date text, time text, 
         volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@') FORMAT 'csv';
 INSERT INTO s3write_ret2wet_write_new SELECT * FROM s3write_ret2wet_read;
 SELECT min(volume), max(volume), count(*) FROM s3write_ret2wet_read_new;
- min |   max   |  count
+ min |   max   |  count  
 -----+---------+---------
    1 | 2000000 | 2000000
 (1 row)

@@ -408,7 +408,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 			else
 			{
 				char tmpprefix[MAXPGPATH];
-				snprintf(tmpprefix, MAXPGPATH, "%s/slice%d_ntuplestore", PG_TEMP_FILES_DIR, currentSliceId);
+				snprintf(tmpprefix, MAXPGPATH, "slice%d_ntuplestore", currentSliceId);
 				nts->pfile = ExecWorkFile_CreateUnique(tmpprefix, BUFFILE, true /* delOnClose */, 0 /* compressType */ );
 			}
 
@@ -693,17 +693,14 @@ NTupleStore *
 ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter)
 {
 	NTupleStore* store = NULL;
-	char filenameprefix[MAXPGPATH];
 	char filenamelob[MAXPGPATH];
 
-	snprintf(filenameprefix, sizeof(filenameprefix), "%s/%s", PG_TEMP_FILES_DIR, filename);
-
-	snprintf(filenamelob, sizeof(filenamelob), "%s_LOB", filenameprefix);
+	snprintf(filenamelob, sizeof(filenamelob), "%s_LOB", filename);
 
 	if(isWriter)
 	{
 		store = ntuplestore_create(maxBytes);
-		store->pfile = ExecWorkFile_Create(filenameprefix, BUFFILE,
+		store->pfile = ExecWorkFile_Create(filename, BUFFILE,
 				true /*delOnClose */, 0 /* compressType */);
 		store->rwflag = NTS_IS_WRITER;
 
@@ -718,7 +715,7 @@ ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWri
 		store->work_set = NULL;
 		store->workfiles_created = false;
 
-		store->pfile = ExecWorkFile_Open(filenameprefix, BUFFILE,
+		store->pfile = ExecWorkFile_Open(filename, BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);
 
@@ -903,7 +900,7 @@ static long ntuplestore_put_lob(NTupleStore *nts, char* data, NTupleStoreLobRef 
 			Assert(nts->work_set == NULL);
 			Assert(nts->lobbytes == 0);
 
-			snprintf(tmpprefix, sizeof(tmpprefix), "%s/slice%d_ntuplestorelob", PG_TEMP_FILES_DIR, currentSliceId);
+			snprintf(tmpprefix, sizeof(tmpprefix), "slice%d_ntuplestorelob", currentSliceId);
 			nts->plobfile = ExecWorkFile_CreateUnique(tmpprefix, BUFFILE,
 					true /*delOnClose */, 0 /* compressType */);
 		}

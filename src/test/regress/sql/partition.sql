@@ -3728,9 +3728,9 @@ CREATE TABLE test_split_part ( log_id int NOT NULL, f_array int[] NOT NULL)
 DISTRIBUTED BY (log_id)
 PARTITION BY RANGE(log_id)
 (
-	START (1::int) END (100::int) EVERY (5) WITH (appendonly=false),
-	PARTITION "Old" START (101::int) END (201::int) WITH (appendonly=false),
-	DEFAULT PARTITION other_log_ids  WITH (appendonly=false)
+    START (1::int) END (100::int) EVERY (5) WITH (appendonly=false),
+    PARTITION "Old" START (101::int) END (201::int) WITH (appendonly=false),
+    DEFAULT PARTITION other_log_ids  WITH (appendonly=false)
 );
 
 insert into test_split_part (log_id , f_array) select id, '{10}' from generate_series(1,1000) id;

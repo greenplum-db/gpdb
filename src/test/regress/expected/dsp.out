@@ -262,6 +262,16 @@ subpartition template
 (partition p1 values('val1'),
  partition p2 values('val2'));
 NOTICE:  CREATE TABLE will create implicit sequence "alter_part_tab1_id_seq" for serial column "alter_part_tab1.id"
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1" for table "alter_part_tab1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_subothers" for table "alter_part_tab1_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_sp1" for table "alter_part_tab1_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p1_2_prt_sp2" for table "alter_part_tab1_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2" for table "alter_part_tab1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_subothers" for table "alter_part_tab1_1_prt_p2"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_sp1" for table "alter_part_tab1_1_prt_p2"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p2_2_prt_sp2" for table "alter_part_tab1_1_prt_p2"
 Insert into alter_part_tab1(a1,a2,a3)
   select g, 'val1', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' from generate_series(1,10) g;
 Insert into alter_part_tab1(a1,a2,a3)
@@ -276,22 +286,26 @@ select count(*) from alter_part_tab1;
 alter table alter_part_tab1 add column a4 numeric default 5.5;
 -- Check that it works for ADD PARTITION, too.
 ALTER TABLE alter_part_tab1 ADD partition p31 values(1) WITH (appendonly=true, orientation=column, checksum=true,compresstype=zlib);
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31" for table "alter_part_tab1"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_subothers" for table "alter_part_tab1_1_prt_p31"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_sp1" for table "alter_part_tab1_1_prt_p31"
+NOTICE:  CREATE TABLE will create partition "alter_part_tab1_1_prt_p31_2_prt_sp2" for table "alter_part_tab1_1_prt_p31"
 SELECT relname, checksum from pg_appendonly ao, pg_class c where ao.relid = c.oid and relname like 'alter_part_tab1%';
                   relname                  | checksum 
 -------------------------------------------+----------
- alter_part_tab1                           | t
- alter_part_tab1_1_prt_p1                  | t
  alter_part_tab1_1_prt_p1_2_prt_sp1        | t
  alter_part_tab1_1_prt_p1_2_prt_sp2        | t
- alter_part_tab1_1_prt_p1_2_prt_subothers  | t
- alter_part_tab1_1_prt_p2                  | t
+ alter_part_tab1_1_prt_p1                  | t
+ alter_part_tab1_1_prt_p31_2_prt_sp1       | t
+ alter_part_tab1_1_prt_p2_2_prt_subothers  | t
  alter_part_tab1_1_prt_p2_2_prt_sp1        | t
  alter_part_tab1_1_prt_p2_2_prt_sp2        | t
- alter_part_tab1_1_prt_p2_2_prt_subothers  | t
+ alter_part_tab1_1_prt_p2                  | t
+ alter_part_tab1                           | t
+ alter_part_tab1_1_prt_p1_2_prt_subothers  | t
  alter_part_tab1_1_prt_p31                 | t
- alter_part_tab1_1_prt_p31_2_prt_sp1       | t
- alter_part_tab1_1_prt_p31_2_prt_sp2       | t
  alter_part_tab1_1_prt_p31_2_prt_subothers | t
+ alter_part_tab1_1_prt_p31_2_prt_sp2       | t
 (13 rows)
 
 drop table alter_part_tab1;
@@ -970,8 +984,101 @@ select count(*) from select_into_heap_to;
     50
 (1 row)
 
+-- Also check CTAS works fine
+create table ctas_ao_from_heap as select * from select_into_heap_from;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select relname, relstorage, reloptions from pg_class where relname='ctas_ao_from_heap';
+      relname      | relstorage |              reloptions              
+-------------------+------------+--------------------------------------
+ ctas_ao_from_heap | c          | {appendonly=true,orientation=column}
+(1 row)
+
+select count(*) from ctas_ao_from_heap;
+ count 
+-------
+    50
+(1 row)
+
+RESET gp_default_storage_options;
+create table dsp_partition1(i int, j int, k int) with(appendonly=true) partition by range(i) (start(1) end(10) every(5));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_1" for table "dsp_partition1"
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_2" for table "dsp_partition1"
+Insert into dsp_partition1 select i, i+1, i+2 from generate_series(1,9) i;
+select count(*) from dsp_partition1;
+ count 
+-------
+     9
+(1 row)
+
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+        relname         | relkind | relstorage |    reloptions     
+------------------------+---------+------------+-------------------
+ dsp_partition1         | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_1 | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_2 | r       | a          | {appendonly=true}
+(3 rows)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
+       where relid in (select oid from pg_class where relname  like 'dsp_partition1%') order by columnstore;
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             0 |              |     32768 | t        | f
+             0 |              |     32768 | t        | f
+             0 |              |     32768 | t        | f
+(3 rows)
+
+set gp_default_storage_options="appendonly=true, orientation=column";
+-- Add partition
+alter table dsp_partition1 add partition p3 start(11) end(15);
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_p3" for table "dsp_partition1"
+alter table dsp_partition1 add partition p4 start(16) end(18) with(appendonly=false);
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_p4" for table "dsp_partition1"
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+         relname         | relkind | relstorage |              reloptions              
+-------------------------+---------+------------+--------------------------------------
+ dsp_partition1          | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_1  | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_2  | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_p3 | r       | c          | {appendonly=true,orientation=column}
+ dsp_partition1_1_prt_p4 | r       | h          | {appendonly=false}
+(5 rows)
+
+-- Split partition
+alter table dsp_partition1 split partition for (rank(2)) at (7) into (partition split_p1, partition split_p2);
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_split_p1" for table "dsp_partition1"
+NOTICE:  CREATE TABLE will create partition "dsp_partition1_1_prt_split_p2" for table "dsp_partition1"
+select relname, relkind, relstorage, reloptions from pg_class where relname like 'dsp_partition1%' order by relname;
+            relname            | relkind | relstorage |              reloptions              
+-------------------------------+---------+------------+--------------------------------------
+ dsp_partition1                | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_1        | r       | a          | {appendonly=true}
+ dsp_partition1_1_prt_p3       | r       | c          | {appendonly=true,orientation=column}
+ dsp_partition1_1_prt_p4       | r       | h          | {appendonly=false}
+ dsp_partition1_1_prt_split_p1 | r       | c          | {appendonly=true,orientation=column}
+ dsp_partition1_1_prt_split_p2 | r       | c          | {appendonly=true,orientation=column}
+(6 rows)
+
+RESET gp_default_storage_options;
 -- cleanup
 \c postgres
 drop database dsp1;
 drop database dsp2;
 drop database dsp3;
+-- start_matchsubs
+-- m/.*\[ERROR\]*/
+-- s/.*\[ERROR\]/[ERROR]/gm
+-- end_matchsubs
+\!gpconfig -c gp_default_storage_options -v 'appendonly=true' --masteronly
+[ERROR]:-gp_default_storage_options value cannot be different on master and segments
+gp_default_storage_options value cannot be different on master and segments
+\!gpconfig -c gp_default_storage_options -v 'appendonly=true' -m 'appendonly=false'
+[ERROR]:-gp_default_storage_options value cannot be different on master and segments
+gp_default_storage_options value cannot be different on master and segments
+\!gpconfig -s gp_default_storage_options
+Values on all segments are consistent
+GUC          : gp_default_storage_options
+Master  value: appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row
+Segment value: appendonly=false,blocksize=32768,compresstype=none,checksum=true,orientation=row

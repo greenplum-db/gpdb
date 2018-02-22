@@ -30,7 +30,7 @@ HINT:  likely caused by a function that reads or modifies data in a distributed 
 CONTEXT:  SQL function "foot" statement 1
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(1) z where z.fooid = foo2.fooid) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foo2"
 DETAIL:  SQL function "foot" during startup
 -- function in subselect
 select * from foo2 where f2 in (select f2 from foot(foo2.fooid) z where z.fooid = 1) ORDER BY 1,2;
@@ -149,7 +149,7 @@ SELECT * FROM getfoo(1) AS t1(fooid int, foosubid int, fooname text);
      1 |        1 | Joe
 (1 row)
 
-CREATE VIEW vw_getfoo AS SELECT * FROM getfoo(1) AS 
+CREATE VIEW vw_getfoo AS SELECT * FROM getfoo(1) AS
 (fooid int, foosubid int, fooname text);
 SELECT * FROM vw_getfoo;
  fooid | foosubid | fooname 
@@ -272,12 +272,12 @@ INSERT INTO foorescan values(5009,5,'abc.5009.5');
 CREATE FUNCTION foorescan(int,int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid >= $1 and fooid < $2 ;' LANGUAGE SQL;
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM foorescan(5002,5004)) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW vw_foorescan AS SELECT * FROM foorescan(5002,5004);
 --invokes ExecFunctionReScan
 SELECT * FROM foorescan f WHERE f.fooid IN (SELECT fooid FROM vw_foorescan) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"  
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 CREATE TABLE barrescan (fooid int primary key);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "barrescan_pkey" for table "barrescan"
@@ -290,18 +290,18 @@ INSERT INTO barrescan values(5008);
 CREATE FUNCTION foorescan(int) RETURNS setof foorescan AS 'SELECT * FROM foorescan WHERE fooid = $1;' LANGUAGE SQL;
 --invokes ExecFunctionReScan with chgParam != NULL
 SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 SELECT b.fooid, max(f.foosubid) FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW fooview1 AS SELECT f.* FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) ORDER BY 1,2;
 SELECT * FROM fooview1 AS fv WHERE fv.fooid = 5004;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 CREATE VIEW fooview2 AS SELECT b.fooid, max(f.foosubid) AS maxsubid FROM barrescan b, foorescan f WHERE f.fooid = b.fooid AND b.fooid IN (SELECT fooid FROM foorescan(b.fooid)) GROUP BY b.fooid ORDER BY 1,2;
 SELECT * FROM fooview2 AS fv WHERE fv.maxsubid = 5;
-ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan" 
+ERROR:  function cannot execute on a QE slice because it accesses relation "public.foorescan"
 DETAIL:  SQL function "foorescan" during startup
 DROP VIEW vw_foorescan;
 DROP VIEW fooview1;
@@ -426,7 +426,13 @@ SELECT * FROM dup('xyz'::text);
  xyz | {xyz,xyz}
 (1 row)
 
--- equivalent specification
+-- fails, as we are attempting to rename first argument
+CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
+AS 'select $1, array[$1,$1]' LANGUAGE sql;
+ERROR:  cannot change name of input parameter "f1"
+HINT:  Use DROP FUNCTION first.
+DROP FUNCTION dup(anyelement);
+-- equivalent behavior, though different name exposed for input arg
 CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 SELECT dup(22);
@@ -755,6 +761,67 @@ LINE 1: select * from testfoo();
 drop function testfoo();
 -- end of disabled RETURNING tests.
 -- end_ignore
+--
+-- Check some cases involving dropped columns in a rowtype result
+--
+create temp table users (userid text, email text, todrop bool, enabled bool);
+insert into users values ('id','email',true,true);
+insert into users values ('id2','email2',true,true);
+alter table users drop column todrop;
+create or replace function get_first_user() returns users as
+$$ SELECT * FROM users ORDER BY userid LIMIT 1; $$
+language sql stable;
+SELECT get_first_user();
+ get_first_user 
+----------------
+ (id,email,t)
+(1 row)
+
+SELECT * FROM get_first_user();
+ userid | email | enabled 
+--------+-------+---------
+ id     | email | t
+(1 row)
+
+create or replace function get_users() returns setof users as
+$$ SELECT * FROM users ORDER BY userid; $$
+language sql stable;
+SELECT get_users();
+   get_users    
+----------------
+ (id,email,t)
+ (id2,email2,t)
+(2 rows)
+
+SELECT * FROM get_users();
+ userid | email  | enabled 
+--------+--------+---------
+ id     | email  | t
+ id2    | email2 | t
+(2 rows)
+
+drop function get_first_user();
+drop function get_users();
+drop table users;
+-- this won't get inlined because of type coercion, but it shouldn't fail
+create or replace function foobar() returns setof text as
+$$ select 'foo'::varchar union all select 'bar'::varchar ; $$
+language sql stable;
+select foobar();
+ foobar 
+--------
+ foo
+ bar
+(2 rows)
+
+select * from foobar();
+ foobar 
+--------
+ foo
+ bar
+(2 rows)
+
+drop function foobar();
 -- check handling of a SQL function with multiple OUT params (bug #5777)
 create or replace function foobar(out integer, out numeric) as
 $$ select (1, 2.1) $$ language sql;

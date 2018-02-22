@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.114 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.117 2009/12/07 05:22:23 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -28,8 +28,9 @@
  * ----------------
  */
 #define RelationRelationId	1259
+#define RelationRelation_Rowtype_Id  83
 
-CATALOG(pg_class,1259) BKI_BOOTSTRAP
+CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83)
 {
 	NameData	relname;		/* class name */
 	Oid			relnamespace;	/* OID of namespace containing this class */
@@ -57,6 +58,7 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP
 	int2		relchecks;		/* # of CHECK constraints for class */
 	bool		relhasoids;		/* T if we generate OIDs for rows of rel */
 	bool		relhaspkey;		/* has (or has had) PRIMARY KEY index */
+	bool		relhasexclusion; /* has (or has had) exclusion constraint */
 	bool		relhasrules;	/* has (or has had) any rules */
 	bool		relhastriggers; /* has (or has had) any TRIGGERs */
 	bool		relhassubclass; /* has (or has had) derived classes */
@@ -97,7 +99,7 @@ typedef FormData_pg_class *Form_pg_class;
  * ----------------
  */
 
-#define Natts_pg_class					26
+#define Natts_pg_class					27
 #define Anum_pg_class_relname			1
 #define Anum_pg_class_relnamespace		2
 #define Anum_pg_class_reltype			3
@@ -118,12 +120,13 @@ typedef FormData_pg_class *Form_pg_class;
 #define Anum_pg_class_relchecks			18
 #define Anum_pg_class_relhasoids		19
 #define Anum_pg_class_relhaspkey		20
-#define Anum_pg_class_relhasrules		21
-#define Anum_pg_class_relhastriggers	22
-#define Anum_pg_class_relhassubclass	23
-#define Anum_pg_class_relfrozenxid		24
-#define Anum_pg_class_relacl			25
-#define Anum_pg_class_reloptions		26
+#define Anum_pg_class_relhasexclusion	21
+#define Anum_pg_class_relhasrules		22
+#define Anum_pg_class_relhastriggers	23
+#define Anum_pg_class_relhassubclass	24
+#define Anum_pg_class_relfrozenxid		25
+#define Anum_pg_class_relacl			26
+#define Anum_pg_class_reloptions		27
 
 /* ----------------
  *		initial contents of pg_class
@@ -135,13 +138,13 @@ typedef FormData_pg_class *Form_pg_class;
  */
 
 /* Note: "3" in the relfrozenxid column stands for FirstNormalTransactionId */
-DATA(insert OID = 1247 (  pg_type		PGNSP 71 PGUID 0 1247 0 0 0 0 0 f f f r h 28 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1247 (  pg_type		PGNSP 71 PGUID 0 1247 0 0 0 0 0 f f f r h 28 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 PGUID 0 1249 0 0 0 0 0 f f f r h 18 0 f f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 PGUID 0 1249 0 0 0 0 0 f f f r h 19 0 f f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1255 (  pg_proc		PGNSP 81 PGUID 0 1255 0 0 0 0 0 f f f r h 27 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1255 (  pg_proc		PGNSP 81 PGUID 0 1255 0 0 0 0 0 f f f r h 27 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1259 (  pg_class		PGNSP 83 PGUID 0 1259 0 0 0 0 0 f f f r h 26 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1259 (  pg_class		PGNSP 83 PGUID 0 1259 0 0 0 0 0 f f f r h 27 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
 
 

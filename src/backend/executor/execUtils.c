@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.159 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.167 2009/12/07 05:22:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -47,11 +47,14 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/appendonlywriter.h"
+#include "access/relscan.h"
+#include "access/transam.h"
 #include "catalog/index.h"
 #include "executor/execdebug.h"
 #include "executor/execUtils.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"
+#include "storage/lmgr.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
 #include "utils/tqual.h"
@@ -80,7 +83,10 @@
 #include "cdb/memquota.h"
 
 static bool get_last_attnums(Node *node, ProjectionInfo *projInfo);
-static void ShutdownExprContext(ExprContext *econtext);
+static bool index_recheck_constraint(Relation index, Oid *constr_procs,
+						 Datum *existing_values, bool *existing_isnull,
+						 Datum *new_values);
+static void ShutdownExprContext(ExprContext *econtext, bool isCommit);
 
 
 /* ----------------------------------------------------------------
@@ -136,6 +142,9 @@ CreateExecutorState(void)
 	estate->es_snapshot = SnapshotNow;
 	estate->es_crosscheck_snapshot = InvalidSnapshot;	/* no crosscheck */
 	estate->es_range_table = NIL;
+	estate->es_plannedstmt = NULL;
+
+	estate->es_junkFilter = NULL;
 
 	estate->es_output_cid = (CommandId) 0;
 
@@ -143,10 +152,9 @@ CreateExecutorState(void)
 	estate->es_num_result_relations = 0;
 	estate->es_result_relation_info = NULL;
 
-	estate->es_junkFilter = NULL;
-
 	estate->es_trig_target_relations = NIL;
 	estate->es_trig_tuple_slot = NULL;
+	estate->es_trig_oldtup_slot = NULL;
 
 	estate->es_param_list_info = NULL;
 	estate->es_param_exec_vals = NULL;
@@ -155,9 +163,10 @@ CreateExecutorState(void)
 
 	estate->es_tupleTable = NIL;
 
+	estate->es_rowMarks = NIL;
+
 	estate->es_processed = 0;
 	estate->es_lastoid = InvalidOid;
-	estate->es_rowMarks = NIL;
 
 	estate->es_instrument = false;
 	estate->es_select_into = false;
@@ -169,11 +178,9 @@ CreateExecutorState(void)
 
 	estate->es_per_tuple_exprcontext = NULL;
 
-	estate->es_plannedstmt = NULL;
-	estate->es_evalPlanQual = NULL;
-	estate->es_evTupleNull = NULL;
-	estate->es_evTuple = NULL;
-	estate->es_useEvalPlan = false;
+	estate->es_epqTuple = NULL;
+	estate->es_epqTupleSet = NULL;
+	estate->es_epqScanDone = NULL;
 
 	estate->es_sliceTable = NULL;
 	estate->interconnect_context = NULL;
@@ -255,7 +262,8 @@ FreeExecutorState(EState *estate)
 		 * XXX: seems there ought to be a faster way to implement this than
 		 * repeated list_delete(), no?
 		 */
-		FreeExprContext((ExprContext *) linitial(estate->es_exprcontexts));
+		FreeExprContext((ExprContext *) linitial(estate->es_exprcontexts),
+						true);
 		/* FreeExprContext removed the list link for us */
 	}
 
@@ -429,16 +437,21 @@ CreateStandaloneExprContext(void)
  * Since we free the temporary context used for expression evaluation,
  * any previously computed pass-by-reference expression result will go away!
  *
+ * If isCommit is false, we are being called in error cleanup, and should
+ * not call callbacks but only release memory.  (It might be better to call
+ * the callbacks and pass the isCommit flag to them, but that would require
+ * more invasive code changes than currently seems justified.)
+ *
  * Note we make no assumption about the caller's memory context.
  * ----------------
  */
 void
-FreeExprContext(ExprContext *econtext)
+FreeExprContext(ExprContext *econtext, bool isCommit)
 {
 	EState	   *estate;
 
 	/* Call any registered callbacks */
-	ShutdownExprContext(econtext);
+	ShutdownExprContext(econtext, isCommit);
 	/* And clean up the memory used */
 	MemoryContextDelete(econtext->ecxt_per_tuple_memory);
 	/* Unlink self from owning EState, if any */
@@ -463,7 +476,7 @@ void
 ReScanExprContext(ExprContext *econtext)
 {
 	/* Call any registered callbacks */
-	ShutdownExprContext(econtext);
+	ShutdownExprContext(econtext, true);
 	/* And clean up the memory used */
 	MemoryContextReset(econtext->ecxt_per_tuple_memory);
 }
@@ -1089,17 +1102,22 @@ ExecCloseIndices(ResultRelInfo *resultRelInfo)
  *		doesn't provide the functionality needed by the
  *		executor.. -cim 9/27/89
  *
+ *		This returns a list of index OIDs for any unique or exclusion
+ *		constraints that are deferred and that had
+ *		potential (unconfirmed) conflicts.
+ *
  *		CAUTION: this must not be called for a HOT update.
  *		We can't defend against that here for lack of info.
  *		Should we change the API to make it safer?
  * ----------------------------------------------------------------
  */
-void
+List *
 ExecInsertIndexTuples(TupleTableSlot *slot,
 					  ItemPointer tupleid,
 					  EState *estate,
-					  bool is_vacuum)
+					  bool is_vacuum_full)
 {
+	List	   *result = NIL;
 	ResultRelInfo *resultRelInfo;
 	int			i;
 	int			numIndices;
@@ -1133,9 +1151,12 @@ ExecInsertIndexTuples(TupleTableSlot *slot,
 	 */
 	for (i = 0; i < numIndices; i++)
 	{
+		Relation	indexRelation = relationDescs[i];
 		IndexInfo  *indexInfo;
+		IndexUniqueCheck checkUnique;
+		bool		satisfiesConstraint;
 
-		if (relationDescs[i] == NULL)
+		if (indexRelation == NULL)
 			continue;
 
 		indexInfo = indexInfoArray[i];
@@ -1178,18 +1199,285 @@ ExecInsertIndexTuples(TupleTableSlot *slot,
 					   isnull);
 
 		/*
-		 * The index AM does the rest.	Note we suppress unique-index checks
-		 * if we are being called from VACUUM, since VACUUM may need to move
-		 * dead tuples that have the same keys as live ones.
+		 * The index AM does the actual insertion, plus uniqueness checking.
+		 *
+		 * For an immediate-mode unique index, we just tell the index AM to
+		 * throw error if not unique.
+		 *
+		 * For a deferrable unique index, we tell the index AM to just detect
+		 * possible non-uniqueness, and we add the index OID to the result
+		 * list if further checking is needed.
+		 *
+		 * Special hack: we suppress unique-index checks if we are being
+		 * called from VACUUM FULL, since VACUUM FULL may need to move dead
+		 * tuples that have the same keys as live ones.
 		 */
-		index_insert(relationDescs[i],	/* index relation */
-					 values,	/* array of index Datums */
-					 isnull,	/* null flags */
-					 tupleid,	/* tid of heap tuple */
-					 heapRelation,
-					 relationDescs[i]->rd_index->indisunique && !is_vacuum);
+		if (is_vacuum_full || !indexRelation->rd_index->indisunique)
+			checkUnique = UNIQUE_CHECK_NO;
+		else if (indexRelation->rd_index->indimmediate)
+			checkUnique = UNIQUE_CHECK_YES;
+		else
+			checkUnique = UNIQUE_CHECK_PARTIAL;
 
+		satisfiesConstraint =
+			index_insert(indexRelation,	/* index relation */
+						 values,		/* array of index Datums */
+						 isnull,		/* null flags */
+						 tupleid,		/* tid of heap tuple */
+						 heapRelation,	/* heap relation */
+						 checkUnique);	/* type of uniqueness check to do */
+
+		/*
+		 * If the index has an associated exclusion constraint, check that.
+		 * This is simpler than the process for uniqueness checks since we
+		 * always insert first and then check.  If the constraint is deferred,
+		 * we check now anyway, but don't throw error on violation; instead
+		 * we'll queue a recheck event.
+		 *
+		 * An index for an exclusion constraint can't also be UNIQUE (not an
+		 * essential property, we just don't allow it in the grammar), so no
+		 * need to preserve the prior state of satisfiesConstraint.
+		 */
+		if (indexInfo->ii_ExclusionOps != NULL)
+		{
+			bool errorOK = !indexRelation->rd_index->indimmediate;
+
+			satisfiesConstraint =
+				check_exclusion_constraint(heapRelation,
+										   indexRelation, indexInfo,
+										   tupleid, values, isnull,
+										   estate, false, errorOK);
+		}
+
+		if ((checkUnique == UNIQUE_CHECK_PARTIAL ||
+			 indexInfo->ii_ExclusionOps != NULL) &&
+			!satisfiesConstraint)
+		{
+			/*
+			 * The tuple potentially violates the uniqueness or exclusion
+			 * constraint, so make a note of the index so that we can re-check
+			 * it later.
+			 */
+			result = lappend_oid(result, RelationGetRelid(indexRelation));
+		}
 	}
+
+	return result;
+}
+
+/*
+ * Check for violation of an exclusion constraint
+ *
+ * heap: the table containing the new tuple
+ * index: the index supporting the exclusion constraint
+ * indexInfo: info about the index, including the exclusion properties
+ * tupleid: heap TID of the new tuple we have just inserted
+ * values, isnull: the *index* column values computed for the new tuple
+ * estate: an EState we can do evaluation in
+ * newIndex: if true, we are trying to build a new index (this affects
+ *		only the wording of error messages)
+ * errorOK: if true, don't throw error for violation
+ *
+ * Returns true if OK, false if actual or potential violation
+ *
+ * When errorOK is true, we report violation without waiting to see if any
+ * concurrent transaction has committed or not; so the violation is only
+ * potential, and the caller must recheck sometime later.  This behavior
+ * is convenient for deferred exclusion checks; we need not bother queuing
+ * a deferred event if there is definitely no conflict at insertion time.
+ *
+ * When errorOK is false, we'll throw error on violation, so a false result
+ * is impossible.
+ */
+bool
+check_exclusion_constraint(Relation heap, Relation index, IndexInfo *indexInfo,
+						   ItemPointer tupleid, Datum *values, bool *isnull,
+						   EState *estate, bool newIndex, bool errorOK)
+{
+	Oid			*constr_procs = indexInfo->ii_ExclusionProcs;
+	uint16		*constr_strats = indexInfo->ii_ExclusionStrats;
+	int			 index_natts = index->rd_index->indnatts;
+	IndexScanDesc	index_scan;
+	HeapTuple		tup;
+	ScanKeyData		scankeys[INDEX_MAX_KEYS];
+	SnapshotData	DirtySnapshot;
+	int				i;
+	bool			conflict;
+	bool			found_self;
+	TupleTableSlot *existing_slot;
+
+	/*
+	 * If any of the input values are NULL, the constraint check is assumed
+	 * to pass (i.e., we assume the operators are strict).
+	 */
+	for (i = 0; i < index_natts; i++)
+	{
+		if (isnull[i])
+			return true;
+	}
+
+	/*
+	 * Search the tuples that are in the index for any violations,
+	 * including tuples that aren't visible yet.
+	 */
+	InitDirtySnapshot(DirtySnapshot);
+
+	for (i = 0; i < index_natts; i++)
+	{
+		ScanKeyInit(&scankeys[i],
+					i + 1,
+					constr_strats[i],
+					constr_procs[i],
+					values[i]);
+	}
+
+	/* Need a TupleTableSlot to put existing tuples in */
+	existing_slot = MakeSingleTupleTableSlot(RelationGetDescr(heap));
+
+	/*
+	 * May have to restart scan from this point if a potential
+	 * conflict is found.
+	 */
+retry:
+	conflict = false;
+	found_self = false;
+	index_scan = index_beginscan(heap, index, &DirtySnapshot,
+								 index_natts, scankeys);
+
+	while ((tup = index_getnext(index_scan,
+								ForwardScanDirection)) != NULL)
+	{
+		TransactionId	 xwait;
+		Datum		existing_values[INDEX_MAX_KEYS];
+		bool		existing_isnull[INDEX_MAX_KEYS];
+		char		*error_new;
+		char		*error_existing;
+
+		/*
+		 * Ignore the entry for the tuple we're trying to check.
+		 */
+		if (ItemPointerEquals(tupleid, &tup->t_self))
+		{
+			if (found_self)		/* should not happen */
+				elog(ERROR, "found self tuple multiple times in index \"%s\"",
+					 RelationGetRelationName(index));
+			found_self = true;
+			continue;
+		}
+
+		/*
+		 * Extract the index column values and isnull flags from the existing
+		 * tuple.
+		 */
+		ExecStoreHeapTuple(tup,	existing_slot, InvalidBuffer, false);
+		FormIndexDatum(indexInfo, existing_slot, estate,
+					   existing_values, existing_isnull);
+
+		/* If lossy indexscan, must recheck the condition */
+		if (index_scan->xs_recheck)
+		{
+			if (!index_recheck_constraint(index,
+										  constr_procs,
+										  existing_values,
+										  existing_isnull,
+										  values))
+				continue; /* tuple doesn't actually match, so no conflict */
+		}
+
+		/*
+		 * At this point we have either a conflict or a potential conflict.
+		 * If we're not supposed to raise error, just return the fact of the
+		 * potential conflict without waiting to see if it's real.
+		 */
+		if (errorOK)
+		{
+			conflict = true;
+			break;
+		}
+
+		/*
+		 * If an in-progress transaction is affecting the visibility of this
+		 * tuple, we need to wait for it to complete and then recheck.  For
+		 * simplicity we do rechecking by just restarting the whole scan ---
+		 * this case probably doesn't happen often enough to be worth trying
+		 * harder, and anyway we don't want to hold any index internal locks
+		 * while waiting.
+		 */
+		xwait = TransactionIdIsValid(DirtySnapshot.xmin) ?
+			DirtySnapshot.xmin : DirtySnapshot.xmax;
+
+		if (TransactionIdIsValid(xwait))
+		{
+			index_endscan(index_scan);
+			XactLockTableWait(xwait);
+			goto retry;
+		}
+
+		/*
+		 * We have a definite conflict.  Report it.
+		 */
+		error_new = BuildIndexValueDescription(index, values, isnull);
+		error_existing = BuildIndexValueDescription(index, existing_values,
+													existing_isnull);
+		if (newIndex)
+			ereport(ERROR,
+					(errcode(ERRCODE_EXCLUSION_VIOLATION),
+					 errmsg("could not create exclusion constraint \"%s\"",
+							RelationGetRelationName(index)),
+					 errdetail("Key %s conflicts with key %s.",
+							   error_new, error_existing)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_EXCLUSION_VIOLATION),
+					 errmsg("conflicting key value violates exclusion constraint \"%s\"",
+							RelationGetRelationName(index)),
+					 errdetail("Key %s conflicts with existing key %s.",
+							   error_new, error_existing)));
+	}
+
+	index_endscan(index_scan);
+
+	/*
+	 * We should have found our tuple in the index, unless we exited the
+	 * loop early because of conflict.  Complain if not.
+	 */
+	if (!found_self && !conflict)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("failed to re-find tuple within index \"%s\"",
+						RelationGetRelationName(index)),
+				 errhint("This may be because of a non-immutable index expression.")));
+
+	ExecDropSingleTupleTableSlot(existing_slot);
+
+	return !conflict;
+}
+
+/*
+ * Check existing tuple's index values to see if it really matches the
+ * exclusion condition against the new_values.  Returns true if conflict.
+ */
+static bool
+index_recheck_constraint(Relation index, Oid *constr_procs,
+						 Datum *existing_values, bool *existing_isnull,
+						 Datum *new_values)
+{
+	int			index_natts = index->rd_index->indnatts;
+	int			i;
+
+	for (i = 0; i < index_natts; i++)
+	{
+		/* Assume the exclusion operators are strict */
+		if (existing_isnull[i])
+			return false;
+
+		if (!DatumGetBool(OidFunctionCall2(constr_procs[i],
+										   existing_values[i],
+										   new_values[i])))
+			return false;
+	}
+
+	return true;
 }
 
 /*
@@ -1325,9 +1613,12 @@ UnregisterExprContextCallback(ExprContext *econtext,
  *
  * The callback list is emptied (important in case this is only a rescan
  * reset, and not deletion of the ExprContext).
+ *
+ * If isCommit is false, just clean the callback list but don't call 'em.
+ * (See comment for FreeExprContext.)
  */
 static void
-ShutdownExprContext(ExprContext *econtext)
+ShutdownExprContext(ExprContext *econtext, bool isCommit)
 {
 	ExprContext_CB *ecxt_callback;
 	MemoryContext oldcontext;
@@ -1348,7 +1639,8 @@ ShutdownExprContext(ExprContext *econtext)
 	while ((ecxt_callback = econtext->ecxt_callbacks) != NULL)
 	{
 		econtext->ecxt_callbacks = ecxt_callback->next;
-		(*ecxt_callback->function) (ecxt_callback->arg);
+		if (isCommit)
+			(*ecxt_callback->function) (ecxt_callback->arg);
 		pfree(ecxt_callback);
 	}
 
@@ -1496,8 +1788,6 @@ sliceCalculateNumSendingProcesses(Slice *slice)
 			return 1; /* on segment */
 
 		case GANGTYPE_PRIMARY_WRITER:
-			return 0; /* writers don't send */
-
 		case GANGTYPE_PRIMARY_READER:
 			if (slice->directDispatch.isDirectDispatch)
 				return list_length(slice->directDispatch.contentIds);
@@ -1507,86 +1797,6 @@ sliceCalculateNumSendingProcesses(Slice *slice)
 		default:
 			Insist(false);
 			return -1;
-	}
-}
-
-/* Assign gang descriptions to the root slices of the slice forest.
- *
- * The root slices of initPlan slice trees will always run on the QD,
- * which, for the time being, we represent as
- *
- *	  (gangType, gangSize) = <GANGTYPE_UNALLOCATED, 0>.
- *
- * The root slice of the main plan wil run on the QD in case it's a
- * SELECT,	but will run on QE(s) in case it's an INSERT, UPDATE, or
- * DELETE. Because we restrict UPDATE and DELETE to have no motions
- * (i.e., one slice) and because INSERT must always route tuples,
- * the assigment for these will be primary and mirror writer gangs,
- * which we represent as
- *
- *	  (gangType, gangSize) =  <GANGTYPE_PRIMARY_WRITER, N>
- */
-void
-InitRootSlices(QueryDesc *queryDesc)
-{
-	EState	   *estate = queryDesc->estate;
-	SliceTable *sliceTable = estate->es_sliceTable;
-	ListCell   *cell;
-	Slice	   *slice;
-	int			i;
-
-	foreach(cell, sliceTable->slices)
-	{
-		slice = (Slice *) lfirst(cell);
-		i = slice->sliceIndex;
-		if (i == 0)
-		{
-			/* Main plan root slice */
-			switch (queryDesc->operation)
-			{
-				case CMD_SELECT:
-					Assert(slice->gangType == GANGTYPE_UNALLOCATED && slice->gangSize == 0);
-					if (queryDesc->plannedstmt->intoClause != NULL)
-					{
-						slice->gangType = GANGTYPE_PRIMARY_WRITER;
-						slice->gangSize = getgpsegmentCount();
-						slice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(slice);
-					}
-					break;
-
-				case CMD_INSERT:
-				case CMD_UPDATE:
-				case CMD_DELETE:
-				{
-					/* if updating a master-only table: do not dispatch to segments */
-					List *resultRelations = queryDesc->plannedstmt->resultRelations;
-					Assert(list_length(resultRelations) > 0);
-					int idx = list_nth_int(resultRelations, 0);
-					Assert (idx > 0);
-					Oid reloid = getrelid(idx, queryDesc->plannedstmt->rtable);
-					if (GpPolicyFetch(CurrentMemoryContext, reloid)->ptype != POLICYTYPE_ENTRY)
-					{
-						slice->gangType = GANGTYPE_PRIMARY_WRITER;
-						slice->gangSize = getgpsegmentCount();
-						slice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(slice);
-			        }
-			        /* else: result relation is master-only, so top slice should run on the QD and not be dispatched */
-					break;
-				}
-				default:
-					Assert(FALSE);
-			}
-		}
-		if (i <= sliceTable->nMotions)
-		{
-			/* Non-root slice */
-			continue;
-		}
-		else
-		{
-			/* InitPlan root slice */
-			Assert(slice->gangType == GANGTYPE_UNALLOCATED && slice->gangSize == 0);
-		}
 	}
 }
 
@@ -1622,7 +1832,7 @@ static void AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceR
  *
  * On entry, the slice table (at queryDesc->estate->es_sliceTable) has
  * the correct structure (established by InitSliceTable) and has correct
- * gang types (established by function InitRootSlices).
+ * gang types (established by function FillSliceTable).
  *
  * Gang assignment involves taking an inventory of the requirements of
  * each slice tree in the slice table, asking the executor factory to
@@ -1860,12 +2070,14 @@ AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceReq * req)
 
 		case GANGTYPE_PRIMARY_WRITER:
 			Assert(slice->gangSize == getgpsegmentCount());
-			Assert(req->numNgangs > 0 && req->nxtNgang == 0 && req->writer);
+			Assert(req->numNgangs > 0 && req->writer);
 			Assert(req->vecNgangs[0] != NULL);
 
 			slice->primaryGang = req->vecNgangs[req->nxtNgang++];
 			Assert(slice->primaryGang != NULL);
-			slice->primaryProcesses = getCdbProcessList(slice->primaryGang, slice->sliceIndex, &slice->directDispatch);
+			slice->primaryProcesses = getCdbProcessList(slice->primaryGang,
+														slice->sliceIndex,
+														&slice->directDispatch);
 			break;
 
 		case GANGTYPE_SINGLETON_READER:
@@ -1998,12 +2210,13 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		CdbCheckDispatchResult(estate->dispatcherState, waitMode);
 
 		/* If top slice was delegated to QEs, get num of rows processed. */
-		if (sliceRunsOnQE(currentSlice))
+		int primaryWriterSliceIndex = PrimaryWriterSliceIndex(estate);
+		//if (sliceRunsOnQE(currentSlice))
 		{
 			estate->es_processed +=
-				cdbdisp_sumCmdTuples(pr, LocallyExecutingSliceIndex(estate));
+				cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
 			estate->es_lastoid =
-				cdbdisp_maxLastOid(pr, LocallyExecutingSliceIndex(estate));
+				cdbdisp_maxLastOid(pr, primaryWriterSliceIndex);
 			aopartcounts = cdbdisp_sumAoPartTupCount(estate->es_result_partitions, pr);
 		}
 
@@ -2582,6 +2795,29 @@ int LocallyExecutingSliceIndex(EState *estate)
 {
 	Assert(estate);
 	return (!estate->es_sliceTable ? 0 : estate->es_sliceTable->localSlice);
+}
+
+/**
+ * Provide index of slice being executed on the primary writer gang
+ */
+int PrimaryWriterSliceIndex(EState *estate)
+{
+	ListCell   *lc;
+
+	Assert(estate);
+
+	if (!estate->es_sliceTable)
+		return 0;
+
+	foreach (lc, estate->es_sliceTable->slices)
+	{
+		Slice	   *slice = (Slice *) lfirst(lc);
+
+		if (slice->gangType == GANGTYPE_PRIMARY_WRITER)
+			return slice->sliceIndex;
+	}
+
+	return 0;
 }
 
 /**

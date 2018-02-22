@@ -24,7 +24,6 @@
 #include "nodes/print.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-#include "postmaster/primary_mirror_mode.h"
 
 #define WORKFILE_SET_MASK  "XXXXXXXXXX"
 
@@ -49,7 +48,7 @@ static void workfile_mgr_populate_set(const void *resource, const void *param);
 static void workfile_mgr_cleanup_set(const void *resource);
 static void workfile_mgr_delete_set_directory(char *workset_path);
 static void workfile_mgr_unlink_directory(const char *dirpath);
-static StringInfo get_name_from_nodeType(const NodeTag node_type);
+static const char *get_name_from_nodeType(const NodeTag node_type);
 static uint64 get_operator_work_mem(PlanState *ps);
 static char *create_workset_directory(NodeTag node_type, int slice_id);
 
@@ -154,34 +153,26 @@ workfile_mgr_shmem_size(void)
  * Retrieves the operator name.
  * Result is palloc-ed in the current memory context.
  */
-static StringInfo
+static const char *
 get_name_from_nodeType(const NodeTag node_type)
 {
-	StringInfo operator_name = makeStringInfo();
-
 	switch ( node_type )
 	{
 		case T_AggState:
-			appendStringInfoString(operator_name,"Agg");
-			break;
+			return "Agg";
 		case T_HashJoinState:
-			appendStringInfoString(operator_name,"HashJoin");
-			break;
+			return "HashJoin";
 		case T_MaterialState:
-			appendStringInfoString(operator_name,"Material");
-			break;
+			return "Material";
 		case T_SortState:
-			appendStringInfoString(operator_name,"Sort");
-			break;
+			return "Sort";
 		case T_Invalid:
 			/* When spilling from a builtin function, we don't have a valid node type */
-			appendStringInfoString(operator_name,"BuiltinFunction");
-			break;
+			return "BuiltinFunction";
 		default:
-			Assert(false && "Operator not supported by the workfile manager");
+			elog(ERROR, "Operator not supported by the workfile manager");
 	}
-
-	return operator_name;
+	return NULL; /* keep compiler quiet */
 }
 
 /*
@@ -266,77 +257,43 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 static char *
 create_workset_directory(NodeTag node_type, int slice_id)
 {
-	/* Create base directory here. We need database relative path */
-	StringInfo tmp_dirpath = makeStringInfo();
-
-	appendStringInfo(tmp_dirpath,
-					"%s/%s",
-					getCurrentTempFilePath,
-					PG_TEMP_FILES_DIR);
-
-	if (tmp_dirpath->len > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s",
-				getCurrentTempFilePath,
-				PG_TEMP_FILES_DIR)));
-	}
-
-	mkdir(tmp_dirpath->data, S_IRWXU);
-	pfree(tmp_dirpath->data);
-	pfree(tmp_dirpath);
-
 	/* Create workset directory here */
-	StringInfo operator_name = get_name_from_nodeType(node_type);
- 	StringInfo workset_path_masked = makeStringInfo();
+	char	   *dirname;
+	char	   *workfile_path_masked;
+	char	   *workfile_path_unmasked;
+	int			dirpos;
+	char	   *final_dirname;
 
-	appendStringInfo(workset_path_masked,
-			"%s/%s/%s_%s_Slice%d.%s",
-			 getCurrentTempFilePath,
-			 PG_TEMP_FILES_DIR,
-			 WORKFILE_SET_PREFIX,
-			 operator_name->data,
-			 slice_id,
-			 WORKFILE_SET_MASK);
+	dirname = psprintf("%s_%s_Slice%d.%s",
+					   WORKFILE_SET_PREFIX,
+					   get_name_from_nodeType(node_type),
+					   slice_id,
+					   WORKFILE_SET_MASK);
 
-	if (workset_path_masked->len > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s/%s_%s_Slice%d.%s",
-			getCurrentTempFilePath,
-			PG_TEMP_FILES_DIR,
-			WORKFILE_SET_PREFIX,
-			operator_name->data,
-			slice_id,
-			WORKFILE_SET_MASK)));
-	}
+	workfile_path_masked = GetTempFilePath(dirname, true);
 
-	char *workset_path_unmasked = gp_mkdtemp(workset_path_masked->data);
-	if (workset_path_unmasked == NULL)
+	/* We assume that GetTempFilePath() returns 'dirname', with some prefix. Verify. */
+	if (strlen(workfile_path_masked) <= strlen(dirname))
+		elog(ERROR, "unexpected path returned by GetTempFilePath()");
+	dirpos = strlen(workfile_path_masked) - strlen(dirname);
+	if (strcmp(&workfile_path_masked[dirpos], dirname) != 0)
+		elog(ERROR, "unexpected path returned by GetTempFilePath()");
+
+	workfile_path_unmasked = gp_mkdtemp(workfile_path_masked);
+	if (workfile_path_unmasked == NULL)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("could not create spill file directory: %m")));
 	}
 
-	char *final_path = (char *) palloc0(MAXPGPATH);
+	/* Extract just the directory name from the path. */
+	Assert(strlen(workfile_path_unmasked) > dirpos);
+	final_dirname = pstrdup(&workfile_path_unmasked[dirpos]);
 
-	/* Initialize result path. Strip prefix from path since bfz/fd add the getCurrentTempFilePath to it */
-	strlcpy(final_path,
-			workset_path_unmasked + strlen(getCurrentTempFilePath) + 1,
-			MAXPGPATH);
+	pfree(workfile_path_masked);
 
-	if ( strlen(workset_path_unmasked + strlen(getCurrentTempFilePath) + 1)
-			> MAXPGPATH )
-	{
-			ereport(ERROR, (errmsg("cannot generate path %s",
-					workset_path_unmasked + strlen(getCurrentTempFilePath) + 1)));
-	}
-
-	pfree(workset_path_masked->data);
-	pfree(workset_path_masked);
-	pfree(operator_name->data);
-	pfree(operator_name);
-
-	return final_path;
+	return final_dirname;
 }
 
 /*
@@ -407,14 +364,7 @@ static void
 workfile_mgr_delete_set_directory(char *workset_path)
 {
 	/* Add filespace prefix to path */
-	char *reldirpath = (char*)palloc(PATH_MAX);
-	if (snprintf(reldirpath, PATH_MAX, "%s/%s", getCurrentTempFilePath, workset_path) > PATH_MAX)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s", getCurrentTempFilePath,
-                        workset_path)));
-	}
-
-	Assert(reldirpath != NULL);
+	char	   *reldirpath = GetTempFilePath(workset_path, false);
 
 	workfile_mgr_unlink_directory(reldirpath);
 	pfree(reldirpath);

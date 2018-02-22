@@ -42,7 +42,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.31 2009/06/26 20:29:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.32 2009/11/23 09:58:36 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */

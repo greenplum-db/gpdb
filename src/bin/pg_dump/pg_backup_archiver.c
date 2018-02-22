@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.172 2009/06/11 14:49:07 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.177 2009/12/14 00:39:10 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -59,12 +59,14 @@
 #define thandle HANDLE
 #endif
 
+/* Arguments needed for a worker child */
 typedef struct _restore_args
 {
 	ArchiveHandle *AH;
 	TocEntry   *te;
 } RestoreArgs;
 
+/* State for each parallel activity slot */
 typedef struct _parallel_slot
 {
 	thandle		child_id;
@@ -119,11 +121,15 @@ static thandle spawn_restore(RestoreArgs *args);
 static thandle reap_child(ParallelSlot *slots, int n_slots, int *work_status);
 static bool work_in_progress(ParallelSlot *slots, int n_slots);
 static int	get_next_slot(ParallelSlot *slots, int n_slots);
+static void par_list_header_init(TocEntry *l);
+static void par_list_append(TocEntry *l, TocEntry *te);
+static void par_list_remove(TocEntry *te);
 static TocEntry *get_next_work_item(ArchiveHandle *AH,
-				   TocEntry **first_unprocessed,
+				   TocEntry *ready_list,
 				   ParallelSlot *slots, int n_slots);
 static parallel_restore_result parallel_restore(RestoreArgs *args);
-static void mark_work_done(ArchiveHandle *AH, thandle worker, int status,
+static void mark_work_done(ArchiveHandle *AH, TocEntry *ready_list,
+			   thandle worker, int status,
 			   ParallelSlot *slots, int n_slots);
 static void fix_dependencies(ArchiveHandle *AH);
 static bool has_lock_conflicts(TocEntry *te1, TocEntry *te2);
@@ -131,7 +137,8 @@ static void repoint_table_dependencies(ArchiveHandle *AH,
 						   DumpId tableId, DumpId tableDataId);
 static void identify_locking_dependencies(TocEntry *te,
 							  TocEntry **tocsByDumpId);
-static void reduce_dependencies(ArchiveHandle *AH, TocEntry *te);
+static void reduce_dependencies(ArchiveHandle *AH, TocEntry *te,
+								TocEntry *ready_list);
 static void mark_create_done(ArchiveHandle *AH, TocEntry *te);
 static void inhibit_data_for_failed_table(ArchiveHandle *AH, TocEntry *te);
 static ArchiveHandle *CloneArchive(ArchiveHandle *AH);
@@ -919,7 +926,7 @@ EndRestoreBlobs(ArchiveHandle *AH)
  * Called by a format handler to initiate restoration of a blob
  */
 void
-StartRestoreBlob(ArchiveHandle *AH, Oid oid)
+StartRestoreBlob(ArchiveHandle *AH, Oid oid, bool drop)
 {
 	Oid			loOid;
 
@@ -929,6 +936,9 @@ StartRestoreBlob(ArchiveHandle *AH, Oid oid)
 	AH->lo_buf_used = 0;
 
 	ahlog(AH, 1, "restoring large object with OID %u\n", oid);
+
+	if (drop)
+		DropBlobIfExists(AH, oid);
 
 	if (AH->connection)
 	{
@@ -943,7 +953,8 @@ StartRestoreBlob(ArchiveHandle *AH, Oid oid)
 	}
 	else
 	{
-		ahprintf(AH, "SELECT lo_open(lo_create(%u), %d);\n", oid, INV_WRITE);
+		ahprintf(AH, "SELECT pg_catalog.lo_open(pg_catalog.lo_create('%u'), %d);\n",
+				 oid, INV_WRITE);
 	}
 
 	AH->writingBlob = 1;
@@ -967,7 +978,7 @@ EndRestoreBlob(ArchiveHandle *AH, Oid oid)
 	}
 	else
 	{
-		ahprintf(AH, "SELECT lo_close(0);\n\n");
+		ahprintf(AH, "SELECT pg_catalog.lo_close(0);\n\n");
 	}
 }
 
@@ -2110,7 +2121,8 @@ ReadToc(ArchiveHandle *AH)
 			 * the entries into sections
 			 */
 			if (strcmp(te->desc, "COMMENT") == 0 ||
-				strcmp(te->desc, "ACL") == 0)
+				strcmp(te->desc, "ACL") == 0 ||
+				strcmp(te->desc, "DEFAULT ACL") == 0)
 				te->section = SECTION_NONE;
 			else if (strcmp(te->desc, "TABLE DATA") == 0 ||
 					 strcmp(te->desc, "BLOBS") == 0 ||
@@ -2265,7 +2277,8 @@ _tocEntryRequired(TocEntry *te, RestoreOptions *ropt, bool include_acls)
 		return 0;
 
 	/* If it's an ACL, maybe ignore it */
-	if ((!include_acls || ropt->aclsSkip) && strcmp(te->desc, "ACL") == 0)
+	if ((!include_acls || ropt->aclsSkip) &&
+		(strcmp(te->desc, "ACL") == 0 || strcmp(te->desc, "DEFAULT ACL") == 0))
 		return 0;
 
 	if (!ropt->createDB && strcmp(te->desc, "DATABASE") == 0)
@@ -2767,12 +2780,14 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 	/* ACLs are dumped only during acl pass */
 	if (acl_pass)
 	{
-		if (strcmp(te->desc, "ACL") != 0)
+		if (!(strcmp(te->desc, "ACL") == 0 ||
+			  strcmp(te->desc, "DEFAULT ACL") == 0))
 			return;
 	}
 	else
 	{
-		if (strcmp(te->desc, "ACL") == 0)
+		if (strcmp(te->desc, "ACL") == 0 ||
+			strcmp(te->desc, "DEFAULT ACL") == 0)
 			return;
 	}
 
@@ -3222,7 +3237,8 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 	ParallelSlot *slots;
 	int			work_status;
 	int			next_slot;
-	TocEntry   *first_unprocessed = AH->toc->next;
+	TocEntry	pending_list;
+	TocEntry	ready_list;
 	TocEntry   *next_work_item;
 	thandle		ret_child;
 	TocEntry   *te;
@@ -3244,8 +3260,7 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 	 * faster in a single connection because we avoid all the connection and
 	 * setup overhead.
 	 */
-	while ((next_work_item = get_next_work_item(AH, &first_unprocessed,
-												NULL, 0)) != NULL)
+	for (next_work_item = AH->toc->next; next_work_item != AH->toc; next_work_item = next_work_item->next)
 	{
 		if (next_work_item->section == SECTION_DATA ||
 			next_work_item->section == SECTION_POST_DATA)
@@ -3257,8 +3272,8 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 
 		(void) restore_toc_entry(AH, next_work_item, ropt, false);
 
-		next_work_item->restored = true;
-		reduce_dependencies(AH, next_work_item);
+		/* there should be no touch of ready_list here, so pass NULL */
+		reduce_dependencies(AH, next_work_item, NULL);
 	}
 
 	/*
@@ -3282,6 +3297,25 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 	AH->currWithOids = -1;
 
 	/*
+	 * Initialize the lists of pending and ready items.  After this setup,
+	 * the pending list is everything that needs to be done but is blocked
+	 * by one or more dependencies, while the ready list contains items that
+	 * have no remaining dependencies.  Note: we don't yet filter out entries
+	 * that aren't going to be restored.  They might participate in
+	 * dependency chains connecting entries that should be restored, so we
+	 * treat them as live until we actually process them.
+	 */
+	par_list_header_init(&pending_list);
+	par_list_header_init(&ready_list);
+	for (; next_work_item != AH->toc; next_work_item = next_work_item->next)
+	{
+		if (next_work_item->depCount > 0)
+			par_list_append(&pending_list, next_work_item);
+		else
+			par_list_append(&ready_list, next_work_item);
+	}
+
+	/*
 	 * main parent loop
 	 *
 	 * Keep going until there is no worker still running AND there is no work
@@ -3290,7 +3324,7 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 
 	ahlog(AH, 1, "entering main parallel loop\n");
 
-	while ((next_work_item = get_next_work_item(AH, &first_unprocessed,
+	while ((next_work_item = get_next_work_item(AH, &ready_list,
 												slots, n_slots)) != NULL ||
 		   work_in_progress(slots, n_slots))
 	{
@@ -3306,8 +3340,8 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 					  next_work_item->dumpId,
 					  next_work_item->desc, next_work_item->tag);
 
-				next_work_item->restored = true;
-				reduce_dependencies(AH, next_work_item);
+				par_list_remove(next_work_item);
+				reduce_dependencies(AH, next_work_item, &ready_list);
 
 				continue;
 			}
@@ -3322,7 +3356,7 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 					  next_work_item->dumpId,
 					  next_work_item->desc, next_work_item->tag);
 
-				next_work_item->restored = true;
+				par_list_remove(next_work_item);
 
 				/* this memory is dealloced in mark_work_done() */
 				args = malloc(sizeof(RestoreArgs));
@@ -3349,7 +3383,8 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 
 		if (WIFEXITED(work_status))
 		{
-			mark_work_done(AH, ret_child, WEXITSTATUS(work_status),
+			mark_work_done(AH, &ready_list,
+						   ret_child, WEXITSTATUS(work_status),
 						   slots, n_slots);
 		}
 		else
@@ -3376,14 +3411,11 @@ restore_toc_entries_parallel(ArchiveHandle *AH)
 	 * dependencies, or some other pathological condition. If so, do it in the
 	 * single parent connection.
 	 */
-	for (te = AH->toc->next; te != AH->toc; te = te->next)
+	for (te = pending_list.par_next; te != &pending_list; te = te->par_next)
 	{
-		if (!te->restored)
-		{
-			ahlog(AH, 1, "processing missed item %d %s %s\n",
-				  te->dumpId, te->desc, te->tag);
-			(void) restore_toc_entry(AH, te, ropt, false);
-		}
+		ahlog(AH, 1, "processing missed item %d %s %s\n",
+			  te->dumpId, te->desc, te->tag);
+		(void) restore_toc_entry(AH, te, ropt, false);
 	}
 
 	/* The ACLs will be handled back in RestoreArchive. */
@@ -3526,25 +3558,57 @@ has_lock_conflicts(TocEntry *te1, TocEntry *te2)
 }
 
 
+/*
+ * Initialize the header of a parallel-processing list.
+ *
+ * These are circular lists with a dummy TocEntry as header, just like the
+ * main TOC list; but we use separate list links so that an entry can be in
+ * the main TOC list as well as in a parallel-processing list.
+ */
+static void
+par_list_header_init(TocEntry *l)
+{
+	l->par_prev = l->par_next = l;
+}
+
+/* Append te to the end of the parallel-processing list headed by l */
+static void
+par_list_append(TocEntry *l, TocEntry *te)
+{
+	te->par_prev = l->par_prev;
+	l->par_prev->par_next = te;
+	l->par_prev = te;
+	te->par_next = l;
+}
+
+/* Remove te from whatever parallel-processing list it's in */
+static void
+par_list_remove(TocEntry *te)
+{
+	te->par_prev->par_next = te->par_next;
+	te->par_next->par_prev = te->par_prev;
+	te->par_prev = NULL;
+	te->par_next = NULL;
+}
+
 
 /*
  * Find the next work item (if any) that is capable of being run now.
  *
  * To qualify, the item must have no remaining dependencies
- * and no requirement for locks that is incompatible with
- * items currently running.
+ * and no requirements for locks that are incompatible with
+ * items currently running.  Items in the ready_list are known to have
+ * no remaining dependencies, but we have to check for lock conflicts.
  *
- * first_unprocessed is state data that tracks the location of the first
- * TocEntry that's not marked 'restored'.  This avoids O(N^2) search time
- * with long TOC lists.  (Even though the constant is pretty small, it'd
- * get us eventually.)
+ * Note that the returned item has *not* been removed from ready_list.
+ * The caller must do that after successfully dispatching the item.
  *
  * pref_non_data is for an alternative selection algorithm that gives
  * preference to non-data items if there is already a data load running.
  * It is currently disabled.
  */
 static TocEntry *
-get_next_work_item(ArchiveHandle *AH, TocEntry **first_unprocessed,
+get_next_work_item(ArchiveHandle *AH, TocEntry *ready_list,
 				   ParallelSlot *slots, int n_slots)
 {
 	bool		pref_non_data = false;	/* or get from AH->ropt */
@@ -3569,25 +3633,11 @@ get_next_work_item(ArchiveHandle *AH, TocEntry **first_unprocessed,
 	}
 
 	/*
-	 * Advance first_unprocessed if possible.
+	 * Search the ready_list until we find a suitable item.
 	 */
-	for (te = *first_unprocessed; te != AH->toc; te = te->next)
-	{
-		if (!te->restored)
-			break;
-	}
-	*first_unprocessed = te;
-
-	/*
-	 * Search from first_unprocessed until we find an available item.
-	 */
-	for (; te != AH->toc; te = te->next)
+	for (te = ready_list->par_next; te != ready_list; te = te->par_next)
 	{
 		bool		conflicts = false;
-
-		/* Ignore if already done or still waiting on dependencies */
-		if (te->restored || te->depCount > 0)
-			continue;
 
 		/*
 		 * Check to see if the item would need exclusive lock on something
@@ -3701,7 +3751,8 @@ parallel_restore(RestoreArgs *args)
  * update status, and reduce the dependency count of any dependent items.
  */
 static void
-mark_work_done(ArchiveHandle *AH, thandle worker, int status,
+mark_work_done(ArchiveHandle *AH, TocEntry *ready_list,
+			   thandle worker, int status,
 			   ParallelSlot *slots, int n_slots)
 {
 	TocEntry   *te = NULL;
@@ -3740,7 +3791,7 @@ mark_work_done(ArchiveHandle *AH, thandle worker, int status,
 		die_horribly(AH, modulename, "worker process failed: exit code %d\n",
 					 status);
 
-	reduce_dependencies(AH, te);
+	reduce_dependencies(AH, te, ready_list);
 }
 
 
@@ -3765,13 +3816,16 @@ fix_dependencies(ArchiveHandle *AH)
 	 * indexes the TOC entries by dump ID, rather than searching the TOC list
 	 * repeatedly.	Entries for dump IDs not present in the TOC will be NULL.
 	 *
-	 * Also, initialize the depCount fields.
+	 * Also, initialize the depCount fields, and make sure all the TOC items
+	 * are marked as not being in any parallel-processing list.
 	 */
 	tocsByDumpId = (TocEntry **) calloc(AH->maxDumpId, sizeof(TocEntry *));
 	for (te = AH->toc->next; te != AH->toc; te = te->next)
 	{
 		tocsByDumpId[te->dumpId - 1] = te;
 		te->depCount = te->nDeps;
+		te->par_prev = NULL;
+		te->par_next = NULL;
 	}
 
 	/*
@@ -3940,10 +3994,11 @@ identify_locking_dependencies(TocEntry *te, TocEntry **tocsByDumpId)
 
 /*
  * Remove the specified TOC entry from the depCounts of items that depend on
- * it, thereby possibly making them ready-to-run.
+ * it, thereby possibly making them ready-to-run.  Any pending item that
+ * becomes ready should be moved to the ready list.
  */
 static void
-reduce_dependencies(ArchiveHandle *AH, TocEntry *te)
+reduce_dependencies(ArchiveHandle *AH, TocEntry *te, TocEntry *ready_list)
 {
 	DumpId		target = te->dumpId;
 	int			i;
@@ -3960,7 +4015,16 @@ reduce_dependencies(ArchiveHandle *AH, TocEntry *te)
 		for (i = 0; i < te->nDeps; i++)
 		{
 			if (te->dependencies[i] == target)
+			{
 				te->depCount--;
+				if (te->depCount == 0 && te->par_prev != NULL)
+				{
+					/* It must be in the pending list, so remove it ... */
+					par_list_remove(te);
+					/* ... and add to ready_list */
+					par_list_append(ready_list, te);
+				}
+			}
 		}
 	}
 }

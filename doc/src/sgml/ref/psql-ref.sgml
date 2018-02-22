@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.225 2009/04/21 17:23:05 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.235 2009/11/25 20:26:30 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -1033,7 +1033,30 @@ testdb=&gt;
 
 
       <varlistentry>
-        <term><literal>\ddp [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\ddp [ <replaceable class="parameter">pattern</replaceable> ]</literal></term>
+        <listitem>
+        <para>
+        Lists default access privilege settings.  An entry is shown for
+        each role (and schema, if applicable) for which the default
+        privilege settings have been changed from the built-in defaults.
+        If <replaceable class="parameter">pattern</replaceable> is
+        specified, only entries whose role name or schema name matches
+        the pattern are listed.
+        </para>
+
+        <para>
+        The <xref linkend="sql-alterdefaultprivileges"
+        endterm="sql-alterdefaultprivileges-title"> command is used to set
+        default access privileges.  The meaning of the
+        privilege display is explained under
+        <xref linkend="sql-grant" endterm="sql-grant-title">.
+        </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <term><literal>\dD[S] [ <replaceable class="parameter">pattern</replaceable> ]</literal></term>
         <listitem>
         <para>
         Lists default access privilege settings.  An entry is shown for
@@ -1213,7 +1236,7 @@ testdb=&gt;
 
 
       <varlistentry>
-        <term><literal>\dg[+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dg[+] [ <replaceable class="parameter">pattern</replaceable> ]</literal></term>
         <listitem>
         <para>
         Lists database roles. If <replaceable
@@ -1324,29 +1347,27 @@ testdb=&gt;
         <xref linkend="sql-revoke" endterm="sql-revoke-title">
         commands are used to set access privileges.  The meaning of the
         privilege display is explained under
-        <xref linkend="sql-grant">.
+        <xref linkend="sql-grant" endterm="sql-grant-title">.
         </para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
-        <term><literal>\drds [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">role-pattern</replaceable></link> [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">database-pattern</replaceable></link> ] ]</literal></term>
+        <term><literal>\drds [ <replaceable class="parameter">role-pattern</replaceable> [ <replaceable class="parameter">database-pattern </replaceable> ] ]</literal></term>
         <listitem>
         <para>
-        Lists defined configuration settings.  These settings can be
-        role-specific, database-specific, or both.
-        <replaceable>role-pattern</replaceable> and
-        <replaceable>database-pattern</replaceable> are used to select
-        specific roles and databases to list, respectively.  If omitted, or if
-        <literal>*</> is specified, all settings are listed, including those
-        not role-specific or database-specific, respectively.
+        Lists defined configuration settings.  These settings can be role-specific,
+        database-specific, or both.  <literal>role-pattern</literal> and
+        <literal>database-pattern</literal> are used to select
+        specific roles and database to list, respectively; if omitted, or * is specified,
+        all settings are listed, including those not role-specific or database-specific,
+        respectively.
         </para>
 
         <para>
-        The <xref linkend="sql-alterrole"> and
-        <xref linkend="sql-alterdatabase">
-        commands are used to define per-role and per-database configuration
-        settings.
+        The <xref linkend="sql-alterrole" endterm="sql-alterrole-title"> and
+        <xref linkend="sql-alterdatabase" endterm="sql-alterdatabase-title">
+        commands are used to define per-database role configuration settings.
         </para>
         </listitem>
       </varlistentry>
@@ -1370,7 +1391,7 @@ testdb=&gt;
 
 
       <varlistentry>
-        <term><literal>\du[+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\du[+] [ <replaceable class="parameter">pattern</replaceable> ]</literal></term>
         <listitem>
         <para>
         Lists database roles. If <replaceable
@@ -1834,7 +1855,7 @@ lo_import 152801
 
           <para>
           <literal>aligned</literal> format is the standard, human-readable,
-          nicely formatted text output;  this is the default.
+          nicely formatted text output that is default.
           </para>
 
           <para>

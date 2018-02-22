@@ -216,6 +216,7 @@
               <varname>target_column_name</varname>: <varname>source_column_name</varname> | '<varname>expression</varname>'
    <xref href="#topic1/cfpreload" format="dita">PRELOAD</xref>:
     - <xref href="#topic1/cftruncate" format="dita">TRUNCATE</xref>: true | false
+    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: <varname>external_table_name</varname>
     - <xref href="#topic1/cfreusetables" format="dita">REUSE_TABLES</xref>: true | false
    <xref href="#topic1/cfsql" format="dita">SQL</xref>:
     - <xref href="#topic1/cfbefore" format="dita">BEFORE</xref>: "<varname>sql_command</varname>"
@@ -734,6 +735,38 @@
                                     all rows in the target table prior to loading it.</pd>
                             </plentry>
                             <plentry>
+                                <pt id="cfstagetbl">STAGING_TABLE</pt>
+                                <pd>Optional. Specify the name of the temporary external table that
+                                    is created during a <codeph>gpload</codeph> operation. The
+                                    external table is used by <codeph>gpfdist</codeph>.
+                                        <codeph>REUSE_TABLES: true</codeph> must also specified. If
+                                        <codeph>REUSE_TABLES</codeph> is false or not specified,
+                                        <codeph>STAGING_TABLE</codeph> is ignored. By default,
+                                        <codeph>gpload</codeph> creates a temporary external table
+                                    with a randomly generated name.</pd>
+                                <pd>If <varname>external_table_name</varname> contains a period (.),
+                                        <codeph>gpload</codeph> returns an error. If the table
+                                    exists, the utility uses the table. The utility returns an error
+                                    if the existing table schema does not match the
+                                        <codeph>OUTPUT</codeph> table schema.</pd>
+                                <pd>The utility uses the value of <codeph><xref
+                                            href="#topic1/cfschema" format="dita"
+                                        >SCHEMA</xref></codeph> in the <codeph>EXTERNAL</codeph>
+                                    section as the schema for
+                                    <varname>external_table_name</varname>. If the
+                                        <codeph>SCHEMA</codeph> value is <codeph>%</codeph>, the
+                                    schema for <varname>external_table_name</varname> is the same as
+                                    the schema of the target table, the schema of <codeph><xref
+                                            href="#topic1/cftable" format="dita"
+                                        >TABLE</xref></codeph> in the <codeph>OUTPUT</codeph>
+                                    section. </pd>
+                                <pd>If <codeph>SCHEMA</codeph> is not set, the utility searches for
+                                    the table (using the schemas in the database
+                                        <codeph>search_path</codeph>). If the table is not found,
+                                        <varname>external_table_name</varname> is created in the
+                                    default <codeph>PUBLIC</codeph> schema. </pd>
+                            </plentry>
+                            <plentry>
                                 <pt id="cfreusetables">REUSE_TABLES</pt>
                                 <pd>Optional. If set to true, <codeph>gpload</codeph> will not drop
                                     the external table objects and staging table objects it creates.
@@ -747,6 +780,10 @@
                                     If <codeph>REUSE_TABLES: true</codeph> is not specified,
                                     formatting error information is deleted after the
                                         <codeph>gpload</codeph> operation.</pd>
+                                <pd>If the <varname>external_table_name</varname> exists, the
+                                    utility uses the existing table. The utility returns an error if
+                                    the table schema does not match the <codeph>OUTPUT</codeph>
+                                    table schema.</pd>
                             </plentry>
                         </parml></pd>
                 </plentry>

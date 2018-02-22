@@ -79,6 +79,8 @@
 #unix_socket_group = ''			# (change requires restart)
 #unix_socket_permissions = 0777		# begin with 0 to use octal notation
 					# (change requires restart)
+#bonjour = off				# advertise server via Bonjour
+					# (change requires restart)
 #bonjour_name = ''			# defaults to the computer name
 					# (change requires restart)
 
@@ -268,6 +270,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					# statements running at least this number
 					# of milliseconds
 
+
 # - What to Log -
 
 #debug_print_parse = off
@@ -433,7 +436,9 @@ log_autostats=off	# print additional autostats information
 #idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
 #vacuum_freeze_min_age = 50000000
 #vacuum_freeze_table_age = 150000000
-#bytea_output='escape'
+#bytea_output = 'hex'			# hex, escape
+#xmlbinary = 'base64'
+#xmloption = 'content'
 #gin_fuzzy_search_limit = 0
 
 # - Locale and Formatting -
@@ -449,7 +454,7 @@ log_autostats=off	# print additional autostats information
 					#   India
 					# You can create your own file in
 					# share/timezonesets/.
-#extra_float_digits = 0			# min -15, max 2
+#extra_float_digits = 0			# min -15, max 3
 #client_encoding = sql_ascii		# actually, defaults to database
 					# encoding
 
@@ -511,11 +516,10 @@ max_appendonly_tables = 10000 # Maximum number of append only tables that can
 
 # - Previous PostgreSQL Versions -
 
-#add_missing_from = off
 #array_nulls = on
 #backslash_quote = safe_encoding	# on, off, or safe_encoding
 #escape_string_warning = on
-#regex_flavor = advanced		# advanced, extended, or basic
+#lo_compat_privileges = off
 #standard_conforming_strings = on
 #synchronize_seqscans = on
 
@@ -550,4 +554,4 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 # CUSTOMIZED OPTIONS
 #------------------------------------------------------------------------------
 
-#custom_variable_classes = ''			# list of custom variable class names
+# Add settings for extensions here

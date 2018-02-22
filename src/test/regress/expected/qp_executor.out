@@ -29,7 +29,11 @@ select * from cf_executor_test order by a limit 1 for share;
 
 --returning clause
 insert into cf_executor_test values (1) returning *;
-ERROR:  The RETURNING clause of the INSERT statement is not supported in this version of Greenplum Database.
+ a 
+---
+ 1
+(1 row)
+
 drop table cf_executor_test;
 create table cf_executor_test (a integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

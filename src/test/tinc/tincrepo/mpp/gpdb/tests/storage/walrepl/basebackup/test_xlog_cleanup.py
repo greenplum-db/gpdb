@@ -22,6 +22,7 @@ from gppylib.db import dbconn
 from tinctest import logger
 from mpp.lib.PSQL import PSQL
 from mpp.models import MPPTestCase
+from mpp.lib.filerep_util import Filerepe2e_Util
 
 from mpp.gpdb.tests.storage.walrepl import lib as walrepl
 import mpp.gpdb.tests.storage.walrepl.run
@@ -36,36 +37,18 @@ class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTe
         super(basebackup_cases, self).tearDown()
         self.reset_fault('base_backup_post_create_checkpoint')
 
-    def run_gpfaultinjector(self, fault_type, fault_name):
-        cmd_str = 'gpfaultinjector -s 1 -y {0} -f {1}'.format(
-                        fault_type, fault_name)
-        cmd = Command(cmd_str, cmd_str)
-        cmd.run()
-
-        return cmd.get_results()
+    def run_gp_inject_fault(self, fault_type, fault_name):
+        fault_injector = Filerepe2e_Util()
+        fault_injector.inject_fault(f=fault_name, y=fault_type, seg_id=1)
 
     def resume(self, fault_name):
-        return self.run_gpfaultinjector('resume', fault_name)
+        self.run_gp_inject_fault('resume', fault_name)
 
     def suspend_at(self, fault_name):
-        return self.run_gpfaultinjector('suspend', fault_name)
+        self.run_gp_inject_fault('suspend', fault_name)
 
     def reset_fault(self, fault_name):
-        return self.run_gpfaultinjector('reset', fault_name)
-
-    def fault_status(self, fault_name):
-        return self.run_gpfaultinjector('status', fault_name)
-
-    def wait_triggered(self, fault_name):
-
-        search = "fault injection state:'triggered'"
-        for i in walrepl.polling(10, 3):
-            result = self.fault_status(fault_name)
-            stdout = result.stdout
-            if stdout.find(search) > 0:
-                return True
-
-        return False
+        self.run_gp_inject_fault('reset', fault_name)
 
     def test_xlogcleanup(self):
         """
@@ -78,10 +61,7 @@ class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTe
 
         # Inject fault at post checkpoint create (basebackup)
         logger.info ('Injecting base_backup_post_create_checkpoint fault ...')
-        result = self.suspend_at(
-                    'base_backup_post_create_checkpoint')
-        logger.info(result.stdout)
-        self.assertEqual(result.rc, 0, result.stdout)
+        self.suspend_at('base_backup_post_create_checkpoint')
 
         # Now execute basebackup. It will be blocked due to the
         # injected fault.
@@ -93,8 +73,11 @@ class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTe
         # Give basebackup a moment to reach the fault & 
         # trigger it
         logger.info('Check if suspend fault is hit ...')
-        triggered = self.wait_triggered(
-                    'base_backup_post_create_checkpoint')
+        fault_injector = Filerepe2e_Util()
+        triggered = fault_injector.check_fault_status(
+            fault_name='base_backup_post_create_checkpoint',
+            seg_id=1,
+            status='triggered')
         self.assertTrue(triggered, 'Fault was not triggered')
 
         # Perform operations that causes xlog seg generation
@@ -105,9 +88,7 @@ class basebackup_cases(mpp.gpdb.tests.storage.walrepl.run.StandbyRunMixin, MPPTe
             count = count + 1
 
         # Resume basebackup
-        result = self.resume('base_backup_post_create_checkpoint')
-        logger.info(result.stdout)
-        self.assertEqual(result.rc, 0, result.stdout)
+        self.resume('base_backup_post_create_checkpoint')
 
         # Wait until basebackup end
         logger.info('Waiting for basebackup to end ...')

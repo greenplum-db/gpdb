@@ -54,7 +54,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
 
 test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
@@ -77,8 +77,9 @@ test: sreh
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression compression_zstd eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges aocs
+test: external_table external_table_create_privs column_compression compression_zstd eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges aocs
 test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
+test: udf_exception_blocks_panic_scenarios
 test: ic
 ignore: icudp_full
 
@@ -93,7 +94,7 @@ test: wrkloadadmin
 test: gp_toolkit
 
 test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
-test: rle rle_delta dsp
+test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types

@@ -802,21 +802,13 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 {
 	Tuplesortstate_mk *state;
 	char		statedump[MAXPGPATH];
-	char		full_prefix[MAXPGPATH];
 
 	Assert(randomAccess);
 
-	int			len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate",
-							   PG_TEMP_FILES_DIR,
+	int			len = snprintf(statedump, sizeof(statedump), "%s_sortstate",
 							   rwfile_prefix);
 
 	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
-				   PG_TEMP_FILES_DIR,
-				   rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
 
 	if (isWriter)
 	{
@@ -828,7 +820,7 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 										sortOperators, nullsFirstFlags,
 										workMem, randomAccess);
 
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 
 		state->tapeset_state_file = ExecWorkFile_Create(statedump,
 														BUFFILE,
@@ -856,13 +848,13 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 
 		oldctxt = MemoryContextSwitchTo(state->sortcontext);
 
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 
 		state->tapeset_state_file = ExecWorkFile_Open(statedump,
 													  BUFFILE,
 													  false /* delOnClose */ ,
 													  0 /* compressType */ );
-		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
+		ExecWorkFile *tapefile = ExecWorkFile_Open(rwfile_prefix,
 												   BUFFILE,
 												   false /* delOnClose */ ,
 												   0 /* compressType */ );

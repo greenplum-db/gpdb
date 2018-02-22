@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/dependency.c,v 1.89 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/dependency.c,v 1.93 2009/12/11 03:34:55 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,12 +34,14 @@
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_conversion_fn.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_default_acl.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
+#include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -73,6 +75,7 @@
 #include "parser/parsetree.h"
 #include "rewrite/rewriteRemove.h"
 #include "storage/lmgr.h"
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
@@ -142,6 +145,7 @@ static const Oid object_classes[MAX_OCLASS] = {
 	ConversionRelationId,		/* OCLASS_CONVERSION */
 	AttrDefaultRelationId,		/* OCLASS_DEFAULT */
 	LanguageRelationId,			/* OCLASS_LANGUAGE */
+	LargeObjectRelationId,		/* OCLASS_LARGEOBJECT */
 	OperatorRelationId,			/* OCLASS_OPERATOR */
 	OperatorClassRelationId,	/* OCLASS_OPCLASS */
 	OperatorFamilyRelationId,	/* OCLASS_OPFAMILY */
@@ -157,9 +161,13 @@ static const Oid object_classes[MAX_OCLASS] = {
 	AuthIdRelationId,			/* OCLASS_ROLE */
 	DatabaseRelationId,			/* OCLASS_DATABASE */
 	TableSpaceRelationId,		/* OCLASS_TBLSPACE */
+	ForeignDataWrapperRelationId,	/* OCLASS_FDW */
+	ForeignServerRelationId,	/* OCLASS_FOREIGN_SERVER */
+	UserMappingRelationId,		/* OCLASS_USER_MAPPING */
+	DefaultAclRelationId,		/* OCLASS_DEFACL */
+	ExtensionRelationId,		/* OCLASS_EXTENSION */
 	ExtprotocolRelationId,		/* OCLASS_EXTPROTOCOL */
-	CompressionRelationId,		/* OCLASS_COMPRESSION */
-	ExtensionRelationId			/* OCLASS_EXTENSION */
+	CompressionRelationId		/* OCLASS_COMPRESSION */
 };
 
 
@@ -583,7 +591,8 @@ findDependentObjects(const ObjectAddress *object,
 				{
 					char	   *otherObjDesc;
 
-					if (object_address_present(&otherObject, pendingObjects))
+					if (pendingObjects &&
+						object_address_present(&otherObject, pendingObjects))
 					{
 						systable_endscan(scan);
 						/* need to release caller's lock; see notes below */
@@ -1117,6 +1126,10 @@ doDeletion(const ObjectAddress *object)
 			DropProceduralLanguageById(object->objectId);
 			break;
 
+		case OCLASS_LARGEOBJECT:
+			LargeObjectDrop(object->objectId);
+			break;
+
 		case OCLASS_OPERATOR:
 			RemoveOperatorById(object->objectId);
 			break;
@@ -1165,16 +1178,25 @@ doDeletion(const ObjectAddress *object)
 			RemoveTSConfigurationById(object->objectId);
 			break;
 
-		case OCLASS_USER_MAPPING:
-			RemoveUserMappingById(object->objectId);
+			/*
+			 * OCLASS_ROLE, OCLASS_DATABASE, OCLASS_TBLSPACE intentionally
+			 * not handled here
+			 */
+
+		case OCLASS_FDW:
+			RemoveForeignDataWrapperById(object->objectId);
 			break;
 
 		case OCLASS_FOREIGN_SERVER:
 			RemoveForeignServerById(object->objectId);
 			break;
 
-		case OCLASS_FDW:
-			RemoveForeignDataWrapperById(object->objectId);
+		case OCLASS_USER_MAPPING:
+			RemoveUserMappingById(object->objectId);
+			break;
+
+		case OCLASS_DEFACL:
+			RemoveDefaultACLById(object->objectId);
 			break;
 
 		case OCLASS_EXTENSION:
@@ -2080,6 +2102,10 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_LANGUAGE;
 
+		case LargeObjectRelationId:
+			Assert(object->objectSubId == 0);
+			return OCLASS_LARGEOBJECT;
+
 		case OperatorRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_OPERATOR;
@@ -2152,13 +2178,17 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_USER_MAPPING;
 
-		case ExtprotocolRelationId:
+		case DefaultAclRelationId:
 			Assert(object->objectSubId == 0);
-			return OCLASS_EXTPROTOCOL;
+			return OCLASS_DEFACL;
 
 		case ExtensionRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_EXTENSION;
+
+		case ExtprotocolRelationId:
+			Assert(object->objectSubId == 0);
+			return OCLASS_EXTPROTOCOL;
 
 		case CompressionRelationId:
 			Assert(object->objectSubId == 0);
@@ -2340,6 +2370,10 @@ getObjectDescription(const ObjectAddress *object)
 				ReleaseSysCache(langTup);
 				break;
 			}
+		case OCLASS_LARGEOBJECT:
+			appendStringInfo(&buffer, _("large object %u"),
+							 object->objectId);
+			break;
 
 		case OCLASS_OPERATOR:
 			appendStringInfo(&buffer, _("operator %s"),
@@ -2702,6 +2736,69 @@ getObjectDescription(const ObjectAddress *object)
 					usename = "public";
 
 				appendStringInfo(&buffer, _("user mapping for %s"), usename);
+				break;
+			}
+
+		case OCLASS_DEFACL:
+			{
+				Relation	defaclrel;
+				ScanKeyData skey[1];
+				SysScanDesc rcscan;
+				HeapTuple	tup;
+				Form_pg_default_acl defacl;
+
+				defaclrel = heap_open(DefaultAclRelationId, AccessShareLock);
+
+				ScanKeyInit(&skey[0],
+							ObjectIdAttributeNumber,
+							BTEqualStrategyNumber, F_OIDEQ,
+							ObjectIdGetDatum(object->objectId));
+
+				rcscan = systable_beginscan(defaclrel, DefaultAclOidIndexId,
+											true, SnapshotNow, 1, skey);
+
+				tup = systable_getnext(rcscan);
+
+				if (!HeapTupleIsValid(tup))
+					elog(ERROR, "could not find tuple for default ACL %u",
+						 object->objectId);
+
+				defacl = (Form_pg_default_acl) GETSTRUCT(tup);
+
+				switch (defacl->defaclobjtype)
+				{
+					case DEFACLOBJ_RELATION:
+						appendStringInfo(&buffer,
+										 _("default privileges on new relations belonging to role %s"),
+										 GetUserNameFromId(defacl->defaclrole));
+						break;
+					case DEFACLOBJ_SEQUENCE:
+						appendStringInfo(&buffer,
+										 _("default privileges on new sequences belonging to role %s"),
+										 GetUserNameFromId(defacl->defaclrole));
+						break;
+					case DEFACLOBJ_FUNCTION:
+						appendStringInfo(&buffer,
+										 _("default privileges on new functions belonging to role %s"),
+										 GetUserNameFromId(defacl->defaclrole));
+						break;
+					default:
+						/* shouldn't get here */
+						appendStringInfo(&buffer,
+										 _("default privileges belonging to role %s"),
+										 GetUserNameFromId(defacl->defaclrole));
+						break;
+				}
+
+				if (OidIsValid(defacl->defaclnamespace))
+				{
+					appendStringInfo(&buffer,
+									_(" in schema %s"),
+									get_namespace_name(defacl->defaclnamespace));
+				}
+
+				systable_endscan(rcscan);
+				heap_close(defaclrel, AccessShareLock);
 				break;
 			}
 

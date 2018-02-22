@@ -75,21 +75,6 @@ ExecInitSequence(Sequence *node, EState *estate, int eflags)
 	return sequenceState;
 }
 
-int
-ExecCountSlotsSequence(Sequence *node)
-{
-	Assert(list_length(node->subplans) > 0);
-
-	int numSlots = 0;
-	ListCell *lc = NULL;
-	foreach(lc, node->subplans)
-	{
-		numSlots += ExecCountSlotsNode((Plan *)lfirst(lc));
-	}
-
-	return numSlots + SEQUENCE_NSLOTS;
-}
-
 /*
  * completeSubplan
  *   Execute a given subplan to completion.

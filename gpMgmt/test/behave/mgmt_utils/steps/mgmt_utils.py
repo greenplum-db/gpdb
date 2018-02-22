@@ -1843,16 +1843,6 @@ def impl(_):
         if not timestamp in file:
             raise Exception("file found containing inconsistent timestamp")
 
-
-@when('user kills a mirror process with the saved information')
-def impl(context):
-    cmdStr = "ps ux | grep '[m]irror process' | grep %s  | awk '{print $2}'" % context.mirror_port
-    cmd = Command(name='get mirror pid: %s' % cmdStr, cmdStr=cmdStr)
-    cmd.run()
-    pid = cmd.get_stdout_lines()[0]
-    kill_process(int(pid), context.mirror_segdbname, sig=signal.SIGABRT)
-
-
 @when('user temporarily moves the data directory of the killed mirror')
 @then('user temporarily moves the data directory of the killed mirror')
 def impl(context):

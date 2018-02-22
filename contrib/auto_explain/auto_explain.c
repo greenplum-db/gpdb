@@ -6,7 +6,7 @@
  * Copyright (c) 2008-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/auto_explain/auto_explain.c,v 1.5 2009/06/11 14:48:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/contrib/auto_explain/auto_explain.c,v 1.10 2009/12/15 04:57:46 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,7 +22,17 @@ PG_MODULE_MAGIC;
 static int	auto_explain_log_min_duration = -1; /* msec or -1 */
 static bool auto_explain_log_analyze = false;
 static bool auto_explain_log_verbose = false;
+static bool auto_explain_log_buffers = false;
+static int	auto_explain_log_format = EXPLAIN_FORMAT_TEXT;
 static bool auto_explain_log_nested_statements = false;
+
+static const struct config_enum_entry format_options[] = {
+        {"text", EXPLAIN_FORMAT_TEXT, false},
+        {"xml", EXPLAIN_FORMAT_XML, false},
+        {"json", EXPLAIN_FORMAT_JSON, false},
+        {"yaml", EXPLAIN_FORMAT_YAML, false},
+        {NULL, 0, false}
+};
 
 /* Current nesting depth of ExecutorRun calls */
 static int	nesting_level = 0;
@@ -84,6 +94,27 @@ _PG_init(void)
 							 NULL,
 							 NULL);
 
+	DefineCustomBoolVariable("auto_explain.log_buffers",
+							 "Log buffers usage.",
+							 NULL,
+							 &auto_explain_log_buffers,
+							 false,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL);
+
+	DefineCustomEnumVariable("auto_explain.log_format",
+							 "EXPLAIN format to be used for plan logging.",
+							 NULL,
+							 &auto_explain_log_format,
+							 EXPLAIN_FORMAT_TEXT,
+							 format_options,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL);
+
 	DefineCustomBoolVariable("auto_explain.log_nested_statements",
 							 "Log nested statements.",
 							 NULL,
@@ -127,7 +158,11 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	{
 		/* Enable per-node instrumentation iff log_analyze is required. */
 		if (auto_explain_log_analyze && (eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
-			queryDesc->instrument_options = INSTRUMENT_ALL;
+		{
+			queryDesc->instrument_options |= INSTRUMENT_TIMER;
+			if (auto_explain_log_buffers)
+				queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
+		}
 	}
 
 	if (prev_ExecutorStart)
@@ -147,7 +182,7 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			MemoryContext oldcxt;
 
 			oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
-			queryDesc->totaltime = InstrAlloc(1, queryDesc->instrument_options);
+			queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL);
 			MemoryContextSwitchTo(oldcxt);
 		}
 	}
@@ -196,16 +231,21 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 		msec = queryDesc->totaltime->total * 1000.0;
 		if (msec >= auto_explain_log_min_duration)
 		{
-			StringInfoData buf;
+			ExplainState	es;
 
-			initStringInfo(&buf);
-			ExplainPrintPlan(&buf, queryDesc,
-						 queryDesc->instrument_options && auto_explain_log_analyze,
-							 auto_explain_log_verbose);
+			ExplainInitState(&es);
+			es.analyze = (queryDesc->instrument_options && auto_explain_log_analyze);
+			es.verbose = auto_explain_log_verbose;
+			es.buffers = (es.analyze && auto_explain_log_buffers);
+			es.format = auto_explain_log_format;
+
+			ExplainBeginOutput(&es);
+			ExplainPrintPlan(&es, queryDesc);
+			ExplainEndOutput(&es);
 
 			/* Remove last line break */
-			if (buf.len > 0 && buf.data[buf.len - 1] == '\n')
-				buf.data[--buf.len] = '\0';
+			if (es.str->len > 0 && es.str->data[es.str->len - 1] == '\n')
+				es.str->data[--es.str->len] = '\0';
 
 			/*
 			 * Note: we rely on the existing logging of context or
@@ -215,9 +255,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			 */
 			ereport(LOG,
 					(errmsg("duration: %.3f ms  plan:\n%s",
-							msec, buf.data)));
+							msec, es.str->data)));
 
-			pfree(buf.data);
+			pfree(es.str->data);
 		}
 	}
 

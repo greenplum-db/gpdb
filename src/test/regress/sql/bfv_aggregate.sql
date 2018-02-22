@@ -1386,7 +1386,10 @@ select array_agg(a order by b nulls last) from aggordertest;
 select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
-
+-- begin MPP-14125: if prelim function is missing, do not choose hash agg.
+create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
+explain select string_agg(a) from mpp14125 group by b;
+-- end MPP-14125
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

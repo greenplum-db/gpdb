@@ -7,7 +7,7 @@
  *
  * Copyright (c) 1998-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/utils/numeric.h,v 1.27 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/numeric.h,v 1.28 2009/08/10 18:29:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -89,5 +89,10 @@ extern int cmp_numerics(Numeric num1, Numeric num2);
 extern float8 numeric_li_fraction(Numeric x, Numeric x0, Numeric x1, 
 								  bool *eq_bounds, bool *eq_abscissas);
 extern Numeric numeric_li_value(float8 f, Numeric y0, Numeric y1);
+
+/*
+ * Utility functions in numeric.c
+ */
+extern char *numeric_out_sci(Numeric num, int scale);
 
 #endif   /* _PG_NUMERIC_H_ */

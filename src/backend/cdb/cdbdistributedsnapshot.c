@@ -52,8 +52,16 @@ localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 {
 	DistributedSnapshotWithLocalMapping *dslm;
 
-
 	Assert(TransactionIdIsNormal(localXid));
+
+	/*
+	 * In general expect this function to be called only for normal xid, as
+	 * more performant for caller to avoid the call based on
+	 * TransactionIdIsNormal() check but just in case was called can safely
+	 * return false.
+	 */
+	if (!TransactionIdIsNormal(localXid))
+		return false;
 
 	/*
 	 * For single user mode operation like initdb time, let the vacuum

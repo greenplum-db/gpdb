@@ -337,31 +337,31 @@ select count(*) from ext_whois;
 create table v_w as select * from ext_whois;
 -- sort distinct spill to disk/external sort
 select count(*) from (select * from v_w union select * from ext_whois) as foo;
- count
+ count 
 -------
     23
 (1 row)
 
 select count(*) from (select * from v_w union all select * from ext_whois) as foo;
- count
+ count 
 -------
     46
 (1 row)
 
 select count(*) from (select distinct * from ext_whois) as foo;
- count
+ count 
 -------
     23
 (1 row)
 
 select count(*) from (select * from ext_whois order by 1 limit 300000 offset 30000) as foo;
- count
+ count 
 -------
      0
 (1 row)
 
 select count(*) from (select * from ext_whois order by 1 limit 300000 offset 10) as foo;
- count
+ count 
 -------
     13
 (1 row)
@@ -455,7 +455,7 @@ admin_postal_code,
 admin_country,
 rec_path,
 raw_record limit 10 offset 10;
- source_lineno |   domain_name
+ source_lineno |   domain_name   
 ---------------+-----------------
            596 | 007dy.net
            650 | 00163.net
@@ -561,7 +561,7 @@ select * from ext_newline1; -- should pass. using the correct linefeed. file has
 select * from ext_newline2; -- should fail. using an incorrect linefeed. file has 'lf'.
 ERROR:  extra data after last expected column  (seg0 slice1 @hostname@:50000 pid=64819)
 DETAIL:  
-	 External table ext_newline2, line 1 of gpfdist://@hostname@:7070/exttab1/nation.tbl: "0|ALGERIA|0| haggle. carefully final deposits detect slyly agai
+External table ext_newline2, line 1 of gpfdist://@hostname@:7070/exttab1/nation.tbl: "0|ALGERIA|0| haggle. carefully final deposits detect slyly agai
 1|ARGENTINA|1|al foxes promise slyly..."
 drop external table ext_newline1;
 drop external table ext_newline2;

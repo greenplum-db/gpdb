@@ -34,7 +34,6 @@
 #include "miscadmin.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
-#include "utils/flatfiles.h"
 #include "utils/fmgroids.h"
 #include "utils/formatting.h"
 #include "utils/guc.h"

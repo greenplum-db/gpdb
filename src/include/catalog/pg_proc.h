@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_proc.h,v 1.544 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_proc.h,v 1.556 2009/12/06 02:55:54 tgl Exp $
  *
  * NOTES
  *	  The script catalog/genbki.sh reads this file and generates .bki
@@ -33,8 +33,9 @@
  * ----------------
  */
 #define ProcedureRelationId  1255
+#define ProcedureRelation_Rowtype_Id  81
 
-CATALOG(pg_proc,1255) BKI_BOOTSTRAP
+CATALOG(pg_proc,1255) BKI_BOOTSTRAP BKI_ROWTYPE_OID(81)
 {
 	NameData	proname;		/* procedure name */
 	Oid			pronamespace;	/* OID of namespace containing this proc */
@@ -61,7 +62,7 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	text		proargdefaults; /* list of expression trees for argument
 								 * defaults (NULL if none) */
 	text		prosrc;			/* procedure source text */
-	bytea		probin;			/* secondary procedure info (can be NULL) */
+	text		probin;			/* secondary procedure info (can be NULL) */
 	text		proconfig[1];	/* procedure-local GUC settings */
 	aclitem		proacl[1];		/* access permissions */
 	char		prodataaccess;	/* data access indicator */
@@ -1337,6 +1338,8 @@ DATA(insert OID = 1062 (  aclitemeq		   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 16 
 DESCR("equality operator for ACL items");
 DATA(insert OID = 1365 (  makeaclitem	   PGNSP PGUID 12 1 0 0 f f f t f i 4 0 1033 "26 26 25 16" _null_ _null_ _null_ _null_ makeaclitem _null_ _null_ _null_ ));
 DESCR("make ACL item");
+DATA(insert OID = 1689 (  aclexplode	PGNSP PGUID 12 1 10 0 f f f t t s 1 0 2249 "1034" "{1034,26,26,25,16}" "{i,o,o,o,o}" "{acl,grantor,grantee,privilege_type,is_grantable}" _null_ aclexplode _null_ _null_ _null_ ));
+DESCR("convert ACL item array to table, for use by information schema");
 DATA(insert OID = 1044 (  bpcharin		   PGNSP PGUID 12 1 0 0 f f f t f i 3 0 1042 "2275 26 23" _null_ _null_ _null_ _null_ bpcharin _null_ _null_ _null_ ));
 DESCR("I/O");
 DATA(insert OID = 1045 (  bpcharout		   PGNSP PGUID 12 1 0 0 f f f t f i 1 0 2275 "1042" _null_ _null_ _null_ _null_ bpcharout _null_ _null_ _null_ ));
@@ -2228,9 +2231,6 @@ DESCR("matches LIKE expression, case-insensitive");
 DATA(insert OID = 1661 (  bpcharicnlike		PGNSP PGUID 12 1 0 0 f f f t f i 2 0 16 "1042 25" _null_ _null_ _null_ _null_ texticnlike _null_ _null_ _null_ ));
 DESCR("does not match LIKE expression, case-insensitive");
 
-DATA(insert OID = 1689 (  flatfile_update_trigger  PGNSP PGUID 12 1 0 0 f f f t f v 0 0 2279 "" _null_ _null_ _null_ _null_ flatfile_update_trigger _null_ _null_ _null_ ));
-DESCR("update flat-file copy of a shared catalog");
-
 /* Oracle Compatibility Related Functions - By Edmund Mergl <E.Mergl@bawue.de> */
 DATA(insert OID =  868 (  strpos	   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 23 "25 25" _null_ _null_ _null_ _null_ textpos _null_ _null_ _null_ ));
 DESCR("find position of substring");
@@ -2326,6 +2326,9 @@ DESCR("convert encoding name to encoding id");
 DATA(insert OID = 1597 (  pg_encoding_to_char	   PGNSP PGUID 12 1 0 0 f f f t f s 1 0 19 "23" _null_ _null_ _null_ _null_ PG_encoding_to_char _null_ _null_ _null_ ));
 DESCR("convert encoding id to encoding name");
 
+DATA(insert OID = 2319 (  pg_encoding_max_length   PGNSP PGUID 12 1 0 0 f f f t f i 1 0 23 "23" _null_ _null_ _null_ _null_ pg_encoding_max_length_sql _null_ _null_ _null_ ));
+DESCR("maximum octet length of a character in given encoding");
+
 DATA(insert OID = 1638 (  oidgt				   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 16 "26 26" _null_ _null_ _null_ _null_ oidgt _null_ _null_ _null_ ));
 DESCR("greater-than");
 DATA(insert OID = 1639 (  oidge				   PGNSP PGUID 12 1 0 0 f f f t f i 2 0 16 "26 26" _null_ _null_ _null_ _null_ oidge _null_ _null_ _null_ ));
@@ -2367,6 +2370,10 @@ DESCR("convert generic options array to name/value table");
 
 DATA(insert OID = 1619 (  pg_typeof				PGNSP PGUID 12 1 0 0 f f f f f s 1 0 2206 "2276" _null_ _null_ _null_ _null_  pg_typeof _null_ _null_ _null_ ));
 DESCR("returns the type of the argument");
+
+/* Deferrable unique constraint trigger */
+DATA(insert OID = 1250 (  unique_key_recheck	PGNSP PGUID 12 1 0 0 f f f t f v 0 0 2279 "" _null_ _null_ _null_ _null_ unique_key_recheck _null_ _null_ _null_ ));
+DESCR("deferred UNIQUE constraint check");
 
 /* Generic referential integrity constraint triggers */
 GPDB_EXTRA_COL(pg_proc_prodataaccess = m);
@@ -2985,6 +2992,19 @@ DATA(insert OID = 1926 (  has_table_privilege		   PGNSP PGUID 12 1 0 0 f f f t f
 DESCR("current user privilege on relation by rel name");
 DATA(insert OID = 1927 (  has_table_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 2 0 16 "26 25" _null_ _null_ _null_ _null_ has_table_privilege_id _null_ _null_ _null_ ));
 DESCR("current user privilege on relation by rel oid");
+
+DATA(insert OID = 2181 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 3 0 16 "19 25 25" _null_ _null_ _null_ _null_	has_sequence_privilege_name_name _null_ _null_ _null_ ));
+DESCR("user privilege on sequence by username, seq name");
+DATA(insert OID = 2182 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 3 0 16 "19 26 25" _null_ _null_ _null_ _null_	has_sequence_privilege_name_id _null_ _null_ _null_ ));
+DESCR("user privilege on sequence by username, seq oid");
+DATA(insert OID = 2183 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 3 0 16 "26 25 25" _null_ _null_ _null_ _null_	has_sequence_privilege_id_name _null_ _null_ _null_ ));
+DESCR("user privilege on sequence by user oid, seq name");
+DATA(insert OID = 2184 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 3 0 16 "26 26 25" _null_ _null_ _null_ _null_	has_sequence_privilege_id_id _null_ _null_ _null_ ));
+DESCR("user privilege on sequence by user oid, seq oid");
+DATA(insert OID = 2185 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 2 0 16 "25 25" _null_ _null_ _null_ _null_ has_sequence_privilege_name _null_ _null_ _null_ ));
+DESCR("current user privilege on sequence by seq name");
+DATA(insert OID = 2186 (  has_sequence_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 2 0 16 "26 25" _null_ _null_ _null_ _null_ has_sequence_privilege_id _null_ _null_ _null_ ));
+DESCR("current user privilege on sequence by seq oid");
 
 DATA(insert OID = 3012 (  has_column_privilege		   PGNSP PGUID 12 1 0 0 f f f t f s 4 0 16 "19 25 25 25" _null_ _null_ _null_ _null_	has_column_privilege_name_name_name _null_ _null_ _null_ ));
 DESCR("user privilege on column by username, rel name, col name");
@@ -4152,6 +4172,8 @@ DATA(insert OID = 2599 (  pg_timezone_abbrevs	PGNSP PGUID 12 1 1000 0 f f f t t 
 DESCR("get the available time zone abbreviations");
 DATA(insert OID = 2856 (  pg_timezone_names		PGNSP PGUID 12 1 1000 0 f f f t t s 0 0 2249 "" "{25,25,1186,16}" "{o,o,o,o}" "{name,abbrev,utc_offset,is_dst}" _null_ pg_timezone_names _null_ _null_ _null_ ));
 DESCR("get the available time zone names");
+DATA(insert OID = 2730 (  pg_get_triggerdef    PGNSP PGUID 12 1 0 0 f f f t f s 2 0 25 "26 16" _null_ _null_ _null_ _null_ pg_get_triggerdef_ext _null_ _null_ _null_ ));
+DESCR("trigger description with pretty-print option");
 
 /* non-persistent series generator */
 DATA(insert OID = 1066 (  generate_series PGNSP PGUID 12 1 1000 0 f f f t t i 3 0 23 "23 23 23" _null_ _null_ _null_ _null_ generate_series_step_int4 _null_ _null_ _null_ ));

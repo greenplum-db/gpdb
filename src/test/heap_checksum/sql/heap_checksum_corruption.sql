@@ -111,6 +111,9 @@ $$ LANGUAGE plpgsql;
 -- Make sure that checksum is enabled
 SHOW data_checksums;
 
+-- skip FTS probes always
+SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+
 --  Corrupt a heap table
 create table corrupt_table(a int);
 insert into corrupt_table select i from generate_series(1, 10) i;
@@ -184,3 +187,5 @@ select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', 
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
 DROP SCHEMA corrupt_heap_checksum CASCADE;
+-- resume fts
+SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);

@@ -85,6 +85,9 @@
 /* Greenplum version as a number */
 #undef GP_VERSION_NUM
 
+/* Define to 1 if you have the `append_history' function. */
+#undef HAVE_APPEND_HISTORY
+
 /* Define to 1 if you have the <apr_getopt.h> header file. */
 #undef HAVE_APR_GETOPT_H
 
@@ -162,6 +165,9 @@
 
 /* Define to 1 if you have the <endian.h> header file. */
 #undef HAVE_ENDIAN_H
+
+/* Define to 1 if you have the `erand48' function. */
+#undef HAVE_ERAND48
 
 /* Define to 1 if you have the `ERR_set_mark' function. */
 #undef HAVE_ERR_SET_MARK
@@ -271,6 +277,9 @@
 
 /* Define to 1 if you have the <history.h> header file. */
 #undef HAVE_HISTORY_H
+
+/* Define to 1 if you have the `history_truncate_file' function. */
+#undef HAVE_HISTORY_TRUNCATE_FILE
 
 /* Define to 1 if you have the <ieeefp.h> header file. */
 #undef HAVE_IEEEFP_H
@@ -488,9 +497,6 @@
 
 /* Define to 1 if you have the `readlink' function. */
 #undef HAVE_READLINK
-
-/* Define to 1 if you have the `replace_history_entry' function. */
-#undef HAVE_REPLACE_HISTORY_ENTRY
 
 /* Define to 1 if you have the `rint' function. */
 #undef HAVE_RINT

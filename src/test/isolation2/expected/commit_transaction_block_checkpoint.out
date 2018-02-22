@@ -23,7 +23,7 @@ CREATE
 select gp_inject_fault('twophase_transaction_commit_prepared', 'wait_until_triggered', '', '', '', 1, 0, 3);
 gp_inject_fault
 ---------------
-t                     
+t              
 (1 row)
 
 -- do checkpoint on segment content 1 in utility mode, and it should block
@@ -63,7 +63,7 @@ DROP
 select gp_inject_fault('onephase_transaction_commit', 'wait_until_triggered', '', '', '', 1, 0, 1);
 gp_inject_fault
 ---------------
-t                     
+t              
 (1 row)
 
 -- do checkpoint on master in utility mode, and it should block

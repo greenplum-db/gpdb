@@ -247,7 +247,8 @@
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>
         <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU
-          resources. With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from
+          resources. (cgroups are <b>not</b> used for resource group memory management.) 
+          With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from
           other processes on the node. This allows Greenplum to support CPU usage restrictions on a
           per-resource-group basis.</p>
         <p>For detailed information about cgroups, refer to the Control Groups documentation for
@@ -428,6 +429,12 @@ gpstart
           </tbody>
         </tgroup>
       </table>
+      <p>Keep in mind that the <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph>
+        values for the default resource groups <codeph>admin_group</codeph> and
+        <codeph>default_group</codeph> contribute to the total percentages on a segment host.
+        You may find that you need to adjust these limits for <codeph>admin_group</codeph>
+        and/or <codeph>default_group</codeph> as you create and add new resource groups to
+        your Greenplum Database deployment.</p>
     </body>
   </topic>
 

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.43 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.44 2009/07/16 06:33:45 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,6 +36,7 @@ typedef struct NewConstraint
 	char	   *name;			/* Constraint name, or NULL if none */
 	ConstrType	contype;		/* CHECK or FOREIGN */
 	Oid			refrelid;		/* PK rel, if FOREIGN */
+	Oid			refindid;		/* OID of PK's index, if FOREIGN */
 	Oid			conid;			/* OID of pg_constraint entry, if FOREIGN */
 	Node	   *qual;			/* Check expr or FkConstraint struct */
 	List	   *qualstate;		/* Execution state for CHECK */
@@ -74,7 +75,7 @@ extern void AlterRelationNamespaceInternal(Relation classRel, Oid relOid,
 
 extern void CheckTableNotInUse(Relation rel, const char *stmt);
 
-extern void TruncateRelfiles(Relation rel);
+extern void TruncateRelfiles(Relation rel, SubTransactionId mysubid);
 
 extern void ExecuteTruncate(TruncateStmt *stmt);
 

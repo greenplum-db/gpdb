@@ -164,22 +164,6 @@ CTranslatorRelcacheToDXL::PimdobjGPDB
 
 	OID oid = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
 
-	// GPDB_84_MERGE_FIXME: The OIDS of a few built-in window
-	// functions have been hard-coded in ORCA. But the OIDs
-	// were changed when we merged the upstream window function
-	// implementation, to match the upstream OIDs. Map the old
-	// OIDs to the upstream ones.
-	if (oid == 7000)	// ROW_NUMBER()
-		oid = 3100;
-	if (oid == 7002)	// DENSE_RANK()
-		oid = 3102;
-	if (oid == 7003)	// PERCENT_RANK()
-		oid = 3103;
-	if (oid == 7004)	// CUME_DIST()
-		oid = 3104;
-	if (oid == 7005)	// NTILE(int4)
-		oid = 3105;
-
 	GPOS_ASSERT(0 != oid);
 
 	// find out what type of object this oid stands for
@@ -811,6 +795,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 										pmdnameCol,
 										att->attnum,
 										pmdidCol,
+										att->atttypmod,
 										!att->attnotnull,
 										att->attisdropped,
 										pdxlnDefault /* default value */,
@@ -1028,7 +1013,8 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 										(
 										pmdnameCol, 
 										attno, 
-										CTranslatorUtils::PmdidSystemColType(pmp, attno), 
+										CTranslatorUtils::PmdidSystemColType(pmp, attno),
+										IDefaultTypeModifier,
 										false,	// fNullable
 										false,	// fDropped
 										NULL,	// default value
@@ -1834,23 +1820,6 @@ CTranslatorRelcacheToDXL::Pmdfunc
 {
 	OID oidFunc = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
 
-
-	// GPDB_84_MERGE_FIXME: The OIDS of a few built-in window
-	// functions have been hard-coded in ORCA. But the OIDs
-	// were changed when we merged the upstream window function
-	// implementation, to match the upstream OIDs. Map the old
-	// OIDs to the upstream ones.
-	if (oidFunc == 7000)	// ROW_NUMBER()
-		oidFunc = 3100;
-	if (oidFunc == 7002)	// DENSE_RANK()
-		oidFunc = 3102;
-	if (oidFunc == 7003)	// PERCENT_RANK()
-		oidFunc = 3103;
-	if (oidFunc == 7004)	// CUME_DIST()
-		oidFunc = 3104;
-	if (oidFunc == 7005)	// NTILE(int4)
-		oidFunc = 3105;
-
 	GPOS_ASSERT(InvalidOid != oidFunc);
 
 	// get func name
@@ -2117,6 +2086,7 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 										ul + 1 /*ulColId*/,
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(),
 										false /* fColDropped */
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -2767,7 +2737,7 @@ CTranslatorRelcacheToDXL::PimdobjCast
 		case COERCION_PATH_ARRAYCOERCE:
 		{
 			coercePathType = IMDCast::EmdtArrayCoerce;
-			return GPOS_NEW(pmp) CMDArrayCoerceCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtArrayCoerce, -1, false, EdxlcfImplicitCast, -1);
+			return GPOS_NEW(pmp) CMDArrayCoerceCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtArrayCoerce, IDefaultTypeModifier, false, EdxlcfImplicitCast, -1);
 		}
 			break;
 		case COERCION_PATH_FUNC:
@@ -3440,6 +3410,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrIndex
 										ul + 1, // ulColId
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(),
 										false // fColDropped
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -3528,6 +3499,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 											ul + 1, // ulColId
 											pmdcol->IAttno(),
 											pmdidColType,
+											pmdcol->ITypeModifier(),
 											false // fColDropped
 											);
 			pdrgpdxlcd->Append(pdxlcd);

@@ -1473,6 +1473,11 @@ buildSliceIndexGangIdMap(SliceVec *sliceVec, int numSlices, int numTotalSlices)
  * ParamExternDatas into a List of SerializedParamExternData nodes,
  * which we can then pass to nodeToStringBinary().
  *
+ * - The paramFetch callback, which could be used in this process to fetch
+ * parameter values on-demand, cannot be used in a different process.
+ * Therefore, fetch all parameters before serializing them. When
+ * deserializing, leave the callbacks NULL.
+ *
  * - In order to deserialize correctly, the receiver needs the typlen and
  * typbyval information for each datatype. The receiver has access to the
  * catalogs, so it could look them up, but for the sake of simplicity and
@@ -1510,6 +1515,13 @@ serializeParamListInfo(ParamListInfo paramLI, int *len_p)
 	{
 		ParamExternData *prm = &paramLI->params[i];
 		SerializedParamExternData *sprm;
+
+		/*
+		 * First, use paramFetch to fetch any "lazy" parameters. (The callback
+		 * function is of no use in the QE.)
+		 */
+		if (paramLI->paramFetch && !OidIsValid(prm->ptype))
+			(*paramLI->paramFetch) (paramLI, i + 1);
 
 		sprm = makeNode(SerializedParamExternData);
 

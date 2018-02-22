@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.300 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.317 2009/12/15 17:57:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,12 +42,12 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
-#include "parser/gramparse.h"
 #include "parser/keywords.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_cte.h"
+#include "parser/parser.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteHandler.h"
 #include "rewrite/rewriteManip.h"
@@ -148,10 +148,12 @@ static char *deparse_expression_pretty(Node *expr, List *dpcontext,
 						  bool forceprefix, bool showimplicit,
 						  int prettyFlags, int startIndent);
 static char *pg_get_viewdef_worker(Oid viewoid, int prettyFlags);
+static char *pg_get_triggerdef_worker(Oid trigid, bool pretty);
 static void decompile_column_index_array(Datum column_index_array, Oid relId,
 							 StringInfo buf);
 static char *pg_get_ruledef_worker(Oid ruleoid, int prettyFlags);
 static char *pg_get_indexdef_worker(Oid indexrelid, int colno,
+					   const Oid *excludeOps,
 					   bool attrsOnly, bool showTblSpc,
 					   int prettyFlags);
 static char *pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
@@ -200,7 +202,6 @@ static RangeTblEntry *find_rte_by_refname(const char *refname,
 					deparse_context *context);
 static const char *get_simple_binary_op_name(OpExpr *expr);
 static bool isSimpleNode(Node *node, Node *parentNode, int prettyFlags);
-static void appendStringInfoSpaces(StringInfo buf, int count);
 static void appendContextKeyword(deparse_context *context, const char *str,
 					 int indentBefore, int indentAfter, int indentPlus);
 static void get_rule_expr(Node *node, deparse_context *context,
@@ -237,7 +238,7 @@ static void printSubscripts(ArrayRef *aref, deparse_context *context);
 static char *get_relation_name(Oid relid);
 static char *generate_relation_name(Oid relid, List *namespaces);
 static char *generate_function_name(Oid funcid, int nargs,
-					   Oid *argtypes,
+					   List *argnames, Oid *argtypes,
 					   bool has_variadic, bool *use_variadic_p);
 static char *generate_operator_name(Oid operid, Oid arg1, Oid arg2);
 static text *string_to_text(char *str);
@@ -485,6 +486,22 @@ Datum
 pg_get_triggerdef(PG_FUNCTION_ARGS)
 {
 	Oid			trigid = PG_GETARG_OID(0);
+
+	PG_RETURN_TEXT_P(string_to_text(pg_get_triggerdef_worker(trigid, false)));
+}
+
+Datum
+pg_get_triggerdef_ext(PG_FUNCTION_ARGS)
+{
+	Oid			trigid = PG_GETARG_OID(0);
+	bool		pretty = PG_GETARG_BOOL(1);
+
+	PG_RETURN_TEXT_P(string_to_text(pg_get_triggerdef_worker(trigid, pretty)));
+}
+
+static char *
+pg_get_triggerdef_worker(Oid trigid, bool pretty)
+{
 	HeapTuple	ht_trig;
 	Form_pg_trigger trigrec;
 	StringInfoData buf;
@@ -493,6 +510,8 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 	SysScanDesc tgscan;
 	int			findx = 0;
 	char	   *tgname;
+	Datum		value;
+	bool		isnull;
 
 	/*
 	 * Fetch the pg_trigger tuple by the Oid of the trigger
@@ -521,9 +540,10 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 	initStringInfo(&buf);
 
 	tgname = NameStr(trigrec->tgname);
-	appendStringInfo(&buf, "CREATE %sTRIGGER %s ",
+	appendStringInfo(&buf, "CREATE %sTRIGGER %s",
 					 trigrec->tgisconstraint ? "CONSTRAINT " : "",
 					 quote_identifier(tgname));
+	appendStringInfoString(&buf, pretty ? "\n    " : " ");
 
 	if (TRIGGER_FOR_BEFORE(trigrec->tgtype))
 		appendStringInfo(&buf, "BEFORE");
@@ -548,6 +568,24 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 			appendStringInfo(&buf, " OR UPDATE");
 		else
 			appendStringInfo(&buf, " UPDATE");
+		findx++;
+		/* tgattr is first var-width field, so OK to access directly */
+		if (trigrec->tgattr.dim1 > 0)
+		{
+			int		i;
+
+			appendStringInfoString(&buf, " OF ");
+			for (i = 0; i < trigrec->tgattr.dim1; i++)
+			{
+				char   *attname;
+
+				if (i > 0)
+					appendStringInfoString(&buf, ", ");
+				attname = get_relid_attribute_name(trigrec->tgrelid,
+												   trigrec->tgattr.values[i]);
+				appendStringInfoString(&buf, quote_identifier(attname));
+			}
+		}
 	}
 	if (TRIGGER_FOR_TRUNCATE(trigrec->tgtype))
 	{
@@ -555,49 +593,101 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 			appendStringInfo(&buf, " OR TRUNCATE");
 		else
 			appendStringInfo(&buf, " TRUNCATE");
+		findx++;
 	}
-	appendStringInfo(&buf, " ON %s ",
+	appendStringInfo(&buf, " ON %s",
 					 generate_relation_name(trigrec->tgrelid, NIL));
+	appendStringInfoString(&buf, pretty ? "\n    " : " ");
 
 	if (trigrec->tgisconstraint)
 	{
-		if (trigrec->tgconstrrelid != InvalidOid)
-			appendStringInfo(&buf, "FROM %s ",
-							 generate_relation_name(trigrec->tgconstrrelid,
-													NIL));
+		if (OidIsValid(trigrec->tgconstrrelid))
+		{
+			appendStringInfo(&buf, "FROM %s",
+							 generate_relation_name(trigrec->tgconstrrelid, NIL));
+			appendStringInfoString(&buf, pretty ? "\n    " : " ");
+		}
 		if (!trigrec->tgdeferrable)
 			appendStringInfo(&buf, "NOT ");
 		appendStringInfo(&buf, "DEFERRABLE INITIALLY ");
 		if (trigrec->tginitdeferred)
-			appendStringInfo(&buf, "DEFERRED ");
+			appendStringInfo(&buf, "DEFERRED");
 		else
-			appendStringInfo(&buf, "IMMEDIATE ");
-
+			appendStringInfo(&buf, "IMMEDIATE");
+		appendStringInfoString(&buf, pretty ? "\n    " : " ");
 	}
 
 	if (TRIGGER_FOR_ROW(trigrec->tgtype))
-		appendStringInfo(&buf, "FOR EACH ROW ");
+		appendStringInfo(&buf, "FOR EACH ROW");
 	else
-		appendStringInfo(&buf, "FOR EACH STATEMENT ");
+		appendStringInfo(&buf, "FOR EACH STATEMENT");
+	appendStringInfoString(&buf, pretty ? "\n    " : " ");
+
+	/* If the trigger has a WHEN qualification, add that */
+	value = fastgetattr(ht_trig, Anum_pg_trigger_tgqual,
+						tgrel->rd_att, &isnull);
+	if (!isnull)
+	{
+		Node			   *qual;
+		deparse_context		context;
+		deparse_namespace	dpns;
+		RangeTblEntry	   *oldrte;
+		RangeTblEntry	   *newrte;
+
+		appendStringInfoString(&buf, "WHEN (");
+
+		qual = stringToNode(TextDatumGetCString(value));
+
+		/* Build minimal OLD and NEW RTEs for the rel */
+		oldrte = makeNode(RangeTblEntry);
+		oldrte->rtekind = RTE_RELATION;
+		oldrte->relid = trigrec->tgrelid;
+		oldrte->eref = makeAlias("old", NIL);
+		oldrte->inh = false;
+		oldrte->inFromCl = true;
+
+		newrte = makeNode(RangeTblEntry);
+		newrte->rtekind = RTE_RELATION;
+		newrte->relid = trigrec->tgrelid;
+		newrte->eref = makeAlias("new", NIL);
+		newrte->inh = false;
+		newrte->inFromCl = true;
+
+		/* Build two-element rtable */
+		dpns.rtable = list_make2(oldrte, newrte);
+		dpns.ctes = NIL;
+		dpns.subplans = NIL;
+		dpns.outer_plan = dpns.inner_plan = NULL;
+
+		/* Set up context with one-deep namespace stack */
+		context.buf = &buf;
+		context.namespaces = list_make1(&dpns);
+		context.windowClause = NIL;
+		context.windowTList = NIL;
+		context.varprefix = true;
+		context.prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
+		context.indentLevel = PRETTYINDENT_STD;
+
+		get_rule_expr(qual, &context, false);
+
+		appendStringInfo(&buf, ")%s", pretty ? "\n    " : " ");
+	}
 
 	appendStringInfo(&buf, "EXECUTE PROCEDURE %s(",
 					 generate_function_name(trigrec->tgfoid, 0,
-											NULL,
+											NIL, NULL,
 											false, NULL));
 
 	if (trigrec->tgnargs > 0)
 	{
-		bytea	   *val;
-		bool		isnull;
 		char	   *p;
 		int			i;
 
-		val = DatumGetByteaP(fastgetattr(ht_trig,
-										 Anum_pg_trigger_tgargs,
-										 tgrel->rd_att, &isnull));
+		value = fastgetattr(ht_trig, Anum_pg_trigger_tgargs,
+							tgrel->rd_att, &isnull);
 		if (isnull)
 			elog(ERROR, "tgargs is null for trigger %u", trigid);
-		p = (char *) VARDATA(val);
+		p = (char *) VARDATA(DatumGetByteaP(value));
 		for (i = 0; i < trigrec->tgnargs; i++)
 		{
 			if (i > 0)
@@ -618,7 +708,7 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 
 	heap_close(tgrel, AccessShareLock);
 
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
+	return buf.data;
 }
 
 /* ----------
@@ -639,6 +729,7 @@ pg_get_indexdef(PG_FUNCTION_ARGS)
 	Oid			indexrelid = PG_GETARG_OID(0);
 
 	PG_RETURN_TEXT_P(string_to_text(pg_get_indexdef_worker(indexrelid, 0,
+														   NULL,
 														   false, false, 0)));
 }
 
@@ -652,6 +743,7 @@ pg_get_indexdef_ext(PG_FUNCTION_ARGS)
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 	PG_RETURN_TEXT_P(string_to_text(pg_get_indexdef_worker(indexrelid, colno,
+														   NULL,
 														   colno != 0,
 														   false,
 														   prettyFlags)));
@@ -661,7 +753,7 @@ pg_get_indexdef_ext(PG_FUNCTION_ARGS)
 char *
 pg_get_indexdef_string(Oid indexrelid)
 {
-	return pg_get_indexdef_worker(indexrelid, 0, false, true, 0);
+	return pg_get_indexdef_worker(indexrelid, 0, NULL, false, true, 0);
 }
 
 /* Internal version that just reports the column definitions */
@@ -671,14 +763,23 @@ pg_get_indexdef_columns(Oid indexrelid, bool pretty)
 	int			prettyFlags;
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
-	return pg_get_indexdef_worker(indexrelid, 0, true, false, prettyFlags);
+	return pg_get_indexdef_worker(indexrelid, 0, NULL, true, false, prettyFlags);
 }
 
+/*
+ * Internal workhorse to decompile an index definition.
+ *
+ * This is now used for exclusion constraints as well: if excludeOps is not
+ * NULL then it points to an array of exclusion operator OIDs.
+ */
 static char *
 pg_get_indexdef_worker(Oid indexrelid, int colno,
+					   const Oid *excludeOps,
 					   bool attrsOnly, bool showTblSpc,
 					   int prettyFlags)
 {
+	/* might want a separate isConstraint parameter later */
+	bool		isConstraint = (excludeOps != NULL);
 	HeapTuple	ht_idx;
 	HeapTuple	ht_idxrel;
 	HeapTuple	ht_am;
@@ -780,11 +881,17 @@ pg_get_indexdef_worker(Oid indexrelid, int colno,
 	initStringInfo(&buf);
 
 	if (!attrsOnly)
-		appendStringInfo(&buf, "CREATE %sINDEX %s ON %s USING %s (",
-						 idxrec->indisunique ? "UNIQUE " : "",
-						 quote_identifier(NameStr(idxrelrec->relname)),
-						 generate_relation_name(indrelid, NIL),
-						 quote_identifier(NameStr(amrec->amname)));
+	{
+		if (!isConstraint)
+			appendStringInfo(&buf, "CREATE %sINDEX %s ON %s USING %s (",
+							 idxrec->indisunique ? "UNIQUE " : "",
+							 quote_identifier(NameStr(idxrelrec->relname)),
+							 generate_relation_name(indrelid, NIL),
+							 quote_identifier(NameStr(amrec->amname)));
+		else					/* currently, must be EXCLUDE constraint */
+			appendStringInfo(&buf, "EXCLUDE USING %s (",
+							 quote_identifier(NameStr(amrec->amname)));
+	}
 
 	/*
 	 * Report the indexed attributes
@@ -855,6 +962,13 @@ pg_get_indexdef_worker(Oid indexrelid, int colno,
 						appendStringInfo(&buf, " NULLS FIRST");
 				}
 			}
+
+			/* Add the exclusion operator if relevant */
+			if (excludeOps != NULL)
+				appendStringInfo(&buf, " WITH %s",
+								 generate_operator_name(excludeOps[keyno],
+														keycoltype,
+														keycoltype));
 		}
 	}
 
@@ -881,8 +995,12 @@ pg_get_indexdef_worker(Oid indexrelid, int colno,
 
 			tblspc = get_rel_tablespace(indexrelid);
 			if (OidIsValid(tblspc))
+			{
+				if (isConstraint)
+					appendStringInfoString(&buf, " USING INDEX");
 				appendStringInfo(&buf, " TABLESPACE %s",
 							  quote_identifier(get_tablespace_name(tblspc)));
+			}
 		}
 
 		/*
@@ -906,7 +1024,10 @@ pg_get_indexdef_worker(Oid indexrelid, int colno,
 			/* Deparse */
 			str = deparse_expression_pretty(node, context, false, false,
 											prettyFlags, 0);
-			appendStringInfo(&buf, " WHERE %s", str);
+			if (isConstraint)
+				appendStringInfo(&buf, " WHERE (%s)", str);
+			else
+				appendStringInfo(&buf, " WHERE %s", str);
 		}
 	}
 
@@ -1093,11 +1214,6 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 				if (string)
 					appendStringInfo(&buf, " ON DELETE %s", string);
 
-				if (conForm->condeferrable)
-					appendStringInfo(&buf, " DEFERRABLE");
-				if (conForm->condeferred)
-					appendStringInfo(&buf, " INITIALLY DEFERRED");
-
 				break;
 			}
 		case CONSTRAINT_PRIMARY:
@@ -1194,10 +1310,52 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 
 				break;
 			}
+		case CONSTRAINT_EXCLUSION:
+			{
+				Oid		 indexOid = conForm->conindid;
+				Datum	 val;
+				bool	 isnull;
+				Datum	*elems;
+				int		 nElems;
+				int		 i;
+				Oid		*operators;
+
+				/* Extract operator OIDs from the pg_constraint tuple */
+				val = SysCacheGetAttr(CONSTROID, tup,
+									  Anum_pg_constraint_conexclop,
+									  &isnull);
+				if (isnull)
+					elog(ERROR, "null conexclop for constraint %u",
+						 constraintId);
+
+				deconstruct_array(DatumGetArrayTypeP(val),
+								  OIDOID, sizeof(Oid), true, 'i',
+								  &elems, NULL, &nElems);
+
+				operators = (Oid *) palloc(nElems * sizeof(Oid));
+				for (i = 0; i < nElems; i++)
+					operators[i] = DatumGetObjectId(elems[i]);
+
+				/* pg_get_indexdef_worker does the rest */
+				/* suppress tablespace because pg_dump wants it that way */
+				appendStringInfoString(&buf,
+									   pg_get_indexdef_worker(indexOid,
+															  0,
+															  operators,
+															  false,
+															  false,
+															  prettyFlags));
+				break;
+			}
 		default:
 			elog(ERROR, "invalid constraint type \"%c\"", conForm->contype);
 			break;
 	}
+
+	if (conForm->condeferrable)
+		appendStringInfo(&buf, " DEFERRABLE");
+	if (conForm->condeferred)
+		appendStringInfo(&buf, " INITIALLY DEFERRED");
 
 	/* Cleanup */
 	ReleaseSysCache(tup);
@@ -2253,7 +2411,7 @@ make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 		query = getInsertSelectQuery(query, NULL);
 
 		/* Must acquire locks right away; see notes in get_query_def() */
-		AcquireRewriteLocks(query);
+		AcquireRewriteLocks(query, false);
 
 		context.buf = buf;
 		context.namespaces = list_make1(&dpns);
@@ -2407,7 +2565,7 @@ get_query_def(Query *query, StringInfo buf, List *parentnamespace,
 	 * consistent results.	Note we assume it's OK to scribble on the passed
 	 * querytree!
 	 */
-	AcquireRewriteLocks(query);
+	AcquireRewriteLocks(query, false);
 
 	context.buf = buf;
 	context.namespaces = lcons(&dpns, list_copy(parentnamespace));
@@ -2669,21 +2827,28 @@ get_select_query_def(Query *query, deparse_context *context,
 	}
 
 	/* Add FOR UPDATE/SHARE clauses if present */
-	foreach(l, query->rowMarks)
+	if (query->hasForUpdate)
 	{
-		RowMarkClause *rc = (RowMarkClause *) lfirst(l);
-		RangeTblEntry *rte = rt_fetch(rc->rti, query->rtable);
+		foreach(l, query->rowMarks)
+		{
+			RowMarkClause *rc = (RowMarkClause *) lfirst(l);
+			RangeTblEntry *rte = rt_fetch(rc->rti, query->rtable);
 
-		if (rc->forUpdate)
-			appendContextKeyword(context, " FOR UPDATE",
-								 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
-		else
-			appendContextKeyword(context, " FOR SHARE",
-								 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
-		appendStringInfo(buf, " OF %s",
-						 quote_identifier(rte->eref->aliasname));
-		if (rc->noWait)
-			appendStringInfo(buf, " NOWAIT");
+			/* don't print implicit clauses */
+			if (rc->pushedDown)
+				continue;
+
+			if (rc->forUpdate)
+				appendContextKeyword(context, " FOR UPDATE",
+									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
+			else
+				appendContextKeyword(context, " FOR SHARE",
+									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
+			appendStringInfo(buf, " OF %s",
+							 quote_identifier(rte->eref->aliasname));
+			if (rc->noWait)
+				appendStringInfo(buf, " NOWAIT");
+		}
 	}
 
 	context->windowClause = save_windowclause;
@@ -3526,7 +3691,11 @@ push_plan(deparse_namespace *dpns, Plan *subplan)
 {
 	/*
 	 * We special-case Append to pretend that the first child plan is the
-	 * OUTER referent; otherwise normal.
+	 * OUTER referent; we have to interpret OUTER Vars in the Append's tlist
+	 * according to one of the children, and the first one is the most
+	 * natural choice.  Likewise special-case ModifyTable to pretend that the
+	 * first child plan is the OUTER referent; this is to support RETURNING
+	 * lists containing references to non-target relations.
 	 */
 	if (IsA(subplan, Append))
 		dpns->outer_plan = (Plan *) linitial(((Append *) subplan)->appendplans);
@@ -3541,6 +3710,8 @@ push_plan(deparse_namespace *dpns, Plan *subplan)
 		 */
 		dpns->outer_plan = (Plan *) llast(((Sequence *) subplan)->subplans);
 	}
+	else if (IsA(subplan, ModifyTable))
+		dpns->outer_plan = (Plan *) linitial(((ModifyTable *) subplan)->plans);
 	else
 		dpns->outer_plan = outerPlan(subplan);
 
@@ -3789,12 +3960,7 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 			appendStringInfo(buf, "%s.",
 							 quote_identifier(schemaname));
 
-		if (strcmp(refname, "*NEW*") == 0)
-			appendStringInfoString(buf, "new");
-		else if (strcmp(refname, "*OLD*") == 0)
-			appendStringInfoString(buf, "old");
-		else
-			appendStringInfoString(buf, quote_identifier(refname));
+		appendStringInfoString(buf, quote_identifier(refname));
 
 		appendStringInfoChar(buf, '.');
 	}
@@ -4469,16 +4635,6 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 
 
 /*
- * appendStringInfoSpaces - append spaces to buffer
- */
-static void
-appendStringInfoSpaces(StringInfo buf, int count)
-{
-	while (count-- > 0)
-		appendStringInfoChar(buf, ' ');
-}
-
-/*
  * appendContextKeyword - append a keyword to buffer
  *
  * If prettyPrint is enabled, perform a line break, and adjust indentation.
@@ -4629,6 +4785,15 @@ get_rule_expr(Node *node, deparse_context *context,
 
 		case T_FuncExpr:
 			get_func_expr((FuncExpr *) node, context, showimplicit);
+			break;
+
+		case T_NamedArgExpr:
+			{
+				NamedArgExpr *na = (NamedArgExpr *) node;
+
+				get_rule_expr((Node *) na->arg, context, showimplicit);
+				appendStringInfo(buf, " AS %s", quote_identifier(na->name));
+			}
 			break;
 
 		case T_OpExpr:
@@ -5533,6 +5698,7 @@ get_func_expr(FuncExpr *expr, deparse_context *context,
 	Oid			funcoid = expr->funcid;
 	Oid			argtypes[FUNC_MAX_ARGS];
 	int			nargs;
+	List	   *argnames;
 	bool		use_variadic;
 	ListCell   *l;
 
@@ -5572,20 +5738,25 @@ get_func_expr(FuncExpr *expr, deparse_context *context,
 	 * Normal function: display as proname(args).  First we need to extract
 	 * the argument datatypes.
 	 */
+	if (list_length(expr->args) > FUNC_MAX_ARGS)
+		ereport(ERROR,
+				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
+				 errmsg("too many arguments")));
 	nargs = 0;
+	argnames = NIL;
 	foreach(l, expr->args)
 	{
-		if (nargs >= FUNC_MAX_ARGS)
-			ereport(ERROR,
-					(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-					 errmsg("too many arguments")));
-		argtypes[nargs] = exprType((Node *) lfirst(l));
+		Node   *arg = (Node *) lfirst(l);
+
+		if (IsA(arg, NamedArgExpr))
+			argnames = lappend(argnames, ((NamedArgExpr *) arg)->name);
+		argtypes[nargs] = exprType(arg);
 		nargs++;
 	}
 
 	appendStringInfo(buf, "%s(",
 					 generate_function_name(funcoid, nargs,
-											argtypes,
+											argnames, argtypes,
 											expr->funcvariadic,
 											&use_variadic));
 	nargs = 0;
@@ -5734,7 +5905,7 @@ get_agg_expr(Aggref *aggref, deparse_context *context)
 	/* Print the aggregate name, schema-qualified if needed */
 	appendStringInfo(buf, "%s(%s",
 					 generate_function_name(fnoid, nargs,
-											argtypes,
+											NIL, argtypes,
 											aggref->aggvariadic,
 											&use_variadic),
 					 aggref->aggdistinct ? "DISTINCT " : "");
@@ -5855,6 +6026,7 @@ get_windowfunc_expr(WindowFunc *wfunc, deparse_context *context)
 	StringInfo	buf = context->buf;
 	Oid			argtypes[FUNC_MAX_ARGS];
 	int			nargs;
+	List	   *argnames;
 	ListCell   *l;
 
 	if (list_length(wfunc->args) >= FUNC_MAX_ARGS)
@@ -5862,15 +6034,20 @@ get_windowfunc_expr(WindowFunc *wfunc, deparse_context *context)
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
 				 errmsg("too many arguments")));
 	nargs = 0;
+	argnames = NIL;
 	foreach(l, wfunc->args)
 	{
-		argtypes[nargs] = exprType((Node *) lfirst(l));
+		Node   *arg = (Node *) lfirst(l);
+
+		if (IsA(arg, NamedArgExpr))
+			argnames = lappend(argnames, ((NamedArgExpr *) arg)->name);
+		argtypes[nargs] = exprType(arg);
 		nargs++;
 	}
 
 	appendStringInfo(buf, "%s(",
 					 generate_function_name(wfunc->winfnoid, nargs,
-											argtypes,
+											argnames, argtypes,
 											false, NULL));
 	/* winstar can be set only in zero-argument aggregates */
 	if (wfunc->winstar)
@@ -6843,7 +7020,9 @@ quote_identifier(const char *ident)
 		 * Note: ScanKeywordLookup() does case-insensitive comparison, but
 		 * that's fine, since we already know we have all-lower-case.
 		 */
-		const ScanKeyword *keyword = ScanKeywordLookup(ident);
+		const ScanKeyword *keyword = ScanKeywordLookup(ident,
+													   ScanKeywords,
+													   NumScanKeywords);
 
 		if (keyword != NULL && keyword->category != UNRESERVED_KEYWORD)
 			safe = false;
@@ -6873,7 +7052,7 @@ quote_identifier(const char *ident)
 /*
  * quote_qualified_identifier	- Quote a possibly-qualified identifier
  *
- * Return a name of the form namespace.ident, or just ident if namespace
+ * Return a name of the form qualifier.ident, or just ident if qualifier
  * is NULL, quoting each component if necessary.  The result is palloc'd.
  */
 char *
@@ -6975,8 +7154,8 @@ generate_relation_name(Oid relid, List *namespaces)
 /*
  * generate_function_name
  *		Compute the name to display for a function specified by OID,
- *		given that it is being called with the specified actual arg types.
- *		(Arg types matter because of ambiguous-function resolution rules.)
+ *		given that it is being called with the specified actual arg names and
+ *		types.  (Those matter because of ambiguous-function resolution rules.)
  *
  * If we're dealing with a potentially variadic function (in practice, this
  * means a FuncExpr or Aggref, not some other way of calling a function), then
@@ -6988,7 +7167,7 @@ generate_relation_name(Oid relid, List *namespaces)
  * The result includes all necessary quoting and schema-prefixing.
  */
 static char *
-generate_function_name(Oid funcid, int nargs, Oid *argtypes,
+generate_function_name(Oid funcid, int nargs, List *argnames, Oid *argtypes,
 					   bool has_variadic, bool *use_variadic_p)
 {
 	char	   *result;
@@ -7047,7 +7226,7 @@ generate_function_name(Oid funcid, int nargs, Oid *argtypes,
 	 * specified argtypes and VARIADIC flag.
 	 */
 	p_result = func_get_detail(list_make1(makeString(proname)),
-							   NIL, nargs, argtypes,
+							   NIL, argnames, nargs, argtypes,
 							   !use_variadic, true,
 							   &p_funcid, &p_rettype,
 							   &p_retset, &p_nvargs, &p_vatype,

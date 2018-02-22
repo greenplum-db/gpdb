@@ -1147,15 +1147,15 @@ order by locid, country_code;
 -- Test that "decode", when quoted, is interpreted as the PostgreSQL built-in
 -- function decode, rather than as a decode expression.
 select "decode"('MTIzAAE=', 'base64');
-   decode    
--------------
- 123\000\001
+    decode    
+--------------
+ \x3132330001
 (1 row)
 
 select "decode"(md5('password'),'hex');
-                     decode                     
-------------------------------------------------
- _M\314;Z\247e\326\035\203'\336\270\202\317\231
+               decode               
+------------------------------------
+ \x5f4dcc3b5aa765d61d8327deb882cf99
 (1 row)
 
 --

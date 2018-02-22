@@ -45,6 +45,7 @@ typedef struct RelfilenodeEntry
 	Oid relfilenode;
 	int relam;
 	int relkind;
+	char relname[NAMEDATALEN];
 	char relstorage;
 	List *segments;
 } RelfilenodeEntry;
@@ -274,9 +275,9 @@ retry:
 	if (attempts == NUM_RETRIES)
 	{
 		ereport(WARNING,
-				(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %d, gave up after %d retries",
+				(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %d, gave up after %d retries",
 						get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-						primaryfilepath, mirrorfilepath, blockno, attempts)));
+						primaryfilepath, mirrorfilepath, rentry->relname, blockno, attempts)));
 		return false;
 	}
 	attempts++;
@@ -378,9 +379,9 @@ retry:
 		{
 			/* length mismatch */
 			ereport(NOTICE,
-					(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %u, primary length: %i, mirror length: %i",
+					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %u, primary length: %i, mirror length: %i",
 							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-							primaryfilepath, mirrorfilepath, blockno,
+							primaryfilepath, mirrorfilepath, rentry->relname, blockno,
 							primaryFileBytesRead, mirrorFileBytesRead)));
 			goto retry;
 		}
@@ -422,9 +423,10 @@ retry:
 		{
 			/* different contents */
 			ereport(NOTICE,
-					(errmsg("%s files \"%s\" and \"%s\" mismatch by %i at blockno %u",
+					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch by %i at blockno %u",
 							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-							primaryfilepath, mirrorfilepath, diff, blockno)));
+							primaryfilepath, mirrorfilepath, rentry->relname,
+							diff, blockno)));
 			goto retry;
 		}
 
@@ -492,6 +494,7 @@ get_relfilenode_map()
 		rentry->relam = classtuple->relam;
 		rentry->relkind = classtuple->relkind;
 		rentry->relstorage = classtuple->relstorage;
+		strlcpy(rentry->relname, NameStr(classtuple->relname), sizeof(rentry->relname));
 	}
 	heap_endscan(scan);
 	heap_close(pg_class, AccessShareLock);

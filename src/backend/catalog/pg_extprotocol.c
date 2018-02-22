@@ -246,7 +246,8 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes, false, false,
+	fdresult = func_get_detail(fnName, NIL, NIL,
+							   nargs, inputTypes, false, false,
 							   &fnOid, &actual_rettype, &retset,
 							   &nvargs, &vatype, &true_oid_array, NULL);
 
@@ -255,7 +256,7 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(fnName, nargs, inputTypes))));
+						func_signature_string(fnName, nargs, NIL, inputTypes))));
 
 	if (OidIsValid(vatype))
 		ereport(ERROR,
@@ -274,7 +275,7 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("%s protocol function %s must return %s",
 						func_type_to_name(fntype),
-						func_signature_string(fnName, nargs, inputTypes),
+						func_signature_string(fnName, nargs, NIL, inputTypes),
 						(fntype == EXTPTC_FUNC_VALIDATOR ? "void" : "an integer"))));
 	
 	if (func_volatile(fnOid) == PROVOLATILE_IMMUTABLE)
@@ -282,7 +283,7 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("%s protocol function %s is declared IMMUTABLE",
 						func_type_to_name(fntype),
-						func_signature_string(fnName, nargs, inputTypes)),
+						func_signature_string(fnName, nargs, NIL, inputTypes)),
 				 errhint("PROTOCOL functions must be declared STABLE or VOLATILE")));
 
 	

@@ -1476,6 +1476,12 @@ CREATE CAST (myint AS numeric) WITH FUNCTION myint_numeric(myint) AS IMPLICIT;
 EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
 SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
 
+SELECT a FROM ggg WHERE a IN (NULL, 'x');
+
+EXPLAIN SELECT a FROM ggg WHERE a NOT IN (NULL, '');
+
+EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

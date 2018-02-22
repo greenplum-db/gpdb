@@ -45,24 +45,8 @@ storage_vacuum_xidlimits:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/vacuum/xidlimits
 
-aocoalter_catalog_loaders:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s storage/aoco_alter \
-	-s catalog/mpp25256 \
-	-s catalog/oid_inconsistency \
-	-s catalog/udf_exception_handling
-
-storage_uao_and_transactionmanagement:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s storage/transaction_management \
-	-s storage/uao
-
-# WALREP_FIXME: there are no "peristent" tests anymore. Rename this
-# target, and fix concourse pipelines accordingly.
-storage_persistent_accessmethods_and_vacuum:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage \
-	-s access_methods \
-	-s vacuum \
+storage:
+	$(TESTER) $(DISCOVER) -s tincrepo/mpp/gpdb/tests/storage/vacuum \
 	-q "class!=XidlimitsTests"
 
 # cs-walrepl-multinode

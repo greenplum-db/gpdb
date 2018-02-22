@@ -361,6 +361,15 @@ FROM (
 ) AS sup(c, d)
 WHERE c = 87 ;
 
+--
+-- This used to crash, and/or produce incorrect results. The culprit was that a Hash Agg
+-- was used, but the planner put a Gather Merge at the top, without a Sort, even though
+-- a Hash Agg doesn't preserve the sort order.
+--
+SELECT sale.qty
+FROM sale
+GROUP BY ROLLUP((qty)) order by 1;
+
 
 -- CLEANUP
 -- start_ignore

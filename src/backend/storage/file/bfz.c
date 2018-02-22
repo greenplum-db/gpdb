@@ -246,10 +246,10 @@ bfz_create_internal(const char *fileName, bool open_existing,
 	bfz_handle = palloc0(sizeof(bfz_t));
 	bfz_handle->filename = pstrdup(fileName);
 
-	bfz_handle->file = OpenNamedFile(bfz_handle->filename,
-									 !open_existing,
-									 delOnClose,
-									 true);
+	bfz_handle->file = OpenNamedTemporaryFile(bfz_handle->filename,
+											  !open_existing,
+											  delOnClose,
+											  false /* interXact */);
 	if (bfz_handle->file == -1)
 	{
 		if (open_existing)

@@ -21,7 +21,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
 insert into int_writehdfs_parquet
 select * from int_heap;
 select count(*) from int_readhdfs_parquet;
- count
+ count 
 -------
   5000
 (1 row)

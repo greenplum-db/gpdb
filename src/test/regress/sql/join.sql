@@ -345,6 +345,16 @@ select count(*) from tenk1 x where
   x.unique1 = 0 and
   x.unique1 in (select aa.f1 from int4_tbl aa,float8_tbl bb where aa.f1=bb.f1);
 
+-- try that with GEQO too
+begin;
+set geqo = on;
+set geqo_threshold = 2;
+select count(*) from tenk1 x where
+  x.unique1 in (select a.f1 from int4_tbl a,float8_tbl b where a.f1=b.f1) and
+  x.unique1 = 0 and
+  x.unique1 in (select aa.f1 from int4_tbl aa,float8_tbl bb where aa.f1=bb.f1);
+rollback;
+
 
 --
 -- Clean up
@@ -382,6 +392,14 @@ DELETE FROM t4 USING t1 JOIN t2 USING (a) WHERE t4.x > t1.a;
 SELECT * FROM t4;
 DELETE FROM t3 USING t3 t3_other WHERE t3.x = t3_other.x AND t3.y = t3_other.y;
 SELECT * FROM t3;
+
+-- Test join against inheritance tree
+
+create temp table t2a () inherits (t2);
+
+insert into t2a values (200, 2001);
+
+select * from t1 left join t2 on (t1.a = t2.a);
 
 --
 -- regression test for 8.1 merge right join bug
@@ -528,19 +546,6 @@ select * from a left join b on i = x and i = y and x = i;
 rollback;
 
 --
--- test handling of potential equivalence clauses above outer joins
---
-
-select q1, unique2, thousand, hundred
-  from int8_tbl a left join tenk1 b on q1 = unique2
-  where coalesce(thousand,123) = q1 and q1 = coalesce(hundred,123);
-
-select f1, unique2, case when unique2 is null then f1 else 0 end
-  from int4_tbl a left join tenk1 b on f1 = unique2
-  where (case when unique2 is null then f1 else 0 end) = 0;
-
-
---
 -- test NULL behavior of whole-row Vars, per bug #5025
 --
 select t1.q2, count(t2.*)
@@ -571,3 +576,107 @@ select * from
 where
   1 = (select 1 from int8_tbl t3 where ss.y is not null limit 1)
 order by 1,2;
+
+--
+-- test handling of potential equivalence clauses above outer joins
+--
+
+select q1, unique2, thousand, hundred
+  from int8_tbl a left join tenk1 b on q1 = unique2
+  where coalesce(thousand,123) = q1 and q1 = coalesce(hundred,123);
+
+select f1, unique2, case when unique2 is null then f1 else 0 end
+  from int4_tbl a left join tenk1 b on f1 = unique2
+  where (case when unique2 is null then f1 else 0 end) = 0;
+
+--
+-- test join removal
+--
+
+begin;
+
+CREATE TEMP TABLE a (id int PRIMARY KEY, b_id int);
+CREATE TEMP TABLE b (id int PRIMARY KEY, c_id int);
+CREATE TEMP TABLE c (id int PRIMARY KEY);
+INSERT INTO a VALUES (0, 0), (1, NULL);
+INSERT INTO b VALUES (0, 0), (1, NULL);
+INSERT INTO c VALUES (0), (1);
+
+-- all three cases should be optimizable into a simple seqscan
+explain (costs off) SELECT a.* FROM a LEFT JOIN b ON a.b_id = b.id;
+explain (costs off) SELECT b.* FROM b LEFT JOIN c ON b.c_id = c.id;
+explain (costs off)
+  SELECT a.* FROM a LEFT JOIN (b left join c on b.c_id = c.id)
+  ON (a.b_id = b.id);
+
+-- check optimization of outer join within another special join
+explain (costs off)
+select id from a where id in (
+	select b.id from b left join c on b.id = c.id
+);
+
+rollback;
+
+create temp table parent (k int primary key, pd int);
+create temp table child (k int unique, cd int);
+insert into parent values (1, 10), (2, 20), (3, 30);
+insert into child values (1, 100), (4, 400);
+
+-- this case is optimizable
+select p.* from parent p left join child c on (p.k = c.k);
+explain (costs off)
+  select p.* from parent p left join child c on (p.k = c.k);
+
+-- this case is not
+select p.*, linked from parent p
+  left join (select c.*, true as linked from child c) as ss
+  on (p.k = ss.k);
+explain (costs off)
+  select p.*, linked from parent p
+    left join (select c.*, true as linked from child c) as ss
+    on (p.k = ss.k);
+
+-- check for a 9.0rc1 bug: join removal breaks pseudoconstant qual handling
+select p.* from
+  parent p left join child c on (p.k = c.k)
+  where p.k = 1 and p.k = 2;
+explain (costs off)
+select p.* from
+  parent p left join child c on (p.k = c.k)
+  where p.k = 1 and p.k = 2;
+
+select p.* from
+  (parent p left join child c on (p.k = c.k)) join parent x on p.k = x.k
+  where p.k = 1 and p.k = 2;
+explain (costs off)
+select p.* from
+  (parent p left join child c on (p.k = c.k)) join parent x on p.k = x.k
+  where p.k = 1 and p.k = 2;
+
+-- bug 5255: this is not optimizable by join removal
+begin;
+
+CREATE TEMP TABLE a (id int PRIMARY KEY);
+CREATE TEMP TABLE b (id int PRIMARY KEY, a_id int);
+INSERT INTO a VALUES (0), (1);
+INSERT INTO b VALUES (0, 0), (1, NULL);
+
+SELECT * FROM b LEFT JOIN a ON (b.a_id = a.id) WHERE (a.id IS NULL OR a.id > 0);
+SELECT b.* FROM b LEFT JOIN a ON (b.a_id = a.id) WHERE (a.id IS NULL OR a.id > 0);
+
+rollback;
+
+-- another join removal bug: this is not optimizable, either
+begin;
+
+create temp table innertab (id int8 primary key, dat1 int8);
+insert into innertab values(123, 42);
+
+SELECT * FROM
+    (SELECT 1 AS x) ss1
+  LEFT JOIN
+    (SELECT q1, q2, COALESCE(dat1, q1) AS y
+     FROM int8_tbl LEFT JOIN innertab ON q2 = id) ss2
+  ON true;
+
+rollback;

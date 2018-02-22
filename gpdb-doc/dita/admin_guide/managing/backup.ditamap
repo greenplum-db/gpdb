@@ -17,6 +17,13 @@
       <topicref href="gpdbrestore.xml"/>
       <topicref href="restore-diff-system.xml"/>
     </topicref>
-    <topicref href="backup-gpbackup.xml"/>
+    <topicref href="backup-gpbackup.xml">
+      <topicref href="backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
+      <topicref href="backup-gpbackup.xml#topic_x3s_lqj_tbb"/>
+      <topicref href="backup-gpbackup.xml#topic_qgj_b3d_tbb"/>
+      <topicref href="backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+      <topicref href="backup-gpbackup.xml#topic_qwd_d5d_tbb"/>
+      <topicref href="backup-gpbackup.xml#topic_xnj_b4c_tbb"/>
+    </topicref>
   </topicref>
 </map>

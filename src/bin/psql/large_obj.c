@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/large_obj.c,v 1.52 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/large_obj.c,v 1.53 2009/12/11 03:34:56 itagaki Exp $
  */
 #include "postgres_fe.h"
 #include "large_obj.h"
@@ -283,7 +283,7 @@ do_lo_list(void)
 		snprintf(buf, sizeof(buf),
 				 "SELECT oid as \"%s\",\n"
 				 "  pg_catalog.pg_get_userbyid(lomowner) as \"%s\",\n"
-			"  pg_catalog.obj_description(oid, 'pg_largeobject') as \"%s\"\n"
+				 "  pg_catalog.obj_description(oid, 'pg_largeobject') as \"%s\"\n"
 				 "  FROM pg_catalog.pg_largeobject_metadata "
 				 "  ORDER BY oid",
 				 gettext_noop("ID"),
@@ -294,8 +294,8 @@ do_lo_list(void)
 	{
 		snprintf(buf, sizeof(buf),
 				 "SELECT loid as \"%s\",\n"
-		   "  pg_catalog.obj_description(loid, 'pg_largeobject') as \"%s\"\n"
-			 "FROM (SELECT DISTINCT loid FROM pg_catalog.pg_largeobject) x\n"
+				 "  pg_catalog.obj_description(loid, 'pg_largeobject') as \"%s\"\n"
+				 "FROM (SELECT DISTINCT loid FROM pg_catalog.pg_largeobject) x\n"
 				 "ORDER BY 1",
 				 gettext_noop("ID"),
 				 gettext_noop("Description"));

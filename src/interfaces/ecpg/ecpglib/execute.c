@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/execute.c,v 1.77 2008/03/01 03:26:34 tgl Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/execute.c,v 1.87 2009/09/03 10:24:48 meskes Exp $ */
 
 /*
  * The aim is to get a simpler inteface to the database routines.
@@ -359,6 +359,7 @@ ecpg_store_result(const PGresult *results, int act_field,
 			{
 				case ECPGt_char:
 				case ECPGt_unsigned_char:
+				case ECPGt_string:
 					if (!var->varcharsize && !var->arrsize)
 					{
 						/* special mode for handling char**foo=0 */
@@ -418,7 +419,7 @@ ecpg_store_result(const PGresult *results, int act_field,
 
 	/* fill the variable with the tuple(s) */
 	if (!var->varcharsize && !var->arrsize &&
-		(var->type == ECPGt_char || var->type == ECPGt_unsigned_char))
+		(var->type == ECPGt_char || var->type == ECPGt_unsigned_char || var->type == ECPGt_string))
 	{
 		/* special mode for handling char**foo=0 */
 
@@ -468,8 +469,8 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 	char	   *newcopy = NULL;
 
 	/*
-	 * arrays are not possible unless the attribute is an array too FIXME: we
-	 * do not know if the attribute is an array here
+	 * arrays are not possible unless the attribute is an array too
+	 * FIXME: we do not know if the attribute is an array here
 	 */
 #if 0
 	if (var->arrsize > 1 &&...)
@@ -757,6 +758,7 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 			case ECPGt_char:
 			case ECPGt_unsigned_char:
+			case ECPGt_string:
 				{
 					/* set slen to string length if type is char * */
 					int			slen = (var->varcharsize == 0) ? strlen((char *) var->value) : (unsigned int) var->varcharsize;
@@ -816,6 +818,9 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 					if (var->arrsize > 1)
 					{
+						if (!(mallocedval = ecpg_strdup("array [", lineno)))
+							return false;
+
 						for (element = 0; element < var->arrsize; element++)
 						{
 							nval = PGTYPESnumeric_new();
@@ -831,14 +836,11 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 							slen = strlen(str);
 							PGTYPESnumeric_free(nval);
 
-							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + sizeof("array [] "), lineno)))
+							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + 2, lineno)))
 							{
 								ecpg_free(str);
 								return false;
 							}
-
-							if (!element)
-								strcpy(mallocedval, "array [");
 
 							strncpy(mallocedval + strlen(mallocedval), str, slen + 1);
 							strcpy(mallocedval + strlen(mallocedval), ",");
@@ -883,6 +885,9 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 					if (var->arrsize > 1)
 					{
+						if (!(mallocedval = ecpg_strdup("array [", lineno)))
+							return false;
+
 						for (element = 0; element < var->arrsize; element++)
 						{
 							str = quote_postgres(PGTYPESinterval_to_asc((interval *) ((var + var->offset * element)->value)), quote, lineno);
@@ -890,14 +895,11 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 								return false;
 							slen = strlen(str);
 
-							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + sizeof("array [],interval "), lineno)))
+							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + 2, lineno)))
 							{
 								ecpg_free(str);
 								return false;
 							}
-
-							if (!element)
-								strcpy(mallocedval, "array [");
 
 							strncpy(mallocedval + strlen(mallocedval), str, slen + 1);
 							strcpy(mallocedval + strlen(mallocedval), ",");
@@ -934,6 +936,9 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 					if (var->arrsize > 1)
 					{
+						if (!(mallocedval = ecpg_strdup("array [", lineno)))
+							return false;
+
 						for (element = 0; element < var->arrsize; element++)
 						{
 							str = quote_postgres(PGTYPESdate_to_asc(*(date *) ((var + var->offset * element)->value)), quote, lineno);
@@ -941,14 +946,11 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 								return false;
 							slen = strlen(str);
 
-							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + sizeof("array [],date "), lineno)))
+							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + 2, lineno)))
 							{
 								ecpg_free(str);
 								return false;
 							}
-
-							if (!element)
-								strcpy(mallocedval, "array [");
 
 							strncpy(mallocedval + strlen(mallocedval), str, slen + 1);
 							strcpy(mallocedval + strlen(mallocedval), ",");
@@ -985,6 +987,9 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 					if (var->arrsize > 1)
 					{
+						if (!(mallocedval = ecpg_strdup("array [", lineno)))
+							return false;
+
 						for (element = 0; element < var->arrsize; element++)
 						{
 							str = quote_postgres(PGTYPEStimestamp_to_asc(*(timestamp *) ((var + var->offset * element)->value)), quote, lineno);
@@ -993,14 +998,11 @@ ecpg_store_input(const int lineno, const bool force_indicator, const struct vari
 
 							slen = strlen(str);
 
-							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + sizeof("array [], timestamp "), lineno)))
+							if (!(mallocedval = ecpg_realloc(mallocedval, strlen(mallocedval) + slen + 2, lineno)))
 							{
 								ecpg_free(str);
 								return false;
 							}
-
-							if (!element)
-								strcpy(mallocedval, "array [");
 
 							strncpy(mallocedval + strlen(mallocedval), str, slen + 1);
 							strcpy(mallocedval + strlen(mallocedval), ",");

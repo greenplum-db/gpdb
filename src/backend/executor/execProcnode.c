@@ -14,13 +14,12 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.65 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.69 2009/12/15 04:57:47 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
 /*
  *	 INTERFACE ROUTINES
- *		ExecCountSlotsNode -	count tuple slots needed by plan tree
  *		ExecInitNode	-		initialize a plan node and its subplans
  *		ExecProcNode	-		get a tuple by executing the plan node
  *		ExecEndNode		-		shut down a plan node and its subplans
@@ -95,8 +94,10 @@
 #include "executor/nodeHashjoin.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeLimit.h"
+#include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
 #include "executor/nodeMergejoin.h"
+#include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
 #include "executor/nodeResult.h"
@@ -279,6 +280,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitResult((Result *) node,
 												  estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_ModifyTable:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, ModifyTable);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitModifyTable((ModifyTable *) node,
+													   estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -662,6 +674,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			END_MEMORY_ACCOUNT();
 			break;
 
+		case T_LockRows:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, LockRows);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitLockRows((LockRows *) node,
+													estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
 		case T_Limit:
 			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, Limit);
 
@@ -887,6 +910,10 @@ ExecProcNode(PlanState *node)
 			result = ExecResult((ResultState *) node);
 			break;
 
+		case T_ModifyTableState:
+			result = ExecModifyTable((ModifyTableState *) node);
+			break;
+
 		case T_AppendState:
 			result = ExecAppend((AppendState *) node);
 			break;
@@ -1008,6 +1035,10 @@ ExecProcNode(PlanState *node)
 
 		case T_SetOpState:
 			result = ExecSetOp((SetOpState *) node);
+			break;
+
+		case T_LockRowsState:
+			result = ExecLockRows((LockRowsState *) node);
 			break;
 
 		case T_LimitState:
@@ -1165,170 +1196,6 @@ MultiExecProcNode(PlanState *node)
 	return result;
 }
 
-
-/*
- * ExecCountSlotsNode - count up the number of tuple table slots needed
- *
- * Note that this scans a Plan tree, not a PlanState tree, because we
- * haven't built the PlanState tree yet ...
- */
-int
-ExecCountSlotsNode(Plan *node)
-{
-	if (node == NULL)
-		return 0;
-
-	switch (nodeTag(node))
-	{
-			/*
-			 * control nodes
-			 */
-		case T_Result:
-			return ExecCountSlotsResult((Result *) node);
-
-		case T_Append:
-			return ExecCountSlotsAppend((Append *) node);
-
-		case T_RecursiveUnion:
-			return ExecCountSlotsRecursiveUnion((RecursiveUnion *) node);
-
-		case T_Sequence:
-			return ExecCountSlotsSequence((Sequence *) node);
-
-		case T_BitmapAnd:
-			return ExecCountSlotsBitmapAnd((BitmapAnd *) node);
-
-		case T_BitmapOr:
-			return ExecCountSlotsBitmapOr((BitmapOr *) node);
-
-			/*
-			 * scan nodes
-			 */
-		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
-		case T_TableScan:
-			return ExecCountSlotsTableScan((TableScan *) node);
-
-		case T_DynamicTableScan:
-			return ExecCountSlotsDynamicTableScan((DynamicTableScan *) node);
-
-		case T_ExternalScan:
-			return ExecCountSlotsExternalScan((ExternalScan *) node);
-
-		case T_IndexScan:
-			return ExecCountSlotsIndexScan((IndexScan *) node);
-
-		case T_DynamicIndexScan:
-			return ExecCountSlotsDynamicIndexScan((DynamicIndexScan *) node);
-
-		case T_BitmapIndexScan:
-			return ExecCountSlotsBitmapIndexScan((BitmapIndexScan *) node);
-
-		case T_BitmapHeapScan:
-			return ExecCountSlotsBitmapHeapScan((BitmapHeapScan *) node);
-
-		case T_BitmapAppendOnlyScan:
-			return ExecCountSlotsBitmapAppendOnlyScan((BitmapAppendOnlyScan *) node);
-
-		case T_BitmapTableScan:
-			return ExecCountSlotsBitmapTableScan((BitmapTableScan *) node);
-
-		case T_TidScan:
-			return ExecCountSlotsTidScan((TidScan *) node);
-
-		case T_SubqueryScan:
-			return ExecCountSlotsSubqueryScan((SubqueryScan *) node);
-
-		case T_FunctionScan:
-			return ExecCountSlotsFunctionScan((FunctionScan *) node);
-
-		case T_TableFunctionScan:
-			return ExecCountSlotsTableFunction((TableFunctionScan *) node);
-
-		case T_ValuesScan:
-			return ExecCountSlotsValuesScan((ValuesScan *) node);
-
-		case T_CteScan:
-			return ExecCountSlotsCteScan((CteScan *) node);
-
-		case T_WorkTableScan:
-			return ExecCountSlotsWorkTableScan((WorkTableScan *) node);
-
-			/*
-			 * join nodes
-			 */
-		case T_NestLoop:
-			return ExecCountSlotsNestLoop((NestLoop *) node);
-
-		case T_MergeJoin:
-			return ExecCountSlotsMergeJoin((MergeJoin *) node);
-
-		case T_HashJoin:
-			return ExecCountSlotsHashJoin((HashJoin *) node);
-
-			/*
-			 * share input nodes
-			 */
-		case T_ShareInputScan:
-			return ExecCountSlotsShareInputScan((ShareInputScan *) node);
-
-			/*
-			 * materialization nodes
-			 */
-		case T_Material:
-			return ExecCountSlotsMaterial((Material *) node);
-
-		case T_Sort:
-			return ExecCountSlotsSort((Sort *) node);
-
-		case T_Agg:
-			return ExecCountSlotsAgg((Agg *) node);
-
-		case T_WindowAgg:
-			return 0;
-
-		case T_Unique:
-			return ExecCountSlotsUnique((Unique *) node);
-
-		case T_Hash:
-			return ExecCountSlotsHash((Hash *) node);
-
-		case T_SetOp:
-			return ExecCountSlotsSetOp((SetOp *) node);
-
-		case T_Limit:
-			return ExecCountSlotsLimit((Limit *) node);
-
-		case T_Motion:
-			return ExecCountSlotsMotion((Motion *) node);
-
-		case T_Repeat:
-			return ExecCountSlotsRepeat((Repeat *) node);
-
-		case T_DML:
-			return ExecCountSlotsDML((DML *) node);
-
-		case T_SplitUpdate:
-			return ExecCountSlotsSplitUpdate((SplitUpdate *) node);
-
-		case T_AssertOp:
-			return ExecCountSlotsAssertOp((AssertOp *) node);
-
-		case T_RowTrigger:
-			return ExecCountSlotsRowTrigger((RowTrigger *) node);
-
-		case T_PartitionSelector:
-			return ExecCountSlotsPartitionSelector((PartitionSelector *) node);
-
-		default:
-			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
-			break;
-	}
-
-	return 0;
-}
-
 /* ----------------------------------------------------------------
  *		ExecSquelchNode
  *
@@ -1439,7 +1306,7 @@ ExecUpdateTransportState(PlanState *node, ChunkTransportState * state)
  *		Recursively cleans up all the nodes in the plan rooted
  *		at 'node'.
  *
- *		After this operation, the query plan will not be able to
+ *		After this operation, the query plan will not be able to be
  *		processed any further.	This should be called only after
  *		the query plan has been fully executed.
  * ----------------------------------------------------------------
@@ -1484,6 +1351,10 @@ ExecEndNode(PlanState *node)
 			 */
 		case T_ResultState:
 			ExecEndResult((ResultState *) node);
+			break;
+
+		case T_ModifyTableState:
+			ExecEndModifyTable((ModifyTableState *) node);
 			break;
 
 		case T_AppendState:
@@ -1634,6 +1505,10 @@ ExecEndNode(PlanState *node)
 
 		case T_SetOpState:
 			ExecEndSetOp((SetOpState *) node);
+			break;
+
+		case T_LockRowsState:
+			ExecEndLockRows((LockRowsState *) node);
 			break;
 
 		case T_LimitState:
@@ -1851,6 +1726,15 @@ planstate_walk_kids(PlanState *planstate,
 				AppendState *as = (AppendState *) planstate;
 
 				v = planstate_walk_array(as->appendplans, as->as_nplans, walker, context, flags);
+				Assert(!planstate->lefttree && !planstate->righttree);
+				break;
+			}
+
+		case T_ModifyTableState:
+			{
+				ModifyTableState *mts = (ModifyTableState *) planstate;
+
+				v = planstate_walk_array(mts->mt_plans, mts->mt_nplans, walker, context, flags);
 				Assert(!planstate->lefttree && !planstate->righttree);
 				break;
 			}

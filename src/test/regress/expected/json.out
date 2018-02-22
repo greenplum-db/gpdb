@@ -330,11 +330,11 @@ SELECT row_to_json(q,true)
 FROM _rows q ORDER BY x;
  row_to_json  
 --------------
- {"x":1,
+ {"x":1,     +
   "y":"txt1"}
- {"x":2,
+ {"x":2,     +
   "y":"txt2"}
- {"x":3,
+ {"x":3,     +
   "y":"txt3"}
 (3 rows)
 

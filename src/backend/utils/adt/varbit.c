@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varbit.c,v 1.58 2009/01/01 17:23:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varbit.c,v 1.59 2009/12/12 19:24:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

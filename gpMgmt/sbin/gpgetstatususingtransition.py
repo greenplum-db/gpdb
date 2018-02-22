@@ -38,21 +38,6 @@ class GpSegStatusProgram:
         self.__options = options
         self.__pool = None
 
-    def getStatusUsingTransition(self, seg, statusRequest, currentPMPidData):
-        """
-        The data as from GpSegStatusProgram.getPidRunningStatus
-        """
-        if currentPMPidData is not None and \
-            (currentPMPidData['pidValue'] == 0 or not currentPMPidData['lockFileExists'] or not currentPMPidData['netstatPortActive']):
-            logger.warn("Error getting data from segment %s; it is not running" % seg.getSegmentDataDirectory())
-            return None
-
-        cmd = gp.SendFilerepTransitionStatusMessage("Check Status", statusRequest, seg.getSegmentDataDirectory(),
-                                                seg.getSegmentPort())
-
-        cmd.run()
-        return cmd.unpackSuccessLine()
-
     def getPidStatus(self, seg, pidRunningStatus):
         """
         returns a dict containing "pid" and "error" fields.  Note that
@@ -153,12 +138,12 @@ class GpSegStatusProgram:
             for statusRequest in toFetch:
                 data = None
                 if statusRequest == gp.SEGMENT_STATUS__GET_VERSION:
-                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
+#                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
                     if data is not None:
                         data = data.rstrip()
 
                 elif statusRequest == gp.SEGMENT_STATUS__GET_MIRROR_STATUS:
-                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
+#                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
                     if data is not None:
                         data = self.__processMirrorStatusOutput(data)
 

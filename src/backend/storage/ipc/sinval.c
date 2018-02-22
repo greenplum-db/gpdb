@@ -320,7 +320,7 @@ ProcessCatchupEvent(void)
 	{
 	in_process_catchup_event = 1;
 
-	/* Must prevent SIGUSR2 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
+	/* Must prevent notify and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
 	notify_enabled = DisableNotifyInterrupt();
 	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 

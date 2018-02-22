@@ -728,7 +728,7 @@ MEMORY_LIMIT='2000MB');
         pg_stat_activity 
    WHERE pg_roles.rolresqueue=pg_locks.objid 
    AND pg_locks.objid=gp_toolkit.gp_resqueue_status.queueid
-   AND pg_stat_activity.procpid=pg_locks.pid;
+   AND pg_stat_activity.procpid=pg_locks.pid
    AND pg_stat_activity.usename=pg_roles.rolname;
 </codeblock>
         </p>

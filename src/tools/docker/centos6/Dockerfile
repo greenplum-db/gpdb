@@ -1,7 +1,9 @@
 FROM centos:centos6
 
 ## Install some basic utilities and build tools
-RUN yum makecache && yum -y install epel-release java-1.7.0-openjdk-devel && \
+RUN yum makecache && \
+    rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6 && \
+    yum -y install epel-release java-1.7.0-openjdk-devel && \
     yum -y install autoconf bison createrepo flex git gperf indent libtool && \
     yum -y install openssh-server rpm-build rsync sudo svn vim wget && \
     #
@@ -12,8 +14,8 @@ RUN yum makecache && yum -y install epel-release java-1.7.0-openjdk-devel && \
     yum -y install ant-junit libicu perl-ExtUtils-Embed perl-JSON json-c-devel libgsasl-devel protobuf && \
     pip install --upgrade pip && pip install psi lockfile && yum clean all
 
-RUN rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel6/x86_64/city-fan.org-release-1-13.rhel6.noarch.rpm && \
-    yum install -y libcurl && yum remove -y city-fan.org-release && \
+RUN rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel6/x86_64/city-fan.org-release-2-1.rhel6.noarch.rpm && \
+    yum --enablerepo city-fan.org install -y libcurl && yum remove -y city-fan.org-release && \
     wget https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo \
     -O /etc/yum.repos.d/epel-apache-maven.repo && yum install -y apache-maven && \
     rm /etc/yum.repos.d/epel-apache-maven.repo && yum clean all

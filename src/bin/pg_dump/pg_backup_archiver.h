@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.h,v 1.79 2009/06/11 14:49:07 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.h,v 1.83 2009/12/14 00:39:11 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -318,7 +318,8 @@ typedef struct _tocEntry
 	void	   *formatData;		/* TOC Entry data specific to file format */
 
 	/* working state (needed only for parallel restore) */
-	bool		restored;		/* item is in progress or done */
+	struct _tocEntry *par_prev;	/* list links for pending/ready items; */
+	struct _tocEntry *par_next;	/* these are NULL if not in either list */
 	bool		created;		/* set for DATA member if TABLE was created */
 	int			depCount;		/* number of dependencies not yet restored */
 	DumpId	   *lockDeps;		/* dumpIds of objects this one needs lock on */
@@ -362,7 +363,7 @@ int			ReadOffset(ArchiveHandle *, pgoff_t *);
 size_t		WriteOffset(ArchiveHandle *, pgoff_t, int);
 
 extern void StartRestoreBlobs(ArchiveHandle *AH);
-extern void StartRestoreBlob(ArchiveHandle *AH, Oid oid);
+extern void StartRestoreBlob(ArchiveHandle *AH, Oid oid, bool drop);
 extern void EndRestoreBlob(ArchiveHandle *AH, Oid oid);
 extern void EndRestoreBlobs(ArchiveHandle *AH);
 
@@ -374,6 +375,7 @@ extern void InitArchiveFmt_Tar(ArchiveHandle *AH);
 extern bool isValidTarHeader(char *header);
 
 extern int	ReconnectToServer(ArchiveHandle *AH, const char *dbname, const char *newUser);
+extern void	DropBlobIfExists(ArchiveHandle *AH, Oid oid);
 
 int			ahwrite(const void *ptr, size_t size, size_t nmemb, ArchiveHandle *AH);
 int			ahprintf(ArchiveHandle *AH, const char *fmt,...) __attribute__((format(printf, 2, 3)));

@@ -49,7 +49,6 @@ if %DIST%==1 if exist src\interfaces\ecpg\preproc\preproc.h del /q src\interface
 if exist src\port\pg_config_paths.h del /q src\port\pg_config_paths.h
 
 if exist src\pl\plperl\spi.c del /q src\pl\plperl\spi.c
-if %DIST%==1 if exist src\pl\plpgsql\src\pl_scan.c del /q src\pl\plpgsql\src\pl_scan.c
 if %DIST%==1 if exist src\pl\plpgsql\src\pl_gram.c del /q src\pl\plpgsql\src\pl_gram.c
 if %DIST%==1 if exist src\pl\plpgsql\src\pl_gram.h del /q src\pl\plpgsql\src\pl_gram.h
 if %DIST%==1 if exist src\pl\plpgsql\src\pl.tab.h del /q src\pl\plpgsql\src\pl.tab.h

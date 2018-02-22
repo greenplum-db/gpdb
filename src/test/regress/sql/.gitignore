@@ -37,3 +37,5 @@ hooktest.sql
 gpcopy.sql
 trigger_sets_oid.sql
 query_info_hook_test.sql
+gp_tablespace.sql
+partition_ddl.sql

@@ -193,13 +193,6 @@ ExecEndAssertOp(AssertOpState *node)
 	EndPlanStateGpmonPkt(&node->ps);
 }
 
-/* Return number of TupleTableSlots used by AssertOp node.*/
-int
-ExecCountSlotsAssertOp(AssertOp *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + ASSERTOP_NSLOTS;
-}
-
 /* Tracing execution for GP Monitor. */
 void
 initGpmonPktForAssertOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)

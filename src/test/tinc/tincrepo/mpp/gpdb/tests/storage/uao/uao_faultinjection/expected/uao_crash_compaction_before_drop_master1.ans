@@ -1,6 +1,0 @@
-VACUUM foo;
-PANIC:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic'
-server closed the connection unexpectedly
-	This probably means the server terminated abnormally
-	before or while processing the request.
-psql:/data/home/gpadmin/savita/my_p4/tincrepo/private/uao/storage/uao/uao_faultinjection/sql/uao_crash_compaction_before_drop_master1.sql:1: connection to server was lost

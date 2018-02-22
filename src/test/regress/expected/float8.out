@@ -123,25 +123,25 @@ SELECT '          -INFINiTY   '::float8;
 SELECT '+Infinity'::float8;
   float8  
 ----------
-   Infinity
+ Infinity
 (1 row)
 
 SELECT '+INF'::float8;
   float8  
 ----------
-   Infinity
+ Infinity
 (1 row)
 
 SELECT '+inf'::float8;
   float8  
 ----------
-   Infinity
+ Infinity
 (1 row)
 
 SELECT '+INFINITY'::float8;
   float8  
 ----------
-   Infinity
+ Infinity
 (1 row)
 
 -- bad special inputs

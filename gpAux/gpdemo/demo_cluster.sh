@@ -166,7 +166,7 @@ do
 done
 
 if [ -z "${GPHOME}" ]; then
-    echo "FATAL: The GPHOME enviroment variable is not set."
+    echo "FATAL: The GPHOME environment variable is not set."
     echo ""
     echo "  You can set it by sourcing the greenplum_path.sh"
     echo "  file in your Greenplum installation directory."

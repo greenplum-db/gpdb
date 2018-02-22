@@ -55,26 +55,26 @@ HINT:  No operator matches the given name and argument type(s). You might need t
 -- TEXT CASTING TO/FROM ANY TYPE
 --
 SELECT '1'::bool::text;
- text
+ text 
 ------
  true
 (1 row)
 
 SELECT array[1,2]::text;
- array
+ array 
 -------
  {1,2}
 (1 row)
 
 SELECT '{1,2}'::text::integer[];
- int4
+ int4  
 -------
  {1,2}
 (1 row)
 
 CREATE TYPE usr_define_type as (id int, name text);
 SELECT '(1,abc)'::text::usr_define_type;
- usr_define_type
+ usr_define_type 
 -----------------
  (1,abc)
 (1 row)

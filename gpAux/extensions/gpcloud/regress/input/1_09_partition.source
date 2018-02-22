@@ -1,20 +1,20 @@
 CREATE TABLE stock (date text, time text, open float, high float, low float, volume int) DISTRIBUTED BY (date) PARTITION BY RANGE (volume)
 (
-	PARTITION stock10000 START (10000) INCLUSIVE,
-	PARTITION stock20000 START (20000) INCLUSIVE,
-	PARTITION stock30000 START (30000) INCLUSIVE
+  PARTITION stock10000 START (10000) INCLUSIVE,
+  PARTITION stock20000 START (20000) INCLUSIVE,
+  PARTITION stock30000 START (30000) INCLUSIVE
 );
 
 INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 30001);
 
 CREATE READABLE EXTERNAL TABLE ext_stock000 (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+  low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
 CREATE READABLE EXTERNAL TABLE ext_stock001 (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+  low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
 CREATE READABLE EXTERNAL TABLE ext_stock002 (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
+  low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
 ALTER TABLE stock ADD PARTITION stock00000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
 

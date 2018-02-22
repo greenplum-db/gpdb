@@ -283,16 +283,16 @@ SELECT pg_get_viewdef('vsubdepartment'::regclass);
 SELECT pg_get_viewdef('vsubdepartment'::regclass, true);
                                     pg_get_viewdef                                    
 --------------------------------------------------------------------------------------
-  WITH RECURSIVE subdepartment AS (
-                  SELECT department.id, department.parent_department, department.name
-                    FROM department
-                   WHERE department.name = 'A'::text
-         UNION ALL 
-                  SELECT d.id, d.parent_department, d.name
-                    FROM department d, subdepartment sd
-                   WHERE d.parent_department = sd.id
-         )
-  SELECT subdepartment.id, subdepartment.parent_department, subdepartment.name
+  WITH RECURSIVE subdepartment AS (                                                  +
+                  SELECT department.id, department.parent_department, department.name+
+                    FROM department                                                  +
+                   WHERE department.name = 'A'::text                                 +
+         UNION ALL                                                                   +
+                  SELECT d.id, d.parent_department, d.name                           +
+                    FROM department d, subdepartment sd                              +
+                   WHERE d.parent_department = sd.id                                 +
+         )                                                                           +
+  SELECT subdepartment.id, subdepartment.parent_department, subdepartment.name       +
     FROM subdepartment;
 (1 row)
 
@@ -1024,10 +1024,83 @@ WITH outermost(x) AS (
          UNION SELECT 3)
 )
 SELECT * FROM outermost;
-x
+ x 
 ---
  1
  2
  3
 (3 rows)
+
+--
+-- test for nested-recursive-WITH bug
+--
+WITH RECURSIVE t(j) AS (
+    WITH RECURSIVE s(i) AS (
+        VALUES (1)
+        UNION ALL
+        SELECT i+1 FROM s WHERE i < 10
+    )
+    SELECT i FROM s
+    UNION ALL
+    SELECT j+1 FROM t WHERE j < 10
+)
+SELECT * FROM t;
+ j  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+  5
+  6
+  7
+  8
+  9
+ 10
+  6
+  7
+  8
+  9
+ 10
+  7
+  8
+  9
+ 10
+  8
+  9
+ 10
+  9
+ 10
+ 10
+(55 rows)
 

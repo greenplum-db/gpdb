@@ -27,6 +27,18 @@ struct MemoryContextData;
 #define EXPLAIN_MEMORY_VERBOSITY_DETAIL  2 /* Detail memory accounting tree for each slice in explain analyze */
 
 /*
+ * MemoryAccount is a private data structure for recording memory usage by
+ * memory managers, MemoryAccountExplain is a publicly exposed structure used
+ * for copying out the interesting parts of a MemoryAccount for usage in
+ * EXPLAIN {ANALYZE} commands.
+ */
+typedef struct MemoryAccountExplain {
+	double allocated;
+	double freed;
+	double peak;
+} MemoryAccountExplain;
+
+/*
  * What level of details of the memory accounting information to show during EXPLAIN ANALYZE?
  */
 extern int explain_memory_verbosity;
@@ -126,6 +138,8 @@ typedef enum MemoryOwnerType
 	MEMORY_OWNER_TYPE_Exec_ShareInputScan,
 	MEMORY_OWNER_TYPE_Exec_WindowAgg,
 	MEMORY_OWNER_TYPE_Exec_Repeat,
+	MEMORY_OWNER_TYPE_Exec_ModifyTable,
+	MEMORY_OWNER_TYPE_Exec_LockRows,
 	MEMORY_OWNER_TYPE_Exec_DML,
 	MEMORY_OWNER_TYPE_Exec_SplitUpdate,
 	MEMORY_OWNER_TYPE_Exec_RowTrigger,
@@ -237,7 +251,7 @@ MemoryAccounting_DeclareDone(void);
 extern uint64
 MemoryAccounting_RequestQuotaIncrease(void);
 
-extern void
-MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(StringInfoData *str);
+extern MemoryAccountExplain *
+MemoryAccounting_ExplainCurrentOptimizerAccountInfo(void);
 
 #endif   /* MEMACCOUNTING_H */

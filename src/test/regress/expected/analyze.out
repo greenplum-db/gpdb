@@ -811,12 +811,12 @@ INSERT INTO foo_stats values (repeat('a', 3000), 'bbbbb2', 'cccc2', 3);
 INSERT INTO foo_stats values (repeat('a', 3000), 'bbbbb2', 'cccc2', 3);
 ANALYZE foo_stats;
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------
- public     | foo_stats | a       |         0 |         4 |      -0.25 | {aaa}            | {1}               | 
- public     | foo_stats | b       |         0 |         6 |       -0.5 | {bbbbb,bbbbb2}   | {0.5,0.5}         | 
- public     | foo_stats | c       |         0 |         5 |       -0.5 | {cccc,cccc2}     | {0.5,0.5}         | 
- public     | foo_stats | d       |         0 |         4 |       -0.5 | {2,3}            | {0.5,0.5}         | 
+ schemaname | tablename | attname | null_frac | avg_width | n_distinct |          most_common_vals           | most_common_freqs | histogram_bounds 
+------------+-----------+---------+-----------+-----------+------------+-------------------------------------+-------------------+------------------
+ public     | foo_stats | a       |         0 |         4 |      -0.25 | {aaa}                               | {1}               | 
+ public     | foo_stats | b       |         0 |         6 |       -0.5 | {"\\x6262626262","\\x626262626232"} | {0.5,0.5}         | 
+ public     | foo_stats | c       |         0 |         5 |       -0.5 | {cccc,cccc2}                        | {0.5,0.5}         | 
+ public     | foo_stats | d       |         0 |         4 |       -0.5 | {2,3}                               | {0.5,0.5}         | 
 (4 rows)
 
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='expression_idx_foo_stats' ORDER BY attname;
@@ -834,12 +834,12 @@ INSERT INTO foo_stats values (repeat('a', 100000), 'bbbbb2', 'cccc2', 3);
 INSERT INTO foo_stats values (repeat('b', 100000), 'bbbbb2', 'cccc2', 3);
 ANALYZE foo_stats;
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------
- public     | foo_stats | a       |         0 |      1024 |          0 |                  |                   | 
- public     | foo_stats | b       |         0 |         7 |       -0.5 | {bbbbb2}         | {1}               | 
- public     | foo_stats | c       |         0 |         6 |       -0.5 | {cccc2}          | {1}               | 
- public     | foo_stats | d       |         0 |         4 |       -0.5 | {3}              | {1}               | 
+ schemaname | tablename | attname | null_frac | avg_width | n_distinct |  most_common_vals   | most_common_freqs | histogram_bounds 
+------------+-----------+---------+-----------+-----------+------------+---------------------+-------------------+------------------
+ public     | foo_stats | a       |         0 |      1024 |          0 |                     |                   | 
+ public     | foo_stats | b       |         0 |         7 |       -0.5 | {"\\x626262626232"} | {1}               | 
+ public     | foo_stats | c       |         0 |         6 |       -0.5 | {cccc2}             | {1}               | 
+ public     | foo_stats | d       |         0 |         4 |       -0.5 | {3}                 | {1}               | 
 (4 rows)
 
 DROP TABLE IF EXISTS foo_stats;

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/variable.c,v 1.49 2009/06/11 14:49:13 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/variable.c,v 1.51 2009/11/26 15:06:47 meskes Exp $ */
 
 #include "postgres_fe.h"
 
@@ -401,6 +401,30 @@ add_variable_to_tail(struct arguments ** list, struct variable * var, struct var
 		*list = new;
 }
 
+void
+remove_variable_from_list(struct arguments ** list, struct variable * var)
+{
+	struct arguments *p, *prev = NULL;
+	bool found = false;
+
+	for (p = *list; p; p = p->next)
+	{
+		if (p->variable == var)
+		{
+			found = true;
+			break;
+		}
+		prev = p;
+	}
+	if (found)
+	{
+		if (prev)
+			prev->next = p->next;
+		else
+			*list = p->next;
+	}
+}
+
 /* Dump out a list of all the variable on this list.
    This is a recursive function that works from the end of the list and
    deletes the list as we go on.
@@ -500,7 +524,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 												"multilevel pointers (more than 2 levels) are not supported; found %d levels", pointer_len),
 				pointer_len);
 
-	if (pointer_len > 1 && type_enum != ECPGt_char && type_enum != ECPGt_unsigned_char)
+	if (pointer_len > 1 && type_enum != ECPGt_char && type_enum != ECPGt_unsigned_char && type_enum != ECPGt_string)
 		mmerror(PARSE_ERROR, ET_FATAL, "pointer to pointer is not supported for this data type");
 
 	if (pointer_len > 1 && (atoi(*length) >= 0 || atoi(*dimension) >= 0))
@@ -539,6 +563,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 			break;
 		case ECPGt_char:
 		case ECPGt_unsigned_char:
+		case ECPGt_string:
 			/* char ** */
 			if (pointer_len == 2)
 			{

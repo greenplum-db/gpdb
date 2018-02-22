@@ -4,7 +4,7 @@ CREATE
 -- end_ignore
 
 create or replace function pg_ctl(datadir text, command text, port int, contentid int) returns text as $$ import subprocess 
-cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts else: return 'Invalid command input' 
+cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts else: return 'Invalid command input' 
 return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
 CREATE
 
@@ -43,57 +43,8 @@ content|preferred_role|role|status|mode
 0Uq: ... <quitting>
 
 -- fully recover the failed primary as new mirror
-!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+!\retcode gprecoverseg -aF;
 -- start_ignore
-2018-01-10 23:42:04.312398: fetching cluster configuration
-2018-01-10 23:42:04.405057: fetched cluster configuration
-found 3 distinct content IDs
-Mirror content 0:  2018-01-10 23:42:04.423853: Running command... rm -rf /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:04.508628: Running command... pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0 -h 127.0.0.1 -p 25435
-Mirror content 0:  NOTICE:  WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:05.009465: Running command... mkdir /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0/pg_log; mkdir /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0/pg_xlog/archive_status
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:05.020184: Initialized mirror at /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0
-
-Segment primary content 0:  2018-01-10 23:42:05.020494: Running command... pg_ctl -D /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0  -o '-p 25432 --gp_dbid=0 --silent-mode=true -i -M mirrorless --gp_contentid=0 --gp_num_contents_in_cluster=3' start
-Segment primary content 0:  server starting
-Segment primary content 0:  
-Segment primary content 0:  2018-01-10 23:42:05.048563: Running command... pg_ctl -D /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0 status
-Segment primary content 0:  pg_ctl: server is running (PID: 35912)
-Segment primary content 0:  
-Segment primary content 0:  2018-01-10 23:42:05.055839: Started primary segment with content 0 and port 25432 at /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0
-
-Force FTS probe scan:  2018-01-10 23:42:05.056015: Running command... psql postgres -c "SELECT gp_request_fts_probe_scan()"
-Force FTS probe scan:   gp_request_fts_probe_scan 
-Force FTS probe scan:  ---------------------------
-Force FTS probe scan:   t
-Force FTS probe scan:  (1 row)
-Force FTS probe scan:  
-Force FTS probe scan:  
-Force FTS probe scan:  2018-01-10 23:42:06.088302: FTS probe refreshed catalog
-
-2018-01-10 23:42:06.088478: fetching cluster configuration
-2018-01-10 23:42:06.179366: fetched cluster configuration
-found 3 distinct content IDs
-:  2018-01-10 23:42:06.189714: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
-:   dbid | content | role | preferred_role | mode | status | port  |     hostname      |      address      |                           datadir                            
-:  ------+---------+------+----------------+------+--------+-------+-------------------+-------------------+--------------------------------------------------------------
-:      1 |      -1 | p    | p              | n    | u      | 15432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/qddir/demoDataDir-1
-:      8 |      -1 | m    | m              | s    | u      | 16432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/standby
-:      2 |       0 | m    | p              | s    | u      | 25432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0
-:      5 |       0 | p    | m              | s    | u      | 25435 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0
-:      3 |       1 | p    | p              | s    | u      | 25433 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast2/demoDataDir1
-:      7 |       1 | m    | m              | s    | u      | 25436 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror2/demoDataDir1
-:      4 |       2 | p    | p              | s    | u      | 25434 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast3/demoDataDir2
-:      6 |       2 | m    | m              | s    | u      | 25437 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror3/demoDataDir2
-:  (8 rows)
-:  
-:  
-:  2018-01-10 23:42:06.205890: 
-
-
 -- end_ignore
 (exited with code 0)
 
@@ -137,57 +88,8 @@ content|preferred_role|role|status|mode
 (1 row)
 
 -- now, let's fully recover the mirror
-!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+!\retcode gprecoverseg -aF;
 -- start_ignore
-2018-01-10 23:42:12.624505: fetching cluster configuration
-2018-01-10 23:42:12.717571: fetched cluster configuration
-found 3 distinct content IDs
-Mirror content 0:  2018-01-10 23:42:12.733807: Running command... rm -rf /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:12.830415: Running command... pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0 -h 127.0.0.1 -p 25432
-Mirror content 0:  NOTICE:  WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:14.326265: Running command... mkdir /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0/pg_log; mkdir /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0/pg_xlog/archive_status
-Mirror content 0:  
-Mirror content 0:  2018-01-10 23:42:14.335604: Initialized mirror at /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0
-
-Segment mirror content 0:  2018-01-10 23:42:14.335990: Running command... pg_ctl -D /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0  -o '-p 25435 --gp_dbid=0 --silent-mode=true -i -M mirrorless --gp_contentid=0 --gp_num_contents_in_cluster=3' start
-Segment mirror content 0:  server starting
-Segment mirror content 0:  
-Segment mirror content 0:  2018-01-10 23:42:14.362829: Running command... pg_ctl -D /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0 status
-Segment mirror content 0:  pg_ctl: server is running (PID: 35968)
-Segment mirror content 0:  
-Segment mirror content 0:  2018-01-10 23:42:14.370174: Started mirror segment with content 0 and port 25435 at /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0
-
-Force FTS probe scan:  2018-01-10 23:42:14.370351: Running command... psql postgres -c "SELECT gp_request_fts_probe_scan()"
-Force FTS probe scan:   gp_request_fts_probe_scan 
-Force FTS probe scan:  ---------------------------
-Force FTS probe scan:   t
-Force FTS probe scan:  (1 row)
-Force FTS probe scan:  
-Force FTS probe scan:  
-Force FTS probe scan:  2018-01-10 23:42:15.399794: FTS probe refreshed catalog
-
-2018-01-10 23:42:15.399942: fetching cluster configuration
-2018-01-10 23:42:15.492766: fetched cluster configuration
-found 3 distinct content IDs
-:  2018-01-10 23:42:15.503241: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
-:   dbid | content | role | preferred_role | mode | status | port  |     hostname      |      address      |                           datadir                            
-:  ------+---------+------+----------------+------+--------+-------+-------------------+-------------------+--------------------------------------------------------------
-:      1 |      -1 | p    | p              | n    | u      | 15432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/qddir/demoDataDir-1
-:      8 |      -1 | m    | m              | s    | u      | 16432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/standby
-:      2 |       0 | p    | p              | s    | u      | 25432 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast1/demoDataDir0
-:      5 |       0 | m    | m              | s    | u      | 25435 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror1/demoDataDir0
-:      3 |       1 | p    | p              | s    | u      | 25433 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast2/demoDataDir1
-:      7 |       1 | m    | m              | s    | u      | 25436 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror2/demoDataDir1
-:      4 |       2 | p    | p              | s    | u      | 25434 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast3/demoDataDir2
-:      6 |       2 | m    | m              | s    | u      | 25437 | ashwins-mac.local | ashwins-mac.local | /Users/aagrawal/workspace/gpdata/dbfast_mirror3/demoDataDir2
-:  (8 rows)
-:  
-:  
-:  2018-01-10 23:42:15.519589: 
-
-
 -- end_ignore
 (exited with code 0)
 

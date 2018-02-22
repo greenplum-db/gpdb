@@ -78,8 +78,8 @@ SELECT p1.oid, p1.proname
 FROM pg_proc AS p1
 WHERE (pronargdefaults <> 0) != (proargdefaults IS NOT NULL);
  oid | proname 
- -----+---------
- (0 rows)
+-----+---------
+(0 rows)
 
 -- probin should be non-empty for C functions, null everywhere else
 SELECT p1.oid, p1.proname
@@ -302,7 +302,7 @@ WHERE p1.oid != p2.oid AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[7] < p2.proargtypes[7])
-ORDER BY 1, 2; -- order none 
+ORDER BY 1, 2; -- order none
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)
@@ -1243,7 +1243,7 @@ FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
 WHERE am.amname <> 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) != amsupport OR amprocfamily IS NULL;
-amname | opcname | count 
+ amname | opcname | count 
 --------+---------+-------
 (0 rows)
 
@@ -1254,7 +1254,7 @@ FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
 WHERE am.amname = 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) < amsupport - 1 OR amprocfamily IS NULL;
-  amname |   opcname    | count 
+ amname |   opcname    | count 
 --------+--------------+-------
  gin    | _complex_ops |     1
 (1 row)

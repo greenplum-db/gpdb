@@ -4,7 +4,7 @@
  *
  * Tatsuo Ishii
  *
- * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.87 2009/06/11 14:49:05 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.92 2009/11/12 02:46:16 tgl Exp $
  */
 #include "postgres.h"
 
@@ -58,6 +58,7 @@ static FmgrInfo *ToClientConvProc = NULL;
  */
 static pg_enc2name *ClientEncoding = &pg_enc2name_tbl[PG_SQL_ASCII];
 static pg_enc2name *DatabaseEncoding = &pg_enc2name_tbl[PG_SQL_ASCII];
+static pg_enc2name *PlatformEncoding = NULL;
 
 /*
  * During backend startup we can't set client encoding because we (a)
@@ -482,6 +483,17 @@ length_in_encoding(PG_FUNCTION_ARGS)
 	retval = pg_verify_mbstr_len(src_encoding, VARDATA(string), len, false);
 	PG_RETURN_INT32(retval);
 
+}
+
+Datum
+pg_encoding_max_length_sql(PG_FUNCTION_ARGS)
+{
+	int encoding = PG_GETARG_INT32(0);
+
+	if (PG_VALID_ENCODING(encoding))
+		PG_RETURN_INT32(pg_wchar_table[encoding].maxmblen);
+	else
+		PG_RETURN_NULL();
 }
 
 /*
@@ -1185,3 +1197,73 @@ pg_client_encoding(PG_FUNCTION_ARGS)
 	Assert(ClientEncoding);
 	return DirectFunctionCall1(namein, CStringGetDatum(ClientEncoding->name));
 }
+
+int
+GetPlatformEncoding(void)
+{
+	if (PlatformEncoding == NULL)
+	{
+		/* try to determine encoding of server's environment locale */
+		int		encoding = pg_get_encoding_from_locale("");
+
+		if (encoding < 0)
+			encoding = PG_SQL_ASCII;
+		PlatformEncoding = &pg_enc2name_tbl[encoding];
+	}
+	return PlatformEncoding->encoding;
+}
+
+#ifdef WIN32
+
+/*
+ * Result is palloc'ed null-terminated utf16 string. The character length
+ * is also passed to utf16len if not null. Returns NULL iff failed.
+ */
+WCHAR *
+pgwin32_toUTF16(const char *str, int len, int *utf16len)
+{
+	WCHAR	   *utf16;
+	int			dstlen;
+	UINT		codepage;
+
+	codepage = pg_enc2name_tbl[GetDatabaseEncoding()].codepage;
+
+	/*
+	 * Use MultiByteToWideChar directly if there is a corresponding codepage,
+	 * or double conversion through UTF8 if not.
+	 */
+	if (codepage != 0)
+	{
+		utf16 = (WCHAR *) palloc(sizeof(WCHAR) * (len + 1));
+		dstlen = MultiByteToWideChar(codepage, 0, str, len, utf16, len);
+		utf16[dstlen] = L'\0';
+	}
+	else
+	{
+		char	   *utf8;
+
+		utf8 = (char *) pg_do_encoding_conversion((unsigned char *) str,
+										len, GetDatabaseEncoding(), PG_UTF8);
+		if (utf8 != str)
+			len = strlen(utf8);
+
+		utf16 = (WCHAR *) palloc(sizeof(WCHAR) * (len + 1));
+		dstlen = MultiByteToWideChar(CP_UTF8, 0, utf8, len, utf16, len);
+		utf16[dstlen] = L'\0';
+
+		if (utf8 != str)
+			pfree(utf8);
+	}
+
+	if (dstlen == 0 && len > 0)
+	{
+		pfree(utf16);
+		return NULL;	/* error */
+	}
+
+	if (utf16len)
+		*utf16len = dstlen;
+	return utf16;
+}
+
+#endif

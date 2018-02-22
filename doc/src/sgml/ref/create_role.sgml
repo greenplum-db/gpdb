@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_role.sgml,v 1.11 2008/11/14 10:22:46 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_role.sgml,v 1.13 2009/09/19 10:23:26 petere Exp $
 PostgreSQL documentation
 -->
 
@@ -21,8 +21,10 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-CREATE ROLE name [[WITH] option [ ... ]]
-where option can be:
+CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replaceable class="PARAMETER">option</replaceable> [ ... ] ]
+
+<phrase>where <replaceable class="PARAMETER">option</replaceable> can be:</phrase>
+    
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
@@ -33,12 +35,15 @@ where option can be:
            protocol='gpfdist'|'http'|'gphdfs'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
-    | CONNECTION LIMIT connlimit
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD 'password'
-    | VALID UNTIL 'timestamp' 
-    | IN ROLE rolename [, ...]
-    | ROLE rolename [, ...]
-    | ADMIN rolename [, ...]
+    | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
+    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
+    | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>' 
+    | IN ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | IN GROUP <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | ADMIN <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | SYSID <replaceable class="PARAMETER">uid</replaceable> 
     | RESOURCE QUEUE queue_name
     | RESOURCE GROUP group_name
 </synopsis>
@@ -238,7 +243,7 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>IN ROLE</> <replaceable class="parameter">rolename</replaceable></term>
+      <term><literal>IN ROLE</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
        <para>
         The <literal>IN ROLE</literal> clause lists one or more existing
@@ -250,7 +255,7 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>IN GROUP</> <replaceable class="parameter">rolename</replaceable></term>
+      <term><literal>IN GROUP</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
        <para>
         <literal>IN GROUP</literal> is an obsolete spelling of
@@ -260,7 +265,7 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>ROLE</> <replaceable class="parameter">rolename</replaceable></term>
+      <term><literal>ROLE</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
        <para>
         The <literal>ROLE</literal> clause lists one or more existing
@@ -271,7 +276,7 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>ADMIN</> <replaceable class="parameter">rolename</replaceable></term>
+      <term><literal>ADMIN</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
        <para>
         The <literal>ADMIN</literal> clause is like <literal>ROLE</literal>,
@@ -283,7 +288,7 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>USER</> <replaceable class="parameter">rolename</replaceable></term>
+      <term><literal>USER</> <replaceable class="parameter">role_name</replaceable></term>
       <listitem>
        <para>
         The <literal>USER</literal> clause is an obsolete spelling of
@@ -473,7 +478,7 @@ CREATE ROLE admin WITH CREATEDB CREATEROLE;
    The <command>CREATE ROLE</command> statement is in the SQL standard,
    but the standard only requires the syntax
 <synopsis>
-CREATE ROLE <replaceable class="PARAMETER">name</> [ WITH ADMIN <replaceable class="PARAMETER">rolename</> ]
+CREATE ROLE <replaceable class="PARAMETER">name</> [ WITH ADMIN <replaceable class="PARAMETER">role_name</> ]
 </synopsis>
    Multiple initial administrators, and all the other options of
    <command>CREATE ROLE</command>, are

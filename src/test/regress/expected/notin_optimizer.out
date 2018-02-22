@@ -79,7 +79,7 @@ explain select c1 from t1 where c1 not in
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=431.00..431.00 rows=5 width=4)
@@ -109,12 +109,12 @@ explain select c1 from t1 where c1 not in
                                                      QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1293.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..1293.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..1293.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=862.00..862.00 rows=1 width=4)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                     ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+                     ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                            Hash Cond: t2.c2 = t3.c3
                            ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
                                  Filter: c2 > 2
@@ -151,17 +151,17 @@ explain select c1 from t1 where c1 not in
                                                               QUERY PLAN                                                               
 ---------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1724.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..1724.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..1724.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=1293.00..1293.00 rows=2 width=4)
                ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1293.00 rows=2 width=4)
-                     ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..1293.00 rows=1 width=4)
+                     ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..1293.00 rows=1 width=4)
                            Hash Cond: t2.c2 = t3.c3
                            ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                            ->  Hash  (cost=862.00..862.00 rows=2 width=4)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
-                                       ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+                                       ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                                              Hash Cond: t3.c3 = t4.c4
                                              ->  Table Scan on t3  (cost=0.00..431.00 rows=1 width=4)
                                              ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -199,7 +199,7 @@ explain select c1 from t1,
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=862.00..862.00 rows=1 width=4)
-               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                      Hash Cond: t2.c2 = t3.c3
                      ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=3 width=4)
@@ -228,7 +228,7 @@ explain select c1 from t1,
 	where c1 = foo.c2;
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
- Hash Left Anti Semi Join (Not-In)  (cost=0.00..1293.00 rows=1 width=4)
+ Hash Left Anti Semi (Not-In) Join  (cost=0.00..1293.00 rows=1 width=4)
    Hash Cond: t2.c2 = t3.c3
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
          ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
@@ -262,7 +262,7 @@ explain select c1 from t1 where c1 not in
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=3 width=4)
                Filter: c1 > 1
@@ -292,7 +292,7 @@ explain select c1 from t1 where c1 > 6 and c1 not in
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=2 width=4)
                Filter: c1 > 6 AND c1 < 10
@@ -324,7 +324,7 @@ explain select c1 from t1,t2 where c1 not in
          Hash Cond: t2.c2 = t1.c1
          ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
          ->  Hash  (cost=862.00..862.00 rows=2 width=4)
-               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
                      Hash Cond: t1.c1 = t3.c3
                      ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=3 width=4)
@@ -407,12 +407,12 @@ explain select x,y from l1 where (x,y) not in
    Merge Key: notin.l1.x, notin.l1.y
    ->  Sort  (cost=8.96..8.98 rows=4 width=8)
          Sort Key: notin.l1.x, notin.l1.y
-         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.44..8.79 rows=4 width=8)
+         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=3.44..8.79 rows=4 width=8)
                Join Filter: notin.l1.x = "NotIn_SUBQUERY".y AND notin.l1.y = "NotIn_SUBQUERY".sum
                ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=8)
                ->  Materialize  (cost=3.44..3.53 rows=3 width=12)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.25..3.43 rows=3 width=12)
-                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=3.25..3.31 rows=1 width=12)
+                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.25..3.31 rows=1 width=12)
                                  ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
                                        Group By: notin.l1.y
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
@@ -446,7 +446,7 @@ explain select * from g1 where (a,b,c) not in
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.53..14.71 rows=11 width=12)
-   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.53..14.71 rows=4 width=12)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=3.53..14.71 rows=4 width=12)
          Join Filter: g1.a = l1.x AND g1.b = l1.y AND g1.c = l1.z
          ->  Seq Scan on g1  (cost=0.00..2.11 rows=4 width=12)
          ->  Materialize  (cost=3.53..3.83 rows=10 width=12)
@@ -551,7 +551,7 @@ explain select c1 from t1 where c1 not in
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
          Hash Cond: t1.c1::bigint = (sum(t2.c2))
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=431.00..431.00 rows=2 width=8)
@@ -670,7 +670,7 @@ explain select (case when c1%2 = 0
                                  ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
                                        ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
                                              ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
-                                                   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+                                                   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                                                          Hash Cond: t2.c2 = notin.t3.c3
                                                          ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                                                          ->  Hash  (cost=431.00..431.00 rows=3 width=4)
@@ -681,7 +681,7 @@ explain select (case when c1%2 = 0
                            ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
                                  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
                                        ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
-                                             ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+                                             ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                                                    Hash Cond: notin.t3.c3 = t4.c4
                                                    ->  Table Scan on t3  (cost=0.00..431.00 rows=1 width=4)
                                                    ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -803,7 +803,7 @@ explain select c1 from t1 where c1 not in (select c2 from t2 order by c2 limit 3
    Merge Key: t1.c1
    ->  Sort  (cost=0.00..862.00 rows=2 width=4)
          Sort Key: t1.c1
-         ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+         ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
                Hash Cond: t1.c1 = t2.c2
                ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
                ->  Hash  (cost=431.00..431.00 rows=3 width=4)
@@ -869,7 +869,7 @@ explain select c1 from t1 where c1 <>all (select c2 from t2);
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=431.00..431.00 rows=5 width=4)
@@ -907,7 +907,7 @@ explain select c1 from t1 where c1 <=all (select c2 from t2 where c2 not in (sel
                                    ->  Result  (cost=0.00..862.00 rows=2 width=8)
                                          ->  Materialize  (cost=0.00..862.00 rows=2 width=4)
                                                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
-                                                     ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+                                                     ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                                                            Hash Cond: t2.c2 = t1n.c1n
                                                            ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                                                            ->  Hash  (cost=431.00..431.00 rows=7 width=4)
@@ -1066,7 +1066,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where c2 not in (s
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=862.00..862.00 rows=1 width=4)
-               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=4)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=4)
                      Hash Cond: t2.c2 = t3.c3
                      ->  Table Scan on t2  (cost=0.00..431.00 rows=2 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=3 width=4)
@@ -1101,7 +1101,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where exists (sele
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=1324463.16..1324463.16 rows=1 width=4)
-               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..1324463.16 rows=1 width=4)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..1324463.16 rows=1 width=4)
                      Hash Cond: t2.c2 = notin.t3.c3
                      ->  Nested Loop Semi Join  (cost=0.00..1324032.16 rows=2 width=4)
                            Join Filter: true
@@ -1164,7 +1164,7 @@ explain select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Table Scan on t1  (cost=0.00..431.00 rows=4 width=4)
                Filter: NOT c1 IS NULL

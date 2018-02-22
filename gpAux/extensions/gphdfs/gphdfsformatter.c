@@ -78,6 +78,28 @@ typedef struct {
 /* Bit flag */
 #define GPDBWRITABLE_BITFLAG_ISNULL 1 /* Column is null */
 
+/*
+ * appendStringInfoFill
+ *
+ * Append a single byte, repeated 0 or more times, to str.
+ */
+static void
+appendStringInfoFill(StringInfo str, int occurrences, char ch)
+{
+    /* Length must not overflow. */
+    if (str->len + occurrences <= str->len)
+        return;
+
+    /* Make more room if needed */
+    if (str->len + occurrences >= str->maxlen)
+	    enlargeStringInfo(str, occurrences);
+
+    /* Fill specified number of bytes with the character. */
+    memset(str->data + str->len, ch, occurrences);
+    str->len += occurrences;
+    str->data[str->len] = '\0';
+}
+
 /**
  * Write a int4 to the buffer
  */

@@ -34,7 +34,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/walwriter.c,v 1.7 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/walwriter.c,v 1.9 2009/12/16 22:55:33 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -113,7 +113,7 @@ WalWriterMain(void)
 	pqsignal(SIGQUIT, wal_quickdie);	/* hard crash time */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
-	pqsignal(SIGUSR1, SIG_IGN); /* reserve for sinval */
+	pqsignal(SIGUSR1, SIG_IGN); /* reserve for ProcSignal */
 	pqsignal(SIGUSR2, SIG_IGN); /* not used */
 
 	/*
@@ -126,11 +126,7 @@ WalWriterMain(void)
 	pqsignal(SIGWINCH, SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
-#ifdef HAVE_SIGPROCMASK
 	sigdelset(&BlockSig, SIGQUIT);
-#else
-	BlockSig &= ~(sigmask(SIGQUIT));
-#endif
 
 	/*
 	 * Create a resource owner to keep track of our resources (not clear that

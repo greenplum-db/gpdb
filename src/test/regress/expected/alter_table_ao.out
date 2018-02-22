@@ -267,7 +267,7 @@ insert into aoco1 values('a', 1);
 alter table aoco1 add column col3 char(1) not null default NULL; 
 ERROR:  column "col3" contains null values  (seg0 usxxreddyr3mbp1.corp.emc.com:40000 pid=87838)
 alter table aoco1 add column c5 int check (c5 IS NOT NULL) default NULL;
-ERROR:  check constraint "aoco1_c5_check" is violated
+ERROR:  check constraint "aoco1_c5_check" is violated by some row
 -- should fail (rewrite needs to do constraint checking) 
 insert into aoco1(col1, col2) values('a', NULL);
 alter table aoco1 alter column col2 set not null; 

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/compatlib/informix.c,v 1.59 2009/06/11 14:49:13 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/compatlib/informix.c,v 1.62 2009/10/01 18:03:54 meskes Exp $ */
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -16,6 +16,34 @@
 #include <sqlca.h>
 #include <ecpgerrno.h>
 
+/* this is also defined in ecpglib/misc.c, by defining it twice we don't have to export the symbol */
+
+static struct sqlca_t sqlca_init =
+{
+	{
+		'S', 'Q', 'L', 'C', 'A', ' ', ' ', ' '
+	},
+	sizeof(struct sqlca_t),
+	0,
+	{
+		0,
+		{
+			0
+		}
+	},
+	{
+		'N', 'O', 'T', ' ', 'S', 'E', 'T', ' '
+	},
+	{
+		0, 0, 0, 0, 0, 0
+	},
+	{
+		0, 0, 0, 0, 0, 0, 0, 0
+	},
+	{
+		'0', '0', '0', '0', '0'
+	}
+};
 static int
 deccall2(decimal *arg1, decimal *arg2, int (*ptr) (numeric *, numeric *))
 {
@@ -204,7 +232,7 @@ deccvasc(char *cp, int len, decimal *np)
 		{
 			int			i = PGTYPESnumeric_to_decimal(result, np);
 
-			free(result);
+			PGTYPESnumeric_free(result);
 			if (i != 0)
 				ret = ECPG_INFORMIX_NUM_OVERFLOW;
 		}
@@ -739,13 +767,12 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 	size_t		fmt_len = strlen(fmt);
 	size_t		temp_len;
 	int			i,
-				j,
+				j, /* position in temp */
 				k,
 				dotpos;
 	int			leftalign = 0,
 				blank = 0,
 				sign = 0,
-				entity = 0,
 				entitydone = 0,
 				signdone = 0,
 				brackets_ok = 0;
@@ -783,7 +810,6 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 
 	/* start to parse the formatstring */
 	temp[0] = '\0';
-	j = 0;						/* position in temp */
 	k = value.digits - 1;		/* position in the value_string */
 	for (i = fmt_len - 1, j = 0; i >= 0; i--, j++)
 	{
@@ -791,9 +817,7 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 		if (k < 0)
 		{
 			blank = 1;
-			if (k == -2)
-				entity = 1;
-			else if (k == -1)
+			if (k == -1)
 				sign = 1;
 			if (leftalign)
 			{
@@ -1034,6 +1058,14 @@ ECPG_informix_get_var(int number)
 
 	for (ptr = ivlist; ptr != NULL && ptr->number != number; ptr = ptr->next);
 	return (ptr) ? ptr->pointer : NULL;
+}
+
+void
+ECPG_informix_reset_sqlca(void)
+{
+	struct sqlca_t *sqlca = ECPGget_sqlca();
+
+	memcpy((char *) sqlca, (char *) &sqlca_init, sizeof(struct sqlca_t));
 }
 
 int

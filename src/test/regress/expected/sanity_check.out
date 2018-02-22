@@ -96,6 +96,8 @@ SELECT relname, relhasindex
  pg_constraint           | t
  pg_conversion           | t
  pg_database             | t
+ pg_db_role_setting      | t
+ pg_default_acl          | t
  pg_depend               | t
  pg_description          | t
  pg_exttable             | t
@@ -108,6 +110,7 @@ SELECT relname, relhasindex
  pg_inherits             | t
  pg_language             | t
  pg_largeobject          | t
+ pg_largeobject_metadata | t
  pg_listener             | f
  pg_namespace            | t
  pg_opclass              | t
@@ -169,7 +172,8 @@ FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = relnamespace
 WHERE relhasoids
     AND ((nspname ~ '^pg_') IS NOT FALSE)
     AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE indrelid = c.oid
-                    AND indkey[0] = -2 AND indnatts = 1 AND indisunique);
+                    AND indkey[0] = -2 AND indnatts = 1
+                    AND indisunique AND indimmediate);
  relname | nspname 
 ---------+---------
 (0 rows)

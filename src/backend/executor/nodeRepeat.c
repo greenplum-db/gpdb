@@ -174,12 +174,6 @@ ExecInitRepeat(Repeat *node, EState *estate, int eflags)
 	return repeatstate;
 }
 
-int
-ExecCountSlotsRepeat(Repeat *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + 1;
-}
-
 void
 ExecEndRepeat(RepeatState *node)
 {

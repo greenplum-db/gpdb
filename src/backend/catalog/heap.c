@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.354 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.361 2009/12/07 05:22:21 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -72,6 +72,7 @@
 #include "storage/bufmgr.h"
 #include "storage/freespace.h"
 #include "storage/smgr.h"
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
@@ -104,12 +105,14 @@ static void AddNewRelationTuple(Relation pg_class_desc,
 					Oid relowner,
 					char relkind,
 					char relstorage,
+					Datum relacl,
 					Datum reloptions);
 static Oid AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
 				   Oid ownerid,
+				   Oid new_row_type,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static void StoreRelCheck(Relation rel, char *ccname, Node *expr,
@@ -139,37 +142,37 @@ static List *insert_ordered_unique_oid(List *list, Oid datum);
  */
 
 static FormData_pg_attribute a1 = {
-	0, {"ctid"}, TIDOID, 0, sizeof(ItemPointerData),
+	0, {"ctid"}, TIDOID, 0, 0, sizeof(ItemPointerData),
 	SelfItemPointerAttributeNumber, 0, -1, -1,
 	false, 'p', 's', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a2 = {
-	0, {"oid"}, OIDOID, 0, sizeof(Oid),
+	0, {"oid"}, OIDOID, 0, 0, sizeof(Oid),
 	ObjectIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a3 = {
-	0, {"xmin"}, XIDOID, 0, sizeof(TransactionId),
+	0, {"xmin"}, XIDOID, 0, 0, sizeof(TransactionId),
 	MinTransactionIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a4 = {
-	0, {"cmin"}, CIDOID, 0, sizeof(CommandId),
+	0, {"cmin"}, CIDOID, 0, 0, sizeof(CommandId),
 	MinCommandIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a5 = {
-	0, {"xmax"}, XIDOID, 0, sizeof(TransactionId),
+	0, {"xmax"}, XIDOID, 0, 0, sizeof(TransactionId),
 	MaxTransactionIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a6 = {
-	0, {"cmax"}, CIDOID, 0, sizeof(CommandId),
+	0, {"cmax"}, CIDOID, 0, 0, sizeof(CommandId),
 	MaxCommandIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
@@ -181,14 +184,14 @@ static FormData_pg_attribute a6 = {
  * used in SQL.
  */
 static FormData_pg_attribute a7 = {
-	0, {"tableoid"}, OIDOID, 0, sizeof(Oid),
+	0, {"tableoid"}, OIDOID, 0, 0, sizeof(Oid),
 	TableOidAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 /*CDB*/
 static FormData_pg_attribute a8 = {
-	0, {"gp_segment_id"}, INT4OID, 0, sizeof(gpsegmentId),
+	0, {"gp_segment_id"}, INT4OID, 0, 0, sizeof(gpsegmentId),
 	GpSegmentIdAttributeNumber, 0, -1, -1,
 	true, 'p', 'i', true, false, false, true, 0
 };
@@ -864,6 +867,7 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	values[Anum_pg_attribute_attname - 1] = NameGetDatum(&new_attribute->attname);
 	values[Anum_pg_attribute_atttypid - 1] = ObjectIdGetDatum(new_attribute->atttypid);
 	values[Anum_pg_attribute_attstattarget - 1] = Int32GetDatum(new_attribute->attstattarget);
+	values[Anum_pg_attribute_attdistinct - 1] = Float4GetDatum(new_attribute->attdistinct);
 	values[Anum_pg_attribute_attlen - 1] = Int16GetDatum(new_attribute->attlen);
 	values[Anum_pg_attribute_attnum - 1] = Int16GetDatum(new_attribute->attnum);
 	values[Anum_pg_attribute_attndims - 1] = Int32GetDatum(new_attribute->attndims);
@@ -934,6 +938,7 @@ AddNewAttributeTuples(Oid new_rel_oid,
 		attr->attrelid = new_rel_oid;
 		/* Make sure these are OK, too */
 		attr->attstattarget = -1;
+		attr->attdistinct = 0;
 		attr->attcacheoff = -1;
 
 		InsertPgAttributeTuple(rel, attr, indstate);
@@ -996,14 +1001,16 @@ AddNewAttributeTuples(Oid new_rel_oid,
  * Caller has already opened and locked pg_class.
  * Tuple data is taken from new_rel_desc->rd_rel, except for the
  * variable-width fields which are not present in a cached reldesc.
- * We always initialize relacl to NULL (i.e., default permissions),
- * and reloptions is set to the passed-in text array (if any).
+ * relacl and reloptions are passed in Datum form (to avoid having
+ * to reference the data types in heap.h).  Pass (Datum) 0 to set them
+ * to NULL.
  * --------------------------------
  */
 void
 InsertPgClassTuple(Relation pg_class_desc,
 				   Relation new_rel_desc,
 				   Oid new_rel_oid,
+				   Datum relacl,
 				   Datum reloptions)
 {
 	Form_pg_class rd_rel = new_rel_desc->rd_rel;
@@ -1035,12 +1042,15 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_relchecks - 1] = Int16GetDatum(rd_rel->relchecks);
 	values[Anum_pg_class_relhasoids - 1] = BoolGetDatum(rd_rel->relhasoids);
 	values[Anum_pg_class_relhaspkey - 1] = BoolGetDatum(rd_rel->relhaspkey);
+	values[Anum_pg_class_relhasexclusion - 1] = BoolGetDatum(rd_rel->relhasexclusion);
 	values[Anum_pg_class_relhasrules - 1] = BoolGetDatum(rd_rel->relhasrules);
 	values[Anum_pg_class_relhastriggers - 1] = BoolGetDatum(rd_rel->relhastriggers);
 	values[Anum_pg_class_relhassubclass - 1] = BoolGetDatum(rd_rel->relhassubclass);
 	values[Anum_pg_class_relfrozenxid - 1] = TransactionIdGetDatum(rd_rel->relfrozenxid);
-	/* start out with empty permissions */
-	nulls[Anum_pg_class_relacl - 1] = true;
+	if (relacl != (Datum) 0)
+		values[Anum_pg_class_relacl - 1] = relacl;
+	else
+		nulls[Anum_pg_class_relacl - 1] = true;
 	if (reloptions != (Datum) 0)
 		values[Anum_pg_class_reloptions - 1] = reloptions;
 	else
@@ -1077,6 +1087,7 @@ AddNewRelationTuple(Relation pg_class_desc,
 					Oid relowner,
 					char relkind,
 					char relstorage,
+					Datum relacl,
 					Datum reloptions)
 {
 	Form_pg_class new_rel_reltup;
@@ -1148,7 +1159,8 @@ AddNewRelationTuple(Relation pg_class_desc,
 	new_rel_desc->rd_att->tdtypeid = new_type_oid;
 
 	/* Now build and insert the tuple */
-	InsertPgClassTuple(pg_class_desc, new_rel_desc, new_rel_oid, reloptions);
+	InsertPgClassTuple(pg_class_desc, new_rel_desc, new_rel_oid,
+					   relacl, reloptions);
 }
 
 
@@ -1164,10 +1176,11 @@ AddNewRelationType(const char *typeName,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
 				   Oid ownerid,
+				   Oid new_row_type,
 				   Oid new_array_type)
 {
 	return
-		TypeCreate(InvalidOid,	/* no predetermined OID */
+		TypeCreate(new_row_type,		/* optional predetermined OID */
 				   typeName,	/* type name */
 				   typeNamespace,		/* type namespace */
 				   new_rel_oid, /* relation oid */
@@ -1203,6 +1216,27 @@ AddNewRelationType(const char *typeName,
  *		heap_create_with_catalog
  *
  *		creates a new cataloged relation.  see comments above.
+ *
+ * Arguments:
+ *	relname: name to give to new rel
+ *	relnamespace: OID of namespace it goes in
+ *	reltablespace: OID of tablespace it goes in
+ *	relid: OID to assign to new rel, or InvalidOid to select a new OID
+ *	reltypeid: OID to assign to rel's rowtype, or InvalidOid to select one
+ *	ownerid: OID of new rel's owner
+ *	tupdesc: tuple descriptor (source of column definitions)
+ *	cooked_constraints: list of precooked check constraints and defaults
+ *	relkind: relkind for new rel
+ *	shared_relation: TRUE if it's to be a shared relation
+ *	oidislocal: TRUE if oid column (if any) should be marked attislocal
+ *	oidinhcount: attinhcount to assign to oid column (if any)
+ *	oncommit: ON COMMIT marking (only relevant if it's a temp table)
+ *	reloptions: reloptions in Datum form, or (Datum) 0 if none
+ *	use_user_acl: TRUE if should look for user-defined default permissions;
+ *		if FALSE, relacl is always set NULL
+ *	allow_system_table_mods: TRUE to allow creation in system namespaces
+ *
+ * Returns the OID of the new relation
  * --------------------------------
  */
 Oid
@@ -1210,6 +1244,7 @@ heap_create_with_catalog(const char *relname,
 						 Oid relnamespace,
 						 Oid reltablespace,
 						 Oid relid,
+						 Oid reltypeid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
 						 List *cooked_constraints,
@@ -1222,53 +1257,20 @@ heap_create_with_catalog(const char *relname,
 						 OnCommitAction oncommit,
                          const struct GpPolicy *policy,
 						 Datum reloptions,
+						 bool use_user_acl,
 						 bool allow_system_table_mods,
 						 bool valid_opts)
 {
 	Relation	pg_class_desc;
 	Relation	new_rel_desc;
+	Acl		   *relacl;
 	Oid			old_type_oid;
 	Oid			new_type_oid;
 	Oid			new_array_oid = InvalidOid;
 	bool		appendOnlyRel;
 	StdRdOptions *stdRdOptions;
 	int			safefswritesize = gp_safefswritesize;
-	Oid			existing_rowtype_oid = InvalidOid;
 	char	   *relarrayname = NULL;
-
-	/*
-	 * Don't create the row type if the bootstrapper tells us it already
-	 * knows what it is.
-	 */
-	if (IsBootstrapProcessingMode())
-	{
-		/*
-		 * Some relations need to have a fixed relation type
-		 * OID, because it is referenced in code.
-		 *
-		 * GPDB_90_MERGE_FIXME: In PostgreSQL 9.0, there's a
-		 * new BKI directive, BKI_ROWTYPE_OID(<oid>), for
-		 * doing the same. Replace this hack with that once
-		 * we merge with 9.0.
-		 */
-		switch (relid)
-		{
-			case DatabaseRelationId:
-				existing_rowtype_oid = PG_DATABASE_RELTYPE_OID;
-				break;
-
-			case AuthIdRelationId:
-				existing_rowtype_oid = PG_AUTHID_RELTYPE_OID;
-				break;
-
-			case AuthMemRelationId:
-				existing_rowtype_oid = PG_AUTH_MEMBERS_RELTYPE_OID;
-				break;
-
-			default:
-				break;
-		}
-	}
 
 	pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
 
@@ -1344,7 +1346,7 @@ heap_create_with_catalog(const char *relname,
 								  CStringGetDatum(relname),
 								  ObjectIdGetDatum(relnamespace),
 								  0, 0);
-	if (OidIsValid(old_type_oid) && !OidIsValid(existing_rowtype_oid))
+	if (OidIsValid(old_type_oid))
 	{
 		if (!moveArrayTypeName(old_type_oid, relname, relnamespace))
 			ereport(ERROR,
@@ -1396,6 +1398,30 @@ heap_create_with_catalog(const char *relname,
 		else
 			relid = GetNewOid(pg_class_desc);
 	}
+
+	/*
+	 * Determine the relation's initial permissions.
+	 */
+	if (use_user_acl)
+	{
+		switch (relkind)
+		{
+			case RELKIND_RELATION:
+			case RELKIND_VIEW:
+				relacl = get_user_default_acl(ACL_OBJECT_RELATION, ownerid,
+											  relnamespace);
+				break;
+			case RELKIND_SEQUENCE:
+				relacl = get_user_default_acl(ACL_OBJECT_SEQUENCE, ownerid,
+											  relnamespace);
+				break;
+			default:
+				relacl = NULL;
+				break;
+		}
+	}
+	else
+		relacl = NULL;
 
 	/*
 	 * Create the relcache entry (mostly dummy at this point) and the physical
@@ -1454,23 +1480,21 @@ heap_create_with_catalog(const char *relname,
 
 	/*
 	 * Since defining a relation also defines a complex type, we add a new
-	 * system type corresponding to the new relation.
+	 * system type corresponding to the new relation.  The OID of the type
+	 * can be preselected by the caller, but if reltypeid is InvalidOid,
+	 * we'll generate a new OID for it.
 	 *
 	 * NOTE: we could get a unique-index failure here, in case someone else is
 	 * creating the same type name in parallel but hadn't committed yet when
 	 * we checked for a duplicate name above.
 	 */
-	if (existing_rowtype_oid != InvalidOid)
-		new_type_oid = existing_rowtype_oid;
-	else
-	{
-		new_type_oid = AddNewRelationType(relname,
-										  relnamespace,
-										  relid,
-										  relkind,
-										  ownerid,
-										  new_array_oid);
-	}
+	new_type_oid = AddNewRelationType(relname,
+									  relnamespace,
+									  relid,
+									  relkind,
+									  ownerid,
+									  reltypeid,
+									  new_array_oid);
 
 	/*
 	 * Now make the array type if wanted.
@@ -1528,6 +1552,7 @@ heap_create_with_catalog(const char *relname,
 						ownerid,
 						relkind,
 						relstorage,
+						PointerGetDatum(relacl),
 						reloptions);
 
 	/*
@@ -1558,12 +1583,15 @@ heap_create_with_catalog(const char *relname,
 
 	/*
 	 * Make a dependency link to force the relation to be deleted if its
-	 * namespace is.  Also make a dependency link to its owner.
+	 * namespace is.  Also make a dependency link to its owner, as well
+	 * as dependencies for any roles mentioned in the default ACL.
 	 *
 	 * For composite types, these dependencies are tracked for the pg_type
 	 * entry, so we needn't record them here.  Likewise, TOAST tables don't
 	 * need a namespace dependency (they live in a pinned namespace) nor an
-	 * owner dependency (they depend indirectly through the parent table).
+	 * owner dependency (they depend indirectly through the parent table),
+	 * nor should they have any ACL entries.
+	 *
 	 * Also, skip this in bootstrap mode, since we don't make dependencies
 	 * while bootstrapping.
 	 */
@@ -1583,8 +1611,19 @@ heap_create_with_catalog(const char *relname,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 		recordDependencyOnOwner(RelationRelationId, relid, ownerid);
-
 		recordDependencyOnCurrentExtension(&myself, false);
+
+		if (relacl != NULL)
+		{
+			int			nnewmembers;
+			Oid		   *newmembers;
+
+			nnewmembers = aclmembers(relacl, &newmembers);
+			updateAclDependencies(RelationRelationId, relid, 0,
+								  ownerid, true,
+								  0, NULL,
+								  nnewmembers, newmembers);
+		}
 	}
 
 	/*
@@ -2385,6 +2424,7 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  attNos,		/* attrs in the constraint */
 						  keycount,		/* # attrs in the constraint */
 						  InvalidOid,	/* not a domain constraint */
+						  InvalidOid,	/* no associated index */
 						  InvalidOid,	/* Foreign key fields */
 						  NULL,
 						  NULL,
@@ -2394,10 +2434,10 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  ' ',
 						  ' ',
 						  ' ',
-						  InvalidOid,	/* no associated index */
-						  expr, /* Tree form check constraint */
-						  ccbin,	/* Binary form check constraint */
-						  ccsrc,	/* Source form check constraint */
+						  NULL,	/* not an exclusion constraint */
+						  expr, /* Tree form of check constraint */
+						  ccbin,	/* Binary form of check constraint */
+						  ccsrc,	/* Source form of check constraint */
 						  is_local,		/* conislocal */
 						  inhcount);	/* coninhcount */
 
@@ -2596,11 +2636,11 @@ AddRelationNewConstraints(Relation rel,
 		/*
 		 * Check name uniqueness, or generate a name if none was given.
 		 */
-		if (cdef->name != NULL)
+		if (cdef->conname != NULL)
 		{
 			ListCell   *cell2;
 
-			ccname = cdef->name;
+			ccname = cdef->conname;
 			/* Check against other new constraints */
 			/* Needed because we don't do CommandCounterIncrement in loop */
 			foreach(cell2, checknames)
@@ -3041,20 +3081,9 @@ heap_truncate(List *relids)
 	{
 		Oid			rid = lfirst_oid(cell);
 		Relation	rel;
-		Oid			toastrelid;
 
 		rel = heap_open(rid, AccessExclusiveLock);
 		relations = lappend(relations, rel);
-
-		/* If there is a toast table, add it to the list too */
-		toastrelid = rel->rd_rel->reltoastrelid;
-		if (OidIsValid(toastrelid))
-		{
-			Relation trel;
-
-			trel = heap_open(toastrelid, AccessExclusiveLock);
-			relations = lappend(relations, trel);
-		}
 	}
 
 	/* Don't allow truncate on tables that are referenced by foreign keys */
@@ -3090,21 +3119,56 @@ heap_truncate(List *relids)
 
 		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 		{
-			TruncateRelfiles(rel);
+			/*
+			 * GPDB_90_MERGE_FIXME: see commit cab9a0656, which changed how
+			 * truncation was done for heap tables. Do we need a matching change
+			 * here, and does the removal of filerep change any of the
+			 * assumptions in the above comment?
+			 */
+			TruncateRelfiles(rel, InvalidSubTransactionId);
 			reindex_relation(RelationGetRelid(rel), true);
 		}
 		else
 		{
-			/* Truncate the actual file (and discard buffers) */
-			RelationTruncate(rel, 0);
-
-			/* If this relation has indexes, truncate the indexes too */
-			RelationTruncateIndexes(rel);
+			/* Truncate the relation */
+			heap_truncate_one_rel(rel);
 		}
-		/*
-		 * Close the relation, but keep exclusive lock on it until commit.
-		 */
+
+		/* Close the relation, but keep exclusive lock on it until commit */
 		heap_close(rel, NoLock);
+	}
+}
+
+/*
+ *	 heap_truncate_one_rel
+ *
+ *	 This routine deletes all data within the specified relation.
+ *
+ * This is not transaction-safe, because the truncation is done immediately
+ * and cannot be rolled back later.  Caller is responsible for having
+ * checked permissions etc, and must have obtained AccessExclusiveLock.
+ */
+void
+heap_truncate_one_rel(Relation rel)
+{
+	Oid			toastrelid;
+
+	/* Truncate the actual file (and discard buffers) */
+	RelationTruncate(rel, 0);
+
+	/* If the relation has indexes, truncate the indexes too */
+	RelationTruncateIndexes(rel);
+
+	/* If there is a toast table, truncate that too */
+	toastrelid = rel->rd_rel->reltoastrelid;
+	if (OidIsValid(toastrelid))
+	{
+		Relation	toastrel = heap_open(toastrelid, AccessExclusiveLock);
+
+		RelationTruncate(toastrel, 0);
+		RelationTruncateIndexes(toastrel);
+		/* keep the lock... */
+		heap_close(toastrel, NoLock);
 	}
 }
 

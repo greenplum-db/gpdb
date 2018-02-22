@@ -93,7 +93,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.91 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.93 2009/08/10 05:46:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -3490,16 +3490,10 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 {
 	Tuplesortstate *state;
 	char statedump[MAXPGPATH];
-	char full_prefix[MAXPGPATH];
 
 	Assert(randomAccess);
 
-	int len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate", PG_TEMP_FILES_DIR, rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
-			PG_TEMP_FILES_DIR,
-			rwfile_prefix);
+	int len = snprintf(statedump, sizeof(statedump), "%s_sortstate", rwfile_prefix);
 	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
 
 	if(isWriter)
@@ -3512,7 +3506,7 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 									 sortOperators, nullsFirstFlags,
 									 workMem, randomAccess);
 
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 		state->pfile_rwfile_state = ExecWorkFile_Create(statedump,
 				BUFFILE,
 				true /* delOnClose */ ,
@@ -3536,13 +3530,13 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 
 		state->readtup = readtup_heap;
 
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 		state->pfile_rwfile_state = ExecWorkFile_Open(statedump,
 				BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);
 
-		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
+		ExecWorkFile *tapefile = ExecWorkFile_Open(rwfile_prefix,
 				BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);

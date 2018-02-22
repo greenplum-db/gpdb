@@ -15,7 +15,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.113 2009/06/11 14:49:04 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.116 2009/12/09 21:57:51 tgl Exp $
  *
  * ----------
  */
@@ -3965,8 +3965,9 @@ ri_HashCompareOp(Oid eq_opr, Oid typeid)
 			{
 				/*
 				 * The declared input type of the eq_opr might be a
-				 * polymorphic type such as ANYARRAY or ANYENUM.  If so,
-				 * assume the coercion is valid; otherwise complain.
+				 * polymorphic type such as ANYARRAY or ANYENUM, or other
+				 * special cases such as RECORD; find_coercion_pathway
+				 * currently doesn't subsume these special cases.
 				 */
 				if (!IsBinaryCoercible(typeid, lefttype))
 					elog(ERROR, "no conversion function from %s to %s",

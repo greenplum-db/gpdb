@@ -42,7 +42,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions taken from FreeBSD.
  *
- * $PostgreSQL: pgsql/src/bin/initdb/initdb.c,v 1.172 2009/06/11 14:49:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/initdb/initdb.c,v 1.180 2009/12/18 21:28:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -164,7 +164,7 @@ static char **replace_token(char **lines,
 #ifndef HAVE_UNIX_SOCKETS
 static char **filter_lines_with_token(char **lines, const char *token);
 #endif
-static char **readfile(char *path);
+static char **readfile(const char *path);
 static void writefile(char *path, char **lines);
 static FILE *popen_check(const char *command, const char *mode);
 static int	mkdir_p(char *path, mode_t omode);
@@ -191,6 +191,7 @@ static void setup_privileges(void);
 static void set_info_version(void);
 static void setup_schema(void);
 static void setup_cdb_schema(void);
+static void load_plpgsql(void);
 static void vacuum_db(void);
 static void make_template0(void);
 static void make_postgres(void);
@@ -501,13 +502,12 @@ filter_lines_with_token(char **lines, const char *token)
  * get the lines from a text file
  */
 static char **
-readfile(char *path)
+readfile(const char *path)
 {
 	FILE	   *infile;
-	int			maxlength = 0,
+	int			maxlength = 1,
 				linelen = 0;
 	int			nlines = 0;
-	int			n;
 	char	  **result;
 	char	   *buffer;
 	int			c;
@@ -534,27 +534,24 @@ readfile(char *path)
 	}
 
 	/* handle last line without a terminating newline (yuck) */
-
 	if (linelen)
 		nlines++;
 	if (linelen > maxlength)
 		maxlength = linelen;
 
 	/* set up the result and the line buffer */
-
-	result = (char **) pg_malloc((nlines + 2) * sizeof(char *));
-	buffer = (char *) pg_malloc(maxlength + 2);
+	result = (char **) pg_malloc((nlines + 1) * sizeof(char *));
+	buffer = (char *) pg_malloc(maxlength + 1);
 
 	/* now reprocess the file and store the lines */
-
 	rewind(infile);
-	n = 0;
-	while (fgets(buffer, maxlength + 1, infile) != NULL && n < nlines)
-		result[n++] = xstrdup(buffer);
+	nlines = 0;
+	while (fgets(buffer, maxlength + 1, infile) != NULL)
+		result[nlines++] = xstrdup(buffer);
 
 	fclose(infile);
 	free(buffer);
-	result[n] = NULL;
+	result[nlines] = NULL;
 
 	return result;
 }
@@ -1550,23 +1547,6 @@ setup_auth(void)
 	const char **line;
 	static const char *pg_authid_setup[] = {
 		/*
-		 * Create triggers to ensure manual updates to shared catalogs will be
-		 * reflected into their "flat file" copies.
-		 */
-		"CREATE TRIGGER pg_sync_pg_database "
-		"  AFTER INSERT OR UPDATE OR DELETE ON pg_database "
-		"  FOR EACH STATEMENT EXECUTE PROCEDURE flatfile_update_trigger();\n",
-		"CREATE TRIGGER pg_sync_pg_authid "
-		"  AFTER INSERT OR UPDATE OR DELETE ON pg_authid "
-		"  FOR EACH STATEMENT EXECUTE PROCEDURE flatfile_update_trigger();\n",
-		"CREATE TRIGGER pg_sync_pg_auth_members "
-		"  AFTER INSERT OR UPDATE OR DELETE ON pg_auth_members "
-		"  FOR EACH STATEMENT EXECUTE PROCEDURE flatfile_update_trigger();\n",
-		"CREATE TRIGGER pg_sync_pg_auth_time_constraint "
-		"  AFTER INSERT OR UPDATE OR DELETE ON pg_auth_time_constraint "
-		"  FOR EACH STATEMENT EXECUTE PROCEDURE flatfile_update_trigger();\n",
-
-		/*
 		 * The authid table shouldn't be readable except through views, to
 		 * ensure passwords are not publicly visible.
 		 */
@@ -1602,8 +1582,6 @@ get_set_pwd(void)
 
 	char	   *pwd1,
 			   *pwd2;
-	char		pwdpath[MAXPGPATH];
-	struct stat statbuf;
 
 	if (pwprompt)
 	{
@@ -1673,16 +1651,6 @@ get_set_pwd(void)
 	PG_CMD_CLOSE;
 
 	check_ok();
-
-	snprintf(pwdpath, sizeof(pwdpath), "%s/global/pg_auth", pg_data);
-	if (stat(pwdpath, &statbuf) != 0 || !S_ISREG(statbuf.st_mode))
-	{
-		fprintf(stderr,
-				_("%s: The password file was not generated. "
-				  "Please report this problem.\n"),
-				progname);
-		exit_nicely();
-	}
 }
 
 /*
@@ -1963,6 +1931,7 @@ setup_privileges(void)
 		"  WHERE relkind IN ('r', 'v', 'S') AND relacl IS NULL;\n",
 		"GRANT USAGE ON SCHEMA pg_catalog TO PUBLIC;\n",
 		"GRANT CREATE, USAGE ON SCHEMA public TO PUBLIC;\n",
+		"REVOKE ALL ON pg_largeobject FROM PUBLIC;\n",
 		NULL
 	};
 
@@ -2192,6 +2161,31 @@ setup_cdb_schema(void)
 				 backend_exec, backend_options,
 				 backend_output);
 	}
+
+	check_ok();
+}
+
+/*
+ * load PL/pgsql server-side language
+ */
+static void
+load_plpgsql(void)
+{
+	PG_CMD_DECL;
+
+	fputs(_("loading PL/pgSQL server-side language ... "), stdout);
+	fflush(stdout);
+
+	snprintf(cmd, sizeof(cmd),
+			 "\"%s\" %s template1 >%s",
+			 backend_exec, backend_options,
+			 DEVNULL);
+
+	PG_CMD_OPEN;
+
+	PG_CMD_PUTS("CREATE LANGUAGE plpgsql;\n");
+
+	PG_CMD_CLOSE;
 
 	check_ok();
 }
@@ -2507,21 +2501,14 @@ check_locale_encoding(const char *locale, int user_enc)
 
 	locale_enc = pg_get_encoding_from_locale(locale);
 
-	/* We allow selection of SQL_ASCII --- see notes in createdb() */
+	/* See notes in createdb() to understand these tests */
 	if (!(locale_enc == user_enc ||
 		  locale_enc == PG_SQL_ASCII ||
-		  user_enc == PG_SQL_ASCII
+		  locale_enc == -1 ||
 #ifdef WIN32
-
-	/*
-	 * On win32, if the encoding chosen is UTF8, all locales are OK (assuming
-	 * the actual locale name passed the checks above). This is because UTF8
-	 * is a pseudo-codepage, that we convert to UTF16 before doing any
-	 * operations on, and UTF16 supports all locales.
-	 */
-		  || user_enc == PG_UTF8
+		  user_enc == PG_UTF8 ||
 #endif
-		  ))
+		  user_enc == PG_SQL_ASCII))
 	{
 		fprintf(stderr, _("%s: encoding mismatch\n"), progname);
 		fprintf(stderr,
@@ -3156,6 +3143,14 @@ main(int argc, char *argv[])
 	sprintf(pgdenv, "PGDATA=%s", pg_data);
 	putenv(pgdenv);
 
+	/*
+	 * Also ensure that TZ is set, so that we don't waste time identifying the
+	 * system timezone each of the many times we start a standalone backend.
+	 * It's okay to use a hard-wired value here because nothing done during
+	 * initdb cares about the timezone setting.
+	 */
+	putenv("TZ=GMT");
+
 	if ((ret = find_other_exec(argv[0], "postgres", PG_BACKEND_VERSIONSTR,
 							   backend_exec)) < 0)
 	{
@@ -3284,11 +3279,9 @@ main(int argc, char *argv[])
 
 		ctype_enc = pg_get_encoding_from_locale(lc_ctype);
 
-		if (ctype_enc == PG_SQL_ASCII &&
-			!(pg_strcasecmp(lc_ctype, "C") == 0 ||
-			  pg_strcasecmp(lc_ctype, "POSIX") == 0))
+		if (ctype_enc == -1)
 		{
-			/* Hmm, couldn't recognize the locale's codeset */
+			/* Couldn't recognize the locale's codeset */
 			fprintf(stderr, _("%s: could not find suitable encoding for locale %s\n"),
 					progname, lc_ctype);
 			fprintf(stderr, _("Rerun %s with the -E option.\n"), progname);
@@ -3579,6 +3572,8 @@ main(int argc, char *argv[])
 
 		/* sets up the Greenplum Database admin schema */
 		setup_cdb_schema();
+
+		load_plpgsql();
 
 		vacuum_db();
 

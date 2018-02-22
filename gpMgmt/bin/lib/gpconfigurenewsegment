@@ -145,15 +145,16 @@ class ConfExpSegCmd(Command):
                         self.set_results(CommandResult(1,'',e,True,False))
                         raise
 
-                    logger.info("extract tar file to new segment")
-                    extractTarCmd = unix.ExtractTar('extract tar file to new segment', self.tarfile, self.datadir )
-                    try:
-                        logger.debug('Extracting tar file %s to %s' % (self.tarfile, self.datadir))
-                        extractTarCmd.run(validateAfter=True)
-                    except:
-                        self.set_results(extractTarCmd.get_results())
-                        logger.error(extractTarCmd.get_results())
-                        raise
+                    if self.tarfile:
+                        logger.info("extract tar file to new segment")
+                        extractTarCmd = unix.ExtractTar('extract tar file to new segment', self.tarfile, self.datadir )
+                        try:
+                            logger.debug('Extracting tar file %s to %s' % (self.tarfile, self.datadir))
+                            extractTarCmd.run(validateAfter=True)
+                        except:
+                            self.set_results(extractTarCmd.get_results())
+                            logger.error(extractTarCmd.get_results())
+                            raise
 
                     logger.info("create gp_dbid file for segment")
                     writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
@@ -231,9 +232,6 @@ def parseargs():
     if options.batch_size <= 0:
         logger.warn('batch_size was less than zero.  Setting to 1.')
         options.batch_size = 1
-
-    if options.newsegments and not options.tarfile:
-        raise Exception('-n option requires -t option to be specified')
 
     if options.validationOnly and options.writeGpidFileOnly:
         raise Exception('Only one of --validation-only and --write-gpid-file-only can be specified')

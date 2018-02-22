@@ -343,7 +343,7 @@ distributed by (a)
 partition by range (b)
 (
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition bb start (date '2008-01-01') end (date '2009-01-01')
 every (interval '10 days'));
 ERROR:  starting value of partition "bb_1" overlaps previous range
 LINE 6: partition bb start (date '2008-01-01') end (date '2009-01-01...
@@ -980,7 +980,7 @@ partition by list (b)
 (
 partition aa values ('2007-01-01'),
 partition bb values ('2008-01-01'),
-partition cc values ('2009-01-01') 
+partition cc values ('2009-01-01')
 );
 NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_aa" for table "hhh_l1"
 NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_bb" for table "hhh_l1"
@@ -1015,7 +1015,7 @@ NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_zaa" for table "hhh_r1
 alter table hhh_r1 add partition bb start ('2008-01-01') end ('2008-01-01') ;
 ERROR:  START equal to END for partition "bb"
 -- start > last (ok)
-alter table hhh_r1 add partition bb start ('2008-01-01') 
+alter table hhh_r1 add partition bb start ('2008-01-01')
 end ('2008-02-01') inclusive;
 NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_bb" for table "hhh_r1"
 -- start > last (fail because start == last end inclusive)
@@ -1037,11 +1037,11 @@ ERROR:  new partition overlaps existing partition
 alter table hhh_r1 add partition yaa start ('2007-05-01') end ('2007-07-01');
 ERROR:  new partition overlaps existing partition "aa_7"
 -- start before first partition (fail )
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') inclusive;
 ERROR:  new partition overlaps existing partition "aa_10"
 -- start before first partition (fail because end overlaps)
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') exclusive;
 ERROR:  new partition overlaps existing partition "aa_10"
 drop table hhh_r1 cascade;
@@ -1115,7 +1115,7 @@ select * from rank ;
  10 |    1 | 05-15-2005 | F
 (5 rows)
 
--- MPP-3722: complain if for(value) matches the default partition 
+-- MPP-3722: complain if for(value) matches the default partition
 alter table rank truncate partition for('N');
 ERROR:  FOR expression matches DEFAULT partition "neuter" of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
@@ -1134,7 +1134,7 @@ HINT:  Use DROP TABLE "rank" to remove the table and the final partition
 -- MPP-4011: make FOR(value) work
 alter table rank alter partition for ('F') add default partition def1;
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_def1" for table "rank_1_prt_girls"
-alter table rank alter partition for ('F') 
+alter table rank alter partition for ('F')
 truncate partition for ('2010-10-10');
 ERROR:  FOR expression matches DEFAULT partition "def1" of partition "girls" of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
@@ -1316,7 +1316,7 @@ drop table hhh cascade;
 create table jjj (aa int, bb date)
 partition by range(bb)
 (partition j1 end (date '2008-01-01'),
-partition j2 end (date '2009-01-01'), 
+partition j2 end (date '2009-01-01'),
 default partition j3 end (date '2010-01-01'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -1327,7 +1327,7 @@ LINE 5: default partition j3 end (date '2010-01-01'));
 create table jjj (aa int, bb date)
 partition by range(bb)
 (partition j1 end (date '2008-01-01'),
-partition j2 end (date '2009-01-01'), 
+partition j2 end (date '2009-01-01'),
 default partition j3,
 default partition j4);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
@@ -1337,7 +1337,7 @@ LINE 6: default partition j4);
         ^
 -- check default
 create table foz (i int, d date) distributed by (i)
-partition by range (d) 
+partition by range (d)
 (
  default partition dsf,
  partition foo start (date '2001-01-01') end (date '2005-01-01')
@@ -1470,7 +1470,7 @@ select * from d_1_prt_abc;
 
 drop table  d cascade;
 -- multicolumn list support
-create table d (a int, b int, c int) distributed by (a) 
+create table d (a int, b int, c int) distributed by (a)
 partition by list(b, c)
 (partition a values(('1', '2'), ('3', '4')),
  partition b values(('100', '20')),

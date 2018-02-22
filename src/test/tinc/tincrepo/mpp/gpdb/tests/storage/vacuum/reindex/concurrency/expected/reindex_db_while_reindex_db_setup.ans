@@ -1,4 +1,0 @@
-1: DROP DATABASE IF EXISTS reindexdb;
-DROP
-1: create database reindexdb template template0;
-CREATE

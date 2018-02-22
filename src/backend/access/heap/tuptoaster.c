@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.93 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.95 2009/07/29 20:56:18 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -755,7 +755,10 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 		maxDataLen = TOAST_TUPLE_TARGET - hoff;
 	}
 	else
+	{
 		maxDataLen = toast_tuple_target;
+		hoff = -1; /* keep compiler quiet about using 'hoff' uninitialized */
+	}
 
 	/*
 	 * Look for attributes with attstorage 'x' to compress.  Also find large
@@ -957,8 +960,17 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 	}
 
 	/*
-	 * Finally we store attributes of type 'm' external, if possible.
+	 * Finally we store attributes of type 'm' externally.  At this point
+	 * we increase the target tuple size, so that 'm' attributes aren't
+	 * stored externally unless really necessary.
 	 */
+	/*
+	 * GPDB_90_MERGE_FIXME: Should we do something like this with memtuples on
+	 * AO tables too?
+	 */
+	if (!ismemtuple)
+		maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
+
 	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
 							   toast_values, toast_isnull) > maxDataLen &&
 		   rel->rd_rel->reltoastrelid != InvalidOid)
@@ -1562,7 +1574,9 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen, int options)
 		 */
 		index_insert(toastidx, t_values, t_isnull,
 					 &(toasttup->t_self),
-					 toastrel, toastidx->rd_index->indisunique);
+					 toastrel,
+					 toastidx->rd_index->indisunique ?
+					 UNIQUE_CHECK_YES : UNIQUE_CHECK_NO);
 
 		/*
 		 * Free memory

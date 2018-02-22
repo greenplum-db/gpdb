@@ -724,7 +724,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i = all (s
 
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 select * from A,B where exists (select * from C where C.j = A.j and B.i = all (select min(C.j) from C where C.j = B.j)) order by 1,2,3,4;
- i  | j  | i | j
+ i  | j  | i | j 
 ----+----+---+---
   1 |  1 | 1 | 1
   1 |  1 | 1 | 1
@@ -810,7 +810,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
          ->  Limit  (cost=0.00..1391061420469.59 rows=4 width=12)
                ->  Sort  (cost=0.00..1391061420469.59 rows=36 width=12)
                      Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-                     ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=0.00..1391061420469.58 rows=36 width=12)
+                     ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=0.00..1391061420469.58 rows=36 width=12)
                            Join Filter: qp_correlated_query.a.j >= qp_correlated_query.c.j
                            ->  Nested Loop  (cost=0.00..1356692610.50 rows=90 width=16)
                                  Join Filter: true

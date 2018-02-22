@@ -469,7 +469,9 @@ dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, Com
 		 * transaction.  We would then need to keep combocid_map_count
 		 * synchronized with open files at (sub-) xact boundaries.
 		 */
-		combocid_map = BufFileCreateTemp_ReaderWriter(path, true, true);
+		combocid_map = BufFileCreateNamedTemp(path,
+											  true /* delOnClose */,
+											  true /* interXact */);
 		MemoryContextSwitchTo(oldCtx);
 	}
 	Assert(combocid_map != NULL);
@@ -522,7 +524,9 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 		ComboCidMapName(path, gp_session_id, lockHolderProcPtr->pid);
 		/* open our file, as appropriate: this will throw an error if the create-fails. */
 		oldCtx = MemoryContextSwitchTo(TopMemoryContext);
-		combocid_map = BufFileCreateTemp_ReaderWriter(path, false, true);
+		combocid_map = BufFileOpenNamedTemp(path,
+											false /* delOnClose */,
+											true /* interXact */);
 		MemoryContextSwitchTo(oldCtx);
 	}
 	Assert(combocid_map != NULL);

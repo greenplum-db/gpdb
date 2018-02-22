@@ -264,6 +264,9 @@ class PgControlData(Command):
                     self.data[n.strip()] = v.strip() 
         return self.data[name]
 
+    def get_datadir(self):
+        return self.datadir
+
 class PgBaseBackup(Command):
     def __init__(self, pgdata, host, port, excludePaths=[], ctxt=LOCAL, remoteHost=None):
         cmd_tokens = ['pg_basebackup',

@@ -35,8 +35,9 @@
  * ----------------
  */
 #define AuthTimeConstraintRelationId	6070
+#define AuthTimeConstraint_Rowtype_Id	6071
 
-CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS BKI_ROWTYPE_OID(6071)
 {
 	Oid		authid;		/* foreign key to pg_authid.oid, */
 	int2	start_day;	/* [0,6] denoting start of interval */
@@ -70,5 +71,12 @@ typedef FormData_pg_auth_time_constraint *Form_pg_auth_time_constraint;
 #define Anum_pg_auth_time_constraint_start_time	3
 #define Anum_pg_auth_time_constraint_end_day	4
 #define Anum_pg_auth_time_constraint_end_time	5
+
+#define Schema_pg_auth_time_constraint \
+{6070, {"authid"}    ,   26, -1, 0, 4, 1, 0, -1, -1, true           , 'p' ,'i', true, false, false, true, 0, { 0 } }, \
+{6070, {"start_day"} ,   21, -1, 0, 2, 2, 0, -1, -1, true           , 'p' ,'s', true, false, false, true, 0, { 0 } }, \
+{6070, {"start_time"}, 1083, -1, 0, 8, 3, 0, -1, -1, FLOAT8PASSBYVAL, 'p' ,'d', true, false, false, true, 0, { 0 } }, \
+{6070, {"end_day"}   ,   21, -1, 0, 2, 4, 0, -1, -1, true           , 'p' ,'s', true, false, false, true, 0, { 0 } }, \
+{6070, {"end_time"}  , 1083, -1, 0, 8, 5, 0, -1, -1, FLOAT8PASSBYVAL, 'p' ,'d', true, false, false, true, 0, { 0 } }
 
 #endif   /* PG_AUTH_TIME_CONSTRAINT_H */

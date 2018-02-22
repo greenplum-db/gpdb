@@ -73,3 +73,16 @@ DROP FUNCTION if exists test_call_set_command();
 -- another way to detect that the GUC's assign-hook is called only once.
 set work_mem='1MB';
 reset work_mem;
+
+--
+-- Test if RESET timezone is dispatched to all slices
+--
+CREATE TABLE timezone_table AS SELECT * FROM (VALUES (123,1513123564),(123,1512140765),(123,1512173164),(123,1512396441)) foo(a, b) DISTRIBUTED RANDOMLY;
+
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+SET timezone= 'America/New_York';
+SHOW timezone;
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+RESET timezone;
+SHOW timezone;
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;

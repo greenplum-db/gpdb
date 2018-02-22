@@ -351,7 +351,7 @@ SELECT dblink_build_sql_update('test_dropped', '2', 1,
 SELECT dblink_build_sql_delete('test_dropped', '2', 1,
                                ARRAY['2'::TEXT]);
 
--- test nested query for GPDB 
+-- test nested query for GPDB
 CREATE TEMPORARY TABLE result AS
 (SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t1(f1 int, f2 text, f3 text[]))
 UNION
@@ -359,7 +359,7 @@ UNION
 UNION
 (SELECT * from dblink('dbname=contrib_regression','select * from foo where f1 > 2 and f1 < 7') as t3(f1 int, f2 text, f3 text[]))
 ORDER by f1;
-SELECT * FROM result; 
+SELECT * FROM result;
 DROP TABLE result;
 CREATE TEMPORARY TABLE result (f1 int, f2 text, f3 text[]);
 INSERT INTO result SELECT * FROM dblink ('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[]);
@@ -389,3 +389,20 @@ DROP USER dblink_regression_test;
 DROP USER MAPPING FOR public SERVER fdtest;
 DROP SERVER fdtest;
 DROP FOREIGN DATA WRAPPER postgresql;
+
+-- test asynchronous notifications
+SELECT dblink_connect('dbname=contrib_regression');
+
+--should return listen
+SELECT dblink_exec('LISTEN regression');
+--should return listen
+SELECT dblink_exec('LISTEN foobar');
+
+SELECT dblink_exec('NOTIFY regression');
+SELECT dblink_exec('NOTIFY foobar');
+
+SELECT notify_name, be_pid = (select t.be_pid from dblink('select pg_backend_pid()') as t(be_pid int)) AS is_self_notify, extra from dblink_get_notify();
+
+SELECT * from dblink_get_notify();
+
+SELECT dblink_disconnect();

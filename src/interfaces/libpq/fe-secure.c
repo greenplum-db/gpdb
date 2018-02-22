@@ -325,7 +325,6 @@ pqsecure_read(PGconn *conn, void *ptr, size_t len)
 	if (conn->ssl)
 	{
 		int			err;
-
 		DECLARE_SIGPIPE_INFO(spinfo);
 
 		/* SSL_read can write to the socket, so we need to disable SIGPIPE */
@@ -596,7 +595,7 @@ pqsecure_write(PGconn *conn, const void *ptr, size_t len)
 	else
 #endif   /* USE_SSL */
 	{
-		int			flags = 0;
+		int		flags = 0;
 
 #ifdef MSG_NOSIGNAL
 		if (conn->sigpipe_flag)

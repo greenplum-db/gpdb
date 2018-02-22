@@ -24,6 +24,115 @@
 \set VERBOSITY terse
 CREATE TABLE gp_single_row(a int) distributed by (a);
 insert into gp_single_row values(1);
+-- Set up test functions first.
+CREATE FUNCTION test_return_void(s text) 
+RETURNS void AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_bool(s text) 
+RETURNS bool AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_text(s text) 
+RETURNS text AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_bytea(s text) 
+RETURNS bytea AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_circle(s text) 
+RETURNS circle AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_int(s text) 
+RETURNS int[] AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_text(s text) 
+RETURNS text[] AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_void(s text) 
+RETURNS setof void AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_bool(s text) 
+RETURNS setof bool AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_text(s text) 
+RETURNS setof text AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_bytea(s text) 
+RETURNS setof bytea AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_circle(s text) 
+RETURNS setof circle AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+-- RETURNS record types
+CREATE FUNCTION test_return_table_record(s text) 
+RETURNS table_record AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_type_record(s text) 
+RETURNS type_record AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_table_record(s text) 
+RETURNS table_record AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_setof_type_record(s text) 
+RETURNS type_record AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+-- RETURNS with OUT Parameters
+CREATE FUNCTION test_return_out_text(s text, OUT text) 
+AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_out_setof_text(s text, OUT text) 
+RETURNS setof text AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_out_record(s text, OUT first text, OUT second int4) 
+AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_out_setof_record(s text, OUT first text, OUT second int4)
+RETURNS setof record AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+-- RETURNS TABLE
+CREATE FUNCTION test_return_table(s text) RETURNS TABLE(first text, second int4)
+AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
 -- =============================================
 -- TEST 1:  RETURN VALUE TESTING - Scalar values
 -- =============================================
@@ -503,140 +612,140 @@ FROM gp_single_row;
 SELECT test_return_bytea('True');
  test_return_bytea 
 -------------------
- True
+ \x54727565
 (1 row)
 
 SELECT * FROM test_return_bytea('True');
  test_return_bytea 
 -------------------
- True
+ \x54727565
 (1 row)
 
 SELECT test_return_bytea('True') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- True
+ \x54727565
 (1 row)
 
 -- From Python empty string
 SELECT test_return_bytea('""');
  test_return_bytea 
 -------------------
- 
+ \x
 (1 row)
 
 SELECT * FROM test_return_bytea('""');
  test_return_bytea 
 -------------------
- 
+ \x
 (1 row)
 
 SELECT test_return_bytea('""') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- 
+ \x
 (1 row)
 
 -- From Python string
 SELECT test_return_bytea('"value"');
  test_return_bytea 
 -------------------
- value
+ \x76616c7565
 (1 row)
 
 SELECT * FROM test_return_bytea('"value"');
  test_return_bytea 
 -------------------
- value
+ \x76616c7565
 (1 row)
 
 SELECT test_return_bytea('"value"') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- value
+ \x76616c7565
 (1 row)
 
 -- From Python empty list
 SELECT test_return_bytea('[]');
  test_return_bytea 
 -------------------
- []
+ \x5b5d
 (1 row)
 
 SELECT * FROM test_return_bytea('[]');
  test_return_bytea 
 -------------------
- []
+ \x5b5d
 (1 row)
 
 SELECT test_return_bytea('[]') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- []
+ \x5b5d
 (1 row)
 
 -- From Python non-empty list
 SELECT test_return_bytea('[False]');
  test_return_bytea 
 -------------------
- [False]
+ \x5b46616c73655d
 (1 row)
 
 SELECT * FROM test_return_bytea('[False]');
  test_return_bytea 
 -------------------
- [False]
+ \x5b46616c73655d
 (1 row)
 
 SELECT test_return_bytea('[False]') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- [False]
+ \x5b46616c73655d
 (1 row)
 
 -- From Python empty dict
 SELECT test_return_bytea('{}');
  test_return_bytea 
 -------------------
- {}
+ \x7b7d
 (1 row)
 
 SELECT * FROM test_return_bytea('{}');
  test_return_bytea 
 -------------------
- {}
+ \x7b7d
 (1 row)
 
 SELECT test_return_bytea('{}') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- {}
+ \x7b7d
 (1 row)
 
 -- From Python non-empty dict
 SELECT test_return_bytea('{None: None}');
- test_return_bytea 
--------------------
- {None: None}
+     test_return_bytea      
+----------------------------
+ \x7b4e6f6e653a204e6f6e657d
 (1 row)
 
 SELECT * FROM test_return_bytea('{None: None}');
- test_return_bytea 
--------------------
- {None: None}
+     test_return_bytea      
+----------------------------
+ \x7b4e6f6e653a204e6f6e657d
 (1 row)
 
 SELECT test_return_bytea('{None: None}') 
 FROM gp_single_row;
- test_return_bytea 
--------------------
- {None: None}
+     test_return_bytea      
+----------------------------
+ \x7b4e6f6e653a204e6f6e657d
 (1 row)
 
 -- From Python Object with str() function
@@ -645,7 +754,7 @@ SELECT test_return_bytea(
 );
  test_return_bytea 
 -------------------
- test
+ \x74657374
 (1 row)
 
 SELECT * FROM test_return_bytea(
@@ -653,7 +762,7 @@ SELECT * FROM test_return_bytea(
 );
  test_return_bytea 
 -------------------
- test
+ \x74657374
 (1 row)
 
 SELECT test_return_bytea(
@@ -661,27 +770,27 @@ SELECT test_return_bytea(
 ) FROM gp_single_row;
  test_return_bytea 
 -------------------
- test
+ \x74657374
 (1 row)
 
 -- From Python String with null characters
 SELECT test_return_bytea(E'"test\\0"');
  test_return_bytea 
 -------------------
- test\000
+ \x7465737400
 (1 row)
 
 SELECT * FROM test_return_bytea(E'"test\\0"');
  test_return_bytea 
 -------------------
- test\000
+ \x7465737400
 (1 row)
 
 SELECT test_return_bytea(E'"test\\0"') 
 FROM gp_single_row;
  test_return_bytea 
 -------------------
- test\000
+ \x7465737400
 (1 row)
 
 -- Error conditions
@@ -871,9 +980,9 @@ SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 2, but 3 was expected
 SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 2, but 3 was expected
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
 ERROR:  invalid input syntax for integer: "[2, 3]"
@@ -881,9 +990,9 @@ SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
 ERROR:  invalid input syntax for integer: "[2, 3]"
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length -1, but 3 was expected
 SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length -1, but 3 was expected
 --
 -- Case 5: Return array of texts
 --
@@ -944,19 +1053,19 @@ SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
 -- Error conditions
 -- Multi-dimensional array with non-fixed dimension sizes
 SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 4, but 3 was expected
 SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 4, but 3 was expected
 -- Multi-dimensional array with mix of arrays and atomic elements
 SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 2, but 1 was expected
 SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length 2, but 1 was expected
 -- Multi-dimensional array with missing dimensions
 SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length -1, but 2 was expected
 SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
-ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4957)
+ERROR:  wrong length of inner sequence: has length -1, but 2 was expected
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
 -- ===================================================
@@ -1366,34 +1475,34 @@ FROM gp_single_row;
 
 -- From Python List of values
 SELECT test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]');
- test_return_setof_bytea 
--------------------------
+   test_return_setof_bytea    
+------------------------------
  
- True
- value
- [1]
- {'\\x00': 'B'}
+ \x54727565
+ \x76616c7565
+ \x5b315d
+ \x7b275c783030273a202742277d
 (5 rows)
 
 SELECT * FROM test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]');
- test_return_setof_bytea 
--------------------------
+   test_return_setof_bytea    
+------------------------------
  
- True
- value
- [1]
- {'\\x00': 'B'}
+ \x54727565
+ \x76616c7565
+ \x5b315d
+ \x7b275c783030273a202742277d
 (5 rows)
 
 SELECT test_return_setof_bytea(E'[None, True, "value", [1], {"\\0": "B"}]') 
 FROM gp_single_row;
- test_return_setof_bytea 
--------------------------
+   test_return_setof_bytea    
+------------------------------
  
- True
- value
- [1]
- {'\\x00': 'B'}
+ \x54727565
+ \x76616c7565
+ \x5b315d
+ \x7b275c783030273a202742277d
 (5 rows)
 
 -- Error conditions
@@ -1434,57 +1543,57 @@ SELECT * FROM test_return_setof_bytea('{}');
 SELECT test_return_setof_bytea('"value"');
  test_return_setof_bytea 
 -------------------------
- v
- a
- l
- u
- e
+ \x76
+ \x61
+ \x6c
+ \x75
+ \x65
 (5 rows)
 
 SELECT * FROM test_return_setof_bytea('"value"');
  test_return_setof_bytea 
 -------------------------
- v
- a
- l
- u
- e
+ \x76
+ \x61
+ \x6c
+ \x75
+ \x65
 (5 rows)
 
 -- From Python string with null values
 SELECT test_return_setof_bytea(E'"test\\0"');
  test_return_setof_bytea 
 -------------------------
- t
- e
- s
- t
- \000
+ \x74
+ \x65
+ \x73
+ \x74
+ \x00
 (5 rows)
 
 SELECT * FROM test_return_setof_bytea(E'"test\\0"');
  test_return_setof_bytea 
 -------------------------
- t
- e
- s
- t
- \000
+ \x74
+ \x65
+ \x73
+ \x74
+ \x00
 (5 rows)
 
 -- From Python dictionary 
 SELECT test_return_setof_bytea('{True: "ignored", False: "ignored"}');
  test_return_setof_bytea 
 -------------------------
- False
- True
+ \x46616c7365
+ \x54727565
 (2 rows)
 
 SELECT * FROM test_return_setof_bytea('{True: "ignored", False: "ignored"}');
  test_return_setof_bytea 
 -------------------------
- False
- True
+ \x46616c7365
+ \x54727565
 (2 rows)
 
 --

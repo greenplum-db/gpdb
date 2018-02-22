@@ -4286,9 +4286,11 @@ add_second_stage_agg(PlannerInfo *root,
 								 result_plan);
 
 	/*
-	 * Agg will not change the sort order unless it is hashed.
+	 * A sorted Agg will not change the sort order.
 	 */
 	agg_node->flow = pull_up_Flow(agg_node, agg_node->lefttree);
+	if (aggstrategy != AGG_SORTED)
+		*p_current_pathkeys = NIL;
 
 	/*
 	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
@@ -4332,7 +4334,8 @@ add_subqueryscan(PlannerInfo *root, List **p_pathkeys,
 										 NIL,
 										 varno, /* scanrelid (= varno) */
 										 subplan,
-										 subquery->rtable);
+										 subquery->rtable,
+										 subquery->rowMarks);
 
 	mark_passthru_locus(subplan, true, true);
 
@@ -4799,7 +4802,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
  * Corresponds to make_three_stage_agg_plan and must be maintained in sync
  * with it.
  *
- * This function assumes the enviroment established by planDqaJoinOrder()
+ * This function assumes the environment established by planDqaJoinOrder()
  * and set_coplan_strategies().
  */
 Cost

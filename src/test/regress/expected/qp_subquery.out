@@ -1218,7 +1218,7 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
 -------------------------------------------------------------------------------------------------------
  Delete (slice0; segments: 3)  (rows=2 width=10)
    ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.09..3.17 rows=2 width=10)
-         ->  Hash Left Anti Semi Join (Not-In)  (cost=1.09..3.17 rows=2 width=10)
+         ->  Hash Left Anti Semi (Not-In) Join  (cost=1.09..3.17 rows=2 width=10)
                Hash Cond: tabdel1.a = tabdel3.a
                ->  Seq Scan on tabdel1  (cost=0.00..2.03 rows=1 width=14)
                ->  Hash  (cost=1.05..1.05 rows=1 width=4)
@@ -1231,7 +1231,7 @@ explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- s
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Delete (slice0; segments: 3)  (rows=2 width=10)
-   ->  Hash Left Anti Semi Join (Not-In)  (cost=1.02..3.10 rows=2 width=10)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1.02..3.10 rows=2 width=10)
          Hash Cond: tabdel2.a = tabdel4.a
          ->  Seq Scan on tabdel2  (cost=0.00..2.03 rows=1 width=14)
          ->  Hash  (cost=1.01..1.01 rows=1 width=4)

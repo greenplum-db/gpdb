@@ -4,14 +4,13 @@
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
-      are not intended for use in a production environment. Experimental features are subject to
-      change without notice in future releases.</note>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
+      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gpbackup -dbname</b> <varname>database_name</varname>
-   [<b>-backupdir</b> <varname>directory</varname>]
-   [<b>-compression-level</b> <varname>level</varname>
+   [<b>-backup-dir</b> <varname>directory</varname>]
+   [<b>-compression-level</b> <varname>level</varname>]
    [<b>-data-only</b>]
    [<b>-debug</b>]
    [<b>-exclude-schema</b> <varname>schema_name</varname>]
@@ -36,7 +35,7 @@
         tables. For example, you can combine schema level and table level options to back up all the
         tables in a schema except for a single table. </p><p>By default, <codeph>gpbackup</codeph>
         backs up objects in the specified database as well as global Greenplum Database system
-        objects. You can optionally supply the <codeph>-globals</codeph> option with
+        objects. You can optionally supply the <codeph>-with-globals</codeph> option with
           <codeph>gprestore</codeph> to restore global objects. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
         information.</p><p><codeph>gpbackup</codeph> stores the object metadata files and DDL files
@@ -44,19 +43,19 @@
         segments use the <codeph>COPY ... ON SEGMENT</codeph> command to store their data for
         backed-up tables in compressed CSV data files, located in each segment's data directory. See
           <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_xnj_b4c_tbb"/> for
-        additional information.</p><p>You can add the <codeph>-backupdir</codeph> option to copy all
-        backup files from the Greenplum Database master and segment hosts to an absolute path for
-        later use. Additional options are provided to filter the backup set in order to include or
-        exclude specific tables.</p><p>Each <codeph>gpbackup</codeph> task uses a single transaction
-        on the Greenplum database master host. Utility-mode connections are created for each segment
-        host, which perform the associated <codeph>COPY ... ON SEGMENT</codeph> operations in
-        parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table
-        that is backed up.</p><codeph>gpbackup</codeph> will send out status email notifications
-      after a back up operation completes, if you place a file named
-        <filepath>mail_contacts</filepath> in the home directory of the Greenplum database superuser
-      (gpadmin) or in the same directory as the <codeph>gpbackup</codeph> utility
-        (<filepath>$GPHOME/bin</filepath>). See <xref
-        href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb"/>.</section>
+        additional information.</p><p>You can add the <codeph>-backup-dir</codeph> option to copy
+        all backup files from the Greenplum Database master and segment hosts to an absolute path
+        for later use. Additional options are provided to filter the backup set in order to include
+        or exclude specific tables.</p><p>Each <codeph>gpbackup</codeph> task uses a single
+        transaction on the Greenplum Database master host. The <codeph>COPY ... ON
+        SEGMENT</codeph>command performs the backup task in parallel on each segment host. The
+        backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table that is backed
+        up.</p>When a back up operation completes, <codeph>gpbackup</codeph> returns a status code.
+      See <xref href="#topic_dyz_d5j_tbb/return_codes" format="dita"/>. <p><codeph>gpbackup</codeph>
+        can send status email notifications after a back up operation completes. You specify when
+        the utility sends the mail and the email recipients in a configuration file. See <xref
+          href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
+        />.</p></section>
     <section>
       <title>Options</title>
       <parml>
@@ -68,7 +67,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt><b>-backupdir</b>
+          <pt><b>-backup-dir</b>
             <varname>directory</varname></pt>
           <pd>Optional. Copies all required backup files (metadata files and data files) to the
             specified directory. You must specify <varname>directory</varname> as an absolute path
@@ -176,7 +175,8 @@
               <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
-              <codeph>-leaf-partition-data</codeph> option. </pd>
+              <codeph>-leaf-partition-data</codeph> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -195,7 +195,8 @@
             another table filtering option such as <codeph>-exclude-table-file</codeph>.</pd>
           <pd>You can optionally specify a table leaf partition name in place of the table name, to
             include only specific leaf partitions in a backup with the
-              <codeph>-leaf-partition-data</codeph> option. </pd>
+              <codeph>-leaf-partition-data</codeph> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -231,7 +232,7 @@
       </parml>
       <parml>
         <plentry>
-          <pt>-single-data-file</pt>
+          <pt><b>-single-data-file</b></pt>
           <pd>Optional. Create a single data file on each segment host for all tables backed up on
             that segment. By default, each <codeph>gpbackup</codeph> creates one compressed CSV file
             for each table that is backed up on the segment.<note>If you use the
@@ -260,6 +261,16 @@
         </plentry>
       </parml>
     </section>
+    <section id="return_codes">
+      <title>Return Codes</title>
+      <p>One of these codes is returned after <codeph>gpbackup</codeph> completes.<ul
+          id="ul_hhb_sqp_n4">
+          <li><b>0</b> – Backup completed with no problems.</li>
+          <li><b>1</b> – Backup completed with non-fatal errors. See log file for more
+            information.</li>
+          <li><b>2</b> – Backup failed with a fatal error. See log file for more information.</li>
+        </ul></p>
+    </section>
     <section>
       <title>Examples</title>
       <p>Backup all schemas and tables in the "demo" database, including global Greenplum Database
@@ -271,7 +282,7 @@
       <p>Backup all schemas and tables in the "demo" database, including global Greenplum Database
         system objects and query statistics, and copy all backup files to the
           <filepath>/home/gpadmin/backup</filepath>
-        directory:<codeblock>$ gpbackup -dbname demo -with-stats -backupdir /home/gpadmin/backup</codeblock></p>
+        directory:<codeblock>$ gpbackup -dbname demo -with-stats -backup-dir /home/gpadmin/backup</codeblock></p>
       <p>This example uses <codeph>-include-schema</codeph> with <codeph>-exclude-table</codeph> to
         back up a schema except for a single table. </p>
       <codeblock>$ gpbackup -dbname demo -include-schema mydata -exclude-table mydata.addresses</codeblock>
@@ -281,10 +292,8 @@
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="./gprestore.xml" type="topic" format="dita"/>
-        </codeph>
-      </p>
+        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
+          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/></p>
     </section>
   </body>
 </topic>

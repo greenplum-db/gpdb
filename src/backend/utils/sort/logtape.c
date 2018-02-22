@@ -411,8 +411,7 @@ LogicalTapeSetCreate_Internal(int ntapes)
 LogicalTapeSet *LogicalTapeSetCreate(int ntapes, bool del_on_close)
 {
 	char tmpprefix[MAXPGPATH];
-	int len = snprintf(tmpprefix, MAXPGPATH, "%s/slice%d_sort",
-			PG_TEMP_FILES_DIR,
+	int len = snprintf(tmpprefix, MAXPGPATH, "slice%d_sort",
 			currentSliceId);
 	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
 	StringInfo uniquename = ExecWorkFile_AddUniqueSuffix(tmpprefix);

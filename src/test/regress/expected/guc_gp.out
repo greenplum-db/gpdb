@@ -78,3 +78,45 @@ set work_mem='1MB';
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 reset work_mem;
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+--
+-- Test if RESET timezone is dispatched to all slices
+--
+CREATE TABLE timezone_table AS SELECT * FROM (VALUES (123,1513123564),(123,1512140765),(123,1512173164),(123,1512396441)) foo(a, b) DISTRIBUTED RANDOMLY;
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+ to_timestamp 
+--------------
+ 12-01-2017
+ 12-04-2017
+ 12-12-2017
+(3 rows)
+
+SET timezone= 'America/New_York';
+SHOW timezone;
+     TimeZone     
+------------------
+ America/New_York
+(1 row)
+
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+ to_timestamp 
+--------------
+ 12-01-2017
+ 12-04-2017
+ 12-12-2017
+(3 rows)
+
+RESET timezone;
+SHOW timezone;
+ TimeZone 
+----------
+ PST8PDT
+(1 row)
+
+SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+ to_timestamp 
+--------------
+ 12-01-2017
+ 12-04-2017
+ 12-12-2017
+(3 rows)
+

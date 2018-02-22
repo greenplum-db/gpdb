@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.80 2009/01/01 17:24:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/pathnode.h,v 1.81 2009/09/17 20:49:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,6 +34,7 @@ extern int compare_fractional_path_costs(Path *path1, Path *path2,
 							  double fraction);
 extern void set_cheapest(PlannerInfo *root, RelOptInfo *parent_rel);    /*CDB*/
 extern void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path);
+extern void cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_jointype, JoinPath *new_path);
 
 extern Path *create_seqscan_path(PlannerInfo *root, RelOptInfo *rel);
 extern ExternalPath *create_external_path(PlannerInfo *root, RelOptInfo *rel);
@@ -69,11 +70,12 @@ extern TidPath *create_tidscan_path(PlannerInfo *root, RelOptInfo *rel,
 extern AppendPath *create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths);
 extern ResultPath *create_result_path(List *quals);
 extern MaterialPath *create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath);
-extern UniquePath *create_unique_path(PlannerInfo *root,
-		Path        *subpath,
-		List        *distinct_on_exprs,
-		List		   *distinct_on_operators,
-		Relids       distinct_on_rowid_relids);
+extern UniquePath *create_unique_path(PlannerInfo *root, RelOptInfo *rel,
+				   Path *subpath, SpecialJoinInfo *sjinfo);
+extern UniquePath *create_unique_rowid_path(PlannerInfo *root,
+						 RelOptInfo *rel,
+                         Path        *subpath,
+                         Relids       distinct_relids);
 extern Path *create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys);
 extern Path *create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
 extern Path *create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
@@ -141,7 +143,5 @@ extern Var *cdb_define_pseudo_column(PlannerInfo   *root,
 extern CdbRelColumnInfo *cdb_find_pseudo_column(PlannerInfo *root, Var *var);
 
 extern CdbRelColumnInfo *cdb_rte_find_pseudo_column(RangeTblEntry *rte, AttrNumber attno);
-
-extern CdbRelDedupInfo *cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel);
 
 #endif   /* PATHNODE_H */

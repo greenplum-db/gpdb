@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginfast.c,v 1.3 2009/06/11 14:48:53 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginfast.c,v 1.5 2009/10/02 21:14:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,6 @@
 
 #include "access/genam.h"
 #include "access/gin.h"
-#include "access/tuptoaster.h"
 #include "catalog/index.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
@@ -41,13 +40,15 @@ typedef struct DatumArray
 
 /*
  * Build a pending-list page from the given array of tuples, and write it out.
+ *
+ * Returns amount of free space left on the page.
  */
 static int32
 writeListPage(Relation index, Buffer buffer,
 			  IndexTuple *tuples, int32 ntuples, BlockNumber rightlink)
 {
 	Page		page = BufferGetPage(buffer);
-	int			i,
+	int32		i,
 				freesize,
 				size = 0;
 	OffsetNumber l,
@@ -100,8 +101,6 @@ writeListPage(Relation index, Buffer buffer,
 		GinPageGetOpaque(page)->maxoff = 0;
 	}
 
-	freesize = PageGetFreeSpace(page);
-
 	MarkBufferDirty(buffer);
 
 	if (!index->rd_istemp)
@@ -110,24 +109,28 @@ writeListPage(Relation index, Buffer buffer,
 		ginxlogInsertListPage data;
 		XLogRecPtr	recptr;
 
-		rdata[0].buffer = buffer;
-		rdata[0].buffer_std = true;
-		rdata[0].data = (char *) &data;
-		rdata[0].len = sizeof(ginxlogInsertListPage);
-		rdata[0].next = rdata + 1;
-
-		rdata[1].buffer = InvalidBuffer;
-		rdata[1].data = workspace;
-		rdata[1].len = size;
-		rdata[1].next = NULL;
-
+		data.node = index->rd_node;
 		data.blkno = BufferGetBlockNumber(buffer);
 		data.rightlink = rightlink;
 		data.ntuples = ntuples;
 
+		rdata[0].buffer = InvalidBuffer;
+		rdata[0].data = (char *) &data;
+		rdata[0].len = sizeof(ginxlogInsertListPage);
+		rdata[0].next = rdata + 1;
+
+		rdata[1].buffer = buffer;
+		rdata[1].buffer_std = true;
+		rdata[1].data = workspace;
+		rdata[1].len = size;
+		rdata[1].next = NULL;
+
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_INSERT_LISTPAGE, rdata);
 		PageSetLSN(page, recptr);
 	}
+
+	/* get free space before releasing buffer */
+	freesize = PageGetExactFreeSpace(page);
 
 	UnlockReleaseBuffer(buffer);
 
@@ -164,7 +167,8 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples,
 			{
 				res->nPendingPages++;
 				writeListPage(index, prevBuffer,
-							  tuples + startTuple, i - startTuple,
+							  tuples + startTuple,
+							  i - startTuple,
 							  BufferGetBlockNumber(curBuffer));
 			}
 			else
@@ -179,7 +183,7 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples,
 
 		tupsize = MAXALIGN(IndexTupleSize(tuples[i])) + sizeof(ItemIdData);
 
-		if (size + tupsize >= GinListPageSize)
+		if (size + tupsize > GinListPageSize)
 		{
 			/* won't fit, force a new page and reprocess */
 			i--;
@@ -196,7 +200,8 @@ makeSublist(Relation index, IndexTuple *tuples, int32 ntuples,
 	 */
 	res->tail = BufferGetBlockNumber(curBuffer);
 	res->tailFreeSize = writeListPage(index, curBuffer,
-								   tuples + startTuple, ntuples - startTuple,
+									  tuples + startTuple,
+									  ntuples - startTuple,
 									  InvalidBlockNumber);
 	res->nPendingPages++;
 	/* that was only one heap tuple */
@@ -236,7 +241,7 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 	metabuffer = ReadBuffer(index, GIN_METAPAGE_BLKNO);
 	metapage = BufferGetPage(metabuffer);
 
-	if (collector->sumsize + collector->ntuples * sizeof(ItemIdData) > GIN_PAGE_FREESIZE)
+	if (collector->sumsize + collector->ntuples * sizeof(ItemIdData) > GinListPageSize)
 	{
 		/*
 		 * Total size is greater than one page => make sublist
@@ -264,13 +269,12 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 
 	if (separateList)
 	{
-		GinMetaPageData sublist;
-
 		/*
 		 * We should make sublist separately and append it to the tail
 		 */
-		memset(&sublist, 0, sizeof(GinMetaPageData));
+		GinMetaPageData sublist;
 
+		memset(&sublist, 0, sizeof(GinMetaPageData));
 		makeSublist(index, collector->tuples, collector->ntuples, &sublist);
 
 		/*
@@ -282,45 +286,44 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 		if (metadata->head == InvalidBlockNumber)
 		{
 			/*
-			 * Sublist becomes main list
+			 * Main list is empty, so just copy sublist into main list
 			 */
 			START_CRIT_SECTION();
+
 			memcpy(metadata, &sublist, sizeof(GinMetaPageData));
-			memcpy(&data.metadata, &sublist, sizeof(GinMetaPageData));
 		}
 		else
 		{
 			/*
-			 * merge lists
+			 * Merge lists
 			 */
-
 			data.prevTail = metadata->tail;
+			data.newRightlink = sublist.head;
+
 			buffer = ReadBuffer(index, metadata->tail);
 			LockBuffer(buffer, GIN_EXCLUSIVE);
 			page = BufferGetPage(buffer);
+
 			Assert(GinPageGetOpaque(page)->rightlink == InvalidBlockNumber);
 
 			START_CRIT_SECTION();
 
 			GinPageGetOpaque(page)->rightlink = sublist.head;
+
+			MarkBufferDirty(buffer);
+
 			metadata->tail = sublist.tail;
 			metadata->tailFreeSize = sublist.tailFreeSize;
 
 			metadata->nPendingPages += sublist.nPendingPages;
 			metadata->nPendingHeapTuples += sublist.nPendingHeapTuples;
-
-			memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
-			data.newRightlink = sublist.head;
-
-			MarkBufferDirty(buffer);
 		}
 	}
 	else
 	{
 		/*
-		 * Insert into tail page, metapage is already locked
+		 * Insert into tail page.  Metapage is already locked
 		 */
-
 		OffsetNumber l,
 					off;
 		int			i,
@@ -330,6 +333,7 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 		buffer = ReadBuffer(index, metadata->tail);
 		LockBuffer(buffer, GIN_EXCLUSIVE);
 		page = BufferGetPage(buffer);
+
 		off = (PageIsEmpty(page)) ? FirstOffsetNumber :
 			OffsetNumberNext(PageGetMaxOffsetNumber(page));
 
@@ -367,19 +371,23 @@ ginHeapTupleFastInsert(Relation index, GinState *ginstate,
 			off++;
 		}
 
-		metadata->tailFreeSize -= collector->sumsize + collector->ntuples * sizeof(ItemIdData);
-		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
+		Assert((ptr - rdata[1].data) <= collector->sumsize);
+
+		metadata->tailFreeSize = PageGetExactFreeSpace(page);
+
 		MarkBufferDirty(buffer);
 	}
 
 	/*
-	 * Make real write
+	 * Write metabuffer, make xlog entry
 	 */
-
 	MarkBufferDirty(metabuffer);
+
 	if (!index->rd_istemp)
 	{
 		XLogRecPtr	recptr;
+
+		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE, rdata);
 		PageSetLSN(metapage, recptr);
@@ -453,16 +461,10 @@ ginHeapTupleFastCollect(Relation index, GinState *ginstate,
 	 */
 	for (i = 0; i < nentries; i++)
 	{
-		int32		tupsize;
-
-		collector->tuples[collector->ntuples + i] = GinFormTuple(ginstate, attnum, entries[i], NULL, 0);
+		collector->tuples[collector->ntuples + i] =
+			GinFormTuple(index, ginstate, attnum, entries[i], NULL, 0, true);
 		collector->tuples[collector->ntuples + i]->t_tid = *item;
-		tupsize = IndexTupleSize(collector->tuples[collector->ntuples + i]);
-
-		if (tupsize > TOAST_INDEX_TARGET || tupsize >= GinMaxItemSize)
-			elog(ERROR, "huge tuple");
-
-		collector->sumsize += tupsize;
+		collector->sumsize += IndexTupleSize(collector->tuples[collector->ntuples + i]);
 	}
 
 	collector->ntuples += nentries;
@@ -549,7 +551,6 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 			metadata->nPendingPages = 0;
 			metadata->nPendingHeapTuples = 0;
 		}
-		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
 		MarkBufferDirty(metabuffer);
 
@@ -563,6 +564,8 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 		if (!index->rd_istemp)
 		{
 			XLogRecPtr	recptr;
+
+			memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
 			recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_DELETE_LISTPAGE, rdata);
 			PageSetLSN(metapage, recptr);

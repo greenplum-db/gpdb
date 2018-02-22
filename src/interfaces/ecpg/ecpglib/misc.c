@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/misc.c,v 1.49 2009/06/11 14:49:13 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/misc.c,v 1.53 2009/11/24 16:30:31 meskes Exp $ */
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -170,6 +170,21 @@ ECPGstatus(int lineno, const char *connection_name)
 	return (true);
 }
 
+PGTransactionStatusType
+ECPGtransactionStatus(const char *connection_name)
+{
+	const struct connection *con;
+
+	con = ecpg_get_connection(connection_name);
+	if (con == NULL) {
+		/* transaction status is unknown */
+		return PQTRANS_UNKNOWN;
+	}
+
+	return PQtransactionStatus(con->connection);
+
+}
+
 bool
 ECPGtrans(int lineno, const char *connection_name, const char *transaction)
 {
@@ -202,12 +217,12 @@ ECPGtrans(int lineno, const char *connection_name, const char *transaction)
 		if (!ecpg_check_PQresult(res, lineno, con->connection, ECPG_COMPAT_PGSQL))
 			return FALSE;
 		PQclear(res);
-	}
 
-	if (strncmp(transaction, "commit", 6) == 0 || strncmp(transaction, "rollback", 8) == 0)
-		con->committed = true;
-	else
-		con->committed = false;
+		if (strncmp(transaction, "commit", 6) == 0 || strncmp(transaction, "rollback", 8) == 0)
+			con->committed = true;
+		else
+			con->committed = false;
+	}
 
 	return true;
 }
@@ -295,6 +310,7 @@ ECPGset_noind_null(enum ECPGttype type, void *ptr)
 	{
 		case ECPGt_char:
 		case ECPGt_unsigned_char:
+		case ECPGt_string:
 			*((char *) ptr) = '\0';
 			break;
 		case ECPGt_short:
@@ -348,10 +364,11 @@ ECPGset_noind_null(enum ECPGttype type, void *ptr)
 static bool
 _check(unsigned char *ptr, int length)
 {
-	for (; length > 0 && ptr[--length] == 0xff;);
-	if (length <= 0)
-		return true;
-	return false;
+	for (length--; length >= 0; length--)
+		if (ptr[length] != 0xff)
+			return false;
+
+	return true;
 }
 
 bool
@@ -361,6 +378,7 @@ ECPGis_noind_null(enum ECPGttype type, void *ptr)
 	{
 		case ECPGt_char:
 		case ECPGt_unsigned_char:
+		case ECPGt_string:
 			if (*((char *) ptr) == '\0')
 				return true;
 			break;

@@ -70,6 +70,8 @@ extern int host_segments;
 extern MemoryContext GangContext;
 extern Gang *CurrentGangCreating;
 
+extern const char *gangTypeToString(GangType type);
+
 extern Gang *AllocateReaderGang(GangType type, char *portal_name);
 
 extern Gang *AllocateWriterGang(void);

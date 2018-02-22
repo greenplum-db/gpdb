@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.115 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.116 2009/11/28 00:46:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -160,6 +160,8 @@ query_planner(PlannerInfo *root, List *tlist,
 		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
 	root->join_rel_list = NIL;
 	root->join_rel_hash = NULL;
+	root->join_rel_level = NULL;
+	root->join_cur_level = 0;
 	root->canon_pathkeys = NIL;
 	root->left_join_clauses = NIL;
 	root->right_join_clauses = NIL;
@@ -194,31 +196,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * for example views.  We don't want to make RelOptInfos for them.
 	 */
 	add_base_rels_to_query(root, (Node *) parse->jointree);
-
-	/*
-	 * We should now have size estimates for every actual table involved in
-	 * the query, so we can compute total_table_pages.	Note that appendrels
-	 * are not double-counted here, even though we don't bother to distinguish
-	 * RelOptInfos for appendrel parents, because the parents will still have
-	 * size zero.
-	 *
-	 * XXX if a table is self-joined, we will count it once per appearance,
-	 * which perhaps is the wrong thing ... but that's not completely clear,
-	 * and detecting self-joins here is difficult, so ignore it for now.
-	 */
-	total_pages = 0;
-	for (rti = 1; rti < root->simple_rel_array_size; rti++)
-	{
-		RelOptInfo *brel = root->simple_rel_array[rti];
-
-		if (brel == NULL)
-			continue;
-
-		Assert(brel->relid == rti);		/* sanity check on array */
-
-		total_pages += (double) brel->pages;
-	}
-	root->total_table_pages = total_pages;
 
 	/*
 	 * Examine the targetlist and join tree, adding entries to baserel
@@ -276,6 +253,49 @@ query_planner(PlannerInfo *root, List *tlist,
 	fix_placeholder_input_needed_levels(root);
 
 	/*
+	 * Remove any useless outer joins.  Ideally this would be done during
+	 * jointree preprocessing, but the necessary information isn't available
+	 * until we've built baserel data structures and classified qual clauses.
+	 */
+	joinlist = remove_useless_joins(root, joinlist);
+
+	/*
+	 * Now distribute "placeholders" to base rels as needed.  This has to be
+	 * done after join removal because removal could change whether a
+	 * placeholder is evaluatable at a base rel.
+	 */
+	add_placeholders_to_base_rels(root);
+
+	/*
+	 * We should now have size estimates for every actual table involved in
+	 * the query, and we also know which if any have been deleted from the
+	 * query by join removal; so we can compute total_table_pages.
+	 *
+	 * Note that appendrels are not double-counted here, even though we don't
+	 * bother to distinguish RelOptInfos for appendrel parents, because the
+	 * parents will still have size zero.
+	 *
+	 * XXX if a table is self-joined, we will count it once per appearance,
+	 * which perhaps is the wrong thing ... but that's not completely clear,
+	 * and detecting self-joins here is difficult, so ignore it for now.
+	 */
+	total_pages = 0;
+	for (rti = 1; rti < root->simple_rel_array_size; rti++)
+	{
+		RelOptInfo *brel = root->simple_rel_array[rti];
+
+		if (brel == NULL)
+			continue;
+
+		Assert(brel->relid == rti);		/* sanity check on array */
+
+		if (brel->reloptkind == RELOPT_BASEREL ||
+			brel->reloptkind == RELOPT_OTHER_MEMBER_REL)
+			total_pages += (double) brel->pages;
+	}
+	root->total_table_pages = total_pages;
+
+	/*
 	 * Ready to do the primary planning.
 	 */
 	final_rel = make_one_rel(root, joinlist);
@@ -283,17 +303,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	if (!final_rel || !final_rel->cheapest_total_path)
 		elog(ERROR, "failed to construct the join relation");
 	Insist(final_rel->cheapest_startup_path);
-
-	/*
-	 * CDB: Subquery duplicate suppression should be all finished by now.
-	 *
-	 * CDB TODO: If query has DISTINCT, GROUP BY with just MIN/MAX aggs, or
-	 * LIMIT 1, consider paths in which subquery duplicate suppression has
-	 * not been completed.  (Would have to change set_cheapest_dedup() to not
-	 * discard them.)
-	 */
-	Insist(final_rel->cheapest_startup_path->subq_complete &&
-		   final_rel->cheapest_total_path->subq_complete);
 
 	/*
 	 * If there's grouping going on, estimate the number of result groups. We

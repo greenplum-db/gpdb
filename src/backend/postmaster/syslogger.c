@@ -18,7 +18,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.51 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.53 2009/11/19 02:45:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2043,9 +2043,10 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 			if (saveerrno != ENFILE && saveerrno != EMFILE)
 			{
 				ereport(LOG,
-						(errmsg("disabling automatic rotation (use SIGHUP to reenable)")));
+						(errmsg("disabling automatic rotation (use SIGHUP to re-enable)")));
 				rotation_disabled = true;
 			}
+
 			if (filename)
 				pfree(filename);
 			return;
@@ -2095,7 +2096,8 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
  * Result is palloc'd.
  */
 static char *
-logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directory, const char *log_file_pattern)
+logfile_getname(pg_time_t timestamp, const char *suffix,
+				const char *log_directory, const char *log_file_pattern)
 {
 	char	   *filename;
 	int			len;
@@ -2109,7 +2111,7 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 
 	len = strlen(filename);
 
-	/* treat it as a strftime pattern */
+	/* treat Log_filename as a strftime pattern */
 	pg_strftime(filename + len, MAXPGPATH - len, log_file_pattern,
 				pg_localtime(&timestamp, log_timezone));
 

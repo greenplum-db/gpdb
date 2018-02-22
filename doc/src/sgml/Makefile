@@ -2,16 +2,28 @@
 #
 # PostgreSQL documentation makefile
 #
-# $PostgreSQL: pgsql/doc/src/sgml/Makefile,v 1.117 2009/06/25 21:15:38 petere Exp $
+# $PostgreSQL: pgsql/doc/src/sgml/Makefile,v 1.133 2009/10/06 20:00:44 petere Exp $
 #
 #----------------------------------------------------------------------------
+
+# This makefile is for building and installing the documentation.
+# When a release tarball is created, the documentation files are
+# prepared using the distprep target.  In CVS-based trees these files
+# don't exist, unless explicitly built, so we skip the installation in
+# that case.
+
+
+# Make "html" the default target, since that is what most people tend
+# to want to use.
+html:
 
 subdir = doc/src/sgml
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-.NOTPARALLEL:
-.PRECIOUS: %-A4.tex-ps %-US.tex-ps %-A4.tex-pdf %-US.tex-pdf
+
+distprep: html man
+
 
 ifndef COLLATEINDEX
 COLLATEINDEX = $(DOCBOOKSTYLE)/bin/collateindex.pl
@@ -20,36 +32,30 @@ endif
 ifndef JADE
 JADE = jade
 endif
-SGMLINCLUDE = -D $(srcdir)
-
-# If this is a vpath build, some generated SGML will be in the build
-# tree, so we need to make sure we look there as well as in the
-# source tree
-ifeq ($(vpath_build), yes)
-SGMLINCLUDE += -D .
-endif
+SGMLINCLUDE = -D . -D $(srcdir)
 
 ifndef NSGMLS
 NSGMLS = nsgmls
 endif
 
-ifndef SGMLSPL
-SGMLSPL = sgmlspl
+ifndef OSX
+OSX = osx
 endif
 
-ifndef DOCBOOK2MAN
-DOCBOOK2MAN = docbook2man_is_missing
+ifndef XSLTPROC
+XSLTPROC = xsltproc
 endif
 
-# docbook2man generates man pages from docbook refentry source code.
-D2MSCRIPT= $(D2MDIR)/docbook2man-spec.pl
-D2MLINKS = $(D2MDIR)/docbook2man-spec_makelinks
+override XSLTPROCFLAGS += --stringparam pg.version '$(VERSION)'
 
 
 GENERATED_SGML = bookindex.sgml version.sgml \
 	features-supported.sgml features-unsupported.sgml
 
 ALLSGML := $(wildcard $(srcdir)/*.sgml $(srcdir)/ref/*.sgml) $(GENERATED_SGML)
+
+# Sometimes we don't want this one.
+ALMOSTALLSGML := $(filter-out %bookindex.sgml,$(ALLSGML))
 
 ifdef DOCBOOKSTYLE
 CATALOG = -c $(DOCBOOKSTYLE)/catalog
@@ -67,66 +73,49 @@ override SPFLAGS += -wall -wno-unused-param -wno-empty -wfully-tagged
 ## Man pages
 ##
 
-.PHONY: html man draft clean
+man: man-stamp
 
-DEFAULTSECTION = l
-
-fix_man_xrefs = $(PERL) -npi -e 's{\[XRef to GUC-([A-Z0-9-]*)\]}{($$l = $$1) =~ tr/A-Z-/a-z_/, $$l}ge || s{\[XRef to [A-Z0-9-]*\]}{in the documentation}g'
-lowercase = tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'
-
-man: postgres.sgml $(ALLSGML)
-	$(NSGMLS) $(NSGMLS_FLAGS) $(SGMLINCLUDE) $< | $(SGMLSPL) $(D2MSCRIPT) --lowercase --section $(DEFAULTSECTION) --date "`date '+%Y-%m-%d'`"
-# One more time, to resolve cross-references
-	$(NSGMLS) $(NSGMLS_FLAGS) $(SGMLINCLUDE) $< | $(SGMLSPL) $(D2MSCRIPT) --lowercase --section $(DEFAULTSECTION) --date "`date '+%Y-%m-%d'`"
-	$(fix_man_xrefs) *.1 *.7
-	$(mkinstalldirs) man1 man7
-	$(D2MLINKS) < manpage.links
-	mv *.1 man1/
-	mv *.7 man7/
-	rm *.$(DEFAULTSECTION)
-# manpage.links doesn't handle lowercase, needs fixups
-	cd man7 && for file in `awk '{ print $$2 }' ../manpage.links`; do $(lowercase) <$$file >`echo $$file | $(lowercase)` && rm $$file || exit; done
+man-stamp: stylesheet-man.xsl postgres.xml
+	$(XSLTPROC) $(XSLTPROCFLAGS) $(XSLTPROC_MAN_FLAGS) $^
+	rm man1/dblink*
+	touch $@
 
 
 ##
 ## HTML
 ##
 
-all: html
+.PHONY: draft
 
-# The draft target creates HTML output in draft mode
-draft : JADEFLAGS += -V draft-mode
-draft: html-output
+JADE.html.call = $(JADE) $(JADEFLAGS) $(SPFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -t sgml -i output-html
 
-html: html-output
-# Re-run this target until HTML.index does not change
-	@cmp -s HTML.index.start HTML.index || $(MAKE) $@
+# The draft target creates HTML output in draft mode, without index (for faster build).
+draft: postgres.sgml $(ALMOSTALLSGML) stylesheet.dsl
+	$(MKDIR_P) html
+	$(JADE.html.call) -V draft-mode $<
+	cp $(srcdir)/stylesheet.css html/
 
-# This is run for all output formats because we need bookindex.sgml
-html-output: postgres.sgml $(ALLSGML) stylesheet.dsl
-	@rm -f *.html
-	$(JADE) $(JADEFLAGS) $(SPFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -i output-html -t sgml $<
-ifeq ($(vpath_build), yes)
-	@cp $(srcdir)/stylesheet.css .
-endif
+html: html-stamp
 
-COLLATEINDEX := LC_ALL=C $(PERL) $(COLLATEINDEX) -f -g
+html-stamp: postgres.sgml $(ALLSGML) stylesheet.dsl
+	$(MKDIR_P) html
+	$(JADE.html.call) -i include-index $<
+	cp $(srcdir)/stylesheet.css html/
+	touch $@
 
-# bookindex.sgml is required so there is a proper index for all output formats
+HTML.index: postgres.sgml $(ALMOSTALLSGML) stylesheet.dsl
+	@$(MKDIR_P) html
+	$(JADE.html.call) -V html-index $<
+
 bookindex.sgml: HTML.index
-# create a dummy bookindex.html
-	test -s HTML.index || $(COLLATEINDEX) -o $@ -N
-# If HTML.index is valid, create a valid bookindex.sgml.
-	test ! -s HTML.index || $(COLLATEINDEX) -i 'bookindex' -o $@ $<
-# save copy of HTML.index for later comparison
-	@cp HTML.index HTML.index.start
+	LC_ALL=C $(PERL) $(COLLATEINDEX) -f -g -i 'bookindex' -o $@ $<
 
-# HTML.index is used to create bookindex.sgml
-HTML.index:
-# create an empty HTML.index if it does not exist
-	@$(if $(wildcard HTML.index), , touch HTML.index)
-
-version.sgml: $(top_builddir)/src/Makefile.global
+# Technically, this should depend on Makefile.global, but then
+# version.sgml would need to be rebuilt after every configure run,
+# even in distribution tarballs.  So this is cheating a bit, but it
+# will achieve the goal of updating the version number when it
+# changes.
+version.sgml: $(top_srcdir)/configure
 	{ \
 	  echo "<!entity version \"$(VERSION)\">"; \
 	  echo "<!entity majorversion \"$(MAJORVERSION)\">"; \
@@ -145,26 +134,22 @@ features-unsupported.sgml: $(top_srcdir)/src/backend/catalog/sql_feature_package
 
 
 # RTF to allow minor editing for hardcopy
-%.rtf: %.sgml $(ALLSGML) html
-	$(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -t rtf -V rtf-backend -i output-print postgres.sgml
+%.rtf: %.sgml $(ALLSGML)
+	$(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -t rtf -V rtf-backend -i output-print  -i include-index postgres.sgml
 
 # TeX
 # Regular TeX and pdfTeX have slightly differing requirements, so we
 # need to distinguish the path we're taking.
 
-JADE.tex.call = $(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d $(srcdir)/stylesheet.dsl -t tex -V tex-backend -i output-print
+JADE.tex.call = $(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d $(srcdir)/stylesheet.dsl -t tex -V tex-backend -i output-print -i include-index
 
-%-A4.tex-ps: %.sgml $(ALLSGML) html
-	$(JADE.tex.call) -V texdvi-output -V '%paper-type%'=A4 -o $@ $<
+%-A4.tex-ps %-US.tex-ps : JADE_OUTPUT=texdvi-output
+%-A4.tex-pdf %-US.tex-pdf : JADE_OUTPUT=texpdf-output
+%-A4.tex-ps %-A4.tex-pdf : JADE_PAPER=A4
+%-US.tex-ps %-US.tex-pdf : JADE_PAPER=USletter
 
-%-US.tex-ps: %.sgml $(ALLSGML) html
-	$(JADE.tex.call) -V texdvi-output -V '%paper-type%'=USletter -o $@ $<
-
-%-A4.tex-pdf: %.sgml $(ALLSGML) html
-	$(JADE.tex.call) -V texpdf-output -V '%paper-type%'=A4 -o $@ $<
-
-%-US.tex-pdf: %.sgml $(ALLSGML) html
-	$(JADE.tex.call) -V texpdf-output -V '%paper-type%'=USletter -o $@ $<
+%-A4.tex-ps %-US.tex-ps %-A4.tex-pdf %-US.tex-pdf: %.sgml $(ALLSGML)
+	$(JADE.tex.call) -V $(JADE_OUTPUT) -V '%paper-type%'=$(JADE_PAPER) -o $@ $<
 
 %.dvi: %.tex-ps
 	@rm -f $*.aux $*.log
@@ -190,12 +175,15 @@ postgres.pdf:
 	pdfjadetex $<
 	pdfjadetex $<
 
+# Cancel built-in suffix rules, interfering with PS building
+.SUFFIXES:
+
 
 # This generates an XML version of the flow-object tree.  It's useful
 # for debugging DSSSL code, and possibly to interface to some other
 # tools that can make use of this.
-%.fot: %.sgml $(ALLSGML) html
-	$(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -t fot -i output-print -o $@ $<
+%.fot: %.sgml $(ALLSGML)
+	$(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -t fot -i output-print -i include-index -o $@ $<
 
 
 ##
@@ -229,20 +217,15 @@ regress_README.html: regress.sgml
 ## XSLT processing
 ##
 
-OSX = osx # (may be called sx or sgml2xml on some systems)
-XSLTPROC = xsltproc
-
-postgres.xml: postgres.sgml $(GENERATED_SGML)
+postgres.xml: postgres.sgml $(ALMOSTALLSGML)
 	$(OSX) -D. -x lower $< | \
 	  $(PERL) -p -e 's/\[(amp|copy|egrave|gt|lt|mdash|nbsp|ouml|pi|quot|uuml) *\]/\&\1;/g;' \
 	             -e '$$_ .= qq{<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">\n} if $$. == 1;' \
 	  >$@
 # ' hello Emacs
 
-override XSLTPROCFLAGS += --stringparam pg.version '$(VERSION)'
-
 xslthtml: stylesheet.xsl postgres.xml
-	$(XSLTPROC) $(XSLTPROCFLAGS) $^
+	$(XSLTPROC) $(XSLTPROCFLAGS) $(XSLTPROC_HTML_FLAGS) $^
 
 htmlhelp: stylesheet-hh.xsl postgres.xml
 	$(XSLTPROC) $(XSLTPROCFLAGS) $^
@@ -271,50 +254,122 @@ MAKEINFO = makeinfo
 %.info: %.texi
 	$(MAKEINFO) --enable-encoding --no-split --no-validate $< -o $@
 
-# Cancel built-in suffix rules, interfering with PS building
-.SUFFIXES:
-
-
-##
-## Experimental man page building through docbook2x
-##
-
-manx: postgres.xml stylesheet-man.xsl
-	$(DOCBOOK2MAN) --solinks -s $(srcdir)/stylesheet-man.xsl --string-param default-manpage-section=$(DEFAULTSECTION)  $<
-	$(mkinstalldirs) man1 man7
-	mv *.1 man1/
-	mv *.7 man7/
-	rm *.$(DEFAULTSECTION)
-
 
 ##
 ## Check
 ##
 
 # Quick syntax check without style processing
-check: postgres.sgml $(ALLSGML)
+check: postgres.sgml $(ALMOSTALLSGML)
 	$(NSGMLS) $(SPFLAGS) $(SGMLINCLUDE) -s $<
+
+
+##
+## Install
+##
+
+vpathsearch = $(firstword $(wildcard $(addsuffix /$(1),$(subst :, ,. $(VPATH)))))
+
+found_html = $(wildcard html-stamp $(srcdir)/html-stamp)
+
+ifneq ($(wildcard man-stamp $(srcdir)/man-stamp),)
+# SCO OpenServer's man system is sufficiently different to not bother.
+ifneq ($(PORTNAME), sco)
+found_man = yes
+endif
+endif
+
+install: $(if $(found_html),install-html) $(if $(found_man),install-man)
+
+installdirs:
+	$(MKDIR_P) '$(DESTDIR)$(htmldir)'/html $(addprefix '$(DESTDIR)$(mandir)'/man, 1 3 $(sqlmansectnum))
+
+uninstall:
+	rm -f '$(DESTDIR)$(htmldir)/html/'* $(addprefix  '$(DESTDIR)$(mandir)'/man, 1/* 3/* $(sqlmansectnum)/*)
+
+
+## Install html
+
+install-html: html installdirs
+	cp -R $(call vpathsearch,html) '$(DESTDIR)$(htmldir)'
+
+
+## Install man
+
+install-man: man installdirs
+
+sqlmansect ?= 7
+sqlmansectnum = $(shell expr X'$(sqlmansect)' : X'\([0-9]\)')
+
+# Before we install the man pages, we massage the section numbers to
+# follow the local conventions.
+#
+ifeq ($(sqlmansectnum),7)
+install-man:
+	cp -R $(foreach dir,man1 man3 man7,$(call vpathsearch,$(dir))) '$(DESTDIR)$(mandir)'
+
+else # sqlmansectnum != 7
+fix_sqlmansectnum = sed -e '/^\.TH/s/"7"/"$(sqlmansect)"/' \
+			-e 's/\\fR(7)/\\fR($(sqlmansectnum))/g' \
+			-e '1s/^\.so man7/.so man$(sqlmansectnum)/g;1s/^\(\.so.*\)\.7$$/\1.$(sqlmansect)/g'
+
+nonsql_manpage_files := $(wildcard $(srcdir)/man1/*.1 $(srcdir)/man3/*.3)
+sql_manpage_files := $(wildcard $(srcdir)/man7/*.7)
+
+fixed_nonsql_manpage_files = $(patsubst $(srcdir)/%,fixedman/%,$(nonsql_manpage_files))
+fixed_sql_manpage_files = $(patsubst $(srcdir)/man7/%.7,fixedman/man$(sqlmansectnum)/%.$(sqlmansect),$(sql_manpage_files))
+
+fixed_manpage_files = $(fixed_nonsql_manpage_files) $(fixed_sql_manpage_files)
+
+all: all-man
+all-man: $(fixed_manpage_files)
+
+$(fixed_nonsql_manpage_files): fixedman/%: %
+	@$(MKDIR_P) $(dir $@)
+	$(fix_sqlmansectnum) $< >$@
+
+$(fixed_sql_manpage_files): fixedman/man$(sqlmansectnum)/%.$(sqlmansect): man7/%.7
+	@$(MKDIR_P) $(dir $@)
+	$(fix_sqlmansectnum) $< >$@
+
+install-man: all-man
+	cp -R $(sort $(dir $(fixed_manpage_files))) '$(DESTDIR)$(mandir)'
+
+clean: clean-man
+.PHONY: clean-man
+clean-man:
+	rm -rf fixedman/
+
+endif # sqlmansectnum != 7
 
 
 ##
 ## Clean
 ##
 
-clean distclean maintainer-clean:
-# HTML
-	rm -f HTML.manifest *.html
-# man
-	rm -rf *.1 *.7 *.$(DEFAULTSECTION) man1 man7 manpage.refs manpage.links manpage.log
+# This allows removing some files from the distribution tarballs while
+# keeping the dependencies satisfied.
+.SECONDARY: postgres.xml $(GENERATED_SGML) HTML.index
+.SECONDARY: INSTALL.html HISTORY.html regress_README.html
+.SECONDARY: %-A4.tex-ps %-US.tex-ps %-A4.tex-pdf %-US.tex-pdf
+
+clean:
+# text --- these are shipped, but not in this directory
+	rm -f INSTALL HISTORY regress_README
+	rm -f INSTALL.html HISTORY.html regress_README.html
 # print
 	rm -f *.rtf *.tex-ps *.tex-pdf *.dvi *.aux *.log *.ps *.pdf *.out *.fot
 # index
-	rm -f HTML.index HTML.index.start $(GENERATED_SGML)
-# text
-	rm -f INSTALL HISTORY regress_README
+	rm -f HTML.index $(GENERATED_SGML)
 # XSLT
 	rm -f postgres.xml htmlhelp.hhp toc.hhc index.hhk *.fo
 # Texinfo
 	rm -f *.texixml *.texi *.info db2texi.refs
-ifeq ($(vpath_build), yes)
-	rm -f stylesheet.css
-endif
+
+distclean: clean
+
+maintainer-clean: distclean
+# HTML
+	rm -fr html/ html-stamp
+# man
+	rm -rf man1/ man3/ man7/ man-stamp

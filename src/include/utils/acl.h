@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.108 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.111 2009/12/11 03:34:56 itagaki Exp $
  *
  * NOTES
  *	  An ACL array is simply an array of AclItems, representing the union
@@ -26,6 +26,7 @@
 
 #include "nodes/parsenodes.h"
 #include "utils/array.h"
+#include "utils/snapshot.h"
 
 
 /*
@@ -152,6 +153,7 @@ typedef ArrayType Acl;
 #define ACL_ALL_RIGHTS_FOREIGN_SERVER (ACL_USAGE)
 #define ACL_ALL_RIGHTS_FUNCTION		(ACL_EXECUTE)
 #define ACL_ALL_RIGHTS_LANGUAGE		(ACL_USAGE)
+#define ACL_ALL_RIGHTS_LARGEOBJECT	(ACL_SELECT|ACL_UPDATE)
 #define ACL_ALL_RIGHTS_NAMESPACE	(ACL_USAGE|ACL_CREATE)
 #define ACL_ALL_RIGHTS_TABLESPACE	(ACL_CREATE)
 
@@ -182,6 +184,7 @@ typedef enum AclObjectKind
 	ACL_KIND_OPER,				/* pg_operator */
 	ACL_KIND_TYPE,				/* pg_type */
 	ACL_KIND_LANGUAGE,			/* pg_language */
+	ACL_KIND_LARGEOBJECT,		/* pg_largeobject */
 	ACL_KIND_NAMESPACE,			/* pg_namespace */
 	ACL_KIND_OPCLASS,			/* pg_opclass */
 	ACL_KIND_OPFAMILY,			/* pg_opfamily */
@@ -196,41 +199,23 @@ typedef enum AclObjectKind
 	MAX_ACL_KIND				/* MUST BE LAST */
 } AclObjectKind;
 
-/*
- * The information about one Grant/Revoke statement, in internal format: object
- * and grantees names have been turned into Oids, the privilege list is an
- * AclMode bitmask.  If 'privileges' is ACL_NO_RIGHTS (the 0 value) and
- * all_privs is true, 'privileges' will be internally set to the right kind of
- * ACL_ALL_RIGHTS_*, depending on the object type (NB - this will modify the
- * InternalGrant struct!)
- *
- * Note: 'all_privs' and 'privileges' represent object-level privileges only.
- * There might also be column-level privilege specifications, which are
- * represented in col_privs (this is a list of untransformed AccessPriv nodes).
- * Column privileges are only valid for objtype ACL_OBJECT_RELATION.
- */
-typedef struct
-{
-	bool		is_grant;
-	GrantObjectType objtype;
-	List	   *objects;
-	bool		all_privs;
-	AclMode		privileges;
-	List	   *col_privs;
-	List	   *grantees;
-	bool		grant_option;
-	DropBehavior behavior;
-} InternalGrant;
 
 /*
  * routines used internally
  */
 extern Acl *acldefault(GrantObjectType objtype, Oid ownerId);
+extern Acl *get_user_default_acl(GrantObjectType objtype, Oid ownerId,
+								 Oid nsp_oid);
+
 extern Acl *aclupdate(const Acl *old_acl, const AclItem *mod_aip,
 		  int modechg, Oid ownerId, DropBehavior behavior);
 extern Acl *aclnewowner(const Acl *old_acl, Oid oldOwnerId, Oid newOwnerId);
+extern Acl *make_empty_acl(void);
 extern Acl *aclcopy(const Acl *orig_acl);
 extern Acl *aclconcat(const Acl *left_acl, const Acl *right_acl);
+extern Acl *aclmerge(const Acl *left_acl, const Acl *right_acl, Oid ownerId);
+extern void aclitemsort(Acl *acl);
+extern bool aclequal(const Acl *left_acl, const Acl *right_acl);
 
 extern AclMode aclmask(const Acl *acl, Oid roleid, Oid ownerId,
 		AclMode mask, AclMaskHow how);
@@ -263,12 +248,16 @@ extern Datum aclcontains(PG_FUNCTION_ARGS);
 extern Datum makeaclitem(PG_FUNCTION_ARGS);
 extern Datum aclitem_eq(PG_FUNCTION_ARGS);
 extern Datum hash_aclitem(PG_FUNCTION_ARGS);
+extern Datum aclexplode(PG_FUNCTION_ARGS);
 
 /*
  * prototypes for functions in aclchk.c
  */
 extern void ExecuteGrantStmt(GrantStmt *stmt);
-extern void ExecGrantStmt_oids(InternalGrant *istmt);
+extern void ExecAlterDefaultPrivilegesStmt(AlterDefaultPrivilegesStmt *stmt);
+
+extern void RemoveRoleFromObjectACL(Oid roleid, Oid classid, Oid objid);
+extern void RemoveDefaultACLById(Oid defaclOid);
 
 extern void CopyRelationAcls(Oid src, Oid dest);
 
@@ -282,6 +271,8 @@ extern AclMode pg_proc_aclmask(Oid proc_oid, Oid roleid,
 				AclMode mask, AclMaskHow how);
 extern AclMode pg_language_aclmask(Oid lang_oid, Oid roleid,
 					AclMode mask, AclMaskHow how);
+extern AclMode pg_largeobject_aclmask_snapshot(Oid lobj_oid, Oid roleid,
+					AclMode mask, AclMaskHow how, Snapshot snapshot);
 extern AclMode pg_namespace_aclmask(Oid nsp_oid, Oid roleid,
 					 AclMode mask, AclMaskHow how);
 extern AclMode pg_tablespace_aclmask(Oid spc_oid, Oid roleid,
@@ -301,6 +292,8 @@ extern AclResult pg_class_aclcheck(Oid table_oid, Oid roleid, AclMode mode);
 extern AclResult pg_database_aclcheck(Oid db_oid, Oid roleid, AclMode mode);
 extern AclResult pg_proc_aclcheck(Oid proc_oid, Oid roleid, AclMode mode);
 extern AclResult pg_language_aclcheck(Oid lang_oid, Oid roleid, AclMode mode);
+extern AclResult pg_largeobject_aclcheck_snapshot(Oid lang_oid, Oid roleid,
+												  AclMode mode, Snapshot snapshot);
 extern AclResult pg_namespace_aclcheck(Oid nsp_oid, Oid roleid, AclMode mode);
 extern AclResult pg_tablespace_aclcheck(Oid spc_oid, Oid roleid, AclMode mode);
 extern AclResult pg_foreign_data_wrapper_aclcheck(Oid fdw_oid, Oid roleid, AclMode mode);
@@ -320,6 +313,7 @@ extern bool pg_type_ownercheck(Oid type_oid, Oid roleid);
 extern bool pg_oper_ownercheck(Oid oper_oid, Oid roleid);
 extern bool pg_proc_ownercheck(Oid proc_oid, Oid roleid);
 extern bool pg_language_ownercheck(Oid lan_oid, Oid roleid);
+extern bool pg_largeobject_ownercheck(Oid lobj_oid, Oid roleid);
 extern bool pg_namespace_ownercheck(Oid nsp_oid, Oid roleid);
 extern bool pg_tablespace_ownercheck(Oid spc_oid, Oid roleid);
 extern bool pg_opclass_ownercheck(Oid opc_oid, Oid roleid);

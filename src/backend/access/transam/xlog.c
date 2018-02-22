@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.345 2009/06/26 20:29:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.353 2009/09/13 18:32:07 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 #include "catalog/catversion.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_control.h"
+#include "catalog/pg_database.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_tablespace.h"
@@ -60,7 +61,6 @@
 #include "utils/builtins.h"
 #include "utils/nabstime.h"
 #include "utils/faultinjector.h"
-#include "utils/flatfiles.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "pg_trace.h"
@@ -3407,7 +3407,7 @@ RemoveOldXlogFiles(uint32 log, uint32 seg, XLogRecPtr endptr)
 				else
 				{
 					/* No need for any more future segments... */
-					int			rc;
+					int rc;
 
 					ereport(DEBUG2,
 							(errmsg("removing transaction log file \"%s\"",
@@ -5652,17 +5652,7 @@ XLOGShmemInit(void)
 	XLogCtl->haveLastCheckpointLoc = false;
 	memset(&XLogCtl->lastCheckpointLoc, 0, sizeof(XLogRecPtr));
 	memset(&XLogCtl->lastCheckpointEndLoc, 0, sizeof(XLogRecPtr));
-}
 
-/**
- * This should be called when we are sure that it is safe to try to read the control file and BEFORE
- *  we have launched any child processes that need access to collation and ctype data.
- *
- * It is not safe to read the control file on a mirror because it may not be synchronized
- */
-void
-XLogStartupInit(void)
-{
 	/*
 	 * If we are not in bootstrap mode, pg_control should already exist. Read
 	 * and validate it immediately (see comments in ReadControlFile() for the
@@ -5739,6 +5729,8 @@ BootStrapXLOG(void)
 	checkPoint.nextRelfilenode = FirstNormalObjectId;
 	checkPoint.nextMulti = FirstMultiXactId;
 	checkPoint.nextMultiOffset = 0;
+	checkPoint.oldestXid = FirstNormalTransactionId;
+	checkPoint.oldestXidDB = TemplateDbOid;
 	checkPoint.time = (pg_time_t) time(NULL);
 
 	ShmemVariableCache->nextXid = checkPoint.nextXid;
@@ -5747,6 +5739,8 @@ BootStrapXLOG(void)
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
 	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
+	ShmemVariableCache->oldestXid = checkPoint.oldestXid;
+	ShmemVariableCache->oldestXidDB = checkPoint.oldestXidDB;
 
 	/* Set up the XLOG page header */
 	page->xlp_magic = XLOG_PAGE_MAGIC;
@@ -6797,6 +6791,9 @@ StartupXLOG(void)
 	ereport(DEBUG1,
 			(errmsg("next MultiXactId: %u; next MultiXactOffset: %u",
 					checkPoint.nextMulti, checkPoint.nextMultiOffset)));
+	ereport(DEBUG1,
+			(errmsg("oldest unfrozen transaction ID: %u, in database %u",
+					checkPoint.oldestXid, checkPoint.oldestXidDB)));
 	if (!TransactionIdIsNormal(checkPoint.nextXid))
 		ereport(PANIC,
 				(errmsg("invalid next transaction ID")));
@@ -6808,6 +6805,8 @@ StartupXLOG(void)
 	ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
 	ShmemVariableCache->relfilenodeCount = 0;
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
+	ShmemVariableCache->oldestXid = checkPoint.oldestXid;
+	ShmemVariableCache->oldestXidDB = checkPoint.oldestXidDB;
 	XLogCtl->ckptXidEpoch = checkPoint.nextXidEpoch;
 	XLogCtl->ckptXid = checkPoint.nextXid;
 
@@ -7741,6 +7740,9 @@ XLogInsertAllowed(void)
 
 /*
  * Make XLogInsertAllowed() return true in the current process only.
+ *
+ * Note: it is allowed to switch LocalXLogInsertAllowed back to -1 later,
+ * and even call LocalSetXLogInsertAllowed() again after that.
  */
 static void
 LocalSetXLogInsertAllowed(void)
@@ -8576,6 +8578,8 @@ CreateCheckPoint(int flags)
 	 */
 	LWLockAcquire(XidGenLock, LW_SHARED);
 	checkPoint.nextXid = ShmemVariableCache->nextXid;
+	checkPoint.oldestXid = ShmemVariableCache->oldestXid;
+	checkPoint.oldestXidDB = ShmemVariableCache->oldestXidDB;
 	LWLockRelease(XidGenLock);
 
 	/* Increase XID epoch if we've wrapped around since last checkpoint */
@@ -9261,6 +9265,8 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		ShmemVariableCache->relfilenodeCount = 0;
 		MultiXactSetNextMXact(checkPoint.nextMulti,
 							  checkPoint.nextMultiOffset);
+		ShmemVariableCache->oldestXid = checkPoint.oldestXid;
+		ShmemVariableCache->oldestXidDB = checkPoint.oldestXidDB;
 
 		/*
 		 * If we see a shutdown checkpoint while waiting for an end-of-backup
@@ -9320,6 +9326,12 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		ShmemVariableCache->relfilenodeCount = 0;
 		MultiXactAdvanceNextMXact(checkPoint.nextMulti,
 								  checkPoint.nextMultiOffset);
+		if (TransactionIdPrecedes(ShmemVariableCache->oldestXid,
+								  checkPoint.oldestXid))
+		{
+			ShmemVariableCache->oldestXid = checkPoint.oldestXid;
+			ShmemVariableCache->oldestXidDB = checkPoint.oldestXidDB;
+		}
 
 		/* ControlFile->checkPointCopy always tracks the latest ckpt XID */
 		ControlFile->checkPointCopy.nextXidEpoch = checkPoint.nextXidEpoch;
@@ -9420,7 +9432,8 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 		CheckpointExtendedRecord ckptExtended;
 
 		appendStringInfo(buf, "checkpoint: redo %X/%X; "
-						 "tli %u; xid %u/%u; oid %u; relfilenode %u; multi %u; offset %u; %s",
+						 "tli %u; xid %u/%u; oid %u; relfilenode %u; multi %u; offset %u; "
+						 "oldest xid %u in DB %u; %s",
 						 checkpoint->redo.xlogid, checkpoint->redo.xrecoff,
 						 checkpoint->ThisTimeLineID,
 						 checkpoint->nextXidEpoch, checkpoint->nextXid,
@@ -9428,6 +9441,8 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 						 checkpoint->nextRelfilenode,
 						 checkpoint->nextMulti,
 						 checkpoint->nextMultiOffset,
+						 checkpoint->oldestXid,
+						 checkpoint->oldestXidDB,
 				 (info == XLOG_CHECKPOINT_SHUTDOWN) ? "shutdown" : "online");
 
 		UnpackCheckPointRecord(record, &ckptExtended);
@@ -10593,7 +10608,6 @@ rm_redo_error_callback(void *arg)
 	pfree(buf.data);
 }
 
-#if 0 /* GPDB doesn't have online backup */
 /*
  * BackupInProgress: check if online backup mode is active
  *
@@ -10642,7 +10656,6 @@ CancelBackup(void)
 						   BACKUP_LABEL_FILE, BACKUP_LABEL_OLD)));
 	}
 }
-#endif
 
 static char *
 XLogLocationToBuffer(char *buffer, XLogRecPtr *loc, bool longFormat)
@@ -10904,8 +10917,6 @@ StartupProcessMain(void)
 	PG_SETMASK(&UnBlockSig);
 
 	StartupXLOG();
-
-	BuildFlatFiles(false);
 
 	/*
 	 * Exit normally. Exit code 0 tells postmaster that we completed

@@ -234,9 +234,9 @@ SELECT gppc_func_varchar('white', true), gppc_func_varchar('black', false);
 (1 row)
 
 SELECT byteafunc1(E'\\244\\233abc');
- byteafunc1  
--------------
- \244\233abc
+  byteafunc1  
+--------------
+ \xa49b616263
 (1 row)
 
 -- Numeric type

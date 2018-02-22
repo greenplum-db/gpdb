@@ -1010,11 +1010,11 @@ SELECT pg_get_viewdef('my_view'::regclass);
 SELECT pg_get_viewdef('my_view'::regclass, true);
                 pg_get_viewdef                
 ----------------------------------------------
-  WITH my_sum(total) AS (                     
-          SELECT sum(with_test1.value) AS sum 
-            FROM with_test1                   
-         )                                    
-  SELECT my_sum.total                         
+  WITH my_sum(total) AS (                    +
+          SELECT sum(with_test1.value) AS sum+
+            FROM with_test1                  +
+         )                                   +
+  SELECT my_sum.total                        +
     FROM my_sum;
 (1 row)
 
@@ -1034,16 +1034,16 @@ SELECT pg_get_viewdef('my_view'::regclass);
 SELECT pg_get_viewdef('my_view'::regclass, true);
                     pg_get_viewdef                    
 ------------------------------------------------------
-  WITH my_sum(total) AS (                             
-          WITH my_group_sum(total) AS (               
-                  SELECT sum(with_test1.value) AS sum 
-                    FROM with_test1                   
-                   GROUP BY with_test1.i              
-                 )                                    
-          SELECT sum(my_group_sum.total) AS sum       
-            FROM my_group_sum                         
-         )                                            
-  SELECT my_sum.total                                 
+  WITH my_sum(total) AS (                            +
+          WITH my_group_sum(total) AS (              +
+                  SELECT sum(with_test1.value) AS sum+
+                    FROM with_test1                  +
+                   GROUP BY with_test1.i             +
+                 )                                   +
+          SELECT sum(my_group_sum.total) AS sum      +
+            FROM my_group_sum                        +
+         )                                           +
+  SELECT my_sum.total                                +
     FROM my_sum;
 (1 row)
 
@@ -1100,11 +1100,214 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into y
 with t as (select i from with_test1)
 select i+20 from t returning *;
-ERROR:  The RETURNING clause of the INSERT statement is not supported in this version of Greenplum Database.
+ i  
+----
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+(100 rows)
+
 select * from y;
- i 
----
-(0 rows)
+ i  
+----
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 20
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 21
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 22
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 23
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 24
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 25
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 26
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 27
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 28
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+ 29
+(100 rows)
 
 drop table y;
 -- WITH used in SETOP

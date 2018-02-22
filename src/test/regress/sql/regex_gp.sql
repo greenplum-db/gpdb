@@ -658,16 +658,6 @@ from phone_book_substr order by lname
 
 -----------------------------------------------------------------------
 
--- Function regexp_matches returns all the captured substrings
--- that match with the pattern.
--- select regexp_matches('Aadgahd', '(ad)');
------------------------------------------------------------------------
-set regex_flavor=advanced;
------------------------------------------------------------------------
---You don't need to actually set regex_flavor=extended.
-
-set regex_flavor=extended;
------------------------------------------------------------------------
 SELECT regexp_matches('foobarbequebaz', '(bar)(beque)');
 -- regexp_matches 
 ----------------
@@ -1250,40 +1240,7 @@ select DISTINCT lname, regexp_matches(lname, 'd$') from phone_book_substr order 
 
 select foo from regexp_split_to_table('the quick brown fox jumped over the lazy dog',E'\\\s+') AS foo;
 
---  foo   
-----------
--- the
--- quick
--- brown
--- fox
--- jumped
--- over
--- the
--- lazy
--- dog
---(9 rows)
-
 SELECT foo FROM regexp_split_to_table('the quick brown fox', E'\\s*') AS foo;
-
--- foo 
--------
--- t
--- h
--- e
--- q
--- u
--- i
--- c
--- k
--- b
--- r
--- o
--- w
--- n
--- f
--- o
--- x
---(16 rows)
 
 -----------------------------------------------------------------------
 ----------------------------------------------------------

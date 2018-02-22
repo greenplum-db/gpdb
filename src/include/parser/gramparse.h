@@ -1,13 +1,17 @@
 /*-------------------------------------------------------------------------
  *
  * gramparse.h
- *	  Declarations for routines exported from lexer and parser files.
+ *		Shared definitions for the "raw" parser (flex and bison phases only)
+ *
+ * NOTE: this file is only meant to be included in the core parsing files,
+ * ie, parser.c, gram.y, scan.l, and keywords.c.  Definitions that are needed
+ * outside the core parser should be in parser.h.
  *
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/gramparse.h,v 1.44 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/gramparse.h,v 1.50 2009/11/09 18:38:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,44 +20,54 @@
 #define GRAMPARSE_H
 
 #include "nodes/parsenodes.h"
+#include "parser/scanner.h"
 
 /*
- * We track token locations in terms of byte offsets from the start of the
- * source string, not the column number/line number representation that
- * bison uses by default.  Also, to minimize overhead we track only one
- * location (usually the first token location) for each construct, not
- * the beginning and ending locations as bison does by default.  It's
- * therefore sufficient to make YYLTYPE an int.
+ * NB: include gram.h only AFTER including scanner.h, because scanner.h
+ * is what #defines YYLTYPE.
  */
-#define YYLTYPE  int
+#include "parser/gram.h"
 
-typedef enum
+/*
+ * The YY_EXTRA data that a flex scanner allows us to pass around.  Private
+ * state needed for raw parsing/lexing goes here.
+ */
+typedef struct base_yy_extra_type
 {
-	BACKSLASH_QUOTE_OFF,
-	BACKSLASH_QUOTE_ON,
-	BACKSLASH_QUOTE_SAFE_ENCODING
-} BackslashQuoteType;
+	/*
+	 * Fields used by the core scanner.
+	 */
+	core_yy_extra_type core_yy_extra;
 
-/* GUC variables in scan.l (every one of these is a bad idea :-() */
-extern int	backslash_quote;
-extern bool escape_string_warning;
-extern bool standard_conforming_strings;
+	/*
+	 * State variables for base_yylex().
+	 */
+	bool		have_lookahead;		/* is lookahead info valid? */
+	int			lookahead_token;	/* one-token lookahead */
+	core_YYSTYPE lookahead_yylval;	/* yylval for lookahead token */
+	YYLTYPE		lookahead_yylloc;	/* yylloc for lookahead token */
+
+	/*
+	 * State variables that belong to the grammar.
+	 */
+	List	   *parsetree;		/* final parse result is delivered here */
+} base_yy_extra_type;
+
+/*
+ * In principle we should use yyget_extra() to fetch the yyextra field
+ * from a yyscanner struct.  However, flex always puts that field first,
+ * and this is sufficiently performance-critical to make it seem worth
+ * cheating a bit to use an inline macro.
+ */
+#define pg_yyget_extra(yyscanner) (*((base_yy_extra_type **) (yyscanner)))
 
 
 /* from parser.c */
-extern int	filtered_base_yylex(void);
-
-/* from scan.l */
-extern void scanner_init(const char *str);
-extern void scanner_finish(void);
-extern int	base_yylex(void);
-extern int	scanner_errposition(int location);
-extern void base_yyerror(const char *message);
+extern int	base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp,
+					   core_yyscan_t yyscanner);
 
 /* from gram.y */
-extern void parser_init(void);
-extern int	base_yyparse(void);
-extern List *SystemFuncName(char *name);
-extern TypeName *SystemTypeName(char *name);
+extern void parser_init(base_yy_extra_type *yyext);
+extern int	base_yyparse(core_yyscan_t yyscanner);
 
 #endif   /* GRAMPARSE_H */

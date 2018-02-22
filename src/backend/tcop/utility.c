@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.309 2009/06/11 20:46:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.324 2009/12/15 20:04:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,6 +67,10 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
+
+
+/* Hook for plugins to get control in ProcessUtility() */
+ProcessUtility_hook_type ProcessUtility_hook = NULL;
 
 
 /*
@@ -259,6 +263,7 @@ check_xact_readonly(Node *parsetree)
 		case T_DropPropertyStmt:
 		case T_GrantStmt:
 		case T_GrantRoleStmt:
+		case T_AlterDefaultPrivilegesStmt:
 		case T_TruncateStmt:
 		case T_DropOwnedStmt:
 		case T_ReassignOwnedStmt:
@@ -332,6 +337,27 @@ ProcessUtility(Node *parsetree,
 {
 	Assert(queryString != NULL);	/* required as of 8.4 */
 
+	/*
+	 * We provide a function hook variable that lets loadable plugins
+	 * get control when ProcessUtility is called.  Such a plugin would
+	 * normally call standard_ProcessUtility().
+	 */
+	if (ProcessUtility_hook)
+		(*ProcessUtility_hook) (parsetree, queryString, params,
+								isTopLevel, dest, completionTag);
+	else
+		standard_ProcessUtility(parsetree, queryString, params,
+								isTopLevel, dest, completionTag);
+}
+
+void
+standard_ProcessUtility(Node *parsetree,
+						const char *queryString,
+						ParamListInfo params,
+						bool isTopLevel,
+						DestReceiver *dest,
+						char *completionTag)
+{
 	check_xact_readonly(parsetree);
 
 	if (completionTag)
@@ -1012,6 +1038,10 @@ ProcessUtility(Node *parsetree,
 			GrantRole((GrantRoleStmt *) parsetree);
 			break;
 
+		case T_AlterDefaultPrivilegesStmt:
+			ExecAlterDefaultPrivilegesStmt((AlterDefaultPrivilegesStmt *) parsetree);
+			break;
+
 			/*
 			 * **************** object creation / destruction *****************
 			 */
@@ -1114,9 +1144,12 @@ ProcessUtility(Node *parsetree,
 							stmt->indexParams,	/* parameters */
 							(Expr *) stmt->whereClause,
 							stmt->options,
+							stmt->excludeOpNames,
 							stmt->unique,
 							stmt->primary,
 							stmt->isconstraint,
+							stmt->deferrable,
+							stmt->initdeferred,
 							false,		/* is_alter_table */
 							true,		/* check_rights */
 							false,		/* skip_build */
@@ -1324,7 +1357,10 @@ ProcessUtility(Node *parsetree,
 
 		case T_CreateTrigStmt:
 			{
-				Oid trigOid = CreateTrigger((CreateTrigStmt *) parsetree, InvalidOid, true);
+				Oid			trigOid;
+
+				trigOid = CreateTrigger((CreateTrigStmt *) parsetree, queryString,
+										InvalidOid, InvalidOid, NULL, true);
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
 					((CreateTrigStmt *) parsetree)->trigOid = trigOid;
@@ -2062,6 +2098,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_LANGUAGE:
 					tag = "ALTER LANGUAGE";
 					break;
+				case OBJECT_LARGEOBJECT:
+					tag = "ALTER LARGEOBJECT";
+					break;
 				case OBJECT_OPERATOR:
 					tag = "ALTER OPERATOR";
 					break;
@@ -2156,6 +2195,10 @@ CreateCommandTag(Node *parsetree)
 
 				tag = (stmt->is_grant) ? "GRANT ROLE" : "REVOKE ROLE";
 			}
+			break;
+
+		case T_AlterDefaultPrivilegesStmt:
+			tag = "ALTER DEFAULT PRIVILEGES";
 			break;
 
 		case T_DefineStmt:
@@ -2292,7 +2335,7 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		case T_VacuumStmt:
-			if (((VacuumStmt *) parsetree)->vacuum)
+			if (((VacuumStmt *) parsetree)->options & VACOPT_VACUUM)
 				tag = "VACUUM";
 			else
 				tag = "ANALYZE";
@@ -2513,7 +2556,8 @@ CreateCommandTag(Node *parsetree)
 							tag = "SELECT INTO";
 						else if (stmt->rowMarks != NIL)
 						{
-							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
+							/* not 100% but probably close enough */
+							if (((PlanRowMark *) linitial(stmt->rowMarks))->markType == ROW_MARK_EXCLUSIVE)
 								tag = "SELECT FOR UPDATE";
 							else
 								tag = "SELECT FOR SHARE";
@@ -2557,6 +2601,7 @@ CreateCommandTag(Node *parsetree)
 							tag = "SELECT INTO";
 						else if (stmt->rowMarks != NIL)
 						{
+							/* not 100% but probably close enough */
 							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
 								tag = "SELECT FOR UPDATE";
 							else
@@ -2754,6 +2799,10 @@ GetCommandLogLevel(Node *parsetree)
 			lev = LOGSTMT_DDL;
 			break;
 
+		case T_AlterDefaultPrivilegesStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
 		case T_DefineStmt:
 			lev = LOGSTMT_DDL;
 			break;
@@ -2851,10 +2900,20 @@ GetCommandLogLevel(Node *parsetree)
 		case T_ExplainStmt:
 			{
 				ExplainStmt *stmt = (ExplainStmt *) parsetree;
+				bool		 analyze = false;
+				ListCell	*lc;
 
 				/* Look through an EXPLAIN ANALYZE to the contained stmt */
-				if (stmt->analyze)
+				foreach(lc, stmt->options)
+				{
+					DefElem *opt = (DefElem *) lfirst(lc);
+
+					if (strcmp(opt->defname, "analyze") == 0)
+						analyze = defGetBoolean(opt);
+				}
+				if (analyze)
 					return GetCommandLogLevel(stmt->query);
+
 				/* Plain EXPLAIN isn't so interesting */
 				lev = LOGSTMT_ALL;
 			}

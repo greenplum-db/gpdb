@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.130 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.131 2009/09/03 22:08:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

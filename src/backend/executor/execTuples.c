@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.107 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.110 2009/09/27 20:09:57 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -97,6 +97,7 @@
 #include "nodes/nodeFuncs.h"
 #include "parser/parsetree.h"               /* rt_fetch() */
 #include "storage/bufmgr.h"
+#include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
@@ -1302,7 +1303,7 @@ BuildTupleFromCStrings(AttInMetadata *attinmeta, char **values)
  * Functions for sending tuples to the frontend (or other specified destination)
  * as though it is a SELECT result. These are used by utility commands that
  * need to project directly to the destination and don't need or want full
- * Table Function capability. Currently used by EXPLAIN and SHOW ALL
+ * table function capability. Currently used by EXPLAIN and SHOW ALL.
  */
 TupOutputState *
 begin_tup_output_tupdesc(DestReceiver *dest, TupleDesc tupdesc)
@@ -1311,7 +1312,6 @@ begin_tup_output_tupdesc(DestReceiver *dest, TupleDesc tupdesc)
 
 	tstate = (TupOutputState *) palloc(sizeof(TupOutputState));
 
-	tstate->metadata = TupleDescGetAttInMetadata(tupdesc);
 	tstate->slot = MakeSingleTupleTableSlot(tupdesc);
 	tstate->dest = dest;
 
@@ -1322,52 +1322,61 @@ begin_tup_output_tupdesc(DestReceiver *dest, TupleDesc tupdesc)
 
 /*
  * write a single tuple
- *
- * values is a list of the external C string representations of the values
- * to be projected.
- *
- * XXX This could be made more efficient, since in reality we probably only
- * need a virtual tuple.
  */
 void
-do_tup_output(TupOutputState *tstate, char **values)
+do_tup_output(TupOutputState *tstate, Datum *values, bool *isnull)
 {
-	/* build a tuple from the input strings using the tupdesc */
-	HeapTuple	tuple = BuildTupleFromCStrings(tstate->metadata, values);
+	TupleTableSlot *slot = tstate->slot;
+	int			natts = slot->tts_tupleDescriptor->natts;
 
-	/* put it in a slot */
-	ExecStoreHeapTuple(tuple, tstate->slot, InvalidBuffer, true);
+	/* make sure the slot is clear */
+	ExecClearTuple(slot);
+
+	/* insert data */
+	memcpy(slot->PRIVATE_tts_values, values, natts * sizeof(Datum));
+	memcpy(slot->PRIVATE_tts_isnull, isnull, natts * sizeof(bool));
+
+	/* mark slot as containing a virtual tuple */
+	ExecStoreVirtualTuple(slot);
 
 	/* send the tuple to the receiver */
-	(*tstate->dest->receiveSlot) (tstate->slot, tstate->dest);
+	(*tstate->dest->receiveSlot) (slot, tstate->dest);
 
 	/* clean up */
-	ExecClearTuple(tstate->slot);
+	ExecClearTuple(slot);
 }
 
 /*
  * write a chunk of text, breaking at newline characters
- *
- * NB: scribbles on its input!
  *
  * Should only be used with a single-TEXT-attribute tupdesc.
  */
 void
 do_text_output_multiline(TupOutputState *tstate, char *text)
 {
+	Datum		values[1];
+	bool		isnull[1] = { false };
+
 	while (*text)
 	{
 		char	   *eol;
+		int			len;
 
 		eol = strchr(text, '\n');
 		if (eol)
-			*eol++ = '\0';
+		{
+			len = eol - text;
+			eol++;
+		}
 		else
-			eol = text +strlen(text);
+		{
+			len = strlen(text);
+			eol += len;
+		}
 
-		/* &text yields a singleton pointer - make sure only one is read */
-		Assert(1 == tstate->metadata->tupdesc->natts);
-		do_tup_output(tstate, &text);
+		values[0] = PointerGetDatum(cstring_to_text_with_len(text, len));
+		do_tup_output(tstate, values, isnull);
+		pfree(DatumGetPointer(values[0]));
 		text = eol;
 	}
 }
@@ -1378,7 +1387,6 @@ end_tup_output(TupOutputState *tstate)
 	(*tstate->dest->rShutdown) (tstate->dest);
 	/* note that destroying the dest is not ours to do */
 	ExecDropSingleTupleTableSlot(tstate->slot);
-	/* XXX worth cleaning up the attinmetadata? */
 	pfree(tstate);
 }
 

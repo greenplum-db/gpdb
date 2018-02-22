@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.131 2009/06/11 14:49:02 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.133 2009/12/15 04:57:47 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -152,7 +152,7 @@ CreateUtilityQueryDesc(Node *utilitystmt,
 	qd->crosscheck_snapshot = InvalidSnapshot;	/* RI check snapshot */
 	qd->dest = dest;			/* output dest */
 	qd->params = params;		/* parameter values passed into query */
-	qd->instrument_options = INSTRUMENT_NONE;	/* uninteresting for utilities */
+	qd->instrument_options = false;	/* uninteresting for utilities */
 
 	/* null these fields until set by ExecutorStart */
 	qd->tupDesc = NULL;
@@ -460,13 +460,15 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (++nSetTag > 1)
 					return PORTAL_MULTI_QUERY;	/* no need to look further */
-				if (pstmt->returningLists == NIL)
+				if (!pstmt->hasReturning)
 					return PORTAL_MULTI_QUERY;	/* no need to look further */
 			}
 		}
 		/* otherwise, utility command, assumed not canSetTag */
 	}
-	if (nSetTag == 1)
+
+	/* In QE nodes, execute everything as PORTAL_MULTIQUERY. */
+	if (nSetTag == 1 && Gp_role != GP_ROLE_EXECUTE)
 		return PORTAL_ONE_RETURNING;
 
 	/* Else, it's the general case... */
@@ -536,8 +538,8 @@ FetchStatementTargetList(Node *stmt)
 			pstmt->utilityStmt == NULL &&
 			pstmt->intoClause == NULL)
 			return pstmt->planTree->targetlist;
-		if (pstmt->returningLists)
-			return (List *) linitial(pstmt->returningLists);
+		if (pstmt->hasReturning)
+			return pstmt->planTree->targetlist;
 		return NIL;
 	}
 	if (IsA(stmt, FetchStmt))
@@ -757,9 +759,9 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 
 					pstmt = (PlannedStmt *) PortalGetPrimaryStmt(portal);
 					Assert(IsA(pstmt, PlannedStmt));
-					Assert(pstmt->returningLists);
+					Assert(pstmt->hasReturning);
 					portal->tupDesc =
-						ExecCleanTypeFromTL((List *) linitial(pstmt->returningLists),
+						ExecCleanTypeFromTL(pstmt->planTree->targetlist,
 											false);
 				}
 

@@ -111,8 +111,8 @@ select pg_get_viewdef('print_name');
 select pg_get_viewdef('print_name', true);
                                  pg_get_viewdef                                  
 ---------------------------------------------------------------------------------
-  SELECT concat(' '::text, VARIADIC ARRAY[people.fname, people.lname]) AS concat 
-    FROM people                                                                  
+  SELECT concat(' '::text, VARIADIC ARRAY[people.fname, people.lname]) AS concat+
+    FROM people                                                                 +
    WHERE people.id < 790;
 (1 row)
 

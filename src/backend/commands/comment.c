@@ -7,7 +7,7 @@
  * Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.107 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.109 2009/12/11 03:34:55 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,6 +26,7 @@
 #include "catalog/pg_extension.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
+#include "catalog/pg_largeobject_metadata.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -45,6 +46,7 @@
 #include "commands/dbcommands.h"
 #include "commands/extension.h"
 #include "commands/tablespace.h"
+#include "libpq/be-fsstubs.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
@@ -483,6 +485,61 @@ DeleteSharedComments(Oid oid, Oid classoid)
 
 	systable_endscan(sd);
 	heap_close(shdescription, RowExclusiveLock);
+}
+
+/*
+ * GetComment -- get the comment for an object, or null if not found.
+ */
+char *
+GetComment(Oid oid, Oid classoid, int32 subid)
+{
+	Relation	description;
+	ScanKeyData skey[3];
+	SysScanDesc sd;
+	TupleDesc	tupdesc;
+	HeapTuple	tuple;
+	char	   *comment;
+
+	/* Use the index to search for a matching old tuple */
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_description_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_description_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+	ScanKeyInit(&skey[2],
+				Anum_pg_description_objsubid,
+				BTEqualStrategyNumber, F_INT4EQ,
+				Int32GetDatum(subid));
+
+	description = heap_open(DescriptionRelationId, AccessShareLock);
+	tupdesc = RelationGetDescr(description);
+
+	sd = systable_beginscan(description, DescriptionObjIndexId, true,
+							SnapshotNow, 3, skey);
+
+	comment  = NULL;
+	while ((tuple = systable_getnext(sd)) != NULL)
+	{
+		Datum	value;
+		bool	isnull;
+
+		/* Found the tuple, get description field */
+		value = heap_getattr(tuple, Anum_pg_description_description, tupdesc, &isnull);
+		if (!isnull)
+			comment = TextDatumGetCString(value);
+		break;					/* Assume there can be only one match */
+	}
+
+	systable_endscan(sd);
+
+	/* Done */
+	heap_close(description, AccessShareLock);
+
+	return comment;
 }
 
 /*
@@ -1075,12 +1132,8 @@ CommentConstraint(List *qualname, char *comment)
 	List	   *relName;
 	char	   *conName;
 	RangeVar   *rel;
-	Relation	pg_constraint,
-				relation;
-	HeapTuple	tuple;
-	SysScanDesc scan;
-	ScanKeyData skey[1];
-	Oid			conOid = InvalidOid;
+	Relation	relation;
+	Oid			conOid;
 
 	/* Separate relname and constraint name */
 	nnames = list_length(qualname);
@@ -1099,50 +1152,12 @@ CommentConstraint(List *qualname, char *comment)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   RelationGetRelationName(relation));
 
-	/*
-	 * Fetch the constraint tuple from pg_constraint.  There may be more than
-	 * one match, because constraints are not required to have unique names;
-	 * if so, error out.
-	 */
-	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
-
-	ScanKeyInit(&skey[0],
-				Anum_pg_constraint_conrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(relation)));
-
-	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
-							  SnapshotNow, 1, skey);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
-	{
-		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
-
-		if (strcmp(NameStr(con->conname), conName) == 0)
-		{
-			if (OidIsValid(conOid))
-				ereport(ERROR,
-						(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("table \"%s\" has multiple constraints named \"%s\"",
-						RelationGetRelationName(relation), conName)));
-			conOid = HeapTupleGetOid(tuple);
-		}
-	}
-
-	systable_endscan(scan);
-
-	/* If no constraint exists for the relation specified, notify user */
-	if (!OidIsValid(conOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("constraint \"%s\" for table \"%s\" does not exist",
-						conName, RelationGetRelationName(relation))));
+	conOid = get_constraint_oid(RelationGetRelid(relation), conName, false);
 
 	/* Call CreateComments() to create/drop the comments */
 	CreateComments(conOid, ConstraintRelationId, 0, comment);
 
 	/* Done, but hold lock on relation */
-	heap_close(pg_constraint, AccessShareLock);
 	heap_close(relation, NoLock);
 }
 
@@ -1430,7 +1445,20 @@ CommentLargeObject(List *qualname, char *comment)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("large object %u does not exist", loid)));
 
-	/* Call CreateComments() to create/drop the comments */
+	/* Permission checks */
+	if (!lo_compat_privileges &&
+		!pg_largeobject_ownercheck(loid, GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be owner of large object %u", loid)));
+
+	/*
+	 * Call CreateComments() to create/drop the comments
+	 *
+	 * See the comment in the inv_create() which describes
+	 * the reason why LargeObjectRelationId is used instead
+	 * of the LargeObjectMetadataRelationId.
+	 */
 	CreateComments(loid, LargeObjectRelationId, 0, comment);
 }
 

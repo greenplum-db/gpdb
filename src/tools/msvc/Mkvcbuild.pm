@@ -3,7 +3,7 @@ package Mkvcbuild;
 #
 # Package that generates build files for msvc build
 #
-# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.40 2009/06/05 18:29:56 adunstan Exp $
+# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.44 2009/11/12 00:13:00 tgl Exp $
 #
 use Carp;
 use Win32;
@@ -49,7 +49,7 @@ sub mkvcbuild
 
     our @pgportfiles = qw(
       chklocale.c crypt.c fseeko.c getrusage.c inet_aton.c random.c srandom.c
-      getaddrinfo.c gettimeofday.c kill.c open.c rand.c
+      getaddrinfo.c gettimeofday.c kill.c open.c erand48.c
       snprintf.c strlcat.c strlcpy.c copydir.c dirmod.c exec.c noblock.c path.c pipe.c
       pgsleep.c pgstrcasecmp.c qsort.c qsort_arg.c sprompt.c thread.c
       getopt.c getopt_long.c dirent.c rint.c win32env.c win32error.c glob.c);
@@ -91,7 +91,7 @@ sub mkvcbuild
     $snowball->AddReference($postgres);
 
     my $plpgsql = $solution->AddProject('plpgsql','dll','PLs','src\pl\plpgsql\src');
-    $plpgsql->AddFiles('src\pl\plpgsql\src','scan.l','gram.y');
+    $plpgsql->AddFiles('src\pl\plpgsql\src', 'gram.y');
     $plpgsql->AddReference($postgres);
     $plpgsql->AddLibrary('wsock32.lib');
     $plpgsql->AddLibrary('ws2_32.lib');
@@ -385,7 +385,7 @@ sub mkvcbuild
 
     $mf = Project::read_file('src\backend\utils\mb\conversion_procs\Makefile');
     $mf =~ s{\\s*[\r\n]+}{}mg;
-    $mf =~ m{DIRS\s*=\s*(.*)$}m || die 'Could not match in conversion makefile' . "\n";
+    $mf =~ m{SUBDIRS\s*=\s*(.*)$}m || die 'Could not match in conversion makefile' . "\n";
     foreach my $sub (split /\s+/,$1)
     {
         my $mf = Project::read_file('src\backend\utils\mb\conversion_procs\\' . $sub . '\Makefile');

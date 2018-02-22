@@ -30,7 +30,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.62 2009/06/26 20:29:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.64 2009/12/16 22:55:33 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -115,16 +115,16 @@ BackgroundWriterMain(void)
 	 * tell us it's okay to shut down (via SIGUSR2).
 	 *
 	 * SIGUSR1 is presently unused; keep it spare in case someday we want this
-	 * process to participate in ProcSignal messaging.
+	 * process to participate in ProcSignal signalling.
 	 */
 	pqsignal(SIGHUP, BgSigHupHandler);	/* set flag to read config file */
 	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGTERM, SIG_IGN); /* ignore SIGTERM */
+	pqsignal(SIGTERM, ReqShutdownHandler);		/* shutdown */
 	pqsignal(SIGQUIT, quickdie);		/* hard crash time: nothing bg-writer specific, just use the standard */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, SIG_IGN); /* reserve for ProcSignal */
-	pqsignal(SIGUSR2, ReqShutdownHandler);		/* request shutdown */
+	pqsignal(SIGUSR2, SIG_IGN);
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
@@ -136,11 +136,7 @@ BackgroundWriterMain(void)
 	pqsignal(SIGWINCH, SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
-#ifdef HAVE_SIGPROCMASK
 	sigdelset(&BlockSig, SIGQUIT);
-#else
-	BlockSig &= ~(sigmask(SIGQUIT));
-#endif
 
 	/*
 	 * Create a resource owner to keep track of our resources (currently only
@@ -330,7 +326,7 @@ BgSigHupHandler(SIGNAL_ARGS)
 	got_SIGHUP = true;
 }
 
-/* SIGUSR2: set flag to run a shutdown checkpoint and exit */
+/* SIGTERM: set flag to shutdown and exit */
 static void
 ReqShutdownHandler(SIGNAL_ARGS)
 {

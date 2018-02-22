@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.274 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.277 2009/12/09 21:57:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,7 +52,6 @@
 #include "storage/freespace.h"
 #include "utils/combocid.h"
 #include "utils/faultinjector.h"
-#include "utils/flatfiles.h"
 #include "utils/guc.h"
 #include "utils/inval.h"
 #include "utils/memutils.h"
@@ -2348,12 +2347,6 @@ CommitTransaction(void)
 	AtCommit_Notify();
 
 	/*
-	 * Update flat files if we changed pg_database, pg_authid or
-	 * pg_auth_members.  This should be the last step before commit.
-	 */
-	AtEOXact_UpdateFlatFiles(true);
-
-	/*
 	 * Prepare all QE.
 	 */
 	prepareDtxTransaction();
@@ -2628,7 +2621,7 @@ PrepareTransaction(void)
 	/* close large objects before lower-level cleanup */
 	AtEOXact_LargeObject(true);
 
-	/* NOTIFY and flatfiles will be handled below */
+	/* NOTIFY will be handled below */
 
 	/*
 	 * In Postgres, MyXactAccessedTempRel is used to error out if PREPARE TRANSACTION
@@ -2716,7 +2709,6 @@ PrepareTransaction(void)
 	StartPrepare(gxact);
 
 	AtPrepare_Notify();
-	AtPrepare_UpdateFlatFiles();
 	AtPrepare_Inval();
 	AtPrepare_Locks();
 	AtPrepare_PgStat();
@@ -2773,7 +2765,7 @@ PrepareTransaction(void)
 	/* Clean up the snapshot manager */
 	AtEarlyCommit_Snapshot();
 
-	/* notify and flatfiles don't need a postprepare call */
+	/* notify doesn't need a postprepare call */
 
 	PostPrepare_PgStat();
 
@@ -2907,7 +2899,7 @@ AbortTransaction(void)
 	 * Reset user ID which might have been changed transiently.  We need this
 	 * to clean up in case control escaped out of a SECURITY DEFINER function
 	 * or other local change of CurrentUserId; therefore, the prior value of
-	 * SecurityDefinerContext also needs to be restored.
+	 * SecurityRestrictionContext also needs to be restored.
 	 *
 	 * (Note: it is not necessary to restore session authorization or role
 	 * settings here because those can only be changed via GUC, and GUC will
@@ -2934,7 +2926,6 @@ AbortTransaction(void)
 
 	AtEOXact_LargeObject(false);	/* 'false' means it's abort */
 	AtAbort_Notify();
-	AtEOXact_UpdateFlatFiles(false);
 	AtAbort_Twophase();
 
 	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
@@ -5008,8 +4999,6 @@ CommitSubTransaction(void)
 	AtEOSubXact_LargeObject(true, s->subTransactionId,
 							s->parent->subTransactionId);
 	AtSubCommit_Notify();
-	AtEOSubXact_UpdateFlatFiles(true, s->subTransactionId,
-								s->parent->subTransactionId);
 
 	CallSubXactCallbacks(SUBXACT_EVENT_COMMIT_SUB, s->subTransactionId,
 						 s->parent->subTransactionId);
@@ -5130,8 +5119,6 @@ AbortSubTransaction(void)
 		AtEOSubXact_LargeObject(false, s->subTransactionId,
 								s->parent->subTransactionId);
 		AtSubAbort_Notify();
-		AtEOSubXact_UpdateFlatFiles(false, s->subTransactionId,
-									s->parent->subTransactionId);
 
 		/* Advertise the fact that we aborted in pg_clog. */
 		(void) RecordTransactionAbort(true);
@@ -5557,26 +5544,21 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 		TransactionIdAdvance(ShmemVariableCache->nextXid);
 	}
 
-	for (i = 0; i < xlrec->nrels; i++)
+	/* Make sure files supposed to be dropped are dropped */
+	if (xlrec->nrels > 0)
 	{
-		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
-		ForkNumber fork;
-
-		for (fork = 0; fork <= MAX_FORKNUM; fork++)
+		for (i = 0; i < xlrec->nrels; i++)
 		{
-			/*
-			 * In GPDB, always try to drop the main fork. This is because
-			 * smgrexists() doesn't do the right thing for AOCO tables.
-			 * smgrexists() checks for the existence of the first segment (0),
-			 * but an AOCO table doesn't user segment 0.
-			 */
-			if (smgrexists(srel, fork) || fork == MAIN_FORKNUM)
+			SMgrRelation srel = smgropen(xlrec->xnodes[i]);
+			ForkNumber	fork;
+
+			for (fork = 0; fork <= MAX_FORKNUM; fork++)
 			{
 				XLogDropRelation(xlrec->xnodes[i], fork);
 				smgrdounlink(srel, fork, false, true);
 			}
+			smgrclose(srel);
 		}
-		smgrclose(srel);
 	}
 }
 
@@ -5721,17 +5703,8 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 
 		for (fork = 0; fork <= MAX_FORKNUM; fork++)
 		{
-			/*
-			 * In GPDB, always try to drop the main fork. This is because
-			 * smgrexists() doesn't do the right thing for AOCO tables.
-			 * smgrexists() checks for the existence of the first segment (0),
-			 * but an AOCO table doesn't user segment 0.
-			 */
-			if (smgrexists(srel, fork) || fork == MAIN_FORKNUM)
-			{
-				XLogDropRelation(xlrec->xnodes[i], fork);
-				smgrdounlink(srel, fork, false, true);
-			}
+			XLogDropRelation(xlrec->xnodes[i], fork);
+			smgrdounlink(srel, fork, false, true);
 		}
 		smgrclose(srel);
 	}

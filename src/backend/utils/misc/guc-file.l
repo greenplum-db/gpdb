@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.59 2009/04/09 14:21:02 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.63 2009/11/12 18:20:23 tgl Exp $
  */
 
 %{
@@ -136,7 +136,6 @@ ProcessConfigFile(GucContext context)
 				   *head,
 				   *tail;
 	char	   *cvc = NULL;
-	struct config_string *cvc_struct;
 	const char *envvar;
 	int			i;
 
@@ -169,41 +168,6 @@ ProcessConfigFile(GucContext context)
 		goto cleanup_list;
 
 	/*
-	 * We need the proposed new value of custom_variable_classes to check
-	 * custom variables with.  ParseConfigFile ensured that if it's in
-	 * the file, it's first in the list.  But first check to see if we
-	 * have an active value from the command line, which should override
-	 * the file in any case.  (Since there's no relevant env var, the
-	 * only possible nondefault sources are the file and ARGV.)
-	 */
-	cvc_struct = (struct config_string *)
-		find_option("custom_variable_classes", false, elevel);
-	if (cvc_struct && cvc_struct->gen.reset_source > PGC_S_FILE)
-	{
-		cvc = guc_strdup(elevel, cvc_struct->reset_val);
-		if (cvc == NULL)
-			goto cleanup_list;
-	}
-	else if (head != NULL &&
-			 guc_name_compare(head->name, "custom_variable_classes") == 0)
-	{
-		/*
-		 * Need to canonicalize the value via the assign hook.  Casting away
-		 * const is a bit ugly, but we know the result is malloc'd.
-		 */
-		cvc = (char *) assign_custom_variable_classes(head->value,
-													  false, PGC_S_FILE);
-		if (cvc == NULL)
-		{
-			ereport(elevel,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid value for parameter \"%s\": \"%s\"",
-							head->name, head->value)));
-			goto cleanup_list;
-		}
-	}
-
-	/*
 	 * Mark all extant GUC variables as not present in the config file.
 	 * We need this so that we can tell below which ones have been removed
 	 * from the file since we last processed it.
@@ -232,6 +196,7 @@ ProcessConfigFile(GucContext context)
 			 * of custom_variable_classes.  If so, reject.  We don't care
 			 * which side is at fault.
 			 */
+#if 0
 			if (!is_custom_class(item->name, sep - item->name, cvc))
 			{
 				ereport(elevel,
@@ -240,6 +205,7 @@ ProcessConfigFile(GucContext context)
 								item->name)));
 				goto cleanup_list;
 			}
+#endif
 			/*
 			 * 2. There is no GUC entry.  If we called set_config_option then
 			 * it would make a placeholder, which we don't want to do yet,
@@ -283,9 +249,8 @@ ProcessConfigFile(GucContext context)
 		{
 			ereport(elevel,
 					(errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM),
-					 errmsg("attempted change of parameter \"%s\" ignored",
-							gconf->name),
-					 errdetail("This parameter cannot be changed after server start.")));
+					 errmsg("parameter \"%s\" cannot be changed without restarting the server",
+							gconf->name)));
 			continue;
 		}
 
@@ -306,6 +271,10 @@ ProcessConfigFile(GucContext context)
 		/* Now we can re-apply the wired-in default */
 		set_config_option(gconf->name, NULL, context, PGC_S_DEFAULT,
 						  GUC_ACTION_SET, true);
+		if (context == PGC_SIGHUP)
+			ereport(elevel,
+					(errmsg("parameter \"%s\" removed from configuration file, reset to default",
+							gconf->name)));
 	}
 
 	/*
@@ -332,12 +301,41 @@ ProcessConfigFile(GucContext context)
 	/* If we got here all the options checked out okay, so apply them. */
 	for (item = head; item; item = item->next)
 	{
+		char   *pre_value = NULL;
+
+		/* In SIGHUP cases in the postmaster, report changes */
+		if (context == PGC_SIGHUP && !IsUnderPostmaster)
+		{
+			const char *preval = GetConfigOption(item->name, false);
+
+			/* string variables could be NULL; treat that as empty */
+			if (!preval)
+				preval = "";
+			/* must dup, else might have dangling pointer below */
+			pre_value = pstrdup(preval);
+		}
+
 		if (set_config_option(item->name, item->value, context,
 			   					 PGC_S_FILE, GUC_ACTION_SET, true))
 		{
 			set_config_sourcefile(item->name, item->filename,
 								  item->sourceline);
+
+			if (pre_value)
+			{
+				const char *post_value = GetConfigOption(item->name, false);
+
+				if (!post_value)
+					post_value = "";
+				if (strcmp(pre_value, post_value) != 0)
+					ereport(elevel,
+							(errmsg("parameter \"%s\" changed to \"%s\"",
+									item->name, item->value)));
+			}
 		}
+
+		if (pre_value)
+			pfree(pre_value);
 	}
 
 	/* Remember when we last successfully loaded the config file. */
@@ -558,40 +556,6 @@ ParseConfigFp(FILE *fp, const char *config_file, int depth, int elevel,
 			yy_switch_to_buffer(lex_buffer);
 			pfree(opt_name);
 			pfree(opt_value);
-		}
-		else if (guc_name_compare(opt_name, "custom_variable_classes") == 0)
-		{
-			/*
-			 * This variable must be processed first as it controls
-			 * the validity of other variables; so it goes at the head
-			 * of the result list.  If we already found a value for it,
-			 * replace with this one.
-			 */
-			item = *head_p;
-			if (item != NULL &&
-				guc_name_compare(item->name, "custom_variable_classes") == 0)
-			{
-				/* replace existing head item */
-				pfree(item->name);
-				pfree(item->value);
-				item->name = opt_name;
-				item->value = opt_value;
-				item->filename = pstrdup(config_file);
-				item->sourceline = ConfigFileLineno-1;
-			}
-			else
-			{
-				/* prepend to list */
-				item = palloc(sizeof *item);
-				item->name = opt_name;
-				item->value = opt_value;
-				item->filename = pstrdup(config_file);
-				item->sourceline = ConfigFileLineno-1;
-				item->next = *head_p;
-				*head_p = item;
-				if (*tail_p == NULL)
-					*tail_p = item;
-			}
 		}
 		else
 		{

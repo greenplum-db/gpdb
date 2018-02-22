@@ -457,7 +457,7 @@ select * from bytea where bytea1='d' and cidr1='0.0.0.1';
 INFO:  Dispatch command to SINGLE content
  bytea1 |   cidr1    
 --------+------------
- d      | 0.0.0.1/32
+ \x64   | 0.0.0.1/32
 (1 row)
 
 --start_ignore
@@ -982,12 +982,11 @@ explain select * from (select * from mpp7620 where key=200) ss where key =200;
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
                          QUERY PLAN                          
 -------------------------------------------------------------
- Insert (slice0; segments: 3)  (rows=1 width=4)
+ Insert  (cost=0.00..1.01 rows=1 width=4)
    ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
          Filter: key = 200
- Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(5 rows)
+(4 rows)
 
 explain select key from mpp7620 where mpp7620.key=200;
                                  QUERY PLAN                                 

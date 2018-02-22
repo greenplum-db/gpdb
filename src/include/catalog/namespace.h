@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.59 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.61 2009/10/31 01:41:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,6 +32,7 @@ typedef struct _FuncCandidateList
 	int			nargs;			/* number of arg types returned */
 	int			nvargs;			/* number of args to become variadic array */
 	int			ndargs;			/* number of defaulted args */
+	int		   *argnumbers;		/* args' positional indexes, if named call */
 	Oid			args[1];		/* arg types --- VARIABLE LENGTH ARRAY */
 }	*FuncCandidateList;	/* VARIABLE LENGTH STRUCT */
 
@@ -61,7 +62,8 @@ extern bool RelationIsVisible(Oid relid);
 extern Oid	TypenameGetTypid(const char *typname);
 extern bool TypeIsVisible(Oid typid);
 
-extern FuncCandidateList FuncnameGetCandidates(List *names, int nargs,
+extern FuncCandidateList FuncnameGetCandidates(List *names,
+					  int nargs, List *argnames,
 					  bool expand_variadic,
 					  bool expand_defaults);
 extern bool FunctionIsVisible(Oid funcid);
@@ -94,6 +96,7 @@ extern bool TSConfigIsVisible(Oid cfgid);
 extern void DeconstructQualifiedName(List *names,
 						 char **nspname_p,
 						 char **objname_p);
+extern Oid	LookupNamespaceNoError(const char *nspname);
 extern Oid	LookupExplicitNamespace(const char *nspname);
 
 extern void DropTempTableNamespaceForResetSession(Oid namespaceOid);

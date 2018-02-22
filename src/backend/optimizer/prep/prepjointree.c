@@ -23,7 +23,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.66 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.69 2009/10/28 14:55:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 #include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
+#include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "parser/parse_relation.h"
 #include "rewrite/rewriteManip.h"
@@ -608,8 +609,8 @@ inline_set_returning_functions(PlannerInfo *root)
  * we are currently processing!  We handle this by being careful not to
  * change the jointree structure while recursing: no nodes other than
  * subquery RangeTblRef entries will be replaced.  Also, we can't turn
- * ResolveNew loose on the whole jointree, because it'll return a mutated
- * copy of the tree; we have to invoke it just on the quals, instead.
+ * pullup_replace_vars loose on the whole jointree, because it'll return a
+ * mutated copy of the tree; we have to invoke it just on the quals, instead.
  * This behavior is what makes it reasonable to pass lowest_outer_join as a
  * pointer rather than some more-indirect way of identifying the lowest OJ.
  * Likewise, we don't replace append_rel_list members but only their
@@ -745,7 +746,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	PlannerInfo *subroot;
 	int			rtoffset;
 	pullup_replace_vars_context rvcontext;
-    ListCell   *lc;
+	ListCell   *lc;
 
 	/*
 	 * Need a modifiable copy of the subquery to hack on.  Even if we didn't
@@ -772,6 +773,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	subroot->cte_plan_ids = NIL;
 	subroot->eq_classes = NIL;
 	subroot->append_rel_list = NIL;
+	subroot->rowMarks = NIL;
 	subroot->hasRecursion = false;
 	subroot->wt_param_id = -1;
 	subroot->non_recursive_plan = NULL;
@@ -784,9 +786,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	{
 		subroot->list_cteplaninfo = init_list_cteplaninfo(list_length(subroot->parse->cteList));
 	}
-
-    /* CDB: Stash subquery jointree relids before flattening subqueries. */
-    subroot->currlevel_relids = get_relids_in_jointree((Node *)subquery->jointree, false);
     
     /* Ensure that jointree has been normalized. See normalize_query_jointree_mutator() */
     AssertImply(subquery->jointree->fromlist, list_length(subquery->jointree->fromlist) == 1);
@@ -847,16 +846,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 		return jtnode;
 	}
 
-    /* CDB: If parent RTE belongs to subquery's query level, children do too. */
-    foreach (lc, subroot->append_rel_list)
-    {
-        AppendRelInfo  *appinfo = (AppendRelInfo *) lfirst(lc);
-
-        if (bms_is_member(appinfo->parent_relid, subroot->currlevel_relids))
-            subroot->currlevel_relids = bms_add_member(subroot->currlevel_relids,
-                                                       appinfo->child_relid);
-    }
-
 	/*
 	 * Adjust level-0 varnos in subquery so that we can append its rangetable
 	 * to upper query's.  We have to fix the subquery's append_rel_list as
@@ -878,17 +867,20 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * insert into the top query, but if we are under an outer join then
 	 * non-nullable items may have to be turned into PlaceHolderVars.  If we
 	 * are dealing with an appendrel member then anything that's not a simple
-	 * Var has to be turned into a PlaceHolderVar.
+	 * Var has to be turned into a PlaceHolderVar.  Set up appropriate context
+	 * data for pullup_replace_vars.
 	 */
 	rvcontext.root = root;
 	rvcontext.targetlist = subquery->targetList;
 	rvcontext.target_rte = rte;
 	rvcontext.outer_hasSubLinks = &parse->hasSubLinks;
 	rvcontext.varno = varno;
-	rvcontext.need_phvs = (lowest_outer_join != NULL || containing_appendrel != NULL);
+	rvcontext.need_phvs = (lowest_outer_join != NULL ||
+						   containing_appendrel != NULL);
 	rvcontext.wrap_non_vars = (containing_appendrel != NULL);
 	/* initialize cache array with indexes 0 .. length(tlist) */
-	rvcontext.rv_cache = palloc0((list_length(subquery->targetList) + 1) * sizeof(Node *));
+	rvcontext.rv_cache = palloc0((list_length(subquery->targetList) + 1) *
+								 sizeof(Node *));
 
 	List *newTList = (List *)
 		pullup_replace_vars((Node *) parse->targetList, &rvcontext);
@@ -904,8 +896,8 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * replace any of the jointree structure. (This'd be a lot cleaner if we
 	 * could use query_tree_mutator.)  We have to use PHVs in the targetList,
 	 * returningList, and havingQual, since those are certainly above any
-	 * outer join.  replace_vars_in_jointree tracks its location in the jointree
-	 * and uses PHVs or not appropriately.
+	 * outer join.  replace_vars_in_jointree tracks its location in the
+	 * jointree and uses PHVs or not appropriately.
 	 */
 	parse->targetList = newTList;
 
@@ -924,14 +916,10 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 
 			if (wc->startOffset)
 				wc->startOffset =
-					ResolveNew((Node *) wc->startOffset,
-							   varno, 0, rte,
-							   subquery->targetList, CMD_SELECT, 0, NULL);
+					pullup_replace_vars((Node *) wc->startOffset, &rvcontext);
 			if (wc->endOffset)
 				wc->endOffset =
-					ResolveNew((Node *) wc->endOffset,
-							   varno, 0, rte,
-							   subquery->targetList, CMD_SELECT, 0, NULL);
+					pullup_replace_vars((Node *) wc->endOffset, &rvcontext);
 		}
 	}
 
@@ -950,7 +938,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 		if (appinfo == containing_appendrel)
 			rvcontext.need_phvs = false;
 		appinfo->translated_vars = (List *)
-				pullup_replace_vars((Node *) appinfo->translated_vars, &rvcontext);
+			pullup_replace_vars((Node *) appinfo->translated_vars, &rvcontext);
 		rvcontext.need_phvs = save_need_phvs;
 	}
 
@@ -969,8 +957,8 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 
 		if (otherrte->rtekind == RTE_JOIN)
 			otherrte->joinaliasvars = (List *)
-				pullup_replace_vars((Node *) otherrte->joinaliasvars, &rvcontext);
-
+				pullup_replace_vars((Node *) otherrte->joinaliasvars,
+									&rvcontext);
 		else if (otherrte->rtekind == RTE_SUBQUERY && rte != otherrte)
 		{
 			otherrte->subquery = (Query *)
@@ -997,25 +985,11 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 */
 	parse->rowMarks = list_concat(parse->rowMarks, subquery->rowMarks);
 
-    /*
-     * CDB: Fix current query level's FROM clause relid set if the subquery
-     * was in the FROM clause of current query (not a flattened sublink).
-     */
-    if (bms_is_member(varno, root->currlevel_relids))
-    {
-        int     subrelid;
-
-        root->currlevel_relids = bms_del_member(root->currlevel_relids, varno);
-        bms_foreach(subrelid, subroot->currlevel_relids)
-            root->currlevel_relids = bms_add_member(root->currlevel_relids,
-                                                    subrelid + rtoffset);
-    }
-
 	/*
 	 * We also have to fix the relid sets of any PlaceHolderVar nodes in the
-	 * parent query.  (This could perhaps be done by ResolveNew, but it would
-	 * clutter that routine's API unreasonably.)  Note in particular that any
-	 * PlaceHolderVar nodes just created by insert_targetlist_placeholders()
+	 * parent query.  (This could perhaps be done by pullup_replace_vars(),
+	 * but it seems cleaner to use two passes.)  Note in particular that any
+	 * PlaceHolderVar nodes just created by pullup_replace_vars()
 	 * will be adjusted, so having created them with the subquery's varno is
 	 * correct.
 	 *
@@ -1050,7 +1024,6 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 
 	/*
 	 * Miscellaneous housekeeping.
-	 *
 	 *
 	 * Although replace_rte_variables() faithfully updated parse->hasSubLinks
 	 * if it copied any SubLinks out of the subquery's targetlist, we still
@@ -1110,6 +1083,12 @@ is_simple_subquery(PlannerInfo *root, Query *subquery)
 	/*
 	 * Can't pull up a subquery involving grouping, aggregation, sorting,
 	 * limiting, or WITH.  (XXX WITH could possibly be allowed later)
+	 *
+	 * We also don't pull up a subquery that has explicit FOR UPDATE/SHARE
+	 * clauses, because pullup would cause the locking to occur semantically
+	 * higher than it should.  Implicit FOR UPDATE/SHARE is okay because
+	 * in that case the locking was originally declared in the upper query
+	 * anyway.
 	 */
 	if (subquery->hasAggs ||
 		subquery->hasWindowFuncs ||
@@ -1120,6 +1099,7 @@ is_simple_subquery(PlannerInfo *root, Query *subquery)
 		subquery->distinctClause ||
 		subquery->limitOffset ||
 		subquery->limitCount ||
+		subquery->hasForUpdate ||
 		subquery->cteList ||
 		root->parse->cteList)
 		return false;
@@ -1272,17 +1252,17 @@ is_safe_append_member(Query *subquery)
 }
 
 /*
- * Helper routine for pull_up_subqueries: do pullup_replace_vars on every expression
- * in the jointree, without changing the jointree structure itself.  Ugly,
- * but there's no other way...
+ * Helper routine for pull_up_subqueries: do pullup_replace_vars on every
+ * expression in the jointree, without changing the jointree structure itself.
+ * Ugly, but there's no other way...
  *
- * If we are above lowest_outer_join then use subtlist_with_phvs; at or
- * below it, use subtlist.  (When no outer joins are in the picture,
- * these will be the same list.)
+ * If we are at or below lowest_outer_join, we can suppress use of
+ * PlaceHolderVars wrapped around the replacement expressions.
  */
 static void
-replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context,
-					   JoinExpr *lowest_outer_join)
+replace_vars_in_jointree(Node *jtnode,
+						 pullup_replace_vars_context *context,
+						 JoinExpr *lowest_outer_join)
 {
 	ListCell   *l;
 
@@ -1313,7 +1293,6 @@ replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context,
 		}
 		replace_vars_in_jointree(j->larg, context, lowest_outer_join);
 		replace_vars_in_jointree(j->rarg, context, lowest_outer_join);
-
 		j->quals = pullup_replace_vars(j->quals, context);
 
 		/*
@@ -1342,7 +1321,6 @@ pullup_replace_vars(Node *expr, pullup_replace_vars_context *context)
 								 (void *) context,
 								 context->outer_hasSubLinks);
 }
-
 
 static Node *
 pullup_replace_vars_callback(Var *var,
@@ -1419,9 +1397,9 @@ pullup_replace_vars_callback(Var *var,
 		{
 			/* RowExpr is certainly not strict, so always need PHV */
 			newnode = (Node *)
-			make_placeholder_expr(rcon->root,
-								  (Expr *) newnode,
-								  bms_make_singleton(rcon->varno));
+				make_placeholder_expr(rcon->root,
+									  (Expr *) newnode,
+									  bms_make_singleton(rcon->varno));
 			/* cache it with the PHV, and with varlevelsup still zero */
 			rcon->rv_cache[InvalidAttrNumber] = copyObject(newnode);
 		}
@@ -1430,19 +1408,19 @@ pullup_replace_vars_callback(Var *var,
 	{
 		/* Normal case referencing one targetlist element */
 		TargetEntry *tle = get_tle_by_resno(rcon->targetlist, varattno);
-		
+
 		if (tle == NULL)		/* shouldn't happen */
 			elog(ERROR, "could not find attribute %d in subquery targetlist",
 				 varattno);
-		
+
 		/* Make a copy of the tlist item to return */
 		newnode = copyObject(tle->expr);
-		
+
 		/* Insert PlaceHolderVar if needed */
 		if (rcon->need_phvs)
 		{
 			bool	wrap;
-			
+
 			if (newnode && IsA(newnode, Var) &&
 				((Var *) newnode)->varlevelsup == 0)
 			{
@@ -1478,9 +1456,9 @@ pullup_replace_vars_callback(Var *var,
 
 			if (wrap)
 				newnode = (Node *)
-				make_placeholder_expr(rcon->root,
-									  (Expr *) newnode,
-									  bms_make_singleton(rcon->varno));
+					make_placeholder_expr(rcon->root,
+										  (Expr *) newnode,
+										  bms_make_singleton(rcon->varno));
 
 			/*
 			 * Cache it if possible (ie, if the attno is in range, which it
@@ -1500,7 +1478,6 @@ pullup_replace_vars_callback(Var *var,
 
 	return newnode;
 }
-
 
 /*
  * reduce_outer_joins

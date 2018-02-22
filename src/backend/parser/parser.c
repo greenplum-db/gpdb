@@ -14,26 +14,17 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parser.c,v 1.78 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parser.c,v 1.83 2009/11/12 01:13:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "parser/gramparse.h"	/* required before parser/gram.h! */
-#include "parser/gram.h"
+#include "parser/gramparse.h"
 #include "parser/parser.h"
 
 #include "cdb/cdbvars.h"
-
-
-List	   *parsetree;			/* result of parsing is left here */
-
-static bool have_lookahead;		/* is lookahead info valid? */
-static int	lookahead_token;	/* one-token lookahead */
-static YYSTYPE lookahead_yylval;	/* yylval for lookahead token */
-static YYLTYPE lookahead_yylloc;	/* yylloc for lookahead token */
 
 
 /*
@@ -45,79 +36,35 @@ static YYLTYPE lookahead_yylloc;	/* yylloc for lookahead token */
 List *
 raw_parser(const char *str)
 {
+	core_yyscan_t yyscanner;
+	base_yy_extra_type yyextra;
 	int			yyresult;
 
-	parsetree = NIL;			/* in case grammar forgets to set it */
-	have_lookahead = false;
+	/* initialize the flex scanner */
+	yyscanner = scanner_init(str, &yyextra.core_yy_extra,
+							 ScanKeywords, NumScanKeywords);
 
-	scanner_init(str);
-	parser_init();
+	/* base_yylex() only needs this much initialization */
+	yyextra.have_lookahead = false;
 
-	yyresult = base_yyparse();
+	/* initialize the bison parser */
+	parser_init(&yyextra);
 
-	scanner_finish();
+	/* Parse! */
+	yyresult = base_yyparse(yyscanner);
+
+	/* Clean up (release memory) */
+	scanner_finish(yyscanner);
 
 	if (yyresult)				/* error */
 		return NIL;
 
-	return parsetree;
+	return yyextra.parsetree;
 }
 
 
 /*
- * pg_parse_string_token - get the value represented by a string literal
- *
- * Given the textual form of a SQL string literal, produce the represented
- * value as a palloc'd string.  It is caller's responsibility that the
- * passed string does represent one single string literal.
- *
- * We export this function to avoid having plpgsql depend on internal details
- * of the core grammar (such as the token code assigned to SCONST).  Note
- * that since the scanner isn't presently re-entrant, this cannot be used
- * during use of the main parser/scanner.
- */
-char *
-pg_parse_string_token(const char *token)
-{
-	int			ctoken;
-
-	/*
-	 * In GDPB, temporarily disable escape_string_warning, if we're in a QE
-	 * node. When we're parsing a PL/pgSQL function, e.g. in a CREATE FUNCTION
-	 * command, you should've gotten the same warning from the QD node already.
-	 * We could probably disable the warning in QE nodes altogether, not just
-	 * in PL/pgSQL, but it can be useful for catching escaping bugs, when
-	 * internal queries are dispatched from QD to QEs.
-	 */
-	bool		save_escape_string_warning = escape_string_warning;
-PG_TRY();
-{
-	if (Gp_role == GP_ROLE_EXECUTE)
-		escape_string_warning = false;
-
-	scanner_init(token);
-
-	ctoken = base_yylex();
-
-	if (ctoken != SCONST)		/* caller error */
-		elog(ERROR, "expected string constant, got token code %d", ctoken);
-
-	scanner_finish();
-
-}
-PG_CATCH();
-{
-	if (Gp_role == GP_ROLE_EXECUTE)
-		escape_string_warning = save_escape_string_warning;
-}
-PG_END_TRY();
-
-	return base_yylval.str;
-}
-
-
-/*
- * Intermediate filter between parser and base lexer (base_yylex in scan.l).
+ * Intermediate filter between parser and core lexer (core_yylex in scan.l).
  *
  * The filter is needed because in some cases the standard SQL grammar
  * requires more than one token lookahead.	We reduce these cases to one-token
@@ -128,25 +75,30 @@ PG_END_TRY();
  * words.  Furthermore it's not clear how to do it without re-introducing
  * scanner backtrack, which would cost more performance than this filter
  * layer does.
+ *
+ * The filter also provides a convenient place to translate between
+ * the core_YYSTYPE and YYSTYPE representations (which are really the
+ * same thing anyway, but notationally they're different).
  */
 int
-filtered_base_yylex(void)
+base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 {
+	base_yy_extra_type *yyextra = pg_yyget_extra(yyscanner);
 	int			cur_token;
 	int			next_token;
-	YYSTYPE		cur_yylval;
+	core_YYSTYPE cur_yylval;
 	YYLTYPE		cur_yylloc;
 
 	/* Get next token --- we might already have it */
-	if (have_lookahead)
+	if (yyextra->have_lookahead)
 	{
-		cur_token = lookahead_token;
-		base_yylval = lookahead_yylval;
-		base_yylloc = lookahead_yylloc;
-		have_lookahead = false;
+		cur_token = yyextra->lookahead_token;
+		lvalp->core_yystype = yyextra->lookahead_yylval;
+		*llocp = yyextra->lookahead_yylloc;
+		yyextra->have_lookahead = false;
 	}
 	else
-		cur_token = base_yylex();
+		cur_token = core_yylex(&(lvalp->core_yystype), llocp, yyscanner);
 
 	/* Do we need to look ahead for a possible multiword token? */
 	switch (cur_token)
@@ -156,9 +108,9 @@ filtered_base_yylex(void)
 			/*
 			 * NULLS FIRST and NULLS LAST must be reduced to one token
 			 */
-			cur_yylval = base_yylval;
-			cur_yylloc = base_yylloc;
-			next_token = base_yylex();
+			cur_yylval = lvalp->core_yystype;
+			cur_yylloc = *llocp;
+			next_token = core_yylex(&(lvalp->core_yystype), llocp, yyscanner);
 			switch (next_token)
 			{
 				case FIRST_P:
@@ -169,13 +121,13 @@ filtered_base_yylex(void)
 					break;
 				default:
 					/* save the lookahead token for next time */
-					lookahead_token = next_token;
-					lookahead_yylval = base_yylval;
-					lookahead_yylloc = base_yylloc;
-					have_lookahead = true;
+					yyextra->lookahead_token = next_token;
+					yyextra->lookahead_yylval = lvalp->core_yystype;
+					yyextra->lookahead_yylloc = *llocp;
+					yyextra->have_lookahead = true;
 					/* and back up the output info to cur_token */
-					base_yylval = cur_yylval;
-					base_yylloc = cur_yylloc;
+					lvalp->core_yystype = cur_yylval;
+					*llocp = cur_yylloc;
 					break;
 			}
 			break;
@@ -185,9 +137,9 @@ filtered_base_yylex(void)
 			/*
 			 * WITH TIME must be reduced to one token
 			 */
-			cur_yylval = base_yylval;
-			cur_yylloc = base_yylloc;
-			next_token = base_yylex();
+			cur_yylval = lvalp->core_yystype;
+			cur_yylloc = *llocp;
+			next_token = core_yylex(&(lvalp->core_yystype), llocp, yyscanner);
 			switch (next_token)
 			{
 				case TIME:
@@ -195,13 +147,13 @@ filtered_base_yylex(void)
 					break;
 				default:
 					/* save the lookahead token for next time */
-					lookahead_token = next_token;
-					lookahead_yylval = base_yylval;
-					lookahead_yylloc = base_yylloc;
-					have_lookahead = true;
+					yyextra->lookahead_token = next_token;
+					yyextra->lookahead_yylval = lvalp->core_yystype;
+					yyextra->lookahead_yylloc = *llocp;
+					yyextra->have_lookahead = true;
 					/* and back up the output info to cur_token */
-					base_yylval = cur_yylval;
-					base_yylloc = cur_yylloc;
+					lvalp->core_yystype = cur_yylval;
+					*llocp = cur_yylloc;
 					break;
 			}
 			break;

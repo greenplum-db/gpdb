@@ -52,14 +52,16 @@ LANGUAGE plpgsql STABLE;
 1: begin;
 1: select * from starve;
 
-2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
+2: insert into starve_helper select 'session2', setting::int from pg_settings
+   where name = 'gp_session_id';
 -- Wait on access exclusive lock.
 2: begin;
 2>: alter table starve rename column c to d;
 
 select wait_until_locks_awaited('session2');
 
-3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
+3: insert into starve_helper select 'session3', setting::int
+   from pg_settings where name = 'gp_session_id';
 -- ENTRY_DB_SINGLETON reader requests access share lock on table
 -- starve.  The lockmode conflicts with already existing waiter's
 -- lockmode (access exclusive).  And the writer is not holding any
@@ -71,14 +73,16 @@ select wait_until_locks_awaited('session3');
 
 -- Check the lock table, expect both session2 and session3 to wait.
 -- expect: 2 rows with AccessExclusiveLock and AccessSharedLock
-select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+select mode from pg_locks where granted=false and relation='starve'::regclass
+and gp_segment_id=-1;
 
 -- Let everyone move forward.
 1: commit;
 
 -- session2 is granted the lock on starve table first.
 2<:
-2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+2: select mode from pg_locks where granted=false and
+   relation='starve'::regclass and gp_segment_id=-1;
 2: commit;
 
 -- session3 is granted the lock after session2 commits.  We should
@@ -97,14 +101,16 @@ truncate table starve_helper;
 1: begin;
 1: select * from starve;
 
-2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
+2: insert into starve_helper select 'session2', setting::int from
+   pg_settings where name = 'gp_session_id';
 -- Wait on access exclusive lock.
 2: begin;
 2>: alter table starve add column e int default 0;
 
 select wait_until_locks_awaited('session2');
 
-3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
+3: insert into starve_helper select 'session3', setting::int from pg_settings
+   where name = 'gp_session_id';
 3: begin;
 -- Wait on RowExclusiveLock on table starve because session2 is
 -- waiting on the same lock with a conflicting lockmode.
@@ -116,7 +122,8 @@ select wait_until_locks_awaited('session3');
 -- Session2 must go first.
 2<:
 -- Ensure that session3 is still waiting.
-2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
+2: select mode from pg_locks where granted=false and relation='starve'::regclass
+   and gp_segment_id=-1;
 2: commit;
 
 -- Session3 gets the lock only after session2 commits.

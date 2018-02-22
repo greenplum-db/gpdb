@@ -801,8 +801,9 @@ class SegmentTemplate:
         self.logger.info('Configuring new segments (primary)')
         new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
                                                                              primaryMirror='primary')
+        self.logger.info(new_segment_info)
         for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
                                             tarFile=self.segTarFile, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
@@ -828,7 +829,7 @@ class SegmentTemplate:
         new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(mirrorsList, primaryMirror='mirror')
 
         for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host, validationOnly=False)
@@ -1496,7 +1497,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.logger.info('Restoring original segments catalog tables')
         orig_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(originalArray.getSegDbList())
         for host in iter(orig_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', orig_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=orig_segment_info[host],
                                             verbose=gplog.logging_is_verbose(), batchSize=self.options.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)

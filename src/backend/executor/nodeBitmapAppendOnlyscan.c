@@ -230,44 +230,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	iterator = node->baos_iterator;
 
 	/*
-	 * Check if we are evaluating PlanQual for tuple of this relation.
-	 * Additional checking is not good, but no other way for now. We could
-	 * introduce new nodes for this case and handle IndexScan --> NewNode
-	 * switching in Init/ReScan plan...
-	 */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		if (estate->es_evTupleNull[scanrelid - 1])
-		{
-			freeFetchDesc(node);
-			freeBitmapState(node);
-			
-			return ExecClearTuple(slot);
-		}
-
-		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1],
-						   slot, InvalidBuffer, false);
-
-		/* Does the tuple meet the original qual conditions? */
-		econtext->ecxt_scantuple = slot;
-
-		ResetExprContext(econtext);
-
-		if (!ExecQual(node->baos_bitmapqualorig, econtext, false))
-		{
-			ExecEagerFreeBitmapAppendOnlyScan(node);
-
-			ExecClearTuple(slot);		/* would not be returned by scan */
-		}
-
-		/* Flag for the next call that no more tuples */
-		estate->es_evTupleNull[scanrelid - 1] = true;
-
-		return slot;
-	}
-
-	/*
 	 * If we haven't yet performed the underlying index scan, or
 	 * we have used up the bitmaps from the previous scan, do the next scan,
 	 * and prepare the bitmap to be iterated over.
@@ -449,6 +411,28 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	return ExecClearTuple(slot);
 }
 
+/*
+ * BitmapAppendOnlyScanRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+static bool
+BitmapAppendOnlyScanRecheck(BitmapHeapScanState *node, TupleTableSlot *slot)
+{
+	ExprContext *econtext;
+
+	/*
+	 * extract necessary information from index scan node
+	 */
+	econtext = node->ss.ps.ps_ExprContext;
+
+	/* Does the tuple meet the original qual conditions? */
+	econtext->ecxt_scantuple = slot;
+
+	ResetExprContext(econtext);
+
+	return ExecQual(node->bitmapqualorig, econtext, false);
+}
+
+
 /* ----------------------------------------------------------------
  *		ExecBitmapAppendOnlyScan(node)
  * ----------------------------------------------------------------
@@ -459,7 +443,9 @@ ExecBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node)
 	/*
 	 * use BitmapAppendOnlyNext as access method
 	 */
-	return ExecScan(&node->ss, (ExecScanAccessMtd) BitmapAppendOnlyScanNext);
+	return ExecScan(&node->ss,
+					(ExecScanAccessMtd) BitmapAppendOnlyScanNext,
+					(ExecScanRecheckMtd) BitmapAppendOnlyScanRecheck);
 }
 
 /* ----------------------------------------------------------------
@@ -469,14 +455,6 @@ ExecBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node)
 void
 ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtxt)
 {
-	EState	   *estate;
-	Index		scanrelid;
-
-	estate = node->ss.ps.state;
-	scanrelid = ((BitmapAppendOnlyScan *) node->ss.ps.plan)->scan.scanrelid;
-
-	/* node->aofs.ps.ps_TupFromTlist = false; */
-
 	/*
 	 * If we are being passed an outer tuple, link it into the "regular"
 	 * per-tuple econtext for possible qual eval.
@@ -487,13 +465,6 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 
 		stdecontext = node->ss.ps.ps_ExprContext;
 		stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-	}
-
-	/* If this is re-scanning of PlanQual ... */
-	if (estate->es_evTuple != NULL &&
-		estate->es_evTuple[scanrelid - 1] != NULL)
-	{
-		estate->es_evTupleNull[scanrelid - 1] = false;
 	}
 
 	/*
@@ -659,13 +630,6 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 	 * all done.
 	 */
 	return scanstate;
-}
-
-int
-ExecCountSlotsBitmapAppendOnlyScan(BitmapAppendOnlyScan *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPAPPENDONLYSCAN_NSLOTS;
 }
 
 void

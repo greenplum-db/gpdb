@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.201 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.204 2009/11/10 18:41:24 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -267,6 +267,11 @@ timestamp_recv(PG_FUNCTION_ARGS)
 	timestamp = (Timestamp) pq_getmsgint64(buf);
 #else
 	timestamp = (Timestamp) pq_getmsgfloat8(buf);
+
+	if (isnan(timestamp))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("timestamp cannot be NaN")));
 #endif
 
 	/* rangecheck: see if timestamp_out would like it */
@@ -3224,6 +3229,12 @@ interval_mi(PG_FUNCTION_ARGS)
 	PG_RETURN_INTERVAL_P(result);
 }
 
+/*
+ *  There is no interval_abs():  it is unclear what value to return:
+ *    http://archives.postgresql.org/pgsql-general/2009-10/msg01031.php
+ *    http://archives.postgresql.org/pgsql-general/2009-11/msg00041.php
+ */
+ 
 Datum
 interval_mul(PG_FUNCTION_ARGS)
 {
@@ -4042,13 +4053,13 @@ timestamp_trunc(PG_FUNCTION_ARGS)
 #ifdef HAVE_INT64_TIMESTAMP
 				fsec = (fsec / 1000) * 1000;
 #else
-				fsec = rint(fsec * 1000) / 1000;
+				fsec = floor(fsec * 1000) / 1000;
 #endif
 				break;
 
 			case DTK_MICROSEC:
 #ifndef HAVE_INT64_TIMESTAMP
-				fsec = rint(fsec * 1000000) / 1000000;
+				fsec = floor(fsec * 1000000) / 1000000;
 #endif
 				break;
 
@@ -4198,12 +4209,12 @@ timestamptz_trunc(PG_FUNCTION_ARGS)
 #ifdef HAVE_INT64_TIMESTAMP
 				fsec = (fsec / 1000) * 1000;
 #else
-				fsec = rint(fsec * 1000) / 1000;
+				fsec = floor(fsec * 1000) / 1000;
 #endif
 				break;
 			case DTK_MICROSEC:
 #ifndef HAVE_INT64_TIMESTAMP
-				fsec = rint(fsec * 1000000) / 1000000;
+				fsec = floor(fsec * 1000000) / 1000000;
 #endif
 				break;
 
@@ -4295,12 +4306,12 @@ interval_trunc(PG_FUNCTION_ARGS)
 #ifdef HAVE_INT64_TIMESTAMP
 					fsec = (fsec / 1000) * 1000;
 #else
-					fsec = rint(fsec * 1000) / 1000;
+					fsec = floor(fsec * 1000) / 1000;
 #endif
 					break;
 				case DTK_MICROSEC:
 #ifndef HAVE_INT64_TIMESTAMP
-					fsec = rint(fsec * 1000000) / 1000000;
+					fsec = floor(fsec * 1000000) / 1000000;
 #endif
 					break;
 

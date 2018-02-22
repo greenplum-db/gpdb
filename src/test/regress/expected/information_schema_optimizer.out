@@ -88,7 +88,7 @@ where ordinal_position = 20;
  pg_catalog         | pg_type              | typanalyze         |               20
  pg_catalog         | pg_proc              | proargnames        |               20
  pg_catalog         | pg_class             | relhaspkey         |               20
- pg_catalog         | pg_constraint        | consrc             |               20
+ pg_catalog         | pg_constraint        | conexclop          |               20
  pg_catalog         | pg_am                | amendscan          |               20
  information_schema | columns              | collation_catalog  |               20
  information_schema | domains              | udt_catalog        |               20
@@ -104,7 +104,7 @@ where a.table_name
 in
 (select b.table_name from information_schema.tables b where
 	a.column_name like 'mpp_25724_col');
-  column_name
+  column_name  
 ---------------
  mpp_25724_col
 (1 row)
@@ -115,7 +115,7 @@ where c.relname
 in
 (select b.table_name from information_schema.tables b where
 	c.relname like 'mpp_25724');
-  relname
+  relname  
 -----------
  mpp_25724
 (1 row)
@@ -126,7 +126,7 @@ where a.table_name
 in
 (select b.relname from pg_class b where
 	a.table_name like 'mpp_25724');
- table_name
+ table_name 
 ------------
  mpp_25724
 (1 row)

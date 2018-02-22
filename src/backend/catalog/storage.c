@@ -234,7 +234,7 @@ RelationTruncate(Relation rel, BlockNumber nblocks)
 	}
 
 	/* Do the real work */
-	smgrtruncate(rel->rd_smgr, MAIN_FORKNUM, nblocks, rel->rd_istemp);
+	smgrtruncate(rel->rd_smgr, MAIN_FORKNUM, nblocks, rel->rd_isLocalBuf);
 }
 
 /*

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.97 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.98 2009/09/27 21:10:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1604,8 +1604,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	else
 		mergestate->mj_ExtraMarks = false;
 
-#define MERGEJOIN_NSLOTS 4
-
 	/*
 	 * tuple table initialization
 	 */
@@ -1704,14 +1702,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 			   "node initialized");
 
 	return mergestate;
-}
-
-int
-ExecCountSlotsMergeJoin(MergeJoin *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) +
-		MERGEJOIN_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

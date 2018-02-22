@@ -51,7 +51,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.61 2009/01/22 20:16:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.63 2009/11/10 18:53:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -735,10 +735,6 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 			strcmp(de->d_name, "..") == 0)
 			continue;
 
-		/* Odd... On snow leopard, we get back "/" as a subdir, which is wrong. Ingore it */
-		if (de->d_name[0] == '/' && de->d_name[1] == '\0')
-			continue;
-
 		subfile = palloc(strlen(linkloc_with_version_dir) + 1 + strlen(de->d_name) + 1);
 		sprintf(subfile, "%s/%s", linkloc_with_version_dir, de->d_name);
 
@@ -819,9 +815,6 @@ directory_is_empty(const char *path)
 	{
 		if (strcmp(de->d_name, ".") == 0 ||
 			strcmp(de->d_name, "..") == 0)
-			continue;
-		/* Odd... On snow leopard, we get back "/" as a subdir, which is wrong. Ingore it */
-		if (de->d_name[0] == '/' && de->d_name[1] == '\0')
 			continue;
 		FreeDir(dirdesc);
 		return false;

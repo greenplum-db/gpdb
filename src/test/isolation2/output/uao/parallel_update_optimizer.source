@@ -16,16 +16,16 @@ BEGIN
 2: UPDATE ao SET b = 42 WHERE a = 1;
 UPDATE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
-coalesce|mode               |locktype                |node
+coalesce|mode               |locktype                |node  
 --------+-------------------+------------------------+------
 ao      |AccessExclusiveLock|append-only segment file|master
 ao      |AccessShareLock    |relation                |master
 ao      |ExclusiveLock      |relation                |master
 (3 rows)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
-coalesce|mode               |locktype                |node
+coalesce|mode               |locktype                |node      
 --------+-------------------+------------------------+----------
-ao      |AccessExclusiveLock|append-only segment file|1 segment
+ao      |AccessExclusiveLock|append-only segment file|1 segment 
 ao      |AccessShareLock    |relation                |n segments
 ao      |RowExclusiveLock   |relation                |n segments
 (3 rows)

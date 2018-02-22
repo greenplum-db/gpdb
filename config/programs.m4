@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/config/programs.m4,v 1.24 2008/08/29 13:02:32 petere Exp $
+# $PostgreSQL: pgsql/config/programs.m4,v 1.26 2009/07/13 05:36:53 tgl Exp $
 
 
 # PGAC_PATH_BISON
@@ -10,7 +10,7 @@
 AC_DEFUN([PGAC_PATH_BISON],
 [# Let the user override the search
 if test -z "$BISON"; then
-  AC_CHECK_PROGS(BISON, bison)
+  AC_PATH_PROGS(BISON, bison)
 fi
 
 if test "$BISON"; then
@@ -19,8 +19,8 @@ if test "$BISON"; then
   if echo "$pgac_bison_version" | $AWK '{ if ([$]4 < 1.875) exit 0; else exit 1;}'
   then
     AC_MSG_WARN([
-*** The installed version of Bison is too old to use with PostgreSQL.
-*** Bison version 1.875 or later is required.])
+*** The installed version of Bison, $BISON, is too old to use with PostgreSQL.
+*** Bison version 1.875 or later is required, but this is $pgac_bison_version.])
     BISON=""
   fi
  # Bison >=3.0 issues warnings about %name-prefix="base_yy", instead
@@ -50,8 +50,11 @@ AC_SUBST(BISONFLAGS)
 # PGAC_PATH_FLEX
 # --------------
 # Look for Flex, set the output variable FLEX to its path if found.
-# Avoid the buggy version 2.5.3. Also find Flex if its installed
-# under `lex', but do not accept other Lex programs.
+# Reject versions before 2.5.31, as we need a reasonably non-buggy reentrant
+# scanner.  (Note: the well-publicized security problem in 2.5.31 does not
+# affect Postgres, and there are still distros shipping patched 2.5.31,
+# so allow it.)  Also find Flex if its installed under `lex', but do not
+# accept other Lex programs.
 
 AC_DEFUN([PGAC_PATH_FLEX],
 [AC_CACHE_CHECK([for flex], pgac_cv_path_flex,
@@ -83,9 +86,6 @@ else
 *** The installed version of Flex, $pgac_candidate, is too old to use with Greenplum DB.
 *** Flex version 2.5.4 or later is required, but this is $pgac_flex_version.])
           fi
-
-          pgac_cv_path_flex=$pgac_candidate
-          break 2
         fi
       fi
     done
@@ -96,14 +96,8 @@ fi
 ])[]dnl AC_CACHE_CHECK
 
 if test x"$pgac_cv_path_flex" = x"no"; then
-  if test -n "$pgac_broken_flex"; then
-    AC_MSG_WARN([
-*** The Flex version 2.5.3 you have at $pgac_broken_flex contains a bug. You
-*** should get version 2.5.4 or later.])
-  fi
-
   AC_MSG_WARN([
-*** Without Flex you will not be able to build PostgreSQL from CVS or
+*** Without Flex you will not be able to build PostgreSQL from CVS nor
 *** change any of the scanner definition files.  You can obtain Flex from
 *** a GNU mirror site.  (If you are using the official distribution of
 *** PostgreSQL then you do not need to worry about this because the Flex
@@ -112,7 +106,7 @@ if test x"$pgac_cv_path_flex" = x"no"; then
   FLEX=
 else
   FLEX=$pgac_cv_path_flex
-  pgac_flex_version=`$FLEX -V 2>/dev/null`
+  pgac_flex_version=`$FLEX --version 2>/dev/null`
   AC_MSG_NOTICE([using $pgac_flex_version])
 fi
 

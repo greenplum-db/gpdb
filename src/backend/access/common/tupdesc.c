@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.126 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.130 2009/10/13 00:53:07 tgl Exp $
  *
  * NOTES
  *	  some of the executor utility code such as "ExecTypeFromTL" should be
@@ -379,6 +379,8 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict)
 			return false;
 		if (attr1->attstattarget != attr2->attstattarget)
 			return false;
+		if (attr1->attdistinct != attr2->attdistinct)
+			return false;
 		if (attr1->attlen != attr2->attlen)
 			return false;
 		if (attr1->attndims != attr2->attndims)
@@ -519,6 +521,7 @@ TupleDescInitEntry(TupleDesc desc,
 		namestrcpy(&(att->attname), attributeName);
 
 	att->attstattarget = -1;
+	att->attdistinct = 0;
 	att->attcacheoff = -1;
 	att->atttypmod = typmod;
 
@@ -603,6 +606,10 @@ BuildDescForRelation(List *schema)
 
 		TupleDescInitEntry(desc, attnum, attname,
 						   atttypid, atttypmod, attdim);
+
+		/* Override TupleDescInitEntry's settings as requested */
+		if (entry->storage)
+			desc->attrs[attnum - 1]->attstorage = entry->storage;
 
 		/* Fill in additional stuff not handled by TupleDescInitEntry */
 		desc->attrs[attnum - 1]->attnotnull = entry->is_not_null;
