@@ -60,6 +60,8 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
+2. PXF user impersonation is on by default in Greenplum Database version 5.5.0 and later. If you are upgrading from an older *PXF.from* version, you must configure user impersonation for the underlying Hadoop services. Refer to [Configuring User Impersonation and Proxying](pxfuserimpers.html) for instructions, including the configuration procedure to turn off PXF user impersonation.
+
 2. If you updated the `pxf-env.sh` configuration file in your *PXF.from* installation, re-apply those changes to the file, and copy the updated `pxf-env.sh` to all segment hosts. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ``` shell
