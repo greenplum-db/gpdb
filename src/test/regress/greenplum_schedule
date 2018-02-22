@@ -72,6 +72,11 @@ test: sreh
 #test: olap_window
 #test: tpch500GB
 
+# gp_toolkit performs a vacuum and checks that it truncated the relation. That
+# might not happen if other backends are holding transactions open, preventing
+# vacuum from removing dead tuples.
+test: gp_toolkit
+
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
@@ -87,11 +92,6 @@ test: resource_queue
 test: resource_queue_function
 test: resource_group
 test: wrkloadadmin
-
-# gp_toolkit performs a vacuum and checks that it truncated the relation. That
-# might not happen if other backends are holding transactions open, preventing
-# vacuum from removing dead tuples.
-test: gp_toolkit
 
 test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
 test: rle rle_delta dsp not_out_of_shmem_exit_slots
