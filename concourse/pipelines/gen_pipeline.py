@@ -155,9 +155,9 @@ def how_to_use_generated_pipeline_message():
         msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
         msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
         msg += '    -v tf-bucket-path=dev/' + ARGS.pipeline_type + '/ \\\n'
-        MSG += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
-        MSG += '    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \\\n'
-        MSG += '    -v gpdb-git-branch=<branch-name>\n'
+        msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
+        msg += '    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \\\n'
+        msg += '    -v gpdb-git-branch=<branch-name>\n'
 
     return msg
 
