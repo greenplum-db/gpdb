@@ -37,7 +37,7 @@ from gp_toolkit.__gp_is_append_only iao
 inner join pg_catalog.pg_class c on iao.iaooid = c.oid
 where c.relname like 'toolkit_%'
 group by iaotype;
- count | iaotype
+ count | iaotype 
 -------+---------
      7 | t
      2 | f
@@ -49,35 +49,35 @@ from gp_toolkit.__gp_is_append_only iao
 inner join pg_catalog.pg_class c on iao.iaooid = c.oid
 where c.relname like 'toolkit_%'
 group by iaotype;
- count | iaotype
+ count | iaotype 
 -------+---------
      1 | t
      1 | f
 (2 rows)
 
 select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest';
- aunnspname
+ aunnspname 
 ------------
 (0 rows)
 
 create schema tktest;
 select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest';
- aunnspname
+ aunnspname 
 ------------
  tktest
 (1 row)
 
 drop schema tktest;
 select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest';
- aunnspname
+ aunnspname 
 ------------
 (0 rows)
 
 select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
- autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl
+ autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl 
 ------------+--------------+------------+--------------+-------------+-----------
- public     | toolkit_ao   | r          |            0 |           0 |
- public     | toolkit_heap | r          |            0 |           0 |
+ public     | toolkit_ao   | r          |            0 |           0 | 
+ public     | toolkit_heap | r          |            0 |           0 | 
 (2 rows)
 
 create table toolkit_a (a int);
@@ -87,26 +87,26 @@ create table toolkit_b (b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
- autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl
+ autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl 
 ------------+--------------+------------+--------------+-------------+-----------
- public     | toolkit_a    | r          |            0 |           0 |
- public     | toolkit_ao   | r          |            0 |           0 |
- public     | toolkit_b    | r          |            0 |           0 |
- public     | toolkit_heap | r          |            0 |           0 |
+ public     | toolkit_a    | r          |            0 |           0 | 
+ public     | toolkit_ao   | r          |            0 |           0 | 
+ public     | toolkit_b    | r          |            0 |           0 | 
+ public     | toolkit_heap | r          |            0 |           0 | 
 (4 rows)
 
 drop table toolkit_a;
 drop table toolkit_b;
 select  autnspname, autrelname, autrelkind, autreltuples, autrelpages, autrelacl from gp_toolkit.__gp_user_data_tables where autrelname like 'toolkit%' order by 2;
- autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl
+ autnspname |  autrelname  | autrelkind | autreltuples | autrelpages | autrelacl 
 ------------+--------------+------------+--------------+-------------+-----------
- public     | toolkit_ao   | r          |            0 |           0 |
- public     | toolkit_heap | r          |            0 |           0 |
+ public     | toolkit_ao   | r          |            0 |           0 | 
+ public     | toolkit_heap | r          |            0 |           0 | 
 (2 rows)
 
 -- Test log reading functions
 select logseverity from gp_toolkit.__gp_log_segment_ext where logseverity='LOG' limit 5;
- logseverity
+ logseverity 
 -------------
  LOG
  LOG
@@ -116,7 +116,7 @@ select logseverity from gp_toolkit.__gp_log_segment_ext where logseverity='LOG' 
 (5 rows)
 
 select logseverity from gp_toolkit.__gp_log_master_ext where logseverity='LOG' limit 5;
- logseverity
+ logseverity 
 -------------
  LOG
  LOG
@@ -126,7 +126,7 @@ select logseverity from gp_toolkit.__gp_log_master_ext where logseverity='LOG' l
 (5 rows)
 
 select logseverity from gp_toolkit.gp_log_system where logseverity='LOG' limit 5;
- logseverity
+ logseverity 
 -------------
  LOG
  LOG
@@ -136,7 +136,7 @@ select logseverity from gp_toolkit.gp_log_system where logseverity='LOG' limit 5
 (5 rows)
 
 select logseverity from gp_toolkit.gp_log_database where logseverity='LOG' limit 3;
- logseverity
+ logseverity 
 -------------
  LOG
  LOG
@@ -144,7 +144,7 @@ select logseverity from gp_toolkit.gp_log_database where logseverity='LOG' limit
 (3 rows)
 
 select logseverity from gp_toolkit.gp_log_master_concise where logseverity='LOG' limit 5; -- superuser only
- logseverity
+ logseverity 
 -------------
  LOG
  LOG
@@ -161,7 +161,7 @@ select count(*) from
   select logsession, logcmdcount, logpid, logduration from gp_toolkit.gp_log_command_timings
   limit 5
 ) as timings_test;
- count
+ count 
 -------
      5
 (1 row)
@@ -173,7 +173,7 @@ select dfsegment,
        dfspace > 10 as "dfspace > 10 kB",
        dfspace < 1000000000000 as "dfspace < 1 PB"
 from gp_toolkit.gp_disk_free where dfsegment=0;
- dfsegment | dfspace > 10 kB | dfspace < 1 PB
+ dfsegment | dfspace > 10 kB | dfspace < 1 PB 
 -----------+-----------------+----------------
          0 | t               | t
 (1 row)
@@ -186,7 +186,7 @@ create table toolkit_miss_stat (a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
- smischema |     smitable      | smisize | smicols | smirecs
+ smischema |     smitable      | smisize | smicols | smirecs 
 -----------+-------------------+---------+---------+---------
  public    | toolkit_miss_stat | f       |       2 |       0
 (1 row)
@@ -194,7 +194,7 @@ select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
 insert into toolkit_miss_stat select i,i from generate_series(1,10) i;
 analyze toolkit_miss_stat;
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
- smischema | smitable | smisize | smicols | smirecs
+ smischema | smitable | smisize | smicols | smirecs 
 -----------+----------+---------+---------+---------
 (0 rows)
 
@@ -205,7 +205,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into toolkit_skew select i from generate_series(1,50000) i;
 select sifnamespace, sifrelname from gp_toolkit.gp_skew_idle_fractions where sifoid = 'toolkit_skew'::regclass;
- sifnamespace |  sifrelname
+ sifnamespace |  sifrelname  
 --------------+--------------
  public       | toolkit_skew
 (1 row)
@@ -219,13 +219,13 @@ select btdrelpages > 40 as btdrelpages_over_40,
        btdexppages > 40 as btdexppages_over_40,
        btdexppages < 80 as btdexppages_below_80
 from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'toolkit_skew'::regclass;
- btdrelpages_over_40 | btdrelpages_below_80 | btdexppages_over_40 | btdexppages_below_80
+ btdrelpages_over_40 | btdrelpages_below_80 | btdexppages_over_40 | btdexppages_below_80 
 ---------------------+----------------------+---------------------+----------------------
  t                   | t                    | t                   | t
 (1 row)
 
 select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass;
- bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag 
 ----------+------------+------------+-------------+-------------+---------
 (0 rows)
 
@@ -238,7 +238,7 @@ select btdrelpages > 40 as btdrelpages_over_40,
        btdexppages > 0 as btdexppages_over_0,
        btdexppages < 10 as btdexppages_below_10
 from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'toolkit_skew'::regclass;
- btdrelpages_over_40 | btdrelpages_below_80 | btdexppages_over_0 | btdexppages_below_10
+ btdrelpages_over_40 | btdrelpages_below_80 | btdexppages_over_0 | btdexppages_below_10 
 ---------------------+----------------------+--------------------+----------------------
  t                   | t                    | t                  | t
 (1 row)
@@ -251,7 +251,7 @@ select bdirelid::regclass, bdinspname, bdirelname,
        bdiexppages < 80 as bdiexppages_below_80,
        bdidiag
 from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass;
-   bdirelid   | bdinspname |  bdirelname  | bdirelpages_over_40 | bdirelpages_below_80 | bdiexppages_over_40 | bdiexppages_below_80 |                bdidiag
+   bdirelid   | bdinspname |  bdirelname  | bdirelpages_over_40 | bdirelpages_below_80 | bdiexppages_over_40 | bdiexppages_below_80 |                bdidiag                
 --------------+------------+--------------+---------------------+----------------------+---------------------+----------------------+---------------------------------------
  toolkit_skew | public     | toolkit_skew | t                   | t                    | f                   | t                    | significant amount of bloat suspected
 (1 row)
@@ -263,13 +263,13 @@ select btdrelpages > 0 as btdrelpages_over_0,
        btdexppages > 0 as btdexppages_over_0,
        btdexppages < 10 as btdexppages_below_10
 from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'toolkit_skew'::regclass;
- btdrelpages_over_0 | btdrelpages_below_10 | btdexppages_over_0 | btdexppages_below_10
+ btdrelpages_over_0 | btdrelpages_below_10 | btdexppages_over_0 | btdexppages_below_10 
 --------------------+----------------------+--------------------+----------------------
  t                  | t                    | t                  | t
 (1 row)
 
 select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass;
- bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag 
 ----------+------------+------------+-------------+-------------+---------
 (0 rows)
 
@@ -280,7 +280,7 @@ create table wide_width_test as select * from pg_attribute;
 set allow_system_table_mods=dml ;
 update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
 select * from gp_toolkit.gp_bloat_diag WHERE bdinspname <> 'pg_catalog';
- bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages | bdidiag 
 ----------+------------+------------+-------------+-------------+---------
 (0 rows)
 
@@ -311,7 +311,7 @@ PARTITION old_data END (date '2007-10-01') EXCLUSIVE
 );
 set client_min_messages='notice';
 SELECT sifoid::regclass, siffraction from gp_toolkit.gp_skew_idle_fraction('mpp5871_statistics'::regclass);
-       sifoid       | siffraction
+       sifoid       | siffraction 
 --------------------+-------------
  mpp5871_statistics |           0
 (1 row)
@@ -347,7 +347,7 @@ create table gptoolkit_user_table_co (id VARCHAR, lname CHAR(20), fname CHAR(10)
  DISTRIBUTED BY (id)
  ;
 select autnspname,autrelname,autrelkind from gp_toolkit.__gp_user_tables where autrelname like 'gptoolkit_user_table%';
- autnspname |                autrelname                | autrelkind
+ autnspname |                autrelname                | autrelkind 
 ------------+------------------------------------------+------------
  tktest     | gptoolkit_user_table_heap                | r
  tktest     | gptoolkit_user_table_ao_1_prt_p1_2_prt_1 | r
@@ -362,7 +362,7 @@ select autnspname,autrelname,autrelkind from gp_toolkit.__gp_user_tables where a
 
 -- gp_param_settings\(\)
 select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramname like 'gp_%' and paramsegment=0 and paramname IN ('gp_contentid', 'gp_dbid', 'gp_interconnect_type', 'gp_role', 'gp_session_id') order by 2;
- paramsegment |      paramname
+ paramsegment |      paramname       
 --------------+----------------------
             0 | gp_contentid
             0 | gp_dbid
@@ -374,23 +374,23 @@ select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramnam
 -- Expected to have no results
 -- However it will show there is a difference if segment guc is different
 select * from gp_toolkit.gp_param_settings_seg_value_diffs;
- psdname | psdvalue | psdcount
+ psdname | psdvalue | psdcount 
 ---------+----------+----------
 (0 rows)
 
 -- gp_locks_on_relation
 select lorlocktype,lorrelname,lormode,lorgranted from gp_toolkit.gp_locks_on_relation where lorrelname = 'pg_locks';
- lorlocktype | lorrelname |     lormode     | lorgranted
+ lorlocktype | lorrelname |     lormode     | lorgranted 
 -------------+------------+-----------------+------------
  relation    | pg_locks   | AccessShareLock | t
 (1 row)
 
 -- gp_roles_assigned
 select rarolename,ramemberid,ramembername from gp_toolkit.gp_roles_assigned where rarolename like 'toolkit%';
-  rarolename   | ramemberid | ramembername
+  rarolename   | ramemberid | ramembername 
 ---------------+------------+--------------
- toolkit_admin |            |
- toolkit_user1 |            |
+ toolkit_admin |            | 
+ toolkit_user1 |            | 
 (2 rows)
 
 -----------------------------------
@@ -408,7 +408,7 @@ select relname,
        sotusize < 5000000 as sz_under5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_uncompressed sotu
 where relname = 'toolkit_ao2' and pg.oid=sotu.sotuoid;
-   relname   | sz_over50kb | sz_under5mb
+   relname   | sz_over50kb | sz_under5mb 
 -------------+-------------+-------------
  toolkit_ao2 | t           | t
 (1 row)
@@ -419,13 +419,13 @@ select pg.relname,
        si.soisize < 5000000 as sz_under5mb
 from pg_class pg, gp_toolkit.gp_size_of_index si
 where relname = 'toolkit_ao2' and pg.oid=si.soitableoid;
-   relname   | sz_over50kb | sz_under5mb
+   relname   | sz_over50kb | sz_under5mb 
 -------------+-------------+-------------
  toolkit_ao2 | t           | t
 (1 row)
 
 -- gp_size_of_table_disk
-select relname,
+select relname, 
        sotdsize > 50000 as dsz_over_50kb,
        sotdsize < 500000 as dsz_under_500kb,
        sotdtoastsize, -- should be zero
@@ -433,7 +433,7 @@ select relname,
        sotdadditionalsize < 5000000 as daddsz_under_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_disk st
 where relname = 'toolkit_ao2' and pg.oid=st.sotdoid;
-   relname   | dsz_over_50kb | dsz_under_500kb | sotdtoastsize | daddsz_over_50kb | daddsz_under_5mb
+   relname   | dsz_over_50kb | dsz_under_500kb | sotdtoastsize | daddsz_over_50kb | daddsz_under_5mb 
 -------------+---------------+-----------------+---------------+------------------+------------------
  toolkit_ao2 | t             | t               |             0 | t                | t
 (1 row)
@@ -444,7 +444,7 @@ select relname,
        sotusize < 5000000 as uncomp_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_uncompressed sotu
 where relname = 'toolkit_ao2' and pg.oid=sotu.sotuoid;
-   relname   | uncomp_over_500kb | uncomp_below_5mb
+   relname   | uncomp_over_500kb | uncomp_below_5mb 
 -------------+-------------------+------------------
  toolkit_ao2 | t                 | t
 (1 row)
@@ -454,7 +454,7 @@ select pg.relname,
        ti.tiidxoid::regclass
 from pg_class pg, gp_toolkit.gp_table_indexes ti
 where relname = 'toolkit_ao2' and pg.oid=ti.tireloid;
-   relname   |      tiidxoid
+   relname   |      tiidxoid      
 -------------+--------------------
  toolkit_ao2 | tookit_ao2_index_j
 (1 row)
@@ -465,7 +465,7 @@ select pg.relname,
        soati.soatisize < 5000000 as sz_under_5mb
 from pg_class pg, gp_toolkit.gp_size_of_all_table_indexes soati
 where relname = 'toolkit_ao2' and pg.oid=soati.soatioid;
-   relname   | sz_over_50kb | sz_under_5mb
+   relname   | sz_over_50kb | sz_under_5mb 
 -------------+--------------+--------------
  toolkit_ao2 | t            | t
 (1 row)
@@ -476,7 +476,7 @@ select pg.relname,
        sotai.sotaididxsize < 5000000 as tablesz_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_and_indexes_disk sotai
 where relname = 'toolkit_ao2' and pg.oid=sotai.sotaidoid;
-   relname   | tablesz_over_500kb | tablesz_below_5mb
+   relname   | tablesz_over_500kb | tablesz_below_5mb 
 -------------+--------------------+-------------------
  toolkit_ao2 | t                  | t
 (1 row)
@@ -491,7 +491,7 @@ select pg.relname,
        sotail.sotailindexessize < 5000000 as uncompressed_below_5mb
 from pg_class pg, gp_toolkit.gp_size_of_table_and_indexes_licensing sotail
 where relname = 'toolkit_ao2' and pg.oid=sotail.sotailoid;
-   relname   | tables_over_500kb | tables_below_5mb | uncompressed_over_500kb | uncompressed_below_5mb | indexes_over_500k | uncompressed_below_5mb
+   relname   | tables_over_500kb | tables_below_5mb | uncompressed_over_500kb | uncompressed_below_5mb | indexes_over_500k | uncompressed_below_5mb 
 -------------+-------------------+------------------+-------------------------+------------------------+-------------------+------------------------
  toolkit_ao2 | t                 | t                | t                       | t                      | t                 | t
 (1 row)
@@ -501,7 +501,7 @@ select sosdnsp,
        sosdschematablesize > 50000 as "schema size over 50 kB",
        sosdschematablesize < 10000000 as "schema size below 10 MB"
 from gp_toolkit.gp_size_of_schema_disk where sosdnsp='tktest' order by 1;
- sosdnsp | schema size over 50 kB | schema size below 10 MB
+ sosdnsp | schema size over 50 kB | schema size below 10 MB 
 ---------+------------------------+-------------------------
  tktest  | t                      | t
 (1 row)
@@ -512,7 +512,7 @@ select sodddatname,
        sodddatsize > 30000000 as "db size over 30MB",
        sodddatsize < 5000000000 as "db size below 5 GB"
 from gp_toolkit.gp_size_of_database where sodddatname='regression';
- sodddatname | db size over 30MB | db size below 5 GB
+ sodddatname | db size over 30MB | db size below 5 GB 
 -------------+-------------------+--------------------
  regression  | t                 | t
 (1 row)
@@ -524,7 +524,7 @@ select pg.relname,
        sopaidpartitionindexessize
 from pg_class pg,gp_toolkit.gp_size_of_partition_and_indexes_disk gsopai
 where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
-                 relname                  | tblsz_over50k | tblsz_under5mb | sopaidpartitionindexessize
+                 relname                  | tblsz_over50k | tblsz_under5mb | sopaidpartitionindexessize 
 ------------------------------------------+---------------+----------------+----------------------------
  gptoolkit_user_table_ao_1_prt_p2         | t             | t              |                          0
  gptoolkit_user_table_ao_1_prt_p1         | t             | t              |                          0
@@ -536,70 +536,29 @@ where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table
 
 -- This also depends on the number of segments
 select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
- ?column?
+ ?column? 
 ----------
  t
-(1 row)
-
------------------------------------
--- Test gp_stats views
--- if we get results and not errors the queries should be driving
--- down into the pg_* version of these
-
-select count(*) > 0 from gp_toolkit.gp_stat_database;
-?column?
-----------
-t
-(1 row)
-
-select count(*) > 0 from gp_toolkit.gp_stat_all_tables;
-?column?
-----------
-t
-(1 row)
-
-select count(*) > 0 from gp_toolkit.gp_statio_all_tables;
-?column?
-----------
-t
-(1 row)
-
-select count(*) > 0 from gp_toolkit.gp_stat_all_indexes;
-?column?
-----------
-t
-(1 row)
-
-select count(*) > 0 from gp_toolkit.gp_statio_all_indexes;
-?column?
-----------
-t
-(1 row)
-
-select count(*) > 0 from gp_toolkit.gp_stat_bgwriter;
-?column?
-----------
-t
 (1 row)
 
 -----------------------------------
 -- Test Resource Queue views
 -- GP Resource Queue Activity
 select * from gp_toolkit.gp_resq_activity;
- resqprocpid | resqrole | resqoid | resqname | resqstart | resqstatus
+ resqprocpid | resqrole | resqoid | resqname | resqstart | resqstatus 
 -------------+----------+---------+----------+-----------+------------
 (0 rows)
 
 -- GP Resource Queue Activity by Queue
 -- There is no resource queue, so should be empty
 select * from gp_toolkit.gp_resq_activity_by_queue;
- resqoid | resqname | resqlast | resqstatus | resqtotal
+ resqoid | resqname | resqlast | resqstatus | resqtotal 
 ---------+----------+----------+------------+-----------
 (0 rows)
 
 -- gp_resq_role
 select * from gp_toolkit.gp_resq_role where rrrolname like 'toolkit%';
-   rrrolname   | rrrsqname
+   rrrolname   | rrrsqname  
 ---------------+------------
  toolkit_admin | pg_default
  toolkit_user1 | pg_default
@@ -608,14 +567,14 @@ select * from gp_toolkit.gp_resq_role where rrrolname like 'toolkit%';
 -- gp_locks_on_resqueue
 -- Should be empty because there is no one in the queue
 select * from gp_toolkit.gp_locks_on_resqueue;
- lorusename | lorrsqname | lorlocktype | lorobjid | lortransaction | lorpid | lormode | lorgranted | lorwaiting
+ lorusename | lorrsqname | lorlocktype | lorobjid | lortransaction | lorpid | lormode | lorgranted | lorwaiting 
 ------------+------------+-------------+----------+----------------+--------+---------+------------+------------
 (0 rows)
 
 -- GP Resource Queue Activity for User
 set session authorization toolkit_user1;
 select resqname, resqstatus from gp_toolkit.gp_resq_activity where resqname='pg_default';
-  resqname  | resqstatus
+  resqname  | resqstatus 
 ------------+------------
  pg_default | running
 (1 row)
@@ -623,14 +582,14 @@ select resqname, resqstatus from gp_toolkit.gp_resq_activity where resqname='pg_
 reset session authorization;
 -- should be empty because the sql is completed
 select * from gp_toolkit.gp_resq_activity where resqrole = 'toolkit_user1';
- resqprocpid | resqrole | resqoid | resqname | resqstart | resqstatus
+ resqprocpid | resqrole | resqoid | resqname | resqstart | resqstatus 
 -------------+----------+---------+----------+-----------+------------
 (0 rows)
 
 -- gp_pgdatabase_invalid
 -- Should be empty unless there is failure in the segment, it's a view from gp_pgdatabase
 select * from gp_toolkit.gp_pgdatabase_invalid;
- pgdbidbid | pgdbiisprimary | pgdbicontent | pgdbivalid | pgdbidefinedprimary
+ pgdbidbid | pgdbiisprimary | pgdbicontent | pgdbivalid | pgdbidefinedprimary 
 -----------+----------------+--------------+------------+---------------------
 (0 rows)
 
@@ -641,13 +600,13 @@ create resource queue q with (active_statements = 10);
 create user resqueuetest with resource queue q;
 set role resqueuetest;
 select 1;
- ?column?
+ ?column? 
 ----------
         1
 (1 row)
 
 select n_queries_exec from pg_stat_resqueues where queuename = 'q';
- n_queries_exec
+ n_queries_exec 
 ----------------
               1
 (1 row)
@@ -660,12 +619,12 @@ drop resource queue q;
 -- view.
 select autnspname, autrelname, autrelkind, autoid::regclass, autrelacl
 from gp_toolkit.__gp_user_data_tables_readable where autrelname like 'toolkit%';
- autnspname |  autrelname  | autrelkind |       autoid        | autrelacl
+ autnspname |  autrelname  | autrelkind |       autoid        | autrelacl 
 ------------+--------------+------------+---------------------+-----------
- public     | toolkit_ao   | r          | public.toolkit_ao   |
- public     | toolkit_heap | r          | public.toolkit_heap |
- public     | toolkit_skew | r          | public.toolkit_skew |
- tktest     | toolkit_ao2  | r          | toolkit_ao2         |
+ public     | toolkit_ao   | r          | public.toolkit_ao   | 
+ public     | toolkit_heap | r          | public.toolkit_heap | 
+ public     | toolkit_skew | r          | public.toolkit_skew | 
+ tktest     | toolkit_ao2  | r          | toolkit_ao2         | 
 (4 rows)
 
 -- Switch to non-privileged user, and test that they are no longer visible.
@@ -673,9 +632,9 @@ set session authorization toolkit_user1;
 create table public.toolkit_usertest (id int4) distributed by (id);
 select autnspname, autrelname, autrelkind, autoid::regclass, autrelacl
 from gp_toolkit.__gp_user_data_tables_readable where autrelname like 'toolkit%';
- autnspname |    autrelname    | autrelkind |         autoid          | autrelacl
+ autnspname |    autrelname    | autrelkind |         autoid          | autrelacl 
 ------------+------------------+------------+-------------------------+-----------
- public     | toolkit_usertest | r          | public.toolkit_usertest |
+ public     | toolkit_usertest | r          | public.toolkit_usertest | 
 (1 row)
 
 reset session authorization;
