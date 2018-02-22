@@ -2,17 +2,22 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_lv4_czp_fz">
   <title>dblink Functions</title>
-  <shortdesc>The <codeph>dblink</codeph> module is provided for making easy connections to other
-    databases either on the same database host, or on a remote host. </shortdesc>
+  <shortdesc>The <codeph>dblink</codeph> module supports connections to other Greenplum
+    Database databases from within a database session. These databases may reside on the
+    same database host, or on a remote host. </shortdesc>
   <body>
+    <p>Greenplum Database supports <codeph>dblink</codeph> connections between databases
+     in Greenplum Database installations with the same major version number.
+     <codeph>dblink</codeph> may also connect to other Greenplum Database or PostgreSQL
+      installations that use compatible <codeph>libpq</codeph> libraries.</p>
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
-      other databases. <codeph>dblink</codeph> is not intended as a replacement for external tables
-      or for administrative tools such as <codeph>gptransfer</codeph>.</p>
-    <p>The following procedure shows the basic steps for configuring and using
-        <codeph>dblink</codeph> in Greenplum Database. See <xref
-        href="https://www.postgresql.org/docs/8.3/static/dblink.html" format="html" scope="external"
+      other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
+      tables or for administrative tools such as <codeph>gptransfer</codeph>.</p>
+    <p>The following procedure identifies the basic steps for configuring and using
+        <codeph>dblink</codeph> in Greenplum Database. Refer to <xref
+        href="https://www.postgresql.org/docs/8.4/static/dblink.html" format="html" scope="external"
         >dblink</xref> in the PostgreSQL documentation for more information about individual
-      functions. </p>
+      <codeph>dblink</codeph> functions. </p>
     <note>You must specify both a hostname and a password to connect with <codeph>dblink</codeph> as
       a non-superuser.</note>
     <ol id="ol_nhg_f1q_fz">
@@ -39,7 +44,7 @@ postgres=# <b>\q
 psql (8.3.23)
 Type "help" for help.
 
-gpadmin=# <b>\i /usr/local/gpdb/share/postgresql/contrib/dblink.sql</b>
+gpadmin=# <b>\i /usr/local/greenplum-db/share/postgresql/contrib/dblink.sql</b>
 SET
 CREATE FUNCTION
 CREATE FUNCTION
@@ -50,7 +55,7 @@ REVOKE
 CREATE FUNCTION
 CREATE FUNCTION
 ...</codeblock></li>
-      <li>Use the <codeph>dblink_connect</codeph> function to create both implicit and named
+      <li>Use the <codeph>dblink_connect()</codeph> function to create both implicit and named
         connections to other databases. The connection string that you provide should be a
         libpq-style keyword/value string. For example, to create a named connection to the
           <codeph>postgres</codeph> database on the local Greenplum Database
@@ -65,9 +70,9 @@ CREATE FUNCTION
           system:<codeblock>gpadmin=# <b>SELECT dblink_connect('host=remotehost port=5432 dbname=postgres');</b></codeblock></p><note>You
           must specify both a hostname and a password in the connection string to connect as a
           non-superuser.</note></li>
-      <li>Use the basic <codeph>dblink</codeph> function to query a database using a configured
-        connection. Keep in mind that the <codeph>dblink</codeph> function returns a record type, so
-        you must assign the columns returned in the <codeph>dblink</codeph> query. For example, the
+      <li>Use the basic <codeph>dblink()</codeph> function to query a database using a configured
+        connection. Keep in mind that this function returns a record type, so
+        you must assign the columns returned in the <codeph>dblink()</codeph> query. For example, the
         following command uses the named connection to query the table you created in Step
           1:<codeblock>gpadmin=# <b>SELECT * FROM dblink('mylocalconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b>
  id | product
@@ -77,7 +82,7 @@ CREATE FUNCTION
 (2 rows)</codeblock><p>In
           this release of Greenplum Database, statements that modify table data cannot use named or
           implicit <codeph>dblink</codeph> connections. Instead, you must provide the connection
-          string directly in the <codeph>dblink</codeph> function. For
+          string directly in the <codeph>dblink()</codeph> function. For
           example:<codeblock>gpadmin=# <b>CREATE TABLE testdbllocal (a int, b text) DISTRIBUTED BY (a);</b>
 CREATE TABLE
 gpadmin=# <b>INSERT INTO testdbllocal select * FROM dblink('dbname=postgres', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b>
