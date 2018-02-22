@@ -236,47 +236,53 @@ def delete_cluster(options):
         logger.warn('Warnings were generated while stopping the database.')
         g_warnings_generated = True
 
-    # From this point on we don't want ctrl-c to happen
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        # From this point on we don't want ctrl-c to happen
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    # create pool
-    pool = base.WorkerPool(numWorkers=options.batch_size)
+        # create pool
+        pool = base.WorkerPool(numWorkers=options.batch_size)
 
-    logger.info('Deleting tablespace directories...')
-    # getSegmentsByHostName(segments)
-    segmentHosts = gparray.GpArray.getSegmentsByHostName(segments).keys()
-    for segmentHost in segmentHosts:
-        for tablespaceDir in tablespaceDirs:
-            logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
-                                                                  tablespaceDir))
-            cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,
-                                       ctxt=base.REMOTE, remoteHost=segmentHost)
-            pool.addCommand(cmd)
+        try:
+            logger.info('Deleting tablespace directories...')
+            # getSegmentsByHostName(segments)
+            segmentHosts = gparray.GpArray.getSegmentsByHostName(segments).keys()
+            for segmentHost in segmentHosts:
+                for tablespaceDir in tablespaceDirs:
+                    logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
+                                                                          tablespaceDir))
+                    cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,
+                                               ctxt=base.REMOTE, remoteHost=segmentHost)
+                    pool.addCommand(cmd)
 
-    logger.info('Waiting for worker threads to delete tablespace dirs...')
-    pool.join()
-    pool.haltWork()
-    pool.joinWorkers()
+            logger.info('Waiting for worker threads to delete tablespace dirs...')
+        finally:
+            pool.join()
+            pool.haltWork()
+            pool.joinWorkers()
 
-    # create pool
-    pool = base.WorkerPool(numWorkers=options.batch_size)
+        # create pool
+        pool = base.WorkerPool(numWorkers=options.batch_size)
 
-    logger.info('Deleting segments and removing data directories...')
-    for segdb in segments:
-        segmentDataDirectory = segdb.getSegmentDataDirectory()
-        logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
-                                                              segmentDataDirectory))
-        cmd = unix.RemoveDirectory('remove data dir', segmentDataDirectory, ctxt=base.REMOTE,
-                                   remoteHost=segdb.getSegmentHostName())
-        pool.addCommand(cmd)
+        try:
+            logger.info('Deleting segments and removing data directories...')
+            for segdb in segments:
+                segmentDataDirectory = segdb.getSegmentDataDirectory()
+                logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
+                                                                      segmentDataDirectory))
+                cmd = unix.RemoveDirectory('remove data dir', segmentDataDirectory, ctxt=base.REMOTE,
+                                           remoteHost=segdb.getSegmentHostName())
+                pool.addCommand(cmd)
 
-    logger.info('Waiting for worker threads to complete...')
-    pool.join()
-    pool.haltWork()
-    pool.joinWorkers()
+            logger.info('Waiting for worker threads to complete...')
+        finally:
+            pool.join()
+            pool.haltWork()
+            pool.joinWorkers()
 
-    # Re-enable ctrl-c
-    signal.signal(signal.SIGINT, signal.default_int_handler)
+    finally:
+        # Re-enable ctrl-c
+        signal.signal(signal.SIGINT, signal.default_int_handler)
 
 #############
 if __name__ == '__main__':
