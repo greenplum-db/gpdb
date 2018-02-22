@@ -127,11 +127,11 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 	/*
 	 * In PostgreSQL, checksums were introduced in 9.3 so the test for checksum
 	 * version applies to <= 9.2. Greenplum backported checksums into 5.x which
-	 * is based on PostgreSQL 8.3 so this test need to go on <= 8.3 instead.
+	 * is based on PostgreSQL 8.3 so this test need to go on <= 8.2 instead.
 	 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
+	if (GET_MAJOR_VERSION(cluster->major_version) <= 802)
 	{
-		cluster->controldata.data_checksum_version = false;
+		cluster->controldata.data_checksum_version = 0;
 		got_data_checksums = true;
 	}
 
