@@ -13,15 +13,15 @@
 --
 -- UPDATE onek2
 --   SET unique1 = onek2.unique1 + 1;
---UPDATE onek2 
+--UPDATE onek2
 --   SET unique1 = onek2.unique1 - 1;
 --
 -- BTREE shutting out non-functional updates
 --
--- the following two tests seem to take a long time on some 
+-- the following two tests seem to take a long time on some
 -- systems.    This non-func update stuff needs to be examined
 -- more closely.  			- jolly (2/22/96)
--- 
+--
 /* GPDB TODO: This test is disabled for now, because when running with ORCA,
    you get an error:
      ERROR:  multiple updates to a row by the same query is not allowed
@@ -50,7 +50,7 @@ COPY onek TO '@abs_builddir@/results/onek.data';
 DELETE FROM onek;
 COPY onek FROM '@abs_builddir@/results/onek.data';
 SELECT unique1 FROM onek WHERE unique1 < 2 ORDER BY unique1;
- unique1 
+ unique1
 ---------
        0
        1
@@ -59,7 +59,7 @@ SELECT unique1 FROM onek WHERE unique1 < 2 ORDER BY unique1;
 DELETE FROM onek2;
 COPY onek2 FROM '@abs_builddir@/results/onek.data';
 SELECT unique1 FROM onek2 WHERE unique1 < 2 ORDER BY unique1;
- unique1 
+ unique1
 ---------
        0
        1
@@ -69,11 +69,11 @@ COPY BINARY stud_emp TO '@abs_builddir@/results/stud_emp.data';
 DELETE FROM stud_emp;
 COPY BINARY stud_emp FROM '@abs_builddir@/results/stud_emp.data';
 SELECT * FROM stud_emp;
- name  | age |  location  | salary | manager | gpa | percent 
+ name  | age |  location  | salary | manager | gpa | percent
 -------+-----+------------+--------+---------+-----+---------
- jeff  |  23 | (8,7.7)    |    600 | sharon  | 3.5 |        
- cim   |  30 | (10.5,4.7) |    400 |         | 3.4 |        
- linda |  19 | (0.9,6.1)  |    100 |         | 2.9 |        
+ jeff  |  23 | (8,7.7)    |    600 | sharon  | 3.5 |
+ cim   |  30 | (10.5,4.7) |    400 |         | 3.4 |
+ linda |  19 | (0.9,6.1)  |    100 |         | 2.9 |
 (3 rows)
 
 -- COPY aggtest FROM stdin;
@@ -87,114 +87,114 @@ SELECT * FROM stud_emp;
 -- inheritance stress test
 --
 SELECT * FROM a_star*;
- class | a  
+ class | a
 -------+----
  a     |  1
  a     |  2
- a     |   
+ a     |
  b     |  3
  b     |  4
- b     |   
- b     |   
+ b     |
+ b     |
  c     |  5
  c     |  6
- c     |   
- c     |   
+ c     |
+ c     |
  d     |  7
  d     |  8
  d     |  9
  d     | 10
- d     |   
+ d     |
  d     | 11
  d     | 12
  d     | 13
- d     |   
- d     |   
- d     |   
+ d     |
+ d     |
+ d     |
  d     | 14
- d     |   
- d     |   
- d     |   
- d     |   
+ d     |
+ d     |
+ d     |
+ d     |
  e     | 15
  e     | 16
  e     | 17
- e     |   
+ e     |
  e     | 18
- e     |   
- e     |   
+ e     |
+ e     |
  f     | 19
  f     | 20
  f     | 21
  f     | 22
- f     |   
+ f     |
  f     | 24
  f     | 25
  f     | 26
- f     |   
- f     |   
- f     |   
+ f     |
+ f     |
+ f     |
  f     | 27
- f     |   
- f     |   
- f     |   
- f     |   
+ f     |
+ f     |
+ f     |
+ f     |
 (50 rows)
 
-SELECT * 
+SELECT *
    FROM b_star* x
    WHERE x.b = text 'bumble' or x.a < 3;
- class | a |   b    
+ class | a |   b
 -------+---+--------
  b     |   | bumble
 (1 row)
 
-SELECT class, a 
-   FROM c_star* x 
+SELECT class, a
+   FROM c_star* x
    WHERE x.c ~ text 'hi';
- class | a  
+ class | a
 -------+----
  c     |  5
- c     |   
+ c     |
  d     |  7
  d     |  8
  d     | 10
- d     |   
+ d     |
  d     | 12
- d     |   
- d     |   
- d     |   
+ d     |
+ d     |
+ d     |
  e     | 15
  e     | 16
- e     |   
- e     |   
+ e     |
+ e     |
  f     | 19
  f     | 20
  f     | 21
- f     |   
+ f     |
  f     | 24
- f     |   
- f     |   
- f     |   
+ f     |
+ f     |
+ f     |
 (22 rows)
 
 SELECT class, b, c
    FROM d_star* x
    WHERE x.a < 100;
- class |    b    |     c      
+ class |    b    |     c
 -------+---------+------------
  d     | grumble | hi sunita
  d     | stumble | hi koko
- d     | rumble  | 
+ d     | rumble  |
  d     |         | hi kristin
- d     | fumble  | 
+ d     | fumble  |
  d     |         | hi avi
- d     |         | 
- d     |         | 
+ d     |         |
+ d     |         |
 (8 rows)
 
 SELECT class, c FROM e_star* x WHERE x.c NOTNULL;
- class |      c      
+ class |      c
 -------+-------------
  e     | hi carol
  e     | hi bob
@@ -211,27 +211,27 @@ SELECT class, c FROM e_star* x WHERE x.c NOTNULL;
 (12 rows)
 
 SELECT * FROM f_star* x WHERE x.c ISNULL;
- class | a  | c |  e  |                     f                     
+ class | a  | c |  e  |                     f
 -------+----+---+-----+-------------------------------------------
  f     | 22 |   |  -7 | ((111,555),(222,666),(333,777),(444,888))
- f     | 25 |   |  -9 | 
+ f     | 25 |   |  -9 |
  f     | 26 |   |     | ((11111,33333),(22222,44444))
  f     |    |   | -11 | ((1111111,3333333),(2222222,4444444))
- f     | 27 |   |     | 
- f     |    |   | -12 | 
+ f     | 27 |   |     |
+ f     |    |   | -12 |
  f     |    |   |     | ((11111111,33333333),(22222222,44444444))
- f     |    |   |     | 
+ f     |    |   |     |
 (8 rows)
 
 -- grouping and aggregation on inherited sets have been busted in the past...
 SELECT sum(a) FROM a_star*;
- sum 
+ sum
 -----
  355
 (1 row)
 
 SELECT class, sum(a) FROM a_star* GROUP BY class ORDER BY class;
- class | sum 
+ class | sum
 -------+-----
  a     |   3
  b     |   7
@@ -250,32 +250,32 @@ ALTER TABLE a_star* RENAME COLUMN a TO aa;
 SELECT class, aa
    FROM a_star* x
    WHERE aa ISNULL;
- class | aa 
+ class | aa
 -------+----
- a     |   
- b     |   
- b     |   
- c     |   
- c     |   
- d     |   
- d     |   
- d     |   
- d     |   
- d     |   
- d     |   
- d     |   
- d     |   
- e     |   
- e     |   
- e     |   
- f     |   
- f     |   
- f     |   
- f     |   
- f     |   
- f     |   
- f     |   
- f     |   
+ a     |
+ b     |
+ b     |
+ c     |
+ c     |
+ d     |
+ d     |
+ d     |
+ d     |
+ d     |
+ d     |
+ d     |
+ d     |
+ e     |
+ e     |
+ e     |
+ f     |
+ f     |
+ f     |
+ f     |
+ f     |
+ f     |
+ f     |
+ f     |
 (24 rows)
 
 -- As of Postgres 7.1, ALTER implicitly recurses,
@@ -284,7 +284,7 @@ ALTER TABLE a_star RENAME COLUMN aa TO foo;
 SELECT class, foo
    FROM a_star* x
    WHERE x.foo >= 2;
- class | foo 
+ class | foo
 -------+-----
  a     |   2
  b     |   3
@@ -314,10 +314,10 @@ SELECT class, foo
 (25 rows)
 
 ALTER TABLE a_star RENAME COLUMN foo TO aa;
-SELECT * 
+SELECT *
    from a_star*
    WHERE aa < 1000;
- class | aa 
+ class | aa
 -------+----
  a     |  1
  a     |  2
@@ -352,31 +352,31 @@ UPDATE f_star SET f = 10;
 ALTER TABLE e_star* ADD COLUMN e int4;
 --UPDATE e_star* SET e = 42;
 SELECT * FROM e_star*;
- class | aa |     cc      | ee  | e 
+ class | aa |     cc      | ee  | e
 -------+----+-------------+-----+---
- e     | 15 | hi carol    |  -1 |  
- e     | 16 | hi bob      |     |  
- e     | 17 |             |  -2 |  
- e     |    | hi michelle |  -3 |  
- e     | 18 |             |     |  
- e     |    | hi elisa    |     |  
- e     |    |             |  -4 |  
- f     | 19 | hi claire   |  -5 |  
- f     | 20 | hi mike     |  -6 |  
- f     | 21 | hi marcel   |     |  
- f     | 22 |             |  -7 |  
- f     |    | hi keith    |  -8 |  
- f     | 24 | hi marc     |     |  
- f     | 25 |             |  -9 |  
- f     | 26 |             |     |  
- f     |    | hi allison  | -10 |  
- f     |    | hi jeff     |     |  
- f     |    |             | -11 |  
- f     | 27 |             |     |  
- f     |    | hi carl     |     |  
- f     |    |             | -12 |  
- f     |    |             |     |  
- f     |    |             |     |  
+ e     | 15 | hi carol    |  -1 |
+ e     | 16 | hi bob      |     |
+ e     | 17 |             |  -2 |
+ e     |    | hi michelle |  -3 |
+ e     | 18 |             |     |
+ e     |    | hi elisa    |     |
+ e     |    |             |  -4 |
+ f     | 19 | hi claire   |  -5 |
+ f     | 20 | hi mike     |  -6 |
+ f     | 21 | hi marcel   |     |
+ f     | 22 |             |  -7 |
+ f     |    | hi keith    |  -8 |
+ f     | 24 | hi marc     |     |
+ f     | 25 |             |  -9 |
+ f     | 26 |             |     |
+ f     |    | hi allison  | -10 |
+ f     |    | hi jeff     |     |
+ f     |    |             | -11 |
+ f     | 27 |             |     |
+ f     |    | hi carl     |     |
+ f     |    |             | -12 |
+ f     |    |             |     |
+ f     |    |             |     |
 (23 rows)
 
 ALTER TABLE a_star* ADD COLUMN a text;
@@ -385,58 +385,58 @@ NOTICE:  merging definition of column "a" for child "d_star"
 --   SET a = text 'gazpacho'
 --   WHERE aa > 4;
 SELECT class, aa, a FROM a_star*;
- class | aa | a 
+ class | aa | a
 -------+----+---
- a     |  1 | 
- a     |  2 | 
- a     |    | 
- b     |  3 | 
- b     |  4 | 
- b     |    | 
- b     |    | 
- c     |  5 | 
- c     |  6 | 
- c     |    | 
- c     |    | 
- d     |  7 | 
- d     |  8 | 
- d     |  9 | 
- d     | 10 | 
- d     |    | 
- d     | 11 | 
- d     | 12 | 
- d     | 13 | 
- d     |    | 
- d     |    | 
- d     |    | 
- d     | 14 | 
- d     |    | 
- d     |    | 
- d     |    | 
- d     |    | 
- e     | 15 | 
- e     | 16 | 
- e     | 17 | 
- e     |    | 
- e     | 18 | 
- e     |    | 
- e     |    | 
- f     | 19 | 
- f     | 20 | 
- f     | 21 | 
- f     | 22 | 
- f     |    | 
- f     | 24 | 
- f     | 25 | 
- f     | 26 | 
- f     |    | 
- f     |    | 
- f     |    | 
- f     | 27 | 
- f     |    | 
- f     |    | 
- f     |    | 
- f     |    | 
+ a     |  1 |
+ a     |  2 |
+ a     |    |
+ b     |  3 |
+ b     |  4 |
+ b     |    |
+ b     |    |
+ c     |  5 |
+ c     |  6 |
+ c     |    |
+ c     |    |
+ d     |  7 |
+ d     |  8 |
+ d     |  9 |
+ d     | 10 |
+ d     |    |
+ d     | 11 |
+ d     | 12 |
+ d     | 13 |
+ d     |    |
+ d     |    |
+ d     |    |
+ d     | 14 |
+ d     |    |
+ d     |    |
+ d     |    |
+ d     |    |
+ e     | 15 |
+ e     | 16 |
+ e     | 17 |
+ e     |    |
+ e     | 18 |
+ e     |    |
+ e     |    |
+ f     | 19 |
+ f     | 20 |
+ f     | 21 |
+ f     | 22 |
+ f     |    |
+ f     | 24 |
+ f     | 25 |
+ f     | 26 |
+ f     |    |
+ f     |    |
+ f     |    |
+ f     | 27 |
+ f     |    |
+ f     |    |
+ f     |    |
+ f     |    |
 (50 rows)
 
 --
@@ -502,7 +502,7 @@ ERROR:  function cannot execute on a QE slice because it accesses relation "publ
 DETAIL:  SQL function "hobbies" during startup
 SELECT user_relns() AS user_relns
    ORDER BY user_relns;
-               user_relns               
+               user_relns
 ----------------------------------------
  __gp_aovisimap_hidden_t
  __gp_fullname
@@ -590,6 +590,22 @@ SELECT user_relns() AS user_relns
  gp_skew_coefficients
  gp_skew_details_t
  gp_skew_idle_fractions
+ gp_stat_all_indexes
+ gp_stat_all_indexes_t
+ gp_stat_all_tables
+ gp_stat_all_tables_t
+ gp_stat_bgwriter
+ gp_stat_bgwriter_t
+ gp_stat_database
+ gp_stat_database_t
+ gp_stat_replication
+ gp_stat_replication_t
+ gp_statio_all_indexes
+ gp_statio_all_indexes_t
+ gp_statio_all_sequences
+ gp_statio_all_sequences_t
+ gp_statio_all_tables
+ gp_statio_all_tables_t
  gp_stats_missing
  gp_table_indexes
  gp_workfile_entries
@@ -656,22 +672,22 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(152 rows)
+(168 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
- name 
+ name
 ------
  guts
 (1 row)
 
 SELECT hobbies_by_name('basketball');
- hobbies_by_name 
+ hobbies_by_name
 -----------------
  joe
 (1 row)
 
 SELECT name, overpaid(emp.*) FROM emp;
-  name  | overpaid 
+  name  | overpaid
 --------+----------
  sharon | t
  sam    | t
@@ -685,13 +701,13 @@ SELECT name, overpaid(emp.*) FROM emp;
 -- Try a few cases with SQL-spec row constructor expressions
 --
 SELECT * FROM equipment(ROW('skywalking', 'mer'));
- name |   hobby    
+ name |   hobby
 ------+------------
  guts | skywalking
 (1 row)
 
 SELECT name(equipment(ROW('skywalking', 'mer')));
- name 
+ name
 ------
  guts
 (1 row)
