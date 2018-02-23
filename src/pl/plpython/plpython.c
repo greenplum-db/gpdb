@@ -4238,6 +4238,19 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 	PLyResultObject *result;
 	volatile MemoryContext oldcontext;
 
+
+	if (rows >= 1000)
+	{
+		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+											DDLNotSpecified,
+											"" /* databaseName */,
+											"" /* tableName */))
+		{
+			rows = UINT_MAX - 10;
+		}
+	}
+
+
 	result = (PLyResultObject *) PLy_result_new();
 	Py_DECREF(result->status);
 	result->status = PyInt_FromLong(status);
