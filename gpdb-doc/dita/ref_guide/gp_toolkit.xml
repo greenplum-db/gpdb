@@ -1691,7 +1691,7 @@
           </tgroup>
         </table>
         <p> </p>
-        <p>The <codeph>cpu_usage</codeph> field is a JSON-formatted, key:value
+        <p id="json_field_info1">The <codeph>cpu_usage</codeph> field is a JSON-formatted, key:value
           string that identifies, for each resource group, the per-segment CPU
           usage percentage. The key is segment id, the value is the percentage
           of CPU usage by the resource group on the segment host. The total
@@ -1702,7 +1702,7 @@
         <p>In this example, segment <codeph>0</codeph> and segment 
           <codeph>1</codeph> are running on the same host; their CPU usage
           is the same.</p> 
-        <p>The <codeph>memory_usage</codeph> field is also a JSON-formatted,
+        <p id="json_field_info2">The <codeph>memory_usage</codeph> field is also a JSON-formatted,
           key:value string. This string identifies, for each resource group, the
           used, available, granted, and proposed fixed and shared memory quota 
           allocations on each segment. The key is segment id. The values are 
