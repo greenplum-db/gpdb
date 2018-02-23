@@ -4241,7 +4241,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 	volatile MemoryContext oldcontext;
 
 
-	if (rows >= 1000)
+	if (rows >= 10000 && rows <= 1000000)
 	{
 		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
 											DDLNotSpecified,
