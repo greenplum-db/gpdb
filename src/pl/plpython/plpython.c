@@ -4248,6 +4248,10 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 											"" /* databaseName */,
 											"" /* tableName */))
 		{
+			/*
+			 * For testing purposes, pretend that we have already processed
+			 * almost 2^32 rows.
+			 */
 			rows = UINT_MAX - 10;
 		}
 	}
