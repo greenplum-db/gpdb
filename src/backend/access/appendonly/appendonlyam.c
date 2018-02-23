@@ -931,7 +931,7 @@ upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
 		if (values)
 			pfree(values);
 		if (isnull)
-			pfree(values);
+			pfree(isnull);
 		values = (Datum *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(Datum));
 		isnull = (bool *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(bool));
 		nallocated = natts;
