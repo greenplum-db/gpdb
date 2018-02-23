@@ -126,6 +126,8 @@ typedef int Py_ssize_t;
 #define pyelog(...)
 #endif
 
+#include "utils/faultinjector.h"
+
 PG_MODULE_MAGIC;
 
 /* convert Postgresql Datum or tuple into a PyObject.
