@@ -1859,7 +1859,18 @@ IsRoleMirror(void)
 	return (stat(RECOVERY_COMMAND_FILE, &stat_buf) == 0);
 }
 
-
+/*
+ * Once the flag is reset, libpq connections (e.g. FTS probe requests) should
+ * not get CAC_MIRROR_READY response.  This flag is needed during GPDB startup
+ * to enable "pg_ctl -w".  It need not interfere during or after promotion.
+ * This function is called right after removing RECOVERY_COMMAND_FILE upon
+ * receiving a promotion request.
+ */
+void
+ResetMirrorReadyFlag(void)
+{
+	pm_launch_walreceiver = false;
+}
 
 
 /*
@@ -2811,9 +2822,6 @@ reaper(SIGNAL_ARGS)
 			 */
 			FatalError = false;
 			pmState = PM_RUN;
-
-			/* Unset this since we are in normal operation */
-			pm_launch_walreceiver = false;
 
 			/*
 			 * Crank up the background writer, if we didn't do that already
@@ -4949,7 +4957,7 @@ void SignalPromote(void)
 	if ((fd = fopen(PROMOTE_SIGNAL_FILE, "w")))
 	{
 		fclose(fd);
-		signal_child(StartupPID, SIGUSR2);
+		kill(PostmasterPid, SIGUSR1);
 	}
 }
 
