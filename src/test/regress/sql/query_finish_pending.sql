@@ -67,6 +67,14 @@ select gp_inject_fault('execshare_input_next', 'reset', 2);
 create table _tmp_table1 as select i as c1, i as c2 from generate_series(1, 10) i;
 create table _tmp_table2 as select i as c1, 0 as c2 from generate_series(0, 10) i;
 
+-- Prevent FTS from probing as "before_read_command" fault interfers
+-- with FTS probes.  Request a scan so that the skip fault is
+-- triggered immediately, rather that waiting until the next probe
+-- interval.
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_request_fts_probe_scan();
+select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+
 -- make one QE sleep before reading command
 select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 50, 2::smallint);
 
@@ -75,5 +83,8 @@ select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
 end;
 
 select gp_inject_fault('before_read_command', 'reset', 2);
+-- Resume FTS probes starting from the next probe interval.
+select gp_inject_fault('fts_probe', 'reset', 1);
+
 drop table _tmp_table1;
 drop table _tmp_table2;
