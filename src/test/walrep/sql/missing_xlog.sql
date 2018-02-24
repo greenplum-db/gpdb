@@ -26,7 +26,7 @@ returns text as $$
 
 	cmd = 'mkdir -p %s; ' % dest
 	cmd = cmd + 'mv %s/0* %s' % (source, dest)
-	
+
 	return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
 
@@ -112,7 +112,17 @@ $$ language plpgsql;
 -- checkpoint to ensure clean xlog replication before bring down mirror
 select checkpoint_and_wait_for_replication_replay(200);
 
--- stop a mirror 
+create extension if not exists gp_inject_fault;
+-- Prevent FTS from probing segments as we don't want a change in
+-- cluster configuration to be triggered after the mirror is stoped
+-- temporarily in the test.  Request a scan so that the skip fault is
+-- triggered immediately, rather that waiting until the next probe
+-- interval.
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_request_fts_probe_scan();
+select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+
+-- stop a mirror
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);
 
 -- checkpoint and switch the xlog to avoid corrupting the xlog due to background processes
@@ -136,3 +146,10 @@ select move_xlog('/tmp/missing_xlog', (select datadir || '/pg_xlog' from gp_segm
 -- the error should go away
 select wait_for_replication_error('none', 0, 200);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
+
+-- Resume FTS probes and perform a probe scan.
+select gp_inject_fault('fts_probe', 'reset', 1);
+select gp_request_fts_probe_scan();
+-- Validate that the mirror for content=0 is marked up.
+select count(*) = 2 as mirror_up from gp_segment_configuration
+ where content=0 and status='u';
