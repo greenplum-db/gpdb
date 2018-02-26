@@ -315,23 +315,6 @@ where pg.oid=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table
 select count(*) > 0 from gp_toolkit.__gp_number_of_segments;
 
 -----------------------------------
--- Test gp_stats views
--- if we get results and not errors the queries should be driving
--- down into the pg_* version of these
-
-select count(*) > 0 from gp_toolkit.gp_stat_database;
-
-select count(*) > 0 from gp_toolkit.gp_stat_all_tables;
-
-select count(*) > 0 from gp_toolkit.gp_statio_all_tables;
-
-select count(*) > 0 from gp_toolkit.gp_stat_all_indexes;
-
-select count(*) > 0 from gp_toolkit.gp_statio_all_indexes;
-
-select count(*) > 0 from gp_toolkit.gp_stat_bgwriter;
-
------------------------------------
 -- Test Resource Queue views
 
 
@@ -394,3 +377,21 @@ reset session authorization;
 drop database toolkit_testdb;
 drop role toolkit_user1;
 drop role toolkit_admin;
+
+-----------------------------------
+-- Test gp_stats views
+-- if we get results and not errors the queries should be driving
+-- down into the pg_* version of these
+
+select count(*) > 0 from gp_toolkit.gp_stat_database;
+
+select count(*) > 0 from gp_toolkit.gp_stat_all_tables;
+
+select count(*) > 0 from gp_toolkit.gp_statio_all_tables;
+
+select count(*) > 0 from gp_toolkit.gp_stat_all_indexes;
+
+select count(*) > 0 from gp_toolkit.gp_statio_all_indexes;
+
+select count(*) > 0 from gp_toolkit.gp_stat_bgwriter;
+
