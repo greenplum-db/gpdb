@@ -25,6 +25,7 @@ ftsprobe.t: \
 
 fts.t: \
     $(MOCK_DIR)/backend/access/transam/xact_mock.o \
+    $(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o \
     $(MOCK_DIR)/backend/utils/time/snapmgr_mock.o \
     $(MOCK_DIR)/backend/access/heap/heapam_mock.o \
     $(MOCK_DIR)/backend/access/common/heaptuple_mock.o \

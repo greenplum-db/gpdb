@@ -264,6 +264,8 @@ ftsMain(int argc, char *argv[])
 		/* Report the error to the server log */
 		EmitErrorReport();
 
+		AbortCurrentTransaction();
+
 		/*
 		 * We can now go away.	Note that because we'll call InitProcess, a
 		 * callback will be registered to do ProcKill, which will clean up
@@ -420,6 +422,8 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
 		simple_heap_insert(histrel, histtuple);
 		CatalogUpdateIndexes(histrel, histtuple);
+
+		SIMPLE_FAULT_INJECTOR(FtsUpdateConfig);
 
 		heap_close(histrel, RowExclusiveLock);
 	}

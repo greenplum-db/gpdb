@@ -156,6 +156,11 @@ probeWalRepUpdateConfig_will_be_called_with(
 	expect_any(heap_open, lockmode);
 	will_return(heap_open, &gp_configuration_history_relation);
 
+	expect_value(FaultInjector_InjectFaultIfSet, identifier, FtsUpdateConfig);
+	expect_value(FaultInjector_InjectFaultIfSet, ddlStatement, DDLNotSpecified);
+	expect_value(FaultInjector_InjectFaultIfSet, databaseName, "");
+	expect_value(FaultInjector_InjectFaultIfSet, tableName, "");
+	will_return(FaultInjector_InjectFaultIfSet, FaultInjectorTypeNotSpecified);
 	/* Mock heap_open gp_segment_configuration_relation */
 	static RelationData gp_segment_configuration_relation;
 

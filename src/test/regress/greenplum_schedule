@@ -197,7 +197,7 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
-test: ao_checksum_corruption AOCO_Compression2 table_statistics
+test: ao_checksum_corruption AOCO_Compression2 table_statistics fts_error
 test: metadata_track
 test: workfile_mgr_test
 
