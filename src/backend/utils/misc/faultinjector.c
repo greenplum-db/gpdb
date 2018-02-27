@@ -284,6 +284,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault before an append-only delete */
 	_("appendonly_update"),
 		/* inject fault before an append-only update */
+	_("appendonly_skip_compression"),
+		/* inject fault in append-only compression function */
 	_("reindex_db"),
 		/* inject fault while reindex db is in progress */
 	_("reindex_relation"),
@@ -1064,6 +1066,7 @@ FaultInjector_NewHashEntry(
 
 			case InterconnectStopAckIsLost:
 			case SendQEDetailsInitBackend:
+			case AppendOnlySkipCompression:
 
 				break;
 			default:

@@ -30,6 +30,7 @@
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbpersistentfilesysobj.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 
@@ -1303,6 +1304,18 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 							  storageWrite->storageAttributes.compressLevel,
 							  compressor,
 							  storageWrite->compressionState);
+
+#ifdef FAULT_INJECTOR
+	/* Simulate that compression is not possible if the fault is set. */
+	if (FaultInjector_InjectFaultIfSet(
+			AppendOnlySkipCompression,
+			DDLNotSpecified,
+			"",
+			storageWrite->relationName) == FaultInjectorTypeSkip)
+	{
+		*compressedLen = sourceLen + 1;
+	}
+#endif
 
 	/*
 	 * We always store the data compressed if the compressed length is less
