@@ -8,4 +8,8 @@ s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 # entry db matches
 m/\s+\(entry db(.*)+\spid=\d+\)/
 s/\s+\(entry db(.*)+\spid=\d+\)//
+
+# ignore OID and file/line number diffs for invalid toast indexes
+m/^ERROR:  no valid index found for toast relation/
+s/with Oid \d+ \(.*\)/with Oid OID/
 -- end_matchsubs
