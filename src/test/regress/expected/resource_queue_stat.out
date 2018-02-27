@@ -1,0 +1,137 @@
+set stats_queue_level=on;
+-- start_ignore
+drop role resqueuetest;
+ERROR:  role "resqueuetest" does not exist
+drop resource queue q;
+ERROR:  resource queue "q" does not exist
+-- end_ignore
+create resource queue q with (active_statements = 10);
+create user resqueuetest with resource queue q;
+set role resqueuetest;
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select pg_sleep(1);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+-- will display q.n_queries_exec=4, and after the query it becomes 5
+select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ queuename | n_queries_exec 
+-----------+----------------
+ q         |              4
+(1 row)
+
+-- drop the queue
+reset role;
+drop role resqueuetest;
+drop resource queue q;
+set stats_queue_level=on;
+-- create the queue and test
+create resource queue q with (active_statements = 10);
+create user resqueuetest with resource queue q;
+set role resqueuetest;
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select pg_sleep(1);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+-- will display q.n_queries_exec=4, and after the query it becomes 5
+select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ queuename | n_queries_exec 
+-----------+----------------
+ q         |              4
+(1 row)
+
+-- create another queue, do switch test
+reset role;
+set stats_queue_level=on;
+-- start_ignore
+drop role resqueuetest1;
+ERROR:  role "resqueuetest1" does not exist
+drop resource queue q1;
+ERROR:  resource queue "q1" does not exist
+-- end_ignore
+create resource queue q1 with (active_statements = 10);
+create user resqueuetest1 with resource queue q1;
+-- now change the role
+set role resqueuetest1;
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select pg_sleep(1);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+-- will display q.n_queries_exec=5, q1.n_queries_exec=4
+select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q1';
+ queuename | n_queries_exec 
+-----------+----------------
+ q1        |              4
+(1 row)
+
+select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ queuename | n_queries_exec 
+-----------+----------------
+ q         |              5
+(1 row)
+
+-- clean
+reset role;
+drop role resqueuetest;
+drop resource queue q;
+drop role resqueuetest1;
+drop resource queue q1;

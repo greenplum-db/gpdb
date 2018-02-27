@@ -4202,7 +4202,7 @@ pgstat_getportalentry(uint32 portalid, Oid queueid)
 	Assert(portalentry != NULL);
 
 	/* Initialize if this we have not seen this portal before! */
-	if (!found)
+	if (!found || portalentry->queueentry.queueid == InvalidOid)
 	{
 		portalentry->portalid = portalid;
 		portalentry->queueentry.queueid = queueid;
@@ -4254,6 +4254,7 @@ pgstat_report_queuestat()
 		msg.m_elapsed_wait = pentry->queueentry.elapsed_wait;
 
 		/* Reset the counters for this entry. */
+		pentry->queueentry.queueid = InvalidOid;
 		pentry->queueentry.n_queries_exec = 0;
 		pentry->queueentry.n_queries_wait = 0;
 		pentry->queueentry.elapsed_exec = 0;
