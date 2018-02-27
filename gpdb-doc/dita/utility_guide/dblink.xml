@@ -8,7 +8,7 @@
   <body>
     <p>Greenplum Database supports <codeph>dblink</codeph> connections between databases
      in Greenplum Database installations with the same major version number.
-     <codeph>dblink</codeph> may also connect to other Greenplum Database or PostgreSQL
+     <codeph>dblink</codeph> may also connect to other Greenplum Database 
       installations that use compatible <codeph>libpq</codeph> libraries.</p>
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
       other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
