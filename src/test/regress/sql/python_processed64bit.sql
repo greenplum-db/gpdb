@@ -1,7 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
-CREATE LANGUAGE plpythonu;
-
 DROP FUNCTION IF EXISTS public.test_bigint_python();
 DROP TABLE IF EXISTS public.spi64bittestpython;
 
