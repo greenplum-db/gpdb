@@ -335,6 +335,8 @@ HandleFtsWalRepPromote(void)
 void
 HandleFtsMessage(const char* query_string)
 {
+	SIMPLE_FAULT_INJECTOR(FtsHandleMessage);
+
 	if (strncmp(query_string, FTS_MSG_PROBE,
 				strlen(FTS_MSG_PROBE)) == 0)
 		HandleFtsWalRepProbe();

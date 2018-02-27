@@ -2048,7 +2048,6 @@ retry1:
 						ereport(FATAL,
 								(errcode(ERRCODE_PROTOCOL_VIOLATION),
 								 errmsg("cannot handle FTS connection on master")));
-					SIMPLE_FAULT_INJECTOR(FtsHandleMessage);
 					am_ftshandler = true;
 					am_mirror = IsRoleMirror();
 				}
