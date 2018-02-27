@@ -540,3 +540,34 @@ a.c1
 ;
 
 drop table bms_ao_bug;
+-- Small content as well as bulk dense content headers need to be used
+-- appropriately if compression is found to be not useful.  This test
+-- cover a bug where only small content headers were generated in such
+-- a case.
+create table aocs_small_and_dense_content (a int, b int) with
+(appendonly =true, orientation=column, blocksize=409600,
+ compresstype=rle_type, compresslevel=4);
+
+insert into aocs_small_and_dense_content select i,i from
+generate_series(1,800000)i;
+
+create extension if not exists gp_inject_fault;
+-- Inject fault on one primary segment that will cause compression to
+-- be considered not useful.
+select gp_inject_fault('appendonly_skip_compression', 'skip', '', '',
+'aocs_small_and_dense_content', -1, 0, dbid)
+from gp_segment_configuration where role = 'p' and content = 0;
+
+insert into aocs_small_and_dense_content select i,i from
+generate_series(1,800000)i;
+
+select gp_inject_fault('appendonly_skip_compression',
+'wait_until_triggered', dbid) from gp_segment_configuration where
+role = 'p' and content = 0;
+
+-- This should not fail if small content or bulk dense content headers
+-- are used correctly in spite of compression not possible.
+select count(*) from aocs_small_and_dense_content;
+
+select gp_inject_fault('appendonly_skip_compression', 'reset', dbid)
+from gp_segment_configuration where role = 'p' and content = 0;

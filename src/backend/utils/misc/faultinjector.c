@@ -732,6 +732,7 @@ FaultInjector_NewHashEntry(
 			case SendQEDetailsInitBackend:
 			case ExecutorRunHighProcessed:
 			case FtsProbe:
+			case AppendOnlySkipCompression:
 
 				break;
 			default:
