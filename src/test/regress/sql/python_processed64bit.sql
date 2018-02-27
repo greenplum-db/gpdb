@@ -19,7 +19,7 @@ $$ LANGUAGE plpythonu;
 
 
 -- insert 30k rows without fault injection framework
-SELECT public.test_bigint();
+SELECT public.test_bigint_python();
 SELECT COUNT(*) AS count
   FROM public.spi64bittestpython;
 
@@ -37,7 +37,7 @@ SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, 
 
 
 -- and insert another 30k rows, this time overflowing the 2^32 counter
-SELECT public.test_bigint();
+SELECT public.test_bigint_python();
 
 
 -- reset fault injection framework
