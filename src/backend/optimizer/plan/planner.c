@@ -1646,6 +1646,17 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		else
 			best_path = sorted_path;
 
+		/* if dummy pathlist of partition, make result plan here and return */
+		if (best_path->pathtype == T_Append && ((AppendPath *)best_path)->subpaths == NIL)
+		{
+			/* Generate a Result plan with constant-FALSE gating qual */
+			return (Plan *) make_result(root,
+										tlist,
+										(Node *) list_make1(makeBoolConst(false,
+																		  false)),
+										NULL);
+		}
+		
 		/*
 		 * CDB:  For now, we either - construct a general parallel plan, - let
 		 * the sequential planner handle the situation, or - construct a
