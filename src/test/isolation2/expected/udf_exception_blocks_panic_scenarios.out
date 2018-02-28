@@ -8,11 +8,14 @@
 -- debug_dtm_action: Using this can specify what action to be
 -- triggered/simulated and at what point like error / panic / delay
 -- and at start or end command after receiving by the segment.
+
 -- debug_dtm_action_segment: Using this can specify segment number to
 -- trigger the specified dtm_action.
+
 -- debug_dtm_action_target: Allows to set target for specified
 -- dtm_action should it be DTM protocol command or SQL command from
 -- master to segment.
+
 -- debug_dtm_action_protocol: Allows to specify sub-type of DTM
 -- protocol for which to perform specified dtm_action (like prepare,
 -- abort_no_prepared, commit_prepared, abort_prepared,
@@ -22,6 +25,7 @@
 -- debug_dtm_action_sql_command_tag: If debug_dtm_action_target is sql
 -- then this parameter can be used to set the type of sql that should
 -- trigger the exeception. Ex: 'MPPEXEC UPDATE'
+
 -- debug_dtm_action_nestinglevel: This allows to optional specify at
 -- which specific depth level in transaction to take the specified
 -- dtm_action. This apples only to target with protocol and not SQL.
@@ -35,69 +39,36 @@
 -- m/transaction -\d+/
 -- s/transaction -\d+/transaction/
 -- end_matchsubs
-CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER
-AS $$
-    DECLARE res INTEGER;
-    BEGIN
-        res := 100 / arg;
-        RETURN res;
-    EXCEPTION
-        WHEN division_by_zero
-        THEN  RETURN 999;
-    END;
-$$
-LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION test_protocol_allseg(mid int, mshop int, mgender character) RETURNS VOID AS
-$$
-DECLARE tfactor int default 0;
-BEGIN
-  BEGIN
-  CREATE TABLE employees(id int, shop_id int, gender character) DISTRIBUTED BY (id);
-  
-  INSERT INTO employees VALUES (0, 1, 'm');
-  END;
- BEGIN
-  BEGIN
-    IF EXISTS (select 1 from employees where id = mid) THEN
-        RAISE EXCEPTION 'Duplicate employee id';
-    ELSE
-         IF NOT (mshop between 1 AND 2) THEN
-            RAISE EXCEPTION 'Invalid shop id' ;
-        END IF;
-    END IF;
-    SELECT * INTO tfactor FROM test_excep(0);
-    BEGIN
-        INSERT INTO employees VALUES (mid, mshop, mgender);
-    EXCEPTION
-            WHEN OTHERS THEN
-            BEGIN
-                RAISE NOTICE 'catching the exception ...3';
-            END;
-    END;
-   EXCEPTION
-       WHEN OTHERS THEN
-          RAISE NOTICE 'catching the exception ...2';
-   END;
- EXCEPTION
-     WHEN OTHERS THEN
-          RAISE NOTICE 'catching the exception ...1';
- END;
-END;
-$$
-LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER AS $$ DECLARE res INTEGER; /* in func */ BEGIN /* in func */ res := 100 / arg; /* in func */ RETURN res; /* in func */ EXCEPTION /* in func */ WHEN division_by_zero /* in func */ THEN  RETURN 999; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+CREATE
+
+CREATE OR REPLACE FUNCTION test_protocol_allseg(mid int, mshop int, mgender character) RETURNS VOID AS $$ DECLARE tfactor int default 0; /* in func */ BEGIN /* in func */ BEGIN /* in func */ CREATE TABLE employees(id int, shop_id int, gender character) DISTRIBUTED BY (id); /* in func */  INSERT INTO employees VALUES (0, 1, 'm'); /* in func */ END; /* in func */ BEGIN /* in func */ BEGIN /* in func */ IF EXISTS (select 1 from employees where id = mid) THEN /* in func */ RAISE EXCEPTION 'Duplicate employee id'; /* in func */ ELSE /* in func */ IF NOT (mshop between 1 AND 2) THEN /* in func */ RAISE EXCEPTION 'Invalid shop id' ; /* in func */ END IF; /* in func */ END IF; /* in func */ SELECT * INTO tfactor FROM test_excep(0); /* in func */ BEGIN /* in func */ INSERT INTO employees VALUES (mid, mshop, mgender); /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ BEGIN /* in func */ RAISE NOTICE 'catching the exception ...3'; /* in func */ END; /* in func */ END; /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ RAISE NOTICE 'catching the exception ...2'; /* in func */ END; /* in func */ EXCEPTION /* in func */ WHEN OTHERS THEN /* in func */ RAISE NOTICE 'catching the exception ...1'; /* in func */ END; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+CREATE
+
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_begin;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=0;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  DTM error (gathered results from cmd ' Begin Internal Subtransaction') (cdbtm.c:2040)
-DETAIL:  PANIC for debug_dtm_action = 4, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1440)  (seg1 127.0.1.1:25433 pid=24563)
+DETAIL:  PANIC for debug_dtm_action = 4, debug_dtm_action_protocol =  Begin Internal Subtransaction (postgres.c:1490)  (seg1 127.0.1.1:25433 pid=27784)
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 8 during statement block entry
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -105,17 +76,28 @@ LINE 1: select * from employees;
 --
 --
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_release;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=0;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  could not connect to segment: initialization of segworker group failed
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 18 during exception cleanup
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -123,17 +105,28 @@ LINE 1: select * from employees;
 --
 --
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_release;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=4;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  could not connect to segment: initialization of segworker group failed
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 18 during exception cleanup
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -141,17 +134,28 @@ LINE 1: select * from employees;
 --
 --
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_rollback;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=3;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  could not connect to segment: initialization of segworker group failed
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -159,17 +163,28 @@ LINE 1: select * from employees;
 --
 --
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_rollback;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=0;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  could not connect to segment: initialization of segworker group failed
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
@@ -177,17 +192,28 @@ LINE 1: select * from employees;
 --
 --
 SET debug_dtm_action_segment=1;
+SET
 SET debug_dtm_action_target=protocol;
+SET
 SET debug_dtm_action_protocol=subtransaction_begin;
+SET
 SET debug_dtm_action=panic_begin_command;
+SET
 SET debug_dtm_action_nestinglevel=3;
+SET
 DROP TABLE IF EXISTS employees;
-NOTICE:  table "employees" does not exist, skipping
+DROP
 select test_protocol_allseg(1, 2,'f');
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
 ERROR:  could not connect to segment: initialization of segworker group failed
 CONTEXT:  PL/pgSQL function "test_protocol_allseg" line 17 during exception cleanup
 ERROR:  could not connect to segment: initialization of segworker group failed
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+?column?
+--------
+1       
+(1 row)
+0Uq: ... <quitting>
 select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;

@@ -41,53 +41,53 @@
 -- end_matchsubs
 CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER
 AS $$
-    DECLARE res INTEGER;
-    BEGIN
-        res := 100 / arg;
-        RETURN res;
-    EXCEPTION
-        WHEN division_by_zero
-        THEN  RETURN 999;
-    END;
+    DECLARE res INTEGER; /* in func */
+    BEGIN /* in func */
+        res := 100 / arg; /* in func */
+        RETURN res; /* in func */
+    EXCEPTION /* in func */
+        WHEN division_by_zero /* in func */
+        THEN  RETURN 999; /* in func */
+    END; /* in func */
 $$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION test_protocol_allseg(mid int, mshop int, mgender character) RETURNS VOID AS
 $$
-DECLARE tfactor int default 0;
-BEGIN
-  BEGIN
-  CREATE TABLE employees(id int, shop_id int, gender character) DISTRIBUTED BY (id);
+DECLARE tfactor int default 0; /* in func */
+BEGIN /* in func */
+  BEGIN /* in func */
+  CREATE TABLE employees(id int, shop_id int, gender character) DISTRIBUTED BY (id); /* in func */
   
-  INSERT INTO employees VALUES (0, 1, 'm');
-  END;
- BEGIN
-  BEGIN
-    IF EXISTS (select 1 from employees where id = mid) THEN
-        RAISE EXCEPTION 'Duplicate employee id';
-    ELSE
-         IF NOT (mshop between 1 AND 2) THEN
-            RAISE EXCEPTION 'Invalid shop id' ;
-        END IF;
-    END IF;
-    SELECT * INTO tfactor FROM test_excep(0);
-    BEGIN
-        INSERT INTO employees VALUES (mid, mshop, mgender);
-    EXCEPTION
-            WHEN OTHERS THEN
-            BEGIN
-                RAISE NOTICE 'catching the exception ...3';
-            END;
-    END;
-   EXCEPTION
-       WHEN OTHERS THEN
-          RAISE NOTICE 'catching the exception ...2';
-   END;
- EXCEPTION
-     WHEN OTHERS THEN
-          RAISE NOTICE 'catching the exception ...1';
- END;
-END;
+  INSERT INTO employees VALUES (0, 1, 'm'); /* in func */
+  END; /* in func */
+ BEGIN /* in func */
+  BEGIN /* in func */
+    IF EXISTS (select 1 from employees where id = mid) THEN /* in func */
+        RAISE EXCEPTION 'Duplicate employee id'; /* in func */
+    ELSE /* in func */
+         IF NOT (mshop between 1 AND 2) THEN /* in func */
+            RAISE EXCEPTION 'Invalid shop id' ; /* in func */
+        END IF; /* in func */
+    END IF; /* in func */
+    SELECT * INTO tfactor FROM test_excep(0); /* in func */
+    BEGIN /* in func */
+        INSERT INTO employees VALUES (mid, mshop, mgender); /* in func */
+    EXCEPTION /* in func */
+            WHEN OTHERS THEN /* in func */
+            BEGIN /* in func */
+                RAISE NOTICE 'catching the exception ...3'; /* in func */
+            END; /* in func */
+    END; /* in func */
+   EXCEPTION /* in func */
+       WHEN OTHERS THEN /* in func */
+          RAISE NOTICE 'catching the exception ...2'; /* in func */
+   END; /* in func */
+ EXCEPTION /* in func */
+     WHEN OTHERS THEN /* in func */
+          RAISE NOTICE 'catching the exception ...1'; /* in func */
+ END; /* in func */
+END; /* in func */
 $$
 LANGUAGE plpgsql;
 
@@ -98,6 +98,9 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=0;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
 --
 --
@@ -108,6 +111,9 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=0;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
 --
 --
@@ -118,6 +124,9 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=4;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
 --
 --
@@ -128,6 +137,9 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=3;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
 --
 --
@@ -138,6 +150,9 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=0;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
 --
 --
@@ -148,4 +163,7 @@ SET debug_dtm_action=panic_begin_command;
 SET debug_dtm_action_nestinglevel=3;
 DROP TABLE IF EXISTS employees;
 select test_protocol_allseg(1, 2,'f');
+-- make sure segment recovery is complete after panic.
+0U: select 1;
+0Uq:
 select * from employees;
