@@ -1,4 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- already loaded in the general SPI tests
+-- CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 CREATE LANGUAGE plpythonu;
 
