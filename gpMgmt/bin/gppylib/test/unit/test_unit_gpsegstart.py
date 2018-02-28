@@ -38,6 +38,7 @@ class GpSegStart(GpTestCase):
             ])
 
         self.mock_workerpool = self.get_mock_from_apply_patch('WorkerPool')
+        self.mock_pgcontroldata_run = self.get_mock_from_apply_patch('run')
 
     def tearDown(self):
         super(GpSegStart, self).tearDown()
@@ -88,6 +89,23 @@ class GpSegStart(GpTestCase):
         self.assertEqual(exitCode, 1)
         for result in gpsegstart.overall_status.results:
             self.assertTrue(result.reasoncode == gp.SEGSTART_ERROR_CHECKSUM_MISMATCH)
+
+    @patch.object(PgControlData, "get_results", return_value=CommandResult(2, 'pg_controldata: could not open file "/path/to/global/pg_control" for reading: No such file or directory', '', True, False))
+    def test_startSegments_when_pg_control_file_missing(self, mock1):
+        #self.mock_pgcontroldata_run.side_effect = Exception("missing pg_control file")
+        self.args_list.append("--master-checksum-version")
+        self.args_list.append("1")
+        sys.argv = self.args_list
+
+        parser = self.subject.GpSegStart.createParser()
+        options, args = parser.parse_args()
+
+        gpsegstart = self.subject.GpSegStart.createProgram(options, args)
+        exitCode = gpsegstart.run()
+
+        self.assertEqual(exitCode, 1)
+        for result in gpsegstart.overall_status.results:
+            self.assertTrue(result.reasoncode == gp.SEGSTART_ERROR_PG_CONTROLDATA_FAILED)
 
     @patch.object(PgControlData, "get_results", return_value=CommandResult(1, '/tmp/f1', '', True, False))
     def test_startSegments_when_pg_controldata_failed(self, mock1):

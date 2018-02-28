@@ -12,7 +12,7 @@ Internal Use Function.
 # THIS IMPORT MUST COME FIRST
 from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions
 
-import os, pickle, base64, time
+import os, pickle, base64, re
 
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib import gparray, gplog
@@ -238,39 +238,62 @@ class GpSegStart:
                 self.overall_status.mark_failed(datadir, msg, reasoncode)
 
 
+    def __checkSegmentChecksum(self, datadir, seg):
+        cmd = PgControlData(name='run pg_controldata', datadir=datadir)
+        cmd.run()
+
+        res = cmd.get_results()
+
+        # failure in getting checksum data for the segment
+        if res.rc != 0:
+            msg = "pg_controldata failed for seg %s. rc : %d\nstdout:%s\nstderr:%s\n" % \
+                  (seg, res.rc, res.stdout, res.stderr)
+            self.logger.info(msg)
+            missing_pg_control_file_re = re.compile('pg_controldata: could not open file .*global/pg_control\" for reading: No such file or directory')
+            # If the mirror is missing the pg_control file, then the Filerep
+            # process would bring over the pg_control file from the primary.
+            # Therefore, it is OK to start the mirror.
+            # In case the primary is missing the pg_control file, then we can
+            # still attempt to start it. However, postmaster would not start it
+            # and give a more detailed error message about the missing
+            # pg_control file.
+            if missing_pg_control_file_re.match(res.stderr):
+                self.logger.info("pg_control file could not be opened, but Filerep would populate it. Continuing with startup for segment %s" % seg)
+            else:
+                msg = "pg_controldata failure. Skipping startup for seg %s" % seg
+                reasoncode = gp.SEGSTART_ERROR_PG_CONTROLDATA_FAILED
+                self.overall_status.mark_failed(datadir, msg, reasoncode)
+            return
+
+        # check the segment checksum
+        segment_heap_checksum_version = cmd.get_value('Data page checksum version')
+        if segment_heap_checksum_version != self.master_checksum_version:
+            msg = "Segment checksum %s does not match master checksum %s.\n" % (segment_heap_checksum_version,
+                                                                                self.master_checksum_version)
+            reasoncode = gp.SEGSTART_ERROR_CHECKSUM_MISMATCH
+            self.overall_status.mark_failed(datadir, msg, reasoncode)
+
+
     def __startSegments(self):
         """
         Start the segments themselves
         """
         self.logger.info("Starting segments... (mirroringMode %s)" % self.mirroringMode)
 
+        if self.master_checksum_version != None:
+            for datadir, seg in self.overall_status.dirmap.items():
+                self.__checkSegmentChecksum(datadir, seg)
+
+        # The __checkSegmentChecksum() method would mark all all failed segments
+        # and remove them from overall_status.dirmap. Hence, only eligible
+        # segments would start.
         for datadir, seg in self.overall_status.dirmap.items():
-
-            if self.master_checksum_version != None:
-                cmd = PgControlData(name='run pg_controldata', datadir=datadir)
-                cmd.run(validateAfter=True)
-                res = cmd.get_results()
-
-                if res.rc != 0:
-                    msg = "pg_controldata failed.\nstdout:%s\nstderr:%s\n" % (res.stdout, res.stderr)
-                    reasoncode = gp.SEGSTART_ERROR_PG_CONTROLDATA_FAILED
-                    self.overall_status.mark_failed(datadir, msg, reasoncode)
-                    continue
-
-                segment_heap_checksum_version = cmd.get_value('Data page checksum version')
-                if segment_heap_checksum_version != self.master_checksum_version:
-                    msg = "Segment checksum %s does not match master checksum %s.\n" % (segment_heap_checksum_version,
-                                                                                        self.master_checksum_version)
-                    reasoncode = gp.SEGSTART_ERROR_CHECKSUM_MISMATCH
-                    self.overall_status.mark_failed(datadir, msg, reasoncode)
-                    continue
 
             cmd = gp.SegmentStart("Starting seg at dir %s" % datadir, 
                                   seg,
                                   self.num_cids,
                                   self.era,
                                   self.mirroringMode,
-                                  self.master_checksum_version,
                                   timeout=self.timeout,
                                   specialMode=self.specialMode,
                                   wrapper=self.wrapper,

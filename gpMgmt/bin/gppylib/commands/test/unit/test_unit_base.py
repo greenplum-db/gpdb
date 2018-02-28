@@ -75,6 +75,8 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.assertEquals("bar=1 && foo=1 && ssh -o \'StrictHostKeyChecking no\' localhost "
                           "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)
 
-    def test_no_workders_in_WorkerPool(self):
+    def test_no_workers_in_WorkerPool(self):
         with self.assertRaises(Exception):
             WorkerPool(numWorkers=0)
+
+
