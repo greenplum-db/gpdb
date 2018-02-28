@@ -298,42 +298,32 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 {
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		save_enumerate;
+	char	   *dxl = NULL;
 
 	save_enumerate = optimizer_enumerate_plans;
 
 	/* Do the EXPLAIN. */
-	PG_TRY();
+
+	/* enable plan enumeration before calling optimizer */
+	optimizer_enumerate_plans = true;
+
+	/* optimize query using optimizer and get generated plan in DXL format */
+	dxl = SzDXLPlan(query);
+
+	/* restore old value of enumerate plans GUC */
+	optimizer_enumerate_plans = save_enumerate;
+
+	if (dxl == NULL)
+		elog(NOTICE, "Optimizer failed to produce plan");
+	else
 	{
-		// enable plan enumeration before calling optimizer
-		optimizer_enumerate_plans = true;
-
-		// optimize query using optimizer and get generated plan in DXL format
-		char *dxl = SzDXLPlan(query);
-
-		// restore old value of enumerate plans GUC
-		optimizer_enumerate_plans = save_enumerate;
-
-		if (dxl == NULL)
-			elog(NOTICE, "Optimizer failed to produce plan");
-		else
-		{
-			appendStringInfoString(es->str, dxl);
-			appendStringInfoChar(es->str, '\n'); /* separator line */
-			pfree(dxl);
-		}
-
-		/* Free the memory we used. */
-		MemoryContextSwitchTo(oldcxt);
+		appendStringInfoString(es->str, dxl);
+		appendStringInfoChar(es->str, '\n'); /* separator line */
+		pfree(dxl);
 	}
-	PG_CATCH();
-	{
-		// restore old value of enumerate plans GUC
-		optimizer_enumerate_plans = save_enumerate;
 
-		/* Exit to next error handler. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	/* Free the memory we used. */
+	MemoryContextSwitchTo(oldcxt);
 }
 #endif
 
