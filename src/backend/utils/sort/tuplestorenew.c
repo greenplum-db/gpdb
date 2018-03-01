@@ -172,10 +172,12 @@ nts_page_set_first_valid_slotn(NTupleStorePage *page, int fs)
 {
 	page->header.first_slot = fs;
 }
+#if USE_ASSERT_CHECKING
 static inline int nts_page_valid_slot_cnt(NTupleStorePage *page)
 {
 	return nts_page_slot_cnt(page) - nts_page_first_valid_slotn(page);
 }
+#endif
 static inline NTupleStorePageSlotEntry *nts_page_slot_entry(NTupleStorePage *page, int slotn)
 {
 	return &(page->slot[-slotn]);

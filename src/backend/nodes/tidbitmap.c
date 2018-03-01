@@ -735,7 +735,9 @@ tbm_generic_iterate(GenericBMIterator *iterator)
 	{
 		case T_TIDBitmap:
 			{
+#ifdef USE_ASSERT_CHECKING
 				const TIDBitmap *hashBitmap = (const TIDBitmap *) tbm;
+#endif
 				TBMIterator *hashIterator = iterator->impl.hash;
 
 				Assert(hashIterator->tbm == hashBitmap);

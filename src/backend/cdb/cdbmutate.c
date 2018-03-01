@@ -552,9 +552,11 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 	int			saveNextMotionID;
 	int			saveNumInitPlans;
 	int			saveSliceDepth;
-	PlannerInfo *root = (PlannerInfo *) context->base.node;
 
+#ifdef USE_ASSERT_CHECKING
+	PlannerInfo *root = (PlannerInfo *) context->base.node;
 	Assert(root && IsA(root, PlannerInfo));
+#endif
 
 	if (node == NULL)
 		return NULL;

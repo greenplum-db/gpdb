@@ -600,11 +600,9 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 		 * Construct the join expression involving the new pulled up subselect.
 		 */
 		Assert(list_length(root->parse->jointree->fromlist) == 1);
-		Node	   *larg = lfirst(list_head(root->parse->jointree->fromlist));	/* represents the
-																				 * top-level join tree
-																				 * entry */
 
-		Assert(larg != NULL);
+		/* represents the top-level join tree entry */
+		Assert(linitial(root->parse->jointree->fromlist) != NULL);
 
 		JoinExpr   *join_expr = make_join_expr(NULL, rteIndex, JOIN_INNER);
 
