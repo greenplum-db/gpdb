@@ -808,6 +808,7 @@ void FtsLoop()
 			if (fullscan_requested)
 			{
 				ftsProbeInfo->fts_statusVersion++;
+				fullscan_requested = false;
 				if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
 					elog(LOG, "skipping fullscan, since probe is skipped.");
 			}
@@ -837,6 +838,7 @@ void FtsLoop()
 			if (fullscan_requested)
 			{
 				ftsProbeInfo->fts_statusVersion++;
+				fullscan_requested = false;
 			}
 			goto prober_sleep;
 		}
@@ -882,11 +884,11 @@ void FtsLoop()
 		if (updated_probe_state || fullscan_requested)
 		{
 			ftsProbeInfo->fts_statusVersion++;
+			fullscan_requested = false;
 		}
 
 	prober_sleep:
 		{
-			fullscan_requested = false;
 
 			/* check if we need to sleep before starting next iteration */
 			elapsed = time(NULL) - probe_start_time;
