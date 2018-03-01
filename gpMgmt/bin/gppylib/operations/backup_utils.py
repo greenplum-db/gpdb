@@ -99,18 +99,19 @@ class Context(Values, object):
         format_str =  "%s/%sgp_%s_%s%s" % (use_dir, self.dump_prefix, "%s", timestamp, "%s")
         filename = format_str % (self.filename_dict[filetype][0], self.filename_dict[filetype][1])
         if "%(content)d_%(dbid)s" in filename:
-            content_num = -2
-            dbid_str = ""
-            if content is not None: # Doesn't use "if not content" because 0 is a valid content id
-                content_num = content
-                dbids = ["%d" % id for id in self.content_map if self.content_map[id] == content]
-                dbid_str = "(%s)" % ("|".join(dbids))
-            else:
-                content_num = self.content_map[dbid]
-                dbid_str = dbid
             if use_old_format:
-                content_num = 1 if content_num == -1 else 0
-            filename = filename % {"content": content_num, "dbid": dbid_str}
+                if content is not None: # Doesn't use "if not content" because 0 is a valid content id
+                    dbids = ["%d" % id for id in self.content_map if self.content_map[id] == content]
+                    filename = filename % {"content": 1 if content == -1 else 0, "dbid": "(%s)" % ("|".join(dbids))}
+                elif dbid == 1:
+                    filename = filename % {"content": 1, "dbid": 1}
+                else:
+                    filename = filename % {"content": 0, "dbid": dbid}
+            else:
+                if content is not None:
+                    filename = filename % {"content": content, "dbid": "\d+"}
+                else:
+                    filename = filename % {"content": self.content_map[dbid], "dbid": dbid}
         if self.compress and filetype in ["metadata", "dump", "postdata"] and use_compress:
             filename += ".gz"
         return filename
@@ -286,24 +287,26 @@ class Context(Values, object):
         return compress, target_db
 
 def get_filename_for_content(context, filetype, content, remote_directory=None, host=None):
-    filetype_glob = context.generate_filename(filetype, content=content, directory=remote_directory)
+    filetype_regex = context.generate_filename(filetype, content=content, directory=remote_directory)
     if remote_directory:
         if not host:
             raise Exception("Must supply name of remote host to check for %s file" % filetype)
         cmd = Command(name = "Find file of type %s for content %d on host %s" % (filetype, content, host),
-                cmdStr = 'echo "import glob, re\nfor f in glob.glob(\'%s/*\'):\n    if re.match(\'%s\', f):\n        print f\n        break" | python'
-                            % (remote_directory, filetype_glob), ctxt = REMOTE, remoteHost = host)
+                cmdStr = 'echo "import glob\nprint glob.glob(\'%s/*\')" | python'
+                            % (remote_directory), ctxt = REMOTE, remoteHost = host)
         cmd.run()
 
         if cmd.get_results().rc == 0 and cmd.get_results().stdout:
-            return cmd.get_results().stdout
-        return None
+            filenames = eval(cmd.get_results().stdout)
+        else:
+            return None
     else:
         filenames = glob.glob("%s/*" % context.get_backup_dir())
-        for filename in filenames:
-            if re.match(filetype_glob, filename):
-                return filename
-        return None
+
+    for filename in filenames:
+        if re.match(filetype_regex, filename):
+            return filename
+    return None
 
 def expand_partitions_and_populate_filter_file(context, partition_list, file_prefix):
     expanded_partitions = expand_partition_tables(context, partition_list)
