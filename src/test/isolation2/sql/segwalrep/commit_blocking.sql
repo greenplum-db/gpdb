@@ -21,7 +21,7 @@ returns text as $$
 $$ language plpythonu;
 
 -- make sure we are in-sync for the primary we will be testing with
-select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
+select content, role, preferred_role, mode, status from gp_segment_configuration where content=0;
 
 -- print synchronous_standby_names should be set to '*' at start of test
 0U: show synchronous_standby_names;

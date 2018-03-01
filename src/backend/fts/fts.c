@@ -35,6 +35,7 @@
 #include "postmaster/fork_process.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/fts.h"
+#include "postmaster/ftsprobe.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "storage/procsignal.h"
@@ -488,30 +489,94 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 }
 
 /*
- * Process probe resonses from primary segments:
- * (a) Update gp_segment_configuration catalog table, if needed.
- * (b) Indicate the segments that need to be messaged subsequently.
+ * Timeout is said to have occurred if greater than gp_fts_probe_timeout
+ * seconds have elapsed since connection start and a response is not received.
+ * Segments for which a response is received already or that have failed with
+ * all retries exhausted are exempted from timeout evaluation.
+ */
+static void
+ftsCheckTimeout(per_segment_info *ftsInfo, pg_time_t now)
+{
+	if (!IsFtsProbeStateSuccess(ftsInfo->state) &&
+		ftsInfo->retry_count < gp_fts_probe_retries &&
+		(int) (now - ftsInfo->startTime) > gp_fts_probe_timeout)
+	{
+		elog(LOG,
+			 "FTS timeout detected for (content=%d, dbid=%d) "
+			 "state=%d, retry_count=%d,",
+			 ftsInfo->primary_cdbinfo->segindex,
+			 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state,
+			 ftsInfo->retry_count);
+		ftsInfo->state = nextFailedState(ftsInfo->state);
+		/* For now no more retries if connection timed out. */
+
+		ftsInfo->retry_count = gp_fts_probe_retries;
+	}
+}
+
+/*
+ * Return true for segments whose response is ready to be processed.  Segments
+ * whose response is already processed should have response->conn set to NULL.
  */
 static bool
-probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
+ftsResponseReady(per_segment_info *ftsInfo)
+{
+	return ((IsFtsProbeStateSuccess(ftsInfo->state) ||
+			 IsFtsProbeStateFailed(ftsInfo->state)) && ftsInfo->conn != NULL);
+}
+
+/*
+ * Process resonses from primary segments:
+ * (a) Transition internal state so that segments can be messaged subsequently
+ * (e.g. promotion and turning off syncrep).
+ * (b) Update gp_segment_configuration catalog table, if needed.
+ */
+bool
+probeWalRepPublishUpdate(fts_context *context)
 {
 	bool is_updated = false;
 
-	for (int response_index = 0; response_index < context->num_of_requests;
+	pg_time_t now = (pg_time_t) time(NULL);
+
+	for (int response_index = 0; response_index < context->num_pairs;
 		 response_index ++)
 	{
-		probe_response_per_segment *response = &(context->responses[response_index]);
+		per_segment_info *ftsInfo = &(context->perSegInfos[response_index]);
 
-		Assert(SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
+		ftsCheckTimeout(ftsInfo, now);
+		/*
+		 * Consider segments that are in final state (success / failure) and
+		 * that are not already processed.
+		 */
+		if (!ftsResponseReady(ftsInfo))
+			continue;
+		/*
+		 * We must be in a final state, which is (1) success or (2) failure
+		 * with retries exhausted.
+		 */
+		Assert(IsFtsProbeStateSuccess(ftsInfo->state) ||
+			   IsFtsProbeStateFailed(ftsInfo->state));
+		AssertImply(IsFtsProbeStateFailed(ftsInfo->state),
+					ftsInfo->retry_count == gp_fts_probe_retries);
+
+		/*
+		 * Before sending promote message, primary_cdbinfo refence is swapped
+		 * with the mirror, leaving primary_cdbinfo->role to be 'm'.  So the
+		 * assertion applies only to non-promote cases.
+		 */
+		AssertImply(ftsInfo->state != FTS_PROMOTE_SUCCESS &&
+					ftsInfo->state != FTS_PROMOTE_FAILED,
+					SEGMENT_IS_ACTIVE_PRIMARY(ftsInfo->primary_cdbinfo));
 
 		if (!FtsIsActive())
 			return false;
 
-		CdbComponentDatabaseInfo *primary = response->segment_db_info;
+		CdbComponentDatabaseInfo *primary = ftsInfo->primary_cdbinfo;
 
-		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(cdbs,
-															 primary->segindex,
-															 primary->dbid);
+		CdbComponentDatabaseInfo *mirror = ftsInfo->mirror_cdbinfo;
+
+		bool UpdatePrimary = false;
+		bool UpdateMirror = false;
 
 		/*
 		 * Currently, mode of primary and mirror should be same, either both
@@ -519,88 +584,162 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 		 */
 		Assert(primary->mode == mirror->mode);
 
-		bool IsPrimaryAlive = response->result.isPrimaryAlive;
-		bool IsMirrorAlive = response->result.isMirrorAlive;
-		bool IsInSync = response->result.isInSync;
+		bool IsPrimaryAlive = ftsInfo->result.isPrimaryAlive;
+		/* Trust a response from primary only if it's alive. */
+		bool IsMirrorAlive =  IsPrimaryAlive ?
+			ftsInfo->result.isMirrorAlive : SEGMENT_IS_ALIVE(mirror);
+		bool IsInSync = IsPrimaryAlive ?
+			ftsInfo->result.isInSync : false;
 
-		/* If are in sync, then both have to be ALIVE */
+		/* If primary and mirror are in sync, then both have to be ALIVE. */
 		AssertImply(IsInSync, IsPrimaryAlive && IsMirrorAlive);
-
-		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
-		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
+		/* Primary must enable syncrep as long as it thinks mirror is alive. */
+		AssertImply(IsMirrorAlive && IsPrimaryAlive,
+					ftsInfo->result.isSyncRepEnabled);
 
 		/* Only swapped in promotion; by default, keep the current roles. */
 		char newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 		char newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 
 		/*
-		 * If probe response state is different from current state in
-		 * configuration, update both primary and mirror.
-		 */
-		if (IsInSync != SEGMENT_IS_IN_SYNC(primary))
-			UpdatePrimary = UpdateMirror = true;
-
-		/* Primary must block commits as long as it and its mirror are alive. */
-		AssertImply(IsMirrorAlive && IsPrimaryAlive,
-					response->result.isSyncRepEnabled);
-
-		/*
-		 * Primaries that have syncrep enabled continue to block commits.  FTS
-		 * must notify them to unblock commits by sending syncrep off message.
-		 */
-		if (!IsMirrorAlive && response->result.isSyncRepEnabled)
-		{
-			response->message = FTS_MSG_SYNCREP_OFF;
-			/*
-			 * Mirror must be marked down in FTS configuration before primary
-			 * can be notified to unblock commits.
-			 */
-			Assert(UpdateMirror || !SEGMENT_IS_ALIVE(mirror));
-		}
-		else if (!IsPrimaryAlive && SEGMENT_IS_IN_SYNC(mirror))
-		{
-			/* Primary must have been recorded as in-sync before the probe. */
-			Assert(SEGMENT_IS_IN_SYNC(primary));
-
-			/* The primary is down; promote the mirror to primary. */
-			response->message = FTS_MSG_PROMOTE;
-			response->segment_db_info = mirror;
-
-			/*
-			 * Flip the roles and mark the failed primary as down in FTS
-			 * configuration before sending promote message.  Dispatcher
-			 * should no longer consider the failed primary for gang
-			 * creation, FTS should no longer probe the failed primary.
-			 */
-			newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
-			newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
-		}
-		else if (IsPrimaryAlive && response->result.isRoleMirror)
-		{
-			/* A promote message sent previously didn't make it to the mirror. */
-			Assert(!SEGMENT_IS_ALIVE(mirror));
-			Assert(SEGMENT_IS_NOT_INSYNC(mirror));
-			Assert(SEGMENT_IS_NOT_INSYNC(primary));
-			Assert(!response->result.isSyncRepEnabled);
-			Assert(!UpdateMirror);
-			Assert(!UpdatePrimary);
-			response->message = FTS_MSG_PROMOTE;
-		}
-
-		/*
-		 * ----------------------------
-		 * In double fault situations:
-		 *     - Primary and Mirror are up but not in SYNC
-		 *     - Mirror is down and hence are not in SYNC
+		 * Allow updates to configuration upon receiving response to PROBE
+		 * message.  Any other message (SYNCREP_OFF / PROMOTE) should not
+		 * result in configuration update.
 		 *
-		 * In these situations probe fails, cannot make any change to
-		 * configuration and need to leave current primary marked as UP.
+		 * XXX For SYNCREP_OFF message, a primary may respond with mirror is
+		 * back up and syncrep is turned on.  In that case, the mirror should
+		 * be marked back up in coniguration.
 		 */
-		if (SEGMENT_IS_NOT_INSYNC(primary) && !IsPrimaryAlive)
+		if (ftsInfo->state == FTS_PROBE_SUCCESS ||
+			ftsInfo->state == FTS_PROBE_FAILED)
 		{
-			elog(WARNING, "FTS double fault detected for primary dbid %d, mirror dbid %d having contentid %d",
-				 primary->dbid, mirror->dbid, primary->segindex);
-			continue;
+			UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
+			UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
+			/*
+			 * If probe response state is different from current state in
+			 * configuration, update both primary and mirror.
+			 */
+			if (IsInSync != SEGMENT_IS_IN_SYNC(primary))
+				UpdatePrimary = UpdateMirror = true;
+		}
+
+		switch(ftsInfo->state)
+		{
+			case FTS_PROBE_SUCCESS:
+				Assert(IsPrimaryAlive);
+				if (ftsInfo->result.isSyncRepEnabled && !IsMirrorAlive)
+				{
+					/*
+					 * Primaries that have syncrep enabled continue to block
+					 * commits.  FTS must notify them to unblock commits by
+					 * sending syncrep off message.
+					 */
+					ftsInfo->state = FTS_SYNCREP_SEGMENT;
+					elog(LOG, "FTS turning syncrep off on (content=%d, dbid=%d)",
+						 primary->segindex, primary->dbid);
+					/*
+					 * Mirror must be marked down in FTS configuration before
+					 * primary can be notified to unblock commits.
+					 */
+					Assert(UpdateMirror || !SEGMENT_IS_ALIVE(mirror));
+				}
+				else if (ftsInfo->result.isRoleMirror && !IsMirrorAlive)
+				{
+					/*
+					 * A promote message sent previously didn't make it to the
+					 * mirror.  Catalog must have been updated before sending
+					 * the previous promote message.
+					 */
+					Assert(!SEGMENT_IS_ALIVE(mirror));
+					Assert(SEGMENT_IS_NOT_INSYNC(mirror));
+					Assert(SEGMENT_IS_NOT_INSYNC(primary));
+					Assert(!ftsInfo->result.isSyncRepEnabled);
+					Assert(!UpdateMirror);
+					Assert(!UpdatePrimary);
+					elog(LOG, "FTS resending promote request to (content=%d,"
+						 " dbid=%d)", primary->segindex, primary->dbid);
+					ftsInfo->state = FTS_PROMOTE_SEGMENT;
+				}
+				break;
+			case FTS_PROBE_FAILED:
+				/* Primary is down, see if mirror can be promoted. */
+				Assert(!IsPrimaryAlive);
+				if (SEGMENT_IS_IN_SYNC(mirror))
+				{
+					/*
+					 * Primary must have been recorded as in-sync before the
+					 * probe.
+					 */
+					Assert(SEGMENT_IS_IN_SYNC(primary));
+					/*
+					 * Swap the primary and mirror references so that the
+					 * mirror will be promoted in subsequent connect, poll,
+					 * send, receive steps.
+					 */
+					elog(LOG, "FTS promoting mirror (content=%d, dbid=%d) to be"
+						 " the new primary", mirror->segindex, mirror->dbid);
+					ftsInfo->state = FTS_PROMOTE_SEGMENT;
+					ftsInfo->primary_cdbinfo = mirror;
+					ftsInfo->mirror_cdbinfo = primary;
+
+					/*
+					 * Flip the roles and mark the failed primary as down in
+					 * FTS configuration before sending promote message.
+					 * Dispatcher should no longer consider the failed primary
+					 * for gang creation, FTS should no longer probe the failed
+					 * primary.
+					 */
+					newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+					newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+				}
+				else
+				{
+					elog(WARNING, "FTS double fault detected (content=%d) "
+						 "primary dbid=%d, mirror dbid=%d",
+						 primary->segindex, primary->dbid, mirror->dbid);
+					UpdatePrimary = UpdateMirror = false;
+				}
+				break;
+			case FTS_SYNCREP_FAILED:
+				/*
+				 * XXX transactions may block forever, waiting for a mirror
+				 * that doesn't exist.  Should we PANIC here?
+				 */
+				elog(WARNING, "FTS failed to turn off syncrep on (content=%d,"
+					 " dbid=%d)", primary->segindex, primary->dbid);
+				break;
+			case FTS_PROMOTE_FAILED:
+				elog(WARNING, "FTS double fault detected (content=%d) "
+					 "primary dbid=%d, mirror dbid=%d",
+					 primary->segindex, primary->dbid, mirror->dbid);
+				break;
+			case FTS_PROMOTE_SUCCESS:
+				Assert(ftsInfo->result.isRoleMirror);
+				elog(LOG, "FTS mirror (content=%d, dbid=%d) promotion "
+					 "triggerred successfully",
+					 primary->segindex, primary->dbid);
+				break;
+			case FTS_SYNCREP_SUCCESS:
+				elog(LOG, "FTS primary (content=%d, dbid=%d) notified to turn "
+					 "syncrep off", primary->segindex, primary->dbid);
+				break;
+			default:
+				elog(ERROR, "FTS invalid internal state %d for (content=%d)"
+					 "primary dbid=%d, mirror dbid=%d", ftsInfo->state,
+					 primary->segindex, primary->dbid, mirror->dbid);
+				break;
+		}
+		/* Close connection and reset result for next message, if any. */
+		memset(&ftsInfo->result, 0, sizeof(probe_result));
+		PQfinish(ftsInfo->conn);
+		ftsInfo->conn = NULL;
+		ftsInfo->poll_events = ftsInfo->poll_revents = 0;
+		ftsInfo->retry_count = 0;
+
+		if (shutdown_requested)
+		{
+			elog(LOG, "shutdown in progress, ignoring FTS prober updates");
+			return is_updated;
 		}
 
 		if (UpdatePrimary || UpdateMirror)
@@ -623,12 +762,6 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 										newMirrorRole, IsMirrorAlive,
 										IsInSync);
 
-			if (shutdown_requested)
-			{
-				elog(LOG, "Shutdown in progress, ignoring FTS prober updates.");
-				return is_updated;
-			}
-
 			is_updated = true;
 
 			CommitTransactionCommand();
@@ -639,6 +772,7 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 			 * dispatcher, now that changes has been persisted to catalog.
 			 */
 			Assert(ftsProbeInfo);
+			/* XXX why shouldn't FtsControlBlock->ControlLock be held here? */
 			if (IsPrimaryAlive)
 				FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[primary->dbid]);
 			else
@@ -657,16 +791,16 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 static void
 FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 {
-	context->num_of_requests = cdbs->total_segments;
-	context->responses = (probe_response_per_segment *) palloc(
-		context->num_of_requests * sizeof(probe_response_per_segment));
+	context->num_pairs = cdbs->total_segments;
+	context->perSegInfos = (per_segment_info *) palloc0(
+		context->num_pairs * sizeof(per_segment_info));
 
 	int response_index = 0;
 
 	for(int segment_index = 0; segment_index < cdbs->total_segment_dbs; segment_index++)
 	{
 		CdbComponentDatabaseInfo *segment = &(cdbs->segment_db_info[segment_index]);
-		probe_response_per_segment *response = &(context->responses[response_index]);
+		per_segment_info *ftsInfo = &(context->perSegInfos[response_index]);
 
 		if (!SEGMENT_IS_ACTIVE_PRIMARY(segment))
 			continue;
@@ -686,7 +820,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		 */
 		if (!mirror)
 		{
-			context->num_of_requests--;
+			context->num_pairs--;
 			continue;
 		}
 
@@ -700,60 +834,21 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		 * DEFAULT the response to not in sync. Only if primary communicates
 		 * positively, consider it in sync.
 		 */
-		response->result.isPrimaryAlive = false;
-		response->result.isMirrorAlive = SEGMENT_IS_ALIVE(mirror);
-		response->result.isInSync = false;
-		response->result.isSyncRepEnabled = false;
-		response->result.retryRequested = false;
-		response->result.isRoleMirror = false;
-		response->message = FTS_MSG_PROBE;
+		ftsInfo->result.isPrimaryAlive = false;
+		ftsInfo->result.isMirrorAlive = false;
+		ftsInfo->result.isInSync = false;
+		ftsInfo->result.isSyncRepEnabled = false;
+		ftsInfo->result.retryRequested = false;
+		ftsInfo->result.isRoleMirror = false;
+		ftsInfo->result.dbid = primary->dbid;
+		ftsInfo->state = FTS_PROBE_SEGMENT;
 
-		response->segment_db_info = primary;
-		response->isScheduled = false;
+		ftsInfo->primary_cdbinfo = primary;
+		ftsInfo->mirror_cdbinfo = mirror;
 
-		Assert(response_index < context->num_of_requests);
+		Assert(response_index < context->num_pairs);
 		response_index ++;
 	}
-}
-
-/*
- * Setup context such that FTS threads can send a message other than PROBE to
- * segments.  PROBE message must already be sent and response processed by the
- * time this funtion is called.  Returns true if one or more segments need to
- * be messaged.
- */
-static bool
-FtsWalRepSetupMessageContext(fts_context *context)
-{
-	int i;
-	bool message_segments = false;
-
-	if (!FtsIsActive())
-		return false;
-
-	for (i = 0; i < context->num_of_requests; i++)
-	{
-		probe_response_per_segment *response = &context->responses[i];
-		if (strcmp(response->message, FTS_MSG_PROBE) == 0)
-		{
-			response->message = NULL;
-			response->isScheduled = true;
-		}
-		else if ((response->message == FTS_MSG_SYNCREP_OFF)
-				 || (response->message == FTS_MSG_PROMOTE))
-		{
-			response->isScheduled = false;
-			response->result.isPrimaryAlive = false;
-			response->result.isInSync = false;
-			response->result.isSyncRepEnabled = false;
-			message_segments = true;
-		}
-		else
-		{
-			Assert(false);
-		}
-	}
-	return message_segments;
 }
 
 static
@@ -796,10 +891,9 @@ void FtsLoop()
 #endif
 
 		/* make sure the probeScanRequested is set before SIGINT sent to FTS */
-		if (fullscan_requested)
-		{
-			Assert(ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion);
-		}
+		AssertImply(fullscan_requested,
+					ftsProbeInfo->fts_probeScanRequested ==
+					ftsProbeInfo->fts_statusVersion);
 
 		if (skipFtsProbe)
 		{
@@ -853,16 +947,13 @@ void FtsLoop()
 		 * stuff palloc()s internally
 		 */
 		oldContext = MemoryContextSwitchTo(probeContext);
+		initPollFds(cdbs->total_segments);
 
 		fts_context context;
 
 		FtsWalRepInitProbeContext(cdbs, &context);
-		FtsWalRepMessageSegments(&context);
 
-		updated_probe_state = probeWalRepPublishUpdate(cdbs, &context);
-
-		if (FtsWalRepSetupMessageContext(&context))
-			FtsWalRepMessageSegments(&context);
+		updated_probe_state = FtsWalRepMessageSegments(&context);
 
 		MemoryContextSwitchTo(oldContext);
 
