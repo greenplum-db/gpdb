@@ -21,7 +21,8 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan update_gp
-test: spi_processed64bit python_processed64bit
+test: spi_processed64bit
+test: python_processed64bit
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain

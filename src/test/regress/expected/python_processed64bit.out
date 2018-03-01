@@ -17,6 +17,22 @@ res = plpy.execute("INSERT INTO public.spi64bittestpython (data) SELECT g FROM g
 return res.nrows()
 
 $$ LANGUAGE plpythonu;
+-- deactivate fault injection framework (from previous runs)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
+NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
+NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
 -- insert 30k rows without fault injection framework
 SELECT public.test_bigint_python();
  test_bigint_python 
@@ -32,29 +48,13 @@ SELECT COUNT(*) AS count
 (1 row)
 
 -- activate fault injection framework
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
-  FROM pg_catalog.gp_segment_configuration
- WHERE role = 'p';
-NOTICE:  Success:
-NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=93313)
-NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=93314)
-NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=93315)
- gp_inject_fault 
------------------
- t
- t
- t
- t
-(4 rows)
-
--- insert enough rows to trigger the fault injector
 SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=93313)
-NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=93314)
-NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=93315)
+NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
+NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
+NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
  gp_inject_fault 
 -----------------
  t
@@ -75,9 +75,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=93313)
-NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=93314)
-NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=93315)
+NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
+NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
+NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
  gp_inject_fault 
 -----------------
  t
