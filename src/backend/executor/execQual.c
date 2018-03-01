@@ -2351,7 +2351,6 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 			{
 				tuplestore_putvalues(tupstore, tupdesc, &result, &fcinfo.isnull);
 			}
-			MemoryContextSwitchTo(oldcontext);
 
 			/*
 			 * Are we done?

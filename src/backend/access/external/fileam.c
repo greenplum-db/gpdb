@@ -2437,7 +2437,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	char	   *encoded_delim;
 	int			line_delim_len;
 
-	sprintf(extvar->GP_CSVOPT,
+	snprintf(extvar->GP_CSVOPT, sizeof(extvar->GP_CSVOPT),
 			"m%dx%dq%dn%dh%d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,
