@@ -19,6 +19,12 @@ return res.nrows()
 $$ LANGUAGE plpythonu;
 
 
+-- deactivate fault injection framework (from previous runs)
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+
+
 -- insert 30k rows without fault injection framework
 SELECT public.test_bigint_python();
 SELECT COUNT(*) AS count
@@ -26,12 +32,6 @@ SELECT COUNT(*) AS count
 
 
 -- activate fault injection framework
-SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
-  FROM pg_catalog.gp_segment_configuration
- WHERE role = 'p';
-
-
--- insert enough rows to trigger the fault injector
 SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
