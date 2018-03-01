@@ -4987,7 +4987,26 @@ OptSingleRowErrorHandling:
 		;
 	
 OptLogErrorTable:
-		LOG_P ERRORS                        { $$ = TRUE; }
+		LOG_P ERRORS INTO qualified_name
+		{
+			if (gp_ignore_error_table) /* ignore the [INTO error-table] clause for backward compatibility */
+			{
+			ereport(WARNING,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("Error table is not supported, use gp_read_error_log() and gp_truncate_error_log()"
+					 " to view and manage the internal error log associated with your table.")));
+			}
+			else
+			{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("Error table is not supported."),
+					 errhint("Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility."),
+					 parser_errposition(@3)));
+			}
+			$$ = TRUE;
+		}
+		| LOG_P ERRORS                        { $$ = TRUE; }
 		| /*EMPTY*/							{ $$ = FALSE; }
 		;
 	

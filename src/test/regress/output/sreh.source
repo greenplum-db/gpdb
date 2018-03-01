@@ -53,7 +53,14 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 -- error logs
 --
 DROP TABLE IF EXISTS sreh_copy; CREATE TABLE sreh_copy(a int, b int, c int) distributed by(a);
-COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS SEGMENT REJECT LIMIT 1000;
+COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;
+ERROR:  Error table is not supported.
+LINE 1: ...ess/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATE...
+                                                             ^
+HINT:  Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility.
+SET gp_ignore_error_table=true;
+COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;
+WARNING:  Error table is not supported, use gp_read_error_log() and gp_truncate_error_log() to view and manage the internal error log associated with your table.
 NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
 SELECT * FROM sreh_copy ORDER BY a,b,c;
  a  | b  | c  
@@ -308,6 +315,30 @@ DROP EXTERNAL TABLE sreh_ext;
 -- 
 -- error logs
 --
+CREATE EXTERNAL TABLE sreh_ext_err_tbl(a int, b int, c int)
+LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )
+FORMAT 'text' (delimiter '|')
+LOG ERRORS INTO WHATEVER
+SEGMENT REJECT LIMIT 1000;
+WARNING:  Error table is not supported, use gp_read_error_log() and gp_truncate_error_log() to view and manage the internal error log associated with your table.
+SELECT * FROM sreh_ext_err_tbl ORDER BY a;
+NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+ a  | b  | c  
+----+----+----
+  1 |  1 |  1
+  5 |  5 |  5
+  6 |  6 |  6
+  9 |  9 |  9
+ 10 | 10 | 10
+ 14 | 14 | 14
+(6 rows)
+
+WITH error_log AS (SELECT gp_read_error_log('sreh_ext_err_tbl')) select count(*) from error_log;
+ count 
+-------
+    10
+(1 row)
+
 CREATE EXTERNAL TABLE sreh_ext(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )
 FORMAT 'text' (delimiter '|')
@@ -400,6 +431,7 @@ SELECT count(*) FROM sreh_target;
 
 TRUNCATE sreh_target;
 DROP EXTERNAL TABLE sreh_ext;
+DROP EXTERNAL TABLE sreh_ext_err_tbl;
 --
 -- constraint errors - data is rolled back from both target and error tables (CHECK)
 --
