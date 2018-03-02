@@ -4,7 +4,7 @@
 <topic id="topic1" xml:lang="en">
   <title id="pz212122">Greenplum PL/Container Language Extension</title>
   <body>
-    <p>This section includes the following information:</p>
+    <p>This section includes the following information about PL/Container 1.1 and later:</p>
     <ul>
       <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
       <li>
@@ -19,6 +19,11 @@
       <li><xref href="#topic_ydt_rtc_rbb" format="dita"/></li>
       <li><xref href="#topic_kds_plk_rbb" format="dita"/></li>
     </ul>
+    <note otherprops="pivotal">The extension PL/Container 1.1 and later is installed by
+        <codeph>gppkg</codeph> as a Greenplum Database extension, while the extension PL/Container
+      1.0 is installed as a Greenplum Database language. To upgrade to PL/Container 1.1 or later
+      from PL/Container 1.0, you uninstall the old version and install the new version. See <xref
+        href="#topic_qbl_dkq_vcb" format="dita"/>.</note>
     <note type="warning">PL/Container is compatible with Greenplum Database 5.2.0 and later.
       PL/Container has not been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0.
     </note>
@@ -127,7 +132,8 @@
           <li>Ensure the Greenplum Database hosts meet the prerequisites, see <xref
               href="#topic_i31_3tr_dw" format="dita"/>.</li>
           <li otherprops="pivotal">Install the PL/Container extension, see <xref
-              href="#topic_ifk_2tr_dw" format="dita"/>.</li>
+              href="#topic_ifk_2tr_dw" format="dita"/>.<p>If you are upgrading from PL/Container
+              1.0, see <xref href="#topic_qbl_dkq_vcb" format="dita"/>.</p></li>
           <li otherprops="oss-only">Build and Install the PL/Container extension from source, see
               <xref href="#topic_i2t_v2n_sbb" format="dita"/>.</li>
           <li>Install Docker images and configure PL/Container, see <xref href="#topic_qcr_bfk_rbb"
@@ -146,17 +152,80 @@
           <li>Make sure Greenplum Database is up and running. If not, bring it up with this
             command.<codeblock>gpstart -a</codeblock></li>
           <li>Run the package installation
-            command.<codeblock>gppkg -i plcontainer-1.0.0-rhel7-x86_64.gppkg</codeblock></li>
+            command.<codeblock>gppkg -i plcontainer-1.1.0-rhel7-x86_64.gppkg</codeblock></li>
           <li>Source the file
             <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
-          <li>Enable PL/Container for specific databases by
-              running<codeblock>psql -d <varname>your_database</varname> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
-              SQL script registers the language <codeph>plcontainer</codeph> in the database and
-              creates PL/Container specific UDFs.</p></li>
+          <li>Enable PL/Container for specific databases by running this command.<ol
+              id="ol_ydy_bjq_vcb">
+              <li>For PL/Container 1.1 and later, log into the database log into the database as a
+                Greenplum Database superuser (<codeph>gpadmin</codeph>) and run this
+                  command.<codeblock>CREATE EXTENSION plcontainer; </codeblock><p>The command
+                  registers PL/Container and creates PL/Container-specific functions and
+                views.</p></li>
+              <li>For PL/Container 1.0, run this
+                  command.<codeblock>psql -d <varname>your_database</varname> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
+                  SQL script registers the language <codeph>plcontainer</codeph> in the database and
+                  creates PL/Container-specific functions and views.</p></li>
+            </ol></li>
         </ol>
         <p>After installing PL/Container, you can manage Docker images and manage the PL/Container
           configuration with the Greenplum Database <codeph>plcontainer</codeph> utility.</p>
+      </body>
+    </topic>
+    <topic id="topic_qbl_dkq_vcb" otherprops="pivotal">
+      <title>Upgrading from PL/Container 1.0</title>
+      <body>
+        <p>To upgrade to version 1.1 or higher, uninstall version 1.0 and install the new version.
+          The <codeph>gppkg</codeph> utility installs PL/Container version 1.1 and later as a
+          Greenplum Database extension, while PL/Container 1.0 is installed as a Greenplum Database
+          language. The Docker images and the PL/Container configuration do not change when
+          upgrading PL/Container, only the PL/Container extension installation changes.</p>
+        <p>As part of the upgrade process, you must drop PL/Container from all databases that are
+          configured with PL/Container.</p>
+        <note type="important">Dropping PL/Container from a database drops all PL/Container UDFs
+          from the database, including user-created PL/Container UDFs. If the UDFs are required,
+          ensure you can re-create the UDFs before dropping PL/Container. This
+            <codeph>SELECT</codeph> command lists the names of and body of PL/Container UDFs in a
+            database.<codeblock>SELECT proname, prosrc FROM pg_proc WHERE prolang = (SELECT oid FROM pg_language WHERE lanname = 'plcontainer');</codeblock><p>For
+            information about the catalog tables, <codeph>pg_proc</codeph> and
+              <codeph>pg_language</codeph>, see <xref
+              href="../system_catalogs/catalog_ref-tables.xml" format="dita"/>. </p></note>
+        <p>These steps upgrade from PL/Container 1.0 to PL/Container 1.1 or later in a database. The
+          steps save the PL/Container 1.0 configuration and restore the configuration for use with
+          PL/Container 1.1 or later.<ol id="ol_axf_mmq_vcb">
+            <li>Save the PL/Container configuration. This example saves the configuration to
+                <codeph>plcontainer10-backup.xml</codeph> in the local
+              directory.<codeblock>plcontainer runtime-backup -f plcontainer10-backup.xml</codeblock></li>
+            <li>Run the <codeph>plcontainer_uninstall.sql</codeph> script as the
+                <codeph>gpadmin</codeph> user for each database that is configured with
+              PL/Container. For example, this command drops the <codeph>plcontainer</codeph>
+              language in the <codeph>mytest</codeph> database.
+                <codeblock>psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock><p>The
+                script drops the <codeph>plcontainer</codeph> language with the
+                  <codeph>CASCADE</codeph> clause that drops PL/Container-specific functions and
+                views in the database. </p></li>
+            <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the
+                <codeph>-r</codeph> option to uninstall the PL/Container language extension. This
+              example uninstalls the PL/Container language extension on a Linux
+              system.<codeblock>$ gppkg -r plcontainer-1.0.0</codeblock></li>
+            <li>Run the package installation command. This example installs the PL/Container 1.1
+              language extension on a Linux
+              system.<codeblock>gppkg -i plcontainer-1.1.0-rhel7-x86_64.gppkg</codeblock></li>
+            <li>Source the file
+              <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
+            <li>Update the PL/Container configuration file. This command restores the saved
+              configuration.<codeblock>plcontainer runtime-restore -f plcontainer10-backup.xml</codeblock></li>
+            <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
+            <li>Register PL/Container as an extension for each database that uses PL/Container UDFs.
+              This <codeph>psql</codeph> command runs a <codeph>CREATE EXTENSION</codeph> command to
+              register PL/Container in the database <codeph>mytest</codeph>.
+                <codeblock>psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
+                command registers PL/Container as an extension and creates PL/Container-specific
+                functions and views.</p></li>
+          </ol></p>
+        <p>After upgrading PL/Container for a database, re-install any user-created PL/Container
+          UDFs that are required.</p>
       </body>
     </topic>
     <topic id="topic_i2t_v2n_sbb" otherprops="oss-only">
@@ -198,7 +267,7 @@
         file in <codeph>/home/gpadmin</codeph>.</p>
       <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python from a
         Docker image file.
-        <codeblock>plcontainer image-add -i /home/gpadmin/plcontainer-python-images-1.0.0.tar.gz</codeblock></p>
+        <codeblock>plcontainer image-add -f /home/gpadmin/plcontainer-python-images-1.0.0.tar.gz</codeblock></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
       <p>Use the <codeph>plcontainer image-show</codeph> command to display the installed Docker
@@ -245,13 +314,26 @@
     <topic xml:lang="en" id="topic_qnb_3cj_kw">
       <title>Remove PL/Container Support for a Database</title>
       <body>
-        <p>For a database that no long requires PL/Container, remove support for PL/Container. Run
-          the <codeph>plcontainer_uninstall.sql</codeph> script as the <codeph>gpadmin</codeph>
-          user. For example, this command removes the <codeph>plcontainer</codeph> language in the
-            <codeph>mytest</codeph> database. </p>
-        <codeblock>psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock>
-        <p>The script drops the <codeph>plcontainer</codeph> language with <codeph>CASCADE</codeph>
-          to drop functions that depend on the language.</p>
+        <p>For a database that no long requires PL/Container, remove support for PL/Container.</p>
+        <section>
+          <title>PL/Container 1.1 and Later</title>
+          <p>For PL/Container 1.1 and later, drop the extension from the database. This
+              <codeph>psql</codeph> command runs a <codeph>DROP EXTENION</codeph> command to remove
+            PL/Container in the database <codeph>mytest</codeph>.
+            <codeblock>psql -d mytest -c 'DROP EXTENSION plcontainer cascade;'</codeblock></p>
+          <p>The command drops the <codeph>plcontainer</codeph> extension and drops
+            PL/Container-specific functions and views from the database.</p>
+        </section>
+        <section>
+          <title>PL/Container 1.0</title>
+          <p>Run the <codeph>plcontainer_uninstall.sql</codeph> script as the
+              <codeph>gpadmin</codeph> user. For example, this command removes the
+              <codeph>plcontainer</codeph> language in the <codeph>mytest</codeph> database. </p>
+          <codeblock>psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock>
+          <p>The script drops the <codeph>plcontainer</codeph> language with
+              <codeph>CASCADE</codeph> to drop PL/Container-specific functions and views from the
+            database.</p>
+        </section>
       </body>
     </topic>
     <topic xml:lang="en" id="topic_dty_fcj_kw" otherprops="pivotal">
@@ -264,7 +346,7 @@
           <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the <codeph>-r</codeph>
             option to uninstall the PL/Container language extension. This example uninstalls the
             PL/Container language extension on a Linux
-              system:<codeblock>$ gppkg -r plcontainer-1.0.0-rhel7</codeblock><p>You can run the
+              system:<codeblock>$ gppkg -r plcontainer-1.1.0-rhel7</codeblock><p>You can run the
                 <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
               the installed extensions and their versions.</p></li>
           <li>Reload
@@ -829,6 +911,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         &lt;command>/clientdir/rclient.sh&lt;/command>
         &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
         &lt;setting use_container_logging="yes"/>
+        &lt;cpu_share>2056&lt;/cpu_share>
     &lt;/runtime>
     &lt;runtime>
 &lt;/configuration></codeblock></p>
@@ -889,9 +972,23 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         <codeph>plcontainer runtime-edit</codeph> command.</note></pd>
                 </plentry>
                 <plentry>
+                  <pt>cpu_share</pt>
+                  <pd>
+                    <p>Optional. Specify the CPU usage for a PL/Container container. The value of
+                      the element is a positive integer. The default value is 1024. The value is a
+                      relative weighting of CPU usage compared to other containers. </p>
+                    <p>For example, a container with a <codeph>cpu_share</codeph> of 2048 is
+                      allocated double the CPU slice time compared with container with the default
+                      value of 1024.</p>
+                    <note>This element cannot be set with the <codeph>plcontainer</codeph> utility.
+                      You can update the configuration file with the with the <codeph>plcontainer
+                        runtime-edit</codeph> command.</note>
+                  </pd>
+                </plentry>
+                <plentry>
                   <pt>shared_directory</pt>
                   <pd>Optional. This element specifies a shared Docker shared volume for a container
-                    with access information. Mutliple <codeph>shared_directory</codeph> elements are
+                    with access information. Multiple <codeph>shared_directory</codeph> elements are
                     allowed. Each <codeph>shared_directory</codeph> element specifies a single
                     shared volume. XML attributes for the <codeph>shared_directory</codeph>
                       element:<ul id="ul_x4d_lcs_dw">
