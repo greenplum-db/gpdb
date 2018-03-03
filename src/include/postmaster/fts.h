@@ -34,64 +34,6 @@
 
 #define FTS_MESSAGE_RESPONSE_NTUPLES 1
 
-typedef struct
-{
-	int16 dbid;
-	bool isPrimaryAlive;
-	bool isMirrorAlive;
-	bool isInSync;
-	bool isSyncRepEnabled;
-	bool isRoleMirror;
-	bool retryRequested;
-} probe_result;
-
-/* States used by FTS main loop for probing segments. */
-typedef enum
-{
-	FTS_PROBE_SEGMENT,     /* send probe message */
-	FTS_SYNCREP_SEGMENT,   /* turn off syncrep due to mirror down */
-	FTS_PROMOTE_SEGMENT,   /* promote a mirror due to primary down */
-
-	/* wait before making another retry attempt */
-	FTS_PROBE_RETRY_WAIT,
-	FTS_SYNCREP_RETRY_WAIT,
-	FTS_PROMOTE_RETRY_WAIT,
-
-	FTS_PROBE_SUCCESS,     /* response to probe is ready for processing */
-	FTS_SYNCREP_SUCCESS,   /* syncrep was turned off by the primary */
-	FTS_PROMOTE_SUCCESS,   /* promotion was triggered on the mirror */
-
-	FTS_PROBE_FAILED,      /* the segment should be considered down */
-	FTS_SYNCREP_FAILED,    /* XXX how to handle this? */
-	FTS_PROMOTE_FAILED     /* double fault */
-} FtsProbeState;
-
-#define IsFtsProbeStateSuccess(state) (state == FTS_PROBE_SUCCESS || \
-		state == FTS_SYNCREP_SUCCESS || state == FTS_PROMOTE_SUCCESS)
-#define IsFtsProbeStateFailed(state) (state == FTS_PROBE_FAILED || \
-		state == FTS_SYNCREP_FAILED || state == FTS_PROMOTE_FAILED)
-typedef struct
-{
-	CdbComponentDatabaseInfo *primary_cdbinfo;
-	CdbComponentDatabaseInfo *mirror_cdbinfo;
-	probe_result result;
-	FtsProbeState state;
-	short poll_events;
-	short poll_revents;
-	int16 fd_index;               /* index into PollFds array */
-	pg_time_t startTime;          /* probe start timestamp */
-	pg_time_t retryStartTime;     /* time at which next retry attempt can start */
-	int16 probe_errno;            /* saved errno from the latest system call */
-	struct pg_conn *conn;         /* libpq connection object */
-	int retry_count;
-} per_segment_info;
-
-typedef struct
-{
-	int num_pairs; /* number of primary-mirror pairs FTS wants to probe */
-	per_segment_info *perSegInfos;
-} fts_context;
-
 typedef struct FtsResponse
 {
 	bool IsMirrorUp;
@@ -182,17 +124,6 @@ typedef struct
 extern int ftsprobe_start(void);
 
 /*
- * Interface for probing segments
- */
-extern void FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *scan_status);
-
-/*
- * Interface for segment state checking
- */
-extern bool FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo);
-extern CdbComponentDatabaseInfo *FtsGetPeerSegment(CdbComponentDatabases *cdbs,
-												   int content, int dbid);
-/*
  * Interface for checking if FTS is active
  */
 extern bool FtsIsActive(void);
@@ -201,13 +132,6 @@ extern bool FtsIsActive(void);
  * Interface for WALREP specific checking
  */
 extern void HandleFtsMessage(const char* query_string);
-extern bool FtsWalRepMessageSegments(fts_context *context);
-extern bool probeWalRepPublishUpdate(fts_context *context);
-
-/*
- * If master has requested FTS to shutdown.
- */
-#ifdef FAULT_INJECTOR
-extern bool IsFtsShudownRequested(void);
-#endif
+extern void probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
+									bool IsSegmentAlive, bool IsInSync);
 #endif   /* FTS_H */
