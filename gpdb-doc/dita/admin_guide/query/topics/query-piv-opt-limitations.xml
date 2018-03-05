@@ -38,7 +38,6 @@
               <li><cmdname>ROWCOMPARE</cmdname></li>
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
-          <li>Multiple <cmdname>DISTINCT</cmdname> qualified aggregate functions </li>
           <li>Aggregate functions that take set operators as input arguments</li>
           <li>Inverse distribution functions</li>
         </ul></p>
