@@ -4246,7 +4246,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
 											DDLNotSpecified,
 											"" /* databaseName */,
-											"" /* tableName */))
+											"" /* tableName */) == FaultInjectorTypeSkip)
 		{
 			/*
 			 * For testing purposes, pretend that we have already processed
