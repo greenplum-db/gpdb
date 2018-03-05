@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 DROP TABLE IF EXISTS public.spi64bittest;
 NOTICE:  table "spi64bittest" does not exist, skipping
 -- use a sequence as primary key, so we can update the data later on
