@@ -88,6 +88,7 @@
             <topicref href="guc-list.xml#gp_enable_multiphase_agg"/>
             <topicref href="guc-list.xml#gp_enable_predicate_propagation"/>
             <topicref href="guc-list.xml#gp_enable_preunique"/>
+            <topicref href="guc-list.xml#gp_enable_query_metrics"/>
             <topicref href="guc-list.xml#gp_enable_relsize_collection"/>
             <topicref href="guc-list.xml#gp_enable_segment_copy_checking"/>
             <topicref href="guc-list.xml#gp_enable_sort_distinct"/>
@@ -107,6 +108,7 @@
             <topicref href="guc-list.xml#gp_hadoop_target_version"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#topic_lvm_ttc_3p"/>
+            <topicref href="guc-list.xml#gp_instrument_shmem_size"/>
             <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
             <topicref href="guc-list.xml#gp_interconnect_hash_multiplier"/>

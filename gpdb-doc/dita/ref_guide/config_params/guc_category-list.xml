@@ -896,10 +896,10 @@
       </body>
     </topic>
     <topic id="topic36" xml:lang="en">
-      <title>Greenplum Command Center Agent</title>
+      <title>Greenplum Performance Database</title>
       <body>
         <p>The following parameters configure the data collection agents that populate the
-            <codeph>gpperfmon</codeph> database for Greenplum Command Center.</p>
+            <codeph>gpperfmon</codeph> database.</p>
         <simpletable id="kh171891" frame="none">
           <strow>
             <stentry>
@@ -919,6 +919,31 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gpperfmon_port" type="section">gpperfmon_port</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
+    <topic id="query-metrics">
+      <title>Query Metrics Collection Parameters</title>
+      <body>
+        <p>These parameters enable and configure query metrics collection. When enabled, 
+          Greenplum Database saves metrics to shared memory during query execution. These
+          metrics are used by Greenplum Command Center, which is included with the 
+          commercial version of Pivotal Greenplum Database.</p>
+        <simpletable id="query-metrics" frame="none">
+          <strow>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#gp_enable_query_metrics" type="section"
+                  >gp_enable_query_metrics</xref>
+              </p>
+            </stentry>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#gp_instrument_shmem_size" type="section"
+                  >gp_instrument_shmem_size</xref>
               </p>
             </stentry>
           </strow>
