@@ -11838,14 +11838,19 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			int i_parname = 0;
 			int i_partitionrank = 0;
 			resetPQExpBuffer(query);
-
-			appendPQExpBuffer(query, "SELECT DISTINCT cc.relname, ps.partitionrank, pp.parname "
+			appendPQExpBuffer(query, "SELECT c.relname, pr.parname,"
+					"CASE WHEN p.parkind <> 'r'::\"char\" OR pr.parisdefault THEN NULL::bigint "
+					"ELSE pg_catalog.rank() OVER ( "
+					"PARTITION BY p.oid, cc.relname, p.parlevel, cl3.relname "
+					"ORDER BY pr.parisdefault, pr.parruleord) "
+					"END AS partitionrank "
 					"FROM pg_partition p "
-					"JOIN pg_class c on (p.parrelid = c.oid) "
-					"JOIN pg_partitions ps on (c.relname = ps.tablename) "
-					"JOIN pg_class cc on (ps.partitiontablename = cc.relname) "
-					"JOIN pg_partition_rule pp on (cc.oid = pp.parchildrelid) "
-					"WHERE p.parrelid = %u AND cc.relstorage = '%c';", tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
+					"JOIN pg_class cc ON (p.parrelid = cc.oid), pg_class c "
+					"JOIN pg_partition_rule pr ON (c.oid = pr.parchildrelid) "
+					"LEFT JOIN pg_partition_rule pr2 ON pr.parparentrule = pr2.oid "
+					"LEFT JOIN pg_class cl3 ON pr2.parchildrelid = cl3.oid "
+					"WHERE pr.paroid = p.oid "
+					"AND p.parrelid = %u AND c.relstorage = '%c';", tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
 
 			res = PQexec(g_conn, query->data);
 			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
