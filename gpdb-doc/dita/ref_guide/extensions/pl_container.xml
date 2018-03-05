@@ -10,6 +10,7 @@
       <li>
         <xref href="#topic_tcm_htd_gw" format="dita"/></li>
       <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
+      <li otherprops="op-pivotal"><xref href="#topic_qbl_dkq_vcb" format="dita"/></li>
       <li id="pz213668"><xref href="#topic6" type="topic" format="dita"/>
       </li>
       <li id="pz215253"><xref href="#topic_rh3_p3q_dw" format="dita"/></li>
@@ -197,6 +198,10 @@
             <li>Save the PL/Container configuration. This example saves the configuration to
                 <codeph>plcontainer10-backup.xml</codeph> in the local
               directory.<codeblock>plcontainer runtime-backup -f plcontainer10-backup.xml</codeblock></li>
+            <li>Remove any <codeph>setting</codeph> elements that contain the
+                <codeph>use_container_network</codeph> attribute from the configuration file. For
+              example, this <codeph>setting</codeph> element must be removed from the configuration
+              file.<codeblock>&lt;setting use_container_network="yes"/></codeblock></li>
             <li>Run the <codeph>plcontainer_uninstall.sql</codeph> script as the
                 <codeph>gpadmin</codeph> user for each database that is configured with
               PL/Container. For example, this command drops the <codeph>plcontainer</codeph>
@@ -703,12 +708,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         relative weighting of CPU usage compared to other containers.</li>
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
                         The value is an integer that specifies the amount of memory in MB. </li>
-                      <li><codeph>use_container_network</codeph> - Set the type of networking for
-                        communication between the container and Greenplum Database. The value is
-                        either <codeph>yes</codeph>, use TCP, or <codeph>no</codeph> use IPC. The
-                        default is <codeph>no</codeph>, use IPC. <p>We recommend not changing the
-                          value. The default value (IPC) performs better than TCP in most
-                          environments.</p></li>
                       <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging
                         for the container. The value is either <codeph>yes</codeph> (enable logging)
                         or <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
@@ -907,7 +906,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         &lt;command>/clientdir/pyclient.sh&lt;/command>
         &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
         &lt;setting memory_mb="512"/>
-        &lt;setting use_container_network="yes"/>
         &lt;setting use_container_logging="yes"/>
         &lt;setting cpu_share="1024"/>
     &lt;/runtime>
@@ -1018,14 +1016,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>These are the valid attributes.<parml>
                       <plentry>
                         <pt>cpu_share</pt>
-                        <pd>
-                          <p>Optional. Specify the CPU usage for a PL/Container container. The value
-                            of the element is a positive integer. The default value is 1024. The
-                            value is a relative weighting of CPU usage compared to other containers. </p>
-                          <p>For example, a container with a <codeph>cpu_share</codeph> of 2048 is
-                            allocated double the CPU slice time compared with container with the
-                            default value of 1024.</p>
-                        </pd>
+                        <pd>Optional. Specify the CPU usage for a PL/Container container. The value
+                          of the element is a positive integer. The default value is 1024. The value
+                          is a relative weighting of CPU usage compared to other containers. </pd>
+                        <pd>For example, a container with a <codeph>cpu_share</codeph> of 2048 is
+                          allocated double the CPU slice time compared with container with the
+                          default value of 1024.</pd>
                       </plentry>
                       <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
@@ -1053,16 +1049,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                             to the <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6
                             systems, the log is sent to the <codeph>syslogd</codeph> service. </p>
                         </pd>
-                      </plentry>
-                      <plentry>
-                        <pt>use_container_network="{yes | no}"</pt>
-                        <pd>Optional. The value can be either <codeph>yes</codeph> or
-                            <codeph>no</codeph> to specify whether to use TCP (the value
-                            <codeph>yes</codeph>) or IPC (the value <codeph>no</codeph>) for
-                          communication between the Greenplum Database process and the Docker
-                          container process. The default is <codeph>no</codeph> use IPC.<p>We
-                            recommend not changing the value. The default value (IPC) performs
-                            better than TCP in most environments.</p></pd>
                       </plentry>
                     </parml></pd>
                 </plentry>
