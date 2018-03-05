@@ -2319,6 +2319,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		_SPI_current->lastoid = queryDesc->es_lastoid;
 		if (checkTuples)
 		{
+#ifdef FAULT_INJECTOR
 			/*
 			 * only check number tuples if the SPI 64 bit test is NOT running
 			 */
@@ -2327,9 +2328,12 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 										   "" /* databaseName */,
 										   "" /* tableName */))
 			{
+#endif /* FAULT_INJECTOR */
 				if (_SPI_checktuples())
 					elog(ERROR, "consistency check on SPI tuple count failed");
+#ifdef FAULT_INJECTOR
 			}
+#endif /* FAULT_INJECTOR */
 		}
 
 		gp_enable_gpperfmon = orig_gp_enable_gpperfmon;

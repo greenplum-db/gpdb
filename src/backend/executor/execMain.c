@@ -993,6 +993,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	PG_END_TRY();
 
 
+#ifdef FAULT_INJECTOR
 	/*
 	 * Allow testing of very high number of processed rows, without spending
 	 * hours actually processing that many rows.
@@ -1016,6 +1017,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 			estate->es_processed = UINT_MAX - 10;
 		}
 	}
+#endif /* FAULT_INJECTOR */
 
 	/*
 	 * shutdown tuple receiver, if we started it
@@ -2614,6 +2616,7 @@ ExecutePlan(EState *estate,
 		{
 			(estate->es_processed)++;
 
+#ifdef FAULT_INJECTOR
 			/*
 			 * bump es_processed using the fault injector, but only if the number rows is in a certain range
 			 * this avoids bumping the counter every time after we bumped it once
@@ -2632,6 +2635,7 @@ ExecutePlan(EState *estate,
 					estate->es_processed = UINT_MAX - 10;
 				}
 			}
+#endif /* FAULT_INJECTOR */
 		}
 
 		/*
