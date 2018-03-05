@@ -35,9 +35,8 @@
   <topic id="topic_vh5_1hd_tbb">
     <title>Requirements and Limitations</title>
     <body>
-      <p>You can use <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> on Greenplum Database
-        systems that support the <codeph>COPY ... ON SEGMENT</codeph> command (Greenplum Database
-        5.1.0 and later<ph otherprops="pivotal">, or 4.3.17.0 and later</ph>).</p>
+      <p>The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities are supported on
+        Pivotal Greenplum Database 4.3.22.0 and later, Pivotal Greenplum Database 5.5.0 and later. </p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> have the following limitations:<ul
           id="ul_uqh_hhd_tbb">
           <li>If you create an index on a parent partitioned table, <codeph>gpbackup</codeph> does
@@ -395,13 +394,14 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
               supported in Greenplum Database.</li>
             <li>The file that you specify with <codeph>-include-table-file</codeph> cannot include a
               leaf partition name, as it can when you specify this option with
-                <codeph>gpbackup</codeph>.<p>When restoring a backup set that contains data from
-                some leaf partitions of a partitioned tables, the partitioned table is restored
-                along with the data for the leaf partitions. For example, you create a backup with
-                the <codeph>gpbackup</codeph> option <codeph>-include-table-file</codeph> and the
-                text file lists some leaf partitions of a partitioned table. Restoring the backup
-                creates the partitioned table and restores the data only for the leaf partitions
-                listed in the file. </p></li>
+                <codeph>gpbackup</codeph>. If you specified leaf partitions in the backup set,
+              specify the partitioned table to restore the leaf partition data. <p>When restoring a
+                backup set that contains data from some leaf partitions of a partitioned tables, the
+                partitioned table is restored along with the data for the leaf partitions. For
+                example, you create a backup with the <codeph>gpbackup</codeph> option
+                  <codeph>-include-table-file</codeph> and the text file lists some leaf partitions
+                of a partitioned table. Restoring the backup creates the partitioned table and
+                restores the data only for the leaf partitions listed in the file. </p></li>
           </ul></p>
       </section>
     </body>
