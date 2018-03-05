@@ -158,8 +158,8 @@
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
           <li>Enable PL/Container for specific databases by running this command.<ol
               id="ol_ydy_bjq_vcb">
-              <li>For PL/Container 1.1 and later, log into the database log into the database as a
-                Greenplum Database superuser (<codeph>gpadmin</codeph>) and run this
+              <li>For PL/Container 1.1 and later, log into the database as a Greenplum Database
+                superuser (<codeph>gpadmin</codeph>) and run this
                   command.<codeblock>CREATE EXTENSION plcontainer; </codeblock><p>The command
                   registers PL/Container and creates PL/Container-specific functions and
                 views.</p></li>
@@ -214,12 +214,13 @@
               system.<codeblock>gppkg -i plcontainer-1.1.0-rhel7-x86_64.gppkg</codeblock></li>
             <li>Source the file
               <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
-            <li>Update the PL/Container configuration file. This command restores the saved
+            <li>Update the PL/Container configuration. This command restores the saved
               configuration.<codeblock>plcontainer runtime-restore -f plcontainer10-backup.xml</codeblock></li>
             <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
-            <li>Register PL/Container as an extension for each database that uses PL/Container UDFs.
-              This <codeph>psql</codeph> command runs a <codeph>CREATE EXTENSION</codeph> command to
-              register PL/Container in the database <codeph>mytest</codeph>.
+            <li>Register the new PL/Container extension as an extension for each database that uses
+              PL/Container UDFs. This <codeph>psql</codeph> command runs a <codeph>CREATE
+                EXTENSION</codeph> command to register PL/Container in the database
+                <codeph>mytest</codeph>.
                 <codeblock>psql -d mytest -c 'CREATE EXTENSION plcontainer;'</codeblock><p>The
                 command registers PL/Container as an extension and creates PL/Container-specific
                 functions and views.</p></li>
@@ -346,7 +347,7 @@
           <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the <codeph>-r</codeph>
             option to uninstall the PL/Container language extension. This example uninstalls the
             PL/Container language extension on a Linux
-              system:<codeblock>$ gppkg -r plcontainer-1.1.0-rhel7</codeblock><p>You can run the
+              system:<codeblock>$ gppkg -r plcontainer-1.1.0</codeblock><p>You can run the
                 <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
               the installed extensions and their versions.</p></li>
           <li>Reload
@@ -694,8 +695,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>Optional. Specify a setting to add to the runtime configuration information.
                     You can specify this option multiple times. The setting applies to the runtime
                     configuration specified by the <varname>runtime_id</varname>. The parameter is
-                    the XML attribute of the <codeph>setting</codeph> element in the PL/Container
+                    the XML attribute of the <codeph><xref href="#topic_ojn_r2s_dw/plc_settings"
+                        format="dita">settings</xref></codeph> element in the PL/Container
                     configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
+                      <li><codeph>cpu_chare</codeph> - Set relative waiting of CPU usage CPU usage
+                        compared to other containers. The default value is 1024. The value is a
+                        relative weighting of CPU usage compared to other containers.</li>
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
                         The value is an integer that specifies the amount of memory in MB. </li>
                       <li><codeph>use_container_network</codeph> - Set the type of networking for
@@ -904,6 +909,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         &lt;setting memory_mb="512"/>
         &lt;setting use_container_network="yes"/>
         &lt;setting use_container_logging="yes"/>
+        &lt;setting cpu_share="1024"/>
     &lt;/runtime>
     &lt;runtime>
         &lt;id>plc_r_example&lt;/id>
@@ -911,7 +917,6 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         &lt;command>/clientdir/rclient.sh&lt;/command>
         &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
         &lt;setting use_container_logging="yes"/>
-        &lt;cpu_share>2056&lt;/cpu_share>
     &lt;/runtime>
     &lt;runtime>
 &lt;/configuration></codeblock></p>
@@ -968,22 +973,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>You should modify the value only if you build a custom container and want to
                     implement some additional initialization logic before the container
                       starts.<note>This element cannot be set with the <codeph>plcontainer</codeph>
-                      utility. You can update the configuration file with the with the
-                        <codeph>plcontainer runtime-edit</codeph> command.</note></pd>
-                </plentry>
-                <plentry>
-                  <pt>cpu_share</pt>
-                  <pd>
-                    <p>Optional. Specify the CPU usage for a PL/Container container. The value of
-                      the element is a positive integer. The default value is 1024. The value is a
-                      relative weighting of CPU usage compared to other containers. </p>
-                    <p>For example, a container with a <codeph>cpu_share</codeph> of 2048 is
-                      allocated double the CPU slice time compared with container with the default
-                      value of 1024.</p>
-                    <note>This element cannot be set with the <codeph>plcontainer</codeph> utility.
-                      You can update the configuration file with the with the <codeph>plcontainer
-                        runtime-edit</codeph> command.</note>
-                  </pd>
+                      utility. You can update the configuration file with the <codeph>plcontainer
+                        runtime-edit</codeph> command.</note></pd>
                 </plentry>
                 <plentry>
                   <pt>shared_directory</pt>
@@ -1017,7 +1008,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                           the data in the host directory.</li>
                       </ul></note></pd>
                 </plentry>
-                <plentry>
+                <plentry id="plc_settings">
                   <pt>settings</pt>
                   <pd>Optional. This element specifies Docker container configuration information.
                     Each <codeph>setting</codeph> element contains one attribute. The element
@@ -1025,6 +1016,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     this element enables
                     logging.<codeblock>&lt;setting use_container_logging="yes"/></codeblock></pd>
                   <pd>These are the valid attributes.<parml>
+                      <plentry>
+                        <pt>cpu_share</pt>
+                        <pd>
+                          <p>Optional. Specify the CPU usage for a PL/Container container. The value
+                            of the element is a positive integer. The default value is 1024. The
+                            value is a relative weighting of CPU usage compared to other containers. </p>
+                          <p>For example, a container with a <codeph>cpu_share</codeph> of 2048 is
+                            allocated double the CPU slice time compared with container with the
+                            default value of 1024.</p>
+                        </pd>
+                      </plentry>
                       <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
                         <pd>Optional. The value specifies the amount of memory, in MB, that a
