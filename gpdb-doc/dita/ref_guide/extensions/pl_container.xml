@@ -703,7 +703,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     the XML attribute of the <codeph><xref href="#topic_ojn_r2s_dw/plc_settings"
                         format="dita">settings</xref></codeph> element in the PL/Container
                     configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
-                      <li><codeph>cpu_chare</codeph> - Set relative waiting of CPU usage CPU usage
+                      <li><codeph>cpu_share</codeph> - Set relative waiting of CPU usage CPU usage
                         compared to other containers. The default value is 1024. The value is a
                         relative weighting of CPU usage compared to other containers.</li>
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
