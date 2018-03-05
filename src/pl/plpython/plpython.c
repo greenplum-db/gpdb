@@ -4241,6 +4241,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 	volatile MemoryContext oldcontext;
 
 
+#ifdef FAULT_INJECTOR
 	if (rows >= 10000 && rows <= 1000000)
 	{
 		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
@@ -4255,6 +4256,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 			rows = UINT_MAX - 10;
 		}
 	}
+#endif /* FAULT_INJECTOR */
 
 
 	result = (PLyResultObject *) PLy_result_new();
