@@ -8,7 +8,7 @@ run:
   - -c
   - |
     set -ex
-    ccp_src/aws/setup_ssh_to_cluster.sh
+    ccp_src/scripts/setup_ssh_to_cluster.sh
     if [ -n "$PRE_TEST_SCRIPT" ]; then
       ssh -t "${PRE_TEST_SCRIPT_USER:-gpadmin}"@mdw "$CUSTOM_ENV $PRE_TEST_SCRIPT"
     fi
