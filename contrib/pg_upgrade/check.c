@@ -20,7 +20,7 @@ static void check_for_isn_and_int8_passing_mismatch(migratorContext *ctx,
 static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster);
 static void check_external_partition(migratorContext *ctx);
 static void check_covering_aoindex(migratorContext *ctx);
-static void check_hash_partition_usage(migratorContext *ctx, Cluster whichCluster);
+static void check_hash_partition_usage(migratorContext *ctx);
 
 
 /*
@@ -104,7 +104,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
 	check_external_partition(ctx);
 	check_covering_aoindex(ctx);
-	check_hash_partition_usage(ctx, CLUSTER_OLD);
+	check_hash_partition_usage(ctx);
 
 	/* old = PG 8.3 checks? */
 	/*
@@ -997,22 +997,21 @@ check_covering_aoindex(migratorContext *ctx)
  *	The hash algorithm was changed in 8.4, so upgrading is impossible anyway.
  *	This is basically the same problem as with hash indexes in PostgreSQL.
  */
-void
-check_hash_partition_usage(migratorContext *ctx, Cluster whichCluster)
+static void
+check_hash_partition_usage(migratorContext *ctx)
 {
-	ClusterInfo *active_cluster = (whichCluster == CLUSTER_OLD) ?
-	&ctx->old : &ctx->new;
-	int			dbnum;
-	FILE	   *script = NULL;
-	bool		found = false;
-	char		output_path[MAXPGPATH];
+	ClusterInfo	   *old_cluster = &ctx->old;
+	int				dbnum;
+	FILE		   *script = NULL;
+	bool			found = false;
+	char			output_path[MAXPGPATH];
 
 	prep_status(ctx, "Checking for hash partitioned tables");
 
 	snprintf(output_path, sizeof(output_path), "%s/hash_partitioned_tables.txt",
 			 ctx->cwd);
 
-	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -1020,8 +1019,8 @@ check_hash_partition_usage(migratorContext *ctx, Cluster whichCluster)
 		int			rowno;
 		int			i_nspname,
 					i_relname;
-		DbInfo	   *active_db = &active_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(ctx, active_db->db_name, whichCluster);
+		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
 
 		res = executeQueryOrDie(ctx, conn,
 								"SELECT n.nspname, c.relname "
