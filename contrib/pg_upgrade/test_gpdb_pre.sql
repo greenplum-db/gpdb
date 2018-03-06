@@ -31,12 +31,3 @@ DROP TABLE IF EXISTS partition_pruning.pt_lt_tab CASCADE;
 DROP TABLE IF EXISTS dcl_messaging_test CASCADE;
 DROP TABLE IF EXISTS my_tq_agg_opt_part CASCADE;
 DROP TABLE IF EXISTS pt_indx_tab CASCADE;
-
--- These partitioned tables have a SERIAL column. That's also not
--- not reconstructed by pg_dump + restore correctly.
-DROP TABLE IF EXISTS ao_wt_sub_partzlib8192_5_2_uncompr CASCADE;
-DROP TABLE IF EXISTS ao_wt_sub_partzlib8192_5_uncompr CASCADE;
-DROP TABLE IF EXISTS co_cr_sub_partzlib8192_1_2_uncompr CASCADE;
-DROP TABLE IF EXISTS co_cr_sub_partzlib8192_1_uncompr CASCADE;
-DROP TABLE IF EXISTS co_wt_sub_partrle_type8192_1_2_uncompr CASCADE;
-DROP TABLE IF EXISTS co_wt_sub_partrle_type8192_1_uncompr CASCADE;
