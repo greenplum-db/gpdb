@@ -111,6 +111,7 @@
             <topicref href="guc-list.xml#gp_hadoop_target_version"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#gp_idf_deduplicate"/>
+            <topicref href="guc-list.xml#gp_ignore_error_table"/>
             <topicref href="guc-list.xml#topic_lvm_ttc_3p"/>
             <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
