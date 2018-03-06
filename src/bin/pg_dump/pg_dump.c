@@ -11839,7 +11839,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			int i_partitionrank = 0;
 			resetPQExpBuffer(query);
 			appendPQExpBuffer(query, "SELECT c.relname, pr.parname,"
-					"CASE WHEN p.parkind <> 'r'::\"char\" OR pr.parisdefault THEN NULL::bigint "
+					"CASE WHEN p.parkind <> '%c'::char OR pr.parisdefault THEN NULL::bigint "
 					"ELSE pg_catalog.rank() OVER ( "
 					"PARTITION BY p.oid, cc.relname, p.parlevel, cl3.relname "
 					"ORDER BY pr.parisdefault, pr.parruleord) "
@@ -11850,7 +11850,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					"LEFT JOIN pg_partition_rule pr2 ON pr.parparentrule = pr2.oid "
 					"LEFT JOIN pg_class cl3 ON pr2.parchildrelid = cl3.oid "
 					"WHERE pr.paroid = p.oid "
-					"AND p.parrelid = %u AND c.relstorage = '%c';", tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
+					"AND p.parrelid = %u AND c.relstorage = '%c';", RELKIND_RELATION, tbinfo->dobj.catId.oid, RELSTORAGE_EXTERNAL);
 
 			res = PQexec(g_conn, query->data);
 			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
