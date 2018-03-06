@@ -18,6 +18,11 @@ OBJS += aotable.o gpdb4_heap_convert.o version_old_gpdb4.o oid_dump.o
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
 
+# We don't need to add tmp_check to the EXTRA_CLEAN since it's a default name
+# and thus already handled by PGXS "make clean"
+EXTRA_CLEAN = clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
+              hostfile
+
 ifdef USE_PGXS
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
