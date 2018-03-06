@@ -7,8 +7,6 @@
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
       located in the Greenplum Database master host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
-      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>

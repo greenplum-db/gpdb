@@ -26,8 +26,6 @@
       segment host is written to CSV backup files using <codeph>COPY ... ON SEGMENT</codeph>
       commands in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on
       each table that is backed up.</p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
-      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
       options, see <xref href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref> and
         <xref href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref>.</p>
@@ -35,8 +33,8 @@
   <topic id="topic_vh5_1hd_tbb">
     <title>Requirements and Limitations</title>
     <body>
-      <p>The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities are supported on
-        Pivotal Greenplum Database 4.3.22.0 and later, Pivotal Greenplum Database 5.5.0 and later. </p>
+      <p>The <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities are available with
+        Greenplum Database 5.5.0 and later. </p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> have the following limitations:<ul
           id="ul_uqh_hhd_tbb">
           <li>If you create an index on a parent partitioned table, <codeph>gpbackup</codeph> does
@@ -86,7 +84,8 @@
                 <entry>
                   <ul id="ul_kpk_yrj_tbb">
                     <li>Session-level configuration parameter settings (GUCs)</li>
-                    <li>Schemas</li>
+                    <li>Schemas, see <xref href="#topic_x3s_lqj_tbb/schema_note" format="dita"
+                        >Note</xref></li>
                     <li>Procedural language extensions</li>
                     <li>Sequences</li>
                     <li dir="ltr">Comments</li>
@@ -126,6 +125,22 @@
             </tbody>
           </tgroup>
         </table></p>
+      <note id="schema_note">These schemas are not included in a backup.<ul id="ul_xly_1jv_bdb">
+          <li><codeph>gp_toolkit</codeph></li>
+          <li><codeph>information_schema</codeph></li>
+          <li><codeph>pg_aoseg</codeph></li>
+          <li><codeph>pg_bitmapindex</codeph></li>
+          <li><codeph>pg_catalog</codeph></li>
+          <li><codeph>pg_toast*</codeph></li>
+          <li><codeph>pg_temp*</codeph></li>
+        </ul><p>When restoring to an existing database, <codeph>gprestore</codeph> assumes the
+            <codeph>public</codeph> schema exists when restoring objects to the
+            <codeph>public</codeph> schema. When restoring to a new database (with the
+            <codeph>-create-db</codeph> option), <codeph>gprestore</codeph> creates the
+            <codeph>public</codeph> schema automatically when creating a database with the
+            <codeph>CREATE DATABASE</codeph> command. The command uses the
+            <codeph>template0</codeph> database that contains the <codeph>public</codeph>
+          schema.</p></note>
       <p>See also <xref href="#topic_xnj_b4c_tbb" format="dita"/>.</p>
     </body>
   </topic>
@@ -396,7 +411,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
               leaf partition name, as it can when you specify this option with
                 <codeph>gpbackup</codeph>. If you specified leaf partitions in the backup set,
               specify the partitioned table to restore the leaf partition data. <p>When restoring a
-                backup set that contains data from some leaf partitions of a partitioned tables, the
+                backup set that contains data from some leaf partitions of a partitioned table, the
                 partitioned table is restored along with the data for the leaf partitions. For
                 example, you create a backup with the <codeph>gpbackup</codeph> option
                   <codeph>-include-table-file</codeph> and the text file lists some leaf partitions

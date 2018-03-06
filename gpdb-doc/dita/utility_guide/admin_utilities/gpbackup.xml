@@ -4,8 +4,6 @@
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
-    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
-      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gpbackup -dbname</b> <varname>database_name</varname>
