@@ -191,9 +191,17 @@ fi
 trap restore_cluster EXIT
 
 # The cluster should be running by now, but in case it isn't, issue a restart.
-# Worst case we powercycle once for no reason, but it's better than failing
-# due to not having a cluster to work with.
-gpstart -a
+# Since we expect the testcluster to be a stock standard gpdemo, we test for
+# the presence of it. Worst case we powercycle once for no reason, but it's
+# better than failing due to not having a cluster to work with.
+if [ -f "/tmp/.s.PGSQL.15432.lock" ]; then
+	ps aux | grep  `head -1 /tmp/.s.PGSQL.15432.lock` | grep -q postgres
+	if (( $? )) ; then
+		gpstart -a
+	fi
+else
+	gpstart -a
+fi
 
 # Run any pre-upgrade tasks to prep the cluster
 if [ -f "test_gpdb_pre.sql" ]; then
