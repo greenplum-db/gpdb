@@ -75,6 +75,12 @@ restore_cluster()
 
 	# Remove the temporary cluster, and associated files, if requested
 	if (( !$retain_tempdir )) ; then
+		# If we are asked to blow away the temp root, echo any potential error
+		# files to the output channel to aid debugging
+		find ${temp_root} -type f -name "*.txt" | grep -v share |
+		while read error_file; do
+			cat ${error_file}
+		done
 		# Remove configuration files created by setting up the new cluster
 		rm -f "clusterConfigPostgresAddonsFile"
 		rm -f "clusterConfigFile"
