@@ -213,7 +213,7 @@ fi
 # upgrading a faulty catalog won't work.
 if (( $gpcheckcat )) ; then
 	gpcheckcat
-		if (( $? )) ; then
+	if (( $? )) ; then
 		echo "ERROR: gpcheckcat reported catalog issues, fix before upgrading"
 		exit 1
 	fi
