@@ -930,8 +930,8 @@
       <body>
         <p>These parameters enable and configure query metrics collection. When enabled, 
           Greenplum Database saves metrics to shared memory during query execution. These
-          metrics are used by Greenplum Command Center, which is included with the 
-          commercial version of Pivotal Greenplum Database.</p>
+          metrics are used by Pivotal Greenplum Command Center, which is included with 
+          Pivotal's commercial version of Greenplum Database.</p> 
         <simpletable id="query-metrics" frame="none">
           <strow>
             <stentry>

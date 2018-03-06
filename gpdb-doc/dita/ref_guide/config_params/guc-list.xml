@@ -3444,32 +3444,32 @@
         Greenplum Database collects metrics during query execution. The default is off.</p> 
       <p>After changing this configuration parameter, Greenplum Database must be restarted for the 
         change to take effect.</p>
-      <p>The Greenplum Database metrics collection extension<sup>1</sup>, when enabled, sends the
-      collected metrics over UDP to a Pivotal Greenplum Command Center<sup>1</sup> agent. </p>
-      <note><sup>1</sup> The metrics collection extension is included in the commercial
-        version of Greenplum Database. Pivotal Greenplum Command Center is supported only with the
-        commercial version of Greenplum Database.</note>
-        <table id="gp_enable_query_metrics">
-          <tgroup cols="3">
-            <colspec colnum="1" colname="col1" colwidth="1*"/>
-            <colspec colnum="2" colname="col2" colwidth="1*"/>
-            <colspec colnum="3" colname="col3" colwidth="1*"/>
-            <thead>
-              <row>
-                <entry colname="col1">Value Range</entry>
-                <entry colname="col2">Default</entry>
-                <entry colname="col3">Set Classifications</entry>
-              </row>
-            </thead>
-            <tbody>
-              <row>
-                <entry colname="col1">Boolean</entry>
-                <entry colname="col2">off</entry>
-                <entry colname="col3">master<p>system</p><p>restart</p></entry>
-              </row>
-            </tbody>
-          </tgroup>
-        </table>
+      <p>The Greenplum Database metrics collection extension, when enabled, sends the
+      collected metrics over UDP to a Pivotal Greenplum Command Center agent<sup>1</sup>. </p>
+      <note><sup>1</sup> The metrics collection extension is included in Pivotal's commercial 
+      version of Greenplum Database. Pivotal Greenplum Command Center is supported only with 
+        Pivotal Greenplum Database.</note>
+      <table id="gp_enable_query_metrics">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
     </body>
   </topic>
   <topic id="gp_enable_relsize_collection">
