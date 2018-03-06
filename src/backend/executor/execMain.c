@@ -1008,7 +1008,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
 										   DDLNotSpecified,
 										   "" /* databaseName */,
-										   "" /* tableName */))
+										   "" /* tableName */) == FaultInjectorTypeSkip)
 		{
 			/*
 			 * For testing purposes, pretend that we have already processed
@@ -2626,7 +2626,7 @@ ExecutePlan(EState *estate,
 				if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
 												   DDLNotSpecified,
 												   "" /* databaseName */,
-												   "" /* tableName */))
+												   "" /* tableName */) == FaultInjectorTypeSkip)
 				{
 					/*
 					 * For testing purposes, pretend that we have already processed
