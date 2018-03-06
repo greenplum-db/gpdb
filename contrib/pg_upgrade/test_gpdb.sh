@@ -209,6 +209,7 @@ fi
 # Run any pre-upgrade tasks to prep the cluster
 if [ -f "test_gpdb_pre.sql" ]; then
 	psql -f test_gpdb_pre.sql regression
+	psql -f test_gpdb_pre.sql isolation2test
 fi
 
 # Ensure that the catalog is sane before attempting an upgrade. While there is

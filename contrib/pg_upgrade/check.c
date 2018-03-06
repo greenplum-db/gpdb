@@ -21,6 +21,7 @@ static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichClu
 static void check_external_partition(migratorContext *ctx);
 static void check_covering_aoindex(migratorContext *ctx);
 static void check_hash_partition_usage(migratorContext *ctx);
+static void check_partition_indexes(migratorContext *ctx);
 
 
 /*
@@ -105,6 +106,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	check_external_partition(ctx);
 	check_covering_aoindex(ctx);
 	check_hash_partition_usage(ctx);
+	check_partition_indexes(ctx);
 
 	/* old = PG 8.3 checks? */
 	/*
@@ -1062,6 +1064,103 @@ check_hash_partition_usage(migratorContext *ctx)
 			   "| can remove the problem tables and restart the\n"
 			   "| migration.  A list of the problem tables is in the\n"
 			   "| file:\n"
+			   "| \t%s\n\n", output_path);
+	}
+	else
+		check_ok(ctx);
+}
+
+/*
+ *	check_partition_indexes
+ *
+ *	There are numerous pitfalls surrounding indexes on partition hierarchies,
+ *	so rather than trying to cover all the cornercases we disallow indexes on
+ *	partitioned tables altogether during the upgrade.  Since we in any case
+ *	invalidate the indexes forcing a REINDEX, there is little to be gained by
+ *	handling them for the end-user.
+ */
+static void
+check_partition_indexes(migratorContext *ctx)
+{
+	ClusterInfo	   *old_cluster = &ctx->old;
+	int				dbnum;
+	FILE		   *script = NULL;
+	bool			found = false;
+	char			output_path[MAXPGPATH];
+
+	prep_status(ctx, "Checking for indexes on partitioned tables");
+
+	snprintf(output_path, sizeof(output_path), "%s/partitioned_tables_indexes.txt",
+			 ctx->cwd);
+
+	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		int			i_nspname;
+		int			i_relname;
+		int			i_indexes;
+		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
+
+		res = executeQueryOrDie(ctx, conn,
+								"WITH partitions AS ("
+								"    SELECT DISTINCT n.nspname, "
+								"           c.relname "
+								"    FROM pg_catalog.pg_partition p "
+								"         JOIN pg_catalog.pg_class c ON (p.parrelid = c.oid) "
+								"         JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace) "
+								"    UNION "
+								"    SELECT n.nspname, "
+								"           partitiontablename AS relname "
+								"    FROM pg_catalog.pg_partitions p "
+								"         JOIN pg_catalog.pg_class c ON (p.partitiontablename = c.relname) "
+								"         JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace) "
+								") "
+								"SELECT nspname, "
+								"       relname, "
+								"       count(indexname) AS indexes "
+								"FROM partitions "
+								"     JOIN pg_catalog.pg_indexes ON (relname = tablename AND "
+								"                                    nspname = schemaname) "
+								"GROUP BY nspname, relname "
+								"ORDER BY relname");
+
+		ntups = PQntuples(res);
+		i_nspname = PQfnumber(res, "nspname");
+		i_relname = PQfnumber(res, "relname");
+		i_indexes = PQfnumber(res, "indexes");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database:  %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s.%s has %s index(es)\n",
+					PQgetvalue(res, rowno, i_nspname),
+					PQgetvalue(res, rowno, i_relname),
+					PQgetvalue(res, rowno, i_indexes));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(ctx, PG_REPORT, "fatal\n");
+		pg_log(ctx, PG_FATAL,
+			   "| Your installation contains partitioned tables with\n"
+			   "| indexes defined on them.  Indexes on partition parents,\n"
+			   "| as well as children, must be dropped before upgrade.\n"
+			   "| A list of the problem tables is in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else
