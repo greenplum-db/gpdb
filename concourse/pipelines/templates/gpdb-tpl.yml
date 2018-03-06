@@ -326,7 +326,6 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
-    tag_filter: {{ccp-tag-filter}}
 
 - name: terraform
   type: terraform
@@ -334,6 +333,9 @@ resources:
     env:
       AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
       AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+    vars:
+      project_id: {{google-project-id}}
     storage:
       access_key_id: {{tf-machine-access-key-id}}
       secret_access_key: {{tf-machine-secret-access-key}}
@@ -341,7 +343,7 @@ resources:
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
       bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters/
+      bucket_path: clusters-google/
 
 {% endif %}
 {% if "DPM" in test_sections %}
@@ -352,12 +354,15 @@ resources:
     env:
       AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
       AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+    vars:
+      project_id: {{google-project-id}}
     storage:
       access_key_id: {{tf-machine-access-key-id}}
       secret_access_key: {{tf-machine-secret-access-key}}
       region_name: {{aws-region}}
       bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters/
+      bucket_path: clusters-google/
 
 - name: terraform_for_dpm
   type: terraform
@@ -372,7 +377,7 @@ resources:
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
       bucket: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
-      bucket_path: clusters/
+      bucket_path: clusters-aws/
 
 {% endif %}
 - name: aix_environments
@@ -756,46 +761,63 @@ anchors:
         path: 'sh'
         args: ['-c', 'sleep `expr $RANDOM % {{ccp_delay_jitter}} + 1`']
 
-- &ccp_default_params
+ccp_default_params_anchor: &ccp_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
-  terraform_source: ccp_src/aws/
+  terraform_source: ccp_src/google/
 
-- &ccp_default_vars
+ccp_vars_anchor: &ccp_default_vars
+  instance_type: n1-standard-1
+  PLATFORM: centos6
+
+ccp_aws_vars_anchor: &ccp_aws_default_vars
   aws_instance-node-instance_type: t2.medium
-  platform: centos6
+  PLATFORM: centos6
 
-- &ccp_destroy
+ccp_destroy_anchor: &ccp_destroy
   put: terraform
-  tags: ["ccp"]
   params:
     action: destroy
     env_name_file: terraform/name
-    terraform_source: ccp_src/aws/
+    terraform_source: ccp_src/google/
     vars:
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
       aws_ebs_volume_type: standard
   get_params:
     action: destroy
 
-- &ccp_destroy_two_clusters
+ccp_nvme_destroy_anchor: &ccp_destroy_nvme
+  put: terraform
+  params:
+    action: destroy
+    env_name_file: terraform/name
+    terraform_source: ccp_src/google-nvme-block-device/
+    vars:
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+      instance_type: n1-standard-1
+      aws_ebs_volume_type: standard
+  get_params:
+    action: destroy
+
+ccp_destroy_clusters_anchor: &ccp_destroy_two_clusters
   do:
   - *ccp_destroy
   - put: terraform2
     params:
       action: destroy
       env_name_file: terraform2/name
-      terraform_source: ccp_src/aws/
+      terraform_source: ccp_src/google/
       vars:
-        platform: centos6
+        PLATFORM: centos6
         aws_instance-node-instance_type: t2.micro
         cluster_suffix: "-2"
     get_params:
       action: destroy
 
-- &dpm_ccp_destroy
+dpm_ccp_destroy_anchor: &dpm_ccp_destroy
   put: terraform_for_dpm
+  tags: ["ccp"]
   params:
     action: destroy
     env_name_file: terraform_for_dpm/name
@@ -805,24 +827,25 @@ anchors:
   get_params:
     action: destroy
 
-- &ccp_gen_cluster_default_params
+ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
-  BUCKET_PATH: clusters/
+  BUCKET_PATH: clusters-google/
   BUCKET_NAME: {{tf-bucket-name}}
+  CLOUD_PROVIDER: google
 
-- &ccp_gpdb4_gen_cluster_default_params
+ccp_gpdb4_gen_cluster_default_params_anchor: &ccp_gpdb4_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
-  BUCKET_PATH: clusters/
+  BUCKET_PATH: clusters-aws/
   BUCKET_NAME: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
+  CLOUD_PROVIDER: aws
 
-- &set_failed
+set_failed_anchor: &set_failed
   do:
   - task: on_failure_set_failed
-    tags: ["ccp"]
     config:
       platform: linux
       image_resource:
@@ -834,19 +857,22 @@ anchors:
         - name: ccp_src
         - name: terraform
       run:
-        path: 'ccp_src/aws/ccp_failed_test.sh'
+        path: 'ccp_src/google/ccp_failed_test.sh'
       params:
+        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_PROJECT_ID: {{google-project-id}}
+        GOOGLE_ZONE: {{google-zone}}
+        GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
         AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
         AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
         AWS_DEFAULT_REGION: {{tf-machine-region}}
-        BUCKET_PATH: clusters/
+        BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
 
-- &set_failed_two_clusters
+set_failed_two_clusters_anchor: &set_failed_two_clusters
   do:
   - *set_failed
   - task: on_failure_set_failed
-    tags: ["ccp"]
     config:
       platform: linux
       image_resource:
@@ -858,15 +884,19 @@ anchors:
         - name: ccp_src
         - name: terraform2
       run:
-        path: 'ccp_src/aws/ccp_failed_test.sh'
+        path: 'ccp_src/google/ccp_failed_test.sh'
       params:
+        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_PROJECT_ID: {{google-project-id}}
+        GOOGLE_ZONE: {{google-zone}}
+        GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
         AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
         AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
         AWS_DEFAULT_REGION: {{tf-machine-region}}
-        BUCKET_PATH: clusters/
+        BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
 
-- &dpm_debug_sleep
+dpm_debug_sleep_anchor: &dpm_debug_sleep
   do:
   - task: debug_sleep
     config:
@@ -880,54 +910,43 @@ anchors:
         path: 'sh'
         args: ['-c', 'sleep {{ccp_debug_sleep}}']
 
-- &cs_ccp_aggregate_dpm_start
+cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
   - get: gpdb_src
-    tags: ["ccp"]
     passed: [gate_dpm_start]
   - get: gpdb_binary
-    tags: ["ccp"]
     resource: bin_gpdb_centos6
     passed: [gate_dpm_start]
   - get: ccp_src
-    tags: ["ccp"]
   - get: centos-gpdb-dev-6
-    tags: ["ccp"]
 
-- &cs_ccp_aggregate_mpp_start
+cs_ccp_aggregate_mpp_start_anchor: &cs_ccp_aggregate_mpp_start
   - get: gpdb_src
-    tags: ["ccp"]
     passed: [gate_cs_start]
   - get: gpdb_binary
-    tags: ["ccp"]
     resource: bin_gpdb_centos6
     passed: [gate_cs_start]
     trigger: [[ test_trigger ]]
   - get: ccp_src
-    tags: ["ccp"]
   - get: centos-gpdb-dev-6
-    tags: ["ccp"]
 
-- &cs_ccp_terraform_vars
-  aws_instance-node-instance_type: m4.large
+cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
+  instance_type: n1-standard-2
   aws_ebs_volume_type: gp2
   number_of_nodes: 1
 
-- &cs_ccp_terraform_params
-  tags: ["ccp"]
+cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
   params:
     <<: *ccp_default_params
     vars:
       <<: *ccp_default_vars
       <<: *cs_ccp_terraform_vars
 
-- &cs_ccp_gen_cluster_params
-  tags: ["ccp"]
+cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
 
-- &cs_ccp_run_tests_params
-  tags: ["ccp"]
+cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6
   on_success:
@@ -1281,7 +1300,6 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
-      - compile_gpdb_windows_cl
       trigger: true
     - get: bin_gpdb_sles11
       passed:
@@ -1665,30 +1683,25 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_cs_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1705,33 +1718,27 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_cs_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
+        instance_type: n1-standard-2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1751,6 +1758,8 @@ jobs:
     <<: *cs_ccp_terraform_params
   - task: gen_cluster
     <<: *cs_ccp_gen_cluster_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     <<: *cs_ccp_run_tests_params
     params:
@@ -1903,21 +1912,19 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_mpp_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mpp_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
     <<: *cs_ccp_terraform_params
   - task: gen_cluster
     <<: *cs_ccp_gen_cluster_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     <<: *cs_ccp_run_tests_params
     params:
@@ -1933,32 +1940,28 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_mpp_start]
     - get: bin_gpdb
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mpp_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
+        instance_type: n1-standard-2
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
       gpdb_binary: bin_gpdb
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
     image: centos-gpdb-dev-6
     params:
@@ -1973,33 +1976,29 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_mpp_start]
     - get: bin_gpdb
-      tags: ["ccp"]
       resource: bin_gpdb_centos7
       passed: [gate_mpp_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-7
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-        platform: centos7
+        PLATFORM: centos7
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+      PLATFORM: centos7
     input_mapping:
       gpdb_binary: bin_gpdb
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
     image: centos-gpdb-dev-7
     params:
@@ -2065,33 +2064,28 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2107,38 +2101,32 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: setup_gppkg_second_install
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/gppkg_behave.yml
     params:
       SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2218,34 +2206,29 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
         number_of_nodes: 5
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: pre_run_test_setup
-    tags: ["ccp"]
     image: centos-gpdb-dev-6
     config:
       platform: linux
@@ -2258,11 +2241,10 @@ jobs:
         - -c
         - |
           set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/scripts/setup_ssh_to_cluster.sh
           ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
                       bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2331,33 +2313,28 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_dpm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2391,7 +2368,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
@@ -2402,6 +2379,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["ddboost"]
   - task: ddboost_pre_test_setup
     tags: ["ddboost"]
     config:
@@ -2422,7 +2402,7 @@ jobs:
         - -c
         - |
           set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/scripts/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
@@ -2465,7 +2445,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
@@ -2476,6 +2456,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["ddboost"]
   - task: ddboost_pre_test_setup
     tags: ["ddboost"]
     config:
@@ -2496,7 +2479,7 @@ jobs:
         - -c
         - |
           set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/scripts/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
@@ -2539,7 +2522,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
@@ -2550,6 +2533,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["ddboost"]
   - task: ddboost_pre_test_setup
     tags: ["ddboost"]
     config:
@@ -2570,7 +2556,7 @@ jobs:
         - -c
         - |
           set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/scripts/setup_ssh_to_cluster.sh
           scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm mdw:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
           scp ddboost_rpm/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm sdw1:/tmp/compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
@@ -2615,7 +2601,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
@@ -2626,6 +2612,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["netbackup"]
   - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
@@ -2669,7 +2658,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
@@ -2680,6 +2669,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["netbackup"]
   - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
@@ -2723,7 +2715,7 @@ jobs:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
-        <<: *ccp_default_vars
+        <<: *ccp_aws_default_vars
     tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
@@ -2734,6 +2726,9 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+    tags: ["netbackup"]
   - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
@@ -2754,54 +2749,44 @@ jobs:
 - name: DPM_backup_43_restore_5
   plan:
   - get: nightly-trigger
-    tags: ["ccp"]
     trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_dpm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
     - get: gpdb4_binary
-      tags: ["ccp"]
       resource: bin_gpdb4_centos6
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: setup_gpdb4
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
       gpdb_binary: gpdb4_binary
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_backup_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
   - task: setup_gpdb5
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    image: centos-gpdb-dev-6
   - task: run_restore_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2814,51 +2799,55 @@ jobs:
 - name: DPM_gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
-    tags: ["ccp"]
     trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_dpm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
     - get: gpdb4_binary
-      tags: ["ccp"]
       resource: bin_gpdb4_centos6
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
     - do:
       - put: terraform
-        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
-            aws_instance-node-instance_type: m4.large
+            instance_type: n1-standard-2
       - task: gen_cluster1
-        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
+      - task: gpinitsystem
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: pivotaldata/ccp
+              tag: "7"
+          inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          run:
+            path: ccp_src/scripts/gpinitsystem.sh
     - do:
       - put: terraform2
-        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
-            aws_instance-node-instance_type: m4.large
+            instance_type: n1-standard-2
             cluster_suffix: "-2"
       - task: gen_cluster2
-        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -2867,8 +2856,22 @@ jobs:
           gpdb_binary: gpdb4_binary
         output_mapping:
           cluster_env_files: cluster_env_files2
+      - task: gpinitsystem
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: pivotaldata/ccp
+              tag: "7"
+          inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files2
+            path: cluster_env_files
+          run:
+            path: ccp_src/scripts/gpinitsystem.sh
   - task: gptransfer_pre_test_setup
-    tags: ["ccp"]
     config:
       platform: linux
       inputs:
@@ -2888,7 +2891,6 @@ jobs:
         - |
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
   - task: run_gptransfer_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2904,44 +2906,50 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_dpm_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
     - do:
       - put: terraform
-        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
-            aws_instance-node-instance_type: m4.large
+            instance_type: n1-standard-2
       - task: gen_cluster1
-        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
+      - task: gpinitsystem
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: pivotaldata/ccp
+              tag: "7"
+          inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          run:
+            path: ccp_src/scripts/gpinitsystem.sh
     - do:
       - put: terraform2
-        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
-            aws_instance-node-instance_type: m4.large
+            instance_type: n1-standard-2
             cluster_suffix: "-2"
       - task: gen_cluster2
-        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -2949,8 +2957,22 @@ jobs:
           terraform: terraform2
         output_mapping:
           cluster_env_files: cluster_env_files2
+      - task: gpinitsystem
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: pivotaldata/ccp
+              tag: "7"
+          inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files2
+            path: cluster_env_files
+          run:
+            path: ccp_src/scripts/gpinitsystem.sh
   - task: gptransfer_pre_test_setup
-    tags: ["ccp"]
     config:
       platform: linux
       inputs:
@@ -2970,7 +2992,6 @@ jobs:
         - |
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
   - task: run_gptransfer_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3230,41 +3251,36 @@ jobs:
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
-      tags: ["ccp"]
       passed: [gate_filerep_start]
     - get: gpdb_binary
-      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_filerep_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["ccp"]
   - put: terraform
-    tags: ["ccp"]
     params:
       <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
+      terraform_source: ccp_src/google-nvme-block-device/
       vars:
         <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
+        instance_type: n1-highmem-4
 {% if test_name != 'filerep_end_to_end_full_primary' %}
         number_of_nodes: 1
 {% endif %}
   - task: gen_cluster
-    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
-    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
       TINC_TARGET: [[ test_name ]]
     on_success:
-      <<: *ccp_destroy
+      <<: *ccp_destroy_nvme
   ensure:
     <<: *set_failed
 
