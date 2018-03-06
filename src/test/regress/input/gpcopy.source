@@ -1100,3 +1100,6 @@ COPY lineitem TO '/tmp/aborted.data';
 CREATE TABLE lineitem_aborted (LIKE lineitem);
 COPY lineitem_aborted FROM '/tmp/aborted.data';
 SELECT count(*) < 57190 FROM lineitem_aborted;
+
+CREATE TABLE cp_oom_errors (c text);
+copy cp_oom_errors from program 'dd if=/dev/zero bs=1074790400 count=1';
