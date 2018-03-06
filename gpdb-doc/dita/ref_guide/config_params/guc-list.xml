@@ -326,6 +326,8 @@
             <li>
               <xref href="#gp_idf_deduplicate"/>
             </li>
+            <li><xref href="#gp_ignore_error_table"/>
+            </li>
             <li>
               <xref href="#topic_lvm_ttc_3p"/>
             </li>
@@ -4230,6 +4232,42 @@
               <entry colname="col1">auto<p>none</p><p>force</p></entry>
               <entry colname="col2">auto</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_ignore_error_table">
+    <title>gp_ignore_error_table</title>
+    <body>
+      <p>Controls Greenplum Database behavior when the <codeph>INTO ERROR TABLE</codeph> clause is
+        specified in a <codeph>CREATE EXTERNAL TABLE</codeph> or <codeph>COPY</codeph> command. The
+          <codeph>INTO ERROR TABLE</codeph> clause was removed in Greenplum Database 5. </p>
+      <p>The default value is <codeph>false</codeph>, Greenplum Database returns an error if the
+          <codeph>INTO ERROR TABLE</codeph> clause is specified in a command. If the value is
+          <codeph>true</codeph>, Greenplum Database ignores the clause, issues a warning, and
+        executes the command and logs information about data rows with formatting errors.</p>
+      <p>Set the value to <codeph>true</codeph> to run Greenplum Database 4.3.x a <codeph>CREATE
+          EXTERNAL TABLE</codeph> or <codeph>COPY</codeph> command that contains the <codeph>INTO
+          ERROR TABLE</codeph> clause.</p>
+      <table id="table_hnf_2v5_bdb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

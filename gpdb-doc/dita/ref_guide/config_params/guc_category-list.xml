@@ -192,12 +192,10 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
-                  >gp_resource_group_memory_limit</xref> (resource group-based resource management)
-              </p>
+                  >gp_resource_group_memory_limit</xref> (resource group-based resource management) </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_limit" type="section"
-                  >gp_vmem_protect_limit</xref> (resource queue-based resource management)
-              </p>
+                  >gp_vmem_protect_limit</xref> (resource queue-based resource management) </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
                   >gp_vmem_protect_segworker_cache_limit</xref>
@@ -1180,8 +1178,7 @@
                 >max_resource_portals_per_transaction</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#max_statement_mem" type="section"
-                >max_statement_mem</xref>
+              <xref href="guc-list.xml#max_statement_mem" type="section">max_statement_mem</xref>
             </p>
             <p>
               <xref href="guc-list.xml#resource_cleanup_gangs_on_wait" type="section"
@@ -1363,43 +1360,61 @@
     </body>
   </topic>
   <topic id="topic48" xml:lang="en">
-    <title id="kh178569">Past PostgreSQL Version Compatibility Parameters</title>
+    <title id="kh178569">Past Version Compatibility Parameters</title>
     <body>
-      <p>The following parameters provide compatibility with older PostgreSQL versions. You do not
-        need to change these parameters in Greenplum Database.</p>
-      <simpletable id="kh162083" frame="none">
-        <strow>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#backslash_quote" type="section">backslash_quote</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#escape_string_warning" type="section"
-                >escape_string_warning</xref>
-            </p>
-          </stentry>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#standard_conforming_strings" type="section"
-                >standard_conforming_strings</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#transform_null_equals" type="section"
-                >transform_null_equals</xref>
-            </p>
-          </stentry>
-        </strow>
-      </simpletable>
+      <p>The following parameters provide compatibility with older PostgreSQL and Greenplum Database
+        versions. You do not need to change these parameters in Greenplum Database.</p>
     </body>
+    <topic id="topic_ax3_r1v_bdb">
+      <title>PostgreSQL</title>
+      <body>
+        <simpletable frame="none" id="simpletable_bx3_r1v_bdb">
+          <strow>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#backslash_quote" type="section">backslash_quote</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#escape_string_warning" type="section"
+                  >escape_string_warning</xref>
+              </p>
+            </stentry>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#standard_conforming_strings" type="section"
+                  >standard_conforming_strings</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#transform_null_equals" type="section"
+                  >transform_null_equals</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
+    <topic id="topic_jq1_n1v_bdb">
+      <title>Greenplum Database</title>
+      <body>
+        <simpletable frame="none" id="simpletable_uy5_1bv_bdb">
+          <strow>
+            <stentry>
+              <p><xref href="guc-list.xml#gp_ignore_error_table">gp_ignore_error_table</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
   </topic>
   <topic id="topic49" xml:lang="en">
     <title id="kh182770">Greenplum Database Array Configuration Parameters</title>
