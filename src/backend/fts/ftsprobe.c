@@ -55,7 +55,7 @@ FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 static FtsMessageState
 nextSuccessState(FtsMessageState state)
 {
-	FtsMessageState result;
+	FtsMessageState result = FTS_PROBE_FAILED; /* to shut up compiler */
 	switch(state)
 	{
 		case FTS_PROBE_SEGMENT:
@@ -85,7 +85,7 @@ nextSuccessState(FtsMessageState state)
 static FtsMessageState
 nextFailedState(FtsMessageState state)
 {
-	FtsMessageState result;
+	FtsMessageState result = FTS_PROBE_FAILED; /* to shut up compiler */
 	switch(state)
 	{
 		case FTS_PROBE_SEGMENT:
