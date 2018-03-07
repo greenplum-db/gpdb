@@ -3503,36 +3503,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_threadcount", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Use this number of threads for probing the segments."),
-			gettext_noop("The number of threads to create at each probe interval expiration."),
-			GUC_NOT_IN_SAMPLE
-		},
-		&gp_fts_probe_threadcount,
-		16, 1, 128, NULL, NULL
-	},
-
-	{
-		{"gp_fts_transition_retries", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("The number of retries for FTS to request a segment state transition."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_fts_transition_retries,
-		5, 1, 100, NULL, NULL
-	},
-
-	{
-		{"gp_fts_transition_timeout", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Timeout (in seconds) for FTS to request a segment state transition."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_UNIT_S
-		},
-		&gp_fts_transition_timeout,
-		3600, 1, 36000, NULL, NULL
-	},
-
-	{
 		{"gp_gang_creation_retry_count", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("After a gang-creation fails, retry the number of times if failure is retryable."),
 			gettext_noop("A value of zero disables retries."),

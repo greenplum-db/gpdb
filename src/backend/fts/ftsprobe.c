@@ -52,48 +52,76 @@ FtsGetPeerSegment(CdbComponentDatabases *cdbs,
 	return NULL;
 }
 
-static FtsProbeState
-nextSuccessState(FtsProbeState state)
+static FtsMessageState
+nextSuccessState(FtsMessageState state)
 {
+	FtsMessageState result;
 	switch(state)
 	{
 		case FTS_PROBE_SEGMENT:
-			return FTS_PROBE_SUCCESS;
-		case FTS_SYNCREP_SEGMENT:
-			return FTS_SYNCREP_SUCCESS;
+			result = FTS_PROBE_SUCCESS;
+			break;
+		case FTS_SYNCREP_OFF_SEGMENT:
+			result = FTS_SYNCREP_OFF_SUCCESS;
+			break;
 		case FTS_PROMOTE_SEGMENT:
-			return FTS_PROMOTE_SUCCESS;
-		default:
+			result = FTS_PROMOTE_SUCCESS;
+			break;
+		case FTS_PROBE_RETRY_WAIT:
+		case FTS_SYNCREP_OFF_RETRY_WAIT:
+		case FTS_PROMOTE_RETRY_WAIT:
+		case FTS_PROBE_SUCCESS:
+		case FTS_SYNCREP_OFF_SUCCESS:
+		case FTS_PROMOTE_SUCCESS:
+		case FTS_PROBE_FAILED:
+		case FTS_SYNCREP_OFF_FAILED:
+		case FTS_PROMOTE_FAILED:
+		case FTS_RESPONSE_PROCESSED:
 			elog(ERROR, "cannot determine next success state for %d", state);
 	}
+	return result;
 }
 
-static FtsProbeState
-nextFailedState(FtsProbeState state)
+static FtsMessageState
+nextFailedState(FtsMessageState state)
 {
+	FtsMessageState result;
 	switch(state)
 	{
 		case FTS_PROBE_SEGMENT:
-			return FTS_PROBE_FAILED;
-		case FTS_SYNCREP_SEGMENT:
-			return FTS_SYNCREP_FAILED;
+			result = FTS_PROBE_FAILED;
+			break;
+		case FTS_SYNCREP_OFF_SEGMENT:
+			result = FTS_SYNCREP_OFF_FAILED;
+			break;
 		case FTS_PROMOTE_SEGMENT:
-			return FTS_PROMOTE_FAILED;
+			result = FTS_PROMOTE_FAILED;
+			break;
 		case FTS_PROBE_FAILED:
-			return FTS_PROBE_FAILED;
-		case FTS_SYNCREP_FAILED:
-			return FTS_SYNCREP_FAILED;
+			result = FTS_PROBE_FAILED;
+			break;
+		case FTS_SYNCREP_OFF_FAILED:
+			result = FTS_SYNCREP_OFF_FAILED;
+			break;
 		case FTS_PROMOTE_FAILED:
-			return FTS_PROMOTE_FAILED;
+			result = FTS_PROMOTE_FAILED;
+			break;
 		case FTS_PROBE_RETRY_WAIT:
-			return FTS_PROBE_FAILED;
-		case FTS_SYNCREP_RETRY_WAIT:
-			return FTS_SYNCREP_FAILED;
+			result = FTS_PROBE_FAILED;
+			break;
+		case FTS_SYNCREP_OFF_RETRY_WAIT:
+			result = FTS_SYNCREP_OFF_FAILED;
+			break;
 		case FTS_PROMOTE_RETRY_WAIT:
-			return FTS_PROMOTE_FAILED;
-		default:
+			result = FTS_PROMOTE_FAILED;
+			break;
+		case FTS_PROBE_SUCCESS:
+		case FTS_SYNCREP_OFF_SUCCESS:
+		case FTS_PROMOTE_SUCCESS:
+		case FTS_RESPONSE_PROCESSED:
 			elog(ERROR, "cannot determine next failed state for %d", state);
 	}
+	return result;
 }
 
 static bool
@@ -106,12 +134,7 @@ allDone(fts_context *context)
 		/*
 		 * If any segment is not in a final state, return false.
 		 */
-		result &= (context->perSegInfos[i].state == FTS_PROBE_SUCCESS ||
-				   context->perSegInfos[i].state == FTS_SYNCREP_SUCCESS ||
-				   context->perSegInfos[i].state == FTS_PROMOTE_SUCCESS ||
-				   context->perSegInfos[i].state == FTS_PROBE_FAILED ||
-				   context->perSegInfos[i].state == FTS_SYNCREP_FAILED ||
-				   context->perSegInfos[i].state == FTS_PROMOTE_FAILED);
+		result = (context->perSegInfos[i].state == FTS_RESPONSE_PROCESSED);
 	}
 	return result;
 }
@@ -120,7 +143,7 @@ allDone(fts_context *context)
  * Establish async libpq connection to a segment
  */
 static bool
-ftsConnectStart(per_segment_info *ftsInfo)
+ftsConnectStart(fts_segment_info *ftsInfo)
 {
 	char conninfo[1024];
 
@@ -134,7 +157,7 @@ ftsConnectStart(per_segment_info *ftsInfo)
 	 * SYNCREP_OFF messages.
 	 */
 	AssertImply(ftsInfo->state == FTS_PROBE_SEGMENT ||
-				ftsInfo->state == FTS_SYNCREP_SEGMENT,
+				ftsInfo->state == FTS_SYNCREP_OFF_SEGMENT,
 				SEGMENT_IS_ACTIVE_PRIMARY(ftsInfo->primary_cdbinfo));
 
 	snprintf(conninfo, 1024, "host=%s port=%d gpconntype=%s",
@@ -178,7 +201,7 @@ ftsConnectStart(per_segment_info *ftsInfo)
  * that object by calling PQconnectPoll().  An established libpq connection
  * (authentication complete and ready-for-query received) is identified by: (1)
  * state of the "per segment" object is any of FTS_PROBE_SEGMENT,
- * FTS_SYNCREP_SEGMENT, FTS_PROMOTE_SEGMENT and (2) PQconnectPoll() returns
+ * FTS_SYNCREP_OFF_SEGMENT, FTS_PROMOTE_SEGMENT and (2) PQconnectPoll() returns
  * PGRES_POLLING_OK for the connection.
  *
  * Upon failure, transition that object to a failed state.
@@ -189,19 +212,20 @@ ftsConnect(fts_context *context)
 	int i;
 	for (i = 0; i < context->num_pairs; i++)
 	{
-		per_segment_info *ftsInfo = &context->perSegInfos[i];
-		elog(DEBUG1, "FTS: ftsConnect (content=%d, dbid=%d) state=%d, "
-			 "retry_count=%d, conn->status=%d",
-			 ftsInfo->primary_cdbinfo->segindex,
-			 ftsInfo->primary_cdbinfo->dbid,
-			 ftsInfo->state, ftsInfo->retry_count,
-			 ftsInfo->conn ? ftsInfo->conn->status : -1);
+		fts_segment_info *ftsInfo = &context->perSegInfos[i];
+		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			   "FTS: ftsConnect (content=%d, dbid=%d) state=%d, "
+			   "retry_count=%d, conn->status=%d",
+			   ftsInfo->primary_cdbinfo->segindex,
+			   ftsInfo->primary_cdbinfo->dbid,
+			   ftsInfo->state, ftsInfo->retry_count,
+			   ftsInfo->conn ? ftsInfo->conn->status : -1);
 		if (ftsInfo->conn && PQstatus(ftsInfo->conn) == CONNECTION_OK)
 			continue;
 		switch(ftsInfo->state)
 		{
 			case FTS_PROBE_SEGMENT:
-			case FTS_SYNCREP_SEGMENT:
+			case FTS_SYNCREP_OFF_SEGMENT:
 			case FTS_PROMOTE_SEGMENT:
 				if (ftsInfo->conn == NULL)
 				{
@@ -221,13 +245,14 @@ ftsConnect(fts_context *context)
 							 * completed.  Next step should now be able to send
 							 * the appropriate FTS message.
 							 */
-							elog(LOG, "FTS: established libpq connection "
-								 "(content=%d, dbid=%d) state=%d, "
-								 "retry_count=%d, conn->status=%d",
-								 ftsInfo->primary_cdbinfo->segindex,
-								 ftsInfo->primary_cdbinfo->dbid,
-								 ftsInfo->state, ftsInfo->retry_count,
-								 ftsInfo->conn->status);
+							elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+								   "FTS: established libpq connection "
+								   "(content=%d, dbid=%d) state=%d, "
+								   "retry_count=%d, conn->status=%d",
+								   ftsInfo->primary_cdbinfo->segindex,
+								   ftsInfo->primary_cdbinfo->dbid,
+								   ftsInfo->state, ftsInfo->retry_count,
+								   ftsInfo->conn->status);
 							ftsInfo->poll_events = POLLOUT;
 							break;
 
@@ -268,24 +293,49 @@ ftsConnect(fts_context *context)
 					}
 				}
 				else
-					elog(DEBUG1, "FTS: ftsConnect (content=%d, dbid=%d) state=%d,"
-						 " retry_count=%d, conn->status=%d pollfd.revents unset",
-						 ftsInfo->primary_cdbinfo->segindex,
-						 ftsInfo->primary_cdbinfo->dbid,
-						 ftsInfo->state, ftsInfo->retry_count,
-						 ftsInfo->conn ? ftsInfo->conn->status : -1);
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						   "FTS: ftsConnect (content=%d, dbid=%d) state=%d, "
+						   "retry_count=%d, conn->status=%d pollfd.revents unset",
+						   ftsInfo->primary_cdbinfo->segindex,
+						   ftsInfo->primary_cdbinfo->dbid,
+						   ftsInfo->state, ftsInfo->retry_count,
+						   ftsInfo->conn ? ftsInfo->conn->status : -1);
 				break;
 			case FTS_PROBE_SUCCESS:
-			case FTS_SYNCREP_SUCCESS:
+			case FTS_SYNCREP_OFF_SUCCESS:
 			case FTS_PROMOTE_SUCCESS:
 			case FTS_PROBE_FAILED:
-			case FTS_SYNCREP_FAILED:
+			case FTS_SYNCREP_OFF_FAILED:
 			case FTS_PROMOTE_FAILED:
 			case FTS_PROBE_RETRY_WAIT:
-			case FTS_SYNCREP_RETRY_WAIT:
+			case FTS_SYNCREP_OFF_RETRY_WAIT:
 			case FTS_PROMOTE_RETRY_WAIT:
+			case FTS_RESPONSE_PROCESSED:
 				break;
 		}
+	}
+}
+
+/*
+ * Timeout is said to have occurred if greater than gp_fts_probe_timeout
+ * seconds have elapsed since connection start and a response is not received.
+ * Segments for which a response is received already or that have failed with
+ * all retries exhausted are exempted from timeout evaluation.
+ */
+static void
+ftsCheckTimeout(fts_segment_info *ftsInfo, pg_time_t now)
+{
+	if (!IsFtsMessageStateSuccess(ftsInfo->state) &&
+		ftsInfo->retry_count < gp_fts_probe_retries &&
+		(int) (now - ftsInfo->startTime) > gp_fts_probe_timeout)
+	{
+		elog(LOG,
+			 "FTS timeout detected for (content=%d, dbid=%d) "
+			 "state=%d, retry_count=%d,",
+			 ftsInfo->primary_cdbinfo->segindex,
+			 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state,
+			 ftsInfo->retry_count);
+		ftsInfo->state = nextFailedState(ftsInfo->state);
 	}
 }
 
@@ -297,7 +347,7 @@ ftsPoll(fts_context *context)
 	int nready;
 	for (i = 0; i < context->num_pairs; i++)
 	{
-		per_segment_info *ftsInfo = &context->perSegInfos[i];
+		fts_segment_info *ftsInfo = &context->perSegInfos[i];
 		if (ftsInfo->poll_events & (POLLIN|POLLOUT))
 		{
 			PollFds[nfds].fd = PQsocket(ftsInfo->conn);
@@ -319,23 +369,30 @@ ftsPoll(fts_context *context)
 	if (nready < 0)
 	{
 		if (errno == EINTR)
-			elog(DEBUG1, "FTS: ftsPoll() interrupted, nfds %d", nfds);
+		{
+			elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+				   "FTS: ftsPoll() interrupted, nfds %d", nfds);
+		}
 		else
 			elog(ERROR, "FTS: ftsPoll() failed: nfds %d, %m", nfds);
 	}
 	else if (nready == 0)
 	{
-		elog(DEBUG1, "FTS: ftsPoll() timed out, nfds %d", nfds);
+		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			   "FTS: ftsPoll() timed out, nfds %d", nfds);
 		return;
 	}
 
-	elog(DEBUG1, "FTS: ftsPoll() found %d out of %d sockets ready",
-		 nready, nfds);
+	elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+		   "FTS: ftsPoll() found %d out of %d sockets ready",
+		   nready, nfds);
+
+	pg_time_t now = (pg_time_t) time(NULL);
 
 	/* Record poll() response poll_revents for each "per_segment" object. */
 	for (i = 0; i < context->num_pairs; i++)
 	{
-		per_segment_info *ftsInfo = &context->perSegInfos[i];
+		fts_segment_info *ftsInfo = &context->perSegInfos[i];
 		if (ftsInfo->poll_events & (POLLIN|POLLOUT))
 		{
 			Assert(PollFds[ftsInfo->fd_index].fd == PQsocket(ftsInfo->conn));
@@ -346,7 +403,10 @@ ftsPoll(fts_context *context)
 			 * or POLLOUT).
 			 */
 			if (ftsInfo->poll_revents & ftsInfo->poll_events)
+			{
 				ftsInfo->poll_events = 0;
+				ftsCheckTimeout(ftsInfo, now);
+			}
 			else if (ftsInfo->poll_revents & (POLLHUP | POLLERR))
 			{
 				ftsInfo->state = nextFailedState(ftsInfo->state);
@@ -375,7 +435,10 @@ ftsPoll(fts_context *context)
 			}
 		}
 		else
+		{
 			ftsInfo->poll_revents = 0;
+			ftsCheckTimeout(ftsInfo, now);
+		}
 	}
 }
 
@@ -385,23 +448,24 @@ ftsPoll(fts_context *context)
 static void
 ftsSend(fts_context *context)
 {
-	per_segment_info *ftsInfo;
+	fts_segment_info *ftsInfo;
 	const char *message;
 	int i;
 
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		ftsInfo = &context->perSegInfos[i];
-		elog(DEBUG1, "FTS: ftsSend (content=%d, dbid=%d) state=%d, "
-			 "retry_count=%d, conn->asyncStatus=%d",
-			 ftsInfo->primary_cdbinfo->segindex,
-			 ftsInfo->primary_cdbinfo->dbid,
-			 ftsInfo->state, ftsInfo->retry_count,
-			 ftsInfo->conn ? ftsInfo->conn->asyncStatus : -1);
+		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			   "FTS: ftsSend (content=%d, dbid=%d) state=%d, "
+			   "retry_count=%d, conn->asyncStatus=%d",
+			   ftsInfo->primary_cdbinfo->segindex,
+			   ftsInfo->primary_cdbinfo->dbid,
+			   ftsInfo->state, ftsInfo->retry_count,
+			   ftsInfo->conn ? ftsInfo->conn->asyncStatus : -1);
 		switch(ftsInfo->state)
 		{
 			case FTS_PROBE_SEGMENT:
-			case FTS_SYNCREP_SEGMENT:
+			case FTS_SYNCREP_OFF_SEGMENT:
 			case FTS_PROMOTE_SEGMENT:
 				/*
 				 * The libpq connection must be ready for accepting query and
@@ -413,7 +477,7 @@ ftsSend(fts_context *context)
 					break;
 				if (ftsInfo->state == FTS_PROBE_SEGMENT)
 					message = FTS_MSG_PROBE;
-				else if (ftsInfo->state == FTS_SYNCREP_SEGMENT)
+				else if (ftsInfo->state == FTS_SYNCREP_OFF_SEGMENT)
 					message = FTS_MSG_SYNCREP_OFF;
 				else
 					message = FTS_MSG_PROMOTE;
@@ -425,9 +489,10 @@ ftsSend(fts_context *context)
 					 * arrives.
 					 */
 					ftsInfo->poll_events = POLLIN;
-					elog(LOG, "FTS sent %s to (content=%d, dbid=%d), retry_count=%d",
-						 message, ftsInfo->primary_cdbinfo->segindex,
-						 ftsInfo->primary_cdbinfo->dbid, ftsInfo->retry_count);
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						   "FTS sent %s to (content=%d, dbid=%d), retry_count=%d",
+						   message, ftsInfo->primary_cdbinfo->segindex,
+						   ftsInfo->primary_cdbinfo->dbid, ftsInfo->retry_count);
 				}
 				else
 				{
@@ -451,10 +516,10 @@ ftsSend(fts_context *context)
 }
 
 /*
- * Record FTS handler's response from libpq result into probe_result
+ * Record FTS handler's response from libpq result into fts_result
  */
 static void
-probeRecordResponse(per_segment_info *ftsInfo, PGresult *result)
+probeRecordResponse(fts_segment_info *ftsInfo, PGresult *result)
 {
 	ftsInfo->result.isPrimaryAlive = true;
 
@@ -483,17 +548,18 @@ probeRecordResponse(per_segment_info *ftsInfo, PGresult *result)
 	Assert (retryRequested);
 	ftsInfo->result.retryRequested = *retryRequested;
 
-	elog(LOG, "FTS: segment (content=%d, dbid=%d, role=%c) reported "
-		 "isMirrorUp %d, isInSync %d, isSyncRepEnabled %d, "
-		 "isRoleMirror %d, and retryRequested %d to the prober.",
-		 ftsInfo->primary_cdbinfo->segindex,
-		 ftsInfo->primary_cdbinfo->dbid,
-		 ftsInfo->primary_cdbinfo->role,
-		 ftsInfo->result.isMirrorAlive,
-		 ftsInfo->result.isInSync,
-		 ftsInfo->result.isSyncRepEnabled,
-		 ftsInfo->result.isRoleMirror,
-		 ftsInfo->result.retryRequested);
+	elogif(gp_log_fts >= GPVARS_VERBOSITY_TERSE, LOG,
+		   "FTS: segment (content=%d, dbid=%d, role=%c) reported "
+		   "isMirrorUp %d, isInSync %d, isSyncRepEnabled %d, "
+		   "isRoleMirror %d, and retryRequested %d to the prober.",
+		   ftsInfo->primary_cdbinfo->segindex,
+		   ftsInfo->primary_cdbinfo->dbid,
+		   ftsInfo->primary_cdbinfo->role,
+		   ftsInfo->result.isMirrorAlive,
+		   ftsInfo->result.isInSync,
+		   ftsInfo->result.isSyncRepEnabled,
+		   ftsInfo->result.isRoleMirror,
+		   ftsInfo->result.retryRequested);
 }
 
 /*
@@ -502,7 +568,7 @@ probeRecordResponse(per_segment_info *ftsInfo, PGresult *result)
 static void
 ftsReceive(fts_context *context)
 {
-	per_segment_info *ftsInfo;
+	fts_segment_info *ftsInfo;
 	PGresult *result = NULL;
 	int ntuples;
 	int nfields;
@@ -511,16 +577,17 @@ ftsReceive(fts_context *context)
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		ftsInfo = &context->perSegInfos[i];
-		elog(DEBUG1, "FTS: ftsReceive (content=%d, dbid=%d) state=%d, "
-			 "retry_count=%d, conn->asyncStatus=%d",
-			 ftsInfo->primary_cdbinfo->segindex,
-			 ftsInfo->primary_cdbinfo->dbid,
-			 ftsInfo->state, ftsInfo->retry_count,
-			 ftsInfo->conn ? ftsInfo->conn->asyncStatus : -1);
+		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+			   "FTS: ftsReceive (content=%d, dbid=%d) state=%d, "
+			   "retry_count=%d, conn->asyncStatus=%d",
+			   ftsInfo->primary_cdbinfo->segindex,
+			   ftsInfo->primary_cdbinfo->dbid,
+			   ftsInfo->state, ftsInfo->retry_count,
+			   ftsInfo->conn ? ftsInfo->conn->asyncStatus : -1);
 		switch(ftsInfo->state)
 		{
 			case FTS_PROBE_SEGMENT:
-			case FTS_SYNCREP_SEGMENT:
+			case FTS_SYNCREP_OFF_SEGMENT:
 			case FTS_PROMOTE_SEGMENT:
 				/*
 				 * The libpq connection must be established and a message must
@@ -617,6 +684,7 @@ ftsReceive(fts_context *context)
 				ftsInfo->state = nextSuccessState(ftsInfo->state);
 				break;
 			default:
+				/* Cannot receive response in any other state. */
 				break;
 		}
 
@@ -640,7 +708,7 @@ ftsReceive(fts_context *context)
 static void
 processRetry(fts_context *context)
 {
-	per_segment_info *ftsInfo;
+	fts_segment_info *ftsInfo;
 	int i;
 	pg_time_t now = (pg_time_t) time(NULL);
 
@@ -659,7 +727,7 @@ processRetry(fts_context *context)
 					  SEGMENT_IS_ALIVE(ftsInfo->mirror_cdbinfo)))
 					break;
 			case FTS_PROBE_FAILED:
-			case FTS_SYNCREP_FAILED:
+			case FTS_SYNCREP_OFF_FAILED:
 			case FTS_PROMOTE_FAILED:
 				if (ftsInfo->retry_count == gp_fts_probe_retries)
 				{
@@ -675,24 +743,25 @@ processRetry(fts_context *context)
 					if (ftsInfo->state == FTS_PROBE_SUCCESS ||
 						ftsInfo->state == FTS_PROBE_FAILED)
 						ftsInfo->state = FTS_PROBE_RETRY_WAIT;
-					else if (ftsInfo->state == FTS_SYNCREP_FAILED)
-						ftsInfo->state = FTS_SYNCREP_RETRY_WAIT;
+					else if (ftsInfo->state == FTS_SYNCREP_OFF_FAILED)
+						ftsInfo->state = FTS_SYNCREP_OFF_RETRY_WAIT;
 					else
 						ftsInfo->state = FTS_PROMOTE_RETRY_WAIT;
 					ftsInfo->retryStartTime = now;
-					elog(LOG, "FTS initialized retry start time to now "
-						 "(content=%d, dbid=%d) state=%d",
-						 ftsInfo->primary_cdbinfo->segindex,
-						 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
+					elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
+						   "FTS initialized retry start time to now "
+						   "(content=%d, dbid=%d) state=%d",
+						   ftsInfo->primary_cdbinfo->segindex,
+						   ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
 					PQfinish(ftsInfo->conn);
 					ftsInfo->conn = NULL;
 					ftsInfo->poll_events = ftsInfo->poll_revents = 0;
 					/* Reset result before next attempt. */
-					memset(&ftsInfo->result, 0, sizeof(probe_result));
+					memset(&ftsInfo->result, 0, sizeof(fts_result));
 				}
 				break;
 			case FTS_PROBE_RETRY_WAIT:
-			case FTS_SYNCREP_RETRY_WAIT:
+			case FTS_SYNCREP_OFF_RETRY_WAIT:
 			case FTS_PROMOTE_RETRY_WAIT:
 				/* Wait for 1 second before making another attempt. */
 				if ((int) (now - ftsInfo->retryStartTime) < 1)
@@ -701,14 +770,15 @@ processRetry(fts_context *context)
 				 * We have remained in retry state for over a second, it's time
 				 * to make another attempt.
 				 */
-				elog(LOG, "FTS retrying attempt %d (content=%d, dbid=%d) "
-					 "state=%d", ftsInfo->retry_count,
-					 ftsInfo->primary_cdbinfo->segindex,
-					 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
+				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+					   "FTS retrying attempt %d (content=%d, dbid=%d) "
+					   "state=%d", ftsInfo->retry_count,
+					   ftsInfo->primary_cdbinfo->segindex,
+					   ftsInfo->primary_cdbinfo->dbid, ftsInfo->state);
 				if (ftsInfo->state == FTS_PROBE_RETRY_WAIT)
 					ftsInfo->state = FTS_PROBE_SEGMENT;
-				else if (ftsInfo->state == FTS_SYNCREP_RETRY_WAIT)
-					ftsInfo->state = FTS_SYNCREP_SEGMENT;
+				else if (ftsInfo->state == FTS_SYNCREP_OFF_RETRY_WAIT)
+					ftsInfo->state = FTS_SYNCREP_OFF_SEGMENT;
 				else
 					ftsInfo->state = FTS_PROMOTE_SEGMENT;
 				break;
@@ -719,39 +789,14 @@ processRetry(fts_context *context)
 }
 
 /*
- * Timeout is said to have occurred if greater than gp_fts_probe_timeout
- * seconds have elapsed since connection start and a response is not received.
- * Segments for which a response is received already or that have failed with
- * all retries exhausted are exempted from timeout evaluation.
- */
-static void
-ftsCheckTimeout(per_segment_info *ftsInfo, pg_time_t now)
-{
-	if (!IsFtsProbeStateSuccess(ftsInfo->state) &&
-		ftsInfo->retry_count < gp_fts_probe_retries &&
-		(int) (now - ftsInfo->startTime) > gp_fts_probe_timeout)
-	{
-		elog(LOG,
-			 "FTS timeout detected for (content=%d, dbid=%d) "
-			 "state=%d, retry_count=%d,",
-			 ftsInfo->primary_cdbinfo->segindex,
-			 ftsInfo->primary_cdbinfo->dbid, ftsInfo->state,
-			 ftsInfo->retry_count);
-		ftsInfo->state = nextFailedState(ftsInfo->state);
-		/* For now no more retries if connection timed out. */
-		ftsInfo->retry_count = gp_fts_probe_retries;
-	}
-}
-
-/*
  * Return true for segments whose response is ready to be processed.  Segments
  * whose response is already processed should have response->conn set to NULL.
  */
 static bool
-ftsResponseReady(per_segment_info *ftsInfo)
+ftsResponseReady(fts_segment_info *ftsInfo)
 {
-	return ((IsFtsProbeStateSuccess(ftsInfo->state) ||
-			 IsFtsProbeStateFailed(ftsInfo->state)) && ftsInfo->conn != NULL);
+	return (IsFtsMessageStateSuccess(ftsInfo->state) ||
+			IsFtsMessageStateFailed(ftsInfo->state));
 }
 
 static bool
@@ -839,15 +884,12 @@ processResponse(fts_context *context)
 {
 	bool is_updated = false;
 
-	pg_time_t now = (pg_time_t) time(NULL);
-
 	for (int response_index = 0;
 		 response_index < context->num_pairs && FtsIsActive();
 		 response_index ++)
 	{
-		per_segment_info *ftsInfo = &(context->perSegInfos[response_index]);
+		fts_segment_info *ftsInfo = &(context->perSegInfos[response_index]);
 
-		ftsCheckTimeout(ftsInfo, now);
 		/*
 		 * Consider segments that are in final state (success / failure) and
 		 * that are not already processed.
@@ -856,7 +898,7 @@ processResponse(fts_context *context)
 			continue;
 
 		/* All retries must have exhausted before a failure is processed. */
-		AssertImply(IsFtsProbeStateFailed(ftsInfo->state),
+		AssertImply(IsFtsMessageStateFailed(ftsInfo->state),
 					ftsInfo->retry_count == gp_fts_probe_retries);
 
 		CdbComponentDatabaseInfo *primary = ftsInfo->primary_cdbinfo;
@@ -901,9 +943,10 @@ processResponse(fts_context *context)
 					 * the primaries to unblock commits by sending syncrep off
 					 * message.
 					 */
-					ftsInfo->state = FTS_SYNCREP_SEGMENT;
-					elog(LOG, "FTS turning syncrep off on (content=%d, dbid=%d)",
-						 primary->segindex, primary->dbid);
+					ftsInfo->state = FTS_SYNCREP_OFF_SEGMENT;
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						   "FTS turning syncrep off on (content=%d, dbid=%d)",
+						   primary->segindex, primary->dbid);
 				}
 				else if (ftsInfo->result.isRoleMirror)
 				{
@@ -917,8 +960,9 @@ processResponse(fts_context *context)
 					Assert(SEGMENT_IS_NOT_INSYNC(mirror));
 					Assert(SEGMENT_IS_NOT_INSYNC(primary));
 					Assert(!ftsInfo->result.isSyncRepEnabled);
-					elog(LOG, "FTS resending promote request to (content=%d,"
-						 " dbid=%d)", primary->segindex, primary->dbid);
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						   "FTS resending promote request to (content=%d,"
+						   " dbid=%d)", primary->segindex, primary->dbid);
 					ftsInfo->state = FTS_PROMOTE_SEGMENT;
 				}
 				else
@@ -934,6 +978,7 @@ processResponse(fts_context *context)
 						GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
 						GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
 						IsInSync, IsPrimaryAlive, IsMirrorAlive);
+					ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				}
 				break;
 			case FTS_PROBE_FAILED:
@@ -966,9 +1011,10 @@ processResponse(fts_context *context)
 					 * mirror will be promoted in subsequent connect, poll,
 					 * send, receive steps.
 					 */
-					elog(LOG, "FTS promoting mirror (content=%d, dbid=%d) "
-						 "to be the new primary",
-						 mirror->segindex, mirror->dbid);
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						   "FTS promoting mirror (content=%d, dbid=%d) "
+						   "to be the new primary",
+						   mirror->segindex, mirror->dbid);
 					ftsInfo->state = FTS_PROMOTE_SEGMENT;
 					ftsInfo->primary_cdbinfo = mirror;
 					ftsInfo->mirror_cdbinfo = primary;
@@ -978,9 +1024,10 @@ processResponse(fts_context *context)
 					elog(WARNING, "FTS double fault detected (content=%d) "
 						 "primary dbid=%d, mirror dbid=%d",
 						 primary->segindex, primary->dbid, mirror->dbid);
+					ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				}
 				break;
-			case FTS_SYNCREP_FAILED:
+			case FTS_SYNCREP_OFF_FAILED:
 				/*
 				 * Another attempt to turn off syncrep will be made in the next
 				 * probe cycle.  Until then, leave the transactions waiting for
@@ -988,21 +1035,27 @@ processResponse(fts_context *context)
 				 */
 				elog(WARNING, "FTS failed to turn off syncrep on (content=%d,"
 					 " dbid=%d)", primary->segindex, primary->dbid);
+				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_FAILED:
 				elog(WARNING, "FTS double fault detected (content=%d) "
 					 "primary dbid=%d, mirror dbid=%d",
 					 primary->segindex, primary->dbid, mirror->dbid);
+				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_SUCCESS:
 				Assert(ftsInfo->result.isRoleMirror);
-				elog(LOG, "FTS mirror (content=%d, dbid=%d) promotion "
-					 "triggerred successfully",
-					 primary->segindex, primary->dbid);
+				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+					   "FTS mirror (content=%d, dbid=%d) promotion "
+					   "triggerred successfully",
+					   primary->segindex, primary->dbid);
+				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
-			case FTS_SYNCREP_SUCCESS:
-				elog(LOG, "FTS primary (content=%d, dbid=%d) notified to turn "
-					 "syncrep off", primary->segindex, primary->dbid);
+			case FTS_SYNCREP_OFF_SUCCESS:
+				elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+					   "FTS primary (content=%d, dbid=%d) notified to turn "
+					   "syncrep off", primary->segindex, primary->dbid);
+				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			default:
 				elog(ERROR, "FTS invalid internal state %d for (content=%d)"
@@ -1011,7 +1064,7 @@ processResponse(fts_context *context)
 				break;
 		}
 		/* Close connection and reset result for next message, if any. */
-		memset(&ftsInfo->result, 0, sizeof(probe_result));
+		memset(&ftsInfo->result, 0, sizeof(fts_result));
 		PQfinish(ftsInfo->conn);
 		ftsInfo->conn = NULL;
 		ftsInfo->poll_events = ftsInfo->poll_revents = 0;
@@ -1043,8 +1096,8 @@ static void
 FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 {
 	context->num_pairs = cdbs->total_segments;
-	context->perSegInfos = (per_segment_info *) palloc0(
-		context->num_pairs * sizeof(per_segment_info));
+	context->perSegInfos = (fts_segment_info *) palloc0(
+		context->num_pairs * sizeof(fts_segment_info));
 
 	int fts_index = 0;
 	int cdb_index = 0;
@@ -1068,7 +1121,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		/* primary in catalog will NEVER be marked down. */
 		Assert(FtsIsSegmentAlive(primary));
 
-		per_segment_info *ftsInfo = &(context->perSegInfos[fts_index]);
+		fts_segment_info *ftsInfo = &(context->perSegInfos[fts_index]);
 		/*
 		 * Initialize the response object.  Response from a segment will be
 		 * processed only if ftsInfo->state is one of SUCCESS states.  If a

@@ -123,7 +123,7 @@ InitTestCdb(int segCnt, bool has_mirrors, char default_mode)
 
 /* Initialize connection and startTime for each primary-mirror pair. */
 static void
-init_fts_context(fts_context *context, FtsProbeState state)
+init_fts_context(fts_context *context, FtsMessageState state)
 {
 	pg_time_t now = (pg_time_t) time(NULL);
 	int i;
@@ -205,7 +205,7 @@ test_ftsConnect_FTS_PROBE_SEGMENT(void **state)
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
 	char primary_conninfo[1024];
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 
 	ftsInfo->conn = NULL;
 	ftsInfo->startTime = 0;
@@ -240,7 +240,7 @@ test_ftsConnect_one_failure_one_success(void **state)
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
 	init_fts_context(&context, FTS_PROBE_SEGMENT);
-	per_segment_info *success_resp = &context.perSegInfos[0];
+	fts_segment_info *success_resp = &context.perSegInfos[0];
 	success_resp->conn->status = CONNECTION_STARTED;
 	success_resp->conn->sock = 11;
 	/* Assume that the successful socket is ready for writing. */
@@ -251,7 +251,7 @@ test_ftsConnect_one_failure_one_success(void **state)
 	expect_value(PQstatus, conn, success_resp->conn);
 	will_return(PQstatus, CONNECTION_STARTED);
 
-	per_segment_info *failure_resp = &context.perSegInfos[1];
+	fts_segment_info *failure_resp = &context.perSegInfos[1];
 	pfree(failure_resp->conn);
 	failure_resp->conn = NULL;
 	char primary_conninfo_failure[1024];
@@ -292,7 +292,7 @@ test_ftsConnect_ftsPoll(void **state)
 
 	InitPollFds(1);
 	char primary_conninfo[1024];
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 
 	PGconn *pgconn = palloc(sizeof(PGconn));
 	pgconn->status = CONNECTION_STARTED;
@@ -341,7 +341,7 @@ test_ftsSend_success(void **state)
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
 	init_fts_context(&context, FTS_PROBE_SEGMENT);
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 	ftsInfo->conn->asyncStatus = PGASYNC_IDLE;
 	ftsInfo->poll_revents = POLLOUT;
 	expect_value(PQstatus, conn, ftsInfo->conn);
@@ -370,7 +370,7 @@ test_ftsReceive_success(void **state)
 	static int true_value = 1;
 	static int false_value = 0;
 
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 	ftsInfo->state = FTS_PROBE_SEGMENT;
 	ftsInfo->conn = palloc(sizeof(PGconn));
 	ftsInfo->conn->status = CONNECTION_OK;
@@ -448,7 +448,7 @@ test_ftsReceive_when_fts_handler_FATAL(void **state)
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
 	init_fts_context(&context, FTS_PROBE_SEGMENT);
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 
 	/* Simulate that data is available for reading from the socket. */
 	ftsInfo->poll_revents = POLLIN;
@@ -487,7 +487,7 @@ test_ftsReceive_when_fts_handler_ERROR(void **state)
 	 * message.
 	 */
 	init_fts_context(&context, FTS_PROMOTE_SEGMENT);
-	per_segment_info *ftsInfo = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 
 	/* Simulate that data is available for reading from the socket. */
 	ftsInfo->poll_revents = POLLIN;
@@ -537,16 +537,16 @@ test_processRetry_wait_before_retry(void **state)
 		2, true, GP_SEGMENT_CONFIGURATION_MODE_INSYNC);
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
-	init_fts_context(&context, FTS_SYNCREP_FAILED);
+	init_fts_context(&context, FTS_SYNCREP_OFF_FAILED);
 
 	/* First primary sent a response with requestRetry set. */
-	per_segment_info *ftsInfo1 = &context.perSegInfos[0];
+	fts_segment_info *ftsInfo1 = &context.perSegInfos[0];
 	ftsInfo1->state = FTS_PROBE_SUCCESS;
 	ftsInfo1->result.isPrimaryAlive = true;
 	ftsInfo1->result.retryRequested = true;
 
 	/* Second primary didn't respond to syncrep_off message. */
-	per_segment_info *ftsInfo2 = &context.perSegInfos[1];
+	fts_segment_info *ftsInfo2 = &context.perSegInfos[1];
 
 	expect_value(PQfinish, conn, ftsInfo1->conn);
 	will_be_called(PQfinish);
@@ -557,7 +557,7 @@ test_processRetry_wait_before_retry(void **state)
 
 	/* We must wait in a retry_wait state with retryStartTime set. */
 	assert_true(ftsInfo1->state == FTS_PROBE_RETRY_WAIT);
-	assert_true(ftsInfo2->state == FTS_SYNCREP_RETRY_WAIT);
+	assert_true(ftsInfo2->state == FTS_SYNCREP_OFF_RETRY_WAIT);
 	assert_true(ftsInfo1->retry_count == 1);
 	assert_true(ftsInfo1->poll_events == 0);
 	assert_true(ftsInfo1->poll_revents == 0);
@@ -576,7 +576,7 @@ test_processRetry_wait_before_retry(void **state)
 	processRetry(&context);
 
 	assert_true(ftsInfo1->state == FTS_PROBE_RETRY_WAIT);
-	assert_true(ftsInfo2->state == FTS_SYNCREP_RETRY_WAIT);
+	assert_true(ftsInfo2->state == FTS_SYNCREP_OFF_RETRY_WAIT);
 
 	/*
 	 * Adjust retryStartTime to 1 second in past so that next processRetry()
@@ -589,7 +589,7 @@ test_processRetry_wait_before_retry(void **state)
 
 	/* This time, we must be ready to make another retry. */
 	assert_true(ftsInfo1->state == FTS_PROBE_SEGMENT);
-	assert_true(ftsInfo2->state == FTS_SYNCREP_SEGMENT);
+	assert_true(ftsInfo2->state == FTS_SYNCREP_OFF_SEGMENT);
 }
 
 
@@ -826,11 +826,11 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorUpNotInSync(void **state)
 	 * changed (no further messages needed from FTS).
 	 */
 	assert_true(context.perSegInfos[0].conn == NULL);
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 	assert_true(context.perSegInfos[1].conn == NULL);
-	assert_true(context.perSegInfos[1].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[1].state == FTS_RESPONSE_PROCESSED);
 	assert_true(context.perSegInfos[2].conn == NULL);
-	assert_true(context.perSegInfos[2].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[2].state == FTS_RESPONSE_PROCESSED);
 }
 
 /*
@@ -952,13 +952,13 @@ test_processResponse_multiple_segments(void **state)
 
 	assert_true(is_updated);
 	/* mirror found up */
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 	/* mirror promotion should be triggered */
 	assert_true(context.perSegInfos[1].state == FTS_PROMOTE_SEGMENT);
 	/* mirror found down, must turn off syncrep on primary */
-	assert_true(context.perSegInfos[2].state == FTS_SYNCREP_SEGMENT);
+	assert_true(context.perSegInfos[2].state == FTS_SYNCREP_OFF_SEGMENT);
 	/* no change in configuration */
-	assert_true(context.perSegInfos[3].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[3].state == FTS_RESPONSE_PROCESSED);
 	/* retry possible, final state is not yet reached */
 	assert_true(context.perSegInfos[4].state == FTS_PROBE_RETRY_WAIT);
 }
@@ -1005,7 +1005,7 @@ test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorUpNotInSync(void **state)
 	bool is_updated = processResponse(&context);
 
 	assert_true(is_updated);
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 	assert_true(context.perSegInfos[0].conn == NULL);
 }
 
@@ -1061,9 +1061,9 @@ test_PrimayUpMirrorUpSync_to_PrimaryUpMirrorDownNotInSync(void **state)
 
 	assert_true(is_updated);
 	/* mirror is down but syncrep is enabled, so it must be turned off */
-	assert_true(context.perSegInfos[0].state == FTS_SYNCREP_SEGMENT);
+	assert_true(context.perSegInfos[0].state == FTS_SYNCREP_OFF_SEGMENT);
 	/* no change in config */
-	assert_true(context.perSegInfos[1].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[1].state == FTS_RESPONSE_PROCESSED);
 	assert_true(context.perSegInfos[0].conn == NULL);
 	assert_true(context.perSegInfos[1].conn == NULL);
 }
@@ -1158,7 +1158,7 @@ test_PrimayUpMirrorUpNotInSync_to_PrimayUpMirrorUpSync(void **state)
 	bool is_updated = processResponse(&context);
 
 	assert_true(is_updated);
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 	assert_true(context.perSegInfos[0].conn == NULL);
 }
 
@@ -1212,7 +1212,7 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorUpSync(void **state)
 
 	assert_true(is_updated);
 	assert_true(context.perSegInfos[0].conn == NULL);
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 }
 
 /*
@@ -1248,7 +1248,7 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorDownNotInSync(void **state)
 
 	assert_false(is_updated);
 	assert_true(context.perSegInfos[0].conn == NULL);
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
 }
 
 /*
@@ -1293,13 +1293,12 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimaryDown(void **state)
 	assert_false(is_updated);
 	assert_true(context.perSegInfos[0].conn == NULL);
 	assert_true(context.perSegInfos[1].conn == NULL);
-	/* double fault, so state change for first segment */
-	assert_true(context.perSegInfos[0].state == FTS_PROBE_FAILED);
-	assert_true(context.perSegInfos[1].state == FTS_PROBE_SUCCESS);
+	assert_true(context.perSegInfos[0].state == FTS_RESPONSE_PROCESSED);
+	assert_true(context.perSegInfos[1].state == FTS_RESPONSE_PROCESSED);
 }
 
 /*
- * 1 segment, probe times out, is_updated = false because it's a double fault.
+ * 1 segment, probe times out.
  */
 void
 test_probeTimeout(void **state)
@@ -1308,21 +1307,19 @@ test_probeTimeout(void **state)
 		1, true, GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC);
 	fts_context context;
 	FtsWalRepInitProbeContext(cdbs, &context);
-	init_fts_context(&context, FTS_PROBE_SUCCESS);
+	init_fts_context(&context, FTS_PROBE_SEGMENT);
 
-	will_return(FtsIsActive, true);
+	pg_time_t now = (pg_time_t) time(NULL);
+	context.perSegInfos[0].startTime = now - gp_fts_probe_timeout - 1;
 
-	context.perSegInfos[0].startTime =
-		(pg_time_t) time(NULL) - gp_fts_probe_timeout - 1;
-	context.perSegInfos[0].state = FTS_PROBE_SEGMENT;
+	ftsCheckTimeout(&context.perSegInfos[0], now);
 
-	expect_value(PQfinish, conn, context.perSegInfos[0].conn);
-	will_be_called(PQfinish);
-
-	bool is_updated = processResponse(&context);
-	/* double fault, state remains failed due to timeout */
-	assert_false(is_updated);
 	assert_true(context.perSegInfos[0].state == FTS_PROBE_FAILED);
+	/*
+	 * Timeout should be treated as just another failure and should be
+	 * retried.
+	 */
+	assert_true(context.perSegInfos[0].retry_count == 0);
 }
 
 void
