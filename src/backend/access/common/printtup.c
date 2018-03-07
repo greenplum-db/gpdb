@@ -20,9 +20,7 @@
 #include "libpq/pqformat.h"
 #include "tcop/pquery.h"
 #include "utils/lsyscache.h"
-#include "catalog/pg_type.h"
-extern void varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree);
-extern char * pg_server_to_client(const char *s, int len);
+#include "mb/pg_wchar.h"
 
 static void printtup_startup(DestReceiver *self, int operation,
 				 TupleDesc typeinfo);

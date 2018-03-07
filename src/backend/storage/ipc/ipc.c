@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 
 #include "cdb/cdbdisp.h"
+#include "cdb/ml_ipc.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #ifdef PROFILE_PID_DIR
@@ -46,8 +47,6 @@ bool		proc_exit_inprogress = false;
  */
 static bool atexit_callback_setup = false;
 
-/* GPDB_84_MERGE_FIXME: externs in .c files like this are dangerous */
-extern void WaitInterconnectQuit(void);
 
 /* ----------------------------------------------------------------
  *						exit() handling stuff

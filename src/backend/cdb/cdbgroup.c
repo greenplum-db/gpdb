@@ -65,7 +65,6 @@
 #include "cdb/cdbsetop.h"
 #include "cdb/cdbgroup.h"
 
-extern void UpdateScatterClause(Query *query, List *newtlist);
 
 /*
  * MppGroupPrep represents a strategy by which to precondition the

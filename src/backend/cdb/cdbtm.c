@@ -49,7 +49,6 @@
 #include "utils/snapmgr.h"
 
 extern bool Test_print_direct_dispatch_info;
-extern struct Port *MyProcPort;
 
 #define DTM_DEBUG3 (Debug_print_full_dtm ? LOG : DEBUG3)
 #define DTM_DEBUG5 (Debug_print_full_dtm ? LOG : DEBUG5)

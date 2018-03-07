@@ -62,9 +62,6 @@ typedef struct URL_EXECUTE_FILE
 	execute_handle_t *handle;	/* ResourceOwner-tracked stuff */
 } URL_EXECUTE_FILE;
 
-extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
-extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
-extern char *make_command(const char *cmd, extvar_t *ev);
 static void pclose_without_stderr(int *rwepipe);
 static char *interpretError(int exitCode, char *buf, size_t buflen, char *err, size_t errlen);
 static const char *getSignalNameFromCode(int signo);

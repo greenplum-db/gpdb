@@ -74,4 +74,6 @@ extern List *augment_subplan_tlist(List *tlist, List *exprs, int *pnum, AttrNumb
 extern Plan *within_agg_planner(PlannerInfo *root, AggClauseCounts *agg_counts,
 								GroupContext *group_context);
 
+extern void UpdateScatterClause(Query *query, List *newtlist);
+
 #endif   /* CDBGROUP_H */
