@@ -16,8 +16,8 @@
 #include "postgres.h"
 
 #include <unistd.h>
-#include <cdb/cdbvars.h>
 
+#include "cdb/cdbvars.h"
 #include "storage/spin.h"
 #include "executor/instrument.h"
 #include "utils/memutils.h"

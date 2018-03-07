@@ -35,7 +35,6 @@
 #include "utils/lsyscache.h"
 #include "nodes/tidbitmap.h"
 
-#define BITMAPINDEXSCAN_NSLOTS 0
 
 /* ----------------------------------------------------------------
  *		MultiExecBitmapIndexScan(node)

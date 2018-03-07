@@ -1834,6 +1834,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 							 errmsg("cannot lock rows in relation \"%s\"",
 									RelationGetRelationName(relation))));
+					break;
 			}
 		}
 
