@@ -2326,7 +2326,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 			if (!FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
 										   DDLNotSpecified,
 										   "" /* databaseName */,
-										   "" /* tableName */) == FaultInjectorTypeSkip)
+										   "" /* tableName */))
 			{
 #endif /* FAULT_INJECTOR */
 				if (_SPI_checktuples())
