@@ -4245,11 +4245,16 @@
         specified in a <codeph>CREATE EXTERNAL TABLE</codeph> or <codeph>COPY</codeph> command. The
           <codeph>INTO ERROR TABLE</codeph> clause was removed in Greenplum Database 5. </p>
       <p>The default value is <codeph>false</codeph>, Greenplum Database returns an error if the
-          <codeph>INTO ERROR TABLE</codeph> clause is specified in a command. If the value is
-          <codeph>true</codeph>, Greenplum Database ignores the clause, issues a warning, and
-        executes the command and logs information about data rows with formatting errors.</p>
-      <p>Set the value to <codeph>true</codeph> to run Greenplum Database 4.3.x a <codeph>CREATE
-          EXTERNAL TABLE</codeph> or <codeph>COPY</codeph> command that contains the <codeph>INTO
+          <codeph>INTO ERROR TABLE</codeph> clause is specified in a command. </p>
+      <p>If the value is <codeph>true</codeph>, Greenplum Database ignores the clause, issues a
+        warning, and executes the command and logs information about data rows with formatting
+        errors. In Greenplum Database 5.x, you access the error log information with built-in SQL
+        functions. See the <codeph><xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE
+            EXTERNAL TABLE</xref></codeph> or <codeph><xref href="../sql_commands/COPY.xml"
+            >COPY</xref></codeph> command.</p>
+      <p>You can set this value to <codeph>true</codeph> to avoid the Greenplum Database 5 error
+        when you run applications that execute <codeph>CREATE EXTERNAL TABLE</codeph> or
+          <codeph>COPY</codeph> commands that include the Greenplum Database 4.3.x <codeph>INTO
           ERROR TABLE</codeph> clause.</p>
       <table id="table_hnf_2v5_bdb">
         <tgroup cols="3">
