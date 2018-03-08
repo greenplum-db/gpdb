@@ -252,8 +252,8 @@ CREATE TABLE wj_model_results_roi AS SELECT *
             host:<codeblock>wget http://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget http://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
           <li id="py219012">Use the <codeph>gpscp</codeph> utility and the
               <codeph>hosts_all</codeph> file to copy the <codeph>tar.gz</codeph> files to the same
-            directory on all nodes of the Greenplum cluster. The <codeph>hosts_all</codeph> file
-            contains a list of all the Greenplum Database segment hosts. You might require root
+            directory on all nodes of the Greenplum Database cluster. The <codeph>hosts_all</codeph>
+            file contains a list of all the Greenplum Database segment hosts. You might require root
             access to do
             this.<codeblock>gpscp -f hosts_all Matrix_0.9996875-1.tar.gz =:/home/gpadmin </codeblock><codeblock>gpscp -f /hosts_all arm_1.5-03.tar.gz =:/home/gpadmin</codeblock></li>
           <li id="py219020">Use the <codeph>gpssh</codeph> utility in interactive mode to log into
