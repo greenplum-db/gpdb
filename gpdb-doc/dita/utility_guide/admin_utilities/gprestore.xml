@@ -7,6 +7,8 @@
       utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
       located in the Greenplum Database master host data directory, with table data stored locally
       on segment hosts in CSV data files.</p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
+      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
@@ -157,9 +159,8 @@
           <pd>If a schema that you specify for inclusion exists in the database, the utility issues
             an error and continues the operation. The utility fails if a table being restored exists
             in the database. </pd>
-          <pd>You cannot use this option if the backup set uses a single data file for all tables on
-            each segment (<codeph>gpbackup -single-data-file</codeph> option), or if objects in the
-            backup set have dependencies on multiple schemas.</pd>
+          <pd>You cannot use this option if objects in the backup set have dependencies on multiple
+            schemas.</pd>
         </plentry>
       </parml>
       <parml>
@@ -200,8 +201,8 @@
             data. By default, <codeph>gprestore</codeph> uses 1 connection. Increasing this number
             can improve the speed of restoring data.<note>If you used the <codeph>gpbackup
                 -single-data-file</codeph> option to combine table backups into a single file per
-              segment, you cannot perform a parallel restore operation with
-                <codeph>gprestore</codeph>.</note></pd>
+              segment, you cannot set <codeph>-jobs</codeph> to a value higher than 1 to perform a
+              parallel restore operation.</note></pd>
         </plentry>
       </parml>
       <parml>

@@ -4,6 +4,8 @@
   <title>gpbackup</title>
   <body>
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are not provided with the SuSE
+      Linux Enterprise Server build of Pivotal Greenplum Database.</note>
     <section>
       <title>Synopsis</title>
       <codeblock><b>gpbackup -dbname</b> <varname>database_name</varname>
@@ -235,9 +237,9 @@
             that segment. By default, each <codeph>gpbackup</codeph> creates one compressed CSV file
             for each table that is backed up on the segment.<note>If you use the
                 <codeph>-single-data-file</codeph> option to combine table backups into a single
-              file per segment, you cannot perform a parallel restore operation with
-                <codeph>gprestore</codeph>, and you cannot use the <codeph>-include-schema</codeph>
-              option with <codeph>gprestore</codeph>.</note></pd>
+              file per segment, you cannot set the <codeph>gprestore</codeph> option
+                <codeph>-jobs</codeph> to a value higher than 1 to perform a parallel restore
+              operation.</note></pd>
         </plentry>
       </parml>
       <parml>
