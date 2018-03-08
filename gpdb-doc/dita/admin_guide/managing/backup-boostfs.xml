@@ -9,8 +9,8 @@
          Domain system. BoostFS leverages DD Boost technology and helps reduce bandwidth usage, can
          improve backup-times, offers load-balancing, in-flight encryption, and supports the Data
          Domain multi-tenancy feature set.</p>
-      <p>The BoostFS plug-in is installed on the Greenplum Database host systems and provides access
-         a Data Domain system as a standard file system mount point. With direct access to a BoostFS
+      <p>You install the BoostFS plug-in on the Greenplum Database host systems to provide access a
+         Data Domain system as a standard file system mount point. With direct access to a BoostFS
          mount point, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> can leverage the
          storage and network efficiencies of the DD Boost protocol for backup and recovery.</p>
       <p>To back up or restore with BoostFS, you specify the <codeph>gpbackup</codeph> and
@@ -72,11 +72,11 @@
          <p>This example <codeph>gpbackup</codeph> command backs up the database
                <codeph>test</codeph>. The example assumes that the directory
                <codeph>/boostfs-test</codeph> is the mounted Data Domain storage unit.
-            <codeblock>$ gpbackup -dbname test -backiup-dir /boostfs-test/ -single-data-file -no-compression</codeblock></p>
+            <codeblock>$ gpbackup -dbname test -backup-dir /boostfs-test/ -single-data-file -no-compression</codeblock></p>
          <p>These commands drop the database <codeph>test</codeph> and runs a
                <codeph>gprestore</codeph> command to restore the database from the backup.
             <codeblock>$ dropdb test
-$ gprestore -backiup-dir /boostfs-test/ -timestamp 20171103153156 -create-db</codeblock></p>
+$ gprestore -backup-dir /boostfs-test/ -timestamp 20171103153156 -create-db</codeblock></p>
          <p>The name of the report file created for the backup contains the timestamp of the backup.
             The report file is placed in the Greenplum Database master backup directory. For
             information about the report files, see <xref href="backup-gpbackup.xml"/>.</p>
