@@ -28,6 +28,7 @@
 #include "cdb/cdbtm.h"
 #include "libpq/libpq-be.h"
 #include "commands/dbcommands.h"
+#include "storage/pmsignal.h"
 #include "storage/proc.h"
 
 #include "executor/spi.h"
@@ -41,15 +42,12 @@
 /* segment id for the master */
 #define MASTER_SEGMENT_ID -1
 
-FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
-volatile bool *ftsShutdownMaster;
+volatile FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
+
 static LWLockId ftsControlLock;
 
 static volatile bool *ftsReadOnlyFlag;
 static volatile bool *ftsAdminRequestedRO;
-
-static bool local_fts_status_initialized = false;
-static uint64 local_fts_statusVersion;
 
 /*
  * get fts share memory size
@@ -78,7 +76,6 @@ FtsShmemInit(void)
 
 	/* Initialize locks and shared memory area */
 
-	ftsShutdownMaster = &shared->ftsShutdownMaster;
 	ftsControlLock = shared->ControlLock;
 
 	ftsReadOnlyFlag = &shared->ftsReadOnlyFlag; /* global RO state */
@@ -98,11 +95,7 @@ FtsShmemInit(void)
 		shared->ftsReadOnlyFlag = gp_set_read_only;
 		shared->ftsAdminRequestedRO = gp_set_read_only;
 
-		shared->fts_probe_info.fts_probePid = 0;
 		shared->fts_probe_info.fts_statusVersion = 0;
-		shared->fts_probe_info.fts_status_initialized = false;
-
-		shared->ftsShutdownMaster = false;
 	}
 }
 
@@ -122,25 +115,15 @@ void
 FtsNotifyProber(void)
 {
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-
-	if (ftsProbeInfo->fts_probePid == 0)
-		return;
-
-	/*
-	 * This is a full-scan request. We set the request-flag == to the bitmap
-	 * version flag. When the version has been bumped, we know that the
-	 * request has been filled.
-	 */
-	ftsProbeInfo->fts_probeScanRequested = ftsProbeInfo->fts_statusVersion;
+	uint8 probeTick = ftsProbeInfo->probeTick;
 
 	/* signal fts-probe */
-	kill(ftsProbeInfo->fts_probePid, SIGINT);
+	SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
 
 	/* sit and spin */
-	while (ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)
+	while (probeTick == ftsProbeInfo->probeTick)
 	{
 		pg_usleep(50000);
-
 		CHECK_FOR_INTERRUPTS();
 	}
 }
@@ -158,27 +141,20 @@ FtsTestConnection(CdbComponentDatabaseInfo *failedDBInfo, bool fullScan)
 		return true;
 	}
 
-	if (!fullScan)
-	{
-		/*
-		 * if fullscan not requested, caller is just trying to optimize on
-		 * cached version but if we haven't populated yet the fts_status, we
-		 * don't have one and hence just return positively back. This is
-		 * mainly to avoid queries incorrectly failing just after QD restarts
-		 * if FTS process is yet to start and complete initializing the
-		 * fts_status. We shouldn't be checking against uninitialzed variable.
-		 */
-		if (ftsProbeInfo->fts_status_initialized)
-			return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
+	if (fullScan)
+		FtsNotifyProber();
 
-		return true;
-	}
-
-	FtsNotifyProber();
-
-	Assert(ftsProbeInfo->fts_status_initialized);
-
-	return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
+	/*
+	 * If fullscan is not requested, caller is just trying to optimize on the
+	 * cached version of the segment status.  If the cached version is not
+	 * initialized yet, just return positively back.  This is mainly to avoid
+	 * queries incorrectly failing just after QD restarts if FTS process is yet
+	 * to start and complete initializing the cached status.  We shouldn't be
+	 * checking against uninitialzed variable.
+	 */
+	return ftsProbeInfo->fts_statusVersion ?
+		FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]) :
+		true;
 }
 
 /*
@@ -194,7 +170,6 @@ FtsReConfigureMPP(bool create_new_gangs)
 {
 	/* need to scan to pick up the latest view */
 	FtsNotifyProber();
-	local_fts_statusVersion = ftsProbeInfo->fts_statusVersion;
 
 	ereport(LOG, (errmsg_internal("FTS: reconfiguration is in progress"),
 				  errSendAlert(true)));
@@ -255,29 +230,12 @@ FtsCondSetTxnReadOnly(bool *XactFlag)
 }
 
 bool
-verifyFtsSyncCount(void)
-{
-	if (ftsProbeInfo->fts_probePid == 0)
-		return true;
-
-	if (!local_fts_status_initialized)
-	{
-		local_fts_status_initialized = true;
-		local_fts_statusVersion = ftsProbeInfo->fts_statusVersion;
-
-		return true;
-	}
-
-	return (local_fts_statusVersion == ftsProbeInfo->fts_statusVersion);
-}
-
-bool
 isFtsReadOnlySet(void)
 {
 	return *ftsReadOnlyFlag;
 }
 
-uint64
+uint8
 getFtsVersion(void)
 {
 	return ftsProbeInfo->fts_statusVersion;

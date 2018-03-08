@@ -192,6 +192,8 @@ PrimaryOrMirrorWillBeUpdated(int count)
 	will_be_called_count(StartTransactionCommand, count);
 	will_be_called_count(GetTransactionSnapshot, count);
 	will_be_called_count(CommitTransactionCommand, count);
+	will_be_called_count(ftsLock, count);
+	will_be_called_count(ftsUnlock, count);
 }
 
 /*

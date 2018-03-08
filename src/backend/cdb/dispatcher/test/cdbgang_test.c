@@ -140,7 +140,7 @@ static void
 test__createWriterGang(void **state)
 {
 	int			segmentCount = TOTOAL_SEGMENTS;
-	int			ftsVersion = 1;
+	uint8		ftsVersion = 1;
 	PGconn	   *conn = &pgconn;
 	uint32		motionListener = 10000;
 	int			qePid = 2000;
@@ -192,7 +192,7 @@ static void
 test__createReaderGang(void **state)
 {
 	int			segmentCount = TOTOAL_SEGMENTS;
-	int			ftsVersion = 1;
+	uint8		ftsVersion = 1;
 	PGconn	   *conn = &pgconn;
 	const char *portalName = "portal1";
 	uint32		motionListener = 10000;

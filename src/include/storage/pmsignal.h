@@ -30,6 +30,8 @@ typedef enum
 	PMSIGNAL_START_AUTOVAC_WORKER,		/* start an autovacuum worker */
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
 
+	PMSIGNAL_WAKEN_FTS,         /* wake up FTS to probe segments */
+
 	NUM_PMSIGNALS				/* Must be last value of enum! */
 } PMSignalReason;
 

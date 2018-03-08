@@ -372,7 +372,7 @@ getComponentDatabases(void)
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 	Assert(GangContext != NULL);
 
-	uint64		ftsVersion = getFtsVersion();
+	uint8		ftsVersion = getFtsVersion();
 	MemoryContext oldContext = MemoryContextSwitchTo(GangContext);
 
 	if (cdb_component_dbs == NULL)

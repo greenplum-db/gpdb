@@ -32,10 +32,8 @@
 
 typedef struct FtsProbeInfo
 {
-	volatile uint32		fts_probePid;
-	volatile uint64		fts_probeScanRequested;
-	volatile uint64		fts_statusVersion;
-	volatile bool       fts_status_initialized;
+	volatile uint8		fts_statusVersion;
+	volatile uint8      probeTick;
 	volatile uint8		fts_status[FTS_MAX_DBS];
 } FtsProbeInfo;
 
@@ -43,8 +41,6 @@ typedef struct FtsProbeInfo
 
 typedef struct FtsControlBlock
 {
-	bool		ftsShutdownMaster;
-
 	LWLockId	ControlLock;
 
 	bool		ftsReadOnlyFlag;
@@ -54,7 +50,7 @@ typedef struct FtsControlBlock
 
 }	FtsControlBlock;
 
-extern FtsProbeInfo *ftsProbeInfo;
+extern volatile FtsProbeInfo *ftsProbeInfo;
 
 extern int	FtsShmemSize(void);
 extern void FtsShmemInit(void);
@@ -72,7 +68,7 @@ extern void ftsUnlock(void);
 extern void FtsNotifyProber(void);
 
 extern bool isFtsReadOnlySet(void);
-extern uint64 getFtsVersion(void);
+extern uint8 getFtsVersion(void);
 
 /* markStandbyStatus forces persistent state change ?! */
 #define markStandbyStatus(dbid, state) (markSegDBPersistentState((dbid), (state)))

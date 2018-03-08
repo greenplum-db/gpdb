@@ -852,23 +852,24 @@ updateConfiguration(CdbComponentDatabaseInfo *primary,
 
 		CommitTransactionCommand();
 		CurrentResourceOwner = save;
+
+		/*
+		 * Update the status to in-memory variable as well used by
+		 * dispatcher, now that changes has been persisted to catalog.
+		 */
+		Assert(ftsProbeInfo);
+		ftsLock();
+		if (IsPrimaryAlive)
+			FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[primary->dbid]);
+		else
+			FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[primary->dbid]);
+
+		if (IsMirrorAlive)
+			FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[mirror->dbid]);
+		else
+			FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[mirror->dbid]);
+		ftsUnlock();
 	}
-
-	/*
-	 * Update the status to in-memory variable as well used by
-	 * dispatcher, now that changes has been persisted to catalog.
-	 */
-	Assert(ftsProbeInfo);
-	/* XXX why shouldn't FtsControlBlock->ControlLock be held here? */
-	if (IsPrimaryAlive)
-		FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[primary->dbid]);
-	else
-		FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[primary->dbid]);
-
-	if (IsMirrorAlive)
-		FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[mirror->dbid]);
-	else
-		FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[mirror->dbid]);
 
 	return UpdateNeeded;
 }
