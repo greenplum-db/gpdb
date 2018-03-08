@@ -662,8 +662,6 @@ extern ArrayType *GUCArrayReset(ArrayType *array);
 
 extern int	GUC_complaint_elevel(GucSource source);
 
-extern void pg_timezone_abbrev_initialize(void);
-
 extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
 extern struct config_generic *find_option(const char *name,

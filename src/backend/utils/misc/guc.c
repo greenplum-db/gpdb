@@ -164,6 +164,7 @@ static bool assign_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_transaction_read_only(bool newval, bool doit, GucSource source);
 static const char *assign_canonical_path(const char *newval, bool doit, GucSource source);
 static const char *assign_timezone_abbreviations(const char *newval, bool doit, GucSource source);
+static void pg_timezone_abbrev_initialize(void);
 static const char *show_archive_command(void);
 static bool assign_tcp_keepalives_idle(int newval, bool doit, GucSource source);
 static bool assign_tcp_keepalives_interval(int newval, bool doit, GucSource source);
@@ -2389,7 +2390,7 @@ static struct config_string ConfigureNamesString[] =
 			NULL
 		},
 		&log_timezone_string,
-		"UNKNOWN", assign_log_timezone, show_log_timezone
+		"GMT", assign_log_timezone, show_log_timezone
 	},
 
 	{
@@ -2648,7 +2649,7 @@ static struct config_string ConfigureNamesString[] =
 			GUC_REPORT | GUC_GPDB_ADDOPT
 		},
 		&timezone_string,
-		"UNKNOWN", assign_timezone, show_timezone
+		"GMT", assign_timezone, show_timezone
 	},
 	{
 		{"timezone_abbreviations", PGC_USERSET, CLIENT_CONN_LOCALE,
@@ -3968,6 +3969,15 @@ SelectConfigFiles(const char *userDoption, const char *progname)
 	 * DataDir in advance.)
 	 */
 	SetConfigOption("data_directory", DataDir, PGC_POSTMASTER, PGC_S_OVERRIDE);
+
+	/*
+	 * If timezone_abbreviations wasn't set in the configuration file, install
+	 * the default value.  We do it this way because we can't safely install
+	 * a "real" value until my_exec_path is set, which may not have happened
+	 * when InitializeGUCOptions runs, so the bootstrap default value cannot
+	 * be the real desired default.
+	 */
+	pg_timezone_abbrev_initialize();
 
 	/*
 	 * Figure out where pg_hba.conf is, and make sure the path is absolute.
@@ -8481,14 +8491,11 @@ assign_timezone_abbreviations(const char *newval, bool doit, GucSource source)
  * This is called after initial loading of postgresql.conf.  If no
  * timezone_abbreviations setting was found therein, select default.
  */
-void
+static void
 pg_timezone_abbrev_initialize(void)
 {
-	if (strcmp(timezone_abbreviations_string, "UNKNOWN") == 0)
-	{
-		SetConfigOption("timezone_abbreviations", "Default",
-						PGC_POSTMASTER, PGC_S_ARGV);
-	}
+	SetConfigOption("timezone_abbreviations", "Default",
+					PGC_POSTMASTER, PGC_S_ARGV);
 }
 
 static const char *

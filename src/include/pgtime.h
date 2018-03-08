@@ -45,6 +45,11 @@ struct pg_tm
 typedef struct pg_tz pg_tz;
 typedef struct pg_tzenum pg_tzenum;
 
+/* Maximum length of a timezone name (not including trailing null) */
+#define TZ_STRLEN_MAX 255
+
+/* these functions are in localtime.c */
+
 extern struct pg_tm *pg_localtime(const pg_time_t *timep, const pg_tz *tz);
 extern struct pg_tm *pg_gmtime(const pg_time_t *timep);
 extern int pg_next_dst_boundary(const pg_time_t *timep,
@@ -62,7 +67,6 @@ extern bool pg_interpret_timezone_abbrev(const char *abbrev,
 extern size_t pg_strftime(char *s, size_t max, const char *format,
 			const struct pg_tm * tm);
 
-extern void pg_timezone_pre_initialize(void);
 extern void pg_timezone_initialize(void);
 extern pg_tz *pg_tzset(const char *tzname);
 extern pg_tz *pg_tzset_offset(long gmtoffset);
@@ -90,9 +94,6 @@ extern pg_tz *log_timezone;
  * conflicts.
  */
 #define tz_acceptable(X) pg_tz_acceptable(X)
-
-/* Maximum length of a timezone name (not including trailing null) */
-#define TZ_STRLEN_MAX 255
 
 /*
  * GpMonotonicTime: used to guarantee that the elapsed time is in
