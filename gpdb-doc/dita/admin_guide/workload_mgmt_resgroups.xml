@@ -123,7 +123,7 @@
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit"
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system CPU resources to allocate to resource groups on each Greenplum Database
-        segment node. The remaining CPU resources are used for the OS kernel and the Greenplum
+        segment host. The remaining CPU resources are used for the OS kernel and the Greenplum
         Database auxiliary daemon processes. The default
         <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
       <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
@@ -161,10 +161,17 @@
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_memory_limit"
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system memory resources to allocate to resource groups on each Greenplum
-        Database segment node. The default <codeph>gp_resource_group_memory_limit</codeph> value is
+        Database segment host. The default <codeph>gp_resource_group_memory_limit</codeph> value is
         .7 (70%).</p>
       <p>The memory resource available on a Greenplum Database node is further divided equally among
-        each segment on the node. Each resource group reserves a percentage of the segment memory
+        each segment on the node. 
+        When resource group-based resource management is active, the amount of memory allocated
+          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
+          <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter and
+          divided by the number of active primary segments on the host:</p>
+        <p><codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
+      <p>Each resource group reserves a percentage of the segment memory
         for resource management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph>
         value you specify when you create the resource group. The minimum
           <codeph>MEMORY_LIMIT</codeph> percentage you can specify for a resource group is 1, the
