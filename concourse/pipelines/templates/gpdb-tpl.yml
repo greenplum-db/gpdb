@@ -12,11 +12,11 @@
 {% set MM_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
 ## ======================================================================
-##   __ _ _ __ ___  _   _ _ __  ___ 
+##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
 ## | (_| | | | (_) | |_| | |_) \__ \
 ##  \__, |_|  \___/ \__,_| .__/|___/
-##  |___/                |_|        
+##  |___/                |_|
 ## ======================================================================
 
 groups:
@@ -115,12 +115,12 @@ groups:
   - MU_check_centos
   - gate_mm_end
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "GPUnite" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_dpm_start
-  - DPM_gptransfer_43x_to_master
-  - DPM_gptransfer
-  - gate_dpm_end
+  - gate_gpunite_start
+  - GPUnite_gptransfer_43x_to_master
+  - GPUnite_gptransfer
+  - gate_gpunite_end
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
@@ -249,15 +249,15 @@ groups:
   - gate_mm_end
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "GPUnite" in test_sections %}
 ## ======================================================================
 
-- name: G:DPM
+- name: G:GPUnite
   jobs:
-  - gate_dpm_start
-  - DPM_gptransfer_43x_to_master
-  - DPM_gptransfer
-  - gate_dpm_end
+  - gate_gpunite_start
+  - GPUnite_gptransfer_43x_to_master
+  - GPUnite_gptransfer
+  - gate_gpunite_end
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -272,12 +272,12 @@ groups:
 
 {% endif %}
 ## ======================================================================
-##                                           _                         
-##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___ 
+##                                           _
+##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___
 ## | '__/ _ \/ __|/ _ \| | | | '__/ __/ _ \ | __| | | | '_ \ / _ \/ __|
 ## | | |  __/\__ \ (_) | |_| | | | (_|  __/ | |_| |_| | |_) |  __/\__ \
 ## |_|  \___||___/\___/ \__,_|_|  \___\___|  \__|\__, | .__/ \___||___/
-##                                               |___/|_|              
+##                                               |___/|_|
 ## ======================================================================
 
 resource_types:
@@ -287,7 +287,7 @@ resource_types:
     repository: ljfranklin/terraform-resource
 
 ## ======================================================================
-##  _ __ ___  ___  ___  _   _ _ __ ___ ___  ___ 
+##  _ __ ___  ___  ___  _   _ _ __ ___ ___  ___
 ## | '__/ _ \/ __|/ _ \| | | | '__/ __/ _ \/ __|
 ## | | |  __/\__ \ (_) | |_| | | | (_|  __/\__ \
 ## |_|  \___||___/\___/ \__,_|_|  \___\___||___/
@@ -296,7 +296,7 @@ resource_types:
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "CS"      in test_sections or
-      "DPM"     in test_sections or
+      "GPUnite"     in test_sections or
       "MPP"     in test_sections or
       "MM"      in test_sections %}
 - name: ccp_src
@@ -326,7 +326,7 @@ resources:
 
 {% endif %}
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "GPUnite" in test_sections %}
 # a second cluster for gptransfer tests
 - name: terraform2
   type: terraform
@@ -534,7 +534,7 @@ resources:
     regexp: windows-cl/greenplum-loaders-(.*)-WinXP-x86_32.msi
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "GPUnite" in test_sections %}
 - name: bin_gpdb4_centos6
   type: s3
   source:
@@ -576,7 +576,7 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
+{% if 'GPUnite' in test_sections + os_types or 'aix7' in test_sections + os_types %}
 - name: nightly-trigger
   type: time
   source:
@@ -595,8 +595,8 @@ resources:
     stop: {{reduced-frequency-trigger-stop}}
 
 ## ======================================================================
-##                   _                    
-##   __ _ _ __   ___| |__   ___  _ __ ___ 
+##                   _
+##   __ _ _ __   ___| |__   ___  _ __ ___
 ##  / _` | '_ \ / __| '_ \ / _ \| '__/ __|
 ## | (_| | | | | (__| | | | (_) | |  \__ \
 ##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
@@ -699,14 +699,14 @@ pulse_properties_anchor: &pulse_properties
   PULSE_USERNAME: {{pulse_username}}
   PULSE_PASSWORD: {{pulse_password}}
 
-cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
+cs_ccp_aggregate_gpunite_start_anchor: &cs_ccp_aggregate_gpunite_start
   - get: gpdb_src
     tags: ["ccp"]
-    passed: [gate_dpm_start]
+    passed: [gate_gpunite_start]
   - get: gpdb_binary
     tags: ["ccp"]
     resource: bin_gpdb_centos6
-    passed: [gate_dpm_start]
+    passed: [gate_gpunite_start]
     trigger: ((reduced-frequency-trigger-flag))
   - get: ccp_src
     tags: ["ccp"]
@@ -754,23 +754,23 @@ cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
     <<: *ccp_destroy
 
 ## ======================================================================
-##    _       _         
-##   (_) ___ | |__  ___ 
+##    _       _
+##   (_) ___ | |__  ___
 ##   | |/ _ \| '_ \/ __|
 ##   | | (_) | |_) \__ \
 ##  _/ |\___/|_.__/|___/
-## |__/                 
+## |__/
 ## ======================================================================
 
 jobs:
 
 ## ======================================================================
-##   ____                      _ _      
-##  / ___|___  _ __ ___  _ __ (_) | ___ 
+##   ____                      _ _
+##  / ___|___  _ __ ___  _ __ (_) | ___
 ## | |   / _ \| '_ ` _ \| '_ \| | |/ _ \
 ## | |__| (_) | | | | | | |_) | | |  __/
 ##  \____\___/|_| |_| |_| .__/|_|_|\___|
-##                      |_|             
+##                      |_|
 ## ======================================================================
 
 - name: gate_compile_start
@@ -1149,9 +1149,9 @@ jobs:
 ## ======================================================================
 ##  ___ ______        __
 ## |_ _/ ___\ \      / /
-##  | | |    \ \ /\ / / 
-##  | | |___  \ V  V /  
-## |___\____|  \_/\_/   
+##  | | |    \ \ /\ / /
+##  | | |___  \ V  V /
+## |___\____|  \_/\_/
 ## ======================================================================
 
 - name: gate_icw_start
@@ -1570,11 +1570,11 @@ jobs:
 {% endif %}
 {% if "CS" in test_sections %}
 ## ======================================================================
-##   ____ ____  
-##  / ___/ ___| 
-## | |   \___ \ 
+##   ____ ____
+##  / ___/ ___|
+## | |   \___ \
 ## | |___ ___) |
-##  \____|____/ 
+##  \____|____/
 ## ======================================================================
 
 - name: gate_cs_start
@@ -1760,11 +1760,11 @@ jobs:
 {% endif %}
 {% if "MPP" in test_sections %}
 ## ======================================================================
-##  __  __ ____  ____  
-## |  \/  |  _ \|  _ \ 
+##  __  __ ____  ____
+## |  \/  |  _ \|  _ \
 ## | |\/| | |_) | |_) |
-## | |  | |  __/|  __/ 
-## |_|  |_|_|   |_|    
+## | |  | |  __/|  __/
+## |_|  |_|_|   |_|
 ## ======================================================================
 
 - name: gate_mpp_start
@@ -1985,7 +1985,7 @@ jobs:
 {% endif %}
 {% if "MM" in test_sections %}
 ## ======================================================================
-##  __  __ __  __ 
+##  __  __ __  __
 ## |  \/  |  \/  |
 ## | |\/| | |\/| |
 ## | |  | | |  | |
@@ -2225,16 +2225,16 @@ jobs:
       trigger: true
 
 {% endif %}
-{% if "DPM" in test_sections %}
+{% if "GPUnite" in test_sections %}
 ## ======================================================================
-##  ____  ____  __  __ 
-## |  _ \|  _ \|  \/  |
-## | | | | |_) | |\/| |
-## | |_| |  __/| |  | |
-## |____/|_|   |_|  |_|
+##   ____ ____  _   _       _ _       
+##  / ___|  _ \| | | |_ __ (_) |_ ___ 
+## | |  _| |_) | | | | '_ \| | __/ _ \
+## | |_| |  __/| |_| | | | | | ||  __/
+##  \____|_|    \___/|_| |_|_|\__\___|
 ## ======================================================================
 
-- name: gate_dpm_start
+- name: gate_gpunite_start
   plan:
 {% if stagger_sections %}
   # stagger starts on prod pipelines
@@ -2258,7 +2258,7 @@ jobs:
       passed:
       - gate_compile_end
 
-- name: DPM_gptransfer_43x_to_master
+- name: GPUnite_gptransfer_43x_to_master
   plan:
   - get: nightly-trigger
     tags: ["ccp"]
@@ -2266,11 +2266,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_dpm_start]
+      passed: [gate_gpunite_start]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
+      passed: [gate_gpunite_start]
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb4_binary
       tags: ["ccp"]
@@ -2346,16 +2346,16 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: DPM_gptransfer
+- name: GPUnite_gptransfer
   plan:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_dpm_start]
+      passed: [gate_gpunite_start]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
+      passed: [gate_gpunite_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
       tags: ["ccp"]
@@ -2427,23 +2427,23 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
-- name: gate_dpm_end
+- name: gate_gpunite_end
   plan:
   - aggregate:
     - get: gpdb_src
       trigger: true
       passed:
-      - DPM_gptransfer_43x_to_master
-      - DPM_gptransfer
+      - GPUnite_gptransfer_43x_to_master
+      - GPUnite_gptransfer
 
 {% endif %}
 {% if "UD" in test_sections %}
 ## ======================================================================
-##  _   _ ____  
-## | | | |  _ \ 
+##  _   _ ____
+## | | | |  _ \
 ## | | | | | | |
 ## | |_| | |_| |
-##  \___/|____/ 
+##  \___/|____/
 ## ======================================================================
 
 - name: gate_ud_start
@@ -2526,8 +2526,8 @@ jobs:
 {% endif %}
 {% if pipeline_type == "prod" %}
 ## ======================================================================
-##  ____      _                     
-## |  _ \ ___| | ___  __ _ ___  ___ 
+##  ____      _
+## |  _ \ ___| | ___  __ _ ___  ___
 ## | |_) / _ \ |/ _ \/ _` / __|/ _ \
 ## |  _ <  __/ |  __/ (_| \__ \  __/
 ## |_| \_\___|_|\___|\__,_|___/\___|
@@ -2577,7 +2577,7 @@ jobs:
     - MM_gpcheck
     - MM_gppkg
     - MU_check_centos
-    - DPM_gptransfer_43x_to_master
-    - DPM_gptransfer
+    - GPUnite_gptransfer_43x_to_master
+    - GPUnite_gptransfer
     - mpp_interconnect
 {% endif %}
