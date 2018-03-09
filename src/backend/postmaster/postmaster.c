@@ -7828,23 +7828,27 @@ StartAutovacuumWorker(void)
 	 */
 	if (canAcceptConnections() == CAC_OK)
 	{
-		/*
-		 * Compute the cancel key that will be assigned to this session. We
-		 * probably don't need cancel keys for autovac workers, but we'd
-		 * better have something random in the field to prevent unfriendly
-		 * people from sending cancels to them.
-		 */
-		MyCancelKey = PostmasterRandom();
-
 		bn = (Backend *) malloc(sizeof(Backend));
 		if (bn)
 		{
+			/*
+			 * Compute the cancel key that will be assigned to this session. We
+			 * probably don't need cancel keys for autovac workers, but we'd
+			 * better have something random in the field to prevent unfriendly
+			 * people from sending cancels to them.
+			 */
+			MyCancelKey = PostmasterRandom();
+			bn->cancel_key = MyCancelKey;
+
+			/* Autovac workers are not dead_end and need a child slot */
+			bn->dead_end = false;
+			bn->child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
+
 			bn->pid = StartAutoVacWorker();
 			if (bn->pid > 0)
 			{
-				bn->cancel_key = MyCancelKey;
 				bn->is_autovacuum = true;
-				bn->dead_end = false;
+
 				DLAddHead(BackendList, DLNewElem(bn));
 #ifdef EXEC_BACKEND
 				ShmemBackendArrayAdd(bn);
@@ -7857,6 +7861,7 @@ StartAutovacuumWorker(void)
 			 * fork failed, fall through to report -- actual error message was
 			 * logged by StartAutoVacWorker
 			 */
+			(void) ReleasePostmasterChildSlot(bn->child_slot);
 			free(bn);
 		}
 		else

@@ -348,11 +348,11 @@ InitProcess(void)
 	 * cleaning up.  (XXX autovac launcher currently doesn't participate in
 	 * this; it probably should.)
 	 *
-	 * Ideally, we should create functions similar to IsAutoVacuumWorkerProcess()
+	 * Ideally, we should create functions similar to IsAutoVacuumLauncherProcess()
 	 * for ftsProber, SeqServer etc who call InitProcess().
 	 * But MyPMChildSlot helps to get away with it.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess()
+	if (IsUnderPostmaster && !IsAutoVacuumLauncherProcess()
 		&& MyPMChildSlot > 0)
 		MarkPostmasterChildActive();
 
@@ -823,7 +823,7 @@ ProcKill(int code, Datum arg)
 	 * This process is no longer present in shared memory in any meaningful
 	 * way, so tell the postmaster we've cleaned up acceptably well.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess()
+	if (IsUnderPostmaster && !IsAutoVacuumLauncherProcess()
 		&& MyPMChildSlot > 0)
 		MarkPostmasterChildInactive();
 

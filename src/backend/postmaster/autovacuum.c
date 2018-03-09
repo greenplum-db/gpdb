@@ -116,7 +116,7 @@ int			autovacuum_freeze_max_age;
 int			autovacuum_vac_cost_delay;
 int			autovacuum_vac_cost_limit;
 
-int			Log_autovacuum_min_duration = -1;
+int			Log_autovacuum_min_duration = 0;
 
 /* how long to keep pgstat data in the launcher, in milliseconds */
 #define STATS_READ_DELAY 1000
@@ -301,8 +301,6 @@ static void avl_sigusr1_handler(SIGNAL_ARGS);
 static void avl_sigterm_handler(SIGNAL_ARGS);
 static void avl_quickdie(SIGNAL_ARGS);
 static void autovac_refresh_stats(void);
-
-
 
 /********************************************************************
  *					  AUTOVACUUM LAUNCHER CODE
@@ -1009,7 +1007,7 @@ rebuild_database_list(Oid newdb)
 		current_time = GetCurrentTimestamp();
 
 		/*
-		 * move the elements from the array into the dllist, setting the 
+		 * move the elements from the array into the dllist, setting the
 		 * next_worker while walking the array
 		 */
 		for (i = 0; i < nelems; i++)
@@ -1083,13 +1081,12 @@ do_start_worker(void)
 	 * Create and switch to a temporary context to avoid leaking the memory
 	 * allocated for the database list.
 	 */
-	 tmpcxt = AllocSetContextCreate(CurrentMemoryContext,
-									"Start worker tmp cxt",
-									ALLOCSET_DEFAULT_MINSIZE,
-									ALLOCSET_DEFAULT_INITSIZE,
-									ALLOCSET_DEFAULT_MAXSIZE);
-	 oldcxt = MemoryContextSwitchTo(tmpcxt);
-
+	tmpcxt = AllocSetContextCreate(CurrentMemoryContext,
+								   "Start worker tmp cxt",
+								   ALLOCSET_DEFAULT_MINSIZE,
+								   ALLOCSET_DEFAULT_INITSIZE,
+								   ALLOCSET_DEFAULT_MAXSIZE);
+	oldcxt = MemoryContextSwitchTo(tmpcxt);
 
 	/* use fresh stats */
 	autovac_refresh_stats();
@@ -1572,7 +1569,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 		MyWorkerInfo->wi_proc = MyProc;
 
 		/* insert into the running list */
-		SHMQueueInsertBefore(&AutoVacuumShmem->av_runningWorkers, 
+		SHMQueueInsertBefore(&AutoVacuumShmem->av_runningWorkers,
 							 &MyWorkerInfo->wi_links);
 		/*
 		 * remove from the "starting" pointer, so that the launcher can start
@@ -1618,8 +1615,8 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, dbname);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(DEBUG1,
-				(errmsg("autovacuum: processing database \"%s\"", dbname)));
+		ereport(LOG,
+				(errmsg("autovacuum: processing database %s", dbname)));
 
 		if (PostAuthDelay)
 			pg_usleep(PostAuthDelay * 1000000L);
@@ -1814,6 +1811,15 @@ get_database_list(void)
 	{
 		avw_dbase  *avdb;
 
+		/*
+		 * In GPDB, autovacuum is currently disabled, except for the
+		 * anti-wraparound vacuum of template0. The administrator is expected
+		 * to do all VACUUMing manually, except for template0, which you cannot
+		 * VACUUM manually because you cannot connect to it.
+		 */
+		if (strcmp(thisname, TEMPLATE0_DATABASE_NAME))
+			continue;
+
 		avdb = (avw_dbase *) palloc(sizeof(avw_dbase));
 
 		avdb->adw_datid = db_id;
@@ -1823,6 +1829,9 @@ get_database_list(void)
 		avdb->adw_entry = NULL;
 
 		dblist = lappend(dblist, avdb);
+
+		/* In GPDB, we only look for template0 so we can break after we find it. */
+		break;
 	}
 
 	FreeFile(db_file);
@@ -1952,6 +1961,13 @@ do_autovacuum(void)
 		 * process other backends' temp tables.
 		 */
 		if (isAnyTempNamespace(classForm->relnamespace))
+			continue;
+
+		/*
+		 * GPDB: it's safe to skip the shared objects in template0 because
+		 * another database will consider the age of the shared objects.
+		 */
+		if (IsMyDatabaseTemplate0 && classForm->relisshared)
 			continue;
 
 		relid = HeapTupleGetOid(tuple);
@@ -2779,7 +2795,6 @@ IsAutoVacuumWorkerProcess(void)
 {
 	return am_autovacuum_worker;
 }
-
 
 /*
  * AutoVacuumShmemSize

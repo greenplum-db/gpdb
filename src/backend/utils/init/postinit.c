@@ -814,6 +814,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		/* pass the database name back to the caller */
 		if (out_dbname)
 			strcpy(out_dbname, dbname);
+		IsMyDatabaseTemplate0 = strcmp(dbname, TEMPLATE0_DATABASE_NAME) == 0;
 		pfree(tuple);
 	}
 
@@ -941,7 +942,8 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * protect ourselves from normal clients who might be trying to connect to
 	 * the system while we startup.
 	 */
-	if ((Gp_role == GP_ROLE_UTILITY) && (Gp_session_role != GP_ROLE_UTILITY))
+	if ((Gp_role == GP_ROLE_UTILITY) && (Gp_session_role != GP_ROLE_UTILITY) &&
+		!IsAutoVacuumWorkerProcess())
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),

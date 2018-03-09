@@ -69,6 +69,8 @@ BackendId	MyBackendId = InvalidBackendId;
 
 Oid			MyDatabaseId = InvalidOid;
 
+bool			IsMyDatabaseTemplate0 = false;
+
 Oid			MyDatabaseTableSpace = InvalidOid;
 
 /*

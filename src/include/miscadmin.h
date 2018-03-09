@@ -246,6 +246,8 @@ extern PGDLLIMPORT bool  pljava_classpath_insecure;
  */
 extern PGDLLIMPORT Oid MyDatabaseId;
 
+extern PGDLLIMPORT bool IsMyDatabaseTemplate0;
+
 extern PGDLLIMPORT Oid MyDatabaseTableSpace;
 
 /*

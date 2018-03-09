@@ -19,6 +19,7 @@
 #include "access/transam.h"
 #include "cdb/cdbvars.h"
 #include "utils/tqual.h"
+#include "postmaster/autovacuum.h"
 
 /*
  * Purpose of this function is on pretty same lines as
@@ -99,6 +100,21 @@ localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 				break;
 		}
 	}
+
+	/*
+	 * GPDB: autovacuum is enabled only for template0. If an autovacuum
+	 * worker is vacuuming the tuples in template0, we want to exclude the
+	 * tuples from distributed snapshot checking because there is no
+	 * distributed snapshot under utility mode.
+	 *
+	 * It's safe, because template0 is not connectable under distributed
+	 * transactions and can only be updated by autovacuum worker process in
+	 * utility mode. In extreme scenarios where autovacuum is not doing its
+	 * job, a user may be able to connect to template0 in utility mode to
+	 * manually vacuum.
+	 */
+	if (Gp_role == GP_ROLE_UTILITY && IsMyDatabaseTemplate0)
+		return false;
 
 	/*
 	 * If don't have distributed snapshot to check, return it can be seen and

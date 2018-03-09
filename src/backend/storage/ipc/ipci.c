@@ -169,7 +169,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, ProcSignalShmemSize());
 		size = add_size(size, primaryMirrorModeShmemSize());
 		size = add_size(size, FreeSpaceShmemSize());
-		//size = add_size(size, AutoVacuumShmemSize());
+		size = add_size(size, AutoVacuumShmemSize());
 		size = add_size(size, FtsShmemSize());
 		size = add_size(size, tmShmemSize());
 		size = add_size(size, SeqServerShmemSize());
@@ -216,7 +216,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		elog(DEBUG1, "Size not including the buffer pool %lu",
 			 (unsigned long) size);
 
-		size = add_size(size, AutoVacuumShmemSize());
 		size = add_size(size, BTreeShmemSize());
 		size = add_size(size, SyncScanShmemSize());
 		size = add_size(size, CheckpointerShmemSize());
@@ -375,7 +374,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	CheckpointerShmemInit();
 	WalSndShmemInit();
 	WalRcvShmemInit();
-	//AutoVacuumShmemInit();
+	AutoVacuumShmemInit();
 	SeqServerShmemInit();
 
 	if (GPAreFileReplicationStructuresRequired()) {
