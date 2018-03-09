@@ -11,9 +11,12 @@ endif
 PSQLDIR = $(prefix)/bin
 REGRESS_OPTS = --init-file=init_file
 
-installcheck:
+installcheck: watchdog
 	@-cp -rf $(MASTER_DATA_DIRECTORY)/gpfdists data/gpfdist_ssl/certs_matching
 	$(top_builddir)/src/test/regress/pg_regress --psqldir=$(PSQLDIR) --dbname=gpfdist_regression $(REGRESS) $(REGRESS_OPTS)
+
+watchdog:
+	sh test_watchdog.sh
 
 clean:
 	rm -rf regression.* sql results expected

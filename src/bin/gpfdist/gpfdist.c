@@ -32,6 +32,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #define SOCKET int
 #ifndef closesocket
 #define closesocket(x)   close(x)
@@ -203,6 +204,7 @@ static struct
 	BIO 			*bio_err;	/* for SSL */
 	SSL_CTX 		*server_ctx;/* for SSL */
 #endif
+	int 			wdtimer; /* Kill gpfdist after k seconds of inactivity. 0 to disable. */
 } gcb;
 
 /*  A session */
@@ -367,6 +369,12 @@ static void * pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, cons
 static void process_term_signal(int sig,short event,void* arg);
 int gpfdist_init(int argc, const char* const argv[]);
 int gpfdist_run(void);
+
+static void delay_watchdog_timer(void);
+#ifndef WIN32
+static apr_time_t shutdown_time;
+static void* watchdog_thread(void*);
+#endif
 
 /*
  * block_fill_header
@@ -1305,6 +1313,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	/* read data from our filestream as a chunk with whole data rows */
 
 	size = fstream_read(session->fstream, retblock->data, opt.m, &fos, whole_rows, line_delim_str, line_delim_length);
+	delay_watchdog_timer();
 
 	if (size == 0)
 	{
@@ -1575,6 +1584,7 @@ static int session_attach(request_t* r)
 		/* try opening the fstream */
 		gprintlnif(r, "new session trying to open the data stream");
 		fstream = fstream_open(r->path, &fstream_options, &response_code, &response_string);
+		delay_watchdog_timer();
 
 		if (!fstream)
 		{
@@ -2999,6 +3009,7 @@ static void handle_post_request(request_t *r, int header_end)
 		if(r->in.davailable == 0)
 		{
 			wrote = fstream_write(session->fstream, r->in.dbuf, data_bytes_in_req, 1, r->line_delim_str, r->line_delim_length);
+			delay_watchdog_timer();
 			if(wrote == -1)
 			{
 				/* write error */
@@ -3066,6 +3077,7 @@ static void handle_post_request(request_t *r, int header_end)
 				/* only write up to end of last row */
 				wrote = fstream_write(session->fstream, r->in.dbuf, r->in.dbuftop, 1, r->line_delim_str, r->line_delim_length);
 				gdebug(r, "wrote %d bytes to file", wrote);
+				delay_watchdog_timer();
 
 				if (wrote == -1)
 				{
@@ -3571,6 +3583,21 @@ int gpfdist_init(int argc, const char* const argv[])
 	 * must identify errors in calls above and return non-zero for them
 	 * behaviour required for the Windows service case
 	 */
+
+#ifndef WIN32
+	char* wd = getenv("GPFDIST_WATCHDOG_TIMER");
+	if (wd != NULL)
+	{
+		gcb.wdtimer = atoi(wd);
+		if (gcb.wdtimer > 0)
+		{
+			gprintln(NULL, "Watchdog enabled, abort in %d seconds if no activity", gcb.wdtimer);
+			shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
+			static pthread_t watchdog;
+			pthread_create(&watchdog, 0, watchdog_thread, 0);
+		}
+	}
+#endif
 	return 0;
 }
 
@@ -4326,3 +4353,27 @@ pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, .
 
 	return result;
 }
+
+#ifndef WIN32
+static void* watchdog_thread(void* p)
+{
+	while(apr_time_now() < shutdown_time)
+	{
+		sleep(1);
+	}
+	gprintln(NULL, "Watchdog timer expired, abort gpfdist");
+	abort();
+}
+
+static void delay_watchdog_timer()
+{
+	if (gcb.wdtimer > 0)
+	{
+		shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
+	}
+}
+#else
+static void delay_watchdog_timer()
+{
+}
+#endif
