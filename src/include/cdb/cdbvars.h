@@ -239,6 +239,8 @@ extern bool Debug_print_slice_table;
 
 extern bool Debug_resource_group;
 
+extern bool Debug_burn_xids;
+
 /*
  * gp_backup_directIO
  *

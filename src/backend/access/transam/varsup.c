@@ -129,6 +129,28 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 	TransactionIdAdvance(ShmemVariableCache->nextXid);
 
 	/*
+	 * To aid testing, you can set the debug_burn_xids GUC, to consume XIDs
+	 * faster. If set, we bump the XID counter to the next value divisible by
+	 * 1024, minus one. The idea is to skip over "boring" XID ranges, but
+	 * still step through XID wraparound, CLOG page boundaries etc. one XID
+	 * at a time.
+	 */
+	if (Debug_burn_xids)
+	{
+		TransactionId xx;
+		uint32		r;
+
+		xx = ShmemVariableCache->nextXid;
+
+		r = xx % 1024;
+		if (r > 1 && r < 1023)
+		{
+			xx += 1024 - r - 1;
+			ShmemVariableCache->nextXid = xx;
+		}
+	}
+
+	/*
 	 * We must store the new XID into the shared ProcArray before releasing
 	 * XidGenLock.	This ensures that every active XID older than
 	 * latestCompletedXid is present in the ProcArray, which is essential for

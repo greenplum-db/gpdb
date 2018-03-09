@@ -1207,6 +1207,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"debug_burn_xids", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Consume a lot of XIDs, for testing purposes."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Debug_burn_xids,
+		false, NULL, NULL
+	},
+
+	{
 		{"gp_cost_hashjoin_chainwalk", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Enable the cost for walking the chain in the hash join"),
 			NULL,
