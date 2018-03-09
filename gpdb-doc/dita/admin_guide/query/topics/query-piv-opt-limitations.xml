@@ -40,6 +40,8 @@
             </ul></li>
           <li>Aggregate functions that take set operators as input arguments</li>
           <li>Inverse distribution functions</li>
+          <li>Queries that contain UNICODE characters in metadata names, such as table names, and
+            the characters are not compatible with the host system locale</li>
         </ul></p>
     </body>
   </topic>
