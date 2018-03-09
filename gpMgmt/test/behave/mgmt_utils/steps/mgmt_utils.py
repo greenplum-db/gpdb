@@ -5292,3 +5292,53 @@ def impl(context, command, target):
             contents += line
     if target not in contents:
         raise Exception("cannot find %s in %s" % (target, filename))
+
+@given('the system timezone is saved')
+def impl(context):
+    cmd = Command(name='Get system timezone',
+                  cmdStr='date +"%Z"')
+    cmd.run(validateAfter=True)
+    context.system_timezone = cmd.get_stdout()
+
+@then('the database timezone is saved')
+def impl(context):
+    cmd = Command(name='Get database timezone',
+                  cmdStr='psql -d template1 -c "show time zone" -t')
+    cmd.run(validateAfter=True)
+    tz = cmd.get_stdout()
+    cmd = Command(name='Get abbreviated database timezone',
+                  cmdStr='psql -d template1 -c "select abbrev from pg_timezone_names where name=\'%s\';" -t' % tz)
+    cmd.run(validateAfter=True)
+    context.database_timezone = cmd.get_stdout()
+
+@then('the database timezone matches the system timezone')
+def step_impl(context):
+    if context.database_timezone != context.system_timezone:
+        raise Exception("Expected database timezone to be %s, but it was %s" % (context.system_timezone, context.database_timezone))
+
+@then('the database timezone matches "{abbreviated_timezone}"')
+def step_impl(context, abbreviated_timezone):
+    if context.database_timezone != abbreviated_timezone:
+        raise Exception("Expected database timezone to be %s, but it was %s" % (abbreviated_timezone, context.database_timezone))
+
+@then('the startup timezone is saved')
+def step_impl(context):
+    logfile = "%s/pg_log/startup.log" % os.getenv("MASTER_DATA_DIRECTORY")
+    timezone = ""
+    with open(logfile) as l:
+        first_line = l.readline()
+        timestamp = first_line.split(",")[0]
+        timezone = timestamp[-3:]
+    if timezone == "":
+        raise Exception("Could not find timezone information in startup.log")
+    context.startup_timezone = timezone
+
+@then('the startup timezone matches the system timezone')
+def step_impl(context):
+    if context.startup_timezone != context.system_timezone:
+        raise Exception("Expected timezone in startup.log to be %s, but it was %s" % (context.system_timezone, context.startup_timezone))
+
+@then('the startup timezone matches "{abbreviated_timezone}"')
+def step_impl(context, abbreviated_timezone):
+    if context.startup_timezone != abbreviated_timezone:
+        raise Exception("Expected timezone in startup.log to be %s, but it was %s" % (abbreviated_timezone, context.startup_timezone))
