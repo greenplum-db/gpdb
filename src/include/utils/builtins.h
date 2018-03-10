@@ -814,7 +814,6 @@ extern Datum unknownsend(PG_FUNCTION_ARGS);
 extern Datum pg_column_size(PG_FUNCTION_ARGS);
 
 extern Datum string_agg_transfn(PG_FUNCTION_ARGS);
-extern Datum string_agg_delim_transfn(PG_FUNCTION_ARGS);
 extern Datum string_agg_finalfn(PG_FUNCTION_ARGS);
 
 /* version.c */
@@ -871,9 +870,6 @@ extern Datum translate(PG_FUNCTION_ARGS);
 extern Datum chr (PG_FUNCTION_ARGS);
 extern Datum repeat(PG_FUNCTION_ARGS);
 extern Datum ascii(PG_FUNCTION_ARGS);
-extern Datum string_agg_transfn(PG_FUNCTION_ARGS);
-extern Datum string_agg_delim_transfn(PG_FUNCTION_ARGS);
-extern Datum string_agg_finalfn(PG_FUNCTION_ARGS);
 
 /* inet_cidr_ntop.c */
 extern char *inet_cidr_ntop(int af, const void *src, int bits,
