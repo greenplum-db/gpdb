@@ -1,0 +1,47 @@
+create or replace function test_consume_xids(int4) returns void
+as '@abs_srcdir@/regress.so', 'test_consume_xids'
+language C;
+
+set debug_burn_xids=on;
+
+-- Autovacuum should take care of anti-XID wraparounds of 'template0'. Because
+-- of that, the age of template0 should not go much above
+-- autovacuum_freeze_max_age (we assume the default of 200 million here).
+select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0';
+
+-- Autovacuum is triggered after autovacuum_freeze_max_age and on 64K boundaries.
+select test_consume_xids(200 * 1000000);
+-- start_ignore
+
+-- force the ShmemVariableCache->latestCompleteXid to be refreshed.
+\! psql regression -c 'select txid_current()'
+
+-- end_ignore
+select test_consume_xids(64 * 1024);
+
+-- Wait until autovacuum has processed template0. (But give up after 20 seconds)
+do $$
+begin
+  for i in 1..20 loop
+    if (select age(datfrozenxid) < 200 * 1000000 from pg_database where datname='template0') then
+      raise notice 'template0 is young again';
+      return;
+    end if;
+    perform pg_sleep(1);
+  end loop;
+  raise notice 'FAIL: template0 is not being frozen!';
+end;
+$$;
+
+-- But autovacuum should not touch other databases. Hence, our database
+-- should be well above the 200 million mark.
+select age(datfrozenxid) > 200 * 1000000 from pg_database where datname=current_database();
+
+-- There is a limit of one billion transactions due to xid_stop_limit
+-- Let's vacuum to clean up after ourselves to make future tests or multiple runs more reliable.
+\c regression;
+VACUUM;
+\c template1;
+VACUUM;
+\c postgres;
+VACUUM;

@@ -205,4 +205,6 @@ test: psql_gp_commands pg_resetxlog
 test: instr_in_shmem_verify
 test: instr_in_shmem_cleanup
 
+test: autovacuum-template0
+
 # end of tests
