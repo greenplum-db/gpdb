@@ -128,6 +128,8 @@ static void CopyInitPartitioningState(EState *estate);
 static void CopyInitDataParser(CopyState cstate);
 static bool CopyCheckIsLastLine(CopyState cstate);
 static char *extract_line_buf(CopyState cstate);
+static void checkBufferLength(StringInfoData *buffer, int32 moreBytes);
+
 uint64
 DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate);
 
@@ -429,6 +431,7 @@ CopySendData(CopyState cstate, const void *databuf, int datasize)
 {
 	if (!cstate->is_copy_in) /* copy out */
 	{
+		checkBufferLength(cstate->fe_msgbuf, datasize);
 		appendBinaryStringInfo(cstate->fe_msgbuf, (char *) databuf, datasize);
 	}
 	else /* hack for: copy in */
@@ -438,6 +441,7 @@ CopySendData(CopyState cstate, const void *databuf, int datasize)
 		 * dispatcher to the executor primary and mirror segments.
 		 * we do so by concatenating the results to line buffer.
 		 */
+		checkBufferLength(&cstate->line_buf, datasize);
 		appendBinaryStringInfo(&cstate->line_buf, (char *) databuf, datasize);
 	}
 }
@@ -2445,6 +2449,7 @@ CopyToDispatch(CopyState cstate)
     /* catch error from CopyStart, CopySendEndOfRow or CopyToDispatchFlush */
 	PG_CATCH();
 	{
+		checkBufferLength(&cdbcopy_err, cdbCopy->err_msg.len);
 		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		cdbCopyEnd(cdbCopy);
@@ -2799,6 +2804,7 @@ CopyTo(CopyState cstate)
 void
 CopyOneCustomRowTo(CopyState cstate, bytea *value)
 {
+	checkBufferLength(cstate->fe_msgbuf, VARSIZE_ANY_EXHDR((void *) value));
 	appendBinaryStringInfo(cstate->fe_msgbuf,
 						   VARDATA_ANY((void *) value),
 						   VARSIZE_ANY_EXHDR((void *) value));
@@ -3501,12 +3507,14 @@ CopyFromDispatch(CopyState cstate)
 	PG_CATCH();
 	{
 		/* get error message from CopyStart */
+		checkBufferLength(&cdbcopy_err, cdbCopy->err_msg.len);
 		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		/* end COPY in all the segdbs in progress */
 		cdbCopyEnd(cdbCopy);
 
 		/* get error message from CopyEnd */
+		checkBufferLength(&cdbcopy_err, cdbCopy->err_msg.len);
 		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		ereport(LOG,
@@ -3826,6 +3834,7 @@ CopyFromDispatch(CopyState cstate)
 						 * copy to line_buf
 						*/
 						uint16 fld_count_be = htons((uint16) fld_count + extra_attr_count);
+						checkBufferLength(&cstate->line_buf, 2);
 						appendBinaryStringInfo(&cstate->line_buf, &fld_count_be, 2);
 
 						if (fld_count != attr_count)
@@ -3848,10 +3857,12 @@ CopyFromDispatch(CopyState cstate)
 																		 false));
 							fld_size = isnull ? -1 : cstate->attribute_buf.len;
 							uint32 fld_size_be = htonl((uint32) fld_size);
+							checkBufferLength(&cstate->line_buf, 4);
 							appendBinaryStringInfo(&cstate->line_buf,
 												   &fld_size_be,
 												   4);
 							if (!isnull)
+								checkBufferLength(&cstate->line_buf, cstate->attribute_buf.len);
 								appendBinaryStringInfo(&cstate->line_buf,
 													   cstate->attribute_buf.data,
 													   cstate->attribute_buf.len);
@@ -3904,6 +3915,7 @@ CopyFromDispatch(CopyState cstate)
 												   &fld_size_be,
 												   4);
 							if (!isnull)
+								checkBufferLength(&cstate->line_buf, cstate->attribute_buf.len);
 								appendBinaryStringInfo(&cstate->line_buf,
 													   cstate->attribute_buf.data,
 													   cstate->attribute_buf.len);
@@ -3988,6 +4000,7 @@ CopyFromDispatch(CopyState cstate)
 								/* binary format */
 								if (isnull) {
 									uint32 fld_size_be = htonl((uint32) -1);
+									checkBufferLength(&cstate->line_buf, 4);
 									appendBinaryStringInfo(&cstate->line_buf,
 														   &fld_size_be,
 														   4);
@@ -4000,9 +4013,11 @@ CopyFromDispatch(CopyState cstate)
 																		   		 Int32GetDatum(attr[defmap[i]]->atttypmod)));
 									int32 fld_size = VARSIZE(outputbytes) - VARHDRSZ;
 									uint32 fld_size_be = htonl((uint32) fld_size);
+									checkBufferLength(&cstate->line_buf, 4);
 									appendBinaryStringInfo(&cstate->line_buf,
 														   &fld_size_be,
 														   4);
+									checkBufferLength(&cstate->line_buf, fld_size);
 									appendBinaryStringInfo(&cstate->line_buf,
 														   VARDATA(outputbytes),
 														   fld_size);
@@ -4096,9 +4111,11 @@ CopyFromDispatch(CopyState cstate)
 					 *    "<lineno:int64><data:bytes>"
 					 */
 					uint64 lineno = htonll((uint64) original_lineno_for_qe);
+					checkBufferLength(&line_buf_with_lineno, sizeof(lineno));
 					appendBinaryStringInfo(&line_buf_with_lineno,
 										   &lineno,
 										   sizeof(lineno));
+					checkBufferLength(&line_buf_with_lineno, cstate->line_buf.len);
 					appendBinaryStringInfo(&line_buf_with_lineno,
 										   cstate->line_buf.data,
 										   cstate->line_buf.len);
@@ -4119,6 +4136,7 @@ CopyFromDispatch(CopyState cstate)
 
 				if (cdbCopy->io_errors)
 				{
+					checkBufferLength(&cdbcopy_err, cdbCopy->err_msg.len);
 					appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 					no_more_data = true;
 					break;
@@ -4157,6 +4175,7 @@ CopyFromDispatch(CopyState cstate)
 	{
 		cstate->error_on_executor = true;
 		if(cdbCopy->err_context.len > 0)
+			checkBufferLength(&cstate->executor_err_context, cdbCopy->err_context.len);
 			appendBinaryStringInfo(&cstate->executor_err_context, cdbCopy->err_context.data, cdbCopy->err_context.len);
 	}
 
@@ -5251,6 +5270,7 @@ CopyReadLineText(CopyState cstate, size_t bytesread)
 		if (!DetectLineEnd(cstate, bytesread))
 		{
 			/* load entire input buffer into line buf, and quit */
+			checkBufferLength(&cstate->line_buf, bytesread);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->raw_buf, bytesread);
 			cstate->raw_buf_done = true;
 			cstate->line_done = CopyCheckIsLastLine(cstate);
@@ -5285,6 +5305,7 @@ CopyReadLineText(CopyState cstate, size_t bytesread)
 					* load that one linefeed byte and indicate we are done
 					* with the data line
 					*/
+					checkBufferLength(&cstate->line_buf, 1);
 					appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, 1);
 					cstate->raw_buf_index++;
 					cstate->begloc++;
@@ -5313,6 +5334,7 @@ CopyReadLineText(CopyState cstate, size_t bytesread)
 		if ((cstate->endloc = scanTextLine(cstate, cstate->begloc, cstate->eol_ch[0], bytesread - cstate->raw_buf_index)) == NULL)
 		{
 			linesize = bytesread - (cstate->begloc - cstate->raw_buf);
+			checkBufferLength(&cstate->line_buf, linesize);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, linesize);
 
 			if (cstate->eol_type == EOL_CRLF && cstate->line_buf.len > 1)
@@ -5338,6 +5360,7 @@ CopyReadLineText(CopyState cstate, size_t bytesread)
 			 * and update the pointers for the next scan.
 			 */
 			linesize = cstate->endloc - cstate->begloc + 1;
+			checkBufferLength(&cstate->line_buf, linesize);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, linesize);
 			cstate->raw_buf_index += linesize;
 			cstate->begloc = cstate->endloc + 1;
@@ -5348,6 +5371,7 @@ CopyReadLineText(CopyState cstate, size_t bytesread)
 				if (cstate->raw_buf_index < bytesread && *(cstate->endloc + 1) == '\n')
 				{
 					/* this is a line end */
+					checkBufferLength(&cstate->line_buf, 1);
 					appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, 1);		/* load that '\n' */
 					cstate->raw_buf_index++;
 					cstate->begloc++;
@@ -5490,6 +5514,7 @@ CopyReadLineCSV(CopyState cstate, size_t bytesread)
 		if (!DetectLineEnd(cstate, bytesread))
 		{
 			/* EOL not found. load entire input buffer into line buf, and return */
+			checkBufferLength(&cstate->line_buf, bytesread);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->raw_buf, bytesread);
 			cstate->line_done = CopyCheckIsLastLine(cstate);;
 			cstate->raw_buf_done = true;
@@ -5524,6 +5549,7 @@ CopyReadLineCSV(CopyState cstate, size_t bytesread)
 					 * load that one linefeed byte and indicate we are done
 					 * with the data line
 					 */
+					checkBufferLength(&cstate->line_buf, 1);
 					appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, 1);
 					cstate->raw_buf_index++;
 					cstate->begloc++;
@@ -5553,6 +5579,7 @@ CopyReadLineCSV(CopyState cstate, size_t bytesread)
 		if ((cstate->endloc = scanCSVLine(cstate, cstate->begloc, cstate->eol_ch[0], escapec, quotec, bytesread - cstate->raw_buf_index)) == NULL)
 		{
 			linesize = bytesread - (cstate->begloc - cstate->raw_buf);
+			checkBufferLength(&cstate->line_buf, linesize);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, linesize);
 
 			if (cstate->line_buf.len > 1)
@@ -5580,6 +5607,7 @@ CopyReadLineCSV(CopyState cstate, size_t bytesread)
 			 * and update the pointers for the next scan.
 			 */
 			linesize = cstate->endloc - cstate->begloc + 1;
+			checkBufferLength(&cstate->line_buf, linesize);
 			appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, linesize);
 			cstate->raw_buf_index += linesize;
 			cstate->begloc = cstate->endloc + 1;
@@ -5626,6 +5654,7 @@ CopyReadLineCSV(CopyState cstate, size_t bytesread)
 					if (cstate->raw_buf_index < bytesread && *(cstate->endloc + 1) == '\n')
 					{
 						/* this is a line end */
+						checkBufferLength(&cstate->line_buf, 1);
 						appendBinaryStringInfo(&cstate->line_buf, cstate->begloc, 1);	/* load that '\n' */
 						cstate->raw_buf_index++;
 						cstate->begloc++;
@@ -6021,6 +6050,7 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 
 
 			/* load the last chunk, the whole buffer in most cases */
+			checkBufferLength(&cstate->attribute_buf, chunk_len);
 			appendBinaryStringInfo(&cstate->attribute_buf, cstate->line_buf.data + chunk_start, chunk_len);
 
 			cstate->line_buf.cursor += attr_pre_len + 2;		/* skip eol char and
@@ -6103,6 +6133,7 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 						 * attribute, not including delimiter
 						 */
 						chunk_len = cstate->line_buf.cursor - chunk_start - 1;
+						checkBufferLength(&cstate->attribute_buf, chunk_len);
 						appendBinaryStringInfo(&cstate->attribute_buf, cstate->line_buf.data + chunk_start, chunk_len);
 						break;
 					}
@@ -6120,6 +6151,7 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 				chunk_len = (scan_end - cstate->line_buf.data) - chunk_start + 1;
 
 				/* load a chunk of data */
+				checkBufferLength(&cstate->attribute_buf, chunk_len);
 				appendBinaryStringInfo(&cstate->attribute_buf, cstate->line_buf.data + chunk_start, chunk_len);
 
 				switch (nextc)
@@ -6529,6 +6561,7 @@ CopyReadAttributesTextNoDelim(CopyState cstate, bool *nulls, int num_phys_attrs,
 	else
 		nulls[attnum - 1] = false;
 
+	checkBufferLength(&cstate->attribute_buf, len);
 	appendBinaryStringInfo(&cstate->attribute_buf, cstate->line_buf.data, len);
 }
 
@@ -6556,6 +6589,7 @@ CopyReadOidAttr(CopyState cstate, bool *isnull)
 	if ((end_loc = scanTextLine(cstate, start_loc, delimc, bytes_remaining)) == NULL)
 	{
 		attr_len = bytes_remaining - 1; /* don't count '\n' in len calculation */
+		checkBufferLength(&cstate->attribute_buf, attr_len);
 		appendBinaryStringInfo(&cstate->attribute_buf, start_loc, attr_len);
 		cstate->line_buf.cursor += attr_len + 2;		/* skip '\n' and '\0' */
 	}
@@ -6569,6 +6603,7 @@ CopyReadOidAttr(CopyState cstate, bool *isnull)
 
 		attr_len = end_loc - start_loc; /* we don't include the delimiter ch */
 
+		checkBufferLength(&cstate->attribute_buf, attr_len);
 		appendBinaryStringInfo(&cstate->attribute_buf, start_loc, attr_len);
 		cstate->line_buf.cursor += attr_len + 1;
 	}
@@ -7736,6 +7771,7 @@ void preProcessDataLine(CopyState cstate)
 		{
 			/* transfer converted data back to line_buf */
 			RESET_LINEBUF;
+			checkBufferLength(&cstate->line_buf, strlen(cvt));
 			appendBinaryStringInfo(&cstate->line_buf, cvt, strlen(cvt));
 			pfree(cvt);
 		}
@@ -8226,5 +8262,17 @@ close_program_pipes(CopyState cstate, bool ifThrow)
 		ereport(ERROR,
 				(errcode(ERRCODE_SQL_ROUTINE_EXCEPTION),
 				 errmsg("command error message: %s", sinfo.data)));
+	}
+}
+
+static void
+checkBufferLength(StringInfoData *buffer, int moreBytes) {
+	uint64 buf_length = (uint64)buffer->len + moreBytes;
+
+	if (buf_length > MaxAllocSize)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("Line is longer than the max allocable size %ld bytes", MaxAllocSize)));
 	}
 }

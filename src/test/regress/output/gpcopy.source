@@ -1304,3 +1304,7 @@ SELECT count(*) < 57190 FROM lineitem_aborted;
  t
 (1 row)
 
+CREATE TABLE cp_oom_errors (c text);
+copy cp_oom_errors from program 'dd if=/dev/zero bs=1074790400 count=1';
+ERROR:  Line is longer than the max allocable size 1073741823 bytes
+CONTEXT:  COPY cp_oom_errors, line 0
