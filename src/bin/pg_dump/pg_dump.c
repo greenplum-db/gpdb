@@ -11207,8 +11207,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		char	   *command = NULL;
 		char	   *rejlim;
 		char	   *rejlimtype;
-		char	   *errnspname;
-		char	   *errtblname;
+		char	   *errnspname = NULL;
+		char	   *errtblname = NULL;
 		char	   *extencoding;
 		char	   *writable = NULL;
 		char	   *tmpstring = NULL;
@@ -11218,6 +11218,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		bool		iswritable = false;
 		char	   *options;
 		bool		gpdb5OrLater = isGPDB5000OrLater();
+		bool		gpdb6OrLater = isGPDB6000OrLater();
+		char	   *logerrors = NULL;
 		char	   *on_clause;
 
 		/*
@@ -11230,10 +11232,28 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						  fmtId(tbinfo->dobj.name));
 
 		/* Now get required information from pg_exttable */
-		if (gpdb5OrLater)
+		if (gpdb6OrLater)
+		{
+			appendPQExpBuffer(query,
+					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, x.logerrors, "
+						   "x.rejectlimit, x.rejectlimittype, "
+						   "null as errnspname, null as errtblname, "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), "
+						   "x.writable, "
+						   "array_to_string(ARRAY( "
+						   "SELECT pg_catalog.quote_ident(option_name) || ' ' || "
+						   "pg_catalog.quote_literal(option_value) "
+						   "FROM pg_options_to_table(x.options) "
+						   "ORDER BY option_name"
+						   "), E',\n    ') AS options "
+					"FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+					"WHERE x.reloid = c.oid AND c.oid = '%u'::oid ", tbinfo->dobj.catId.oid);
+		}
+		else if (gpdb5OrLater)
 		{
 			appendPQExpBuffer(query,
 					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
+						   "CASE WHEN x.fmterrtbl = x.reloid THEN true ELSE false END AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
 						   "(SELECT relname "
 							"FROM pg_catalog.pg_class "
@@ -11258,6 +11278,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
+						   "false AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
 						   "n.nspname AS errnspname, d.relname AS errtblname, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
@@ -11278,6 +11299,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
+						   "false AS logerrors, "
 						   "x.rejectlimit, x.rejectlimittype, "
 						   "n.nspname AS errnspname, d.relname AS errtblname, "
 						   "pg_catalog.pg_encoding_to_char(x.encoding), "
@@ -11298,6 +11320,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 								"ELSE '{ALL_SEGMENTS}' "
 						   "END AS execlocation, "
 						   "x.fmttype, x.fmtopts, x.command, "
+						   "false as logerrors, "
 						   "-1 as rejectlimit, null as rejectlimittype,"
 						   "null as errnspname, null as errtblname, "
 						   "null as encoding, null as writable, "
@@ -11330,13 +11353,14 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		fmttype = PQgetvalue(res, 0, 2);
 		fmtopts = PQgetvalue(res, 0, 3);
 		command = PQgetvalue(res, 0, 4);
-		rejlim = PQgetvalue(res, 0, 5);
-		rejlimtype = PQgetvalue(res, 0, 6);
-		errnspname = PQgetvalue(res, 0, 7);
-		errtblname = PQgetvalue(res, 0, 8);
-		extencoding = PQgetvalue(res, 0, 9);
-		writable = PQgetvalue(res, 0, 10);
-		options = PQgetvalue(res, 0, 11);
+		logerrors = PQgetvalue(res, 0, 5);
+		rejlim = PQgetvalue(res, 0, 6);
+		rejlimtype = PQgetvalue(res, 0, 7);
+		errnspname = PQgetvalue(res, 0, 8);
+		errtblname = PQgetvalue(res, 0, 9);
+		extencoding = PQgetvalue(res, 0, 10);
+		writable = PQgetvalue(res, 0, 11);
+		options = PQgetvalue(res, 0, 12);
 
 		on_clause = execlocations;
 
@@ -11506,7 +11530,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				 * logging is however still using the pg_exttable.fmterrtbl
 				 * attribute so we use the errtblname for emitting LOG ERRORS.
 				 */
-				if (errtblname && strlen(errtblname) > 0)
+				if ((errtblname && strlen(errtblname) > 0) || (logerrors && logerrors[0] == 't'))
 					appendPQExpBufferStr(q, "LOG ERRORS ");
 
 				/* reject limit */

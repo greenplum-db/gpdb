@@ -2040,9 +2040,9 @@ class gpload:
         sql = sqlFormat % (joinStr, conditionStr)
 
         if log_errors:
-            sql += " WHERE pgext.fmterrtbl = pgext.reloid "
+            sql += " WHERE pgext.logerrors "
         else:
-            sql += " WHERE pgext.fmterrtbl IS NULL "
+            sql += " WHERE NOT pgext.logerrors "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))

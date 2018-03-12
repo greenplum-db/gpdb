@@ -1684,7 +1684,7 @@ _readExternalScan(void)
 	READ_BOOL_FIELD(isMasterOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
-	READ_OID_FIELD(fmterrtbl);
+	READ_BOOL_FIELD(logErrors);
 	READ_INT_FIELD(encoding);
 	READ_INT_FIELD(scancounter);
 

@@ -459,18 +459,9 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 		pes->fmtType = pextentry->fmtcode;
 		pes->isMasterOnly = isMasterOnly;
 		GPOS_ASSERT((IMDRelation::EreldistrMasterOnly == pmdrelext->Ereldistribution()) == isMasterOnly);
+		pes->logErrors = pextentry->logerrors;
 		pes->rejLimit = pmdrelext->IRejectLimit();
 		pes->rejLimitInRows = pmdrelext->FRejLimitInRows();
-
-		IMDId *pmdidFmtErrTbl = pmdrelext->PmdidFmtErrRel();
-		if (NULL == pmdidFmtErrTbl)
-		{
-			pes->fmterrtbl = InvalidOid;
-		}
-		else
-		{
-			pes->fmterrtbl = CMDIdGPDB::PmdidConvert(pmdidFmtErrTbl)->OidObjectId();
-		}
 
 		pes->encoding = pextentry->encoding;
 		pes->scancounter = m_ulExternalScanCounter++;

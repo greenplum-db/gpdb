@@ -54,7 +54,7 @@ InsertExtTableEntry(Oid 	tbloid,
 					char	rejectlimittype,
 					char*	commandString,
 					int		rejectlimit,
-					Oid		fmtErrTblOid,
+					bool    logerrors,
 					int		encoding,
 					Datum	formatOptStr,
 					Datum   optionsStr,
@@ -100,24 +100,18 @@ InsertExtTableEntry(Oid 	tbloid,
 		nulls[Anum_pg_exttable_command - 1] = true;
 	}
 
-	if(issreh)
+	if (issreh)
 	{
 		values[Anum_pg_exttable_rejectlimit -1] = Int32GetDatum(rejectlimit);
 		values[Anum_pg_exttable_rejectlimittype - 1] = CharGetDatum(rejectlimittype);
-
-		/* if error log specified store its OID, otherwise put a NULL */
-		if(fmtErrTblOid != InvalidOid)
-			values[Anum_pg_exttable_fmterrtbl - 1] = ObjectIdGetDatum(fmtErrTblOid);
-		else
-			nulls[Anum_pg_exttable_fmterrtbl - 1] = true;
 	}
 	else
 	{
 		nulls[Anum_pg_exttable_rejectlimit -1] = true;
 		nulls[Anum_pg_exttable_rejectlimittype - 1] = true;
-		nulls[Anum_pg_exttable_fmterrtbl - 1] = true;
 	}
 
+	values[Anum_pg_exttable_logerrors - 1] = BoolGetDatum(logerrors);
 	values[Anum_pg_exttable_encoding - 1] = Int32GetDatum(encoding);
 	values[Anum_pg_exttable_writable - 1] = BoolGetDatum(iswritable);
 
@@ -216,7 +210,7 @@ GetExtTableEntryIfExists(Oid relid)
 				command,
 				rejectlimit,
 				rejectlimittype,
-				fmterrtbl,
+				logerrors,
 				encoding,
 				iswritable;
 	bool		isNull;
@@ -390,21 +384,19 @@ GetExtTableEntryIfExists(Oid relid)
 								   &isNull);
 
 	extentry->rejectlimittype = DatumGetChar(rejectlimittype);
-	if(!isNull)
+	if (!isNull)
 		Insist(extentry->rejectlimittype == 'r' || extentry->rejectlimittype == 'p');
 	else
 		extentry->rejectlimittype = -1;
 
 	/* get the error table oid */
-	fmterrtbl = heap_getattr(tuple,
-							 Anum_pg_exttable_fmterrtbl,
+	logerrors = heap_getattr(tuple,
+							 Anum_pg_exttable_logerrors,
 							 RelationGetDescr(pg_exttable_rel),
 							 &isNull);
 
-	if(isNull)
-		extentry->fmterrtbl = InvalidOid;
-	else
-		extentry->fmterrtbl = DatumGetObjectId(fmterrtbl);
+	Insist(!isNull);
+	extentry->logerrors = DatumGetBool(logerrors);
 
 	/* get the table encoding */
 	encoding = heap_getattr(tuple,

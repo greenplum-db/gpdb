@@ -1822,20 +1822,34 @@ describeOneTableDetails(const char *schemaname,
 		/* Footer information about an external table */
 		PGresult   *result;
         bool	    gpdb5OrLater = isGPDB5000OrLater();
+        bool	    gpdb6OrLater = isGPDB6000OrLater();
 		char	   *optionsName = gpdb5OrLater ? ", x.options " : "";
 		char	   *execLocations = gpdb5OrLater ? "x.urilocation, x.execlocation" : "x.location";
 
-		printfPQExpBuffer(&buf,
-						  "SELECT %s, x.fmttype, x.fmtopts, x.command, "
-						         "x.rejectlimit, x.rejectlimittype, x.writable, "
-						         "(SELECT relname "
-						          "FROM pg_class "
-								  "WHERE Oid=x.fmterrtbl) AS errtblname, "
-								  "pg_catalog.pg_encoding_to_char(x.encoding), "
-								  "x.fmterrtbl = x.reloid AS errortofile "
-								  "%s"
-						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-						  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
+		if (gpdb6OrLater)
+		{
+			printfPQExpBuffer(&buf,
+							  "SELECT %s, x.fmttype, x.fmtopts, x.command, x.logerrors, "
+									 "x.rejectlimit, x.rejectlimittype, x.writable, "
+									  "pg_catalog.pg_encoding_to_char(x.encoding) "
+									  "%s"
+							  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+							  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
+		}
+		else
+		{
+			printfPQExpBuffer(&buf,
+							  "SELECT %s, x.fmttype, x.fmtopts, x.command, "
+									 "x.rejectlimit, x.rejectlimittype, x.writable, "
+									 "(SELECT relname "
+									  "FROM pg_class "
+									  "WHERE Oid=x.fmterrtbl) AS errtblname, "
+									  "pg_catalog.pg_encoding_to_char(x.encoding), "
+									  "x.fmterrtbl = x.reloid AS errortofile "
+									  "%s"
+							  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+							  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", execLocations, optionsName, oid);
+		}
 
 		result = PSQLexec(buf.data, false);
 		if (!result)
@@ -1855,13 +1869,28 @@ describeOneTableDetails(const char *schemaname,
 			char	   *rejlim;
 			char	   *rejlimtype;
 			char	   *writable;
-			char	   *errtblname;
+			char	   *errtblname = NULL;
 			char	   *extencoding;
-			char	   *errortofile;
+			char	   *errortofile = NULL;
+			char	   *logerrors = NULL;
 			char       *format;
 			char	   *options;
 
-			if (gpdb5OrLater)
+			if (gpdb6OrLater)
+			{
+				urislocation = PQgetvalue(result, 0, 0);
+				execlocation = PQgetvalue(result, 0, 1);
+				fmttype = PQgetvalue(result, 0, 2);
+				fmtopts = PQgetvalue(result, 0, 3);
+				command = PQgetvalue(result, 0, 4);
+				logerrors = PQgetvalue(result, 0, 5);
+				rejlim =  PQgetvalue(result, 0, 6);
+				rejlimtype = PQgetvalue(result, 0, 7);
+				writable = PQgetvalue(result, 0, 8);
+				extencoding = PQgetvalue(result, 0, 9);
+				options = PQgetvalue(result, 0, 10);
+			}
+			else if (gpdb5OrLater)
 			{
 				urislocation = PQgetvalue(result, 0, 0);
 				execlocation = PQgetvalue(result, 0, 1);
@@ -2020,7 +2049,7 @@ describeOneTableDetails(const char *schemaname,
 								  (rejlimtype[0] == 'p' ? "percent" : "rows"));
 				printTableAddFooter(&cont, tmpbuf.data);
 
-				if (errortofile && errortofile[0] == 't')
+				if ((errortofile && errortofile[0] == 't') || (logerrors && logerrors[0] == 't'))
 				{
 					printfPQExpBuffer(&tmpbuf, _("Error Log in File"));
 					printTableAddFooter(&cont, tmpbuf.data);

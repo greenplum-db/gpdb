@@ -41,14 +41,13 @@ CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 	text	command;			/* the command string to EXECUTE */
 	int4	rejectlimit;		/* error count reject limit per segment */
 	char	rejectlimittype;	/* 'r' (rows) or 'p' (percent) */
-	Oid		fmterrtbl;			/* the data format error table oid in pg_class */
+	bool	logerrors;			/* 't' to log errors into file */
 	int4	encoding;			/* character encoding of this external table */
 	bool	writable;			/* 't' if writable, 'f' if readable */
 } FormData_pg_exttable;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(reloid REFERENCES pg_class(oid));
-FOREIGN_KEY(fmterrtbl REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_exttable corresponds to a pointer to a tuple with
@@ -72,7 +71,7 @@ typedef FormData_pg_exttable *Form_pg_exttable;
 #define Anum_pg_exttable_command			7
 #define Anum_pg_exttable_rejectlimit		8
 #define Anum_pg_exttable_rejectlimittype	9
-#define Anum_pg_exttable_fmterrtbl			10
+#define Anum_pg_exttable_logerrors			10
 #define Anum_pg_exttable_encoding			11
 #define Anum_pg_exttable_writable			12
 
@@ -91,7 +90,7 @@ typedef struct ExtTableEntry
 	char*	command;
 	int		rejectlimit;
 	char	rejectlimittype;
-	Oid		fmterrtbl;
+	bool	logerrors;
     int		encoding;
     bool	iswritable;
     bool	isweb;		/* extra state, not cataloged */
@@ -107,7 +106,7 @@ extern void InsertExtTableEntry(Oid 	tbloid,
 					char	rejectlimittype,
 					char*	commandString,
 					int		rejectlimit,
-					Oid		fmtErrTblOid,
+					bool	logerrors,
 					int		encoding,
 					Datum	formatOptStr,
 					Datum	optionsStr,

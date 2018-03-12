@@ -133,7 +133,6 @@ Feature: gpcheckcat tests
         Examples:
           | attrname   | tablename     |
           | reloid     | pg_exttable   |
-          | fmterrtbl  | pg_exttable   |
           | conrelid   | pg_constraint |
 
     @miss_attr_table

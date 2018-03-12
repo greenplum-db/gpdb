@@ -42,14 +42,14 @@ class GpLoadTestCase(unittest.TestCase):
         self.assertEqual(self.begin, expected_begin_value)
         self.assertEqual(self.commit, expected_commit_value)
 
-    def test_reuse_exttbl_with_errtbl_and_limit(self):
+    def test_reuse_exttbl_with_logerrors_and_limit(self):
         gploader = gpload(['-f', os.path.join(os.path.dirname(__file__), 'gpload_merge.yml')])
         gploader.read_config()
         gploader.locations = [ 'gpfdist://localhost:8080/test' ]
         rejectLimit = '9999'
 
         sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False)
-        self.assertTrue('pgext.fmterrtbl IS NULL' in sql)
+        self.assertTrue('NOT pgext.logerrors' in sql)
         self.assertTrue('pgext.rejectlimit IS NULL' in sql)
 
     def test_case_merge_transaction(self):

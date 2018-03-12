@@ -578,7 +578,7 @@ _outExternalScan(StringInfo str, ExternalScan *node)
 	WRITE_BOOL_FIELD(isMasterOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
-	WRITE_OID_FIELD(fmterrtbl);
+	WRITE_BOOL_FIELD(logErrors);
 	WRITE_INT_FIELD(encoding);
 	WRITE_INT_FIELD(scancounter);
 }

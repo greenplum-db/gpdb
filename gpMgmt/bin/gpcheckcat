@@ -3959,7 +3959,7 @@ class GPObject:
                 for issue in issues:
                     # Get schemaname.tablename corresponding to oid
                     for key in issue.pkeys:
-                        if 'relid' in key or key in ['ev_class', 'reloid', 'fmterrtbl']:
+                        if 'relid' in key or key in ['ev_class', 'reloid']:
                             table_list = db.query(oid_query % issue.pkeys[key]).getresult()
                             if table_list:
                                 if issue.type == 'missing':

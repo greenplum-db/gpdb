@@ -120,7 +120,7 @@ static ExternalScan *make_externalscan(List *qptlist,
 				  bool ismasteronly,
 				  int rejectlimit,
 				  bool rejectlimitinrows,
-				  Oid fmterrtableOid,
+				  bool logerrors,
 				  int encoding);
 static IndexScan *make_indexscan(List *qptlist, List *qpqual, Index scanrelid,
 			   Oid indexid, List *indexqual, List *indexqualorig,
@@ -1210,7 +1210,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	bool		ismasteronly = false;
 	bool		islimitinrows = false;
 	int			rejectlimit = -1;
-	Oid			fmtErrTblOid = InvalidOid;
+	bool		logerrors = false;
 	ExtTableEntry *ext = rel->extEntry;
 	List	   *fmtopts;
 
@@ -1250,7 +1250,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 	{
 		islimitinrows = (ext->rejectlimittype == 'r' ? true : false);
 		rejectlimit = ext->rejectlimit;
-		fmtErrTblOid = ext->fmterrtbl;
+		logerrors = ext->logerrors;
 	}
 
 	scan_plan = make_externalscan(tlist,
@@ -1262,7 +1262,7 @@ create_externalscan_plan(PlannerInfo *root, Path *best_path,
 								  ismasteronly,
 								  rejectlimit,
 								  islimitinrows,
-								  fmtErrTblOid,
+								  logerrors,
 								  ext->encoding);
 
 	copy_path_costsize(root, &scan_plan->scan.plan, best_path);
@@ -3847,7 +3847,7 @@ make_externalscan(List *qptlist,
 				  bool ismasteronly,
 				  int rejectlimit,
 				  bool rejectlimitinrows,
-				  Oid fmterrtableOid,
+				  bool logerrors,
 				  int encoding)
 {
 	ExternalScan *node = makeNode(ExternalScan);
@@ -3868,7 +3868,7 @@ make_externalscan(List *qptlist,
 	node->isMasterOnly = ismasteronly;
 	node->rejLimit = rejectlimit;
 	node->rejLimitInRows = rejectlimitinrows;
-	node->fmterrtbl = fmterrtableOid;
+	node->logErrors = logerrors;
 	node->encoding = encoding;
 	node->scancounter = scancounter++;
 

@@ -534,7 +534,7 @@ _copyExternalScan(ExternalScan *from)
 	COPY_SCALAR_FIELD(isMasterOnly);
 	COPY_SCALAR_FIELD(rejLimit);
 	COPY_SCALAR_FIELD(rejLimitInRows);
-	COPY_SCALAR_FIELD(fmterrtbl);
+	COPY_SCALAR_FIELD(logErrors);
 	COPY_SCALAR_FIELD(encoding);
 	COPY_SCALAR_FIELD(scancounter);
 
