@@ -203,15 +203,6 @@ kernel.shmall = 4000000000</codeblock>
         compression algorithm to apply to spill files. It can have the value <codeph>none</codeph>
         (the default) or <codeph>zlib</codeph>. Setting this parameter to <codeph>zlib</codeph> can
         improve performance when spill files are used.</p>
-      <p>A query could generate a large number of spill files if not enough memory is allocated to
-        it or if data skew is present in the queried data. If a query creates more than the
-        specified number of spill files, Greenplum Database returns this error: </p>
-      <p>
-        <codeph>ERROR: number of workfiles per query limit exceeded</codeph>
-      </p>
-      <p>Before raising the <codeph>gp_workfile_limit_files_per_query</codeph>, try reducing the
-        number of spill files by changing the query, changing the data distribution, or changing the
-        memory configuration. </p>
     </section>
   </body>
 </topic>
