@@ -467,6 +467,7 @@ def impl(context, tablename, dbname):
 
 @then('verify that there is a "{table_type}" table "{tablename}" in "{dbname}"')
 def impl(context, table_type, tablename, dbname):
+    tablename = tablename.replace('\\\"', '"')
     if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=table_type):
         raise Exception("Table '%s' of type '%s' does not exist when expected" % (tablename, table_type))
 
@@ -479,6 +480,7 @@ def impl(context, table_name, part_level, dbname):
 
 @then('verify that table "{tname}" in "{dbname}" has "{nrows}" rows')
 def impl(context, tname, dbname, nrows):
+    tname = tname.replace('\\\"', '"')
     check_row_count(tname, dbname, int(nrows))
 
 

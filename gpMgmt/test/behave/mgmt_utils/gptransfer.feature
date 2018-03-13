@@ -400,13 +400,13 @@ Feature: gptransfer tests
 
     Scenario: gptransfer dot in table name
         Given the gptransfer test is initialized
-        And the user runs "psql -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'create schema \"s\"\"';,1.s\"' gptransfer_testdb1"
-        And the user runs "psql -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'create table \"s\"\"';,1.s\".\"t\"\"';,1.t\"(\"c\"\"';,1.c\" int)' gptransfer_testdb1"
-        And the user runs "psql -d gptransfer_testdb1 -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'insert into \"s\"\"';,1.s\".\"t\"\"';,1.t\" select * from generate_series(0,99)'"
-        And the user runs "psql -sfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
+        And the user runs "psql -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'create schema \"s\"\"'\'';,1.s\"' gptransfer_testdb1"
+        And the user runs "psql -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'create table \"s\"\"'\'';,1.s\".\"t\"\"'\'';,1.t\"(\"c\"\"'\'';,1.c\" int)' gptransfer_testdb1"
+        And the user runs "psql -d gptransfer_testdb1 -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'insert into \"s\"\"'\'';,1.s\".\"t\"\"'\'';,1.t\" select * from generate_series(0,99)'"
+        And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
-        And verify that there is a "heap" table "s\"\"';,1.s"."t\"\"';,1.t" in "gptransfer_testdb1"
-        And verify that table "s\"\"';,1.s"."t\"\"';,1.t" in "gptransfer_testdb1" has "100" rows
+        And verify that there is a "heap" table "\"s\"\"';,1.s\".\"t\"\"';,1.t\"" in "gptransfer_testdb1"
+        And verify that table "\"s\"\"';,1.s\".\"t\"\"';,1.t\"" in "gptransfer_testdb1" has "100" rows
 
     @unsupported_identifiers
     Scenario: gptransfer unsupported identifiers in table name

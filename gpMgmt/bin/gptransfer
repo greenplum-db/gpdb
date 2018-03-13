@@ -1378,7 +1378,7 @@ class GpCreateNamedPipe(Command):
         fifo_name: full path of the named pipe to create
         """
 
-        cmdStr = 'mkfifo %s' % fifo_name
+        cmdStr = 'mkfifo \'%s\'' % fifo_name.replace('\'', '\'\\\'\'')
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
@@ -1422,10 +1422,13 @@ class GpCreateGpfdist(Command):
         pid_file = pid_file.replace('\'', '\'\\\'\'')
         log_file = log_file.replace('\'', '\'\\\'\'')
 
+        cmdStr2 = '(sleep 1 && kill -0 `cat \'%s\' 2> /dev/null` && cat \'%s\') || (cat \'%s\' >&2 && exit 1)' % \
+                (pid_file, log_file, log_file)
+
         cmdStr = \
             'nohup gpfdist -d \'%s\' -p %d -P %d -m %d -t %d %s> \'%s\' 2>&1 < /dev/null & echo $! > ' \
-            '\'%s\' && bash -c \'(sleep 1 && kill -0 `cat \'%s\' 2> /dev/null` && cat \'%s\') || (cat \'%s\' >&2 && exit 1)\'' % \
-            (directory, port, last_port, max_line_length, timeout, verbosity, log_file, pid_file, pid_file, log_file, log_file)
+            '\'%s\' &&  bash -c \'%s\'' % \
+            (directory, port, last_port, max_line_length, timeout, verbosity, log_file, pid_file, cmdStr2.replace('\'', '\'\\\'\''))
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
@@ -1561,7 +1564,6 @@ class GpSchemaDump(Command):
         """
         Runs the command.
         """
-
         Command.run(self)
 
     def get_schema_sql(self):
