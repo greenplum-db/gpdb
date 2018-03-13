@@ -1015,6 +1015,8 @@ text_position_setup(text *t1, text *t2, TextPositionState *state)
 		state->use_wchar = false;
 		state->str1 = VARDATA_ANY(t1);
 		state->str2 = VARDATA_ANY(t2);
+		state->wstr1 = NULL;
+		state->wstr2 = NULL;
 		state->len1 = len1;
 		state->len2 = len2;
 	}
@@ -1030,6 +1032,8 @@ text_position_setup(text *t1, text *t2, TextPositionState *state)
 		len2 = pg_mb2wchar_with_len(VARDATA_ANY(t2), p2, len2);
 
 		state->use_wchar = true;
+		state->str1 = NULL;
+		state->str2 = NULL;
 		state->wstr1 = p1;
 		state->wstr2 = p2;
 		state->len1 = len1;
@@ -1112,6 +1116,10 @@ text_position_setup(text *t1, text *t2, TextPositionState *state)
 			for (i = 0; i < last; i++)
 				state->skiptable[wstr2[i] & skiptablemask] = last - i;
 		}
+	}
+	else
+	{
+		state->skiptablemask = 0;
 	}
 }
 
