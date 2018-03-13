@@ -291,7 +291,6 @@ static bool
 isGPDB4300OrLater(void)
 {
 	static int	value = -1;		/* -1 = not known yet, 0 = no, 1 = yes */
-	bool	retValue = false;
 
 	/* Query the server on first call, and cache the result */
 	if (value == -1)
@@ -319,7 +318,7 @@ isGPDB4300OrLater(void)
 			value = 0;
 	}
 
-	return retValue;
+	return (value == 1) ? true : false;
 }
 
 /*
@@ -359,7 +358,7 @@ isGPDB5000OrLater(void)
 		return false;		/* Not Greenplum at all. */
 
 	/* GPDB 5 is based on PostgreSQL 8.3 */
-	return g_fout->remoteVersion >= 80400;
+	return g_fout->remoteVersion >= 80300;
 }
 
 
