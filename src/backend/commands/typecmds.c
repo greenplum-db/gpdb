@@ -291,9 +291,10 @@ DefineType(List *names, List *parameters)
 		else if (is_storage_encoding_directive(defel->defname))
 		{
 			/* 
-			 * GPDB_84_MERGE_FIXME: need to check to make sure that this is
-			 * copied correctly when using CREATE TABLE LIKE. See new logic
-			 * below.
+			 * This is to define default block size, compress type, and
+			 * compress level. When this type is used in an append only column
+			 * oriented table, the column's encoding will be defaulted to these
+			 * values.
 			 */
 			encoding = lappend(encoding, defel);
 			continue;
