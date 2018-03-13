@@ -116,21 +116,6 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		return;
 	}
 
-	/*
-	 * XXX: Some processes (e.g. auxiliary processes) don't need even
-	 * check the walsenders.  We just stay away from any of the shared
-	 * memory values.  When we move to fully-synchronous replication,
-	 * any xlog change needs to be considered to be synchronous,
-	 * but for now this is acceptable.
-	 */
-	if (MyProc->syncRepState == SYNC_REP_DISABLED)
-	{
-		elogif(debug_walrepl_syncrep, LOG,
-				"syncrep wait -- Not waiting for syncrep as synrep state for this process is disabled.");
-
-		return;
-	}
-
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 	{
 		/* Fast exit if user has not requested sync replication. */

@@ -598,13 +598,6 @@ InitAuxiliaryProcess(void)
 		SHMQueueInit(&(MyProc->myProcLocks[i]));
 
 	/*
-	 * Auxiliary process doesn't bother with sync rep.  Though it was
-	 * originally supposed to not do transaction work, but it does in GPDB,
-	 * we mark it and avoid sync rep work.
-	 */
-	MyProc->syncRepState = SYNC_REP_DISABLED;
-
-	/*
 	 * Acquire ownership of the PGPROC's latch, so that we can use WaitLatch.
 	 * Note that there's no particular need to do ResetLatch here.
 	 */
