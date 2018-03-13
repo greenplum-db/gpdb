@@ -338,7 +338,8 @@ class GpExpandTests(MPPTestCase):
         outfile = local_path("gpcheckcat_"+datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')+".out")
 
         self.dbstate.check_catalog(outputFile=outfile)
-        self.dbstate.check_mirrorintegrity()
+        # WALREP_FIXME: gpcheckmirrorseg.pl doesn't work with walrep, replace with something
+        # self.dbstate.check_mirrorintegrity()
 
 
     def get_value_from_query(self, sql_cmd):
