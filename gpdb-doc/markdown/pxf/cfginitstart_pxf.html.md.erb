@@ -113,7 +113,7 @@ Perform the following procedure to start PXF on each segment host in your Greenp
 
 ## <a id="stop_pxf"></a>Stopping PXF
 
-You must explicitly stop PXF on each segment host in your Greenplum Database cluster when you upgrade PXF. Only the `gpadmin` user can stop the PXF service.
+If you must stop PXF, for example if you are upgrading PXF, you must explicitly stop PXF on each segment host in your Greenplum Database cluster. Only the `gpadmin` user can stop the PXF service.
 
 Perform the following procedure to stop PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
 
