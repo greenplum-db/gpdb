@@ -124,10 +124,10 @@ Perform the following procedure to stop PXF on each segment host in your Greenpl
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-3. Run the `pxf start` command to start PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+3. Run the `pxf stop` command to stop PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf start"
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf stop"
     ```
 
 ## <a id="pxf_svc_mgmt"></a>PXF Service Management
