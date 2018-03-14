@@ -6,6 +6,7 @@
     <topicref href="topics/preface.xml">
         <topicref href="topics/SecuringGPDB.xml"/>
         <topicref href="topics/ports_and_protocols.xml"/>
+        <topicref href="topics/listen-addresses.xml"/>
         <topicref href="topics/Authenticate.xml"/>
         <topicref href="topics/Authorization.xml"/>
         <topicref href="topics/gpcc.xml" otherprops="pivotal"/>

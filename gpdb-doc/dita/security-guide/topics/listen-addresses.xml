@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="Untitled1">
+  <title>Restricting Greenplum Database Network Access</title>
+  <body>
+    <p>Greenplum Database is configured by default to listen for connections on all network
+      interfaces on the hosts in the cluster. This allows Greenplum Database to use all of the
+      hosts' available network bandwidth and enhances high availability by allowing database network
+      traffic to continue if an interface or subnet fails.</p>
+    <p>With the <codeph>pg_hba.conf</codeph> host-based authentication configuration file, you can
+      manage who can connect to databases, from which hosts, and the type of authentication
+      required. For greater security, you may also want to configure Greenplum Database to only
+      accept connections on some interfaces or subnets in order to prevent connections from insecure
+      networks. For example, consider a Greenplum Database cluster with hosts that have two NICs:
+      one configured on an internal 192.51.100.0/24 network and another on an external 192.0.2.0/24
+      subnet. To prevent access to the database from the external subnet, you can configure the
+      Greenplum Database <codeph>listen_addresses</codeph> server configuration parameter to listen
+      for connections only on the 198.51.100.0/24 subnet. </p>
+    <note>Greenplum Database releases before 5.6.0 do not use the <codeph>listen_addresses</codeph>
+      parameter and listen on all interfaces.</note>
+    <p>The <codeph>listen_addresses</codeph> parameter specifies network addresses Greenplum
+      Database listens on for connections.  It is set to <codeph>'*'</codeph> by default so that
+      Greenplum Database processes bind to and listen on all interfaces. To listen on a subset of
+      interfaces, you can set the parameter to a list of addresses. Be sure to follow these
+      rules:</p>
+    <ul id="ul_ebt_v2b_2db">
+      <li>The addresses must resolve to full IPV4 or IPV6 addresses; network masks are not
+        supported.</li>
+      <li>You can include <codeph>0.0.0.0</codeph> to listen on all IPV4 interfaces or
+          <codeph>::</codeph> to listen on all IPV6 interfaces. </li>
+      <li>You must include <codeph>localhost</codeph> or <codeph>127.0.0.1</codeph> in the address
+        list.</li>
+      <li>You must include at least one TCP/IP interface in the address list.</li>
+    </ul>
+    <note type="warning">If you set the <codeph>listen_addresses</codeph> parameter, you may
+      experience problems with client applications and Greenplum Database management utilities, such
+      as <codeph>gpfdist</codeph>, <codeph>gpload</codeph>, and <codeph>gptransfer</codeph>. You
+      should test the utilities you use, including client applications, ETL systems, backup, and
+      restore, to ensure they work with your restricted network configuration.</note>
+    <p>Because each interface in a network has a unique address, the
+        <codeph>listen_addresses</codeph> configuration parameter must be set individually on each
+      host. You cannot use the <codeph>gpconfig</codeph> utility to set the parameter. You must edit
+      the <codeph>postgresql.conf</codeph> configuration file for the master, standby master, and
+      for every primary and mirror segment on every host to set listen addresses to interfaces
+      available on the specific host.</p>
+    <p>The <codeph>postgresql.conf</codeph> file on the master and standby master is at
+        <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph>. The
+        <codeph>postgresql.conf</codeph> file for a segment is in the root of the segment's data
+      directory.</p>
+    <p>To only allow Greenplum Database connections on a single subnet, for example 198.51.100.0/24,
+      set the <codeph>listen_addresses</codeph> parameter in each <codeph>postgresql.conf</codeph>
+      file to the host's IP address in that subnet.</p>
+    <codeblock>listen_addresses = 'localhost,198.51.100.100' </codeblock>
+    <p>After setting the <codeph>listen_addresses</codeph> parameter for the master, standby master,
+      and segments, restart the Greenplum Database system to activate the changes. </p>
+    <codeblock>$ gpstop -r</codeblock>
+  </body>
+</topic>
