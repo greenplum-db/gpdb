@@ -1,4 +1,5 @@
 # Global excludes across all subdirectories
+*.swp
 *.o
 *.so
 *.so.[0-9]
