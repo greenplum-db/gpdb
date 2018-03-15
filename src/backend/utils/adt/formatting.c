@@ -1,10 +1,10 @@
 /* -----------------------------------------------------------------------
  * formatting.c
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.158 2009/06/22 17:54:30 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.171 2010/07/06 19:18:58 momjian Exp $
  *
  *
- *	 Portions Copyright (c) 1999-2009, PostgreSQL Global Development Group
+ *	 Portions Copyright (c) 1999-2010, PostgreSQL Global Development Group
  *
  *
  *	 TO_CHAR(); TO_TIMESTAMP(); TO_DATE(); TO_NUMBER();
@@ -82,6 +82,7 @@
 #include <wctype.h>
 #endif
 
+#include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datetime.h"
@@ -89,7 +90,6 @@
 #include "utils/int8.h"
 #include "utils/numeric.h"
 #include "utils/pg_locale.h"
-#include "mb/pg_wchar.h"
 
 /* ----------
  * Routines type
@@ -335,6 +335,7 @@ typedef struct
 #define NUM_F_MULTI			(1 << 11)
 #define NUM_F_PLUS_POST		(1 << 12)
 #define NUM_F_MINUS_POST	(1 << 13)
+#define NUM_F_EEEE			(1 << 14)
 
 #define NUM_LSIGN_PRE	(-1)
 #define NUM_LSIGN_POST	1
@@ -355,6 +356,7 @@ typedef struct
 #define IS_PLUS(_f) ((_f)->flag & NUM_F_PLUS)
 #define IS_ROMAN(_f)	((_f)->flag & NUM_F_ROMAN)
 #define IS_MULTI(_f)	((_f)->flag & NUM_F_MULTI)
+#define IS_EEEE(_f)		((_f)->flag & NUM_F_EEEE)
 
 /* ----------
  * Format picture cache
@@ -513,6 +515,7 @@ do { \
 #define S_th(_s)	(((_s) & DCH_S_th) ? 1 : 0)
 #define S_TH_TYPE(_s)	(((_s) & DCH_S_TH) ? TH_UPPER : TH_LOWER)
 
+/* Oracle toggles FM behavior, we don't; see docs. */
 #define S_FM(_s)	(((_s) & DCH_S_FM) ? 1 : 0)
 #define S_SP(_s)	(((_s) & DCH_S_SP) ? 1 : 0)
 #define S_TM(_s)	(((_s) & DCH_S_TM) ? 1 : 0)
@@ -823,7 +826,7 @@ static const KeyWord NUM_keywords[] = {
 	{"B", 1, NUM_B},			/* B */
 	{"C", 1, NUM_C},			/* C */
 	{"D", 1, NUM_D},			/* D */
-	{"E", 1, NUM_E},			/* E */
+	{"EEEE", 4, NUM_E},			/* E */
 	{"FM", 2, NUM_FM},			/* F */
 	{"G", 1, NUM_G},			/* G */
 	{"L", 1, NUM_L},			/* L */
@@ -839,7 +842,7 @@ static const KeyWord NUM_keywords[] = {
 	{"b", 1, NUM_B},			/* b */
 	{"c", 1, NUM_C},			/* c */
 	{"d", 1, NUM_D},			/* d */
-	{"e", 1, NUM_E},			/* e */
+	{"eeee", 4, NUM_E},			/* e */
 	{"fm", 2, NUM_FM},			/* f */
 	{"g", 1, NUM_G},			/* g */
 	{"l", 1, NUM_L},			/* l */
@@ -1047,184 +1050,179 @@ NUMDesc_prepare(NUMDesc *num, FormatNode *n, char *func)
 	if (n->type != NODE_TYPE_ACTION)
 		return;
 
-	switch (n->key->id)
+	/*
+	 * In case of an error, we need to remove the numeric from the cache.  Use
+	 * a PG_TRY block to ensure that this happens.
+	 */
+	PG_TRY();
 	{
-		case NUM_9:
-			if (IS_BRACKET(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("\"9\" must be ahead of \"PR\" for function \"%s\"", func)));
-			}
-			if (IS_MULTI(num))
-			{
-				++num->multi;
-				break;
-			}
-			if (IS_DECIMAL(num))
-				++num->post;
-			else
-				++num->pre;
-			break;
-
-		case NUM_0:
-			if (IS_BRACKET(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("\"0\" must be ahead of \"PR\" for function \"%s\"", func)));
-			}
-			if (!IS_ZERO(num) && !IS_DECIMAL(num))
-			{
-				num->flag |= NUM_F_ZERO;
-				num->zero_start = num->pre + 1;
-			}
-			if (!IS_DECIMAL(num))
-				++num->pre;
-			else
-				++num->post;
-
-			num->zero_end = num->pre + num->post;
-			break;
-
-		case NUM_B:
-			if (num->pre == 0 && num->post == 0 && (!IS_ZERO(num)))
-				num->flag |= NUM_F_BLANK;
-			break;
-
-		case NUM_D:
-			num->flag |= NUM_F_LDECIMAL;
-			num->need_locale = TRUE;
-		case NUM_DEC:
-			if (IS_DECIMAL(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("multiple decimal points for function \"%s\"", func)));
-			}
-			if (IS_MULTI(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot use \"V\" and decimal point together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_DECIMAL;
-			break;
-
-		case NUM_FM:
-			num->flag |= NUM_F_FILLMODE;
-			break;
-
-		case NUM_S:
-			if (IS_LSIGN(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"S\" twice for function \"%s\"", func)));
-			}
-			if (IS_PLUS(num) || IS_MINUS(num) || IS_BRACKET(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"S\" and \"PL\"/\"MI\"/\"SG\"/\"PR\" together for function \"%s\"", func)));
-			}
-			if (!IS_DECIMAL(num))
-			{
-				num->lsign = NUM_LSIGN_PRE;
-				num->pre_lsign_num = num->pre;
-				num->need_locale = TRUE;
-				num->flag |= NUM_F_LSIGN;
-			}
-			else if (num->lsign == NUM_LSIGN_NONE)
-			{
-				num->lsign = NUM_LSIGN_POST;
-				num->need_locale = TRUE;
-				num->flag |= NUM_F_LSIGN;
-			}
-			break;
-
-		case NUM_MI:
-			if (IS_LSIGN(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"S\" and \"MI\" together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_MINUS;
-			if (IS_DECIMAL(num))
-				num->flag |= NUM_F_MINUS_POST;
-			break;
-
-		case NUM_PL:
-			if (IS_LSIGN(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"S\" and \"PL\" together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_PLUS;
-			if (IS_DECIMAL(num))
-				num->flag |= NUM_F_PLUS_POST;
-			break;
-
-		case NUM_SG:
-			if (IS_LSIGN(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"S\" and \"SG\" together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_MINUS;
-			num->flag |= NUM_F_PLUS;
-			break;
-
-		case NUM_PR:
-			if (IS_LSIGN(num) || IS_PLUS(num) || IS_MINUS(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot use \"PR\" and \"S\"/\"PL\"/\"MI\"/\"SG\" together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_BRACKET;
-			break;
-
-		case NUM_rn:
-		case NUM_RN:
-			num->flag |= NUM_F_ROMAN;
-			break;
-
-		case NUM_L:
-		case NUM_G:
-			num->need_locale = TRUE;
-			break;
-
-		case NUM_V:
-			if (IS_DECIMAL(num))
-			{
-				NUM_cache_remove(last_NUMCacheEntry);
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot use \"V\" and decimal point together for function \"%s\"", func)));
-			}
-			num->flag |= NUM_F_MULTI;
-			break;
-
-		case NUM_E:
-			NUM_cache_remove(last_NUMCacheEntry);
+		if (IS_EEEE(num) && n->key->id != NUM_E)
 			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("\"E\" is not supported for function \"%s\"", func)));
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("\"EEEE\" must be the last pattern used")));
+
+		switch (n->key->id)
+		{
+			case NUM_9:
+				if (IS_BRACKET(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("\"9\" must be ahead of \"PR\"")));
+				if (IS_MULTI(num))
+				{
+					++num->multi;
+					break;
+				}
+				if (IS_DECIMAL(num))
+					++num->post;
+				else
+					++num->pre;
+				break;
+
+			case NUM_0:
+				if (IS_BRACKET(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("\"0\" must be ahead of \"PR\"")));
+				if (!IS_ZERO(num) && !IS_DECIMAL(num))
+				{
+					num->flag |= NUM_F_ZERO;
+					num->zero_start = num->pre + 1;
+				}
+				if (!IS_DECIMAL(num))
+					++num->pre;
+				else
+					++num->post;
+
+				num->zero_end = num->pre + num->post;
+				break;
+
+			case NUM_B:
+				if (num->pre == 0 && num->post == 0 && (!IS_ZERO(num)))
+					num->flag |= NUM_F_BLANK;
+				break;
+
+			case NUM_D:
+				num->flag |= NUM_F_LDECIMAL;
+				num->need_locale = TRUE;
+			case NUM_DEC:
+				if (IS_DECIMAL(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("multiple decimal points")));
+				if (IS_MULTI(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("cannot use \"V\" and decimal point together")));
+				num->flag |= NUM_F_DECIMAL;
+				break;
+
+			case NUM_FM:
+				num->flag |= NUM_F_FILLMODE;
+				break;
+
+			case NUM_S:
+				if (IS_LSIGN(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"S\" twice")));
+				if (IS_PLUS(num) || IS_MINUS(num) || IS_BRACKET(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"S\" and \"PL\"/\"MI\"/\"SG\"/\"PR\" together")));
+				if (!IS_DECIMAL(num))
+				{
+					num->lsign = NUM_LSIGN_PRE;
+					num->pre_lsign_num = num->pre;
+					num->need_locale = TRUE;
+					num->flag |= NUM_F_LSIGN;
+				}
+				else if (num->lsign == NUM_LSIGN_NONE)
+				{
+					num->lsign = NUM_LSIGN_POST;
+					num->need_locale = TRUE;
+					num->flag |= NUM_F_LSIGN;
+				}
+				break;
+
+			case NUM_MI:
+				if (IS_LSIGN(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"S\" and \"MI\" together")));
+				num->flag |= NUM_F_MINUS;
+				if (IS_DECIMAL(num))
+					num->flag |= NUM_F_MINUS_POST;
+				break;
+
+			case NUM_PL:
+				if (IS_LSIGN(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"S\" and \"PL\" together")));
+				num->flag |= NUM_F_PLUS;
+				if (IS_DECIMAL(num))
+					num->flag |= NUM_F_PLUS_POST;
+				break;
+
+			case NUM_SG:
+				if (IS_LSIGN(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"S\" and \"SG\" together")));
+				num->flag |= NUM_F_MINUS;
+				num->flag |= NUM_F_PLUS;
+				break;
+
+			case NUM_PR:
+				if (IS_LSIGN(num) || IS_PLUS(num) || IS_MINUS(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"PR\" and \"S\"/\"PL\"/\"MI\"/\"SG\" together")));
+				num->flag |= NUM_F_BRACKET;
+				break;
+
+			case NUM_rn:
+			case NUM_RN:
+				num->flag |= NUM_F_ROMAN;
+				break;
+
+			case NUM_L:
+			case NUM_G:
+				num->need_locale = TRUE;
+				break;
+
+			case NUM_V:
+				if (IS_DECIMAL(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("cannot use \"V\" and decimal point together")));
+				num->flag |= NUM_F_MULTI;
+				break;
+
+			case NUM_E:
+				if (IS_EEEE(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot use \"EEEE\" twice")));
+				if (IS_BLANK(num) || IS_FILLMODE(num) || IS_LSIGN(num) ||
+					IS_BRACKET(num) || IS_MINUS(num) || IS_PLUS(num) ||
+					IS_ROMAN(num) || IS_MULTI(num))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+					   errmsg("\"EEEE\" is incompatible with other formats"),
+							 errdetail("\"EEEE\" may only be used together with digit and decimal point patterns.")));
+				num->flag |= NUM_F_EEEE;
+				break;
+		}
 	}
+	PG_CATCH();
+	{
+		NUM_cache_remove(last_NUMCacheEntry);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
 
 	return;
 }
@@ -2145,7 +2143,6 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out)
 	FormatNode *n;
 	char	   *s;
 	struct pg_tm *tm = &in->tm;
-	char		buff[DCH_CACHE_SIZE];
 	int			i;
 
 	/* cache localized days and months */
@@ -2189,6 +2186,11 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out)
 				break;
 			case DCH_HH:
 			case DCH_HH12:
+
+				/*
+				 * display time as shown on a 12-hour clock, even for
+				 * intervals
+				 */
 				sprintf(s, "%0*d", S_FM(n->suffix) ? 0 : 2,
 						tm->tm_hour % (HOURS_PER_DAY / 2) == 0 ? 12 :
 						tm->tm_hour % (HOURS_PER_DAY / 2));
@@ -2591,65 +2593,55 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out)
 				break;
 			case DCH_YYYY:
 			case DCH_IYYY:
-				if (tm->tm_year <= 9999 && tm->tm_year >= -9998)
-					sprintf(s, "%0*d",
-							S_FM(n->suffix) ? 0 : 4,
-							n->key->id == DCH_YYYY ?
-							ADJUST_YEAR(tm->tm_year, is_interval) :
-							ADJUST_YEAR(date2isoyear(
-													 tm->tm_year,
-													 tm->tm_mon,
-												 tm->tm_mday), is_interval));
-				else
-					sprintf(s, "%d",
-							n->key->id == DCH_YYYY ?
-							ADJUST_YEAR(tm->tm_year, is_interval) :
-							ADJUST_YEAR(date2isoyear(
-													 tm->tm_year,
-													 tm->tm_mon,
-												 tm->tm_mday), is_interval));
+				sprintf(s, "%0*d",
+						S_FM(n->suffix) ? 0 : 4,
+						(n->key->id == DCH_YYYY ?
+						 ADJUST_YEAR(tm->tm_year, is_interval) :
+						 ADJUST_YEAR(date2isoyear(tm->tm_year,
+												  tm->tm_mon,
+												  tm->tm_mday),
+									 is_interval)));
 				if (S_THth(n->suffix))
 					str_numth(s, s, S_TH_TYPE(n->suffix));
 				s += strlen(s);
 				break;
 			case DCH_YYY:
 			case DCH_IYY:
-				snprintf(buff, sizeof(buff), "%03d",
-						 n->key->id == DCH_YYY ?
+				sprintf(s, "%0*d",
+						S_FM(n->suffix) ? 0 : 3,
+						(n->key->id == DCH_YYY ?
 						 ADJUST_YEAR(tm->tm_year, is_interval) :
 						 ADJUST_YEAR(date2isoyear(tm->tm_year,
-												  tm->tm_mon, tm->tm_mday),
-									 is_interval));
-				i = strlen(buff);
-				strcpy(s, buff + (i - 3));
+												  tm->tm_mon,
+												  tm->tm_mday),
+									 is_interval)) % 1000);
 				if (S_THth(n->suffix))
 					str_numth(s, s, S_TH_TYPE(n->suffix));
 				s += strlen(s);
 				break;
 			case DCH_YY:
 			case DCH_IY:
-				snprintf(buff, sizeof(buff), "%02d",
-						 n->key->id == DCH_YY ?
+				sprintf(s, "%0*d",
+						S_FM(n->suffix) ? 0 : 2,
+						(n->key->id == DCH_YY ?
 						 ADJUST_YEAR(tm->tm_year, is_interval) :
 						 ADJUST_YEAR(date2isoyear(tm->tm_year,
-												  tm->tm_mon, tm->tm_mday),
-									 is_interval));
-				i = strlen(buff);
-				strcpy(s, buff + (i - 2));
+												  tm->tm_mon,
+												  tm->tm_mday),
+									 is_interval)) % 100);
 				if (S_THth(n->suffix))
 					str_numth(s, s, S_TH_TYPE(n->suffix));
 				s += strlen(s);
 				break;
 			case DCH_Y:
 			case DCH_I:
-				snprintf(buff, sizeof(buff), "%1d",
-						 n->key->id == DCH_Y ?
+				sprintf(s, "%1d",
+						(n->key->id == DCH_Y ?
 						 ADJUST_YEAR(tm->tm_year, is_interval) :
 						 ADJUST_YEAR(date2isoyear(tm->tm_year,
-												  tm->tm_mon, tm->tm_mday),
-									 is_interval));
-				i = strlen(buff);
-				strcpy(s, buff + (i - 1));
+												  tm->tm_mon,
+												  tm->tm_mday),
+									 is_interval)) % 10);
 				if (S_THth(n->suffix))
 					str_numth(s, s, S_TH_TYPE(n->suffix));
 				s += strlen(s);
@@ -2868,8 +2860,11 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 			case DCH_Q:
 
 				/*
-				 * We ignore Q when converting to date because it is not
-				 * normative.
+				 * We ignore 'Q' when converting to date because it is unclear
+				 * which date in the quarter to use, and some people specify
+				 * both quarter and month, so if it was honored it might
+				 * conflict with the supplied month. That is also why we don't
+				 * throw an error.
 				 *
 				 * We still parse the source string for an integer, but it
 				 * isn't stored anywhere in 'out'.
@@ -3304,6 +3299,9 @@ to_date(PG_FUNCTION_ARGS)
  *
  * The TmFromChar is then analysed and converted into the final results in
  * struct 'tm' and 'fsec'.
+ *
+ * This function does very little error checking, e.g.
+ * to_timestamp('20096040','YYYYMMDD') works
  */
 static void
 do_to_timestamp(text *date_txt, text *fmt,
@@ -4376,6 +4374,15 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
 	if (Np->Num->zero_start)
 		--Np->Num->zero_start;
 
+	if (IS_EEEE(Np->Num))
+	{
+		if (!Np->is_to_char)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("\"EEEE\" not supported for input")));
+		return strcpy(inout, number);
+	}
+
 	/*
 	 * Roman correction
 	 */
@@ -4480,7 +4487,7 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
 
 #ifdef DEBUG_TO_FROM_CHAR
 	elog(DEBUG_elog_output,
-		 "\n\tSIGN: '%c'\n\tNUM: '%s'\n\tPRE: %d\n\tPOST: %d\n\tNUM_COUNT: %d\n\tNUM_PRE: %d\n\tSIGN_WROTE: %s\n\tZERO: %s\n\tZERO_START: %d\n\tZERO_END: %d\n\tLAST_RELEVANT: %s\n\tBRACKET: %s\n\tPLUS: %s\n\tMINUS: %s\n\tFILLMODE: %s\n\tROMAN: %s",
+		 "\n\tSIGN: '%c'\n\tNUM: '%s'\n\tPRE: %d\n\tPOST: %d\n\tNUM_COUNT: %d\n\tNUM_PRE: %d\n\tSIGN_WROTE: %s\n\tZERO: %s\n\tZERO_START: %d\n\tZERO_END: %d\n\tLAST_RELEVANT: %s\n\tBRACKET: %s\n\tPLUS: %s\n\tMINUS: %s\n\tFILLMODE: %s\n\tROMAN: %s\n\tEEEE: %s",
 		 Np->sign,
 		 Np->number,
 		 Np->Num->pre,
@@ -4496,7 +4503,8 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
 		 IS_PLUS(Np->Num) ? "Yes" : "No",
 		 IS_MINUS(Np->Num) ? "Yes" : "No",
 		 IS_FILLMODE(Np->Num) ? "Yes" : "No",
-		 IS_ROMAN(Np->Num) ? "Yes" : "No"
+		 IS_ROMAN(Np->Num) ? "Yes" : "No",
+		 IS_EEEE(Np->Num) ? "Yes" : "No"
 		);
 #endif
 
@@ -4866,6 +4874,39 @@ numeric_to_char(PG_FUNCTION_ARGS)
 			int_to_roman(DatumGetInt32(DirectFunctionCall1(numeric_int4,
 													   NumericGetDatum(x))));
 	}
+	else if (IS_EEEE(&Num))
+	{
+		orgnum = numeric_out_sci(value, Num.post);
+
+		/*
+		 * numeric_out_sci() does not emit a sign for positive numbers.  We
+		 * need to add a space in this case so that positive and negative
+		 * numbers are aligned.  We also have to do the right thing for NaN.
+		 */
+		if (strcmp(orgnum, "NaN") == 0)
+		{
+			/*
+			 * Allow 6 characters for the leading sign, the decimal point,
+			 * "e", the exponent's sign and two exponent digits.
+			 */
+			numstr = (char *) palloc(Num.pre + Num.post + 7);
+			fill_str(numstr, '#', Num.pre + Num.post + 6);
+			*numstr = ' ';
+			*(numstr + Num.pre + 1) = '.';
+		}
+		else if (*orgnum != '-')
+		{
+			numstr = (char *) palloc(strlen(orgnum) + 2);
+			*numstr = ' ';
+			strcpy(numstr + 1, orgnum);
+			len = strlen(numstr);
+		}
+		else
+		{
+			numstr = orgnum;
+			len = strlen(orgnum);
+		}
+	}
 	else
 	{
 		Numeric		val = value;
@@ -4947,6 +4988,23 @@ int4_to_char(PG_FUNCTION_ARGS)
 	 */
 	if (IS_ROMAN(&Num))
 		numstr = orgnum = int_to_roman(value);
+	else if (IS_EEEE(&Num))
+	{
+		/* we can do it easily because float8 won't lose any precision */
+		float8		val = (float8) value;
+
+		orgnum = (char *) palloc(MAXDOUBLEWIDTH + 1);
+		snprintf(orgnum, MAXDOUBLEWIDTH + 1, "%+.*e", Num.post, val);
+
+		/*
+		 * Swap a leading positive sign for a space.
+		 */
+		if (*orgnum == '+')
+			*orgnum = ' ';
+
+		len = strlen(orgnum);
+		numstr = orgnum;
+	}
 	else
 	{
 		if (IS_MULTI(&Num))
@@ -5025,6 +5083,33 @@ int8_to_char(PG_FUNCTION_ARGS)
 		numstr = orgnum = int_to_roman(DatumGetInt32(
 						  DirectFunctionCall1(int84, Int64GetDatum(value))));
 	}
+	else if (IS_EEEE(&Num))
+	{
+		/* to avoid loss of precision, must go via numeric not float8 */
+		Numeric		val;
+
+		val = DatumGetNumeric(DirectFunctionCall1(int8_numeric,
+												  Int64GetDatum(value)));
+		orgnum = numeric_out_sci(val, Num.post);
+
+		/*
+		 * numeric_out_sci() does not emit a sign for positive numbers.  We
+		 * need to add a space in this case so that positive and negative
+		 * numbers are aligned.  We don't have to worry about NaN here.
+		 */
+		if (*orgnum != '-')
+		{
+			numstr = (char *) palloc(strlen(orgnum) + 2);
+			*numstr = ' ';
+			strcpy(numstr + 1, orgnum);
+			len = strlen(numstr);
+		}
+		else
+		{
+			numstr = orgnum;
+			len = strlen(orgnum);
+		}
+	}
 	else
 	{
 		if (IS_MULTI(&Num))
@@ -5099,6 +5184,34 @@ float4_to_char(PG_FUNCTION_ARGS)
 
 	if (IS_ROMAN(&Num))
 		numstr = orgnum = int_to_roman((int) rint(value));
+	else if (IS_EEEE(&Num))
+	{
+		numstr = orgnum = (char *) palloc(MAXDOUBLEWIDTH + 1);
+		if (isnan(value) || is_infinite(value))
+		{
+			/*
+			 * Allow 6 characters for the leading sign, the decimal point,
+			 * "e", the exponent's sign and two exponent digits.
+			 */
+			numstr = (char *) palloc(Num.pre + Num.post + 7);
+			fill_str(numstr, '#', Num.pre + Num.post + 6);
+			*numstr = ' ';
+			*(numstr + Num.pre + 1) = '.';
+		}
+		else
+		{
+			snprintf(orgnum, MAXDOUBLEWIDTH + 1, "%+.*e", Num.post, value);
+
+			/*
+			 * Swap a leading positive sign for a space.
+			 */
+			if (*orgnum == '+')
+				*orgnum = ' ';
+
+			len = strlen(orgnum);
+			numstr = orgnum;
+		}
+	}
 	else
 	{
 		float4		val = value;
@@ -5175,6 +5288,34 @@ float8_to_char(PG_FUNCTION_ARGS)
 
 	if (IS_ROMAN(&Num))
 		numstr = orgnum = int_to_roman((int) rint(value));
+	else if (IS_EEEE(&Num))
+	{
+		numstr = orgnum = (char *) palloc(MAXDOUBLEWIDTH + 1);
+		if (isnan(value) || is_infinite(value))
+		{
+			/*
+			 * Allow 6 characters for the leading sign, the decimal point,
+			 * "e", the exponent's sign and two exponent digits.
+			 */
+			numstr = (char *) palloc(Num.pre + Num.post + 7);
+			fill_str(numstr, '#', Num.pre + Num.post + 6);
+			*numstr = ' ';
+			*(numstr + Num.pre + 1) = '.';
+		}
+		else
+		{
+			snprintf(orgnum, MAXDOUBLEWIDTH + 1, "%+.*e", Num.post, value);
+
+			/*
+			 * Swap a leading positive sign for a space.
+			 */
+			if (*orgnum == '+')
+				*orgnum = ' ';
+
+			len = strlen(orgnum);
+			numstr = orgnum;
+		}
+	}
 	else
 	{
 		float8		val = value;

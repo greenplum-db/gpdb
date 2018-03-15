@@ -45,11 +45,11 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.48 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.51 2010/02/26 02:01:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -320,7 +320,7 @@ tuplestore_begin_common(int eflags, bool interXact, int maxKBytes)
  * tuple store are allowed.
  *
  * interXact: if true, the files used for on-disk storage persist beyond the
- * end of the current transaction.  NOTE: It's the caller's responsibility to
+ * end of the current transaction.	NOTE: It's the caller's responsibility to
  * create such a tuplestore in a memory context and resource owner that will
  * also survive transaction boundaries, and to ensure the tuplestore is closed
  * when it's no longer wanted.
@@ -476,7 +476,7 @@ tuplestore_end(Tuplestorestate *state)
 	/*
 	 * CDB: Report statistics to EXPLAIN ANALYZE.
 	 */
-	if (state->instrument)
+	if (state->instrument && state->instrument->need_cdb)
 	{
 		double  nbytes;
 

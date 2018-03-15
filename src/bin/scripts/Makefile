@@ -2,14 +2,16 @@
 #
 # Makefile for src/bin/scripts
 #
-# Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/bin/scripts/Makefile,v 1.42 2009/03/07 02:09:22 alvherre Exp $
+# $PostgreSQL: pgsql/src/bin/scripts/Makefile,v 1.46 2010/07/05 18:54:38 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
 PGFILEDESC = "PostgreSQL utility"
+PGAPPICON=win32
+
 subdir = src/bin/scripts
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
@@ -31,7 +33,7 @@ override CPPFLAGS := -I$(top_srcdir)/src/bin/pg_dump -I$(top_srcdir)/src/bin/psq
 all: submake-libpq submake-libpgport $(PROGRAMS)
 
 %: %.o $(WIN32RES)
-	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 createdb: createdb.o common.o dumputils.o kwlookup.o keywords.o
 createlang: createlang.o common.o print.o mbprint.o

@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 \d pg2_heap_table_bitmap_index_a0
 
 insert into pg2_heap_table_bitmap_index_a0 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000');

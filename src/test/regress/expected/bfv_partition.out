@@ -768,9 +768,7 @@ NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_4" for table "mpp3466
 NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_5" for table "mpp3466"
 NOTICE:  CREATE TABLE will create partition "mpp3466_1_prt_6" for table "mpp3466"
 alter table mpp3466 split partition f at (3) into (partition f, partition new);
-ERROR:  syntax error at or near "new"
-LINE 1: ... split partition f at (3) into (partition f, partition new);
-                                                                  ^
+ERROR:  AT clause cannot be used when splitting a default RANGE partition
 drop table mpp3466;
 create table mpp3058 (a char(1), b date, d char(3))       
  distributed by (a)         
@@ -3709,10 +3707,10 @@ NOTICE:  CREATE TABLE will create partition "sg_cal_detail_r1_1_prt_r348824926_2
 NOTICE:  CREATE TABLE will create partition "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc_3_prt_et3" for table "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc"
 NOTICE:  CREATE TABLE will create partition "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc_3_prt_et4" for table "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc"
 NOTICE:  CREATE TABLE will create partition "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc_3_prt_etx" for table "sg_cal_detail_r1_1_prt_r348824926_2_prt_xdc"
-select count(*) from pg_partitions where tablename = 'sg_cal_detail_r1';
+select count(*) from pg_class where relname like 'sg_cal_detail_r1%';
  count 
 -------
-    62
+    63
 (1 row)
 
 drop table sg_cal_detail_r1;
@@ -4713,20 +4711,20 @@ NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_99" for table "mpp542
 NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_100" for table "mpp5427"
 insert into mpp5427 select i from generate_series(1, 100) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 100000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 1000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 truncate table mpp5427;
@@ -4734,26 +4732,26 @@ alter table mpp5427 add default partition default_part;
 NOTICE:  CREATE TABLE will create partition "mpp5427_1_prt_default_part" for table "mpp5427"
 insert into mpp5427 select i from generate_series(1, 100) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 100000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(1, 1000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 insert into mpp5427 select i from generate_series(10000000, 15000000) i;
 select * from pg_stats where tablename like 'mpp5427%';
- schemaname | tablename | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-----------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
 (0 rows)
 
 drop table mpp5427;
@@ -5157,8 +5155,8 @@ NOTICE:  CREATE TABLE will create partition "mpp6573_1_prt_1" for table "mpp6573
 NOTICE:  CREATE TABLE will create partition "mpp6573_1_prt_2" for table "mpp6573"
 alter table mpp6573 add primary key (id, date) ;
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_pkey" for table "mpp6573"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_1_pkey" for table "mpp6573_1_prt_1"
-NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_2_pkey" for table "mpp6573_1_prt_2"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_1_idx" for table "mpp6573_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "mpp6573_1_prt_2_idx" for table "mpp6573_1_prt_2"
 \d mpp6573*
    Table "bfv_partition.mpp6573"
  Column |     Type      | Modifiers 
@@ -5179,13 +5177,13 @@ Table "bfv_partition.mpp6573_1_prt_1"
  date   | date          | not null
  amt    | numeric(10,2) | 
 Indexes:
-    "mpp6573_1_prt_1_pkey" PRIMARY KEY, btree (id, date)
+    "mpp6573_1_prt_1_idx" PRIMARY KEY, btree (id, date)
 Check constraints:
     "mpp6573_1_prt_1_check" CHECK (date >= '01-01-2008'::date AND date < '01-02-2008'::date)
 Inherits: mpp6573
 Distributed by: (id)
 
-Index "bfv_partition.mpp6573_1_prt_1_pkey"
+Index "bfv_partition.mpp6573_1_prt_1_idx"
  Column |  Type   | Definition 
 --------+---------+------------
  id     | integer | id
@@ -5199,13 +5197,13 @@ Table "bfv_partition.mpp6573_1_prt_2"
  date   | date          | not null
  amt    | numeric(10,2) | 
 Indexes:
-    "mpp6573_1_prt_2_pkey" PRIMARY KEY, btree (id, date)
+    "mpp6573_1_prt_2_idx" PRIMARY KEY, btree (id, date)
 Check constraints:
     "mpp6573_1_prt_2_check" CHECK (date >= '01-02-2008'::date AND date < '01-03-2008'::date)
 Inherits: mpp6573
 Distributed by: (id)
 
-Index "bfv_partition.mpp6573_1_prt_2_pkey"
+Index "bfv_partition.mpp6573_1_prt_2_idx"
  Column |  Type   | Definition 
 --------+---------+------------
  id     | integer | id
@@ -5420,12 +5418,12 @@ ALTER TABLE part_acl_test ADD PARTITION p2 VALUES (2);
                                                  Access privileges
     Schema     |          Name          | Type  |           Access privileges           | Column access privileges 
 ---------------+------------------------+-------+---------------------------------------+--------------------------
- bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
- bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
- bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner | 
-                                                : part_acl_u1=r/part_acl_owner            
+ bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
+ bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
+ bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner+| 
+               |                        |       | part_acl_u1=r/part_acl_owner          | 
 (3 rows)
 
 -- View dependencies

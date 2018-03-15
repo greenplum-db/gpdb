@@ -19,6 +19,7 @@
 #include "access/attnum.h"
 #include "utils/faultinjector.h"
 #include "parser/parse_coerce.h"
+#include "utils/lsyscache.h"
 
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
@@ -182,11 +183,11 @@ namespace gpdb {
 			char elmalign, Datum **elemsp, bool **nullsp, int *nelemsp);
 
 	// attribute stats slot
-	bool FGetAttrStatsSlot(HeapTuple statstuple, Oid atttype, int32 atttypmod, int reqkind,
-			Oid reqop, Datum **values, int *nvalues, float4 **numbers, int *nnumbers);
+	bool FGetAttrStatsSlot(AttStatsSlot *sslot, HeapTuple statstuple, int reqkind,
+			Oid reqop, int flags);
 
 	// free attribute stats slot
-	void FreeAttrStatsSlot(Oid atttype, Datum *values, int nvalues, float4 *numbers, int nnumbers);
+	void FreeAttrStatsSlot(AttStatsSlot *sslot);
 
 	// attribute statistics
 	HeapTuple HtAttrStats(Oid relid, AttrNumber attnum);
@@ -655,6 +656,11 @@ namespace gpdb {
 	for ((cell1) = gpdb::PlcListHead(list1), (cell2) = gpdb::PlcListHead(list2);	\
 		 (cell1) != NULL && (cell2) != NULL;						\
 		 (cell1) = lnext(cell1), (cell2) = lnext(cell2))
+
+#define ForThree(cell1, list1, cell2, list2, cell3, list3)							\
+	for ((cell1) = gpdb::PlcListHead(list1), (cell2) = gpdb::PlcListHead(list2), (cell3) = gpdb::PlcListHead(list3);	\
+		 (cell1) != NULL && (cell2) != NULL && (cell3) != NULL;						\
+		 (cell1) = lnext(cell1), (cell2) = lnext(cell2), (cell3) = lnext(cell3))
 
 #define ForEachWithCount(cell, list, counter) \
 	for ((cell) = gpdb::PlcListHead(list), (counter)=0; \

@@ -18,6 +18,7 @@
 #include "access/genam.h"
 #include "access/hash.h"
 #include "catalog/index.h"
+#include "catalog/indexing.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_partition_rule.h"
 #include "cdb/cdbpartition.h"
@@ -29,6 +30,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/tqual.h"
 
 /* initial estimate for number of logical indexes */
 #define INITIAL_NUM_LOGICAL_INDEXES_ESTIMATE 100

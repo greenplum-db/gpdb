@@ -1,5 +1,5 @@
 -- @Description Ensures that a vacuum with serializable works ok
--- 
+--
 DROP TABLE IF EXISTS ao;
 DROP
 CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);

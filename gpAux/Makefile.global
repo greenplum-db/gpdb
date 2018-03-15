@@ -35,7 +35,7 @@ export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)
 endif
 
 # take over the gcc version we use
-BLD_CC=$(shell which gcc)
+BLD_CC=gcc
 hpux_ia64_CC=gcc
 osx106_x86_CC=gcc
 

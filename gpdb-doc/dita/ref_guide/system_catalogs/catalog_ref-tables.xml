@@ -25,21 +25,6 @@
       </li>
       <li id="eu152757">gp_master_mirroring (Deprecated. See <xref
         href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
-      <li id="eu150169">
-        <xref href="./gp_persistent_database_node.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150359">
-        <xref href="./gp_persistent_filespace_node.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150344">
-        <xref href="./gp_persistent_relation_node.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150345">
-        <xref href="./gp_persistent_tablespace_node.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150346">
-        <xref href="./gp_relation_node.xml#topic1" type="topic" format="dita"/>
-      </li>
       <li id="eu150031">
         <xref href="./gp_segment_configuration.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -104,12 +89,6 @@
       </li>
       <li id="eu150510">
         <xref href="./pg_exttable.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150511">
-        <xref href="./pg_filespace.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150515">
-        <xref href="./pg_filespace_entry.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu150585">pg_foreign_data_wrapper (not supported)</li>
       <li id="eu150589">pg_foreign_server (not supported)</li>

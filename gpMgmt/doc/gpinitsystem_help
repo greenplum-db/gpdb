@@ -13,7 +13,7 @@ gpinitsystem -c <gpinitsystem_config>
             [-B <parallel_processes>] 
             [-p <postgresql_conf_param_file>]
             [-s <standby_master_host>
-                [-P <standby_master_port>] [-F <standby_master_filespaces>]]
+                [-P <standby_master_port>] [-F <standby_master_datadir>]]
             [--max_connections=<number>] [--shared_buffers=<size>]
             [--locale=<locale>] [--lc-collate=<locale>] 
             [--lc-ctype=<locale>] [--lc-messages=<locale>] 
@@ -203,10 +203,10 @@ OPTIONS
  is the same as the primary master.
 
 
--F <standby_master_filespace>
+-F <standby_master_datadir>
 
- Optional and effective only when specified with -s.  This option can
- specify the filespace mappings.
+ Optional and effective only when specified with -s.  Specifies the
+ data directory of the standby.
 
 
 --su_password=<superuser_password> | -e <superuser_password>

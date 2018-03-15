@@ -1,34 +1,58 @@
+-- gp_dump_query_oids() doesn't list built-in functions, so we need a UDF to test with.
+CREATE FUNCTION dumptestfunc(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+-- The function returns OIDs. We need to replace them with something reproducable.
+CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
+declare
+  dumptestfunc_oid oid;
+  dumptestfunc2_oid oid;
+begin
+    dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
+    dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
+
+    t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
+    t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
+
+    RETURN t;
+end;
+$$ LANGUAGE plpgsql;
 -- Test the built-in gp_dump_query function.
-SELECT gp_dump_query_oids('SELECT 123');
-      gp_dump_query_oids       
+SELECT sanitize_output(gp_dump_query_oids('SELECT 123'));
+        sanitize_output        
 -------------------------------
  {"relids": "", "funcids": ""}
 (1 row)
 
-SELECT gp_dump_query_oids('SELECT * FROM pg_proc');
-        gp_dump_query_oids         
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM pg_proc'));
+          sanitize_output          
 -----------------------------------
  {"relids": "1255", "funcids": ""}
 (1 row)
 
-SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc');
-            gp_dump_query_oids             
--------------------------------------------
- {"relids": "1255", "funcids": "1317,406"}
+SELECT sanitize_output(gp_dump_query_oids('SELECT length(proname) FROM pg_proc'));
+          sanitize_output          
+-----------------------------------
+ {"relids": "1255", "funcids": ""}
+(1 row)
+
+SELECT sanitize_output(gp_dump_query_oids('SELECT dumptestfunc(proname) FROM pg_proc'));
+                 sanitize_output                 
+-------------------------------------------------
+ {"relids": "1255", "funcids": "<dumptestfunc>"}
 (1 row)
 
 -- with EXPLAIN
-SELECT gp_dump_query_oids('explain SELECT length(proname) FROM pg_proc');
-            gp_dump_query_oids             
--------------------------------------------
- {"relids": "1255", "funcids": "1317,406"}
+SELECT sanitize_output(gp_dump_query_oids('explain SELECT dumptestfunc(proname) FROM pg_proc'));
+                 sanitize_output                 
+-------------------------------------------------
+ {"relids": "1255", "funcids": "<dumptestfunc>"}
 (1 row)
 
 -- with a multi-query statement
-SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc; SELECT abs(relpages) FROM pg_class');
-                 gp_dump_query_oids                  
------------------------------------------------------
- {"relids": "1255,1259", "funcids": "1317,406,1397"}
+SELECT sanitize_output(gp_dump_query_oids('SELECT dumptestfunc(proname) FROM pg_proc; SELECT dumptestfunc2(relname) FROM pg_class'));
+                           sanitize_output                            
+----------------------------------------------------------------------
+ {"relids": "1255,1259", "funcids": "<dumptestfunc>,<dumptestfunc2>"}
 (1 row)
 
 -- Test error reporting on an invalid query.
@@ -122,3 +146,5 @@ DROP TABLE cctable;
 DROP TABLE ctable;
 DROP TABLE ptable;
 DROP TABLE minirepro_partition_test;
+DROP FUNCTION dumptestfunc(text);
+DROP FUNCTION dumptestfunc2(text);

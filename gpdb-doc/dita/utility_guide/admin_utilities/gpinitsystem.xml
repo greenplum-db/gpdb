@@ -14,7 +14,6 @@
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
             [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>]
-              [<b>-F</b> <varname>standby_master_filespaces</varname>]]
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
             [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
@@ -240,22 +239,6 @@
                     <pd>Optional. If you configure a standby master host, specify its port number
                         using this option. The Greenplum Database software must already be installed
                         and configured on this host.</pd>
-                </plentry>
-                <plentry>
-                    <pt>-F <varname>standby_master_filespaces</varname></pt>
-                    <pd>Optional. If you configure a standby master host, specify a list of
-                        filespace names and the associated locations using this option. Each
-                        filespace name and its location is separated by a colon. If there is more
-                        than one file space name, each pair (name and location) is separated by a
-                        comma. For example: </pd>
-                    <pd>
-                        <codeblock>filespace1_name:fs1_location,filespace2_name:fs2_location</codeblock>
-                    </pd>
-                    <pd>If this option is not specified, <codeph>gpinitstandby</codeph> prompts the
-                        user for the filespace names and locations.</pd>
-                    <pd>If the list is not formatted correctly or number of filespaces do not match
-                        the number of filespaces already created in the system,
-                            <codeph>gpinitstandby</codeph> returns an error.</pd>
                 </plentry>
                 <plentry>
                     <pt>--su_password=<varname>superuser_password</varname> | -e

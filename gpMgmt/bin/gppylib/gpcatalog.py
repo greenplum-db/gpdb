@@ -28,26 +28,14 @@ MASTER_ONLY_TABLES = [
     'gp_distribution_policy',
     'gp_segment_configuration',
     'pg_description',
-    'pg_listener',  # ???
     'pg_partition',
     'pg_partition_rule',
     'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
-    'pg_filespace_entry',
     'pg_partition_encoding',
     'pg_auth_time_constraint',
-    ]
-
-# Hard coded since "persistent" is not defined in the catalog
-PERSISTENT_TABLES = [
-    'gp_global_sequence',
-    'gp_persistent_database_node',
-    'gp_persistent_filespace_node',
-    'gp_persistent_relation_node',
-    'gp_persistent_tablespace_node',
-    'gp_relation_node',
     ]
 
 # Hard coded tables that have different values on every segment
@@ -67,7 +55,6 @@ DEPENDENCY_EXCLUSION = [
     'pg_conversion',
     'pg_database',
     'pg_enum',
-    'pg_filespace',
     'pg_namespace',
     'pg_partition',
     'pg_partition_rule',
@@ -211,10 +198,9 @@ class GPCatalog():
 
     def _markMasterOnlyTables(self):
         """
-        We mark three types of catalog tables as "master only"
+        We mark two types of catalog tables as "master only"
           - True "master only" tables
           - Tables we know to have different contents on master/segment
-          - Persistent Tables
 
         While the later two are not technically "master only" they have
         the property that we cannot validate cross segment consistency,
@@ -228,10 +214,6 @@ class GPCatalog():
                 self._tables[name]._setMasterOnly()
 
         for name in SEGMENT_LOCAL_TABLES:
-            if name in self._tables:
-                self._tables[name]._setMasterOnly()
-
-        for name in PERSISTENT_TABLES:
             if name in self._tables:
                 self._tables[name]._setMasterOnly()
 

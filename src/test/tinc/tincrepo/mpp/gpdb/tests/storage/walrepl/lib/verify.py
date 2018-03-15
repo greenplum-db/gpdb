@@ -69,12 +69,16 @@ class StandbyVerify(object):
                     pg_stat_replication
              """)
 
-    def check_gp_segment_config(self):
+    def check_gp_segment_config(self, datadir = None):
         ''' Check for the new entry in gp_segment_configuration'''
         sm_count = PSQL.run_sql_command("select count(*) from gp_segment_configuration where content='-1' and role='m';", flags='-q -t', dbname='postgres')
         if int(sm_count.strip()) != 1:
             return False
         tinctest.logger.info('A new entry is added for standby in gp_segment_configuration')
+        result = PSQL.run_sql_command("select datadir from gp_segment_configuration " 
+                                       "where content='-1' and role='m';", flags='-q -t', dbname='postgres')
+        if datadir is not None and datadir != result.strip():
+            return False
         return True
 
     def check_pg_stat_replication(self):
@@ -97,16 +101,15 @@ class StandbyVerify(object):
         # We could use gparray, but for now let's stay away from gppylib
         with DbConn(dbname='postgres') as conn:
             results = conn.execute("""
-                SELECT hostname, fselocation
+                SELECT hostname, datadir
                 FROM gp_segment_configuration
-                INNER JOIN pg_filespace_entry ON dbid = fsedbid
-                WHERE fsefsoid = 3052 AND content = -1 AND role = 'm'
+                WHERE content = -1 AND role = 'm'
                 """)
             # If standby is not configured, there must not be any standby processes.
             if len(results) == 0:
                 return False
             host = results[0].hostname
-            datadir = results[0].fselocation
+            datadir = results[0].datadir
 
         # We look for these processes that are spawned from standby postmaster.
         # They should have postmaster pid as ppid.  We minimize remote operation
@@ -134,4 +137,7 @@ class StandbyVerify(object):
         if len(standby_processes) != len(process_list):
             return False
         tinctest.logger.info('All the standby processes are present at standby host''')
+        return True
+
+    def check_standby_tablespace(self):
         return True

@@ -102,11 +102,12 @@ PXF provides the following built-in profiles. Those profiles that support write 
 | HDFS | Avro | Avro | Avro format binary files (\<filename\>.avro). |
 | HDFS | JSON | Json | JSON format data files (\<filename\>.json). |
 | HDFS | Binary | SequenceWritable | Binary files. *Supports write*. |
+| HDFS | Parquet | Parquet | Parquet compressed columnar data stored in an HDFS file. *Supports read.*|
 | Hive | TextFile | Hive, HiveText | Data in comma-, tab-, or space-separated value format or JSON notation. |
 | Hive | RCFile | Hive, HiveRC | Record columnar data consisting of binary key/value pairs. |
 | Hive | SequenceFile | Hive | Data consisting of binary key/value pairs. |
 | Hive | ORC | Hive, HiveORC, HiveVectorizedORC | Optimized row columnar data with stripe, footer, and postscript sections. |
-| Hive | Parquet | Hive | Compressed columnar data representation. |
+| Hive | Parquet | Hive | Compressed columnar data representation.|
 
 A PXF profile definition includes the name of the profile, a description, and the Java classes that implement parsing and reading external data for the profile. Built-in PXF profiles are defined in the `$GPHOME/pxf/conf/pxf-profiles-default.xml` configuration file. The built-in `HdfsTextSimple` profile definition is reproduced below:
 

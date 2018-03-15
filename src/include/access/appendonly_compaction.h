@@ -13,7 +13,6 @@
 #ifndef APPENDONLY_COMPACTION_H
 #define APPENDONLY_COMPACTION_H
 
-#include "postgres.h"
 #include "nodes/pg_list.h"
 #include "access/appendonly_visimap.h"
 #include "utils/rel.h"

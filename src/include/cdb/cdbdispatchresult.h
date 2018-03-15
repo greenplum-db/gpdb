@@ -265,12 +265,10 @@ void
 cdbdisp_debugDispatchResult(CdbDispatchResult  *dispatchResult);
 
 /*
- * Format a CdbDispatchResult into a StringInfo buffer provided by caller.
- * It reports at most one error.
+ * Construct an ErrorData from the dispatch results.
  */
-void
-cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
-                           struct StringInfoData *buf);
+ErrorData *
+cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult);
 
 /*
  * Format a CdbDispatchResults object.
@@ -278,9 +276,9 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
  * Returns ERRCODE_xxx if some error was found, or 0 if no errors.
  * Before calling this function, you must call CdbCheckDispatchResult().
  */
-int
+void
 cdbdisp_dumpDispatchResults(struct CdbDispatchResults *gangResults,
-                            struct StringInfoData *buffer);
+							ErrorData **qeError);
 
 /*
  * Return sum of the cmdTuples values from CdbDispatchResult

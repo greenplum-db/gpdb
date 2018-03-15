@@ -106,4 +106,7 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 							List *oid_assignments,
 							struct CdbPgResults* cdb_pgresults);
 
+
+extern ParamListInfo deserializeParamListInfo(const char *str, int slen);
+
 #endif   /* CDBDISP_QUERY_H */

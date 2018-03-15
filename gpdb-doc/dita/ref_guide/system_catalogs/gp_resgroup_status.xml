@@ -100,5 +100,8 @@
         </tbody>
       </tgroup>
     </table>
+    <p> </p>
+    <p conref="../gp_toolkit.xml#topic31x/json_field_info1"/>
+    <p conref="../gp_toolkit.xml#topic31x/json_field_info2"/>
   </body>
 </topic>

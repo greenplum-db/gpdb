@@ -1,11 +1,10 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/include/pgtypes_numeric.h,v 1.16 2006/08/09 07:30:56 meskes Exp $ */
-
 #ifndef PGTYPES_NUMERIC
 #define PGTYPES_NUMERIC
 
 #define NUMERIC_POS						0x0000
 #define NUMERIC_NEG						0x4000
 #define NUMERIC_NAN						0xC000
+#define NUMERIC_NULL						0xF000
 #define NUMERIC_MAX_PRECISION			1000
 #define NUMERIC_MAX_DISPLAY_SCALE		NUMERIC_MAX_PRECISION
 #define NUMERIC_MIN_DISPLAY_SCALE		0

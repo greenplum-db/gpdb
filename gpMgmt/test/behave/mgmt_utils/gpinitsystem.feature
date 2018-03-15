@@ -58,7 +58,7 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
         # stop db and make sure cluster config exists so that we can manually initialize standby
         And the cluster config is generated with data_checksums "1"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F intentional_nonexistent_filespace:/wrong/path -h ../gpAux/gpdemo/hostfile"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F /wrong/path -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 1
         And gpinitsystem should not print "To activate the Standby Master Segment in the event of Master" to stdout
         And gpinitsystem should print "Cluster setup finished, but Standby Master failed to initialize. Review contents of log files for errors." to stdout
@@ -73,8 +73,38 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf $MASTER_DATA_DIRECTORY/newstandby"
         And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
         And the cluster config is generated with data_checksums "1"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F pg_system:$MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 0
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
+    @gpinitsystem_verify_default_timezone
+    Scenario: gpinitsystem creates a cluster in default timezone
+        Given the database is not running
+        And the environment variable "TZ" is not set
+		And the system timezone is saved
+		And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+		And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+		When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+		And gpinitsystem should return a return code of 0
+		Then the database timezone is saved
+		And the database timezone matches the system timezone
+		And the startup timezone is saved
+		And the startup timezone matches the system timezone
+
+    @gpinitsystem_verify_timezone_setting
+    Scenario: gpinitsystem creates a cluster using TZ
+        Given the database is not running
+        And the environment variable "TZ" is set to "US/Hawaii"
+		And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+		And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+		And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+		When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+		And gpinitsystem should return a return code of 0
+		Then the database timezone is saved
+		And the database timezone matches "HST"
+		And the startup timezone is saved
+		And the startup timezone matches "HST"

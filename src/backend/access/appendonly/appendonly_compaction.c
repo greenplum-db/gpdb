@@ -34,9 +34,6 @@
 #include "catalog/indexing.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
-#include "cdb/cdbpersistentfilesysobj.h"
-#include "cdb/cdbmirroredfilesysobj.h"
-#include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
@@ -52,36 +49,45 @@
 /*
  * Drops a segment file.
  *
+ * Actually, we just truncate the segfile to 0 bytes, to reclaim the space.
+ * Before GPDB 6, we used to remove the file, but with WAL replication, we
+ * no longer have a convenient function to remove a single segment of a
+ * relation. An empty file is as almost as good as a non-existent file. If
+ * the relation is dropped later, the code in mdunlink() will remove all
+ * segments, including any empty ones we've left behind.
  */
 static void
-AppendOnlyCompaction_DropSegmentFile(Relation aorel,
-									 int segno)
+AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 {
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum;
+	char		filenamepath[MAXPGPATH];
+	int32		fileSegNo;
+	File		fd;
 
-	if (!ReadGpRelationNode(
-							aorel->rd_rel->reltablespace,
-							aorel->rd_rel->relfilenode,
-							segno,
-							&persistentTid,
-							&persistentSerialNum))
-	{
-		/* There is nothing to drop */
-		return;
-	}
+	Assert(RelationIsAoRows(aorel));
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Drop segment file: segno %d", segno);
 
-	MirroredFileSysObj_ScheduleDropAppendOnlyFile(
-												  &aorel->rd_node,
-												  segno,
-												  RelationGetRelationName(aorel),
-												  &persistentTid,
-												  persistentSerialNum);
+	/* Open and truncate the relation segfile */
+	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
 
-	DeleteGpRelationNodeTuple(aorel, segno);
+	fd = OpenAOSegmentFile(aorel, filenamepath, fileSegNo, 0);
+	if (fd >= 0)
+	{
+		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0);
+		CloseAOSegmentFile(fd);
+	}
+	else
+	{
+		/*
+		 * The file we were about to drop/truncate didn't exist. That shouldn't
+		 * happen, but the end result is what we wanted. Assert so that we will
+		 * find out if this happens, after all, in testing. In production, we'd
+		 * rather keep running.
+		 */
+		elog(LOG, "could not truncate segfile %s, because it does not exist", filenamepath);
+		Assert(false);
+	}
 }
 
 /*
@@ -205,7 +211,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 								   FileSegInfo *fsinfo)
 {
 	const char *relname = RelationGetRelationName(aorel);
-	MirroredAppendOnlyOpen mirroredOpened;
+	File		fd;
 	int32		fileSegNo;
 	char		filenamepath[MAXPGPATH];
 	int			segno;
@@ -218,7 +224,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 	relname = RelationGetRelationName(aorel);
 	segeof = (int64) fsinfo->eof;
 
-	/* Open and truncate the relation segfile beyond its eof */
+	/* Open and truncate the relation segfile to its eof */
 	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
 
 	elogif(Debug_appendonly_print_compaction, LOG,
@@ -230,10 +236,11 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 		   segno,
 		   segeof);
 
-	if (OpenAOSegmentFile(aorel, filenamepath, fileSegNo, segeof, &mirroredOpened))
+	fd = OpenAOSegmentFile(aorel, filenamepath, fileSegNo, segeof);
+	if (fd >= 0)
 	{
-		TruncateAOSegmentFile(&mirroredOpened, aorel, segeof);
-		CloseAOSegmentFile(&mirroredOpened);
+		TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
+		CloseAOSegmentFile(fd);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Successfully truncated AO ROW relation \"%s.%s\", relation id %u, relfilenode %u (physical segment file #%d, logical EOF " INT64_FORMAT ")",
@@ -287,7 +294,7 @@ AppendOnlyMoveTuple(MemTuple tuple,
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate, true);
+		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate);
 		ResetPerTupleExprContext(estate);
 	}
 
@@ -772,9 +779,11 @@ AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 	while ((tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL &&
 		   empty)
 	{
-		if (0 < fastgetattr(tuple, Anum_tupcount,
-							pg_aoseg_dsc, NULL))
+		bool		isNull;
+
+		if (0 < fastgetattr(tuple, Anum_tupcount, pg_aoseg_dsc, &isNull))
 			empty = false;
+		Assert(!isNull);
 	}
 	heap_endscan(aoscan);
 	heap_close(pg_aoseg_rel, AccessShareLock);

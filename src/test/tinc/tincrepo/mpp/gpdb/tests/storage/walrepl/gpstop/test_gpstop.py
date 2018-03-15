@@ -52,7 +52,6 @@ class GpstopTestCase(MPPTestCase):
    def tearDown(self):
        self.gputil.remove_standby()
        self.gputil.run('gpstart -a')
-       self.gputil.run('gprecoverseg -a')
 
    def test_gpstop_from_master(self):
        self.assertTrue(self.gputil.gpstop_and_verify())

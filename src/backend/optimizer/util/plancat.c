@@ -6,12 +6,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.158 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.163 2010/03/30 21:58:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -121,6 +121,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 
 	rel->min_attr = FirstLowInvalidHeapAttributeNumber + 1;
 	rel->max_attr = RelationGetNumberOfAttributes(relation);
+	rel->reltablespace = RelationGetForm(relation)->reltablespace;
 
 	Assert(rel->max_attr >= rel->min_attr);
 	rel->attr_needed = (Relids *)
@@ -238,6 +239,8 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			info = makeNode(IndexOptInfo);
 
 			info->indexoid = index->indexrelid;
+			info->reltablespace =
+				RelationGetForm(indexRelation)->reltablespace;
 			info->rel = rel;
 			info->ncolumns = ncolumns = index->indnatts;
 
@@ -772,6 +775,7 @@ get_relation_constraints(PlannerInfo *root,
 												  att->atttypmod,
 												  0);
 					ntest->nulltesttype = IS_NOT_NULL;
+					ntest->argisrow = type_is_rowtype(att->atttypid);
 					result = lappend(result, ntest);
 				}
 			}
@@ -803,11 +807,15 @@ relation_excluded_by_constraints(PlannerInfo *root,
 	List	   *constraint_pred;
 	List	   *safe_constraints;
 	ListCell   *lc;
+	int			constraint_exclusion = root->config->constraint_exclusion;
 
 	/* Skip the test if constraint exclusion is disabled for the rel */
-	if (root->config->constraint_exclusion == CONSTRAINT_EXCLUSION_OFF ||
-		(root->config->constraint_exclusion == CONSTRAINT_EXCLUSION_PARTITION &&
-		 rel->reloptkind != RELOPT_OTHER_MEMBER_REL))
+	if (constraint_exclusion == CONSTRAINT_EXCLUSION_OFF ||
+		(constraint_exclusion == CONSTRAINT_EXCLUSION_PARTITION &&
+		 !(rel->reloptkind == RELOPT_OTHER_MEMBER_REL ||
+		   (root->hasInheritedTarget &&
+			rel->reloptkind == RELOPT_BASEREL &&
+			rel->relid == root->parse->resultRelation))))
 		return false;
 
 	/*
@@ -1044,11 +1052,11 @@ build_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
  */
 Selectivity
 restriction_selectivity(PlannerInfo *root,
-						Oid operator,
+						Oid operatorid,
 						List *args,
 						int varRelid)
 {
-	RegProcedure oprrest = get_oprrest(operator);
+	RegProcedure oprrest = get_oprrest(operatorid);
 	float8		result;
 
 	/*
@@ -1060,7 +1068,7 @@ restriction_selectivity(PlannerInfo *root,
 
 	result = DatumGetFloat8(OidFunctionCall4(oprrest,
 											 PointerGetDatum(root),
-											 ObjectIdGetDatum(operator),
+											 ObjectIdGetDatum(operatorid),
 											 PointerGetDatum(args),
 											 Int32GetDatum(varRelid)));
 
@@ -1079,12 +1087,12 @@ restriction_selectivity(PlannerInfo *root,
  */
 Selectivity
 join_selectivity(PlannerInfo *root,
-				 Oid operator,
+				 Oid operatorid,
 				 List *args,
 				 JoinType jointype,
 				 SpecialJoinInfo *sjinfo)
 {
-	RegProcedure oprjoin = get_oprjoin(operator);
+	RegProcedure oprjoin = get_oprjoin(operatorid);
 	float8		result;
 
 	/*
@@ -1096,7 +1104,7 @@ join_selectivity(PlannerInfo *root,
 
 	result = DatumGetFloat8(OidFunctionCall5(oprjoin,
 											 PointerGetDatum(root),
-											 ObjectIdGetDatum(operator),
+											 ObjectIdGetDatum(operatorid),
 											 PointerGetDatum(args),
 											 Int16GetDatum(jointype),
 											 PointerGetDatum(sjinfo)));

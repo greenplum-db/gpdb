@@ -68,6 +68,27 @@ insert into C values(78,62);
 insert into C values(2,7);
 
 analyze C;
+
+create table D(i integer, j integer) distributed by (j);
+insert into D values(1,1);
+insert into D values(19,5);
+insert into D values(99,62);
+insert into D values(1,1);
+insert into D values(78,-1);
+
+analyze D;
+
+create table E(i integer, j integer) distributed by (i);
+insert into E values(1,889);
+insert into E values(288,1);
+insert into E values(-1,625);
+insert into E values(32,65);
+insert into E values(32,62);
+insert into E values(3,-1);
+insert into E values(99,7);
+insert into E values(78,62);
+
+analyze E;
 -- end_ignore
 
 -- -- -- --
@@ -92,6 +113,7 @@ select A.i, B.i, C.j from A, B, C where A.j in (select C.j from C where C.j = A.
 select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a not in (select x) order by a,x;
 select A.i from A where A.i not in (select B.i from B where A.i = B.i) order by A.i;
 select * from A where exists (select * from B,C where C.j = A.j and B.i not in (select sum(C.i) from C where C.i = B.i and C.i != 10)) order by 1,2;
+select * from A,B where exists (select * from E where E.j = A.j and B.i not in (select E.i from E where E.i != 10)) order by 1,2,3,4;
 
 select * from B where not exists (select * from A,C where C.j = A.j and B.i in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
 select * from B where not exists (select * from A,C where C.j = A.j and B.i not in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
@@ -247,16 +269,6 @@ insert into qp_csq_t4 values (7,8);
 
 analyze qp_csq_t4;
 
-drop table if exists D;
-
-create table D(i integer, j integer) distributed by (j);
-insert into D values(1,1);
-insert into D values(19,5);
-insert into D values(99,62);
-insert into D values(1,1);
-insert into D values(78,-1);
-
-analyze D;
 -- end_ignore
 
 -- -- -- --

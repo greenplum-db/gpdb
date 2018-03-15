@@ -7,7 +7,7 @@ DELETE FROM uao_full WHERE a < 4;
 SELECT COUNT(*) FROM uao_full;
  count 
 -------
-14
+    14
 (1 row)
 
 VACUUM FULL uao_full;
@@ -15,7 +15,7 @@ VACUUM FULL uao_full;
 SELECT COUNT(*) FROM uao_full;
  count 
 -------
-14
+    14
 (1 row)
 
 -- check if we can still insert into the relation
@@ -23,6 +23,6 @@ INSERT INTO uao_full VALUES (11, 11);
 SELECT COUNT(*) FROM uao_full;
  count 
 -------
-15
+    15
 (1 row)
 

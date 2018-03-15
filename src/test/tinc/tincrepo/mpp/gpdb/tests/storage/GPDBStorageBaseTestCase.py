@@ -29,7 +29,6 @@ from mpp.lib.gprecoverseg import GpRecover
 from mpp.lib.gpstart import GpStart
 from mpp.lib.gpstop import GpStop
 from mpp.lib.config import GPDBConfig
-from mpp.lib.gpfilespace import Gpfilespace
 from mpp.lib.gpdbverify import GpdbVerify
 from mpp.models import MPPTestCase
 from mpp.gpdb.tests.storage.lib.dbstate import DbStateClass
@@ -52,15 +51,14 @@ class GPDBStorageBaseTestCase():
         self.gprecover = GpRecover(self.config)
         self.gpstop = GpStop()
         self.gpstart = GpStart()
-        self.gpfile = Gpfilespace(self.config)
         self.gpverify = GpdbVerify(config=self.config)
         self.dbstate = DbStateClass('run_validation', self.config)
         self.port = os.getenv('PGPORT')
 
     def invoke_fault(self, fault_name, type, role='mirror', port=None, occurence=None, sleeptime=None, seg_id=None):
         ''' Reset the fault and then issue the fault with the given type'''
-        self.filereputil.inject_fault(f=fault_name, y='reset', r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
-        self.filereputil.inject_fault(f=fault_name, y=type, r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y='reset', r=role , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
+        self.filereputil.inject_fault(f=fault_name, y=type, r=role , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
         tinctest.logger.info('Successfully injected fault_name : %s fault_type : %s  occurence : %s ' % (fault_name, type, occurence))
 
     def start_db(self):

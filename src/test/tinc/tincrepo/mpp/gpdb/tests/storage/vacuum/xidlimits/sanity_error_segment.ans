@@ -1,2 +1,0 @@
-CREATE TABLE foo (x int);
-psql:/path/sql_file:1: ERROR:  failed to acquire resources on one or more segments

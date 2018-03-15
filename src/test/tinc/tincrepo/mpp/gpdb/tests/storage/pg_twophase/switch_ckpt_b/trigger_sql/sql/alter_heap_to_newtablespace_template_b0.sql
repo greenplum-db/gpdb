@@ -1,4 +1,1 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
-alter table pg2_heap_table_for_alter_b0 set tablespace pg2_heap_ts2_b0;
+alter table pg2_heap_table_for_alter_b0 set tablespace twophase_test_ts2;

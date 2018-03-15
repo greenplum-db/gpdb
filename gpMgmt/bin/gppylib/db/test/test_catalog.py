@@ -30,11 +30,6 @@ class catalogTestCase(unittest.TestCase):
         self.conn.close()
         pass
     
-    def test_vacuumcatalog(self):
-        logger.info("test_vacuumcatalog")
-        catalog.vacuum_catalog(self.dburl,self.conn)
-        catalog.vacuum_catalog(self.dburl,self.conn,full=True)
-    
 #------------------------------- Mainline --------------------------------
 if __name__ == '__main__':
     unittest.main()    

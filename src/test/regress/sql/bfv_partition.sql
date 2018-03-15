@@ -1209,7 +1209,7 @@ EVERY (INTERVAL '1 day')
 ALTER TABLE sg_cal_detail_r1 ADD PARTITION START ('2008-10-01') INCLUSIVE END ('2008-10-02') EXCLUSIVE
 WITH (appendonly=true, compresslevel=5, blocksize=2097152);
 
-select count(*) from pg_partitions where tablename = 'sg_cal_detail_r1';
+select count(*) from pg_class where relname like 'sg_cal_detail_r1%';
 
 drop table sg_cal_detail_r1;
 create table j (i int, a date) partition by range(i)

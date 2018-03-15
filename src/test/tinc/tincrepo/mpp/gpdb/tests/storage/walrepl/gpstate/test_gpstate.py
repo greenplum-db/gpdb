@@ -46,9 +46,9 @@ class GpstateTestCase(MPPTestCase):
        if stdby_presence:
            self.gputil.remove_standby()
        self.gputil.install_standby()
-       get_mirror_sql = '''select port, hostname, fselocation
-                      from gp_segment_configuration, pg_filespace_entry 
-                      where dbid = fsedbid and content != -1 and preferred_role=\'m\' ;'''
+       get_mirror_sql = '''select port, hostname, datadir
+                      from gp_segment_configuration
+                      where content != -1 and preferred_role=\'m\' ;'''
        segments=self.gputil.run_SQLQuery(get_mirror_sql, dbname='template1')  
        for seg in segments:
            port = seg[0]

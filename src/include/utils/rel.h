@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.114 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.124 2010/02/26 02:01:29 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,8 +27,6 @@
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"
-
-#include "catalog/gp_persistent.h"
 
 
 /*
@@ -61,8 +59,9 @@ typedef struct Trigger
 	Oid			tgfoid;
 	int16		tgtype;
 	char		tgenabled;
-	bool		tgisconstraint;
+	bool		tgisinternal;
 	Oid			tgconstrrelid;
+	Oid			tgconstrindid;
 	Oid			tgconstraint;
 	bool		tgdeferrable;
 	bool		tginitdeferred;
@@ -70,6 +69,7 @@ typedef struct Trigger
 	int16		tgnattr;
 	int16	   *tgattr;
 	char	  **tgargs;
+	char	   *tgqual;
 } Trigger;
 
 typedef struct TriggerDesc
@@ -118,16 +118,6 @@ typedef struct RelationAmInfo
 	FmgrInfo	amoptions;
 } RelationAmInfo;
 
-typedef struct RelationNodeInfo
-{
-	bool	isPresent;
-
-	bool	tidAllowedToBeZero;
-				// Persistent TID allowed to be zero for "Before Persistence" or Recovery.
-
-	ItemPointerData		persistentTid;
-	int64				persistentSerialNum;
-} RelationNodeInfo;
 
 /*
  * Here are the contents of a relation cache entry.
@@ -138,8 +128,6 @@ typedef struct RelationData
 	RelFileNode rd_node;		/* relation physical identifier */
 	/* use "struct" here to avoid needing to include smgr.h: */
 	struct SMgrRelationData *rd_smgr;	/* cached file handle, or NULL */
-	BlockNumber rd_targblock;	/* current insertion target block, or
-								 * InvalidBlockNumber */
 	int			rd_refcnt;		/* reference count */
 	bool		rd_istemp;		/* CDB: true => skip locking, logging, fsync */
 	bool		rd_islocaltemp; /* rel is a temp rel of this session */
@@ -148,17 +136,6 @@ typedef struct RelationData
 	bool		rd_isvalid;		/* relcache entry is valid */
 	char		rd_indexvalid;	/* state of rd_indexlist: 0 = not valid, 1 =
 								 * valid, 2 = temporarily forced */
-	SubTransactionId rd_createSubid;	/* rel was created in current xact */
-	SubTransactionId rd_newRelfilenodeSubid;	/* new relfilenode assigned in
-												 * current xact */
-
-	/*
-	 * Debugging information, Values from CREATE TABLE, if present.
-	 */
-	bool				rd_haveCreateDebugInfo;
-	bool				rd_createDebugIsZeroTid;
-	ItemPointerData		rd_createDebugPersistentTid;
-	int64				rd_createDebugPersistentSerialNum;
 
 	/*
 	 * rd_createSubid is the ID of the highest subtransaction the rel has
@@ -169,6 +146,10 @@ typedef struct RelationData
 	 * subtransaction the relfilenode change has survived into, or zero if not
 	 * changed in the current transaction (or we have forgotten changing it).
 	 */
+	SubTransactionId rd_createSubid;	/* rel was created in current xact */
+	SubTransactionId rd_newRelfilenodeSubid;	/* new relfilenode assigned in
+												 * current xact */
+
 	Form_pg_class rd_rel;		/* RELATION tuple */
 	TupleDesc	rd_att;			/* tuple descriptor */
 	Oid			rd_id;			/* relation's object id */
@@ -192,8 +173,8 @@ typedef struct RelationData
 
 	/* These are non-NULL only for an index relation: */
 	Form_pg_index rd_index;		/* pg_index tuple describing this index */
+	/* use "struct" here to avoid needing to include htup.h: */
 	struct HeapTupleData *rd_indextuple;		/* all of pg_index tuple */
-	/* "struct HeapTupleData *" avoids need to include htup.h here	*/
 	Form_pg_am	rd_am;			/* pg_am tuple for index's AM */
 
 	/*
@@ -221,26 +202,26 @@ typedef struct RelationData
 	int16	   *rd_indoption;	/* per-column AM-specific flags */
 	List	   *rd_indexprs;	/* index expression trees, if any */
 	List	   *rd_indpred;		/* index predicate tree, if any */
+	Oid		   *rd_exclops;		/* OIDs of exclusion operators, if any */
+	Oid		   *rd_exclprocs;	/* OIDs of exclusion ops' procs, if any */
+	uint16	   *rd_exclstrats;	/* exclusion ops' strategy numbers, if any */
 	void	   *rd_amcache;		/* available for use by index AM */
 
 	/*
-	 * sizes of the free space and visibility map forks, or InvalidBlockNumber
-	 * if not known yet
+	 * Hack for CLUSTER, rewriting ALTER TABLE, etc: when writing a new
+	 * version of a table, we need to make any toast pointers inserted into it
+	 * have the existing toast table's OID, not the OID of the transient toast
+	 * table.  If rd_toastoid isn't InvalidOid, it is the OID to place in
+	 * toast pointers inserted into this rel.  (Note it's set on the new
+	 * version of the main heap, not the toast table itself.)
 	 */
-	BlockNumber rd_fsm_nblocks;
-	BlockNumber rd_vm_nblocks;
+	Oid			rd_toastoid;	/* Real TOAST table's OID, or InvalidOid */
 
 	/*
 	 * AO table support info (used only for AO and AOCS relations)
 	 */
 	Form_pg_appendonly rd_appendonly;
 	struct HeapTupleData *rd_aotuple;		/* all of pg_appendonly tuple */
-
-	/*
-	 * Physical file-system information.
-	 */
-	struct RelationNodeInfo rd_segfile0_relationnodeinfo;
-								/* Values from gp_relation_node, if present */
 
 	/* use "struct" here to avoid needing to include pgstat.h: */
 	struct PgStat_TableStatus *pgstat_info;		/* statistics collection area */
@@ -413,6 +394,16 @@ typedef struct StdRdOptions
 	((relation)->rd_rel->relnamespace)
 
 /*
+ * RelationIsMapped
+ *		True if the relation uses the relfilenode map.
+ *
+ * NB: this is only meaningful for relkinds that have storage, else it
+ * will misleadingly say "true".
+ */
+#define RelationIsMapped(relation) \
+	((relation)->rd_rel->relfilenode == InvalidOid)
+
+/*
  * RelationOpenSmgr
  *		Open the relation at the smgr level, if not already done.
  */
@@ -438,6 +429,26 @@ typedef struct StdRdOptions
 	} while (0)
 
 /*
+ * RelationGetTargetBlock
+ *		Fetch relation's current insertion target block.
+ *
+ * Returns InvalidBlockNumber if there is no current target block.	Note
+ * that the target block status is discarded on any smgr-level invalidation.
+ */
+#define RelationGetTargetBlock(relation) \
+	( (relation)->rd_smgr != NULL ? (relation)->rd_smgr->smgr_targblock : InvalidBlockNumber )
+
+/*
+ * RelationSetTargetBlock
+ *		Set relation's current insertion target block.
+ */
+#define RelationSetTargetBlock(relation, targblock) \
+	do { \
+		RelationOpenSmgr(relation); \
+		(relation)->rd_smgr->smgr_targblock = (targblock); \
+	} while (0)
+
+/*
  * RELATION_IS_LOCAL
  *		If a rel is either temp or newly created in the current transaction,
  *		it can be assumed to be visible only to the current backend.
@@ -460,6 +471,5 @@ typedef struct StdRdOptions
 /* routines in utils/cache/relcache.c */
 extern void RelationIncrementReferenceCount(Relation rel);
 extern void RelationDecrementReferenceCount(Relation rel);
-extern void RelationGetPTInfo(Relation rel, ItemPointer persistentTid, int64 *persistentSerialNum);
 
 #endif   /* REL_H */

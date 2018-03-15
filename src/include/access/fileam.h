@@ -53,7 +53,7 @@ typedef enum DataLineStatus
 	END_MARKER
 } DataLineStatus;
 
-extern FileScanDesc external_beginscan(Relation relation, Index scanrelid,
+extern FileScanDesc external_beginscan(Relation relation,
 				   uint32 scancounter, List *uriList,
 				   List *fmtOpts, char fmtType, bool isMasterOnly,
 				   int rejLimit, bool rejLimitInRows,
@@ -67,5 +67,10 @@ extern Oid	external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, bool header, uint32 scancounter);
 extern char *linenumber_atoi(char buffer[20], int64 linenumber);
+
+/* prototypes for functions in url_execute.c */
+extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
+extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
+extern char *make_command(const char *cmd, extvar_t *ev);
 
 #endif   /* FILEAM_H */

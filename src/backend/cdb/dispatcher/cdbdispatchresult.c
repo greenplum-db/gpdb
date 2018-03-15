@@ -39,32 +39,11 @@ static pthread_mutex_t setErrcodeMutex = PTHREAD_MUTEX_INITIALIZER;
 static int cdbdisp_snatchPGresults(CdbDispatchResult *dispatchResult,
 						struct pg_result **pgresultptrs, int maxresults);
 
-/*
- * Make sure buffer has no trailing newline, whitespace, etc.
- */
-static void
-noTrailingNewline(StringInfo buf)
-{
-	while (buf->len > 0 && buf->data[buf->len - 1] <= ' ' && buf->data[buf->len - 1] > '\0')
-		buf->data[--buf->len] = '\0';
-}
-
 static void
 noTrailingNewlinePQ(PQExpBuffer buf)
 {
 	while (buf->len > 0 && buf->data[buf->len - 1] <= ' ' && buf->data[buf->len - 1] > '\0')
 		buf->data[--buf->len] = '\0';
-}
-
-/*
- * If buffer is nonempty, make sure it has exactly one trailing newline.
- */
-static void
-oneTrailingNewline(StringInfo buf)
-{
-	noTrailingNewline(buf);
-	if (buf->len > 0)
-		appendStringInfoChar(buf, '\n');
 }
 
 static void
@@ -536,18 +515,17 @@ cdbdisp_debugDispatchResult(CdbDispatchResult *dispatchResult)
 }
 
 /*
- * Format a CdbDispatchResult into a StringInfo buffer provided by caller.
- * It reports at most one error.
+ * Construct an ErrorData from the dispatch results.
  */
-void
-cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
-						   struct StringInfoData *buf)
+ErrorData *
+cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 {
 	int			ires;
 	int			nres;
+	ErrorData  *errdata;
 
-	if (!dispatchResult || !buf)
-		return;
+	if (!dispatchResult)
+		return NULL;
 
 	/*
 	 * Format PGresult messages
@@ -557,7 +535,6 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
 	{
 		PGresult   *pgresult = cdbdisp_getPGresult(dispatchResult, ires);
 		ExecStatusType resultStatus = PQresultStatus(pgresult);
-		char	   *whoami = PQresultErrorField(pgresult, PG_DIAG_GP_PROCESS_TAG);
 
 		/*
 		 * QE success
@@ -572,41 +549,64 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
 		/*
 		 * QE error or libpq error
 		 */
-		char	   *pri = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_PRIMARY);
-		char	   *dtl = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_DETAIL);
-		char	   *ctx = PQresultErrorField(pgresult, PG_DIAG_CONTEXT);
 
-		oneTrailingNewline(buf);
-		if (pri)
-		{
-			appendStringInfoString(buf, pri);
-		}
-		else
-		{
-			elog(LOG, "No primary message?");
-			appendStringInfoString(buf, PQresultErrorMessage(pgresult));
-		}
+		/* These will be overwritten below with the values from QE, if the QE sent them. */
+		char	   *filename = __FILE__;
+		int			lineno = __LINE__;
+		const char *funcname = PG_FUNCNAME_MACRO;
+		int			qe_errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
+
+		char	   *whoami;
+		char	   *fld;
+
+		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FILE);
+		if (fld)
+			filename = fld;
+
+		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_LINE);
+		if (fld)
+			lineno = atoi(fld);
+
+		fld = PQresultErrorField(pgresult, PG_DIAG_SOURCE_FUNCTION);
+		if (fld)
+			funcname = fld;
+
+		/*
+		 * We should only get errors with ERROR level or above, if the
+		 * command failed. And if a QE disconnected with FATAL, or PANICed,
+		 * we don't want to do the same in the QD. So, always an ERROR.
+		 */
+		errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN);
+
+		fld = PQresultErrorField(pgresult, PG_DIAG_SQLSTATE);
+		if (fld)
+			qe_errcode = sqlstate_to_errcode(fld);
+		errcode(qe_errcode);
+
+		whoami = PQresultErrorField(pgresult, PG_DIAG_GP_PROCESS_TAG);
+		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_PRIMARY);
+		if (!fld)
+			fld = "no primary message received";
 
 		if (whoami)
-		{
-			noTrailingNewline(buf);
-			appendStringInfo(buf, "  (%s)", whoami);
-		}
+			errmsg("%s  (%s)", fld, whoami);
+		else
+			errmsg("%s", fld);
 
-		if (dtl)
-		{
-			oneTrailingNewline(buf);
-			appendStringInfo(buf, "%s", dtl);
-		}
+		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_DETAIL);
+		if (fld)
+			errdetail("%s", fld);
 
-		if (ctx)
-		{
-			oneTrailingNewline(buf);
-			appendStringInfo(buf, "%s", ctx);
-		}
+		fld = PQresultErrorField(pgresult, PG_DIAG_MESSAGE_HINT);
+		if (fld)
+			errhint("%s", fld);
 
-		noTrailingNewline(buf);
-		return;
+		fld = PQresultErrorField(pgresult, PG_DIAG_CONTEXT);
+		if (fld)
+			errcontext("%s", fld);
+
+		errdata = errfinish_and_return(0);
+		return errdata;
 	}
 
 	/*
@@ -615,21 +615,25 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult,
 	if (dispatchResult->error_message &&
 		dispatchResult->error_message->len > 0)
 	{
-		oneTrailingNewline(buf);
-		appendStringInfoString(buf, dispatchResult->error_message->data);
-		noTrailingNewline(buf);
+
+		errdata = ereport_and_return(ERROR,
+									 (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+									  errmsg("%s", dispatchResult->error_message->data)));
+		return errdata;
 	}
+
+	return NULL;
 }
 
 /*
  * Format a CdbDispatchResults object.
  * Appends error messages to caller's StringInfo buffer.
- * Returns ERRCODE_xxx if some error was found, or 0 if no errors.
+ * Returns an ErrorData object in *qeError if some error was found, or NIL if no errors.
  * Before calling this function, you must call CdbCheckDispatchResult().
  */
-int
+void
 cdbdisp_dumpDispatchResults(struct CdbDispatchResults *meleeResults,
-							struct StringInfoData *buffer)
+							ErrorData **qeError)
 {
 	CdbDispatchResult *dispatchResult;
 
@@ -637,7 +641,10 @@ cdbdisp_dumpDispatchResults(struct CdbDispatchResults *meleeResults,
 	 * Quick exit if no error (not counting ERRCODE_GP_OPERATION_CANCELED).
 	 */
 	if (!meleeResults || !meleeResults->errcode)
-		return 0;
+	{
+		*qeError = NULL;
+		return;
+	}
 
 	/*
 	 * Find the CdbDispatchResult of the first QE that got an error.
@@ -653,9 +660,7 @@ cdbdisp_dumpDispatchResults(struct CdbDispatchResults *meleeResults,
 	/*
 	 * Format one QE's result.
 	 */
-	cdbdisp_dumpDispatchResult(dispatchResult, buffer);
-
-	return meleeResults->errcode;
+	*qeError = cdbdisp_dumpDispatchResult(dispatchResult);
 }
 
 /*

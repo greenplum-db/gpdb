@@ -14,11 +14,11 @@
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
- * Copyright (c) 2004-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.51 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.58 2010/07/06 19:18:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -212,36 +212,36 @@ SysLoggerMain(int argc, char *argv[])
 
     am_syslogger = true;
 
-    if (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH)
-    	init_ps_display("master logger process", "", "", "");
-    else
-    	init_ps_display("logger process", "", "", "");
+	if (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH)
+		init_ps_display("master logger process", "", "", "");
+	else
+		init_ps_display("logger process", "", "", "");
 
-    /*
-     * If we restarted, our stderr is already redirected into our own input
-     * pipe.  This is of course pretty useless, not to mention that it
-     * interferes with detecting pipe EOF.	Point stderr to /dev/null. This
-     * assumes that all interesting messages generated in the syslogger will
-     * come through elog.c and will be sent to write_syslogger_file.
-     */
-    {
-        int			fd = open(DEVNULL, O_WRONLY, 0);
+	/*
+	 * If we restarted, our stderr is already redirected into our own input
+	 * pipe.  This is of course pretty useless, not to mention that it
+	 * interferes with detecting pipe EOF.	Point stderr to /dev/null. This
+	 * assumes that all interesting messages generated in the syslogger will
+	 * come through elog.c and will be sent to write_syslogger_file.
+	 */
+	{
+		int			fd = open(DEVNULL, O_WRONLY, 0);
 
-        /*
-         * The closes might look redundant, but they are not: we want to be
-         * darn sure the pipe gets closed even if the open failed.	We can
-         * survive running with stderr pointing nowhere, but we can't afford
-         * to have extra pipe input descriptors hanging around.
-         */
-        close(fileno(stdout));
-        close(fileno(stderr));
+		/*
+		 * The closes might look redundant, but they are not: we want to be
+		 * darn sure the pipe gets closed even if the open failed.	We can
+		 * survive running with stderr pointing nowhere, but we can't afford
+		 * to have extra pipe input descriptors hanging around.
+		 */
+		close(fileno(stdout));
+		close(fileno(stderr));
 		if (fd != -1)
 		{
 			dup2(fd, fileno(stdout));
 			dup2(fd, fileno(stderr));
 			close(fd);
 		}
-    }
+	}
 	/*
 	 * Syslogger's own stderr can't be the syslogPipe, so set it back to text
 	 * mode if we didn't just close it. (It was set to binary in
@@ -464,11 +464,11 @@ SysLoggerMain(int argc, char *argv[])
 		}
 #ifndef WIN32
 
-        /*
-         * Wait for some data, timing out after 1 second
-         */
-        FD_ZERO(&rfds);
-        FD_SET(syslogPipe[0], &rfds);
+		/*
+		 * Wait for some data, timing out after 1 second
+		 */
+		FD_ZERO(&rfds);
+		FD_SET(syslogPipe[0], &rfds);
 
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
@@ -658,9 +658,9 @@ SysLoggerMain(int argc, char *argv[])
 		 * detect pipe EOF.  The main thread just wakes up once a second to
 		 * check for SIGHUP and rotation conditions.
 		 *
-		 * Server code isn't generally thread-safe, so we ensure that only
-		 * one of the threads is active at a time by entering the critical
-		 * section whenever we're not sleeping.
+		 * Server code isn't generally thread-safe, so we ensure that only one
+		 * of the threads is active at a time by entering the critical section
+		 * whenever we're not sleeping.
 		 */
 		LeaveCriticalSection(&sysloggerSection);
 
@@ -861,10 +861,10 @@ SysLogger_Start(void)
 					 * chunking protocol.
                      */
                     fflush(stderr);
-                    fd = _open_osfhandle((long) syslogPipe[1],
+					fd = _open_osfhandle((intptr_t) syslogPipe[1],
                             _O_APPEND | _O_BINARY);
                     if (dup2(fd, _fileno(stderr)) < 0)
-					ereport(FATAL,
+						ereport(FATAL,
 							(errcode_for_file_access(),
 							 errmsg("could not redirect stderr: %m")));
                     close(fd);
@@ -1472,10 +1472,11 @@ static void set_write_to_alert_log(const char *severity)
 {
     if (alert_log_level_opened)
     {
-        GpperfmonLogAlertLevel alert_level =
-            gpperfmon_log_alert_level_from_string(severity);
-        // gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
-        // because alert_log_level_opened is true; 
+        GpperfmonLogAlertLevel alert_level = lookup_loglevel_by_name(severity);
+        /*
+         * gpperfmon_log_alert_level cannot be GPPERFMON_LOG_ALERT_LEVEL_NONE,
+         * because alert_log_level_opened is true
+         */
         if (alert_level >= gpperfmon_log_alert_level)
         {
             write_to_alert_log = true;
@@ -1923,15 +1924,16 @@ pipeThread(void *arg)
     char		logbuffer[READ_BUF_SIZE];
     int			bytes_in_logbuffer = 0;
 
-    for (;;)
-    {
-        DWORD		bytesRead;
+	for (;;)
+	{
+		DWORD		bytesRead;
 		BOOL		result;
 
 		result = ReadFile(syslogPipe[0],
 						  logbuffer + bytes_in_logbuffer,
 						  sizeof(logbuffer) - bytes_in_logbuffer,
 						  &bytesRead, 0);
+
 		/*
 		 * Enter critical section before doing anything that might touch
 		 * global state shared by the main thread. Anything that uses
@@ -1966,8 +1968,8 @@ pipeThread(void *arg)
     flush_pipe_input(logbuffer, &bytes_in_logbuffer);
 
 	LeaveCriticalSection(&sysloggerSection);
-     _endthread();
-    return 0;
+	_endthread();
+	return 0;
 }
 #endif   /* WIN32 */
 
@@ -2042,9 +2044,10 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 			if (saveerrno != ENFILE && saveerrno != EMFILE)
 			{
 				ereport(LOG,
-						(errmsg("disabling automatic rotation (use SIGHUP to reenable)")));
+						(errmsg("disabling automatic rotation (use SIGHUP to re-enable)")));
 				rotation_disabled = true;
 			}
+
 			if (filename)
 				pfree(filename);
 			return;
@@ -2057,16 +2060,7 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 #endif
 
 		if (*fh_p)
-		{
-			/* On Windows, need to interlock against data-transfer thread */
-#ifdef WIN32
-			EnterCriticalSection(&fileSection);
-#endif
 			fclose(*fh_p);
-#ifdef WIN32
-			LeaveCriticalSection(&fileSection);
-#endif
-		}
 		*fh_p = fh;
 
 		/* instead of pfree'ing filename, remember it for next time */
@@ -2094,7 +2088,8 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
  * Result is palloc'd.
  */
 static char *
-logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directory, const char *log_file_pattern)
+logfile_getname(pg_time_t timestamp, const char *suffix,
+				const char *log_directory, const char *log_file_pattern)
 {
 	char	   *filename;
 	int			len;
@@ -2108,7 +2103,7 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 
 	len = strlen(filename);
 
-	/* treat it as a strftime pattern */
+	/* treat Log_filename as a strftime pattern */
 	pg_strftime(filename + len, MAXPGPATH - len, log_file_pattern,
 				pg_localtime(&timestamp, log_timezone));
 

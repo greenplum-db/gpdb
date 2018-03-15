@@ -559,62 +559,62 @@ SELECT count(*) FROM tenk_ao1 t1, tenk_heap t2 where t1.unique1 = t2.unique2;
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 INNER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 RIGHT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 FULL OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 INNER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 RIGHT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 FULL OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 CREATE TABLE empty_ao_table_for_join (like tenk_heap) with (appendonly=true) distributed by(unique1);
 SELECT count(*) FROM tenk_ao1 t1 INNER JOIN empty_ao_table_for_join t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
      0
 (1 row)
 
 SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN empty_ao_table_for_join t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
@@ -683,6 +683,22 @@ SELECT oideq(oid,-1) FROM aowithoids; -- kind of stupid but checks that oid actu
 
 -- CREATE INDEX
 CREATE INDEX tenk_ao1_unique1 ON tenk_ao1 USING btree(unique1 int4_ops);
+-- Verify that the visimap and block-directory indexes have unique and
+-- primary key constraints on them
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
+ indisunique | indisprimary 
+-------------+--------------
+ t           | t
+(1 row)
+
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
+ indisunique | indisprimary 
+-------------+--------------
+ t           | t
+(1 row)
+
 drop table if exists ao;
 create table ao (i int, j int, k varchar) with(appendonly=true);
 insert into ao values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
@@ -723,7 +739,7 @@ create index ao_ij on ao (i, j) with (fillfactor=10);
 alter index ao_ij set (fillfactor=20);
 reindex index ao_ij;
 select indexname from pg_indexes where tablename = 'ao' order by indexname;
- indexname
+ indexname 
 -----------
  ao_ij
  ao_j
@@ -737,7 +753,7 @@ HINT:  DROP the index first, and recreate it after the ALTER
 alter table ao rename j to j_renamed;
 alter table ao drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
- tablename | attname | avg_width | n_distinct
+ tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
  ao        | i       |         4 |         -1
  ao        | k       |         5 |         -1
@@ -746,21 +762,21 @@ select tablename, attname, avg_width, n_distinct from pg_stats where tablename =
 create index ao_i on ao (i) where i = 9;
 analyze ao;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
- tablename | attname | avg_width | n_distinct
+ tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
  ao        | i       |         4 |  -0.666667
  ao        | k       |         5 |       -0.5
 (2 rows)
 
 select indexname from pg_indexes where tablename = 'ao' order by indexname;
- indexname
+ indexname 
 -----------
  ao_i
  ao_k
 (2 rows)
 
 select * from ao where i = 9;
- i | k
+ i | k 
 ---+---
  9 | b
  9 | b
@@ -768,7 +784,7 @@ select * from ao where i = 9;
 
 alter index ao_i rename to ao_i_renamed;
 select indexname from pg_indexes where tablename = 'ao' order by indexname;
-  indexname
+  indexname   
 --------------
  ao_i_renamed
  ao_k
@@ -828,13 +844,13 @@ create temp table temp_tenk_ao5 with (appendonly=true, orientation=column, compr
     as select * from tenk_ao5 distributed by (unique1);
 create index temp_even_index on temp_tenk_ao5 (even);
 select count(*) from temp_tenk_ao5;
- count
+ count 
 -------
      0
 (1 row)
 
 select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_ao5';
-   tablename   |    indexname    |                             indexdef
+   tablename   |    indexname    |                             indexdef                             
 ---------------+-----------------+------------------------------------------------------------------
  temp_tenk_ao5 | temp_even_index | CREATE INDEX temp_even_index ON temp_tenk_ao5 USING btree (even)
 (1 row)
@@ -843,7 +859,7 @@ insert into temp_tenk_ao5(unique1, unique2) values (99998888, 99998888);
 update temp_tenk_ao5 set unique2 = 99998889 where unique2 = 99998888;
 delete from temp_tenk_ao5 where unique2 = 99998889;
 select count(*) from temp_tenk_ao5;
- count
+ count 
 -------
      0
 (1 row)
@@ -852,24 +868,24 @@ truncate table temp_tenk_ao5;
 vacuum analyze temp_tenk_ao5;
 \d temp_tenk_ao5
 Append-Only Columnar Table "pg_temp_274.temp_tenk_ao5"
-   Column    |  Type   | Modifiers
+   Column    |  Type   | Modifiers 
 -------------+---------+-----------
- unique1     | integer |
- unique2     | integer |
- two         | integer |
- four        | integer |
- ten         | integer |
- twenty      | integer |
- hundred     | integer |
- thousand    | integer |
- twothousand | integer |
- fivethous   | integer |
- tenthous    | integer |
- odd         | integer |
- even        | integer |
- stringu1    | name    |
- stringu2    | name    |
- string4     | name    |
+ unique1     | integer | 
+ unique2     | integer | 
+ two         | integer | 
+ four        | integer | 
+ ten         | integer | 
+ twenty      | integer | 
+ hundred     | integer | 
+ thousand    | integer | 
+ twothousand | integer | 
+ fivethous   | integer | 
+ tenthous    | integer | 
+ odd         | integer | 
+ even        | integer | 
+ stringu1    | name    | 
+ stringu2    | name    | 
+ string4     | name    | 
 Checksum: t
 Indexes:
     "temp_even_index" btree (even)
@@ -877,7 +893,7 @@ Distributed by: (unique1)
 
 insert into temp_tenk_ao5(unique1, unique2) values (99998888, 99998888);
 select unique1 from temp_tenk_ao5;
- unique1
+ unique1  
 ----------
  99998888
 (1 row)
@@ -888,7 +904,7 @@ prepare tenk_ao5_prep(int4) as select * from tenk_ao5 where unique1 > 8000;
 create temp table tenk_ao5_temp_drop with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit drop as execute tenk_ao5_prep(8095);
 select count(*) from tenk_ao5_temp_drop;
- count
+ count 
 -------
      0
 (1 row)
@@ -903,14 +919,14 @@ begin;
 create temp table tenk_ao5_temp_delete_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit delete rows as select * from tenk_ao5 where unique1 > 8000 distributed by (unique1);
 select count(*) from tenk_ao5_temp_delete_rows;
- count
+ count 
 -------
      0
 (1 row)
 
 commit;
 select count(*) from tenk_ao5_temp_delete_rows;
- count
+ count 
 -------
      0
 (1 row)
@@ -920,14 +936,14 @@ begin;
 create temp table tenk_ao5_temp_pres_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit preserve rows as select * from tenk_ao5 where unique1 > 8000 distributed by (unique1);
 select count(*) from tenk_ao5_temp_pres_rows;
- count
+ count 
 -------
      0
 (1 row)
 
 commit;
 select count(*) from tenk_ao5_temp_pres_rows;
- count
+ count 
 -------
      0
 (1 row)
@@ -1042,7 +1058,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO syscoltest VALUES(1);
 SELECT ctid FROM syscoltest;
-   ctid   
+       ctid       
 ------------------
  (33554432,32769)
 (1 row)
@@ -1063,7 +1079,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- size will be < total size because of segrelid
 --
 SELECT pg_relation_size('aosizetest_1') < pg_total_relation_size('aosizetest_1') as total_exceeds_regular;
- total_exceeds_regular
+ total_exceeds_regular 
 -----------------------
  t
 (1 row)
@@ -1075,7 +1091,7 @@ SELECT pg_relation_size('aosizetest_1') < pg_total_relation_size('aosizetest_1')
 CREATE INDEX aosizetest_2_idx on aosizetest_2(a);
 DROP INDEX aosizetest_2_idx;
 SELECT pg_total_relation_size('aosizetest_1') < pg_total_relation_size('aosizetest_2') as with_block_dir_exceeds_without;
- with_block_dir_exceeds_without
+ with_block_dir_exceeds_without 
 --------------------------------
  t
 (1 row)
@@ -1145,7 +1161,7 @@ select get_ao_compression_ratio('ao_compress_table') > 1.2 and get_ao_compressio
 (1 row)
 
 select get_ao_distribution('ao_compress_table');
- get_ao_distribution
+ get_ao_distribution 
 ---------------------
  (0,1)
 (1 row)
@@ -1153,7 +1169,7 @@ select get_ao_distribution('ao_compress_table');
 truncate table ao_compress_table; -- after truncate, reclaim space from the table and index
 insert into ao_compress_results values (pg_relation_size('ao_compress_table'), pg_relation_size('ao_compress_id_index'), pg_relation_size('ao_compress_v_index'));
 select count(*) from (select distinct * from ao_compress_results) temp; -- should give 2 after reclaiming space
- count
+ count 
 -------
      2
 (1 row)

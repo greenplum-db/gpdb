@@ -1,10 +1,11 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/ecpg.header,v 1.7.2.1 2009/09/08 04:25:14 tgl Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/ecpg.header,v 1.16 2010/05/25 14:32:55 meskes Exp $ */
 
 /* Copyright comment */
 %{
 #include "postgres_fe.h"
 
 #include "extern.h"
+#include "ecpg_config.h"
 #include <unistd.h>
 
 /* Location tracking support --- simpler than bison's default */
@@ -33,16 +34,18 @@
  */
 int struct_level = 0;
 int braces_open; /* brace level counter */
-int ecpg_informix_var = 0;
+char *current_function;
+int ecpg_internal_var = 0;
 char	*connection = NULL;
 char	*input_filename = NULL;
 
-static int	QueryIsRule = 0, FoundInto = 0;
+static int	FoundInto = 0;
 static int	initializer = 0;
 static int	pacounter = 1;
 static char     pacounter_buffer[sizeof(int) * CHAR_BIT * 10 / 3]; /* a rough guess at the size we need */
 static struct this_type actual_type[STRUCT_DEPTH];
 static char *actual_startline[STRUCT_DEPTH];
+static int 	varchar_counter = 1;
 
 /* temporarily store struct members while creating the data structure */
 struct ECPGstruct_member *struct_member_list[STRUCT_DEPTH] = { NULL };
@@ -53,10 +56,10 @@ static char *ECPGstruct_sizeof = NULL;
 /* for forward declarations we have to store some data as well */
 static char *forward_name = NULL;
 
-struct ECPGtype ecpg_no_indicator = {ECPGt_NO_INDICATOR, NULL, NULL, {NULL}, 0};
+struct ECPGtype ecpg_no_indicator = {ECPGt_NO_INDICATOR, NULL, NULL, NULL, {NULL}, 0};
 struct variable no_indicator = {"no_indicator", &ecpg_no_indicator, 0, NULL};
 
-struct ECPGtype ecpg_query = {ECPGt_char_variable, NULL, NULL, {NULL}, 0};
+struct ECPGtype ecpg_query = {ECPGt_char_variable, NULL, NULL, NULL, {NULL}, 0};
 
 /*
  * Handle parsing errors and warnings
@@ -226,75 +229,157 @@ create_questionmarks(char *name, bool array)
 }
 
 static char *
-adjust_informix(struct arguments *list)
+adjust_outofscope_cursor_vars(struct cursor *cur)
 {
 	/* Informix accepts DECLARE with variables that are out of scope when OPEN is called.
- 	 * for instance you can declare variables in a function, and then subsequently use them
-	 * {
-	 *      declare_vars();
-	 *      exec sql ... which uses vars declared in the above function
+	 * For instance you can DECLARE a cursor in one function, and OPEN/FETCH/CLOSE
+	 * it in other functions. This is very useful for e.g. event-driver programming,
+	 * but may also lead to dangerous programming. The limitation when this is allowed
+	 * and doesn's cause problems have to be documented, like the allocated variables
+	 * must not be realloc()'ed.
 	 *
-	 * This breaks standard and leads to some very dangerous programming.
-	 * Since they do, we have to work around and accept their syntax as well.
-	 * But we will do so ONLY in Informix mode.
-	 * We have to change the variables to our own struct and just store the pointer instead of the variable
+	 * We have to change the variables to our own struct and just store the pointer
+	 * instead of the variable. Do it only for local variables, not for globals.
 	 */
 
-	 struct arguments *ptr;
-	 char *result = make_str("");
+	char *result = make_str("");
+	int insert;
 
-	 for (ptr = list; ptr != NULL; ptr = ptr->next)
-	 {
-	 	char temp[20]; /* this should be sufficient unless you have 8 byte integers */
-		char *original_var;
+	for (insert = 1; insert >= 0; insert--)
+	{
+		struct arguments *list;
+		struct arguments *ptr;
+		struct arguments *newlist = NULL;
+		struct variable *newvar, *newind;
 
-	 	/* change variable name to "ECPG_informix_get_var(<counter>)" */
-		original_var = ptr->variable->name;
-		sprintf(temp, "%d))", ecpg_informix_var);
+		list = (insert ? cur->argsinsert : cur->argsresult);
 
-		if ((ptr->variable->type->type != ECPGt_varchar && ptr->variable->type->type != ECPGt_char && ptr->variable->type->type != ECPGt_unsigned_char) && atoi(ptr->variable->type->size) > 1)
+		for (ptr = list; ptr != NULL; ptr = ptr->next)
 		{
-			ptr->variable = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->variable->type->u.element->type)), make_str(" *)(ECPG_informix_get_var("), mm_strdup(temp)), ECPGmake_array_type(ECPGmake_simple_type(ptr->variable->type->u.element->type, make_str("1"), ptr->variable->type->u.element->lineno), ptr->variable->type->size), 0);
-			sprintf(temp, "%d, (", ecpg_informix_var++);
-		}
-		else if ((ptr->variable->type->type == ECPGt_varchar || ptr->variable->type->type == ECPGt_char || ptr->variable->type->type == ECPGt_unsigned_char) && atoi(ptr->variable->type->size) > 1)
-		{
-			ptr->variable = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->variable->type->type)), make_str(" *)(ECPG_informix_get_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->variable->type->type, ptr->variable->type->size, ptr->variable->type->lineno), 0);
-			sprintf(temp, "%d, (", ecpg_informix_var++);
-		}
-		else
-		{
-			ptr->variable = new_variable(cat_str(4, make_str("*("), mm_strdup(ecpg_type_name(ptr->variable->type->type)), make_str(" *)(ECPG_informix_get_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->variable->type->type, ptr->variable->type->size, ptr->variable->type->lineno), 0);
-			sprintf(temp, "%d, &(", ecpg_informix_var++);
-		}
+			char temp[20];
+			char *original_var;
+			bool skip_set_var = false;
 
-		/* create call to "ECPG_informix_set_var(<counter>, <pointer>. <linen number>)" */
-		result = cat_str(5, result, make_str("ECPG_informix_set_var("), mm_strdup(temp), mm_strdup(original_var), make_str("), __LINE__);\n"));
+			/* change variable name to "ECPGget_var(<counter>)" */
+			original_var = ptr->variable->name;
+			sprintf(temp, "%d))", ecpg_internal_var);
 
-		/* now the indicator if there is one */
-		if (ptr->indicator->type->type != ECPGt_NO_INDICATOR)
-		{
-			/* change variable name to "ECPG_informix_get_var(<counter>)" */
-			original_var = ptr->indicator->name;
-			sprintf(temp, "%d))", ecpg_informix_var);
-
-			/* create call to "ECPG_informix_set_var(<counter>, <pointer>. <linen number>)" */
-			if (atoi(ptr->indicator->type->size) > 1)
+			/* Don't emit ECPGset_var() calls for global variables */
+			if (ptr->variable->brace_level == 0)
 			{
-				ptr->indicator = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->indicator->type->type)), make_str(" *)(ECPG_informix_get_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->indicator->type->type, ptr->indicator->type->size, ptr->variable->type->lineno), 0);
-				sprintf(temp, "%d, (", ecpg_informix_var++);
+				newvar = ptr->variable;
+				skip_set_var = true;
+			}
+			else if ((ptr->variable->type->type == ECPGt_char_variable) && (!strncmp(ptr->variable->name, "ECPGprepared_statement", strlen("ECPGprepared_statement"))))
+			{
+				newvar = ptr->variable;
+				skip_set_var = true;
+			}
+			else if ((ptr->variable->type->type != ECPGt_varchar && ptr->variable->type->type != ECPGt_char && ptr->variable->type->type != ECPGt_unsigned_char && ptr->variable->type->type != ECPGt_string) && atoi(ptr->variable->type->size) > 1)
+			{
+				newvar = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->variable->type->u.element->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_array_type(ECPGmake_simple_type(ptr->variable->type->u.element->type, make_str("1"), ptr->variable->type->u.element->counter), ptr->variable->type->size), 0);
+				sprintf(temp, "%d, (", ecpg_internal_var++);
+			}
+			else if ((ptr->variable->type->type == ECPGt_varchar || ptr->variable->type->type == ECPGt_char || ptr->variable->type->type == ECPGt_unsigned_char || ptr->variable->type->type == ECPGt_string) && atoi(ptr->variable->type->size) > 1)
+			{
+				newvar = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->variable->type->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->variable->type->type, ptr->variable->type->size, ptr->variable->type->counter), 0);
+				if (ptr->variable->type->type == ECPGt_varchar)
+					sprintf(temp, "%d, &(", ecpg_internal_var++);
+				else
+					sprintf(temp, "%d, (", ecpg_internal_var++);
+			}
+			else if (ptr->variable->type->type == ECPGt_struct || ptr->variable->type->type == ECPGt_union)
+			{
+				sprintf(temp, "%d)))", ecpg_internal_var);
+				newvar = new_variable(cat_str(4, make_str("(*("), mm_strdup(ptr->variable->type->type_name), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_struct_type(ptr->variable->type->u.members, ptr->variable->type->type, ptr->variable->type->type_name, ptr->variable->type->struct_sizeof), 0);
+				sprintf(temp, "%d, &(", ecpg_internal_var++);
+			}
+			else if (ptr->variable->type->type == ECPGt_array)
+			{
+				if (ptr->variable->type->u.element->type == ECPGt_struct || ptr->variable->type->u.element->type == ECPGt_union)
+				{
+					sprintf(temp, "%d)))", ecpg_internal_var);
+					newvar = new_variable(cat_str(4, make_str("(*("), mm_strdup(ptr->variable->type->u.element->type_name), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_struct_type(ptr->variable->type->u.element->u.members, ptr->variable->type->u.element->type, ptr->variable->type->u.element->type_name, ptr->variable->type->u.element->struct_sizeof), 0);
+					sprintf(temp, "%d, (", ecpg_internal_var++);
+				}
+				else
+				{
+					newvar = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->variable->type->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_array_type(ECPGmake_simple_type(ptr->variable->type->u.element->type, ptr->variable->type->u.element->size, ptr->variable->type->u.element->counter), ptr->variable->type->size), 0);
+					sprintf(temp, "%d, &(", ecpg_internal_var++);
+				}
 			}
 			else
 			{
-				ptr->indicator = new_variable(cat_str(4, make_str("*("), mm_strdup(ecpg_type_name(ptr->indicator->type->type)), make_str(" *)(ECPG_informix_get_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->indicator->type->type, ptr->indicator->type->size, ptr->variable->type->lineno), 0);
-				sprintf(temp, "%d, &(", ecpg_informix_var++);
+				newvar = new_variable(cat_str(4, make_str("*("), mm_strdup(ecpg_type_name(ptr->variable->type->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->variable->type->type, ptr->variable->type->size, ptr->variable->type->counter), 0);
+				sprintf(temp, "%d, &(", ecpg_internal_var++);
 			}
-			result = cat_str(5, result, make_str("ECPG_informix_set_var("), mm_strdup(temp), mm_strdup(original_var), make_str("), __LINE__);\n"));
-		}
-	 }
 
-	 return result;
+			/* create call to "ECPGset_var(<counter>, <pointer>. <line number>)" */
+			if (!skip_set_var)
+				result = cat_str(5, result, make_str("ECPGset_var("), mm_strdup(temp), mm_strdup(original_var), make_str("), __LINE__);\n"));
+
+			/* now the indicator if there is one and it's not a global variable */
+			if ((ptr->indicator->type->type == ECPGt_NO_INDICATOR) || (ptr->indicator->brace_level == 0))
+			{
+				newind = ptr->indicator;
+			}
+			else
+			{
+				/* change variable name to "ECPGget_var(<counter>)" */
+				original_var = ptr->indicator->name;
+				sprintf(temp, "%d))", ecpg_internal_var);
+
+				if (ptr->indicator->type->type == ECPGt_struct || ptr->indicator->type->type == ECPGt_union)
+				{
+					sprintf(temp, "%d)))", ecpg_internal_var);
+					newind = new_variable(cat_str(4, make_str("(*("), mm_strdup(ptr->indicator->type->type_name), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_struct_type(ptr->indicator->type->u.members, ptr->indicator->type->type, ptr->indicator->type->type_name, ptr->indicator->type->struct_sizeof), 0);
+					sprintf(temp, "%d, &(", ecpg_internal_var++);
+				}
+				else if (ptr->indicator->type->type == ECPGt_array)
+				{
+					if (ptr->indicator->type->u.element->type == ECPGt_struct || ptr->indicator->type->u.element->type == ECPGt_union)
+					{
+						sprintf(temp, "%d)))", ecpg_internal_var);
+						newind = new_variable(cat_str(4, make_str("(*("), mm_strdup(ptr->indicator->type->u.element->type_name), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_struct_type(ptr->indicator->type->u.element->u.members, ptr->indicator->type->u.element->type, ptr->indicator->type->u.element->type_name, ptr->indicator->type->u.element->struct_sizeof), 0);
+						sprintf(temp, "%d, (", ecpg_internal_var++);
+					}
+					else
+					{
+						newind = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->indicator->type->u.element->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_array_type(ECPGmake_simple_type(ptr->indicator->type->u.element->type, ptr->indicator->type->u.element->size, ptr->indicator->type->u.element->counter), ptr->indicator->type->size), 0);
+						sprintf(temp, "%d, &(", ecpg_internal_var++);
+					}
+				}
+				else if (atoi(ptr->indicator->type->size) > 1)
+				{
+					newind = new_variable(cat_str(4, make_str("("), mm_strdup(ecpg_type_name(ptr->indicator->type->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->indicator->type->type, ptr->indicator->type->size, ptr->variable->type->counter), 0);
+					sprintf(temp, "%d, (", ecpg_internal_var++);
+				}
+				else
+				{
+					newind = new_variable(cat_str(4, make_str("*("), mm_strdup(ecpg_type_name(ptr->indicator->type->type)), make_str(" *)(ECPGget_var("), mm_strdup(temp)), ECPGmake_simple_type(ptr->indicator->type->type, ptr->indicator->type->size, ptr->variable->type->counter), 0);
+					sprintf(temp, "%d, &(", ecpg_internal_var++);
+				}
+
+				/* create call to "ECPGset_var(<counter>, <pointer>. <line number>)" */
+				result = cat_str(5, result, make_str("ECPGset_var("), mm_strdup(temp), mm_strdup(original_var), make_str("), __LINE__);\n"));
+			}
+
+			add_variable_to_tail(&newlist, newvar, newind);
+		}
+
+		if (insert)
+			cur->argsinsert_oos = newlist;
+		else
+			cur->argsresult_oos = newlist;
+	}
+
+	return result;
 }
+
+/* This tests whether the cursor was declared and opened in the same function. */
+#define SAMEFUNC(cur)	\
+	((cur->function == NULL) ||		\
+	 (cur->function != NULL && !strcmp(cur->function, current_function)))
 
 static struct cursor *
 add_additional_variables(char *name, bool insert)
@@ -318,12 +403,12 @@ add_additional_variables(char *name, bool insert)
 	{
 		/* add all those input variables that were given earlier
 		 * note that we have to append here but have to keep the existing order */
-		for (p = ptr->argsinsert; p; p = p->next)
+		for (p = (SAMEFUNC(ptr) ? ptr->argsinsert : ptr->argsinsert_oos); p; p = p->next)
 			add_variable_to_tail(&argsinsert, p->variable, p->indicator);
 	}
 
 	/* add all those output variables that were given earlier */
-	for (p = ptr->argsresult; p; p = p->next)
+	for (p = (SAMEFUNC(ptr) ? ptr->argsresult : ptr->argsresult_oos); p; p = p->next)
 		add_variable_to_tail(&argsresult, p->variable, p->indicator);
 
 	return ptr;
@@ -339,6 +424,8 @@ add_typedef(char *name, char * dimension, char * length, enum ECPGttype type_enu
 	     type_enum == ECPGt_union) &&
 	    initializer == 1)
 		mmerror(PARSE_ERROR, ET_ERROR, "initializer not allowed in type definition");
+	else if (INFORMIX_MODE && strcmp(name, "string") == 0)
+		mmerror(PARSE_ERROR, ET_ERROR, "type name \"string\" is reserved in Informix mode");
 	else
 	{
 		for (ptr = types; ptr != NULL; ptr = ptr->next)
@@ -367,6 +454,7 @@ add_typedef(char *name, char * dimension, char * length, enum ECPGttype type_enu
 		if (type_enum != ECPGt_varchar &&
 			type_enum != ECPGt_char &&
 			type_enum != ECPGt_unsigned_char &&
+			type_enum != ECPGt_string &&
 			atoi(this->type->type_index) >= 0)
 			mmerror(PARSE_ERROR, ET_ERROR, "multidimensional arrays for simple data types are not supported");
 

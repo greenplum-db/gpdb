@@ -113,7 +113,18 @@ CGPOptimizer::SzDXLPlan
 	Query *pquery
 	)
 {
-	return COptTasks::SzOptimize(pquery);
+	GPOS_TRY;
+	{
+		return COptTasks::SzOptimize(pquery);
+	}
+	GPOS_CATCH_EX(ex);
+	{
+		errstart(ERROR, ex.SzFilename(), ex.UlLine(), NULL, TEXTDOMAIN);
+		errfinish(errcode(ERRCODE_INTERNAL_ERROR),
+				errmsg("Optimizer failed to produce plan"));
+	}
+	GPOS_CATCH_END;
+	return NULL;
 }
 
 //---------------------------------------------------------------------------

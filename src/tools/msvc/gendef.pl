@@ -1,8 +1,9 @@
 my @def;
+
 #
 # Script that generates a .DEF file for all objects in a directory
-# 
-# $PostgreSQL: pgsql/src/tools/msvc/gendef.pl,v 1.8 2008/01/31 16:30:24 adunstan Exp $
+#
+# $PostgreSQL: pgsql/src/tools/msvc/gendef.pl,v 1.10 2010/04/09 13:05:58 mha Exp $
 #
 
 #

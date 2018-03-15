@@ -2,7 +2,7 @@
 -- PXF read test
 ------------------------------------------------------------------
 SELECT * from pxf_read_test order by a;
-       a        |   b    |   c
+       a        |   b    |   c    
 ----------------+--------+--------
  fragment1 row1 | value1 | value2
  fragment1 row2 | value1 | value2
@@ -13,7 +13,7 @@ SELECT * from pxf_read_test order by a;
 (6 rows)
 
 SELECT * from pxf_readcustom_test order by a;
-       a        |   b    |   c
+       a        |   b    |   c    
 ----------------+--------+--------
  fragment1 row1 | value1 | value2
  fragment1 row2 | value1 | value2

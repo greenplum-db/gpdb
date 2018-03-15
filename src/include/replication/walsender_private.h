@@ -84,6 +84,13 @@ typedef struct WalSnd
 	int			sync_standby_priority;
 
 	bool		synchronous;
+
+	/*
+	 * Records time when PID was set to 0, either during initialization or due
+	 * to disconnection. This helps to detect time passed since mirror didn't
+	 * connect.
+	 */
+	pg_time_t   marked_pid_zero_at_time;
 } WalSnd;
 
 extern WalSnd *MyWalSnd;

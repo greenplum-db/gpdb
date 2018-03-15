@@ -28,7 +28,9 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "catalog/gp_id.h"
 #include "catalog/gp_segment_config.h"
+#include "catalog/indexing.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
@@ -253,15 +255,6 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_port, RelationGetDescr(gp_seg_config_rel), &isNull);
 		Assert(!isNull);
 		pRow->port = DatumGetInt32(attr);
-
-		/*
-		 * Filerep_port
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_replication_port, RelationGetDescr(gp_seg_config_rel), &isNull);
-		if (!isNull)
-			pRow->filerep_port = DatumGetInt32(attr);
-		else
-			pRow->filerep_port = -1;
 
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
 
@@ -1089,16 +1082,6 @@ dbid_get_dbinfo(int16 dbid)
 							RelationGetDescr(rel), &isNull);
 		Assert(!isNull);
 		i->port = DatumGetInt32(attr);
-
-		/*
-		 * Filerep_port
-		 */
-		attr = heap_getattr(tuple, Anum_gp_segment_configuration_replication_port,
-							RelationGetDescr(rel), &isNull);
-		if (!isNull)
-			i->filerep_port = DatumGetInt32(attr);
-		else
-			i->filerep_port = -1;
 
 		Assert(systable_getnext(scan) == NULL); /* should be only 1 */
 	}

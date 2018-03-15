@@ -20,7 +20,7 @@ select localoid::regclass, attrnums from gp_distribution_policy where localoid =
 
 alter table atsdb set distributed by (j);
 select localoid::regclass, attrnums from gp_distribution_policy where localoid = 'atsdb'::regclass;
--- verify that the data is correctly redistributed by building a fresh 
+-- verify that the data is correctly redistributed by building a fresh
 -- table with the same policy
 create table ats_test (i int, j text) distributed by (j);
 insert into ats_test :DATA;
@@ -115,7 +115,7 @@ copy atsdb_1 from stdin delimiter '|';
 3|2|1
 3|3|1
 \.
-select gp_segment_id, * from atsdb where k = 1 except 
+select gp_segment_id, * from atsdb where k = 1 except
 select gp_segment_id, * from atsdb_1;
 
 create table atsdb_2 (like atsdb_1_prt_2) distributed by (i);
@@ -169,7 +169,7 @@ select * from distcheck where rel = 'atsdb';
 alter table atsdb drop column n;
 
 alter table atsdb set with(appendonly = true, compresslevel = 3);
-select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid = 
+select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
 
 select * from distcheck where rel = 'atsdb';
@@ -207,7 +207,7 @@ alter table atsdb set distributed by (j);
 select * from distcheck where rel like 'atsdb%';
 select * from atsdb order by 1, 2, 3;
 alter table atsdb set with(appendonly = true);
-select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where 
+select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
 relname  like 'atsdb%' and c.oid = a.relid order by 1;
 select * from atsdb order by 1, 2, 3;
 insert into atsdb select i+2, i+1, i from generate_series(1, 9) i;
@@ -240,11 +240,11 @@ CREATE TABLE test_add_drop_rename_column_change_datatype(
  a_ts_without timestamp without time zone,
  b_ts_with timestamp with time zone,
  date_column date) distributed randomly;
- 
+
 insert into test_add_drop_rename_column_change_datatype values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000');
 insert into test_add_drop_rename_column_change_datatype values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001');
 insert into test_add_drop_rename_column_change_datatype values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002');
- 
+
 ALTER TABLE test_add_drop_rename_column_change_datatype ADD COLUMN added_col character varying(30);
 ALTER TABLE test_add_drop_rename_column_change_datatype DROP COLUMN drop_col ;
 ALTER TABLE test_add_drop_rename_column_change_datatype RENAME COLUMN before_rename_col TO after_rename_col;
@@ -308,13 +308,13 @@ create table owner_test(i int, toast text) distributed randomly;
 alter table owner_test owner to atsdb;
 alter table owner_test set with (reorganize = true) distributed by (i);
 -- verify, atsdb should own all three
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from pg_class a, pg_class b, pg_class c, 
+from pg_class a, pg_class b, pg_class c,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid = b.oid 
+where a.reltoastrelid = b.oid
   and b.reltoastidxid=c.oid
   and a.relname='owner_test'
   and x.oid = a.relowner
@@ -322,13 +322,13 @@ where a.reltoastrelid = b.oid
   and z.oid = c.relowner;
 
 -- MPP-9663 - Check that the ownership is consistent on the segments as well
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a, 
-	 gp_dist_random('pg_class') b, 
-	 gp_dist_random('pg_class') c, 
+from gp_dist_random('pg_class') a,
+	 gp_dist_random('pg_class') b,
+	 gp_dist_random('pg_class') c,
      pg_authid x, pg_authid y, pg_authid z
 where a.reltoastrelid=b.oid
   and b.reltoastidxid=c.oid
@@ -345,13 +345,13 @@ alter table owner_test add column d text;
 alter table owner_test drop column d;
 alter table owner_test set with (reorganize = true) distributed by (i);
 
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a, 
-	 gp_dist_random('pg_class') b, 
-	 gp_dist_random('pg_class') c, 
+from gp_dist_random('pg_class') a,
+	 gp_dist_random('pg_class') b,
+	 gp_dist_random('pg_class') c,
      pg_authid x, pg_authid y, pg_authid z
 where a.reltoastrelid=b.oid
   and b.reltoastidxid=c.oid
@@ -387,14 +387,14 @@ set enable_seqscan=off;
 
 drop table if exists distrib_index_test;
 create table distrib_index_test (a int, b text) distributed by (a);
-select count(*) from gp_distribution_policy 
+select count(*) from gp_distribution_policy
 	where localoid in (select oid from pg_class where relname='distrib_index_test');
 
 begin;
 drop table distrib_index_test;
 rollback;
 
-select count(*) from gp_distribution_policy 
+select count(*) from gp_distribution_policy
 	where localoid in (select oid from pg_class where relname='distrib_index_test');
 
 reset enable_indexscan;
@@ -408,7 +408,7 @@ drop table distrib_index_test;
 --     3. partition table have "with" option.
 drop index if exists distrib_part_test_idx;
 drop table if exists distrib_part_test;
-CREATE TABLE distrib_part_test 
+CREATE TABLE distrib_part_test
 (
   col1 int,
   col2 decimal,
@@ -425,12 +425,12 @@ ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RAN
 
 -- MPP-23801
 --
--- ALTER TABLE set distribution key should check compatible with unique index. 
+-- ALTER TABLE set distribution key should check compatible with unique index.
 
 -- case 1
 
 CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
-ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1); 
+ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1);
 
 -- case 2
 
@@ -440,13 +440,13 @@ CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
 CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col3);
 CREATE UNIQUE INDEX idx3_t_dist2 ON t_dist2(col1, col2, col4);
 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2);
 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
 
 -- Altering distribution policy for subpartitioned tables
 CREATE TABLE mpp6489

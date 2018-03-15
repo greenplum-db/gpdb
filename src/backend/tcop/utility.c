@@ -5,12 +5,12 @@
  *	  commands.  At one time acted as an interface between the Lisp and C
  *	  systems.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.309 2009/06/11 20:46:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.335 2010/02/26 02:01:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,7 +37,6 @@
 #include "commands/explain.h"
 #include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
-#include "commands/filespace.h"
 #include "commands/lockcmds.h"
 #include "commands/portalcmds.h"
 #include "commands/prepare.h"
@@ -70,6 +69,10 @@
 #include "cdb/cdbvars.h"
 
 
+/* Hook for plugins to get control in ProcessUtility() */
+ProcessUtility_hook_type ProcessUtility_hook = NULL;
+
+
 /*
  * Verify user has ownership of specified relation, else ereport.
  *
@@ -83,9 +86,7 @@ CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
 	HeapTuple	tuple;
 
 	relOid = RangeVarGetRelid(rel, false);
-	tuple = SearchSysCache(RELOID,
-						   ObjectIdGetDatum(relOid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
 	if (!HeapTupleIsValid(tuple))		/* should not happen */
 		elog(ERROR, "cache lookup failed for relation %u", relOid);
 
@@ -161,7 +162,8 @@ check_xact_readonly(Node *parsetree)
 	/*
 	 * Note: Commands that need to do more complicated checking are handled
 	 * elsewhere, in particular COPY and plannable statements do their own
-	 * checking.
+	 * checking.  However they should all call PreventCommandIfReadOnly to
+	 * actually throw the error.
 	 */
 
 	switch (nodeTag(parsetree))
@@ -242,7 +244,6 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateSchemaStmt:
 		case T_CreateSeqStmt:
 		case T_CreateExternalStmt:
-		case T_CreateFileSpaceStmt:
 		case T_CreateTableSpaceStmt:
 		case T_CreateTrigStmt:
 		case T_CompositeTypeStmt:
@@ -251,7 +252,6 @@ check_xact_readonly(Node *parsetree)
 		case T_DropCastStmt:
 		case T_DropdbStmt:
 		case T_DropTableSpaceStmt:
-		case T_DropFileSpaceStmt:
 		case T_RemoveFuncStmt:
 		case T_DropQueueStmt:
 		case T_DropResourceGroupStmt:
@@ -262,6 +262,7 @@ check_xact_readonly(Node *parsetree)
 		case T_DropPropertyStmt:
 		case T_GrantStmt:
 		case T_GrantRoleStmt:
+		case T_AlterDefaultPrivilegesStmt:
 		case T_TruncateStmt:
 		case T_DropOwnedStmt:
 		case T_ReassignOwnedStmt:
@@ -276,14 +277,55 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateUserMappingStmt:
 		case T_AlterUserMappingStmt:
 		case T_DropUserMappingStmt:
-			ereport(ERROR,
-					(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
-					 errmsg("transaction is read-only")));
+		case T_AlterTableSpaceOptionsStmt:
+			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
 			break;
 		default:
 			/* do nothing */
 			break;
 	}
+}
+
+/*
+ * PreventCommandIfReadOnly: throw error if XactReadOnly
+ *
+ * This is useful mainly to ensure consistency of the error message wording;
+ * most callers have checked XactReadOnly for themselves.
+ */
+void
+PreventCommandIfReadOnly(const char *cmdname)
+{
+	if (XactReadOnly)
+		ereport(ERROR,
+				(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+		/* translator: %s is name of a SQL command, eg CREATE */
+				 errmsg("cannot execute %s in a read-only transaction",
+						cmdname)));
+
+	/*
+	 * This is also a convenient place to make note that this transaction
+	 * needs two-phase commit.
+	 */
+	ExecutorMarkTransactionDoesWrites();
+}
+
+/*
+ * PreventCommandDuringRecovery: throw error if RecoveryInProgress
+ *
+ * The majority of operations that are unsafe in a Hot Standby slave
+ * will be rejected by XactReadOnly tests.	However there are a few
+ * commands that are allowed in "read-only" xacts but cannot be allowed
+ * in Hot Standby mode.  Those commands should call this function.
+ */
+void
+PreventCommandDuringRecovery(const char *cmdname)
+{
+	if (RecoveryInProgress())
+		ereport(ERROR,
+				(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+		/* translator: %s is name of a SQL command, eg CREATE */
+				 errmsg("cannot execute %s during recovery",
+						cmdname)));
 }
 
 /*
@@ -299,9 +341,9 @@ CheckRestrictedOperation(const char *cmdname)
 	if (InSecurityRestrictedOperation())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 /* translator: %s is name of a SQL command, eg PREPARE */
-				 errmsg("cannot execute %s within security-restricted operation",
-						cmdname)));
+		/* translator: %s is name of a SQL command, eg PREPARE */
+			 errmsg("cannot execute %s within security-restricted operation",
+					cmdname)));
 }
 
 
@@ -335,6 +377,27 @@ ProcessUtility(Node *parsetree,
 {
 	Assert(queryString != NULL);	/* required as of 8.4 */
 
+	/*
+	 * We provide a function hook variable that lets loadable plugins get
+	 * control when ProcessUtility is called.  Such a plugin would normally
+	 * call standard_ProcessUtility().
+	 */
+	if (ProcessUtility_hook)
+		(*ProcessUtility_hook) (parsetree, queryString, params,
+								isTopLevel, dest, completionTag);
+	else
+		standard_ProcessUtility(parsetree, queryString, params,
+								isTopLevel, dest, completionTag);
+}
+
+void
+standard_ProcessUtility(Node *parsetree,
+						const char *queryString,
+						ParamListInfo params,
+						bool isTopLevel,
+						DestReceiver *dest,
+						char *completionTag)
+{
 	check_xact_readonly(parsetree);
 
 	if (completionTag)
@@ -399,6 +462,7 @@ ProcessUtility(Node *parsetree,
 											));
 
 						}
+						PreventCommandDuringRecovery("PREPARE TRANSACTION");
 						if (!PrepareTransactionBlock(stmt->gid))
 						{
 							/* report unsuccessful commit in completionTag */
@@ -417,6 +481,7 @@ ProcessUtility(Node *parsetree,
 
 						}
 						PreventTransactionChain(isTopLevel, "COMMIT PREPARED");
+						PreventCommandDuringRecovery("COMMIT PREPARED");
 						FinishPreparedTransaction(stmt->gid, /* isCommit */ true, /* raiseErrorIfNotFound */ true);
 						break;
 
@@ -430,6 +495,7 @@ ProcessUtility(Node *parsetree,
 
 						}
 						PreventTransactionChain(isTopLevel, "ROLLBACK PREPARED");
+						PreventCommandDuringRecovery("ROLLBACK PREPARED");
 						FinishPreparedTransaction(stmt->gid, /* isCommit */ false, /* raiseErrorIfNotFound */ true);
 						break;
 
@@ -621,9 +687,7 @@ ProcessUtility(Node *parsetree,
 												   true);
 
 							AlterTableCreateToastTable(relOid,
-													   InvalidOid,
 													   toast_options,
-													   false,
 													   cstmt->is_part_child);
 							AlterTableCreateAoSegTable(relOid,
 													   cstmt->is_part_child);
@@ -710,25 +774,32 @@ ProcessUtility(Node *parsetree,
 			}
 			break;
 
-		case T_CreateFileSpaceStmt:
-			CreateFileSpace((CreateFileSpaceStmt *) parsetree);
-			break;
-
-		case T_DropFileSpaceStmt:
-			/* Note: This is allowed in a transaction */
-			DropFileSpace((DropFileSpaceStmt *) parsetree);
-			break;
-
 		case T_CreateTableSpaceStmt:
+			if (Gp_role != GP_ROLE_EXECUTE)
+			{
+				/*
+				 * Don't allow master to call this in a transaction block. Segments
+				 * are ok as distributed transaction participants.
+				 */
+				PreventTransactionChain(isTopLevel, "CREATE TABLESPACE");
+			}
 			CreateTableSpace((CreateTableSpaceStmt *) parsetree);
 			break;
 
 		case T_DropTableSpaceStmt:
-			/* In GPDB; this is allowed in a transaction */
-#if 0
-			PreventTransactionChain(isTopLevel, "DROP TABLESPACE");
-#endif
+			if (Gp_role != GP_ROLE_EXECUTE)
+			{
+				/*
+				 * Don't allow master to call this in a transaction block.  Segments are ok as
+				 * distributed transaction participants.
+				 */
+				PreventTransactionChain(isTopLevel, "DROP TABLESPACE");
+			}
 			DropTableSpace((DropTableSpaceStmt *) parsetree);
+			break;
+
+		case T_AlterTableSpaceOptionsStmt:
+			AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *) parsetree);
 			break;
 
 		case T_CreateFdwStmt:
@@ -1012,6 +1083,10 @@ ProcessUtility(Node *parsetree,
 			GrantRole((GrantRoleStmt *) parsetree);
 			break;
 
+		case T_AlterDefaultPrivilegesStmt:
+			ExecAlterDefaultPrivilegesStmt((AlterDefaultPrivilegesStmt *) parsetree);
+			break;
+
 			/*
 			 * **************** object creation / destruction *****************
 			 */
@@ -1114,9 +1189,12 @@ ProcessUtility(Node *parsetree,
 							stmt->indexParams,	/* parameters */
 							(Expr *) stmt->whereClause,
 							stmt->options,
+							stmt->excludeOpNames,
 							stmt->unique,
 							stmt->primary,
 							stmt->isconstraint,
+							stmt->deferrable,
+							stmt->initdeferred,
 							false,		/* is_alter_table */
 							true,		/* check_rights */
 							false,		/* skip_build */
@@ -1192,7 +1270,7 @@ ProcessUtility(Node *parsetree,
 			{
 				/*
 				 * Don't allow master to call this in a transaction block. Segments
-				 * are ok as distributed transaction participants. 
+				 * are ok as distributed transaction participants.
 				 */
 				PreventTransactionChain(isTopLevel, "CREATE DATABASE");
 			}
@@ -1214,7 +1292,7 @@ ProcessUtility(Node *parsetree,
 				if (Gp_role != GP_ROLE_EXECUTE)
 				{
 					/*
-					 * Don't allow master tp call this in a transaction block.  Segments are ok as
+					 * Don't allow master to call this in a transaction block.  Segments are ok as
 					 * distributed transaction participants. 
 					 */
 					PreventTransactionChain(isTopLevel, "DROP DATABASE");
@@ -1234,7 +1312,8 @@ ProcessUtility(Node *parsetree,
 						 errmsg("Notify command cannot run in a function running on a segDB.")
 								));
 
-				Async_Notify(stmt->conditionname);
+				PreventCommandDuringRecovery("NOTIFY");
+				Async_Notify(stmt->conditionname, stmt->payload);
 			}
 			break;
 
@@ -1246,6 +1325,7 @@ ProcessUtility(Node *parsetree,
 					ereport(ERROR,(errcode(ERRCODE_GP_COMMAND_ERROR),
 							errmsg("Listen command cannot run in a function running on a segDB.")));
 
+				PreventCommandDuringRecovery("LISTEN");
 				CheckRestrictedOperation("LISTEN");
 				Async_Listen(stmt->conditionname);
 			}
@@ -1259,6 +1339,7 @@ ProcessUtility(Node *parsetree,
 					ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
 							errmsg("Unlisten command cannot run in a function running on a segDB.")));
 
+				PreventCommandDuringRecovery("UNLISTEN");
 				CheckRestrictedOperation("UNLISTEN");
 				if (stmt->conditionname)
 					Async_Unlisten(stmt->conditionname);
@@ -1292,10 +1373,14 @@ ProcessUtility(Node *parsetree,
 			break;
 
 		case T_ClusterStmt:
+			/* we choose to allow this during "read only" transactions */
+			PreventCommandDuringRecovery("CLUSTER");
 			cluster((ClusterStmt *) parsetree, isTopLevel);
 			break;
 
 		case T_VacuumStmt:
+			/* we choose to allow this during "read only" transactions */
+			PreventCommandDuringRecovery("VACUUM");
 			vacuum((VacuumStmt *) parsetree, InvalidOid, true, NULL, false,
 				   isTopLevel);
 			break;
@@ -1324,7 +1409,10 @@ ProcessUtility(Node *parsetree,
 
 		case T_CreateTrigStmt:
 			{
-				Oid trigOid = CreateTrigger((CreateTrigStmt *) parsetree, InvalidOid, true);
+				Oid			trigOid;
+
+				trigOid = CreateTrigger((CreateTrigStmt *) parsetree, queryString,
+										InvalidOid, InvalidOid, false);
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
 					((CreateTrigStmt *) parsetree)->trigOid = trigOid;
@@ -1485,17 +1573,27 @@ ProcessUtility(Node *parsetree,
 						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 						 errmsg("must be superuser to do CHECKPOINT")));
 
+			/*
+			 * You might think we should have a PreventCommandDuringRecovery()
+			 * here, but we interpret a CHECKPOINT command during recovery as
+			 * a request for a restartpoint instead. We allow this since it
+			 * can be a useful way of reducing switchover time when using
+			 * various forms of replication.
+			 */
 			if (Gp_role == GP_ROLE_DISPATCH)
 			{
 				CdbDispatchCommand("CHECKPOINT", 0, NULL);
 			}
-			RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+			RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_WAIT |
+							  (RecoveryInProgress() ? 0 : CHECKPOINT_FORCE));
 			break;
 
 		case T_ReindexStmt:
 			{
 				ReindexStmt *stmt = (ReindexStmt *) parsetree;
 
+				/* we choose to allow this during "read only" transactions */
+				PreventCommandDuringRecovery("REINDEX");
 				switch (stmt->kind)
 				{
 					case OBJECT_INDEX:
@@ -1808,20 +1906,16 @@ CreateCommandTag(Node *parsetree)
 			tag = "CREATE EXTERNAL TABLE";
 			break;
 
-		case T_CreateFileSpaceStmt:
-			tag = "CREATE FILESPACE";
-			break;
-
-		case T_DropFileSpaceStmt:
-			tag = "DROP FILESPACE";
-			break;
-
 		case T_CreateTableSpaceStmt:
 			tag = "CREATE TABLESPACE";
 			break;
 
 		case T_DropTableSpaceStmt:
 			tag = "DROP TABLESPACE";
+			break;
+
+		case T_AlterTableSpaceOptionsStmt:
+			tag = "ALTER TABLESPACE";
 			break;
 
 		case T_CreateFdwStmt:
@@ -1889,9 +1983,6 @@ CreateCommandTag(Node *parsetree)
 					break;
 				case OBJECT_SCHEMA:
 					tag = "DROP SCHEMA";
-					break;
-				case OBJECT_FILESPACE:
-					tag = "DROP FILESPACE";
 					break;
 				case OBJECT_TABLESPACE:
 					tag = "DROP TABLESPACE";
@@ -1973,9 +2064,6 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_COLUMN:
 				case OBJECT_TABLE:
 					tag = "ALTER TABLE";
-					break;
-				case OBJECT_FILESPACE:
-					tag = "ALTER FILESPACE";
 					break;
 				case OBJECT_TABLESPACE:
 					tag = "ALTER TABLESPACE";
@@ -2076,6 +2164,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_LANGUAGE:
 					tag = "ALTER LANGUAGE";
 					break;
+				case OBJECT_LARGEOBJECT:
+					tag = "ALTER LARGE OBJECT";
+					break;
 				case OBJECT_OPERATOR:
 					tag = "ALTER OPERATOR";
 					break;
@@ -2087,9 +2178,6 @@ CreateCommandTag(Node *parsetree)
 					break;
 				case OBJECT_SCHEMA:
 					tag = "ALTER SCHEMA";
-					break;
-				case OBJECT_FILESPACE:
-					tag = "ALTER FILESPACE";
 					break;
 				case OBJECT_TABLESPACE:
 					tag = "ALTER TABLESPACE";
@@ -2173,6 +2261,10 @@ CreateCommandTag(Node *parsetree)
 
 				tag = (stmt->is_grant) ? "GRANT ROLE" : "REVOKE ROLE";
 			}
+			break;
+
+		case T_AlterDefaultPrivilegesStmt:
+			tag = "ALTER DEFAULT PRIVILEGES";
 			break;
 
 		case T_DefineStmt:
@@ -2309,7 +2401,7 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		case T_VacuumStmt:
-			if (((VacuumStmt *) parsetree)->vacuum)
+			if (((VacuumStmt *) parsetree)->options & VACOPT_VACUUM)
 				tag = "VACUUM";
 			else
 				tag = "ANALYZE";
@@ -2530,7 +2622,8 @@ CreateCommandTag(Node *parsetree)
 							tag = "SELECT INTO";
 						else if (stmt->rowMarks != NIL)
 						{
-							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
+							/* not 100% but probably close enough */
+							if (((PlanRowMark *) linitial(stmt->rowMarks))->markType == ROW_MARK_EXCLUSIVE)
 								tag = "SELECT FOR UPDATE";
 							else
 								tag = "SELECT FOR SHARE";
@@ -2574,6 +2667,7 @@ CreateCommandTag(Node *parsetree)
 							tag = "SELECT INTO";
 						else if (stmt->rowMarks != NIL)
 						{
+							/* not 100% but probably close enough */
 							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
 								tag = "SELECT FOR UPDATE";
 							else
@@ -2677,19 +2771,15 @@ GetCommandLogLevel(Node *parsetree)
 			lev = LOGSTMT_DDL;
 			break;
 
-		case T_CreateFileSpaceStmt:
-			lev = LOGSTMT_DDL;
-			break;
-
-		case T_DropFileSpaceStmt:
-			lev = LOGSTMT_DDL;
-			break;
-
 		case T_CreateTableSpaceStmt:
 			lev = LOGSTMT_DDL;
 			break;
 
 		case T_DropTableSpaceStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
+		case T_AlterTableSpaceOptionsStmt:
 			lev = LOGSTMT_DDL;
 			break;
 
@@ -2776,6 +2866,10 @@ GetCommandLogLevel(Node *parsetree)
 			break;
 
 		case T_GrantRoleStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
+		case T_AlterDefaultPrivilegesStmt:
 			lev = LOGSTMT_DDL;
 			break;
 
@@ -2876,10 +2970,21 @@ GetCommandLogLevel(Node *parsetree)
 		case T_ExplainStmt:
 			{
 				ExplainStmt *stmt = (ExplainStmt *) parsetree;
+				bool		analyze = false;
+				ListCell   *lc;
 
 				/* Look through an EXPLAIN ANALYZE to the contained stmt */
-				if (stmt->analyze)
+				foreach(lc, stmt->options)
+				{
+					DefElem    *opt = (DefElem *) lfirst(lc);
+
+					if (strcmp(opt->defname, "analyze") == 0)
+						analyze = defGetBoolean(opt);
+					/* don't "break", as explain.c will use the last value */
+				}
+				if (analyze)
 					return GetCommandLogLevel(stmt->query);
+
 				/* Plain EXPLAIN isn't so interesting */
 				lev = LOGSTMT_ALL;
 			}

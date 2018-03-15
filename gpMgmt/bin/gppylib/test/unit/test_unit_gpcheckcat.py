@@ -146,7 +146,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.db_connection.query.return_value.getresult.return_value = [['4.3']]
         self.db_connection.query.return_value.dictresult.return_value = primaries
 
-        testargs = ['gpcrondump', '-port 1', '-R foo']
+        testargs = ['some_string','-port 1', '-R foo']
 
         # GOOD_MOCK_EXAMPLE for testing functionality in "__main__": put all code inside a method "main()",
         # which can then be mocked as necessary.
@@ -245,37 +245,6 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject.getCatObj.assert_called_once_with(' pg_class')
         self.subject.checkForeignKey.assert_called_once_with([cat_obj_mock])
 
-    def test_mirror_matching_success_sets_status_and_error(self):
-        with patch('gpcheckcat_modules.mirror_matching_check.MirrorMatchingCheck.run_check') as mirrorMatchingCheckMock:
-            mirrorMatchingCheckMock.return_value = []
-
-            self.subject.runOneCheck('mirroring_matching')
-
-            mirrorMatchingCheckMock.assert_called_once_with(self.db_connection, self.subject.logger)
-            self.assertTrue(self.subject.GV.checkStatus)
-            self.assertEqual(self.subject.setError.call_count, 0)
-
-    def test_mirror_matching_failure_sets_status_and_error(self):
-        with patch('gpcheckcat_modules.mirror_matching_check.MirrorMatchingCheck.run_check') as mirrorMatchingCheckMock:
-            mirrorMatchingCheckMock.return_value = [1]  # failure, a list of segments that are mismatched
-
-            self.subject.runOneCheck('mirroring_matching')
-
-            mirrorMatchingCheckMock.assert_called_once_with(self.db_connection, self.subject.logger)
-            self.assertFalse(self.subject.GV.checkStatus)
-            self.subject.setError.assert_called_once_with(self.subject.ERROR_NOREPAIR)
-
-    def test_mirror_matching_exception(self):
-        self.subject.logger.info.side_effect = Exception('Boom!')
-
-        self.subject.runOneCheck("mirroring_matching")
-
-        log_messages = [args[0][1] for args in self.subject.logger.log.call_args_list]
-        self.assertIn("  Execution error: Boom!", log_messages)
-        self.assertFalse(self.subject.GV.checkStatus)
-        self.subject.setError.assert_called_once_with(self.subject.ERROR_NOREPAIR)
-
-
     @patch('gpcheckcat.checkTableMissingEntry', return_value = None)
     def test_checkMissingEntry__no_issues(self, mock1):
         cat_mock = Mock()
@@ -349,16 +318,6 @@ class GpCheckCatTestCase(GpTestCase):
                 self.num_batches += 1
                 self.num_joins = 0
                 self.num_starts = 0
-
-        with patch('gpcheckcat.execThread') as mock_execThread:
-            mock_execThread.return_value.cfg = self.subject.GV.cfg[0]
-            mock_execThread.return_value.join.side_effect = count_joins
-            mock_execThread.return_value.start.side_effect = count_starts
-            self.subject.runOneCheck('persistent')
-
-            self.assertTrue(self.num_batches > 0)
-            if self.is_remainder_case:
-                self.assertTrue(self.num_joins < BATCH_SIZE)
 
 if __name__ == '__main__':
     run_tests()

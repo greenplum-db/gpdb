@@ -1,7 +1,7 @@
 set enable_partition_rules = false;
---ERROR: Missing boundary specification in partition 'aa' of type LIST 
+--ERROR: Missing boundary specification in partition 'aa' of type LIST
 create table fff (a char(1), b char(2), d char(3)) distributed by
-(a) partition by list (b) (partition aa ); 
+(a) partition by list (b) (partition aa );
 ERROR:  missing boundary specification in partition "aa" of type LIST
 LINE 2: (a) partition by list (b) (partition aa );
                                    ^
@@ -20,7 +20,7 @@ drop table fff cascade;
 -- this is subtly wrong -- it defines 4 partitions
 -- the problem is the comma before "end", which causes us to
 -- generate 2 anonymous partitions.
--- This is an error: 
+-- This is an error:
 -- ERROR:  invalid use of mixed named and unnamed RANGE boundary specifications
 create table ggg (a char(1), b int, d char(3))
 distributed by (a)
@@ -147,7 +147,7 @@ select * from ggg_1_prt_bb order by 1, 2;
 
 drop table ggg cascade;
 -- documentation example - partition by list and range
-CREATE TABLE rank (id int, rank int, year date, gender 
+CREATE TABLE rank (id int, rank int, year date, gender
 char(1)) DISTRIBUTED BY (id, gender, year)
 partition by list (gender)
 subpartition by range (year)
@@ -238,14 +238,14 @@ distributed by (a)
 partition by range (b)
 subpartition by list(d)
 (
-partition aa 
-start  (date '2007-01-01') 
-end (date '2008-01-01') 
-       (subpartition dd values ('1', '2', '3'), 
+partition aa
+start  (date '2007-01-01')
+end (date '2008-01-01')
+       (subpartition dd values ('1', '2', '3'),
 	    subpartition ee values ('4', '5', '6')),
 partition bb
-start  (date '2008-01-01') 
-end (date '2009-01-01') 
+start  (date '2008-01-01')
+end (date '2009-01-01')
        (subpartition dd values ('1', '2', '3'),
 	    subpartition ee values ('4', '5', '6'))
 );
@@ -291,12 +291,12 @@ LINE 10:  partition bb values ((1, 'M'))
                        ^
 -- RANGE validation
 -- legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01'),
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2008-03-01')
 every (interval '10 days'));
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
@@ -338,12 +338,12 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_36" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_37" for table "ggg"
 drop table ggg cascade;
 -- bad - legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition bb start (date '2008-01-01') end (date '2009-01-01')
 every (interval '10 days'));
 ERROR:  starting value of partition "bb_1" overlaps previous range
 LINE 6: partition bb start (date '2008-01-01') end (date '2009-01-01...
@@ -351,12 +351,12 @@ LINE 6: partition bb start (date '2008-01-01') end (date '2009-01-01...
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- legal because start of bb not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') exclusive end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') exclusive end (date '2008-03-01')
 every (interval '10 days'));
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_1" for table "ggg"
@@ -398,7 +398,7 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_36" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_37" for table "ggg"
 drop table ggg cascade;
 -- legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -409,7 +409,7 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
 -- bad - legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -422,7 +422,7 @@ LINE 5: partition bb start (date '2008-01-01') end (date '2009-01-01...
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- legal because start of bb not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -433,7 +433,7 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 drop table ggg cascade;
 -- validate aa - start greater than end
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -447,12 +447,12 @@ drop table ggg cascade;
 ERROR:  table "ggg" does not exist
 -- formerly we could not set end of first partition because next is before
 -- but we can sort them now so this is legal.
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
 partition bb start (date '2008-01-01') ,
-partition aa start (date '2007-01-01') 
+partition aa start (date '2007-01-01')
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
@@ -801,22 +801,16 @@ partition by list (gender)
 subpartition by range (year)
 subpartition template (
 start (date '2001-01-01')
-end (date '2006-01-01') every (interval '1 year')) (
+end (date '2003-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_1" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_2" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_3" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_4" for table "rank2_1_prt_boys"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_5" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_1" for table "rank2_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_2" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_3" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_4" for table "rank2_1_prt_girls"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_5" for table "rank2_1_prt_girls"
 drop table rank1 cascade;
 drop table rank2 cascade;
 -- alter table testing
@@ -824,7 +818,7 @@ create table hhh (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') 
+partition aa start (date '2007-01-01') end (date '2008-01-01')
     with (appendonly=true),
 partition bb start (date '2008-01-01') end (date '2009-01-01')
     with (appendonly=false)
@@ -889,7 +883,7 @@ alter table no_start1 add partition baz2 start (5);
 NOTICE:  CREATE TABLE will create partition "no_start1_1_prt_baz2" for table "no_start1"
 select tablename, partitionlevel, parentpartitiontablename,
 partitionname, partitionrank, partitionboundary from pg_partitions
-where tablename = 'no_start1' or tablename = 'no_end1' 
+where tablename = 'no_start1' or tablename = 'no_end1'
 order by tablename, partitionrank;
  tablename | partitionlevel | parentpartitiontablename | partitionname | partitionrank |        partitionboundary        
 -----------+----------------+--------------------------+---------------+---------------+---------------------------------
@@ -904,9 +898,9 @@ order by tablename, partitionrank;
 drop table no_end1;
 drop table no_start1;
 -- default partitions cannot have boundary specifications
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
 partition j2 end (date '2009-01-01'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -924,9 +918,9 @@ alter table jjj add default partition j3 end (date '2010-01-01');
 ERROR:  invalid use of boundary specification for DEFAULT partition "j3" of relation "jjj"
 drop table jjj cascade;
 -- only one default partition
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
 partition j2 end (date '2009-01-01'),
 default partition j3);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
@@ -965,7 +959,7 @@ create table hhh_r1 (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') 
+partition aa start (date '2007-01-01') end (date '2008-01-01')
              every (interval '1 month')
 );
 NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_aa_1" for table "hhh_r1"
@@ -986,7 +980,7 @@ partition by list (b)
 (
 partition aa values ('2007-01-01'),
 partition bb values ('2008-01-01'),
-partition cc values ('2009-01-01') 
+partition cc values ('2009-01-01')
 );
 NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_aa" for table "hhh_l1"
 NOTICE:  CREATE TABLE will create partition "hhh_l1_1_prt_bb" for table "hhh_l1"
@@ -1021,7 +1015,7 @@ NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_zaa" for table "hhh_r1
 alter table hhh_r1 add partition bb start ('2008-01-01') end ('2008-01-01') ;
 ERROR:  START equal to END for partition "bb"
 -- start > last (ok)
-alter table hhh_r1 add partition bb start ('2008-01-01') 
+alter table hhh_r1 add partition bb start ('2008-01-01')
 end ('2008-02-01') inclusive;
 NOTICE:  CREATE TABLE will create partition "hhh_r1_1_prt_bb" for table "hhh_r1"
 -- start > last (fail because start == last end inclusive)
@@ -1043,11 +1037,11 @@ ERROR:  new partition overlaps existing partition
 alter table hhh_r1 add partition yaa start ('2007-05-01') end ('2007-07-01');
 ERROR:  new partition overlaps existing partition "aa_7"
 -- start before first partition (fail )
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') inclusive;
 ERROR:  new partition overlaps existing partition "aa_10"
 -- start before first partition (fail because end overlaps)
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') exclusive;
 ERROR:  new partition overlaps existing partition "aa_10"
 drop table hhh_r1 cascade;
@@ -1121,7 +1115,7 @@ select * from rank ;
  10 |    1 | 05-15-2005 | F
 (5 rows)
 
--- MPP-3722: complain if for(value) matches the default partition 
+-- MPP-3722: complain if for(value) matches the default partition
 alter table rank truncate partition for('N');
 ERROR:  FOR expression matches DEFAULT partition "neuter" of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
@@ -1140,7 +1134,7 @@ HINT:  Use DROP TABLE "rank" to remove the table and the final partition
 -- MPP-4011: make FOR(value) work
 alter table rank alter partition for ('F') add default partition def1;
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_def1" for table "rank_1_prt_girls"
-alter table rank alter partition for ('F') 
+alter table rank alter partition for ('F')
 truncate partition for ('2010-10-10');
 ERROR:  FOR expression matches DEFAULT partition "def1" of partition "girls" of relation "rank"
 HINT:  FOR expression may only specify a non-default partition in this context.
@@ -1319,10 +1313,10 @@ select * from hhh;
 drop table hhh cascade;
 -- default partitions
 -- default partitions cannot have boundary specifications
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
-partition j2 end (date '2009-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
+partition j2 end (date '2009-01-01'),
 default partition j3 end (date '2010-01-01'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -1330,10 +1324,10 @@ ERROR:  invalid use of boundary specification for DEFAULT partition "j3"
 LINE 5: default partition j3 end (date '2010-01-01'));
         ^
 -- more than one default partition
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
-partition j2 end (date '2009-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
+partition j2 end (date '2009-01-01'),
 default partition j3,
 default partition j4);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
@@ -1343,7 +1337,7 @@ LINE 6: default partition j4);
         ^
 -- check default
 create table foz (i int, d date) distributed by (i)
-partition by range (d) 
+partition by range (d)
 (
  default partition dsf,
  partition foo start (date '2001-01-01') end (date '2005-01-01')
@@ -1476,7 +1470,7 @@ select * from d_1_prt_abc;
 
 drop table  d cascade;
 -- multicolumn list support
-create table d (a int, b int, c int) distributed by (a) 
+create table d (a int, b int, c int) distributed by (a)
 partition by list(b, c)
 (partition a values(('1', '2'), ('3', '4')),
  partition b values(('100', '20')),
@@ -1551,7 +1545,6 @@ insert into b values(91, '2008-05-05');
 ERROR:  relation "b" does not exist
 LINE 1: insert into b values(91, '2008-05-05');
                     ^
- 
 select * from b_1_prt_1;
 ERROR:  relation "b_1_prt_1" does not exist
 LINE 1: select * from b_1_prt_1;
@@ -1606,7 +1599,7 @@ insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
 ERROR:  relation "b" does not exist
 LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
                     ^
-insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp - 
+insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp -
 					'1 second'::interval, 'BBZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
 LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00'::timesta...
@@ -1654,7 +1647,7 @@ ERROR:  table "b" does not exist
 -- MPP-3988: allow same column in multiple partitioning keys at
 -- different levels -- so this is legal again...
 drop table if exists a;
--- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer 
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer
 --       for queries with partition elimination over FULL OUTER JOIN
 --       between partitioned tables.
 -- SETUP
@@ -1696,9 +1689,9 @@ drop table if exists s2;
 -- end_ignore
 create table mpp_2914A(id int,  buyDate date, kind char(1))
 DISTRIBUTED BY (id)
-partition by list (kind) 
-subpartition by range(buyDate) 
-subpartition template 
+partition by list (kind)
+subpartition by range(buyDate)
+subpartition template
 (
         start (date '2001-01-01'),
         start (date '2002-01-01'),
@@ -1979,7 +1972,7 @@ subpartition by range(buyDate)
                 subpartition y2004 start (date '2004-01-01'),
                 subpartition y2005 start (date '2005-01-01')
         ),
-        default partition catchAll  
+        default partition catchAll
         (
                 subpartition  y2001 start (date '2001-01-01'),
                 subpartition  y2002 start (date '2002-01-01'),

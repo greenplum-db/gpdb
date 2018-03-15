@@ -10,10 +10,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/xlogutils.c,v 1.68 2009/06/11 14:48:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/xlogutils.c,v 1.71 2010/07/08 16:08:30 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,10 +30,6 @@
 #include "utils/guc.h"
 #include "utils/hsearch.h"
 #include "utils/rel.h"
-
-#include "cdb/cdbpersistentrecovery.h"
-#include "cdb/cdbpersistenttablespace.h"
-
 
 /*
  * During XLOG replay, we may see XLOG records for incremental updates of
@@ -83,19 +79,11 @@ log_invalid_page(RelFileNode node, ForkNumber forkno, BlockNumber blkno,
 		{
 			elog(DEBUG1, "page %u of relation %s is uninitialized",
 				 blkno, path);
-			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(),
-					 "log_invalid_page: page %u of relation %s is uninitialized",
-					 blkno, path);
 		}
 		else
 		{
 			elog(DEBUG1, "page %u of relation %s does not exist",
 				 blkno, path);
-			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(),
-					 "log_invalid_page: page %u of relation %s does not exist",
-					 blkno, path);
 		}
 		pfree(path);
 	}
@@ -158,10 +146,6 @@ forget_invalid_pages(RelFileNode node, ForkNumber forkno, BlockNumber minblkno)
 
 				elog(DEBUG2, "page %u of relation %s has been dropped",
 					 hentry->key.blkno, path);
-				if (Debug_persistent_recovery_print)
-					elog(PersistentRecovery_DebugPrintLevel(),
-						 "forget_invalid_pages: page %u of relation %s has been dropped",
-						 hentry->key.blkno, path);
 				pfree(path);
 			}
 
@@ -173,10 +157,9 @@ forget_invalid_pages(RelFileNode node, ForkNumber forkno, BlockNumber minblkno)
 	}
 }
 
-#if 0 /* XLOG_DBASE_DROP is not used in GPDB so this function will never get called */
 /* Forget any invalid pages in a whole database */
 static void
-forget_invalid_pages_db(Oid tblspc, Oid dbid)
+forget_invalid_pages_db(Oid dbid)
 {
 	HASH_SEQ_STATUS status;
 	xl_invalid_page *hentry;
@@ -188,8 +171,7 @@ forget_invalid_pages_db(Oid tblspc, Oid dbid)
 
 	while ((hentry = (xl_invalid_page *) hash_seq_search(&status)) != NULL)
 	{
-		if ((!OidIsValid(tblspc) || hentry->key.node.spcNode == tblspc) &&
-			hentry->key.node.dbNode == dbid)
+		if (hentry->key.node.dbNode == dbid)
 		{
 			if (log_min_messages <= DEBUG2 || client_min_messages <= DEBUG2)
 			{
@@ -197,10 +179,6 @@ forget_invalid_pages_db(Oid tblspc, Oid dbid)
 
 				elog(DEBUG2, "page %u of relation %s has been dropped",
 					 hentry->key.blkno, path);
-				if (Debug_persistent_recovery_print)
-					elog(PersistentRecovery_DebugPrintLevel(),
-						 "forget_invalid_pages_db: %u of relation %s has been dropped",
-						 hentry->key.blkno, path);
 				pfree(path);
 			}
 
@@ -211,9 +189,7 @@ forget_invalid_pages_db(Oid tblspc, Oid dbid)
 		}
 	}
 }
-#endif
 
-#ifdef USE_SEGWALREP
 /* Forget an invalid AO/AOCO segment file */
 static void
 forget_invalid_segment_file(RelFileNode rnode, uint32 segmentFileNum)
@@ -237,13 +213,7 @@ forget_invalid_segment_file(RelFileNode rnode, uint32 segmentFileNum)
 					(void *) &key,
 					HASH_REMOVE, &found) == NULL)
 		elog(ERROR, "hash table corrupted");
-
-	elog(Debug_persistent_recovery_print ? PersistentRecovery_DebugPrintLevel() : DEBUG2,
-		 "segmentfile %u of relation %u/%u/%u has been dropped",
-		 key.blkno, key.node.spcNode,
-		 key.node.dbNode, key.node.relNode);
 }
-#endif
 
 /* Complain about any remaining invalid-page entries */
 void
@@ -291,11 +261,9 @@ XLogCheckInvalidPages(void)
  * LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE), for reading from the main
  * fork.
  *
- * (Getting the lock is not really necessary, since we expect that this is
- * only used during single-process XLOG replay, but some subroutines such
- * as MarkBufferDirty will complain if we don't. And hopefully we'll get
- * hot standby support in the future, where there will be backends running
- * read-only queries during XLOG replay.)
+ * (Getting the buffer lock is not really necessary during single-process
+ * crash recovery, but some subroutines such as MarkBufferDirty will complain
+ * if we don't have the lock.  In hot standby mode it's definitely necessary.)
  *
  * The returned buffer is exclusively-locked.
  *
@@ -339,9 +307,6 @@ XLogReadBufferExtended(RelFileNode rnode, ForkNumber forknum,
 	Buffer		buffer;
 	SMgrRelation smgr;
 
-	if (forknum == MAIN_FORKNUM)
-		MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	Assert(blkno != P_NEW);
 
 	/* Open the relation at smgr level */
@@ -355,36 +320,7 @@ XLogReadBufferExtended(RelFileNode rnode, ForkNumber forknum,
 	 * filesystem loses an inode during a crash.  Better to write the data
 	 * until we are actually told to delete the file.)
 	 */
-
-	/*
-	 * The multi-pass WAL replay during crash recovery in GPDB, guided by
-	 * persistent tables, may make the following smgrcreate() call redundant.
-	 * The problem is shortlived, it will go away once filerep and persistent
-	 * tables are removed.  To be clear, that the smgrcreate() call exists in
-	 * upstream.
-	 */
-	MirrorDataLossTrackingState mirrorDataLossTrackingState;
-	int64 mirrorDataLossTrackingSessionNum;
-	bool mirrorDataLossOccurred;
-
-	// UNDONE: What about the persistent rel files table???
-	// UNDONE: This condition should not occur anymore.
-	// UNDONE: segmentFileNum and AO?
-	if (forknum ==  MAIN_FORKNUM)
-	{
-		mirrorDataLossTrackingState =
-			FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
-				&mirrorDataLossTrackingSessionNum);
-
-		smgrmirroredcreate(smgr,
-						   /* relationName */ NULL,    // Ok to be NULL -- we don't know the name here.
-						   mirrorDataLossTrackingState,
-						   mirrorDataLossTrackingSessionNum,
-						   /* ignoreAlreadyExists */ true,
-						   &mirrorDataLossOccurred);
-	}
-	else
-		smgrcreate(smgr, forknum, true);
+	smgrcreate(smgr, forknum, true);
 
 	lastblock = smgrnblocks(smgr, forknum);
 
@@ -438,7 +374,6 @@ XLogReadBufferExtended(RelFileNode rnode, ForkNumber forknum,
 	return buffer;
 }
 
-#ifdef USE_SEGWALREP
 /*
  * If the AO segment file does not exist, log the relfilenode into the
  * invalid_page_table hash table using the segment file number as the
@@ -451,7 +386,6 @@ XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum)
 {
 	log_invalid_page(rnode, MAIN_FORKNUM, segmentFileNum, false);
 }
-#endif
 
 /*
  * Struct actually returned by XLogFakeRelcacheEntry, though the declared
@@ -503,9 +437,6 @@ CreateFakeRelcacheEntry(RelFileNode rnode)
 	rel->rd_lockInfo.lockRelId.dbId = rnode.dbNode;
 	rel->rd_lockInfo.lockRelId.relId = rnode.relNode;
 
-	rel->rd_targblock = InvalidBlockNumber;
-	rel->rd_fsm_nblocks = InvalidBlockNumber;
-	rel->rd_vm_nblocks = InvalidBlockNumber;
 	rel->rd_smgr = NULL;
 
 	return rel;
@@ -532,23 +463,20 @@ XLogDropRelation(RelFileNode rnode, ForkNumber forknum)
 	forget_invalid_pages(rnode, forknum, 0);
 }
 
-#ifdef USE_SEGWALREP
 /* Drop an AO/CO segment file from the invalid_page_tab hash table */
 void
 XLogAODropSegmentFile(RelFileNode rnode, uint32 segmentFileNum)
 {
 	forget_invalid_segment_file(rnode, segmentFileNum);
 }
-#endif
 
-#if 0 /* XLOG_DBASE_DROP is not used in GPDB so this function will never get called */
 /*
  * Drop a whole database during XLOG replay
  *
  * As above, but for DROP DATABASE instead of dropping a single rel
  */
 void
-XLogDropDatabase(Oid tblspc, Oid dbid)
+XLogDropDatabase(Oid dbid)
 {
 	/*
 	 * This is unnecessarily heavy-handed, as it will close SMgrRelation
@@ -558,9 +486,8 @@ XLogDropDatabase(Oid tblspc, Oid dbid)
 	 */
 	smgrcloseall();
 
-	forget_invalid_pages_db(tblspc, dbid);
+	forget_invalid_pages_db(dbid);
 }
-#endif
 
 /*
  * Truncate a relation during XLOG replay

@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.112 2009/02/23 09:28:50 heikki Exp $
+ * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.123 2010/07/06 19:19:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,10 +20,11 @@
 #include "storage/lock.h"
 #include "storage/spin.h"
 #include "storage/pg_sema.h"
+#include "utils/timestamp.h"
 #include "access/xlog.h"
 
 #include "cdb/cdblocaldistribxact.h"  /* LocalDistribXactData */
-
+#include "cdb/cdbtm.h"  /* TMGXACT */
 
 /*
  * Each backend advertises up to PGPROC_MAX_CACHED_SUBXIDS TransactionIds
@@ -105,7 +106,9 @@ struct PGPROC
 	 */
 	LocalDistribXactData localDistribXactData;
 
-	int			pid;			/* This backend's process id, or 0 */
+	int			pid;			/* Backend's process ID; 0 if prepared xact */
+
+	/* These fields are zero while a backend is still starting up: */
 	BackendId	backendId;		/* This backend's backend ID (if assigned) */
 	Oid			databaseId;		/* OID of database this backend is using */
 	Oid			roleId;			/* OID of role using this backend */
@@ -116,6 +119,13 @@ struct PGPROC
 	bool		inCommit;		/* true if within commit critical section */
 
 	uint8		vacuumFlags;	/* vacuum-related flags, see above */
+
+	/*
+	 * While in hot standby mode, shows that a conflict signal has been sent
+	 * for the current transaction. Set/cleared while holding ProcArrayLock,
+	 * though not required. Accessed without lock, if needed.
+	 */
+	bool		recoveryConflictPending;
 
 	/* Info about LWLock the process is currently waiting for, if any. */
 	bool		lwWaiting;		/* true if waiting for an LW lock */
@@ -172,6 +182,7 @@ struct PGPROC
 	void		*resSlot;	/* the resource group slot granted.
    							 * NULL indicates the resource group is
 							 * locked for drop. */
+	TMGXACT		gxact;
 };
 
 /* NOTE: "typedef struct PGPROC PGPROC" appears in storage/lock.h. */
@@ -196,45 +207,31 @@ typedef struct PROC_HDR
 	/* Current shared estimate of appropriate spins_per_delay value */
 	int			spins_per_delay;
 
+	/* The proc of the Startup process, since not in ProcArray */
+	PGPROC	   *startupProc;
+	int			startupProcPid;
+	/* Buffer id of the buffer that Startup process waits for pin on */
+	int			startupBufferPinWaitBufId;
+
     /* Counter for assigning serial numbers to processes */
     int         mppLocalProcessCounter;
 
 	/* Number of free PGPROC entries in freeProcs list. */
 	int			numFreeProcs;
-
 } PROC_HDR;
 
 /*
  * We set aside some extra PGPROC structures for auxiliary processes,
  * ie things that aren't full-fledged backends but need shmem access.
  *
- * Background writer, checkpointer, WAL writer, and autovacuum launcher run
- * during normal operation. Startup process also consumes one slot, but WAL
- * writer and autovacuum launcher are launched only after it has exited (4
- * slots).
+ * Background writer and WAL writer run during normal operation. Startup
+ * process and WAL receiver also consume 2 slots, but WAL writer is
+ * launched only after startup has exited, so we only need 3 slots.
  *
- * FileRep Process uses 
- *			a) 10 slots on Primary 
- *					1) Sender
- *					2) Receiver Ack
- *					3) Consumer Ack 
- *					4) Recovery 
- *					5) Resync Manager 
- *					6) Resync Worker 1
- *					7) Resync Worker 2
- *					8) Resync Worker 3
- *					9) Resync Worker 4
- *				   10) Verification
- * 
- *			b) 6 slots on Mirror 
- *					1) Receiver 
- *					2) Consumer 
- *					3) Consumer Writer
- *					4) Consumer Append Only
- *					5) Consumer Verification
- *					6) Sender Ack
+ * In GPDB, we have some extra processes.
+ * GDPB_90_MERGE_FIXME: count them correctly. 10 is an exaggeration.
  */
-#define NUM_AUXILIARY_PROCS	 14
+#define NUM_AUXILIARY_PROCS		(/* PG */ 3 + /* GPDB */ 10)
 
 
 /* configurable options */
@@ -251,10 +248,15 @@ extern volatile bool cancel_from_timeout;
  */
 extern int	ProcGlobalSemas(void);
 extern Size ProcGlobalShmemSize(void);
-extern void InitProcGlobal(int mppLocalProcessCounter);
+extern void InitProcGlobal(void);
 extern void InitProcess(void);
 extern void InitProcessPhase2(void);
 extern void InitAuxiliaryProcess(void);
+
+extern void PublishStartupProcessInformation(void);
+extern void SetStartupBufferPinWaitBufId(int bufid);
+extern int	GetStartupBufferPinWaitBufId(void);
+
 extern bool HaveNFreeProcs(int n);
 extern void ProcReleaseLocks(bool isCommit);
 
@@ -262,6 +264,7 @@ extern void ProcQueueInit(PROC_QUEUE *queue);
 extern int	ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable);
 extern PGPROC *ProcWakeup(PGPROC *proc, int waitStatus);
 extern void ProcLockWakeup(LockMethod lockMethodTable, LOCK *lock);
+extern bool IsWaitingForLock(void);
 extern void LockWaitCancel(void);
 
 extern void ProcWaitForSignal(void);
@@ -276,8 +279,12 @@ extern bool DisableClientWaitTimeoutInterrupt(void);
 extern int ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet);
 
 extern void ResLockWaitCancel(void);
-extern bool ProcGetMppLocalProcessCounter(int *mppLocalProcessCounter);
 extern bool ProcCanSetMppSessionId(void);
 extern void ProcNewMppSessionId(int *newSessionId);
+
+extern bool enable_standby_sig_alarm(TimestampTz now,
+						 TimestampTz fin_time, bool deadlock_only);
+extern bool disable_standby_sig_alarm(void);
+extern void handle_standby_sig_alarm(SIGNAL_ARGS);
 
 #endif   /* PROC_H */

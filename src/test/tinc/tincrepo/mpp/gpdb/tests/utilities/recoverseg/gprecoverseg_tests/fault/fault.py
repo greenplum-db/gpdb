@@ -27,7 +27,6 @@ from mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.genFault impor
 from mpp.lib.config import GPDBConfig
 
 from mpp.lib.gprecoverseg import GpRecoverseg
-from utilities.gppersistentrebuild import PTTestCase
 
 # Environmental variable to be set priror to the gprecoverseg run.
 ENV_VAR="GP_MPP_12038_INJECT_DELAY" 
@@ -142,27 +141,6 @@ class FaultInjectorTestCase (TINCTestCase):
         newfault.remove_remote_symlink(seginfo.getSegmentHostName(), seginfo.getSegmentDataDirectory())
         tinctest.logger.info('Removed symlinks for seg %s on host %s' % (seginfo.getSegmentDataDirectory(), seginfo.getSegmentHostName()))
 
-    def test_corrupt_persistent_tables(self):
-        """
-        [feature]: corrupts PT tables for segment that has been marked down 
-        
-        """
-        
-        newfault = Fault()
-        seginfo = newfault.get_seginfo(preferred_role='p', content=1)
-        pt = PTTestCase('corrupt_persistent_table')
-        pt.corrupt_persistent_table(seginfo.getSegmentHostName(), seginfo.getSegmentPort())
-        tinctest.logger.info('Finished corruption of PT tables')
-
-    def test_rebuild_persistent_tables(self):
-        """
-        [feature]: rebuilds PT tables for segment that has been marked down 
-        
-        """
-        cmd = Command(name='Running gppersistentrebuild tool', cmdStr = 'echo "y\ny\n" | $GPHOME/sbin/gppersistentrebuild -c 1')
-        cmd.run(validateAfter=True)
-        tinctest.logger.info('Finished rebuild of PT tables')
-
     def test_shared_mem_is_cleaned(self):
         """
         [feature]: Check if the shared memory is cleaned
@@ -262,9 +240,9 @@ class GprecoversegClass(TINCTestCase):
             tinctest.logger.info("Waiting [%s] for DB to recover" %rtrycnt)
             rtrycnt = rtrycnt + 1
 
-    def test_incremental_recovery_skip_persistent_tables_check(self):
+    def test_incremental_recovery(self):
         """
-        [feature]: Run incremental recoverseg with persistent tables check option 
+        [feature]: Run incremental gprecoverseg
         
         """
 
@@ -272,15 +250,14 @@ class GprecoversegClass(TINCTestCase):
         recoverseg = GpRecoverseg()
         tinctest.logger.info('Running gprecoverseg...')
         recoverseg.run()
-        self.assertNotIn('Performing persistent table check', recoverseg.stdout)
         rtrycnt = 0
         while (not config.is_not_insync_segments()):
             tinctest.logger.info("Waiting [%s] for DB to recover" %rtrycnt)
             rtrycnt = rtrycnt + 1
 
-    def test_full_recovery_skip_persistent_tables_check(self):
+    def test_full_recovery(self):
         """
-        [feature]: Run recoverseg with persistent tables check option 
+        [feature]: Run gprecoverseg -F
         
         """
 
@@ -288,39 +265,10 @@ class GprecoversegClass(TINCTestCase):
         recoverseg = GpRecoverseg()
         tinctest.logger.info('Running gprecoverseg...')
         recoverseg.run(option='-F')
-        self.assertNotIn('Performing persistent table check', recoverseg.stdout)
         rtrycnt = 0
         while (not config.is_not_insync_segments()):
             tinctest.logger.info("Waiting [%s] for DB to recover" %rtrycnt)
             rtrycnt = rtrycnt + 1
-
-    def test_incremental_recovery_with_persistent_tables_corruption(self):
-        """
-        [feature]: Run incremental recoverseg with persistent tables corruption 
-        
-        """
-
-        recoverseg = GpRecoverseg()
-        tinctest.logger.info('Running gprecoverseg...')
-        try:
-            recoverseg.run(option='--persistent-check', validate=False)
-        except Exception as e:
-            tinctest.logger.info('Encountered exception while running incremental recovery with corrupt persistent table')
-        self.assertIn('Performing persistent table check', recoverseg.stdout)
-
-    def test_full_recovery_with_persistent_tables_corruption(self):
-        """
-        [feature]: Run recoverseg with persistent tables corruption 
-        
-        """
-
-        recoverseg = GpRecoverseg()
-        tinctest.logger.info('Running gprecoverseg...')
-        try:
-            recoverseg.run(option='-F --persistent-check', validate=False)
-        except Exception as e:
-            tinctest.logger.info('Encountered exception while running full recovery with corrupt persistent table')
-        self.assertIn('Performing persistent table check', recoverseg.stdout)
 
 class GPDBdbOps(TINCTestCase):
     """

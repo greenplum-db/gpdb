@@ -2359,18 +2359,18 @@ lead(l, 1, E'\015') over (w), lead(m, 1, '{test}') over (w)
 from typetest_for_window_seq window w as (order by i);
     i    |  lead   |    lead     | lead | lead |   lead    
 ---------+---------+-------------+------+------+-----------
- {1,2,3} | {4,5,6} | (6,7),(3,4) | 0    | \002 | {bar,baz}
- {4,5,6} | {1}     | (1,1),(0,0) |      | \015 | {test}
+ {1,2,3} | {4,5,6} | (6,7),(3,4) | 0    | \x02 | {bar,baz}
+ {4,5,6} | {1}     | (1,1),(0,0) |      | \x0d | {test}
 (2 rows)
 
 select i, lag(i, 1, '{1}') over (w), 
 lag(j, 1, '(0, 0), (1, 1)') over (w), lag(k, 1) over(w),
 lag(l, 1, E'\015') over (w), lag(m, 1, '{test}') over (w)
 from typetest_for_window_seq window w as (order by i);
-    i    |   lag   |     lag     | lag |   lag    |    lag    
----------+---------+-------------+-----+----------+-----------
- {1,2,3} | {1}     | (1,1),(0,0) |     | \015     | {test}
- {4,5,6} | {1,2,3} | (3,4),(1,2) | 1   | \012\001 | {foo,bar}
+    i    |   lag   |     lag     | lag |  lag   |    lag    
+---------+---------+-------------+-----+--------+-----------
+ {1,2,3} | {1}     | (1,1),(0,0) |     | \x0d   | {test}
+ {4,5,6} | {1,2,3} | (3,4),(1,2) | 1   | \x0a01 | {foo,bar}
 (2 rows)
 
 select i, first_value(i) over (w), 
@@ -2379,8 +2379,8 @@ first_value(l) over (w), first_value(m) over (w)
 from typetest_for_window_seq window w as (order by i rows 1 preceding);
     i    | first_value | first_value | first_value | first_value | first_value 
 ---------+-------------+-------------+-------------+-------------+-------------
- {1,2,3} | {1,2,3}     | (3,4),(1,2) | 1           | \012\001    | {foo,bar}
- {4,5,6} | {1,2,3}     | (3,4),(1,2) | 1           | \012\001    | {foo,bar}
+ {1,2,3} | {1,2,3}     | (3,4),(1,2) | 1           | \x0a01      | {foo,bar}
+ {4,5,6} | {1,2,3}     | (3,4),(1,2) | 1           | \x0a01      | {foo,bar}
 (2 rows)
 
 select i, last_value(i) over (w), 
@@ -2389,8 +2389,8 @@ last_value(l) over (w), last_value(m) over (w)
 from typetest_for_window_seq window w as (order by i rows between current row and 1 following);
     i    | last_value | last_value  | last_value | last_value | last_value 
 ---------+------------+-------------+------------+------------+------------
- {1,2,3} | {4,5,6}    | (6,7),(3,4) | 0          | \002       | {bar,baz}
- {4,5,6} | {4,5,6}    | (6,7),(3,4) | 0          | \002       | {bar,baz}
+ {1,2,3} | {4,5,6}    | (6,7),(3,4) | 0          | \x02       | {bar,baz}
+ {4,5,6} | {4,5,6}    | (6,7),(3,4) | 0          | \x02       | {bar,baz}
 (2 rows)
 
 drop table typetest_for_window_seq;
@@ -7369,7 +7369,7 @@ create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
 \d+ v1
-                  View "public.v1"
+              View "olap_window_seq.v1"
  Column |  Type  | Modifiers | Storage | Description 
 --------+--------+-----------+---------+-------------
  dt     | date   |           | plain   | 
@@ -7883,8 +7883,6 @@ select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 
 
 -- End MPP-12913
 -- MPP-13710
--- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes redundant SORT operators
--- while GPDB did generate such plans
 create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
                                                QUERY PLAN                                               
@@ -8008,11 +8006,11 @@ lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
- depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi2 | qianzhi11
+ depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi2 | qianzhi11 
 ---------+-------+----------+-------------+----------+----------+-----------
  develop |     8 | 6000     | 10-01-2006  | 5200     | 4500     |        11
  develop |    11 | 5200     | 08-15-2007  | 4500     |          |         9
- develop |     9 | 4500     | 01-01-2008  |          |          |
+ develop |     9 | 4500     | 01-01-2008  |          |          |          
 (3 rows)
 
 -- Lead functions are in order.
@@ -8021,11 +8019,11 @@ lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2
 from empsalary;
- depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi11 | qianzhi2
+ depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi11 | qianzhi2 
 ---------+-------+----------+-------------+----------+-----------+----------
- develop |     8 | 6000     | 10-01-2006  | 5200     |        11 | 4500
- develop |    11 | 5200     | 08-15-2007  | 4500     |         9 |
- develop |     9 | 4500     | 01-01-2008  |          |           |
+ develop |     8 | 6000     | 10-01-2006  | 5200     |        11 | 4500    
+ develop |    11 | 5200     | 08-15-2007  | 4500     |         9 | 
+ develop |     9 | 4500     | 01-01-2008  |          |           | 
 (3 rows)
 
 DROP TABLE IF EXISTS empsalary;
@@ -8046,11 +8044,11 @@ lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
- depname | empno |   salary    | enroll_date |  qianzhi1   |  qianzhi2   | qianzhi11
+ depname | empno |   salary    | enroll_date |  qianzhi1   |  qianzhi2   | qianzhi11 
 ---------+-------+-------------+-------------+-------------+-------------+-----------
  develop |     8 | 6000.000000 | 10-01-2006  | 5200.000000 | 4500.000000 |        11
  develop |    11 | 5200.000000 | 08-15-2007  | 4500.000000 |             |         9
- develop |     9 | 4500.000000 | 01-01-2008  |             |             |
+ develop |     9 | 4500.000000 | 01-01-2008  |             |             |          
 (3 rows)
 
 DROP TABLE IF EXISTS empsalary;
@@ -8071,11 +8069,11 @@ lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
- depname | empno | salary | enroll_date | qianzhi1 | qianzhi2 | qianzhi11
+ depname | empno | salary | enroll_date | qianzhi1 | qianzhi2 | qianzhi11 
 ---------+-------+--------+-------------+----------+----------+-----------
  develop |     8 |   6000 | 10-01-2006  |     5200 |     4500 |        11
  develop |    11 |   5200 | 08-15-2007  |     4500 |          |         9
- develop |     9 |   4500 | 01-01-2008  |          |          |
+ develop |     9 |   4500 | 01-01-2008  |          |          |          
 (3 rows)
 
 -- There was a bug at one point where the planner would not recognize that the
@@ -8145,7 +8143,7 @@ create table foo (a int, b int) distributed by (a);
 create table bar (c int, d int) distributed by (c);
 insert into foo select i,i from generate_series(1,10) i;
 insert into bar select i,i from generate_series(1,10) i;
-set optimizer_segments to 1; 
+set optimizer_segments to 1;
 SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
  c  | d  | e  
 ----+----+----
@@ -8167,11 +8165,6 @@ CREATE TABLE foo (a int, b int, c int, d int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into foo select i,i,i,i from generate_series(1, 10) i;
--- Check that the planner can spot ORDER BYs that are supersets of each
--- other, and sort directly to the longest sort order. This query can
--- be satisfied with just two Sorts.
--- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes
--- redundant SORT operators, while GPDB did generate such plans
 EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
        count(*) over (PARTITION BY a ORDER BY b, c) as count2,
        count(*) over (PARTITION BY a ORDER BY b) as count3,

@@ -90,7 +90,7 @@ VACUUM ANALYZE old_table;
   <topic id="topic92" xml:lang="en">
     <title>Index Types</title>
     <body>
-      <p>Greenplum Database supports the Postgres index types B-tree and GiST. Hash and GIN indexes
+      <p>Greenplum Database supports the Postgres index types B-tree, GiST, and GIN. Hash indexes
         are not supported. Each index type uses a different algorithm that is best suited to
         different types of queries. B-tree indexes fit the most common situations and are the
         default index type. See <xref

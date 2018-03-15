@@ -3,12 +3,12 @@
  * acl.c
  *	  Basic access control list data structures manipulation routines.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/acl.c,v 1.148 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/acl.c,v 1.157 2010/02/26 02:01:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,9 +21,11 @@
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
+#include "catalog/pg_class.h"
 #include "commands/dbcommands.h"
 #include "commands/tablespace.h"
 #include "foreign/foreign.h"
+#include "funcapi.h"
 #include "miscadmin.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -77,6 +79,7 @@ static Acl *allocacl(int n);
 static void check_acl(const Acl *acl);
 static const char *aclparse(const char *s, AclItem *aip);
 static bool aclitem_match(const AclItem *a1, const AclItem *a2);
+static int	aclitemComparator(const void *arg1, const void *arg2);
 static void check_circularity(const Acl *old_acl, const AclItem *mod_aip,
 				  Oid ownerId);
 static Acl *recursive_revoke(Acl *acl, Oid grantee, AclMode revoke_privs,
@@ -89,6 +92,7 @@ static AclMode convert_any_priv_string(text *priv_type_text,
 
 static Oid	try_convert_table_name(text *tablename);
 static AclMode convert_table_priv_string(text *priv_type_text);
+static AclMode convert_sequence_priv_string(text *priv_type_text);
 static AttrNumber convert_column_name(Oid tableoid, text *column);
 static AclMode convert_column_priv_string(text *priv_type_text);
 static Oid	convert_database_name(text *databasename);
@@ -382,6 +386,15 @@ allocacl(int n)
 }
 
 /*
+ * Create a zero-entry ACL
+ */
+Acl *
+make_empty_acl(void)
+{
+	return allocacl(0);
+}
+
+/*
  * Copy an ACL
  */
 Acl *
@@ -420,6 +433,98 @@ aclconcat(const Acl *left_acl, const Acl *right_acl)
 		   ACL_NUM(right_acl) * sizeof(AclItem));
 
 	return result_acl;
+}
+
+/*
+ * Merge two ACLs
+ *
+ * This produces a properly merged ACL with no redundant entries.
+ * Returns NULL on NULL input.
+ */
+Acl *
+aclmerge(const Acl *left_acl, const Acl *right_acl, Oid ownerId)
+{
+	Acl		   *result_acl;
+	AclItem    *aip;
+	int			i,
+				num;
+
+	/* Check for cases where one or both are empty/null */
+	if (left_acl == NULL || ACL_NUM(left_acl) == 0)
+	{
+		if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+			return NULL;
+		else
+			return aclcopy(right_acl);
+	}
+	else
+	{
+		if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+			return aclcopy(left_acl);
+	}
+
+	/* Merge them the hard way, one item at a time */
+	result_acl = aclcopy(left_acl);
+
+	aip = ACL_DAT(right_acl);
+	num = ACL_NUM(right_acl);
+
+	for (i = 0; i < num; i++, aip++)
+	{
+		Acl		   *tmp_acl;
+
+		tmp_acl = aclupdate(result_acl, aip, ACL_MODECHG_ADD,
+							ownerId, DROP_RESTRICT);
+		pfree(result_acl);
+		result_acl = tmp_acl;
+	}
+
+	return result_acl;
+}
+
+/*
+ * Sort the items in an ACL (into an arbitrary but consistent order)
+ */
+void
+aclitemsort(Acl *acl)
+{
+	if (acl != NULL && ACL_NUM(acl) > 1)
+		qsort(ACL_DAT(acl), ACL_NUM(acl), sizeof(AclItem), aclitemComparator);
+}
+
+/*
+ * Check if two ACLs are exactly equal
+ *
+ * This will not detect equality if the two arrays contain the same items
+ * in different orders.  To handle that case, sort both inputs first,
+ * using aclitemsort().
+ */
+bool
+aclequal(const Acl *left_acl, const Acl *right_acl)
+{
+	/* Check for cases where one or both are empty/null */
+	if (left_acl == NULL || ACL_NUM(left_acl) == 0)
+	{
+		if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+			return true;
+		else
+			return false;
+	}
+	else
+	{
+		if (right_acl == NULL || ACL_NUM(right_acl) == 0)
+			return false;
+	}
+
+	if (ACL_NUM(left_acl) != ACL_NUM(right_acl))
+		return false;
+
+	if (memcmp(ACL_DAT(left_acl),
+			   ACL_DAT(right_acl),
+			   ACL_NUM(left_acl) * sizeof(AclItem)) == 0)
+		return true;
+
+	return false;
 }
 
 /*
@@ -495,9 +600,7 @@ aclitemout(PG_FUNCTION_ARGS)
 
 	if (aip->ai_grantee != ACL_ID_PUBLIC)
 	{
-		htup = SearchSysCache(AUTHOID,
-							  ObjectIdGetDatum(aip->ai_grantee),
-							  0, 0, 0);
+		htup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(aip->ai_grantee));
 		if (HeapTupleIsValid(htup))
 		{
 			putid(p, NameStr(((Form_pg_authid) GETSTRUCT(htup))->rolname));
@@ -525,9 +628,7 @@ aclitemout(PG_FUNCTION_ARGS)
 	*p++ = '/';
 	*p = '\0';
 
-	htup = SearchSysCache(AUTHOID,
-						  ObjectIdGetDatum(aip->ai_grantor),
-						  0, 0, 0);
+	htup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(aip->ai_grantor));
 	if (HeapTupleIsValid(htup))
 	{
 		putid(p, NameStr(((Form_pg_authid) GETSTRUCT(htup))->rolname));
@@ -552,6 +653,31 @@ aclitem_match(const AclItem *a1, const AclItem *a2)
 {
 	return a1->ai_grantee == a2->ai_grantee &&
 		a1->ai_grantor == a2->ai_grantor;
+}
+
+/*
+ * aclitemComparator
+ *		qsort comparison function for AclItems
+ */
+static int
+aclitemComparator(const void *arg1, const void *arg2)
+{
+	const AclItem *a1 = (const AclItem *) arg1;
+	const AclItem *a2 = (const AclItem *) arg2;
+
+	if (a1->ai_grantee > a2->ai_grantee)
+		return 1;
+	if (a1->ai_grantee < a2->ai_grantee)
+		return -1;
+	if (a1->ai_grantor > a2->ai_grantor)
+		return 1;
+	if (a1->ai_grantor < a2->ai_grantor)
+		return -1;
+	if (a1->ai_privs > a2->ai_privs)
+		return 1;
+	if (a1->ai_privs < a2->ai_privs)
+		return -1;
+	return 0;
 }
 
 /*
@@ -592,6 +718,9 @@ hash_aclitem(PG_FUNCTION_ARGS)
  *
  * Change this routine if you want to alter the default access policy for
  * newly-created objects (or any object with a NULL acl entry).
+ *
+ * Note that these are the hard-wired "defaults" that are used in the
+ * absence of any pg_default_acl entry.
  */
 Acl *
 acldefault(GrantObjectType objtype, Oid ownerId)
@@ -631,6 +760,10 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 			/* Grant USAGE by default, for now */
 			world_default = ACL_USAGE;
 			owner_default = ACL_ALL_RIGHTS_LANGUAGE;
+			break;
+		case ACL_OBJECT_LARGEOBJECT:
+			world_default = ACL_NO_RIGHTS;
+			owner_default = ACL_ALL_RIGHTS_LARGEOBJECT;
 			break;
 		case ACL_OBJECT_NAMESPACE:
 			world_default = ACL_NO_RIGHTS;
@@ -1499,6 +1632,145 @@ convert_any_priv_string(text *priv_type_text,
 }
 
 
+static const char *
+convert_aclright_to_string(int aclright)
+{
+	switch (aclright)
+	{
+		case ACL_INSERT:
+			return "INSERT";
+		case ACL_SELECT:
+			return "SELECT";
+		case ACL_UPDATE:
+			return "UPDATE";
+		case ACL_DELETE:
+			return "DELETE";
+		case ACL_TRUNCATE:
+			return "TRUNCATE";
+		case ACL_REFERENCES:
+			return "REFERENCES";
+		case ACL_TRIGGER:
+			return "TRIGGER";
+		case ACL_EXECUTE:
+			return "EXECUTE";
+		case ACL_USAGE:
+			return "USAGE";
+		case ACL_CREATE:
+			return "CREATE";
+		case ACL_CREATE_TEMP:
+			return "TEMPORARY";
+		case ACL_CONNECT:
+			return "CONNECT";
+		default:
+			elog(ERROR, "unrecognized aclright: %d", aclright);
+			return NULL;
+	}
+}
+
+
+/*----------
+ * Convert an aclitem[] to a table.
+ *
+ * Example:
+ *
+ * aclexplode('{=r/joe,foo=a*w/joe}'::aclitem[])
+ *
+ * returns the table
+ *
+ * {{ OID(joe), 0::OID,   'SELECT', false },
+ *	{ OID(joe), OID(foo), 'INSERT', true },
+ *	{ OID(joe), OID(foo), 'UPDATE', false }}
+ *----------
+ */
+Datum
+aclexplode(PG_FUNCTION_ARGS)
+{
+	Acl		   *acl = PG_GETARG_ACL_P(0);
+	FuncCallContext *funcctx;
+	int		   *idx;
+	AclItem    *aidat;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		TupleDesc	tupdesc;
+		MemoryContext oldcontext;
+
+		check_acl(acl);
+
+		funcctx = SRF_FIRSTCALL_INIT();
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/*
+		 * build tupdesc for result tuples (matches out parameters in pg_proc
+		 * entry)
+		 */
+		tupdesc = CreateTemplateTupleDesc(4, false);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "grantor",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "grantee",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "privilege_type",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "is_grantable",
+						   BOOLOID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		/* allocate memory for user context */
+		idx = (int *) palloc(sizeof(int[2]));
+		idx[0] = 0;				/* ACL array item index */
+		idx[1] = -1;			/* privilege type counter */
+		funcctx->user_fctx = (void *) idx;
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+	idx = (int *) funcctx->user_fctx;
+	aidat = ACL_DAT(acl);
+
+	/* need test here in case acl has no items */
+	while (idx[0] < ACL_NUM(acl))
+	{
+		AclItem    *aidata;
+		AclMode		priv_bit;
+
+		idx[1]++;
+		if (idx[1] == N_ACL_RIGHTS)
+		{
+			idx[1] = 0;
+			idx[0]++;
+			if (idx[0] >= ACL_NUM(acl)) /* done */
+				break;
+		}
+		aidata = &aidat[idx[0]];
+		priv_bit = 1 << idx[1];
+
+		if (ACLITEM_GET_PRIVS(*aidata) & priv_bit)
+		{
+			Datum		result;
+			Datum		values[4];
+			bool		nulls[4];
+			HeapTuple	tuple;
+
+			values[0] = ObjectIdGetDatum(aidata->ai_grantor);
+			values[1] = ObjectIdGetDatum(aidata->ai_grantee);
+			values[2] = CStringGetTextDatum(convert_aclright_to_string(priv_bit));
+			values[3] = BoolGetDatum((ACLITEM_GET_GOPTIONS(*aidata) & priv_bit) != 0);
+
+			MemSet(nulls, 0, sizeof(nulls));
+
+			tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+			result = HeapTupleGetDatum(tuple);
+
+			SRF_RETURN_NEXT(funcctx, result);
+		}
+	}
+
+	SRF_RETURN_DONE(funcctx);
+}
+
+
 /*
  * has_table_privilege variants
  *		These are all named "has_table_privilege" at the SQL level.
@@ -1596,9 +1868,7 @@ has_table_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1624,9 +1894,7 @@ has_table_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1682,9 +1950,7 @@ has_table_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1738,6 +2004,243 @@ convert_table_priv_string(text *priv_type_text)
 	};
 
 	return convert_any_priv_string(priv_type_text, table_priv_map);
+}
+
+/*
+ * has_sequence_privilege variants
+ *		These are all named "has_sequence_privilege" at the SQL level.
+ *		They take various combinations of relation name, relation OID,
+ *		user name, user OID, or implicit user = current_user.
+ *
+ *		The result is a boolean value: true if user has the indicated
+ *		privilege, false if not.  The variants that take a relation OID
+ *		return NULL if the OID doesn't exist.
+ */
+
+/*
+ * has_sequence_privilege_name_name
+ *		Check user privileges on a sequence given
+ *		name username, text sequencename, and text priv name.
+ */
+Datum
+has_sequence_privilege_name_name(PG_FUNCTION_ARGS)
+{
+	Name		rolename = PG_GETARG_NAME(0);
+	text	   *sequencename = PG_GETARG_TEXT_P(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			roleid;
+	Oid			sequenceoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = get_roleid_checked(NameStr(*rolename));
+	mode = convert_sequence_priv_string(priv_type_text);
+	sequenceoid = try_convert_table_name(sequencename);
+
+	/*
+	 * While we scan pg_class with an MVCC snapshot,
+	 * someone else might drop the sequence. It's better to return NULL for
+	 * already-dropped sequences than throw an error and abort the whole query.
+	 */
+	if (!OidIsValid(sequenceoid))
+		PG_RETURN_NULL();
+
+	if (get_rel_relkind(sequenceoid) != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						text_to_cstring(sequencename))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_sequence_privilege_name
+ *		Check user privileges on a sequence given
+ *		text sequencename and text priv name.
+ *		current_user is assumed
+ */
+Datum
+has_sequence_privilege_name(PG_FUNCTION_ARGS)
+{
+	text	   *sequencename = PG_GETARG_TEXT_P(0);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
+	Oid			roleid;
+	Oid			sequenceoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	roleid = GetUserId();
+	mode = convert_sequence_priv_string(priv_type_text);
+	sequenceoid = try_convert_table_name(sequencename);
+
+	/*
+	 * While we scan pg_class with an MVCC snapshot,
+	 * someone else might drop the sequence. It's better to return NULL for
+	 * already-dropped sequences than throw an error and abort the whole query.
+	 */
+	if (!OidIsValid(sequenceoid))
+		PG_RETURN_NULL();
+
+	if (get_rel_relkind(sequenceoid) != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						text_to_cstring(sequencename))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_sequence_privilege_name_id
+ *		Check user privileges on a sequence given
+ *		name usename, sequence oid, and text priv name.
+ */
+Datum
+has_sequence_privilege_name_id(PG_FUNCTION_ARGS)
+{
+	Name		username = PG_GETARG_NAME(0);
+	Oid			sequenceoid = PG_GETARG_OID(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			roleid;
+	AclMode		mode;
+	AclResult	aclresult;
+	char		relkind;
+
+	roleid = get_roleid_checked(NameStr(*username));
+	mode = convert_sequence_priv_string(priv_type_text);
+	relkind = get_rel_relkind(sequenceoid);
+	if (relkind == '\0')
+		PG_RETURN_NULL();
+	else if (relkind != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						get_rel_name(sequenceoid))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_sequence_privilege_id
+ *		Check user privileges on a sequence given
+ *		sequence oid, and text priv name.
+ *		current_user is assumed
+ */
+Datum
+has_sequence_privilege_id(PG_FUNCTION_ARGS)
+{
+	Oid			sequenceoid = PG_GETARG_OID(0);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
+	Oid			roleid;
+	AclMode		mode;
+	AclResult	aclresult;
+	char		relkind;
+
+	roleid = GetUserId();
+	mode = convert_sequence_priv_string(priv_type_text);
+	relkind = get_rel_relkind(sequenceoid);
+	if (relkind == '\0')
+		PG_RETURN_NULL();
+	else if (relkind != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						get_rel_name(sequenceoid))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_sequence_privilege_id_name
+ *		Check user privileges on a sequence given
+ *		roleid, text sequencename, and text priv name.
+ */
+Datum
+has_sequence_privilege_id_name(PG_FUNCTION_ARGS)
+{
+	Oid			roleid = PG_GETARG_OID(0);
+	text	   *sequencename = PG_GETARG_TEXT_P(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	Oid			sequenceoid;
+	AclMode		mode;
+	AclResult	aclresult;
+
+	mode = convert_sequence_priv_string(priv_type_text);
+	sequenceoid = try_convert_table_name(sequencename);
+
+	/*
+	 * While we scan pg_class with an MVCC snapshot,
+	 * someone else might drop the sequence. It's better to return NULL for
+	 * already-dropped sequences than throw an error and abort the whole query.
+	 */
+	if (!OidIsValid(sequenceoid))
+		PG_RETURN_NULL();
+
+	if (get_rel_relkind(sequenceoid) != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						text_to_cstring(sequencename))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * has_sequence_privilege_id_id
+ *		Check user privileges on a sequence given
+ *		roleid, sequence oid, and text priv name.
+ */
+Datum
+has_sequence_privilege_id_id(PG_FUNCTION_ARGS)
+{
+	Oid			roleid = PG_GETARG_OID(0);
+	Oid			sequenceoid = PG_GETARG_OID(1);
+	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
+	AclMode		mode;
+	AclResult	aclresult;
+	char		relkind;
+
+	mode = convert_sequence_priv_string(priv_type_text);
+	relkind = get_rel_relkind(sequenceoid);
+	if (relkind == '\0')
+		PG_RETURN_NULL();
+	else if (relkind != RELKIND_SEQUENCE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a sequence",
+						get_rel_name(sequenceoid))));
+
+	aclresult = pg_class_aclcheck(sequenceoid, roleid, mode);
+
+	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
+}
+
+/*
+ * convert_sequence_priv_string
+ *		Convert text string to AclMode value.
+ */
+static AclMode
+convert_sequence_priv_string(text *priv_type_text)
+{
+	static const priv_map sequence_priv_map[] = {
+		{"USAGE", ACL_USAGE},
+		{"SELECT", ACL_SELECT},
+		{"UPDATE", ACL_UPDATE},
+		{NULL, 0}
+	};
+
+	return convert_any_priv_string(priv_type_text, sequence_priv_map);
 }
 
 
@@ -1846,9 +2349,7 @@ has_any_column_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_column_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	/* First check at table level, then examine each column if needed */
@@ -1878,9 +2379,7 @@ has_any_column_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_column_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	/* First check at table level, then examine each column if needed */
@@ -1944,9 +2443,7 @@ has_any_column_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_column_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		PG_RETURN_NULL();
 
 	/* First check at table level, then examine each column if needed */
@@ -1994,9 +2491,7 @@ column_privilege_check(Oid tableoid, AttrNumber attnum,
 	 * here and there.	So if we see the row in the syscache, so will
 	 * pg_class_aclcheck.
 	 */
-	if (!SearchSysCacheExists(RELOID,
-							  ObjectIdGetDatum(tableoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(tableoid)))
 		return -1;
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -2009,10 +2504,9 @@ column_privilege_check(Oid tableoid, AttrNumber attnum,
 	 * check for dropped attribute first, and we rely on the syscache not to
 	 * notice a concurrent drop before pg_attribute_aclcheck fetches the row.
 	 */
-	attTuple = SearchSysCache(ATTNUM,
-							  ObjectIdGetDatum(tableoid),
-							  Int16GetDatum(attnum),
-							  0, 0);
+	attTuple = SearchSysCache2(ATTNUM,
+							   ObjectIdGetDatum(tableoid),
+							   Int16GetDatum(attnum));
 	if (!HeapTupleIsValid(attTuple))
 		return -1;
 	attributeForm = (Form_pg_attribute) GETSTRUCT(attTuple);
@@ -2524,9 +3018,7 @@ has_database_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(DATABASEOID,
-							  ObjectIdGetDatum(databaseoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -2552,9 +3044,7 @@ has_database_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(DATABASEOID,
-							  ObjectIdGetDatum(databaseoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -2601,9 +3091,7 @@ has_database_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(DATABASEOID,
-							  ObjectIdGetDatum(databaseoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(DATABASEOID, ObjectIdGetDatum(databaseoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -2910,9 +3398,7 @@ has_function_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(PROCOID,
-							  ObjectIdGetDatum(functionoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -2938,9 +3424,7 @@ has_function_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(PROCOID,
-							  ObjectIdGetDatum(functionoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -2987,9 +3471,7 @@ has_function_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(PROCOID,
-							  ObjectIdGetDatum(functionoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(PROCOID, ObjectIdGetDatum(functionoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -3116,9 +3598,7 @@ has_language_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(LANGOID,
-							  ObjectIdGetDatum(languageoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -3144,9 +3624,7 @@ has_language_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(LANGOID,
-							  ObjectIdGetDatum(languageoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -3193,9 +3671,7 @@ has_language_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(LANGOID,
-							  ObjectIdGetDatum(languageoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(LANGOID, ObjectIdGetDatum(languageoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -3216,9 +3692,7 @@ convert_language_name(text *languagename)
 	char	   *langname = text_to_cstring(languagename);
 	Oid			oid;
 
-	oid = GetSysCacheOid(LANGNAME,
-						 CStringGetDatum(langname),
-						 0, 0, 0);
+	oid = GetSysCacheOid1(LANGNAME, CStringGetDatum(langname));
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -3322,9 +3796,7 @@ has_schema_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(NAMESPACEOID,
-							  ObjectIdGetDatum(schemaoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -3350,9 +3822,7 @@ has_schema_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(NAMESPACEOID,
-							  ObjectIdGetDatum(schemaoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -3399,9 +3869,7 @@ has_schema_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (!SearchSysCacheExists(NAMESPACEOID,
-							  ObjectIdGetDatum(schemaoid),
-							  0, 0, 0))
+	if (!SearchSysCacheExists1(NAMESPACEOID, ObjectIdGetDatum(schemaoid)))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -3422,9 +3890,7 @@ convert_schema_name(text *schemaname)
 	char	   *nspname = text_to_cstring(schemaname);
 	Oid			oid;
 
-	oid = GetSysCacheOid(NAMESPACENAME,
-						 CStringGetDatum(nspname),
-						 0, 0, 0);
+	oid = GetSysCacheOid1(NAMESPACENAME, CStringGetDatum(nspname));
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -4064,9 +4530,7 @@ has_rolinherit(Oid roleid)
 	bool		result = false;
 	HeapTuple	utup;
 
-	utup = SearchSysCache(AUTHOID,
-						  ObjectIdGetDatum(roleid),
-						  0, 0, 0);
+	utup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
 	if (HeapTupleIsValid(utup))
 	{
 		result = ((Form_pg_authid) GETSTRUCT(utup))->rolinherit;
@@ -4126,9 +4590,8 @@ roles_has_privs_of(Oid roleid)
 			continue;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
-									 ObjectIdGetDatum(memberid),
-									 0, 0, 0);
+		memlist = SearchSysCacheList1(AUTHMEMMEMROLE,
+									  ObjectIdGetDatum(memberid));
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;
@@ -4206,9 +4669,8 @@ roles_is_member_of(Oid roleid)
 		int			i;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
-									 ObjectIdGetDatum(memberid),
-									 0, 0, 0);
+		memlist = SearchSysCacheList1(AUTHMEMMEMROLE,
+									  ObjectIdGetDatum(memberid));
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;
@@ -4390,9 +4852,8 @@ is_admin_of_role(Oid member, Oid role)
 		int			i;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
-									 ObjectIdGetDatum(memberid),
-									 0, 0, 0);
+		memlist = SearchSysCacheList1(AUTHMEMMEMROLE,
+									  ObjectIdGetDatum(memberid));
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;

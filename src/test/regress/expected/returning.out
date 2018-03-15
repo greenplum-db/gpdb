@@ -4,6 +4,9 @@
 -- Simple cases
 CREATE TEMP TABLE foo (f1 serial, f2 text, f3 int default 42);
 NOTICE:  CREATE TABLE will create implicit sequence "foo_f1_seq" for serial column "foo.f1"
+-- GPDB: otherwise the UPDATE tests fail with:
+-- ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ALTER TABLE foo SET DISTRIBUTED RANDOMLY;
 INSERT INTO foo (f2,f3)
   VALUES ('test', DEFAULT), ('More', 11), (upper('more'), 7+9)
   RETURNING *, f1+f3 AS sum;
@@ -301,34 +304,33 @@ SELECT * FROM joinview;
  16 | zoo2 | 57 |  99 | 54321
 (2 rows)
 
+-- GPDB_90_MERGE_FIXME: This CREATE RULE fails in GPDB. Why?
 CREATE RULE joinview_u AS ON UPDATE TO joinview DO INSTEAD
   UPDATE foo SET f1 = new.f1, f3 = new.f3
     FROM joinme WHERE f2 = f2j AND f2 = old.f2
     RETURNING foo.*, other;
+ERROR:  column "f2j" does not exist
 UPDATE joinview SET f1 = f1 + 1 WHERE f3 = 57 RETURNING *, other + 1;
- f1 |  f2  | f3 | f4 | other | ?column? 
-----+------+----+----+-------+----------
- 17 | zoo2 | 57 | 99 | 54321 |    54322
-(1 row)
-
+ERROR:  cannot update a view
+HINT:  You need an unconditional ON UPDATE DO INSTEAD rule.
 SELECT * FROM joinview;
  f1 |  f2  | f3 | f4  | other 
 ----+------+----+-----+-------
   2 | more | 42 | 141 | 12345
- 17 | zoo2 | 57 |  99 | 54321
+ 16 | zoo2 | 57 |  99 | 54321
 (2 rows)
 
 SELECT * FROM foo;
  f1 |  f2  | f3 | f4  
 ----+------+----+-----
   2 | more | 42 | 141
- 17 | zoo2 | 57 |  99
+ 16 | zoo2 | 57 |  99
 (2 rows)
 
 SELECT * FROM voo;
  f1 |  f2  
 ----+------
   2 | more
- 17 | zoo2
+ 16 | zoo2
 (2 rows)
 

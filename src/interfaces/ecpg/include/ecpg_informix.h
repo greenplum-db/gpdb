@@ -1,6 +1,6 @@
 /*
  * This file contains stuff needed to be as compatible to Informix as possible.
- * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpg_informix.h,v 1.22 2008/02/17 18:14:29 meskes Exp $
+ * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpg_informix.h,v 1.24 2010/02/26 02:01:31 momjian Exp $
  */
 #ifndef _ECPG_INFORMIX_H
 #define _ECPG_INFORMIX_H
@@ -56,6 +56,7 @@ extern void ldchar(char *, int, char *);
 
 extern void ECPG_informix_set_var(int, void *, int);
 extern void *ECPG_informix_get_var(int);
+extern void ECPG_informix_reset_sqlca(void);
 
 /* Informix defines these in decimal.h */
 int			decadd(decimal *, decimal *, decimal *);

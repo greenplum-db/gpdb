@@ -9,10 +9,6 @@ import sys
 
 from builds.GpBuild import GpBuild
 
-CODEGEN_MODE = 'codegen'
-ORCA_CODEGEN_DEFAULT_MODE = "orca_codegen"
-ORCA_MODE = 'orca'
-PLANNER_MODE = 'planner'
 INSTALL_DIR = "/usr/local/gpdb"
 DEPENDENCY_INSTALL_DIR = "/usr/local"
 

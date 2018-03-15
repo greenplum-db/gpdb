@@ -47,10 +47,6 @@ create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
 
 -- TEST
--- start_ignore
--- GPDB_84_MERGE_FIXME: QP team should look at this query (the implementation
--- changed in the window func merge)
--- end_ignore
 select
    id, val,
    sum(val) over (w),
@@ -182,11 +178,7 @@ select count_operator('select max(b) over (partition by a) from foo order by 1;'
 select string_agg(b) over (partition by a+1) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a+1) from foo order by 1;
--- fall back and planner's plan produces unsupported execution
--- start_ignore
--- GPDB_84_MERGE_FIXME: QP team should look at these three queries (the
--- implementation changed in the window func merge)
--- end_ignore
+-- fall back
 select string_agg(b) over (partition by a order by a) from foo order by 1;
 select string_agg(b || 'txt') over (partition by a,b order by a,b) from foo order by 1;
 select '1' || string_agg(b) over (partition by a+1 order by a+1) from foo;
@@ -1386,7 +1378,16 @@ select array_agg(a order by b nulls last) from aggordertest;
 select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
+-- begin MPP-14125: if prelim function is missing, do not choose hash agg.
+create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
+explain select string_agg(a) from mpp14125 group by b;
+-- end MPP-14125
 
+-- Test unsupported ORCA feature: agg(set returning function)
+CREATE TABLE tbl_agg_srf (foo int[]) DISTRIBUTED RANDOMLY;
+INSERT INTO tbl_agg_srf VALUES (array[1,2,3]);
+EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
+SELECT count(unnest(foo)) FROM tbl_agg_srf;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

@@ -562,7 +562,7 @@ select * from (select i from filter_test where j = 1) x1,
               (select sum(i) filter (where i < x1.i) from filter_test where j = 2) x2;
 ERROR:  subquery in FROM cannot refer to other relations of same query level
 LINE 2:               (select sum(i) filter (where i < x1.i) from fi...
-                              ^
+                                                       ^
 -- TEST against user defined aggregation function
 create or replace function _maxodd(oldmax int, newval int) returns int as $$
   SELECT CASE WHEN $1 is NULL 

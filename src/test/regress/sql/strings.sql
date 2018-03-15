@@ -81,6 +81,27 @@ SELECT U&'wrong: +0061' UESCAPE '+';
 
 RESET standard_conforming_strings;
 
+-- bytea
+SET bytea_output TO hex;
+SELECT E'\\xDeAdBeEf'::bytea;
+SELECT E'\\x De Ad Be Ef '::bytea;
+SELECT E'\\xDeAdBeE'::bytea;
+SELECT E'\\xDeAdBeEx'::bytea;
+SELECT E'\\xDe00BeEf'::bytea;
+SELECT E'DeAdBeEf'::bytea;
+SELECT E'De\\000dBeEf'::bytea;
+SELECT E'De\123dBeEf'::bytea;
+SELECT E'De\\123dBeEf'::bytea;
+SELECT E'De\\678dBeEf'::bytea;
+
+SET bytea_output TO escape;
+SELECT E'\\xDeAdBeEf'::bytea;
+SELECT E'\\x De Ad Be Ef '::bytea;
+SELECT E'\\xDe00BeEf'::bytea;
+SELECT E'DeAdBeEf'::bytea;
+SELECT E'De\\000dBeEf'::bytea;
+SELECT E'De\\123dBeEf'::bytea;
+
 --
 -- test conversions between various string types
 -- E021-10 implicit casting among the character data types
@@ -609,6 +630,9 @@ SELECT trim(E'\\000'::bytea from E'\\000Tom\\000'::bytea);
 SELECT btrim(E'\\000trim\\000'::bytea, E'\\000'::bytea);
 SELECT btrim(''::bytea, E'\\000'::bytea);
 SELECT btrim(E'\\000trim\\000'::bytea, ''::bytea);
+SELECT encode(overlay(E'Th\\000omas'::bytea placing E'Th\\001omas'::bytea from 2),'escape');
+SELECT encode(overlay(E'Th\\000omas'::bytea placing E'\\002\\003'::bytea from 8),'escape');
+SELECT encode(overlay(E'Th\\000omas'::bytea placing E'\\002\\003'::bytea from 5 for 3),'escape');
 
 
 -- Clean up GPDB-added tables

@@ -11,6 +11,7 @@ if exist debug rd /s /q debug
 if exist release rd /s /q release
 for %%f in (*.vcproj) do del %%f
 if exist pgsql.sln del /q pgsql.sln
+if exist pgsql.sln.cache del /q pgsql.sln.cache
 del /s /q src\bin\win32ver.rc 2> NUL
 del /s /q src\interfaces\win32ver.rc 2> NUL
 if exist src\backend\win32ver.rc del /q src\backend\win32ver.rc
@@ -22,11 +23,12 @@ if %DIST%==1 if exist src\backend\parser\gram.h del /q src\backend\parser\gram.h
 if exist src\include\utils\fmgroids.h del /q src\include\utils\fmgroids.h
 if exist src\include\utils\probes.h del /q src\include\utils\probes.h
 
-if exist src\backend\utils\fmgroids.h del /q src\backend\utils\fmgroids.h
-if exist src\backend\utils\fmgrtab.c del /q src\backend\utils\fmgrtab.c
-if exist src\backend\catalog\postgres.bki del /q src\backend\catalog\postgres.bki
-if exist src\backend\catalog\postgres.description del /q src\backend\catalog\postgres.description
-if exist src\backend\catalog\postgres.shdescription del /q src\backend\catalog\postgres.shdescription
+if %DIST%==1 if exist src\backend\utils\fmgroids.h del /q src\backend\utils\fmgroids.h
+if %DIST%==1 if exist src\backend\utils\fmgrtab.c del /q src\backend\utils\fmgrtab.c
+if %DIST%==1 if exist src\backend\catalog\postgres.bki del /q src\backend\catalog\postgres.bki
+if %DIST%==1 if exist src\backend\catalog\postgres.description del /q src\backend\catalog\postgres.description
+if %DIST%==1 if exist src\backend\catalog\postgres.shdescription del /q src\backend\catalog\postgres.shdescription
+if %DIST%==1 if exist src\backend\catalog\schemapg.h del /q src\backend\catalog\schemapg.h
 if %DIST%==1 if exist src\backend\parser\scan.c del /q src\backend\parser\scan.c
 if %DIST%==1 if exist src\backend\parser\gram.c del /q src\backend\parser\gram.c
 if %DIST%==1 if exist src\backend\bootstrap\bootscanner.c del /q src\backend\bootstrap\bootscanner.c
@@ -49,7 +51,6 @@ if %DIST%==1 if exist src\interfaces\ecpg\preproc\preproc.h del /q src\interface
 if exist src\port\pg_config_paths.h del /q src\port\pg_config_paths.h
 
 if exist src\pl\plperl\spi.c del /q src\pl\plperl\spi.c
-if %DIST%==1 if exist src\pl\plpgsql\src\pl_scan.c del /q src\pl\plpgsql\src\pl_scan.c
 if %DIST%==1 if exist src\pl\plpgsql\src\pl_gram.c del /q src\pl\plpgsql\src\pl_gram.c
 if %DIST%==1 if exist src\pl\plpgsql\src\pl_gram.h del /q src\pl\plpgsql\src\pl_gram.h
 if %DIST%==1 if exist src\pl\plpgsql\src\pl.tab.h del /q src\pl\plpgsql\src\pl.tab.h

@@ -95,7 +95,6 @@
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbfilerepservice.h"
 #include "tcop/tcopprot.h"
 
 /*
@@ -875,16 +874,7 @@ pq_recvbuf(void)
 		if (r < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN)
-			{
-				/* change tracking */
-				if (FileRepSubProcess_IsStateTransitionRequested())
-				{
-					elog(WARNING, "segment state transition requested while waiting to read data from socket");
-					return EOF;
-				}
-				else
-					continue;		/* Ok if interrupted or timeout expired */
-			}
+				continue;		/* Ok if interrupted or timeout expired */
 
 			/*
 			 * Careful: an ereport() that tries to write to the client would
@@ -1726,7 +1716,7 @@ pq_getkeepalivesidle(Port *port)
 	if (port->default_keepalives_idle == 0)
 	{
 #ifndef WIN32
-		socklen_t size = sizeof(port->default_keepalives_idle);
+		ACCEPT_TYPE_ARG3 size = sizeof(port->default_keepalives_idle);
 
 #ifdef TCP_KEEPIDLE
 		if (getsockopt(port->sock, IPPROTO_TCP, TCP_KEEPIDLE,
@@ -1809,7 +1799,6 @@ pq_setkeepalivesidle(int idle, Port *port)
 		return STATUS_ERROR;
 	}
 #endif
-
 	return STATUS_OK;
 }
 
@@ -1826,7 +1815,7 @@ pq_getkeepalivesinterval(Port *port)
 	if (port->default_keepalives_interval == 0)
 	{
 #ifndef WIN32
-		socklen_t size = sizeof(port->default_keepalives_interval);
+		ACCEPT_TYPE_ARG3 size = sizeof(port->default_keepalives_interval);
 
 		if (getsockopt(port->sock, IPPROTO_TCP, TCP_KEEPINTVL,
 					   (char *) &port->default_keepalives_interval,

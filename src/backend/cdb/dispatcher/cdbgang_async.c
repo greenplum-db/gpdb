@@ -298,8 +298,7 @@ create_gang_retry:
 		MemoryContextSwitchTo(GangContext);
 
 		/* FTS shows some segment DBs are down */
-		if (isFTSEnabled() &&
-			FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
+		if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
 		{
 
 			DisconnectAndDestroyGang(newGangDefinition);

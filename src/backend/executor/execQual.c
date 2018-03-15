@@ -3,12 +3,12 @@
  * execQual.c
  *	  Routines to evaluate qualification and targetlist expressions
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.250 2009/06/11 17:25:38 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.263 2010/02/26 02:00:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 
 #include "access/nbtree.h"
 #include "access/tuptoaster.h"
+#include "access/tupconvert.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
@@ -50,6 +51,7 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/planner.h"
+#include "parser/parse_coerce.h"
 #include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -61,8 +63,8 @@
 
 /* static function decls */
 static Datum ExecEvalArrayRef(ArrayRefExprState *astate,
-			 ExprContext *econtext,
-			 bool *isNull, ExprDoneCond *isDone);
+				 ExprContext *econtext,
+				 bool *isNull, ExprDoneCond *isDone);
 static bool isAssignmentIndirectionExpr(ExprState *exprstate);
 static Datum ExecEvalAggref(AggrefExprState *aggref,
 		   ExprContext *econtext,
@@ -398,7 +400,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 		 * We might have a nested-assignment situation, in which the
 		 * refassgnexpr is itself a FieldStore or ArrayRef that needs to
 		 * obtain and modify the previous value of the array element or slice
-		 * being replaced.  If so, we have to extract that value from the
+		 * being replaced.	If so, we have to extract that value from the
 		 * array and pass it down via the econtext's caseValue.  It's safe to
 		 * reuse the CASE mechanism because there cannot be a CASE between
 		 * here and where the value would be needed, and an array assignment
@@ -427,7 +429,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 													  astate->refelemlength,
 													  astate->refelembyval,
 													  astate->refelemalign,
-													  &econtext->caseValue_isNull);
+												&econtext->caseValue_isNull);
 			}
 			else
 			{
@@ -684,26 +686,15 @@ ExecEvalScalarVar(ExprState *exprstate, ExprContext *econtext,
 	if (isDone)
 		*isDone = ExprSingleResult;
 
-	/*
-	 * Get the input slot and attribute number we want
-	 *
-	 * The asserts check that references to system attributes only appear at
-	 * the level of a relation scan; at higher levels, system attributes must
-	 * be treated as ordinary variables (since we no longer have access to the
-	 * original tuple).
-	 */
-	attnum = variable->varattno;
-
+	/* Get the input slot and attribute number we want */
 	switch (variable->varno)
 	{
 		case INNER:				/* get the tuple from the inner node */
 			slot = econtext->ecxt_innertuple;
-			Assert(attnum > 0);
 			break;
 
 		case OUTER:				/* get the tuple from the outer node */
 			slot = econtext->ecxt_outertuple;
-			Assert(attnum > 0);
 			break;
 
 		default:				/* get the tuple from the relation being
@@ -711,6 +702,8 @@ ExecEvalScalarVar(ExprState *exprstate, ExprContext *econtext,
 			slot = econtext->ecxt_scantuple;
 			break;
 	}
+
+	attnum = variable->varattno;
 
 	/* This was checked by ExecInitExpr */
 	Assert(attnum != InvalidAttrNumber);
@@ -820,7 +813,6 @@ ExecEvalWholeRowVar(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 {
 	Var		   *variable = (Var *) wrvstate->xprstate.expr;
 	TupleTableSlot *slot;
-	TupleDesc	slot_tupdesc;
 	bool		needslow = false;
 
 	if (isDone)
@@ -895,25 +887,14 @@ ExecEvalWholeRowVar(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 	if (wrvstate->wrv_junkFilter != NULL)
 		slot = ExecFilterJunk(wrvstate->wrv_junkFilter, slot);
 
-	slot_tupdesc = slot->tts_tupleDescriptor;
-
 	/*
-	 * If it's a RECORD Var, we'll use the slot's type ID info.  It's likely
-	 * that the slot's type is also RECORD; if so, make sure it's been
-	 * "blessed", so that the Datum can be interpreted later.
-	 *
 	 * If the Var identifies a named composite type, we must check that the
 	 * actual tuple type is compatible with it.
 	 */
-	if (variable->vartype == RECORDOID)
-	{
-		if (slot_tupdesc->tdtypeid == RECORDOID &&
-			slot_tupdesc->tdtypmod < 0)
-			assign_record_type_typmod(slot_tupdesc);
-	}
-	else
+	if (variable->vartype != RECORDOID)
 	{
 		TupleDesc	var_tupdesc;
+		TupleDesc	slot_tupdesc;
 		int			i;
 
 		/*
@@ -929,6 +910,8 @@ ExecEvalWholeRowVar(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 		 * ExecEvalWholeRowSlow to check (2) for each row.
 		 */
 		var_tupdesc = lookup_rowtype_tupdesc(variable->vartype, -1);
+
+		slot_tupdesc = slot->tts_tupleDescriptor;
 
 		if (var_tupdesc->natts != slot_tupdesc->natts)
 			ereport(ERROR,
@@ -988,7 +971,7 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 	Var		   *variable = (Var *) wrvstate->xprstate.expr;
 	TupleTableSlot *slot = econtext->ecxt_scantuple;
 	HeapTuple	tuple;
-	TupleDesc	tupleDesc;
+	TupleDesc	slot_tupdesc;
 	HeapTupleHeader dtuple;
 
 	if (isDone)
@@ -1000,11 +983,23 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 		slot = ExecFilterJunk(wrvstate->wrv_junkFilter, slot);
 
 	tuple = ExecFetchSlotHeapTuple(slot);
-	tupleDesc = slot->tts_tupleDescriptor;
 
 	/*
-	 * We have to make a copy of the tuple so we can safely insert the Datum
-	 * overhead fields, which are not set in on-disk tuples.
+	 * If it's a RECORD Var, we'll use the slot's type ID info.  It's likely
+	 * that the slot's type is also RECORD; if so, make sure it's been
+	 * "blessed", so that the Datum can be interpreted later.  (Note: we must
+	 * do this here, not in ExecEvalWholeRowVar, because some plan trees may
+	 * return different slots at different times.  We have to be ready to
+	 * bless additional slots during the run.)
+	 */
+	slot_tupdesc = slot->tts_tupleDescriptor;
+	if (variable->vartype == RECORDOID &&
+		slot_tupdesc->tdtypeid == RECORDOID &&
+		slot_tupdesc->tdtypmod < 0)
+		assign_record_type_typmod(slot_tupdesc);
+
+	/*
+	 * Copy the slot tuple and make sure any toasted fields get detoasted.
 	 */
 	dtuple = (HeapTupleHeader) palloc(tuple->t_len);
 	memcpy((char *) dtuple, (char *) tuple->t_data, tuple->t_len);
@@ -1022,8 +1017,8 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 	}
 	else
 	{
-		HeapTupleHeaderSetTypeId(dtuple, tupleDesc->tdtypeid);
-		HeapTupleHeaderSetTypMod(dtuple, tupleDesc->tdtypmod);
+		HeapTupleHeaderSetTypeId(dtuple, slot_tupdesc->tdtypeid);
+		HeapTupleHeaderSetTypMod(dtuple, slot_tupdesc->tdtypmod);
 	}
 
 	return PointerGetDatum(dtuple);
@@ -1032,7 +1027,7 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 /* ----------------------------------------------------------------
  *		ExecEvalWholeRowSlow
  *
- *		Returns a Datum for a whole-row variable, in the "slow" case where
+ *		Returns a Datum for a whole-row variable, in the "slow" cases where
  *		we can't just copy the subplan's output.
  * ----------------------------------------------------------------
  */
@@ -1180,9 +1175,21 @@ ExecEvalParam(ExprState *exprstate, ExprContext *econtext,
 		{
 			ParamExternData *prm = &paramInfo->params[thisParamId - 1];
 
+			/* give hook a chance in case parameter is dynamic */
+			if (!OidIsValid(prm->ptype) && paramInfo->paramFetch != NULL)
+				(*paramInfo->paramFetch) (paramInfo, thisParamId);
+
 			if (OidIsValid(prm->ptype))
 			{
-				Assert(prm->ptype == expression->paramtype);
+				/* safety check in case hook did something unexpected */
+				if (prm->ptype != expression->paramtype)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATATYPE_MISMATCH),
+							 errmsg("type of parameter %d (%s) does not match that when preparing the plan (%s)",
+									thisParamId,
+									format_type_be(prm->ptype),
+									format_type_be(expression->paramtype))));
+
 				*isNull = prm->isnull;
 				return prm->value;
 			}
@@ -1641,7 +1648,7 @@ tupledesc_match(TupleDesc dst_tupdesc, TupleDesc src_tupdesc)
 		Form_pg_attribute dattr = dst_tupdesc->attrs[i];
 		Form_pg_attribute sattr = src_tupdesc->attrs[i];
 
-		if (dattr->atttypid == sattr->atttypid)
+		if (IsBinaryCoercible(sattr->atttypid, dattr->atttypid))
 			continue;			/* no worries */
 		if (!dattr->attisdropped)
 			ereport(ERROR,
@@ -2341,10 +2348,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 				tuplestore_puttuple(tupstore, (HeapTuple) tuple);
 			}
 			else
-			{
 				tuplestore_putvalues(tupstore, tupdesc, &result, &fcinfo.isnull);
-			}
-			MemoryContextSwitchTo(oldcontext);
 
 			/*
 			 * Are we done?
@@ -3226,13 +3230,6 @@ ExecEvalConvertRowtype(ConvertRowtypeExprState *cstate,
 	Datum		tupDatum;
 	HeapTupleHeader tuple;
 	HeapTupleData tmptup;
-	AttrNumber *attrMap;
-	Datum	   *invalues;
-	bool	   *inisnull;
-	Datum	   *outvalues;
-	bool	   *outisnull;
-	int			i;
-	int			outnatts;
 
 	tupDatum = ExecEvalExpr(cstate->arg, econtext, isNull, isDone);
 
@@ -3244,110 +3241,51 @@ ExecEvalConvertRowtype(ConvertRowtypeExprState *cstate,
 
 	/* Lookup tupdescs if first time through or after rescan */
 	if (cstate->indesc == NULL)
+	{
 		get_cached_rowtype(exprType((Node *) convert->arg), -1,
 						   &cstate->indesc, econtext);
+		cstate->initialized = false;
+	}
 	if (cstate->outdesc == NULL)
+	{
 		get_cached_rowtype(convert->resulttype, -1,
 						   &cstate->outdesc, econtext);
+		cstate->initialized = false;
+	}
 
 	Assert(HeapTupleHeaderGetTypeId(tuple) == cstate->indesc->tdtypeid);
 	Assert(HeapTupleHeaderGetTypMod(tuple) == cstate->indesc->tdtypmod);
 
-	/* if first time through, initialize */
-	if (cstate->attrMap == NULL)
+	/* if first time through, initialize conversion map */
+	if (!cstate->initialized)
 	{
 		MemoryContext old_cxt;
-		int			n;
 
-		/* allocate state in long-lived memory context */
+		/* allocate map in long-lived memory context */
 		old_cxt = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
 
 		/* prepare map from old to new attribute numbers */
-		n = cstate->outdesc->natts;
-		cstate->attrMap = (AttrNumber *) palloc0(n * sizeof(AttrNumber));
-		for (i = 0; i < n; i++)
-		{
-			Form_pg_attribute att = cstate->outdesc->attrs[i];
-			char	   *attname;
-			Oid			atttypid;
-			int32		atttypmod;
-			int			j;
-
-			if (att->attisdropped)
-				continue;		/* attrMap[i] is already 0 */
-			attname = NameStr(att->attname);
-			atttypid = att->atttypid;
-			atttypmod = att->atttypmod;
-			for (j = 0; j < cstate->indesc->natts; j++)
-			{
-				att = cstate->indesc->attrs[j];
-				if (att->attisdropped)
-					continue;
-				if (strcmp(attname, NameStr(att->attname)) == 0)
-				{
-					/* Found it, check type */
-					if (atttypid != att->atttypid || atttypmod != att->atttypmod)
-						elog(ERROR, "attribute \"%s\" of type %s does not match corresponding attribute of type %s",
-							 attname,
-							 format_type_be(cstate->indesc->tdtypeid),
-							 format_type_be(cstate->outdesc->tdtypeid));
-					cstate->attrMap[i] = (AttrNumber) (j + 1);
-					break;
-				}
-			}
-			if (cstate->attrMap[i] == 0)
-				elog(ERROR, "attribute \"%s\" of type %s does not exist",
-					 attname,
-					 format_type_be(cstate->indesc->tdtypeid));
-		}
-		/* preallocate workspace for Datum arrays */
-		n = cstate->indesc->natts + 1;	/* +1 for NULL */
-		cstate->invalues = (Datum *) palloc(n * sizeof(Datum));
-		cstate->inisnull = (bool *) palloc(n * sizeof(bool));
-		n = cstate->outdesc->natts;
-		cstate->outvalues = (Datum *) palloc(n * sizeof(Datum));
-		cstate->outisnull = (bool *) palloc(n * sizeof(bool));
+		cstate->map = convert_tuples_by_name(cstate->indesc,
+											 cstate->outdesc,
+								 gettext_noop("could not convert row type"));
+		cstate->initialized = true;
 
 		MemoryContextSwitchTo(old_cxt);
 	}
 
-	attrMap = cstate->attrMap;
-	invalues = cstate->invalues;
-	inisnull = cstate->inisnull;
-	outvalues = cstate->outvalues;
-	outisnull = cstate->outisnull;
-	outnatts = cstate->outdesc->natts;
+	/*
+	 * No-op if no conversion needed (not clear this can happen here).
+	 */
+	if (cstate->map == NULL)
+		return tupDatum;
 
 	/*
-	 * heap_deform_tuple needs a HeapTuple not a bare HeapTupleHeader.
+	 * do_convert_tuple needs a HeapTuple not a bare HeapTupleHeader.
 	 */
 	tmptup.t_len = HeapTupleHeaderGetDatumLength(tuple);
 	tmptup.t_data = tuple;
 
-	/*
-	 * Extract all the values of the old tuple, offsetting the arrays so that
-	 * invalues[0] is NULL and invalues[1] is the first source attribute; this
-	 * exactly matches the numbering convention in attrMap.
-	 */
-	heap_deform_tuple(&tmptup, cstate->indesc, invalues + 1, inisnull + 1);
-	invalues[0] = (Datum) 0;
-	inisnull[0] = true;
-
-	/*
-	 * Transpose into proper fields of the new tuple.
-	 */
-	for (i = 0; i < outnatts; i++)
-	{
-		int			j = attrMap[i];
-
-		outvalues[i] = invalues[j];
-		outisnull[i] = inisnull[j];
-	}
-
-	/*
-	 * Now form the new tuple.
-	 */
-	result = heap_form_tuple(cstate->outdesc, outvalues, outisnull);
+	result = do_convert_tuple(&tmptup, cstate->map);
 
 	return HeapTupleGetDatum(result);
 }
@@ -4222,7 +4160,7 @@ ExecEvalNullTest(NullTestState *nstate,
 	if (isDone && *isDone == ExprEndResult)
 		return result;			/* nothing to check */
 
-	if (nstate->argisrow && !(*isNull))
+	if (ntest->argisrow && !(*isNull))
 	{
 		HeapTupleHeader tuple;
 		Oid			tupType;
@@ -4513,12 +4451,20 @@ ExecEvalFieldSelect(FieldSelectState *fstate,
 	tupDesc = get_cached_rowtype(tupType, tupTypmod,
 								 &fstate->argdesc, econtext);
 
-	/* Check for dropped column, and force a NULL result if so */
-	if (fieldnum <= 0 ||
-		fieldnum > tupDesc->natts)		/* should never happen */
+	/*
+	 * Find field's attr record.  Note we don't support system columns here: a
+	 * datum tuple doesn't have valid values for most of the interesting
+	 * system columns anyway.
+	 */
+	if (fieldnum <= 0)			/* should never happen */
+		elog(ERROR, "unsupported reference to system column %d in FieldSelect",
+			 fieldnum);
+	if (fieldnum > tupDesc->natts)		/* should never happen */
 		elog(ERROR, "attribute number %d exceeds number of columns %d",
 			 fieldnum, tupDesc->natts);
 	attr = tupDesc->attrs[fieldnum - 1];
+
+	/* Check for dropped column, and force a NULL result if so */
 	if (attr->attisdropped)
 	{
 		*isNull = true;
@@ -4534,13 +4480,8 @@ ExecEvalFieldSelect(FieldSelectState *fstate,
 						   format_type_be(attr->atttypid),
 						   format_type_be(fselect->resulttype))));
 
-	/*
-	 * heap_getattr needs a HeapTuple not a bare HeapTupleHeader.  We set all
-	 * the fields in the struct just in case user tries to inspect system
-	 * columns.
-	 */
+	/* heap_getattr needs a HeapTuple not a bare HeapTupleHeader */
 	tmptup.t_len = HeapTupleHeaderGetDatumLength(tuple);
-	ItemPointerSetInvalid(&(tmptup.t_self));
 	tmptup.t_data = tuple;
 
 	result = heap_getattr(&tmptup,
@@ -4623,10 +4564,12 @@ ExecEvalFieldStore(FieldStoreState *fstate,
 
 		/*
 		 * Use the CaseTestExpr mechanism to pass down the old value of the
-		 * field being replaced; this is useful in case we have a nested field
-		 * update situation.  It's safe to reuse the CASE mechanism because
-		 * there cannot be a CASE between here and where the value would be
-		 * needed.
+		 * field being replaced; this is needed in case the newval is itself a
+		 * FieldStore or ArrayRef that has to obtain and modify the old value.
+		 * It's safe to reuse the CASE mechanism because there cannot be a
+		 * CASE between here and where the value would be needed, and a field
+		 * assignment can't be within a CASE either.  (So saving and restoring
+		 * the caseValue is just paranoia, but let's do it anyway.)
 		 */
 		econtext->caseValue_datum = values[fieldnum - 1];
 		econtext->caseValue_isNull = isnull[fieldnum - 1];
@@ -5862,7 +5805,6 @@ ExecInitExpr(Expr *node, PlanState *parent)
 
 				nstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalNullTest;
 				nstate->arg = ExecInitExpr(ntest->arg, parent);
-				nstate->argisrow = type_is_rowtype(exprType((Node *) ntest->arg));
 				nstate->argdesc = NULL;
 				state = (ExprState *) nstate;
 			}
@@ -6176,10 +6118,7 @@ ExecCleanTargetListLength(List *targetlist)
  * of *isDone = ExprEndResult signifies end of the set of tuple.
  * We assume that *isDone has been initialized to ExprSingleResult by caller.
  */
-#ifndef USE_CODEGEN
-static
-#endif
-bool
+static bool
 ExecTargetList(List *targetlist,
 			   ExprContext *econtext,
 			   Datum *values,

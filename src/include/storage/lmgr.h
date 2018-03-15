@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.65 2009/06/11 14:49:12 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.66 2010/01/02 16:58:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,12 +42,6 @@ extern void UnlockRelationIdForSession(LockRelId *relid, LOCKMODE lockmode);
 /* Lock a relation for extension */
 extern void LockRelationForExtension(Relation relation, LOCKMODE lockmode);
 extern void UnlockRelationForExtension(Relation relation, LOCKMODE lockmode);
-extern void LockRelationForResyncExtension(RelFileNode *relFileNode, LOCKMODE lockmode);
-extern void UnlockRelationForResyncExtension(RelFileNode *relFileNode, LOCKMODE lockmode);
-
-/* Lock a relation for resynchronize */
-extern void LockRelationForResynchronize(RelFileNode *relFileNode, LOCKMODE lockmode);
-extern void UnlockRelationForResynchronize(RelFileNode *relFileNode, LOCKMODE lockmode);
 
 /* Lock a relation for Append-Only segment files. */
 extern LockAcquireResult LockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode, bool dontWait);

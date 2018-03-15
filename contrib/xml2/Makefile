@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/contrib/xml2/Makefile,v 1.12 2008/05/08 16:49:37 tgl Exp $
+# $PostgreSQL: pgsql/contrib/xml2/Makefile,v 1.14 2010/03/01 18:07:59 tgl Exp $
 
 MODULE_big = pgxml
 

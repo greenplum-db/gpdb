@@ -46,11 +46,11 @@
  *	 HeapTupleSatisfiesAny()
  *		  all tuples are visible
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/tqual.c,v 1.113 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/tqual.c,v 1.118 2010/02/26 02:01:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -146,9 +146,12 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
  * code in heapam.c relies on that!)
  *
  * Also, if we are cleaning up HEAP_MOVED_IN or HEAP_MOVED_OFF entries, then
- * we can always set the hint bits, since VACUUM FULL always uses synchronous
- * commits and doesn't move tuples that weren't previously hinted.	(This is
- * not known by this subroutine, but is applied by its callers.)
+ * we can always set the hint bits, since pre-9.0 VACUUM FULL always used
+ * synchronous commits and didn't move tuples that weren't previously
+ * hinted.	(This is not known by this subroutine, but is applied by its
+ * callers.)  Note: old-style VACUUM FULL is gone, but we have to keep this
+ * module's support for MOVED_OFF/MOVED_IN flag bits for as long as we
+ * support in-place update from pre-9.0 databases.
  *
  * Normal commits may be asynchronous, so for those we need to get the LSN
  * of the transaction and then check whether this is flushed.
@@ -236,6 +239,7 @@ HeapTupleSatisfiesSelf(Relation relation, HeapTupleHeader tuple, Snapshot snapsh
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return false;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -254,6 +258,7 @@ HeapTupleSatisfiesSelf(Relation relation, HeapTupleHeader tuple, Snapshot snapsh
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -407,6 +412,7 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Snapshot snapsho
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return false;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -425,6 +431,7 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Snapshot snapsho
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -571,6 +578,7 @@ HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Snapshot snaps
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return false;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -589,6 +597,7 @@ HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Snapshot snaps
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -650,6 +659,7 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return HeapTupleInvisible;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -668,6 +678,7 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -817,6 +828,7 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Snapshot snaps
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return false;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -835,6 +847,7 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Snapshot snaps
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -979,6 +992,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTupleHeader tuple, Snapshot snapsh
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return false;
 
+		/* Used by pre-9.0 binary upgrades */
 		if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -997,6 +1011,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTupleHeader tuple, Snapshot snapsh
 							InvalidTransactionId);
 			}
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -1163,6 +1178,7 @@ HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader tuple, TransactionId
 	{
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
 			return HEAPTUPLE_DEAD;
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_OFF)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -1180,6 +1196,7 @@ HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader tuple, TransactionId
 			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
 						InvalidTransactionId);
 		}
+		/* Used by pre-9.0 binary upgrades */
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
 			TransactionId xvac = HeapTupleHeaderGetXvac(tuple);
@@ -1306,23 +1323,6 @@ HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader tuple, TransactionId
 	if (!TransactionIdPrecedes(HeapTupleHeaderGetXmax(tuple), OldestXmin))
 		return HEAPTUPLE_RECENTLY_DEAD;
 
-	/*
-	 * Okay here means based on local visibility rules the tuple can be
-	 * reported as DEAD, lets check from distributed visibility if its still
-	 * LIVE. This is performed to avoid removing the tuple still needed based
-	 * on distributed snapshot.
-	 */
-	if (TransactionIdIsNormal(HeapTupleHeaderGetXmax(tuple)) &&
-		!(tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE))
-	{
-		if (localXidSatisfiesAnyDistributedSnapshot(HeapTupleHeaderGetXmax(tuple)))
-			return HEAPTUPLE_RECENTLY_DEAD;
-
-		tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
-		markDirty(buffer, relation, tuple, /* isXmin */ false);
-		return HEAPTUPLE_DEAD;
-	}
-
 	/* Otherwise, it's dead and removable */
 	return HEAPTUPLE_DEAD;
 }
@@ -1344,8 +1344,12 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 	 * snapshot since it covers the correct past view of in-progress distributed
 	 * transactions and also the correct future view of in-progress distributed
 	 * transactions that may yet arrive.
+	 *
+	 * In the QD, the distributed transactions become visible at the same time
+	 * as the corresponding local ones, so we can rely on the local XIDs.
 	 */
-	if (snapshot->haveDistribSnapshot && !distributedSnapshotIgnore)
+	if (snapshot->haveDistribSnapshot && !distributedSnapshotIgnore &&
+		Gp_segment != -1)
 	{
 		DistributedSnapshotCommitted	distributedSnapshotCommitted;
 
@@ -1415,42 +1419,86 @@ XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot)
 		return true;
 
 	/*
-	 * If the snapshot contains full subxact data, the fastest way to check
-	 * things is just to compare the given XID against both subxact XIDs and
-	 * top-level XIDs.	If the snapshot overflowed, we have to use pg_subtrans
-	 * to convert a subxact XID to its parent XID, but then we need only look
-	 * at top-level XIDs not subxacts.
+	 * Snapshot information is stored slightly differently in snapshots taken
+	 * during recovery.
 	 */
-	if (snapshot->subxcnt >= 0)
+	if (!snapshot->takenDuringRecovery)
 	{
-		/* full data, so search subxip */
+		/*
+		 * If the snapshot contains full subxact data, the fastest way to
+		 * check things is just to compare the given XID against both subxact
+		 * XIDs and top-level XIDs.  If the snapshot overflowed, we have to
+		 * use pg_subtrans to convert a subxact XID to its parent XID, but
+		 * then we need only look at top-level XIDs not subxacts.
+		 */
+		if (!snapshot->suboverflowed)
+		{
+			/* full data, so search subxip */
+			int32		j;
+
+			for (j = 0; j < snapshot->subxcnt; j++)
+			{
+				if (TransactionIdEquals(xid, snapshot->subxip[j]))
+					return true;
+			}
+
+			/* not there, fall through to search xip[] */
+		}
+		else
+		{
+			/* overflowed, so convert xid to top-level */
+			xid = SubTransGetTopmostTransaction(xid);
+
+			/*
+			 * If xid was indeed a subxact, we might now have an xid < xmin,
+			 * so recheck to avoid an array scan.  No point in rechecking
+			 * xmax.
+			 */
+			if (TransactionIdPrecedes(xid, snapshot->xmin))
+				return false;
+		}
+
+		for (i = 0; i < snapshot->xcnt; i++)
+		{
+			if (TransactionIdEquals(xid, snapshot->xip[i]))
+				return true;
+		}
+	}
+	else
+	{
 		int32		j;
 
+		/*
+		 * In recovery we store all xids in the subxact array because it is by
+		 * far the bigger array, and we mostly don't know which xids are
+		 * top-level and which are subxacts. The xip array is empty.
+		 *
+		 * We start by searching subtrans, if we overflowed.
+		 */
+		if (snapshot->suboverflowed)
+		{
+			/* overflowed, so convert xid to top-level */
+			xid = SubTransGetTopmostTransaction(xid);
+
+			/*
+			 * If xid was indeed a subxact, we might now have an xid < xmin,
+			 * so recheck to avoid an array scan.  No point in rechecking
+			 * xmax.
+			 */
+			if (TransactionIdPrecedes(xid, snapshot->xmin))
+				return false;
+		}
+
+		/*
+		 * We now have either a top-level xid higher than xmin or an
+		 * indeterminate xid. We don't know whether it's top level or subxact
+		 * but it doesn't matter. If it's present, the xid is visible.
+		 */
 		for (j = 0; j < snapshot->subxcnt; j++)
 		{
 			if (TransactionIdEquals(xid, snapshot->subxip[j]))
 				return true;
 		}
-
-		/* not there, fall through to search xip[] */
-	}
-	else
-	{
-		/* overflowed, so convert xid to top-level */
-		xid = SubTransGetTopmostTransaction(xid);
-
-		/*
-		 * If xid was indeed a subxact, we might now have an xid < xmin, so
-		 * recheck to avoid an array scan.	No point in rechecking xmax.
-		 */
-		if (TransactionIdPrecedes(xid, snapshot->xmin))
-			return false;
-	}
-
-	for (i = 0; i < snapshot->xcnt; i++)
-	{
-		if (TransactionIdEquals(xid, snapshot->xip[i]))
-			return true;
 	}
 
 	return false;

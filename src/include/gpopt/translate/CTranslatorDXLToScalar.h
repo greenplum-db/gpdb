@@ -331,6 +331,12 @@ namespace gpdxl
 			CTranslatorDXLToScalar(const CTranslatorDXLToScalar&);
 
 		public:
+			struct STypeOidAndTypeModifier
+			{
+				OID OidType;
+				INT ITypeModifier;
+			};
+
 			// ctor
 			CTranslatorDXLToScalar(IMemoryPool *pmp, CMDAccessor *pmda, ULONG ulSegments);
 

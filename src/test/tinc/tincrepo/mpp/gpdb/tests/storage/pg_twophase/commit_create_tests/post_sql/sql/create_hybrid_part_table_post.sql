@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 \d cr_hybrid_part
 COPY cr_hybrid_part FROM STDIN delimiter as '|';
 1|2|3325|771.64|, even theodolites. regular, final theodolites eat after the carefully pending foxes. furiously regular deposits sleep slyly. carefully bold realms above the ironic dependencies haggle careful

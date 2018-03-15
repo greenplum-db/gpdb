@@ -100,49 +100,49 @@ select sum(tnumeric) from dtype;
 select sum(tint2)::boolean[]     from dtype;  -- bigint[]
 ERROR:  cannot cast type bigint[] to boolean[]
 LINE 1: select sum(tint2)::boolean[]     from dtype;
-                           ^
+                         ^
 select sum(tint4)::boolean[]     from dtype;  -- bigint[]
 ERROR:  cannot cast type bigint[] to boolean[]
 LINE 1: select sum(tint4)::boolean[]     from dtype;
-                           ^
+                         ^
 select sum(tint8)::boolean[]     from dtype;  -- bigint[]
 ERROR:  cannot cast type bigint[] to boolean[]
 LINE 1: select sum(tint8)::boolean[]     from dtype;
-                           ^
+                         ^
 select sum(tfloat4)::boolean[]   from dtype;  -- float8[]
 ERROR:  cannot cast type double precision[] to boolean[]
 LINE 1: select sum(tfloat4)::boolean[]   from dtype;
-                             ^
+                           ^
 select sum(tfloat8)::boolean[]   from dtype;  -- float8[]
 ERROR:  cannot cast type double precision[] to boolean[]
 LINE 1: select sum(tfloat8)::boolean[]   from dtype;
-                             ^
+                           ^
 select sum(tnumeric)::boolean[]  from dtype;  -- float8[]
 ERROR:  cannot cast type double precision[] to boolean[]
 LINE 1: select sum(tnumeric)::boolean[]  from dtype;
-                              ^
+                            ^
 -- What would normal sum do?
 select sum(tint2[1])::boolean     from dtype;  -- bigint
 ERROR:  cannot cast type bigint to boolean
 LINE 1: select sum(tint2[1])::boolean     from dtype;
-                              ^
+                            ^
 select sum(tint4[1])::boolean     from dtype;  -- bigint
 ERROR:  cannot cast type bigint to boolean
 LINE 1: select sum(tint4[1])::boolean     from dtype;
-                              ^
+                            ^
 select sum(tint8[1])::boolean     from dtype;  -- numeric  (bigint above)
 ERROR:  cannot cast type numeric to boolean
 LINE 1: select sum(tint8[1])::boolean     from dtype;
-                              ^
+                            ^
 select sum(tfloat4[1])::boolean   from dtype;  -- float4   (float8 above)
 ERROR:  cannot cast type real to boolean
 LINE 1: select sum(tfloat4[1])::boolean   from dtype;
-                                ^
+                              ^
 select sum(tfloat8[1])::boolean   from dtype;  -- float8
 ERROR:  cannot cast type double precision to boolean
 LINE 1: select sum(tfloat8[1])::boolean   from dtype;
-                                ^
+                              ^
 select sum(tnumeric[1])::boolean  from dtype;  -- numeric
 ERROR:  cannot cast type numeric to boolean
 LINE 1: select sum(tnumeric[1])::boolean  from dtype;
-                                 ^
+                               ^

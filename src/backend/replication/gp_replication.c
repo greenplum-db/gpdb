@@ -10,20 +10,34 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres.h"
 
+#include "pgtime.h"
 #include "replication/gp_replication.h"
+#include "replication/walreceiver.h"
 #include "replication/walsender_private.h"
 #include "utils/builtins.h"
 
-#ifdef USE_SEGWALREP
+/* Set at database system is ready to accept connections */
+extern pg_time_t PMAcceptingConnectionsStartTime;
+
+/*
+ * If mirror disconnects and re-connects between this period, or just takes
+ * this much time during initial connection of cluster start, it will not get
+ * reported as down to FTS.
+ */
+#define FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD 30 /* secs */
+
 /*
  * Check the WalSndCtl to obtain if mirror is up or down, if the wal sender is
  * in streaming, and if synchronous replication is enabled or not.
  */
-void GetMirrorStatus(FtsResponse *response)
+void
+GetMirrorStatus(FtsResponse *response)
 {
 	response->IsMirrorUp = false;
 	response->IsInSync = false;
+	response->RequestRetry = false;
 
 	/*
 	 * Greenplum currently supports only ONE mirror per primary.
@@ -38,7 +52,39 @@ void GetMirrorStatus(FtsResponse *response)
 		/* use volatile pointer to prevent code rearrangement */
 		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
 
-		if (walsnd->pid != 0)
+		if (walsnd->pid == 0)
+		{
+			Assert(walsnd->marked_pid_zero_at_time);
+			/*
+			 * PMAcceptingConnectionStartTime is process-local variable, set in
+			 * postmaster process and inherited by the FTS handler child
+			 * process. This works because the timestamp is set only once by
+			 * postmaster, and is guaranteed to be set before FTS handler child
+			 * processes can be spawned.
+			 */
+			Assert(PMAcceptingConnectionsStartTime);
+			pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsnd->marked_pid_zero_at_time, PMAcceptingConnectionsStartTime);
+			/*
+			 * Report mirror as down, only if it didn't connect for below
+			 * grace period to primary. This helps to avoid marking mirror
+			 * down unnecessarily when restarting primary or due to small n/w
+			 * glitch. During this period, request FTS to probe again.
+			 *
+			 * If the delta is negative, then it's overflowed, meaning it's
+			 * over FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD since either last
+			 * database accepting connections or last time wal sender
+			 * died. Then, we can safely mark the mirror is down.
+			 */
+			if (delta < FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD && delta >= 0)
+			{
+				ereport(LOG,
+						(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
+						 errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
+									  walsnd->marked_pid_zero_at_time, PMAcceptingConnectionsStartTime)));
+				response->RequestRetry = true;
+			}
+		}
+		else
 		{
 			if(walsnd->state == WALSNDSTATE_CATCHUP
 			   || walsnd->state == WALSNDSTATE_STREAMING)
@@ -63,33 +109,28 @@ void GetMirrorStatus(FtsResponse *response)
 void
 SetSyncStandbysDefined(void)
 {
-	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-
 	if (!WalSndCtl->sync_standbys_defined)
 	{
-		SyncRepStandbyNames = "*";
-		set_gp_replication_config("synchronous_standby_names", SyncRepStandbyNames);
-		SyncRepUpdateSyncStandbysDefined();
-	}
+		set_gp_replication_config("synchronous_standby_names", "*");
 
-	LWLockRelease(SyncRepLock);
+		/* Signal a reload to the postmaster. */
+		elog(LOG, "signaling configuration reload: setting synchronous_standby_names to '*'");
+		DirectFunctionCall1(pg_reload_conf, PointerGetDatum(NULL) /* unused */);
+	}
 }
 
 void
 UnsetSyncStandbysDefined(void)
 {
-	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-
 	if (WalSndCtl->sync_standbys_defined)
 	{
-		SyncRepStandbyNames = "";
-		set_gp_replication_config("synchronous_standby_names", SyncRepStandbyNames);
-		SyncRepUpdateSyncStandbysDefined();
-	}
+		set_gp_replication_config("synchronous_standby_names", "");
 
-	LWLockRelease(SyncRepLock);
+		/* Signal a reload to the postmaster. */
+		elog(LOG, "signaling configuration reload: setting synchronous_standby_names to ''");
+		DirectFunctionCall1(pg_reload_conf, PointerGetDatum(NULL) /* unused */);
+	}
 }
-#endif
 
 Datum
 gp_replication_error(PG_FUNCTION_ARGS)

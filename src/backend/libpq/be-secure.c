@@ -6,12 +6,12 @@
  *	  message integrity and endpoint authentication.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/be-secure.c,v 1.92 2009/06/11 14:48:58 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/be-secure.c,v 1.102 2010/07/06 19:18:56 momjian Exp $
  *
  *	  Since the server static private key ($DataDir/server.key)
  *	  will normally be stored unencrypted so that the database
@@ -445,7 +445,6 @@ wloop:
  * directly so it gets passed through the socket/signals layer on Win32.
  *
  * They are closely modelled on the original socket implementations in OpenSSL.
- *
  */
 
 static bool my_bio_initialized = false;
@@ -838,7 +837,7 @@ initialize_SSL(void)
 	SSL_CTX_set_tmp_dh_callback(SSL_context, tmp_dh_cb);
 	SSL_CTX_set_options(SSL_context, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2);
 
-	/* setup the allowed cipher list */
+	/* set up the allowed cipher list */
 	if (SSL_CTX_set_cipher_list(SSL_context, SSLCipherSuites) != 1)
 		elog(FATAL, "could not set the cipher list (no valid ciphers available)");
 
@@ -858,8 +857,8 @@ initialize_SSL(void)
 		 */
 		if (errno != ENOENT)
 			ereport(FATAL,
-					(errmsg("could not access root certificate file \"%s\": %m",
-							ROOT_CERT_FILE)));
+				 (errmsg("could not access root certificate file \"%s\": %m",
+						 ROOT_CERT_FILE)));
 	}
 	else if (SSL_CTX_load_verify_locations(SSL_context, ROOT_CERT_FILE, NULL) != 1 ||
 		  (root_cert_list = SSL_load_client_CA_file(ROOT_CERT_FILE)) == NULL)
@@ -876,7 +875,7 @@ initialize_SSL(void)
 	{
 		/*----------
 		 * Load the Certificate Revocation List (CRL) if file exists.
-		 * http://searchsecurity.techtarget.com/sDefinition/0,,sid14_gci803160,
+		 * http://searchsecurity.techtarget.com/sDefinition/0,,sid14_gci803160,00.html
 		 *----------
 		 */
 		X509_STORE *cvstore = SSL_CTX_get_cert_store(SSL_context);
@@ -886,7 +885,7 @@ initialize_SSL(void)
 			/* Set the flags to check against the complete CRL chain */
 			if (X509_STORE_load_locations(cvstore, ROOT_CRL_FILE, NULL) == 1)
 			{
-/* OpenSSL 0.96 does not support X509_V_FLAG_CRL_CHECK */
+				/* OpenSSL 0.96 does not support X509_V_FLAG_CRL_CHECK */
 #ifdef X509_V_FLAG_CRL_CHECK
 				X509_STORE_set_flags(cvstore,
 						  X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);

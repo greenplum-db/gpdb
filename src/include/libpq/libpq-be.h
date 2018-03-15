@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/libpq/libpq-be.h,v 1.71 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/libpq/libpq-be.h,v 1.74 2010/01/15 09:19:08 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -75,8 +75,8 @@ typedef struct
 
 typedef enum CAC_state
 {
-	CAC_OK, CAC_STARTUP, CAC_SHUTDOWN, CAC_RECOVERY, CAC_TOOMANY, CAC_MIRROR_OR_QUIESCENT,
-	CAC_WAITBACKUP
+	CAC_OK, CAC_STARTUP, CAC_SHUTDOWN, CAC_RECOVERY, CAC_TOOMANY,
+	CAC_WAITBACKUP, CAC_MIRROR_READY
 } CAC_state;
 
 

@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_group.sgml,v 1.19 2008/11/14 10:22:46 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_group.sgml,v 1.22 2010/04/03 07:22:58 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEGROUP">
  <refmeta>
-  <refentrytitle id="sql-creategroup-title">CREATE GROUP</refentrytitle>
+  <refentrytitle>CREATE GROUP</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -23,7 +23,7 @@ PostgreSQL documentation
 <synopsis>
 CREATE GROUP <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replaceable class="PARAMETER">option</replaceable> [ ... ] ]
 
-where <replaceable class="PARAMETER">option</replaceable> can be:
+<phrase>where <replaceable class="PARAMETER">option</replaceable> can be:</phrase>
     
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
@@ -33,11 +33,11 @@ where <replaceable class="PARAMETER">option</replaceable> can be:
     | LOGIN | NOLOGIN
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
     | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>' 
-    | IN ROLE <replaceable class="PARAMETER">rolename</replaceable> [, ...]
-    | IN GROUP <replaceable class="PARAMETER">rolename</replaceable> [, ...]
-    | ROLE <replaceable class="PARAMETER">rolename</replaceable> [, ...]
-    | ADMIN <replaceable class="PARAMETER">rolename</replaceable> [, ...]
-    | USER <replaceable class="PARAMETER">rolename</replaceable> [, ...]
+    | IN ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | IN GROUP <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | ROLE <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | ADMIN <replaceable class="PARAMETER">role_name</replaceable> [, ...]
+    | USER <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     | SYSID <replaceable class="PARAMETER">uid</replaceable> 
 </synopsis>
  </refsynopsisdiv>
@@ -47,7 +47,7 @@ where <replaceable class="PARAMETER">option</replaceable> can be:
 
   <para>
    <command>CREATE GROUP</command> is now an alias for
-   <xref linkend="sql-createrole" endterm="sql-createrole-title">.
+   <xref linkend="sql-createrole">.
   </para>
  </refsect1> 
  
@@ -64,7 +64,7 @@ where <replaceable class="PARAMETER">option</replaceable> can be:
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createrole" endterm="sql-createrole-title"></member>
+   <member><xref linkend="sql-createrole"></member>
   </simplelist>
  </refsect1>
 </refentry>

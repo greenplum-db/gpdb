@@ -50,7 +50,7 @@ DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
 (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
-LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
      s1     |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
@@ -10398,13 +10398,13 @@ SELECT * FROM clean_out_file;
 -- Create WET with line_delim=E'\n'
 DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
 CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
-  s1 char(10), s2 varchar(10), s3 text, dt timestamp,
-  n1 smallint, n2 integer, n3 bigint, n4 decimal,
-  n5 numeric, n6 real, n7 double precision)
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
-  s2='10', s3='10', dt='25', n1='5', n2='10',
-  n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\n');
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\n');
 -- Output data
 INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
 \! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
@@ -10482,14 +10482,14 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
   s1 char(10), s2 varchar(10), s3 text,
   col_empty character(5),col_null character varying(5)
 )
-LOCATION ('gpfdist://@hostname@:7575/fixedwidth_null.tbl')       
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_null.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', null='', preserve_blanks='on',
   s1='10',s2='10', s3='10', col_empty='5', col_null='5');
 -- Create WET with null string defined: null='NULL'
 DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
 CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
-    s1 char(10), s2 varchar(10), s3 text,
-     col_empty character(5),col_null character varying(5)
+  s1 char(10), s2 varchar(10), s3 text,
+  col_empty character(5),col_null character varying(5)
 )
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
 FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',s2='10',

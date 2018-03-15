@@ -17,3 +17,5 @@ run:
     - --gpdb_name=bin_gpdb
     - --action=test
     - --configure-option=--disable-gpcloud
+params:
+  BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB

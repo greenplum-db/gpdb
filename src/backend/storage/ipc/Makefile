@@ -1,7 +1,7 @@
 #
 # Makefile for storage/ipc
 #
-# $PostgreSQL: pgsql/src/backend/storage/ipc/Makefile,v 1.21 2008/02/19 10:30:08 petere Exp $
+# $PostgreSQL: pgsql/src/backend/storage/ipc/Makefile,v 1.23 2009/12/19 01:32:35 sriggs Exp $
 #
 
 subdir = src/backend/storage/ipc
@@ -17,6 +17,6 @@ endif
 endif
 
 OBJS = ipc.o ipci.o pmsignal.o procarray.o procsignal.o shmem.o shmqueue.o \
-	sinval.o sinvaladt.o
+	sinval.o sinvaladt.o standby.o
 
 include $(top_srcdir)/src/backend/common.mk

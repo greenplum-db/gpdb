@@ -14,11 +14,3 @@ def appendSegmentInfoForOutput(instanceType, gpArray, seg, tableLogger):
     tableLogger.info(['%s instance address' % instanceType, "= " + seg.getSegmentAddress()])
     tableLogger.info(['%s instance directory' % instanceType, "= " + seg.getSegmentDataDirectory()])
     tableLogger.info(['%s instance port' % instanceType, "= " + str(seg.getSegmentPort())])
-    tableLogger.info(['%s instance replication port' % instanceType, "= " + str(seg.getSegmentReplicationPort())])
-
-    for fs in gpArray.getFilespaces(False):
-        path = seg.getSegmentFilespaces()[fs.getOid()]
-        tableLogger.info(['%s instance %s directory' % (instanceType, fs.getName()), "= " + path])
-
-
-

@@ -116,12 +116,12 @@
         <p>Use the interactive interview process to create your own input file
           unless your expansion scenario has atypical needs. </p>
         <p>The format for expansion input files is:</p>
-        <codeblock>hostname:address:port:fselocation:dbid:content:preferred_role:replication_port</codeblock>
+        <codeblock>hostname:address:port:datadir:dbid:content:preferred_role</codeblock>
         <p>For example:</p>
-        <codeblock>sdw5:sdw5-1:50011:/gpdata/primary/gp9:11:9:p:53011
-sdw5:sdw5-2:50012:/gpdata/primary/gp10:12:10:p:53011
-sdw5:sdw5-2:60011:/gpdata/mirror/gp9:13:9:m:63011
-sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
+        <codeblock>sdw5:sdw5-1:50011:/gpdata/primary/gp9:11:9:p
+sdw5:sdw5-2:50012:/gpdata/primary/gp10:12:10:p
+sdw5:sdw5-2:60011:/gpdata/mirror/gp9:13:9:m
+sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
         <p>For each new segment, this format of expansion input file requires the following:</p>
         <table id="no165833">
           <title>Data for the expansion configuration file</title>
@@ -149,10 +149,10 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
                   existing segment <i>port</i> base number. </entry>
               </row>
               <row>
-                <entry colname="col1">fselocation</entry>
+                <entry colname="col1">datadir</entry>
                 <entry colname="col2">Directory name</entry>
-                <entry colname="col3">The data directory (filespace) location for a segment as per
-                  the pg_filespace_entry system catalog.</entry>
+                <entry colname="col3">The data directory location for a segment as per
+                  the gp_segment_configuration system catalog.</entry>
               </row>
               <row>
                 <entry colname="col1">dbid</entry>
@@ -180,12 +180,6 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
                 </entry>
                 <entry colname="col3">Determines whether this segment is a primary or mirror.
                   Specify <codeph>p</codeph> for primary and <codeph>m</codeph> for mirror.</entry>
-              </row>
-              <row>
-                <entry colname="col1">replication_port</entry>
-                <entry colname="col2">An available port number</entry>
-                <entry colname="col3">File replication port for the segment, incremented on the
-                  existing segment <i>replication_port</i> base number.</entry>
               </row>
             </tbody>
           </tgroup>

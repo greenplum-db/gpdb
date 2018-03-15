@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.101 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.103 2010/01/02 16:57:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -175,7 +175,7 @@ ExecHashJoin(HashJoinState *node)
 		/*
 		 * CDB: Offer extra info for EXPLAIN ANALYZE.
 		 */
-		if (estate->es_instrument)
+		if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 			ExecHashTableExplainInit(hashNode, node, hashtable);
 
 
@@ -541,8 +541,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 
 	outerPlanState(hjstate) = ExecInitNode(outerNode, estate, eflags);
 
-#define HASHJOIN_NSLOTS 3
-
 	/*
 	 * tuple table initialization
 	 */
@@ -633,14 +631,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	hjstate->hj_OuterNotEmpty = false;
 
 	return hjstate;
-}
-
-int
-ExecCountSlotsHashJoin(HashJoin *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		HASHJOIN_NSLOTS;
 }
 
 /* ----------------------------------------------------------------
@@ -1005,6 +995,9 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 
 	if (hashtable->work_set == NULL)
 	{
+		/*
+		 * First time spilling.
+		 */
 		hashtable->hjstate->workfiles_created = true;
 		if (hashtable->hjstate->js.ps.instrument)
 		{
@@ -1014,18 +1007,9 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 		MemoryContext oldcxt;
 
 		oldcxt = MemoryContextSwitchTo(bfCxt);
-
 		hashtable->work_set = workfile_mgr_create_set(gp_workfile_type_hashjoin,
 				true, /* can_be_reused */
 				&hashtable->hjstate->js.ps);
-
-		/*
-		 * First time spilling. Before creating any spill files, create a
-		 * metadata file
-		 */
-		hashtable->state_file = workfile_mgr_create_fileno(hashtable->work_set, WORKFILE_NUM_HASHJOIN_METADATA);
-		elog(gp_workfile_caching_loglevel, "created state file %s", ExecWorkFile_GetFileName(hashtable->state_file));
-
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -1348,7 +1332,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 		 * after we build the hash table, the inner batch file is no longer
 		 * needed
 		 */
-		if (hjstate->js.ps.instrument)
+		if (hjstate->js.ps.instrument && hjstate->js.ps.instrument->need_cdb)
 		{
 			Assert(hashtable->stats);
 			hashtable->stats->batchstats[curbatch].innerfilesize =

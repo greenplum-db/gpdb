@@ -121,6 +121,17 @@ update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
 SELECT relname, bar.* FROM bar, pg_class where bar.tableoid = pg_class.oid
 order by 1,2;
 
+/* Test multiple inheritance of column defaults */
+
+CREATE TABLE firstparent (tomorrow date default now()::date + 1);
+CREATE TABLE secondparent (tomorrow date default  now() :: date  +  1);
+CREATE TABLE jointchild () INHERITS (firstparent, secondparent);  -- ok
+CREATE TABLE thirdparent (tomorrow date default now()::date - 1);
+CREATE TABLE otherchild () INHERITS (firstparent, thirdparent);  -- not ok
+CREATE TABLE otherchild (tomorrow date default now())
+  INHERITS (firstparent, thirdparent);  -- ok, child resolves ambiguous default
+
+DROP TABLE firstparent, secondparent, jointchild, thirdparent, otherchild;
 
 /* Test inheritance of structure (LIKE) */
 CREATE TABLE inhx (xx text DEFAULT 'text');
@@ -276,3 +287,89 @@ create table cc2(f4 float) inherits(pp1,cc1);
 alter table pp1 add column a2 int check (a2 > 0);
 \d cc2
 drop table pp1 cascade;
+
+-- including storage and comments
+CREATE TABLE t1 (a text CHECK (length(a) > 2) PRIMARY KEY, b text);
+CREATE INDEX t1_b_key ON t1 (b);
+CREATE INDEX t1_fnidx ON t1 ((a || b));
+COMMENT ON COLUMN t1.a IS 'A';
+COMMENT ON COLUMN t1.b IS 'B';
+COMMENT ON CONSTRAINT t1_a_check ON t1 IS 't1_a_check';
+COMMENT ON INDEX t1_pkey IS 'index pkey';
+COMMENT ON INDEX t1_b_key IS 'index b_key';
+ALTER TABLE t1 ALTER COLUMN a SET STORAGE MAIN;
+
+CREATE TABLE t2 (c text);
+ALTER TABLE t2 ALTER COLUMN c SET STORAGE EXTERNAL;
+COMMENT ON COLUMN t2.c IS 'C';
+
+CREATE TABLE t3 (a text CHECK (length(a) < 5), c text);
+ALTER TABLE t3 ALTER COLUMN c SET STORAGE EXTERNAL;
+ALTER TABLE t3 ALTER COLUMN a SET STORAGE MAIN;
+COMMENT ON COLUMN t3.a IS 'A3';
+COMMENT ON COLUMN t3.c IS 'C';
+COMMENT ON CONSTRAINT t3_a_check ON t3 IS 't3_a_check';
+
+CREATE TABLE t4 (a text, c text);
+ALTER TABLE t4 ALTER COLUMN c SET STORAGE EXTERNAL;
+
+CREATE TABLE t12_storage (LIKE t1 INCLUDING STORAGE, LIKE t2 INCLUDING STORAGE);
+\d+ t12_storage
+CREATE TABLE t12_comments (LIKE t1 INCLUDING COMMENTS, LIKE t2 INCLUDING COMMENTS);
+\d+ t12_comments
+CREATE TABLE t1_inh (LIKE t1 INCLUDING CONSTRAINTS INCLUDING COMMENTS) INHERITS (t1);
+\d+ t1_inh
+SELECT description FROM pg_description, pg_constraint c WHERE classoid = 'pg_constraint'::regclass AND objoid = c.oid AND c.conrelid = 't1_inh'::regclass;
+CREATE TABLE t13_inh () INHERITS (t1, t3);
+\d+ t13_inh
+CREATE TABLE t13_like (LIKE t3 INCLUDING CONSTRAINTS INCLUDING COMMENTS INCLUDING STORAGE) INHERITS (t1);
+\d+ t13_like
+SELECT description FROM pg_description, pg_constraint c WHERE classoid = 'pg_constraint'::regclass AND objoid = c.oid AND c.conrelid = 't13_like'::regclass;
+
+CREATE TABLE t_all (LIKE t1 INCLUDING ALL);
+\d+ t_all
+SELECT c.relname, objsubid, description FROM pg_description, pg_index i, pg_class c WHERE classoid = 'pg_class'::regclass AND objoid = i.indexrelid AND c.oid = i.indexrelid AND i.indrelid = 't_all'::regclass ORDER BY c.relname, objsubid;
+
+CREATE TABLE inh_error1 () INHERITS (t1, t4);
+CREATE TABLE inh_error2 (LIKE t4 INCLUDING STORAGE) INHERITS (t1);
+
+DROP TABLE t1, t2, t3, t4, t12_storage, t12_comments, t1_inh, t13_inh, t13_like, t_all;
+
+-- Test for renaming in simple multiple inheritance
+CREATE TABLE t1 (a int, b int);
+CREATE TABLE s1 (b int, c int);
+CREATE TABLE ts (d int) INHERITS (t1, s1);
+
+ALTER TABLE t1 RENAME a TO aa;
+ALTER TABLE t1 RENAME b TO bb;                -- to be failed
+ALTER TABLE ts RENAME aa TO aaa;      -- to be failed
+ALTER TABLE ts RENAME d TO dd;
+\d+ ts
+
+DROP TABLE ts;
+
+-- Test for renaming in diamond inheritance
+CREATE TABLE t2 (x int) INHERITS (t1);
+CREATE TABLE t3 (y int) INHERITS (t1);
+CREATE TABLE t4 (z int) INHERITS (t2, t3);
+
+ALTER TABLE t1 RENAME aa TO aaa;
+\d+ t4
+
+CREATE TABLE ts (d int) INHERITS (t2, s1);
+ALTER TABLE t1 RENAME aaa TO aaaa;
+ALTER TABLE t1 RENAME b TO bb;                -- to be failed
+\d+ ts
+
+WITH RECURSIVE r AS (
+  SELECT 't1'::regclass AS inhrelid
+UNION ALL
+  SELECT c.inhrelid FROM pg_inherits c, r WHERE r.inhrelid = c.inhparent
+)
+SELECT a.attrelid::regclass, a.attname, a.attinhcount, e.expected
+  FROM (SELECT inhrelid, count(*) AS expected FROM pg_inherits
+        WHERE inhparent IN (SELECT inhrelid FROM r) GROUP BY inhrelid) e
+  JOIN pg_attribute a ON e.inhrelid = a.attrelid WHERE NOT attislocal
+  ORDER BY a.attrelid::regclass::name, a.attnum;
+
+DROP TABLE t1, s1 CASCADE;

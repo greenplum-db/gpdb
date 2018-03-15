@@ -1,4 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
+BEGIN;
 REINDEX INDEX cr_co_reindex_btree_idx1;
+COMMIT;

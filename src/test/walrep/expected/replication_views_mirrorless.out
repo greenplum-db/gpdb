@@ -1,6 +1,6 @@
 -- Check how many WAL replication mirrors are up
 SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and status='u';
- count
+ count 
 -------
      0
 (1 row)

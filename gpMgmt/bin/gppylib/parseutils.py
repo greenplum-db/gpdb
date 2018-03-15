@@ -296,55 +296,9 @@ def line_reader(f):
 
 
 ################
-# gpfilespace format
-#
-# First line in file is the filespace name, remaining lines are
-# specify hostname, dbid, and a path:
-#
-#   filespace:name
-#   hostname:dbid:path
-#   ...
-################
-
-def parse_fspacename(filename, lineno, line):
-    """
-    Parse the filespace: line which appears at the beginning of the gpfilespace configuration file.
-
-    >>> parse_fspacename('file', 1, 'filespace:blah')
-    'blah'
-    """
-    p = LineParser(caller(), filename, lineno, line)
-    p.ensure_starts_with('filespace:')
-    fspacename = p.read_delimited_field(':')
-    if p.rest is not None:
-        msg = "unexpected characters after filespace name >>%s" % p.rest
-        raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return fspacename
-
-
-def parse_gpfilespace_line(filename, lineno, line):
-    """
-    Parse a line of the gpfilespace configuration file other than the first.
-
-    >>> parse_gpfilespace_line('file', 1, '[::1]:dbid:path')
-    ('::1', 'dbid', 'path')
-    >>> parse_gpfilespace_line('file', 1, 'host:dbid:path')
-    ('host', 'dbid', 'path')
-    """
-    p = LineParser(caller(), filename, lineno, line)
-    host = p.handle_field('[host]')  # [host] indicates possible IPv6 address
-    dbid = p.handle_field('dbid')
-    path = p.handle_field('path')
-    if p.rest is not None:
-        msg = "unexpected characters after path name >>%s" % p.rest
-        raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return host, dbid, path
-
-
-################
 # gpexpand segment file format:
 #
-# Form of file is hostname:address:port:dtadir:dbid:contentId:role[:replicationPort]
+# Form of file is hostname:address:port:dtadir:dbid:contentId:role
 ################
 
 def parse_gpexpand_segment_line(filename, lineno, line):
@@ -353,8 +307,6 @@ def parse_gpexpand_segment_line(filename, lineno, line):
 
     >>> parse_gpexpand_segment_line('file', 1, "localhost:[::1]:40001:/Users/ctaylor/data/p2/gpseg1:4:1:p")
     ('localhost', '::1', '40001', '/Users/ctaylor/data/p2/gpseg1', '4', '1', 'p', None)
-    >>> parse_gpexpand_segment_line('file', 1, "localhost:[::1]:40001:/Users/ctaylor/data/p2/gpseg1:4:1:p:41001")
-    ('localhost', '::1', '40001', '/Users/ctaylor/data/p2/gpseg1', '4', '1', 'p', '41001')
     """
     p = LineParser(caller(), filename, lineno, line)
     hostname        = p.handle_field('[host]')      # [host] indicates possible IPv6 address
@@ -364,47 +316,18 @@ def parse_gpexpand_segment_line(filename, lineno, line):
     dbid            = p.handle_field('dbid')
     contentId       = p.handle_field('contentId')
     role            = p.handle_field('role')
-    replicationPort = None
     if p.rest is not None:
-        replicationPort = p.handle_field('replicationPort')
-        if p.rest is not None:
-            msg = "unexpected characters after replicationPort >>%s" % p.rest
-            raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return hostname, address, port, datadir, dbid, contentId, role, replicationPort
+        msg = "unexpected characters after role >>%s" % p.rest
+        raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
+    return hostname, address, port, datadir, dbid, contentId, role
 
 
-################
-# gpaddmirrors format:
-# 
-# filespaceOrder=[filespace1_fsname[:filespace2_fsname:...]]
-# mirror[content]=content:address:port:mir_replication_port:pri_replication_port:fselocation[:fselocation:...]  
-#
-################
-
-def parse_filespace_order(filename, lineno, line):
-    """
-    Parse the filespaceOrder= line appearing at the beginning of the gpaddmirrors,
-    gpmovemirrors and gprecoverseg configuration files.
-
-    >>> parse_filespace_order('file', 1, "filespaceOrder=fs1:fs2:fs3")
-    ['fs1', 'fs2', 'fs3']
-    >>> parse_filespace_order('file', 1, "filespaceOrder=")
-    []
-    """
-    p = LineParser(caller(), filename, lineno, line)
-    p.ensure_starts_with('filespaceOrder=')
-    fslist = []
-    while p.rest:
-        fslist.append( p.read_delimited_field(':', 'next filespace') )
-    return fslist
-
-
-def parse_gpaddmirrors_line(filename, lineno, line, fslist):
+def parse_gpaddmirrors_line(filename, lineno, line):
     """
     Parse a line in the gpaddmirrors configuration file other than the first.
 
     >>> line = "mirror0=0:[::1]:40001:50001:60001:/Users/ctaylor/data/p2/gpseg1"
-    >>> fixed, flex = parse_gpaddmirrors_line('file', 1, line, [])
+    >>> fixed, flex = parse_gpaddmirrors_line('file', 1, line)
     >>> fixed["address"], fixed["contentId"], fixed["dataDirectory"]
     ('::1', '0', '/Users/ctaylor/data/p2/gpseg1')
 
@@ -415,10 +338,8 @@ def parse_gpaddmirrors_line(filename, lineno, line, fslist):
     p.ensure_starts_with('mirror')
     p.read_delimited_field('=', 'content id', consume_to)
     # [address] indicates possible IPv6 address
-    for field in [ 'contentId', '[address]', 'port', 'replicationPort', 'primarySegmentReplicationPort', 'dataDirectory' ]:
+    for field in [ 'contentId', '[address]', 'port', 'dataDirectory' ]:
         p.handle_field(field, fixed)
-    for fsname in fslist:
-        p.handle_field(fsname, flexible)
     return fixed, flexible
 
 
@@ -429,13 +350,12 @@ def parse_gpaddmirrors_line(filename, lineno, line, fslist):
 # This is basically the same as the gprecoverseg format (since gpmovemirrors ultimately just
 # passes the input file after validating it) but the field names are slightly different.
 # 
-# filespaceOrder=[filespace1_fsname[:filespace2_fsname:...]
-# old_address:port:datadir new_address:port:replication_port:datadir[:fselocation:...]
+# old_address:port:datadir new_address:port:datadir
 #                         ^
 #                         note space
 ################
 
-def parse_gpmovemirrors_line(filename, lineno, line, fslist):
+def parse_gpmovemirrors_line(filename, lineno, line):
     """
     Parse a line in the gpmovemirrors configuration file other than the first.
 
@@ -459,10 +379,7 @@ def parse_gpmovemirrors_line(filename, lineno, line, fslist):
     p.handle_field('oldDataDirectory', fixed, delimiter=' ', stripchars=' \t') # MPP-15675 note stripchars here and next line
     p.handle_field('[newAddress]', fixed, stripchars=' \t') # [newAddress] indicates possible IPv6 address
     p.handle_field('newPort', fixed)
-    p.handle_field('newReplicationPort', fixed)
     p.handle_field('newDataDirectory', fixed)
-    for fsname in fslist:
-        p.handle_field(fsname, flexible)
     if p.rest is not None:
         msg = "unexpected characters after mirror fields >>%s" % p.rest
         raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
@@ -472,8 +389,7 @@ def parse_gpmovemirrors_line(filename, lineno, line, fslist):
 ################
 # gprecoverseg format:
 #
-# filespaceOrder=[filespace1_fsname[:filespace2_fsname:...]]
-# failed_host_address:port:datadir [recovery_host_address:port:replication_port:datadir[:fselocation:...]]
+# failed_host_address:port:datadir [recovery_host_address:port:datadir]
 #                                 ^
 #                                 note space
 # 
@@ -485,21 +401,14 @@ def parse_gpmovemirrors_line(filename, lineno, line, fslist):
 # failed_host_address:port:datadir
 ################
 
-def parse_gprecoverseg_line(filename, lineno, line, fslist):
+def parse_gprecoverseg_line(filename, lineno, line):
     """
     Parse a line in the gprecoverseg configuration file other than the first.
 
     >>> line = "[::1]:40001:/Users/ctaylor/data/m2/gpseg1"
-    >>> fixed, flex = parse_gprecoverseg_line('file', 1, line, [])
+    >>> fixed, flex = parse_gprecoverseg_line('file', 1, line)
     >>> fixed["failedAddress"], fixed["failedPort"], fixed["failedDataDirectory"]
     ('::1', '40001', '/Users/ctaylor/data/m2/gpseg1')
-
-    >>> line = "[::1]:40001:/Users/ctaylor/data/m2/gpseg1 [::2]:40101:50101:/Users/ctaylor/data/m2/gpseg1:/fs1"
-    >>> fixed, flex = parse_gprecoverseg_line('file', 1, line, ['fs1'])
-    >>> fixed["newAddress"], fixed["newPort"], fixed["newReplicationPort"], fixed["newDataDirectory"]
-    ('::2', '40101', '50101', '/Users/ctaylor/data/m2/gpseg1')
-    >>> flex
-    {'fs1': '/fs1'}
     """
 
     groups = len(line.split())
@@ -517,10 +426,7 @@ def parse_gprecoverseg_line(filename, lineno, line, fslist):
         p.handle_field('failedDataDirectory', fixed, delimiter=' ', stripchars=' \t') # MPP-15675 note stripchars here and next line
         p.handle_field('[newAddress]', fixed, stripchars=' \t') # [newAddress] indicates possible IPv6 address
         p.handle_field('newPort', fixed)
-        p.handle_field('newReplicationPort', fixed)
         p.handle_field('newDataDirectory', fixed)
-        for fsname in fslist:
-            p.handle_field(fsname, flexible)
     return fixed, flexible
 
 

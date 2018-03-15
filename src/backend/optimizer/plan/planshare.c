@@ -207,7 +207,11 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 		Material *m = make_material(common);
 		shared = (Plan *) m;
 
-		cost_material(&matpath, root, common->total_cost, common->plan_rows, common->plan_width);
+		cost_material(&matpath, root,
+					  common->startup_cost,
+					  common->total_cost,
+					  common->plan_rows,
+					  common->plan_width);
 		shared->startup_cost = matpath.startup_cost;
 		shared->total_cost = matpath.total_cost;
 		shared->plan_rows = common->plan_rows;
@@ -281,7 +285,11 @@ Cost cost_share_plan(Plan *common, PlannerInfo *root, int numpartners)
 		return common->total_cost + (sipath.total_cost - common->total_cost) * numpartners;
 	}
 
-	cost_material(&mapath, root, common->total_cost, common->plan_rows, common->plan_width);
+	cost_material(&mapath, root,
+				  common->startup_cost,
+				  common->total_cost,
+				  common->plan_rows,
+				  common->plan_width);
 	cost_shareinputscan(&sipath, root, mapath.total_cost, common->plan_rows, common->plan_width);
 
 	return mapath.total_cost + (sipath.total_cost - mapath.total_cost) * numpartners;

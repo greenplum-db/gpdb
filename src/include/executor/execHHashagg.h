@@ -164,9 +164,6 @@ typedef struct HashAggTable
 	SpillSet       *spill_set;
 	/* Representation of all workfile names, used by the workfile manager */
 	workfile_set *work_set;
-	/* Metadata file containing information required to restore the state
-	 * from a cached workfile for reuse */
-	ExecWorkFile *state_file;
 
 	/* The batch file is currently being processed. */
 	SpillFile *curr_spill_file;

@@ -1810,11 +1810,11 @@ BEGIN
 END;
 $$LANGUAGE plpgsql immutable;
 
-CREATE OR REPLACE FUNCTION mustan.f7( d date ) RETURNS DATE AS $$
+CREATE OR REPLACE FUNCTION mustan.f7( in_d date ) RETURNS DATE AS $$
 DECLARE
 	out_dt date;
 BEGIN
-	SELECT d INTO out_dt FROM mustan.test WHERE d=d;
+	SELECT d INTO out_dt FROM mustan.test WHERE d=in_d;
 	return out_dt;
 END;
 $$LANGUAGE plpgsql immutable;

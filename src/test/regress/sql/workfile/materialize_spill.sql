@@ -13,12 +13,12 @@ returns setof int as
 $$
 import re
 rv = plpy.execute(explain_query)
-search_text = 'Work_mem used'
+search_text = 'spilling'
 result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         result.append(workfile_created)
@@ -71,7 +71,7 @@ select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1
 -- data from test_mat_small.
 select n - (select count (distinct gp_segment_id) from test_mat_small) as difference
 from num_workfiles_created($$
-  explain analyze
+  explain (analyze, verbose)
   select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2
 $$) as n;
 
@@ -79,7 +79,7 @@ $$) as n;
 select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2 limit 10;
 select n - (select count (distinct gp_segment_id) from test_mat_small) as difference
 from num_workfiles_created($$
-  explain analyze
+  explain (analyze, verbose)
   select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2 limit 10
 $$) as n;
 

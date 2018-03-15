@@ -3,18 +3,20 @@
  * alter.c
  *	  Drivers for generic alter commands
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/alter.c,v 1.31 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/alter.c,v 1.36 2010/06/13 17:43:12 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
 #include "commands/alter.h"
 #include "commands/conversioncmds.h"
@@ -22,7 +24,6 @@
 #include "commands/defrem.h"
 #include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
-#include "commands/filespace.h"
 #include "commands/proclang.h"
 #include "commands/schemacmds.h"
 #include "commands/tablecmds.h"
@@ -34,6 +35,7 @@
 #include "parser/parse_clause.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
+#include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -94,10 +96,6 @@ ExecRenameStmt(RenameStmt *stmt)
 			RenameTableSpace(stmt->subname, stmt->newname);
 			break;
 
-		case OBJECT_FILESPACE:
-			RenameFileSpace(stmt->subname, stmt->newname);
-			break;
-
 		case OBJECT_TABLE:
 		case OBJECT_SEQUENCE:
 		case OBJECT_VIEW:
@@ -150,7 +148,7 @@ ExecRenameStmt(RenameStmt *stmt)
 								  stmt->subname,		/* old att name */
 								  stmt->newname,		/* new att name */
 								  interpretInhOption(stmt->relation->inhOpt),	/* recursive? */
-								  false);		/* recursing already? */
+								  0);	/* expected inhcount */
 						break;
 					case OBJECT_TRIGGER:
 						renametrig(relid,
@@ -492,6 +490,10 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 			AlterLanguageOwner(strVal(linitial(stmt->object)), newowner);
 			break;
 
+		case OBJECT_LARGEOBJECT:
+			LargeObjectAlterOwner(oidparse(linitial(stmt->object)), newowner);
+			break;
+
 		case OBJECT_OPERATOR:
 			Assert(list_length(stmt->objarg) == 2);
 			AlterOperatorOwner(stmt->object,
@@ -514,10 +516,6 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 
 		case OBJECT_TABLESPACE:
 			AlterTableSpaceOwner(strVal(linitial(stmt->object)), newowner);
-			break;
-
-		case OBJECT_FILESPACE:
-			AlterFileSpaceOwner(stmt->object, newowner);
 			break;
 
 		case OBJECT_EXTPROTOCOL:

@@ -1,9 +1,9 @@
 #!/usr/bin/perl
-# $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/parse.pl,v 1.3 2009/01/29 09:38:38 petere Exp $
+# $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/parse.pl,v 1.9 2010/06/04 10:09:58 meskes Exp $
 # parser generater for ecpg
 # call with backend parser as stdin
 #
-# Copyright (c) 2007-2009, PostgreSQL Global Development Group
+# Copyright (c) 2007-2010, PostgreSQL Global Development Group
 #
 # Written by Mike Aubury <mike.aubury@aubit.com>
 #	     Michael Meskes <meskes@postgresql.org>
@@ -44,6 +44,8 @@ $replace_string{'WITH_TIME'} = 'with time';
 $replace_string{'NULLS_FIRST'} = 'nulls first';
 $replace_string{'NULLS_LAST'} = 'nulls last';
 $replace_string{'TYPECAST'} = '::';
+$replace_string{'DOT_DOT'} = '..';
+$replace_string{'COLON_EQUALS'} = ':=';
 
 # specific replace_types for specific non-terminals - never include the ':'
 # ECPG-only replace_types are defined in ecpg-replace_types
@@ -54,23 +56,37 @@ $replace_types{'stmtblock'} = 'ignore';
 $replace_types{'stmtmulti'} = 'ignore';
 $replace_types{'CreateAsStmt'} = 'ignore';
 $replace_types{'DeallocateStmt'} = 'ignore';
-$replace_types{'RuleStmt'} = 'ignore';
+$replace_types{'ColId'} = 'ignore';
+$replace_types{'type_function_name'} = 'ignore';
 $replace_types{'ColLabel'} = 'ignore';
-$replace_types{'unreserved_keyword'} = 'ignore';
 $replace_types{'Sconst'} = 'ignore';
 
-# some production rules have to be ignored or replaced
-$replace_line{'fetch_direction'} = 'ignore';
-$replace_line{"opt_array_boundsopt_array_bounds'['Iconst']'"} = 'ignore';
+# these replace_line commands excise certain keywords from the core keyword
+# lists.  Be sure to account for these in ColLabel and related productions.
+$replace_line{'unreserved_keywordCONNECTION'} = 'ignore';
+$replace_line{'unreserved_keywordCURRENT_P'} = 'ignore';
+$replace_line{'unreserved_keywordDAY_P'} = 'ignore';
+$replace_line{'unreserved_keywordHOUR_P'} = 'ignore';
+$replace_line{'unreserved_keywordINPUT_P'} = 'ignore';
+$replace_line{'unreserved_keywordMINUTE_P'} = 'ignore';
+$replace_line{'unreserved_keywordMONTH_P'} = 'ignore';
+$replace_line{'unreserved_keywordSECOND_P'} = 'ignore';
+$replace_line{'unreserved_keywordYEAR_P'} = 'ignore';
 $replace_line{'col_name_keywordCHAR_P'} = 'ignore';
 $replace_line{'col_name_keywordINT_P'} = 'ignore';
 $replace_line{'col_name_keywordVALUES'} = 'ignore';
 $replace_line{'reserved_keywordTO'} = 'ignore';
 $replace_line{'reserved_keywordUNION'} = 'ignore';
+
+# some other production rules have to be ignored or replaced
+$replace_line{'fetch_argsFORWARDopt_from_incursor_name'} = 'ignore';
+$replace_line{'fetch_argsBACKWARDopt_from_incursor_name'} = 'ignore';
+$replace_line{"opt_array_boundsopt_array_bounds'['Iconst']'"} = 'ignore';
 $replace_line{'VariableShowStmtSHOWvar_name'} = 'SHOW var_name ecpg_into';
 $replace_line{'VariableShowStmtSHOWTIMEZONE'} = 'SHOW TIME ZONE ecpg_into';
 $replace_line{'VariableShowStmtSHOWTRANSACTIONISOLATIONLEVEL'} = 'SHOW TRANSACTION ISOLATION LEVEL ecpg_into';
 $replace_line{'VariableShowStmtSHOWSESSIONAUTHORIZATION'} = 'SHOW SESSION AUTHORIZATION ecpg_into';
+$replace_line{'returning_clauseRETURNINGtarget_list'} = 'RETURNING target_list ecpg_into';
 $replace_line{'ExecuteStmtEXECUTEnameexecute_param_clause'} = 'EXECUTE prepared_name execute_param_clause execute_rest';
 $replace_line{'ExecuteStmtCREATEOptTempTABLEcreate_as_targetASEXECUTEnameexecute_param_clause'} = 'CREATE OptTemp TABLE create_as_target AS EXECUTE prepared_name execute_param_clause';
 $replace_line{'PrepareStmtPREPAREnameprep_type_clauseASPreparableStmt'} = 'PREPARE prepared_name prep_type_clause AS PreparableStmt';

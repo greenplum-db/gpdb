@@ -4,10 +4,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/subselect.h,v 1.37 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/subselect.h,v 1.39 2010/01/02 16:58:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,7 +34,7 @@ extern void SS_finalize_plan(PlannerInfo *root, Plan *plan,
 				 bool attach_initplans);
 extern Param *SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 						   Oid resulttype, int32 resulttypmod);
-extern int	SS_assign_worktable_param(PlannerInfo *root);
+extern int	SS_assign_special_param(PlannerInfo *root);
 
 
 extern bool IsSubqueryCorrelated(Query *sq);

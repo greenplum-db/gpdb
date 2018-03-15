@@ -2,11 +2,13 @@
 #
 # Makefile for src/bin/pgevent
 #
-# Copyright (c) 1996-2009, PostgreSQL Global Development Group
+# Copyright (c) 1996-2010, PostgreSQL Global Development Group
 #
 #-------------------------------------------------------------------------
 
 PGFILEDESC = "Eventlog message formatter"
+PGAPPICON=win32
+
 PGFILESHLIB = 1
 subdir = src/bin/pgevent
 top_builddir = ../../..

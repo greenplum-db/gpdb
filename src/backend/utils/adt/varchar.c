@@ -3,12 +3,12 @@
  * varchar.c
  *	  Functions for the built-in types char(n) and varchar(n).
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.131 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.133 2010/01/02 16:57:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -78,7 +78,7 @@ anychar_typmodout(int32 typmod)
 
 
 /*
- * CHAR() and VARCHAR() types are part of the ANSI SQL standard. CHAR()
+ * CHAR() and VARCHAR() types are part of the SQL standard. CHAR()
  * is for blank-padded string whose length is specified in CREATE TABLE.
  * VARCHAR is for storing string whose length is at most the length specified
  * at CREATE TABLE time.

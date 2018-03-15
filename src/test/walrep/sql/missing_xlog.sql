@@ -10,7 +10,7 @@ returns text as $$
     if command in ('stop', 'restart'):
         cmd = cmd + '-w -m immediate %s' % command
     elif command == 'start':
-        opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
+        opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
         cmd = cmd + '-o "%s" start' % opts
     elif command == 'reload':
         cmd = cmd + 'reload'
@@ -26,22 +26,61 @@ returns text as $$
 
 	cmd = 'mkdir -p %s; ' % dest
 	cmd = cmd + 'mv %s/0* %s' % (source, dest)
-	
+
 	return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
 
-create or replace function wait_for_replication_replay (retries int) returns bool as
+-- Issue a checkpoint, and wait for it to be replayed on all segments.
+create or replace function checkpoint_and_wait_for_replication_replay (retries int) returns bool as
 $$
 declare
 	i int;
+	checkpoint_locs text[];
+	r record;
+	all_caught_up bool;
 begin
 	i := 0;
+
+	-- Issue a checkpoint.
+	checkpoint;
+
+	-- Get the WAL positions after the checkpoint records on every segment.
+	for r in select gp_segment_id, pg_current_xlog_location() as loc from gp_dist_random('gp_id') loop
+		checkpoint_locs[r.gp_segment_id] = r.loc;
+	end loop;
+	-- and the QD, too.
+	checkpoint_locs[-1] = pg_current_xlog_location();
+
+	-- Force some WAL activity, to nudge the mirrors to replay past the
+	-- checkpoint location. There are some cases where a non-transactional
+	-- WAL record is created right after the checkpoint record, which
+	-- doesn't get replayed on the mirror until something else forces it
+	-- out.
+	create temp table dummy (id int4) distributed randomly;
+
+	-- Wait until all mirrors have replayed up to the location we
+	-- memorized above.
 	loop
-		if (select count(*) from gp_stat_replication) =
-			(select count(*) from gp_stat_replication
-				where replay_location = sent_location) then
+		all_caught_up = true;
+		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
+			-- XXX: Using text comparison to compare XLOG positions
+			-- is not quite right. Comparing 10/12345678 with
+			-- 9/12345678 would yield incorrect result, for
+			-- example. Ignore that for now, because this test is
+			-- executed in a fresh test cluster, which surely
+			-- hasn't written enough WAL yet to hit that problem.
+			-- With WAL positions smaller than 10/00000000, this
+			-- should work. PostgreSQL 9.4 got a pg_lsn datatype
+			-- that we could use here, once we merge up to 9.4.
+			if r.loc < checkpoint_locs[r.gp_segment_id] then
+				all_caught_up = false;
+			end if;
+		end loop;
+
+		if all_caught_up then
 			return true;
 		end if;
+
 		if i >= retries then
 			return false;
 		end if;
@@ -71,12 +110,20 @@ end;
 $$ language plpgsql;
 
 -- checkpoint to ensure clean xlog replication before bring down mirror
-checkpoint;
-begin;end;
-select wait_for_replication_replay(200);
+select checkpoint_and_wait_for_replication_replay(200);
 
--- stop a mirror 
-select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='m' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+create extension if not exists gp_inject_fault;
+-- Prevent FTS from probing segments as we don't want a change in
+-- cluster configuration to be triggered after the mirror is stoped
+-- temporarily in the test.  Request a scan so that the skip fault is
+-- triggered immediately, rather that waiting until the next probe
+-- interval.
+select gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+select gp_request_fts_probe_scan();
+select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+
+-- stop a mirror
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);
 
 -- checkpoint and switch the xlog to avoid corrupting the xlog due to background processes
 checkpoint;
@@ -84,18 +131,25 @@ checkpoint;
 select substring(pg_switch_xlog(), 0, 0) from gp_dist_random('gp_id') where gp_segment_id = 0;
 
 -- hide old xlog on segment 0
-select move_xlog((select fselocation || '/pg_xlog' from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid=f.fsedbid), '/tmp/missing_xlog');
+select move_xlog((select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0), '/tmp/missing_xlog');
 
 -- bring the mirror back up
-select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='m' and c.content=0 and c.dbid = f.fsedbid), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
 
 -- check the view, we expect to see error
 select wait_for_replication_error('walread', 0, 200);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
 
 -- bring the missing xlog back on segment 0
-select move_xlog('/tmp/missing_xlog', (select fselocation || '/pg_xlog' from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid=f.fsedbid));
+select move_xlog('/tmp/missing_xlog', (select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0));
 
 -- the error should go away
-select wait_for_replication_error('none', 0, 100);
+select wait_for_replication_error('none', 0, 200);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
+
+-- Resume FTS probes and perform a probe scan.
+select gp_inject_fault('fts_probe', 'reset', 1);
+select gp_request_fts_probe_scan();
+-- Validate that the mirror for content=0 is marked up.
+select count(*) = 2 as mirror_up from gp_segment_configuration
+ where content=0 and status='u';

@@ -31,6 +31,7 @@
 #include "utils/lsyscache.h"
 #include "miscadmin.h"
 #include "catalog/gp_policy.h"
+#include "utils/tqual.h"
 
 
 #ifdef PG_MODULE_MAGIC

@@ -89,11 +89,11 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.91 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.95 2010/02/26 02:01:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1306,7 +1306,7 @@ tuplesort_performsort(Tuplesortstate *state)
 			dumptuples(state, true);
 
 			/* CDB: How much work_mem would be enough for in-memory sort? */
-			if (state->instrument)
+			if (state->instrument && state->instrument->need_cdb)
 			{
 				/*
 				 * The workmemwanted is summed up of the following:
@@ -3119,8 +3119,8 @@ comparetup_index_btree(const SortTuple *a, const SortTuple *b,
 	 */
 	if (state->enforceUnique && !equal_hasnull && tuple1 != tuple2)
 	{
-		Datum	values[INDEX_MAX_KEYS];
-		bool	isnull[INDEX_MAX_KEYS];
+		Datum		values[INDEX_MAX_KEYS];
+		bool		isnull[INDEX_MAX_KEYS];
 
 		index_deform_tuple(tuple1, tupDes, values, isnull);
 		ereport(ERROR,
@@ -3490,16 +3490,10 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 {
 	Tuplesortstate *state;
 	char statedump[MAXPGPATH];
-	char full_prefix[MAXPGPATH];
 
 	Assert(randomAccess);
 
-	int len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate", PG_TEMP_FILES_DIR, rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
-			PG_TEMP_FILES_DIR,
-			rwfile_prefix);
+	int len = snprintf(statedump, sizeof(statedump), "%s_sortstate", rwfile_prefix);
 	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
 
 	if(isWriter)
@@ -3512,7 +3506,7 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 									 sortOperators, nullsFirstFlags,
 									 workMem, randomAccess);
 
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 		state->pfile_rwfile_state = ExecWorkFile_Create(statedump,
 				BUFFILE,
 				true /* delOnClose */ ,
@@ -3536,13 +3530,13 @@ tuplesort_begin_heap_file_readerwriter(ScanState *ss,
 
 		state->readtup = readtup_heap;
 
-		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->pfile_rwfile_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 		state->pfile_rwfile_state = ExecWorkFile_Open(statedump,
 				BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);
 
-		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
+		ExecWorkFile *tapefile = ExecWorkFile_Open(rwfile_prefix,
 				BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);
@@ -3752,7 +3746,7 @@ tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
 void
 tuplesort_finalize_stats(Tuplesortstate *state)
 {
-    if (state->instrument && !state->statsFinalized)
+    if (state->instrument && state->instrument->need_cdb && !state->statsFinalized)
     {
         double  workmemused;
 

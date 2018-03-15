@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/show.sgml,v 1.47 2008/11/14 10:22:47 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/show.sgml,v 1.50 2010/05/17 20:50:44 alvherre Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-SHOW">
  <refmeta>
-  <refentrytitle id="SQL-SHOW-TITLE">SHOW</refentrytitle>
+  <refentrytitle>SHOW</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -52,7 +52,7 @@ SHOW ALL
      <para>
       The name of a run-time parameter.  Available parameters are
       documented in <xref linkend="runtime-config"> and on the <xref
-      linkend="SQL-SET" endterm="SQL-SET-title"> reference page.  In
+      linkend="SQL-SET"> reference page.  In
       addition, there are a few parameters that can be shown but not
       set:
 
@@ -168,16 +168,15 @@ SHOW geqo;
    Show all settings:
 <programlisting>
 SHOW ALL;
-              name              |            setting             |                                         description                                          
---------------------------------+--------------------------------+----------------------------------------------------------------------------------------------
- add_missing_from               | off                            | Automatically adds missing table references to FROM clauses.
- allow_system_table_mods        | off                            | Allows modifications of the structure of system tables.
+            name         | setting |                description                                                          
+-------------------------+---------+-------------------------------------------------
+ allow_system_table_mods | off     | Allows modifications of the structure of ...
     .
     .
     .
- work_mem                       | 1024                           | Sets the maximum memory to be used for query workspaces.
- zero_damaged_pages             | off                            | Continues processing past damaged page headers.
-(146 rows)
+ xmloption               | content | Sets whether XML data in implicit parsing ...
+ zero_damaged_pages      | off     | Continues processing past damaged page headers.
+(196 rows)
 </programlisting>
   </para>
  </refsect1>
@@ -195,8 +194,8 @@ SHOW ALL;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="SQL-SET" endterm="SQL-SET-title"></member>
-   <member><xref linkend="SQL-RESET" endterm="SQL-RESET-title"></member>
+   <member><xref linkend="SQL-SET"></member>
+   <member><xref linkend="SQL-RESET"></member>
   </simplelist>
  </refsect1>
 

@@ -1414,6 +1414,7 @@ SetupTCPInterconnect(EState *estate)
 		elog(FATAL, "SetupTCPInterconnect: no slice table ?");
 	}
 
+	SIMPLE_FAULT_INJECTOR(InterconnectSetupPalloc);
 	estate->interconnect_context = palloc0(sizeof(ChunkTransportState));
 
 	estate->interconnect_context->estate = estate;
@@ -1980,9 +1981,9 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates,
 	Slice	   *mySlice;
 	MotionConn *conn;
 
-	if (transportStates->sliceTable == NULL)
+	if (transportStates == NULL || transportStates->sliceTable == NULL)
 	{
-		elog(LOG, "TeardownUDPInterconnect: missing slice table.");
+		elog(LOG, "TeardownTCPInterconnect: missing slice table.");
 		return;
 	}
 

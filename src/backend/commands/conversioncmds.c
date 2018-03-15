@@ -3,12 +3,12 @@
  * conversioncmds.c
  *	  conversion creation command support code
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/conversioncmds.c,v 1.39 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/conversioncmds.c,v 1.41 2010/02/14 18:42:14 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -178,9 +178,7 @@ DropConversionsCommand(DropStmt *drop)
 			continue;
 		}
 
-		tuple = SearchSysCache(CONVOID,
-							   ObjectIdGetDatum(conversionOid),
-							   0, 0, 0);
+		tuple = SearchSysCache1(CONVOID, ObjectIdGetDatum(conversionOid));
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for conversion %u",
 				 conversionOid);
@@ -222,19 +220,16 @@ RenameConversion(List *name, const char *newname)
 
 	conversionOid = get_conversion_oid(name, false);
 
-	tup = SearchSysCacheCopy(CONVOID,
-							 ObjectIdGetDatum(conversionOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(CONVOID, ObjectIdGetDatum(conversionOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for conversion %u", conversionOid);
 
 	namespaceOid = ((Form_pg_conversion) GETSTRUCT(tup))->connamespace;
 
 	/* make sure the new name doesn't exist */
-	if (SearchSysCacheExists(CONNAMENSP,
-							 CStringGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0, 0))
+	if (SearchSysCacheExists2(CONNAMENSP,
+							  CStringGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("conversion \"%s\" already exists in schema \"%s\"",
@@ -307,9 +302,7 @@ AlterConversionOwner_internal(Relation rel, Oid conversionOid, Oid newOwnerId)
 
 	Assert(RelationGetRelid(rel) == ConversionRelationId);
 
-	tup = SearchSysCacheCopy(CONVOID,
-							 ObjectIdGetDatum(conversionOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(CONVOID, ObjectIdGetDatum(conversionOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for conversion %u", conversionOid);
 

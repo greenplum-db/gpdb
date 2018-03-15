@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/heap.h,v 1.91 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/heap.h,v 1.98 2010/02/26 02:01:21 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,7 +17,6 @@
 #define HEAP_H
 
 #include "parser/parse_node.h"
-#include "catalog/gp_persistent.h"
 #include "catalog/indexing.h"
 
 /*
@@ -62,13 +61,15 @@ extern Relation heap_create(const char *relname,
 			char relkind,
 			char relstorage,
 			bool shared_relation,
-			bool allow_system_table_mods,
-			bool bufferPoolBulkLoad);
+			bool mapped_relation,
+			bool allow_system_table_mods);
 
 extern Oid heap_create_with_catalog(const char *relname,
 						 Oid relnamespace,
 						 Oid reltablespace,
 						 Oid relid,
+						 Oid reltypeid,
+						 Oid reloftypeid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
 						 List *cooked_constraints,
@@ -76,20 +77,21 @@ extern Oid heap_create_with_catalog(const char *relname,
 						 char relkind,
 						 char relstorage,
 						 bool shared_relation,
+						 bool mapped_relation,
 						 bool oidislocal,
-						 bool bufferPoolBulkLoad,
 						 int oidinhcount,
 						 OnCommitAction oncommit,
                          const struct GpPolicy *policy,    /* MPP */
 						 Datum reloptions,
+						 bool use_user_acl,
 						 bool allow_system_table_mods,
-						 bool valid_opts,
-						 ItemPointer persistentTid,
-						 int64 *persistentSerialNum);
+						 bool valid_opts);
 
 extern void heap_drop_with_catalog(Oid relid);
 
 extern void heap_truncate(List *relids);
+
+extern void heap_truncate_one_rel(Relation rel);
 
 extern void heap_truncate_check_FKs(List *relations, bool tempTables);
 
@@ -102,26 +104,8 @@ extern void InsertPgAttributeTuple(Relation pg_attribute_rel,
 extern void InsertPgClassTuple(Relation pg_class_desc,
 				   Relation new_rel_desc,
 				   Oid new_rel_oid,
+				   Datum relacl,
 				   Datum reloptions);
-
-extern void InsertGpRelationNodeTuple(
-	Relation 		gp_relation_node,
-	Oid				relationId,
-	char			*relname,
-	Oid				tablespaceOid,
-	Oid				relation,
-	int32			segmentFileNum,
-	bool			updateIndex,
-	ItemPointer		persistentTid,
-	int64			persistentSerialNum);
-extern void UpdateGpRelationNodeTuple(
-		Relation	gp_relation_node,
-		HeapTuple	tuple,
-		Oid 		tablespaceOid,
-		Oid 		relation,
-		int32		segmentFileNum,
-		ItemPointer persistentTid,
-		int64		persistentSerialNum);
 
 extern List *AddRelationNewConstraints(Relation rel,
 						  List *newColDefaults,
@@ -154,10 +138,12 @@ extern Form_pg_attribute SystemAttributeDefinition(AttrNumber attno,
 extern Form_pg_attribute SystemAttributeByName(const char *attname,
 					  bool relhasoids);
 
-extern void CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind);
+extern void CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind,
+						 bool allow_system_table_mods);
 
 extern void CheckAttributeType(const char *attname, Oid atttypid,
-							   List *containing_rowtypes);
+				   List *containing_rowtypes,
+				   bool allow_system_table_mods);
 extern void SetRelationNumChecks(Relation rel, int numchecks);
 
 /* MPP-6929: metadata tracking */
@@ -180,6 +166,6 @@ extern void MetaTrackDropObject(Oid		classid,
 		|| ((relkind) == RELKIND_SEQUENCE) \
 		|| ((relkind) == RELKIND_VIEW)) 
 
-extern void remove_gp_relation_node_and_schedule_drop(Relation rel);
-extern bool should_have_valid_relfrozenxid(Oid oid, char relkind, char relstorage);
+extern bool should_have_valid_relfrozenxid(char relkind, char relstorage);
+
 #endif   /* HEAP_H */

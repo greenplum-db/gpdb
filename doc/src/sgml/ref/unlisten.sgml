@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/unlisten.sgml,v 1.30 2008/11/14 10:22:47 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/unlisten.sgml,v 1.32 2010/04/03 07:23:02 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-UNLISTEN">
  <refmeta>
-  <refentrytitle id="SQL-UNLISTEN-TITLE">UNLISTEN</refentrytitle>
+  <refentrytitle>UNLISTEN</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-UNLISTEN { <replaceable class="PARAMETER">name</replaceable> | * }
+UNLISTEN { <replaceable class="PARAMETER">channel</replaceable> | * }
 </synopsis>
  </refsynopsisdiv>
 
@@ -33,14 +33,14 @@ UNLISTEN { <replaceable class="PARAMETER">name</replaceable> | * }
    registration for <command>NOTIFY</command> events.
    <command>UNLISTEN</command> cancels any existing registration of
    the current <productname>PostgreSQL</productname> session as a
-   listener on the notification <replaceable
-   class="PARAMETER">name</replaceable>.  The special wildcard
+   listener on the notification channel named <replaceable
+   class="PARAMETER">channel</replaceable>.  The special wildcard
    <literal>*</literal> cancels all listener registrations for the
    current session.
   </para>
 
   <para>
-   <xref endterm="sql-notify-title" linkend="sql-notify">
+   <xref linkend="sql-notify">
    contains a more extensive
    discussion of the use of <command>LISTEN</command> and
    <command>NOTIFY</command>.
@@ -52,10 +52,10 @@ UNLISTEN { <replaceable class="PARAMETER">name</replaceable> | * }
 
   <variablelist>
    <varlistentry>
-    <term><replaceable class="PARAMETER">name</replaceable></term>
+    <term><replaceable class="PARAMETER">channel</replaceable></term>
     <listitem>
      <para>
-      Name of a notification (any identifier).
+      Name of a notification channel (any identifier).
      </para>
     </listitem>
    </varlistentry>
@@ -83,6 +83,11 @@ UNLISTEN { <replaceable class="PARAMETER">name</replaceable> | * }
    At the end of each session, <command>UNLISTEN *</command> is
    automatically executed.
   </para>
+
+  <para>
+   A transaction that has executed <command>UNLISTEN</command> cannot be
+   prepared for two-phase commit.
+  </para>
  </refsect1>
 
  <refsect1>
@@ -100,7 +105,7 @@ Asynchronous notification "virtual" received from server process with PID 8448.
 
   <para>
    Once <command>UNLISTEN</> has been executed, further <command>NOTIFY</>
-   commands will be ignored:
+   messages will be ignored:
 
 <programlisting>
 UNLISTEN virtual;
@@ -122,8 +127,8 @@ NOTIFY virtual;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-listen" endterm="sql-listen-title"></member>
-   <member><xref linkend="sql-notify" endterm="sql-notify-title"></member>
+   <member><xref linkend="sql-listen"></member>
+   <member><xref linkend="sql-notify"></member>
   </simplelist>
  </refsect1>
 </refentry>

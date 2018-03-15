@@ -262,3 +262,18 @@ WITH (APPENDONLY=ON) DISTRIBUTED BY (c)
 PARTITION BY RANGE(d) (START(1) END (100) EVERY(1));
 ANALYZE T25289_T4;
 
+--
+-- expect NO crash when the statistic slot for an attribute is broken
+--
+CREATE TABLE good_tab(a int, b text);
+
+CREATE TABLE test_broken_stats(a int, b text);
+INSERT INTO test_broken_stats VALUES(1, 'abc'), (2, 'cde'), (3, 'efg'), (3, 'efg'), (3, 'efg'), (1, 'abc'), (2, 'cde'); 
+ANALYZE test_broken_stats;
+SET allow_system_table_mods='DML';
+-- Simulate broken stats by changing the data type of MCV slot to a different type than in pg_attribute 
+UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='bfv_statistic.test_broken_stats'::regclass AND staattnum=2;
+
+SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
+
+RESET allow_system_table_mods;

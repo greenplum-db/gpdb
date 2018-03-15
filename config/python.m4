@@ -77,7 +77,7 @@ else
 	python_libspec="-L${python_libdir} -lpython${python_version}"
 fi
 
-python_additional_libs=`${PYTHON} -c "import distutils.sysconfig,string; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LIBS','LIBC','LIBM','LOCALMODLIBS','BASEMODLIBS'))))"`
+python_additional_libs=`${PYTHON} -c "import distutils.sysconfig,string; print(' '.join(filter(None,distutils.sysconfig.get_config_vars('LIBS','LIBC','LIBM','BASEMODLIBS'))))"`
 
 AC_MSG_RESULT([${python_libspec} ${python_additional_libs}])
 

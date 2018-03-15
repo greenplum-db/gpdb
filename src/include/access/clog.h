@@ -3,10 +3,10 @@
  *
  * PostgreSQL transaction-commit-log manager
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/clog.h,v 1.24 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/clog.h,v 1.25 2010/01/02 16:58:00 momjian Exp $
  */
 #ifndef CLOG_H
 #define CLOG_H
@@ -35,9 +35,6 @@ typedef int XidStatus;
 extern void TransactionIdSetTreeStatus(TransactionId xid, int nsubxids,
 				   TransactionId *subxids, XidStatus status, XLogRecPtr lsn);
 extern XidStatus TransactionIdGetStatus(TransactionId xid, XLogRecPtr *lsn);
-extern XidStatus InRecoveryTransactionIdGetStatus(TransactionId xid, bool *valid);
-
-extern char *XidStatus_Name(XidStatus status);
 
 extern Size CLOGShmemSize(void);
 extern void CLOGShmemInit(void);

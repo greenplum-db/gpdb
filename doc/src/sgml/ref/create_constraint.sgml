@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_constraint.sgml,v 1.19 2008/11/14 10:22:46 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_constraint.sgml,v 1.22 2010/04/03 07:22:58 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATECONSTRAINT">
  <refmeta>
-  <refentrytitle id="sql-createconstraint-title">CREATE CONSTRAINT TRIGGER</refentrytitle>
+  <refentrytitle>CREATE CONSTRAINT TRIGGER</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -27,7 +27,8 @@ CREATE CONSTRAINT TRIGGER <replaceable class="parameter">name</replaceable>
     [ FROM <replaceable class="parameter">referenced_table_name</replaceable> ]
     { NOT DEFERRABLE | [ DEFERRABLE ] { INITIALLY IMMEDIATE | INITIALLY DEFERRED } }
     FOR EACH ROW
-    EXECUTE PROCEDURE <replaceable class="parameter">funcname</replaceable> ( <replaceable class="parameter">arguments</replaceable> )
+    [ WHEN ( <replaceable class="parameter">condition</replaceable> ) ]
+    EXECUTE PROCEDURE <replaceable class="parameter">function_name</replaceable> ( <replaceable class="parameter">arguments</replaceable> )
 </synopsis>
  </refsynopsisdiv>
 
@@ -38,7 +39,7 @@ CREATE CONSTRAINT TRIGGER <replaceable class="parameter">name</replaceable>
    <command>CREATE CONSTRAINT TRIGGER</command> creates a
    <firstterm>constraint trigger</>.  This is the same as a regular trigger
    except that the timing of the trigger firing can be adjusted using
-   <xref linkend="SQL-SET-CONSTRAINTS" endterm="SQL-SET-CONSTRAINTS-TITLE">.
+   <xref linkend="SQL-SET-CONSTRAINTS">.
    Constraint triggers must be <literal>AFTER ROW</> triggers.  They can
    be fired either at the end of the statement causing the triggering event,
    or at the end of the containing transaction; in the latter case they are
@@ -103,18 +104,34 @@ CREATE CONSTRAINT TRIGGER <replaceable class="parameter">name</replaceable>
     <listitem>
      <para>
       The default timing of the trigger.
-      See the <xref linkend="SQL-CREATETABLE" endterm="SQL-CREATETABLE-TITLE">
+      See the <xref linkend="SQL-CREATETABLE">
       documentation for details of these constraint options.
      </para>
     </listitem>
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="PARAMETER">funcname</replaceable></term>
+    <term><replaceable class="parameter">condition</replaceable></term>
+    <listitem>
+     <para>
+      A Boolean expression that determines whether the trigger function
+      will actually be executed.  This acts the same as in <xref
+      linkend="SQL-CREATETRIGGER">.
+      Note in particular that evaluation of the <literal>WHEN</>
+      condition is not deferred, but occurs immediately after the row
+      update operation is performed.  If the condition does not evaluate
+      to <literal>true</> then the trigger is not queued for deferred
+      execution.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="PARAMETER">function_name</replaceable></term>
     <listitem>
      <para>
       The function to call when the trigger is fired. See <xref
-      linkend="SQL-CREATETRIGGER" endterm="SQL-CREATETRIGGER-TITLE"> for
+      linkend="SQL-CREATETRIGGER"> for
       details.
      </para>
     </listitem>
@@ -125,7 +142,7 @@ CREATE CONSTRAINT TRIGGER <replaceable class="parameter">name</replaceable>
     <listitem>
      <para>
       Optional argument strings to pass to the trigger function. See <xref
-      linkend="SQL-CREATETRIGGER" endterm="SQL-CREATETRIGGER-TITLE"> for
+      linkend="SQL-CREATETRIGGER"> for
       details.
      </para>
     </listitem>
@@ -146,9 +163,9 @@ CREATE CONSTRAINT TRIGGER <replaceable class="parameter">name</replaceable>
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createtrigger" endterm="sql-createtrigger-title"></member>
-   <member><xref linkend="sql-droptrigger" endterm="sql-droptrigger-title"></member>
-   <member><xref linkend="sql-set-constraints" endterm="sql-set-constraints-title"></member>
+   <member><xref linkend="sql-createtrigger"></member>
+   <member><xref linkend="sql-droptrigger"></member>
+   <member><xref linkend="sql-set-constraints"></member>
   </simplelist>
  </refsect1>
 </refentry>

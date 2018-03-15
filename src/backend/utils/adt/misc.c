@@ -3,12 +3,12 @@
  * misc.c
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.71 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.75 2010/02/26 02:01:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include <math.h>
 
 #include "access/xact.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_tablespace.h"
 #include "commands/dbcommands.h"
@@ -286,7 +287,8 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 		/*
 		 * size = tablespace dirname length + dir sep char + oid + terminator
 		 */
-		fctx->location = (char *) palloc(10 + 10 + 1);
+		fctx->location = (char *) palloc(9 + 1 + OIDCHARS + 1 +
+										 strlen(tablespace_version_directory()) + 1);
 		if (tablespaceOid == GLOBALTABLESPACE_OID)
 		{
 			fctx->dirdesc = NULL;
@@ -298,7 +300,8 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 			if (tablespaceOid == DEFAULTTABLESPACE_OID)
 				sprintf(fctx->location, "base");
 			else
-				sprintf(fctx->location, "pg_tblspc/%u", tablespaceOid);
+				sprintf(fctx->location, "pg_tblspc/%u/%s", tablespaceOid,
+						tablespace_version_directory());
 
 			fctx->dirdesc = AllocateDir(fctx->location);
 
@@ -435,7 +438,7 @@ pg_get_keywords(PG_FUNCTION_ARGS)
 
 	funcctx = SRF_PERCALL_SETUP();
 
-	if (&ScanKeywords[funcctx->call_cntr] < LastScanKeyword)
+	if (funcctx->call_cntr < NumScanKeywords)
 	{
 		char	   *values[3];
 		HeapTuple	tuple;

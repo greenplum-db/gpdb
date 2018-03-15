@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_user_mapping.sgml,v 1.3 2009/06/19 15:28:25 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/drop_user_mapping.sgml,v 1.5 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-DROPUSERMAPPING">
  <refmeta>
-  <refentrytitle id="sql-dropusermapping-title">DROP USER MAPPING</refentrytitle>
+  <refentrytitle>DROP USER MAPPING</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-DROP USER MAPPING [ IF EXISTS ] FOR { <replaceable class="parameter">username</replaceable> | USER | CURRENT_USER | PUBLIC } SERVER <replaceable class="parameter">servername</replaceable>
+DROP USER MAPPING [ IF EXISTS ] FOR { <replaceable class="parameter">user_name</replaceable> | USER | CURRENT_USER | PUBLIC } SERVER <replaceable class="parameter">server_name</replaceable>
 </synopsis>
  </refsynopsisdiv>
 
@@ -56,7 +56,7 @@ DROP USER MAPPING [ IF EXISTS ] FOR { <replaceable class="parameter">username</r
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">username</replaceable></term>
+    <term><replaceable class="parameter">user_name</replaceable></term>
     <listitem>
      <para>
       User name of the mapping.  <literal>CURRENT_USER</>
@@ -68,7 +68,7 @@ DROP USER MAPPING [ IF EXISTS ] FOR { <replaceable class="parameter">username</r
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">servername</replaceable></term>
+    <term><replaceable class="parameter">server_name</replaceable></term>
     <listitem>
      <para>
       Server name of the user mapping.
@@ -103,8 +103,8 @@ DROP USER MAPPING IF EXISTS FOR bob SERVER foo;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createusermapping" endterm="sql-createusermapping-title"></member>
-   <member><xref linkend="sql-alterusermapping" endterm="sql-alterusermapping-title"></member>
+   <member><xref linkend="sql-createusermapping"></member>
+   <member><xref linkend="sql-alterusermapping"></member>
   </simplelist>
  </refsect1>
 

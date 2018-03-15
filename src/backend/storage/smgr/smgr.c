@@ -8,35 +8,29 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.117 2009/06/11 14:49:02 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.121 2010/02/26 02:01:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "access/persistentfilesysobjname.h"
 #include "access/xact.h"
-#include "access/xlogmm.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
-#include "cdb/cdbpersistentfilespace.h"
-#include "cdb/cdbpersistenttablespace.h"
-#include "cdb/cdbpersistentdatabase.h"
-#include "cdb/cdbpersistentrelation.h"
 #include "commands/tablespace.h"
 #include "postmaster/postmaster.h"
 #include "storage/bufmgr.h"
 #include "storage/ipc.h"
 #include "storage/smgr.h"
-#include "storage/smgr_ao.h"
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
+#include "utils/inval.h"
 
 /*
  * Each backend has a hashtable that stores all extant SMgrRelation objects.
@@ -45,25 +39,6 @@ static HTAB *SMgrRelationHash = NULL;
 
 /* local function prototypes */
 static void smgrshutdown(int code, Datum arg);
-
-char *
-StorageManagerMirrorMode_Name(StorageManagerMirrorMode mirrorMode)
-{
-	switch (mirrorMode)
-	{
-		case StorageManagerMirrorMode_None:
-			return "None";
-		case StorageManagerMirrorMode_PrimaryOnly:
-			return "Primary Only";
-		case StorageManagerMirrorMode_MirrorOnly:
-			return "Mirror Only";
-		case StorageManagerMirrorMode_Both:
-			return "Both";
-
-		default:
-			return "Unknown";
-	}
-}
 
 /*
  *	smgrinit(), smgrshutdown() -- Initialize or shut down storage
@@ -126,6 +101,9 @@ smgropen(RelFileNode rnode)
 
 		/* hash_search already filled in the lookup key */
 		reln->smgr_owner = NULL;
+		reln->smgr_targblock = InvalidBlockNumber;
+		reln->smgr_fsm_nblocks = InvalidBlockNumber;
+		reln->smgr_vm_nblocks = InvalidBlockNumber;
 		reln->smgr_which = 0;	/* we only have md.c at present */
 
 		/* mark it not open */
@@ -239,130 +217,6 @@ smgrclosenode(RelFileNode rnode)
 }
 
 /*
- *	smgrcreatefilespacedir() -- Create a new filespace directory.
- */
-void
-smgrcreatefilespacedir(Oid filespaceOid,
-					   char *primaryFilespaceLocation,
-
- /*
-  * The primary filespace directory path.  NOT Blank padded. Just a NULL
-  * terminated string.
-  */
-					   char *mirrorFilespaceLocation,
-					   StorageManagerMirrorMode mirrorMode,
-					   bool ignoreAlreadyExists,
-					   int *primaryError,
-					   bool *mirrorDataLossOccurred)
-{
-	mdcreatefilespacedir(filespaceOid,
-						 primaryFilespaceLocation,
-						 mirrorFilespaceLocation,
-						 mirrorMode,
-						 ignoreAlreadyExists,
-						 primaryError,
-						 mirrorDataLossOccurred);
-}
-
-/*
- *	smgrcreatetablespacedir() -- Create a new tablespace directory.
- *
- */
-void
-smgrcreatetablespacedir(Oid tablespaceOid,
-						StorageManagerMirrorMode mirrorMode,
-						bool ignoreAlreadyExists,
-						int *primaryError,
-						bool *mirrorDataLossOccurred)
-{
-	mdcreatetablespacedir(tablespaceOid,
-						  mirrorMode,
-						  ignoreAlreadyExists,
-						  primaryError,
-						  mirrorDataLossOccurred);
-}
-
-/*
- *	smgrcreatedbdir() -- Create a new database directory.
- */
-void
-smgrcreatedbdir(DbDirNode *dbDirNode,
-				StorageManagerMirrorMode mirrorMode,
-				bool ignoreAlreadyExists,
-				int *primaryError,
-				bool *mirrorDataLossOccurred)
-{
-	mdcreatedbdir(dbDirNode,
-				  mirrorMode,
-				  ignoreAlreadyExists,
-				  primaryError,
-				  mirrorDataLossOccurred);
-}
-
-void
-smgrcreatedbdirjustintime(DbDirNode *justInTimeDbDirNode,
-						  MirroredObjectExistenceState mirrorExistenceState,
-						  StorageManagerMirrorMode mirrorMode,
-						  ItemPointer persistentTid,
-						  int64 *persistentSerialNum,
-						  int *primaryError,
-						  bool *mirrorDataLossOccurred)
-{
-	PersistentDatabase_MarkJustInTimeCreatePending(justInTimeDbDirNode,
-												   mirrorExistenceState,
-												   persistentTid,
-												   persistentSerialNum);
-
-	mdcreatedbdir(justInTimeDbDirNode,
-				  mirrorMode,
-				  /* ignoreAlreadyExists */ true,
-				  primaryError,
-				  mirrorDataLossOccurred);
-	if (*primaryError != 0)
-	{
-		PersistentDatabase_AbandonJustInTimeCreatePending(justInTimeDbDirNode,
-														  persistentTid,
-														  *persistentSerialNum);
-		return;
-	}
-
-	PersistentDatabase_JustInTimeCreated(justInTimeDbDirNode,
-										 persistentTid,
-										 *persistentSerialNum);
-
-	/* be sure to set PG_VERSION file for just in time dirs too */
-	set_short_version(NULL, justInTimeDbDirNode, true);
-}
-
-/*
- *	smgrcreate() -- Create a new relation.
- *
- *		Given an already-created (but presumably unused) SMgrRelation,
- *		cause the underlying disk file or other storage for the fork
- *		to be created.
- *
- *		We assume the persistent 'Create Pending' work has already been done.
- *
- *		And, we assume the Just-In-Time database directory in the tablespace has already
- *		been created.
- */
-void
-smgrmirroredcreate(SMgrRelation reln,
-				   char *relationName, /* For tracing only.  Can be NULL in some execution paths. */
-				   MirrorDataLossTrackingState mirrorDataLossTrackingState,
-				   int64 mirrorDataLossTrackingSessionNum,
-				   bool ignoreAlreadyExists,
-				   bool *mirrorDataLossOccurred) /* FIXME: is this arg still needed? */
-{
-	mdmirroredcreate(reln,
-					 relationName,
-					 mirrorDataLossTrackingState,
-					 mirrorDataLossTrackingSessionNum,
-					 ignoreAlreadyExists,
-					 mirrorDataLossOccurred);
-}
-
-/*
  *	smgrcreate() -- Create a new relation.
  *
  *		Given an already-created (but presumably unused) SMgrRelation,
@@ -371,77 +225,48 @@ smgrmirroredcreate(SMgrRelation reln,
  *
  *		If isRedo is true, it is okay for the underlying file to exist
  *		already because we are in a WAL replay sequence.
- *
- *
- * In GPDB, this is currently only used for non-main forks, which are
- * not mirrored. smgrmirroredcreate must be used for the main fork.
  */
 void
 smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 {
-	/*
-	 * GPDB_84_MERGE_FIXME: the following performance tweak came in from 8.4;
-	 * is it still applicable to our system here?
-	 */
-#if 0
 	/*
 	 * Exit quickly in WAL replay mode if we've already opened the file. If
 	 * it's open, it surely must exist.
 	 */
 	if (isRedo && reln->md_fd[forknum] != NULL)
 		return;
-#endif
+
+	/*
+	 * We may be using the target table space for the first time in this
+	 * database, so create a per-database subdirectory if needed.
+	 *
+	 * XXX this is a fairly ugly violation of module layering, but this seems
+	 * to be the best place to put the check.  Maybe TablespaceCreateDbspace
+	 * should be here and not in commands/tablespace.c?  But that would imply
+	 * importing a lot of stuff that smgr.c oughtn't know, either.
+	 */
+	TablespaceCreateDbspace(reln->smgr_rnode.spcNode,
+							reln->smgr_rnode.dbNode,
+							isRedo);
 
 	mdcreate(reln, forknum, isRedo);
 }
 
-
 /*
- *	smgrdounlink() -- Immediately unlink a relation.
+ *	smgrcreate_ao() -- Create a new AO relation segment.
  *
- *		The specified fork of the relation is removed from the store.  This
- *		should not be used during transactional operations, since it can't be
- *		undone.
+ *		Given a RelFileNode, cause the underlying disk file for the
+ *		AO segment to be created.
  *
- *		If isRedo is true, it is okay for the underlying file to be gone
- *		already.
+ *		If isRedo is true, it is okay for the underlying file to exist
+ *		already because we are in a WAL replay sequence.
  */
 void
-smgrdomirroredunlink(RelFileNode *relFileNode,
-	bool isLocalBuf,
-	char *relationName, /* For tracing only.  Can be NULL in some execution paths. */
-	bool primaryOnly,
-	bool isRedo,
-	bool ignoreNonExistence,
-	bool *mirrorDataLossOccurred)
+smgrcreate_ao(RelFileNode rnode, int32 segmentFileNum, bool isRedo)
 {
-	/*
-	 * Get rid of any remaining buffers for the relation.  bufmgr will just
-	 * drop them without bothering to write the contents.
-	 */
-	DropRelFileNodeBuffers(*relFileNode, MAIN_FORKNUM, isLocalBuf, 0);
-
-	/*
-	 * It'd be nice to tell the stats collector to forget it immediately, too.
-	 * But we can't because we don't know the OID (and in cases involving
-	 * relfilenode swaps, it's not always clear which table OID to forget,
-	 * anyway).
-	 */
-
-	/*
-	 * And delete the physical files.
-	 *
-	 * Note: smgr_unlink must treat deletion failure as a WARNING, not an
-	 * ERROR, because we've already decided to commit or abort the current
-	 * xact.
-	 */
-	mdmirroredunlink(*relFileNode,
-					 relationName,
-					 primaryOnly,
-					 isRedo,
-					 ignoreNonExistence,
-					 mirrorDataLossOccurred);
+	mdcreate_ao(rnode, segmentFileNum, isRedo);
 }
+
 
 void
 smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isTemp, bool isRedo)
@@ -453,98 +278,31 @@ smgrdounlink(SMgrRelation reln, ForkNumber forknum, bool isTemp, bool isRedo)
 
 	DropRelFileNodeBuffers(rnode, forknum, isTemp, 0);
 
+	/*
+	 * It'd be nice to tell the stats collector to forget it immediately, too.
+	 * But we can't because we don't know the OID (and in cases involving
+	 * relfilenode swaps, it's not always clear which table OID to forget,
+	 * anyway).
+	 */
+
+	/*
+	 * Send a shared-inval message to force other backends to close any
+	 * dangling smgr references they may have for this rel.  We should do this
+	 * before starting the actual unlinking, in case we fail partway through
+	 * that step.  Note that the sinval message will eventually come back to
+	 * this backend, too, and thereby provide a backstop that we closed our
+	 * own smgr rel.
+	 */
+	CacheInvalidateSmgr(rnode);
+
+	/*
+	 * Delete the physical file(s).
+	 *
+	 * Note: smgr_unlink must treat deletion failure as a WARNING, not an
+	 * ERROR, because we've already decided to commit or abort the current
+	 * xact.
+	 */
 	mdunlink(rnode, forknum, isRedo);
-}
-
-void
-smgrdormfilespacedir(Oid filespaceOid,
-					 char *primaryFilespaceLocation,
-
- /*
-  * The primary filespace directory path.  NOT Blank padded. Just a NULL
-  * terminated string.
-  */
-					 char *mirrorFilespaceLocation,
-					 bool primaryOnly,
-					 bool mirrorOnly,
-					 bool ignoreNonExistence,
-					 bool *mirrorDataLossOccurred)
-{
-	/*
-	 * And remove the physical filespace directory.
-	 *
-	 * Note: we treat deletion failure as a WARNING, not an error, because
-	 * we've already decided to commit or abort the current xact.
-	 */
-	if (!mdrmfilespacedir(filespaceOid,
-						  primaryFilespaceLocation,
-						  mirrorFilespaceLocation,
-						  primaryOnly,
-						  mirrorOnly,
-						  ignoreNonExistence,
-						  mirrorDataLossOccurred))
-		ereport(WARNING,
-				(errcode_for_file_access(),
-				 errmsg("could not remove filespace directory %u: %m",
-						filespaceOid)));
-}
-
-void
-smgrdormtablespacedir(Oid tablespaceOid,
-					  bool primaryOnly,
-					  bool mirrorOnly,
-					  bool ignoreNonExistence,
-					  bool *mirrorDataLossOccurred)
-{
-	/*
-	 * And remove the physical tablespace directory.
-	 *
-	 * Note: we treat deletion failure as a WARNING, not an error, because
-	 * we've already decided to commit or abort the current xact.
-	 */
-	if (!mdrmtablespacedir(tablespaceOid, primaryOnly, mirrorOnly, ignoreNonExistence, mirrorDataLossOccurred))
-		ereport(WARNING,
-				(errcode_for_file_access(),
-				 errmsg("could not remove tablespace directory %u: %m",
-						tablespaceOid)));
-}
-
-/*
- * Shared subroutine that actually does the rmdir of a database directory ...
- */
-static void
-smgr_internal_rmdbdir(DbDirNode *dbDirNode,
-					  bool primaryOnly,
-					  bool mirrorOnly,
-					  bool ignoreNonExistence,
-					  bool *mirrorDataLossOccurred)
-{
-	/*
-	 * And remove the physical database directory.
-	 *
-	 * Note: we treat deletion failure as a WARNING, not an error, because
-	 * we've already decided to commit or abort the current xact.
-	 */
-	if (!mdrmdbdir(dbDirNode, primaryOnly, mirrorOnly, ignoreNonExistence, mirrorDataLossOccurred))
-		ereport(WARNING,
-				(errcode_for_file_access(),
-				 errmsg("could not remove database directory %u/%u: %m",
-						dbDirNode->tablespace,
-						dbDirNode->database)));
-}
-
-void
-smgrdormdbdir(DbDirNode *dbDirNode,
-			  bool primaryOnly,
-			  bool mirrorOnly,
-			  bool ignoreNonExistence,
-			  bool *mirrorDataLossOccurred)
-{
-	smgr_internal_rmdbdir(dbDirNode,
-						  primaryOnly,
-						  mirrorOnly,
-						  ignoreNonExistence,
-						  mirrorDataLossOccurred);
 }
 
 /*
@@ -623,20 +381,36 @@ smgrnblocks(SMgrRelation reln, ForkNumber forknum)
 /*
  *	smgrtruncate() -- Truncate supplied relation to the specified number
  *					  of blocks
+ *
+ * The truncation is done immediately, so this can't be rolled back.
  */
 void
 smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
-			 bool isTemp)
+			 bool isLocalBuf)
 {
 	/*
 	 * Get rid of any buffers for the about-to-be-deleted blocks. bufmgr will
 	 * just drop them without bothering to write the contents.
 	 */
-	DropRelFileNodeBuffers(reln->smgr_rnode, forknum, isTemp, nblocks);
+	DropRelFileNodeBuffers(reln->smgr_rnode, forknum, isLocalBuf, nblocks);
 
-	/* Do the truncation */
+	/*
+	 * Send a shared-inval message to force other backends to close any smgr
+	 * references they may have for this rel.  This is useful because they
+	 * might have open file pointers to segments that got removed, and/or
+	 * smgr_targblock variables pointing past the new rel end.	(The inval
+	 * message will come back to our backend, too, causing a
+	 * probably-unnecessary local smgr flush.  But we don't expect that this
+	 * is a performance-critical path.)  As in the unlink code, we want to be
+	 * sure the message is sent before we start changing things on-disk.
+	 */
+	CacheInvalidateSmgr(reln->smgr_rnode);
+
+	/*
+	 * Do the truncation.
+	 */
 	// GPDB_84_MERGE_FIXME: is allowedNotFound = false correct here?
-	mdtruncate(reln, forknum, nblocks, isTemp, false /* allowedNotFound */);
+	mdtruncate(reln, forknum, nblocks, isLocalBuf, false /* allowedNotFound */);
 }
 
 /*

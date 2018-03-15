@@ -33,6 +33,7 @@
 #include <ctype.h>
 
 #include "lib/stringinfo.h"
+#include "nodes/params.h"
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
@@ -329,6 +330,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 
 	WRITE_ENUM_FIELD(commandType, CmdType);
 	WRITE_ENUM_FIELD(planGen, PlanGenerator);
+	WRITE_BOOL_FIELD(hasReturning);
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_BOOL_FIELD(oneoffPlan);
@@ -340,7 +342,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(subplans);
 	WRITE_BITMAPSET_FIELD(rewindPlanIDs);
-	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
 	WRITE_NODE_FIELD(result_aosegnos);
@@ -404,6 +405,7 @@ _outSubqueryScan(StringInfo str, SubqueryScan *node)
 
 	WRITE_NODE_FIELD(subplan);
 	/* Planner-only: subrtable -- don't serialize. */
+	WRITE_NODE_FIELD(subrowmark);
 }
 
 static void
@@ -675,6 +677,7 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_NODE_FIELD(inhRelations);
 	WRITE_NODE_FIELD(inhOids);
 	WRITE_INT_FIELD(parentOidCount);
+	WRITE_NODE_FIELD(ofTypename);
 	WRITE_NODE_FIELD(constraints);
 	WRITE_NODE_FIELD(options);
 	WRITE_ENUM_FIELD(oncommit, OnCommitAction);
@@ -783,6 +786,14 @@ _outAlterDomainStmt(StringInfo str, AlterDomainStmt *node)
 }
 
 static void
+_outAlterDefaultPrivilegesStmt(StringInfo str, AlterDefaultPrivilegesStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERDEFAULTPRIVILEGESSTMT");
+	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(action);
+}
+
+static void
 _outColumnDef(StringInfo str, ColumnDef *node)
 {
 	WRITE_NODE_TYPE("COLUMNDEF");
@@ -793,8 +804,9 @@ _outColumnDef(StringInfo str, ColumnDef *node)
 	WRITE_BOOL_FIELD(is_local);
 	WRITE_BOOL_FIELD(is_not_null);
 	WRITE_INT_FIELD(attnum);
+	WRITE_CHAR_FIELD(storage);
 	WRITE_NODE_FIELD(raw_default);
-	WRITE_STRING_FIELD(cooked_default);
+	WRITE_NODE_FIELD(cooked_default);
 	WRITE_NODE_FIELD(constraints);
 	WRITE_NODE_FIELD(encoding);
 }
@@ -805,7 +817,7 @@ _outTypeName(StringInfo str, TypeName *node)
 	WRITE_NODE_TYPE("TYPENAME");
 
 	WRITE_NODE_FIELD(names);
-	WRITE_OID_FIELD(typid);
+	WRITE_OID_FIELD(typeOid);
 	WRITE_BOOL_FIELD(setof);
 	WRITE_BOOL_FIELD(pct_type);
 	WRITE_NODE_FIELD(typmods);
@@ -829,10 +841,11 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasWindowFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
-	WRITE_BOOL_FIELD(hasDistinctOn);
-	WRITE_BOOL_FIELD(hasRecursive);
 	WRITE_BOOL_FIELD(hasDynamicFunctions);
 	WRITE_BOOL_FIELD(hasFuncsWithExecRestrictions);
+	WRITE_BOOL_FIELD(hasDistinctOn);
+	WRITE_BOOL_FIELD(hasRecursive);
+	WRITE_BOOL_FIELD(hasForUpdate);
 	WRITE_NODE_FIELD(cteList);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);
@@ -1020,7 +1033,10 @@ _outConstraint(StringInfo str, Constraint *node)
 {
 	WRITE_NODE_TYPE("CONSTRAINT");
 
-	WRITE_STRING_FIELD(name);
+	WRITE_STRING_FIELD(conname);
+	WRITE_BOOL_FIELD(deferrable);
+	WRITE_BOOL_FIELD(initdeferred);
+	WRITE_LOCATION_FIELD(location);
 
 	WRITE_ENUM_FIELD(contype,ConstrType);
 
@@ -1031,6 +1047,7 @@ _outConstraint(StringInfo str, Constraint *node)
 			WRITE_NODE_FIELD(keys);
 			WRITE_NODE_FIELD(options);
 			WRITE_STRING_FIELD(indexspace);
+			/* access_method and where_clause not currently used */
 			break;
 
 		case CONSTR_CHECK:
@@ -1039,8 +1056,30 @@ _outConstraint(StringInfo str, Constraint *node)
 			WRITE_STRING_FIELD(cooked_expr);
 			break;
 
-		case CONSTR_NOTNULL:
+		case CONSTR_EXCLUSION:
+			WRITE_NODE_FIELD(exclusions);
+			WRITE_NODE_FIELD(options);
+			WRITE_STRING_FIELD(indexspace);
+			WRITE_STRING_FIELD(access_method);
+			WRITE_NODE_FIELD(where_clause);
+			break;
+
+		case CONSTR_FOREIGN:
+			WRITE_NODE_FIELD(pktable);
+			WRITE_NODE_FIELD(fk_attrs);
+			WRITE_NODE_FIELD(pk_attrs);
+			WRITE_CHAR_FIELD(fk_matchtype);
+			WRITE_CHAR_FIELD(fk_upd_action);
+			WRITE_CHAR_FIELD(fk_del_action);
+			WRITE_BOOL_FIELD(skip_validation);
+			WRITE_OID_FIELD(trig1Oid);
+			WRITE_OID_FIELD(trig2Oid);
+			WRITE_OID_FIELD(trig3Oid);
+			WRITE_OID_FIELD(trig4Oid);
+			break;
+
 		case CONSTR_NULL:
+		case CONSTR_NOTNULL:
 		case CONSTR_ATTR_DEFERRABLE:
 		case CONSTR_ATTR_NOT_DEFERRABLE:
 		case CONSTR_ATTR_DEFERRED:
@@ -1089,6 +1128,12 @@ _outAlterResourceGroupStmt(StringInfo str, AlterResourceGroupStmt *node)
 	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
 }
 
+/*
+ * Support for serializing TupleDescs and ParamListInfos.
+ *
+ * TupleDescs and ParamListInfos are not Nodes as such, but if you wrap them
+ * in TupleDescNode and ParamListInfoNode structs, we allow serializing them.
+ */
 static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
 {
@@ -1110,6 +1155,22 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
 }
+
+static void
+_outSerializedParamExternData(StringInfo str, SerializedParamExternData *node)
+{
+	WRITE_NODE_TYPE("SERIALIZEDPARAMEXTERNDATA");
+
+	WRITE_BOOL_FIELD(isnull);
+	WRITE_INT16_FIELD(pflags);
+	WRITE_OID_FIELD(ptype);
+	WRITE_INT16_FIELD(plen);
+	WRITE_BOOL_FIELD(pbyval);
+
+	if (!node->isnull)
+		_outDatum(str, node->value, node->plen, node->pbyval);
+}
+
 
 static void
 _outCookedConstraint(StringInfo str, CookedConstraint *node)
@@ -1271,6 +1332,9 @@ _outNode(StringInfo str, void *obj)
 			case T_Repeat:
 				_outRepeat(str, obj);
 				break;
+			case T_ModifyTable:
+				_outModifyTable(str, obj);
+				break;
 			case T_Append:
 				_outAppend(str, obj);
 				break;
@@ -1382,8 +1446,14 @@ _outNode(StringInfo str, void *obj)
 			case T_SetOp:
 				_outSetOp(str, obj);
 				break;
+			case T_LockRows:
+				_outLockRows(str, obj);
+				break;
 			case T_Limit:
 				_outLimit(str, obj);
+				break;
+			case T_PlanRowMark:
+				_outPlanRowMark(str, obj);
 				break;
 			case T_Hash:
 				_outHash(str, obj);
@@ -1435,6 +1505,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_FuncExpr:
 				_outFuncExpr(str, obj);
+				break;
+			case T_NamedArgExpr:
+				_outNamedArgExpr(str, obj);
 				break;
 			case T_OpExpr:
 				_outOpExpr(str, obj);
@@ -1601,9 +1674,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_IndexOptInfo:
 				_outIndexOptInfo(str, obj);
-				break;
-			case T_CdbRelDedupInfo:
-				_outCdbRelDedupInfo(str, obj);
 				break;
 			case T_PathKey:
 				_outPathKey(str, obj);
@@ -1842,6 +1912,9 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterDomainStmt:
 				_outAlterDomainStmt(str, obj);
 				break;
+			case T_AlterDefaultPrivilegesStmt:
+				_outAlterDefaultPrivilegesStmt(str, obj);
+				break;
 
 			case T_TransactionStmt:
 				_outTransactionStmt(str, obj);
@@ -1952,9 +2025,6 @@ _outNode(StringInfo str, void *obj)
 			case T_Constraint:
 				_outConstraint(str, obj);
 				break;
-			case T_FkConstraint:
-				_outFkConstraint(str, obj);
-				break;
 			case T_FuncCall:
 				_outFuncCall(str, obj);
 				break;
@@ -2032,18 +2102,6 @@ _outNode(StringInfo str, void *obj)
 				_outCreateTrigStmt(str, obj);
 				break;
 
-			case T_CreateFileSpaceStmt:
-				_outCreateFileSpaceStmt(str, obj);
-				break;
-
-			case T_FileSpaceEntry:
-				_outFileSpaceEntry(str, obj);
-				break;
-
-			case T_DropFileSpaceStmt:
-				_outDropFileSpaceStmt(str, obj);
-				break;
-
 			case T_CreateTableSpaceStmt:
 				_outCreateTableSpaceStmt(str, obj);
 				break;
@@ -2094,8 +2152,12 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterExtensionContentsStmt:
 				_outAlterExtensionContentsStmt(str, obj);
 				break;
+
 			case T_TupleDescNode:
 				_outTupleDescNode(str, obj);
+				break;
+			case T_SerializedParamExternData:
+				_outSerializedParamExternData(str, obj);
 				break;
 
 			case T_AlterTSConfigurationStmt:
@@ -2156,7 +2218,7 @@ _outNode(StringInfo str, void *obj)
  *	   returns a binary representation of the Node as a palloc'd string
  */
 char *
-nodeToBinaryStringFast(void *obj, int * length)
+nodeToBinaryStringFast(void *obj, int *length)
 {
 	StringInfoData str;
 	int16 tg = (int16) 0xDEAD;
@@ -2172,4 +2234,3 @@ nodeToBinaryStringFast(void *obj, int * length)
 	*length = str.len;
 	return str.data;
 }
-

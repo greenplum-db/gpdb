@@ -1,4 +1,4 @@
-CREATE TABLESPACE ts1 FILESPACE filespace_test_a;
+CREATE TABLESPACE ts1 LOCATION '/tmp/twophase_create_tablespace_test_ts';
 CREATE TABLESPACE
 create table drop_table_ts_test(a int, b int) tablespace ts1;
 psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

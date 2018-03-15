@@ -24,7 +24,7 @@
         <codeph>log_truncate_on_rotation</codeph> parameter.  This is a local parameter and must be
       set on each segment and master configuration file.</p>
     <p>Greenplum provides an administrative schema called <codeph>gp_toolkit</codeph> that you can
-      use to query log files, as well as system catalogs and operating enviroment for system status
+      use to query log files, as well as system catalogs and operating environment for system status
       information. For more information, including usage, refer to <i>The gp_tookit Administrative
         Schema</i> appendix in the <i>Greenplum Database Reference Guide</i>.</p>
     <section>

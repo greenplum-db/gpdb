@@ -845,7 +845,7 @@ SELECT COUNT(DISTINCT lowCardinalityHighDomain) FROM card_heap_table_w_bitmap;
 SELECT COUNT(*) FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain = 5;
  count 
 -------
-   99
+    99
 (1 row)
 
 -- Each of these tests a "single-sided range".
@@ -880,7 +880,7 @@ SELECT COUNT(DISTINCT lowCardinalityHighDomain) FROM card_heap_table_w_bitmap;
 SELECT COUNT(*) FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain IS NULL;
  count 
 -------
-  115
+   115
 (1 row)
 
 -- There should no longer be any rows with value 4.
@@ -892,7 +892,7 @@ SELECT COUNT(*) FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain = 4
 
 -- We should have 10,000 rows now.
 SELECT COUNT(*) FROM card_heap_table_w_bitmap;
- count  
+ count 
 -------
  10000
 (1 row)
@@ -903,7 +903,7 @@ DELETE FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain = 3;
 SELECT COUNT(*) FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain = 22;
  count 
 -------
-   99
+    99
 (1 row)
 
 -- Now reduce the cardinality
@@ -936,7 +936,7 @@ SELECT COUNT(*) FROM card_heap_table_w_bitmap WHERE lowCardinalityHighDomain IS 
 -- The number of rows updated here should be equal to the total number of rows 
 -- minus the number that have lowCardinalityHighDomain less than 10 
 -- minus the number that have lowCardinalityHighDomain greater than 100
--- minus the number that are NULL (if any).   
+-- minus the number that are NULL (if any).
 UPDATE card_heap_table_w_bitmap SET lowCardinalityHighDomain = 200 WHERE lowCardinalityHighDomain >= 10 and lowCardinalityHighDomain <= 100;
 -- Should be around 14 rows.
 SELECT DISTINCT lowCardinalityHighDomain FROM card_heap_table_w_bitmap;

@@ -732,13 +732,13 @@ DROP INDEX idx1_1_prt_part5;
 -- same as the previous case, but the columns are the other way 'round, and we
 -- do this on the table with default partition.
 ALTER TABLE pt_lt_tab_df ADD CONSTRAINT col2_col1_unique unique(col2,col1);
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_col2_key" for table "pt_lt_tab_df"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part1_col2_key" for table "pt_lt_tab_df_1_prt_part1"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part2_col2_key" for table "pt_lt_tab_df_1_prt_part2"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part3_col2_key" for table "pt_lt_tab_df_1_prt_part3"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part4_col2_key" for table "pt_lt_tab_df_1_prt_part4"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part5_col2_key" for table "pt_lt_tab_df_1_prt_part5"
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_def_col2_key" for table "pt_lt_tab_df_1_prt_def"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_col2_col1_key" for table "pt_lt_tab_df"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part1_idx" for table "pt_lt_tab_df_1_prt_part1"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part2_idx" for table "pt_lt_tab_df_1_prt_part2"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part3_idx" for table "pt_lt_tab_df_1_prt_part3"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part4_idx" for table "pt_lt_tab_df_1_prt_part4"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_part5_idx" for table "pt_lt_tab_df_1_prt_part5"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "pt_lt_tab_df_1_prt_def_idx" for table "pt_lt_tab_df_1_prt_def"
 SELECT * FROM pt_lt_tab_df WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
  col1 | col2 | col3 | col4 
 ------+------+------+------

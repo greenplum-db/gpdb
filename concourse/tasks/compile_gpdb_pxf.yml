@@ -1,0 +1,22 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+  - name: gpaddon_src
+  - name: pxf_tarball
+outputs:
+  - name: gpdb_artifacts
+run:
+  path: gpdb_src/concourse/scripts/compile_gpdb.bash
+params:
+  TARGET_OS:
+  TARGET_OS_VERSION:
+  BLD_TARGETS:
+  OUTPUT_ARTIFACT_DIR: gpdb_artifacts
+  EXTRACT_PXF: true
+  IVYREPO_HOST:
+  IVYREPO_REALM:
+  IVYREPO_USER:
+  IVYREPO_PASSWD:
+  CONFIGURE_FLAGS:

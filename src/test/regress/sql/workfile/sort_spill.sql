@@ -14,12 +14,12 @@ query = "select count(*) as nsegments from gp_segment_configuration where role='
 rv = plpy.execute(query)
 nsegments = int(rv[0]['nsegments'])
 rv = plpy.execute(explain_query)
-search_text = 'Work_mem used'
+search_text = 'spilling'
 result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((seg[\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         cur_row = int(workfile_created == nsegments)
@@ -39,13 +39,13 @@ set gp_resqueue_print_operator_memory_limits=on;
 
 set gp_enable_mk_sort=on;
 select avg(i2) from (select i1,i2 from testsort order by i2) foo;
-select * from sort_spill.is_workfile_created('explain analyze select i1,i2 from testsort order by i2;');
-select * from sort_spill.is_workfile_created('explain analyze select i1,i2 from testsort order by i2 limit 50000;');
+select * from sort_spill.is_workfile_created('explain (analyze, verbose) select i1,i2 from testsort order by i2;');
+select * from sort_spill.is_workfile_created('explain (analyze, verbose) select i1,i2 from testsort order by i2 limit 50000;');
 
 set gp_enable_mk_sort=off;
 select avg(i2) from (select i1,i2 from testsort order by i2) foo;
-select * from sort_spill.is_workfile_created('explain analyze select i1,i2 from testsort order by i2;');
-select * from sort_spill.is_workfile_created('explain analyze select i1,i2 from testsort order by i2 limit 50000;');
+select * from sort_spill.is_workfile_created('explain (analyze, verbose) select i1,i2 from testsort order by i2;');
+select * from sort_spill.is_workfile_created('explain (analyze, verbose) select i1,i2 from testsort order by i2 limit 50000;');
 
 drop schema sort_spill cascade;
 

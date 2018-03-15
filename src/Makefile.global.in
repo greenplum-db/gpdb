@@ -1,5 +1,5 @@
 # -*-makefile-*-
-# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.254 2009/06/23 03:46:00 tgl Exp $
+# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.264 2010/07/06 22:03:05 tgl Exp $
 
 #------------------------------------------------------------------------------
 # All PostgreSQL makefiles include this file and use the variables it sets,
@@ -18,8 +18,7 @@
 #
 # Meta configuration
 
-.PHONY: all install install-strip installdirs uninstall clean distclean maintainer-clean distprep check installcheck maintainer-check coverage installcheck-good
-.SILENT: installdirs
+.PHONY: all install install-strip installdirs uninstall clean distclean maintainer-clean distprep check installcheck maintainer-check coverage html man installcheck-parallel world install-world installcheck-world installcheck-good
 
 # make `all' the default target
 all:
@@ -185,18 +184,14 @@ enable_coverage	= @enable_coverage@
 enable_thread_safety	= @enable_thread_safety@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
-enable_codegen		= @enable_codegen@
 enable_gpfdist		= @enable_gpfdist@
 enable_pxf			= @enable_pxf@
 enable_gphdfs		= @enable_gphdfs@
 enable_snmp			= @enable_snmp@
-enable_ddboost	    = @enable_ddboost@
-enable_netbackup	= @enable_netbackup@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_gpperfmon    = @enable_gpperfmon@
 
-enable_segwalrep    = @enable_segwalrep@
 enable_tap_tests = @enable_tap_tests@
 
 python_includespec	= @python_includespec@
@@ -204,6 +199,7 @@ python_libdir		= @python_libdir@
 python_libspec		= @python_libspec@
 python_additional_libs	= @python_additional_libs@
 python_configdir	= @python_configdir@
+python_majorversion	= @python_majorversion@
 python_version		= @python_version@
 
 krb_srvtab = @krb_srvtab@
@@ -220,10 +216,6 @@ PTHREAD_CFLAGS		= @PTHREAD_CFLAGS@
 PTHREAD_LIBS		= @PTHREAD_LIBS@
 
 have_yaml 		= @have_yaml@
-have_docbook	= @have_docbook@
-DOCBOOKSTYLE	= @DOCBOOKSTYLE@
-COLLATEINDEX	= @COLLATEINDEX@
-DOCBOOK2MAN	= @DOCBOOK2MAN@
 
 
 ##########################################################################
@@ -291,8 +283,6 @@ LDFLAGS += @LDFLAGS@
 LDFLAGS_EX = @LDFLAGS_EX@
 # LDFLAGS_SL might have already been assigned by calling makefile
 LDFLAGS_SL += @LDFLAGS_SL@
-
-
 LDREL = -r
 LDOUT = -o
 RANLIB = @RANLIB@
@@ -387,7 +377,6 @@ INSTALL_SHLIB_OPTS = -m 755
 
 MKDIR_P = @MKDIR_P@
 
-mkinstalldirs	= $(SHELL) $(top_srcdir)/config/mkinstalldirs
 missing		= $(SHELL) $(top_srcdir)/config/missing
 
 STRIP		= @STRIP@
@@ -396,9 +385,13 @@ STRIP_SHARED_LIB = @STRIP_SHARED_LIB@
 
 # Documentation
 
-JADE	= @JADE@
-NSGMLS	= @NSGMLS@
-SGMLSPL	= @SGMLSPL@
+have_docbook	= @have_docbook@
+COLLATEINDEX	= @COLLATEINDEX@
+DOCBOOKSTYLE	= @DOCBOOKSTYLE@
+JADE			= @JADE@
+NSGMLS			= @NSGMLS@
+OSX				= @OSX@
+XSLTPROC		= @XSLTPROC@
 
 # Code coverage
 
@@ -548,6 +541,7 @@ endif
 ##########################################################################
 #
 # substitute implementations of C library routines (see src/port/)
+# note we already included -L.../src/port in LDFLAGS above
 
 LIBOBJS = @LIBOBJS@
 
@@ -555,12 +549,6 @@ LIBOBJS = @LIBOBJS@
 PG_CRC32C_OBJS = @PG_CRC32C_OBJS@
 
 LIBS := -lpgport $(LIBS)
-# add location of libpgport.a to LDFLAGS
-ifdef PGXS
-override LDFLAGS := -L$(libdir) $(LDFLAGS)
-else
-override LDFLAGS := -L$(top_builddir)/src/port $(LDFLAGS)
-endif
 
 # to make ws2_32.lib the last library, and always link with shfolder,
 # so SHGetFolderName isn't picked up from shell32.dll
@@ -724,12 +712,22 @@ lcov.info: $(gcda_files)
 %.c.gcov: %.gcda | lcov.info
 	$(GCOV) -b -f -p -o . $(GCOVFLAGS) $*.c >$*.c.gcov.out
 
+coverage: $(gcda_files:.gcda=.c.gcov) lcov.info
+	$(if $(SUBDIRS),for dir in $(SUBDIRS); do $(MAKE) -C $$dir coverage || exit; done)
+
+.PHONY: coverage-html
+coverage-html: coverage
+	rm -rf coverage
+	mkdir coverage
+	$(GENHTML) --show-details --legend --output-directory=coverage --title=PostgreSQL --num-spaces=4 --prefix=$(abs_top_srcdir) `find . -name lcov.info -print`
+
 
 # hook for clean-up
 clean distclean maintainer-clean: clean-coverage
 
 .PHONY: clean-coverage
 clean-coverage:
+	rm -rf coverage
 	rm -f *.gcda *.gcno lcov.info *.gcov *.gcov.out
 
 

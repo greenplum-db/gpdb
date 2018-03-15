@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/include/port/cygwin.h,v 1.7 2007/07/25 12:22:53 mha Exp $ */
+/* $PostgreSQL: pgsql/src/include/port/cygwin.h,v 1.9 2010/05/28 16:34:15 itagaki Exp $ */
 
 #include <cygwin/version.h>
 
@@ -17,5 +17,6 @@
 #define PGDLLIMPORT __declspec (dllexport)
 #else
 #define PGDLLIMPORT __declspec (dllimport)
-
 #endif
+
+#define PGDLLEXPORT __declspec (dllimport)

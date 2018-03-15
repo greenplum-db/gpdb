@@ -7,10 +7,10 @@
  * for debug printouts, because that's more flexible than printf().
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/execdebug.h,v 1.34 2009/01/01 17:23:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/execdebug.h,v 1.36 2010/01/02 16:58:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,7 +68,6 @@
  */
 #define T_OR_F(b)				((b) ? "true" : "false")
 #define NULL_OR_TUPLE(slot)		(TupIsNull(slot) ? "null" : "a tuple")
-
 
 /* ----------------
  *		nest loop debugging defines

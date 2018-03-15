@@ -15,10 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import tinctest
 from tinctest.lib import local_path
 from mpp.lib.PSQL import PSQL
-from mpp.lib.gpfilespace import Gpfilespace
 from tinctest.models.scenario import ScenarioTestCase
 
 
@@ -26,17 +26,24 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
     ''' Testing state of transactions with faults on master after crash-recovery'''
 
     def __init__(self, methodName):
-        self.gpfile = Gpfilespace()
+        if (PSQL.run_sql_command("select count(*) from pg_tablespace WHERE spcname = 'twophase_test_ts'", flags ='-q -t').strip() == '0'):
+            if not os.path.exists('/tmp/twophase_test_ts'):
+                os.mkdir('/tmp/twophase_test_ts')
+            PSQL.run_sql_command("CREATE TABLESPACE twophase_test_ts LOCATION '/tmp/twophase_test_ts';", dbname='postgres')
+
+        if (PSQL.run_sql_command("select count(*) from pg_tablespace WHERE spcname = 'twophase_test_ts2'", flags ='-q -t').strip() == '0'):
+            if not os.path.exists('/tmp/twophase_test_ts2'):
+                os.mkdir('/tmp/twophase_test_ts2')
+            PSQL.run_sql_command("CREATE TABLESPACE twophase_test_ts2 LOCATION '/tmp/twophase_test_ts2';", dbname='postgres')
+
+        if not os.path.exists('/tmp/twophase_create_tablespace_test_ts'):
+            os.mkdir('/tmp/twophase_create_tablespace_test_ts')
         super(SwitchCheckpointTestCase,self).__init__(methodName)
     
     def setUp(self):
-        '''Create filespace '''
-        self.gpfile.create_filespace('filespace_test_a')
         super(SwitchCheckpointTestCase,self).setUp()
 
     def tearDown(self):
-        ''' Cleanup up the filespace created '''
-        self.gpfile.drop_filespace('filespace_test_a')
         super(SwitchCheckpointTestCase,self).tearDown()
 
     def switch_checkpoint(self, cluster_state, fault_type, crash_type):

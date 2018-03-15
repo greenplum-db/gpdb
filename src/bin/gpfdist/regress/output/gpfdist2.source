@@ -1003,7 +1003,7 @@ LOCATION
 FORMAT 'csv'
 (
         DELIMITER AS '|'
-      NEWLINE 'CR'
+        NEWLINE 'CR'
 )
 ;
 SELECT count(*) FROM ext_lineitem;

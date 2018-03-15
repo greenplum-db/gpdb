@@ -27,6 +27,7 @@ extern int	max_wal_senders;
 extern int	replication_timeout;
 extern int	repl_catchup_within_range;
 
+extern int	WalSenderMain(void);
 extern void InitWalSender(void);
 extern void exec_replication_command(const char *query_string);
 extern void WalSndErrorCleanup(void);

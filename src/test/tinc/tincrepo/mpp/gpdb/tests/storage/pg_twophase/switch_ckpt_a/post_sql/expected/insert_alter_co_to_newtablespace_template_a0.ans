@@ -41,7 +41,7 @@
  col040 | timestamp without time zone | 
 Checksum: f
 Distributed by: (phase)
-Tablespace: "pg2_co_ts2_a0"
+Tablespace: "twophase_test_ts2"
 
 INSERT INTO pg2_co_table_for_alter_a0 VALUES ('sync1_co1',generate_series(1,10),'a',11,true,'111', repeat('text_',10), '{1,2,3,4,5}', 'Hello .. how are you 1
 ', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
@@ -50,7 +50,3 @@ INSERT INTO pg2_co_table_for_alter_a0 VALUES ('sync1_co1',generate_series(1,10),
 INSERT 0 10
 DROP table pg2_co_table_for_alter_a0;
 DROP TABLE
-drop tablespace pg2_co_ts1_a0;
-DROP TABLESPACE
-drop tablespace pg2_co_ts2_a0;
-DROP TABLESPACE

@@ -870,7 +870,7 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 	if (basetablespace)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
-		strlcpy(current_path, PQgetvalue(res, rownum, 2), sizeof(current_path));
+		strlcpy(current_path, PQgetvalue(res, rownum, 1), sizeof(current_path));
 
 	/*
 	 * Get the COPY data
@@ -1441,15 +1441,15 @@ BaseBackup(void)
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		if (showprogress)
-			totalsize += atol(PQgetvalue(res, i, 3));
+			totalsize += atol(PQgetvalue(res, i, 2));
 
 		/*
 		 * Verify tablespace directories are empty. Don't bother with the
 		 * first once since it can be relocated, and it will be checked before
 		 * we do anything anyway.
 		 */
-		if (format == 'p' && !PQgetisnull(res, i, 2))
-			verify_dir_is_empty_or_create(PQgetvalue(res, i, 2));
+		if (format == 'p' && !PQgetisnull(res, i, 1))
+			verify_dir_is_empty_or_create(PQgetvalue(res, i, 1));
 	}
 
 	/*

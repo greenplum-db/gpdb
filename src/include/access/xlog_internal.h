@@ -8,10 +8,10 @@
  * needed by rmgr routines (redo support for individual record types).
  * So the XLogRecord typedef and associated stuff appear in xlog.h.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/xlog_internal.h,v 1.25 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/xlog_internal.h,v 1.33 2010/04/28 16:10:43 heikki Exp $
  */
 #ifndef XLOG_INTERNAL_H
 #define XLOG_INTERNAL_H
@@ -21,7 +21,6 @@
 #include "pgtime.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
-#include "postmaster/primary_mirror_mode.h"
 
 
 /*
@@ -52,13 +51,6 @@ typedef struct BkpBlock
 /* Information stored in block_info */
 #define BLOCK_APPLY 0x01 /* page image should be restored during replay */
 
-typedef struct BkpBlockWithPT
-{
-	ItemPointerData persistentTid;
-	int64 persistentSerialNum;
-	BkpBlock bkpb;
-} BkpBlockWithPT;
-
 /*
  * When there is not enough space on current page for whole record, we
  * continue on the next page with continuation record.	(However, the
@@ -82,7 +74,7 @@ typedef struct XLogContRecord
 /*
  * Each page of XLOG file has a header like this:
  */
-#define XLOG_PAGE_MAGIC 0xD063	/* can be used as WAL version indicator */
+#define XLOG_PAGE_MAGIC 0xD064	/* can be used as WAL version indicator */
 
 typedef struct XLogPageHeaderData
 {
@@ -162,6 +154,19 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 		} \
 	} while (0)
 
+/* Align a record pointer to next page */
+#define NextLogPage(recptr) \
+	do {	\
+		if ((recptr).xrecoff % XLOG_BLCKSZ != 0)	\
+			(recptr).xrecoff +=	\
+				(XLOG_BLCKSZ - (recptr).xrecoff % XLOG_BLCKSZ);	\
+		if ((recptr).xrecoff >= XLogFileSize) \
+		{	\
+			((recptr).xlogid)++;	\
+			(recptr).xrecoff = 0; \
+		}	\
+	} while (0)
+
 /*
  * Compute ID and segment from an XLogRecPtr.
  *
@@ -204,8 +209,6 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
  */
 #define XLOGDIR				"pg_xlog"
 #define XLOG_CONTROL_FILE	"global/pg_control"
-#define XLOG_CONTROL_FILE_SUBDIR	"global"
-#define XLOG_CONTROL_FILE_SIMPLE	"pg_control"
 
 /*
  * These macros encapsulate knowledge about the exact layout of XLog file
@@ -220,45 +223,22 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 	sscanf(fname, "%08X%08X%08X", tli, log, seg)
 
 #define XLogFilePath(path, tli, log, seg)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X", XLogDir, tli, log, seg);	\
-		pfree(XLogDir);								\
-	}while(0)
-
-#define XLogFilePath2(path, tli, log, seg)	\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X", XLOGDIR, tli, log, seg);	
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X", tli, log, seg)
 
 #define TLHistoryFileName(fname, tli)	\
 	snprintf(fname, MAXFNAMELEN, "%08X.history", tli)
 
 #define TLHistoryFilePath(path, tli)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X.history", XLogDir, tli);			\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X.history", tli)
 
 #define StatusFilePath(path, xlog, suffix)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/archive_status/%s%s", XLogDir, xlog, suffix);	\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/archive_status/%s%s", xlog, suffix)
 
 #define BackupHistoryFileName(fname, tli, log, seg, offset) \
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X.%08X.backup", tli, log, seg, offset)
 
 #define BackupHistoryFilePath(path, tli, log, seg, offset)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X.%08X.backup", XLogDir, tli, log, seg, offset);	\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X.%08X.backup", tli, log, seg, offset)
 
 
 /*
@@ -293,11 +273,14 @@ extern XLogRecPtr RequestXLogSwitch(void);
  * These aren't in xlog.h because I'd rather not include fmgr.h there.
  */
 extern Datum pg_start_backup(PG_FUNCTION_ARGS);
-extern Datum pg_stop_backup(PG_FUNCTION_ARGS __attribute__((unused)) );
-extern Datum pg_switch_xlog(PG_FUNCTION_ARGS __attribute__((unused)) );
-extern Datum pg_current_xlog_location(PG_FUNCTION_ARGS __attribute__((unused)) );
-extern Datum pg_current_xlog_insert_location(PG_FUNCTION_ARGS __attribute__((unused)) );
+extern Datum pg_stop_backup(PG_FUNCTION_ARGS);
+extern Datum pg_switch_xlog(PG_FUNCTION_ARGS);
+extern Datum pg_current_xlog_location(PG_FUNCTION_ARGS);
+extern Datum pg_current_xlog_insert_location(PG_FUNCTION_ARGS);
+extern Datum pg_last_xlog_receive_location(PG_FUNCTION_ARGS);
+extern Datum pg_last_xlog_replay_location(PG_FUNCTION_ARGS);
 extern Datum pg_xlogfile_name_offset(PG_FUNCTION_ARGS);
 extern Datum pg_xlogfile_name(PG_FUNCTION_ARGS);
+extern Datum pg_is_in_recovery(PG_FUNCTION_ARGS);
 
 #endif   /* XLOG_INTERNAL_H */

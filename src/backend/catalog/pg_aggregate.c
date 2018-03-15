@@ -3,12 +3,12 @@
  * pg_aggregate.c
  *	  routines to support manipulation of the pg_aggregate relation
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_aggregate.c,v 1.102 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_aggregate.c,v 1.106 2010/02/26 02:00:37 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -221,9 +221,7 @@ AggregateCreate(const char *aggName,
 						NameListToString(aggtransfnName),
 						format_type_be(aggTransType))));
 
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(transfn),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(transfn));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for function %u", transfn);
 	proc = (Form_pg_proc) GETSTRUCT(tup);
@@ -262,7 +260,7 @@ AggregateCreate(const char *aggName,
 		
 		elog(DEBUG5,"AggregateCreateWithOid: successfully located preliminary "
 					"function %s with return type %d", 
-					func_signature_string(aggprelimfnName, 2, fnArgs), 
+			 func_signature_string(aggprelimfnName, 2, NIL, fnArgs), 
 					prelimrettype);
 		
 		Assert(OidIsValid(prelimrettype));
@@ -524,7 +522,8 @@ lookup_agg_function(List *fnName,
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, input_types, false, false,
+	fdresult = func_get_detail(fnName, NIL, NIL,
+							   nargs, input_types, false, false,
 							   &fnOid, rettype, &retset,
 							   &nvargs, &vatype,
 							   &true_oid_array, NULL);
@@ -534,12 +533,14 @@ lookup_agg_function(List *fnName,
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(fnName, nargs, input_types))));
+						func_signature_string(fnName, nargs,
+											  NIL, input_types))));
 	if (retset)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("function %s returns a set",
-						func_signature_string(fnName, nargs, input_types))));
+						func_signature_string(fnName, nargs,
+											  NIL, input_types))));
 
 	/*
 	 * If the agg is declared to take VARIADIC ANY, the underlying functions
@@ -554,7 +555,7 @@ lookup_agg_function(List *fnName,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("function %s must accept VARIADIC ANY to be used in this aggregate",
 						func_signature_string(fnName, nargs,
-											  input_types))));
+											  NIL, input_types))));
 
 	/*
 	 * If there are any polymorphic types involved, enforce consistency, and
@@ -577,7 +578,8 @@ lookup_agg_function(List *fnName,
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 					 errmsg("function %s requires run-time type coercion",
-					 func_signature_string(fnName, nargs, true_oid_array))));
+							func_signature_string(fnName, nargs,
+												  NIL, true_oid_array))));
 	}
 
 	/* Check aggregate creator has permission to call the function */

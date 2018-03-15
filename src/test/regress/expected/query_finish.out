@@ -227,8 +227,8 @@ order by 1, 2, 3
 limit 2;
  l_skewkey | l_orderkey | med 
 -----------+------------+-----
-         1 |          1 |  25 
-         1 |          1 |  25 
+         1 |          1 |  25
+         1 |          1 |  25
 (2 rows)
 
 --
@@ -247,7 +247,7 @@ select b.l_skewkey, b.l_orderkey
 from t7a a inner join t7b b on a.l_orderkey = b.l_orderkey
 limit 2
 )s;
- count
+ count 
 -------
      2
 (1 row)
@@ -307,8 +307,8 @@ inner join qf.supplier s1 on l1.l_suppkey = s1.s_suppkey
 limit 2;
  part_is_not_null 
 ------------------
-t
-t
+ t
+ t
 (2 rows)
 
 reset statement_mem;

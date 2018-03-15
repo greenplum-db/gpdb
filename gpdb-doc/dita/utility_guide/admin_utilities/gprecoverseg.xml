@@ -8,13 +8,12 @@
       enabled).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gprecoverseg</b> [<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname> | 
-              <b>-s</b> <varname>filespace_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
+      <codeblock><b>gprecoverseg</b> [<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
              [<b>-B</b> <varname>parallel_processes</varname>] [<b>-F</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>]
 
 <b>gprecoverseg</b> <b>-r</b> 
 
-<b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> | <b>-S</b> <varname>output_filespace_config_file</varname>
+<b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> 
              [<b>-p</b> <varname>new_recover_host</varname>[,...]]
 
 <b>gprecoverseg</b> <b>-?</b> 
@@ -48,8 +47,7 @@
         segment back online on the same host and data directory location on which it was originally
         configured. In this case, use the following format for the recovery configuration file
         (using <codeph>-i</codeph>).</p>
-      <codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
-&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt; </codeblock>
+      <codeblock>&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt; </codeblock>
       <p>In some cases, this may not be possible (for example, if a host was physically damaged and
         cannot be recovered). In this situation, <codeph>gprecoverseg</codeph> allows you to recover
         failed segments to a completely new host (using <codeph>-p</codeph>), on an alternative data
@@ -57,20 +55,16 @@
         supplying a recovery configuration file (using <codeph>-i</codeph>) in the following format.
         The word <b>SPACE</b> indicates the location of a required space. Do not add additional
         spaces.</p>
-      <codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
-&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b>
-&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;replication_port&gt;:&lt;data_directory&gt;
-[:&lt;fselocation&gt;:...]</codeblock>
+      <codeblock>&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b>
+&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;
+</codeblock>
       <p>See the <codeph>-i</codeph> option below for details and examples of a recovery
         configuration file.</p>
-      <p>The <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
-          <codeph>pg_filespace_entry</codeph> system catalog tables can help you determine your
+      <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine your
         current segment configuration so that you can plan your mirror recovery configuration. For
         example, run the following query:</p>
-      <codeblock>=# SELECT dbid, content, address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid 
+      <codeblock>=# SELECT dbid, content, address, port, datadir 
+   FROM gp_segment_configuration
    ORDER BY dbid;</codeblock>
       <p>The new recovery segment host must be pre-installed with the Greenplum Database software
         and configured exactly the same as the existing segment hosts. A spare data directory
@@ -111,21 +105,12 @@
           <pd>Specifies the name of a file with the details about failed segments to recover. Each
             line in the file is in the following format. The word <b>SPACE</b> indicates the
             location of a required space. Do not add additional
-                spaces.<codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
-&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b> 
-&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;replication_port&gt;:&lt;data_directory&gt;
-[:&lt;fselocation&gt;:...]</codeblock><p><b>Comments</b></p><p>Lines
+                spaces.<codeblock>&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b> 
+&lt;recovery_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;
+</codeblock><p><b>Comments</b></p><p>Lines
               beginning with <codeph>#</codeph> are treated as comments and
-                ignored.</p><p><b>Filespace Order</b></p><p>The first comment line that is not a
-              comment specifies filespace ordering. This line starts with
-                <codeph>filespaceOrder=</codeph> and is followed by list of filespace names
-              delimited by a colon. For example:</p><p>
-              <codeblock>filespaceOrder=raid1:raid2</codeblock>
-            </p><p>The default <codeph>pg_system</codeph> filespace should not appear in this list.
-              The list should be left empty on a system with no filespaces other than the default
-                <codeph>pg_system</codeph> filespace. For example:</p><p>
-              <codeblock>filespaceOrder=</codeblock>
-            </p><p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
+              ignored.</p>
+	      <p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
               recover. This line can have one of two formats. In the event of in-place recovery,
               enter one group of colon delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress:failedPort:failedDataDirectory</codeblock>
@@ -133,26 +118,15 @@
               in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
               spaces.</p><p>
               <codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
-newPort:newReplicationPort:newDataDirectory</codeblock>
-            </p><p>On a system with additional filespaces, the second group of fields is expected to
-              be followed with a list of the corresponding filespace locations separated by
-              additional colons. For example, on a system with two additional filespaces, enter two
-              additional directories in the second group, as follows. The required space is
-              indicated by <b>SPACE</b>. Do not add additional
-                spaces.</p><codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
-newPort:newReplicationPort:newDataDirectory:location1:location2</codeblock><p><b>Examples</b></p><p><b>In-place
+newPort:newDataDirectory</codeblock>
+            </p><p><b>Examples</b></p><p><b>In-place
                 recovery of a single
-                mirror</b></p><codeblock>filespaceOrder=
-sdw1-1:50001:/data1/mirror/gpseg16</codeblock><p><b>Recovery
-                of a single mirror to a new
-                host</b></p><codeblock>filespaceOrder=
-sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
-50001:51001:/data1/recover1/gpseg16</codeblock><p><b>Recovery
-                of a single mirror to a new host on a system with an extra
-                filespace</b></p><codeblock>filespaceOrder=
-fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
-50001:51001:/data1/recover1/gpseg16:/data1/fs1/gpseg16</codeblock><p><b>Obtaining
-                a Sample File</b></p><p>You can use the <codeph>-o</codeph> option to output a
+                mirror</b></p>
+		<codeblock>sdw1-1:50001:/data1/mirror/gpseg16</codeblock>
+		<p><b>Recovery of a single mirror to a new host</b></p>
+		<codeblock>sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:50001:/data1/recover1/gpseg16</codeblock>
+		<p><b>Obtaining a Sample File</b></p>
+		<p>You can use the <codeph>-o</codeph> option to output a
               sample recovery configuration file to use as a starting point.</p></pd>
         </plentry>
         <plentry>
@@ -191,32 +165,6 @@ fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
             segments by returning them to their preferred roles. All segments must be valid and
             synchronized before running <codeph>gprecoverseg -r</codeph>. If there are any in
             progress queries, they will be cancelled and rolled back.</pd>
-        </plentry>
-        <plentry>
-          <pt>-s <varname>filespace_config_file</varname></pt>
-          <pd>Specifies the name of a configuration file that contains file system locations on the
-            currently configured segment hosts where you can recover failed segment instances. The
-            filespace configuration file is in the format of:</pd>
-          <pd>
-            <codeblock>pg_system=<varname>default_fselocation</varname>
-<varname>filespace1_name</varname>=<varname>filespace1_fselocation</varname>
-<varname>filespace2_name</varname>=<varname>filespace2_fselocation</varname>
-...</codeblock>
-          </pd>
-          <pd>If your system does not have additional filespaces configured, this file will only
-            have one location (for the default filespace, <codeph>pg_system</codeph>). These file
-            system locations must exist on all segment hosts in the array and have sufficient disk
-            space to accommodate recovered segments.</pd>
-          <pd>Note: The <codeph>-s</codeph> and <codeph>-S</codeph> options are only used when you
-            recover to existing hosts in the cluster. You cannot use these options when you recover
-            to a new host. To recover to a new host, use the <codeph>-i</codeph> and
-              <codeph>-o</codeph> options.</pd>
-        </plentry>
-        <plentry>
-          <pt>-S <varname>output_filespace_config_file</varname></pt>
-          <pd>Specifies a file name and location to output a sample filespace configuration file in
-            the format that is required by the <codeph>-s</codeph> option. This file should be
-            edited to supply the correct alternate filespace locations.</pd>
         </plentry>
         <plentry>
           <pt>-v (verbose)</pt>

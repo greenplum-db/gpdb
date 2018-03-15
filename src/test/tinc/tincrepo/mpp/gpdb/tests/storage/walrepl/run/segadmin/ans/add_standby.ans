@@ -1,4 +1,0 @@
-set gp_role = utility;
-SET
-select gp_activate_standby();
-psql:/path/sql_file:1: ERROR:  gp_activate_standby can only be run on the standby master (segadmin.c:303)

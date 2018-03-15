@@ -8,12 +8,12 @@
  * special I/O conversion routines.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/regproc.c,v 1.110 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/regproc.c,v 1.113 2010/02/14 18:42:16 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -131,7 +131,7 @@ regprocin(PG_FUNCTION_ARGS)
 	 * pg_proc entries in the current search path.
 	 */
 	names = stringToQualifiedNameList(pro_name_or_oid);
-	clist = FuncnameGetCandidates(names, -1, false, false);
+	clist = FuncnameGetCandidates(names, -1, NIL, false, false);
 
 	if (clist == NULL)
 		ereport(ERROR,
@@ -164,9 +164,7 @@ regprocout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	proctup = SearchSysCache(PROCOID,
-							 ObjectIdGetDatum(proid),
-							 0, 0, 0);
+	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(proid));
 
 	if (HeapTupleIsValid(proctup))
 	{
@@ -190,7 +188,7 @@ regprocout(PG_FUNCTION_ARGS)
 			 * qualify it.
 			 */
 			clist = FuncnameGetCandidates(list_make1(makeString(proname)),
-										  -1, false, false);
+										  -1, NIL, false, false);
 			if (clist != NULL && clist->next == NULL &&
 				clist->oid == proid)
 				nspname = NULL;
@@ -277,7 +275,7 @@ regprocedurein(PG_FUNCTION_ARGS)
 	 */
 	parseNameAndArgTypes(pro_name_or_oid, false, &names, &nargs, argtypes);
 
-	clist = FuncnameGetCandidates(names, nargs, false, false);
+	clist = FuncnameGetCandidates(names, nargs, NIL, false, false);
 
 	for (; clist; clist = clist->next)
 	{
@@ -307,9 +305,7 @@ format_procedure(Oid procedure_oid)
 	char	   *result;
 	HeapTuple	proctup;
 
-	proctup = SearchSysCache(PROCOID,
-							 ObjectIdGetDatum(procedure_oid),
-							 0, 0, 0);
+	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procedure_oid));
 
 	if (HeapTupleIsValid(proctup))
 	{
@@ -509,9 +505,7 @@ regoperout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	opertup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(oprid),
-							 0, 0, 0);
+	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(oprid));
 
 	if (HeapTupleIsValid(opertup))
 	{
@@ -659,9 +653,7 @@ format_operator(Oid operator_oid)
 	char	   *result;
 	HeapTuple	opertup;
 
-	opertup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(operator_oid),
-							 0, 0, 0);
+	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operator_oid));
 
 	if (HeapTupleIsValid(opertup))
 	{
@@ -848,9 +840,7 @@ regclassout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	classtup = SearchSysCache(RELOID,
-							  ObjectIdGetDatum(classid),
-							  0, 0, 0);
+	classtup = SearchSysCache1(RELOID, ObjectIdGetDatum(classid));
 
 	if (HeapTupleIsValid(classtup))
 	{
@@ -1011,9 +1001,7 @@ regtypeout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	typetup = SearchSysCache(TYPEOID,
-							 ObjectIdGetDatum(typid),
-							 0, 0, 0);
+	typetup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
 
 	if (HeapTupleIsValid(typetup))
 	{
@@ -1124,9 +1112,7 @@ regconfigout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	cfgtup = SearchSysCache(TSCONFIGOID,
-							ObjectIdGetDatum(cfgid),
-							0, 0, 0);
+	cfgtup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgid));
 
 	if (HeapTupleIsValid(cfgtup))
 	{
@@ -1236,9 +1222,7 @@ regdictionaryout(PG_FUNCTION_ARGS)
 		PG_RETURN_CSTRING(result);
 	}
 
-	dicttup = SearchSysCache(TSDICTOID,
-							 ObjectIdGetDatum(dictid),
-							 0, 0, 0);
+	dicttup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictid));
 
 	if (HeapTupleIsValid(dicttup))
 	{

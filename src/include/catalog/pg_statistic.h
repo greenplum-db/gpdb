@@ -7,13 +7,13 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_statistic.h,v 1.39 2009/06/11 14:49:10 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_statistic.h,v 1.42 2010/01/05 01:06:57 tgl Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -45,6 +45,7 @@ CATALOG(pg_statistic,2619) BKI_WITHOUT_OIDS
 	/* These fields form the unique key for the entry: */
 	Oid			starelid;		/* relation containing attribute */
 	int2		staattnum;		/* attribute (column) stats are for */
+	bool		stainherit;		/* true if inheritance children are included */
 
 	/* the fraction of the column's entries that are NULL: */
 	float4		stanullfrac;
@@ -151,28 +152,29 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  *		compiler constants for pg_statistic
  * ----------------
  */
-#define Natts_pg_statistic				21
+#define Natts_pg_statistic				22
 #define Anum_pg_statistic_starelid		1
 #define Anum_pg_statistic_staattnum		2
-#define Anum_pg_statistic_stanullfrac	3
-#define Anum_pg_statistic_stawidth		4
-#define Anum_pg_statistic_stadistinct	5
-#define Anum_pg_statistic_stakind1		6
-#define Anum_pg_statistic_stakind2		7
-#define Anum_pg_statistic_stakind3		8
-#define Anum_pg_statistic_stakind4		9
-#define Anum_pg_statistic_staop1		10
-#define Anum_pg_statistic_staop2		11
-#define Anum_pg_statistic_staop3		12
-#define Anum_pg_statistic_staop4		13
-#define Anum_pg_statistic_stanumbers1	14
-#define Anum_pg_statistic_stanumbers2	15
-#define Anum_pg_statistic_stanumbers3	16
-#define Anum_pg_statistic_stanumbers4	17
-#define Anum_pg_statistic_stavalues1	18
-#define Anum_pg_statistic_stavalues2	19
-#define Anum_pg_statistic_stavalues3	20
-#define Anum_pg_statistic_stavalues4	21
+#define Anum_pg_statistic_stainherit	3
+#define Anum_pg_statistic_stanullfrac	4
+#define Anum_pg_statistic_stawidth		5
+#define Anum_pg_statistic_stadistinct	6
+#define Anum_pg_statistic_stakind1		7
+#define Anum_pg_statistic_stakind2		8
+#define Anum_pg_statistic_stakind3		9
+#define Anum_pg_statistic_stakind4		10
+#define Anum_pg_statistic_staop1		11
+#define Anum_pg_statistic_staop2		12
+#define Anum_pg_statistic_staop3		13
+#define Anum_pg_statistic_staop4		14
+#define Anum_pg_statistic_stanumbers1	15
+#define Anum_pg_statistic_stanumbers2	16
+#define Anum_pg_statistic_stanumbers3	17
+#define Anum_pg_statistic_stanumbers4	18
+#define Anum_pg_statistic_stavalues1	19
+#define Anum_pg_statistic_stavalues2	20
+#define Anum_pg_statistic_stavalues3	21
+#define Anum_pg_statistic_stavalues4	22
 
 /*
  * Currently, three statistical slot "kinds" are defined: most common values,
@@ -265,109 +267,6 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_MCELEM  4
 
-/*
- * The CATALOG definition has to refer to the type of log_time as
- * "timestamptz" (lower case) so that bootstrap mode recognizes it.  But
- * the C header files define this type as TimestampTz.	Since the field is
- * potentially-null and therefore can't be accessed directly from C code,
- * there is no particular need for the C struct definition to show the
- * field type as TimestampTz --- instead we just make it Datum.
- */
 
-#define timestamptz Datum
-
-/* MPP-6929: metadata tracking */
-#define StatLastOpRelationName		"pg_stat_last_operation"
-
-#define StatLastOpRelationId 6052
-
-CATALOG(pg_stat_last_operation,6052) BKI_WITHOUT_OIDS
-{
-	/* unique key */
-	Oid			classid;		/* OID of table containing object */
-	Oid			objid;			/* OID of object itself */
-	NameData	staactionname;	/* name of action */
-
-	/* */
-	Oid			stasysid;		/* OID of user (when action was performed) */
-	NameData	stausename;		/* name of user (when action was performed) */
-	text		stasubtype;		/* action subtype */
-	timestamptz	statime;
-} FormData_pg_statlastop;
-
-
-/* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(classid REFERENCES pg_class(oid));
-FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
-
-#undef timestamptz
-
-/* ----------------
- *		Form_pg_statlastop corresponds to a pointer to a tuple with
- *		the format of pg_statlastop relation.
- * ----------------
- */
-typedef FormData_pg_statlastop *Form_pg_statlastop;
-
-/* ----------------
- *		compiler constants for pg_stat_last_operation
- * ----------------
- */
-#define Natts_pg_statlastop					7
-#define Anum_pg_statlastop_classid			1
-#define Anum_pg_statlastop_objid			2
-#define Anum_pg_statlastop_staactionname	3
-#define Anum_pg_statlastop_stasysid			4
-#define Anum_pg_statlastop_stausename		5
-#define Anum_pg_statlastop_stasubtype		6
-#define Anum_pg_statlastop_statime			7
-
-/* here is the "shared" version */
-
-#define timestamptz Datum
-
-#define StatLastShOpRelationName		"pg_stat_last_shoperation"
-
-#define StatLastShOpRelationId 6056
-
-CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
-{
-	/* unique key */
-	Oid			classid;		/* OID of table containing object */
-	Oid			objid;			/* OID of object itself */
-	NameData	staactionname;	/* name of action */
-
-	/* */
-	Oid			stasysid;		/* OID of user (when action was performed) */
-	NameData	stausename;		/* name of user (when action was performed) */
-	text		stasubtype;		/* action subtype */
-	timestamptz	statime;
-} FormData_pg_statlastshop;
-
-/* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(classid REFERENCES pg_class(oid));
-FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
-
-#undef timestamptz
-
-/* ----------------
- *		Form_pg_statlastshop corresponds to a pointer to a tuple with
- *		the format of pg_statlastshop relation.
- * ----------------
- */
-typedef FormData_pg_statlastshop *Form_pg_statlastshop;
-
-/* ----------------
- *		compiler constants for pg_stat_last_shoperation
- * ----------------
- */
-#define Natts_pg_statlastshop				7
-#define Anum_pg_statlastshop_classid		1
-#define Anum_pg_statlastshop_objid			2
-#define Anum_pg_statlastshop_staactionname	3
-#define Anum_pg_statlastshop_stasysid		4
-#define Anum_pg_statlastshop_stausename		5
-#define Anum_pg_statlastshop_stasubtype		6
-#define Anum_pg_statlastshop_statime		7
 
 #endif   /* PG_STATISTIC_H */

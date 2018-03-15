@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/createuser.sgml,v 1.52 2009/02/26 16:02:37 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/createuser.sgml,v 1.56 2010/04/03 07:23:00 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="APP-CREATEUSER">
  <refmeta>
-  <refentrytitle id="APP-CREATEUSER-TITLE"><application>createuser</application></refentrytitle>
+  <refentrytitle><application>createuser</application></refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
@@ -22,6 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
   <cmdsynopsis>
    <command>createuser</command>
+   <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg rep="repeat"><replaceable>option</replaceable></arg>
    <arg><replaceable>username</replaceable></arg>
   </cmdsynopsis>
@@ -48,8 +49,7 @@ PostgreSQL documentation
 
   <para>
    <application>createuser</application> is a wrapper around the
-   <acronym>SQL</acronym> command <xref linkend="SQL-CREATEROLE"
-   endterm="SQL-CREATEROLE-title">.
+   <acronym>SQL</acronym> command <xref linkend="SQL-CREATEROLE">.
    There is no effective difference between creating users via
    this utility and via other methods for accessing the server.
   </para>
@@ -77,22 +77,12 @@ PostgreSQL documentation
      </varlistentry>  
 
      <varlistentry>
-      <term><option>-s</></term>
-      <term><option>--superuser</></term>
+      <term><option>-c <replaceable class="parameter">number</replaceable></></term>
+      <term><option>--connection-limit <replaceable class="parameter">number</replaceable></></term>
       <listitem>
        <para>
-        The new user will be a superuser.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-S</></term>
-      <term><option>--no-superuser</></term>
-      <listitem>
-       <para>
-        The new user will not be a superuser.
-        This is the default.
+        Set a maximum number of connections for the new user.
+        The default is to set no limit.
        </para>
       </listitem>
      </varlistentry>
@@ -119,23 +109,46 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-r</></term>
-      <term><option>--createrole</></term>
+      <term><option>-e</></term>
+      <term><option>--echo</></term>
       <listitem>
        <para>
-        The new user will be allowed to create new roles (that is,
-        this user will have <literal>CREATEROLE</> privilege).
+        Echo the commands that <application>createuser</application> generates
+        and sends to the server.
        </para>
       </listitem>
      </varlistentry>
 
      <varlistentry>
-      <term><option>-R</></term>
-      <term><option>--no-createrole</></term>
+      <term><option>-E</></term>
+      <term><option>--encrypted</></term>
       <listitem>
        <para>
-        The new user will not be allowed to create new roles.
+        Encrypts the user's password stored in the database. If not
+        specified, the default password behavior is used.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-i</></term>
+      <term><option>--inherit</></term>
+      <listitem>
+       <para>
+        The new role will automatically inherit privileges of roles
+        it is a member of.
         This is the default.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-I</></term>
+      <term><option>--no-inherit</></term>
+      <listitem>
+       <para>
+        The new role will not automatically inherit privileges of roles
+        it is a member of.
        </para>
       </listitem>
      </varlistentry>
@@ -165,35 +178,12 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-i</></term>
-      <term><option>--inherit</></term>
+      <term><option>-N</></term>
+      <term><option>--unencrypted</></term>
       <listitem>
        <para>
-        The new role will automatically inherit privileges of roles
-        it is a member of.
-        This is the default.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-I</></term>
-      <term><option>--no-inherit</></term>
-      <listitem>
-       <para>
-        The new role will not automatically inherit privileges of roles
-        it is a member of.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
-      <term><option>-c <replaceable class="parameter">number</replaceable></></term>
-      <term><option>--connection-limit <replaceable class="parameter">number</replaceable></></term>
-      <listitem>
-       <para>
-        Set a maximum number of connections for the new user.
-        The default is to set no limit.
+        Does not encrypt the user's password stored in the database. If
+        not specified, the default password behavior is used.
        </para>
       </listitem>
      </varlistentry>
@@ -211,37 +201,69 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-E</></term>
-      <term><option>--encrypted</></term>
+      <term><option>-r</></term>
+      <term><option>--createrole</></term>
       <listitem>
        <para>
-        Encrypts the user's password stored in the database. If not
-        specified, the default password behavior is used.
+        The new user will be allowed to create new roles (that is,
+        this user will have <literal>CREATEROLE</> privilege).
        </para>
       </listitem>
      </varlistentry>
 
      <varlistentry>
-      <term><option>-N</></term>
-      <term><option>--unencrypted</></term>
+      <term><option>-R</></term>
+      <term><option>--no-createrole</></term>
       <listitem>
        <para>
-        Does not encrypt the user's password stored in the database. If
-        not specified, the default password behavior is used.
+        The new user will not be allowed to create new roles.
+        This is the default.
        </para>
       </listitem>
      </varlistentry>
 
      <varlistentry>
-      <term><option>-e</></term>
-      <term><option>--echo</></term>
+      <term><option>-s</></term>
+      <term><option>--superuser</></term>
       <listitem>
        <para>
-        Echo the commands that <application>createuser</application> generates
-        and sends to the server.
+        The new user will be a superuser.
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term><option>-S</></term>
+      <term><option>--no-superuser</></term>
+      <listitem>
+       <para>
+        The new user will not be a superuser.
+        This is the default.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>createuser</application> version and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
+       <para>
+       Show help about <application>createuser</application> command line
+       arguments, and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
     </variablelist>
   </para>
 
@@ -361,8 +383,8 @@ PostgreSQL documentation
   <title>Diagnostics</title>
 
   <para>
-   In case of difficulty, see <xref linkend="SQL-CREATEROLE"
-   endterm="sql-createrole-title"> and <xref linkend="APP-PSQL"> for
+   In case of difficulty, see <xref linkend="SQL-CREATEROLE">
+   and <xref linkend="APP-PSQL"> for
    discussions of potential problems and error messages.
    The database server must be running at the
    targeted host.  Also, any default connection settings and environment
@@ -422,7 +444,7 @@ PostgreSQL documentation
 
   <simplelist type="inline">
    <member><xref linkend="app-dropuser"></member>
-   <member><xref linkend="sql-createrole" endterm="sql-createrole-title"></member>
+   <member><xref linkend="sql-createrole"></member>
   </simplelist>
  </refsect1>
 

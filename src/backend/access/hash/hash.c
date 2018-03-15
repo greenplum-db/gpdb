@@ -3,12 +3,12 @@
  * hash.c
  *	  Implementation of Margo Seltzer's Hashing package for postgres.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.112 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.117 2010/02/26 02:00:33 momjian Exp $
  *
  * NOTES
  *	  This file contains only the public interface routines.
@@ -165,7 +165,7 @@ hashinsert(PG_FUNCTION_ARGS)
 
 #ifdef NOT_USED
 	Relation	heapRel = (Relation) PG_GETARG_POINTER(4);
-	bool		checkUnique = PG_GETARG_BOOL(5);
+	IndexUniqueCheck checkUnique = (IndexUniqueCheck) PG_GETARG_INT32(5);
 #endif
 	IndexTuple	itup;
 
@@ -192,7 +192,7 @@ hashinsert(PG_FUNCTION_ARGS)
 
 	pfree(itup);
 
-	PG_RETURN_BOOL(true);
+	PG_RETURN_BOOL(false);
 }
 
 
@@ -202,14 +202,14 @@ hashinsert(PG_FUNCTION_ARGS)
 Datum
 hashgettuple(PG_FUNCTION_ARGS)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	ScanDirection dir = (ScanDirection) PG_GETARG_INT32(1);
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	Relation	rel = scan->indexRelation;
+	Buffer		buf;
 	Page		page;
 	OffsetNumber offnum;
+	ItemPointer current;
 	bool		res;
 
 	/* Hash indexes are always lossy since we store only the hash code */
@@ -219,10 +219,6 @@ hashgettuple(PG_FUNCTION_ARGS)
 	 * We hold pin but not lock on current buffer while outside the hash AM.
 	 * Reacquire the read lock here.
 	 */
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-
 	if (BufferIsValid(so->hashso_curbuf))
 		_hash_chgbufaccess(rel, so->hashso_curbuf, HASH_NOLOCK, HASH_READ);
 
@@ -231,8 +227,38 @@ hashgettuple(PG_FUNCTION_ARGS)
 	 * appropriate direction.  If we haven't done so yet, we call a routine to
 	 * get the first item in the scan.
 	 */
-	if (ItemPointerIsValid(&(so->hashso_curpos)))
+	current = &(so->hashso_curpos);
+	if (ItemPointerIsValid(current))
 	{
+		/*
+		 * An insertion into the current index page could have happened while
+		 * we didn't have read lock on it.  Re-find our position by looking
+		 * for the TID we previously returned.	(Because we hold share lock on
+		 * the bucket, no deletions or splits could have occurred; therefore
+		 * we can expect that the TID still exists in the current index page,
+		 * at an offset >= where we were.)
+		 */
+		OffsetNumber maxoffnum;
+
+		buf = so->hashso_curbuf;
+		Assert(BufferIsValid(buf));
+		page = BufferGetPage(buf);
+		maxoffnum = PageGetMaxOffsetNumber(page);
+		for (offnum = ItemPointerGetOffsetNumber(current);
+			 offnum <= maxoffnum;
+			 offnum = OffsetNumberNext(offnum))
+		{
+			IndexTuple	itup;
+
+			itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offnum));
+			if (ItemPointerEquals(&(so->hashso_heappos), &(itup->t_tid)))
+				break;
+		}
+		if (offnum > maxoffnum)
+			elog(ERROR, "failed to re-find scan position within index \"%s\"",
+				 RelationGetRelationName(rel));
+		ItemPointerSetOffsetNumber(current, offnum);
+
 		/*
 		 * Check to see if we should kill the previously-fetched tuple.
 		 */
@@ -241,8 +267,6 @@ hashgettuple(PG_FUNCTION_ARGS)
 			/*
 			 * Yes, so mark it by setting the LP_DEAD state in the item flags.
 			 */
-			offnum = ItemPointerGetOffsetNumber(&(so->hashso_curpos));
-			page = BufferGetPage(so->hashso_curbuf);
 			ItemIdMarkDead(PageGetItemId(page, offnum));
 
 			/*
@@ -266,7 +290,7 @@ hashgettuple(PG_FUNCTION_ARGS)
 	{
 		while (res)
 		{
-			offnum = ItemPointerGetOffsetNumber(&(so->hashso_curpos));
+			offnum = ItemPointerGetOffsetNumber(current);
 			page = BufferGetPage(so->hashso_curbuf);
 			if (!ItemIdIsDead(PageGetItemId(page, offnum)))
 				break;
@@ -277,12 +301,13 @@ hashgettuple(PG_FUNCTION_ARGS)
 	/* Release read lock on current buffer, but keep it pinned */
 	if (BufferIsValid(so->hashso_curbuf))
 		_hash_chgbufaccess(rel, so->hashso_curbuf, HASH_READ, HASH_NOLOCK);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
+	/* Return current heap TID on success */
+	scan->xs_ctup.t_self = so->hashso_heappos;
+
 	PG_RETURN_BOOL(res);
 }
+
 
 /*
  * hashgetbitmap() -- get all tuples at once
@@ -290,8 +315,6 @@ hashgettuple(PG_FUNCTION_ARGS)
 Datum
 hashgetbitmap(PG_FUNCTION_ARGS)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	Node	   *n = (Node *) PG_GETARG_POINTER(1);
 	TIDBitmap  *tbm;
@@ -306,9 +329,6 @@ hashgetbitmap(PG_FUNCTION_ARGS)
 	else
 		tbm = (TIDBitmap *) n;
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	res = _hash_first(scan, ForwardScanDirection);
 
 	while (res)
@@ -334,18 +354,16 @@ hashgetbitmap(PG_FUNCTION_ARGS)
 		if (add_tuple)
 		{
 			/* Note we mark the tuple ID as requiring recheck */
-			tbm_add_tuples(tbm, &scan->xs_ctup.t_self, 1, true);
+			tbm_add_tuples(tbm, &(so->hashso_heappos), 1, true);
 			ntids++;
 		}
 
 		res = _hash_next(scan, ForwardScanDirection);
 	}
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	PG_RETURN_POINTER(tbm);
 }
+
 
 /*
  *	hashbeginscan() -- start a scan on a hash index
@@ -366,6 +384,7 @@ hashbeginscan(PG_FUNCTION_ARGS)
 	so->hashso_curbuf = InvalidBuffer;
 	/* set position invalid (this will cause _hash_first call) */
 	ItemPointerSetInvalid(&(so->hashso_curpos));
+	ItemPointerSetInvalid(&(so->hashso_heappos));
 
 	scan->opaque = so;
 
@@ -401,6 +420,7 @@ hashrescan(PG_FUNCTION_ARGS)
 
 		/* set position invalid (this will cause _hash_first call) */
 		ItemPointerSetInvalid(&(so->hashso_curpos));
+		ItemPointerSetInvalid(&(so->hashso_heappos));
 	}
 
 	/* Update scan key, if a new one is given */
@@ -475,8 +495,6 @@ hashrestrpos(PG_FUNCTION_ARGS)
 Datum
 hashbulkdelete(PG_FUNCTION_ARGS)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	IndexVacuumInfo *info = (IndexVacuumInfo *) PG_GETARG_POINTER(0);
 	IndexBulkDeleteResult *stats = (IndexBulkDeleteResult *) PG_GETARG_POINTER(1);
 	IndexBulkDeleteCallback callback = (IndexBulkDeleteCallback) PG_GETARG_POINTER(2);
@@ -503,10 +521,6 @@ hashbulkdelete(PG_FUNCTION_ARGS)
 	 * array cannot change under us; and it beats rereading the metapage for
 	 * each bucket.
 	 */
-	
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
 	_hash_checkpage(rel, metabuf, LH_META_PAGE);
 	metap = HashPageGetMeta(BufferGetPage(metabuf));
@@ -545,7 +559,8 @@ loop_top:
 			HashPageOpaque opaque;
 			OffsetNumber offno;
 			OffsetNumber maxoffno;
-			bool		page_dirty = false;
+			OffsetNumber deletable[MaxOffsetNumber];
+			int			ndeletable = 0;
 
 			vacuum_delay_point();
 
@@ -557,9 +572,10 @@ loop_top:
 			Assert(opaque->hasho_bucket == cur_bucket);
 
 			/* Scan each tuple in page */
-			offno = FirstOffsetNumber;
 			maxoffno = PageGetMaxOffsetNumber(page);
-			while (offno <= maxoffno)
+			for (offno = FirstOffsetNumber;
+				 offno <= maxoffno;
+				 offno = OffsetNumberNext(offno))
 			{
 				IndexTuple	itup;
 				ItemPointer htup;
@@ -569,30 +585,25 @@ loop_top:
 				htup = &(itup->t_tid);
 				if (callback(htup, callback_state))
 				{
-					/* delete the item from the page */
-					PageIndexTupleDelete(page, offno);
-					bucket_dirty = page_dirty = true;
-
-					/* don't increment offno, instead decrement maxoffno */
-					maxoffno = OffsetNumberPrev(maxoffno);
-
+					/* mark the item for deletion */
+					deletable[ndeletable++] = offno;
 					tuples_removed += 1;
 				}
 				else
-				{
-					offno = OffsetNumberNext(offno);
-
 					num_index_tuples += 1;
-				}
 			}
 
 			/*
-			 * Write page if needed, advance to next page.
+			 * Apply deletions and write page if needed, advance to next page.
 			 */
 			blkno = opaque->hasho_nextblkno;
 
-			if (page_dirty)
+			if (ndeletable > 0)
+			{
+				PageIndexMultiDelete(page, deletable, ndeletable);
 				_hash_wrtbuf(rel, buf);
+				bucket_dirty = true;
+			}
 			else
 				_hash_relbuf(rel, buf);
 		}
@@ -649,9 +660,6 @@ loop_top:
 	}
 
 	_hash_wrtbuf(rel, metabuf);
-
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
 
 	/* return statistics */
 	if (stats == NULL)

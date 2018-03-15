@@ -8,13 +8,13 @@ RESET client_min_messages;
 select query_to_xml('select 1 as x',true,false,'');
                          query_to_xml                          
 ---------------------------------------------------------------
- <table xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
- 
- <row>
-   <x>1</x>
- </row>
- 
- </table>
+ <table xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">+
+                                                              +
+ <row>                                                        +
+   <x>1</x>                                                   +
+ </row>                                                       +
+                                                              +
+ </table>                                                     +
  
 (1 row)
 

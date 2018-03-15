@@ -85,6 +85,9 @@
 /* Greenplum version as a number */
 #undef GP_VERSION_NUM
 
+/* Define to 1 if you have the `append_history' function. */
+#undef HAVE_APPEND_HISTORY
+
 /* Define to 1 if you have the <apr_getopt.h> header file. */
 #undef HAVE_APR_GETOPT_H
 
@@ -162,6 +165,9 @@
 
 /* Define to 1 if you have the <endian.h> header file. */
 #undef HAVE_ENDIAN_H
+
+/* Define to 1 if you have the `erand48' function. */
+#undef HAVE_ERAND48
 
 /* Define to 1 if you have the `ERR_set_mark' function. */
 #undef HAVE_ERR_SET_MARK
@@ -272,6 +278,9 @@
 /* Define to 1 if you have the <history.h> header file. */
 #undef HAVE_HISTORY_H
 
+/* Define to 1 if you have the `history_truncate_file' function. */
+#undef HAVE_HISTORY_TRUNCATE_FILE
+
 /* Define to 1 if you have the <ieeefp.h> header file. */
 #undef HAVE_IEEEFP_H
 
@@ -340,9 +349,6 @@
 
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #undef HAVE_LIBCRYPTO
-
-/* Define to 1 if you have the `DDBoost' library (-lDDBoost). */
-#undef HAVE_LIBDDBOOST
 
 /* Define to 1 if you have the `eay32' library (-leay32). */
 #undef HAVE_LIBEAY32
@@ -492,9 +498,6 @@
 /* Define to 1 if you have the `readlink' function. */
 #undef HAVE_READLINK
 
-/* Define to 1 if you have the `replace_history_entry' function. */
-#undef HAVE_REPLACE_HISTORY_ENTRY
-
 /* Define to 1 if you have the `rint' function. */
 #undef HAVE_RINT
 
@@ -507,6 +510,9 @@
 
 /* Define to 1 if you have the `rl_filename_completion_function' function. */
 #undef HAVE_RL_FILENAME_COMPLETION_FUNCTION
+
+/* Define to 1 if you have the `scandir' function. */
+#undef HAVE_SCANDIR
 
 /* Define to 1 if you have the <security/pam_appl.h> header file. */
 #undef HAVE_SECURITY_PAM_APPL_H
@@ -776,7 +782,7 @@
 /* Define to 1 if your compiler understands __VA_ARGS__ in macros. */
 #undef HAVE__VA_ARGS
 
-/* Define to the appropriate snprintf format for 64-bit ints, if any. */
+/* Define to the appropriate snprintf format for 64-bit ints. */
 #undef INT64_FORMAT
 
 /* Define to build with Kerberos 5 support. (--with-krb5) */
@@ -853,14 +859,14 @@
    RELSEG_SIZE requires an initdb. */
 #undef RELSEG_SIZE
 
+/* The size of `long', as computed by sizeof. */
+#undef SIZEOF_LONG
+
 /* The size of `off_t', as computed by sizeof. */
 #undef SIZEOF_OFF_T
 
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
-
-/* The size of `unsigned long', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED_LONG
 
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P
@@ -874,8 +880,7 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define to the appropriate snprintf format for unsigned 64-bit ints, if any.
-   */
+/* Define to the appropriate snprintf format for unsigned 64-bit ints. */
 #undef UINT64_FORMAT
 
 /* Define to 1 to build with assertion checks. (--enable-cassert) */
@@ -884,14 +889,8 @@
 /* Define to 1 to build with Bonjour support. (--with-bonjour) */
 #undef USE_BONJOUR
 
-/* Define to 1 to enable code generation. (--enable-codegen) */
-#undef USE_CODEGEN
-
 /* Define to 1 to build with libcurl support. (--with-libcurl) */
 #undef USE_CURL
-
-/* Define to 1 to build with DD Boost capabilities. (--enable-ddboost) */
-#undef USE_DDBOOST
 
 /* Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore) */
 #undef USE_DEBUG_NTUPLESTORE
@@ -927,9 +926,6 @@
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 
-/* Define to 1 to build with NetBackup capabilities. (--enable-netbackup) */
-#undef USE_NETBACKUP
-
 /* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
 
@@ -938,9 +934,6 @@
 
 /* Use replacement snprintf() functions. */
 #undef USE_REPL_SNPRINTF
-
-/* Define to 1 to enable segment WAL replication. (--enable-segwalrep) */
-#undef USE_SEGWALREP
 
 /* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
 #undef USE_SLICING_BY_8_CRC32C

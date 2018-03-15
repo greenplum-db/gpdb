@@ -35,7 +35,6 @@ try:
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
     from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
-    from gpcheckcat_modules.mirror_matching_check import MirrorMatchingCheck
 
 
 except ImportError, e:
@@ -441,10 +440,9 @@ def getGPConfiguration():
     qry = '''
           SELECT content, preferred_role = 'p' as definedprimary,
                  dbid, role = 'p' as isprimary, hostname, address, port,
-                 fselocation as datadir
-            FROM gp_segment_configuration JOIN pg_filespace_entry on (dbid = fsedbid)
-           WHERE fsefsoid = (select oid from pg_filespace where fsname='pg_system')
-             AND (role = 'p' or content < 0 )
+                 datadir
+            FROM gp_segment_configuration
+           WHERE (role = 'p' or content < 0 )
           '''
     curs = db.query(qry)
     for row in curs.dictresult():
@@ -2299,473 +2297,12 @@ def checkOwners():
         # Check owners in pg_proc
         # Check owners in pg_database
         # Check owners in pg_tablespace
-        # Check owners in pg_filespace
         # Check owners in pg_namespace
         # Check owners in pg_operator
         # Check owners in pg_opclass
         # ...
 
     checkOwnersRepair()
-
-
-def checkPersistentTables():
-    logger.info('-----------------------------------')
-    logger.info('Checking persistent tables')
-
-    # Some of the persistency checks modified depending on if we are in
-    # change tracking or not.  For instance when we are in-sync we
-    # shouldn't have persistent entries stuck in "drop pending", but this
-    # is a perfectly valid state to maintain while in change-tracking.
-    db = connect2(GV.cfg[1], utilityMode=False)
-    qry = "SELECT count(*) FROM gp_segment_configuration WHERE mode != 's'"
-    curs = db.query(qry)
-    in_sync = (curs.getresult()[0][0] == 0)
-    if in_sync:
-        logger.info("[OK] System is synchronized")
-    else:
-        logger.warn("System requires recovery via gprecoverseg")
-
-    queries = []
-
-    # Checks on FILESPACE
-    qname = "gp_persistent_filespace_node state check"
-    qry = """
-    SELECT p.filespace_oid,
-       case when p.persistent_state = 0 then 'free'
-            when p.persistent_state = 1 then 'create pending'
-            when p.persistent_state = 2 then 'created'
-            when p.persistent_state = 3 then 'drop pending'
-            when p.persistent_state = 4 then 'abort create'
-            when p.persistent_state = 5 then 'JIT create pending'
-            when p.persistent_state = 6 then 'bulk load create pending'
-            else 'unknown state: ' || p.persistent_state
-       end as persistent_state,
-       case when p.mirror_existence_state = 0 then 'mirror free'
-             when p.mirror_existence_state = 1 then 'not mirrored'
-             when p.mirror_existence_state = 2 then 'mirror create pending'
-             when p.mirror_existence_state = 3 then 'mirror created'
-             when p.mirror_existence_state = 4 then 'mirror down before create'
-             when p.mirror_existence_state = 5 then 'mirror down during create'
-             when p.mirror_existence_state = 6 then 'mirror drop pending'
-             when p.mirror_existence_state = 7 then 'mirror only drop remains'
-             else 'unknown state: ' || p.mirror_existence_state
-        end as mirror_existence_state
-    FROM gp_persistent_filespace_node p
-    WHERE p.persistent_state not in (0, 2)
-       or p.mirror_existence_state not in (0,1,3)
-    """
-    if in_sync:
-        queries.append([qname, qry])
-
-    qname = "gp_persistent_filespace_node  <=> pg_filespace"
-    qry = """
-    SELECT  coalesce(f.oid, p.filespace_oid) as filespace_oid,
-        f.fsname as "filespace"
-    FROM (SELECT * FROM gp_persistent_filespace_node
-          WHERE persistent_state = 2) p
-      FULL OUTER JOIN (SELECT oid, fsname FROM pg_filespace
-                       WHERE oid != 3052) f
-        ON (p.filespace_oid = f.oid)
-    WHERE  (p.filespace_oid is NULL OR f.oid is NULL)
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_filespace_node  <=> gp_global_sequence"
-    qry = """
-    SELECT  p.filespace_oid, f.fsname as "filespace",
-        case when p.persistent_state = 0 then 'free'
-             when p.persistent_state = 1 then 'create pending'
-             when p.persistent_state = 2 then 'created'
-             when p.persistent_state = 3 then 'drop pending'
-             when p.persistent_state = 4 then 'abort create'
-             when p.persistent_state = 5 then 'JIT create pending'
-             when p.persistent_state = 6 then 'bulk load create pending'
-             else 'unknown state: ' || p.persistent_state
-        end as persistent_state,
-        p.persistent_serial_num, s.sequence_num
-    FROM    gp_global_sequence s, gp_persistent_filespace_node p
-      LEFT JOIN pg_filespace f ON (f.oid = p.filespace_oid)
-    WHERE   s.ctid = '(0,4)' and p.persistent_serial_num > s.sequence_num
-    """
-    queries.append([qname, qry])
-
-    # Checks on DATABASE
-    qname = "gp_persistent_database_node state check"
-    qry = """
-    SELECT p.tablespace_oid, p.database_oid,
-       case when p.persistent_state = 0 then 'free'
-            when p.persistent_state = 1 then 'create pending'
-            when p.persistent_state = 2 then 'created'
-            when p.persistent_state = 3 then 'drop pending'
-            when p.persistent_state = 4 then 'abort create'
-            when p.persistent_state = 5 then 'JIT create pending'
-            when p.persistent_state = 6 then 'bulk load create pending'
-            else 'unknown state: ' || p.persistent_state
-       end as persistent_state,
-       case when p.mirror_existence_state = 0 then 'mirror free'
-             when p.mirror_existence_state = 1 then 'not mirrored'
-             when p.mirror_existence_state = 2 then 'mirror create pending'
-             when p.mirror_existence_state = 3 then 'mirror created'
-             when p.mirror_existence_state = 4 then 'mirror down before create'
-             when p.mirror_existence_state = 5 then 'mirror down during create'
-             when p.mirror_existence_state = 6 then 'mirror drop pending'
-             when p.mirror_existence_state = 7 then 'mirror only drop remains'
-             else 'unknown state: ' || p.mirror_existence_state
-        end as mirror_existence_state
-    FROM gp_persistent_database_node p
-    WHERE p.persistent_state not in (0, 2)
-       or p.mirror_existence_state not in (0,1,3)
-    """
-    if in_sync:
-        queries.append([qname, qry])
-
-    qname = "gp_persistent_database_node   <=> pg_database"
-    qry = """
-    SELECT coalesce(d.oid, p.database_oid) as database_oid,
-       d.datname as database
-    FROM (SELECT * FROM gp_persistent_database_node
-          WHERE persistent_state = 2) p
-      FULL OUTER JOIN pg_database d
-        ON (d.oid = p.database_oid)
-    WHERE (d.datname is null or p.database_oid is null)
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_database_node   <=> pg_tablespace"
-    qry = """
-    SELECT  coalesce(t.oid, p.database_oid) as database_oid,
-        t.spcname as tablespace
-    FROM (SELECT * FROM gp_persistent_database_node
-          WHERE persistent_state = 2) p
-      LEFT OUTER JOIN (SELECT oid, spcname FROM pg_tablespace
-                       WHERE oid != 1664) t
-        ON (t.oid = p.tablespace_oid)
-    WHERE  t.spcname is null
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_database_node   <=> gp_global_sequence"
-    qry = """
-    SELECT  p.database_oid, p.tablespace_oid, d.datname as "database",
-        case when p.persistent_state = 0 then 'free'
-             when p.persistent_state = 1 then 'create pending'
-             when p.persistent_state = 2 then 'created'
-             when p.persistent_state = 3 then 'drop pending'
-             when p.persistent_state = 4 then 'abort create'
-             when p.persistent_state = 5 then 'JIT create pending'
-             when p.persistent_state = 6 then 'bulk load create pending'
-             else 'unknown state: ' || p.persistent_state
-        end as persistent_state,
-        p.persistent_serial_num, s.sequence_num
-    FROM    gp_global_sequence s, gp_persistent_database_node p
-      LEFT JOIN pg_database d ON (d.oid = p.database_oid)
-    WHERE   s.ctid = '(0,2)' and p.persistent_serial_num > s.sequence_num
-    """
-    queries.append([qname, qry])
-
-    # Checks on TABLESPACE
-    qname = "gp_persistent_tablespace_node state check"
-    qry = """
-    SELECT p.filespace_oid, p.tablespace_oid,
-       case when p.persistent_state = 0 then 'free'
-            when p.persistent_state = 1 then 'create pending'
-            when p.persistent_state = 2 then 'created'
-            when p.persistent_state = 3 then 'drop pending'
-            when p.persistent_state = 4 then 'abort create'
-            when p.persistent_state = 5 then 'JIT create pending'
-            when p.persistent_state = 6 then 'bulk load create pending'
-            else 'unknown state: ' || p.persistent_state
-       end as persistent_state,
-       case when p.mirror_existence_state = 0 then 'mirror free'
-             when p.mirror_existence_state = 1 then 'not mirrored'
-             when p.mirror_existence_state = 2 then 'mirror create pending'
-             when p.mirror_existence_state = 3 then 'mirror created'
-             when p.mirror_existence_state = 4 then 'mirror down before create'
-             when p.mirror_existence_state = 5 then 'mirror down during create'
-             when p.mirror_existence_state = 6 then 'mirror drop pending'
-             when p.mirror_existence_state = 7 then 'mirror only drop remains'
-             else 'unknown state: ' || p.mirror_existence_state
-        end as mirror_existence_state
-    FROM gp_persistent_tablespace_node p
-    WHERE p.persistent_state not in (0, 2)
-       or p.mirror_existence_state not in (0,1,3)
-    """
-    if in_sync:
-        queries.append([qname, qry])
-
-    qname = "gp_persistent_tablespace_node <=> pg_tablespace"
-    qry = """
-    SELECT  coalesce(t.oid, p.tablespace_oid) as tablespace_oid,
-        t.spcname as tablespace
-    FROM (SELECT * FROM gp_persistent_tablespace_node
-          WHERE persistent_state = 2) p
-      FULL OUTER JOIN (
-        SELECT oid, spcname FROM pg_tablespace WHERE oid not in (1663, 1664)
-      ) t ON (t.oid = p.tablespace_oid)
-    WHERE  t.spcname is null or p.tablespace_oid is null
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_tablespace_node <=> pg_filespace"
-    qry = """
-    SELECT  p.filespace_oid, f.fsname as "filespace"
-    FROM (SELECT * FROM gp_persistent_tablespace_node
-          WHERE persistent_state = 2) p
-      LEFT OUTER JOIN pg_filespace f
-        ON (f.oid = p.filespace_oid)
-    WHERE  f.fsname is null
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_tablespace_node <=> gp_global_sequence"
-    qry = """
-    SELECT  p.filespace_oid, p.tablespace_oid, t.spcname as "tablespace",
-        case when p.persistent_state = 0 then 'free'
-             when p.persistent_state = 1 then 'create pending'
-             when p.persistent_state = 2 then 'created'
-             when p.persistent_state = 3 then 'drop pending'
-             when p.persistent_state = 4 then 'abort create'
-             when p.persistent_state = 5 then 'JIT create pending'
-             when p.persistent_state = 6 then 'bulk load create pending'
-             else 'unknown state: ' || p.persistent_state
-        end as persistent_state,
-        p.persistent_serial_num, s.sequence_num
-    FROM    gp_global_sequence s, gp_persistent_tablespace_node p
-      LEFT JOIN pg_tablespace t ON (t.oid = p.tablespace_oid)
-    WHERE   s.ctid = '(0,3)' and p.persistent_serial_num > s.sequence_num
-    """
-    queries.append([qname, qry])
-
-    # Checks on RELATION
-    qname = "gp_persistent_relation_node state check"
-    qry = """
-    SELECT p.tablespace_oid, p.relfilenode_oid, p.segment_file_num,
-       case when p.persistent_state = 0 then 'free'
-            when p.persistent_state = 1 then 'create pending'
-            when p.persistent_state = 2 then 'created'
-            when p.persistent_state = 3 then 'drop pending'
-            when p.persistent_state = 4 then 'abort create'
-            when p.persistent_state = 5 then 'JIT create pending'
-            when p.persistent_state = 6 then 'bulk load create pending'
-            else 'unknown state: ' || p.persistent_state
-       end as persistent_state,
-       case when p.mirror_existence_state = 0 then 'mirror free'
-             when p.mirror_existence_state = 1 then 'not mirrored'
-             when p.mirror_existence_state = 2 then 'mirror create pending'
-             when p.mirror_existence_state = 3 then 'mirror created'
-             when p.mirror_existence_state = 4 then 'mirror down before create'
-             when p.mirror_existence_state = 5 then 'mirror down during create'
-             when p.mirror_existence_state = 6 then 'mirror drop pending'
-             when p.mirror_existence_state = 7 then 'mirror only drop remains'
-             else 'unknown state: ' || p.mirror_existence_state
-        end as mirror_existence_state
-    FROM gp_persistent_relation_node p
-    WHERE (p.persistent_state not in (0, 2)
-           or p.mirror_existence_state not in (0,1,3))
-      and p.database_oid in (
-        SELECT oid FROM pg_database WHERE datname = current_database()
-      )
-    """
-    if in_sync:
-        queries.append([qname, qry])
-
-    qname = "gp_persistent_relation_node   <=> pg_tablespace"
-    qry = """
-    SELECT  distinct p.tablespace_oid
-    FROM (SELECT * FROM gp_persistent_relation_node
-          WHERE persistent_state = 2
-            AND database_oid in (
-              SELECT oid FROM pg_database
-              WHERE datname = current_database()
-              UNION ALL
-              SELECT 0)) p
-      LEFT OUTER JOIN pg_tablespace t
-        ON (t.oid = p.tablespace_oid)
-    WHERE  t.oid is null
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_relation_node   <=> pg_database"
-    qry = """
-    SELECT  datname, oid, count(*)
-    FROM (
-      SELECT  d.datname as datname, p.database_oid as oid
-      FROM (SELECT * FROM gp_persistent_relation_node
-            WHERE database_oid != 0 and persistent_state = 2
-           ) p
-        full outer join pg_database d ON (d.oid = p.database_oid)
-    ) x
-    GROUP BY 1,2
-    HAVING  datname is null or oid is null or count(*) < 100
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_relation_node   <=> gp_relation_node"
-    qry = """
-    SELECT COALESCE(p.relfilenode_oid, r.relfilenode_oid) AS relfilenode,
-           p.ctid,
-           r.persistent_tid
-    FROM   (SELECT p.ctid,
-                   CASE
-                     WHEN p.tablespace_oid IN (SELECT dattablespace
-                                               FROM   pg_database
-                                               WHERE  datname = Current_database())
-                   THEN 0
-                     ELSE p.tablespace_oid
-                   END,
-                   p.database_oid,
-                   p.relfilenode_oid,
-                   p.segment_file_num,
-                   p.persistent_state
-            FROM   gp_persistent_relation_node p
-            WHERE  persistent_state = 2
-                   AND p.database_oid IN (SELECT oid
-                                          FROM   pg_database
-                                          WHERE  datname = Current_database()
-                                          UNION ALL
-                                          SELECT 0)) p
-           FULL OUTER JOIN gp_relation_node r
-                        ON ( p.relfilenode_oid = r.relfilenode_oid
-                             AND p.segment_file_num = r.segment_file_num
-                             AND p.tablespace_oid = r.tablespace_oid )
-    WHERE  ( p.relfilenode_oid IS NULL
-              OR r.relfilenode_oid IS NULL
-              OR p.ctid != r.persistent_tid ) """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_relation_node   <=> pg_class"
-    qry = """
-    SELECT  coalesce(p.relfilenode_oid, c.relfilenode) as relfilenode,
-        c.nspname, c.relname, c.relkind, c.relstorage
-    FROM (
-      SELECT * FROM gp_persistent_relation_node
-      WHERE persistent_state = 2 AND database_oid in (
-        SELECT oid FROM pg_database WHERE datname = current_database()
-        UNION ALL
-        SELECT 0
-        )
-      ) p
-      FULL OUTER JOIN (
-        SELECT  n.nspname, c.relname, c.relfilenode, c.relstorage, c.relkind
-        FROM  pg_class c
-          LEFT OUTER JOIN pg_namespace n ON (c.relnamespace = n.oid)
-        WHERE  c.relstorage not in ('v', 'x', 'f')
-      ) c ON (p.relfilenode_oid = c.relfilenode)
-    WHERE  p.relfilenode_oid is NULL OR c.relfilenode is NULL
-    """
-    queries.append([qname, qry])
-
-    qname = "gp_persistent_relation_node   <=> gp_global_sequence"
-    qry = """
-    SELECT  p.tablespace_oid, p.database_oid, p.relfilenode_oid,
-        p.segment_file_num,
-        case when p.persistent_state = 0 then 'free'
-             when p.persistent_state = 1 then 'create pending'
-             when p.persistent_state = 2 then 'created'
-             when p.persistent_state = 3 then 'drop pending'
-             when p.persistent_state = 4 then 'abort create'
-             when p.persistent_state = 5 then 'JIT create pending'
-             when p.persistent_state = 6 then 'bulk load create pending'
-             else 'unknown state: ' || p.persistent_state
-        end as persistent_state,
-        p.persistent_serial_num, s.sequence_num
-    FROM    gp_global_sequence s, gp_persistent_relation_node p
-      LEFT JOIN pg_tablespace t ON (t.oid = p.tablespace_oid)
-    WHERE   s.ctid = '(0,1)' and p.persistent_serial_num > s.sequence_num
-    """
-    queries.append([qname, qry])
-
-    # Look for extra/missing files in the filesystem
-    #
-    # Note: heap tables only ever store segment_file_num 0 in the persistent
-    # tables, while ao/co tables will store every segment_file_num that they
-    # use.  This results in the segment_file_num/relstorage where clause.
-    qname = "gp_persistent_relation_node   <=> filesystem"
-    qry = """
-    SELECT coalesce(a.tablespace_oid, b.tablespace_oid) as tablespace_oid,
-       coalesce(a.database_oid, b.database_oid) as database_oid,
-       coalesce(a.relfilenode_oid, b.relfilenode_oid) as relfilenode_oid,
-       coalesce(a.segment_file_num, b.segment_file_num) as segment_file_num,
-       a.relfilenode_oid is null as filesystem,
-       b.relfilenode_oid is null as persistent,
-       b.relkind, b.relstorage
-    FROM   gp_persistent_relation_node a
-    FULL OUTER JOIN (
-      SELECT p.*, c.relkind, c.relstorage
-      FROM   gp_persistent_relation_node_check() p
-        LEFT OUTER JOIN pg_class c
-          ON (p.relfilenode_oid = c.relfilenode)
-      WHERE (p.segment_file_num = 0 or c.relstorage != 'h')
-    ) b ON (a.tablespace_oid   = b.tablespace_oid    and
-            a.database_oid     = b.database_oid      and
-            a.relfilenode_oid  = b.relfilenode_oid   and
-            a.segment_file_num = b.segment_file_num)
-    WHERE (a.relfilenode_oid is null OR
-	   (a.persistent_state = 2 and b.relfilenode_oid is null))  and
-      coalesce(a.database_oid, b.database_oid) in (
-        SELECT oid FROM pg_database WHERE datname = current_database()
-        UNION ALL
-        SELECT 0
-      );
-    """
-    queries.append([qname, qry])
-
-    # Look for databases in the filesystem that have been dropped but still
-    # have dangling files.
-    qname = "pg_database                   <=> filesystem"
-    qry = """
-    SELECT tablespace_oid, database_oid, count(*)
-    FROM   gp_persistent_relation_node_check() p
-      LEFT OUTER JOIN pg_database d
-      ON (p.database_oid = d.oid)
-    WHERE  d.oid is null and database_oid != 0
-    GROUP BY tablespace_oid, database_oid;
-    """
-    queries.append([qname, qry])
-
-    # Phew, that was a lot of queries, eh?
-    # now execute them on every segment.
-    for (qname, qry) in queries:
-        err = connect2run(qry)
-        if not err:
-            logger.info('[OK] ' + qname)
-        else:
-            GV.checkStatus = False
-            setError(ERROR_NOREPAIR)
-            logger.info('[FAIL] ' + qname)
-            logger.error('%s found %d issue(s)' % (qname, len(err)))
-            logger.error(qry)
-
-            # Report at most 100 rows per segment, for brevity
-            last = None
-            count = 0
-            for e in err:
-                cfg = e[0]
-                col = e[1]
-                row = e[2]
-
-                # If this is a new host start again
-                if last != cfg:
-                    count = 0
-                    last = cfg
-
-                if count == 100:
-                    logger.error("...")
-                    count += 1
-                if count > 100:
-                    continue
-
-                # Actual formatting could be prettied up more
-                if count == 0:
-                    logger.error("--------")
-                    logger.error("%s:%s:%s" % (cfg['hostname'],
-                                               cfg['port'],
-                                               cfg['datadir']))
-                    logger.error("  " + " | ".join(map(str, col)))
-                logger.error("  " + " | ".join([str(row[x]) for x in col]))
-                count += 1
-
-    return
 
 
 def closeDbs():
@@ -3011,19 +2548,6 @@ def checkTableMissingEntry(cat):
         myprint('  Execution error: ' + str(e))
         myprint(qry)
 
-
-def checkMirroringMatching():
-    # check that PT rebuild has not left behind mismatched mirroring states in the segments
-    db_connection = connect2(GV.cfg[1], utilityMode=True)
-    try:
-        mismatched_segments = MirrorMatchingCheck().run_check(db_connection, logger)
-        if len(mismatched_segments) > 0:
-            GV.checkStatus = False
-            setError(ERROR_NOREPAIR)
-    except Exception as ex:
-        setError(ERROR_NOREPAIR)
-        GV.checkStatus = False
-        myprint('  Execution error: ' + str(ex))
 
 # -------------------------------------------------------------------------------
 
@@ -3349,81 +2873,6 @@ def duplicateEntryQuery(catname, pkey):
 
 
 # -------------------------------------------------------------------------------
-def checkDuplicatePersistentEntry():
-    """
-    MPP-18178: check duplicate entries in gp_persistent_relation_node
-    	have the same: tablespace_oid, database_oid, relfilenode_oid, segment_file_num
-    	except mirror_existence_state != 6 (MIRROR DROP PENDING)
-    """
-
-    catname = 'gp_persistent_relation_node'
-    fields = ['tablespace_oid', 'database_oid', 'relfilenode_oid', 'segment_file_num']
-    excol = 'mirror_existence_state'
-    state = 6
-
-    qry = duplicatePersistentEntryQuery(catname, fields, excol, state)
-
-    try:
-        db = connect2(GV.cfg[1], utilityMode=False)
-        curs = db.query(qry)
-        nrows = curs.ntuples()
-
-        if nrows == 0:
-            logger.info('[OK] Checking for duplicate persistent entries for ' + catname)
-        else:
-            GV.checkStatus = False
-            setError(ERROR_NOREPAIR)
-            logger.error('[FAIL] Checking for duplicate persistent entries for ' + catname)
-            logger.error('  %s has %d issue(s)' % (catname, nrows))
-
-            fields = curs.listfields()
-            log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-            for row in curs.getresult():
-                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-            results = curs.getresult()
-            processMissingDuplicateEntryResult(catname, fields, results, "duplicate")
-            if catname == 'pg_type':
-                generateVerifyFile(catname, fields, results, 'duplicate_persistent')
-    except Exception, e:
-        setError(ERROR_NOREPAIR)
-        myprint('[ERROR] Executing: duplicate persistent entries check for ' + catname)
-        myprint('  Execution error: ' + str(e))
-        myprint(qry)
-
-
-def duplicatePersistentEntryQuery(catname, pkey, excol, state):
-    """
-    Check for duplicate persistent table entries:
-    	the query is similar to the duplicate catalog entries query, except an extra condition
-    	and the check is limited to the connected database for reporting purposes
-    """
-
-    qry = """
-          SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-
-          -- distribute catalog table from master, so that we can avoid to gather
-          CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
-              SELECT gp_segment_id segid, {pkey}, {excol} FROM {catalog};
-          SELECT {pkey}, total, array_agg(segid order by segid) as segids
-          FROM (
-              SELECT segid, {pkey}, count(*) as total
-              FROM (
-                   select segid, {pkey} from _tmp_master
-                   where {excol} != {state}
-                   union all
-                   select gp_segment_id as segid, {pkey} from gp_dist_random('{catalog}')
-                   where {excol} != {state}
-              ) all_segments
-                LEFT OUTER JOIN pg_database d ON (all_segments.database_oid = d.oid)
-              WHERE d.datname = {dbname}
-              GROUP BY segid, {pkey}
-              HAVING count(*) > 1
-          ) rowresult
-          GROUP BY {pkey}, total
-          """.format(catalog=catname, pkey=','.join(pkey), excol=excol, state=state, dbname=quote_value(GV.dbname))
-    return qry
-
-# -------------------------------------------------------------------------------
 def checkUniqueIndexViolation():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for violated unique indexes')
@@ -3529,20 +2978,12 @@ all_checks = {
             "order": 6,
             "online": True
         },
-    "persistent":
-        {
-            "description": "Check persistent tables",
-            "fn": lambda: checkPersistentTables(),
-            "version": 'main',
-            "order": 7,
-            "online": False
-        },
     "pgclass":
         {
             "description": "Check pg_class entry that does not have any correspond pg_attribute entry",
             "fn": lambda: checkPGClass(),
             "version": 'main',
-            "order": 8,
+            "order": 7,
             "online": False
         },
     "namespace":
@@ -3550,7 +2991,7 @@ all_checks = {
             "description": "Check for schemas with a missing schema definition",
             "fn": lambda: checkPGNamespace(),
             "version": 'main',
-            "order": 9,
+            "order": 8,
             "online": False
         },
     "distribution_policy":
@@ -3558,7 +2999,7 @@ all_checks = {
             "description": "Check constraints on randomly distributed tables",
             "fn": lambda: checkDistribPolicy(),
             "version": 'main',
-            "order": 10,
+            "order": 9,
             "online": False
         },
     "dependency":
@@ -3566,7 +3007,7 @@ all_checks = {
             "description": "Check for dependency on non-existent objects",
             "fn": lambda: checkDepend(),
             "version": 'main',
-            "order": 11,
+            "order": 10,
             "online": False
         },
     "owner":
@@ -3574,7 +3015,7 @@ all_checks = {
             "description": "Check table ownership that is inconsistent with the master database",
             "fn": lambda: checkOwners(),
             "version": 'main',
-            "order": 12,
+            "order": 11,
             "online": True
         },
     "part_integrity":
@@ -3582,7 +3023,7 @@ all_checks = {
             "description": "Check pg_partition branch integrity, partition with oids, partition distribution policy",
             "fn": lambda: checkPartitionIntegrity(),
             "version": 'main',
-            "order": 13,
+            "order": 12,
             "online": True
         },
     "part_constraint":
@@ -3590,25 +3031,9 @@ all_checks = {
             "description": "Check constraints on partitioned tables",
             "fn": lambda: checkPartitionRegularity(),
             "version": 'main',
-            "order": 14,
+            "order": 13,
             "online": True
         },
-    "duplicate_persistent":
-        {
-            "description": "Check for duplicate gp_persistent_relation_node entries",
-            "fn": lambda: checkDuplicatePersistentEntry(),
-            "version": 'main',
-            "order": 15,
-            "online": True
-        },
-    "mirroring_matching":
-        {
-            "description": "Check that configured mirroring and segments' mirroring agree",
-            "fn": lambda: checkMirroringMatching(),
-            "version": 'main',
-            "order": 16,
-            "online": True
-        }
 }
 
 
@@ -3886,9 +3311,6 @@ TableMainColumn['pg_constraint'] = ['conrelid', 'pg_class']
 TableMainColumn['pg_trigger'] = ['tgrelid', 'pg_class']
 TableMainColumn['pg_rewrite'] = ['ev_class', 'pg_class']
 
-# Persistent table
-TableMainColumn['gp_persistent_relation_node'] = ['relfilenode_oid', 'pg_class']
-
 # Cast OID alias type to OID since our graph of objects is based on OID
 # int2vector is also casted to int2[] due to the lack of an <(int2vector, int2vector) operator
 autoCast = {
@@ -4034,10 +3456,6 @@ def processMissingDuplicateEntryResult(catname, colname, allValues, type):
         if catname == 'pg_constraint' and oid == 0:
             oid = row[colname.index('contypid')]
             rowObjName = 'pg_type'
-        # Special case: persistent table
-        if catname == 'gp_persistent_relation_node':
-            relfilenode = oid
-            oid = getClassOidForRelfilenode(relfilenode)
 
         gpObj = getGPObject(oid, rowObjName)
 
@@ -4754,7 +4172,7 @@ def checkcatReport():
             reportAllIssuesRecursive(child, graph)
 
     buildGraph()
-    reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl', 'duplicate_persistent']
+    reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl']
     myprint('')
     myprint('SUMMARY REPORT')
     myprint('===================================================================')

@@ -7,9 +7,9 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.46 2009/06/11 14:49:13 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.49 2010/06/15 07:52:11 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -58,12 +58,16 @@ enum config_group
 	RESOURCES,
 	RESOURCES_MEM,
 	RESOURCES_KERNEL,
+	RESOURCES_VACUUM_DELAY,
+	RESOURCES_BGWRITER,
+	RESOURCES_ASYNCHRONOUS,
 	RESOURCES_MGM,
 	WAL,
 	WAL_SETTINGS,
 	WAL_CHECKPOINTS,
+	WAL_ARCHIVING,
 	WAL_REPLICATION,
-
+	WAL_STANDBY_SERVERS,
 	QUERY_TUNING,
 	QUERY_TUNING_METHOD,
 	QUERY_TUNING_COST,
@@ -187,7 +191,8 @@ struct config_generic
  */
 
 /* upper limit for GUC variables measured in kilobytes of memory */
-#if SIZEOF_SIZE_T > 4
+/* note that various places assume the byte size fits in a "long" variable */
+#if SIZEOF_SIZE_T > 4 && SIZEOF_LONG > 4
 #define MAX_KILOBYTES	INT_MAX
 #else
 #define MAX_KILOBYTES	(INT_MAX / 1024)

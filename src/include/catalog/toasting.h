@@ -4,10 +4,10 @@
  *	  This file provides some definitions to support creation of toast tables
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/toasting.h,v 1.8 2009/06/11 20:46:11 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/toasting.h,v 1.14 2010/04/20 23:48:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,21 +17,20 @@
 /*
  * toasting.c prototypes
  */
-extern void AlterTableCreateToastTable(Oid relOid, Oid toastOid,
-						   Datum reloptions, bool force,
-						   bool is_part_child);
+extern void AlterTableCreateToastTable(Oid relOid, Datum reloptions,
+									   bool is_part_child);
 extern void BootstrapToastTable(char *relName,
 					Oid toastOid, Oid toastIndexOid);
 
 /*
  * This macro is just to keep the C compiler from spitting up on the
- * upcoming commands for genbki.sh.
+ * upcoming commands for genbki.pl.
  */
 #define DECLARE_TOAST(name,toastoid,indexoid) extern int no_such_variable
 
 
 /*
- * What follows are lines processed by genbki.sh to create the statements
+ * What follows are lines processed by genbki.pl to create the statements
  * the bootstrap parser will turn into BootstrapToastTable commands.
  * Each line specifies the system catalog that needs a toast table,
  * the OID to assign to the toast table, and the OID to assign to the
@@ -48,26 +47,23 @@ DECLARE_TOAST(pg_description, 2834, 2835);
 DECLARE_TOAST(pg_proc, 2836, 2837);
 DECLARE_TOAST(pg_rewrite, 2838, 2839);
 DECLARE_TOAST(pg_statistic, 2840, 2841);
+DECLARE_TOAST(pg_trigger, 2336, 2337);
 
 /* shared catalogs */
-DECLARE_TOAST(pg_authid, 2842, 2843);
-#define PgAuthidToastTable 2842
-#define PgAuthidToastIndex 2843
 DECLARE_TOAST(pg_database, 2844, 2845);
 #define PgDatabaseToastTable 2844
 #define PgDatabaseToastIndex 2845
 DECLARE_TOAST(pg_shdescription, 2846, 2847);
 #define PgShdescriptionToastTable 2846
 #define PgShdescriptionToastIndex 2847
+DECLARE_TOAST(pg_db_role_setting, 2966, 2967);
+#define PgDbRoleSettingToastTable 2966
+#define PgDbRoleSettingToastIndex 2967
 
 /* relation id: 5036 - gp_segment_configuration 20101122 */
 DECLARE_TOAST(gp_segment_configuration, 6092, 6093);
 #define GpSegmentConfigToastTable	6092
 #define GpSegmentConfigToastIndex	6093
-/* relation id: 5033 - pg_filespace_entry 20101122 */
-DECLARE_TOAST(pg_filespace_entry, 6094, 6095);
-#define PgFileSpaceEntryToastTable	6094
-#define PgFileSpaceEntryToastIndex	6095
 /* relation id: 3231 - pg_attribute_encoding 20110727 */
 DECLARE_TOAST(pg_attribute_encoding, 3233, 3234);
 #define PgAttributeEncodingToastTable	3233

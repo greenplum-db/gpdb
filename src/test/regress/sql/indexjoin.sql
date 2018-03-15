@@ -2528,4 +2528,4 @@ WHERE tq.sym = tt.symbol AND
 GROUP BY 1
 ORDER BY 1 asc ;
 
-set optimizer_enable_hashjoin = on;  
+set optimizer_enable_hashjoin = on;

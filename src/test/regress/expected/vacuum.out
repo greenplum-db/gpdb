@@ -49,11 +49,24 @@ SELECT count(*) FROM vactst;
 (1 row)
 
 DELETE FROM vactst WHERE i != 0;
-VACUUM FULL vactst;
+VACUUM (FULL) vactst;
 DELETE FROM vactst;
 SELECT i FROM vactst ORDER BY 1;
  i 
 ---
 (0 rows)
 
+VACUUM (FULL, FREEZE) vactst;
+VACUUM (ANALYZE, FULL) vactst;
+CREATE TABLE vaccluster (i INT PRIMARY KEY);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "vaccluster_pkey" for table "vaccluster"
+ALTER TABLE vaccluster CLUSTER ON vaccluster_pkey;
+INSERT INTO vaccluster SELECT i FROM vactst;
+CLUSTER vaccluster;
+VACUUM FULL pg_am;
+VACUUM FULL pg_class;
+VACUUM FULL pg_database;
+VACUUM FULL vaccluster;
+VACUUM FULL vactst;
+DROP TABLE vaccluster;
 DROP TABLE vactst;

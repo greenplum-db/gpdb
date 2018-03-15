@@ -3,12 +3,12 @@
  * fastpath.c
  *	  routines to handle function requests from the frontend
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/fastpath.c,v 1.101 2009/01/01 17:23:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/fastpath.c,v 1.105 2010/07/06 19:18:57 momjian Exp $
  *
  * NOTES
  *	  This cruft is the server side of PQfn.
@@ -215,9 +215,7 @@ fetch_fp_info(Oid func_id, struct fp_info * fip)
 
 	fmgr_info(func_id, &fip->flinfo);
 
-	func_htp = SearchSysCache(PROCOID,
-							  ObjectIdGetDatum(func_id),
-							  0, 0, 0);
+	func_htp = SearchSysCache1(PROCOID, ObjectIdGetDatum(func_id));
 	if (!HeapTupleIsValid(func_htp))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
@@ -358,7 +356,7 @@ HandleFunctionRequest(StringInfo msgBuf)
 	if ((fid == F_PG_GET_EXPR || fid == F_PG_GET_EXPR_EXT) && !superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("argument to pg_get_expr() must come from system catalogs")));
+		errmsg("argument to pg_get_expr() must come from system catalogs")));
 
 	/*
 	 * Prepare function call info block and insert arguments.

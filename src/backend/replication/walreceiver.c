@@ -62,7 +62,7 @@ int			wal_receiver_status_interval = 10;
  * but for walreceiver to write the XLOG. recvFileTLI is the TimeLineID
  * corresponding the filename of recvFile.
  */
-static File		recvFile = -1;
+static int	recvFile = -1;
 static TimeLineID	recvFileTLI = 0;
 static uint32 recvId = 0;
 static uint32 recvSeg = 0;
@@ -624,7 +624,11 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 				 * process soon, so we don't advise the OS to release cache
 				 * pages associated with the file like XLogFileClose() does.
 				 */
-				FileClose(recvFile);
+				if (close(recvFile) != 0)
+					ereport(PANIC,
+							(errcode_for_file_access(),
+						errmsg("could not close log file %u, segment %u: %m",
+							   recvId, recvSeg)));
 
 				/*
 				 * Create .done file forcibly to prevent the restored segment from
@@ -638,7 +642,7 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 			XLByteToSeg(recptr, recvId, recvSeg);
 			use_existent = true;
 			/* For now this only happens on master, so don't care mirror */
-			recvFile = XLogFileInitExt(recvId, recvSeg, &use_existent, true);
+			recvFile = XLogFileInit(recvId, recvSeg, &use_existent, true);
 			recvFileTLI = ThisTimeLineID;
 			recvOff = 0;
 		}
@@ -654,7 +658,7 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 		/* Need to seek in the file? */
 		if (recvOff != startoff)
 		{
-			if (FileSeek(recvFile, (off_t) startoff, SEEK_SET) < 0)
+			if (lseek(recvFile, (off_t) startoff, SEEK_SET) < 0)
 				ereport(PANIC,
 						(errcode_for_file_access(),
 						 errmsg("could not seek in log file %u, "
@@ -667,7 +671,7 @@ XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 		/* OK to write the logs */
 		errno = 0;
 
-		byteswritten = FileWrite(recvFile, buf, segbytes);
+		byteswritten = write(recvFile, buf, segbytes);
 		if (byteswritten <= 0)
 		{
 			/* if write didn't set errno, assume no disk space */
@@ -713,12 +717,7 @@ XLogWalRcvFlush(bool dying)
 		/* use volatile pointer to prevent code rearrangement */
 		volatile WalRcvData *walrcv = WalRcv;
 
-		if (FileSync(recvFile) != 0)
-			ereport(PANIC,
-					(errcode_for_file_access(),
-					 errmsg("could not fsync log file %u, segment %u: %m",
-							 recvId, recvSeg),
-							 errSendAlert(true)));
+		issue_xlog_fsync(recvFile, recvId, recvSeg);
 
 		LogstreamResult.Flush = LogstreamResult.Write;
 

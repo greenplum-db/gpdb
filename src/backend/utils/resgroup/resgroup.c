@@ -63,6 +63,7 @@
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/session_state.h"
+#include "utils/tqual.h"
 #include "utils/vmem_tracker.h"
 
 #define InvalidSlotId	(-1)

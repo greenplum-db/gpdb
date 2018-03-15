@@ -1,6 +1,6 @@
--- =================== -*- mode: sql; -*- =================== 
+-- =================== -*- mode: sql; -*- ===================
 -- table_functions.sql
--- 
+--
 -- Test for enhancements to table function support
 -- ===================
 CREATE SCHEMA table_function;
@@ -41,9 +41,9 @@ CREATE FUNCTION scalar_tf_6(IN a anyelement) RETURNS SETOF example
     AS $$ SELECT a+$1, b from example $$ LANGUAGE SQL READS SQL DATA;
 /* CREATE some multiset input table functions */
 /* scalar value outputs */
-CREATE FUNCTION multiset_scalar_null(anytable) RETURNS int 
+CREATE FUNCTION multiset_scalar_null(anytable) RETURNS int
     AS '@abs_srcdir@/regress.so', 'multiset_scalar_null' LANGUAGE C READS SQL DATA;
-CREATE FUNCTION multiset_scalar_value(anytable) RETURNS int 
+CREATE FUNCTION multiset_scalar_value(anytable) RETURNS int
     AS '@abs_srcdir@/regress.so', 'multiset_scalar_value' LANGUAGE C READS SQL DATA;
 CREATE FUNCTION multiset_scalar_tuple(anytable) RETURNS example
     AS '@abs_srcdir@/regress.so', 'multiset_scalar_tuple' LANGUAGE C READS SQL DATA;
@@ -53,15 +53,15 @@ CREATE FUNCTION multiset_setof_null(anytable) RETURNS setof int
 CREATE FUNCTION multiset_setof_value(anytable) RETURNS setof int
     AS '@abs_srcdir@/regress.so', 'multiset_setof_value' LANGUAGE C READS SQL DATA;
 /* Bunches of different ways of saying "returns a setof rows */
-CREATE FUNCTION multiset_materialize_good(anytable) 
+CREATE FUNCTION multiset_materialize_good(anytable)
 	   RETURNS TABLE(a int, b text)
     AS '@abs_srcdir@/regress.so', 'multiset_materialize_good' LANGUAGE C READS SQL DATA;
-CREATE FUNCTION multiset_materialize_bad(anytable) 
+CREATE FUNCTION multiset_materialize_bad(anytable)
 	   RETURNS TABLE(a int, b text)
     AS '@abs_srcdir@/regress.so', 'multiset_materialize_bad' LANGUAGE C READS SQL DATA;
-CREATE FUNCTION multiset_1(a anytable) RETURNS TABLE(a int, b text) 
+CREATE FUNCTION multiset_1(a anytable) RETURNS TABLE(a int, b text)
     AS '@abs_srcdir@/regress.so', 'multiset_example' LANGUAGE C READS SQL DATA;
-CREATE FUNCTION multiset_2(a anytable) RETURNS TABLE(a int, b text) 
+CREATE FUNCTION multiset_2(a anytable) RETURNS TABLE(a int, b text)
     AS '@abs_srcdir@/regress.so', 'multiset_example' LANGUAGE C READS SQL DATA;
 CREATE FUNCTION multiset_3(a anytable, out a int, out b text) RETURNS SETOF RECORD
     AS '@abs_srcdir@/regress.so', 'multiset_example' LANGUAGE C READS SQL DATA;
@@ -81,20 +81,20 @@ CREATE FUNCTION error(a anytable, b anytable) RETURNS TABLE(a int, b text)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot have multiple "anytable" arguments
 /* ERROR: Multiset outputs not supported */
-CREATE FUNCTION error(OUT anytable) 
+CREATE FUNCTION error(OUT anytable)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot return "anytable" arguments
 CREATE FUNCTION error() RETURNS TABLE(x anytable)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot return "anytable" arguments
 /* ERROR: SETOF as IN/OUT/TABLE parameters is not supported */
-CREATE FUNCTION error(OUT setof example) 
+CREATE FUNCTION error(OUT setof example)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot accept set arguments
-CREATE FUNCTION error(IN setof example) 
+CREATE FUNCTION error(IN setof example)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot accept set arguments
-CREATE FUNCTION error(INOUT setof example) 
+CREATE FUNCTION error(INOUT setof example)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot accept set arguments
 CREATE FUNCTION error() RETURNS TABLE(a setof example)
@@ -111,13 +111,13 @@ ERROR:  column "x" has pseudo-type anytable
 CREATE TYPE  fail AS (x anytable);
 ERROR:  column "x" has pseudo-type anytable
 /* Observe how they are represented in the catalog */
-select 
-  p.proname, 
+select
+  p.proname,
   p.oid::regproc,
   p.oid::regprocedure,
-  p.proretset, 
-  (p.proargtypes::regtype[])[0:0], 
-  p.prorettype::regtype, 
+  p.proretset,
+  (p.proargtypes::regtype[])[0:0],
+  p.prorettype::regtype,
   p.proargmodes
 FROM pg_proc p join pg_namespace n ON (p.pronamespace = n.oid)
 WHERE n.nspname = 'table_function'
@@ -153,7 +153,7 @@ ORDER BY p.proname;
 /* Observe how psql reports them */
 \df (scalar_*|multiset_*)
                                                    List of functions
-     Schema     |           Name            |     Result data type     |          Argument data types          |  Type
+     Schema     |           Name            |     Result data type     |          Argument data types          |  Type  
 ----------------+---------------------------+--------------------------+---------------------------------------+--------
  table_function | multiset_1                | TABLE(a integer, b text) | a anytable                            | normal
  table_function | multiset_2                | TABLE(a integer, b text) | a anytable                            | normal
@@ -1402,7 +1402,7 @@ LINE 1: SELECT * from nameres(TABLE(SELECT 5));
                       ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Error: anytable does NOT match anyelement
-CREATE FUNCTION nameres(anyelement) returns int 
+CREATE FUNCTION nameres(anyelement) returns int
   AS $$ SELECT $1 $$ LANGUAGE SQL CONTAINS SQL;
 SELECT * FROM nameres( TABLE( SELECT 1) ); -- should fail
 ERROR:  function nameres(anytable) does not exist
@@ -1938,11 +1938,11 @@ explain WITH cte AS (SELECT * FROM example) SELECT x.* FROM multiset_5( TABLE ( 
                      ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
                ->  Materialize  (cost=2.43..2.51 rows=4 width=0)
                      ->  Broadcast Motion 1:2  (slice2; segments: 1)  (cost=2.24..2.42 rows=8 width=0)
-                           ->  Subquery Scan y  (cost=2.24..2.26 rows=8 width=0)
+                           ->  Subquery Scan on y  (cost=2.24..2.26 rows=8 width=0)
                                  ->  Aggregate  (cost=2.24..2.25 rows=1 width=8)
                                        ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.13..2.23 rows=1 width=8)
                                              ->  Aggregate  (cost=2.13..2.14 rows=1 width=8)
-                                                   ->  Subquery Scan cte  (cost=0.00..2.10 rows=5 width=0)
+                                                   ->  Subquery Scan on cte  (cost=0.00..2.10 rows=5 width=0)
                                                          ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
  Settings:  gp_segments_for_planner=8
 (16 rows)
@@ -2135,7 +2135,7 @@ SELECT * FROM v1 order by a, b;
 (10 rows)
 
 \d+ v1
-   View "table_function.v1"
+               View "table_function.v1"
  Column |  Type   | Modifiers | Storage  | Description 
 --------+---------+-----------+----------+-------------
  a      | integer |           | plain    | 
@@ -2169,7 +2169,7 @@ SELECT * FROM v2 order by a, b;
 (10 rows)
 
 \d+ v2
-   View "table_function.v2"
+               View "table_function.v2"
  Column |  Type   | Modifiers | Storage  | Description 
 --------+---------+-----------+----------+-------------
  a      | integer |           | plain    | 
@@ -2204,7 +2204,7 @@ SELECT * FROM v3 order by a, b;
 (10 rows)
 
 \d+ v3
-   View "table_function.v3"
+               View "table_function.v3"
  Column |  Type   | Modifiers | Storage  | Description 
 --------+---------+-----------+----------+-------------
  a      | integer |           | plain    | 
@@ -2307,10 +2307,10 @@ create language plpythonu;
 -- end_ignore
 CREATE FUNCTION tf_sql(anytable) returns int AS $$ SELECT 1 $$ language sql CONTAINS SQL;
 ERROR:  SQL functions cannot have arguments of type anytable
-CREATE FUNCTION tf_pgsql(anytable) returns int AS $$ 
+CREATE FUNCTION tf_pgsql(anytable) returns int AS $$
 BEGIN
   RETURN 1;
-END; 
+END;
 $$ language plpgsql NO SQL;
 ERROR:  PL/pgSQL functions cannot accept type anytable
 -- python functions have no validator, error at call time.
@@ -2326,7 +2326,7 @@ CREATE FUNCTION sessionize_describe(internal)
   RETURNS internal
   AS '@abs_srcdir@/regress.so', 'describe'
   LANGUAGE C READS SQL DATA;
-CREATE FUNCTION sessionize(anytable, interval) 
+CREATE FUNCTION sessionize(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA;
@@ -2349,7 +2349,7 @@ SELECT * FROM pg_proc_callback where procallback not in (select oid from pg_proc
 -- Should be able to drop the describe function, no ref yet
 DROP FUNCTION sessionize_describe(internal);
 -- Should fail, no such function
-CREATE OR REPLACE FUNCTION sessionize(anytable, interval) 
+CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA
@@ -2361,7 +2361,7 @@ CREATE OR REPLACE FUNCTION sessionize_describe(internal)
   AS '@abs_srcdir@/regress.so', 'describe'
   LANGUAGE C READS SQL DATA;
 -- Alter the existing function to add the describe callback
-CREATE OR REPLACE FUNCTION sessionize(anytable, interval) 
+CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA
@@ -2406,7 +2406,7 @@ CREATE OR REPLACE FUNCTION sessionize_describe(internal)
   RETURNS internal
   AS '@abs_srcdir@/regress.so', 'describe'
   LANGUAGE C READS SQL DATA;
-CREATE OR REPLACE FUNCTION sessionize(anytable, interval) 
+CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA
@@ -2423,7 +2423,7 @@ SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
 (1 row)
 
 -- Alter existing function to remove the describe callback
-CREATE OR REPLACE FUNCTION sessionize(anytable, interval) 
+CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA;
@@ -2451,21 +2451,21 @@ CREATE FUNCTION sessionize_describe(internal)
   RETURNS internal
   AS '@abs_srcdir@/regress.so', 'describe'
   LANGUAGE C READS SQL DATA;
-CREATE FUNCTION sessionize_plain(anytable, interval) 
+CREATE FUNCTION sessionize_plain(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA;
-CREATE FUNCTION sessionize_static(anytable, interval) 
+CREATE FUNCTION sessionize_static(anytable, interval)
   RETURNS TABLE(id integer, "time" timestamp, sessionnum integer)
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA;
-CREATE FUNCTION sessionize_dynamic(anytable, interval) 
+CREATE FUNCTION sessionize_dynamic(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA
   WITH (describe = sessionize_describe);
 -- Check catalog for the new functions, should only see sessionize_describe
-SELECT * FROM pg_proc_callback 
+SELECT * FROM pg_proc_callback
 WHERE profnoid in (
         'sessionize_plain'::regproc,
         'sessionize_static'::regproc,
@@ -2477,61 +2477,61 @@ WHERE profnoid in (
 (1 row)
 
 -- Plain without qualification fails
-SELECT * 
-FROM sessionize_plain( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_plain(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) as sessionize
 ORDER BY id, time; -- FAILS, no record type
 ERROR:  a column definition list is required for functions returning "record"
-LINE 2: FROM sessionize_plain( 
+LINE 2: FROM sessionize_plain(
              ^
 -- Static with qualification fails
-SELECT * 
-FROM sessionize_static( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_static(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) AS sessionize(id integer, "time" timestamp, sessionnum integer)
 ORDER BY id, time; -- FAIL, double qualified
 ERROR:  a column definition list is only allowed for functions returning "record"
-LINE 2: FROM sessionize_static( 
+LINE 2: FROM sessionize_static(
              ^
 -- Describe with qualification fails
-SELECT * 
-FROM sessionize_dynamic( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_dynamic(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) AS sessionize(id integer, "time" timestamp, sessionnum integer)
 ORDER BY id, time; -- FAIL, double qualified
 ERROR:  a column definition list is only allowed for functions returning "record"
-LINE 2: FROM sessionize_dynamic( 
+LINE 2: FROM sessionize_dynamic(
              ^
 -- Otherwise results should match
 -- start_equiv
-SELECT * 
-FROM sessionize_plain( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_plain(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) AS sessionize(id integer, "time" timestamp, sessionnum integer)
 ORDER BY id, time; -- SUCCESS, qualified record
  id |           time           | sessionnum 
@@ -2556,15 +2556,15 @@ ORDER BY id, time; -- SUCCESS, qualified record
   3 | Sat Aug 20 10:17:42 2011 |          5
 (18 rows)
 
-SELECT * 
-FROM sessionize_static( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_static(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) as sessionize
 ORDER BY id, time; -- SUCCESS, qualified in function
  id |           time           | sessionnum 
@@ -2589,7 +2589,7 @@ ORDER BY id, time; -- SUCCESS, qualified in function
   3 | Sat Aug 20 10:17:42 2011 |          5
 (18 rows)
 
-SELECT * 
+SELECT *
 FROM (SELECT sessionize.id, sessionize."time", sessionize.sessionnum
       FROM sessionize_static(TABLE( SELECT history.id, history."time"
                                     FROM history
@@ -2620,15 +2620,15 @@ ORDER BY 1, 2; -- SUCCESS, qualified in function
   3 | Sat Aug 20 10:17:42 2011 |          5
 (18 rows)
 
-SELECT * 
-FROM sessionize_dynamic( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+SELECT *
+FROM sessionize_dynamic(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) as sessionize
 ORDER BY id, time; -- SUCCESS, qualified in describe
  id |           time           | sessionnum 
@@ -2654,15 +2654,15 @@ ORDER BY id, time; -- SUCCESS, qualified in describe
 (18 rows)
 
 -- Also test subqueries in non TABLE() parameters
-SELECT * 
+SELECT *
 FROM sessionize_dynamic(
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     (select '1 minute'::interval) ) as sessionize
 ORDER BY id, time;
  id |           time           | sessionnum 
@@ -2705,29 +2705,29 @@ ORDER BY id, time;
 --
 -- ===================================
 CREATE VIEW not_supported
-AS SELECT * 
-FROM sessionize_dynamic( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+AS SELECT *
+FROM sessionize_dynamic(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) as sessionize;   -- ERROR, view over dynamic typed function
 ERROR:  CREATE VIEW statements cannot include calls to dynamically typed function
--- The call is in a subquery, not the main query 
+-- The call is in a subquery, not the main query
 CREATE VIEW not_supported
 AS SELECT * FROM (
-      SELECT * 
-      FROM sessionize_dynamic( 
-              TABLE 
-              ( 
-                  SELECT id, time 
-                  FROM history 
-                  ORDER BY id, time 
-                  SCATTER BY id 
-              ), 
+      SELECT *
+      FROM sessionize_dynamic(
+              TABLE
+              (
+                  SELECT id, time
+                  FROM history
+                  ORDER BY id, time
+                  SCATTER BY id
+              ),
               '1 minute' ) as sessionize
       ) subq;   -- ERROR, view over dynamic typed function
 ERROR:  CREATE VIEW statements cannot include calls to dynamically typed function
@@ -2736,17 +2736,17 @@ ERROR:  CREATE VIEW statements cannot include calls to dynamically typed functio
 -- be altered to have a describe function for similar reasons outlined above.
 --
 CREATE VIEW supported
-AS SELECT * 
-FROM sessionize_plain( 
-    TABLE 
-    ( 
-        SELECT id, time 
-        FROM history 
-        ORDER BY id, time 
-        SCATTER BY id 
-    ), 
+AS SELECT *
+FROM sessionize_plain(
+    TABLE
+    (
+        SELECT id, time
+        FROM history
+        ORDER BY id, time
+        SCATTER BY id
+    ),
     '1 minute' ) as sessionize(id integer, "time" timestamp, sessionnum integer);
-CREATE OR REPLACE FUNCTION sessionize_plain(anytable, interval) 
+CREATE OR REPLACE FUNCTION sessionize_plain(anytable, interval)
   RETURNS setof record
   AS '@abs_srcdir@/regress.so', 'sessionize'
   LANGUAGE C READS SQL DATA

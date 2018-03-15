@@ -265,16 +265,7 @@ describeTablespaces(const char *pattern, bool verbose)
 
 	initPQExpBuffer(&buf);
 
-    if (isGPDB() && pset.sversion >= 80213) /* GPDB ? */
 	printfPQExpBuffer(&buf,
-					  "SELECT spcname AS \"%s\",\n"
-					  "  pg_catalog.pg_get_userbyid(spcowner) AS \"%s\",\n"
-					  "  fsname AS \"%s\"",
-					  gettext_noop("Name"),
-					  gettext_noop("Owner"),
-					  gettext_noop("Filespace Name"));
-    else
-    printfPQExpBuffer(&buf,
 					  "SELECT spcname AS \"%s\",\n"
 					  "  pg_catalog.pg_get_userbyid(spcowner) AS \"%s\",\n"
 					  "  spclocation AS \"%s\"",
@@ -290,14 +281,11 @@ describeTablespaces(const char *pattern, bool verbose)
 
 	if (verbose && pset.sversion >= 80200)
 		appendPQExpBuffer(&buf,
-		 ",\n  pg_catalog.shobj_description(t.oid, 'pg_tablespace') AS \"%s\"",
+		 ",\n  pg_catalog.shobj_description(oid, 'pg_tablespace') AS \"%s\"",
 						  gettext_noop("Description"));
 
 	appendPQExpBuffer(&buf,
-					  "\nFROM pg_catalog.pg_tablespace t\n");
-	if (isGPDB())
-	    appendPQExpBuffer(&buf,
-					  "JOIN pg_catalog.pg_filespace fs on (spcfsoid=fs.oid)");
+					  "\nFROM pg_catalog.pg_tablespace\n");
 
 	processSQLNamePattern(pset.db, &buf, pattern, false, false,
 						  NULL, "spcname", NULL,
@@ -1287,7 +1275,7 @@ describeOneTableDetails(const char *schemaname,
 	char	  **ptr;
 	PQExpBufferData title;
 	PQExpBufferData tmpbuf;
-	int			cols = 0;
+	int			cols;
 	int			numrows = 0;
 	bool isGE42 = isGPDB4200OrLater();
 	struct
@@ -1330,8 +1318,9 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 			  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relhasoids, "
-						  "%s, c.reltablespace, %s, "
+						  "%s, c.reltablespace, "
 						  "CASE WHEN c.reloftype = 0 THEN '' ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text END\n"
+						  ", %s as relstorage "
 						  "FROM pg_catalog.pg_class c\n "
 		   "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s'\n",
@@ -1348,7 +1337,7 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 			  "SELECT c.relchecks, c.relkind, c.relhasindex, c.relhasrules, "
 						  "c.relhastriggers, c.relhasoids, "
-						  "%s, c.reltablespace, %s \n"
+						  "%s, c.reltablespace, %s as relstorage\n"
 						  "FROM pg_catalog.pg_class c\n "
 		   "LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)\n"
 						  "WHERE c.oid = '%s'\n",
@@ -1365,7 +1354,7 @@ describeOneTableDetails(const char *schemaname,
 		printfPQExpBuffer(&buf,
 					  "SELECT relchecks, relkind, relhasindex, relhasrules, "
 						  "reltriggers <> 0, relhasoids, "
-						  "%s, reltablespace, %s\n"
+						  "%s, reltablespace, %s as relstorage\n"
 						  "FROM pg_catalog.pg_class WHERE oid = '%s'",
 						  (verbose ?
 					 "pg_catalog.array_to_string(reloptions, E', ')" : "''"),
@@ -1417,8 +1406,10 @@ describeOneTableDetails(const char *schemaname,
 		atooid(PQgetvalue(res, 0, 7)) : 0;
 	tableinfo.reloftype = (pset.sversion >= 90000 && strcmp(PQgetvalue(res, 0, 8), "") != 0) ?
 		strdup(PQgetvalue(res, 0, 8)) : 0;
+
 	/* GPDB Only:  relstorage  */
-	tableinfo.relstorage = (isGPDB()) ? *(PQgetvalue(res, 0, 8)) : 'h';
+	tableinfo.relstorage = (isGPDB()) ? *(PQgetvalue(res, 0, PQfnumber(res, "relstorage"))) : 'h';
+
 	PQclear(res);
 	res = NULL;
 
@@ -3095,17 +3086,14 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 
 	if (pset.sversion >= 90000)
 	{
-		/* ACHOI: havewhere is false */
-		bool		havewhere = false;
+		bool		havewhere;
 
 		printfPQExpBuffer(&buf, "SELECT rolname AS role, datname AS database,\n"
 				"pg_catalog.array_to_string(setconfig, E'\\n') AS settings\n"
 						  "FROM pg_db_role_setting AS s\n"
 				   "LEFT JOIN pg_database ON pg_database.oid = setdatabase\n"
 						  "LEFT JOIN pg_roles ON pg_roles.oid = setrole\n");
-
-		/* ACHOI: psql 9.0 assing the havewhere here */
-		processSQLNamePattern(pset.db, &buf, pattern, false, false,
+		havewhere = processSQLNamePattern(pset.db, &buf, pattern, false, false,
 									   NULL, "pg_roles.rolname", NULL, NULL);
 		processSQLNamePattern(pset.db, &buf, pattern2, havewhere, false,
 							  NULL, "pg_database.datname", NULL, NULL);
@@ -3142,6 +3130,7 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 	resetPQExpBuffer(&buf);
 	return true;
 }
+
 
 /*
  * listTables()

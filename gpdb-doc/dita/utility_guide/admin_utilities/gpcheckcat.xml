@@ -53,12 +53,8 @@
             is missing row on one segment, but other segments have this row. As another example, the
             values of specific row column data are different across segments, such as table owner or
             table access privileges.</li>
-          <li>Persistent Table inconsistencies are inconsistencies in persistence object state and
-            file system objects on a segment. For example, there are no running transactions, all
-            transactions are complete, but there is object that is marked as <codeph>creation
-              incomplete</codeph> in persistent tables. As another example, a file exists in
-            database directory, but there is no corresponding object existing in the database system
-            tables.</li>
+          <li>Inconsistency between a catalog table and the filesystem. For example, a file exists in
+            database directory, but there is no entry for it in the pg_class table.</li>
         </ul></p>
     </section>
     <section id="section4">
@@ -117,28 +113,21 @@
           </pt>
           <pd>Specify a test to run. Some tests can be run only when Greenplum Database is in
             restricted mode.</pd>
-          <pd>These are the tests that can be performed:<p><codeph>acl</codeph> - Cross consistency
-              check for access control privileges</p><p><codeph>duplicate</codeph> - Check for
-              duplicate entries</p><p><codeph>duplicate_persistent</codeph> - Check for duplicate
-                <i>gp_persistent_relation_node</i> entries</p><p><codeph>foreign_key</codeph> -
-              Check foreign keys</p><p><codeph>inconsistent</codeph> - Cross consistency check for
-              master segment inconsistency</p><p><codeph>mirroring_matching</codeph> - Checks if
-              mirroring is consistent (either enabled or disabled) for the cluster and
-                segments.</p><p><codeph>missing_extraneous</codeph> - Cross consistency check for
-              missing or extraneous entries</p><p><codeph>owner</codeph> - Check table ownership
-              that is inconsistent with the master database</p><p><codeph>part_integrity</codeph> -
-              Check <i>pg_partition</i> branch integrity, partition with OIDs, partition
-              distribution policy</p><p><codeph>part_constraint</codeph> - Check constraints on
-              partitioned tables</p><p><codeph>unique_index_violation</codeph> - Check tables that
-              have columns with the unique index constraint for duplicate
-                entries</p><p><codeph>dependency</codeph> - Check for dependency on non-existent
-              objects (restricted mode only)</p><p><codeph>distribution_policy</codeph> - Check
-              constraints on randomly distributed tables (restricted mode
-                only)</p><p><codeph>namespace</codeph> - Check for schemas with a missing schema
-              definition (restricted mode only)</p><p><codeph>persistent</codeph> - Check persistent
-              tables (restricted mode only)</p><p><codeph>pgclass</codeph> - Check <i>pg_class</i>
-              entry that does not have any corresponding <i>pg_attribute</i> entry (restricted mode
-              only)</p></pd>
+            <pd>These are the tests that can be performed:
+	    <p><codeph>acl</codeph> - Cross consistency check for access control privileges</p>
+	    <p><codeph>duplicate</codeph> - Check for duplicate entries</p>
+	    <p><codeph>foreign_key</codeph> - Check foreign keys</p>
+	    <p><codeph>inconsistent</codeph> - Cross consistency check for master segment inconsistency</p>
+	    <p><codeph>missing_extraneous</codeph> - Cross consistency check for missing or extraneous entries</p>
+	    <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the master database</p>
+	    <p><codeph>part_integrity</codeph> - Check <i>pg_partition</i> branch integrity, partition with OIDs, partition distribution policy</p>
+	    <p><codeph>part_constraint</codeph> - Check constraints on partitioned tables</p>
+	    <p><codeph>unique_index_violation</codeph> - Check tables that have columns with the unique index constraint for duplicate entries</p>
+	    <p><codeph>dependency</codeph> - Check for dependency on non-existent objects (restricted mode only)</p>
+	    <p><codeph>distribution_policy</codeph> - Check constraints on randomly distributed tables (restricted mode only)</p>
+	    <p><codeph>namespace</codeph> - Check for schemas with a missing schema definition (restricted mode only)</p>
+	    <p><codeph>pgclass</codeph> - Check <i>pg_class</i> entry that does not have any corresponding <i>pg_attribute</i> entry (restricted mode only)</p>
+	  </pd>
         </plentry>
         <plentry>
           <pt>-S {none | only}</pt>

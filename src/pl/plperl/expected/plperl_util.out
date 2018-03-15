@@ -83,11 +83,11 @@ $$;
 select perl_encode_bytea();
  perl_encode_bytea 
 -------------------
- 
- @
- @\001@
- @\000@
- 
+ \x
+ \x40
+ \x400140
+ \x400040
+ \x
 (5 rows)
 
 -- test encode_array_literal

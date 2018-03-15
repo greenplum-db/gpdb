@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 CREATE TABLE pg2_co_table_bitmap_index_a0(
 text_col text,
 bigint_col bigint,

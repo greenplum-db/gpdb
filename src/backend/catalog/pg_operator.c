@@ -3,12 +3,12 @@
  * pg_operator.c
  *	  routines to support manipulation of the pg_operator relation
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.109 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.111 2010/02/14 18:42:13 rhaas Exp $
  *
  * NOTES
  *	  these routines moved here from commands/define.c and somewhat cleaned up.
@@ -138,11 +138,11 @@ OperatorGet(const char *operatorName,
 	HeapTuple	tup;
 	Oid			operatorObjectId;
 
-	tup = SearchSysCache(OPERNAMENSP,
-						 PointerGetDatum(operatorName),
-						 ObjectIdGetDatum(leftObjectId),
-						 ObjectIdGetDatum(rightObjectId),
-						 ObjectIdGetDatum(operatorNamespace));
+	tup = SearchSysCache4(OPERNAMENSP,
+						  PointerGetDatum(operatorName),
+						  ObjectIdGetDatum(leftObjectId),
+						  ObjectIdGetDatum(rightObjectId),
+						  ObjectIdGetDatum(operatorNamespace));
 	if (HeapTupleIsValid(tup))
 	{
 		RegProcedure oprcode = ((Form_pg_operator) GETSTRUCT(tup))->oprcode;
@@ -512,9 +512,8 @@ OperatorCreate(const char *operatorName,
 	 */
 	if (operatorObjectId)
 	{
-		tup = SearchSysCacheCopy(OPEROID,
-								 ObjectIdGetDatum(operatorObjectId),
-								 0, 0, 0);
+		tup = SearchSysCacheCopy1(OPEROID,
+								  ObjectIdGetDatum(operatorObjectId));
 		if (!HeapTupleIsValid(tup))
 			elog(ERROR, "cache lookup failed for operator %u",
 				 operatorObjectId);
@@ -661,9 +660,7 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId)
 
 	pg_operator_desc = heap_open(OperatorRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(OPEROID,
-							 ObjectIdGetDatum(commId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(OPEROID, ObjectIdGetDatum(commId));
 
 	/*
 	 * if the commutator and negator are the same operator, do one update. XXX
@@ -731,9 +728,7 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId)
 
 	/* check and update the negator, if necessary */
 
-	tup = SearchSysCacheCopy(OPEROID,
-							 ObjectIdGetDatum(negId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(OPEROID, ObjectIdGetDatum(negId));
 
 	if (HeapTupleIsValid(tup) &&
 		!(OidIsValid(((Form_pg_operator) GETSTRUCT(tup))->oprnegate)))

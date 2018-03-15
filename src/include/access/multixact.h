@@ -3,10 +3,10 @@
  *
  * PostgreSQL multi-transaction-log manager
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/multixact.h,v 1.14 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/multixact.h,v 1.16 2010/01/02 16:58:00 momjian Exp $
  */
 #ifndef MULTIXACT_H
 #define MULTIXACT_H
@@ -69,14 +69,15 @@ extern void MultiXactSetNextMXact(MultiXactId nextMulti,
 extern void MultiXactAdvanceNextMXact(MultiXactId minMulti,
 						  MultiXactOffset minMultiOffset);
 
-extern void multixact_redo(XLogRecPtr beginLoc __attribute__((unused)),
-						   XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
-extern void multixact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 extern void multixact_twophase_recover(TransactionId xid, uint16 info,
 						   void *recdata, uint32 len);
 extern void multixact_twophase_postcommit(TransactionId xid, uint16 info,
 							  void *recdata, uint32 len);
 extern void multixact_twophase_postabort(TransactionId xid, uint16 info,
 							 void *recdata, uint32 len);
+
+extern void multixact_redo(XLogRecPtr beginLoc __attribute__((unused)),
+						   XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
+extern void multixact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 
 #endif   /* MULTIXACT_H */

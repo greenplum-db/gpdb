@@ -50,7 +50,7 @@ class OOMClass(object):
 
     def create_standby(self):
         self.pgutil.clean_dir(self.host,self.standby_loc)
-        self.gpinit.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+        self.gpinit.run(option = '-P %s -s %s -F %s' % (self.standby_port, self.host, self.standby_loc))
 
     def setup_oom(self):
         # Build it before testing.

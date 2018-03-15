@@ -3,12 +3,12 @@
  * rowtypes.c
  *	  I/O and comparison functions for generic composite types.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/rowtypes.c,v 1.25 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/rowtypes.c,v 1.28 2010/02/26 02:01:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -98,6 +98,12 @@ record_in(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 		   errmsg("input of anonymous composite types is not implemented")));
 	tupTypmod = -1;				/* for all non-anonymous types */
+
+	/*
+	 * This comes from the composite type's pg_type.oid and stores system oids
+	 * in user tables, specifically DatumTupleFields. This oid must be
+	 * preserved by binary upgrades.
+	 */
 	tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
 	ncolumns = tupdesc->natts;
 

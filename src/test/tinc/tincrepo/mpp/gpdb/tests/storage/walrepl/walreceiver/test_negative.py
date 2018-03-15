@@ -92,7 +92,7 @@ class neg_test(StandbyRunMixin, MPPTestCase):
         logger.info('Start the old master again (to act as the new standby)...')
         master = gp.MasterStart("Starting orig Master in standby mode",
                                 orig_master.datadir, orig_master.port, orig_master.dbid,
-                                0, numcontent, None, None, None)
+                                numcontent, None, None, None)
 
         # -w option would wait forever.
         master.cmdStr = master.cmdStr.replace(' -w', '')
@@ -123,7 +123,7 @@ class neg_test(StandbyRunMixin, MPPTestCase):
         os.remove(os.path.join(orig_master.datadir,'recovery.conf'))
 
         logger.info('Stop the original master again...')
-        rc = subprocess.Popen('pg_ctl stop -D ' + orig_master.datadir + ' -m immediate',
+        subprocess.check_call('pg_ctl stop -D ' + orig_master.datadir + ' -m immediate',
                               shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         # Perform gpstart to get the original master (& cluster) back again

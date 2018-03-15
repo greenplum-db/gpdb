@@ -9,11 +9,11 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/pathkeys.c,v 1.97 2009/02/28 03:51:05 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/pathkeys.c,v 1.101 2010/02/26 02:00:45 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -881,6 +881,15 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 							exprType((Node *) tle->expr),
 							exprTypmod((Node *) tle->expr),
 							0);
+
+				/*
+				 * Note: it might look funny to be setting sortref = 0 for a
+				 * reference to a volatile sub_eclass.	However, the
+				 * expression is *not* volatile in the outer query: it's just
+				 * a Var referencing whatever the subquery emitted. (IOW, the
+				 * outer query isn't going to re-execute the volatile
+				 * expression itself.)	So this is okay.
+				 */
 				outer_ec =
 					get_eclass_for_sort_expr(root,
 											 outer_expr,
@@ -1106,7 +1115,7 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 	PathKey    *pk = NULL;
 	List	   *mergeopfamilies;
 	EquivalenceClass *eclass;
-	int			strategy;
+	int			strategy = 0;
 	ListCell   *lc;
 
 	/* Get the expr's data type. */
@@ -1130,6 +1139,8 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 		if (strategy)
 			break;
 	}
+	if (!lc)
+		elog(ERROR, "could not find operator family for equality operator %u", eqopoid);
 	eclass = get_eclass_for_sort_expr(root, (Expr *) expr, typeoid, mergeopfamilies, 0);
 	if (!canonical)
 		pk = makePathKey(eclass, opfamily, strategy, false);
@@ -1328,10 +1339,16 @@ make_pathkeys_for_groupclause(PlannerInfo *root,
 
 		if (IsA(node, SortGroupClause))
 		{
-			SortGroupClause *gc = (SortGroupClause *) node;
+			SortGroupClause *sortcl = (SortGroupClause *) node;
 
-			sortkey = (Expr *) get_sortgroupclause_expr(gc, tlist);
-			pathkey = make_pathkey_from_sortinfo(root, sortkey, gc->sortop, gc->nulls_first, false, 0);
+			sortkey = (Expr *) get_sortgroupclause_expr(sortcl, tlist);
+			Assert(OidIsValid(sortcl->sortop));
+			pathkey = make_pathkey_from_sortinfo(root,
+												 sortkey,
+												 sortcl->sortop,
+												 sortcl->nulls_first,
+												 sortcl->tleSortGroupRef,
+												 false);
 
 			/*
 			 * The pathkey becomes a one-element sublist. canonicalize_pathkeys() might
@@ -1471,7 +1488,7 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 		 * It's possible that multiple matching clauses might have different
 		 * ECs on the other side, in which case the order we put them into our
 		 * result makes a difference in the pathkeys required for the other
-		 * input path.  However this routine hasn't got any info about which
+		 * input path.	However this routine hasn't got any info about which
 		 * order would be best, so we don't worry about that.
 		 *
 		 * It's also possible that the selected mergejoin clauses produce

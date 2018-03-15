@@ -128,7 +128,7 @@ COMMIT;
 
 
 -- @Description WITH HOLD cursor.
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_forcursor cascade;
 CREATE TABLE sto_uao_emp_forcursor (
    empno    INT  ,

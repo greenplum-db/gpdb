@@ -3,7 +3,7 @@ CREATE READABLE EXTERNAL TABLE s3read_invalid_sub_query_read (date float, time f
 CREATE TEMP TABLE s3read_local_invalid_sub_query (date float, time float, open float, high float, low float, volume int) DISTRIBUTED RANDOMLY;
 INSERT INTO s3read_local_invalid_sub_query SELECT * FROM s3read_invalid_sub_query_read;
 ERROR:  invalid input syntax for type double precision: "05/18/2010"  (seg1 slice1 mdw:10001 pid=790)
-DETAIL:  External table s3read_invalid_sub_query_read, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@, column date
+CONTEXT:  External table s3read_invalid_sub_query_read, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@, column date
 SELECT count(*) FROM s3read_local_invalid_sub_query;
  count 
 -------

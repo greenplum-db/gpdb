@@ -1,8 +1,8 @@
 set enable_partition_rules = false;
 
---ERROR: Missing boundary specification in partition 'aa' of type LIST 
+--ERROR: Missing boundary specification in partition 'aa' of type LIST
 create table fff (a char(1), b char(2), d char(3)) distributed by
-(a) partition by list (b) (partition aa ); 
+(a) partition by list (b) (partition aa );
 
 
 -- ERROR: Invalid use of RANGE boundary specification in partition
@@ -20,7 +20,7 @@ drop table fff cascade;
 -- this is subtly wrong -- it defines 4 partitions
 -- the problem is the comma before "end", which causes us to
 -- generate 2 anonymous partitions.
--- This is an error: 
+-- This is an error:
 -- ERROR:  invalid use of mixed named and unnamed RANGE boundary specifications
 create table ggg (a char(1), b int, d char(3))
 distributed by (a)
@@ -104,7 +104,7 @@ select * from ggg_1_prt_bb order by 1, 2;
 drop table ggg cascade;
 
 -- documentation example - partition by list and range
-CREATE TABLE rank (id int, rank int, year date, gender 
+CREATE TABLE rank (id int, rank int, year date, gender
 char(1)) DISTRIBUTED BY (id, gender, year)
 partition by list (gender)
 subpartition by range (year)
@@ -148,14 +148,14 @@ distributed by (a)
 partition by range (b)
 subpartition by list(d)
 (
-partition aa 
-start  (date '2007-01-01') 
-end (date '2008-01-01') 
-       (subpartition dd values ('1', '2', '3'), 
+partition aa
+start  (date '2007-01-01')
+end (date '2008-01-01')
+       (subpartition dd values ('1', '2', '3'),
 	    subpartition ee values ('4', '5', '6')),
 partition bb
-start  (date '2008-01-01') 
-end (date '2009-01-01') 
+start  (date '2008-01-01')
+end (date '2009-01-01')
        (subpartition dd values ('1', '2', '3'),
 	    subpartition ee values ('4', '5', '6'))
 );
@@ -199,41 +199,41 @@ partition by list (rank,gender)
 -- RANGE validation
 
 -- legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01'),
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2008-03-01')
 every (interval '10 days'));
 
 drop table ggg cascade;
 
 
 -- bad - legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
 partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') end (date '2009-01-01') 
+partition bb start (date '2008-01-01') end (date '2009-01-01')
 every (interval '10 days'));
 
 drop table ggg cascade;
 
 -- legal because start of bb not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
-partition bb start (date '2008-01-01') exclusive end (date '2009-01-01') 
+partition aa start (date '2007-08-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') exclusive end (date '2008-03-01')
 every (interval '10 days'));
 
 drop table ggg cascade;
 
 -- legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -244,7 +244,7 @@ partition aa start (date '2007-01-01') end (date '2008-01-01')
 drop table ggg cascade;
 
 -- bad - legal if end of aa not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -255,7 +255,7 @@ partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
 drop table ggg cascade;
 
 -- legal because start of bb not inclusive
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -266,7 +266,7 @@ partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
 drop table ggg cascade;
 
 -- validate aa - start greater than end
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -278,12 +278,12 @@ drop table ggg cascade;
 
 -- formerly we could not set end of first partition because next is before
 -- but we can sort them now so this is legal.
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
 partition bb start (date '2008-01-01') ,
-partition aa start (date '2007-01-01') 
+partition aa start (date '2007-01-01')
 );
 
 drop table ggg cascade;
@@ -381,7 +381,7 @@ partition bb start (2008,2) end (2009,3)
 
 drop table ggg cascade;
 
-create table ggg (a char(1), b date, d char(3)) 
+create table ggg (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
@@ -477,7 +477,7 @@ partition by list (gender)
 subpartition by range (year)
 subpartition template (
 start (date '2001-01-01')
-end (date '2006-01-01') every (interval '1 year')) (
+end (date '2003-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
@@ -492,7 +492,7 @@ create table hhh (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') 
+partition aa start (date '2007-01-01') end (date '2008-01-01')
     with (appendonly=true),
 partition bb start (date '2008-01-01') end (date '2009-01-01')
     with (appendonly=false)
@@ -551,16 +551,16 @@ alter table no_start1 add partition baz2 start (5);
 
 select tablename, partitionlevel, parentpartitiontablename,
 partitionname, partitionrank, partitionboundary from pg_partitions
-where tablename = 'no_start1' or tablename = 'no_end1' 
+where tablename = 'no_start1' or tablename = 'no_end1'
 order by tablename, partitionrank;
 
 drop table no_end1;
 drop table no_start1;
 
 -- default partitions cannot have boundary specifications
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
 partition j2 end (date '2009-01-01'));
 
 -- must have a name
@@ -572,9 +572,9 @@ alter table jjj add default partition j3 end (date '2010-01-01');
 drop table jjj cascade;
 
 -- only one default partition
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
 partition j2 end (date '2009-01-01'),
 default partition j3);
 
@@ -608,7 +608,7 @@ create table hhh_r1 (a char(1), b date, d char(3))
 distributed by (a)
 partition by range (b)
 (
-partition aa start (date '2007-01-01') end (date '2008-01-01') 
+partition aa start (date '2007-01-01') end (date '2008-01-01')
              every (interval '1 month')
 );
 
@@ -618,7 +618,7 @@ partition by list (b)
 (
 partition aa values ('2007-01-01'),
 partition bb values ('2008-01-01'),
-partition cc values ('2009-01-01') 
+partition cc values ('2009-01-01')
 );
 
 -- must have name or value for list partition
@@ -643,7 +643,7 @@ alter table hhh_r1 add partition zaa start ('2007-06-01');
 -- start > last (fail because start equal end)
 alter table hhh_r1 add partition bb start ('2008-01-01') end ('2008-01-01') ;
 -- start > last (ok)
-alter table hhh_r1 add partition bb start ('2008-01-01') 
+alter table hhh_r1 add partition bb start ('2008-01-01')
 end ('2008-02-01') inclusive;
 -- start > last (fail because start == last end inclusive)
 alter table hhh_r1 add partition cc start ('2008-02-01') end ('2008-03-01') ;
@@ -658,10 +658,10 @@ alter table hhh_r1 add partition ee start ('2006-01-01') end ('2009-01-01') ;
 -- start before first partition (fail because end in "gap" [and overlaps])
 alter table hhh_r1 add partition yaa start ('2007-05-01') end ('2007-07-01');
 -- start before first partition (fail )
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') inclusive;
 -- start before first partition (fail because end overlaps)
-alter table hhh_r1 add partition yaa start ('2007-05-01') 
+alter table hhh_r1 add partition yaa start ('2007-05-01')
 end ('2007-10-01') exclusive;
 
 
@@ -702,7 +702,7 @@ alter table rank DROP partition boys restrict;
 
 select * from rank ;
 
--- MPP-3722: complain if for(value) matches the default partition 
+-- MPP-3722: complain if for(value) matches the default partition
 alter table rank truncate partition for('N');
 alter table rank DROP partition for('N');
 alter table rank DROP partition if exists for('N');
@@ -714,7 +714,7 @@ alter table rank DROP partition girls;
 
 -- MPP-4011: make FOR(value) work
 alter table rank alter partition for ('F') add default partition def1;
-alter table rank alter partition for ('F') 
+alter table rank alter partition for ('F')
 truncate partition for ('2010-10-10');
 alter table rank truncate partition for ('F');
 
@@ -822,24 +822,24 @@ drop table hhh cascade;
 -- default partitions
 
 -- default partitions cannot have boundary specifications
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
-partition j2 end (date '2009-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
+partition j2 end (date '2009-01-01'),
 default partition j3 end (date '2010-01-01'));
 
 -- more than one default partition
-create table jjj (aa int, bb date) 
-partition by range(bb) 
-(partition j1 end (date '2008-01-01'), 
-partition j2 end (date '2009-01-01'), 
+create table jjj (aa int, bb date)
+partition by range(bb)
+(partition j1 end (date '2008-01-01'),
+partition j2 end (date '2009-01-01'),
 default partition j3,
 default partition j4);
 
 
 -- check default
 create table foz (i int, d date) distributed by (i)
-partition by range (d) 
+partition by range (d)
 (
  default partition dsf,
  partition foo start (date '2001-01-01') end (date '2005-01-01')
@@ -899,7 +899,7 @@ select * from d_1_prt_abc;
 drop table  d cascade;
 
 -- multicolumn list support
-create table d (a int, b int, c int) distributed by (a) 
+create table d (a int, b int, c int) distributed by (a)
 partition by list(b, c)
 (partition a values(('1', '2'), ('3', '4')),
  partition b values(('100', '20')),
@@ -932,7 +932,7 @@ insert into b values(90, '2011-05-04');
 -- shouldn't work
 insert into b values(1, '2019-01-01');
 insert into b values(91, '2008-05-05');
- 
+
 select * from b_1_prt_1;
 select * from b_1_prt_2;
 select * from b_1_prt_3;
@@ -960,7 +960,7 @@ insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB');
 insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA');
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
-insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp - 
+insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp -
 					'1 second'::interval, 'BBZZZZZZZZZZ');
 
 -- should fail
@@ -981,7 +981,7 @@ drop table b;
 -- different levels -- so this is legal again...
 drop table if exists a;
 
--- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer 
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer
 --       for queries with partition elimination over FULL OUTER JOIN
 --       between partitioned tables.
 
@@ -1020,9 +1020,9 @@ drop table if exists s2;
 
 create table mpp_2914A(id int,  buyDate date, kind char(1))
 DISTRIBUTED BY (id)
-partition by list (kind) 
-subpartition by range(buyDate) 
-subpartition template 
+partition by list (kind)
+subpartition by range(buyDate)
+subpartition template
 (
         start (date '2001-01-01'),
         start (date '2002-01-01'),
@@ -1060,7 +1060,7 @@ subpartition by range(buyDate)
                 subpartition y2004 start (date '2004-01-01'),
                 subpartition y2005 start (date '2005-01-01')
         ),
-        default partition catchAll  
+        default partition catchAll
         (
                 subpartition  y2001 start (date '2001-01-01'),
                 subpartition  y2002 start (date '2002-01-01'),

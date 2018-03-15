@@ -554,9 +554,9 @@ CREATE TABLE bpchar_ops(id INT8, v char(10)) DISTRIBUTED BY(id);
 CREATE INDEX bpchar_ops_btree_idx ON bpchar_ops USING btree(v bpchar_pattern_ops);
 INSERT INTO bpchar_ops VALUES (0, 'row');
 SELECT * FROM bpchar_ops WHERE v = 'row '::char(20);
- id |     v
+ id |     v      
 ----+------------
-  0 | row
+  0 | row       
 (1 row)
 
 DROP TABLE bpchar_ops;

@@ -41,6 +41,7 @@
 #include "port/pg_crc32c.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
+#include "postmaster/postmaster.h"
 
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
@@ -1162,6 +1163,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	int			fd = -1;
 	const char *fun;
 
+
 	/*
 	 * At the moment, we don't know which of IPv6 or IPv4 is wanted, or even
 	 * supported, so just ask getaddrinfo...
@@ -1198,7 +1200,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	s = getaddrinfo(BackendListenAddress, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
@@ -3070,6 +3072,8 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 				conn->pkt_q_size = 0;
 				conn->pkt_q_head = 0;
 				conn->pkt_q_tail = 0;
+
+				SIMPLE_FAULT_INJECTOR(InterconnectSetupPalloc);
 				conn->pkt_q = (uint8 **) palloc0(conn->pkt_q_capacity * sizeof(uint8 *));
 
 				/* update the max buffer count of our rx buffer pool.  */
@@ -3459,11 +3463,11 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 					if (conn->cdbProc == NULL)
 						continue;
 
-					rx_buffer_pool.maxCount -= conn->pkt_q_capacity;
-
 					/* out of memory has occurred, break out */
 					if (!conn->pkt_q)
 						break;
+
+					rx_buffer_pool.maxCount -= conn->pkt_q_capacity;
 
 					connDelHash(&ic_control_info.connHtab, conn);
 

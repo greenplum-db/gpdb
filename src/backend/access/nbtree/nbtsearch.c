@@ -4,11 +4,11 @@
  *	  Search code for postgres btrees.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.120 2009/05/05 19:36:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.121 2010/01/02 16:57:35 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,8 +57,6 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		   Buffer *bufP, int access)
 {
 	BTStack		stack_in = NULL;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	/* Get the root page to start with */
 	*bufP = _bt_getroot(rel, access);
@@ -165,8 +163,6 @@ _bt_moveright(Relation rel,
 	BTPageOpaque opaque;
 	int32		cmpval;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 
@@ -246,8 +242,6 @@ _bt_binsrch(Relation rel,
 				high;
 	int32		result,
 				cmpval;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -449,8 +443,6 @@ _bt_compare(Relation rel,
 bool
 _bt_first(IndexScanDesc scan, ScanDirection dir)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	Relation	rel = scan->indexRelation;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Buffer		buf;
@@ -842,10 +834,6 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
-	
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	stack = _bt_search(rel, keysCount, scankeys, nextkey, &buf, BT_READ);
 
 	/* don't need to keep the stack around... */
@@ -857,10 +845,6 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	if (!BufferIsValid(buf))
 	{
 		/* Only get here if index is completely empty */
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
 		return false;
 	}
 
@@ -912,21 +896,12 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		if (!_bt_steppage(scan, dir))
-		{
-
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
 			return false;
-		}
 	}
 
 	/* Drop the lock, but not pin, on the current page */
 	LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	/* OK, itemIndex says what to return */
 	scan->xs_ctup.t_self = so->currPos.items[so->currPos.itemIndex].heapTid;
 
@@ -949,18 +924,12 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 bool
 _bt_next(IndexScanDesc scan, ScanDirection dir)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 
 	/*
 	 * Advance to next tuple on current page; or if there's no more, try to
 	 * step to the next page with data.
 	 */
-	
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	if (ScanDirectionIsForward(dir))
 	{
 		if (++so->currPos.itemIndex > so->currPos.lastItem)
@@ -969,12 +938,7 @@ _bt_next(IndexScanDesc scan, ScanDirection dir)
 			Assert(BufferIsValid(so->currPos.buf));
 			LockBuffer(so->currPos.buf, BT_READ);
 			if (!_bt_steppage(scan, dir))
-			{
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
-				
 				return false;
-			}
 			/* Drop the lock, but not pin, on the new page */
 			LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
 		}
@@ -987,21 +951,12 @@ _bt_next(IndexScanDesc scan, ScanDirection dir)
 			Assert(BufferIsValid(so->currPos.buf));
 			LockBuffer(so->currPos.buf, BT_READ);
 			if (!_bt_steppage(scan, dir))
-			{
-				
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
-				
 				return false;
-			}
 			/* Drop the lock, but not pin, on the new page */
 			LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
 		}
 	}
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	/* OK, itemIndex says what to return */
 	scan->xs_ctup.t_self = so->currPos.items[so->currPos.itemIndex].heapTid;
 
@@ -1033,8 +988,6 @@ _bt_readpage(IndexScanDesc scan, ScanDirection dir, OffsetNumber offnum)
 	OffsetNumber maxoff;
 	int			itemIndex;
 	bool		continuescan;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	/* we must have the buffer pinned and locked */
 	Assert(BufferIsValid(so->currPos.buf));
@@ -1138,8 +1091,6 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 	Relation	rel;
 	Page		page;
 	BTPageOpaque opaque;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	/* we must have the buffer pinned and locked */
 	Assert(BufferIsValid(so->currPos.buf));
@@ -1269,8 +1220,6 @@ _bt_walk_left(Relation rel, Buffer buf)
 	Page		page;
 	BTPageOpaque opaque;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 
@@ -1390,8 +1339,6 @@ _bt_get_endpoint(Relation rel, uint32 level, bool rightmost)
 	BlockNumber blkno;
 	IndexTuple	itup;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	/*
 	 * If we are looking for a leaf page, okay to descend from fast root;
 	 * otherwise better descend from true root.  (There is no point in being
@@ -1467,8 +1414,6 @@ _bt_get_endpoint(Relation rel, uint32 level, bool rightmost)
 static bool
 _bt_endpoint(IndexScanDesc scan, ScanDirection dir)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	Relation	rel = scan->indexRelation;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Buffer		buf;
@@ -1481,19 +1426,11 @@ _bt_endpoint(IndexScanDesc scan, ScanDirection dir)
 	 * version of _bt_search().  We don't maintain a stack since we know we
 	 * won't need it.
 	 */
-	
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	buf = _bt_get_endpoint(rel, 0, ScanDirectionIsBackward(dir));
 
 	if (!BufferIsValid(buf))
 	{
 		/* empty index... */
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
 		so->currPos.buf = InvalidBuffer;
 		return false;
 	}
@@ -1548,21 +1485,12 @@ _bt_endpoint(IndexScanDesc scan, ScanDirection dir)
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		if (!_bt_steppage(scan, dir))
-		{
-
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
 			return false;
-		}
 	}
 
 	/* Drop the lock, but not pin, on the current page */
 	LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	/* OK, itemIndex says what to return */
 	scan->xs_ctup.t_self = so->currPos.items[so->currPos.itemIndex].heapTid;
 

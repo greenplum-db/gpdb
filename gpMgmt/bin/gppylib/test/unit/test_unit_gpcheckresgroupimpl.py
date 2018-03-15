@@ -160,11 +160,6 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.limit_in_bytes' does not exist"):
             self.cgroup.validate_all()
 
-    def test_when_memsw_limit_in_bytes_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "memory.memsw.limit_in_bytes"), 0100)
-        with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.memsw.limit_in_bytes' permission denied: require permission 'r'"):
-            self.cgroup.validate_all()
-
 
 if __name__ == '__main__':
     unittest.main()

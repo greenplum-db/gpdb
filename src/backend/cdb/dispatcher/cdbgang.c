@@ -98,7 +98,6 @@ static void disconnectAndDestroyAllReaderGangs(bool destroyAllocated);
 static bool isTargetPortal(const char *p1, const char *p2);
 static bool cleanupGang(Gang *gp);
 static void resetSessionForPrimaryGangLoss(void);
-static const char *gangTypeToString(GangType);
 static CdbComponentDatabaseInfo *copyCdbComponentDatabaseInfo(
 							 CdbComponentDatabaseInfo *dbInfo);
 static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
@@ -232,7 +231,9 @@ AllocateWriterGang()
 	{
 		if (!GangOK(primaryWriterGang))
 		{
-			elog(ERROR, "could not connect to segment: initialization of segworker group failed");
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("could not connect to segment: initialization of segworker group failed")));
 		}
 		else
 		{
@@ -473,13 +474,6 @@ buildGangDefinition(GangType type, int gang_id, int size, int content)
 		cdb_component_dbs->total_segment_dbs <= 0)
 		insist_log(false, "schema not populated while building segworker group");
 
-	/* if mirroring is not configured */
-	if (cdb_component_dbs->total_segment_dbs == cdb_component_dbs->total_segments)
-	{
-		ELOG_DISPATCHER_DEBUG("building Gang: mirroring not configured");
-		disableFTS();
-	}
-
 	perGangContext = AllocSetContextCreate(GangContext, "Per Gang Context",
 										   ALLOCSET_DEFAULT_MINSIZE,
 										   ALLOCSET_DEFAULT_INITSIZE,
@@ -670,13 +664,17 @@ makeOptions(void)
 	 */
 	if (DefaultXactIsoLevel != XACT_READ_COMMITTED)
 	{
-		if (DefaultXactIsoLevel == XACT_SERIALIZABLE)
+		if (DefaultXactIsoLevel == XACT_REPEATABLE_READ)
+			appendStringInfo(&string, " -c default_transaction_isolation=repeatable\\ read");
+		else if (DefaultXactIsoLevel == XACT_SERIALIZABLE)
 			appendStringInfo(&string, " -c default_transaction_isolation=serializable");
 	}
 
 	if (XactIsoLevel != XACT_READ_COMMITTED)
 	{
-		if (XactIsoLevel == XACT_SERIALIZABLE)
+		if (XactIsoLevel == XACT_REPEATABLE_READ)
+			appendStringInfo(&string, " -c transaction_isolation=repeatable\\ read");
+		else if (XactIsoLevel == XACT_SERIALIZABLE)
 			appendStringInfo(&string, " -c transaction_isolation=serializable");
 	}
 
@@ -1770,7 +1768,7 @@ int			gp_pthread_create(pthread_t *thread, void *(*start_routine) (void *),
 	return pthread_err;
 }
 
-static const char *
+const char *
 gangTypeToString(GangType type)
 {
 	const char *ret = "";

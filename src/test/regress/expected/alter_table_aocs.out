@@ -474,7 +474,7 @@ alter table addcol1_renamed alter column new_column set not null;
 alter table addcol1_renamed add column new_column2 int not null; -- should fail
 ERROR:  column "new_column2" contains null values
 select count(*) from addcol1_renamed;
- count
+ count 
 -------
     46
 (1 row)
@@ -486,14 +486,14 @@ alter table addcol1 rename column f to f_renamed;
 alter table addcol1 alter column f_renamed set default 10;
 select adsrc from pg_attrdef pdef, pg_attribute pattr
     where pdef.adrelid='addcol1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='f_renamed';
- adsrc
+ adsrc 
 -------
  10
 (1 row)
 
 insert into addcol1 values (999);
 select a, f_renamed from addcol1 where a = 999;
-  a  | f_renamed
+  a  | f_renamed 
 -----+-----------
  999 |        10
 (1 row)
@@ -501,13 +501,13 @@ select a, f_renamed from addcol1 where a = 999;
 -- try dropping and adding back the column
 alter table addcol1 drop column f_renamed;
 select attname from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
- attname
+ attname 
 ---------
 (0 rows)
 
 alter table addcol1 add column f_renamed int default 20;
 select a, f_renamed from addcol1 where a = 999;
-  a  | f_renamed
+  a  | f_renamed 
 -----+-----------
  999 |        20
 (1 row)
@@ -515,18 +515,18 @@ select a, f_renamed from addcol1 where a = 999;
 -- try altering statistics of a column
 alter table addcol1 alter column f_renamed set statistics 10000;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
- attstattarget
+ attstattarget 
 ---------------
-          10000
+         10000
 (1 row)
 
 set client_min_messages to error;
 alter table addcol1 alter column f_renamed set statistics 10001; -- should limit to 10000 and give warning
 set client_min_messages to notice;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
- attstattarget
+ attstattarget 
 ---------------
-          10000
+         10000
 (1 row)
 
 -- test alter distribution policy
@@ -542,28 +542,28 @@ alter table addcol1 add constraint tcheck check (a is not null);
 alter table addcol1 alter column f_renamed type varchar(7);
 alter table addcol1 alter column f_renamed set storage plain;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
-  attname  | attstorage
+  attname  | attstorage 
 -----------+------------
  f_renamed | p
 (1 row)
 
 alter table addcol1 alter column f_renamed set storage main;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
-  attname  | attstorage
+  attname  | attstorage 
 -----------+------------
  f_renamed | m
 (1 row)
 
 alter table addcol1 alter column f_renamed set storage external;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
-  attname  | attstorage
+  attname  | attstorage 
 -----------+------------
  f_renamed | e
 (1 row)
 
 alter table addcol1 alter column f_renamed set storage extended;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
-  attname  | attstorage
+  attname  | attstorage 
 -----------+------------
  f_renamed | x
 (1 row)
@@ -587,7 +587,7 @@ alter table alter_aocs_part_table split default partition start(7) inclusive end
 NOTICE:  dropped partition "foo" for relation "alter_aocs_part_table"
 select partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive, partitionisdefault
     from pg_partitions where tablename = 'alter_aocs_part_table';
- partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitionisdefault
+ partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitionisdefault 
 ---------------------+-------------------------+-------------------+-----------------------+--------------------
                      | f                       |                   | f                     | t
  2                   | t                       | 3                 | f                     | f
@@ -609,21 +609,21 @@ create table alter_aocs_ptable_exchange (a int, b int) with (appendonly=true, or
 insert into alter_aocs_ptable_exchange values (3,3), (3,3), (3,3);
 alter table alter_aocs_part_table truncate partition for (rank(2));
 select count(*) from alter_aocs_part_table;
- count
+ count 
 -------
      8
 (1 row)
 
 alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_ptable_exchange;
 select count(*) from alter_aocs_part_table;
- count
+ count 
 -------
     11
 (1 row)
 
 rollback work;
 select count(*) from alter_aocs_part_table;
- count
+ count 
 -------
      9
 (1 row)
@@ -646,7 +646,7 @@ alter table aocs_multi_level_part_table add partition part3 start(date '2010-01-
 -- Add default partition (defaults to heap storage unless set with AO)
 alter table aocs_multi_level_part_table add default partition yearYYYY (default subpartition def);
 select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count
+ count 
 -------
      0
 (1 row)
@@ -655,7 +655,7 @@ alter table aocs_multi_level_part_table drop partition yearYYYY;
 NOTICE:  dropped partition "yearyyyy" for relation "aocs_multi_level_part_table" and its children
 alter table aocs_multi_level_part_table add default partition yearYYYY with (appendonly=true, orientation=column) (default subpartition def);
 select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count
+ count 
 -------
      1
 (1 row)
@@ -663,21 +663,21 @@ select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_pr
 -- index on atts 1, 4
 create index ao_mlp_idx on aocs_multi_level_part_table(date, amount);
 select indexname from pg_indexes where tablename='aocs_multi_level_part_table';
- indexname
+ indexname  
 ------------
  ao_mlp_idx
 (1 row)
 
 alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
 select indexname from pg_indexes where tablename='aocs_multi_level_part_table';
-     indexname
+     indexname      
 --------------------
  ao_mlp_idx_renamed
 (1 row)
 
 -- truncate partitions until table is empty
 select * from aocs_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Utah    |  10.05
@@ -687,7 +687,7 @@ select * from aocs_multi_level_part_table;
 
 truncate aocs_multi_level_part_table_1_prt_part1_2_prt_asia;
 select * from aocs_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Utah    |  10.05
@@ -697,7 +697,7 @@ select * from aocs_multi_level_part_table;
 alter table aocs_multi_level_part_table truncate partition for (rank(1));
 NOTICE:  truncated partition "part1" for relation "aocs_multi_level_part_table" and its children
 select * from aocs_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2009 | usa    | Utah    |  10.05
  03-03-2009 | asia   | Japan   |   1.01
@@ -706,7 +706,7 @@ select * from aocs_multi_level_part_table;
 alter table aocs_multi_level_part_table alter partition part2 truncate partition usa;
 NOTICE:  truncated partition "usa" for partition "part2" of relation "aocs_multi_level_part_table"
 select * from aocs_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  03-03-2009 | asia   | Japan   |   1.01
 (1 row)
@@ -714,20 +714,20 @@ select * from aocs_multi_level_part_table;
 alter table aocs_multi_level_part_table truncate partition part2;
 NOTICE:  truncated partition "part2" for relation "aocs_multi_level_part_table" and its children
 select * from aocs_multi_level_part_table;
- date | region | region1 | amount
+ date | region | region1 | amount 
 ------+--------+---------+--------
 (0 rows)
 
 -- drop column in the partition table
 select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::regclass and attname = 'region1';
- count
+ count 
 -------
      1
 (1 row)
 
 alter table aocs_multi_level_part_table drop column region1;
 select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::regclass and attname = 'region1';
- count
+ count 
 -------
      0
 (1 row)

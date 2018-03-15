@@ -3,12 +3,12 @@
  * pl_handler.c		- Handler for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_handler.c,v 1.44 2009/02/18 11:33:04 petere Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_handler.c,v 1.51 2010/02/26 02:01:35 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
@@ -25,6 +26,17 @@
 
 PG_MODULE_MAGIC;
 
+/* Custom GUC variable */
+static const struct config_enum_entry variable_conflict_options[] = {
+	{"error", PLPGSQL_RESOLVE_ERROR, false},
+	{"use_variable", PLPGSQL_RESOLVE_VARIABLE, false},
+	{"use_column", PLPGSQL_RESOLVE_COLUMN, false},
+	{NULL, 0, false}
+};
+
+int			plpgsql_variable_conflict = PLPGSQL_RESOLVE_ERROR;
+
+/* Hook for plugins */
 PLpgSQL_plugin **plugin_ptr = NULL;
 
 
@@ -43,6 +55,17 @@ _PG_init(void)
 		return;
 
 	pg_bindtextdomain(TEXTDOMAIN);
+
+	DefineCustomEnumVariable("plpgsql.variable_conflict",
+							 gettext_noop("Sets handling of conflicts between PL/pgSQL variable names and table column names."),
+							 NULL,
+							 &plpgsql_variable_conflict,
+							 PLPGSQL_RESOLVE_ERROR,
+							 variable_conflict_options,
+							 PGC_SUSET, 0,
+							 NULL, NULL);
+
+	EmitWarningsOnPlaceholders("plpgsql");
 
 	plpgsql_HashTableInit();
 	RegisterXactCallback(plpgsql_xact_cb, NULL);
@@ -67,6 +90,7 @@ Datum
 plpgsql_call_handler(PG_FUNCTION_ARGS)
 {
 	PLpgSQL_function *func;
+	PLpgSQL_execstate *save_cur_estate;
 	Datum		retval;
 	int			rc;
 
@@ -78,6 +102,9 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 
 	/* Find or compile the function */
 	func = plpgsql_compile(fcinfo, false);
+
+	/* Must save and restore prior value of cur_estate */
+	save_cur_estate = func->cur_estate;
 
 	/* Mark the function as busy, so it can't be deleted from under us */
 	func->use_count++;
@@ -96,13 +123,16 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 	}
 	PG_CATCH();
 	{
-		/* Decrement use-count and propagate error */
+		/* Decrement use-count, restore cur_estate, and propagate error */
 		func->use_count--;
+		func->cur_estate = save_cur_estate;
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
 	func->use_count--;
+
+	func->cur_estate = save_cur_estate;
 
 	/*
 	 * Disconnect from SPI manager
@@ -140,7 +170,7 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
 		elog(ERROR, "SPI_connect failed: %s", SPI_result_code_string(rc));
 
 	/* Compile the anonymous code block */
-	func = plpgsql_compile_inline(fcinfo, codeblock->source_text);
+	func = plpgsql_compile_inline(codeblock->source_text);
 
 	/* Mark the function as busy, just pro forma */
 	func->use_count++;
@@ -201,9 +231,7 @@ plpgsql_validator(PG_FUNCTION_ARGS)
 		PG_RETURN_VOID();
 
 	/* Get the new function's pg_proc entry */
-	tuple = SearchSysCache(PROCOID,
-						   ObjectIdGetDatum(funcoid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
 	proc = (Form_pg_proc) GETSTRUCT(tuple);

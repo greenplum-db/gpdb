@@ -370,9 +370,9 @@ DROP TABLE IF EXISTS p3_sales;
 
 --
 -- Test statistics collection on very large datums. In the current implementation,
--- they are left out of the sample, to avoid running out of memory for the main relation 
+-- they are left out of the sample, to avoid running out of memory for the main relation
 -- statistics. In case of indexes on the relation, large datums are masked as NULLs in the sample
--- and are evaluated as NULL in index stats collection. 
+-- and are evaluated as NULL in index stats collection.
 -- Expression / partial indexes are not commonly used, and its rare to have them on wide columns, so the
 -- effect of considering them as NULL is minimal.
 --

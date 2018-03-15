@@ -335,18 +335,12 @@ select (select (select view_a)) from view_a;
 select (select (a.*)::text) from view_a a;
 
 --
--- Check that whole-row Vars reading the result of a subselect don't include
--- any junk columns therein
---
-
-select q from (select max(f1) from int4_tbl group by f1 order by f1) q
-  order by max;
-with q as (select max(f1) from int4_tbl group by f1 order by f1)
-  select q from q;
-
---
 -- Test case for sublinks pushed down into subselects via join alias expansion
 --
+-- Greenplum note: This query will only work with ORCA. This type of query
+-- was not supported in postgres versions prior to 8.4, and thus was never
+-- supported in the planner. After 8.4 versions, the planner works, but
+-- the plan it creates is not currently parallel safe.
 
 select
   (select sq1) as qq1
@@ -355,6 +349,16 @@ from
    from int8_tbl) sq0
   join
   int4_tbl i4 on dummy = i4.f1;
+
+--
+-- Check that whole-row Vars reading the result of a subselect don't include
+-- any junk columns therein
+--
+
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
 
 --
 -- Test case for cross-type partial matching in hashed subplan (bug #7597)
@@ -393,3 +397,13 @@ explain select * from int4_tbl o where (f1, f1) in
 select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
 reset enable_hashjoin;
+
+--
+-- check for over-optimization of whole-row Var referencing an Append plan
+--
+select (select q from
+         (select 1,2,3 where f1 > 0
+          union all
+          select 4,5,6.0 where f1 <= 0
+         ) q )
+from int4_tbl;

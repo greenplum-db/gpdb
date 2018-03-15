@@ -52,7 +52,7 @@ CREATE TABLE tenk_ao12 (like tenk_heap) with (appendonly=false,blocksize=8192);
 SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
        WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
 
--------------------- 
+--------------------
 -- fn needed later
 --------------------
 create  or replace function aototal(relname text) returns float8 as $$
@@ -322,6 +322,13 @@ SELECT oideq(oid,-1) FROM aowithoids; -- kind of stupid but checks that oid actu
 
 -- CREATE INDEX
 CREATE INDEX tenk_ao1_unique1 ON tenk_ao1 USING btree(unique1 int4_ops);
+
+-- Verify that the visimap and block-directory indexes have unique and
+-- primary key constraints on them
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'tenk_ao1') || '_index');
 
 drop table if exists ao;
 create table ao (i int, j int, k varchar) with(appendonly=true);

@@ -20,7 +20,6 @@ Flow *
 cdbpathtoplan_create_flow(PlannerInfo  *root,
                           CdbPathLocus  locus,
                           Relids        relids,
-                          List         *pathkeys,
                           Plan         *plan);
 
 Motion *

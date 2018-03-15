@@ -3,12 +3,12 @@
  * nbtinsert.c
  *	  Item insertion in Lehman and Yao btrees for Postgres.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtinsert.c,v 1.170 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtinsert.c,v 1.178 2010/03/28 09:27:01 sriggs Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,14 +51,16 @@ typedef struct
 static Buffer _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf);
 
 static TransactionId _bt_check_unique(Relation rel, IndexTuple itup,
-				 Relation heapRel, Buffer buf, OffsetNumber ioffset,
-				 ScanKey itup_scankey);
+				 Relation heapRel, Buffer buf, OffsetNumber offset,
+				 ScanKey itup_scankey,
+				 IndexUniqueCheck checkUnique, bool *is_unique);
 static void _bt_findinsertloc(Relation rel,
 				  Buffer *bufptr,
 				  OffsetNumber *offsetptr,
 				  int keysz,
 				  ScanKey scankey,
-				  IndexTuple newtup);
+				  IndexTuple newtup,
+				  Relation heapRel);
 static void _bt_insertonpg(Relation rel, Buffer buf,
 			   BTStack stack,
 			   IndexTuple itup,
@@ -78,7 +80,7 @@ static bool _bt_pgaddtup(Page page, Size itemsize, IndexTuple itup,
 			 OffsetNumber itup_off);
 static bool _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
 			int keysz, ScanKey scankey);
-static void _bt_vacuum_one_page(Relation rel, Buffer buffer);
+static void _bt_vacuum_one_page(Relation rel, Buffer buffer, Relation heapRel);
 
 
 /*
@@ -86,13 +88,24 @@ static void _bt_vacuum_one_page(Relation rel, Buffer buffer);
  *
  *		This routine is called by the public interface routines, btbuild
  *		and btinsert.  By here, itup is filled in, including the TID.
+ *
+ *		If checkUnique is UNIQUE_CHECK_NO or UNIQUE_CHECK_PARTIAL, this
+ *		will allow duplicates.	Otherwise (UNIQUE_CHECK_YES or
+ *		UNIQUE_CHECK_EXISTING) it will throw error for a duplicate.
+ *		For UNIQUE_CHECK_EXISTING we merely run the duplicate check, and
+ *		don't actually insert.
+ *
+ *		The result value is only significant for UNIQUE_CHECK_PARTIAL:
+ *		it must be TRUE if the entry is known unique, else FALSE.
+ *		(In the current implementation we'll also return TRUE after a
+ *		successful UNIQUE_CHECK_YES or UNIQUE_CHECK_EXISTING call, but
+ *		that's just a coding artifact.)
  */
-void
+bool
 _bt_doinsert(Relation rel, IndexTuple itup,
-			 bool index_is_unique, Relation heapRel)
+			 IndexUniqueCheck checkUnique, Relation heapRel)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
+	bool		is_unique = false;
 	int			natts = rel->rd_rel->relnatts;
 	ScanKey		itup_scankey;
 	BTStack		stack;
@@ -103,9 +116,6 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	itup_scankey = _bt_mkscankey(rel, itup);
 
 top:
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	/* find the first page containing this key */
 	stack = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE);
 
@@ -140,13 +150,18 @@ top:
 	 *
 	 * If we must wait for another xact, we release the lock while waiting,
 	 * and then must start over completely.
+	 *
+	 * For a partial uniqueness check, we don't wait for the other xact. Just
+	 * let the tuple in and return false for possibly non-unique, or true for
+	 * definitely unique.
 	 */
-	if (index_is_unique)
+	if (checkUnique != UNIQUE_CHECK_NO)
 	{
 		TransactionId xwait;
 
 		offset = _bt_binsrch(rel, buf, natts, itup_scankey, false);
-		xwait = _bt_check_unique(rel, itup, heapRel, buf, offset, itup_scankey);
+		xwait = _bt_check_unique(rel, itup, heapRel, buf, offset, itup_scankey,
+								 checkUnique, &is_unique);
 
 		if (TransactionIdIsValid(xwait))
 		{
@@ -157,7 +172,6 @@ top:
 			 * the lock in XactLockTableWait and a cancellation is requested,
 			 * we should be able to respond it.
 			 */
-			MIRROREDLOCK_BUFMGR_UNLOCK;
 			XactLockTableWait(xwait);
 			/* start over... */
 			_bt_freestack(stack);
@@ -165,16 +179,23 @@ top:
 		}
 	}
 
-	/* do the insertion */
-	_bt_findinsertloc(rel, &buf, &offset, natts, itup_scankey, itup);
-	_bt_insertonpg(rel, buf, stack, itup, offset, false);
+	if (checkUnique != UNIQUE_CHECK_EXISTING)
+	{
+		/* do the insertion */
+		_bt_findinsertloc(rel, &buf, &offset, natts, itup_scankey, itup, heapRel);
+		_bt_insertonpg(rel, buf, stack, itup, offset, false);
+	}
+	else
+	{
+		/* just release the buffer */
+		_bt_relbuf(rel, buf);
+	}
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
 	/* be tidy */
 	_bt_freestack(stack);
 	_bt_freeskey(itup_scankey);
+
+	return is_unique;
 }
 
 /*
@@ -266,10 +287,16 @@ _bt_ao_check_unique(Relation rel, Relation aoRel, ItemPointer tid)
  * Returns InvalidTransactionId if there is no conflict, else an xact ID
  * we must wait for to see if it commits a conflicting tuple.	If an actual
  * conflict is detected, no return --- just ereport().
+ *
+ * However, if checkUnique == UNIQUE_CHECK_PARTIAL, we always return
+ * InvalidTransactionId because we don't want to wait.  In this case we
+ * set *is_unique to false if there is a potential conflict, and the
+ * core code must redo the uniqueness check later.
  */
 static TransactionId
 _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
-				 Buffer buf, OffsetNumber offset, ScanKey itup_scankey)
+				 Buffer buf, OffsetNumber offset, ScanKey itup_scankey,
+				 IndexUniqueCheck checkUnique, bool *is_unique)
 {
 	TupleDesc	itupdesc = RelationGetDescr(rel);
 	int			natts = rel->rd_rel->relnatts;
@@ -278,8 +305,10 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 	Page		page;
 	BTPageOpaque opaque;
 	Buffer		nbuf = InvalidBuffer;
+	bool		found = false;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
+	/* Assume unique until we find a duplicate */
+	*is_unique = true;
 
 	InitDirtySnapshot(SnapshotDirty);
 
@@ -352,21 +381,47 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 					htid = curitup->t_tid;
 
 					/*
+					 * If we are doing a recheck, we expect to find the tuple we
+					 * are rechecking.  It's not a duplicate, but we have to keep
+					 * scanning.
+					 */
+					if (checkUnique == UNIQUE_CHECK_EXISTING &&
+						ItemPointerCompare(&htid, &itup->t_tid) == 0)
+					{
+						found = true;
+					}
+
+					/*
 					 * We check the whole HOT-chain to see if there is any tuple
 					 * that satisfies SnapshotDirty.  This is necessary because we
 					 * have just a single index entry for the entire chain.
 					 */
-					if (heap_hot_search(&htid, heapRel, &SnapshotDirty, &all_dead))
+					else if (heap_hot_search(&htid, heapRel, &SnapshotDirty, &all_dead))
 					{
-						/* it is a duplicate */
-						TransactionId xwait =
-							(TransactionIdIsValid(SnapshotDirty.xmin)) ?
-							SnapshotDirty.xmin : SnapshotDirty.xmax;
-						
+						TransactionId xwait;
+
+						/*
+						 * It is a duplicate. If we are only doing a partial
+						 * check, then don't bother checking if the tuple is being
+						 * updated in another transaction. Just return the fact
+						 * that it is a potential conflict and leave the full
+						 * check till later.
+						 */
+						if (checkUnique == UNIQUE_CHECK_PARTIAL)
+						{
+							if (nbuf != InvalidBuffer)
+								_bt_relbuf(rel, nbuf);
+							*is_unique = false;
+							return InvalidTransactionId;
+						}
+
 						/*
 						 * If this tuple is being updated by other transaction
 						 * then we have to wait for its commit/abort.
 						 */
+						xwait = (TransactionIdIsValid(SnapshotDirty.xmin)) ?
+							SnapshotDirty.xmin : SnapshotDirty.xmax;
+
 						if (TransactionIdIsValid(xwait))
 						{
 							if (nbuf != InvalidBuffer)
@@ -407,12 +462,12 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 						}
 
 						/*
-						 * This is a definite conflict.  Break the tuple down
-						 * into datums and report the error.  But first, make
-						 * sure we release the buffer locks we're holding ---
+						 * This is a definite conflict.  Break the tuple down into
+						 * datums and report the error.  But first, make sure we
+						 * release the buffer locks we're holding ---
 						 * BuildIndexValueDescription could make catalog accesses,
-						 * which in the worst case might touch this same index
-						 * and cause deadlocks.
+						 * which in the worst case might touch this same index and
+						 * cause deadlocks.
 						 */
 						if (nbuf != InvalidBuffer)
 							_bt_relbuf(rel, nbuf);
@@ -483,6 +538,18 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 		}
 	}
 
+	/*
+	 * If we are doing a recheck then we should have found the tuple we are
+	 * checking.  Otherwise there's something very wrong --- probably, the
+	 * index is on a non-immutable expression.
+	 */
+	if (checkUnique == UNIQUE_CHECK_EXISTING && !found)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("failed to re-find tuple within index \"%s\"",
+						RelationGetRelationName(rel)),
+		errhint("This may be because of a non-immutable index expression.")));
+
 	if (nbuf != InvalidBuffer)
 		_bt_relbuf(rel, nbuf);
 
@@ -525,7 +592,8 @@ _bt_findinsertloc(Relation rel,
 				  OffsetNumber *offsetptr,
 				  int keysz,
 				  ScanKey scankey,
-				  IndexTuple newtup)
+				  IndexTuple newtup,
+				  Relation heapRel)
 {
 	Buffer		buf = *bufptr;
 	Page		page = BufferGetPage(buf);
@@ -552,9 +620,10 @@ _bt_findinsertloc(Relation rel,
 	if (itemsz > BTMaxItemSize(page))
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("index row size %lu exceeds btree maximum, %lu",
-						(unsigned long) itemsz,
-						(unsigned long) BTMaxItemSize(page)),
+			errmsg("index row size %lu exceeds maximum %lu for index \"%s\"",
+				   (unsigned long) itemsz,
+				   (unsigned long) BTMaxItemSize(page),
+				   RelationGetRelationName(rel)),
 		errhint("Values larger than 1/3 of a buffer page cannot be indexed.\n"
 				"Consider a function index of an MD5 hash of the value, "
 				"or use full text indexing.")));
@@ -589,7 +658,7 @@ _bt_findinsertloc(Relation rel,
 		 */
 		if (P_ISLEAF(lpageop) && P_HAS_GARBAGE(lpageop))
 		{
-			_bt_vacuum_one_page(rel, buf);
+			_bt_vacuum_one_page(rel, buf, heapRel);
 
 			/*
 			 * remember that we vacuumed this page, because that makes the
@@ -698,14 +767,6 @@ _bt_insertonpg(Relation rel,
 	BTPageOpaque lpageop;
 	OffsetNumber firstright = InvalidOffsetNumber;
 	Size		itemsz;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
-	/*
-	 * Fetch gp_persistent_relation_node information that will be added to XLOG
-	 * record.
-	 */
-	RelationFetchGpRelationNodeForXLog(rel);
 
 	page = BufferGetPage(buf);
 	lpageop = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -817,7 +878,8 @@ _bt_insertonpg(Relation rel,
 			XLogRecData *nextrdata;
 			IndexTupleData trunctuple;
 
-			xl_btreetid_set(&(xlrec.target), rel, itup_blkno, itup_off);
+			xlrec.target.node = rel->rd_node;
+			ItemPointerSet(&(xlrec.target.tid), itup_blkno, itup_off);
 
 			rdata[0].data = (char *) &xlrec;
 			rdata[0].len = SizeOfBtreeInsert;
@@ -933,14 +995,6 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 	OffsetNumber maxoff;
 	OffsetNumber i;
 	bool		isroot;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
-	/*
-	 * Fetch gp_persistent_relation_node information that will be added to
-	 * XLOG record.
-	 */
-	RelationFetchGpRelationNodeForXLog(rel);
 
 	/* Acquire a new page to split into */
 	rbuf = _bt_getbuf(rel, P_NEW, BT_WRITE);
@@ -1232,9 +1286,6 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 		xlrec.rnext = ropaque->btpo_next;
 		xlrec.level = ropaque->btpo.level;
 		xlrec.firstright = firstright;
-
-		/* Set persistentTid and persistentSerialNum like xl_btreetid_set() does */
-		RelationGetPTInfo(rel, &xlrec.persistentTid, &xlrec.persistentSerialNum);
 
 		rdata[0].data = (char *) &xlrec;
 		rdata[0].len = SizeOfBtreeSplit;
@@ -1657,8 +1708,6 @@ _bt_insert_parent(Relation rel,
 				  bool is_root,
 				  bool is_only)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	/*
 	 * Here we have to do something Lehman and Yao don't talk about: deal with
 	 * a root split and construction of a new root.  If our stack is empty
@@ -1770,8 +1819,6 @@ _bt_getstackbuf(Relation rel, BTStack stack, int access)
 {
 	BlockNumber blkno;
 	OffsetNumber start;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	blkno = stack->bts_blkno;
 	start = stack->bts_offset;
@@ -1898,11 +1945,6 @@ _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 	Page		metapg;
 	BTMetaPageData *metad;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	lbkno = BufferGetBlockNumber(lbuf);
 	rbkno = BufferGetBlockNumber(rbuf);
 	lpage = BufferGetPage(lbuf);
@@ -1989,7 +2031,7 @@ _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 		XLogRecPtr	recptr;
 		XLogRecData rdata[2];
 
-		xl_btreenode_set(&(xlrec.btreenode), rel);
+		xlrec.node = rel->rd_node;
 		xlrec.rootblk = rootblknum;
 		xlrec.level = metad->btm_level;
 
@@ -2120,7 +2162,7 @@ _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
  * super-exclusive "cleanup" lock (see nbtree/README).
  */
 static void
-_bt_vacuum_one_page(Relation rel, Buffer buffer)
+_bt_vacuum_one_page(Relation rel, Buffer buffer, Relation heapRel)
 {
 	OffsetNumber deletable[MaxOffsetNumber];
 	int			ndeletable = 0;
@@ -2147,7 +2189,7 @@ _bt_vacuum_one_page(Relation rel, Buffer buffer)
 	}
 
 	if (ndeletable > 0)
-		_bt_delitems(rel, buffer, deletable, ndeletable, false);
+		_bt_delitems_delete(rel, buffer, deletable, ndeletable, heapRel);
 
 	/*
 	 * Note: if we didn't find any LP_DEAD items, then the page's

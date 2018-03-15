@@ -32,7 +32,7 @@
 #include "utils/guc.h"
 #include "access/appendonlytid.h"
 #include "cdb/cdbappendonlystorage.h"
-#include "cdb/cdbmirroredappendonly.h"
+#include "cdb/cdbappendonlyxlog.h"
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -129,55 +129,40 @@ MakeAOSegmentFileName(
  * The fd module's PathNameOpenFile() is used to open the file, so the
  * the File* routines can be used to read, write, close, etc, the file.
  */
-bool
-OpenAOSegmentFile(
-					Relation rel, 
-					char *filepathname, 
+File
+OpenAOSegmentFile(Relation rel, 
+				  char *filepathname, 
 				  int32	segmentFileNum,
-				  int64	logicalEof,
-				  MirroredAppendOnlyOpen *mirroredOpen)
+				  int64	logicalEof)
 {	
-	ItemPointerData persistentTid;
-	int64 persistentSerialNum;
+	char	   *dbPath;
+	char		path[MAXPGPATH];
+	int			fileFlags = O_RDWR | PG_BINARY;
+	File		fd;
 
-	int primaryError;
+	dbPath = GetDatabasePath(rel->rd_node.dbNode, rel->rd_node.spcNode);
 
-	if (!ReadGpRelationNode(
-			rel->rd_rel->reltablespace,
-			rel->rd_rel->relfilenode,
-			segmentFileNum,
-			&persistentTid,
-			&persistentSerialNum))
+	if (segmentFileNum == 0)
+		snprintf(path, MAXPGPATH, "%s/%u", dbPath, rel->rd_node.relNode);
+	else
+		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, rel->rd_node.relNode, segmentFileNum);
+
+	errno = 0;
+
+	fd = PathNameOpenFile(path, fileFlags, 0600);
+	if (fd < 0)
 	{
-		if (logicalEof == 0)
-			return false;
+		if (logicalEof == 0 && errno == ENOENT)
+			return -1;
 
-		elog(ERROR, "Did not find gp_relation_node entry for relation name %s, relation id %u, relfilenode %u, segment file #%d, logical eof " INT64_FORMAT,
-			 rel->rd_rel->relname.data,
-			 rel->rd_id,
-			 rel->rd_node.relNode,
-			 segmentFileNum,
-			 logicalEof);
-	}
-
-	MirroredAppendOnly_OpenReadWrite(
-							mirroredOpen, 
-							&rel->rd_node,
-							segmentFileNum,
-							/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-							logicalEof,
-							/* traceOpenFlags */ false,
-							&persistentTid,
-							persistentSerialNum,
-							&primaryError);
-	if (primaryError != 0)
 		ereport(ERROR,
-			   (errcode_for_file_access(),
-			    errmsg("Could not open Append-Only segment file '%s': %s",
-					   filepathname,
-					   strerror(primaryError))));
+				(errcode_for_file_access(),
+				 errmsg("could not open Append-Only segment file \"%s\": %m",
+						filepathname)));
+	}
+	pfree(dbPath);
 
-	return true;
+	return fd;
 }
 
 
@@ -185,47 +170,30 @@ OpenAOSegmentFile(
  * Close an Append Only relation file segment
  */
 void
-CloseAOSegmentFile(MirroredAppendOnlyOpen *mirroredOpen)
+CloseAOSegmentFile(File fd)
 {
-	bool mirrorDataLossOccurred;	// UNDONE: We need to do something now...
-
-	Assert(mirroredOpen->primaryFile > 0);
-	
-	MirroredAppendOnly_Close(
-						mirroredOpen,
-						&mirrorDataLossOccurred);
+	FileClose(fd);
 }
 
 /*
  * Truncate all bytes from offset to end of file.
  */
 void
-TruncateAOSegmentFile(MirroredAppendOnlyOpen *mirroredOpen, Relation rel, int64 offset)
+TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 {
-	int primaryError;
-	bool mirrorDataLossOccurred;	// We'll look at this at close time.
-
 	char *relname = RelationGetRelationName(rel);
-	
-	Assert(mirroredOpen->primaryFile > 0);
+
+	Assert(fd > 0);
 	Assert(offset >= 0);
 
 	/*
 	 * Call the 'fd' module with a 64-bit length since AO segment files
 	 * can be multi-gigabyte to the terabytes...
 	 */
-	MirroredAppendOnly_Truncate(
-							mirroredOpen,
-							offset,
-							&primaryError,
-							&mirrorDataLossOccurred);
-	if (primaryError != 0)
+	if (FileTruncate(fd, offset) != 0)
 		ereport(ERROR,
-				(errmsg("\"%s\": failed to truncate data after eof: %s", 
-					    relname,
-					    strerror(primaryError))));
-#ifdef USE_SEGWALREP
+				(errmsg("\"%s\": failed to truncate data after eof: %m",
+					    relname)));
 	if (!rel->rd_istemp)
-		xlog_ao_truncate(mirroredOpen, offset);
-#endif
+		xlog_ao_truncate(rel->rd_node, segFileNum, offset);
 }

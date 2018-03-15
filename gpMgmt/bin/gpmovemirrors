@@ -24,7 +24,7 @@ try:
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
     from gppylib import gparray, gplog, pgconf, userinput, utils
-    from gppylib.parseutils import line_reader, parse_filespace_order, parse_gpmovemirrors_line, \
+    from gppylib.parseutils import line_reader, parse_gpmovemirrors_line, \
         canonicalize_address
 
 except ImportError, e:
@@ -48,8 +48,7 @@ EXECNAME = os.path.split(__file__)[-1]
 _help = ["""
 The input file should be a plain text file with the format:
 
-  filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
-  <old_address>:<port>:<system_filespace_location> <new_address:port>:<replication_port>:<system_filespace_location>[:<fselocation>:...]
+  <old_address>:<port>:<datadir> <new_address:port>:<datadir>
 
 """,
          """
@@ -177,17 +176,6 @@ def lookupGpdb(address, port, dataDirectory):
 
 
 # -------------------------------------------------------------------------
-def lookupReplicatonPort(gpdb):
-    """ Look up the segment's replication port associated with the input parameters. """
-
-    retValue = None
-    if gpdb != None:
-        retValue = gpdb.getSegmentReplicationPort()
-
-    return retValue
-
-
-# -------------------------------------------------------------------------
 def lookupFilespaces(gpdb):
     """ Look up the segment's filespaces, and return map of filespace name : location. """
 
@@ -208,19 +196,16 @@ def lookupFilespaces(gpdb):
 class Mirror:
     """ This class represents information about a mirror. """
 
-    def __init__(self, address, port, replicationPort, dataDirectory, filespaces):
+    def __init__(self, address, port, dataDirectory, filespaces):
         self.address = address
         self.port = port
-        self.replicationPort = replicationPort
         self.dataDirectory = dataDirectory
         self.filespaces = filespaces
 
     def __str__(self):
         tempStr = "address = " + str(self.address) + '\n'
         tempStr = tempStr + "port = " + str(self.port) + '\n'
-        tempStr = tempStr + "replicationPort = " + str(self.replicationPort) + '\n'
         tempStr = tempStr + "dataDirectory   = " + str(self.dataDirectory) + '\n'
-        tempStr = tempStr + "filespaces      = " + str(self.filespaces)
         return tempStr
 
 
@@ -239,16 +224,10 @@ class Configuration:
     def read_input_file(self, inputFile):
         self.inputFile = inputFile
 
-        fslist = None
         with open(inputFile) as f:
 
             for lineno, line in line_reader(f):
-                if fslist is None:
-                    fslist = parse_filespace_order(inputFile, lineno, line)
-                    self.filespaceNames = fslist
-                    continue
-
-                rowMap, newFilespaces = parse_gpmovemirrors_line(inputFile, lineno, line, fslist)
+                rowMap, newFilespaces = parse_gpmovemirrors_line(inputFile, lineno, line)
 
                 oldAddress = rowMap['oldAddress']
                 oldPort = rowMap['oldPort']
@@ -263,11 +242,9 @@ class Configuration:
                         raise Exception(
                             "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
                             % (oldAddress, str(oldPort), oldDataDirectory))
-                oldReplicationPort = lookupReplicatonPort(oldGpdb)
                 oldFilespaces = lookupFilespaces(oldGpdb)
                 oldMirror = Mirror(address=oldAddress
                                    , port=oldPort
-                                   , replicationPort=oldReplicationPort
                                    , dataDirectory=oldDataDirectory
                                    , filespaces=oldFilespaces
                                    )
@@ -275,10 +252,8 @@ class Configuration:
                 newAddress = rowMap['newAddress']
                 newPort = rowMap['newPort']
                 newDataDirectory = rowMap['newDataDirectory']
-                newReplicationPort = rowMap['newReplicationPort']
                 newMirror = Mirror(address=newAddress
                                    , port=newPort
-                                   , replicationPort=newReplicationPort
                                    , dataDirectory=newDataDirectory
                                    , filespaces=newFilespaces
                                    )
@@ -287,12 +262,6 @@ class Configuration:
     def write_output_file(self, filename, oldToNew=True):
         """ Write out the configuration in a format appropriate for use with the -i option. """
         fp = open(filename, 'w')
-
-        """ Set the first line up for the filespaceOrder entry. """
-        fsString = ":".join(self.filespaceNames)
-        line = "filespaceOrder=" + fsString
-        line = line + '\n'
-        fp.write(line)
 
         if oldToNew == True:
             firstList = self.oldMirrorList
@@ -307,9 +276,7 @@ class Configuration:
                    ":" + str(oldEntry.port) + ":" + oldEntry.dataDirectory
             line = line + " "
             line = line + canonicalize_address(newEntry.address) + \
-                   ":" + str(newEntry.port) + ":" + str(newEntry.replicationPort) + ":" + newEntry.dataDirectory
-            for fsName in self.filespaceNames:
-                line = line + ":" + newEntry.filespaces[fsName]
+                   ":" + str(newEntry.port) + ":" + newEntry.dataDirectory
             line = line + '\n'
             fp.write(line)
 
@@ -398,8 +365,7 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    fileSpacesObjList = gpArrayInstance.getFilespaces(includeSystemFilespace=False)
-    totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
+    totalDirsToDelete = len(newConfig.oldMirrorList)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
     if numberOfWorkers > 1:
         pool = WorkerPool(numWorkers=numberOfWorkers)

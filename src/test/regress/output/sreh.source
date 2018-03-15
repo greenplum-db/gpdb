@@ -53,7 +53,14 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 -- error logs
 --
 DROP TABLE IF EXISTS sreh_copy; CREATE TABLE sreh_copy(a int, b int, c int) distributed by(a);
-COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS SEGMENT REJECT LIMIT 1000;
+COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;
+ERROR:  Error table is not supported.
+LINE 1: ...ess/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATE...
+                                                             ^
+HINT:  Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility.
+SET gp_ignore_error_table=true;
+COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;
+WARNING:  Error table is not supported, use gp_read_error_log() and gp_truncate_error_log() to view and manage the internal error log associated with your table.
 NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
 SELECT * FROM sreh_copy ORDER BY a,b,c;
  a  | b  | c  
@@ -97,46 +104,46 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 SELECT linenum, rawdata FROM gp_read_error_log('sreh_copy') ORDER BY linenum;
  linenum | rawdata 
 ---------+---------
-       2 | 2       
-         : 
-       2 | 2       
-         : 
-       3 | 3|      
-         : 
-       3 | 3|      
-         : 
-       4 | 4|4|4|4 
-         : 
-       4 | 4|4|4|4 
-         : 
-       7 | 7|7|bad 
-         : 
-       7 | 7|7|bad 
-         : 
-       8 | bad|8|8 
-         : 
-       8 | bad|8|8 
-         : 
-      11 | eleven  
-         : 
-      11 | eleven  
-         : 
-      12 | 12||||  
-         : 
-      12 | 12||||  
-         : 
-      13 | 13|,13, 
-         : 
-      13 | 13|,13, 
-         : 
-      15 | 15      
-         : 
-      15 | 15      
-         : 
-      16 | sixteen 
-         : 
-      16 | sixteen 
-         : 
+       2 | 2      +
+         | 
+       2 | 2      +
+         | 
+       3 | 3|     +
+         | 
+       3 | 3|     +
+         | 
+       4 | 4|4|4|4+
+         | 
+       4 | 4|4|4|4+
+         | 
+       7 | 7|7|bad+
+         | 
+       7 | 7|7|bad+
+         | 
+       8 | bad|8|8+
+         | 
+       8 | bad|8|8+
+         | 
+      11 | eleven +
+         | 
+      11 | eleven +
+         | 
+      12 | 12|||| +
+         | 
+      12 | 12|||| +
+         | 
+      13 | 13|,13,+
+         | 
+      13 | 13|,13,+
+         | 
+      15 | 15     +
+         | 
+      15 | 15     +
+         | 
+      16 | sixteen+
+         | 
+      16 | sixteen+
+         | 
 (20 rows)
 
 --
@@ -293,10 +300,10 @@ FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2;
 SELECT * FROM sreh_ext ORDER BY a;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "c"  (seg1 slice1 @hostname@:11002 pid=68457)
-DETAIL:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
+CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 INSERT INTO sreh_target SELECT * FROM sreh_ext;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "c"  (seg1 slice1 @hostname@:11002 pid=68459)
-DETAIL:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
+CONTEXT:  External table sreh_ext, line 3 of gpfdist://@hostname@:8080/bad_data1.data: "3|"
 SELECT count(*) FROM sreh_target;
  count 
 -------
@@ -308,6 +315,30 @@ DROP EXTERNAL TABLE sreh_ext;
 -- 
 -- error logs
 --
+CREATE EXTERNAL TABLE sreh_ext_err_tbl(a int, b int, c int)
+LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )
+FORMAT 'text' (delimiter '|')
+LOG ERRORS INTO WHATEVER
+SEGMENT REJECT LIMIT 1000;
+WARNING:  Error table is not supported, use gp_read_error_log() and gp_truncate_error_log() to view and manage the internal error log associated with your table.
+SELECT * FROM sreh_ext_err_tbl ORDER BY a;
+NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+ a  | b  | c  
+----+----+----
+  1 |  1 |  1
+  5 |  5 |  5
+  6 |  6 |  6
+  9 |  9 |  9
+ 10 | 10 | 10
+ 14 | 14 | 14
+(6 rows)
+
+WITH error_log AS (SELECT gp_read_error_log('sreh_ext_err_tbl')) select count(*) from error_log;
+ count 
+-------
+    10
+(1 row)
+
 CREATE EXTERNAL TABLE sreh_ext(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data1.data' )
 FORMAT 'text' (delimiter '|')
@@ -400,6 +431,7 @@ SELECT count(*) FROM sreh_target;
 
 TRUNCATE sreh_target;
 DROP EXTERNAL TABLE sreh_ext;
+DROP EXTERNAL TABLE sreh_ext_err_tbl;
 --
 -- constraint errors - data is rolled back from both target and error tables (CHECK)
 --
@@ -451,14 +483,14 @@ FORMAT 'text' (delimiter '|')
 SEGMENT REJECT LIMIT 2 PERCENT;
 SELECT count(*) FROM sreh_ext_2percent; -- fail
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
-DETAIL:  External table sreh_ext_2percent, line 107 of gpfdist://@hostname@:8080/bad_data3.data, column a
+CONTEXT:  External table sreh_ext_2percent, line 107 of gpfdist://@hostname@:8080/bad_data3.data, column a
 --
 -- test PERCENT reject limit logic with custom threshold 10 (only practical for test purposes)
 --
 set gp_reject_percent_threshold = 10;
 SELECT count(*) FROM sreh_ext_10percent; -- fail
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "BAD", column a  (seg0 slice1 @hostname@:11001 pid=68456)
-DETAIL:  External table sreh_ext_10percent, line 15 of gpfdist://@hostname@:8080/bad_data3.data, column a
+CONTEXT:  External table sreh_ext_10percent, line 15 of gpfdist://@hostname@:8080/bad_data3.data, column a
 CREATE EXTERNAL TABLE sreh_ext_20percent(a int, b int, c int)
 LOCATION ('gpfdist://@hostname@:8080/bad_data3.data' )
 FORMAT 'text' (delimiter '|')

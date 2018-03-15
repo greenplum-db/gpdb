@@ -1,6 +1,0 @@
-set client_min_messages=WARNING;
-drop table if exists xheap;
-CREATE TABLE xheap(a, b, c) as select 1, i, repeat('x', 1000) from generate_series(1, 100)i;
-delete from xheap where b between 0 and 50;
-vacuum full xheap;
-select count(*) from xheap where b > 100;

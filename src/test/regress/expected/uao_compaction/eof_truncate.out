@@ -11,14 +11,14 @@ SET gp_appendonly_compaction=false;
 SELECT COUNT(*) FROM uao_eof_truncate;
  count 
 -------
-1000
+  1000
 (1 row)
 
 VACUUM uao_eof_truncate;
 SELECT COUNT(*) FROM uao_eof_truncate;
  count 
 -------
-1000
+  1000
 (1 row)
 
 -- Insert afterwards
@@ -26,6 +26,6 @@ INSERT INTO uao_eof_truncate SELECT i as a, 1 as b, 'hello world' as c FROM gene
 SELECT COUNT(*) FROM uao_eof_truncate;
  count 
 -------
-1010
+  1010
 (1 row)
 

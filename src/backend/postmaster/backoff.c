@@ -25,6 +25,7 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres.h"
 
 #include "postmaster/backoff.h"
 #include "postmaster/fork_process.h"
@@ -54,6 +55,7 @@
 #include "tcop/tcopprot.h"
 #include "storage/pmsignal.h"	/* PostmasterIsAlive */
 #include "catalog/pg_database.h"
+#include "catalog/pg_resourcetype.h"
 #include "catalog/pg_resqueue.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"

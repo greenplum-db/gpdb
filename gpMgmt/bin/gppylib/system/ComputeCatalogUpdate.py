@@ -103,7 +103,7 @@ class ComputeCatalogUpdate:
             if dbid in forceMap:
                 removeandaddmap[dbid] = seg
                 continue
-            if not seg.equalIgnoringModeAndStatusAndReplicationPort(self.dbsegmap[dbid]):
+            if not seg.equalIgnoringModeAndStatus(self.dbsegmap[dbid]):
                 removeandaddmap[dbid] = seg
                 continue
 
@@ -252,10 +252,8 @@ if __name__ == '__main__':
         def getSegmentMode(self):                  return self.mode
         def getSegmentRole(self):                  return self.role
         def getSegmentStatus(self):                return self.status
-        def getSegmentReplicationPort(self):       return self.rport
         def setSegmentMode(self,mode):             self.mode = mode
         def setSegmentStatus(self,status):         self.status = status
-        def setSegmentReplicationPort(self,rport): self.rport = rport
         def isSegmentPrimary(self, current_role=False):
             role = self.role if current_role else self.preferred_role
             return self.content >= 0 and role == ROLE_PRIMARY
@@ -271,11 +269,10 @@ if __name__ == '__main__':
         def __cmp__(self,other):                   return cmp(repr(self), repr(other))
         def __repr__(s): 
             return '(%s,%s,%s,%s,%s,%s,%s,%s)' % (s.dbid, s.content, s.preferred_role, s.mode, s.role, s.status, s.rport, s.misc)
-        def equalIgnoringModeAndStatusAndReplicationPort(self, other):
+        def equalIgnoringModeAndStatus(self, other):
             tmp = copy.copy(self)
             tmp.setSegmentMode( other.getSegmentMode() )
             tmp.setSegmentStatus( other.getSegmentStatus() )
-            tmp.setSegmentReplicationPort( other.getSegmentReplicationPort() )
             return tmp == other
 
     class xxx:

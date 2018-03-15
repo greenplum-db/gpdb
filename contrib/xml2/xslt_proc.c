@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/xml2/xslt_proc.c,v 1.15 2009/06/11 14:48:53 momjian Exp $
+ * $PostgreSQL: pgsql/contrib/xml2/xslt_proc.c,v 1.21 2010/07/06 19:18:55 momjian Exp $
  *
  * XSLT processing functions (requiring libxslt)
  *
@@ -40,16 +40,12 @@ Datum		xslt_process(PG_FUNCTION_ARGS);
 #ifdef USE_LIBXSLT
 
 /* declarations to come from xpath.c */
-extern void elog_error(int level, char *explain, int force);
 extern void pgxml_parser_init(void);
-extern xmlChar *pgxml_texttoxmlchar(text *textstring);
 
 /* local defs */
 static void parse_params(const char **params, text *paramstr);
 
 #define MAXPARAMS 20			/* must be even, see parse_params() */
-
-#define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
 #endif /* USE_LIBXSLT */
 
@@ -195,8 +191,7 @@ xslt_process(PG_FUNCTION_ARGS)
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("xslt_process() is not available without libxslt")));
 	PG_RETURN_NULL();
-
-#endif /* USE_LIBXSLT */
+#endif   /* USE_LIBXSLT */
 }
 
 #ifdef USE_LIBXSLT
@@ -249,4 +244,4 @@ parse_params(const char **params, text *paramstr)
 	params[i] = NULL;
 }
 
-#endif /* USE_LIBXSLT */
+#endif   /* USE_LIBXSLT */

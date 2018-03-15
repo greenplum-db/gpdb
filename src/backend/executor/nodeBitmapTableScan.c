@@ -42,10 +42,10 @@
 #include "pgstat.h"
 #include "storage/bufmgr.h"
 #include "utils/memutils.h"
+#include "utils/tqual.h"
 #include "miscadmin.h"
 #include "parser/parsetree.h"
 #include "cdb/cdbvars.h" /* gp_select_invisible */
-#include "cdb/cdbfilerepprimary.h"
 #include "nodes/tidbitmap.h"
 #include "cdb/cdbpartition.h"
 
@@ -130,14 +130,6 @@ ExecEndBitmapTableScan(BitmapTableScanState *node)
 	ExecEndNode(outerPlanState(node));
 
 	EndPlanStateGpmonPkt(&node->ss.ps);
-}
-
-/* Returns the number of slots needed for this operator */
-int
-ExecCountSlotsBitmapTableScan(BitmapTableScan *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPTABLESCAN_NSLOTS;
 }
 
 /* Eagerly free memory held for scanning */

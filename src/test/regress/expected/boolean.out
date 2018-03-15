@@ -336,7 +336,7 @@ SELECT '' AS tf_12, BOOLTBL1.*, BOOLTBL2.*
 
 SELECT '' AS ff_4, BOOLTBL1.*, BOOLTBL2.*
    FROM BOOLTBL1, BOOLTBL2
-   WHERE BOOLTBL2.f1 = BOOLTBL1.f1 and BOOLTBL1.f1 = bool 'false' ;
+   WHERE BOOLTBL2.f1 = BOOLTBL1.f1 and BOOLTBL1.f1 = bool 'false';
  ff_4 | f1 | f1 
 ------+----+----
       | f  | f
@@ -348,7 +348,7 @@ SELECT '' AS ff_4, BOOLTBL1.*, BOOLTBL2.*
 SELECT '' AS tf_12_ff_4, BOOLTBL1.*, BOOLTBL2.*
    FROM BOOLTBL1, BOOLTBL2
    WHERE BOOLTBL2.f1 = BOOLTBL1.f1 or BOOLTBL1.f1 = bool 'true'
-   ORDER BY BOOLTBL1.f1, BOOLTBL2.f1 ;
+   ORDER BY BOOLTBL1.f1, BOOLTBL2.f1;
  tf_12_ff_4 | f1 | f1 
 ------------+----+----
             | f  | f

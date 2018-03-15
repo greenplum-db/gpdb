@@ -58,7 +58,6 @@ EXCL_OBJS+=\
 	src/backend/utils/adt/lockfuncs.o \
 	src/backend/utils/adt/mac.o \
 	src/backend/utils/adt/matrix.o \
-	src/backend/utils/adt/misc.o \
 	src/backend/utils/adt/oracle_compat.o \
 	src/backend/utils/adt/pgstatfuncs.o \
 	src/backend/utils/adt/pivot.o \
@@ -79,7 +78,6 @@ EXCL_OBJS+=\
 	src/backend/utils/adt/tsvector_parser.o \
 	src/backend/utils/adt/txid.o \
 	src/backend/utils/adt/uuid.o \
-	src/backend/utils/adt/xid.o \
 	src/backend/tsearch/dict.o \
 	src/backend/tsearch/dict_ispell.o \
 	src/backend/tsearch/dict_simple.o \
@@ -103,12 +101,6 @@ MOCK_OBJS=\
 # mock that instead of linking with the real library.
 ifeq ($(enable_orca),yes)
 MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpopt_mock.o
-endif
-
-# No test programs in GPDB currently exercise codegen, so
-# mock that instead of linking with the real library.
-ifeq ($(enable_codegen),yes)
-MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpcodegen_mock.o
 endif
 
 # $(OBJFILES) contains %/objfiles.txt, because src/backend/Makefile will

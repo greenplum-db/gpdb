@@ -64,7 +64,7 @@ ExecWorkFile_Create(const char *fileName,
 	switch(fileType)
 	{
 		case BUFFILE:
-			file = (void *) BufFileCreateFile(fileName, delOnClose, false /* interXact */ );
+			file = (void *) BufFileCreateNamedTemp(fileName, delOnClose, false /* interXact */ );
 			BufFileSetWorkfile(file);
 			break;
 		case BFZ:
@@ -146,10 +146,9 @@ ExecWorkFile_Open(const char *fileName,
 	switch(fileType)
 	{
 		case BUFFILE:
-			file = (void *)BufFileOpenFile(fileName,
-					false, /* Create */
-					delOnClose,
-					true  /* interXact */ );
+			file = (void *) BufFileOpenNamedTemp(fileName,
+													 delOnClose,
+													 true  /* interXact */ );
 			if (!file)
 				ereport(ERROR,
 						(errcode_for_file_access(),

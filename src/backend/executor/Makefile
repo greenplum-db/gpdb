@@ -4,7 +4,7 @@
 #    Makefile for executor
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/executor/Makefile,v 1.28 2008/10/04 21:56:52 tgl Exp $
+#    $PostgreSQL: pgsql/src/backend/executor/Makefile,v 1.31 2009/10/12 18:10:41 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -19,11 +19,12 @@ OBJS = execAmi.o execCurrent.o execGrouping.o execJunk.o execMain.o \
        execUtils.o functions.o instrument.o nodeAppend.o nodeAgg.o \
        nodeBitmapAnd.o nodeBitmapOr.o \
        nodeBitmapHeapscan.o nodeBitmapIndexscan.o nodeHash.o \
-       nodeHashjoin.o nodeIndexscan.o nodeMaterial.o nodeMergejoin.o \
+       nodeHashjoin.o nodeIndexscan.o nodeLimit.o nodeLockRows.o \
+       nodeMaterial.o nodeMergejoin.o nodeModifyTable.o \
        nodeNestloop.o nodeFunctionscan.o nodeRecursiveunion.o nodeResult.o \
        nodeSeqscan.o nodeSetOp.o nodeSort.o nodeUnique.o \
        nodeValuesscan.o nodeCtescan.o nodeWorktablescan.o \
-       nodeLimit.o nodeSubplan.o nodeSubqueryscan.o nodeTidscan.o \
+       nodeSubplan.o nodeSubqueryscan.o nodeTidscan.o \
        nodeWindowAgg.o tstoreReceiver.o spi.o \
        nodeBitmapTableScan.o \
        nodeExternalscan.o \

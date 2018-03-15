@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/mbprint.c,v 1.35 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/mbprint.c,v 1.38 2010/01/02 16:57:59 momjian Exp $
  *
  * XXX this file does not really belong in psql/.  Perhaps move to libpq?
  * It also seems that the mbvalidate function is redundant with existing

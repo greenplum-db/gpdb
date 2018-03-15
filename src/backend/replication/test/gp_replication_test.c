@@ -30,6 +30,31 @@ expect_lwlock(LWLockMode lockmode)
 }
 
 static void
+expect_elog()
+{
+	expect_any(elog_start, filename);
+	expect_any(elog_start, lineno);
+	expect_any(elog_start, funcname);
+	will_be_called(elog_start);
+
+	expect_any(elog_finish, elevel);
+	expect_any(elog_finish, fmt);
+	will_be_called(elog_finish);
+}
+
+static void
+expect_ereport()
+{
+	expect_any(errstart, elevel);
+	expect_any(errstart, filename);
+	expect_any(errstart, lineno);
+	expect_any(errstart, funcname);
+	expect_any(errstart, domain);
+
+	will_be_called(errstart);
+}
+
+static void
 test_setup(WalSndCtlData *data, WalSndState state)
 {
 	max_wal_senders = 1;
@@ -49,10 +74,106 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+	/*
+	 * This would make sure Mirror is reported as DOWN, as grace period
+	 * duration is taken into account.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time =
+		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+
+	/*
+	 * Ensure the recovery finished before wal sender died.
+	 */
+	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - 1;
 
 	expect_lwlock(LW_SHARED);
 	GetMirrorStatus(&response);
 
+	assert_false(response.RequestRetry);
+	assert_false(response.IsMirrorUp);
+	assert_false(response.IsInSync);
+}
+
+void
+test_GetMirrorStatus_RequestRetry(void **state)
+{
+	FtsResponse response;
+	WalSndCtlData data;
+
+	max_wal_senders = 1;
+	WalSndCtl = &data;
+	data.walsnds[0].pid = 0;
+	/*
+	 * Make the pid zero time within the grace period.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time =
+		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD/2;
+
+	/*
+	 * Ensure recovery finished before wal sender died.
+	 */
+	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+
+	expect_lwlock(LW_SHARED);
+	expect_ereport();
+	GetMirrorStatus(&response);
+
+	assert_true(response.RequestRetry);
+}
+
+/*
+ * Verify the logic the grace period will exclude the recovery time.
+ */
+void
+test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
+{
+	FtsResponse response;
+	WalSndCtlData data;
+
+	max_wal_senders = 1;
+	WalSndCtl = &data;
+	data.walsnds[0].pid = 0;
+	/*
+	 * wal sender pid zero time over the grace period
+	 * Mirror will be marked down, and no retry.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time =
+		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+
+	/*
+	 * However the database was in recovery, hence
+	 * we are still within the grace period, and
+	 * we should retry.
+	 */
+	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD/2;
+
+	expect_lwlock(LW_SHARED);
+	expect_ereport();
+	GetMirrorStatus(&response);
+
+	assert_true(response.RequestRetry);
+}
+
+void
+test_GetMirrorStatus_Overflow(void **state)
+{
+	FtsResponse response;
+	WalSndCtlData data;
+
+	max_wal_senders = 1;
+	WalSndCtl = &data;
+	data.walsnds[0].pid = 0;
+	/*
+	 * This would make sure Mirror is reported as DOWN, as grace period
+	 * duration is taken into account.
+	 */
+	data.walsnds[0].marked_pid_zero_at_time = INT64_MAX;
+	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL));
+
+	expect_lwlock(LW_SHARED);
+	GetMirrorStatus(&response);
+
+	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }
@@ -109,84 +230,6 @@ test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 	assert_true(response.IsInSync);
 }
 
-void
-test_SetSyncStandbysDefined(void **state)
-{
-	WalSndCtlData data;
-	WalSndCtl = &data;
-	data.sync_standbys_defined = false;
-
-	expect_lwlock(LW_EXCLUSIVE);
-#ifdef USE_ASSERT_CHECKING
-	expect_value(LWLockHeldByMe, lockid, SyncRepLock);
-	will_return(LWLockHeldByMe, true);
-#endif
-
-	/*
-	 * set_gp_replication_config() should only be called once when mirror first
-	 * comes up to set synchronous wal rep state
-	 */
-	expect_string_count(set_gp_replication_config, name, "synchronous_standby_names", 1);
-	expect_string_count(set_gp_replication_config, value, "*", 1);
-	will_be_called(set_gp_replication_config);
-
-	/* simulate first call when mirror first comes up */
-	assert_false(WalSndCtl->sync_standbys_defined);
-	assert_true(SyncRepStandbyNames == NULL);
-	SetSyncStandbysDefined();
-
-	/* relative variables should have updated */
-	assert_true(WalSndCtl->sync_standbys_defined);
-	assert_true(strcmp(SyncRepStandbyNames, "*") == 0);
-
-	expect_lwlock(LW_EXCLUSIVE);
-
-	/* simulate second call after sync state is set which should do nothing */
-	SetSyncStandbysDefined();
-}
-
-void
-test_UnsetSyncStandbysDefined(void **state)
-{
-	int shmqueuenext_calls;
-	WalSndCtlData data;
-	WalSndCtl = &data;
-	data.sync_standbys_defined = true;
-
-	/* mock SHMQueueNext to skip the SyncRepWakeQueue */
-#ifdef USE_ASSERT_CHECKING
-	shmqueuenext_calls = 4;
-#else
-	shmqueuenext_calls = 2;
-#endif
-	expect_any_count(SHMQueueNext, queue, shmqueuenext_calls);
-	expect_any_count(SHMQueueNext, curElem, shmqueuenext_calls);
-	expect_any_count(SHMQueueNext, linkOffset, shmqueuenext_calls);
-	will_return_count(SHMQueueNext, NULL, shmqueuenext_calls);
-
-	expect_lwlock(LW_EXCLUSIVE);
-#ifdef USE_ASSERT_CHECKING
-	expect_value(LWLockHeldByMe, lockid, SyncRepLock);
-	will_return(LWLockHeldByMe, true);
-#endif
-
-	/* unset the GUC in-memory */
-	expect_string_count(set_gp_replication_config, name, "synchronous_standby_names", 1);
-	expect_string_count(set_gp_replication_config, value, "", 1);
-	will_be_called(set_gp_replication_config);
-
-	/* simulate call when primary is in synchronous replication */
-	assert_true(WalSndCtl->sync_standbys_defined);
-	assert_true(strcmp(SyncRepStandbyNames, "*") == 0);
-
-	/* call the function we are testing */
-	UnsetSyncStandbysDefined();
-
-	/* relative variables should have updated */
-	assert_false(WalSndCtl->sync_standbys_defined);
-	assert_true(strcmp(SyncRepStandbyNames, "") == 0);
-}
-
 int
 main(int argc, char* argv[])
 {
@@ -194,12 +237,13 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test_GetMirrorStatus_Pid_Zero),
+		unit_test(test_GetMirrorStatus_RequestRetry),
+		unit_test(test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime),
+		unit_test(test_GetMirrorStatus_Overflow),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_STARTUP),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_BACKUP),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_CATCHUP),
-		unit_test(test_GetMirrorStatus_WALSNDSTATE_STREAMING),
-		unit_test(test_SetSyncStandbysDefined),
-		unit_test(test_UnsetSyncStandbysDefined)
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_STREAMING)
 	};
 	return run_tests(tests);
 }

@@ -409,9 +409,9 @@ class GprecoversegTest(ScenarioTestCase):
         test_case_list3.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.test_gprecoverseg.GprecoversegTest.wait_till_insync_transition')
         self.test_case_scenario.append(test_case_list3)
 
-    def test_skip_persistent_check_with_incremental_recovery(self):
+    def test_incremental_recovery(self):
         """
-        [feature]: skip the persistent table check when the user does not supply the --persistent-check option 
+        [feature]: Incremental recovery
         
         @product_version gpdb: [4.3.5.0 -]
         """
@@ -421,16 +421,16 @@ class GprecoversegTest(ScenarioTestCase):
         self.test_case_scenario.append(test_case_list1)
 
         test_case_list2 = []
-        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_incremental_recovery_skip_persistent_tables_check')
+        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_incremental_recovery')
         self.test_case_scenario.append(test_case_list2)
 
         test_case_list3 = []
         test_case_list3.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.test_gprecoverseg.GprecoversegTest.wait_till_insync_transition')
         self.test_case_scenario.append(test_case_list3)
 
-    def test_skip_persistent_check_with_full_recovery(self):
+    def test_full_recovery(self):
         """
-        [feature]: skip the persistent table check when the user does not supply the --persistent-check option 
+        [feature]: Full recovery
         
         @product_version gpdb: [4.3.5.0 -]
         """
@@ -440,74 +440,12 @@ class GprecoversegTest(ScenarioTestCase):
         self.test_case_scenario.append(test_case_list1)
 
         test_case_list2 = []
-        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_full_recovery_skip_persistent_tables_check')
+        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_full_recovery')
         self.test_case_scenario.append(test_case_list2)
 
         test_case_list3 = []
         test_case_list3.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.test_gprecoverseg.GprecoversegTest.wait_till_insync_transition')
         self.test_case_scenario.append(test_case_list3)
-
-    def test_persistent_check_with_incremental_recovery(self):
-        """
-        [feature]: Perform the persistent table check when the persistent tables have been corrupted 
-        
-        @product_version gpdb: [4.3.5.0 -]
-        """
-        
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_corrupt_persistent_tables')
-        self.test_case_scenario.append(test_case_list1)
-
-        test_case_list2 = []
-        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_use_gpfaultinjector_to_mark_segment_down')
-        self.test_case_scenario.append(test_case_list2)
-
-        test_case_list3 = []
-        test_case_list3.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_incremental_recovery_with_persistent_tables_corruption')
-        self.test_case_scenario.append(test_case_list3)
-
-        test_case_list4 = []
-        test_case_list4.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_rebuild_persistent_tables')
-        self.test_case_scenario.append(test_case_list4)
-
-        test_case_list5 = []
-        test_case_list5.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_incremental_recovery_with_persistent_tables_corruption')
-        self.test_case_scenario.append(test_case_list5)
-
-        test_case_list6 = []
-        test_case_list6.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.test_gprecoverseg.GprecoversegTest.wait_till_insync_transition')
-        self.test_case_scenario.append(test_case_list6)
-
-    def test_persistent_check_with_full_recovery(self):
-        """
-        [feature]: Perform the persistent table check when the persistent tables have been corrupted 
-        
-        @product_version gpdb: [4.3.5.0 -]
-        """
-        
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_corrupt_persistent_tables')
-        self.test_case_scenario.append(test_case_list1)
-
-        test_case_list2 = []
-        test_case_list2.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_use_gpfaultinjector_to_mark_segment_down')
-        self.test_case_scenario.append(test_case_list2)
-
-        test_case_list3 = []
-        test_case_list3.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_full_recovery_with_persistent_tables_corruption')
-        self.test_case_scenario.append(test_case_list3)
-
-        test_case_list4 = []
-        test_case_list4.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.FaultInjectorTestCase.test_rebuild_persistent_tables')
-        self.test_case_scenario.append(test_case_list4)
-
-        test_case_list5 = []
-        test_case_list5.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.fault.fault.GprecoversegClass.test_full_recovery_with_persistent_tables_corruption')
-        self.test_case_scenario.append(test_case_list5)
-
-        test_case_list6 = []
-        test_case_list6.append('mpp.gpdb.tests.utilities.recoverseg.gprecoverseg_tests.test_gprecoverseg.GprecoversegTest.wait_till_insync_transition')
-        self.test_case_scenario.append(test_case_list6)
 
     def test_clean_shared_mem(self):
         """

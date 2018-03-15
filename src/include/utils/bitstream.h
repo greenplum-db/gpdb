@@ -13,8 +13,6 @@
  *
  *------------------------------------------------------------------------------
 */
-#include "postgres.h"
-
 #ifndef CDB_BITSTREAM_H
 #define CDB_BITSTREAM_H
 

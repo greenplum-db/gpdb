@@ -59,7 +59,7 @@ class gpinitstandby(StandbyRunMixin, MPPTestCase):
                       ' '.join(['gpinitstandby', '-a',
                          '-s', array.master.getSegmentHostName(),
                          '-P', self.standby_port,
-                         '-F', 'pg_system:' + self.standby_datadir]))
+                         '-F', self.standby_datadir]))
         cmd.run(validateAfter=True)
 
         nsender = self.wait_for_walsender()
@@ -83,7 +83,7 @@ class gpinitstandby(StandbyRunMixin, MPPTestCase):
         cmd = Command('gpinitstandby',
                       'gpinitstandby -a -s {0} -F {1}'.format(
                             array.master.getSegmentHostName(),
-                            'pg_system:/tmp/dummydir'))
+                            '/tmp/dummydir'))
         cmd.run()
         self.assertIn('cannot create standby on the same host and port',
                         cmd.get_results().stdout)

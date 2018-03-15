@@ -61,7 +61,7 @@ The Demo profile demonstrates how GPDB can parallely the external data via the P
 static data from the PXF agents themselves.
 ```
 # CREATE EXTERNAL TABLE pxf_read_test (a TEXT, b TEXT, c TEXT) \
-LOCATION ('pxf://localhost:51200/tmp/dummy1' \
+LOCATION ('pxf://localhost:5888/tmp/dummy1' \
 '?FRAGMENTER=org.apache.hawq.pxf.api.examples.DemoFragmenter' \
 '&ACCESSOR=org.apache.hawq.pxf.api.examples.DemoAccessor' \
 '&RESOLVER=org.apache.hawq.pxf.api.examples.DemoTextResolver') \

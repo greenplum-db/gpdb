@@ -50,9 +50,6 @@
       <li>
         <xref href="#topic46" type="topic" format="dita"/>
       </li>
-      <li>
-        <xref href="#topic47" type="topic" format="dita"/>
-      </li>
       <li id="kh158599">
         <xref href="#topic48" type="topic" format="dita"/>
       </li>
@@ -192,12 +189,10 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
-                  >gp_resource_group_memory_limit</xref> (resource group-based resource management)
-              </p>
+                  >gp_resource_group_memory_limit</xref> (resource group-based resource management) </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_limit" type="section"
-                  >gp_vmem_protect_limit</xref> (resource queue-based resource management)
-              </p>
+                  >gp_vmem_protect_limit</xref> (resource queue-based resource management) </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
                   >gp_vmem_protect_segworker_cache_limit</xref>
@@ -899,10 +894,10 @@
       </body>
     </topic>
     <topic id="topic36" xml:lang="en">
-      <title>Greenplum Command Center Agent</title>
+      <title>Greenplum Performance Database</title>
       <body>
         <p>The following parameters configure the data collection agents that populate the
-            <codeph>gpperfmon</codeph> database for Greenplum Command Center.</p>
+            <codeph>gpperfmon</codeph> database.</p>
         <simpletable id="kh171891" frame="none">
           <strow>
             <stentry>
@@ -922,6 +917,31 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gpperfmon_port" type="section">gpperfmon_port</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
+    <topic id="query-metrics">
+      <title>Query Metrics Collection Parameters</title>
+      <body>
+        <p>These parameters enable and configure query metrics collection. When enabled, 
+          Greenplum Database saves metrics to shared memory during query execution. These
+          metrics are used by Pivotal Greenplum Command Center, which is included with 
+          Pivotal's commercial version of Greenplum Database.</p> 
+        <simpletable id="query-metrics" frame="none">
+          <strow>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#gp_enable_query_metrics" type="section"
+                  >gp_enable_query_metrics</xref>
+              </p>
+            </stentry>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#gp_instrument_shmem_size" type="section"
+                  >gp_instrument_shmem_size</xref>
               </p>
             </stentry>
           </strow>
@@ -1176,8 +1196,7 @@
                 >max_resource_portals_per_transaction</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#max_statement_mem" type="section"
-                >max_statement_mem</xref>
+              <xref href="guc-list.xml#max_statement_mem" type="section">max_statement_mem</xref>
             </p>
             <p>
               <xref href="guc-list.xml#resource_cleanup_gangs_on_wait" type="section"
@@ -1336,66 +1355,62 @@
       </body>
     </topic>
   </topic>
-  <topic id="topic47" xml:lang="en">
-    <title>Database and Tablespace/Filespace Parameters</title>
-    <body>
-      <p>The following parameters configure the maximum number of databases, tablespaces, and
-        filespaces allowed in a system.</p>
-      <simpletable id="d1e1305" frame="none">
-        <strow>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#gp_max_tablespaces" type="section">gp_max_tablespaces</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#gp_max_filespaces" type="section">gp_max_filespaces</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#gp_max_databases" type="section">gp_max_databases</xref>
-            </p>
-          </stentry>
-        </strow>
-      </simpletable>
-    </body>
-  </topic>
   <topic id="topic48" xml:lang="en">
-    <title id="kh178569">Past PostgreSQL Version Compatibility Parameters</title>
+    <title id="kh178569">Past Version Compatibility Parameters</title>
     <body>
-      <p>The following parameters provide compatibility with older PostgreSQL versions. You do not
-        need to change these parameters in Greenplum Database.</p>
-      <simpletable id="kh162083" frame="none">
-        <strow>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#backslash_quote" type="section">backslash_quote</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#escape_string_warning" type="section"
-                >escape_string_warning</xref>
-            </p>
-          </stentry>
-          <stentry>
-            <p>
-              <xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#standard_conforming_strings" type="section"
-                >standard_conforming_strings</xref>
-            </p>
-            <p>
-              <xref href="guc-list.xml#transform_null_equals" type="section"
-                >transform_null_equals</xref>
-            </p>
-          </stentry>
-        </strow>
-      </simpletable>
+      <p>The following parameters provide compatibility with older PostgreSQL and Greenplum Database
+        versions. You do not need to change these parameters in Greenplum Database.</p>
     </body>
+    <topic id="topic_ax3_r1v_bdb">
+      <title>PostgreSQL</title>
+      <body>
+        <simpletable frame="none" id="simpletable_bx3_r1v_bdb">
+          <strow>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#backslash_quote" type="section">backslash_quote</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#escape_string_warning" type="section"
+                  >escape_string_warning</xref>
+              </p>
+            </stentry>
+            <stentry>
+              <p>
+                <xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#standard_conforming_strings" type="section"
+                  >standard_conforming_strings</xref>
+              </p>
+              <p>
+                <xref href="guc-list.xml#transform_null_equals" type="section"
+                  >transform_null_equals</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
+    <topic id="topic_jq1_n1v_bdb">
+      <title>Greenplum Database</title>
+      <body>
+        <simpletable frame="none" id="simpletable_uy5_1bv_bdb">
+          <strow>
+            <stentry>
+              <p><xref href="guc-list.xml#gp_ignore_error_table">gp_ignore_error_table</xref>
+              </p>
+            </stentry>
+          </strow>
+        </simpletable>
+      </body>
+    </topic>
   </topic>
   <topic id="topic49" xml:lang="en">
     <title id="kh182770">Greenplum Database Array Configuration Parameters</title>

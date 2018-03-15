@@ -37,8 +37,7 @@
                 can pass in a file containing the file system locations using the
                     <codeph>-m</codeph> option.</p>
             <p>The mirror locations and ports must be different than your primary segment data
-                locations and ports. If you have created additional filespaces, you will also be
-                prompted for mirror locations for each of your filespaces.</p>
+                locations and ports.</p>
             <p>The utility creates a unique data directory for each mirror segment instance in the
                 specified location using the predefined naming convention. There must be the same
                 number of file system locations declared for mirror segment instances as for primary
@@ -54,22 +53,15 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 detailed configuration file using the <codeph>-i</codeph> option. This is useful if
                 you want your mirror segments on a completely different set of hosts than your
                 primary segments. The format of the mirror configuration file is:</p>
-            <codeblock>filespaceOrder=[<varname>filespace1_fsname</varname>[:<varname>filespace2_fsname</varname>:...]
-mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>mir_replication_port</varname>:<varname>pri_replication_
-port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:...]</codeblock>
-            <p>For example (if you do not have additional filespaces configured besides the default
-                    <varname>pg_system</varname> filespace):</p>
-            <codeblock>filespaceOrder=
-mirror0=0:sdw1-1:60000:61000:62000:/gpdata/mir1/gp0
-mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1</codeblock>
-            <p>The <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
-                    <codeph>pg_filespace_entry</codeph> system catalog tables can help you determine
+            <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>fselocation</varname></codeblock>
+            <p>For example:</p>
+            <codeblock>mirror0=0:sdw1-1:60000:/gpdata/mir1/gp0
+mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
+            <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine
                 your current primary segment configuration so that you can plan your mirror segment
                 configuration. For example, run the following query:</p>
-            <codeblock>=# SELECT dbid, content, address as host_address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid 
+            <codeblock>=# SELECT dbid, content, address as host_address, port, datadir 
+   FROM gp_segment_configuration
    ORDER BY dbid;</codeblock>
             <p>If creating your mirrors on alternate mirror hosts, the new mirror segment hosts must
                 be pre-installed with the Greenplum Database software and configured exactly the
@@ -112,23 +104,10 @@ mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1</codeblock>
                     <pd>A configuration file containing one line for each mirror segment you want to
                         create. You must have one mirror segment listed for each primary segment in
                         the system. The format of this file is as follows (as per attributes in the
-                            <codeph>gp_segment_configuration</codeph>,
-                        <codeph>pg_filespace</codeph>, and <codeph>pg_filespace_entry</codeph>
-                        catalog tables):</pd>
+                            <codeph>gp_segment_configuration</codeph> catalog table):</pd>
                     <pd>
-                        <codeblock>filespaceOrder=[<varname>filespace1_fsname</varname>[:<varname>filespace2_fsname</varname>:...]
-mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>mir_replication_port</varname>:<varname>pri_replication_
-port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:...]</codeblock>
+                        <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname></varname></codeblock>
                     </pd>
-                    <pd>Note that you only need to specify a name for
-                            <codeph>filespaceOrder</codeph> if your system has multiple filespaces
-                        configured. If your system does not have additional filespaces configured
-                        besides the default <codeph>pg_system</codeph> filespace, this file will
-                        only have one location (for the default data directory filespace,
-                            <codeph>pg_system</codeph>). <codeph>pg_system</codeph> does not need to
-                        be listed in the <codeph>filespaceOrder</codeph> line. It will always be the
-                        first <varname>fselocation</varname> listed after
-                            <varname>replication_port</varname>.</pd>
                 </plentry>
                 <plentry>
                     <pt>-l <varname>logfile_directory</varname></pt>
@@ -147,16 +126,6 @@ port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:..
 /gpdata/m3
 /gpdata/m4</codeblock>
                     </pd>
-                    <pd>If your system has additional filespaces configured in addition to the
-                        default <codeph>pg_system</codeph> filespace, you must also list file system
-                        locations for each filespace as follows:</pd>
-                    <pd>
-                        <codeblock>filespace <varname>filespace1</varname>
-/gpfs1/m1
-/gpfs1/m2
-/gpfs1/m3
-/gpfs1/m4</codeblock>
-                    </pd>
                 </plentry>
                 <plentry>
                     <pt>-o <varname>output_sample_mirror_config</varname></pt>
@@ -170,15 +139,12 @@ port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:..
                 </plentry>
                 <plentry>
                     <pt>-p <varname>port_offset</varname></pt>
-                    <pd>Optional. This number is used to calculate the database ports and
-                        replication ports used for mirror segments. The default offset is 1000.
+                    <pd>Optional. This number is used to calculate the database ports
+                        used for mirror segments. The default offset is 1000.
                         Mirror port assignments are calculated as follows: </pd>
                     <pd>primary port + offset = mirror database port</pd>
-                    <pd>primary port + (2 * offset) = mirror replication port</pd>
-                    <pd>primary port + (3 * offset) = primary replication port</pd>
                     <pd>For example, if a primary segment has port 50001, then its mirror will use a
-                        database port of 51001, a mirror replication port of 52001, and a primary
-                        replication port of 53001 by default.</pd>
+                        database port of 51001, by default.</pd>
                 </plentry>
                 <plentry>
                     <pt>-s (spread mirrors)</pt>
@@ -206,20 +172,17 @@ port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:..
         <section id="section5">
             <title>Examples</title>
             <p>Add mirroring to an existing Greenplum Database system using the same set of hosts as
-                your primary data. Calculate the mirror database and replication ports by adding 100
+                your primary data. Calculate the mirror database ports by adding 100
                 to the current primary segment port numbers:</p>
             <codeblock>$ gpaddmirrors -p 100</codeblock>
             <p>Add mirroring to an existing Greenplum Database system using a different set of hosts
                 from your primary data:</p>
             <codeblock>$ gpaddmirrors -i mirror_config_file</codeblock>
-            <p>Where <codeph>mirror_config_file</codeph> looks something like this (if you do not
-                have additional filespaces configured besides the default <codeph>pg_system</codeph>
-                filespace):</p>
-            <codeblock>filespaceOrder=
-mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
-mirror1=1:sdw1-2:52002:53002:54002:/gpdata/mir2/gp1
-mirror2=2:sdw2-1:52001:53001:54001:/gpdata/mir1/gp2
-mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir2/gp3</codeblock>
+            <p>Where <codeph>mirror_config_file</codeph> looks something like this:</p>
+            <codeblock>mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
+mirror1=1:sdw1-2:52002:/gpdata/mir2/gp1
+mirror2=2:sdw2-1:52001:/gpdata/mir1/gp2
+mirror3=3:sdw2-2:52002:/gpdata/mir2/gp3</codeblock>
             <p>Output a sample mirror configuration file to use with <codeph>gpaddmirrors
                     -i</codeph>:</p>
             <codeblock>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</codeblock>

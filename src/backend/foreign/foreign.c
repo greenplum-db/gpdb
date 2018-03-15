@@ -3,10 +3,10 @@
  * foreign.c
  *		  support for foreign-data wrappers, servers and user mappings.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *		  $PostgreSQL: pgsql/src/backend/foreign/foreign.c,v 1.5 2009/06/11 16:14:18 tgl Exp $
+ *		  $PostgreSQL: pgsql/src/backend/foreign/foreign.c,v 1.8 2010/02/14 18:42:14 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -47,9 +47,7 @@ GetForeignDataWrapper(Oid fdwid)
 	HeapTuple	tp;
 	bool		isnull;
 
-	tp = SearchSysCache(FOREIGNDATAWRAPPEROID,
-						ObjectIdGetDatum(fdwid),
-						0, 0, 0);
+	tp = SearchSysCache1(FOREIGNDATAWRAPPEROID, ObjectIdGetDatum(fdwid));
 
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for foreign-data wrapper %u", fdwid);
@@ -84,9 +82,7 @@ GetForeignDataWrapperOidByName(const char *fdwname, bool missing_ok)
 {
 	Oid			fdwId;
 
-	fdwId = GetSysCacheOid(FOREIGNDATAWRAPPERNAME,
-						   CStringGetDatum(fdwname),
-						   0, 0, 0);
+	fdwId = GetSysCacheOid1(FOREIGNDATAWRAPPERNAME, CStringGetDatum(fdwname));
 
 	if (!OidIsValid(fdwId) && !missing_ok)
 		ereport(ERROR,
@@ -125,9 +121,7 @@ GetForeignServer(Oid serverid)
 	Datum		datum;
 	bool		isnull;
 
-	tp = SearchSysCache(FOREIGNSERVEROID,
-						ObjectIdGetDatum(serverid),
-						0, 0, 0);
+	tp = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid));
 
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for foreign server %u", serverid);
@@ -177,9 +171,7 @@ GetForeignServerOidByName(const char *srvname, bool missing_ok)
 {
 	Oid			serverid;
 
-	serverid = GetSysCacheOid(FOREIGNSERVERNAME,
-							  CStringGetDatum(srvname),
-							  0, 0, 0);
+	serverid = GetSysCacheOid1(FOREIGNSERVERNAME, CStringGetDatum(srvname));
 
 	if (!OidIsValid(serverid) && !missing_ok)
 		ereport(ERROR,
@@ -220,18 +212,16 @@ GetUserMapping(Oid userid, Oid serverid)
 	bool		isnull;
 	UserMapping *um;
 
-	tp = SearchSysCache(USERMAPPINGUSERSERVER,
-						ObjectIdGetDatum(userid),
-						ObjectIdGetDatum(serverid),
-						0, 0);
+	tp = SearchSysCache2(USERMAPPINGUSERSERVER,
+						 ObjectIdGetDatum(userid),
+						 ObjectIdGetDatum(serverid));
 
 	if (!HeapTupleIsValid(tp))
 	{
 		/* Not found for the specific user -- try PUBLIC */
-		tp = SearchSysCache(USERMAPPINGUSERSERVER,
-							ObjectIdGetDatum(InvalidOid),
-							ObjectIdGetDatum(serverid),
-							0, 0);
+		tp = SearchSysCache2(USERMAPPINGUSERSERVER,
+							 ObjectIdGetDatum(InvalidOid),
+							 ObjectIdGetDatum(serverid));
 	}
 
 	if (!HeapTupleIsValid(tp))
@@ -372,7 +362,7 @@ is_conninfo_option(const char *option, Oid context)
 	struct ConnectionOption *opt;
 
 	for (opt = libpq_conninfo_options; opt->optname; opt++)
-		if ((context == opt->optcontext || context == InvalidOid) && strcmp(opt->optname, option) == 0)
+		if (context == opt->optcontext && strcmp(opt->optname, option) == 0)
 			return true;
 	return false;
 }
@@ -409,7 +399,7 @@ postgresql_fdw_validator(PG_FUNCTION_ARGS)
 			 */
 			initStringInfo(&buf);
 			for (opt = libpq_conninfo_options; opt->optname; opt++)
-				if (catalog == InvalidOid || catalog == opt->optcontext)
+				if (catalog == opt->optcontext)
 					appendStringInfo(&buf, "%s%s", (buf.len > 0) ? ", " : "",
 									 opt->optname);
 

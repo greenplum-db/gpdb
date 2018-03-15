@@ -648,7 +648,7 @@ ERROR:  column "a" has pseudo-type anytable
     order by b limit 2;
 ERROR:  cannot cast type anytable to anyelement
 LINE 4:         scatter by id)::anyelement) 
-                                ^
+                              ^
     select * from transform( TABLE(
         select * from intable 
         order by value 
@@ -656,7 +656,7 @@ LINE 4:         scatter by id)::anyelement)
     order by b limit 2;
 ERROR:  cannot cast type anytable to anyarray
 LINE 4:         scatter by id)::anyarray) 
-                                ^
+                              ^
     -- Verify array_append(anyarray, anyelement)
     select array_append(array['value1','value2']::anyarray, 'value3'::anyelement);
       array_append      
@@ -668,7 +668,7 @@ LINE 4:         scatter by id)::anyarray)
     select array_append(array['value1','value2']::anytable, 'value3');
 ERROR:  cannot cast type text[] to anytable
 LINE 1: select array_append(array['value1','value2']::anytable, 'val...
-                                                      ^
+                                                    ^
     -- Verify anyelement cannot be casted to anytable
     select array_append(array['value1','value2'], 'value3'::anytable);
 ERROR:  cannot cast type unknown to anytable
@@ -797,7 +797,7 @@ LINE 2:     SCATTER BY (a,b);
 (10 rows)
 
     SELECT * FROM transform( TABLE(select distinct b,c from t1) );
-ERROR:  invalid input tuple for function mytransform   (seg0 slice2 172.17.0.4:25432 pid=35333)
+ERROR:  invalid input tuple for function mytransform (gppc.c:1345)  (seg0 slice2 127.0.0.1:40000 pid=13043) (cdbdisp.c:256)
     -- CONSTANT input
     SELECT * FROM transform( TABLE( SELECT 2 as id,'haha'::text as value FROM intable) );
   a   | b 
@@ -4847,7 +4847,7 @@ ERROR:  CREATE VIEW statements cannot include calls to dynamically typed functio
 CREATE OR REPLACE FUNCTION project_errorcallback(anytable, OUT int, OUT int) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
 SELECT * FROM project_errorcallback(TABLE(SELECT CASE WHEN a < 10 THEN a END, a FROM generate_series(1, 10)a SCATTER BY a));
 INFO:  message: Hello, world!  (seg2 slice2 172.17.0.4:25434 pid=36338)
-ERROR:  first attribute is NULL   (seg2 slice2 172.17.0.4:25434 pid=36338)
+ERROR:  first attribute is NULL (gppc.c:1345)  (seg2 slice2 127.0.0.1:40002 pid=13045) (cdbdisp.c:256)
 SELECT * FROM project_errorcallback(TABLE(SELECT a, a FROM generate_series(1, 5)a SCATTER BY a)) ORDER BY 1;
  column1 | column2 
 ---------+---------

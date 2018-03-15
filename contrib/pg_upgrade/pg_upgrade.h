@@ -496,7 +496,6 @@ const char *transfer_all_new_dbs(migratorContext *ctx, DbInfoArr *olddb_arr,
 
 /* aotable.c */
 void		restore_aosegment_tables(migratorContext *ctx);
-void		restore_persistent_tables(migratorContext *ctx);
 
 /* gpdb4_heap_convert.c */
 const char *convert_gpdb4_heap_file(migratorContext *ctx,

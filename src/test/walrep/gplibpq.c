@@ -24,7 +24,6 @@ static struct
 } LogstreamResult;
 
 
-#ifdef USE_SEGWALREP
 typedef struct CheckAoRecordResult
 {
 	char ao_xlog_record_type;
@@ -32,7 +31,6 @@ typedef struct CheckAoRecordResult
 	Size len;
 	xl_ao_target target;
 } CheckAoRecordResult;
-#endif
 
 static void test_XLogWalRcvProcessMsg(unsigned char type, char *buf,
 									  Size len, XLogRecPtr *logStreamStart);
@@ -41,10 +39,8 @@ static void test_XLogWalRcvSendReply(void);
 static void test_PrintLog(char *type, XLogRecPtr walPtr,
 						  TimestampTz sendTime);
 
-#ifdef USE_SEGWALREP
 static uint32 check_ao_record_present(unsigned char type, char *buf, Size len,
 									  uint32 xrecoff, CheckAoRecordResult *aorecordresults);
-#endif		/* USE_SEGWALREP */
 
 Datum test_connect(PG_FUNCTION_ARGS);
 Datum test_disconnect(PG_FUNCTION_ARGS);
@@ -326,8 +322,6 @@ test_PrintLog(char *type, XLogRecPtr walPtr,
 Datum
 test_xlog_ao(PG_FUNCTION_ARGS)
 {
-
-#ifdef USE_SEGWALREP
 	FuncCallContext *funcctx;
 
 	int			nattr = 8;
@@ -422,12 +416,8 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 	}
 
 	SRF_RETURN_DONE(funcctx);
-#else
-	SRF_RETURN_DONE(NULL);
-#endif
 }
 
-#ifdef USE_SEGWALREP
 /*
  * Verify that AO/AOCO XLOG record is present in buf.
  * Returns the number of AO/AOCO XLOG records found in buf.
@@ -549,4 +539,3 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 	}
 	return num_found;
 }
-#endif		/* USE_SEGWALREP */

@@ -18,7 +18,6 @@
             <topicref href="admin_utilities/gpdeletesystem.xml"/>
             <topicref href="admin_utilities/gpexpand.xml"/>
             <topicref href="admin_utilities/gpfdist.xml"/>
-            <topicref href="admin_utilities/gpfilespace.xml"/>
             <topicref href="admin_utilities/gpinitstandby.xml"/>
             <topicref href="admin_utilities/gpinitsystem.xml"/>
             <topicref href="admin_utilities/gpload.xml"/>

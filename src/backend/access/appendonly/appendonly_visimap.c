@@ -12,12 +12,14 @@
  *------------------------------------------------------------------------------
 */
 #include "postgres.h"
+
 #include "access/appendonly_visimap.h"
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"
 #include "access/appendonlytid.h"
-#include "cdb/cdbappendonlyblockdirectory.h"
 #include "access/hash.h"
+#include "cdb/cdbappendonlyblockdirectory.h"
+#include "storage/fd.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 
@@ -414,8 +416,6 @@ AppendOnlyVisimapDelete_Init(
 							 AppendOnlyVisimap *visiMap)
 {
 	HASHCTL		hash_ctl;
-	char		fileName[MAXPGPATH];
-	int			len;
 
 	Assert(visiMapDelete);
 	Assert(visiMap);
@@ -433,12 +433,7 @@ AppendOnlyVisimapDelete_Init(
 												 &hash_ctl,
 												 HASH_ELEM | HASH_FUNCTION | HASH_COMPARE);
 
-	len = snprintf(fileName, sizeof(fileName), "%s/visimap_delete", PG_TEMP_FILES_DIR);
-	if (len > MAXPGPATH - 1)
-	{
-		elog(ERROR, "could not generate temporary file name");
-	}
-	visiMapDelete->workfile = ExecWorkFile_CreateUnique(fileName, BUFFILE, true, 0);
+	visiMapDelete->workfile = ExecWorkFile_CreateUnique("visimap_delete", BUFFILE, true, 0);
 }
 
 /*

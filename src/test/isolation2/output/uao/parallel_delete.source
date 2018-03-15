@@ -43,7 +43,7 @@ a
 (2 rows)
 3: COMMIT;
 COMMIT
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
+0U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
 tid             |segno|row_num
 ----------------+-----+-------
 (33554432,32769)|1    |1      

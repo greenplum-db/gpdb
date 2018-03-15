@@ -19,7 +19,6 @@
 #include "catalog/pg_control.h"
 #include "commands/dbcommands.h"
 #include "cdb/cdbappendonlyam.h"
-#include "access/xlogmm.h"
 
 #if PG_VERSION_NUM >=90000
 #include "utils/relmapper.h"
@@ -59,11 +58,7 @@ const char * const RM_names[RM_MAX_ID+1] = {
 	"Reserved 16",
 #endif	/* PG_VERSION_NUM >=90200 */
 	"DistributedLog",			/* 17 */
-	"MasterMirrorLog",			/* 18 */
-
-#ifdef USE_SEGWALREP
-	"Appendonly"				/* 19 */
-#endif		/* USE_SEGWALREP */
+	"Appendonly"				/* 18 */
 };
 
 /* copy from utils/timestamp.h */
@@ -641,9 +636,9 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			xl_heap_freeze xlrec;
 			memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
 			snprintf(buf, sizeof(buf), "freeze: ts %d db %d rel %d block %d cutoff_xid %d",
-				xlrec.heapnode.node.spcNode,
-				xlrec.heapnode.node.dbNode,
-				xlrec.heapnode.node.relNode,
+				xlrec.node.spcNode,
+				xlrec.node.dbNode,
+				xlrec.node.relNode,
 				xlrec.block, xlrec.cutoff_xid
 			);
 		}
@@ -666,9 +661,9 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
 			getRelName(xlrec.node.relNode, relName, sizeof(relName));
 #else
-			getSpaceName(xlrec.heapnode.node.spcNode, spaceName, sizeof(spaceName));
-			getDbName(xlrec.heapnode.node.dbNode, dbName, sizeof(dbName));
-			getRelName(xlrec.heapnode.node.relNode, relName, sizeof(relName));
+			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
+			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
+			getRelName(xlrec.node.relNode, relName, sizeof(relName));
 #endif
 
 			total_off = (record->xl_len - SizeOfHeapClean) / sizeof(OffsetNumber);
@@ -872,9 +867,9 @@ print_rmgr_heap(XLogRecPtr cur, XLogRecord *record, uint8 info, bool statements)
 			xl_heap_newpage xlrec;
 
 			memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
-			getSpaceName(xlrec.heapnode.node.spcNode, spaceName, sizeof(spaceName));
-			getDbName(xlrec.heapnode.node.dbNode, dbName, sizeof(dbName));
-			getRelName(xlrec.heapnode.node.relNode, relName, sizeof(relName));
+			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
+			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
+			getRelName(xlrec.node.relNode, relName, sizeof(relName));
 			snprintf(buf, sizeof(buf), "newpage: s/d/r:%s/%s/%s block %u", 
 					spaceName, dbName, relName,
 				   xlrec.blkno);
@@ -1110,9 +1105,9 @@ print_rmgr_btree(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			xl_btree_delete xlrec;
 
 			memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
-			getSpaceName(xlrec.btreenode.node.spcNode, spaceName, sizeof(spaceName));
-			getDbName(xlrec.btreenode.node.dbNode, dbName, sizeof(dbName));
-			getRelName(xlrec.btreenode.node.relNode, relName, sizeof(relName));
+			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
+			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
+			getRelName(xlrec.node.relNode, relName, sizeof(relName));
 			snprintf(buf, sizeof(buf), "delete: s/d/r:%s/%s/%s block %u", 
 					spaceName, dbName,	relName,
 				   	xlrec.block);
@@ -1160,9 +1155,9 @@ print_rmgr_btree(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			xl_btree_newroot xlrec;
 
 			memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
-			getSpaceName(xlrec.btreenode.node.spcNode, spaceName, sizeof(spaceName));
-			getDbName(xlrec.btreenode.node.dbNode, dbName, sizeof(dbName));
-			getRelName(xlrec.btreenode.node.relNode, relName, sizeof(relName));
+			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
+			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
+			getRelName(xlrec.node.relNode, relName, sizeof(relName));
 
 			snprintf(buf, sizeof(buf), "newroot: s/d/r:%s/%s/%s rootblk %u level %u", 
 					spaceName, dbName, relName,
@@ -1409,81 +1404,6 @@ print_rmgr_seq(XLogRecPtr cur, XLogRecord *record, uint8 info)
 }
 
 void
-print_rmgr_mmxlog(XLogRecPtr cur, XLogRecord *record, uint8 info)
-{
-	xl_mm_fs_obj *xlrec = (xl_mm_fs_obj *)XLogRecGetData(record);
-	char 		  buf[1024];
-	char		  operation[256];
-	char 		  objectDetails[256];
-
-	switch (info)
-	{
-	case MMXLOG_CREATE_DIR:
-		strlcpy(operation, "create dir", sizeof(operation));
-		break;
-
-	case MMXLOG_CREATE_FILE:
-		strlcpy(operation, "create file", sizeof(operation));
-		break;
-
-	case MMXLOG_REMOVE_DIR:
-		strlcpy(operation, "remove dir", sizeof(operation));
-		break;
-
-	case MMXLOG_REMOVE_APPENDONLY_FILE:
-		strlcpy(operation, "remove appendonly file", sizeof(operation));
-		break;
-
-	case MMXLOG_REMOVE_HEAP_FILE:
-		strlcpy(operation, "remove heap file", sizeof(operation));
-		break;
-
-	default:
-		snprintf(operation, sizeof(operation),
-				 "unknown MMX operation - 0x%x", info);
-		break;
-	}
-
-	switch (xlrec->objtype)
-	{
-	case MM_OBJ_FILESPACE:
-		snprintf(objectDetails, sizeof(objectDetails), "filespace %u",
-				 xlrec->filespace);
-		break;
-
-	case MM_OBJ_TABLESPACE:
-		snprintf(objectDetails, sizeof(objectDetails), "tablespace %u",
-				 xlrec->tablespace);
-		break;
-
-	case MM_OBJ_DATABASE:
-		snprintf(objectDetails, sizeof(objectDetails),
-				 "tablespace %d, database %u",
-				 xlrec->tablespace, xlrec->database);
-		break;
-
-	case MM_OBJ_RELFILENODE:
-		snprintf(objectDetails, sizeof(objectDetails),
-				 "relation  %u/%u/%u, segment file #%u", xlrec->tablespace,
-				 xlrec->database, xlrec->relfilenode, xlrec->segnum);
-		break;
-
-	default:
-		snprintf(objectDetails, sizeof(objectDetails), "unknown object type - %d",
-				 xlrec->objtype);
-		break;
-	}
-
-	snprintf(buf, sizeof(buf),"%s for %s, master dbid: %d, mirror dbid: %d, "
-			 "master path: %s, mirror path: %s", operation, objectDetails,
-			 xlrec->u.dbid.master, xlrec->u.dbid.mirror, xlrec->master_path,
-			 xlrec->mirror_path);
-
-	print_rmgr_record(cur, record, buf);
-}
-
-#ifdef USE_SEGWALREP
-void
 print_rmgr_ao(XLogRecPtr cur, XLogRecord *record, uint8 info)
 {
 	char spaceName[NAMEDATALEN];
@@ -1529,4 +1449,3 @@ print_rmgr_ao(XLogRecPtr cur, XLogRecord *record, uint8 info)
 
 	print_rmgr_record(cur, record, buf);
 }
-#endif		/* USE_SEGWALREP */

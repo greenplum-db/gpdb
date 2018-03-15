@@ -1,5 +1,5 @@
 # Macros to detect C compiler features
-# $PostgreSQL: pgsql/config/c-compiler.m4,v 1.19 2008/06/27 00:36:16 tgl Exp $
+# $PostgreSQL: pgsql/config/c-compiler.m4,v 1.22 2010/05/25 17:28:20 meskes Exp $
 
 
 # PGAC_C_SIGNED

@@ -14,12 +14,12 @@ a
 -
 1
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a
 -
 2
 (1 row)
- 2: BEGIN;
+2: BEGIN;
 BEGIN
 2: DELETE FROM ao WHERE a < 5;
 DELETE 4
@@ -30,17 +30,17 @@ a
 -
 3
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a
 -
 4
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a
 -
 5
 (1 row)
- 1: CLOSE cur;
+1: CLOSE cur;
 CLOSE
 3: DECLARE cur CURSOR WITH HOLD FOR SELECT a FROM ao ORDER BY a;
 DECLARE
@@ -49,5 +49,5 @@ a
 -
 5
 (1 row)
- 3: CLOSE cur;
+3: CLOSE cur;
 CLOSE

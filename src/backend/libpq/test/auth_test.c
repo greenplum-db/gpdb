@@ -7,108 +7,97 @@
 
 #ifdef ENABLE_GSS
 
+static void
+pg_authid_search_will_return(const char *user_name, HeapTuple retval)
+{
+	expect_value(SearchSysCache, cacheId, AUTHNAME);
+	expect_string(SearchSysCache, key1, user_name);
+	expect_any(SearchSysCache, key2);
+	expect_any(SearchSysCache, key3);
+	expect_any(SearchSysCache, key4);
+
+	will_return(SearchSysCache, retval);
+
+	if (retval != NULL)
+	{
+		expect_value(ReleaseSysCache, tuple, retval);
+		will_be_called(ReleaseSysCache);
+	}
+}
+
+static void
+pg_authid_tuple_attribute_will_be(HeapTuple tuple, AttrNumber attr, Datum retval)
+{
+	expect_value(SysCacheGetAttr, cacheId, AUTHNAME);
+	expect_value(SysCacheGetAttr, tup, tuple);
+	expect_value(SysCacheGetAttr, attributeNumber, attr);
+	expect_any(SysCacheGetAttr, isNull);
+
+	/*
+	 * The cast to bool here is required; otherwise will_assign_value assumes it
+	 * has an int's worth of space to set and we smash the stack.
+	 */
+	will_assign_value(SysCacheGetAttr, isNull, (bool) (retval == 0));
+	will_return(SysCacheGetAttr, retval);
+}
+
 /* Unit tests for check_valid_until_for_gssapi() function */
 void
-test_checkValidUntilForGssapi1(void **state)
+test_checkValidUntilForGssapi_returns_error_for_nonexistent_user(void **state)
 {
-	int			result = -1;
+	int			result;
 	Port	   *port = (Port *) malloc(sizeof(Port));
 
 	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, NULL);
+	pg_authid_search_will_return(port->user_name, NULL);
+
 	result = check_valid_until_for_gssapi(port);
 	assert_true(result == STATUS_ERROR);
 }
 
 void
-test_checkValidUntilForGssapi2(void **state)
+test_checkValidUntilForGssapi_returns_ok_for_user_with_null_validuntil(void **state)
 {
-	int			result = -1;
-	List	   *list = list_make1("foo");
-	List	  **line = &list;
+	int			result;
 	Port	   *port = (Port *) malloc(sizeof(Port));
+	HeapTuple	tuple = malloc(sizeof(*tuple));
 
 	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, line);
+	pg_authid_search_will_return(port->user_name, tuple);
+	pg_authid_tuple_attribute_will_be(tuple, Anum_pg_authid_rolvaliduntil, (Datum) 0);
+
 	result = check_valid_until_for_gssapi(port);
 	assert_true(result == STATUS_OK);
 }
 
 void
-test_checkValidUntilForGssapi3(void **state)
+test_checkValidUntilForGssapi_returns_error_for_user_with_expired_validuntil(void **state)
 {
-	int			result = -1;
-	ListCell   *cell = NULL;
-	List	   *list = list_make1(cell);
-	List	  **line = &list;
+	int			result;
 	Port	   *port = (Port *) malloc(sizeof(Port));
+	HeapTuple	tuple = malloc(sizeof(*tuple));
 
 	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, line);
-	result = check_valid_until_for_gssapi(port);
-	assert_true(result == STATUS_OK);
-}
-
-void
-test_checkValidUntilForGssapi4(void **state)
-{
-	int			result = -1;
-	ListCell   *cell = NULL;
-	ListCell   *cell1 = NULL;
-	List	   *list = list_make2(cell, cell1);
-	List	  **line = &list;
-	Port	   *port = (Port *) malloc(sizeof(Port));
-
-	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, line);
-	result = check_valid_until_for_gssapi(port);
-	assert_true(result == STATUS_OK);
-}
-
-void
-test_checkValidUntilForGssapi5(void **state)
-{
-	int			result = -1;
-	ListCell   *cell = NULL;
-	List	   *list = list_make3(cell, "foo", "bar");
-	List	  **line = &list;
-	Port	   *port = (Port *) malloc(sizeof(Port));
-
-	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, line);
-	expect_any(DirectFunctionCall3, func);
-	expect_any(DirectFunctionCall3, arg1);
-	expect_any(DirectFunctionCall3, arg2);
-	expect_any(DirectFunctionCall3, arg3);
-	will_return(DirectFunctionCall3, 10293842);
+	pg_authid_search_will_return(port->user_name, tuple);
+	pg_authid_tuple_attribute_will_be(tuple, Anum_pg_authid_rolvaliduntil, (Datum) 10293842);
 	will_return(GetCurrentTimestamp, 10293843);
+
 	result = check_valid_until_for_gssapi(port);
 	assert_true(result == STATUS_ERROR);
 }
 
 void
-test_checkValidUntilForGssapi6(void **state)
+test_checkValidUntilForGssapi_returns_ok_for_user_with_unexpired_validuntil(void **state)
 {
-	int			result = -1;
-	ListCell   *cell = NULL;
-	List	   *list = list_make3(cell, "foo", "bar");
-	List	  **line = &list;
+	int			result;
 	Port	   *port = (Port *) malloc(sizeof(Port));
+	HeapTuple	tuple = malloc(sizeof(*tuple));
 
 	port->user_name = "foo";
-	expect_any(get_role_line, role);
-	will_return(get_role_line, line);
-	expect_any(DirectFunctionCall3, func);
-	expect_any(DirectFunctionCall3, arg1);
-	expect_any(DirectFunctionCall3, arg2);
-	expect_any(DirectFunctionCall3, arg3);
-	will_return(DirectFunctionCall3, 10293844);
+	pg_authid_search_will_return(port->user_name, tuple);
+	pg_authid_tuple_attribute_will_be(tuple, Anum_pg_authid_rolvaliduntil, (Datum) 10293844);
 	will_return(GetCurrentTimestamp, 10293843);
+
 	result = check_valid_until_for_gssapi(port);
 	assert_true(result == STATUS_OK);
 }
@@ -121,12 +110,10 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 #ifdef ENABLE_GSS
-		unit_test(test_checkValidUntilForGssapi1),
-		unit_test(test_checkValidUntilForGssapi2),
-		unit_test(test_checkValidUntilForGssapi3),
-		unit_test(test_checkValidUntilForGssapi4),
-		unit_test(test_checkValidUntilForGssapi5),
-		unit_test(test_checkValidUntilForGssapi6)
+		unit_test(test_checkValidUntilForGssapi_returns_error_for_nonexistent_user),
+		unit_test(test_checkValidUntilForGssapi_returns_ok_for_user_with_null_validuntil),
+		unit_test(test_checkValidUntilForGssapi_returns_error_for_user_with_expired_validuntil),
+		unit_test(test_checkValidUntilForGssapi_returns_ok_for_user_with_unexpired_validuntil),
 #endif
 	};
 

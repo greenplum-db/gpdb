@@ -6,12 +6,12 @@
  * Since pg4_dump is long-dead code, there is no longer any useful distinction
  * between this file and pg_dump.c.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.107 2009/06/11 14:49:07 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.109 2010/01/02 16:57:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -65,8 +65,6 @@ static int  numTypeStorageOptions;
 static ExtensionMemberId *extmembers;
 static int	numextmembers;
 
-bool is_gpdump = false; /* determines whether to print extra logging messages in getSchemaData */
-
 static void flagInhTables(TableInfo *tbinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits);
 static void flagInhAttrs(TableInfo *tblinfo, int numTables);
@@ -84,7 +82,7 @@ static int	strInArray(const char *pattern, char **arr, int arr_size);
  *	  Collect information about all potentially dumpable objects
  */
 TableInfo *
-getSchemaData(int *numTablesPtr, int g_role)
+getSchemaData(int *numTablesPtr)
 {
 	TableInfo  *tblinfo;
 	TypeInfo   *typinfo;
@@ -108,6 +106,7 @@ getSchemaData(int *numTablesPtr, int g_role)
 	int			numTSConfigs;
 	int			numForeignDataWrappers;
 	int			numForeignServers;
+	int			numDefaultACLs;
 
 	/*
 	 * We must read extensions and extension membership info first, because
@@ -139,84 +138,82 @@ getSchemaData(int *numTablesPtr, int g_role)
 	tblinfo = getTables(&numTables);
 	tblinfoindex = buildIndexArray(tblinfo, numTables, sizeof(TableInfo));
 
-	/*
-	 * ROLE_MASTER
-	 */
-	if (g_role == 1)
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined functions\n");
+	funinfo = getFuncs(&numFuncs);
+	funinfoindex = buildIndexArray(funinfo, numFuncs, sizeof(FuncInfo));
+
+	/* this must be after getFuncs */
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined types\n");
+	typinfo = getTypes(&numTypes);
+	typinfoindex = buildIndexArray(typinfo, numTypes, sizeof(TypeInfo));
+
+	/* this must be after getFuncs */
+	if (g_verbose)
+		write_msg(NULL, "reading type storage options\n");
+	getTypeStorageOptions(&numTypeStorageOptions);
+
+	/* this must be after getFuncs, too */
+	if (g_verbose)
+		write_msg(NULL, "reading procedural languages\n");
+	getProcLangs(&numProcLangs);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined aggregate functions\n");
+	getAggregates(&numAggregates);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined operators\n");
+	oprinfo = getOperators(&numOperators);
+	oprinfoindex = buildIndexArray(oprinfo, numOperators, sizeof(OprInfo));
+
+	if (testExtProtocolSupport())
 	{
 		if (g_verbose)
-			write_msg(NULL, "reading user-defined functions\n");
-		funinfo = getFuncs(&numFuncs);
-		funinfoindex = buildIndexArray(funinfo, numFuncs, sizeof(FuncInfo));
-
-		/* this must be after getFuncs */
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined types\n");
-		typinfo = getTypes(&numTypes);
-		typinfoindex = buildIndexArray(typinfo, numTypes, sizeof(TypeInfo));
-
-		/* this must be after getFuncs */
-		if (g_verbose)
-			write_msg(NULL, "reading type storage options\n");
-		getTypeStorageOptions(&numTypeStorageOptions);
-
-		/* this must be after getFuncs, too */
-		if (g_verbose)
-			write_msg(NULL, "reading procedural languages\n");
-		getProcLangs(&numProcLangs);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined aggregate functions\n");
-		getAggregates(&numAggregates);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined operators\n");
-		oprinfo = getOperators(&numOperators);
-		oprinfoindex = buildIndexArray(oprinfo, numOperators, sizeof(OprInfo));
-
-		if (testExtProtocolSupport())
-		{
-			if (g_verbose)
-				write_msg(NULL, "reading user-defined external protocols\n");
-			getExtProtocols(&numExtProtocols);
-		}
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined operator classes\n");
-		getOpclasses(&numOpclasses);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined operator families\n");
-		getOpfamilies(&numOpfamilies);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined text search parsers\n");
-		getTSParsers(&numTSParsers);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined text search templates\n");
-		getTSTemplates(&numTSTemplates);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined text search dictionaries\n");
-		getTSDictionaries(&numTSDicts);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined text search configurations\n");
-		getTSConfigurations(&numTSConfigs);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined foreign-data wrappers\n");
-		getForeignDataWrappers(&numForeignDataWrappers);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined foreign servers\n");
-		getForeignServers(&numForeignServers);
-
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined conversions\n");
-		getConversions(&numConversions);
+			write_msg(NULL, "reading user-defined external protocols\n");
+		getExtProtocols(&numExtProtocols);
 	}
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined operator classes\n");
+	getOpclasses(&numOpclasses);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined operator families\n");
+	getOpfamilies(&numOpfamilies);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined text search parsers\n");
+	getTSParsers(&numTSParsers);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined text search templates\n");
+	getTSTemplates(&numTSTemplates);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined text search dictionaries\n");
+	getTSDictionaries(&numTSDicts);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined text search configurations\n");
+	getTSConfigurations(&numTSConfigs);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined foreign-data wrappers\n");
+	getForeignDataWrappers(&numForeignDataWrappers);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined foreign servers\n");
+	getForeignServers(&numForeignServers);
+
+	if (g_verbose)
+		write_msg(NULL, "reading default privileges\n");
+	getDefaultACLs(&numDefaultACLs);
+
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined conversions\n");
+	getConversions(&numConversions);
 
 	if (g_verbose)
 		write_msg(NULL, "reading type casts\n");
@@ -248,23 +245,17 @@ getSchemaData(int *numTablesPtr, int g_role)
 		write_msg(NULL, "flagging inherited columns in subtables\n");
 	flagInhAttrs(tblinfo, numTables);
 
-	/*
-	 * ROLE_MASTER
-	 */
-	if (g_role == 1)
-	{
-		if (g_verbose)
-			write_msg(NULL, "reading indexes\n");
-		getIndexes(tblinfo, numTables);
+	if (g_verbose)
+		write_msg(NULL, "reading indexes\n");
+	getIndexes(tblinfo, numTables);
 
-		if (g_verbose)
-			write_msg(NULL, "reading constraints\n");
-		getConstraints(tblinfo, numTables);
+	if (g_verbose)
+		write_msg(NULL, "reading constraints\n");
+	getConstraints(tblinfo, numTables);
 
-		if (g_verbose)
-			write_msg(NULL, "reading triggers\n");
-		getTriggers(tblinfo, numTables);
-	}
+	if (g_verbose)
+		write_msg(NULL, "reading triggers\n");
+	getTriggers(tblinfo, numTables);
 
 	*numTablesPtr = numTables;
 	return tblinfo;

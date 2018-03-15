@@ -45,9 +45,6 @@
     </section>
     <section>
       <title>Parallel Backup with gpbackup and gprestore</title>
-      <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
-        are not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that are
         designed to improve the performance, functionality, and reliability of backups as compared
         to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. <codeph>gpbackup</codeph>

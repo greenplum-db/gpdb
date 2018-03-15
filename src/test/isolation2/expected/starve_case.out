@@ -92,7 +92,7 @@ COMMIT
 -- see error column 'c' doesn't exist because session2 renamed it.
 3<:  <... completed>
 ERROR:  column "c" does not exist  (entry db 127.0.0.1:15432 pid=94829)
-DETAIL:  PL/pgSQL function "function_starve_volatile" line 5 at SQL statement
+CONTEXT:  PL/pgSQL function "function_starve_volatile" line 5 at SQL statement
 3: commit;
 COMMIT
 

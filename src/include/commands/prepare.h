@@ -4,21 +4,18 @@
  *	  PREPARE, EXECUTE and DEALLOCATE commands, and prepared-stmt storage
  *
  *
- * Copyright (c) 2002-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/commands/prepare.h,v 1.30 2009/01/01 17:23:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/prepare.h,v 1.32 2010/01/02 16:58:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef PREPARE_H
 #define PREPARE_H
 
-#include "executor/execdesc.h"
-#include "executor/executor.h"
+#include "commands/explain.h"
 #include "utils/plancache.h"
 #include "utils/timestamp.h"
-
-struct TupOutputState;                  /* #include "executor/executor.h" */
 
 /*
  * The data structure representing a prepared statement.  This is now just
@@ -43,9 +40,8 @@ extern void ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 			 ParamListInfo params,
 			 DestReceiver *dest, char *completionTag);
 extern void DeallocateQuery(DeallocateStmt *stmt);
-extern void ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
-					const char *queryString,
-					ParamListInfo params, TupOutputState *tstate);
+extern void ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
+					const char *queryString, ParamListInfo params);
 
 /* Low-level access to stored prepared statements */
 extern void StorePreparedStatement(const char *stmt_name,

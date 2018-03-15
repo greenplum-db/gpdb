@@ -28,31 +28,51 @@
 static Oid
 get_max_oid_from_segDBs(void)
 {
-
-	Oid oid = 0;
-	Oid			tempoid = 0;
+	Oid			oid = 0;
+	Oid			tempoid;
 	int			i;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
-	const char *cmd = "select pg_highest_oid()";
+	const char *cmd = "select pg_catalog.pg_highest_oid()";
 
 	CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
 	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
-		if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
+		PGresult   *res = cdb_pgresults.pg_results[i];
+		int			ntuples;
+		int			nfields;
+
+		if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		{
+			char	   *msg = pstrdup(PQresultErrorMessage(res));
+
+			cdbdisp_clearCdbPgResults(&cdb_pgresults);
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("could not get highest OID from segment"),
+					 errdetail("%s", msg)));
+		}
+
+		ntuples = PQntuples(res);
+		nfields = PQnfields(res);
+		if (ntuples != 1 || nfields != 1)
 		{
 			cdbdisp_clearCdbPgResults(&cdb_pgresults);
-			elog(ERROR, "dboid: resultStatus not tuples_Ok");
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unexpected result set received from pg_highest_oid()"),
+					 errdetail("Result set had %d rows and %d columns",
+							   ntuples, nfields)));
 		}
-		else
-		{
-			Assert(PQntuples(cdb_pgresults.pg_results[i]) == 1);
-			tempoid = atol(PQgetvalue(cdb_pgresults.pg_results[i], 0, 0));
 
-			if (tempoid > oid)
-				oid = tempoid;
-		}
+		tempoid = DatumGetObjectId(
+			DirectFunctionCall1(oidin,
+								CStringGetDatum(PQgetvalue(res, 0, 0))));
+
+		/* XXX: This doesn't do the right thing at OID wraparound. */
+		if (tempoid > oid)
+			oid = tempoid;
 	}
 
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);

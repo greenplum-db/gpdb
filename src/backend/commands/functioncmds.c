@@ -5,12 +5,12 @@
  *	  Routines for CREATE and DROP FUNCTION commands and CREATE and DROP
  *	  CAST commands.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.110 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.118 2010/02/26 02:00:39 momjian Exp $
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -345,6 +345,39 @@ interpret_function_parameter_list(List *parameters,
 
 		if (fp->name && fp->name[0])
 		{
+			ListCell   *px;
+
+			/*
+			 * As of Postgres 9.0 we disallow using the same name for two
+			 * input or two output function parameters.  Depending on the
+			 * function's language, conflicting input and output names might
+			 * be bad too, but we leave it to the PL to complain if so.
+			 */
+			foreach(px, parameters)
+			{
+				FunctionParameter *prevfp = (FunctionParameter *) lfirst(px);
+
+				if (prevfp == fp)
+					break;
+				/* pure in doesn't conflict with pure out */
+				if ((fp->mode == FUNC_PARAM_IN ||
+					 fp->mode == FUNC_PARAM_VARIADIC) &&
+					(prevfp->mode == FUNC_PARAM_OUT ||
+					 prevfp->mode == FUNC_PARAM_TABLE))
+					continue;
+				if ((prevfp->mode == FUNC_PARAM_IN ||
+					 prevfp->mode == FUNC_PARAM_VARIADIC) &&
+					(fp->mode == FUNC_PARAM_OUT ||
+					 fp->mode == FUNC_PARAM_TABLE))
+					continue;
+				if (prevfp->name && prevfp->name[0] &&
+					strcmp(prevfp->name, fp->name) == 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+						  errmsg("parameter name \"%s\" used more than once",
+								 fp->name)));
+			}
+
 			paramNames[i] = CStringGetTextDatum(fp->name);
 			have_names = true;
 		}
@@ -1006,6 +1039,7 @@ validate_describe_callback(List *describeQualName,
 	/* Lookup the function in the catalog */
 	fdResult = func_get_detail(describeQualName,
 							   NIL,   /* argument expressions */
+							   NIL,	  /* argument names */
 							   nargs, 
 							   inputTypeOids,
 							   false,	/* expand_variadic */
@@ -1024,21 +1058,21 @@ validate_describe_callback(List *describeQualName,
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("function %s does not exist",
-						func_signature_string(describeQualName, nargs, inputTypeOids))));
+						func_signature_string(describeQualName, nargs, NIL, inputTypeOids))));
 	}
 	if (describeReturnTypeOid != INTERNALOID)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("return type of function %s is not \"internal\"",
-						func_signature_string(describeQualName, nargs, inputTypeOids))));
+						func_signature_string(describeQualName, nargs, NIL, inputTypeOids))));
 	}
 	if (describeReturnsSet)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("function %s returns a set",
-						func_signature_string(describeQualName, nargs, inputTypeOids))));
+						func_signature_string(describeQualName, nargs, NIL, inputTypeOids))));
 	}
 
 	if (OidIsValid(vatype))
@@ -1130,9 +1164,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	languageName = case_translate_language_name(language);
 
 	/* Look up the language and validate permissions */
-	languageTuple = SearchSysCache(LANGNAME,
-								   PointerGetDatum(languageName),
-								   0, 0, 0);
+	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(languageName));
 	if (!HeapTupleIsValid(languageTuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1332,9 +1364,7 @@ RemoveFunction(RemoveFuncStmt *stmt)
 		return;
 	}
 
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(funcOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", funcOid);
 
@@ -1405,9 +1435,7 @@ RemoveFunctionById(Oid funcOid)
 	 */
 	relation = heap_open(ProcedureRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(funcOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", funcOid);
 
@@ -1429,9 +1457,7 @@ RemoveFunctionById(Oid funcOid)
 	{
 		relation = heap_open(AggregateRelationId, RowExclusiveLock);
 
-		tup = SearchSysCache(AGGFNOID,
-							 ObjectIdGetDatum(funcOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(funcOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for pg_aggregate tuple for function %u", funcOid);
 
@@ -1461,9 +1487,7 @@ RenameFunction(List *name, List *argtypes, const char *newname)
 
 	procOid = LookupFuncNameTypeNames(name, argtypes, false);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(procOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 	procForm = (Form_pg_proc) GETSTRUCT(tup);
@@ -1478,17 +1502,17 @@ RenameFunction(List *name, List *argtypes, const char *newname)
 	namespaceOid = procForm->pronamespace;
 
 	/* make sure the new name doesn't exist */
-	if (SearchSysCacheExists(PROCNAMEARGSNSP,
-							 CStringGetDatum(newname),
-							 PointerGetDatum(&procForm->proargtypes),
-							 ObjectIdGetDatum(namespaceOid),
-							 0))
+	if (SearchSysCacheExists3(PROCNAMEARGSNSP,
+							  CStringGetDatum(newname),
+							  PointerGetDatum(&procForm->proargtypes),
+							  ObjectIdGetDatum(namespaceOid)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_FUNCTION),
 				 errmsg("function %s already exists in schema \"%s\"",
 						funcname_signature_string(newname,
 												  procForm->pronargs,
+												  NIL,
 											   procForm->proargtypes.values),
 						get_namespace_name(namespaceOid))));
 	}
@@ -1530,9 +1554,7 @@ AlterFunctionOwner(List *name, List *argtypes, Oid newOwnerId)
 
 	procOid = LookupFuncNameTypeNames(name, argtypes, false);
 
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(procOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 
@@ -1562,9 +1584,7 @@ AlterFunctionOwner_oid(Oid procOid, Oid newOwnerId)
 
 	rel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(procOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 	AlterFunctionOwner_internal(rel, tup, newOwnerId);
@@ -1685,9 +1705,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 									  stmt->func->funcargs,
 									  false);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(funcOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", funcOid);
 
@@ -1864,9 +1882,7 @@ SetFunctionReturnType(Oid funcOid, Oid newRetType)
 
 	pg_proc_rel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(funcOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", funcOid);
 	procForm = (Form_pg_proc) GETSTRUCT(tup);
@@ -1900,9 +1916,7 @@ SetFunctionArgType(Oid funcOid, int argIndex, Oid newArgType)
 
 	pg_proc_rel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(funcOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(funcOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", funcOid);
 	procForm = (Form_pg_proc) GETSTRUCT(tup);
@@ -1988,9 +2002,7 @@ CreateCast(CreateCastStmt *stmt)
 										 stmt->func->funcargs,
 										 false);
 
-		tuple = SearchSysCache(PROCOID,
-							   ObjectIdGetDatum(funcid),
-							   0, 0, 0);
+		tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for function %u", funcid);
 
@@ -2144,10 +2156,9 @@ CreateCast(CreateCastStmt *stmt)
 	 * the unique index would catch it anyway (so no need to sweat about race
 	 * conditions).
 	 */
-	tuple = SearchSysCache(CASTSOURCETARGET,
-						   ObjectIdGetDatum(sourcetypeid),
-						   ObjectIdGetDatum(targettypeid),
-						   0, 0);
+	tuple = SearchSysCache2(CASTSOURCETARGET,
+							ObjectIdGetDatum(sourcetypeid),
+							ObjectIdGetDatum(targettypeid));
 	if (HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
@@ -2232,10 +2243,9 @@ DropCast(DropCastStmt *stmt)
 	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
 	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
 
-	tuple = SearchSysCache(CASTSOURCETARGET,
-						   ObjectIdGetDatum(sourcetypeid),
-						   ObjectIdGetDatum(targettypeid),
-						   0, 0);
+	tuple = SearchSysCache2(CASTSOURCETARGET,
+							ObjectIdGetDatum(sourcetypeid),
+							ObjectIdGetDatum(targettypeid));
 	if (!HeapTupleIsValid(tuple))
 	{
 		if (!stmt->missing_ok)

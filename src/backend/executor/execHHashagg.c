@@ -37,7 +37,6 @@
 
 #include "cdb/cdbexplain.h"
 #include "cdb/cdbvars.h"
-#include "postmaster/primary_mirror_mode.h"
 
 
 #define HHA_MSG_LVL DEBUG2
@@ -914,7 +913,7 @@ agg_hash_initial_pass(AggState *aggstate)
 				break;
 			}
 
-			if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+			if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 			{
 				/* Update in-memory hash table statistics before spilling. */
 				agg_hash_table_stat_upd(hashtable);
@@ -938,7 +937,7 @@ agg_hash_initial_pass(AggState *aggstate)
 		}
 			
 		/* Advance the aggregates */
-		call_AdvanceAggregates(aggstate, hashtable->groupaggs->aggs, &(aggstate->mem_manager));
+		advance_aggregates(aggstate, hashtable->groupaggs->aggs, &(aggstate->mem_manager));
 		
 		hashtable->num_tuples++;
 
@@ -981,7 +980,7 @@ agg_hash_initial_pass(AggState *aggstate)
 		}
 	}
 
-	if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+	if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		/* Update in-memory hash table statistics if not already done when spilling */
 		agg_hash_table_stat_upd(hashtable);
@@ -1276,7 +1275,6 @@ spill_hash_table(AggState *aggstate)
 	if (hashtable->work_set == NULL)
 	{
 		hashtable->work_set = workfile_mgr_create_set(BFZ, true /* can_be_reused */, &aggstate->ss.ps);
-		hashtable->work_set->metadata.buckets = hashtable->nbuckets;
 		//aggstate->workfiles_created = true;
 	}
 
@@ -1769,7 +1767,7 @@ agg_hash_reload(AggState *aggstate)
 
 			elog(gp_workfile_caching_loglevel, "HashAgg: respill occurring in agg_hash_reload while loading batch data");
 
-			if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+			if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 			{
 				/* Update in-memory hash table statistics before spilling. */
 				agg_hash_table_stat_upd(hashtable);
@@ -1858,7 +1856,7 @@ agg_hash_reload(AggState *aggstate)
 			 GET_BUFFER_SIZE(hashtable));
 	}
 
-	if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+	if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		/* Update in-memory hash table statistics if not already done when spilling */
 		agg_hash_table_stat_upd(hashtable);
@@ -2057,7 +2055,7 @@ agg_hash_next_pass(AggState *aggstate)
 	}
 	
 	/* Report statistics for EXPLAIN ANALYZE. */
-	if (!more && aggstate->ss.ps.instrument)
+	if (!more && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		Instrumentation    *instr = aggstate->ss.ps.instrument;
 

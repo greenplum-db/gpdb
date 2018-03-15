@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.13 2009/01/05 09:27:20 petere Exp $
+# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.17 2010/07/05 23:15:56 tgl Exp $
 
 # Use replacement include files for those missing on Win32
 override CPPFLAGS+="-I$(top_srcdir)/src/include/port/win32"
@@ -13,15 +13,12 @@ AROPT = crs
 DLSUFFIX = .dll
 CFLAGS_SL =
 
-%.dll: %.o
-	$(DLLTOOL) --export-all --output-def $*.def $<
-	$(DLLWRAP) -o $@ --def $*.def $< $(SHLIB_LINK)
-	rm -f $*.def
-
 ifneq (,$(findstring backend,$(subdir)))
 ifeq (,$(findstring conversion_procs,$(subdir)))
 ifeq (,$(findstring snowball,$(subdir)))
+ifeq (,$(findstring libpqwalreceiver,$(subdir)))
 override CPPFLAGS+= -DBUILDING_DLL
+endif
 endif
 endif
 endif
@@ -68,3 +65,9 @@ win32ver.rc: $(top_srcdir)/src/port/win32ver.rc
 
 win32ver.o: win32ver.rc
 	$(WINDRES) -i $< -o $@ --include-dir=$(top_builddir)/src/include --include-dir=$(srcdir)
+
+# Rule for building a shared library from a single .o file
+%.dll: %.o
+	$(DLLTOOL) --export-all --output-def $*.def $<
+	$(DLLWRAP) -o $@ --def $*.def $< $(LDFLAGS) $(LDFLAGS_SL) $(BE_DLLLIBS)
+	rm -f $*.def

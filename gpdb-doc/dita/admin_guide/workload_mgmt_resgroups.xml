@@ -123,7 +123,7 @@
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit"
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system CPU resources to allocate to resource groups on each Greenplum Database
-        segment node. The remaining CPU resources are used for the OS kernel and the Greenplum
+        segment host. The remaining CPU resources are used for the OS kernel and the Greenplum
         Database auxiliary daemon processes. The default
         <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
       <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
@@ -161,10 +161,17 @@
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_memory_limit"
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system memory resources to allocate to resource groups on each Greenplum
-        Database segment node. The default <codeph>gp_resource_group_memory_limit</codeph> value is
+        Database segment host. The default <codeph>gp_resource_group_memory_limit</codeph> value is
         .7 (70%).</p>
       <p>The memory resource available on a Greenplum Database node is further divided equally among
-        each segment on the node. Each resource group reserves a percentage of the segment memory
+        each segment on the node. 
+        When resource group-based resource management is active, the amount of memory allocated
+          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
+          <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter and
+          divided by the number of active primary segments on the host:</p>
+        <p><codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
+      <p>Each resource group reserves a percentage of the segment memory
         for resource management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph>
         value you specify when you create the resource group. The minimum
           <codeph>MEMORY_LIMIT</codeph> percentage you can specify for a resource group is 1, the
@@ -189,11 +196,14 @@
           <title>Resource Group Memory Allotments</title>
           <image href="graphics/resgroupmem.png" id="image_iqn_dsl_wlrg"/>
         </fig></p>
-
       <p>When a query's memory usage exceeds the fixed per-transaction memory usage amount,
         Greenplum Database allocates available resource group shared memory to the query. The
         maximum amount of resource group memory available to a specific transaction slot is the sum
         of the transaction's fixed memory and the full resource group shared memory allotment.</p>
+      <note>Greenplum Database tracks, but does not actively monitor, transaction memory usage
+        in resource groups. A transaction submitted in a resource group will fail and exit
+        when memory usage exceeds its fixed memory allotment, no available resource group
+        shared memory exists, and the transaction requests more memory.</note>
 
       <section id="topic833sp" xml:lang="en">
         <title>Query Operator Memory</title>
@@ -247,7 +257,8 @@
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>
         <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU
-          resources. With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from
+          resources. (cgroups are <b>not</b> used for resource group memory management.) 
+          With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from
           other processes on the node. This allows Greenplum to support CPU usage restrictions on a
           per-resource-group basis.</p>
         <p>For detailed information about cgroups, refer to the Control Groups documentation for
@@ -313,10 +324,9 @@ sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
               the <codeph>cgroup</codeph> mount point.</p>
           </li>
           <li>Verify that you set up the Greenplum Database cgroups configuration correctly by
-            running the following commands. Replace <varname>cgroup_mount_point</varname> with the
-            mount point you identified in the previous step: <codeblock>ls -l <i>cgroup_mount_point</i>/cpu/gpdb
-ls -l <i>cgroup_mount_point</i>/cpuacct/gpdb
-        </codeblock>
+            running the following commands. Replace &lt;cgroup_mount_point&gt; with the
+            mount point that you identified in the previous step: <codeblock>ls -l &lt;cgroup_mount_point&gt;/cpu/gpdb
+ls -l &lt;cgroup_mount_point&gt;/cpuacct/gpdb</codeblock>
             <p>If these directories exist and are owned by <codeph>gpadmin:gpadmin</codeph>, you
               have successfully configured cgroups for Greenplum Database CPU resource
               management.</p>
@@ -429,6 +439,12 @@ gpstart
           </tbody>
         </tgroup>
       </table>
+      <p>Keep in mind that the <codeph>CPU_RATE_LIMIT</codeph> and <codeph>MEMORY_LIMIT</codeph>
+        values for the default resource groups <codeph>admin_group</codeph> and
+        <codeph>default_group</codeph> contribute to the total percentages on a segment host.
+        You may find that you need to adjust these limits for <codeph>admin_group</codeph>
+        and/or <codeph>default_group</codeph> as you create and add new resource groups to
+        your Greenplum Database deployment.</p>
     </body>
   </topic>
 

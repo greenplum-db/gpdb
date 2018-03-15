@@ -40,6 +40,9 @@ class GpRecoversegTestCase(GpTestCase):
             config_file.write("")
 
         self.conn = Mock()
+        self.conn.__enter__ = Mock(return_value=(Mock(), None))
+        self.conn.__exit__ = Mock(return_value=None)
+
         self.cursor = FakeCursor()
         self.db_singleton = Mock()
 
@@ -59,7 +62,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
 
         self.gpArrayMock = MagicMock(spec=GpArray)
-        self.gpArrayMock.getDbList.side_effect = [[], [self.primary0], [self.primary0]]
+        self.gpArrayMock.getDbList.side_effect = [[self.primary0], [self.primary0], [self.primary0]]
         self.gpArrayMock.hasMirrors = True
         self.gpArrayMock.isStandardArray.return_value = (True, None)
         self.gpArrayMock.master = self.gparray.master
@@ -250,15 +253,15 @@ class GpRecoversegTestCase(GpTestCase):
 
     def _create_gparray_with_2_primary_2_mirrors(self):
         master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
         self.primary0 = Segment.initFromString(
-            "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         primary1 = Segment.initFromString(
-            "3|1|p|p|s|u|sdw2|sdw2|40001|41001|/data/primary1||/data/primary1/base/10899,/data/primary1/base/1,/data/primary1/base/10898,/data/primary1/base/25780,/data/primary1/base/34782")
+            "3|1|p|p|s|u|sdw2|sdw2|40001|/data/primary1")
         self.mirror0 = Segment.initFromString(
-            "4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
+            "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         mirror1 = Segment.initFromString(
-            "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
+            "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
         return GpArray([master, self.primary0, primary1, self.mirror0, mirror1])
 
 

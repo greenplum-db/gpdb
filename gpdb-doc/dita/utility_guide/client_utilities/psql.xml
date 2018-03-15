@@ -407,7 +407,7 @@ testdb=#</codeblock>
         <plentry>
           <pt>\db [<varname>tablespace_pattern</varname>] | \db+
               [<varname>tablespace_pattern</varname>]</pt>
-          <pd>Lists all available tablespaces and their corresponding filespace locations. If
+          <pd>Lists all available tablespaces and their corresponding paths. If
             pattern is specified, only tablespaces whose names match the pattern are shown. If + is
             appended to the command name, each object is listed with its associated permissions.
           </pd>

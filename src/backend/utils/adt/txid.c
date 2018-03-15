@@ -10,11 +10,11 @@
  * via functions such as SubTransGetTopmostTransaction().
  *
  *
- *	Copyright (c) 2003-2009, PostgreSQL Global Development Group
+ *	Copyright (c) 2003-2010, PostgreSQL Global Development Group
  *	Author: Jan Wieck, Afilias USA INC.
  *	64-bit txids: Marko Kreen, Skype Technologies
  *
- *	$PostgreSQL: pgsql/src/backend/utils/adt/txid.c,v 1.8 2009/01/01 17:23:50 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/utils/adt/txid.c,v 1.13 2010/02/26 02:01:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,18 +24,14 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "funcapi.h"
+#include "miscadmin.h"
 #include "libpq/pqformat.h"
 #include "utils/builtins.h"
 #include "utils/snapmgr.h"
 
 
-#ifndef INT64_IS_BUSTED
 /* txid will be signed int8 in database, so must limit to 63 bits */
 #define MAX_TXID   UINT64CONST(0x7FFFFFFFFFFFFFFF)
-#else
-/* we only really have 32 bits to work with :-( */
-#define MAX_TXID   UINT64CONST(0x7FFFFFFF)
-#endif
 
 /* Use unsigned variant internally */
 typedef uint64 txid;
@@ -96,7 +92,6 @@ load_xid_epoch(TxidEpoch *state)
 static txid
 convert_xid(TransactionId xid, const TxidEpoch *state)
 {
-#ifndef INT64_IS_BUSTED
 	uint64		epoch;
 
 	/* return special xid's as-is */
@@ -113,10 +108,6 @@ convert_xid(TransactionId xid, const TxidEpoch *state)
 		epoch++;
 
 	return (epoch << 32) | xid;
-#else							/* INT64_IS_BUSTED */
-	/* we can't do anything with the epoch, so ignore it */
-	return (txid) xid & MAX_TXID;
-#endif   /* INT64_IS_BUSTED */
 }
 
 /*
@@ -339,6 +330,14 @@ txid_current(PG_FUNCTION_ARGS)
 {
 	txid		val;
 	TxidEpoch	state;
+
+	/*
+	 * Must prevent during recovery because if an xid is not assigned we try
+	 * to assign one, which would fail. Programs already rely on this function
+	 * to always return a valid current xid, so we should not change this to
+	 * return NULL or similar invalid xid.
+	 */
+	PreventCommandDuringRecovery("txid_current()");
 
 	load_xid_epoch(&state);
 

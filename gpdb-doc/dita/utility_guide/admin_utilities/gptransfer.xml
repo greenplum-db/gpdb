@@ -85,7 +85,11 @@
                     source database system. The <codeph>gpfdists</codeph> protocol is not
                     supported.</li>
                 <li id="pk138472">Writable external tables on the source database system and
-                    readable external tables on the destination database system.</li>
+                    readable external tables on the destination database system. Note that
+                        <codeph>gptransfer</codeph> creates external tables with the
+                        <codeph>execute</codeph> protocol, so the <codeph>--source_user</codeph>
+                    account must have superuser privileges (the default is
+                    <codeph>gpadmin</codeph>). </li>
                 <li id="pk138473">Named pipes that transfer the data between a writable external
                     table and a readable external table.</li>
             </ul>
@@ -655,7 +659,11 @@ sdw4,192.0.2.4</codeblock>
                 <plentry>
                     <pt>--source-user=<varname>source_user</varname></pt>
                     <pd>User ID that is used to connect to the source Greenplum Database system. If
-                        not specified, the default is the user gpadmin.</pd>
+                        not specified, the default is the user
+                                gpadmin.<note><codeph>gptransfer</codeph> creates external tables
+                            with the <codeph>execute</codeph> protocol, so the
+                                <codeph>--source_user</codeph> that you specify must have superuser
+                            privileges.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>--sub-batch-size=<varname>sub_batch_size</varname></pt>

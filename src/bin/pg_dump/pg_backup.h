@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.52 2009/06/11 14:49:07 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.53 2010/05/15 21:41:16 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -192,8 +192,6 @@ extern Archive *OpenArchive(const char *FileSpec, const ArchiveFormat fmt);
 /* Create a new archive */
 extern Archive *CreateArchive(const char *FileSpec, const ArchiveFormat fmt,
 			  const int compression, ArchiveMode mode);
-
-extern int updateArchiveWithDDBoostFile(Archive *AH, const char *ddBoostFile);
 
 /* The --list option */
 extern void PrintTOCSummary(Archive *AH, RestoreOptions *ropt);

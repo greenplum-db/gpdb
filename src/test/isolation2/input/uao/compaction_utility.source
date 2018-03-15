@@ -7,6 +7,6 @@ INSERT INTO foo SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1
 
 DELETE FROM foo WHERE a < 20;
 SELECT COUNT(*) FROM foo;
-2U: VACUUM foo;
+0U: VACUUM foo;
 SELECT COUNT(*) FROM foo;
-2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('foo');
+0U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('foo');

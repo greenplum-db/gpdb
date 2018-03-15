@@ -98,7 +98,7 @@ CREATE TEMP TABLE venue(
     venueseats integer) DISTRIBUTED BY (venueid);
 COPY venue FROM '@abs_srcdir@/data/venue_pipe.txt' WITH DELIMITER AS '|';
 SELECT count(*) FROM venue;
- count
+ count 
 -------
     10
 (1 row)

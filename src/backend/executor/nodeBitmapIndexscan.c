@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapIndexscan.c,v 1.30 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapIndexscan.c,v 1.33 2010/01/02 16:57:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,7 +35,6 @@
 #include "utils/lsyscache.h"
 #include "nodes/tidbitmap.h"
 
-#define BITMAPINDEXSCAN_NSLOTS 0
 
 /* ----------------------------------------------------------------
  *		MultiExecBitmapIndexScan(node)
@@ -105,7 +104,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 			break;
 
 		/* CDB: If EXPLAIN ANALYZE, let bitmap share our Instrumentation. */
-		if (node->ss.ps.instrument)
+		if (node->ss.ps.instrument && (node->ss.ps.instrument)->need_cdb)
 			tbm_generic_set_instrument(bitmap, node->ss.ps.instrument);
 
 		if (node->biss_result == NULL)
@@ -275,8 +274,6 @@ ExecInitBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
 	 * sub-parts corresponding to runtime keys (see below).
 	 */
 
-#define BITMAPINDEXSCAN_NSLOTS 0
-
 	/*
 	 * We do not open or lock the base relation here.  We assume that an
 	 * ancestor BitmapHeapScan node is holding AccessShareLock (or better) on
@@ -357,11 +354,4 @@ ExecInitBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
 	 * all done.
 	 */
 	return indexstate;
-}
-
-int
-ExecCountSlotsBitmapIndexScan(BitmapIndexScan *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPINDEXSCAN_NSLOTS;
 }

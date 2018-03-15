@@ -31,7 +31,6 @@ try:
     from gppylib import gparray
     from gppylib.userinput import ask_yesno
     from gppylib.gp_dbid import GpDbidFile, writeGpDbidFile
-    from gppylib.operations.filespace import GP_TRANSACTION_FILES_FILESPACE, GP_TEMPORARY_FILES_FILESPACE
 except ImportError, e_:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e_))
@@ -247,47 +246,6 @@ def get_config():
     return array
 
 #-------------------------------------------------------------------------
-def update_flat_file(datadir, flat_file, old_dbid, new_dbid):
-    """
-        If the transaction/temporary filespaces have
-        ever been moved, we need to update the flat file.
-        The filespace directories are copied by the 
-        copy_master_filespaces method.
-    """
-
-    flat_file_location = os.path.join(datadir, flat_file)
-    if not os.path.exists(flat_file_location):
-        return
-
-    logger.debug('flat file location for filespace files = %s' % flat_file_location)
-    # The flat file looks like this:
-    # <BOF>
-    # {filespace_oid}
-    # {dbid} {path to filespace}
-    # {dbid} {path to filespace}
-    # <EOF>
-    with open(flat_file_location) as read_file:
-        lines_to_write = ''
-        for line in read_file:
-            tokens = line.split()
-            if len(tokens) != 2:
-                lines_to_write += line
-            elif tokens[0] == str(old_dbid):
-                lines_to_write += str(new_dbid) + ' ' + tokens[1] + '\n'
-
-    temp_flat_file = os.path.join(flat_file_location + '.tmp')
-    
-    try:
-        with open(temp_flat_file, 'w') as write_file:
-            write_file.write(lines_to_write)
-     
-        #Rewrite the master flat file to include the standby information 
-        shutil.move(temp_flat_file, flat_file_location)
-    except Exception, e:
-        raise Exception('Failed to update flat file')
-
-
-#-------------------------------------------------------------------------
 def update_gpdbid_file(options, new_dbid):
     """Updates to gp_dbid file in the data directory to reflect the standby masters dbid."""
 
@@ -405,18 +363,6 @@ try:
     dbidfile = GpDbidFile(options_.master_data_dir, do_read=True)
     old_dbid = dbidfile.dbid
     requires_restart = not check_or_start_standby(options_)
-
-    # We update flat files before promote because postmaster reads
-    # the new value on the promote procedure.  Unfortunately at this
-    # point we don't know what is the new dbid as it is only in catalog,
-    # but for now we assume it's 1.
-    logger.info('Updating transaction files filespace flat files...')
-    update_flat_file(options_.master_data_dir, GP_TRANSACTION_FILES_FILESPACE,
-                     old_dbid, 1)
-
-    logger.info('Updating temporary files filespace flat files...')
-    update_flat_file(options_.master_data_dir, GP_TEMPORARY_FILES_FILESPACE,
-                     old_dbid, 1)
 
     # promote standby, only if the standby is running in recovery
     if not requires_restart:

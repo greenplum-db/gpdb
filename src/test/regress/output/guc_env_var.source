@@ -9,13 +9,13 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into guc_env_tbl values ('1401-01-01');
 -- pg_regress framework would set this to 'Postgres'
 show datestyle;
-   DateStyle
+   DateStyle   
 ---------------
  Postgres, MDY
 (1 row)
 
 select CASE WHEN d::text < 10::text THEN 1 ELSE 2 END from guc_env_tbl;
- case
+ case 
 ------
     1
 (1 row)
@@ -28,7 +28,7 @@ create or replace function udf_unsetenv(cstring) returns bool as
 '@abs_srcdir@/regress.so', 'udf_unsetenv' LANGUAGE C;
 -- set QD environment variable
 select udf_setenv('PGDATESTYLE', 'ISO, YMD');
- udf_setenv
+ udf_setenv 
 ------------
  t
 (1 row)
@@ -36,13 +36,13 @@ select udf_setenv('PGDATESTYLE', 'ISO, YMD');
 -- sleep to ensure the existing Gang has been destroyed
 \! sleep 0.5
 select CASE WHEN d::text < 10::text THEN 1 ELSE 2 END from guc_env_tbl;
- case
+ case 
 ------
     1
 (1 row)
 
 select udf_unsetenv('PGDATESTYLE');
- udf_unsetenv
+ udf_unsetenv 
 --------------
  t
 (1 row)

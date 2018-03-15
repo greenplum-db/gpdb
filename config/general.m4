@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/config/general.m4,v 1.10 2008/10/29 09:27:24 petere Exp $
+# $PostgreSQL: pgsql/config/general.m4,v 1.11 2009/07/02 18:55:40 petere Exp $
 
 # This file defines new macros to process configure command line
 # arguments, to replace the brain-dead AC_ARG_WITH and AC_ARG_ENABLE.
@@ -33,7 +33,6 @@ m4_define([pgac_arg_to_variable],
 
 AC_DEFUN([PGAC_ARG],
 [
-pgac_args="$pgac_args pgac_arg_to_variable([$1],[$2])"
 m4_case([$1],
 
 enable, [

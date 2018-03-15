@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/revoke.sgml,v 1.51 2009/01/22 20:15:59 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/revoke.sgml,v 1.56 2010/04/03 07:23:02 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-REVOKE">
  <refmeta>
-  <refentrytitle id="sql-revoke-title">REVOKE</refentrytitle>
+  <refentrytitle>REVOKE</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -24,68 +24,77 @@ PostgreSQL documentation
 REVOKE [ GRANT OPTION FOR ]
     { { SELECT | INSERT | UPDATE | DELETE | TRUNCATE | REFERENCES | TRIGGER }
     [,...] | ALL [ PRIVILEGES ] }
-    ON [ TABLE ] <replaceable class="PARAMETER">tablename</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON { [ TABLE ] <replaceable class="PARAMETER">table_name</replaceable> [, ...]
+         | ALL TABLES IN SCHEMA <replaceable>schema_name</replaceable> [, ...] }
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { SELECT | INSERT | UPDATE | REFERENCES } ( <replaceable class="PARAMETER">column</replaceable> [, ...] )
     [,...] | ALL [ PRIVILEGES ] ( <replaceable class="PARAMETER">column</replaceable> [, ...] ) }
-    ON [ TABLE ] <replaceable class="PARAMETER">tablename</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON [ TABLE ] <replaceable class="PARAMETER">table_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { USAGE | SELECT | UPDATE }
     [,...] | ALL [ PRIVILEGES ] }
-    ON SEQUENCE <replaceable class="PARAMETER">sequencename</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON { SEQUENCE <replaceable class="PARAMETER">sequence_name</replaceable> [, ...]
+         | ALL SEQUENCES IN SCHEMA <replaceable>schema_name</replaceable> [, ...] }
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { CREATE | CONNECT | TEMPORARY | TEMP } [,...] | ALL [ PRIVILEGES ] }
-    ON DATABASE <replaceable>dbname</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON DATABASE <replaceable>database_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN DATA WRAPPER <replaceable>fdwname</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON FOREIGN DATA WRAPPER <replaceable>fdw_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN SERVER <replaceable>servername</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON FOREIGN SERVER <replaceable>server_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { EXECUTE | ALL [ PRIVILEGES ] }
-    ON FUNCTION <replaceable>funcname</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [, ...] ] ) [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON { FUNCTION <replaceable>function_name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">arg_name</replaceable> ] <replaceable class="parameter">arg_type</replaceable> [, ...] ] ) [, ...]
+         | ALL FUNCTIONS IN SCHEMA <replaceable>schema_name</replaceable> [, ...] }
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { USAGE | ALL [ PRIVILEGES ] }
-    ON LANGUAGE <replaceable>langname</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON LANGUAGE <replaceable>lang_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
+    [ CASCADE | RESTRICT ]
+
+REVOKE [ GRANT OPTION FOR ]
+    { { SELECT | UPDATE } [,...] | ALL [ PRIVILEGES ] }
+    ON LARGE OBJECT <replaceable class="PARAMETER">loid</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { { CREATE | USAGE } [,...] | ALL [ PRIVILEGES ] }
-    ON SCHEMA <replaceable>schemaname</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON SCHEMA <replaceable>schema_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
     { CREATE | ALL [ PRIVILEGES ] }
-    ON TABLESPACE <replaceable>tablespacename</replaceable> [, ...]
-    FROM { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...]
+    ON TABLESPACE <replaceable>tablespace_name</replaceable> [, ...]
+    FROM { [ GROUP ] <replaceable class="PARAMETER">role_name</replaceable> | PUBLIC } [, ...]
     [ CASCADE | RESTRICT ]
 
 REVOKE [ ADMIN OPTION FOR ]
-    <replaceable class="PARAMETER">role</replaceable> [, ...] FROM <replaceable class="PARAMETER">rolename</replaceable> [, ...]
+    <replaceable class="PARAMETER">role_name</replaceable> [, ...] FROM <replaceable class="PARAMETER">role_name</replaceable> [, ...]
     [ CASCADE | RESTRICT ]
 </synopsis>
  </refsynopsisdiv>
@@ -101,7 +110,7 @@ REVOKE [ ADMIN OPTION FOR ]
   </para>
 
   <para>
-   See the description of the <xref linkend="sql-grant" endterm="sql-grant-title"> command for
+   See the description of the <xref linkend="sql-grant"> command for
    the meaning of the privilege types.
   </para>
 
@@ -157,7 +166,7 @@ REVOKE [ ADMIN OPTION FOR ]
   <para>
    Use <xref linkend="app-psql">'s <command>\dp</command> command to
    display the privileges granted on existing tables and columns.  See <xref
-   linkend="sql-grant" endterm="sql-grant-title"> for information about the
+   linkend="sql-grant"> for information about the
    format.  For non-table objects there are other <command>\d</> commands
    that can display their privileges.
   </para>
@@ -260,7 +269,7 @@ REVOKE admins FROM joe;
   <title>Compatibility</title>
 
    <para>
-    The compatibility notes of the <xref linkend="sql-grant" endterm="sql-grant-title"> command
+    The compatibility notes of the <xref linkend="sql-grant"> command
     apply analogously to <command>REVOKE</command>.
     The keyword <literal>RESTRICT</literal> or <literal>CASCADE</literal>
     is required according to the standard, but <productname>PostgreSQL</>
@@ -272,7 +281,7 @@ REVOKE admins FROM joe;
   <title>See Also</title>
 
   <simpara>
-   <xref linkend="sql-grant" endterm="sql-grant-title">
+   <xref linkend="sql-grant">
   </simpara>
  </refsect1>
 

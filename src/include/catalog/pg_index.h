@@ -5,13 +5,13 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_index.h,v 1.47 2009/01/01 17:23:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_index.h,v 1.50 2010/01/05 01:06:56 tgl Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -28,13 +28,14 @@
  */
 #define IndexRelationId  2610
 
-CATALOG(pg_index,2610) BKI_WITHOUT_OIDS
+CATALOG(pg_index,2610) BKI_WITHOUT_OIDS BKI_SCHEMA_MACRO
 {
 	Oid			indexrelid;		/* OID of the index */
 	Oid			indrelid;		/* OID of the relation it indexes */
 	int2		indnatts;		/* number of columns in index */
 	bool		indisunique;	/* is this a unique index? */
 	bool		indisprimary;	/* is this index for primary key? */
+	bool		indimmediate;	/* is uniqueness enforced immediately? */
 	bool		indisclustered; /* is this the index last clustered by? */
 	bool		indisvalid;		/* is this index valid for use by queries? */
 	bool		indcheckxmin;	/* must we wait for xmin to be old? */
@@ -68,21 +69,22 @@ typedef FormData_pg_index *Form_pg_index;
  *		compiler constants for pg_index
  * ----------------
  */
-#define Natts_pg_index					14
+#define Natts_pg_index					15
 #define Anum_pg_index_indexrelid		1
 #define Anum_pg_index_indrelid			2
 #define Anum_pg_index_indnatts			3
 #define Anum_pg_index_indisunique		4
 #define Anum_pg_index_indisprimary		5
-#define Anum_pg_index_indisclustered	6
-#define Anum_pg_index_indisvalid		7
-#define Anum_pg_index_indcheckxmin		8
-#define Anum_pg_index_indisready		9
-#define Anum_pg_index_indkey			10
-#define Anum_pg_index_indclass			11
-#define Anum_pg_index_indoption			12
-#define Anum_pg_index_indexprs			13
-#define Anum_pg_index_indpred			14
+#define Anum_pg_index_indimmediate		6
+#define Anum_pg_index_indisclustered	7
+#define Anum_pg_index_indisvalid		8
+#define Anum_pg_index_indcheckxmin		9
+#define Anum_pg_index_indisready		10
+#define Anum_pg_index_indkey			11
+#define Anum_pg_index_indclass			12
+#define Anum_pg_index_indoption			13
+#define Anum_pg_index_indexprs			14
+#define Anum_pg_index_indpred			15
 
 /*
  * Index AMs that support ordered scans must support these two indoption

@@ -157,7 +157,7 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 
 	ExecAssignProjectionInfo(planState, tupDesc);
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        assertOpState->ps.cdbexplainbuf = makeStringInfo();
 
@@ -191,13 +191,6 @@ ExecEndAssertOp(AssertOpState *node)
 	ExecFreeExprContext(&node->ps);
 	ExecEndNode(outerPlanState(node));
 	EndPlanStateGpmonPkt(&node->ps);
-}
-
-/* Return number of TupleTableSlots used by AssertOp node.*/
-int
-ExecCountSlotsAssertOp(AssertOp *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + ASSERTOP_NSLOTS;
 }
 
 /* Tracing execution for GP Monitor. */

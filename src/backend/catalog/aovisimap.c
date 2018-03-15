@@ -30,6 +30,7 @@ AlterTableCreateAoVisimapTable(Oid relOid, bool is_part_child)
 	TupleDesc	tupdesc;
 	Oid			classObjectId[2];
 	int16		coloptions[2];
+	List	   *indexColNames;
 
 	elogif(Debug_appendonly_print_visimap, LOG,
 		   "Create visimap for relation %d",
@@ -87,6 +88,8 @@ AlterTableCreateAoVisimapTable(Oid relOid, bool is_part_child)
 	indexInfo->ii_Unique = true;
 	indexInfo->ii_Concurrent = false;
 
+	indexColNames = list_make2("segno", "first_row_no");
+
 	classObjectId[0] = INT4_BTREE_OPS_OID;
 	classObjectId[1] = INT8_BTREE_OPS_OID;
 
@@ -96,7 +99,9 @@ AlterTableCreateAoVisimapTable(Oid relOid, bool is_part_child)
 	(void) CreateAOAuxiliaryTable(rel,
 								  "pg_aovisimap",
 								  RELKIND_AOVISIMAP,
-								  tupdesc, indexInfo, classObjectId, coloptions);
+								  tupdesc,
+								  indexInfo, indexColNames,
+								  classObjectId, coloptions);
 
 	heap_close(rel, NoLock);
 }

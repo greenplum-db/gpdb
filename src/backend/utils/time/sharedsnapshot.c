@@ -642,8 +642,6 @@ sharedLocalSnapshot_filename(TransactionId xid, CommandId cid, uint32 segmateSyn
 
 /*
  * Dump the shared local snapshot, so that the readers can pick it up.
- *
- * BufFileCreateTemp_ReaderWriter(filename, iswriter)
  */
 void
 dumpSharedLocalSnapshot_forCursor(void)
@@ -671,7 +669,9 @@ dumpSharedLocalSnapshot_forCursor(void)
 	oldowner = CurrentResourceOwner;
 	CurrentResourceOwner = TopTransactionResourceOwner;
 	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
-	f = BufFileCreateTemp_ReaderWriter(fname, true, false);
+	f = BufFileCreateNamedTemp(fname,
+							   true, /* delOnClose */
+							   false /* interXact */);
 
 	/*
 	 * Remember our file, so that we can close it at end of transaction.
@@ -772,7 +772,9 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 	fname = sharedLocalSnapshot_filename(QEDtxContextInfo.distributedXid,
 		QEDtxContextInfo.curcid, QEDtxContextInfo.segmateSync);
 
-	f = BufFileCreateTemp_ReaderWriter(fname, false, false);
+	f = BufFileOpenNamedTemp(fname,
+							 false, /* delOnClose */
+							 false /* interXact */);
 	/* we have our file. */
 
 #define FileReadOK(file, ptr, size) (BufFileRead(file, ptr, size) == size)

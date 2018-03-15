@@ -28,7 +28,7 @@ typedef struct PlannerConfig
 	bool        gp_enable_predicate_propagation;
 	bool		mpp_trying_fallback_plan;
 	int			cdbpath_segments;
-	bool		constraint_exclusion;
+	int			constraint_exclusion;
 
 	bool		gp_enable_multiphase_agg;
 	bool		gp_enable_preunique;

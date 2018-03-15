@@ -1,0 +1,32 @@
+-- create a tablespace we can use
+CREATE TABLESPACE testspace LOCATION '@testtablespace@';
+-- Test moving AO/AOCO tables from one tablespace to another.
+CREATE TABLE ao_ts_table (id int4, t text) with (appendonly=true, orientation=row) distributed by (id);
+CREATE TABLE aoco_ts_table (id int4, t text) with (appendonly=true, orientation=column) distributed by (id);
+insert into ao_ts_table select g, 'foo' || g from generate_series(1, 10000) g;
+insert into aoco_ts_table select g, 'bar' || g from generate_series(1, 10000) g;
+CREATE INDEX ao_ts_index ON ao_ts_table(id);
+ALTER TABLE ao_ts_table SET TABLESPACE testspace;
+ALTER TABLE aoco_ts_table SET TABLESPACE testspace;
+ALTER INDEX ao_ts_index SET TABLESPACE testspace;
+INSERT INTO ao_ts_table VALUES(-1);
+INSERT INTO aoco_ts_table VALUES(-1);
+SELECT COUNT(*) FROM ao_ts_table;
+ count 
+-------
+ 10001
+(1 row)
+
+SELECT COUNT(*) FROM aoco_ts_table;
+ count 
+-------
+ 10001
+(1 row)
+
+-- Clean up. (It would be good to leave some extra tablespaces behind, so that
+-- they would go through the gpcheckcat, pg_upgrade, etc. passes that run
+-- after the main regression test suite. But all those tools are not up to
+-- snuff yet to deal with tablespaces.)
+drop table ao_ts_table;
+drop table aoco_ts_table;
+drop tablespace testspace;

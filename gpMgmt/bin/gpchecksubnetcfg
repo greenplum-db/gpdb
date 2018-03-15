@@ -129,7 +129,7 @@ def parseargs():
 
 #-------------------------------------------------------------------------
 def db_to_str(db):
-    return "%s:%s:%s:%s:%s:%s:%s:%s:%s:%s:%s" % (db.content,
+    return "%s:%s:%s:%s:%s:%s:%s:%s:%s:%s" % (db.content,
                                                 db.dbid,
                                                 db.role,
                                                 db.preferred_role,
@@ -138,8 +138,7 @@ def db_to_str(db):
                                                 db.hostname,
                                                 db.address,
                                                 db.port,
-                                                db.datadir,
-                                                db.replicationPort)
+                                                db.datadir)
 
 
 #-------------------------------------------------------------------------
@@ -175,8 +174,8 @@ def generate_fix_sql(filename, gparray, wrong_subnet_segs):
         fp = open(filename, 'w')
         logger.info("Writing update SQL to %s" % filename)
         
-        fp.write("-- content, dbid, role, preferred_role, mode, status, hostname, address, port, datadir, replicationPort\n")
-        fp.write("-- ----------------------------------------------------------------------------------------------------\n")
+        fp.write("-- content, dbid, role, preferred_role, mode, status, hostname, address, port, datadir\n")
+        fp.write("-- -----------------------------------------------------------------------------------\n")
         for db in gparray.getDbList():
             if us_dict.has_key(db.dbid):
                 fp.write("-- *** %s\n" % db_to_str(db))

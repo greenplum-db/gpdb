@@ -138,72 +138,52 @@ set optimizer_segments=4;
 set gp_cost_hashjoin_chainwalk=on;
 set optimizer_nestloop_factor = 1.0;
 explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
-                                                                                     QUERY PLAN                                                                                      
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice4; segments: 2)  (cost=2.18..3.66 rows=4 width=16)
-   Rows out:  16 rows at destination with 16 ms to end, start offset by 13 ms.
-   ->  Nested Loop  (cost=2.18..3.66 rows=2 width=16)
-         Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 15 ms to end, start offset by 14 ms.
-         ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.17..2.39 rows=7 width=0)
-               Rows out:  Avg 2.0 rows x 2 workers at destination.  Max 2 rows (seg0) with 14 ms to end, start offset by 14 ms.
-               ->  Hash Semi Join  (cost=1.17..2.22 rows=2 width=0)
-                     Hash Cond: b.c1 = "IN_subquery".max
-                     Rows out:  2 rows (seg1) with 9.727 ms to first row, 11 ms to end, start offset by 18 ms.
-                     Executor memory:  1K bytes.
-                     Work_mem used:  1K bytes. Workfile: (0 spilling, 0 reused)
-                     (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 262151 buckets.
-                     ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
-                           Rows out:  4 rows (seg1) with 2.920 ms to first row, 2.929 ms to end, start offset by 24 ms.
-                     ->  Hash  (cost=1.16..1.16 rows=1 width=32)
-                           Rows in:  1 rows (seg1) with 1.279 ms to end, start offset by 23 ms.
-                           ->  Redistribute Motion 1:2  (slice2; segments: 1)  (cost=1.09..1.16 rows=1 width=32)
-                                 Hash Key: "IN_subquery".max
-                                 Rows out:  1 rows at destination (seg1) with 1.260 ms to first row, 1.261 ms to end, start offset by 23 ms.
-                                 ->  Aggregate  (cost=1.09..1.10 rows=1 width=32)
-                                       Rows out:  1 rows with 0.090 ms to end, start offset by 24 ms.
-                                       Executor memory:  8K bytes.
-                                       ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=1.01..1.07 rows=1 width=32)
-                                             Rows out:  2 rows at destination with 0.019 ms to first row, 0.024 ms to end, start offset by 24 ms.
-                                             ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                                                   Rows out:  Avg 1.0 rows x 2 workers.  Max 1 rows (seg0) with 3.996 ms to first row, 3.997 ms to end, start offset by 17 ms.
-                                                   Executor memory:  8K bytes avg, 8K bytes max (seg0).
-                                                   ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
-                                                         Rows out:  Avg 4.0 rows x 2 workers.  Max 4 rows (seg0) with 3.940 ms to first row, 3.947 ms to end, start offset by 17 ms.
-         ->  Materialize  (cost=1.01..1.02 rows=1 width=16)
-               Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 0.293 ms to first row, 0.301 ms to end of 2 scans, start offset by 29 ms.
-               ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
-                     Rows out:  Avg 4.0 rows x 2 workers.  Max 4 rows (seg0) with 0.018 ms to first row, 0.023 ms to end, start offset by 29 ms.
- Slice statistics:
-   (slice0)    Executor memory: 227K bytes.
-   (slice1)    Executor memory: 235K bytes avg x 2 workers, 235K bytes max (seg0).
-   (slice2)    Executor memory: 259K bytes (seg0).
-   (slice3)    Executor memory: 3327K bytes avg x 2 workers, 3339K bytes max (seg1).  Work_mem: 1K bytes max.
-   (slice4)    Executor memory: 227K bytes avg x 2 workers, 227K bytes max (seg0).
- Statement statistics:
-   Memory used: 128000K bytes
- Settings:  gp_cost_hashjoin_chainwalk=on; gp_segments_for_planner=4; optimizer=off; optimizer_segments=4
- Total runtime: 29.533 ms
-(43 rows)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=1.10..3.32 rows=4 width=16) (actual time=3.283..3.293 rows=16 loops=1)
+   ->  Nested Loop  (cost=1.10..3.32 rows=2 width=16) (actual time=1.277..1.436 rows=16 loops=1)
+         Join Filter: (max((max(gpd1.c1)))) = b.c1
+         ->  Redistribute Motion 1:3  (slice3; segments: 1)  (cost=1.10..2.23 rows=4 width=48) (actual time=1.128..1.134 rows=8 loops=1)
+               Hash Key: (max((max(gpd1.c1))))
+               ->  Nested Loop  (cost=1.10..2.16 rows=4 width=48) (actual time=1.002..1.116 rows=8 loops=1)
+                     ->  Aggregate  (cost=1.10..1.11 rows=1 width=32) (actual time=0.857..0.857 rows=1 loops=1)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.08 rows=1 width=32) (actual time=0.020..0.810 rows=3 loops=1)
+                                 ->  Aggregate  (cost=1.02..1.03 rows=1 width=32) (actual time=0.069..0.070 rows=1 loops=1)
+                                       ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2) (actual time=0.030..0.037 rows=4 loops=1)
+                     ->  Materialize  (cost=0.00..1.05 rows=1 width=16) (actual time=0.143..0.168 rows=8 loops=1)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=16) (actual time=0.009..0.024 rows=8 loops=1)
+                                 ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16) (actual time=0.049..0.054 rows=4 loops=1)
+         ->  Materialize  (cost=0.00..1.03 rows=1 width=2) (actual time=0.016..0.019 rows=4 loops=8)
+               ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2) (actual time=0.021..0.029 rows=4 loops=1)
+   (slice0)    Executor memory: 514K bytes.
+   (slice1)    Executor memory: 175K bytes avg x 3 workers, 175K bytes max (seg0).
+   (slice2)    Executor memory: 149K bytes avg x 3 workers, 149K bytes max (seg0).
+   (slice3)    Executor memory: 235K bytes (seg1).
+   (slice4)    Executor memory: 175K bytes avg x 3 workers, 215K bytes max (seg2).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 61.826 ms
+(23 rows)
 
 explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice4; segments: 2)  (cost=2.18..3.66 rows=4 width=16)
-   ->  Nested Loop  (cost=2.18..3.66 rows=2 width=16)
-         ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.17..2.39 rows=7 width=0)
-               ->  Hash Semi Join  (cost=1.17..2.22 rows=2 width=0)
-                     Hash Cond: b.c1 = "IN_subquery".max
-                     ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
-                     ->  Hash  (cost=1.16..1.16 rows=1 width=32)
-                           ->  Redistribute Motion 1:2  (slice2; segments: 1)  (cost=1.09..1.16 rows=1 width=32)
-                                 Hash Key: "IN_subquery".max
-                                 ->  Aggregate  (cost=1.09..1.10 rows=1 width=32)
-                                       ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=1.01..1.07 rows=1 width=32)
-                                             ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                                                   ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
-         ->  Materialize  (cost=1.01..1.02 rows=1 width=16)
-               ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
- Settings:  gp_cost_hashjoin_chainwalk=on; gp_segments_for_planner=4; optimizer=off; optimizer_segments=4
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=1.10..3.32 rows=4 width=16)
+   ->  Nested Loop  (cost=1.10..3.32 rows=2 width=16)
+         Join Filter: (max((max(gpd1.c1)))) = b.c1
+         ->  Redistribute Motion 1:3  (slice3; segments: 1)  (cost=1.10..2.23 rows=4 width=48)
+               Hash Key: (max((max(gpd1.c1))))
+               ->  Nested Loop  (cost=1.10..2.16 rows=4 width=48)
+                     ->  Aggregate  (cost=1.10..1.11 rows=1 width=32)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.08 rows=1 width=32)
+                                 ->  Aggregate  (cost=1.02..1.03 rows=1 width=32)
+                                       ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
+                     ->  Materialize  (cost=0.00..1.05 rows=1 width=16)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=16)
+                                 ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
+         ->  Materialize  (cost=0.00..1.03 rows=1 width=2)
+               ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
+ Optimizer: legacy query optimizer
 (16 rows)
 
 select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
@@ -231,24 +211,24 @@ set gp_segments_for_planner=40;
 set optimizer_segments=40;
 set optimizer_nestloop_factor = 1.0;
 explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice4; segments: 2)  (cost=2.90..7.97 rows=4 width=16)
-   ->  Nested Loop  (cost=2.90..7.97 rows=2 width=16)
-         ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.89..4.30 rows=67 width=0)
-               ->  Hash Semi Join  (cost=1.89..2.94 rows=2 width=0)
-                     Hash Cond: b.c1 = "IN_subquery".max
-                     ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
-                     ->  Hash  (cost=1.88..1.88 rows=1 width=32)
-                           ->  Redistribute Motion 1:2  (slice2; segments: 1)  (cost=1.45..1.88 rows=1 width=32)
-                                 Hash Key: "IN_subquery".max
-                                 ->  Aggregate  (cost=1.45..1.46 rows=1 width=32)
-                                       ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=1.01..1.44 rows=1 width=32)
-                                             ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                                                   ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
-         ->  Materialize  (cost=1.01..1.02 rows=1 width=16)
-               ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
- Settings:  gp_cost_hashjoin_chainwalk=on; gp_segments_for_planner=40; optimizer=off; optimizer_segments=40
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=1.46..3.68 rows=4 width=16)
+   ->  Nested Loop  (cost=1.46..3.68 rows=2 width=16)
+         Join Filter: (max((max(gpd1.c1)))) = b.c1
+         ->  Redistribute Motion 1:3  (slice3; segments: 1)  (cost=1.46..2.59 rows=4 width=48)
+               Hash Key: (max((max(gpd1.c1))))
+               ->  Nested Loop  (cost=1.46..2.52 rows=4 width=48)
+                     ->  Aggregate  (cost=1.46..1.47 rows=1 width=32)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.44 rows=1 width=32)
+                                 ->  Aggregate  (cost=1.02..1.03 rows=1 width=32)
+                                       ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
+                     ->  Materialize  (cost=0.00..1.05 rows=1 width=16)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=16)
+                                 ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
+         ->  Materialize  (cost=0.00..1.03 rows=1 width=2)
+               ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
+ Optimizer: legacy query optimizer
 (16 rows)
 
 select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
@@ -273,52 +253,32 @@ select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
 (16 rows)
 
 explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
-                                                                                       QUERY PLAN                                                                                       
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice4; segments: 2)  (cost=2.90..7.97 rows=4 width=16)
-   Rows out:  16 rows at destination with 13 ms to end, start offset by 0.647 ms.
-   ->  Nested Loop  (cost=2.90..7.97 rows=2 width=16)
-         Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 12 ms to end, start offset by 1.342 ms.
-         ->  Broadcast Motion 2:2  (slice3; segments: 2)  (cost=1.89..4.30 rows=67 width=0)
-               Rows out:  Avg 2.0 rows x 2 workers at destination.  Max 2 rows (seg0) with 11 ms to end, start offset by 1.343 ms.
-               ->  Hash Semi Join  (cost=1.89..2.94 rows=2 width=0)
-                     Hash Cond: b.c1 = "IN_subquery".max
-                     Rows out:  2 rows (seg1) with 5.473 ms to first row, 6.345 ms to end, start offset by 6.331 ms.
-                     Executor memory:  1K bytes.
-                     Work_mem used:  1K bytes. Workfile: (0 spilling, 0 reused)
-                     (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 262151 buckets.
-                     ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2)
-                           Rows out:  4 rows (seg1) with 2.848 ms to first row, 2.858 ms to end, start offset by 8.944 ms.
-                     ->  Hash  (cost=1.88..1.88 rows=1 width=32)
-                           Rows in:  1 rows (seg1) with 2.253 ms to end, start offset by 6.690 ms.
-                           ->  Redistribute Motion 1:2  (slice2; segments: 1)  (cost=1.45..1.88 rows=1 width=32)
-                                 Hash Key: "IN_subquery".max
-                                 Rows out:  1 rows at destination (seg1) with 2.244 ms to first row, 2.245 ms to end, start offset by 6.691 ms.
-                                 ->  Aggregate  (cost=1.45..1.46 rows=1 width=32)
-                                       Rows out:  1 rows with 4.056 ms to end, start offset by 4.734 ms.
-                                       Executor memory:  8K bytes.
-                                       ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=1.01..1.44 rows=1 width=32)
-                                             Rows out:  2 rows at destination with 2.024 ms to first row, 4.027 ms to end, start offset by 4.734 ms.
-                                             ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                                                   Rows out:  Avg 1.0 rows x 2 workers.  Max 1 rows (seg0) with 2.669 ms to end, start offset by 3.919 ms.
-                                                   Executor memory:  8K bytes avg, 8K bytes max (seg0).
-                                                   ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2)
-                                                         Rows out:  Avg 4.0 rows x 2 workers.  Max 4 rows (seg0) with 2.632 ms to first row, 2.639 ms to end, start offset by 3.919 ms.
-         ->  Materialize  (cost=1.01..1.02 rows=1 width=16)
-               Rows out:  Avg 8.0 rows x 2 workers.  Max 8 rows (seg0) with 0.153 ms to first row, 0.161 ms to end of 2 scans, start offset by 13 ms.
-               ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16)
-                     Rows out:  Avg 4.0 rows x 2 workers.  Max 4 rows (seg0) with 0.018 ms to first row, 0.024 ms to end, start offset by 13 ms.
- Slice statistics:
-   (slice0)    Executor memory: 227K bytes.
-   (slice1)    Executor memory: 235K bytes avg x 2 workers, 235K bytes max (seg0).
-   (slice2)    Executor memory: 259K bytes (seg0).
-   (slice3)    Executor memory: 3327K bytes avg x 2 workers, 3339K bytes max (seg1).  Work_mem: 1K bytes max.
-   (slice4)    Executor memory: 227K bytes avg x 2 workers, 227K bytes max (seg0).
- Statement statistics:
-   Memory used: 128000K bytes
- Settings:  gp_cost_hashjoin_chainwalk=on; gp_segments_for_planner=40; optimizer=off; optimizer_segments=40
- Total runtime: 13.674 ms
-(43 rows)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=1.46..3.68 rows=4 width=16) (actual time=2.368..2.372 rows=16 loops=1)
+   ->  Nested Loop  (cost=1.46..3.68 rows=2 width=16) (actual time=1.923..2.016 rows=16 loops=1)
+         Join Filter: (max((max(gpd1.c1)))) = b.c1
+         ->  Redistribute Motion 1:3  (slice3; segments: 1)  (cost=1.46..2.59 rows=4 width=48) (actual time=1.849..1.852 rows=8 loops=1)
+               Hash Key: (max((max(gpd1.c1))))
+               ->  Nested Loop  (cost=1.46..2.52 rows=4 width=48) (actual time=0.412..0.467 rows=8 loops=1)
+                     ->  Aggregate  (cost=1.46..1.47 rows=1 width=32) (actual time=0.348..0.348 rows=1 loops=1)
+                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.44 rows=1 width=32) (actual time=0.008..0.336 rows=3 loops=1)
+                                 ->  Aggregate  (cost=1.02..1.03 rows=1 width=32) (actual time=0.024..0.025 rows=1 loops=1)
+                                       ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2) (actual time=0.014..0.018 rows=4 loops=1)
+                     ->  Materialize  (cost=0.00..1.05 rows=1 width=16) (actual time=0.062..0.075 rows=8 loops=1)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=16) (actual time=0.005..0.012 rows=8 loops=1)
+                                 ->  Seq Scan on gpd1 a  (cost=0.00..1.01 rows=1 width=16) (actual time=0.010..0.012 rows=4 loops=1)
+         ->  Materialize  (cost=0.00..1.03 rows=1 width=2) (actual time=0.008..0.009 rows=4 loops=8)
+               ->  Seq Scan on gpd1 b  (cost=0.00..1.01 rows=1 width=2) (actual time=0.012..0.018 rows=4 loops=1)
+   (slice0)    Executor memory: 514K bytes.
+   (slice1)    Executor memory: 175K bytes avg x 3 workers, 175K bytes max (seg0).
+   (slice2)    Executor memory: 149K bytes avg x 3 workers, 149K bytes max (seg0).
+   (slice3)    Executor memory: 235K bytes (seg1).
+   (slice4)    Executor memory: 175K bytes avg x 3 workers, 215K bytes max (seg2).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 3.412 ms
+(23 rows)
 
 -- start_equiv
 --

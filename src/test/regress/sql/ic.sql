@@ -200,3 +200,15 @@ select gp_inject_fault('interconnect_stop_ack_is_lost', 'reset', 1);
 select gp_inject_fault('interconnect_stop_ack_is_lost', 'skip', 1);
 commit;
 drop table ic_test_1;
+
+/*
+ * If message queue of connection is failed to be allocated in
+ * SetupUDPIFCInterconnect_Internal() , it should be handled properly
+ * in TeardownUDPIFCInterconnect_Internal().
+ */
+CREATE TABLE a (i INT, j INT) DISTRIBUTED BY (i);
+INSERT INTO a (SELECT i, i * i FROM generate_series(1, 10) as i);
+SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 1);
+SELECT * FROM a;
+DROP TABLE a;
+SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 1);

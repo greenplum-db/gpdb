@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_server.sgml,v 1.2 2009/06/19 15:28:25 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/drop_server.sgml,v 1.4 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-DROPSERVER">
  <refmeta>
-  <refentrytitle id="sql-dropserver-title">DROP SERVER</refentrytitle>
+  <refentrytitle>DROP SERVER</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-DROP SERVER [ IF EXISTS ] <replaceable class="parameter">servername</replaceable> [ CASCADE | RESTRICT ]
+DROP SERVER [ IF EXISTS ] <replaceable class="parameter">server_name</replaceable> [ CASCADE | RESTRICT ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -50,7 +50,7 @@ DROP SERVER [ IF EXISTS ] <replaceable class="parameter">servername</replaceable
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">servername</replaceable></term>
+    <term><replaceable class="parameter">server_name</replaceable></term>
     <listitem>
      <para>
       The name of an existing server.
@@ -105,8 +105,8 @@ DROP SERVER IF EXISTS foo;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createserver" endterm="sql-createserver-title"></member>
-   <member><xref linkend="sql-alterserver" endterm="sql-alterserver-title"></member>
+   <member><xref linkend="sql-createserver"></member>
+   <member><xref linkend="sql-alterserver"></member>
   </simplelist>
  </refsect1>
 

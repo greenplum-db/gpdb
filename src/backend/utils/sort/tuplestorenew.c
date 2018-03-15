@@ -81,27 +81,103 @@ static inline void nts_page_set_dirty(NTupleStorePage *page, bool dirty)
 #define NTS_ALLIGN8(n) (((n)+7) & (~7)) 
 
 /* page stuff.  Note slot grow desc, so the minus array index stuff. */
-static inline long nts_page_blockn(NTupleStorePage *page) { return page->header.blockn; }
-static inline void nts_page_set_blockn(NTupleStorePage *page, long blockn) { page->header.blockn = blockn; }
-static inline NTupleStorePage *nts_page_prev(NTupleStorePage *page) { return (NTupleStorePage *) page->header.prev_1; }
-static inline void nts_page_set_prev(NTupleStorePage *page, NTupleStorePage* prev) { page->header.prev_1 = (void *) prev; }
-static inline NTupleStorePage *nts_page_next(NTupleStorePage *page) { return (NTupleStorePage *) page->header.next_1; }
-static inline void nts_page_set_next(NTupleStorePage *page, NTupleStorePage *next) { page->header.next_1 = (void *) next; }
-static inline int nts_page_pin_cnt(NTupleStorePage *page) { return page->header.pin_cnt; }
-static inline void nts_page_set_pin_cnt(NTupleStorePage *page, int pc) { page->header.pin_cnt = pc; }
-static inline void nts_page_incr_pin_cnt(NTupleStorePage *page) { ++page->header.pin_cnt; }
-static inline void nts_page_decr_pin_cnt(NTupleStorePage *page) { --page->header.pin_cnt; }
-static inline int nts_page_slot_cnt(NTupleStorePage *page) { return page->header.slot_cnt; }
-static inline void nts_page_set_slot_cnt(NTupleStorePage *page, int sc) { page->header.slot_cnt = sc; }
-static inline void nts_page_incr_slot_cnt(NTupleStorePage *page) { ++page->header.slot_cnt; }
-static inline int nts_page_data_bcnt(NTupleStorePage *page) { return page->header.data_bcnt; }
-static inline void nts_page_set_data_bcnt(NTupleStorePage *page, int bc) { page->header.data_bcnt = bc; }
-static inline int nts_page_first_valid_slotn(NTupleStorePage *page) { return page->header.first_slot; }
-static inline void nts_page_set_first_valid_slotn(NTupleStorePage *page, int fs) { page->header.first_slot = fs; }
+static inline long
+nts_page_blockn(NTupleStorePage *page)
+{
+	return page->header.blockn;
+}
+static inline void
+nts_page_set_blockn(NTupleStorePage *page, long blockn)
+{
+	page->header.blockn = blockn;
+}
+
+static inline NTupleStorePage *
+nts_page_prev(NTupleStorePage *page)
+{
+	return (NTupleStorePage *) page->header.prev_1;
+}
+static inline void
+nts_page_set_prev(NTupleStorePage *page, NTupleStorePage* prev)
+{
+	page->header.prev_1 = (void *) prev;
+}
+
+static inline NTupleStorePage *
+nts_page_next(NTupleStorePage *page)
+{
+	return (NTupleStorePage *) page->header.next_1;
+}
+static inline void
+nts_page_set_next(NTupleStorePage *page, NTupleStorePage *next)
+{
+	page->header.next_1 = (void *) next;
+}
+
+static inline int
+nts_page_pin_cnt(NTupleStorePage *page)
+{
+	return page->header.pin_cnt;
+}
+static inline void
+nts_page_set_pin_cnt(NTupleStorePage *page, int pc)
+{
+	page->header.pin_cnt = pc;
+}
+static inline void
+nts_page_incr_pin_cnt(NTupleStorePage *page)
+{
+	++page->header.pin_cnt;
+}
+static inline void
+nts_page_decr_pin_cnt(NTupleStorePage *page)
+{
+	--page->header.pin_cnt;
+}
+
+static inline int
+nts_page_slot_cnt(NTupleStorePage *page)
+{
+	return page->header.slot_cnt;
+}
+static inline void
+nts_page_set_slot_cnt(NTupleStorePage *page, int sc)
+{
+	page->header.slot_cnt = sc;
+}
+static inline void
+nts_page_incr_slot_cnt(NTupleStorePage *page)
+{
+	++page->header.slot_cnt;
+}
+
+static inline int
+nts_page_data_bcnt(NTupleStorePage *page)
+{
+	return page->header.data_bcnt;
+}
+static inline void
+nts_page_set_data_bcnt(NTupleStorePage *page, int bc)
+{
+	page->header.data_bcnt = bc;
+}
+
+static inline int
+nts_page_first_valid_slotn(NTupleStorePage *page)
+{
+	return page->header.first_slot;
+}
+static inline void
+nts_page_set_first_valid_slotn(NTupleStorePage *page, int fs)
+{
+	page->header.first_slot = fs;
+}
+#if USE_ASSERT_CHECKING
 static inline int nts_page_valid_slot_cnt(NTupleStorePage *page)
 {
 	return nts_page_slot_cnt(page) - nts_page_first_valid_slotn(page);
 }
+#endif
 static inline NTupleStorePageSlotEntry *nts_page_slot_entry(NTupleStorePage *page, int slotn)
 {
 	return &(page->slot[-slotn]);
@@ -408,7 +484,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 			else
 			{
 				char tmpprefix[MAXPGPATH];
-				snprintf(tmpprefix, MAXPGPATH, "%s/slice%d_ntuplestore", PG_TEMP_FILES_DIR, currentSliceId);
+				snprintf(tmpprefix, MAXPGPATH, "slice%d_ntuplestore", currentSliceId);
 				nts->pfile = ExecWorkFile_CreateUnique(tmpprefix, BUFFILE, true /* delOnClose */, 0 /* compressType */ );
 			}
 
@@ -467,7 +543,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 	init_page(page);
 	++nts->page_cnt;
 
-	if(nts->instrument)
+	if(nts->instrument && nts->instrument->need_cdb)
 	{
 		nts->instrument->workmemused = Max(nts->instrument->workmemused, nts->page_cnt * BLCKSZ); 
 		if(nts->last_page)
@@ -693,17 +769,14 @@ NTupleStore *
 ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter)
 {
 	NTupleStore* store = NULL;
-	char filenameprefix[MAXPGPATH];
 	char filenamelob[MAXPGPATH];
 
-	snprintf(filenameprefix, sizeof(filenameprefix), "%s/%s", PG_TEMP_FILES_DIR, filename);
-
-	snprintf(filenamelob, sizeof(filenamelob), "%s_LOB", filenameprefix);
+	snprintf(filenamelob, sizeof(filenamelob), "%s_LOB", filename);
 
 	if(isWriter)
 	{
 		store = ntuplestore_create(maxBytes);
-		store->pfile = ExecWorkFile_Create(filenameprefix, BUFFILE,
+		store->pfile = ExecWorkFile_Create(filename, BUFFILE,
 				true /*delOnClose */, 0 /* compressType */);
 		store->rwflag = NTS_IS_WRITER;
 
@@ -718,7 +791,7 @@ ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWri
 		store->work_set = NULL;
 		store->workfiles_created = false;
 
-		store->pfile = ExecWorkFile_Open(filenameprefix, BUFFILE,
+		store->pfile = ExecWorkFile_Open(filename, BUFFILE,
 				false /* delOnClose */,
 				0 /* compressType */);
 
@@ -794,48 +867,6 @@ ntuplestore_create_workset(workfile_set *workSet, int64 maxBytes)
 	store->rwflag = NTS_IS_WRITER;
 
 	return store;
-}
-
-void 
-ntuplestore_reset(NTupleStore *ts)
-{
-	NTupleStorePage *p = ts->first_page;
-
-	Assert(list_length(ts->accessors) == 0); 
-	Assert(!ts->fwacc);
-	Assert(ts->rwflag == NTS_NOT_READERWRITER || !"Reset NYI for reader writer");
-
-	while(p)
-	{
-		NTupleStorePage *next = nts_page_next(p); 
-		ts->first_free_page = NTS_PREPEND_1(ts->first_free_page, p);
-		p = next;
-	}
-	ts->pin_cnt = 0;
-
-	Assert(ts->first_free_page != NULL);
-
-	ts->first_page = ts->first_free_page;
-	ts->first_free_page = nts_page_next(ts->first_page);
-	init_page(ts->first_page);
-	nts_page_set_blockn(ts->first_page, 0);
-
-	ts->last_page = ts->first_page;
-	nts_pin_page(ts, ts->first_page);
-	nts_pin_page(ts, ts->last_page);
-
-	ts->first_ondisk_blockn = 0;
-
-	if(ts->plobfile)
-	{
-#ifdef USE_ASSERT_CHECKING
-		int errorcode = 
-#endif /* USE_ASSERT_CHECKING */
-		    ExecWorkFile_Seek(ts->plobfile, 0 /* offset */, SEEK_SET);
-		Assert(errorcode == 0);
-	}
-
-	ts->lobbytes = 0;
 }
 
 void 
@@ -945,7 +976,7 @@ static long ntuplestore_put_lob(NTupleStore *nts, char* data, NTupleStoreLobRef 
 			Assert(nts->work_set == NULL);
 			Assert(nts->lobbytes == 0);
 
-			snprintf(tmpprefix, sizeof(tmpprefix), "%s/slice%d_ntuplestorelob", PG_TEMP_FILES_DIR, currentSliceId);
+			snprintf(tmpprefix, sizeof(tmpprefix), "slice%d_ntuplestorelob", currentSliceId);
 			nts->plobfile = ExecWorkFile_CreateUnique(tmpprefix, BUFFILE,
 					true /*delOnClose */, 0 /* compressType */);
 		}
@@ -1112,48 +1143,6 @@ void ntuplestore_acc_put_data(NTupleStoreAccessor *tsa, void *data, int len)
 
 	tsa->pos.blockn = nts_page_blockn(tsa->page);
 	tsa->pos.slotn = nts_page_slot_cnt(tsa->page) - 1; 
-}
-
-/* XXX Not done yet.
- * Postgres does not allow hole in the BufFile, therefore, even if we are trimming
- * a page, if, we are already in disk mode, we will have to flush the page (or write
- * any junk, but we need to write a page).  A better way is to may logical page blockn
- * to a physical blockn.  
- */
-void ntuplestore_trim(NTupleStore *ts, NTupleStorePos *pos)
-{
-	NTupleStorePage *page = nts_load_page(ts, pos->blockn); 
-
-	Assert(page); 
-	nts_page_set_first_valid_slotn(page, pos->slotn);
-
-	nts_unpin_page(ts, ts->first_page);
-
-	while(ts->first_page != page)
-	{
-		NTupleStorePage *next = nts_page_next(ts->first_page);
-
-		Assert(nts_page_pin_cnt(ts->first_page) == 0);
-
-		/* Flush dirty page anyway, to prevent holes in file */
-		if(nts_page_is_dirty(ts->first_page))
-		{
-			if(ts->pfile)
-			{
-				if (!ntsWriteBlock(ts, ts->first_page))
-				{
-					workfile_mgr_report_error();
-				}
-			}
-
-		}
-
-		ts->first_free_page = NTS_PREPEND_1(ts->first_free_page, ts->first_page); 
-		ts->first_page = next;
-	}
-
-	Assert(ts->first_page);
-	nts_pin_page(ts, ts->first_page);
 }
 
 static void ntuplestore_acc_advance_in_page(NTupleStoreAccessor *tsa, int* pn)
@@ -1390,18 +1379,6 @@ bool ntuplestore_acc_seek_last(NTupleStoreAccessor *tsa)
 	return ntuplestore_acc_advance(tsa, -1);
 }
 
-void  ntuplestore_acc_set_invalid(NTupleStoreAccessor *tsa)
-{
-	Assert(tsa);
-	
-	if(tsa->page)
-		nts_unpin_page(tsa->store, tsa->page);
-
-	tsa->page = NULL;
-	tsa->pos.blockn = -1;
-	tsa->pos.slotn = -1;
-}
-
 void ntuplestore_acc_seek_bof(NTupleStoreAccessor *tsa)
 {
 	Assert(tsa && tsa->store && tsa->store->first_page);
@@ -1428,27 +1405,6 @@ void ntuplestore_acc_seek_eof(NTupleStoreAccessor *tsa)
 
 	tsa->pos.blockn = nts_page_blockn(tsa->page);
 	tsa->pos.slotn = nts_page_slot_cnt(tsa->page);
-}
-
-/*
- * Check if the tuple pointed by tsa1 is before the tuple pointed by tsa2.
- *
- * This function assumes that both tsa1 and tsa2 are pointing to a valid position.
- */
-bool ntuplestore_acc_is_before(NTupleStoreAccessor *tsa1, NTupleStoreAccessor *tsa2)
-{
-	Assert(ntuplestore_acc_tell(tsa1, NULL) &&
-		   ntuplestore_acc_tell(tsa2, NULL));
-	if (tsa1->pos.blockn < tsa2->pos.blockn)
-		return true;
-
-	if (tsa1->pos.blockn > tsa2->pos.blockn)
-		return false;
-	
-	if (tsa1->pos.slotn < tsa2->pos.slotn)
-		return true;
-	else
-		return false;
 }
 
 /*

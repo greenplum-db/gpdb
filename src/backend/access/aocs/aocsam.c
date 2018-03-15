@@ -655,8 +655,6 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	char	   *basepath = relpath(desc->aoi_rel->rd_node, MAIN_FORKNUM);
 	char		fn[MAXPGPATH];
 	int32		fileSegNo;
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum;
 
 	AOCSFileSegInfo *seginfo;
 
@@ -691,39 +689,6 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 
 	if (seginfo == NULL)
 	{
-		if (gp_appendonly_verify_eof)
-		{
-			/*
-			 * If the entry(s) is(are) not found in the aocseg table, then
-			 * it(they) better not be in gp_relation_node table too. But, we
-			 * avoid this check for segment # 0 because it is typically used
-			 * by operations similar to CTAS etc and the order followed is to
-			 * first add to gp_persistent_relation_node (thus
-			 * gp_relation_node) and later to pg_aocsseg table.
-			 */
-			for (i = 0; i < nvp; i++)
-			{
-				if (desc->cur_segno > 0 &&
-					ReadGpRelationNode(
-									   desc->aoi_rel->rd_rel->reltablespace,
-									   desc->aoi_rel->rd_rel->relfilenode,
-									   (i * AOTupleId_MultiplierSegmentFileNum) + desc->cur_segno,
-									   &persistentTid,
-									   &persistentSerialNum))
-				{
-					elog(ERROR, "Found gp_relation_node entry for relation name %s, "
-						 "relation Oid %u, relfilenode %u, segment file #%d "
-						 "at PTID: %s, PSN: " INT64_FORMAT " when not expected ",
-						 desc->aoi_rel->rd_rel->relname.data,
-						 desc->aoi_rel->rd_id,
-						 desc->aoi_rel->rd_node.relNode,
-						 (i * AOTupleId_MultiplierSegmentFileNum) + desc->cur_segno,
-						 ItemPointerToString(&persistentTid),
-						 persistentSerialNum);
-				}
-			}
-		}
-
 		InsertInitialAOCSFileSegInfo(desc->aoi_rel, desc->cur_segno, nvp);
 		seginfo = NewAOCSFileSegInfo(desc->cur_segno, nvp);
 	}

@@ -5,13 +5,13 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_tablespace.h,v 1.12 2009/01/01 17:23:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_tablespace.h,v 1.15 2010/01/05 21:53:59 rhaas Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -34,12 +34,11 @@ CATALOG(pg_tablespace,1213) BKI_SHARED_RELATION
 	Oid			spcowner;		/* owner of tablespace */
 	text		spclocation;	/* physical location (VAR LENGTH) */
 	aclitem		spcacl[1];		/* access permissions (VAR LENGTH) */
-	Oid			spcfsoid;		/* FilespaceOid */
+	text		spcoptions[1];	/* per-tablespace options */
 } FormData_pg_tablespace;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(spcowner REFERENCES pg_authid(oid));
-FOREIGN_KEY(spcfsoid REFERENCES pg_filespace(oid));
 
 /* ----------------
  *		Form_pg_tablespace corresponds to a pointer to a tuple with
@@ -56,18 +55,14 @@ typedef FormData_pg_tablespace *Form_pg_tablespace;
 #define Natts_pg_tablespace				5
 #define Anum_pg_tablespace_spcname		1
 #define Anum_pg_tablespace_spcowner		2
-#define Anum_pg_tablespace_spclocation  3
-#define Anum_pg_tablespace_spcacl       4
-#define Anum_pg_tablespace_spcfsoid	    5
+#define Anum_pg_tablespace_spclocation	3
+#define Anum_pg_tablespace_spcacl		4
+#define Anum_pg_tablespace_spcoptions	5
 
-DATA(insert OID = 1663 ( pg_default PGUID _null_ _null_ 3052 ));
-DATA(insert OID = 1664 ( pg_global	PGUID _null_ _null_ 3052 ));
+DATA(insert OID = 1663 ( pg_default PGUID "" _null_ _null_ ));
+DATA(insert OID = 1664 ( pg_global	PGUID "" _null_ _null_ ));
 
 #define DEFAULTTABLESPACE_OID 1663
 #define GLOBALTABLESPACE_OID 1664
-
-#define IsBuiltinTablespace(tablespaceId) \
-	(tablespaceId == DEFAULTTABLESPACE_OID || \
-	 tablespaceId == GLOBALTABLESPACE_OID)
 
 #endif   /* PG_TABLESPACE_H */

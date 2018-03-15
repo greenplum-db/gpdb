@@ -20,7 +20,6 @@ static void disable_old_cluster(migratorContext *ctx);
 static void prepare_new_cluster(migratorContext *ctx);
 static void prepare_new_databases(migratorContext *ctx);
 static void create_new_objects(migratorContext *ctx);
-static void rebuild_persistent(migratorContext *ctx);
 static void copy_clog_xlog_xid(migratorContext *ctx);
 static void copy_distributedlog(migratorContext *ctx);
 static void set_frozenxids(migratorContext *ctx);
@@ -91,8 +90,6 @@ main(int argc, char **argv)
 
 	transfer_all_new_dbs(&ctx, &ctx.old.dbarr, &ctx.new.dbarr,
 						 ctx.old.pgdata, ctx.new.pgdata);
-
-	rebuild_persistent(&ctx);
 
 	/*
 	 * Assuming OIDs are only used in system tables, there is no need to
@@ -409,16 +406,6 @@ prepare_new_databases(migratorContext *ctx)
 	check_ok(ctx);
 
 	get_db_and_rel_infos(ctx, &ctx->new.dbarr, CLUSTER_NEW);
-
-	stop_postmaster(ctx, false, false);
-}
-
-static void
-rebuild_persistent(migratorContext *ctx)
-{
-	start_postmaster(ctx, CLUSTER_NEW, false);
-
-	restore_persistent_tables(ctx);
 
 	stop_postmaster(ctx, false, false);
 }

@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 \d pg2_ao_table_gist_index_a0
 
 set enable_seqscan=off;

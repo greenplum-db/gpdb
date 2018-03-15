@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_server.sgml,v 1.2 2009/06/19 15:28:25 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_server.sgml,v 1.4 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERSERVER">
  <refmeta>
-  <refentrytitle id="sql-alterserver-title">ALTER SERVER</refentrytitle>
+  <refentrytitle>ALTER SERVER</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,9 +21,9 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER SERVER <replaceable class="parameter">servername</replaceable> [ VERSION 'newversion' ]
+ALTER SERVER <replaceable class="parameter">server_name</replaceable> [ VERSION '<replaceable class="parameter">new_version</replaceable>' ]
     [ OPTIONS ( [ ADD | SET | DROP ] <replaceable class="PARAMETER">option</replaceable> ['<replaceable class="PARAMETER">value</replaceable>'] [, ... ] ) ]
-ALTER SERVER <replaceable class="PARAMETER">servername</replaceable> OWNER TO <replaceable>new_owner</replaceable>
+ALTER SERVER <replaceable class="PARAMETER">server_name</replaceable> OWNER TO <replaceable>new_owner</replaceable>
 </synopsis>
  </refsynopsisdiv>
 
@@ -52,7 +52,7 @@ ALTER SERVER <replaceable class="PARAMETER">servername</replaceable> OWNER TO <r
 
   <variablelist>
    <varlistentry>
-    <term><replaceable class="parameter">servername</replaceable></term>
+    <term><replaceable class="parameter">server_name</replaceable></term>
     <listitem>
      <para>
       The name of an existing server.
@@ -61,7 +61,7 @@ ALTER SERVER <replaceable class="PARAMETER">servername</replaceable> OWNER TO <r
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">serverversion</replaceable></term>
+    <term><replaceable class="parameter">new_version</replaceable></term>
     <listitem>
      <para>
       New server version.
@@ -116,8 +116,8 @@ ALTER SERVER foo VERSION '8.4' OPTIONS (SET host 'baz');
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createserver" endterm="sql-createserver-title"></member>
-   <member><xref linkend="sql-dropserver" endterm="sql-dropserver-title"></member>
+   <member><xref linkend="sql-createserver"></member>
+   <member><xref linkend="sql-dropserver"></member>
   </simplelist>
  </refsect1>
 

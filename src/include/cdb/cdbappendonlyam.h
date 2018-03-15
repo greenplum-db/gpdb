@@ -372,9 +372,8 @@ extern HTSU_Result appendonly_update(
 		AOTupleId* aoTupleId,
 		AOTupleId* newAoTupleId);
 
-#ifdef USE_SEGWALREP
-#define XLOG_APPENDONLY_INSERT    0x00
-#define XLOG_APPENDONLY_TRUNCATE  0x10
+#define XLOG_APPENDONLY_INSERT			0x00
+#define XLOG_APPENDONLY_TRUNCATE		0x10
 
 typedef struct
 {
@@ -402,7 +401,6 @@ typedef struct
 
 extern void appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
-#endif  /* USE_SEGWALREP */
 
 extern void appendonly_update_finish(AppendOnlyUpdateDesc aoUpdateDesc);
 

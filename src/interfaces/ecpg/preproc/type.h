@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/type.h,v 1.51 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/type.h,v 1.56 2010/04/01 10:30:53 meskes Exp $
  */
 #ifndef _ECPG_PREPROC_TYPE_H
 #define _ECPG_PREPROC_TYPE_H
@@ -17,6 +17,8 @@ struct ECPGstruct_member
 struct ECPGtype
 {
 	enum ECPGttype type;
+	char	   *type_name;		/* For struct and union types it is the struct
+								 * name */
 	char	   *size;			/* For array it is the number of elements. For
 								 * varchar it is the maxsize of the area. */
 	char	   *struct_sizeof;	/* For a struct this is the sizeof() type as
@@ -28,7 +30,7 @@ struct ECPGtype
 		struct ECPGstruct_member *members;		/* A pointer to a list of
 												 * members. */
 	}			u;
-	int			lineno;
+	int			counter;
 };
 
 /* Everything is malloced. */
@@ -36,7 +38,7 @@ void		ECPGmake_struct_member(char *, struct ECPGtype *, struct ECPGstruct_member
 struct ECPGtype *ECPGmake_simple_type(enum ECPGttype, char *, int);
 struct ECPGtype *ECPGmake_varchar_type(enum ECPGttype, long);
 struct ECPGtype *ECPGmake_array_type(struct ECPGtype *, char *);
-struct ECPGtype *ECPGmake_struct_type(struct ECPGstruct_member *, enum ECPGttype, char *);
+struct ECPGtype *ECPGmake_struct_type(struct ECPGstruct_member *, enum ECPGttype, char *, char *);
 struct ECPGstruct_member *ECPGstruct_member_dup(struct ECPGstruct_member *);
 
 /* Frees a type. */
@@ -53,9 +55,10 @@ void		ECPGfree_type(struct ECPGtype *);
    size is the maxsize in case it is a varchar. Otherwise it is the size of
 	   the variable (required to do array fetches of structs).
  */
-void ECPGdump_a_type(FILE *, const char *, struct ECPGtype *,
-				const char *, struct ECPGtype *, const char *,
-				const char *, char *, const char *, const char *);
+void ECPGdump_a_type(FILE *, const char *, struct ECPGtype *, const int,
+				const char *, struct ECPGtype *, const int,
+				const char *, const char *, char *,
+				const char *, const char *);
 
 /* A simple struct to keep a variable and its type. */
 struct ECPGtemp_type
@@ -123,11 +126,14 @@ struct _include_path
 struct cursor
 {
 	char	   *name;
+	char	   *function;
 	char	   *command;
 	char	   *connection;
 	bool		opened;
 	struct arguments *argsinsert;
+	struct arguments *argsinsert_oos;
 	struct arguments *argsresult;
+	struct arguments *argsresult_oos;
 	struct cursor *next;
 };
 

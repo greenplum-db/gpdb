@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.120 2009/06/11 14:49:05 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.126 2010/02/14 18:42:17 rhaas Exp $
  *
  * NOTES
  *	  These routines allow the parser/planner/executor to perform
@@ -36,6 +36,7 @@
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_default_acl.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
@@ -49,6 +50,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/pg_statistic.h"
+#include "catalog/pg_tablespace.h"
 #include "catalog/pg_ts_config.h"
 #include "catalog/pg_ts_config_map.h"
 #include "catalog/pg_ts_dict.h"
@@ -106,7 +108,7 @@ struct cachedesc
 
 static const struct cachedesc cacheinfo[] = {
 	{AggregateRelationId,		/* AGGFNOID */
-		AggregateAggfnoidIndexId,
+		AggregateFnoidIndexId,
 		1,
 		{
 			Anum_pg_aggregate_aggfnoid,
@@ -325,6 +327,17 @@ static const struct cachedesc cacheinfo[] = {
 		},
 		4
 	},
+	{DefaultAclRelationId,		/* DEFACLROLENSPOBJ */
+		DefaultAclRoleNspObjIndexId,
+		3,
+		{
+			Anum_pg_default_acl_defaclrole,
+			Anum_pg_default_acl_defaclnamespace,
+			Anum_pg_default_acl_defaclobjtype,
+			0
+		},
+		256
+	},
 	{EnumRelationId,			/* ENUMOID */
 		EnumOidIndexId,
 		1,
@@ -425,7 +438,7 @@ static const struct cachedesc cacheinfo[] = {
 		4
 	},
 	{NamespaceRelationId,		/* NAMESPACENAME */
-		NamespaceNspnameIndexId,
+		NamespaceNameIndexId,
 		1,
 		{
 			Anum_pg_namespace_nspname,
@@ -567,16 +580,27 @@ static const struct cachedesc cacheinfo[] = {
 		},
 		1024
 	},
-	{StatisticRelationId,		/* STATRELATT */
-		StatisticRelidAttnumIndexId,
-		2,
+	{StatisticRelationId,		/* STATRELATTINH */
+		StatisticRelidAttnumInhIndexId,
+		3,
 		{
 			Anum_pg_statistic_starelid,
 			Anum_pg_statistic_staattnum,
-			0,
+			Anum_pg_statistic_stainherit,
 			0
 		},
 		1024
+	},
+	{TableSpaceRelationId,		/* TABLESPACEOID */
+		TablespaceOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0,
+		},
+		16
 	},
 	{TSConfigMapRelationId,		/* TSCONFIGMAP */
 		TSConfigMapIndexId,
@@ -913,10 +937,9 @@ SearchSysCacheAttName(Oid relid, const char *attname)
 {
 	HeapTuple	tuple;
 
-	tuple = SearchSysCache(ATTNAME,
-						   ObjectIdGetDatum(relid),
-						   CStringGetDatum(attname),
-						   0, 0);
+	tuple = SearchSysCache2(ATTNAME,
+							ObjectIdGetDatum(relid),
+							CStringGetDatum(attname));
 	if (!HeapTupleIsValid(tuple))
 		return NULL;
 	if (((Form_pg_attribute) GETSTRUCT(tuple))->attisdropped)

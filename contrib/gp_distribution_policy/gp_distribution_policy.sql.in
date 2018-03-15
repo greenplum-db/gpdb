@@ -1,6 +1,6 @@
 SET search_path = public;
 
--- This funcion validates the data distribution in a heap table in a segment.
+-- This function validates the data distribution in a heap table in a segment.
 CREATE OR REPLACE FUNCTION gp_distribution_policy_heap_table_check(oid, smallint[]) RETURNS bool
 AS 'MODULE_PATHNAME','gp_distribution_policy_heap_table_check'
 LANGUAGE C IMMUTABLE STRICT;

@@ -9,18 +9,17 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.65 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.70 2010/01/02 16:57:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 /*
  *	 INTERFACE ROUTINES
- *		ExecCountSlotsNode -	count tuple slots needed by plan tree
  *		ExecInitNode	-		initialize a plan node and its subplans
  *		ExecProcNode	-		get a tuple by executing the plan node
  *		ExecEndNode		-		shut down a plan node and its subplans
@@ -95,8 +94,10 @@
 #include "executor/nodeHashjoin.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeLimit.h"
+#include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
 #include "executor/nodeMergejoin.h"
+#include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
 #include "executor/nodeResult.h"
@@ -131,8 +132,7 @@
 #include "executor/nodeTableScan.h"
 #include "pg_trace.h"
 #include "tcop/tcopprot.h"
-
-#include "codegen/codegen_wrapper.h"
+#include "utils/metrics_utils.h"
 
  /* flags bits for planstate walker */
 #define PSW_IGNORE_INITPLAN    0x01
@@ -155,12 +155,6 @@ static CdbVisitOpt planstate_walk_kids(PlanState *planstate,
 				 CdbVisitOpt (*walker) (PlanState *planstate, void *context),
 					void *context,
 					int flags);
-
-static void
-			EnrollQualList(PlanState *result);
-
-static void
-			EnrollProjInfoTargetList(PlanState *result, ProjectionInfo *ProjInfo);
 
 /*
  * setSubplanSliceId
@@ -224,13 +218,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	MemoryAccountIdType curMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 
-	StringInfo	codegenManagerName = makeStringInfo();
-
-	appendStringInfo(codegenManagerName, "%s-%d-%d", "execProcnode", node->plan_node_id, node->type);
-	void	   *CodegenManager = CodeGeneratorManagerCreate(codegenManagerName->data);
-
-	START_CODE_GENERATOR_MANAGER(CodegenManager);
-	{
 
 	int localMotionId = LocallyExecutingSliceIndex(estate);
 
@@ -293,6 +280,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitResult((Result *) node,
 												  estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_ModifyTable:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, ModifyTable);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitModifyTable((ModifyTable *) node,
+													   estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -367,34 +365,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitTableScan((TableScan *) node,
 													 estate, eflags);
-
-			/*
-			 * Enroll ExecVariableList in codegen_manager
-			 */
-			if (NULL != result)
-			{
-				ScanState *scanState = (ScanState *) result;
-				ProjectionInfo *projInfo = result->ps_ProjInfo;
-				if (NULL != scanState &&
-				    scanState->tableType == TableTypeHeap &&
-				    NULL != projInfo &&
-				    projInfo->pi_directMap &&
-				    NULL != projInfo->pi_targetlist)
-				{
-					enroll_ExecVariableList_codegen(ExecVariableList,
-							&projInfo->ExecVariableList_gen_info.ExecVariableList_fn, projInfo, scanState->ss_ScanTupleSlot);
-				}
-			}
-
-			/*
-			 * Enroll targetlist & quals' expression evaluation functions
-			 * in codegen_manager
-			 */
-			EnrollQualList(result);
-			if (NULL !=result)
-			{
-			  EnrollProjInfoTargetList(result, result->ps_ProjInfo);
-			}
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -656,22 +626,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitAgg((Agg *) node,
 												 estate, eflags);
-			/*
-			 * Enroll targetlist & quals' expression evaluation functions
-			 * in codegen_manager
-			 */
-			EnrollQualList(result);
-			if (NULL != result)
-			{
-			  AggState* aggstate = (AggState*)result;
-			  for (int aggno = 0; aggno < aggstate->numaggs; aggno++)
-			  {
-			    AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
-			    EnrollProjInfoTargetList(result, peraggstate->evalproj);
-			  }
-			  enroll_AdvanceAggregates_codegen(advance_aggregates,
-			        &aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
-			        aggstate);			}
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -716,6 +670,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitSetOp((SetOp *) node,
 												 estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_LockRows:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, LockRows);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitLockRows((LockRows *) node,
+													estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -836,7 +801,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	/* Set up instrumentation for this node if requested */
 	if (estate->es_instrument && result != NULL)
-		result->instrument = InstrAlloc(1);
+		result->instrument = GpInstrAlloc(node, estate->es_instrument);
 
 	/* Also set up gpmon counters */
 	InitPlanNodeGpmonPkt(node, &result->gpmon_pkt, estate);
@@ -844,120 +809,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	if (result != NULL)
 	{
 		SAVE_EXECUTOR_MEMORY_ACCOUNT(result, curMemoryAccountId);
-		result->CodegenManager = CodegenManager;
-		/*
-		 * Generate code only if current node is not alien or
-		 * if it is from 'explain codegen` / `explain analyze codegen` query
-		 */
-		bool isExplainCodegenOnMaster = (Gp_segment == -1) &&
-				(eflags & EXEC_FLAG_EXPLAIN_CODEGEN) &&
-				(eflags & EXEC_FLAG_EXPLAIN_ONLY);
-
-		bool isExplainAnalyzeCodegenOnMaster = (Gp_segment == -1) &&
-				(eflags & EXEC_FLAG_EXPLAIN_CODEGEN) &&
-				!(eflags & EXEC_FLAG_EXPLAIN_ONLY);
-
-		if (!isAlienPlanNode ||
-				isExplainAnalyzeCodegenOnMaster ||
-				isExplainCodegenOnMaster)
-		{
-			(void) CodeGeneratorManagerGenerateCode(CodegenManager);
-			if (isExplainAnalyzeCodegenOnMaster ||
-					isExplainCodegenOnMaster)
-			{
-				CodeGeneratorManagerAccumulateExplainString(CodegenManager);
-			}
-			if (!isExplainCodegenOnMaster)
-			{
-				(void) CodeGeneratorManagerPrepareGeneratedFunctions(CodegenManager);
-			}
-		}
 	}
-	}
-	END_CODE_GENERATOR_MANAGER();
-
 	return result;
 }
-
-/* ----------------------------------------------------------------
- *	  EnrollQualList
- *
- *	  Enroll Qual List's expr state from PlanState for codegen.
- * ----------------------------------------------------------------
- */
-void
-EnrollQualList(PlanState *result)
-{
-#ifdef USE_CODEGEN
-	if (NULL == result ||
-		NULL == result->qual)
-	{
-		return;
-	}
-
-	ListCell   *l;
-
-	foreach(l, result->qual)
-	{
-		ExprState  *exprstate = (ExprState *) lfirst(l);
-
-		enroll_ExecEvalExpr_codegen(exprstate->evalfunc,
-									&exprstate->evalfunc,
-									exprstate,
-									result->ps_ExprContext,
-									result
-			);
-	}
-
-#endif
-}
-
-/* ----------------------------------------------------------------
- *	  EnrollProjInfoTargetList
- *
- *	  Enroll Targetlist from ProjectionInfo to Codegen
- * ----------------------------------------------------------------
- */
-void
-EnrollProjInfoTargetList(PlanState *result, ProjectionInfo *ProjInfo)
-{
-#ifdef USE_CODEGEN
-	if (NULL == ProjInfo ||
-		NULL == ProjInfo->pi_targetlist)
-	{
-		return;
-	}
-	if (ProjInfo->pi_isVarList)
-	{
-		/*
-		 * Skip generating expression evaluation for VAR elements in the
-		 * target list since ExecVariableList will take of that
-		 * TODO(shardikar) Re-evaluate this condition once we codegen
-		 * ExecTargetList
-		 */
-		return;
-	}
-
-	ListCell   *l;
-
-	foreach(l, ProjInfo->pi_targetlist)
-	{
-		GenericExprState *gstate = (GenericExprState *) lfirst(l);
-
-		if (NULL == gstate->arg ||
-			NULL == gstate->arg->evalfunc)
-		{
-			continue;
-		}
-		enroll_ExecEvalExpr_codegen(gstate->arg->evalfunc,
-									&gstate->arg->evalfunc,
-									gstate->arg,
-									ProjInfo->pi_exprContext,
-									result);
-	}
-#endif
-}
-
 
 /* ----------------------------------------------------------------
  *		ExecSliceDependencyNode
@@ -1013,8 +867,6 @@ ExecProcNode(PlanState *node)
 {
 	TupleTableSlot *result = NULL;
 
-	START_CODE_GENERATOR_MANAGER(node->CodegenManager);
-	{
 	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
 	{
 
@@ -1036,10 +888,18 @@ ExecProcNode(PlanState *node)
 		ExecReScan(node, NULL); /* let ReScan handle this */
 
 	if (node->instrument)
-		InstrStartNode(node->instrument);
+		INSTR_START_NODE(node->instrument);
 
 	if(!node->fHadSentGpmon)
 		CheckSendPlanStateGpmonPkt(node);
+
+	if(!node->fHadSentNodeStart)
+	{
+		/* GPDB hook for collecting query info */
+		if (query_info_collect_hook)
+			(*query_info_collect_hook)(METRICS_PLAN_NODE_EXECUTING, node);
+		node->fHadSentNodeStart = true;
+	}
 
 	switch (nodeTag(node))
 	{
@@ -1048,6 +908,10 @@ ExecProcNode(PlanState *node)
 			 */
 		case T_ResultState:
 			result = ExecResult((ResultState *) node);
+			break;
+
+		case T_ModifyTableState:
+			result = ExecModifyTable((ModifyTableState *) node);
 			break;
 
 		case T_AppendState:
@@ -1173,6 +1037,10 @@ ExecProcNode(PlanState *node)
 			result = ExecSetOp((SetOpState *) node);
 			break;
 
+		case T_LockRowsState:
+			result = ExecLockRows((LockRowsState *) node);
+			break;
+
 		case T_LimitState:
 			result = ExecLimit((LimitState *) node);
 			break;
@@ -1226,7 +1094,7 @@ ExecProcNode(PlanState *node)
 	}
 
 	if (node->instrument)
-		InstrStopNode(node->instrument, TupIsNull(result) ? 0.0 : 1.0);
+		INSTR_STOP_NODE(node->instrument, TupIsNull(result) ? 0 : 1);
 
 	if (node->plan)
 		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
@@ -1257,8 +1125,6 @@ ExecProcNode(PlanState *node)
 
 	}
 	END_MEMORY_ACCOUNT();
-	}
-	END_CODE_GENERATOR_MANAGER();
 	return result;
 }
 
@@ -1328,170 +1194,6 @@ MultiExecProcNode(PlanState *node)
 }
 	END_MEMORY_ACCOUNT();
 	return result;
-}
-
-
-/*
- * ExecCountSlotsNode - count up the number of tuple table slots needed
- *
- * Note that this scans a Plan tree, not a PlanState tree, because we
- * haven't built the PlanState tree yet ...
- */
-int
-ExecCountSlotsNode(Plan *node)
-{
-	if (node == NULL)
-		return 0;
-
-	switch (nodeTag(node))
-	{
-			/*
-			 * control nodes
-			 */
-		case T_Result:
-			return ExecCountSlotsResult((Result *) node);
-
-		case T_Append:
-			return ExecCountSlotsAppend((Append *) node);
-
-		case T_RecursiveUnion:
-			return ExecCountSlotsRecursiveUnion((RecursiveUnion *) node);
-
-		case T_Sequence:
-			return ExecCountSlotsSequence((Sequence *) node);
-
-		case T_BitmapAnd:
-			return ExecCountSlotsBitmapAnd((BitmapAnd *) node);
-
-		case T_BitmapOr:
-			return ExecCountSlotsBitmapOr((BitmapOr *) node);
-
-			/*
-			 * scan nodes
-			 */
-		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
-		case T_TableScan:
-			return ExecCountSlotsTableScan((TableScan *) node);
-
-		case T_DynamicTableScan:
-			return ExecCountSlotsDynamicTableScan((DynamicTableScan *) node);
-
-		case T_ExternalScan:
-			return ExecCountSlotsExternalScan((ExternalScan *) node);
-
-		case T_IndexScan:
-			return ExecCountSlotsIndexScan((IndexScan *) node);
-
-		case T_DynamicIndexScan:
-			return ExecCountSlotsDynamicIndexScan((DynamicIndexScan *) node);
-
-		case T_BitmapIndexScan:
-			return ExecCountSlotsBitmapIndexScan((BitmapIndexScan *) node);
-
-		case T_BitmapHeapScan:
-			return ExecCountSlotsBitmapHeapScan((BitmapHeapScan *) node);
-
-		case T_BitmapAppendOnlyScan:
-			return ExecCountSlotsBitmapAppendOnlyScan((BitmapAppendOnlyScan *) node);
-
-		case T_BitmapTableScan:
-			return ExecCountSlotsBitmapTableScan((BitmapTableScan *) node);
-
-		case T_TidScan:
-			return ExecCountSlotsTidScan((TidScan *) node);
-
-		case T_SubqueryScan:
-			return ExecCountSlotsSubqueryScan((SubqueryScan *) node);
-
-		case T_FunctionScan:
-			return ExecCountSlotsFunctionScan((FunctionScan *) node);
-
-		case T_TableFunctionScan:
-			return ExecCountSlotsTableFunction((TableFunctionScan *) node);
-
-		case T_ValuesScan:
-			return ExecCountSlotsValuesScan((ValuesScan *) node);
-
-		case T_CteScan:
-			return ExecCountSlotsCteScan((CteScan *) node);
-
-		case T_WorkTableScan:
-			return ExecCountSlotsWorkTableScan((WorkTableScan *) node);
-
-			/*
-			 * join nodes
-			 */
-		case T_NestLoop:
-			return ExecCountSlotsNestLoop((NestLoop *) node);
-
-		case T_MergeJoin:
-			return ExecCountSlotsMergeJoin((MergeJoin *) node);
-
-		case T_HashJoin:
-			return ExecCountSlotsHashJoin((HashJoin *) node);
-
-			/*
-			 * share input nodes
-			 */
-		case T_ShareInputScan:
-			return ExecCountSlotsShareInputScan((ShareInputScan *) node);
-
-			/*
-			 * materialization nodes
-			 */
-		case T_Material:
-			return ExecCountSlotsMaterial((Material *) node);
-
-		case T_Sort:
-			return ExecCountSlotsSort((Sort *) node);
-
-		case T_Agg:
-			return ExecCountSlotsAgg((Agg *) node);
-
-		case T_WindowAgg:
-			return 0;
-
-		case T_Unique:
-			return ExecCountSlotsUnique((Unique *) node);
-
-		case T_Hash:
-			return ExecCountSlotsHash((Hash *) node);
-
-		case T_SetOp:
-			return ExecCountSlotsSetOp((SetOp *) node);
-
-		case T_Limit:
-			return ExecCountSlotsLimit((Limit *) node);
-
-		case T_Motion:
-			return ExecCountSlotsMotion((Motion *) node);
-
-		case T_Repeat:
-			return ExecCountSlotsRepeat((Repeat *) node);
-
-		case T_DML:
-			return ExecCountSlotsDML((DML *) node);
-
-		case T_SplitUpdate:
-			return ExecCountSlotsSplitUpdate((SplitUpdate *) node);
-
-		case T_AssertOp:
-			return ExecCountSlotsAssertOp((AssertOp *) node);
-
-		case T_RowTrigger:
-			return ExecCountSlotsRowTrigger((RowTrigger *) node);
-
-		case T_PartitionSelector:
-			return ExecCountSlotsPartitionSelector((PartitionSelector *) node);
-
-		default:
-			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
-			break;
-	}
-
-	return 0;
 }
 
 /* ----------------------------------------------------------------
@@ -1604,7 +1306,7 @@ ExecUpdateTransportState(PlanState *node, ChunkTransportState * state)
  *		Recursively cleans up all the nodes in the plan rooted
  *		at 'node'.
  *
- *		After this operation, the query plan will not be able to
+ *		After this operation, the query plan will not be able to be
  *		processed any further.	This should be called only after
  *		the query plan has been fully executed.
  * ----------------------------------------------------------------
@@ -1649,6 +1351,10 @@ ExecEndNode(PlanState *node)
 			 */
 		case T_ResultState:
 			ExecEndResult((ResultState *) node);
+			break;
+
+		case T_ModifyTableState:
+			ExecEndModifyTable((ModifyTableState *) node);
 			break;
 
 		case T_AppendState:
@@ -1801,6 +1507,10 @@ ExecEndNode(PlanState *node)
 			ExecEndSetOp((SetOpState *) node);
 			break;
 
+		case T_LockRowsState:
+			ExecEndLockRows((LockRowsState *) node);
+			break;
+
 		case T_LimitState:
 			ExecEndLimit((LimitState *) node);
 			break;
@@ -1836,16 +1546,9 @@ ExecEndNode(PlanState *node)
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
 	}
-
-	if (codegen)
-	{
-		/*
-		 * if codegen guc is true, then assert if CodegenManager is NULL
-		 */
-		Assert(NULL != node->CodegenManager);
-		CodeGeneratorManagerDestroy(node->CodegenManager);
-		node->CodegenManager = NULL;
-	}
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_PLAN_NODE_FINISHED, node);
 
 	estate->currentSliceIdInPlan = origSliceIdInPlan;
 	estate->currentExecutingSliceId = origExecutingSliceId;
@@ -2023,6 +1726,15 @@ planstate_walk_kids(PlanState *planstate,
 				AppendState *as = (AppendState *) planstate;
 
 				v = planstate_walk_array(as->appendplans, as->as_nplans, walker, context, flags);
+				Assert(!planstate->lefttree && !planstate->righttree);
+				break;
+			}
+
+		case T_ModifyTableState:
+			{
+				ModifyTableState *mts = (ModifyTableState *) planstate;
+
+				v = planstate_walk_array(mts->mt_plans, mts->mt_nplans, walker, context, flags);
 				Assert(!planstate->lefttree && !planstate->righttree);
 				break;
 			}

@@ -92,11 +92,11 @@
  * heap's TOAST table will go through the normal bufmgr.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/rewriteheap.c,v 1.18 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/rewriteheap.c,v 1.22 2010/04/28 16:10:40 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -347,7 +347,7 @@ rewrite_heap_tuple(RewriteState state,
 	 * we can get the right things to happen by passing InvalidBuffer for the
 	 * buffer.
 	 */
-	heap_freeze_tuple(new_tuple->t_data, &state->rs_freeze_xid, InvalidBuffer, false);
+	heap_freeze_tuple(new_tuple->t_data, state->rs_freeze_xid, InvalidBuffer);
 
 	/*
 	 * Invalid ctid means that ctid should point to the tuple itself. We'll

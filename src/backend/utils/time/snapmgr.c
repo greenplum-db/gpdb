@@ -15,11 +15,11 @@
  * long.)
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/snapmgr.c,v 1.10 2009/06/11 14:49:06 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/snapmgr.c,v 1.15 2010/02/26 02:01:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -257,8 +257,14 @@ CopySnapshot(Snapshot snapshot)
 	else
 		newsnap->xip = NULL;
 
-	/* setup subXID array */
-	if (snapshot->subxcnt > 0)
+	/*
+	 * Setup subXID array. Don't bother to copy it if it had overflowed,
+	 * though, because it's not used anywhere in that case. Except if it's a
+	 * snapshot taken during recovery; all the top-level XIDs are in subxip as
+	 * well in that case, so we mustn't lose them.
+	 */
+	if (snapshot->subxcnt > 0 &&
+		(!snapshot->suboverflowed || snapshot->takenDuringRecovery))
 	{
 		newsnap->subxip = (TransactionId *) ((char *) newsnap + subxipoff);
 		memcpy(newsnap->subxip, snapshot->subxip,
@@ -327,8 +333,9 @@ FreeSnapshot(Snapshot snapshot)
  * PushActiveSnapshot
  *		Set the given snapshot as the current active snapshot
  *
- * If this is the first use of this snapshot, create a new long-lived copy with
- * active refcount=1.  Otherwise, only increment the refcount.
+ * If the passed snapshot is a statically-allocated one, or it is possibly
+ * subject to a future command counter update, create a new long-lived copy
+ * with active refcount=1.	Otherwise, only increment the refcount.
  */
 void
 PushActiveSnapshot(Snapshot snap)
@@ -338,8 +345,16 @@ PushActiveSnapshot(Snapshot snap)
 	Assert(snap != InvalidSnapshot);
 
 	newactive = MemoryContextAlloc(TopTransactionContext, sizeof(ActiveSnapshotElt));
-	/* Static snapshot?  Create a persistent copy */
-	newactive->as_snap = snap->copied ? snap : CopySnapshot(snap);
+
+	/*
+	 * Checking SecondarySnapshot is probably useless here, but it seems
+	 * better to be sure.
+	 */
+	if (snap == CurrentSnapshot || snap == SecondarySnapshot || !snap->copied)
+		newactive->as_snap = CopySnapshot(snap);
+	else
+		newactive->as_snap = snap;
+
 	newactive->as_next = ActiveSnapshot;
 	newactive->as_level = GetCurrentTransactionNestLevel();
 

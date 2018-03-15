@@ -1,0 +1,100 @@
+1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+1:CREATE TABLE crash_test_table(c1 int);
+CREATE
+
+-- transaction of session 2 and session 3 inserted 'COMMIT' record before checkpoint
+1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+2&:insert into crash_test_table values (1);  <waiting ...>
+3&:create table crash_test_ddl(c1 int);  <waiting ...>
+
+-- wait session 2 and session 3 hit inject point
+1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'wait_until_triggered', '', '', '', 2, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:CHECKPOINT;
+CHECKPOINT
+
+-- transaction of session 4 inserted 'COMMIT' record after checkpoint
+4&:insert into crash_test_table values (2);  <waiting ...>
+
+-- wait session 4 hit inject point
+1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'wait_until_triggered', '', '', '', 3, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- transaction of session 5 didn't insert 'COMMIT' record
+1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+5&:INSERT INTO crash_test_table VALUES (3);  <waiting ...>
+
+-- wait session 5 hit inject point
+1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'wait_until_triggered', '', '', '', 1, 0, 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- check injector status
+1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'status', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'status', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- trigger crash
+1:select gp_inject_fault('before_read_command', 'panic', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+2<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+3<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+4<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+5<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- transaction of session 2, session 3 and session 4 will be committed during recovery.
+6:select * from crash_test_table;
+c1
+--
+1 
+2 
+(2 rows)
+6:select * from crash_test_ddl;
+c1
+--
+(0 rows)

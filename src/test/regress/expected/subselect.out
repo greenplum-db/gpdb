@@ -554,6 +554,21 @@ select (select (a.*)::text) from view_a a;
 (1 row)
 
 --
+-- Test case for sublinks pushed down into subselects via join alias expansion
+--
+-- Greenplum note: This query will only work with ORCA. This type of query
+-- was not supported in postgres versions prior to 8.4, and thus was never
+-- supported in the planner. After 8.4 versions, the planner works, but
+-- the plan it creates is not currently parallel safe.
+select
+  (select sq1) as qq1
+from
+  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
+   from int8_tbl) sq0
+  join
+  int4_tbl i4 on dummy = i4.f1;
+ERROR:  correlated subquery with skip-level correlations is not supported
+--
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
@@ -579,17 +594,6 @@ with q as (select max(f1) from int4_tbl group by f1 order by f1)
  (2147483647)
 (5 rows)
 
---
--- Test case for sublinks pushed down into subselects via join alias expansion
---
-select
-  (select sq1) as qq1
-from
-  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
-   from int8_tbl) sq0
-  join
-  int4_tbl i4 on dummy = i4.f1;
-ERROR:  correlated subquery with skip-level correlations is not supported
 --
 -- Test case for cross-type partial matching in hashed subplan (bug #7597)
 --
@@ -655,3 +659,21 @@ select * from int4_tbl o where (f1, f1) in
 (1 row)
 
 reset enable_hashjoin;
+--
+-- check for over-optimization of whole-row Var referencing an Append plan
+--
+select (select q from
+         (select 1,2,3 where f1 > 0
+          union all
+          select 4,5,6.0 where f1 <= 0
+         ) q )
+from int4_tbl;
+ ?column?  
+-----------
+ (4,5,6.0)
+ (1,2,3)
+ (4,5,6.0)
+ (1,2,3)
+ (4,5,6.0)
+(5 rows)
+

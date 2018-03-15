@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/var.h,v 1.41 2009/04/19 19:46:33 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/var.h,v 1.42 2010/01/02 16:58:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

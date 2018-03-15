@@ -31,7 +31,6 @@ Flow *
 cdbpathtoplan_create_flow(PlannerInfo *root,
 						  CdbPathLocus locus,
 						  Relids relids,
-						  List *pathkeys,
 						  Plan *plan)
 {
 	Flow	   *flow = NULL;
@@ -190,7 +189,6 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
                                               subpath->parent
                                                 ? subpath->parent->relids
                                                 : NULL,
-                                              subpath->pathkeys,
                                               subplan);
 
 	/**

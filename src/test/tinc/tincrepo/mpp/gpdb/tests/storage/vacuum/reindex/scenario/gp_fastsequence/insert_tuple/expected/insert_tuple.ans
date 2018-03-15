@@ -1,2 +1,0 @@
-insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
-INSERT 0 100

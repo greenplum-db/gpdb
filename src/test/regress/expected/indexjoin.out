@@ -50,7 +50,7 @@ ORDER BY 1 asc ;
  Optimizer status: legacy query optimizer
 (19 rows)
 
-
+  
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_small tt, my_tq_agg_small tq
 WHERE tq.sym = tt.symbol AND

@@ -30,14 +30,6 @@ resources:
       repository: pivotaldata/centos-gpdb-dev
       tag: '6-gcc6.2-llvm3.7'
 
-  - name: pxf_src
-    type: git
-    source:
-      branch: {{pxf-git-branch}}
-      tag_filter: {{pxf-git-filter}}
-      private_key: {{pxf-git-key}}
-      uri: {{pxf-git-remote}}
-
   - name: gpaddon_src
     type: git
     source:
@@ -57,7 +49,6 @@ jobs:
       - get: ubuntu-gpdb-dev-16
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
-      - get: pxf_src
 
     - put: gpdb_pr
       params:

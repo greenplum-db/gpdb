@@ -19,10 +19,10 @@
  * data across crashes.  During database startup, we simply force the
  * currently-active page of SUBTRANS to zeroes.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/subtrans.c,v 1.24 2009/01/01 17:23:36 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/subtrans.c,v 1.27 2010/02/26 02:00:34 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,7 +34,6 @@
 #include "pg_trace.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
-#include "cdb/cdbpersistentstore.h"
 
 
 /*
@@ -70,8 +69,6 @@ static bool SubTransPagePrecedes(int page1, int page2);
 static void
 SubTransGetData(TransactionId xid, SubTransData* subData)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int			pageno = TransactionIdToPage(xid);
 	int			entryno = TransactionIdToEntry(xid);
 	int			slotno;
@@ -88,11 +85,9 @@ SubTransGetData(TransactionId xid, SubTransData* subData)
 		return;
 	}
 
-	MIRRORED_LOCK;
-
 	/* lock is acquired by SimpleLruReadPage_ReadOnly */
 
-	slotno = SimpleLruReadPage_ReadOnly(SubTransCtl, pageno, xid, NULL);
+	slotno = SimpleLruReadPage_ReadOnly(SubTransCtl, pageno, xid);
 	ptr = (SubTransData *) SubTransCtl->shared->page_buffer[slotno];
 	ptr += entryno;
 
@@ -106,19 +101,17 @@ SubTransGetData(TransactionId xid, SubTransData* subData)
 
 	LWLockRelease(SubtransControlLock);
 
-	MIRRORED_UNLOCK;
-
 	return;
 }
 
 /*
  * Record the parent of a subtransaction in the subtrans log.
+ *
+ * In some cases we may need to overwrite an existing value.
  */
 void
-SubTransSetParent(TransactionId xid, TransactionId parent)
+SubTransSetParent(TransactionId xid, TransactionId parent, bool overwriteOK)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int			pageno = TransactionIdToPage(xid);
 	int			entryno = TransactionIdToEntry(xid);
 	int			slotno;
@@ -138,7 +131,7 @@ SubTransSetParent(TransactionId xid, TransactionId parent)
 		subData.topMostParent = InvalidTransactionId;
 	}
 
-	MIRRORED_LOCK;
+	Assert(TransactionIdIsValid(parent));
 
 	LWLockAcquire(SubtransControlLock, LW_EXCLUSIVE);
 
@@ -147,8 +140,10 @@ SubTransSetParent(TransactionId xid, TransactionId parent)
 	ptr += entryno;
 
 	/* Current state should be 0 */
-	Assert(ptr->parent == InvalidTransactionId);
-	Assert(ptr->topMostParent == InvalidTransactionId);
+	Assert(ptr->parent == InvalidTransactionId ||
+		   (ptr->parent == parent && overwriteOK));
+	Assert(ptr->topMostParent == InvalidTransactionId ||
+		   (ptr->topMostParent == subData.topMostParent && overwriteOK));
 
 	ptr->parent = parent;
 	ptr->topMostParent = subData.topMostParent;
@@ -156,8 +151,6 @@ SubTransSetParent(TransactionId xid, TransactionId parent)
 	SubTransCtl->shared->page_dirty[slotno] = true;
 
 	LWLockRelease(SubtransControlLock);
-
-	MIRRORED_UNLOCK;
 }
 
 /*
@@ -202,7 +195,7 @@ SUBTRANSShmemInit(void)
 {
 	SubTransCtl->PagePrecedes = SubTransPagePrecedes;
 	SimpleLruInit(SubTransCtl, "SUBTRANS Ctl", NUM_SUBTRANS_BUFFERS, 0,
-				  SubtransControlLock, SUBTRANS_DIR);
+				  SubtransControlLock, "pg_subtrans");
 	/* Override default assumption that writes should be fsync'd */
 	SubTransCtl->do_fsync = false;
 }
@@ -220,11 +213,7 @@ SUBTRANSShmemInit(void)
 void
 BootStrapSUBTRANS(void)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int			slotno;
-
-	MIRRORED_LOCK;
 
 	LWLockAcquire(SubtransControlLock, LW_EXCLUSIVE);
 
@@ -236,8 +225,6 @@ BootStrapSUBTRANS(void)
 	Assert(!SubTransCtl->shared->page_dirty[slotno]);
 
 	LWLockRelease(SubtransControlLock);
-
-	MIRRORED_UNLOCK;
 }
 
 /*
@@ -251,15 +238,9 @@ BootStrapSUBTRANS(void)
 static int
 ZeroSUBTRANSPage(int pageno)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int result;
 
-	MIRRORED_LOCK;
-
 	result = SimpleLruZeroPage(SubTransCtl, pageno);
-
-	MIRRORED_UNLOCK;
 
 	return result;
 }
@@ -274,8 +255,6 @@ ZeroSUBTRANSPage(int pageno)
 void
 StartupSUBTRANS(TransactionId oldestActiveXID)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int			startPage;
 	int			endPage;
 
@@ -285,9 +264,6 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 	 * Whenever we advance into a new page, ExtendSUBTRANS will likewise zero
 	 * the new page without regard to whatever was previously on disk.
 	 */
-
-	MIRRORED_LOCK;
-
 	LWLockAcquire(SubtransControlLock, LW_EXCLUSIVE);
 
 	startPage = TransactionIdToPage(oldestActiveXID);
@@ -301,8 +277,6 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 	(void) ZeroSUBTRANSPage(startPage);
 
 	LWLockRelease(SubtransControlLock);
-
-	MIRRORED_UNLOCK;
 }
 
 /*
@@ -311,10 +285,6 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 void
 ShutdownSUBTRANS(void)
 {
-	MIRRORED_LOCK_DECLARE;
-
-	MIRRORED_LOCK;
-
 	/*
 	 * Flush dirty SUBTRANS pages to disk
 	 *
@@ -323,8 +293,6 @@ ShutdownSUBTRANS(void)
 	 */
 	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_START(false);
 	SimpleLruFlush(SubTransCtl, false);
-
-	MIRRORED_UNLOCK;
 	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_DONE(false);
 }
 
@@ -334,10 +302,6 @@ ShutdownSUBTRANS(void)
 void
 CheckPointSUBTRANS(void)
 {
-	MIRRORED_LOCK_DECLARE;
-
-	MIRRORED_LOCK;
-
 	/*
 	 * Flush dirty SUBTRANS pages to disk
 	 *
@@ -347,8 +311,6 @@ CheckPointSUBTRANS(void)
 	 */
 	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_START(true);
 	SimpleLruFlush(SubTransCtl, true);
-
-	MIRRORED_UNLOCK;
 	TRACE_POSTGRESQL_SUBTRANS_CHECKPOINT_DONE(true);
 }
 
@@ -365,10 +327,6 @@ void
 ExtendSUBTRANS(TransactionId newestXact)
 {
 	int			pageno;
-
-	/*
-	 * Caller must have already taken mirrored lock shared.
-	 */
 
 	/*
 	 * No work except at first XID of a page.  But beware: just after
@@ -398,8 +356,6 @@ ExtendSUBTRANS(TransactionId newestXact)
 void
 TruncateSUBTRANS(TransactionId oldestXact)
 {
-	MIRRORED_LOCK_DECLARE;
-
 	int			cutoffPage;
 
 	/*
@@ -407,12 +363,7 @@ TruncateSUBTRANS(TransactionId oldestXact)
 	 * pass the *page* containing oldestXact to SimpleLruTruncate.
 	 */
 	cutoffPage = TransactionIdToPage(oldestXact);
-
-	MIRRORED_LOCK;
-
 	SimpleLruTruncate(SubTransCtl, cutoffPage);
-
-	MIRRORED_UNLOCK;
 }
 
 

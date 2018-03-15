@@ -9,6 +9,14 @@ url="$2"
 
 z40=0000000000000000000000000000000000000000
 
+function user_input_to_proceed() {
+  read -p 'Proceed with push? (y/N): ' yesno </dev/tty
+  case "$yesno" in
+    y|Y|yes|Yes|YES) ;;
+    *) echo "Aborting push" >&2; exit 1 ;;
+  esac
+}
+
 while read local_ref local_sha remote_ref remote_sha ; do
   if [ "$local_sha" = $z40 ] ; then
     # Handle delete
@@ -21,15 +29,18 @@ while read local_ref local_sha remote_ref remote_sha ; do
   # Update to existing branch, examine new commits
   range="$remote_sha..$local_sha"
 
-  # Check for WIP commit
-  commit=$(git rev-list -n 1 "$range" -- concourse/pipelines/*)
-  if [ -n "$commit" ] ; then
+  # Check for changed files in concourse/pipelines
+  changed_pipeline_ymls=$(git rev-list -n 1 "$range" -- concourse/pipelines/*.yml)
+  changed_pipeline_pys=$(git rev-list -n 1 "$range" -- concourse/pipelines/*.py)
+  changed_pipeline_templates=$(git rev-list -n 1 "$range" -- concourse/pipelines/templates/*)
+
+  # if either a change to generators or a change to the templates, but no new pipeline file, warn user
+  if [ -n "${changed_pipeline_pys}${changed_pipeline_templates}" ] && [ -z "$changed_pipeline_ymls" ] ; then
+    echo 'You appear to have changed pipeline inputs (generator or template). Please check in the corresponding generated pipeline.'
+    user_input_to_proceed
+  elif [ -n "$changed_pipeline_ymls" ] ; then
     echo 'You appear to be pushing a change to a pipeline. Please make sure you ran `fly set-pipeline` first.'
-    read -p 'Proceed with push? (y/N): ' yesno </dev/tty
-    case "$yesno" in
-      y|Y|yes|Yes|YES) ;;
-      *) echo "Aborting push" >&2; exit 1 ;;
-    esac
+    user_input_to_proceed
   fi
 done
 

@@ -5,11 +5,19 @@ drop table if exists x;
 drop table if exists y;
 drop table if exists z;
 drop table if exists t;
+drop table if exists t1;
+drop table if exists t2;
 
 create table x (a int, b int, c int);
 insert into x values (generate_series(1,10), generate_series(1,10), generate_series(1,10));
 create table y (a int, b int, c int);
 insert into y (select * from x);
+
+CREATE TABLE t1 (a int, b int);
+CREATE TABLE t2 (a int, b int);
+
+INSERT INTO t1 VALUES (1,1),(2,1),(3,NULL);
+INSERT INTO t2 VALUES (2,3);
 
 CREATE FUNCTION func_x(x int) RETURNS int AS $$
 BEGIN
@@ -55,7 +63,16 @@ SELECT * from x left join y on True where y.a is NULL and Y.b > 0;
 
 SELECT * from x left join y on True where func_x(y.a) > 0;
 
---
+SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t1.b IS DISTINCT FROM t2.b;
+
+SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t1.b IS DISTINCT FROM NULL;
+
+SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t2.b IS DISTINCT FROM NULL;
+
+SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t2.b IS NOT DISTINCT FROM NULL;
+
+SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t1.b IS NOT DISTINCT FROM NULL;
+
 -- Test for unexpected NLJ qual
 --
 explain select 1 as mrs_t1 where 1 <= ALL (select x from z);

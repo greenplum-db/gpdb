@@ -3,12 +3,12 @@
  * reloptions.c
  *	  Core support for relation options (pg_class.reloptions)
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.28 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.35 2010/06/07 02:59:02 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,8 +23,10 @@
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
 #include "commands/defrem.h"
+#include "commands/tablespace.h"
 #include "nodes/makefuncs.h"
 #include "utils/array.h"
+#include "utils/attoptcache.h"
 #include "utils/builtins.h"
 #include "utils/formatting.h"
 #include "utils/guc.h"
@@ -115,15 +117,15 @@ static relopt_int intRelOpts[] =
 			"Minimum number of tuple updates or deletes prior to vacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		50, 0, INT_MAX
+		-1, 0, INT_MAX
 	},
 	{
 		{
 			"autovacuum_analyze_threshold",
 			"Minimum number of tuple inserts, updates or deletes prior to analyze",
-			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+			RELOPT_KIND_HEAP
 		},
-		50, 0, INT_MAX
+		-1, 0, INT_MAX
 	},
 	{
 		{
@@ -131,7 +133,7 @@ static relopt_int intRelOpts[] =
 			"Vacuum cost delay in milliseconds, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		20, 0, 100
+		-1, 0, 100
 	},
 	{
 		{
@@ -139,7 +141,7 @@ static relopt_int intRelOpts[] =
 			"Vacuum cost amount available before napping, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		200, 1, 10000
+		-1, 1, 10000
 	},
 	{
 		{
@@ -147,7 +149,7 @@ static relopt_int intRelOpts[] =
 			"Minimum age at which VACUUM should freeze a table row, for autovacuum",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		100000000, 0, 1000000000
+		-1, 0, 1000000000
 	},
 	{
 		{
@@ -155,14 +157,14 @@ static relopt_int intRelOpts[] =
 			"Age at which to autovacuum a table to prevent transaction ID wraparound",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		200000000, 100000000, 2000000000
+		-1, 100000000, 2000000000
 	},
 	{
 		{
 			"autovacuum_freeze_table_age",
 			"Age at which VACUUM should perform a full table sweep to replace old Xid values with FrozenXID",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
-		}, 150000000, 0, 2000000000
+		}, -1, 0, 2000000000
 	},
 	/* list terminator */
 	{{NULL}}
@@ -176,15 +178,47 @@ static relopt_real realRelOpts[] =
 			"Number of tuple updates or deletes prior to vacuum as a fraction of reltuples",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
 		},
-		0.2, 0.0, 100.0
+		-1, 0.0, 100.0
 	},
 	{
 		{
 			"autovacuum_analyze_scale_factor",
 			"Number of tuple inserts, updates or deletes prior to analyze as a fraction of reltuples",
-			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+			RELOPT_KIND_HEAP
 		},
-		0.1, 0.0, 100.0
+		-1, 0.0, 100.0
+	},
+	{
+		{
+			"seq_page_cost",
+			"Sets the planner's estimate of the cost of a sequentially fetched disk page.",
+			RELOPT_KIND_TABLESPACE
+		},
+		-1, 0.0, DBL_MAX
+	},
+	{
+		{
+			"random_page_cost",
+			"Sets the planner's estimate of the cost of a nonsequentially fetched disk page.",
+			RELOPT_KIND_TABLESPACE
+		},
+		-1, 0.0, DBL_MAX
+	},
+	{
+		{
+			"n_distinct",
+			"Sets the planner's estimate of the number of distinct values appearing in a column (excluding child relations).",
+			RELOPT_KIND_ATTRIBUTE
+		},
+		0, -1.0, DBL_MAX
+	},
+	{
+		{
+			"n_distinct_inherited",
+			"Sets the planner's estimate of the number of distinct values appearing in a column (including child relations).",
+			RELOPT_KIND_ATTRIBUTE
+		},
+		0, -1.0, DBL_MAX
 	},
 	/* list terminator */
 	{{NULL}}
@@ -1147,10 +1181,21 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 bytea *
 heap_reloptions(char relkind, Datum reloptions, bool validate)
 {
+	StdRdOptions *rdopts;
+
 	switch (relkind)
 	{
 		case RELKIND_TOASTVALUE:
-			return default_reloptions(reloptions, validate, RELOPT_KIND_TOAST);
+			rdopts = (StdRdOptions *)
+				default_reloptions(reloptions, validate, RELOPT_KIND_TOAST);
+			if (rdopts != NULL)
+			{
+				/* adjust default-only parameters for TOAST relations */
+				rdopts->fillfactor = 100;
+				rdopts->autovacuum.analyze_threshold = -1;
+				rdopts->autovacuum.analyze_scale_factor = -1;
+			}
+			return (bytea *) rdopts;
 		case RELKIND_RELATION:
 			return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP);
 		default:
@@ -1197,4 +1242,66 @@ index_reloptions(RegProcedure amoptions, Datum reloptions, bool validate)
 		return NULL;
 
 	return DatumGetByteaP(result);
+}
+
+/*
+ * Option parser for attribute reloptions
+ */
+bytea *
+attribute_reloptions(Datum reloptions, bool validate)
+{
+	relopt_value *options;
+	AttributeOpts *aopts;
+	int			numoptions;
+	static const relopt_parse_elt tab[] = {
+		{"n_distinct", RELOPT_TYPE_REAL, offsetof(AttributeOpts, n_distinct)},
+		{"n_distinct_inherited", RELOPT_TYPE_REAL, offsetof(AttributeOpts, n_distinct_inherited)}
+	};
+
+	options = parseRelOptions(reloptions, validate, RELOPT_KIND_ATTRIBUTE,
+							  &numoptions);
+
+	/* if none set, we're done */
+	if (numoptions == 0)
+		return NULL;
+
+	aopts = allocateReloptStruct(sizeof(AttributeOpts), options, numoptions);
+
+	fillRelOptions((void *) aopts, sizeof(AttributeOpts), options, numoptions,
+				   validate, tab, lengthof(tab));
+
+	pfree(options);
+
+	return (bytea *) aopts;
+}
+
+/*
+ * Option parser for tablespace reloptions
+ */
+bytea *
+tablespace_reloptions(Datum reloptions, bool validate)
+{
+	relopt_value *options;
+	TableSpaceOpts *tsopts;
+	int			numoptions;
+	static const relopt_parse_elt tab[] = {
+		{"random_page_cost", RELOPT_TYPE_REAL, offsetof(TableSpaceOpts, random_page_cost)},
+		{"seq_page_cost", RELOPT_TYPE_REAL, offsetof(TableSpaceOpts, seq_page_cost)}
+	};
+
+	options = parseRelOptions(reloptions, validate, RELOPT_KIND_TABLESPACE,
+							  &numoptions);
+
+	/* if none set, we're done */
+	if (numoptions == 0)
+		return NULL;
+
+	tsopts = allocateReloptStruct(sizeof(TableSpaceOpts), options, numoptions);
+
+	fillRelOptions((void *) tsopts, sizeof(TableSpaceOpts), options, numoptions,
+				   validate, tab, lengthof(tab));
+
+	pfree(options);
+
+	return (bytea *) tsopts;
 }

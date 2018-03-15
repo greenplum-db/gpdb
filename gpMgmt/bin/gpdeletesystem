@@ -184,8 +184,15 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
 # -------------------------------------------------------------------------
 def check_for_dump_files(options):
     logger.info('Checking for database dump files...')
-    return gp.GpDumpDirsExist.local('check for dump dirs', options.master_data_dir)
+    return gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*dump*'") \
+           or gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*backups*'")
 
+def getTablespaceDirs():
+    sqlcmd = "select spclocation FROM pg_tablespace where spcname != 'pg_default' and spcname != 'pg_global'"
+    with dbconn.connect(dbconn.DbURL()) as conn:
+        tablespaces = dbconn.execSQL(conn, sqlcmd).fetchall()
+
+    return [row[0] for row in tablespaces]
 
 # -------------------------------------------------------------------------
 # delete_system() - deletes a GPDB system
@@ -196,23 +203,22 @@ def delete_cluster(options):
     # check for dumps if needed
     dump_files_exist = check_for_dump_files(options)
     if not options.force and dump_files_exist:
-        logger.fatal('Located possible database dump file on Master instance host')
+        logger.fatal('Located possible database backup file on Master instance host')
         logger.fatal('in directory %s' % options.master_data_dir)
-        logger.fatal('To override database dump file checking use -f option')
-        raise GpDeleteSystemException('Dump files exist')
+        logger.fatal('To override database backup file checking use -f option')
+        raise GpDeleteSystemException('Backup files exist')
 
     # get gparray object
     logger.info('Getting segment information...')
     dburl = dbconn.DbURL(port=options.pgport)
     try:
         array = gparray.GpArray.initFromCatalog(dburl, True)
+        tablespaceDirs = getTablespaceDirs()
     except Exception, ex:
         raise GpDeleteSystemException('Failed to get database configuration: %s' % ex.__str__())
     # get all segdbs
     segments = array.getDbList()
 
-    # getSegmentsByHostName(segments)
-    segdbs_by_host = gparray.GpArray.getSegmentsByHostName(segments)
     standby = array.standbyMaster
 
     # Display the options
@@ -230,86 +236,111 @@ def delete_cluster(options):
         logger.warn('Warnings were generated while stopping the database.')
         g_warnings_generated = True
 
-    # From this point on we don't want ctrl-c to happen
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        # From this point on we don't want ctrl-c to happen
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    # create pool
-    pool = base.WorkerPool(numWorkers=options.batch_size)
+        # create pool
+        pool = base.WorkerPool(numWorkers=options.batch_size)
 
-    logger.info('Deleting segments and removing data directories...')
-    for segdb in segments:
-        filespaces = segdb.getSegmentFilespaces().items()
-        for (oid, filespace) in filespaces:
-            logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
-                                                                  filespace))
-            cmd = unix.RemoveDirectory('remove fs dir', filespace, ctxt=base.REMOTE,
-                                       remoteHost=segdb.getSegmentHostName())
-            pool.addCommand(cmd)
+        try:
+            logger.info('Deleting tablespace directories...')
+            # getSegmentsByHostName(segments)
+            segmentHosts = gparray.GpArray.getSegmentsByHostName(segments).keys()
+            for segmentHost in segmentHosts:
+                for tablespaceDir in tablespaceDirs:
+                    logger.debug('Queueing up command to remove %s:%s' % (segmentHost,
+                                                                          tablespaceDir))
+                    cmd = unix.RemoveDirectory('remove tablespace dir', tablespaceDir,
+                                               ctxt=base.REMOTE, remoteHost=segmentHost)
+                    pool.addCommand(cmd)
 
-    logger.info('Waiting for worker threads to complete...')
-    pool.join()
-    pool.haltWork()
-    pool.joinWorkers()
+            logger.info('Waiting for worker threads to delete tablespace dirs...')
+        finally:
+            pool.join()
+            pool.haltWork()
+            pool.joinWorkers()
 
-    # Re-enable ctrl-c
-    signal.signal(signal.SIGINT, signal.default_int_handler)
+        # create pool
+        pool = base.WorkerPool(numWorkers=options.batch_size)
 
+        try:
+            logger.info('Deleting segments and removing data directories...')
+            for segdb in segments:
+                segmentDataDirectory = segdb.getSegmentDataDirectory()
+                logger.debug('Queueing up command to remove %s:%s' % (segdb.getSegmentHostName(),
+                                                                      segmentDataDirectory))
+                cmd = unix.RemoveDirectory('remove data dir', segmentDataDirectory, ctxt=base.REMOTE,
+                                           remoteHost=segdb.getSegmentHostName())
+                pool.addCommand(cmd)
 
+            logger.info('Waiting for worker threads to complete...')
+        finally:
+            pool.join()
+            pool.haltWork()
+            pool.joinWorkers()
+
+    finally:
+        # Re-enable ctrl-c
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+
+#############
+if __name__ == '__main__':
 # -------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------
 
-g_warnings_generated = False
-g_errors_generated = False
+    g_warnings_generated = False
+    g_errors_generated = False
 
-# setup logging
-logger = get_default_logger()
-setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName())
+    # setup logging
+    logger = get_default_logger()
+    setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName())
 
-# parse args and options
-(options, args) = parseargs()
+    # parse args and options
+    (options, args) = parseargs()
 
-# if we got a new log dir, we can now set it up.
-if options.logfile:
-    setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName(), logdir=options.logfile)
+    # if we got a new log dir, we can now set it up.
+    if options.logfile:
+        setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName(), logdir=options.logfile)
 
-try:
-    # save off cwd
-    cwd = os.getcwd()
-    # chdir to home to prevent from trying to delete a dir while we are in it
-    home = os.getenv('USERPROFILE') or os.getenv('HOME')
-    os.chdir(home)
-
-    # do the delete
-    delete_cluster(options)
-
-    # now try to go back into the original cwd
     try:
-        os.chdir(cwd)
-    except:
-        # we can ignore this as cwd must no longer exist
-        pass
+        # save off cwd
+        cwd = os.getcwd()
+        # chdir to home to prevent from trying to delete a dir while we are in it
+        home = os.getenv('USERPROFILE') or os.getenv('HOME')
+        os.chdir(home)
 
-except GpDeleteSystemException, ex:
-    g_errors_generated = True
-    if ex.__str__() == 'User canceled':
-        logger.info(ex.__str__())
-    else:
-        logger.fatal(ex.__str__())
-    if options.verbose:
-        logger.exception(ex)
-except Exception, ex:
-    g_errors_generated = True
-    logger.fatal('Error deleting system: %s' % ex.__str__())
-    if options.verbose:
-        logger.exception(ex)
-finally:
-    if g_errors_generated:
-        logger.error('Delete system failed')
-        sys.exit(2)
-    elif g_warnings_generated:
-        logger.warn('Delete system completed but warnings were generated.')
-        sys.exit(1)
-    else:
-        logger.info('Delete system successful.')
-        sys.exit(0)
+        # do the delete
+        delete_cluster(options)
+
+        # now try to go back into the original cwd
+        try:
+            os.chdir(cwd)
+        except:
+            # we can ignore this as cwd must no longer exist
+            pass
+
+    except GpDeleteSystemException, ex:
+        g_errors_generated = True
+        if ex.__str__() == 'User canceled':
+            logger.info(ex.__str__())
+        else:
+            logger.fatal(ex.__str__())
+        if options.verbose:
+            logger.exception(ex)
+    except Exception, ex:
+        g_errors_generated = True
+        logger.fatal('Error deleting system: %s' % ex.__str__())
+        if options.verbose:
+            logger.exception(ex)
+    finally:
+        if g_errors_generated:
+            logger.error('Delete system failed')
+            sys.exit(2)
+        elif g_warnings_generated:
+            logger.warn('Delete system completed but warnings were generated.')
+            sys.exit(1)
+        else:
+            logger.info('Delete system successful.')
+            sys.exit(0)

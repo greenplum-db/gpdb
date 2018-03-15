@@ -3,12 +3,12 @@
  * hashfunc.c
  *	  Support functions for hash access method.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashfunc.c,v 1.59 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashfunc.c,v 1.62 2010/01/07 04:53:34 tgl Exp $
  *
  * NOTES
  *	  These functions are stored in pg_amproc.  For each operator class
@@ -59,7 +59,6 @@ hashint8(PG_FUNCTION_ARGS)
 	 * value if the sign is positive, or the complement of the high half when
 	 * the sign is negative.
 	 */
-#ifndef INT64_IS_BUSTED
 	int64		val = PG_GETARG_INT64(0);
 	uint32		lohalf = (uint32) val;
 	uint32		hihalf = (uint32) (val >> 32);
@@ -67,10 +66,6 @@ hashint8(PG_FUNCTION_ARGS)
 	lohalf ^= (val >= 0) ? hihalf : ~hihalf;
 
 	return hash_uint32(lohalf);
-#else
-	/* here if we can't count on "x >> 32" to work sanely */
-	return hash_uint32((int32) PG_GETARG_INT64(0));
-#endif
 }
 
 Datum
@@ -319,7 +314,7 @@ hash_any(register const unsigned char *k, register int keylen)
 	a = b = c = 0x9e3779b9 + len + 3923095;
 
 	/* If the source pointer is word-aligned, we use word-wide fetches */
-	if (((long) k & UINT32_ALIGN_MASK) == 0)
+	if (((intptr_t) k & UINT32_ALIGN_MASK) == 0)
 	{
 		/* Code path for aligned source data */
 		register const uint32 *ka = (const uint32 *) k;

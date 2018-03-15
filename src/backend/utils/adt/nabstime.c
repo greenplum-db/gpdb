@@ -5,12 +5,12 @@
  *	  Functions for the built-in type "RelativeTime".
  *	  Functions for the built-in type "TimeInterval".
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/nabstime.c,v 1.161 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/nabstime.c,v 1.164 2010/02/26 02:01:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -786,19 +786,24 @@ tintervalrecv(PG_FUNCTION_ARGS)
 {
 	StringInfo	buf = (StringInfo) PG_GETARG_POINTER(0);
 	TimeInterval tinterval;
+	int32		status;
 
 	tinterval = (TimeInterval) palloc(sizeof(TimeIntervalData));
 
 	tinterval->status = pq_getmsgint(buf, sizeof(tinterval->status));
+	tinterval->data[0] = pq_getmsgint(buf, sizeof(tinterval->data[0]));
+	tinterval->data[1] = pq_getmsgint(buf, sizeof(tinterval->data[1]));
 
-	if (!(tinterval->status == T_INTERVAL_INVAL ||
-		  tinterval->status == T_INTERVAL_VALID))
+	if (tinterval->data[0] == INVALID_ABSTIME ||
+		tinterval->data[1] == INVALID_ABSTIME)
+		status = T_INTERVAL_INVAL;		/* undefined  */
+	else
+		status = T_INTERVAL_VALID;
+
+	if (status != tinterval->status)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 				 errmsg("invalid status in external \"tinterval\" value")));
-
-	tinterval->data[0] = pq_getmsgint(buf, sizeof(tinterval->data[0]));
-	tinterval->data[1] = pq_getmsgint(buf, sizeof(tinterval->data[1]));
 
 	PG_RETURN_TIMEINTERVAL(tinterval);
 }

@@ -159,7 +159,7 @@ typedef enum
 
 // #define PRINT_SPILL_AND_MEMORY_MESSAGES
 
-/* 
+/*
  * Current position of Tuplesort operation.
  */
 struct TuplesortPos_mk
@@ -802,21 +802,13 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 {
 	Tuplesortstate_mk *state;
 	char		statedump[MAXPGPATH];
-	char		full_prefix[MAXPGPATH];
 
 	Assert(randomAccess);
 
-	int			len = snprintf(statedump, sizeof(statedump), "%s/%s_sortstate",
-							   PG_TEMP_FILES_DIR,
+	int			len = snprintf(statedump, sizeof(statedump), "%s_sortstate",
 							   rwfile_prefix);
 
 	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
-	len = snprintf(full_prefix, sizeof(full_prefix), "%s/%s",
-				   PG_TEMP_FILES_DIR,
-				   rwfile_prefix);
-	insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
-
 
 	if (isWriter)
 	{
@@ -828,7 +820,7 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 										sortOperators, nullsFirstFlags,
 										workMem, randomAccess);
 
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 
 		state->tapeset_state_file = ExecWorkFile_Create(statedump,
 														BUFFILE,
@@ -856,13 +848,13 @@ tuplesort_begin_heap_file_readerwriter_mk(ScanState *ss,
 
 		oldctxt = MemoryContextSwitchTo(state->sortcontext);
 
-		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, full_prefix);
+		state->tapeset_file_prefix = MemoryContextStrdup(state->sortcontext, rwfile_prefix);
 
 		state->tapeset_state_file = ExecWorkFile_Open(statedump,
 													  BUFFILE,
 													  false /* delOnClose */ ,
 													  0 /* compressType */ );
-		ExecWorkFile *tapefile = ExecWorkFile_Open(full_prefix,
+		ExecWorkFile *tapefile = ExecWorkFile_Open(rwfile_prefix,
 												   BUFFILE,
 												   false /* delOnClose */ ,
 												   0 /* compressType */ );
@@ -1064,7 +1056,7 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 void
 tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 {
-	if (state->instrument && !state->statsFinalized)
+	if (state->instrument && state->instrument->need_cdb && !state->statsFinalized)
 	{
 		Size		maxSpaceUsedOnSort = MemoryContextGetPeakSpace(state->sortcontext);
 
@@ -1728,8 +1720,8 @@ tuplesort_getdatum_mk(Tuplesortstate_mk *state, bool forward,
 bool
 tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, bool forward)
 {
-	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
-	bool		fOK;
+	MemoryContext	oldcontext;
+	bool			fOK;
 
 	/*
 	 * We don't actually support backwards skip yet, because no callers need
@@ -1739,34 +1731,43 @@ tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, bool forward)
 	Assert(ntuples >= 0);
 
 	/*
-	 * GPDB_84_MERGE_FIXME: This simplistic implementation just calls
-	 * gettuple, even if the sort happened in memory.
+	 * Optimize skip strategy only for in memory non unique store. But for unique store, we
+	 * use normal one by one logic because we need to check the emptiness of entries.
 	 */
-
-	/*
-	 * We could probably optimize these cases better, but for now it's
-	 * not worth the trouble.
-	 */
-	fOK = true;
-	while (ntuples-- > 0)
+	if (state->status == TSS_SORTEDINMEM && !state->mkctxt.unique)
 	{
-		MKEntry		e;
-		bool		should_free;
-
-		if (!tuplesort_gettuple_common_pos(state, &state->pos, forward,
-										   &e, &should_free))
+		TuplesortPos_mk	*pos = &state->pos;
+		if (pos->current + ntuples <= state->entry_count)
 		{
-			fOK = false;
-			break;
+			pos->current += ntuples;
+			return true;
 		}
-		if (should_free)
-			pfree(e.ptr);
-		CHECK_FOR_INTERRUPTS();
+		pos->eof_reached = true;
+		return false;
 	}
+	else
+	{
+		oldcontext = MemoryContextSwitchTo(state->sortcontext);
+		fOK = true;
+		while (ntuples-- > 0)
+		{
+			MKEntry		e;
+			bool		should_free;
 
-	MemoryContextSwitchTo(oldcontext);
+			if (!tuplesort_gettuple_common_pos(state, &state->pos, forward,
+											   &e, &should_free))
+			{
+				fOK = false;
+				break;
+			}
+			if (should_free)
+				pfree(e.ptr);
+			CHECK_FOR_INTERRUPTS();
+		}
 
-	return true;
+		MemoryContextSwitchTo(oldcontext);
+		return fOK;
+	}
 }
 
 

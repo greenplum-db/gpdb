@@ -3,10 +3,10 @@
  * postmaster.h
  *	  Exports from postmaster/postmaster.c.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/postmaster/postmaster.h,v 1.20 2009/05/05 19:59:00 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/postmaster/postmaster.h,v 1.22 2010/01/02 16:58:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,11 +22,13 @@ extern int	Unix_socket_permissions;
 extern char *Unix_socket_group;
 extern char *UnixSocketDir;
 extern char *ListenAddresses;
+extern char *BackendListenAddress;
 extern bool ClientAuthInProgress;
 extern int	PreAuthDelay;
 extern int	AuthenticationTimeout;
 extern bool Log_connections;
 extern bool log_hostname;
+extern bool enable_bonjour;
 extern char *bonjour_name;
 
 #ifdef WIN32
@@ -56,6 +58,9 @@ extern void ClosePostmasterPorts(bool am_syslogger);
 
 extern int	MaxLivePostmasterChildren(void);
 
+extern void SignalPromote(void);
+extern void ResetMirrorReadyFlag(void);
+
 #ifdef EXEC_BACKEND
 extern pid_t postmaster_forkexec(int argc, char *argv[]);
 extern int	SubPostmasterMain(int argc, char *argv[]);
@@ -66,20 +71,5 @@ extern void ShmemBackendArrayAllocation(void);
 
 /* CDB */
 typedef int (PMSubStartCallback)(void);
-extern bool GPIsSegmentDatabase(void);
-extern bool GPAreFileReplicationStructuresRequired(void);
-extern int PostmasterGetMppLocalProcessCounter(void);
-
-extern void StartMasterOrPrimaryPostmasterProcesses(void);
-extern void SignalShutdownFilerepProcess(void);
-extern void SignalShutdownFilerepBackendProcesses(void);
-extern bool IsFilerepBackendsDoneShutdown(void);
-extern void NotifyProcessesOfFilerepStateChange(void);
-extern void StartFilerepProcesses(void);
-extern bool IsFilerepProcessRunning(void);
-extern void SetFilerepPeerResetResult(bool success);
-extern bool IsDatabaseInRunMode(void);
-extern char *processTransitionRequest_faultInject(
-	void * inputBuf, int *offsetPtr, int length);
 
 #endif   /* _POSTMASTER_H */

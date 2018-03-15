@@ -1,6 +1,0 @@
-DELETE FROM foo where a <= 5;
-DELETE 5
-vacuum foo;
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
-ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (seg0 mdw:40000 pid=4487) (cdbdisp.c:1487)
-ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:260)

@@ -7,10 +7,9 @@ import tempfile
 import shutil
 from mock import *
 from gp_unittest import *
-from gparray import Segment, GpArray
+from gppylib.gparray import Segment, GpArray
 from gppylib.db.dbconn import UnexpectedRowsError
 from pygresql import pgdb
-from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
 
 cursor_keys = dict(
     normal_tables=re.compile(".*n\.nspname, c\.relname, c\.relstorage.*c\.oid NOT IN \( SELECT parchildrelid.*"),
@@ -18,7 +17,7 @@ cursor_keys = dict(
     relations=re.compile(".*select relname from pg_class r.*"),
     table_info=re.compile(".*select is_nullable, data_type, character_maximum_length,.*"),
     partition_info=re.compile(".*select parkind, parlevel, parnatts, paratts.*"),
-    schema_name=re.compile(".*SELECT fsname FROM pg_catalog.pg_filespace.*"),
+    schema_name=re.compile(".*SELECT spcname FROM pg_catalog.pg_tablespace.*"),
     create_schema=re.compile(".*CREATE SCHEMA.*"),
     ordinal_pos=re.compile(".*select ordinal_position from.*"),
     attname=re.compile(".*SELECT attname.*"),
@@ -57,8 +56,8 @@ class GpTransfer(GpTestCase):
 
         self.apply_patches([
             patch('os.environ', new={"GPHOME": "my_gp_home"}),
-            patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gptransfer.connect', return_value=self.db_connection),
+            patch('gppylib.gparray.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gptransfer.getUserDatabaseList', return_value=[["my_first_database"], ["my_second_database"]]),
             patch('gppylib.db.dbconn.connect', return_value=self.db_connection),
             patch('gptransfer.WorkerPool', return_value=self.workerpool),
@@ -68,7 +67,6 @@ class GpTransfer(GpTestCase):
             patch('gptransfer.execSQLForSingletonRow', new=self.db_singleton),
             patch("gppylib.commands.unix.FileDirExists.remote", return_value=True),
             patch("gptransfer.wait_for_pool", return_value=([], [])),
-            patch("gptransfer.escapeDoubleQuoteInSQLString"),
         ])
 
         # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
@@ -252,9 +250,8 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], [['foo']])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['escaped_string']])
         self.cursor.side_effect = side_effect.cursor_side_effect
-        self.subject.escapeDoubleQuoteInSQLString.return_value='"escaped_string"'
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
         expected_distribution = '''DISTRIBUTED BY ("escaped_string")'''
 
@@ -271,9 +268,8 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], [['foo'], ['bar']])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['first_escaped_value'], ['second_escaped_value']])
         self.cursor.side_effect = side_effect.cursor_side_effect
-        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"first_escaped_value"', '"second_escaped_value"']
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
         expected_distribution = '''DISTRIBUTED BY ("first_escaped_value", "second_escaped_value")'''
 
@@ -505,10 +501,6 @@ class GpTransfer(GpTestCase):
         cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
                                                                             ["public", "my_table_partition2", ""]]
         self.cursor.side_effect = cursor_side_effect.cursor_side_effect
-
-        # call through to unmocked version of this function because the function gets called too many times
-        # to easily mock in this case
-        self.subject.escapeDoubleQuoteInSQLString = escapeDoubleQuoteInSQLString
 
         class SingletonSideEffectWithIterativeReturns(SingletonSideEffect):
             def __init__(self):
@@ -868,14 +860,11 @@ class GpTransfer(GpTestCase):
             self.subject.GpTransfer(Mock(**options), [])
 
     def test__row_count_validation_escapes_schema_and_table_names(self):
-        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"escapedSchema"', '"escapedTable"',
-                                                                 '"escapedSchema"', '"escapedTable"']
-
         escaped_query = 'SELECT count(*) FROM "escapedSchema"."escapedTable"'
 
-        table_mock = Mock(spec=['schema','table'])
-        table_mock.schema = 'mySchema'
-        table_mock.table = 'myTable'
+        table_mock = Mock(spec=['escapedSchema','escapedTable'])
+        table_mock.schema = 'escapedSchema'
+        table_mock.table = 'escapedTable'
         table_pair = Mock(spec=['source','dest'])
         table_pair.source = table_mock
         table_pair.dest = table_mock
@@ -1081,15 +1070,15 @@ class GpTransfer(GpTestCase):
 
     def createGpArrayWith2Primary2Mirrors(self):
         master = Segment.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+            "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
         primary0 = Segment.initFromString(
-            "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         primary1 = Segment.initFromString(
-            "3|1|p|p|s|u|sdw2|sdw2|40001|41001|/data/primary1||/data/primary1/base/10899,/data/primary1/base/1,/data/primary1/base/10898,/data/primary1/base/25780,/data/primary1/base/34782")
+            "3|1|p|p|s|u|sdw2|sdw2|40001|/data/primary1")
         mirror0 = Segment.initFromString(
-            "4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
+            "4|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
         mirror1 = Segment.initFromString(
-            "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
+            "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
         return GpArray([master, primary0, primary1, mirror0, mirror1])
 
     def setup_partition_validation(self):

@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/c.h,v 1.236 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/c.h,v 1.241 2010/05/27 07:59:48 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -711,7 +711,7 @@ typedef NameData *Name;
 		int		_val = (val); \
 		Size	_len = (len); \
 \
-		if ((((size_t) _vstart) & LONG_ALIGN_MASK) == 0 && /*CDB*/ \
+		if ((((intptr_t) _vstart) & LONG_ALIGN_MASK) == 0 && \
 			(_len & LONG_ALIGN_MASK) == 0 && \
 			_val == 0 && \
 			_len <= MEMSET_LOOP_LIMIT && \
@@ -949,7 +949,10 @@ extern int	vsnprintf(char *str, size_t count, const char *fmt, va_list args);
 
 /* no special DLL markers on most ports */
 #ifndef PGDLLIMPORT
-#define PGDLLIMPORT				/* no special DLL markers on most ports */
+#define PGDLLIMPORT
+#endif
+#ifndef PGDLLEXPORT
+#define PGDLLEXPORT
 #endif
 #ifndef PGDLLEXPORT
 #define PGDLLEXPORT

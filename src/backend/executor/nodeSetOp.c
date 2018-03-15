@@ -32,12 +32,12 @@
  * input group.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSetOp.c,v 1.31 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSetOp.c,v 1.33 2010/01/02 16:57:45 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -523,8 +523,6 @@ ExecInitSetOp(SetOp *node, EState *estate, int eflags)
 								  ALLOCSET_DEFAULT_INITSIZE,
 								  ALLOCSET_DEFAULT_MAXSIZE);
 
-#define SETOP_NSLOTS 1
-
 	/*
 	 * Tuple table initialization
 	 */
@@ -574,14 +572,6 @@ ExecInitSetOp(SetOp *node, EState *estate, int eflags)
 	}
 
 	return setopstate;
-}
-
-int
-ExecCountSlotsSetOp(SetOp *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		SETOP_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

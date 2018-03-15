@@ -44,67 +44,8 @@ FI_IDENT(PgControl, "pg_control")
 FI_IDENT(PgXlog, "pg_xlog")
 /* inject fault during start prepare */
 FI_IDENT(StartPrepareTx, "start_prepare")
-/* inject fault after adding entry to persistent relation table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteRelationEntry, "fault_before_pending_delete_relation_entry")
-/* inject fault after adding entry to persistent database table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteDatabaseEntry, "fault_before_pending_delete_database_entry")
-/* inject fault after adding entry to persistent tablespace table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteTablespaceEntry, "fault_before_pending_delete_tablespace_entry")
-/* inject fault after adding entry to persistent filespace table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteFilespaceEntry, "fault_before_pending_delete_filespace_entry")
-/*
- * inject fault before data are processed
- *		*) file operation is issued to file system (if mirror)
- *		*) file operation performed on mirror is acknowledged to backend processes (if primary)
- */
-FI_IDENT(FileRepConsumer, "filerep_consumer")
-/* inject fault before ack verification data are consumed on primary */
-FI_IDENT(FileRepConsumerVerification, "filerep_consumer_verification")
-/* Ashwin - inject fault during compacting change tracking */
-FI_IDENT(FileRepChangeTrackingCompacting, "filerep_change_tracking_compacting")
-/* inject fault before data are sent to network */
-	FI_IDENT(FileRepSender, "filerep_sender")
-/*
- * inject fault after data are received from the network and
- * before data are made available for consuming
- */
-FI_IDENT(FileRepReceiver, "filerep_receiver")
-/* inject fault before fsync is issued to file system */
-FI_IDENT(FileRepFlush, "filerep_flush")
-/* inject fault while InResync when first relations is inserted to be resynced */
-FI_IDENT(FileRepResync, "filerep_resync")
-/* inject fault while InResync when more then 10 relations in progress */
-FI_IDENT(FileRepResyncInProgress, "filerep_resync_in_progress")
-/* inject fault after write to mirror while all locks are still hold */
-FI_IDENT(FileRepResyncWorker, "filerep_resync_worker")
-/* inject fault on read required for resync by resync worker process */
-FI_IDENT(FileRepResyncWorkerRead, "filerep_resync_worker_read")
-/* inject fault during transition to InResync before objects are re-created on mirror */
-FI_IDENT(FileRepTransitionToInResyncMirrorReCreate, "filerep_transition_to_resync")
-/* inject fault during transition to InResync before objects are marked re-created */
-FI_IDENT(FileRepTransitionToInResyncMarkReCreated, "filerep_transition_to_resync_mark_recreate")
-/* inject fault during transition to InResync before transition is marked completed */
-FI_IDENT(FileRepTransitionToInResyncMarkCompleted, "filerep_transition_to_resync_mark_completed")
-/* inject fault before transition to InSync begin */
-FI_IDENT(FileRepTransitionToInSyncBegin, "filerep_transition_to_sync_begin")
-/* inject fault during transition to InSync */
-FI_IDENT(FileRepTransitionToInSync, "filerep_transition_to_sync")
-/* inject fault during transition to InSync before checkpoint is taken */
-FI_IDENT(FileRepTransitionToInSyncBeforeCheckpoint, "filerep_transition_to_sync_before_checkpoint")
-/* inject fault during transition to InSync before transition is marked completed */
-FI_IDENT(FileRepTransitionToInSyncMarkCompleted, "filerep_transition_to_sync_mark_completed")
-/* inject fault during transition to Change Tracking */
-FI_IDENT(FileRepTransitionToChangeTracking, "filerep_transition_to_change_tracking")
-/* inject fault in FileRep Is Operation completed function */
-FI_IDENT(FileRepIsOperationCompleted, "fileRep_is_operation_completed")
-/* inject fault just before sending SIGQUIT to child flerep processes */
-FI_IDENT(FileRepImmediateShutdownRequested, "filerep_immediate_shutdown_request")
 /* inject fault before checkpoint is taken */
 FI_IDENT(Checkpoint, "checkpoint")
-/* report if compacting is in progress */
-FI_IDENT(ChangeTrackingCompactingReport, "change_tracking_compacting_report")
-/* inject fault during fsync to Change Tracking log */
-FI_IDENT(ChangeTrackingDisable, "change_tracking_disable")
 /* inject fault during transaction start with DistributedTransactionContext in ENTRY_DB_SINGLETON mode */
 FI_IDENT(TransactionStartUnderEntryDbSingleton, "transaction_start_under_entry_db_singleton")
 /* inject fault after transaction is prepared */
@@ -149,6 +90,8 @@ FI_IDENT(FinishPreparedTransactionAbortPass1AbortingCreateNeeded, "finish_prepar
 FI_IDENT(FinishPreparedTransactionAbortPass2AbortingCreateNeeded, "finish_prepared_transaction_abort_pass2_aborting_create_needed")
 /* inject fault to start verification (create pending => aborting create) */
 FI_IDENT(FileRepVerification, "filerep_verification")
+/* inject fault after transaction is prepared */
+FI_IDENT(OnePhaseTransactionCommit, "onephase_transaction_commit")
 /* inject fault before transaction commit is recorded in xlog (trigger filerep verification)*/
 FI_IDENT(TwoPhaseTransactionCommitPrepared, "twophase_transaction_commit_prepared")
 /* inject fault before transaction abort is recorded in xlog */
@@ -183,8 +126,6 @@ FI_IDENT(WorkfileWriteFail, "workfile_write_failure")
 FI_IDENT(WorkfileHashJoinFailure, "workfile_hashjoin_failure")
 /* inject fault before we close workfile in ExecHashJoinNewBatch */
 FI_IDENT(ExecutorRunHighProcessed, "executor_run_high_processed")
-/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
-FI_IDENT(UpdateCommittedEofInPersistentTable, "update_committed_eof_in_persistent_table")
 /* large palloc inside MultiExecHash to attempt to exceed vmem limit */
 FI_IDENT(MultiExecHashLargeVmem, "multi_exec_hash_large_vmem")
 /* inject fault in ExecSort before doing the actual sort */
@@ -207,6 +148,8 @@ FI_IDENT(AppendOnlyInsert, "appendonly_insert")
 FI_IDENT(AppendOnlyDelete, "appendonly_delete")
 /* inject fault before an append-only update */
 FI_IDENT(AppendOnlyUpdate, "appendonly_update")
+/* inject fault in append-only compression function */
+FI_IDENT(AppendOnlySkipCompression, "appendonly_skip_compression")
 /* inject fault while reindex db is in progress */
 FI_IDENT(ReindexDB, "reindex_db")
 /* inject fault while reindex relation is in progress */
@@ -227,14 +170,18 @@ FI_IDENT(VacuumFullAfterTruncate, "vacuum_full_after_truncate")
 FI_IDENT(VacuumRelationEndOfFirstRound, "vacuum_relation_end_of_first_round")
 /* inject fault during the open relation of the drop phase of vacuumRelation loop */
 FI_IDENT(VacuumRelationOpenRelationDuringDropPhase, "vacuum_relation_open_relation_during_drop_phase")
-/* inject fault while rebuilding persistent tables (for each db) */
-FI_IDENT(RebuildPTDB, "rebuild_pt_db")
 /* inject fault while adding PGPROC to procarray */
 FI_IDENT(ProcArray_Add, "procarray_add")
 /* inject fault before switching to a new batch in Hash Join */
 FI_IDENT(FaultExecHashJoinNewBatch, "exec_hashjoin_new_batch")
 /* pause FTS process before committing changes, until shutdown */
 FI_IDENT(FtsWaitForShutdown, "fts_wait_for_shutdown")
+/* inject fault in FTS loop */
+FI_IDENT(FtsProbe, "fts_probe")
+/* inject fault in FTS where it updates configuration */
+FI_IDENT(FtsUpdateConfig, "fts_update_config")
+/* inject fault in FTS message handler */
+FI_IDENT(FtsHandleMessage, "fts_handle_message")
 /* inject fault before cleaning up a runaway query */
 FI_IDENT(RunawayCleanup, "runaway_cleanup")
 /* inject fault while translating relcache entries */
@@ -249,12 +196,16 @@ FI_IDENT(QuickDie, "quickdie")
 FI_IDENT(AfterOneSliceDispatched, "after_one_slice_dispatched")
 /* inject fault in interconnect to skip sending the stop ack */
 FI_IDENT(InterconnectStopAckIsLost, "interconnect_stop_ack_is_lost")
+/* inject fault in interconnect to make palloc0 fail in setup */
+FI_IDENT(InterconnectSetupPalloc, "interconnect_setup_palloc")
 /* inject fault after qe got snapshot and interconnect*/
 FI_IDENT(QEGotSnapshotAndInterconnect, "qe_got_snapshot_and_interconnect")
 /* inject fault to 'skip' in order to flush all buffers in BgBufferSync() */
 FI_IDENT(FsyncCounter, "fsync_counter")
 /* inject fault to count buffers fsync'ed by checkpoint process */
 FI_IDENT(BgBufferSyncDefaultLogic, "bg_buffer_sync_default_logic")
+/* inject fault in FinishPreparedTransaction() right at start of function */
+FI_IDENT(FinishPreparedStartOfFunction, "finish_prepared_start_of_function")
 /* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
 FI_IDENT(FinishPreparedAfterRecordCommitPrepared, "finish_prepared_after_record_commit_prepared")
 /* inject fault to report ERROR just after creating Gang */
@@ -263,6 +214,12 @@ FI_IDENT(GangCreated, "gang_created")
 FI_IDENT(ResGroupAssignedOnMaster, "resgroup_assigned_on_master")
 /* inject fault before reading command */
 FI_IDENT(BeforeReadCommand, "before_read_command")
+/* inject fault before get checkpoint dtx information */
+FI_IDENT(CheckPointDtxInfo, "checkpoint_dtx_info")
+/* inject fault at WalSndLoop() function */
+FI_IDENT(WalSenderLoop, "wal_sender_loop")
+/* inject fault at SyncRepWaitForLSN function for QueryCancelPending */
+FI_IDENT(SyncRepQueryCancel, "sync_rep_query_cancel")
 #endif
 
 /*
@@ -288,6 +245,7 @@ FI_TYPE(FaultInjectorTypeSegv, "segv")
 FI_TYPE(FaultInjectorTypeInterrupt, "interrupt")
 FI_TYPE(FaultInjectorTypeFinishPending, "finish_pending")
 FI_TYPE(FaultInjectorTypeCheckpointAndPanic, "checkpoint_and_panic")
+FI_TYPE(FaultInjectorTypeWaitUntilTriggered, "wait_until_triggered")
 #endif
 
 /*
@@ -303,8 +261,6 @@ FI_DDL_STATEMENT(CreateIndex, "create_index")
 FI_DDL_STATEMENT(AlterIndex, "alter_index")
 FI_DDL_STATEMENT(ReIndex, "reindex")
 FI_DDL_STATEMENT(DropIndex, "drop_index")
-FI_DDL_STATEMENT(CreateFilespaces, "create_filespaces")
-FI_DDL_STATEMENT(DropFilespaces, "drop_filespaces")
 FI_DDL_STATEMENT(CreateTablespaces, "create_tablespaces")
 FI_DDL_STATEMENT(DropTablespaces, "drop_tablespaces")
 FI_DDL_STATEMENT(Truncate, "truncate")

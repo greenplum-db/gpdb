@@ -5,6 +5,8 @@
 
 #include "../cdbappendonlystorage.c"
 
+#include "catalog/pg_tablespace.h"
+
 static const XLogRecPtr InvalidXLogRecPtr = {0, 0};
 
 /*

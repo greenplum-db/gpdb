@@ -84,10 +84,6 @@
                             contents.</pd>
                     </plentry>
                     <plentry>
-                        <pt>-F | --filespaces</pt>
-                        <pd>Dump filespace definitions.</pd>
-                    </plentry>
-                    <plentry>
                         <pt>-f <varname>filename</varname> | --file=<varname>filename</varname></pt>
                         <pd>Send output to the specified file. </pd>
                     </plentry>
@@ -184,7 +180,7 @@
                     </plentry>
                     <plentry>
                         <pt>--roles-only</pt>
-                        <pd>Dump only roles, not databases, tablespaces, or filespaces.</pd>
+                        <pd>Dump only roles, not databases, or tablespaces.</pd>
                     </plentry>
                     <plentry>
                         <pt>--no-tablespaces</pt>
@@ -264,7 +260,7 @@
             <p>Once restored, it is wise to run <codeph>ANALYZE</codeph> on each database so the
                 query planner has useful statistics. You can also run <codeph>vacuumdb -a
                     -z</codeph> to analyze all databases. </p>
-            <p><codeph>pg_dumpall</codeph> requires all needed tablespace (filespace) directories to
+            <p><codeph>pg_dumpall</codeph> requires all needed tablespace directories to
                 exist before the restore or database creation will fail for databases in non-default
                 locations.</p>
         </section>
@@ -274,8 +270,8 @@
             <codeblock>pg_dumpall &gt; db.out</codeblock>
             <p>To reload this file:</p>
             <codeblock>psql template1 -f db.out</codeblock>
-            <p>To dump only global objects (including filespaces and resource queues):</p>
-            <codeblock>pg_dumpall -g -F --resource-queues</codeblock>
+            <p>To dump only global objects (including resource queues):</p>
+            <codeblock>pg_dumpall -g --resource-queues</codeblock>
         </section>
         <section id="section9">
             <title>See Also</title>

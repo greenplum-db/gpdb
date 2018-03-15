@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/initdb.sgml,v 1.44 2008/09/23 09:20:34 heikki Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/initdb.sgml,v 1.47 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="APP-INITDB">
  <refmeta>
-  <refentrytitle id="APP-INITDB-TITLE">initdb</refentrytitle>
+  <refentrytitle>initdb</refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
@@ -314,6 +314,28 @@ PostgreSQL documentation
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>initdb</application> version and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
+       <para>
+       Show help about <application>initdb</application> command line
+       arguments, and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
     </variablelist>
    </para>
 
@@ -344,9 +366,19 @@ PostgreSQL documentation
  </refsect1>
 
  <refsect1>
+  <title>Notes</title>
+
+  <para>
+   <command>initdb</command> can also be invoked via
+   <command>pg_ctl initdb</command>.
+  </para>
+ </refsect1>
+
+ <refsect1>
   <title>See Also</title>
 
   <simplelist type="inline">
+   <member><xref linkend="app-pg-ctl"></member>
    <member><xref linkend="app-postgres"></member>
   </simplelist>
  </refsect1>

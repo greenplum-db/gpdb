@@ -27,7 +27,7 @@ vacuum full vfheap;
 select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 0;
 
--- check relpages and reltuples (relpages is 1 though empty, intentionally)
+-- check relpages and reltuples (VACUUM FULL clears them)
 select relname, relpages, reltuples from gp_dist_random('pg_class') where (oid = 'vfheap'::regclass or oid = 'ivfheap'::regclass) and gp_segment_id = 0;
 
 -- again, but delete second half
@@ -65,7 +65,7 @@ vacuum full vfheaptoast;
 
 select pg_relation_size((select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 0;
 
--- check relpages and reltuples (relpages is 1 though empty, intentionally)
+-- check relpages and reltuples (VACUUM FULL clears them)
 select relpages, reltuples from gp_dist_random('pg_class')
   where oid = (select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass) and gp_segment_id = 0;
 

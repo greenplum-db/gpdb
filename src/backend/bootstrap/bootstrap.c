@@ -4,11 +4,11 @@
  *	  routines to support running postgres in 'bootstrap' mode
  *	bootstrap mode is used to create the initial template database
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.250 2009/02/18 15:58:41 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.261 2010/04/20 01:38:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,22 +27,23 @@
 #include "bootstrap/bootstrap.h"
 #include "catalog/index.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbfilerep.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/bgwriter.h"
 #include "postmaster/walwriter.h"
 #include "replication/walreceiver.h"
-#include "storage/bufpage.h"
 #include "storage/bufmgr.h"
+#include "storage/bufpage.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
+#include "storage/procsignal.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
+#include "utils/relmapper.h"
 #include "utils/tqual.h"
 
 extern int	optind;
@@ -50,18 +51,13 @@ extern char *optarg;
 
 uint32 bootstrap_data_checksum_version = 0;  /* No checksum */
 
-extern void FileRepResetPeer_Main(void);
-
 #define ALLOC(t, c)		((t *) calloc((unsigned)(c), sizeof(t)))
 
 static void CheckerModeMain(void);
 static void BootstrapModeMain(void);
 static void bootstrap_signals(void);
 static void ShutdownAuxiliaryProcess(int code, Datum arg);
-static hashnode *AddStr(char *str, int strlength, int mderef);
 static Form_pg_attribute AllocateAttribute(void);
-static int	CompHash(char *str, int len);
-static hashnode *FindStr(char *str, int length, hashnode *mderef);
 static Oid	gettype(char *type);
 static void cleanup(void);
 
@@ -73,30 +69,11 @@ static void cleanup(void);
 Relation	boot_reldesc;		/* current relation descriptor */
 AuxProcType MyAuxProcType = NotAnAuxProcess;
 
+Form_pg_attribute attrtypes[MAXATTR];	/* points to attribute info */
+int			numattr;			/* number of attributes for cur. rel */
+
+
 /*
- * In the lexical analyzer, we need to get the reference number quickly from
- * the string, and the string from the reference number.  Thus we have
- * as our data structure a hash table, where the hashing key taken from
- * the particular string.  The hash table is chained.  One of the fields
- * of the hash table node is an index into the array of character pointers.
- * The unique index number that every string is assigned is simply the
- * position of its string pointer in the array of string pointers.
- */
-
-#define STRTABLESIZE	10000
-#define HASHTABLESIZE	503
-
-/* Hash function numbers */
-#define NUM		23
-#define NUMSQR	529
-#define NUMCUBE 12167
-
-char	   *strtable[STRTABLESIZE];
-hashnode   *hashtable[HASHTABLESIZE];
-
-static int	strtable_end = -1;	/* Tells us last occupied string space */
-
-/*-
  * Basic information associated with each type.  This is used before
  * pg_type is created.
  *
@@ -175,11 +152,8 @@ struct typmap
 static struct typmap **Typ = NULL;
 static struct typmap *Ap = NULL;
 
+static Datum values[MAXATTR];	/* current row's attribute values */
 static bool Nulls[MAXATTR];
-
-Form_pg_attribute attrtypes[MAXATTR];	/* points to attribute info */
-static Datum values[MAXATTR];	/* corresponding attribute values */
-int			numattr;			/* number of attributes for cur. rel */
 
 static MemoryContext nogc = NULL;		/* special no-gc mem context */
 
@@ -203,7 +177,7 @@ static IndexList *ILHead = NULL;
  *	 AuxiliaryProcessMain
  *
  *	 The main entry point for auxiliary processes, such as the bgwriter,
- *	 walwriter, bootstrapper and the shared memory checker code.
+ *	 walwriter, walreceiver, bootstrapper and the shared memory checker code.
  *
  *	 This code is here just because of historical reasons.
  */
@@ -346,32 +320,17 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			case StartupProcess:
 				statmsg = "startup process";
 				break;
-			case StartupPass2Process:
-				statmsg = "startup pass 2 process";
-				break;
-			case StartupPass3Process:
-				statmsg = "startup pass 3 process";
-				break;
-			case StartupPass4Process:
-				statmsg = "startup pass 4 process";
-				break;
 			case BgWriterProcess:
 				statmsg = "writer process";
 				break;
 			case WalWriterProcess:
 				statmsg = "wal writer process";
 				break;
-			case CheckpointerProcess:
-				statmsg = "checkpointer process";
-				break;
 			case WalReceiverProcess:
 				statmsg = "wal receiver process";
 				break;
-			case FilerepProcess:
-				statmsg = "filerep process";
-				break;
-			case FilerepResetPeerProcess:
-				statmsg = "filerep reset peer process";
+			case CheckpointerProcess:
+				statmsg = "checkpointer process";
 				break;
 			default:
 				statmsg = "??? process";
@@ -385,10 +344,6 @@ AuxiliaryProcessMain(int argc, char *argv[])
 	{
 		if (!SelectConfigFiles(userDoption, progname))
 			proc_exit(1);
-		/* If timezone is not set, determine what the OS uses */
-		pg_timezone_initialize();
-		/* If timezone_abbreviations is not set, select default */
-		pg_timezone_abbrev_initialize();
 	}
 
 	/* Validate we have been given a reasonable-looking DataDir */
@@ -413,13 +368,7 @@ AuxiliaryProcessMain(int argc, char *argv[])
 	 * InitPostgres pushups, but there are a couple of things that need to get
 	 * lit up even in an auxiliary process.
 	 */
-	/*
-	 * FileRep Main process does not use LWLock and so PGPROC is not required 
-	 * to be initialized.
-	 * It is temporary fix to handle that here as an exception.
-	 */
-	if (IsUnderPostmaster && (MyAuxProcType != FilerepProcess &&
-							  MyAuxProcType != FilerepResetPeerProcess))
+	if (IsUnderPostmaster)
 	{
 		/*
 		 * Create a PGPROC so we can use LWLocks.  In the EXEC_BACKEND case,
@@ -428,6 +377,19 @@ AuxiliaryProcessMain(int argc, char *argv[])
 #ifndef EXEC_BACKEND
 		InitAuxiliaryProcess();
 #endif
+
+		/*
+		 * Assign the ProcSignalSlot for an auxiliary process.	Since it
+		 * doesn't have a BackendId, the slot is statically allocated based on
+		 * the auxiliary process type (MyAuxProcType).  Backends use slots indexed
+		 * in the range from 1 to MaxBackends (inclusive), so we use
+		 * MaxBackends + AuxProcType + 1 as the index of the slot for an
+		 * auxiliary process.
+		 *
+		 * This will need rethinking if we ever want more than one of a
+		 * particular auxiliary process type.
+		 */
+		ProcSignalInit(MaxBackends + MyAuxProcType + 1);
 
 		/* finish setting up bufmgr.c */
 		InitBufferPoolBackend();
@@ -444,35 +406,19 @@ AuxiliaryProcessMain(int argc, char *argv[])
 	switch (MyAuxProcType)
 	{
 		case CheckerProcess:
-			bootstrap_signals();
+			/* don't set signals, they're useless here */
 			CheckerModeMain();
 			proc_exit(1);		/* should never return */
 
 		case BootstrapProcess:
 			bootstrap_signals();
 			BootStrapXLOG();
-			StartupXLOG();
 			BootstrapModeMain();
 			proc_exit(1);		/* should never return */
 
 		case StartupProcess:
 			/* don't set signals, startup process has its own agenda */
-			StartupProcessMain(1);
-			proc_exit(1);		/* should never return */
-
-		case StartupPass2Process:
-			/* don't set signals, startup process has its own agenda */
-			StartupProcessMain(2);
-			proc_exit(1);		/* should never return */
-
-		case StartupPass3Process:
-			/* don't set signals, startup process has its own agenda */
-			StartupProcessMain(3);
-			proc_exit(1);		/* should never return */
-
-		case StartupPass4Process:
-			/* don't set signals, startup process has its own agenda */
-			StartupProcessMain(4);
+			StartupProcessMain();
 			proc_exit(1);		/* should never return */
 
 		case BgWriterProcess:
@@ -482,7 +428,6 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
 		case CheckpointerProcess:
 			/* don't set signals, checkpointer is similar to bgwriter and has its own agenda */
-			InitXLOGAccess();
 			CheckpointerMain();
 			proc_exit(1);		/* should never return */
 
@@ -497,14 +442,6 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			WalWriterMain();
 			proc_exit(1);		/* should never return */
 
-		case FilerepProcess:
-			FileRep_Main();
-			proc_exit(1); /* should never return */
-
-		case FilerepResetPeerProcess:
-			FileRepResetPeer_Main();
-			proc_exit(1); /* should never return */
-
 		default:
 			elog(PANIC, "unrecognized process type: %d", MyAuxProcType);
 			proc_exit(1);
@@ -514,23 +451,12 @@ AuxiliaryProcessMain(int argc, char *argv[])
 /*
  * In shared memory checker mode, all we really want to do is create shared
  * memory and semaphores (just to prove we can do it with the current GUC
- * settings).
+ * settings).  Since, in fact, that was already done by BaseInit(),
+ * we have nothing more to do here.
  */
 static void
 CheckerModeMain(void)
 {
-	/*
-	 * We must be getting invoked for bootstrap mode
-	 */
-	Assert(!IsUnderPostmaster);
-
-	SetProcessingMode(BootstrapProcessing);
-
-	/*
-	 * Do backend-like initialization for bootstrap mode
-	 */
-	InitProcess();
-	InitPostgres(NULL, InvalidOid, NULL, NULL);
 	proc_exit(0);
 }
 
@@ -554,6 +480,7 @@ BootstrapModeMain(void)
 	 * Do backend-like initialization for bootstrap mode
 	 */
 	InitProcess();
+
 	InitPostgres(NULL, InvalidOid, NULL, NULL);
 
 	/* Initialize stuff for bootstrap-file processing */
@@ -562,19 +489,17 @@ BootstrapModeMain(void)
 		attrtypes[i] = NULL;
 		Nulls[i] = false;
 	}
-	for (i = 0; i < STRTABLESIZE; ++i)
-		strtable[i] = NULL;
-	for (i = 0; i < HASHTABLESIZE; ++i)
-		hashtable[i] = NULL;
 
 	/*
 	 * Process bootstrap input.
 	 */
 	boot_yyparse();
 
-	/* Perform a checkpoint to ensure everything's down to disk */
-	SetProcessingMode(NormalProcessing);
-	CreateCheckPoint(CHECKPOINT_IS_SHUTDOWN | CHECKPOINT_IMMEDIATE);
+	/*
+	 * We should now know about all mapped relations, so it's okay to write
+	 * out the initial relation mapping files.
+	 */
+	RelationMapFinishBootstrap();
 
 	/* Clean up and exit */
 	cleanup();
@@ -1140,168 +1065,6 @@ MapArrayTypeName(char *s)
 	return newStr;
 }
 
-/* ----------------
- *		EnterString
- *		returns the string table position of the identifier
- *		passed to it.  We add it to the table if we can't find it.
- * ----------------
- */
-int
-EnterString(char *str)
-{
-	hashnode   *node;
-	int			len;
-
-	len = strlen(str);
-
-	node = FindStr(str, len, NULL);
-	if (node)
-		return node->strnum;
-	else
-	{
-		node = AddStr(str, len, 0);
-		return node->strnum;
-	}
-}
-
-/* ----------------
- *		LexIDStr
- *		when given an idnum into the 'string-table' return the string
- *		associated with the idnum
- * ----------------
- */
-char *
-LexIDStr(int ident_num)
-{
-	return strtable[ident_num];
-}
-
-
-/* ----------------
- *		CompHash
- *
- *		Compute a hash function for a given string.  We look at the first,
- *		the last, and the middle character of a string to try to get spread
- *		the strings out.  The function is rather arbitrary, except that we
- *		are mod'ing by a prime number.
- * ----------------
- */
-static int
-CompHash(char *str, int len)
-{
-	int			result;
-	
-	Assert(len >=0 && "string length is negative");
-	if (len == 0) 
-	{
-		return 0;
-	}
-
-	result = (NUM * str[0] + NUMSQR * str[len - 1] + NUMCUBE * str[(len - 1) / 2]);
-
-	return result % HASHTABLESIZE;
-
-}
-
-/* ----------------
- *		FindStr
- *
- *		This routine looks for the specified string in the hash
- *		table.	It returns a pointer to the hash node found,
- *		or NULL if the string is not in the table.
- * ----------------
- */
-static hashnode *
-FindStr(char *str, int length, hashnode *mderef)
-{
-	hashnode   *node;
-
-	node = hashtable[CompHash(str, length)];
-	while (node != NULL)
-	{
-		/*
-		 * We must differentiate between string constants that might have the
-		 * same value as a identifier and the identifier itself.
-		 */
-		if (!strcmp(str, strtable[node->strnum]))
-		{
-			return node;		/* no need to check */
-		}
-		else
-			node = node->next;
-	}
-	/* Couldn't find it in the list */
-	return NULL;
-}
-
-/* ----------------
- *		AddStr
- *
- *		This function adds the specified string, along with its associated
- *		data, to the hash table and the string table.  We return the node
- *		so that the calling routine can find out the unique id that AddStr
- *		has assigned to this string.
- * ----------------
- */
-static hashnode *
-AddStr(char *str, int strlength, int mderef)
-{
-	hashnode   *temp,
-			   *trail,
-			   *newnode;
-	int			hashresult;
-	int			len;
-
-	if (++strtable_end >= STRTABLESIZE)
-		elog(FATAL, "bootstrap string table overflow");
-
-	/*
-	 * Some of the utilites (eg, define type, create relation) assume that the
-	 * string they're passed is a NAMEDATALEN.  We get array bound read
-	 * violations from purify if we don't allocate at least NAMEDATALEN bytes
-	 * for strings of this sort.  Because we're lazy, we allocate at least
-	 * NAMEDATALEN bytes all the time.
-	 */
-
-	if ((len = strlength + 1) < NAMEDATALEN)
-		len = NAMEDATALEN;
-
-	strtable[strtable_end] = malloc((unsigned) len);
-	if (strtable[strtable_end] == NULL)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg("Bootstrap failed: out of memory in AddStr")));
-
-	strcpy(strtable[strtable_end], str);
-
-	/* Now put a node in the hash table */
-	newnode = (hashnode *) malloc(sizeof(hashnode) * 1);
-	if (newnode == NULL)
-		ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg("Bootstrap failed: out of memory in AddStr")));
-
-	newnode->strnum = strtable_end;
-	newnode->next = NULL;
-
-	/* Find out where it goes */
-
-	hashresult = CompHash(str, strlength);
-	if (hashtable[hashresult] == NULL)
-		hashtable[hashresult] = newnode;
-	else
-	{							/* There is something in the list */
-		trail = hashtable[hashresult];
-		temp = trail->next;
-		while (temp != NULL)
-		{
-			trail = temp;
-			temp = temp->next;
-		}
-		trail->next = newnode;
-	}
-	return newnode;
-}
-
-
 
 /*
  *	index_register() -- record an index that has been set up for building
@@ -1351,6 +1114,10 @@ index_register(Oid heap,
 	newind->il_info->ii_Predicate = (List *)
 		copyObject(indexInfo->ii_Predicate);
 	newind->il_info->ii_PredicateState = NIL;
+	/* no exclusion constraints at bootstrap time, so no need to copy */
+	Assert(indexInfo->ii_ExclusionOps == NULL);
+	Assert(indexInfo->ii_ExclusionProcs == NULL);
+	Assert(indexInfo->ii_ExclusionStrats == NULL);
 
 	newind->il_next = ILHead;
 	ILHead = newind;

@@ -3,11 +3,11 @@
  * tsginidx.c
  *	 GIN support functions for tsvector_ops
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsginidx.c,v 1.16 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsginidx.c,v 1.18 2010/01/02 16:57:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -142,7 +142,7 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
 			if (item[i].type == QI_VAL)
 			{
 				text	   *txt;
-				QueryOperand *val = &item[i].operand;
+				QueryOperand *val = &item[i].qoperand;
 
 				txt = cstring_to_text_with_len(GETOPERAND(query) + val->distance,
 											   val->length);

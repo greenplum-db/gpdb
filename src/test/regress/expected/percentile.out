@@ -511,13 +511,13 @@ select * from percv;
 (11 rows)
 
 select pg_get_viewdef('percv');
-                                                                                                                                        pg_get_viewdef                                                                                                                                         
+                                                                                                                                               pg_get_viewdef                                                                                                                                                
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY ((perct.a / 10))::double precision) AS percentile_cont, MEDIAN(perct.a) AS "median", percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc FROM perct GROUP BY perct.b ORDER BY perct.b;
 (1 row)
 
 select pg_get_viewdef('percv2');
-                                       pg_get_viewdef                                        
+                                   pg_get_viewdef                                    
 -------------------------------------------------------------------------------------
  SELECT MEDIAN(perct.a) AS m1, MEDIAN((perct.a)::double precision) AS m2 FROM perct;
 (1 row)
@@ -613,12 +613,12 @@ select sum((select median(a) from perct where b = t.b)) from perct t;
 select * from perct limit median(a);
 ERROR:  aggregate functions are not allowed in LIMIT
 LINE 1: select * from perct limit median(a);
-                                         ^
+                                  ^
 -- multiple sort key
 select percentile_cont(0.8) within group (order by a, a + 1, a + 2) from perct;
 ERROR:  function percentile_cont(numeric, integer, integer, integer) does not exist
 LINE 1: select percentile_cont(0.8) within group (order by a, a + 1,...
-                                                             ^
+               ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- set-returning
 select generate_series(1, 2), median(a) from perct;

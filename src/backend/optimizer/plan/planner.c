@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.256 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.267 2010/03/30 21:58:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,7 @@
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
 #endif
+#include "parser/analyze.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_relation.h"
@@ -81,13 +82,17 @@ static Node *preprocess_expression(PlannerInfo *root, Node *expr, int kind);
 static void preprocess_qual_conditions(PlannerInfo *root, Node *jtnode);
 static Plan *inheritance_planner(PlannerInfo *root);
 static Plan *grouping_planner(PlannerInfo *root, double tuple_fraction);
+static void preprocess_rowmarks(PlannerInfo *root);
 static double preprocess_limit(PlannerInfo *root,
 				 double tuple_fraction,
 				 int64 *offset_est, int64 *count_est);
 static void preprocess_groupclause(PlannerInfo *root);
 static bool choose_hashed_distinct(PlannerInfo *root,
-					   Plan *input_plan, List *input_pathkeys,
 					   double tuple_fraction, double limit_tuples,
+					   double path_rows, int path_width,
+					   Cost cheapest_startup_cost, Cost cheapest_total_cost,
+					   Cost sorted_startup_cost, Cost sorted_total_cost,
+					   List *sorted_pathkeys,
 					   double dNumDistinctRows);
 static List *make_subplanTargetList(PlannerInfo *root, List *tlist,
 					   AttrNumber **groupColIdx, Oid **groupOperators, bool *need_tlist_eval);
@@ -123,6 +128,7 @@ static void sort_canonical_gs_list(List *gs, int *p_nsets, Bitmapset ***p_sets);
 static Plan *pushdown_preliminary_limit(Plan *plan, Node *limitCount, int64 count_est, Node *limitOffset, int64 offset_est);
 static bool is_dummy_plan(Plan *plan);
 
+static Plan *getAnySubplan(Plan *node);
 static bool isSimplyUpdatableQuery(Query *query);
 
 
@@ -178,7 +184,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	PlannerInfo *root;
 	Plan	   *top_plan;
 	ListCell   *lp,
-			   *lr;
+			   *lrt,
+			   *lrm;
 	PlannerConfig *config;
 	instr_time		starttime;
 	instr_time		endtime;
@@ -254,8 +261,10 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->paramlist = NIL;
 	glob->subplans = NIL;
 	glob->subrtables = NIL;
+	glob->subrowmarks = NIL;
 	glob->rewindPlanIDs = NULL;
 	glob->finalrtable = NIL;
+	glob->finalrowmarks = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
 	glob->lastPHId = 0;
@@ -322,7 +331,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 			top_plan = materialize_finished_plan(root, top_plan);
 	}
 
-
 	/*
 	 * Fix sharing id and shared id.
 	 *
@@ -331,10 +339,10 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	 *
 	 * apply_shareinput will fix shared_id, and change the DAG to a tree.
 	 */
-	forboth(lp, glob->subplans, lr, glob->subrtables)
+	forboth(lp, glob->subplans, lrt, glob->subrtables)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
-		List	   *subrtable = (List *) lfirst(lr);
+		List	   *subrtable = (List *) lfirst(lrt);
 
 		lfirst(lp) = apply_shareinput_dag_to_tree(glob, subplan, subrtable);
 	}
@@ -342,16 +350,26 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
 	/* final cleanup of the plan */
 	Assert(glob->finalrtable == NIL);
+	Assert(glob->finalrowmarks == NIL);
 	Assert(parse == root->parse);
-	top_plan = set_plan_references(glob, top_plan, root->parse->rtable);
+	top_plan = set_plan_references(glob, top_plan,
+								   root->parse->rtable,
+								   root->rowMarks);
 	/* ... and the subplans (both regular subplans and initplans) */
 	Assert(list_length(glob->subplans) == list_length(glob->subrtables));
-	forboth(lp, glob->subplans, lr, glob->subrtables)
+	Assert(list_length(glob->subplans) == list_length(glob->subrowmarks));
+	lrt = list_head(glob->subrtables);
+	lrm = list_head(glob->subrowmarks);
+	foreach(lp, glob->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
-		List	   *subrtable = (List *) lfirst(lr);
+		List	   *subrtable = (List *) lfirst(lrt);
+		List	   *subrowmark = (List *) lfirst(lrm);
 
-		lfirst(lp) = set_plan_references(glob, subplan, subrtable);
+		lfirst(lp) = set_plan_references(glob, subplan,
+										 subrtable, subrowmark);
+		lrt = lnext(lrt);
+		lrm = lnext(lrm);
 	}
 
 	/* walk plan and remove unused initplans and their params */
@@ -394,8 +412,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	remove_unused_subplans(root, &subplan_context);
 	bms_free(subplan_context.bms_subplans);
 
-	top_plan = zap_trivial_result(root, top_plan);
-
 	/* fix ShareInputScans for EXPLAIN */
 	foreach(lp, glob->subplans)
 	{
@@ -415,6 +431,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result = makeNode(PlannedStmt);
 
 	result->commandType = parse->commandType;
+	result->hasReturning = (parse->returningList != NIL);
 	result->canSetTag = parse->canSetTag;
 	result->transientPlan = glob->transientPlan;
 	result->oneoffPlan = glob->oneoffPlan;
@@ -425,10 +442,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->intoClause = parse->intoClause;
 	result->subplans = glob->subplans;
 	result->rewindPlanIDs = glob->rewindPlanIDs;
-	result->returningLists = root->returningLists;
 	result->result_partitions = root->result_partitions;
 	result->result_aosegnos = root->result_aosegnos;
-	result->rowMarks = parse->rowMarks;
+	result->rowMarks = glob->finalrowmarks;
 	result->relationOids = glob->relationOids;
 	result->invalItems = glob->invalItems;
 	result->nParamExec = list_length(glob->paramlist);
@@ -539,6 +555,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	}
 
 	root->append_rel_list = NIL;
+	root->rowMarks = NIL;
+	root->hasInheritedTarget = false;
 
 	Assert(config);
 	root->config = config;
@@ -551,7 +569,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
-		root->wt_param_id = SS_assign_worktable_param(root);
+		root->wt_param_id = SS_assign_special_param(root);
 	else
 		root->wt_param_id = -1;
 	root->non_recursive_plan = NULL;
@@ -574,9 +592,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * normalize_query_jointree_mutator()
 	 */
 	AssertImply(parse->jointree->fromlist, list_length(parse->jointree->fromlist) == 1);
-
-	/* CDB: Stash current query level's relids before pulling up subqueries. */
-	root->currlevel_relids = get_relids_in_jointree((Node *) parse->jointree, false);
 
 	/*
 	 * Look for ANY and EXISTS SubLinks in WHERE and JOIN/ON clauses, and try
@@ -626,6 +641,14 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	}
 
 	/*
+	 * Preprocess RowMark information.	We need to do this after subquery
+	 * pullup (so that all non-inherited RTEs are present) and before
+	 * inheritance expansion (so that the info is available for
+	 * expand_inherited_tables to examine and modify).
+	 */
+	preprocess_rowmarks(root);
+
+	/*
 	 * Expand any rangetable entries that are inheritance sets into "append
 	 * relations".  This can add entries to the rangetable, but they must be
 	 * plain base relations not joins, so it's OK (and marginally more
@@ -634,16 +657,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * subqueries.
 	 */
 	expand_inherited_tables(root);
-
-	/* CDB: If parent RTE belongs to current query level, children do too. */
-	foreach(l, root->append_rel_list)
-	{
-		AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(l);
-
-		if (bms_is_member(appinfo->parent_relid, root->currlevel_relids))
-			root->currlevel_relids = bms_add_member(root->currlevel_relids,
-													appinfo->child_relid);
-	}
 
 	/*
 	 * Set hasHavingQual to remember if HAVING clause is present.  Needed
@@ -656,7 +669,10 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	root->hasPseudoConstantQuals = false;
 
 	/*
-	 * Do expression preprocessing on targetlist and quals.
+	 * Do expression preprocessing on targetlist and quals, as well as other
+	 * random expressions in the querytree.  Note that we do not need to
+	 * handle sort/group expressions explicitly, because they are actually
+	 * part of the targetlist.
 	 */
 	parse->targetList = (List *)
 		preprocess_expression(root, (Node *) parse->targetList,
@@ -783,15 +799,60 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 		rt_fetch(parse->resultRelation, parse->rtable)->inh)
 		plan = inheritance_planner(root);
 	else
+	{
 		plan = grouping_planner(root, tuple_fraction);
+		/* If it's not SELECT, we need a ModifyTable node */
+		if (parse->commandType != CMD_SELECT)
+		{
+			List	   *returningLists;
+			List	   *rowMarks;
+
+			/*
+			 * Deal with the RETURNING clause if any.  It's convenient to pass
+			 * the returningList through setrefs.c now rather than at top
+			 * level (if we waited, handling inherited UPDATE/DELETE would be
+			 * much harder).
+			 */
+			if (parse->returningList)
+			{
+				List	   *rlist;
+
+				Assert(parse->resultRelation);
+				rlist = set_returning_clause_references(root->glob,
+														parse->returningList,
+														plan,
+													  parse->resultRelation);
+				returningLists = list_make1(rlist);
+			}
+			else
+				returningLists = NIL;
+
+			/*
+			 * If there was a FOR UPDATE/SHARE clause, the LockRows node will
+			 * have dealt with fetching non-locked marked rows, else we need
+			 * to have ModifyTable do that.
+			 */
+			if (parse->rowMarks)
+				rowMarks = NIL;
+			else
+				rowMarks = root->rowMarks;
+
+			plan = (Plan *) make_modifytable(root, parse->commandType,
+										   copyObject(root->resultRelations),
+											 list_make1(plan),
+											 returningLists,
+											 rowMarks,
+											 SS_assign_special_param(root));
+		}
+	}
 
 	/*
-	 * If any subplans were generated, or if we're inside a subplan, build
-	 * initPlan list and extParam/allParam sets for plan nodes, and attach the
-	 * initPlans to the top plan node.
+	 * If any subplans were generated, or if there are any parameters to worry
+	 * about, build initPlan list and extParam/allParam sets for plan nodes,
+	 * and attach the initPlans to the top plan node.
 	 */
 	if (list_length(glob->subplans) != num_old_subplans ||
-		root->query_level > 1)
+		root->glob->paramlist != NIL)
 	{
 		Assert(root->parse == parse); /* GPDB isn't always careful about this. */
 		SS_finalize_plan(root, plan, true);
@@ -863,11 +924,12 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 	/*
 	 * Simplify constant expressions.
 	 *
-	 * Note: one essential effect here is to insert the current actual values
-	 * of any default arguments for functions.	To ensure that happens, we
-	 * *must* process all expressions here.  Previous PG versions sometimes
-	 * skipped const-simplification if it didn't seem worth the trouble, but
-	 * we can't do that anymore.
+	 * Note: an essential effect of this is to convert named-argument function
+	 * calls to positional notation and insert the current actual values of
+	 * any default arguments for functions.  To ensure that happens, we *must*
+	 * process all expressions here.  Previous PG versions sometimes skipped
+	 * const-simplification if it didn't seem worth the trouble, but we can't
+	 * do that anymore.
 	 *
 	 * Note: this also flattens nested AND and OR expressions into N-argument
 	 * form.  All processing of a qual expression after this point must be
@@ -961,9 +1023,7 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
  * is an inheritance set. Source inheritance is expanded at the bottom of the
  * plan tree (see allpaths.c), but target inheritance has to be expanded at
  * the top.  The reason is that for UPDATE, each target relation needs a
- * different targetlist matching its own column set.  Also, for both UPDATE
- * and DELETE, the executor needs the Append plan node at the top, else it
- * can't keep track of which table is the current target table.  Fortunately,
+ * different targetlist matching its own column set.  Fortunately,
  * the UPDATE/DELETE target can never be the nullable side of an outer join,
  * so it's OK to generate the plan this way.
  *
@@ -977,7 +1037,8 @@ inheritance_planner(PlannerInfo *root)
 	List	   *subplans = NIL;
 	List	   *resultRelations = NIL;
 	List	   *returningLists = NIL;
-	List	   *tlist = NIL;
+	List	   *rowMarks;
+	List	   *tlist;
 	PlannerInfo subroot;
 	ListCell   *l;
 
@@ -1002,8 +1063,8 @@ inheritance_planner(PlannerInfo *root)
 		subroot.parse = (Query *)
 			adjust_appendrel_attrs(&subroot, (Node *) parse,
 								   appinfo);
-		subroot.returningLists = NIL;
 		subroot.init_plans = NIL;
+		subroot.hasInheritedTarget = true;
 		/* We needn't modify the child's append_rel_list */
 		/* There shouldn't be any OJ info to translate, as yet */
 		Assert(subroot.join_info_list == NIL);
@@ -1067,12 +1128,6 @@ inheritance_planner(PlannerInfo *root)
 			}
 		}
 
-		/* Save tlist from first rel for use below */
-		if (subplans == NIL)
-		{
-			tlist = subplan->targetlist;
-		}
-
 		/**
 		 * The grouping planner scribbles on the rtable e.g. to add pseudo columns.
 		 * We need to keep track of this.
@@ -1090,9 +1145,13 @@ inheritance_planner(PlannerInfo *root)
 		/* Build list of per-relation RETURNING targetlists */
 		if (parse->returningList)
 		{
-			Assert(list_length(subroot.returningLists) == 1);
-			returningLists = list_concat(returningLists,
-										 subroot.returningLists);
+			List	   *rlist;
+
+			rlist = set_returning_clause_references(root->glob,
+												subroot.parse->returningList,
+													subplan,
+													appinfo->child_relid);
+			returningLists = lappend(returningLists, rlist);
 		}
 	}
 
@@ -1108,14 +1167,15 @@ inheritance_planner(PlannerInfo *root)
 	{
 		root->resultRelations = list_make1_int(parse->resultRelation);
 	}
-	
-	root->returningLists = returningLists;
+
+	root->resultRelations = resultRelations;
 
 	/* Mark result as unordered (probably unnecessary) */
 	root->query_pathkeys = NIL;
 
 	/*
-	 * If we managed to exclude every child rel, return a dummy plan
+	 * If we managed to exclude every child rel, return a dummy plan; it
+	 * doesn't even need a ModifyTable node.
 	 */
 	if (subplans == NIL)
 	{
@@ -1134,43 +1194,23 @@ inheritance_planner(PlannerInfo *root)
 		return plan;
 	}
 
-	/* Suppress Append if there's only one surviving child rel */
-	if (list_length(subplans) == 1)
-		plan = (Plan *) linitial(subplans);
+	/*
+	 * If there was a FOR UPDATE/SHARE clause, the LockRows node will have
+	 * dealt with fetching non-locked marked rows, else we need to have
+	 * ModifyTable do that.
+	 */
+	if (parse->rowMarks)
+		rowMarks = NIL;
 	else
-	{
-		plan = (Plan *) make_append(subplans, true, tlist);
+		rowMarks = root->rowMarks;
 
-		/* MPP dispatch needs to know the kind of locus. */
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			switch (append_locustype)
-			{
-				case CdbLocusType_Entry:
-					mark_plan_entry(plan);
-					break;
-
-				case CdbLocusType_Hashed:
-				case CdbLocusType_HashedOJ:
-				case CdbLocusType_Strewn:
-					/* Depend on caller to avoid incompatible hash keys. */
-
-					/*
-					 * For our purpose (UPD/DEL target), strewn is good
-					 * enough.
-					 */
-					mark_plan_strewn(plan);
-					break;
-
-				default:
-					ereport(ERROR,
-							(errcode(ERRCODE_INTERNAL_ERROR),
-							 errmsg("unexpected locus assigned to target inheritance set")));
-			}
-		}
-	}
-
-	return plan;
+	/* And last, tack on a ModifyTable node to do the UPDATE/DELETE work */
+	return (Plan *) make_modifytable(root, parse->commandType,
+									 copyObject(root->resultRelations),
+									 subplans,
+									 returningLists,
+									 rowMarks,
+									 SS_assign_special_param(root));
 }
 
 #ifdef USE_ASSERT_CHECKING
@@ -1240,6 +1280,15 @@ getAnySubplan(Plan *node)
 
 		return subqueryScan->subplan;
 	}
+	else if (IsA(node, ModifyTable))
+	{
+		ModifyTable *mt = (ModifyTable *) node;
+
+		if (!mt->plans)
+			elog(ERROR, "ModifyTable has no child plans");
+
+		return (Plan *) linitial(mt->plans);
+	}
 
 	return node->lefttree;
 }
@@ -1276,6 +1325,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	CdbPathLocus current_locus;
 	Path	   *best_path = NULL;
 	double		dNumGroups = 0;
+	bool		use_hashed_distinct = false;
+	bool		tested_hashed_distinct = false;
 	double		numDistinct = 1;
 	List	   *distinctExprs = NIL;
 	bool		must_gather;
@@ -1376,6 +1427,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		long		numGroups = 0;
 		AggClauseCounts agg_counts;
 		int			numGroupCols;
+		double		path_rows;
+		int			path_width;
 		bool		use_hashed_grouping = false;
 		WindowFuncLists *wflists = NULL;
 		List	   *activeWindows = NIL;
@@ -1555,43 +1608,55 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					  &cheapest_path, &sorted_path, &dNumGroups);
 
 		/*
-		 * If grouping, decide whether to use sorted or hashed grouping.
+		 * Extract rowcount and width estimates for possible use in grouping
+		 * decisions.  Beware here of the possibility that
+		 * cheapest_path->parent is NULL (ie, there is no FROM clause).
 		 */
+		if (cheapest_path->parent)
+		{
+			path_rows = cheapest_path->parent->rows;
+			path_width = cheapest_path->parent->width;
+		}
+		else
+		{
+			path_rows = 1;		/* assume non-set result */
+			path_width = 100;	/* arbitrary */
+		}
+
 		if (parse->groupClause)
 		{
-			bool		can_hash;
-			bool		can_sort;
-
 			/*
-			 * Executor doesn't support hashed aggregation with DISTINCT
-			 * aggregates.	(Doing so would imply storing *all* the input
-			 * values in the hash table, which seems like a certain loser.)
+			 * If grouping, decide whether to use sorted or hashed grouping.
 			 */
-			can_hash = (agg_counts.numOrderedAggs == 0 &&
-						grouping_is_hashable(parse->groupClause));
-			can_sort = grouping_is_sortable(parse->groupClause);
-			if (can_hash && can_sort)
-			{
-				/* we have a meaningful choice to make ... */
-				use_hashed_grouping =
-					choose_hashed_grouping(root,
-										   tuple_fraction, limit_tuples,
-										   cheapest_path, sorted_path,
-										   numGroupCols,
-										   dNumGroups, &agg_counts);
-			}
-			else if (can_hash)
-				use_hashed_grouping = true;
-			else if (can_sort)
-				use_hashed_grouping = false;
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("could not implement GROUP BY"),
-						 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
-
+			use_hashed_grouping =
+				choose_hashed_grouping(root,
+									   tuple_fraction, limit_tuples,
+									   path_rows, path_width,
+									   cheapest_path, sorted_path,
+									   numGroupCols,
+									   dNumGroups, &agg_counts);
 			/* Also convert # groups to long int --- but 'ware overflow! */
 			numGroups = (long) Min(dNumGroups, (double) LONG_MAX);
+		}
+		else if (parse->distinctClause && sorted_path &&
+				 !root->hasHavingQual && !parse->hasAggs && !activeWindows)
+		{
+			/*
+			 * We'll reach the DISTINCT stage without any intermediate
+			 * processing, so figure out whether we will want to hash or not
+			 * so we can choose whether to use cheapest or sorted path.
+			 */
+			use_hashed_distinct =
+				choose_hashed_distinct(root,
+									   tuple_fraction, limit_tuples,
+									   path_rows, path_width,
+									   cheapest_path->startup_cost,
+									   cheapest_path->total_cost,
+									   sorted_path->startup_cost,
+									   sorted_path->total_cost,
+									   sorted_path->pathkeys,
+									   dNumGroups);
+			tested_hashed_distinct = true;
 		}
 
 		/*
@@ -1599,7 +1664,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * always read all the input tuples, so use the cheapest-total path.
 		 * Otherwise, trust query_planner's decision about which to use.
 		 */
-		if (use_hashed_grouping || !sorted_path)
+		if (use_hashed_grouping || use_hashed_distinct || !sorted_path)
 			best_path = cheapest_path;
 		else
 			best_path = sorted_path;
@@ -2039,8 +2104,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			 * WindowFuncs.  It's probably not worth trying to optimize that
 			 * though.)  We also need any volatile sort expressions, because
 			 * make_sort_from_pathkeys won't add those on its own, and anyway
-			 * we want them evaluated only once at the bottom of the stack.
-			 * As we climb up the stack, we add outputs for the WindowFuncs
+			 * we want them evaluated only once at the bottom of the stack. As
+			 * we climb up the stack, we add outputs for the WindowFuncs
 			 * computed at each level.	Also, each input tlist has to present
 			 * all the columns needed to sort the data for the next WindowAgg
 			 * step.  That's handled internally by make_sort_from_pathkeys,
@@ -2314,9 +2379,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	{
 		double		dNumDistinctRows;
 		long		numDistinctRows;
-		bool		use_hashed_distinct;
-		bool		can_sort;
-		bool		can_hash;
 
 		/*
 		 * If there was grouping or aggregation, use the current number of
@@ -2332,45 +2394,32 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		/* Also convert to long int --- but 'ware overflow! */
 		numDistinctRows = (long) Min(dNumDistinctRows, (double) LONG_MAX);
 
-		/*
-		 * If we have a sortable DISTINCT ON clause, we always use sorting.
-		 * This enforces the expected behavior of DISTINCT ON.
-		 */
-		can_sort = grouping_is_sortable(parse->distinctClause);
-		if (can_sort && parse->hasDistinctOn)
-			use_hashed_distinct = false;
-		else
+		/* Choose implementation method if we didn't already */
+		if (!tested_hashed_distinct)
 		{
-			can_hash = grouping_is_hashable(parse->distinctClause);
+			/*
+			 * At this point, either hashed or sorted grouping will have to
+			 * work from result_plan, so we pass that as both "cheapest" and
+			 * "sorted".
+			 */
+			use_hashed_distinct =
+				choose_hashed_distinct(root,
+									   tuple_fraction, limit_tuples,
+									   result_plan->plan_rows,
+									   result_plan->plan_width,
+									   result_plan->startup_cost,
+									   result_plan->total_cost,
+									   result_plan->startup_cost,
+									   result_plan->total_cost,
+									   current_pathkeys,
+									   dNumDistinctRows);
 
 			/* GPDB_84_MERGE_FIXME: The hash Agg we build for DISTINCT currently
 			 * loses the GROUP_ID() information, so don't use it if there's a
 			 * GROUP_ID().
 			 */
-			if (can_hash && contain_group_id((Node *) result_plan->targetlist))
-				can_hash = false;
-
-			if (can_hash && can_sort)
-			{
-				/* we have a meaningful choice to make ... */
-				use_hashed_distinct =
-					choose_hashed_distinct(root,
-										   result_plan, current_pathkeys,
-										   tuple_fraction, limit_tuples,
-										   dNumDistinctRows);
-			}
-			else if (can_hash)
-				use_hashed_distinct = true;
-			else if (can_sort)
+			if (use_hashed_distinct && contain_group_id((Node *) result_plan->targetlist))
 				use_hashed_distinct = false;
-			else
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("could not implement DISTINCT"),
-						 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
-				use_hashed_distinct = false;	/* keep compiler quiet */
-			}
 		}
 
 		/*
@@ -2599,6 +2648,65 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	}
 
 	/*
+	 * If there is a FOR UPDATE/SHARE clause, add the LockRows node. (Note: we
+	 * intentionally test parse->rowMarks not root->rowMarks here. If there
+	 * are only non-locking rowmarks, they should be handled by the
+	 * ModifyTable node instead.)
+	 */
+	if (parse->rowMarks)
+	{
+		ListCell   *lc;
+		List	   *newmarks = NIL;
+
+		/*
+		 * In case of FOR UPDATE, upgrade the rowmarks so that we will grab an
+		 * ExclusiveLock on the table, instead of locking individual tuples.
+		 *
+		 * Because we don't have a distibuted deadlock detector. See comments
+		 * in CdbTryOpenRelation(). CdbTryOpenRelation() handles the upgrade,
+		 * where heap_open() would otherwise be called, but for FOR UPDATE
+		 * we have this mechanism.
+		 */
+		foreach(lc, root->rowMarks)
+		{
+			PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+
+			if (rc->markType == ROW_MARK_EXCLUSIVE || rc->markType == ROW_MARK_SHARE)
+			{
+				RelOptInfo *brel = root->simple_rel_array[rc->rti];
+
+				if (brel->cdbpolicy &&
+					brel->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+				{
+					if (rc->markType == ROW_MARK_EXCLUSIVE)
+						rc->markType = ROW_MARK_TABLE_EXCLUSIVE;
+					else
+						rc->markType = ROW_MARK_TABLE_SHARE;
+				}
+			}
+
+			/* We only need LockRows for the tuple-level locks */
+			if (rc->markType != ROW_MARK_TABLE_EXCLUSIVE &&
+				rc->markType != ROW_MARK_TABLE_SHARE)
+				newmarks = lappend(newmarks, rc);
+		}
+
+		if (newmarks)
+		{
+			result_plan = (Plan *) make_lockrows(result_plan,
+												 newmarks,
+												 SS_assign_special_param(root));
+			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+
+			/*
+			 * The result can no longer be assumed sorted, since locking might
+			 * cause the sort key columns to be replaced with new values.
+			 */
+			current_pathkeys = NIL;
+		}
+	}
+
+	/*
 	 * Finally, if there is a LIMIT/OFFSET clause, add the LIMIT node.
 	 */
 	if (parse->limitCount || parse->limitOffset)
@@ -2676,25 +2784,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	}
 
 	Insist(result_plan->flow);
-
-	/*
-	 * Deal with the RETURNING clause if any.  It's convenient to pass the
-	 * returningList through setrefs.c now rather than at top level (if we
-	 * waited, handling inherited UPDATE/DELETE would be much harder).
-	 */
-	if (parse->returningList)
-	{
-		List	   *rlist;
-
-		Assert(parse->resultRelation);
-		rlist = set_returning_clause_references(root->glob,
-												parse->returningList,
-												result_plan,
-												parse->resultRelation);
-		root->returningLists = list_make1(rlist);
-	}
-	else
-		root->returningLists = NIL;
 
 	/* Compute result-relations list if needed */
 	if (parse->resultRelation)
@@ -2860,6 +2949,170 @@ is_dummy_plan(Plan *plan)
 	is_dummy_plan_walker((Node *) plan, &is_dummy);
 
 	return is_dummy;
+}
+
+/*
+ * Create a bitmapset of the RT indexes of live base relations
+ *
+ * Helper for preprocess_rowmarks ... at this point in the proceedings,
+ * the only good way to distinguish baserels from appendrel children
+ * is to see what is in the join tree.
+ */
+static Bitmapset *
+get_base_rel_indexes(Node *jtnode)
+{
+	Bitmapset  *result;
+
+	if (jtnode == NULL)
+		return NULL;
+	if (IsA(jtnode, RangeTblRef))
+	{
+		int			varno = ((RangeTblRef *) jtnode)->rtindex;
+
+		result = bms_make_singleton(varno);
+	}
+	else if (IsA(jtnode, FromExpr))
+	{
+		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
+
+		result = NULL;
+		foreach(l, f->fromlist)
+			result = bms_join(result,
+							  get_base_rel_indexes(lfirst(l)));
+	}
+	else if (IsA(jtnode, JoinExpr))
+	{
+		JoinExpr   *j = (JoinExpr *) jtnode;
+
+		result = bms_join(get_base_rel_indexes(j->larg),
+						  get_base_rel_indexes(j->rarg));
+	}
+	else
+	{
+		elog(ERROR, "unrecognized node type: %d",
+			 (int) nodeTag(jtnode));
+		result = NULL;			/* keep compiler quiet */
+	}
+	return result;
+}
+
+/*
+ * preprocess_rowmarks - set up PlanRowMarks if needed
+ */
+static void
+preprocess_rowmarks(PlannerInfo *root)
+{
+	Query	   *parse = root->parse;
+	Bitmapset  *rels;
+	List	   *prowmarks;
+	ListCell   *l;
+	int			i;
+
+	if (parse->rowMarks)
+	{
+		/*
+		 * We've got trouble if FOR UPDATE/SHARE appears inside grouping,
+		 * since grouping renders a reference to individual tuple CTIDs
+		 * invalid.  This is also checked at parse time, but that's
+		 * insufficient because of rule substitution, query pullup, etc.
+		 */
+		CheckSelectLocking(parse);
+	}
+	else
+	{
+		/*
+		 * We only need rowmarks for UPDATE, DELETE, or FOR UPDATE/SHARE.
+		 */
+		if (parse->commandType != CMD_UPDATE &&
+			parse->commandType != CMD_DELETE)
+			return;
+	}
+
+	/*
+	 * We need to have rowmarks for all base relations except the target. We
+	 * make a bitmapset of all base rels and then remove the items we don't
+	 * need or have FOR UPDATE/SHARE marks for.
+	 */
+	rels = get_base_rel_indexes((Node *) parse->jointree);
+	if (parse->resultRelation)
+		rels = bms_del_member(rels, parse->resultRelation);
+
+	/*
+	 * Convert RowMarkClauses to PlanRowMark representation.
+	 */
+	prowmarks = NIL;
+	foreach(l, parse->rowMarks)
+	{
+		RowMarkClause *rc = (RowMarkClause *) lfirst(l);
+		RangeTblEntry *rte = rt_fetch(rc->rti, parse->rtable);
+		PlanRowMark *newrc;
+
+		/*
+		 * Currently, it is syntactically impossible to have FOR UPDATE
+		 * applied to an update/delete target rel.	If that ever becomes
+		 * possible, we should drop the target from the PlanRowMark list.
+		 */
+		Assert(rc->rti != parse->resultRelation);
+
+		/*
+		 * Ignore RowMarkClauses for subqueries; they aren't real tables and
+		 * can't support true locking.  Subqueries that got flattened into the
+		 * main query should be ignored completely.  Any that didn't will get
+		 * ROW_MARK_COPY items in the next loop.
+		 */
+		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		rels = bms_del_member(rels, rc->rti);
+
+		newrc = makeNode(PlanRowMark);
+		newrc->rti = newrc->prti = rc->rti;
+		if (rc->forUpdate)
+			newrc->markType = ROW_MARK_EXCLUSIVE;
+		else
+			newrc->markType = ROW_MARK_SHARE;
+		newrc->noWait = rc->noWait;
+		newrc->isParent = false;
+		/* attnos will be assigned in preprocess_targetlist */
+		newrc->ctidAttNo = InvalidAttrNumber;
+		newrc->toidAttNo = InvalidAttrNumber;
+		newrc->wholeAttNo = InvalidAttrNumber;
+
+		prowmarks = lappend(prowmarks, newrc);
+	}
+
+	/*
+	 * Now, add rowmarks for any non-target, non-locked base relations.
+	 */
+	i = 0;
+	foreach(l, parse->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(l);
+		PlanRowMark *newrc;
+
+		i++;
+		if (!bms_is_member(i, rels))
+			continue;
+
+		newrc = makeNode(PlanRowMark);
+		newrc->rti = newrc->prti = i;
+		/* real tables support REFERENCE, anything else needs COPY */
+		if (rte->rtekind == RTE_RELATION)
+			newrc->markType = ROW_MARK_REFERENCE;
+		else
+			newrc->markType = ROW_MARK_COPY;
+		newrc->noWait = false;	/* doesn't matter */
+		newrc->isParent = false;
+		/* attnos will be assigned in preprocess_targetlist */
+		newrc->ctidAttNo = InvalidAttrNumber;
+		newrc->toidAttNo = InvalidAttrNumber;
+		newrc->wholeAttNo = InvalidAttrNumber;
+
+		prowmarks = lappend(prowmarks, newrc);
+	}
+
+	root->rowMarks = prowmarks;
 }
 
 /*
@@ -3161,25 +3414,50 @@ preprocess_groupclause(PlannerInfo *root)
 /*
  * choose_hashed_grouping - should we use hashed grouping?
  *
- * Note: this is only applied when both alternatives are actually feasible.
+ * Returns TRUE to select hashing, FALSE to select sorting.
  */
 bool
 choose_hashed_grouping(PlannerInfo *root,
 					   double tuple_fraction, double limit_tuples,
+					   double path_rows, int path_width,
 					   Path *cheapest_path, Path *sorted_path,
 					   int numGroupOps,
 					   double dNumGroups, AggClauseCounts *agg_counts)
 {
+	Query	   *parse = root->parse;
 	int			numGroupCols;
-	double		cheapest_path_rows;
-	int			cheapest_path_width;
-	double		hashentrysize;
+	bool		can_hash;
+	bool		can_sort;
+	Size		hashentrysize;
 	List	   *target_pathkeys;
 	List	   *current_pathkeys;
 	Path		hashed_p;
 	Path		sorted_p;
-
 	HashAggTableSizes hash_info;
+
+	/*
+	 * Executor doesn't support hashed aggregation with DISTINCT or ORDER BY
+	 * aggregates.	(Doing so would imply storing *all* the input values in
+	 * the hash table, and/or running many sorts in parallel, either of which
+	 * seems like a certain loser.)
+	 */
+	can_hash = (agg_counts->numOrderedAggs == 0 &&
+				grouping_is_hashable(parse->groupClause));
+	can_sort = grouping_is_sortable(parse->groupClause);
+
+	/* Quick out if only one choice is workable */
+	if (!(can_hash && can_sort))
+	{
+		if (can_hash)
+			return true;
+		else if (can_sort)
+			return false;
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("could not implement GROUP BY"),
+					 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
+	}
 
 	/* Prefer sorting when enable_hashagg is off */
 	if (!root->config->enable_hashagg)
@@ -3203,24 +3481,11 @@ choose_hashed_grouping(PlannerInfo *root,
 	/*
 	 * Don't do it if it doesn't look like the hashtable will fit into
 	 * work_mem.
-	 *
-	 * Beware here of the possibility that cheapest_path->parent is NULL. This
-	 * could happen if user does something silly like SELECT 'foo' GROUP BY 1;
 	 */
-	if (cheapest_path->parent)
-	{
-		cheapest_path_rows = cdbpath_rows(root, cheapest_path);
-		cheapest_path_width = cheapest_path->parent->width;
-	}
-	else
-	{
-		cheapest_path_rows = 1; /* assume non-set result */
-		cheapest_path_width = 100;		/* arbitrary */
-	}
 
 	/* Estimate per-hash-entry space at tuple width... */
 	hashentrysize = agg_hash_entrywidth(agg_counts->numAggs,
-							   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + cheapest_path_width,
+							   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + path_width,
 							   agg_counts->transitionSpace);
 
 	if (!calcHashAggTableSizes(global_work_mem(root),
@@ -3265,12 +3530,12 @@ choose_hashed_grouping(PlannerInfo *root,
 	cost_agg(&hashed_p, root, AGG_HASHED, agg_counts->numAggs,
 			 numGroupCols, dNumGroups,
 			 cheapest_path->startup_cost, cheapest_path->total_cost,
-			 cheapest_path_rows, hash_info.workmem_per_entry,
+			 path_rows, hash_info.workmem_per_entry,
 			 hash_info.nbatches, hash_info.hashentry_width, false);
 	/* Result of hashed agg is always unsorted */
 	if (target_pathkeys)
 		cost_sort(&hashed_p, root, target_pathkeys, hashed_p.total_cost,
-				  dNumGroups, cheapest_path_width, limit_tuples);
+				  dNumGroups, path_width, limit_tuples);
 
 	if (sorted_path)
 	{
@@ -3287,24 +3552,24 @@ choose_hashed_grouping(PlannerInfo *root,
 	if (!pathkeys_contained_in(root->group_pathkeys, current_pathkeys))
 	{
 		cost_sort(&sorted_p, root, root->group_pathkeys, sorted_p.total_cost,
-				  cheapest_path_rows, cheapest_path_width, -1.0);
+				  path_rows, path_width, -1.0);
 		current_pathkeys = root->group_pathkeys;
 	}
 
-	if (root->parse->hasAggs)
+	if (parse->hasAggs)
 		cost_agg(&sorted_p, root, AGG_SORTED, agg_counts->numAggs,
 				 numGroupCols, dNumGroups,
 				 sorted_p.startup_cost, sorted_p.total_cost,
-				 cheapest_path_rows, 0.0, 0.0, 0.0, false);
+				 path_rows, 0.0, 0.0, 0.0, false);
 	else
 		cost_group(&sorted_p, root, numGroupCols, dNumGroups,
 				   sorted_p.startup_cost, sorted_p.total_cost,
-				   cheapest_path_rows);
+				   path_rows);
 	/* The Agg or Group node will preserve ordering */
 	if (target_pathkeys &&
 		!pathkeys_contained_in(target_pathkeys, current_pathkeys))
 		cost_sort(&sorted_p, root, target_pathkeys, sorted_p.total_cost,
-				  dNumGroups, cheapest_path_width, limit_tuples);
+				  dNumGroups, path_width, limit_tuples);
 
 	/*
 	 * Now make the decision using the top-level tuple fraction.  First we
@@ -3330,6 +3595,9 @@ choose_hashed_grouping(PlannerInfo *root,
  *
  * This is fairly similar to choose_hashed_grouping, but there are enough
  * differences that it doesn't seem worth trying to unify the two functions.
+ * (One difference is that we sometimes apply this after forming a Plan,
+ * so the input alternatives can't be represented as Paths --- instead we
+ * pass in the costs as individual variables.)
  *
  * But note that making the two choices independently is a bit bogus in
  * itself.	If the two could be combined into a single choice operation
@@ -3339,20 +3607,50 @@ choose_hashed_grouping(PlannerInfo *root,
  * extra preference to using a sorting implementation when a common sort key
  * is available ... and that's not necessarily wrong anyway.
  *
- * Note: this is only applied when both alternatives are actually feasible.
+ * Returns TRUE to select hashing, FALSE to select sorting.
  */
 static bool
 choose_hashed_distinct(PlannerInfo *root,
-					   Plan *input_plan, List *input_pathkeys,
 					   double tuple_fraction, double limit_tuples,
+					   double path_rows, int path_width,
+					   Cost cheapest_startup_cost, Cost cheapest_total_cost,
+					   Cost sorted_startup_cost, Cost sorted_total_cost,
+					   List *sorted_pathkeys,
 					   double dNumDistinctRows)
 {
-	int			numDistinctCols = list_length(root->parse->distinctClause);
+	Query	   *parse = root->parse;
+	int			numDistinctCols = list_length(parse->distinctClause);
+	bool		can_sort;
+	bool		can_hash;
 	Size		hashentrysize;
 	List	   *current_pathkeys;
 	List	   *needed_pathkeys;
 	Path		hashed_p;
 	Path		sorted_p;
+
+	/*
+	 * If we have a sortable DISTINCT ON clause, we always use sorting. This
+	 * enforces the expected behavior of DISTINCT ON.
+	 */
+	can_sort = grouping_is_sortable(parse->distinctClause);
+	if (can_sort && parse->hasDistinctOn)
+		return false;
+
+	can_hash = grouping_is_hashable(parse->distinctClause);
+
+	/* Quick out if only one choice is workable */
+	if (!(can_hash && can_sort))
+	{
+		if (can_hash)
+			return true;
+		else if (can_sort)
+			return false;
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("could not implement DISTINCT"),
+					 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
+	}
 
 	/* Prefer sorting when enable_hashagg is off */
 	if (!enable_hashagg)
@@ -3362,7 +3660,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * Don't do it if it doesn't look like the hashtable will fit into
 	 * work_mem.
 	 */
-	hashentrysize = MAXALIGN(input_plan->plan_width) + MAXALIGN(sizeof(MinimalTupleData));
+	hashentrysize = MAXALIGN(path_width) + MAXALIGN(sizeof(MinimalTupleData));
 
 	if (hashentrysize * dNumDistinctRows > work_mem * 1024L)
 		return false;
@@ -3373,8 +3671,8 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * output won't be sorted may be a loss; so we need to do an actual cost
 	 * comparison.
 	 *
-	 * We need to consider input_plan + hashagg [+ final sort] versus
-	 * input_plan [+ sort] + group [+ final sort] where brackets indicate a
+	 * We need to consider cheapest_path + hashagg [+ final sort] versus
+	 * sorted_path [+ sort] + group [+ final sort] where brackets indicate a
 	 * step that may not be needed.
 	 *
 	 * These path variables are dummies that just hold cost fields; we don't
@@ -3382,8 +3680,8 @@ choose_hashed_distinct(PlannerInfo *root,
 	 */
 	cost_agg(&hashed_p, root, AGG_HASHED, 0,
 			 numDistinctCols, dNumDistinctRows,
-			 input_plan->startup_cost, input_plan->total_cost,
-			 input_plan->plan_rows,
+			 cheapest_startup_cost, cheapest_total_cost,
+			 path_rows,
 			 /* GPDB_84_MERGE_FIXME: What would be appropriate values for these extra
 			  * arguments? */
 			 0, /* input_width */
@@ -3395,18 +3693,18 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * Result of hashed agg is always unsorted, so if ORDER BY is present we
 	 * need to charge for the final sort.
 	 */
-	if (root->parse->sortClause)
+	if (parse->sortClause)
 		cost_sort(&hashed_p, root, root->sort_pathkeys, hashed_p.total_cost,
-				  dNumDistinctRows, input_plan->plan_width, limit_tuples);
+				  dNumDistinctRows, path_width, limit_tuples);
 
 	/*
 	 * Now for the GROUP case.	See comments in grouping_planner about the
 	 * sorting choices here --- this code should match that code.
 	 */
-	sorted_p.startup_cost = input_plan->startup_cost;
-	sorted_p.total_cost = input_plan->total_cost;
-	current_pathkeys = input_pathkeys;
-	if (root->parse->hasDistinctOn &&
+	sorted_p.startup_cost = sorted_startup_cost;
+	sorted_p.total_cost = sorted_total_cost;
+	current_pathkeys = sorted_pathkeys;
+	if (parse->hasDistinctOn &&
 		list_length(root->distinct_pathkeys) <
 		list_length(root->sort_pathkeys))
 		needed_pathkeys = root->sort_pathkeys;
@@ -3420,15 +3718,15 @@ choose_hashed_distinct(PlannerInfo *root,
 		else
 			current_pathkeys = root->sort_pathkeys;
 		cost_sort(&sorted_p, root, current_pathkeys, sorted_p.total_cost,
-				  input_plan->plan_rows, input_plan->plan_width, -1.0);
+				  path_rows, path_width, -1.0);
 	}
 	cost_group(&sorted_p, root, numDistinctCols, dNumDistinctRows,
 			   sorted_p.startup_cost, sorted_p.total_cost,
-			   input_plan->plan_rows);
-	if (root->parse->sortClause &&
+			   path_rows);
+	if (parse->sortClause &&
 		!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
 		cost_sort(&sorted_p, root, root->sort_pathkeys, sorted_p.total_cost,
-				  dNumDistinctRows, input_plan->plan_width, limit_tuples);
+				  dNumDistinctRows, path_width, limit_tuples);
 
 	/*
 	 * Now make the decision using the top-level tuple fraction.  First we
@@ -3446,7 +3744,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	return false;
 }
 
-/*---------------
+/*
  * make_subplanTargetList
  *	  Generate appropriate target list when grouping is required.
  *
@@ -3491,7 +3789,6 @@ choose_hashed_distinct(PlannerInfo *root,
  *			returned tlist as-is.
  *
  * The result is the targetlist to be passed to query_planner.
- *---------------
  */
 static List *
 make_subplanTargetList(PlannerInfo *root,
@@ -4036,9 +4333,10 @@ get_column_info_for_window(PlannerInfo *root, WindowClause *wc, List *tlist,
  * Currently, we disallow sublinks in standalone expressions, so there's no
  * real "planning" involved here.  (That might not always be true though.)
  * What we must do is run eval_const_expressions to ensure that any function
- * default arguments get inserted.	The fact that constant subexpressions
- * get simplified is a side-effect that is useful when the expression will
- * get evaluated more than once.  Also, we must fix operator function IDs.
+ * calls are converted to positional notation and function default arguments
+ * get inserted.  The fact that constant subexpressions get simplified is a
+ * side-effect that is useful when the expression will get evaluated more than
+ * once.  Also, we must fix operator function IDs.
  *
  * Note: this must not make any damaging changes to the passed-in expression
  * tree.  (It would actually be okay to apply fix_opfuncids to it, but since
@@ -4050,7 +4348,10 @@ expression_planner(Expr *expr)
 {
 	Node	   *result;
 
-	/* Insert default arguments and simplify constant subexprs */
+	/*
+	 * Convert named-argument function calls, insert default arguments and
+	 * simplify constant subexprs
+	 */
 	result = eval_const_expressions(NULL, (Node *) expr);
 
 	/* Fill in opfuncid values if missing */

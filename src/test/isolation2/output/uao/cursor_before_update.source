@@ -16,12 +16,12 @@ a|b
 -+-
 1|1
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a|b
 -+-
 2|2
 (1 row)
- 2: BEGIN;
+2: BEGIN;
 BEGIN
 2: UPDATE ao SET b = 8 WHERE a < 5;
 UPDATE 4
@@ -32,17 +32,17 @@ a|b
 -+-
 3|3
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a|b
 -+-
 4|4
 (1 row)
- 1: FETCH NEXT IN cur;
+1: FETCH NEXT IN cur;
 a|b
 -+-
 5|5
 (1 row)
- 1: CLOSE cur;
+1: CLOSE cur;
 CLOSE
 1: COMMIT;
 COMMIT

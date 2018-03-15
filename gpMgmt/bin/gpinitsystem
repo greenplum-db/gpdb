@@ -53,7 +53,6 @@ GP_USER=$USER_NAME
 # System table names
 GP_TBL=gp_id
 GP_CONFIG_TBL=gp_segment_configuration
-PG_SYSTEM_FILESPACE_NAME="pg_system"
 unset PG_CONF_ADD_FILE
 #unset QD_PRIMARY_ARRAY QE_PRIMARY_ARRAY QE_MIRROR_ARRAY
 EXIT_STATUS=0
@@ -134,7 +133,7 @@ USAGE () {
 		$ECHO "          Also see gpinitsystem_INSTRUCTIONS file for greater detail on"
 		$ECHO "          the operation and configuration of this script"
 		$ECHO "      -e, <password>, password to set for Greenplum superuser in database [default $GP_PASSWD]"
-		$ECHO "      -F, standby_filespaces [optiona]"
+		$ECHO "      -F, standby_datadir [optiona]"
 		$ECHO "      -h, gp_hostlist_file [optional]"
 		$ECHO "          Contains a list of all segment instance hostnames required to participate in"
 		$ECHO "          the new Greenplum instance. Normally set in gp_config_file."
@@ -1188,10 +1187,6 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Initializing Master Postgres instance $GP_DIR"
 		$EXPORT_LIB_PATH
 
-        #
-        # note: is_filerep_mirrored is no because the QD is not mirrored by filerep right now (standby master works differently)
-        #
-        
         if [ x"" != x"$LCCOLLATE" ]; then
 			LC_COLLATE_SETTING="--lc-collate=$LCCOLLATE"
 		fi
@@ -1227,7 +1222,6 @@ CREATE_QD_DB () {
 		cmd="$cmd $LC_ALL_SETTINGS"
 		cmd="$cmd --max_connections=$MASTER_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$MASTER_SHARED_BUFFERS"
-		cmd="$cmd --is_filerep_mirrored=no"
 		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
 			cmd="$cmd --data-checksums"
 		fi
@@ -1255,6 +1249,10 @@ CREATE_QD_DB () {
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0
 		ERROR_CHK $? "set Master port=$GP_PORT in $PG_CONF" 2
 		LOG_MSG "[INFO]:-Completed setting the Master port to $MASTER_PORT"
+		LOG_MSG "[INFO]:-Setting the Master listen addresses to '*'"
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0
+		ERROR_CHK $? "set Master listen addresses to '*' in $PG_CONF" 2
+		LOG_MSG "[INFO]:-Completed setting the listen addresses to '*'"
 		LOG_MSG "[INFO]:-Setting Master logging option"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LOG_STATEMENT_TXT" log_statement=all 0
 		ERROR_CHK $? "set log_statement=all in ${GP_DIR}/$PG_CONF" 1
@@ -1280,7 +1278,7 @@ CREATE_QD_DB () {
 		BUILD_PERFMON $GP_DIR
 		ERROR_CHK $? "create perfmon directories and configuration file" 1
 		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
-		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility -M master --gp_dbid=1 --gp_contentid=-1 \
+		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility --gp_dbid=1 --gp_contentid=-1 \
 		--gp_num_contents_in_cluster=0 -m" start >> /dev/null 2>&1
 		RET_TEXT="`$PG_CTL status -D $GP_DIR`"
 		RUNNING=`$ECHO $RET_TEXT|$EGREP -c "not running|neither"`
@@ -1305,7 +1303,7 @@ CREATE_QD_DB () {
 		if [ $RETVAL -ne 0 ]; then
 			ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2
 		fi
-		UPDATE_GPCONFIG $GP_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p $GP_REPLICATION_PORT
+		UPDATE_GPCONFIG $GP_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p
 		LOAD_QE_SYSTEM_DATA $DEFAULTDB
 		SET_VAR $QD_PRIMARY_ARRAY
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1332,23 +1330,15 @@ UPDATE_GPCONFIG () {
 		U_PORT=$6
 		U_DIR=$7
 		U_ROLE=$8
-		if [ $9 -eq 0 ]; then
-			U_REPLICATION_PORT=null
-		else 
-			U_REPLICATION_PORT=$9
-		fi
-
-        if [ $MIRRORING -ne 1 ]; then
-            U_REPLICATION_PORT=null
-        fi
+		U_REPLICATION_PORT=null
 
 		U_DB=$DEFAULTDB
 		CHK_COUNT=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
 		ERROR_CHK $? "obtain psql count Master $GP_CONFIG_TBL" 2
 		if [ $CHK_COUNT -eq 0 ]; then
-				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME to Master gp_segment_configuration and $U_DIR to gp_filespace_entry"
-				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', ${U_REPLICATION_PORT}, '{${PG_SYSTEM_FILESPACE_NAME}, ${U_DIR}}');" >> $LOG_FILE 2>&1
-				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME to Master gp_segment_configuration and $U_DIR to pg_filespace_entry" 2
+				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME, path $U_DIR to Master gp_segment_configuration"
+				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', '${U_DIR}');" >> $LOG_FILE 2>&1
+				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME in dir $U_DIR to Master gp_segment_configuration" 2
 		else
 				LOG_MSG "[INFO]:-Content $U_CONTENT already exists in gp_segment_configuration system table"
 		fi
@@ -1378,27 +1368,9 @@ LOAD_QE_SYSTEM_DATA () {
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2
 				fi				
-				UPDATE_GPCONFIG $MASTER_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p $GP_REPLICATION_PORT
+				UPDATE_GPCONFIG $MASTER_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR p
 				LOG_MSG "[INFO]:-Successfully added segment $GP_HOSTADDRESS to Master system tables"
 		done
-		if [ $MIRRORING -eq 1 ]; then
-				for I in "${QE_MIRROR_ARRAY[@]}"
-				do
-					SET_VAR $I
-					LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS, $GP_DBID, $GP_DIR to Master system tables as mirror"
-					GP_HOSTNAME=`HOST_LOOKUP $GP_HOSTADDRESS`
-					if [ x"$GP_HOSTNAME" = x"__lookup_of_hostname_failed__" ]; then
-						ERROR_EXIT "[FATAL]:-Hostname lookup for host $GP_HOSTADDRESS failed." 2
-					fi
-					PING_HOST $GP_HOSTNAME
-					RETVAL=$?
-					if [ $RETVAL -ne 0 ]; then
-						ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2
-					fi					
-					UPDATE_GPCONFIG $MASTER_PORT $GP_DBID $GP_CONTENT $GP_HOSTNAME $GP_HOSTADDRESS $GP_PORT $GP_DIR m $GP_REPLICATION_PORT
-					LOG_MSG "[INFO]:-Successfully added segment $GP_HOSTADDRESS to Master system tables as mirror"
-				done
-		fi
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
@@ -1439,7 +1411,7 @@ CREATE_QES_PRIMARY () {
                 HAS_MIRRORS_OPTION=no
             fi
 
-			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
+			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1499,7 +1471,7 @@ CREATE_QES_MIRROR () {
 		    FLAG="-p $PG_CONF_ADD_FILE"
 		fi
 
-		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
+		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 		PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1546,8 +1518,8 @@ CREATE_STANDBY_QD () {
 		if [ x"" != x"$STANDBY_PORT" ]; then
 			INIT_STANDBY_ARGS+=" -P $STANDBY_PORT"
 		fi
-		if [ x"" != x"$STANDBY_FILESPACES" ]; then
-			INIT_STANDBY_ARGS+=" -F $STANDBY_FILESPACES"
+		if [ x"" != x"$STANDBY_DATADIR" ]; then
+			INIT_STANDBY_ARGS+=" -F $STANDBY_DATADIR"
 		fi
 		export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1;$INIT_STANDBY_PROG -s $STANDBY_HOSTNAME $INIT_STANDBY_ARGS -a
 		STANDBY_RET_CODE=$?
@@ -1628,6 +1600,30 @@ CREATE_DATABASE () {
 		$PSQL -p $GP_PORT -d "$DEFAULTDB" -c"create database \"${DATABASE_NAME}\";" >> $LOG_FILE 2>&1
 		ERROR_CHK $? "create database $DATABASE_NAME" 2
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
+}
+
+FORCE_FTS_PROBE () {
+    LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+    # loop on gp_segment_configuration to make sure primary/mirror pairs are up and in sync
+    for i in {1..60}; do
+        if [ $i == 60 ]; then
+            $PSQL -p $GP_PORT -d "$DEFAULTDB" -A -t -c "select * from gp_segment_configuration where (mode = 'n' or status = 'd') and content != -1;" >> $LOG_FILE 2>&1
+            $PSQL -p $GP_PORT -d "$DEFAULTDB" -A -t -c "select * from gp_stat_replication where sync_error != 'none' or sync_state != 'sync';" >> $LOG_FILE 2>&1
+            LOG_MSG "[WARN]:" 1
+            LOG_MSG "[WARN]:-Failed to start Greenplum instance; please review gpinitsystem log to determine failure." 1
+            ERROR_EXIT "[FATAL]:-Some primary/mirror segment pairs were found to be not in sync" 2
+            break;
+        fi
+
+        RESULT=$( $PSQL -p $GP_PORT -d "$DEFAULTDB" -A -t -c "select count(*) > 0 from gp_segment_configuration where (mode = 'n' or status = 'd') and content != -1;" )
+        if [ x"$RESULT" == x"f" ]; then
+            break
+        fi
+
+        $PSQL -p $GP_PORT -d "$DEFAULTDB" -c "select gp_request_fts_probe_scan()" >> /dev/null 2>&1
+        sleep 1;
+    done
+    LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 SCAN_LOG () {
@@ -1944,7 +1940,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 				b ) NEW_BUFFERS=$OPTARG ;;
 				s ) STANDBY_HOSTNAME=$OPTARG ;;
 				P ) STANDBY_PORT=$OPTARG ;;
-				F ) STANDBY_FILESPACES=$OPTARG ;;
+				F ) STANDBY_DATADIR=$OPTARG ;;
 				n ) REQ_LOCALE_SETTING=$OPTARG ;;
 				D ) DEBUG_LEVEL=1 ;;
 				B ) BATCH_DEFAULT=$OPTARG ;;
@@ -2036,9 +2032,6 @@ fi
 CREATE_QD_DB		
 
 CREATE_QES_PRIMARY
-if [ $MIRRORING -ne 0 ]; then
-	CREATE_QES_MIRROR
-fi
 if [ $REPORT_FAIL -ne 0 ];then
 	LOG_MSG "[FATAL]:-Errors generated from parallel processes" 1
 	LOG_MSG "[INFO]:-Dumped contents of status file to the log file" 1
@@ -2075,6 +2068,11 @@ if [ x"" != x"$DATABASE_NAME" ]; then
 fi
 
 SET_GP_USER_PW
+
+if [ $MIRRORING -ne 0 ]; then
+    CREATE_QES_MIRROR
+    FORCE_FTS_PROBE
+fi
 
 if [ x"" != x"$STANDBY_HOSTNAME" ];then
 	CREATE_STANDBY_QD

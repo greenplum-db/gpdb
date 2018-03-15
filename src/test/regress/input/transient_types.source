@@ -176,5 +176,61 @@ INSERT INTO typemod_init VALUES ('A');
 SELECT C FROM ( SELECT B.varchar_col FROM ( SELECT A.varchar_col FROM typemod_init A) B GROUP BY B.varchar_col) C;
 DROP TABLE typemod_init ;
 
+-- Test the case that there is no fields require remapping, such as VOIDOID
+DROP TABLE IF EXISTS t_nomap;
+CREATE TABLE t_nomap AS SELECT f1 FROM generate_series(1,10) f1;
+CREATE OR REPLACE FUNCTION foo()
+RETURNS VOID
+AS $$
+BEGIN
+
+END
+$$
+LANGUAGE plpgsql
+IMMUTABLE;
+
+SELECT q FROM (SELECT max(f1) AS max FROM t_nomap GROUP BY f1 ORDER BY f1) q ORDER BY max;
+SELECT foo() FROM t_nomap;
+DROP TABLE t_nomap;
+DROP FUNCTION foo();
+
+--
+-- Use a transient record type in a parameter of a query that's dispatched to segments
+--
+-- For these tests, the QD needs to serialize a transient record type to the QE, while
+-- all the previous tests were for the other direction, in Motion nodes.
+--
+drop table if exists t;
+create table t as select i as id from generate_series(1,8) i;
+insert into t values (100000);
+
+do $$
+declare
+  r record;
+  nestedr record;
+
+  result record;
+begin
+  select 1 as i, 2 AS j into r;
+  select r as nestedrec, 'foo' AS foo into nestedr;
+
+  raise notice 'r: %', r;
+  raise notice 'nestedr: %', nestedr;
+
+  -- Reference one field of a 'record' variable.
+  select * into result from t where id=r.i;
+  raise notice 'result 1: %', result.id;
+
+  -- Same with a nested 'record' variable
+  select * into result from t where id > length(nestedr.nestedrec::text) + 1000;
+  raise notice 'result 2: %', result.id;
+
+  -- Reference the record variable itself.
+  select * into result from t where id > length(nestedr::text) + 1000;
+  raise notice 'result 3: %', result.id;
+end;
+$$;
+
+drop table if exists t;
 
 drop schema transient_types;

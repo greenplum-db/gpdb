@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.118 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.127 2010/03/28 22:59:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -121,10 +121,12 @@ extern bool contain_group_id(Node *node);
 /*
  * prototypes for plan/createplan.c
  */
-extern Plan *create_plan(PlannerInfo *root, Path *path);
+extern Plan *create_plan(PlannerInfo *root, Path *best_path);
+extern Node *fix_indexqual_operand(Node *node, IndexOptInfo *index);
 extern SubqueryScan *make_subqueryscan(PlannerInfo *root, List *qptlist, List *qpqual,
-				  Index scanrelid, Plan *subplan, List *subrtable);
-extern Append *make_append(List *appendplans, bool isTarget, List *tlist);
+				  Index scanrelid, Plan *subplan,
+				  List *subrtable, List *subrowmark);
+extern Append *make_append(List *appendplans, List *tlist);
 extern RecursiveUnion *make_recursive_union(List *tlist,
 					 Plan *lefttree, Plan *righttree, int wtParam,
 					 List *distinctList, long numGroups);
@@ -159,6 +161,7 @@ extern HashJoin *make_hashjoin(List *tlist,
 extern Hash *make_hash(Plan *lefttree,
 		  Oid skewTable,
 		  AttrNumber skewColumn,
+		  bool skewInherit,
 		  Oid skewColType,
 		  int32 skewColTypmod);
 extern NestLoop *make_nestloop(List *tlist,
@@ -183,6 +186,7 @@ extern WindowAgg *make_windowagg(PlannerInfo *root, List *tlist,
 extern Material *make_material(Plan *lefttree);
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern Unique *make_unique(Plan *lefttree, List *distinctList);
+extern LockRows *make_lockrows(Plan *lefttree, List *rowMarks, int epqParam);
 extern Limit *make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
 		   int64 offset_est, int64 count_est);
 extern SetOp *make_setop(SetOpCmd cmd, SetOpStrategy strategy, Plan *lefttree,
@@ -195,6 +199,9 @@ extern Repeat *make_repeat(List *tlist,
 						   Expr *repeatCountExpr,
 						   uint64 grouping,
 						   Plan *subplan);
+extern ModifyTable *make_modifytable(PlannerInfo *root, CmdType operation, List *resultRelations,
+				 List *subplans, List *returningLists,
+				 List *rowMarks, int epqParam);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
 						   int numCols, 
@@ -242,24 +249,32 @@ extern void check_mergejoinable(RestrictInfo *restrictinfo);
 extern void check_hashjoinable(RestrictInfo *restrictinfo);
 
 /*
+ * prototypes for plan/analyzejoins.c
+ */
+extern List *remove_useless_joins(PlannerInfo *root, List *joinlist);
+
+/*
+ * prototypes for plan/analyzejoins.c
+ */
+extern List *remove_useless_joins(PlannerInfo *root, List *joinlist);
+
+/*
  * prototypes for plan/setrefs.c
  */
 extern Plan *set_plan_references(PlannerGlobal *glob,
 					Plan *plan,
-					List *rtable);
+					List *rtable,
+					List *rowmarks);
 extern List *set_returning_clause_references(PlannerGlobal *glob,
 								List *rlist,
 								Plan *topplan,
 								Index resultRelation);
 
-extern void extract_query_dependencies(List *queries,
-						   List **relationOids,
-						   List **invalItems);
 extern void fix_opfuncids(Node *node);
 extern void set_opfuncid(OpExpr *opexpr);
 extern void set_sa_opfuncid(ScalarArrayOpExpr *opexpr);
 extern void record_plan_function_dependency(PlannerGlobal *glob, Oid funcid);
-extern void extract_query_dependencies(List *queries,
+extern void extract_query_dependencies(Node *query,
 						   List **relationOids,
 						   List **invalItems);
 extern void cdb_extract_plan_dependencies(PlannerGlobal *glob, Plan *plan);

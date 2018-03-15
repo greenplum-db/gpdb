@@ -8,7 +8,6 @@
 #ifndef BACKOFF_H_
 #define BACKOFF_H_
 
-#include "postgres.h"
 #include "storage/proc.h"
 
 /* GUCs */

@@ -34,15 +34,15 @@ struct CdbPgResults;
  */
 struct pg_result **
 CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
-								   int flags,
-								   char	*dtxProtocolCommandLoggingStr,
-								   char	*gid,
-								   DistributedTransactionId	gxid,
-								   StringInfo errmsgbuf,
-								   int *resultCount,
-								   bool* badGangs,
-								   CdbDispatchDirectDesc *direct,
-								   char *argument, int argumentLength );
+							  int flags,
+							  char	*dtxProtocolCommandLoggingStr,
+							  char	*gid,
+							  DistributedTransactionId	gxid,
+							  ErrorData **qeError,
+							  int *resultCount,
+							  bool* badGangs,
+							  CdbDispatchDirectDesc *direct,
+							  char *argument, int argumentLength );
 
 
 /*

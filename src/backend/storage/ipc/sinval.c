@@ -3,7 +3,7 @@
  * sinval.c
  *	  POSTGRES shared cache invalidation communication code.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -320,7 +320,7 @@ ProcessCatchupEvent(void)
 	{
 	in_process_catchup_event = 1;
 
-	/* Must prevent SIGUSR2 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
+	/* Must prevent notify and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
 	notify_enabled = DisableNotifyInterrupt();
 	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 

@@ -9,7 +9,6 @@ Synopsis
 
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
-             |-s <filespace_config_file>] 
              [-d <master_data_directory>] [-B <parallel_processes>] 
              [-F] [-a] [-q] [-l <logfile_directory>]
 
@@ -18,7 +17,6 @@ gprecoverseg -r
 
 
 gprecoverseg -o <output_recover_config_file> 
-            | -S <output_filespace_config_file> 
              [-p <new_recover_host>[,...]]
 
 gprecoverseg -? 
@@ -57,7 +55,6 @@ directory location on which it was originally configured. In
 this case, use the following format for the recovery configuration file 
 (using -i).
 
-filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
 <failed_host_address>:<port>:<data_directory> 
 
 In some cases, this may not be possible (for example, if a host was 
@@ -69,23 +66,19 @@ recovery configuration file (using -i) in the following format.
 The word SPACE indicates the location of a required space. Do not 
 add additional spaces.
 
-filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
 <failed_host_address>:<port>:<data_directory>SPACE 
-[<recovery_host_address>:<port>:<replication_port>:<data_directory>
-[:<fselocation>:...]]
+[<recovery_host_address>:<port>:<data_directory>
 
 See the -i option below for details and examples of a recovery
 configuration file.
 
-The gp_segment_configuration, pg_filespace, and pg_filespace_entry 
-system catalog tables can help you determine your current segment 
-configuration so that you can plan your mirror recovery configuration. 
-For example, run the following query:
+The gp_segment_configuration system catalog tables can help you
+determine your current segment configuration so that you can plan
+your mirror recovery configuration. For example, run the following
+query:
 
-=# SELECT dbid, content, address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid 
+=# SELECT dbid, content, address, port, datadir 
+   FROM gp_segment_configuration
    ORDER BY dbid;
 
 The new recovery segment host must be pre-installed with the Greenplum 
@@ -146,25 +139,11 @@ Specifies the name of a file with the details about failed segments to recover.
 Each line in the file is in the following format. The word SPACE indicates 
 the location of a required space. Do not add additional spaces.
 
-filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
 <failed_host_address>:<port>:<data_directory>SPACE
-<recovery_host_address>:<port>:<replication_port>:<data_directory>[:<fselocation>:...]
+<recovery_host_address>:<port>:<data_directory>
 
 Comments
 Lines beginning with # are treated as comments and ignored.
-
-Filespace Order
-The first comment line that is not a comment specifies filespace ordering. 
-This line starts with filespaceOrder= and is followed by list of filespace 
-names delimited by a colon. For example:
-
-filespaceOrder=raid1:raid2
-
-The default pg_system filespace should not appear in this list. The 
-list should be left empty on a system with no filespaces other than 
-the default pg_system filespace. For example:
-
-filespaceOrder=
 
 Segments to Recover
 Each line after the first specifies a segment to recover. This line can 
@@ -178,35 +157,17 @@ a space in the line. The required space is indicated by SPACE. Do not
 add additional spaces.
 
 failedAddress:failedPort:failedDataDirectorySPACEnewAddress:newPort:
-newReplicationPort:newDataDirectory
-
-On a system with additional filespaces, the second group of fields 
-is expected to be followed with a list of the corresponding filespace 
-locations separated by additional colons. For example, on a system 
-with two additional filespaces, enter two additional directories 
-in the second group, as follows. The required space is indicated 
-by SPACE. Do not add additional spaces.
-
-failedAddress:failedPort:failedDataDirectory newAddress:newPort:
-newReplicationPort:newDataDirectory:location1:location2
+newDataDirectory
 
 Examples
 
 In-place recovery of a single mirror
 
-filespaceOrder=
 sdw1-1:50001:/data1/mirror/gpseg16
 
 Recovery of a single mirror to a new host
 
-filespaceOrder=
 sdw1-1:50001:/data1/mirror/gpseg16SPACE sdw4-1:50001:51001:/data1/recover1/gpseg16
-
-Recovery of a single mirror to a new host on a system with an extra filespace
-
-filespaceOrder=fs1
-sdw1-1:50001:/data1/mirror/gpseg16SPACE sdw4-1:50001:51001:/data1/recover1
-/gpseg16:/data1/fs1/gpseg16
 
 Obtaining a Sample File
 
@@ -258,35 +219,6 @@ their preferred roles. All segments must be valid and synchronized before
 running gprecoverseg -r. If there are any in progress queries, they will 
 be cancelled and rolled back.
 
-
--s <filespace_config_file>
-
-Specifies the name of a configuration file that contains file 
-system locations on the currently configured segment hosts 
-where you can recover failed segment instances. The filespace 
-configuration file is in the format of:
-
-pg_system=default_fselocation 
-filespace1_name=filespace1_fselocation
-filespace2_name=filespace2_fselocation
-...
-
-If your system does not have additional filespaces configured, 
-this file will only have one location (for the default filespace, 
-pg_system). These file system locations must exist on all segment 
-hosts in the array and have sufficient disk space to accommodate 
-recovered segments.
-Note: The -s and -S options are only used when you recover to 
-existing hosts in the cluster. You cannot use these options 
-when you recover to a new host. To recover to a new host, 
-use the -i and -o options.
-
--S <output_filespace_config_file>
-
-Specifies a file name and location to output a sample 
-filespace configuration file in the format that is 
-required by the -s option. This file should be edited 
-to supply the correct alternate filespace locations.
 
 -v
 

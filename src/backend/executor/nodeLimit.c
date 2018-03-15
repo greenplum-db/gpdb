@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeLimit.c,v 1.39 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeLimit.c,v 1.41 2010/01/02 16:57:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -381,8 +381,6 @@ ExecInitLimit(Limit *node, EState *estate, int eflags)
 	limitstate->limitCount = ExecInitExpr((Expr *) node->limitCount,
 										  (PlanState *) limitstate);
 
-#define LIMIT_NSLOTS 1
-
 	/*
 	 * Tuple table initialization (XXX not actually used...)
 	 */
@@ -402,14 +400,6 @@ ExecInitLimit(Limit *node, EState *estate, int eflags)
 	limitstate->ps.ps_ProjInfo = NULL;
 
 	return limitstate;
-}
-
-int
-ExecCountSlotsLimit(Limit *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		LIMIT_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

@@ -201,9 +201,13 @@ TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple
 	if (!remapper->field_remapinfo)
 	{
 		Assert(remapper->tupledesc == NULL);
-		remapper->tupledesc = tupledesc;
 		remapper->field_remapinfo = BuildFieldRemapInfo(tupledesc,
 														remapper->mycontext);
+		if (remapper->field_remapinfo != NULL)
+		{
+			/* Remapping is required. Save a copy of the tupledesc */
+			remapper->tupledesc = tupledesc;
+		}
 	}
 
 	return TRRemapTuple(remapper, tupledesc, remapper->field_remapinfo, tuple);
@@ -254,6 +258,29 @@ TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 		if (!remapper->remap_needed && local_typmod != remote_typmod)
 			remapper->remap_needed = true;
 	}
+}
+
+
+/*
+ * Remap a single Datum, which can be a RECORD datum using the remote system's
+ * typmods.
+ */
+Datum
+TRRemapDatum(TupleRemapper *remapper, Oid typeid, Datum value)
+{
+	TupleRemapInfo *remapinfo;
+	bool		changed;
+
+	remapinfo = BuildTupleRemapInfo(typeid, remapper->mycontext);
+
+	if (!remapinfo)
+		return value;
+
+	value = TRRemap(remapper, remapinfo, value, &changed);
+
+	pfree(remapinfo);
+
+	return value;
 }
 
 /*

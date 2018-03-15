@@ -24,7 +24,6 @@
 #ifndef BITMAP_COMPRESSION_H
 #define BITMAP_COMPRESSION_H
 
-#include "postgres.h"
 #include "utils/bitstream.h"
 
 /*

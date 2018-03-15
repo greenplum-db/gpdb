@@ -596,7 +596,7 @@ as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, in
 
 -- truncate partitions until table is empty
 select * from part_table3;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Texas   |  10.05
@@ -606,7 +606,7 @@ select * from part_table3;
 
 truncate part_table3_1_prt_part1_2_prt_asia;
 select * from part_table3;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Texas   |  10.05
@@ -616,7 +616,7 @@ select * from part_table3;
 alter table part_table3 truncate partition for (rank(1));
 NOTICE:  truncated partition "part1" for relation "part_table3" and its children
 select * from part_table3;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2009 | usa    | Texas   |  10.05
  03-03-2009 | asia   | China   |   1.01
@@ -625,7 +625,7 @@ select * from part_table3;
 alter table part_table3 alter partition part2 truncate partition usa;
 NOTICE:  truncated partition "usa" for partition "part2" of relation "part_table3"
 select * from part_table3;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  03-03-2009 | asia   | China   |   1.01
 (1 row)
@@ -633,7 +633,7 @@ select * from part_table3;
 alter table part_table3 truncate partition part2;
 NOTICE:  truncated partition "part2" for relation "part_table3" and its children
 select * from part_table3;
- date | region | region1 | amount
+ date | region | region1 | amount 
 ------+--------+---------+--------
 (0 rows)
 

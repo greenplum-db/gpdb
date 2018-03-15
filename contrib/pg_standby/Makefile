@@ -1,10 +1,10 @@
-# $PostgreSQL: pgsql/contrib/pg_standby/Makefile,v 1.4 2007/11/10 23:59:51 momjian Exp $
+# $PostgreSQL: pgsql/contrib/pg_standby/Makefile,v 1.6 2010/05/12 11:33:07 momjian Exp $
+
+PGFILEDESC = "pg_standby - supports creation of a warm standby"
+PGAPPICON=win32
 
 PROGRAM = pg_standby
 OBJS	= pg_standby.o
-
-PG_CPPFLAGS = -I$(libpq_srcdir)
-PG_LIBS = $(libpq_pgport)
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

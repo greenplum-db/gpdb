@@ -31,11 +31,11 @@
  * be infrequent enough that more-detailed tracking is not worth the effort.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/plancache.c,v 1.27 2009/06/11 14:49:05 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/plancache.c,v 1.35 2010/02/26 02:01:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,6 +48,8 @@
 #include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/planmain.h"
+#include "optimizer/prep.h"
+#include "parser/parsetree.h"
 #include "storage/lmgr.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
@@ -67,7 +69,6 @@ static void AcquireExecutorLocks(List *stmt_list, bool acquire);
 static void AcquirePlannerLocks(List *stmt_list, bool acquire);
 static void ScanQueryForLocks(Query *parsetree, bool acquire);
 static bool ScanQueryWalker(Node *node, bool *acquire);
-static bool rowmark_member(List *rowMarks, int rt_index);
 static bool plan_list_is_transient(List *stmt_list);
 static bool plan_list_is_oneoff(List *stmt_list);
 static void PlanCacheRelCallback(Datum arg, Oid relid);
@@ -99,8 +100,8 @@ InitPlanCache(void)
  * raw_parse_tree: output of raw_parser()
  * query_string: original query text (as of PG 8.4, must not be NULL)
  * commandTag: compile-time-constant tag for query, or NULL if empty query
- * param_types: array of parameter type OIDs, or NULL if none
- * num_params: number of parameters
+ * param_types: array of fixed parameter type OIDs, or NULL if none
+ * num_params: number of fixed parameters
  * cursor_options: options bitmask that was/will be passed to planner
  * stmt_list: list of PlannedStmts/utility stmts, or list of Query trees
  * fully_planned: are we caching planner or rewriter output?
@@ -158,6 +159,9 @@ CreateCachedPlan(Node *raw_parse_tree,
 	else
 		plansource->param_types = NULL;
 	plansource->num_params = num_params;
+	/* these can be set later with CachedPlanSetParserHook: */
+	plansource->parserSetup = NULL;
+	plansource->parserSetupArg = NULL;
 	plansource->cursor_options = cursor_options;
 	plansource->fully_planned = fully_planned;
 	plansource->fixed_result = fixed_result;
@@ -244,6 +248,9 @@ FastCreateCachedPlan(Node *raw_parse_tree,
 	plansource->commandTag = commandTag;		/* no copying needed */
 	plansource->param_types = param_types;
 	plansource->num_params = num_params;
+	/* these can be set later with CachedPlanSetParserHook: */
+	plansource->parserSetup = NULL;
+	plansource->parserSetupArg = NULL;
 	plansource->cursor_options = cursor_options;
 	plansource->fully_planned = fully_planned;
 	plansource->fixed_result = fixed_result;
@@ -276,6 +283,27 @@ FastCreateCachedPlan(Node *raw_parse_tree,
 	MemoryContextSwitchTo(oldcxt);
 
 	return plansource;
+}
+
+/*
+ * CachedPlanSetParserHook: set up to use parser callback hooks
+ *
+ * Use this when a caller wants to manage parameter information via parser
+ * callbacks rather than a fixed parameter-types list.	Beware that the
+ * information pointed to by parserSetupArg must be valid for as long as
+ * the cached plan might be replanned!
+ */
+void
+CachedPlanSetParserHook(CachedPlanSource *plansource,
+						ParserSetupHook parserSetup,
+						void *parserSetupArg)
+{
+	/* Must not have specified a fixed parameter-types list */
+	Assert(plansource->param_types == NULL);
+	Assert(plansource->num_params == 0);
+	/* OK, save hook info */
+	plansource->parserSetup = parserSetup;
+	plansource->parserSetupArg = parserSetupArg;
 }
 
 /*
@@ -340,13 +368,27 @@ StoreCachedPlan(CachedPlanSource *plansource,
 	plan->context = plan_context;
 	if (plansource->fully_planned)
 	{
-		/* Planner already extracted dependencies, we don't have to */
+		/*
+		 * Planner already extracted dependencies, we don't have to ... except
+		 * in the case of EXPLAIN.	We assume here that EXPLAIN can't appear
+		 * in a list with other commands.
+		 */
 		plan->relationOids = plan->invalItems = NIL;
+
+		if (list_length(stmt_list) == 1 &&
+			IsA(linitial(stmt_list), ExplainStmt))
+		{
+			ExplainStmt *estmt = (ExplainStmt *) linitial(stmt_list);
+
+			extract_query_dependencies(estmt->query,
+									   &plan->relationOids,
+									   &plan->invalItems);
+		}
 	}
 	else
 	{
 		/* Use the planner machinery to extract dependencies */
-		extract_query_dependencies(stmt_list,
+		extract_query_dependencies((Node *) stmt_list,
 								   &plan->relationOids,
 								   &plan->invalItems);
 	}
@@ -495,9 +537,9 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 	if (!plan)
 	{
 		bool		snapshot_set = false;
+		Node	   *rawtree;
 		List	   *slist;
 		TupleDesc	resultDesc;
-		Node	   *raw_parse_tree;
 
 		/*
 		 * Restore the search_path that was in use when the plan was made.
@@ -537,34 +579,38 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 
 			select->intoClause = copyObject(intoClause);
 
-			raw_parse_tree = (Node *) select;
+			rawtree = (Node *) select;
 		}
 		else
-			raw_parse_tree = copyObject(plansource->raw_parse_tree);
+			rawtree = copyObject(plansource->raw_parse_tree);
 
 		/*
 		 * Run parse analysis and rule rewriting.  The parser tends to
 		 * scribble on its input, so we must copy the raw parse tree to
-		 * prevent corruption of the cache.  Note that we do not use
-		 * parse_analyze_varparams(), assuming that the caller never wants
-		 * the parameter types to change from the original values.
+		 * prevent corruption of the cache.
 		 */
-		slist = pg_analyze_and_rewrite(raw_parse_tree,
-									   plansource->query_string,
-									   plansource->param_types,
-									   plansource->num_params);
+		if (plansource->parserSetup != NULL)
+			slist = pg_analyze_and_rewrite_params(rawtree,
+												  plansource->query_string,
+												  plansource->parserSetup,
+												  plansource->parserSetupArg);
+		else
+			slist = pg_analyze_and_rewrite(rawtree,
+										   plansource->query_string,
+										   plansource->param_types,
+										   plansource->num_params);
 
 		if (plansource->fully_planned)
 		{
 			/*
 			 * Generate plans for queries.
 			 *
-			 * The planner may try to call SPI-using functions, which
-			 * causes a problem if we're already inside one.  Rather than
-			 * expect all SPI-using code to do SPI_push whenever a replan
-			 * could happen, it seems best to take care of the case here.
+			 * The planner may try to call SPI-using functions, which causes a
+			 * problem if we're already inside one.  Rather than expect all
+			 * SPI-using code to do SPI_push whenever a replan could happen,
+			 * it seems best to take care of the case here.
 			 */
-			bool	pushed;
+			bool		pushed;
 
 			pushed = SPI_push_conditional();
 
@@ -728,13 +774,31 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 
 		Assert(!IsA(plannedstmt, Query));
 		if (!IsA(plannedstmt, PlannedStmt))
-			continue;			/* Ignore utility statements */
+		{
+			/*
+			 * Ignore utility statements, except EXPLAIN which contains a
+			 * parsed-but-not-planned query.  Note: it's okay to use
+			 * ScanQueryForLocks, even though the query hasn't been through
+			 * rule rewriting, because rewriting doesn't change the query
+			 * representation.
+			 */
+			if (IsA(plannedstmt, ExplainStmt))
+			{
+				Query	   *query;
+
+				query = (Query *) ((ExplainStmt *) plannedstmt)->query;
+				Assert(IsA(query, Query));
+				ScanQueryForLocks(query, acquire);
+			}
+			continue;
+		}
 
 		rt_index = 0;
 		foreach(lc2, plannedstmt->rtable)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc2);
 			LOCKMODE	lockmode;
+			PlanRowMark *rc;
 
 			rt_index++;
 
@@ -764,7 +828,8 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				else
 					lockmode = RowExclusiveLock;
 			}
-			else if (rowmark_member(plannedstmt->rowMarks, rt_index))
+			else if ((rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index)) != NULL &&
+					 RowMarkRequiresRowShareLock(rc->markType))
 				lockmode = RowShareLock;
 			else
 				lockmode = AccessShareLock;
@@ -795,6 +860,19 @@ AcquirePlannerLocks(List *stmt_list, bool acquire)
 		Query	   *query = (Query *) lfirst(lc);
 
 		Assert(IsA(query, Query));
+
+		if (query->commandType == CMD_UTILITY)
+		{
+			/* Ignore utility statements, except EXPLAIN */
+			if (IsA(query->utilityStmt, ExplainStmt))
+			{
+				query = (Query *) ((ExplainStmt *) query->utilityStmt)->query;
+				Assert(IsA(query, Query));
+				ScanQueryForLocks(query, acquire);
+			}
+			continue;
+		}
+
 		ScanQueryForLocks(query, acquire);
 	}
 }
@@ -807,6 +885,9 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 {
 	ListCell   *lc;
 	int			rt_index;
+
+	/* Shouldn't get called on utility commands */
+	Assert(parsetree->commandType != CMD_UTILITY);
 
 	/*
 	 * First, process RTEs of the current query level.
@@ -839,7 +920,7 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					else
 						lockmode = RowExclusiveLock;
 				}
-				else if (rowmark_member(parsetree->rowMarks, rt_index))
+				else if (get_parse_rowmark(parsetree, rt_index) != NULL)
 					lockmode = RowShareLock;
 				else
 					lockmode = AccessShareLock;
@@ -903,24 +984,6 @@ ScanQueryWalker(Node *node, bool *acquire)
 	 */
 	return expression_tree_walker(node, ScanQueryWalker,
 								  (void *) acquire);
-}
-
-/*
- * rowmark_member: check whether an RT index appears in a RowMarkClause list.
- */
-static bool
-rowmark_member(List *rowMarks, int rt_index)
-{
-	ListCell   *l;
-
-	foreach(l, rowMarks)
-	{
-		RowMarkClause *rc = (RowMarkClause *) lfirst(l);
-
-		if (rc->rti == rt_index)
-			return true;
-	}
-	return false;
 }
 
 /*
@@ -1009,8 +1072,8 @@ PlanCacheComputeResultDesc(List *stmt_list)
 			if (IsA(node, PlannedStmt))
 			{
 				pstmt = (PlannedStmt *) node;
-				Assert(pstmt->returningLists);
-				return ExecCleanTypeFromTL((List *) linitial(pstmt->returningLists), false);
+				Assert(pstmt->hasReturning);
+				return ExecCleanTypeFromTL(pstmt->planTree->targetlist, false);
 			}
 			/* other cases shouldn't happen, but return NULL */
 			break;
@@ -1053,7 +1116,16 @@ PlanCacheRelCallback(Datum arg, Oid relid)
 		/* No work if it's already invalidated */
 		if (!plan || plan->dead)
 			continue;
-		if (plan->fully_planned)
+
+		/*
+		 * Check the list we built ourselves; this covers unplanned cases
+		 * including EXPLAIN.
+		 */
+		if ((relid == InvalidOid) ? plan->relationOids != NIL :
+			list_member_oid(plan->relationOids, relid))
+			plan->dead = true;
+
+		if (plan->fully_planned && !plan->dead)
 		{
 			/* Have to check the per-PlannedStmt relid lists */
 			ListCell   *lc2;
@@ -1073,13 +1145,6 @@ PlanCacheRelCallback(Datum arg, Oid relid)
 					break;		/* out of stmt_list scan */
 				}
 			}
-		}
-		else
-		{
-			/* Otherwise check the single list we built ourselves */
-			if ((relid == InvalidOid) ? plan->relationOids != NIL :
-				list_member_oid(plan->relationOids, relid))
-				plan->dead = true;
 		}
 	}
 }
@@ -1103,15 +1168,34 @@ PlanCacheFuncCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 	{
 		CachedPlanSource *plansource = (CachedPlanSource *) lfirst(lc1);
 		CachedPlan *plan = plansource->plan;
+		ListCell   *lc2;
 
 		/* No work if it's already invalidated */
 		if (!plan || plan->dead)
 			continue;
-		if (plan->fully_planned)
+
+		/*
+		 * Check the list we built ourselves; this covers unplanned cases
+		 * including EXPLAIN.
+		 */
+		foreach(lc2, plan->invalItems)
+		{
+			PlanInvalItem *item = (PlanInvalItem *) lfirst(lc2);
+
+			if (item->cacheId != cacheid)
+				continue;
+			if (tuplePtr == NULL ||
+				ItemPointerEquals(tuplePtr, &item->tupleId))
+			{
+				/* Invalidate the plan! */
+				plan->dead = true;
+				break;
+			}
+		}
+
+		if (plan->fully_planned && !plan->dead)
 		{
 			/* Have to check the per-PlannedStmt inval-item lists */
-			ListCell   *lc2;
-
 			foreach(lc2, plan->stmt_list)
 			{
 				PlannedStmt *plannedstmt = (PlannedStmt *) lfirst(lc2);
@@ -1138,26 +1222,6 @@ PlanCacheFuncCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 					break;		/* out of stmt_list scan */
 			}
 		}
-		else
-		{
-			/* Otherwise check the single list we built ourselves */
-			ListCell   *lc2;
-
-			foreach(lc2, plan->invalItems)
-			{
-				PlanInvalItem *item = (PlanInvalItem *) lfirst(lc2);
-
-				if (item->cacheId != cacheid)
-					continue;
-				if (tuplePtr == NULL ||
-					ItemPointerEquals(tuplePtr, &item->tupleId))
-				{
-					/* Invalidate the plan! */
-					plan->dead = true;
-					break;
-				}
-			}
-		}
 	}
 }
 
@@ -1179,14 +1243,61 @@ PlanCacheSysCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 void
 ResetPlanCache(void)
 {
-	ListCell   *lc;
+	ListCell   *lc1;
 
-	foreach(lc, cached_plans_list)
+	foreach(lc1, cached_plans_list)
 	{
-		CachedPlanSource *plansource = (CachedPlanSource *) lfirst(lc);
+		CachedPlanSource *plansource = (CachedPlanSource *) lfirst(lc1);
 		CachedPlan *plan = plansource->plan;
+		ListCell   *lc2;
 
-		if (plan)
-			plan->dead = true;
+		/* No work if it's already invalidated */
+		if (!plan || plan->dead)
+			continue;
+
+		/*
+		 * We *must not* mark transaction control statements as dead,
+		 * particularly not ROLLBACK, because they may need to be executed in
+		 * aborted transactions when we can't revalidate them (cf bug #5269).
+		 * In general there is no point in invalidating utility statements
+		 * since they have no plans anyway.  So mark it dead only if it
+		 * contains at least one non-utility statement.  (EXPLAIN counts as a
+		 * non-utility statement, though, since it contains an analyzed query
+		 * that might have dependencies.)
+		 */
+		if (plan->fully_planned)
+		{
+			/* Search statement list for non-utility statements */
+			foreach(lc2, plan->stmt_list)
+			{
+				PlannedStmt *plannedstmt = (PlannedStmt *) lfirst(lc2);
+
+				Assert(!IsA(plannedstmt, Query));
+				if (IsA(plannedstmt, PlannedStmt) ||
+					IsA(plannedstmt, ExplainStmt))
+				{
+					/* non-utility statement, so invalidate */
+					plan->dead = true;
+					break;		/* out of stmt_list scan */
+				}
+			}
+		}
+		else
+		{
+			/* Search Query list for non-utility statements */
+			foreach(lc2, plan->stmt_list)
+			{
+				Query	   *query = (Query *) lfirst(lc2);
+
+				Assert(IsA(query, Query));
+				if (query->commandType != CMD_UTILITY ||
+					IsA(query->utilityStmt, ExplainStmt))
+				{
+					/* non-utility statement, so invalidate */
+					plan->dead = true;
+					break;		/* out of stmt_list scan */
+				}
+			}
+		}
 	}
 }

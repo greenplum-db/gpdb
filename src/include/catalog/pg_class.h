@@ -5,13 +5,13 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.114 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.122 2010/02/26 02:01:21 momjian Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -28,15 +28,21 @@
  * ----------------
  */
 #define RelationRelationId	1259
+#define RelationRelation_Rowtype_Id  83
 
-CATALOG(pg_class,1259) BKI_BOOTSTRAP
+CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83) BKI_SCHEMA_MACRO
 {
 	NameData	relname;		/* class name */
 	Oid			relnamespace;	/* OID of namespace containing this class */
-	Oid			reltype;		/* OID of associated entry in pg_type */
+	Oid			reltype;		/* OID of entry in pg_type for table's
+								 * implicit row type */
+	Oid			reloftype;		/* OID of entry in pg_type for underlying
+								 * composite type */
 	Oid			relowner;		/* class owner */
 	Oid			relam;			/* index access method; 0 if not an index */
 	Oid			relfilenode;	/* identifier of physical storage file */
+
+	/* relfilenode == 0 means it is a "mapped" relation, see relmapper.c */
 	Oid			reltablespace;	/* identifier of table space for relation */
 	int4		relpages;		/* # of blocks (not always up-to-date) */
 	float4		reltuples;		/* # of tuples (not always up-to-date) */
@@ -57,6 +63,7 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP
 	int2		relchecks;		/* # of CHECK constraints for class */
 	bool		relhasoids;		/* T if we generate OIDs for rows of rel */
 	bool		relhaspkey;		/* has (or has had) PRIMARY KEY index */
+	bool		relhasexclusion;	/* has (or has had) exclusion constraint */
 	bool		relhasrules;	/* has (or has had) any rules */
 	bool		relhastriggers; /* has (or has had) any TRIGGERs */
 	bool		relhassubclass; /* has (or has had) derived classes */
@@ -97,33 +104,35 @@ typedef FormData_pg_class *Form_pg_class;
  * ----------------
  */
 
-#define Natts_pg_class					26
+#define Natts_pg_class					28
 #define Anum_pg_class_relname			1
 #define Anum_pg_class_relnamespace		2
 #define Anum_pg_class_reltype			3
-#define Anum_pg_class_relowner			4
-#define Anum_pg_class_relam				5
-#define Anum_pg_class_relfilenode		6
-#define Anum_pg_class_reltablespace		7
-#define Anum_pg_class_relpages			8
-#define Anum_pg_class_reltuples			9
-#define Anum_pg_class_reltoastrelid		10
-#define Anum_pg_class_reltoastidxid		11
-#define Anum_pg_class_relhasindex		12
-#define Anum_pg_class_relisshared		13
-#define Anum_pg_class_relistemp			14
-#define Anum_pg_class_relkind			15
-#define Anum_pg_class_relstorage		16
-#define Anum_pg_class_relnatts			17
-#define Anum_pg_class_relchecks			18
-#define Anum_pg_class_relhasoids		19
-#define Anum_pg_class_relhaspkey		20
-#define Anum_pg_class_relhasrules		21
-#define Anum_pg_class_relhastriggers	22
-#define Anum_pg_class_relhassubclass	23
-#define Anum_pg_class_relfrozenxid		24
-#define Anum_pg_class_relacl			25
-#define Anum_pg_class_reloptions		26
+#define Anum_pg_class_reloftype			4
+#define Anum_pg_class_relowner			5
+#define Anum_pg_class_relam				6
+#define Anum_pg_class_relfilenode		7
+#define Anum_pg_class_reltablespace		8
+#define Anum_pg_class_relpages			9
+#define Anum_pg_class_reltuples			10
+#define Anum_pg_class_reltoastrelid		11
+#define Anum_pg_class_reltoastidxid		12
+#define Anum_pg_class_relhasindex		13
+#define Anum_pg_class_relisshared		14
+#define Anum_pg_class_relistemp			15
+#define Anum_pg_class_relkind			16
+#define Anum_pg_class_relstorage		17
+#define Anum_pg_class_relnatts			18
+#define Anum_pg_class_relchecks			19
+#define Anum_pg_class_relhasoids		20
+#define Anum_pg_class_relhaspkey		21
+#define Anum_pg_class_relhasexclusion	22
+#define Anum_pg_class_relhasrules		23
+#define Anum_pg_class_relhastriggers	24
+#define Anum_pg_class_relhassubclass	25
+#define Anum_pg_class_relfrozenxid		26
+#define Anum_pg_class_relacl			27
+#define Anum_pg_class_reloptions		28
 
 /* ----------------
  *		initial contents of pg_class
@@ -135,25 +144,14 @@ typedef FormData_pg_class *Form_pg_class;
  */
 
 /* Note: "3" in the relfrozenxid column stands for FirstNormalTransactionId */
-DATA(insert OID = 1247 (  pg_type		PGNSP 71 PGUID 0 1247 0 0 0 0 0 f f f r h 28 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1247 (  pg_type		PGNSP 71 0 PGUID 0 0 0 0 0 0 0 f f f r h 28 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 PGUID 0 1249 0 0 0 0 0 f f f r h 18 0 f f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 0 PGUID 0 0 0 0 0 0 0 f f f r h 19 0 f f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1255 (  pg_proc		PGNSP 81 PGUID 0 1255 0 0 0 0 0 f f f r h 27 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1255 (  pg_proc		PGNSP 81 0 PGUID 0 0 0 0 0 0 0 f f f r h 27 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1259 (  pg_class		PGNSP 83 PGUID 0 1259 0 0 0 0 0 f f f r h 26 0 t f f f f 3 _null_ _null_ ));
+DATA(insert OID = 1259 (  pg_class		PGNSP 83 0 PGUID 0 0 0 0 0 0 0 f f f r h 28 0 t f f f f f 3 _null_ _null_ ));
 DESCR("");
-
-
-/*
- * pg_class table values for FormData_pg_class.
- */
-#define Class_pg_class \
-  {"pg_class"}, PG_CATALOG_NAMESPACE, PG_CLASS_RELTYPE_OID, BOOTSTRAP_SUPERUSERID, 0, \
-               RelationRelationId, GLOBALTABLESPACE_OID, \
-               0, 0, 0, 0, false, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_class, \
-               0, true, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
-
 
 
 #define		  RELKIND_INDEX			  'i'		/* secondary index */
@@ -187,7 +185,7 @@ DESCR("");
 #define		  RELSTORAGE_EXTERNAL 'x'
 #define		  RELSTORAGE_FOREIGN 'f'
 
-static inline bool relstorage_is_buffer_pool(char c)
+static inline bool relstorage_is_heap(char c)
 {
 	return (c == RELSTORAGE_HEAP);
 }

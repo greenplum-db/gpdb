@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/include/port/win32.h,v 1.88 2009/06/11 14:49:12 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/include/port/win32.h,v 1.96 2010/07/06 19:19:00 momjian Exp $ */
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 #define WIN32_ONLY_COMPILER
@@ -64,9 +64,15 @@
 #else							/* not BUILDING_DLL */
 #define PGDLLIMPORT __declspec (dllimport)
 #endif
-#else							/* not CYGWIN, not MSVC, not MingW */
 
+#ifdef _MSC_VER
+#define PGDLLEXPORT __declspec (dllexport)
+#else
+#define PGDLLEXPORT __declspec (dllimport)
+#endif
+#else							/* not CYGWIN, not MSVC, not MingW */
 #define PGDLLIMPORT
+#define PGDLLEXPORT
 #endif
 
 
@@ -304,6 +310,8 @@ int			pgwin32_send(SOCKET s, char *buf, int len, int flags);
 const char *pgwin32_socket_strerror(int err);
 int			pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout);
 
+extern int	pgwin32_noblock;
+
 /* in backend/port/win32/security.c */
 extern int	pgwin32_is_admin(void);
 extern int	pgwin32_is_service(void);
@@ -347,15 +355,6 @@ typedef __int64 ssize_t;
 #ifndef __BORLANDC__
 typedef unsigned short mode_t;
 #endif
-
-/*
- *	Certain "standard edition" versions of MSVC throw a warning
- *	that later generates an error for "inline" statements, but
- *	__inline seems to work.  e.g.  Microsoft Visual C++ .NET
- *	Version 7.1.3088
- */
-#define inline __inline
-#define __inline__ __inline
 
 #ifndef __BORLANDC__
 #define _S_IRWXU	(_S_IREAD | _S_IWRITE | _S_IEXEC)

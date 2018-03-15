@@ -397,52 +397,52 @@ set gp_autostats_on_change_threshold=1;
 set gp_autostats_mode=on_change;
 insert into ao2_@orientation@ select i,'aa'||i from generate_series(21,30) as i;
 select reltuples from pg_class where relname = 'ao2_@orientation@';
- reltuples
+ reltuples 
 -----------
         10
 (1 row)
 
 select count(*)  from ao2_@orientation@;
- count
+ count 
 -------
     10
 (1 row)
 
 insert into ao2_@orientation@ select i,'aa'||i from generate_series(21,30) as i;
 select count(*)  from ao2_@orientation@;
- count
+ count 
 -------
     20
 (1 row)
 
 select reltuples from pg_class where relname = 'ao2_@orientation@';
- reltuples
+ reltuples 
 -----------
         20
 (1 row)
 
 insert into ao2_@orientation@ select i,'aa'||i from generate_series(21,30) as i;
 select reltuples from pg_class where relname = 'ao2_@orientation@';
- reltuples
+ reltuples 
 -----------
         30
 (1 row)
 
 select count(*)  from ao2_@orientation@;
- count
+ count 
 -------
     30
 (1 row)
 
 delete from ao2_@orientation@ where i < 27;
 select count(*)  from ao2_@orientation@;
- count
+ count 
 -------
     12
 (1 row)
 
 select reltuples from pg_class where relname = 'ao2_@orientation@';
- reltuples
+ reltuples 
 -----------
         12
 (1 row)
@@ -581,7 +581,7 @@ insert into bar2 select x , x from generate_series(1,10) as x;
 SET gp_select_invisible=false;
 set gp_select_invisible = true;
 select * from bar2 order by 1;
- a  | b
+ a  | b  
 ----+----
   1 |  1
   2 |  2
@@ -597,7 +597,7 @@ select * from bar2 order by 1;
 
 update bar2 set b = b+200 where a = 5;
 select * from bar2 order by 1;
- a  |  b
+ a  |  b  
 ----+-----
   1 |   1
   2 |   2
@@ -614,7 +614,7 @@ select * from bar2 order by 1;
 
 insert into bar2 select x , x from generate_series(11,20) as x;
 select * from bar2 order by 1;
- a  |  b
+ a  |  b  
 ----+-----
   1 |   1
   2 |   2
@@ -884,7 +884,7 @@ CREATE TABLE mytab_@orientation@(
 Create index mytab_int_idx1_@orientation@ on mytab_@orientation@(col_int);
 insert into mytab_@orientation@ values(1,'aa',1001,101),(2,'bb',1002,102);
 select * from mytab_@orientation@;
- col_int | col_text | col_numeric | col_unq
+ col_int | col_text | col_numeric | col_unq 
 ---------+----------+-------------+---------
        1 | aa       |        1001 |     101
        2 | bb       |        1002 |     102
@@ -892,7 +892,7 @@ select * from mytab_@orientation@;
 
 update mytab_@orientation@ set col_text=' new value' where col_int = 1;
 select * from mytab_@orientation@;
- col_int |  col_text  | col_numeric | col_unq
+ col_int |  col_text  | col_numeric | col_unq 
 ---------+------------+-------------+---------
        2 | bb         |        1002 |     102
        1 |  new value |        1001 |     101
@@ -900,13 +900,13 @@ select * from mytab_@orientation@;
 
 vacuum mytab_@orientation@;
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_@orientation@';
- reltuples
+ reltuples 
 -----------
          2
 (1 row)
 
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_int_idx1_@orientation@';
- reltuples
+ reltuples 
 -----------
          2
 (1 row)
@@ -1219,7 +1219,7 @@ SELECT reltuples FROM pg_class WHERE relname = 'foo_@orientation@_index';
 
 set enable_seqscan=false;
 SELECT COUNT(*) FROM foo_@orientation@ WHERE b=42;
- count
+ count 
 -------
    100
 (1 row)
@@ -1751,7 +1751,7 @@ SELECT SUM(b) FROM foo WHERE a = 17;
  187
 (1 row)
 
-UPDATE foo SET b = 2 * b WHERE a = 17;
+UPDATE foo SET b = 2*b WHERE a = 17;
 SELECT SUM(b) FROM foo WHERE a = 17;
  sum 
 -----

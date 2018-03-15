@@ -332,48 +332,6 @@
         </body>
       </topic>
     </topic>
-    <topic id="topic12" xml:lang="en">
-      <title>Using Direct I/O</title>
-      <body>
-        <p>Direct I/O allows you to bypass the buffering of memory within the file system cache.
-          When Direct I/O is used for a file, data is transferred directly from the disk to the
-          application buffer, without the use of the file buffer cache. Direct I/O benefits
-          applications by reducing CPU consumption and eliminating the overhead of copying data
-          twice: first between the disk and the file buffer cache, and then from the file.</p>
-        <note type="note">Direct I/O is supported only on RHEL, CentOS and SUSE.</note>
-      </body>
-      <topic id="topic13" xml:lang="en">
-        <title>Turn on Direct I/O</title>
-        <body>
-          <codeblock>$ gpconfig -c gp_backup_directIO -v on
-</codeblock>
-        </body>
-      </topic>
-      <topic id="topic14" xml:lang="en">
-        <title>Decrease network data chunks sent to dump when the database is busy</title>
-        <body>
-          <codeblock>$ gpconfig -c gp_backup_directIO_read_chunk_mb -v 10
-</codeblock>
-          <p>The above command sets the chunk size to 10MB; the default chunk size is 20MB. The
-            default value has been tested to be the optimal setting. Decreasing it will increase the
-            backup time and increasing it will result in little change to backup time.</p>
-        </body>
-      </topic>
-      <topic id="topic15" xml:lang="en">
-        <title>Verify the current data chunk size</title>
-        <body>
-          <codeblock>$ gpconfig –s gp_backup_directIO_read_chunk_mb
-</codeblock>
-        </body>
-      </topic>
-      <topic id="topic16" xml:lang="en">
-        <title>Verify whether Direct I/O is turned on</title>
-        <body>
-          <codeblock>$ gpconfig –s gp_backup_directIO
-</codeblock>
-        </body>
-      </topic>
-    </topic>
     <topic id="topic17" xml:lang="en">
       <title id="kk171433">Using Data Domain Boost</title>
       <body>

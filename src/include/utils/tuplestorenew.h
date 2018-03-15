@@ -29,10 +29,8 @@ extern NTupleStore *ntuplestore_create(int64 maxBytes);
 extern NTupleStore *ntuplestore_create_readerwriter(const char* filename, int64 maxBytes, bool isWriter);
 extern NTupleStore *ntuplestore_create_workset(workfile_set *workSet, int64 maxBytes);
 extern bool ntuplestore_is_readerwriter_reader(NTupleStore* nts);
-extern void ntuplestore_reset(NTupleStore *ts);
 extern void ntuplestore_flush(NTupleStore *ts);
 extern void ntuplestore_destroy(NTupleStore *ts);
-extern void ntuplestore_trim(NTupleStore* ts, NTupleStorePos *pos);
 
 /* Tuple store accessor method 
  * Create Accessor: current we support 1 writer, many reader per store.  After created, the accessor
@@ -69,8 +67,5 @@ extern bool ntuplestore_acc_seek_first(NTupleStoreAccessor *tsa);
 extern bool ntuplestore_acc_seek_last(NTupleStoreAccessor *tsa);
 extern void ntuplestore_acc_seek_bof(NTupleStoreAccessor *tsa);
 extern void ntuplestore_acc_seek_eof(NTupleStoreAccessor *tsa);
-
-extern void  ntuplestore_acc_set_invalid(NTupleStoreAccessor *tsa);
-extern bool ntuplestore_acc_is_before(NTupleStoreAccessor *tsa1, NTupleStoreAccessor *tsa2);
 
 #endif /* TUPSTORE_NEW_H */

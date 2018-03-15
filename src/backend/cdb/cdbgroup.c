@@ -65,7 +65,6 @@
 #include "cdb/cdbsetop.h"
 #include "cdb/cdbgroup.h"
 
-extern void UpdateScatterClause(Query *query, List *newtlist);
 
 /*
  * MppGroupPrep represents a strategy by which to precondition the
@@ -2481,6 +2480,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			bool		motion_added_inner = false;
 			Oid			skewTable = InvalidOid;
 			AttrNumber	skewColumn = InvalidAttrNumber;
+			bool		skewInherit = false;
 			Oid			skewColType = InvalidOid;
 			int32		skewColTypmod = -1;
 
@@ -2521,6 +2521,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 					{
 						skewTable = rte->relid;
 						skewColumn = var->varattno;
+						skewInherit = rte->inh;
 						skewColType = var->vartype;
 						skewColTypmod = var->vartypmod;
 					}
@@ -2530,6 +2531,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			Hash	   *hash_plan = make_hash(inner,
 											  skewTable,
 											  skewColumn,
+											  skewInherit,
 											  skewColType,
 											  skewColTypmod);
 
@@ -4286,9 +4288,11 @@ add_second_stage_agg(PlannerInfo *root,
 								 result_plan);
 
 	/*
-	 * Agg will not change the sort order unless it is hashed.
+	 * A sorted Agg will not change the sort order.
 	 */
 	agg_node->flow = pull_up_Flow(agg_node, agg_node->lefttree);
+	if (aggstrategy != AGG_SORTED)
+		*p_current_pathkeys = NIL;
 
 	/*
 	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
@@ -4332,7 +4336,8 @@ add_subqueryscan(PlannerInfo *root, List **p_pathkeys,
 										 NIL,
 										 varno, /* scanrelid (= varno) */
 										 subplan,
-										 subquery->rtable);
+										 subquery->rtable,
+										 subquery->rowMarks);
 
 	mark_passthru_locus(subplan, true, true);
 
@@ -4799,7 +4804,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
  * Corresponds to make_three_stage_agg_plan and must be maintained in sync
  * with it.
  *
- * This function assumes the enviroment established by planDqaJoinOrder()
+ * This function assumes the environment established by planDqaJoinOrder()
  * and set_coplan_strategies().
  */
 Cost

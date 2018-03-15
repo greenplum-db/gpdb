@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_database.sgml,v 1.52 2009/05/06 16:15:21 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_database.sgml,v 1.54 2010/04/03 07:22:58 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEDATABASE">
  <refmeta>
-  <refentrytitle id="sql-createdatabase-title">CREATE DATABASE</refentrytitle>
+  <refentrytitle>CREATE DATABASE</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -22,7 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 CREATE DATABASE <replaceable class="PARAMETER">name</replaceable>
-    [ [ WITH ] [ OWNER [=] <replaceable class="parameter">dbowner</replaceable> ]
+    [ [ WITH ] [ OWNER [=] <replaceable class="parameter">user_name</replaceable> ]
            [ TEMPLATE [=] <replaceable class="parameter">template</replaceable> ]
            [ ENCODING [=] <replaceable class="parameter">encoding</replaceable> ]
            [ LC_COLLATE [=] <replaceable class="parameter">lc_collate</replaceable> ]
@@ -43,7 +43,7 @@ CREATE DATABASE <replaceable class="PARAMETER">name</replaceable>
   <para>
    To create a database, you must be a superuser or have the special
    <literal>CREATEDB</> privilege.
-   See <xref linkend="SQL-CREATEUSER" endterm="SQL-CREATEUSER-title">.
+   See <xref linkend="SQL-CREATEUSER">.
   </para>
 
   <para>
@@ -73,7 +73,7 @@ CREATE DATABASE <replaceable class="PARAMETER">name</replaceable>
       </listitem>
      </varlistentry>
      <varlistentry>
-      <term><replaceable class="parameter">dbowner</replaceable></term>
+      <term><replaceable class="parameter">use_name</replaceable></term>
       <listitem>
        <para>
         The role name of the user who will own the new database,
@@ -141,7 +141,7 @@ CREATE DATABASE <replaceable class="PARAMETER">name</replaceable>
         template database's tablespace. This
         tablespace will be the default tablespace used for objects
         created in this database. See
-        <xref linkend="sql-createtablespace" endterm="sql-createtablespace-title">
+        <xref linkend="sql-createtablespace">
         for more information.
        </para>
       </listitem>
@@ -179,11 +179,11 @@ CREATE DATABASE <replaceable class="PARAMETER">name</replaceable>
    </para>
 
    <para>
-    Use <xref linkend="SQL-DROPDATABASE" endterm="SQL-DROPDATABASE-title"> to remove a database.
+    Use <xref linkend="SQL-DROPDATABASE"> to remove a database.
    </para>
 
    <para>
-    The program <xref linkend="APP-CREATEDB" endterm="APP-CREATEDB-title"> is a
+    The program <xref linkend="APP-CREATEDB"> is a
     wrapper program around this command, provided for convenience.
    </para>
 
@@ -281,8 +281,8 @@ CREATE DATABASE music ENCODING 'LATIN1' TEMPLATE template0;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterdatabase" endterm="sql-alterdatabase-title"></member>
-   <member><xref linkend="sql-dropdatabase" endterm="sql-dropdatabase-title"></member>
+   <member><xref linkend="sql-alterdatabase"></member>
+   <member><xref linkend="sql-dropdatabase"></member>
   </simplelist>
  </refsect1>
 

@@ -30,6 +30,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child)
 	IndexInfo  *indexInfo;
 	Oid			classObjectId[3];
 	int16		coloptions[3];
+	List	   *indexColNames;
 
 	/*
 	 * Grab an exclusive lock on the target table, which we will NOT release
@@ -87,6 +88,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child)
 	indexInfo->ii_PredicateState = NIL;
 	indexInfo->ii_Unique = true;
 	indexInfo->ii_Concurrent = false;
+	indexColNames = list_make3("segno", "columngroup_no", "first_row_no");
 	
 	classObjectId[0] = INT4_BTREE_OPS_OID;
 	classObjectId[1] = INT4_BTREE_OPS_OID;
@@ -97,9 +99,12 @@ AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child)
 	coloptions[2] = 0;
 
 	(void) CreateAOAuxiliaryTable(rel,
-			"pg_aoblkdir",
-			RELKIND_AOBLOCKDIR,
-			tupdesc, indexInfo, classObjectId, coloptions);
+								  "pg_aoblkdir",
+								  RELKIND_AOBLOCKDIR,
+								  tupdesc,
+								  indexInfo, indexColNames,
+								  classObjectId,
+								  coloptions);
 
 	heap_close(rel, NoLock);
 }

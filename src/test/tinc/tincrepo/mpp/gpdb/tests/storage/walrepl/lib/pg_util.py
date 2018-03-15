@@ -234,30 +234,30 @@ class GpUtility(object):
         last_dir = os.path.split(standby_dir)[1]
         pg_system_filespace = os.path.join(os.path.split(standby_dir)[0], last_dir + '_newstandby')        
 
-        pg_filespace = 'pg_system:'+ pg_system_filespace
-        fs_sql = '''select fselocation from pg_filespace_entry
-                    where fsefsoid != 3052 and fsedbid = (select dbid from gp_segment_configuration
-                    where role = 'p' and content = -1);'''
+        pg_filespace =  pg_system_filespace
+        fs_sql = '''select datadir from gp_segment_configuration
+                    where role = 'p' and content = -1;'''
         result = PSQL.run_sql_command(fs_sql, flags = '-q -t', dbname= 'template1')
         result = result.strip()
         filespace_loc = result.split('\n')
         tinctest.logger.info('filespace_loc: %s'%filespace_loc)
         fsp_dir = []
         fsp_dir.append(pg_system_filespace)
-        for fse_loc in filespace_loc:
-            fse_loc = fse_loc.strip()
-            if fse_loc != '':
-                # get leafe node from the dir
-                prune_last1 = os.path.split(fse_loc)[0]
-                # get the second level node name from backward
-                parent_dir = os.path.split(prune_last1)[1]
-                # remove the second level and continue to get the third level leafe node which is the filespace name
-                prune_last2 = os.path.split(prune_last1)[0]
-                filespace = os.path.split(prune_last2)[1]
-                # specify the filespace location on standby side
-                filespace_location_stdby = os.path.split(standby_dir)[0] + '_newstandby' + '/'+filespace+'/'+parent_dir + '/' + last_dir + '_newstandby'
-                pg_filespace = pg_filespace + ',' + filespace + ':' + filespace_location_stdby
-                fsp_dir.append(filespace_location_stdby)
+		#WALREP_FIXME: Enable this when tablespace works
+        #for fse_loc in filespace_loc:
+        #    fse_loc = fse_loc.strip()
+        #    if fse_loc != '':
+        #        # get leafe node from the dir
+        #        prune_last1 = os.path.split(fse_loc)[0]
+        #        # get the second level node name from backward
+        #        parent_dir = os.path.split(prune_last1)[1]
+        #        # remove the second level and continue to get the third level leafe node which is the filespace name
+        #        prune_last2 = os.path.split(prune_last1)[0]
+        #        filespace = os.path.split(prune_last2)[1]
+        #        # specify the filespace location on standby side
+        #        filespace_location_stdby = os.path.split(standby_dir)[0] + '_newstandby' + '/'+filespace+'/'+parent_dir + '/' + last_dir + '_newstandby'
+        #        pg_filespace = pg_filespace + ',' + filespace + ':' + filespace_location_stdby
+        #        fsp_dir.append(filespace_location_stdby)
         tinctest.logger.info("pg_filespace is %s"%pg_filespace)    
         tinctest.logger.info("fsp_dir is %s"%fsp_dir)
         return (pg_filespace,fsp_dir)
@@ -307,9 +307,8 @@ class GpUtility(object):
         ''' 
         Get a concatinated filespace string, inorder to init a standby on the old master host 
         '''
-        fs_sql = ''' select fselocation from pg_filespace_entry 
-                     where fsefsoid != 3052 and fsedbid = (select dbid from gp_segment_configuration 
-                     where role = 'p' and content = -1);'''
+        fs_sql = ''' select datadir from gp_segment_configuration 
+                     where role = 'p' and content = -1;'''
         file = '/tmp/filespace.sql'
         fp = open(file,'w')
         fp.write(fs_sql)
@@ -319,7 +318,7 @@ class GpUtility(object):
         #new_master_postfix = os.path.split(new_master_mdd)[1]
         pg_system_filespace = old_mdd
         last_dir = os.path.split(old_mdd)[1]
-        pg_filespace = 'pg_system:'+ pg_system_filespace
+        pg_filespace =  pg_system_filespace
         get_filespace_cmd = 'psql --pset pager=off template1 -f %s'%file      
         tinctest.logger.info('remote command to run for getting filespace locations %s'%get_filespace_cmd)
         (rc, stdout) = self.run_remote(new_master_host, get_filespace_cmd, new_master_port, new_master_mdd)        
@@ -346,18 +345,19 @@ class GpUtility(object):
         tinctest.logger.info('split and continue removing unncessary information from gpssh, filespace_list is %s'%filespace_list)
         fsp_dir = []
         fsp_dir.append(pg_system_filespace)
-        for fse_loc in filespace_list:
-            fse_loc = fse_loc.strip()
-            if fse_loc != '': 
-                # truncate the last two leafe nodes inorder to get the filespace name
-                prune_last1 = os.path.split(fse_loc)[0]
-                prune_last2 = os.path.split(prune_last1)[0]
-                filespace = os.path.split(prune_last2)[1]
-                
-                filespace_location_stdby = prune_last1.replace('_newstandby', '') + '/' + last_dir
-                #prune_last1 =  prune_last1.replace(new_master_postfix,'master')
-                pg_filespace = pg_filespace + ',' + filespace + ':' + filespace_location_stdby
-                fsp_dir.append(filespace_location_stdby)
+		# WALREP_FIX: Enable this once tablespace work
+        #for fse_loc in filespace_list:
+        #    fse_loc = fse_loc.strip()
+        #    if fse_loc != '': 
+        #        # truncate the last two leafe nodes inorder to get the filespace name
+        #        prune_last1 = os.path.split(fse_loc)[0]
+        #        prune_last2 = os.path.split(prune_last1)[0]
+        #        filespace = os.path.split(prune_last2)[1]
+        #        
+        #        filespace_location_stdby = prune_last1.replace('_newstandby', '') + '/' + last_dir
+        #        #prune_last1 =  prune_last1.replace(new_master_postfix,'master')
+        #        pg_filespace = pg_filespace + ',' + filespace + ':' + filespace_location_stdby
+        #        fsp_dir.append(filespace_location_stdby)
         tinctest.logger.info("pg_filespace is %s"%pg_filespace)    
         tinctest.logger.info("fsp_dir is %s"%fsp_dir)
         return (pg_filespace,fsp_dir)

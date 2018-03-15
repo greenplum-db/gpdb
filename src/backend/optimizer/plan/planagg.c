@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.46 2009/06/11 14:48:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.53 2010/07/06 19:18:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -41,7 +41,7 @@ typedef struct
 	Oid			aggfnoid;		/* pg_proc Oid of the aggregate */
 	Oid			aggsortop;		/* Oid of its sort operator */
 	Expr	   *target;			/* expression we are aggregating on */
-	Expr	   *notnulltest;	/* expression for "target IS NOT NULL" */
+	NullTest   *notnulltest;	/* expression for "target IS NOT NULL" */
 	IndexPath  *path;			/* access path for index scan */
 	Cost		pathcost;		/* estimated cost to fetch first row */
 	bool		nulls_first;	/* null ordering direction matching index */
@@ -54,6 +54,7 @@ static bool build_minmax_path(PlannerInfo *root, RelOptInfo *rel,
 static ScanDirection match_agg_to_index_col(MinMaxAggInfo *info,
 					   IndexOptInfo *index, int indexcol);
 static void make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info);
+static void attach_notnull_index_qual(MinMaxAggInfo *info, IndexScan *iplan);
 static Node *replace_aggs_with_params_mutator(Node *node, List **context);
 static Oid	fetch_agg_sort_op(Oid aggfnoid);
 
@@ -243,12 +244,12 @@ find_minmax_aggs_walker(Node *node, List **context)
 	{
 		Aggref	   *aggref = (Aggref *) node;
 		Oid			aggsortop;
-		Expr	   *curTarget;
+		TargetEntry *curTarget;
 		MinMaxAggInfo *info;
 		ListCell   *l;
 
 		Assert(aggref->agglevelsup == 0);
-		if (list_length(aggref->args) != 1)
+		if (list_length(aggref->args) != 1 || aggref->aggorder != NIL)
 			return true;		/* it couldn't be MIN/MAX */
 
 		/*
@@ -266,19 +267,19 @@ find_minmax_aggs_walker(Node *node, List **context)
 		/*
 		 * Check whether it's already in the list, and add it if not.
 		 */
-		curTarget = linitial(aggref->args);
+		curTarget = (TargetEntry *) linitial(aggref->args);
 		foreach(l, *context)
 		{
 			info = (MinMaxAggInfo *) lfirst(l);
 			if (info->aggfnoid == aggref->aggfnoid &&
-				equal(info->target, curTarget))
+				equal(info->target, curTarget->expr))
 				return false;
 		}
 
 		info = (MinMaxAggInfo *) palloc0(sizeof(MinMaxAggInfo));
 		info->aggfnoid = aggref->aggfnoid;
 		info->aggsortop = aggsortop;
-		info->target = curTarget;
+		info->target = curTarget->expr;
 
 		*context = lappend(*context, info);
 
@@ -319,7 +320,10 @@ build_minmax_path(PlannerInfo *root, RelOptInfo *rel, MinMaxAggInfo *info)
 	ntest = makeNode(NullTest);
 	ntest->nulltesttype = IS_NOT_NULL;
 	ntest->arg = copyObject(info->target);
-	info->notnulltest = (Expr *) ntest;
+	ntest->argisrow = type_is_rowtype(exprType((Node *) ntest->arg));
+	if (ntest->argisrow)
+		return false;			/* punt on composites */
+	info->notnulltest = ntest;
 
 	/*
 	 * Build list of existing restriction clauses plus the notnull test. We
@@ -486,7 +490,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	PlannerInfo subroot;
 	Query	   *subparse;
 	Plan	   *plan;
-	Plan	   *iplan;
+	IndexScan  *iplan;
 	TargetEntry *tle;
 	SortGroupClause *sortcl;
 
@@ -540,17 +544,11 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	 *
 	 * Also we must add a "WHERE target IS NOT NULL" restriction to the
 	 * indexscan, to be sure we don't return a NULL, which'd be contrary to
-	 * the standard behavior of MIN/MAX.  XXX ideally this should be done
-	 * earlier, so that the selectivity of the restriction could be included
-	 * in our cost estimates.  But that looks painful, and in most cases the
-	 * fraction of NULLs isn't high enough to change the decision.
+	 * the standard behavior of MIN/MAX.
 	 *
 	 * The NOT NULL qual has to go on the actual indexscan; create_plan might
 	 * have stuck a gating Result atop that, if there were any pseudoconstant
 	 * quals.
-	 *
-	 * We can skip adding the NOT NULL qual if it's redundant with either an
-	 * already-given WHERE condition, or a clause of the index predicate.
 	 */
 	plan = create_plan(&subroot, (Path *) info->path);
 
@@ -558,14 +556,13 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
     plan = plan_pushdown_tlist(root, plan, copyObject(subparse->targetList));
 
 	if (IsA(plan, Result))
-		iplan = plan->lefttree;
+		iplan = (IndexScan *) plan->lefttree;
 	else
-		iplan = plan;
-	Assert(IsA(iplan, IndexScan));
+		iplan = (IndexScan *) plan;
+	if (!IsA(iplan, IndexScan))
+		elog(ERROR, "result of create_plan(IndexPath) isn't an IndexScan");
 
-	if (!list_member(iplan->qual, info->notnulltest) &&
-		!list_member(info->path->indexinfo->indpred, info->notnulltest))
-		iplan->qual = lcons(info->notnulltest, iplan->qual);
+	attach_notnull_index_qual(info, iplan);
 
 	plan = (Plan *) make_limit(plan,
 							   subparse->limitOffset,
@@ -589,6 +586,169 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 }
 
 /*
+ * Add "target IS NOT NULL" to the quals of the given indexscan.
+ *
+ * This is trickier than it sounds because the new qual has to be added at an
+ * appropriate place in the qual list, to preserve the list's ordering by
+ * index column position.
+ */
+static void
+attach_notnull_index_qual(MinMaxAggInfo *info, IndexScan *iplan)
+{
+	NullTest   *ntest;
+	List	   *newindexqual;
+	List	   *newindexqualorig;
+	bool		done;
+	ListCell   *lc1;
+	ListCell   *lc2;
+	Expr	   *leftop;
+	AttrNumber	targetattno;
+
+	/*
+	 * We can skip adding the NOT NULL qual if it duplicates either an
+	 * already-given WHERE condition, or a clause of the index predicate.
+	 */
+	if (list_member(iplan->indexqualorig, info->notnulltest) ||
+		list_member(info->path->indexinfo->indpred, info->notnulltest))
+		return;
+
+	/* Need a "fixed" copy as well as the original */
+	ntest = copyObject(info->notnulltest);
+	ntest->arg = (Expr *) fix_indexqual_operand((Node *) ntest->arg,
+												info->path->indexinfo);
+
+	/* Identify the target index column from the "fixed" copy */
+	leftop = ntest->arg;
+
+	if (leftop && IsA(leftop, RelabelType))
+		leftop = ((RelabelType *) leftop)->arg;
+
+	Assert(leftop != NULL);
+
+	if (!IsA(leftop, Var))
+		elog(ERROR, "NullTest indexqual has wrong key");
+
+	targetattno = ((Var *) leftop)->varattno;
+
+	/*
+	 * list.c doesn't expose a primitive to insert a list cell at an arbitrary
+	 * position, so our strategy is to copy the lists and insert the null test
+	 * when we reach an appropriate spot.
+	 */
+	newindexqual = newindexqualorig = NIL;
+	done = false;
+
+	forboth(lc1, iplan->indexqual, lc2, iplan->indexqualorig)
+	{
+		Expr	   *qual = (Expr *) lfirst(lc1);
+		Expr	   *qualorig = (Expr *) lfirst(lc2);
+		AttrNumber	varattno;
+
+		/*
+		 * Identify which index column this qual is for.  This code should
+		 * match the qual disassembly code in ExecIndexBuildScanKeys.
+		 */
+		if (IsA(qual, OpExpr))
+		{
+			/* indexkey op expression */
+			leftop = (Expr *) get_leftop(qual);
+
+			if (leftop && IsA(leftop, RelabelType))
+				leftop = ((RelabelType *) leftop)->arg;
+
+			Assert(leftop != NULL);
+
+			if (!IsA(leftop, Var))
+				elog(ERROR, "indexqual doesn't have key on left side");
+
+			varattno = ((Var *) leftop)->varattno;
+		}
+		else if (IsA(qual, RowCompareExpr))
+		{
+			/* (indexkey, indexkey, ...) op (expression, expression, ...) */
+			RowCompareExpr *rc = (RowCompareExpr *) qual;
+
+			/*
+			 * Examine just the first column of the rowcompare, which is what
+			 * determines its placement in the overall qual list.
+			 */
+			leftop = (Expr *) linitial(rc->largs);
+
+			if (leftop && IsA(leftop, RelabelType))
+				leftop = ((RelabelType *) leftop)->arg;
+
+			Assert(leftop != NULL);
+
+			if (!IsA(leftop, Var))
+				elog(ERROR, "indexqual doesn't have key on left side");
+
+			varattno = ((Var *) leftop)->varattno;
+		}
+		else if (IsA(qual, ScalarArrayOpExpr))
+		{
+			/* indexkey op ANY (array-expression) */
+			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) qual;
+
+			leftop = (Expr *) linitial(saop->args);
+
+			if (leftop && IsA(leftop, RelabelType))
+				leftop = ((RelabelType *) leftop)->arg;
+
+			Assert(leftop != NULL);
+
+			if (!IsA(leftop, Var))
+				elog(ERROR, "indexqual doesn't have key on left side");
+
+			varattno = ((Var *) leftop)->varattno;
+		}
+		else if (IsA(qual, NullTest))
+		{
+			/* indexkey IS NULL or indexkey IS NOT NULL */
+			NullTest   *ntest = (NullTest *) qual;
+
+			leftop = ntest->arg;
+
+			if (leftop && IsA(leftop, RelabelType))
+				leftop = ((RelabelType *) leftop)->arg;
+
+			Assert(leftop != NULL);
+
+			if (!IsA(leftop, Var))
+				elog(ERROR, "NullTest indexqual has wrong key");
+
+			varattno = ((Var *) leftop)->varattno;
+		}
+		else
+		{
+			elog(ERROR, "unsupported indexqual type: %d",
+				 (int) nodeTag(qual));
+			varattno = 0;		/* keep compiler quiet */
+		}
+
+		/* Insert the null test at the first place it can legally go */
+		if (!done && targetattno <= varattno)
+		{
+			newindexqual = lappend(newindexqual, ntest);
+			newindexqualorig = lappend(newindexqualorig, info->notnulltest);
+			done = true;
+		}
+
+		newindexqual = lappend(newindexqual, qual);
+		newindexqualorig = lappend(newindexqualorig, qualorig);
+	}
+
+	/* Add the null test at the end if it must follow all existing quals */
+	if (!done)
+	{
+		newindexqual = lappend(newindexqual, ntest);
+		newindexqualorig = lappend(newindexqualorig, info->notnulltest);
+	}
+
+	iplan->indexqual = newindexqual;
+	iplan->indexqualorig = newindexqualorig;
+}
+
+/*
  * Replace original aggregate calls with subplan output Params
  */
 static Node *
@@ -599,15 +759,15 @@ replace_aggs_with_params_mutator(Node *node, List **context)
 	if (IsA(node, Aggref))
 	{
 		Aggref	   *aggref = (Aggref *) node;
+		TargetEntry *curTarget = (TargetEntry *) linitial(aggref->args);
 		ListCell   *l;
-		Expr	   *curTarget = linitial(aggref->args);
 
 		foreach(l, *context)
 		{
 			MinMaxAggInfo *info = (MinMaxAggInfo *) lfirst(l);
 
 			if (info->aggfnoid == aggref->aggfnoid &&
-				equal(info->target, curTarget))
+				equal(info->target, curTarget->expr))
 				return (Node *) info->param;
 		}
 		elog(ERROR, "failed to re-find aggregate info record");
@@ -629,9 +789,7 @@ fetch_agg_sort_op(Oid aggfnoid)
 	Oid			aggsortop;
 
 	/* fetch aggregate entry from pg_aggregate */
-	aggTuple = SearchSysCache(AGGFNOID,
-							  ObjectIdGetDatum(aggfnoid),
-							  0, 0, 0);
+	aggTuple = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(aggfnoid));
 	if (!HeapTupleIsValid(aggTuple))
 		return InvalidOid;
 	aggform = (Form_pg_aggregate) GETSTRUCT(aggTuple);

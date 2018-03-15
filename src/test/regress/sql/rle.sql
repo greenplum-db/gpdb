@@ -1,3 +1,5 @@
+set bytea_output='escape';
+
 -- Basic RLE test
 create table rle_basic (i int encoding (compresstype=rle_type))
        with (appendonly=true, orientation=column);

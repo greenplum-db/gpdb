@@ -5,13 +5,13 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_am.h,v 1.62 2009/03/24 20:17:15 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_am.h,v 1.65 2010/01/05 01:06:56 tgl Exp $
  *
  * NOTES
- *		the genbki.sh script reads this file and generates .bki
+ *		the genbki.pl script reads this file and generates .bki
  *		information from the DATA() statements.
  *
  *		XXX do NOT break up DATA() statements into multiple lines!
@@ -46,7 +46,7 @@ CATALOG(pg_am,2601)
 	bool		amcanmulticol;	/* does AM support multi-column indexes? */
 	bool		amoptionalkey;	/* can query omit key for the first column? */
 	bool		amindexnulls;	/* does AM support NULL index entries? */
-	bool		amsearchnulls;	/* can AM search for NULL index entries? */
+	bool		amsearchnulls;	/* can AM search for NULL/NOT NULL entries? */
 	bool		amstorage;		/* can storage type differ from column type? */
 	bool		amclusterable;	/* does AM support cluster command? */
 	bool		amcanshrink;	/* does AM do anything other than REINDEX in
@@ -107,7 +107,7 @@ typedef FormData_pg_am *Form_pg_am;
 #define Anum_pg_am_amstorage			11
 #define Anum_pg_am_amclusterable		12
 #define Anum_pg_am_amcanshrink			13
-GPDB_COLUMN_DEFAULT(pg_am_amcanshrink, t);
+GPDB_COLUMN_DEFAULT(amcanshrink, t);
 #define Anum_pg_am_amkeytype			14
 #define Anum_pg_am_aminsert				15
 #define Anum_pg_am_ambeginscan			16
@@ -141,7 +141,7 @@ DATA(insert OID = 2742 (  gin	0 5 f f f t t f f t f 0 gininsert ginbeginscan - g
 DESCR("GIN index access method");
 #define GIN_AM_OID 2742
 
-GPDB_EXTRA_COL(pg_am_amcanshrink = f);
+GPDB_EXTRA_COL(amcanshrink = f);
 DATA(insert OID = 7013 (  bitmap	5 1 f f t t t f f f f 0 bminsert bmbeginscan bmgettuple bmgetbitmap bmrescan bmendscan bmmarkpos bmrestrpos bmbuild bmbulkdelete bmvacuumcleanup bmcostestimate bmoptions ));
 DESCR("bitmap index access method");
 #define BITMAP_AM_OID 7013

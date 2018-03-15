@@ -6,12 +6,13 @@ SELECT name, setting FROM pg_settings WHERE name LIKE 'enable%';
  enable_hashagg    | on
  enable_hashjoin   | on
  enable_indexscan  | on
+ enable_material   | on
  enable_mergejoin  | off
  enable_nestloop   | off
  enable_seqscan    | on
  enable_sort       | on
  enable_tidscan    | on
-(10 rows)
+(11 rows)
 
 DROP TABLE IF EXISTS foo;
 NOTICE:  table "foo" does not exist, skipping
@@ -170,7 +171,7 @@ $$  LANGUAGE plpgsql;
 --   Fails: plpgsql does not support SFRM_Materialize
 select foor(1);
 ERROR:  set-valued function called in context that cannot accept a set
-CONTEXT:  PL/pgSQL function "foor"
+CONTEXT:  PL/pgSQL function "foor" line 5 at RETURN NEXT
 -- expanding columns in the select list
 --    Fails: record type not registered
 select (foor(1)).*;
@@ -744,7 +745,7 @@ HINT:  Use DROP FUNCTION first.
 CREATE OR REPLACE FUNCTION foor(in f1 int, out f2 int, out text)
 AS $$select $1-1, $1::text || 'z'$$ LANGUAGE sql;
 SELECT f1, foor(f1) FROM int4_tbl;
-     f1      |            foor
+     f1      |            foor            
 -------------+----------------------------
            0 | (-1,0z)
       123456 | (123455,123456z)
@@ -768,7 +769,7 @@ SELECT * FROM foor(42) AS p(a,b);
 CREATE OR REPLACE FUNCTION foob(in f1 int, inout f2 int, out text)
 AS $$select $2-1, $1::text || 'z'$$ LANGUAGE sql;
 SELECT f1, foob(f1, f1/2) FROM int4_tbl;
-     f1      |            foob
+     f1      |            foob            
 -------------+----------------------------
            0 | (-1,0z)
       123456 | (61727,123456z)
@@ -821,6 +822,8 @@ SELECT * FROM dup('xyz'::text);
 -- equivalent specification
 CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
+ERROR:  cannot change name of input parameter "f1"
+HINT:  Use DROP FUNCTION first.
 SELECT dup(22);
       dup       
 ----------------

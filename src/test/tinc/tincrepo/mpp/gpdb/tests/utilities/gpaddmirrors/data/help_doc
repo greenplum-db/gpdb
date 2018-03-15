@@ -44,8 +44,7 @@ want to be prompted, you can pass in a file containing the file system
 locations using the -m option.
 
 The mirror locations and ports must be different than your primary 
-segment data locations and ports. If you have created additional filespaces, 
-you will also be prompted for mirror locations for each of your filespaces.
+segment data locations and ports.
 
 The utility will create a unique data directory for each mirror segment 
 instance in the specified location using the predefined naming convention. 
@@ -66,25 +65,21 @@ detailed configuration file using the -i option. This is useful if
 you want your mirror segments on a completely different set of hosts 
 than your primary segments. The format of the mirror configuration file is:
 
-filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
 mirror<content>=<content>:<address>:<port>:<mir_replication_port>:<pri_replication_port>:<fselocation>[:<fselocation>:...]
 
-For example (if you do not have additional filespaces configured 
-besides the default pg_system filespace):
+For example:
 
-filespaceOrder=
 mirror0=0:sdw1-1:60000:61000:62000:/gpdata/mir1/gp0
 mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1
 
-The gp_segment_configuration, pg_filespace, and pg_filespace_entry 
-system catalog tables can help you determine your current primary 
+The gp_segment_configuration
+system catalog table can help you determine your current primary
 segment configuration so that you can plan your mirror segment 
 configuration. For example, run the following query:
 
 =# SELECT dbid, content, address as host_address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid 
+   replication_port, datadir
+   FROM gp_segment_configuration
    ORDER BY dbid;
 
 If creating your mirrors on alternate mirror hosts, the new 
@@ -127,19 +122,9 @@ OPTIONS
  A configuration file containing one line for each mirror segment 
  you want to create. You must have one mirror segment listed for 
  each primary segment in the system. The format of this file is as 
- follows (as per attributes in the gp_segment_configuration, 
- pg_filespace, and pg_filespace_entry catalog tables):
+ follows (as per attributes in the gp_segment_configuration):
 
-   filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
    mirror<content>=<content>:<address>:<port>:<mir_replication_port>:<pri_replication_port>:<fselocation>[:<fselocation>:...]
-
- Note that you only need to specify a name for filespaceOrder if 
- your system has multiple filespaces configured. If your system does 
- not have additional filespaces configured besides the default pg_system 
- filespace, this file will only have one location per segment (for 
- the default data directory filespace, pg_system). pg_system does 
- not need to be listed in the filespaceOrder line. It will always be 
- the first <fselocation> listed after <replication_port>.
 
 
 -l <logfile_directory>
@@ -157,14 +142,6 @@ OPTIONS
    /gpdata/m2
    /gpdata/m3
    /gpdata/m4
- If your system has additional filespaces configured in addition to the 
- default pg_system filespace, you must also list file system locations 
- for each filespace as follows:
-    filespace filespace1
-    /gpfs1/m1
-    /gpfs1/m2
-    /gpfs1/m3
-    /gpfs1/m4
 
 
 -o <output_sample_mirror_config>
@@ -234,11 +211,8 @@ different set of hosts from your primary data:
 
 $ gpaddmirrors -i mirror_config_file
 
-Where the mirror_config_file looks something like this (if you do not 
-have additional filespaces configured besides the default pg_system 
-filespace):
+Where the mirror_config_file looks something like this:
 
-filespaceOrder=
 mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
 mirror1=1:sdw1-2:52002:53002:54002:/gpdata/mir2/gp1
 mirror2=2:sdw2-1:52001:53001:54001:/gpdata/mir1/gp2

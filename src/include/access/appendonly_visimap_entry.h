@@ -15,7 +15,6 @@
 #ifndef APPENDONLY_VISIMAP_ENTRY_H
 #define APPENDONLY_VISIMAP_ENTRY_H
 
-#include "postgres.h"
 #include "access/appendonlytid.h"
 #include "access/htup.h"
 #include "nodes/bitmapset.h"

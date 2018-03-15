@@ -1,11 +1,11 @@
 /*
  * dbsize.c
- *		object size functions
+ *		Database object size functions, and related inquiries
  *
- * Copyright (c) 2002-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/dbsize.c,v 1.24 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/dbsize.c,v 1.31 2010/02/26 02:01:07 momjian Exp $
  *
  */
 
@@ -36,11 +36,12 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/relcache.h"
+#include "utils/relmapper.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbpersistenttablespace.h"
 
+static int64 calculate_total_relation_size(Oid Relid);
 
 static int64
 get_size_from_segDBs(const char * cmd)
@@ -161,10 +162,10 @@ static int64
 calculate_database_size(Oid dbOid)
 {
 	int64		totalsize;
+	DIR		   *dirdesc;
+	struct dirent *direntry;
+	char		dirpath[MAXPGPATH];
 	char		pathname[MAXPGPATH];
-	Relation    rel;
-	HeapScanDesc scandesc;
-	HeapTuple   tuple;
 	AclResult	aclresult;
 
 	/* User must have connect privilege for target database */
@@ -173,38 +174,38 @@ calculate_database_size(Oid dbOid)
 		aclcheck_error(aclresult, ACL_KIND_DATABASE,
 					   get_database_name(dbOid));
 
-	/* Scan through all tablespaces */
-	rel = heap_open(TableSpaceRelationId, AccessShareLock);
-	scandesc = heap_beginscan(rel, SnapshotNow, 0, NULL);
-	tuple = heap_getnext(scandesc, ForwardScanDirection);
-	totalsize = 0;
-	while (HeapTupleIsValid(tuple))
+	/* Shared storage in pg_global is not counted */
+
+	/* Include pg_default storage */
+	snprintf(pathname, MAXPGPATH, "base/%u", dbOid);
+	totalsize = db_dir_size(pathname);
+
+	/* Scan the non-default tablespaces */
+	snprintf(dirpath, MAXPGPATH, "pg_tblspc");
+	dirdesc = AllocateDir(dirpath);
+	if (!dirdesc)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open tablespace directory \"%s\": %m",
+						dirpath)));
+
+	while ((direntry = ReadDir(dirdesc, dirpath)) != NULL)
 	{
-		char *priFilespace, *mirFilespace;
-		Oid   tsOid;
-		
-		tsOid = HeapTupleGetOid(tuple);
-		
-		/* Don't include shared relations */
-		if (tsOid != GLOBALTABLESPACE_OID)
-		{			
-			/* Find the filespace path for this tablespace */
-			PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-				tsOid, &priFilespace, &mirFilespace);
+		CHECK_FOR_INTERRUPTS();
 
-			/* Build the path for this database in this tablespace */
-			FormDatabasePath(pathname, priFilespace, tsOid, dbOid);
-			
-			totalsize += db_dir_size(pathname);
-		}
+		if (strcmp(direntry->d_name, ".") == 0 ||
+			strcmp(direntry->d_name, "..") == 0)
+			continue;
 
-		tuple = heap_getnext(scandesc, ForwardScanDirection);
+		snprintf(pathname, MAXPGPATH, "pg_tblspc/%s/%s/%u",
+				 direntry->d_name, tablespace_version_directory(), dbOid);
+		totalsize += db_dir_size(pathname);
 	}
-	heap_endscan(scandesc);
-	heap_close(rel, AccessShareLock);
+
+	FreeDir(dirdesc);
 
 	/* Complain if we found no trace of the DB at all */
-	if (totalsize == 0)
+	if (!totalsize)
 		ereport(ERROR,
 				(ERRCODE_UNDEFINED_DATABASE,
 				 errmsg("database with OID %u does not exist", dbOid)));
@@ -288,7 +289,8 @@ calculate_tablespace_size(Oid tblspcOid)
 	else if (tblspcOid == GLOBALTABLESPACE_OID)
 		snprintf(tblspcPath, MAXPGPATH, "global");
 	else
-		snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u", tblspcOid);
+		snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u/%s", tblspcOid,
+				 tablespace_version_directory());
 
 	dirdesc = AllocateDir(tblspcPath);
 
@@ -377,7 +379,7 @@ pg_tablespace_size_name(PG_FUNCTION_ARGS)
 }
 
 /*
- * calculate size of a relation
+ * calculate size of (one fork of) a relation
  *
  * Iterator over all files belong to the relation and do stat.
  * The obviously better way is to use glob.  For whatever reason,
@@ -501,81 +503,175 @@ pg_relation_size(PG_FUNCTION_ARGS)
 }
 
 /*
- *	Compute the on-disk size of files for the relation according to the
- *	stat function, including heap data, index data, toast data, aoseg data,
- *  aoblkdir data, and aovisimap data.
+ * Calculate total on-disk size of a TOAST relation, including its index.
+ * Must not be applied to non-TOAST relations.
  */
 static int64
-calculate_total_relation_size(Oid Relid)
+calculate_toast_table_size(Oid toastrelid)
 {
-	Relation	heapRel;
-	Oid			toastOid;
-	int64		size;
-	ListCell   *cell;
+	int64		size = 0;
+	Relation	toastRel;
+	Relation	toastIdxRel;
 	ForkNumber	forkNum;
 
-	heapRel = try_relation_open(Relid, AccessShareLock, false);
+	toastRel = relation_open(toastrelid, AccessShareLock);
 
-	if (!RelationIsValid(heapRel))
+	/* toast heap size, including FSM and VM size */
+	for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+		size += calculate_relation_size(toastRel, forkNum);
+
+	/* toast index size, including FSM and VM size */
+	toastIdxRel = relation_open(toastRel->rd_rel->reltoastidxid, AccessShareLock);
+	for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
+		size += calculate_relation_size(toastIdxRel, forkNum);
+
+	relation_close(toastIdxRel, AccessShareLock);
+	relation_close(toastRel, AccessShareLock);
+
+	return size;
+}
+
+/*
+ * Calculate total on-disk size of a given table,
+ * including FSM and VM, plus TOAST table if any.
+ * Indexes other than the TOAST table's index are not included.
+ * GPDB: Also includes aoseg, aoblkdir, and aovisimap tables
+ *
+ * Note that this also behaves sanely if applied to an index or toast table;
+ * those won't have attached toast tables, but they can have multiple forks.
+ */
+static int64
+calculate_table_size(Oid relOid)
+{
+	int64		size = 0;
+	Relation	rel;
+	ForkNumber	forkNum;
+
+	rel = try_relation_open(relOid, AccessShareLock, false);
+
+	if (!RelationIsValid(rel))
 		return 0;
 
-	toastOid = heapRel->rd_rel->reltoastrelid;
-
-	/* Get the heap size */
-	if (Relid == 0 || heapRel->rd_node.relNode == 0)
+	/*
+	 * heap size, including FSM and VM
+	 */
+	if (rel->rd_node.relNode == 0)
 		size = 0;
 	else
 	{
 		size = 0;
 		for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
-			size += calculate_relation_size(heapRel, forkNum);
+			size += calculate_relation_size(rel, forkNum);
 	}
 
-	/* Include any dependent indexes */
-	if (heapRel->rd_rel->relhasindex)
+	/*
+	 * Size of toast relation
+	 */
+	if (OidIsValid(rel->rd_rel->reltoastrelid))
+		size += calculate_toast_table_size(rel->rd_rel->reltoastrelid);
+
+	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 	{
-		List	   *index_oids = RelationGetIndexList(heapRel);
+		Assert(OidIsValid(rel->rd_appendonly->segrelid));
+		size += calculate_total_relation_size(rel->rd_appendonly->segrelid);
+
+        /* block directory may not exist, post upgrade or new table that never has indexes */
+   		if (OidIsValid(rel->rd_appendonly->blkdirrelid))
+        {
+     		size += calculate_total_relation_size(rel->rd_appendonly->blkdirrelid);
+        }
+		if (OidIsValid(rel->rd_appendonly->visimaprelid))
+		{
+			size += calculate_total_relation_size(rel->rd_appendonly->visimaprelid);
+		}
+	}
+
+	relation_close(rel, AccessShareLock);
+
+	return size;
+}
+
+/*
+ * Calculate total on-disk size of all indexes attached to the given table.
+ *
+ * Can be applied safely to an index, but you'll just get zero.
+ */
+static int64
+calculate_indexes_size(Oid relOid)
+{
+	int64		size = 0;
+	Relation	rel;
+
+	rel = relation_open(relOid, AccessShareLock);
+
+	/*
+	 * Aggregate all indexes on the given relation
+	 */
+	if (rel->rd_rel->relhasindex)
+	{
+		List	   *index_oids = RelationGetIndexList(rel);
+		ListCell   *cell;
 
 		foreach(cell, index_oids)
 		{
 			Oid			idxOid = lfirst_oid(cell);
-			Relation	iRel;
+			Relation	idxRel;
+			ForkNumber	forkNum;
 
-			iRel = try_relation_open(idxOid, AccessShareLock, false);
+			idxRel = try_relation_open(idxOid, AccessShareLock, false);
 
-			if (RelationIsValid(iRel))
+			if (RelationIsValid(idxRel))
 			{
 				for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
-					size += calculate_relation_size(iRel, forkNum);
+					size += calculate_relation_size(idxRel, forkNum);
 
-				relation_close(iRel, AccessShareLock);
+				relation_close(idxRel, AccessShareLock);
 			}
 		}
 
 		list_free(index_oids);
 	}
 
-	/* Recursively include toast table (and index) size */
-	if (OidIsValid(toastOid))
-		size += calculate_total_relation_size(toastOid);
+	relation_close(rel, AccessShareLock);
 
-	if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
-	{
-		Assert(OidIsValid(heapRel->rd_appendonly->segrelid));
-		size += calculate_total_relation_size(heapRel->rd_appendonly->segrelid);
+	return size;
+}
 
-        /* block directory may not exist, post upgrade or new table that never has indexes */
-   		if (OidIsValid(heapRel->rd_appendonly->blkdirrelid))
-        {
-     		size += calculate_total_relation_size(heapRel->rd_appendonly->blkdirrelid);
-        }
-		if (OidIsValid(heapRel->rd_appendonly->visimaprelid))
-		{
-			size += calculate_total_relation_size(heapRel->rd_appendonly->visimaprelid);
-		}
-	}
+Datum
+pg_table_size(PG_FUNCTION_ARGS)
+{
+	Oid			relOid = PG_GETARG_OID(0);
 
-	relation_close(heapRel, AccessShareLock);
+	PG_RETURN_INT64(calculate_table_size(relOid));
+}
+
+Datum
+pg_indexes_size(PG_FUNCTION_ARGS)
+{
+	Oid			relOid = PG_GETARG_OID(0);
+
+	PG_RETURN_INT64(calculate_indexes_size(relOid));
+}
+
+/*
+ *	Compute the on-disk size of all files for the relation,
+ *	including heap data, index data, toast data, FSM, VM.
+ */
+static int64
+calculate_total_relation_size(Oid Relid)
+{
+	int64		size;
+
+	/*
+	 * Aggregate the table size, this includes size of the heap, toast and
+	 * toast index with free space and visibility map
+	 */
+	size = calculate_table_size(Relid);
+
+	/*
+	 * Add size of all attached indexes as well
+	 */
+	size += calculate_indexes_size(Relid);
 
 	return size;
 }
@@ -667,4 +763,118 @@ pg_size_pretty(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_TEXT_P(cstring_to_text(buf));
+}
+
+/*
+ * Get the filenode of a relation
+ *
+ * This is expected to be used in queries like
+ *		SELECT pg_relation_filenode(oid) FROM pg_class;
+ * That leads to a couple of choices.  We work from the pg_class row alone
+ * rather than actually opening each relation, for efficiency.	We don't
+ * fail if we can't find the relation --- some rows might be visible in
+ * the query's MVCC snapshot but already dead according to SnapshotNow.
+ * (Note: we could avoid using the catcache, but there's little point
+ * because the relation mapper also works "in the now".)  We also don't
+ * fail if the relation doesn't have storage.  In all these cases it
+ * seems better to quietly return NULL.
+ */
+Datum
+pg_relation_filenode(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	Oid			result;
+	HeapTuple	tuple;
+	Form_pg_class relform;
+
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tuple))
+		PG_RETURN_NULL();
+	relform = (Form_pg_class) GETSTRUCT(tuple);
+
+	switch (relform->relkind)
+	{
+		case RELKIND_RELATION:
+		case RELKIND_INDEX:
+		case RELKIND_SEQUENCE:
+		case RELKIND_TOASTVALUE:
+			/* okay, these have storage */
+			if (relform->relfilenode)
+				result = relform->relfilenode;
+			else	/* Consult the relation mapper */
+				result = RelationMapOidToFilenode(relid,
+												  relform->relisshared);
+			break;
+
+		default:
+			/* no storage, return NULL */
+			result = InvalidOid;
+			break;
+	}
+
+	ReleaseSysCache(tuple);
+
+	if (!OidIsValid(result))
+		PG_RETURN_NULL();
+
+	PG_RETURN_OID(result);
+}
+
+/*
+ * Get the pathname (relative to $PGDATA) of a relation
+ *
+ * See comments for pg_relation_filenode.
+ */
+Datum
+pg_relation_filepath(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	HeapTuple	tuple;
+	Form_pg_class relform;
+	RelFileNode rnode;
+	char	   *path;
+
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tuple))
+		PG_RETURN_NULL();
+	relform = (Form_pg_class) GETSTRUCT(tuple);
+
+	switch (relform->relkind)
+	{
+		case RELKIND_RELATION:
+		case RELKIND_INDEX:
+		case RELKIND_SEQUENCE:
+		case RELKIND_TOASTVALUE:
+			/* okay, these have storage */
+
+			/* This logic should match RelationInitPhysicalAddr */
+			if (relform->reltablespace)
+				rnode.spcNode = relform->reltablespace;
+			else
+				rnode.spcNode = MyDatabaseTableSpace;
+			if (rnode.spcNode == GLOBALTABLESPACE_OID)
+				rnode.dbNode = InvalidOid;
+			else
+				rnode.dbNode = MyDatabaseId;
+			if (relform->relfilenode)
+				rnode.relNode = relform->relfilenode;
+			else	/* Consult the relation mapper */
+				rnode.relNode = RelationMapOidToFilenode(relid,
+													   relform->relisshared);
+			break;
+
+		default:
+			/* no storage, return NULL */
+			rnode.relNode = InvalidOid;
+			break;
+	}
+
+	ReleaseSysCache(tuple);
+
+	if (!OidIsValid(rnode.relNode))
+		PG_RETURN_NULL();
+
+	path = relpath(rnode, MAIN_FORKNUM);
+
+	PG_RETURN_TEXT_P(cstring_to_text(path));
 }

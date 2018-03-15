@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tablespace.sgml,v 1.4 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tablespace.sgml,v 1.7 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTABLESPACE">
  <refmeta>
-  <refentrytitle id="SQL-ALTERTABLESPACE-TITLE">ALTER TABLESPACE</refentrytitle>
+  <refentrytitle>ALTER TABLESPACE</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,8 +21,10 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER TABLESPACE <replaceable>name</replaceable> RENAME TO <replaceable>newname</replaceable>
-ALTER TABLESPACE <replaceable>name</replaceable> OWNER TO <replaceable>newowner</replaceable>
+ALTER TABLESPACE <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
+ALTER TABLESPACE <replaceable>name</replaceable> OWNER TO <replaceable>new_owner</replaceable>
+ALTER TABLESPACE <replaceable>name</replaceable> SET ( <replaceable class="PARAMETER">tablespace_option</replaceable> = <replaceable class="PARAMETER">value</replaceable> [, ... ] )
+ALTER TABLESPACE <replaceable>name</replaceable> RESET ( <replaceable class="PARAMETER">tablespace_option</replaceable> [, ... ] )
 </synopsis>
  </refsynopsisdiv>
   
@@ -56,7 +58,7 @@ ALTER TABLESPACE <replaceable>name</replaceable> OWNER TO <replaceable>newowner<
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newname</replaceable></term>
+    <term><replaceable class="parameter">new_name</replaceable></term>
     <listitem>
      <para>
       The new name of the tablespace.  The new name cannot
@@ -67,10 +69,28 @@ ALTER TABLESPACE <replaceable>name</replaceable> OWNER TO <replaceable>newowner<
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newowner</replaceable></term>
+    <term><replaceable class="parameter">new_owner</replaceable></term>
     <listitem>
      <para>
       The new owner of the tablespace.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">tablespace_parameter</replaceable></term>
+    <listitem>
+     <para>
+      A tablespace parameter to be set or reset.  Currently, the only
+      available parameters are <varname>seq_page_cost</> and
+      <varname>random_page_cost</>.  Setting either value for a particular
+      tablespace will override the planner's usual estimate of the cost of
+      reading pages from tables in that tablespace, as established by
+      the configuration parameters of the same name (see
+      <xref linkend="guc-seq-page-cost">,
+      <xref linkend="guc-random-page-cost">).  This may be useful if one
+      tablespace is located on a disk which is faster or slower than the
+      remainder of the I/O subsystem.
      </para>
     </listitem>
    </varlistentry>
@@ -108,8 +128,8 @@ ALTER TABLESPACE index_space OWNER TO mary;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createtablespace" endterm="sql-createtablespace-title"></member>
-   <member><xref linkend="sql-droptablespace" endterm="sql-droptablespace-title"></member>
+   <member><xref linkend="sql-createtablespace"></member>
+   <member><xref linkend="sql-droptablespace"></member>
   </simplelist>
  </refsect1>
 </refentry>

@@ -44,4 +44,3 @@ BEGIN
 	LEFT JOIN pg_class pg ON t.relnode = pg.relfilenode;
 END;
 $func$ LANGUAGE plpgsql;
-

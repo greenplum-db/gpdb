@@ -26,11 +26,11 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.62 2009/06/26 20:29:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.68 2010/04/28 16:54:15 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -115,16 +115,16 @@ BackgroundWriterMain(void)
 	 * tell us it's okay to shut down (via SIGUSR2).
 	 *
 	 * SIGUSR1 is presently unused; keep it spare in case someday we want this
-	 * process to participate in ProcSignal messaging.
+	 * process to participate in ProcSignal signalling.
 	 */
 	pqsignal(SIGHUP, BgSigHupHandler);	/* set flag to read config file */
 	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGTERM, SIG_IGN); /* ignore SIGTERM */
+	pqsignal(SIGTERM, ReqShutdownHandler);		/* shutdown */
 	pqsignal(SIGQUIT, quickdie);		/* hard crash time: nothing bg-writer specific, just use the standard */
 	pqsignal(SIGALRM, SIG_IGN);
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, SIG_IGN); /* reserve for ProcSignal */
-	pqsignal(SIGUSR2, ReqShutdownHandler);		/* request shutdown */
+	pqsignal(SIGUSR2, SIG_IGN);
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
@@ -136,11 +136,7 @@ BackgroundWriterMain(void)
 	pqsignal(SIGWINCH, SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
-#ifdef HAVE_SIGPROCMASK
 	sigdelset(&BlockSig, SIGQUIT);
-#else
-	BlockSig &= ~(sigmask(SIGQUIT));
-#endif
 
 	/*
 	 * Create a resource owner to keep track of our resources (currently only
@@ -229,6 +225,12 @@ BackgroundWriterMain(void)
 	 * Unblock signals (they were blocked when the postmaster forked us)
 	 */
 	PG_SETMASK(&UnBlockSig);
+
+	/*
+	 * Use the recovery target timeline ID during recovery
+	 */
+	if (RecoveryInProgress())
+		ThisTimeLineID = GetRecoveryTargetTLI();
 
 	/*
 	 * Loop forever
@@ -330,7 +332,7 @@ BgSigHupHandler(SIGNAL_ARGS)
 	got_SIGHUP = true;
 }
 
-/* SIGUSR2: set flag to run a shutdown checkpoint and exit */
+/* SIGTERM: set flag to shutdown and exit */
 static void
 ReqShutdownHandler(SIGNAL_ARGS)
 {

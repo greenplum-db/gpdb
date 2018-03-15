@@ -47,12 +47,12 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.127 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.130 2010/01/10 04:26:36 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -205,7 +205,7 @@ heap_fill_tuple(TupleDesc tupleDesc,
 		if (att[i]->attbyval)
 		{
 			/* pass-by-value */
-			data = (char *) att_align_nominal((long) data, att[i]->attalign);
+			data = (char *) att_align_nominal(data, att[i]->attalign);
 			store_att_byval(data, values[i], att[i]->attlen);
 			data_length = att[i]->attlen;
 		}
@@ -239,7 +239,7 @@ heap_fill_tuple(TupleDesc tupleDesc,
 			else
 			{
 				/* full 4-byte header varlena */
-				data = (char *) att_align_nominal((long) data,
+				data = (char *) att_align_nominal(data,
 												  att[i]->attalign);
 				data_length = VARSIZE(val);
 				memcpy(data, val, data_length);
@@ -256,7 +256,7 @@ heap_fill_tuple(TupleDesc tupleDesc,
 		else
 		{
 			/* fixed-length pass-by-reference */
-			data = (char *) att_align_nominal((long) data, att[i]->attalign);
+			data = (char *) att_align_nominal(data, att[i]->attalign);
 			Assert(att[i]->attlen > 0);
 			data_length = att[i]->attlen;
 			memcpy(data, DatumGetPointer(values[i]), data_length);
@@ -368,68 +368,32 @@ nocachegetattr(HeapTuple tuple,
 	 * ----------------
 	 */
 
-#ifdef IN_MACRO
-/* This is handled in the macro */
-	Assert(attnum > 0);
-
-	if (isnull)
-		*isnull = false;
-#endif
-
 	attnum--;
 
-	if (HeapTupleNoNulls(tuple))
-	{
-#ifdef IN_MACRO
-/* This is handled in the macro */
-		if (att[attnum]->attcacheoff >= 0)
-		{
-			return fetchatt(att[attnum],
-							(char *) tup + tup->t_hoff +
-							att[attnum]->attcacheoff);
-		}
-#endif
-	}
-	else
+	if (!HeapTupleNoNulls(tuple))
 	{
 		/*
 		 * there's a null somewhere in the tuple
 		 *
-		 * check to see if desired att is null
+		 * check to see if any preceding bits are null...
 		 */
+		int byte = attnum >> 3;
+		int			finalbit = attnum & 0x07;
 
-#ifdef IN_MACRO
-/* This is handled in the macro */
-		if (att_isnull(attnum, bp))
+		/* check for nulls "before" final bit of last byte */
+		if ((~bp[byte]) & ((1 << finalbit) - 1))
+			slow = true;
+		else
 		{
-			if (isnull)
-				*isnull = true;
-			return (Datum) NULL;
-		}
-#endif
+			/* check for nulls in any "earlier" bytes */
+			int			i;
 
-		/*
-		 * Now check to see if any preceding bits are null...
-		 */
-		{
-			int byte = attnum >> 3;
-			int			finalbit = attnum & 0x07;
-
-			/* check for nulls "before" final bit of last byte */
-			if ((~bp[byte]) & ((1 << finalbit) - 1))
-				slow = true;
-			else
+			for (i = 0; i < byte; i++)
 			{
-				/* check for nulls in any "earlier" bytes */
-				int			i;
-
-				for (i = 0; i < byte; i++)
+				if (bp[i] != 0xFF)
 				{
-					if (bp[i] != 0xFF)
-					{
-						slow = true;
-						break;
-					}
+					slow = true;
+					break;
 				}
 			}
 		}
@@ -595,8 +559,7 @@ heap_getsysattr(HeapTuple tup, int attnum, bool *isnull)
 	Assert(!is_memtuple((GenericTuple) tup));
 
 	/* Currently, no sys attribute ever reads as NULL. */
-	if (isnull)
-		*isnull = false;
+	*isnull = false;
 
 	switch (attnum)
 	{
@@ -1129,10 +1092,7 @@ heap_deformtuple(HeapTuple tuple,
  *		re-computing information about previously extracted attributes.
  *		slot->tts_nvalid is the number of attributes already extracted.
  */
-#ifndef USE_CODEGEN
-static
-#endif
-void
+static void
 slot_deform_tuple(TupleTableSlot *slot, int natts)
 {
 	HeapTuple	tuple = TupGetHeapTuple(slot); 
@@ -1263,6 +1223,7 @@ _slot_getsomeattrs(TupleTableSlot *slot, int attnum)
 	attno = Min(attno, attnum);
 
 	slot_deform_tuple(slot, attno);
+
 
 	/*
 	 * If tuple doesn't have all the atts indicated by tupleDesc, read the

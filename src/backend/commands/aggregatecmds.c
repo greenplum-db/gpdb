@@ -4,12 +4,12 @@
  *
  *	  Routines for aggregate-manipulation commands
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/aggregatecmds.c,v 1.49 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/aggregatecmds.c,v 1.52 2010/02/14 18:42:13 rhaas Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -330,9 +330,7 @@ RemoveAggregate(RemoveFuncStmt *stmt)
 	/*
 	 * Find the function tuple, do permissions and validity checks
 	 */
-	tup = SearchSysCache(PROCOID,
-						 ObjectIdGetDatum(procOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 
@@ -381,9 +379,7 @@ RenameAggregate(List *name, List *args, const char *newname)
 	/* Look up function and make sure it's an aggregate */
 	procOid = LookupAggNameTypeNames(name, args, false);
 
-	tup = SearchSysCacheCopy(PROCOID,
-							 ObjectIdGetDatum(procOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(PROCOID, ObjectIdGetDatum(procOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", procOid);
 	procForm = (Form_pg_proc) GETSTRUCT(tup);
@@ -391,16 +387,16 @@ RenameAggregate(List *name, List *args, const char *newname)
 	namespaceOid = procForm->pronamespace;
 
 	/* make sure the new name doesn't exist */
-	if (SearchSysCacheExists(PROCNAMEARGSNSP,
-							 CStringGetDatum(newname),
-							 PointerGetDatum(&procForm->proargtypes),
-							 ObjectIdGetDatum(namespaceOid),
-							 0))
+	if (SearchSysCacheExists3(PROCNAMEARGSNSP,
+							  CStringGetDatum(newname),
+							  PointerGetDatum(&procForm->proargtypes),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_FUNCTION),
 				 errmsg("function %s already exists in schema \"%s\"",
 						funcname_signature_string(newname,
 												  procForm->pronargs,
+												  NIL,
 											   procForm->proargtypes.values),
 						get_namespace_name(namespaceOid))));
 

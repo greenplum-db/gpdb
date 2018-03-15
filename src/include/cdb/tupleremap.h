@@ -22,5 +22,6 @@ extern TupleRemapper *CreateTupleRemapper(void);
 extern void DestroyTupleRemapper(TupleRemapper *remapper);
 extern GenericTuple TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple);
 extern void TRHandleTypeLists(TupleRemapper *remapper, List *typelist);
+extern Datum TRRemapDatum(TupleRemapper *remapper, Oid typeid, Datum value);
 
 #endif   /* TUPLEREMAP_H */

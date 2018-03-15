@@ -1,8 +1,0 @@
-BEGIN;
-BEGIN
-UPDATE foo set b = 0 ;
-NOTICE:  Releasing segworker groups to finish aborting the transaction.
-ERROR:  fault triggered, fault name:'appendonly_update' fault type:'panic' (seg0 mdw:40000 pid=64800) (cdbdisp.c:1487)
-ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:xxx)
-COMMIT;
-ROLLBACK

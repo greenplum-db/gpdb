@@ -326,7 +326,7 @@ advance_windowaggregate(WindowAggState *winstate,
 
 	/*
 	 * If pass-by-ref datatype, must copy the new value into aggcontext and
-	 * pfree the prior transValue.  But if transfn returned a pointer to its
+	 * pfree the prior transValue.	But if transfn returned a pointer to its
 	 * first input, we don't need to do anything.
 	 */
 	if (!peraggstate->transtypeByVal &&
@@ -481,7 +481,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * TODO: Rerunning aggregates from the frame start can be pretty slow. For
 	 * some aggregates like SUM and COUNT we could avoid that by implementing
 	 * a "negative transition function" that would be called for each row as
-	 * it exits the frame.  We'd have to think about avoiding recalculation of
+	 * it exits the frame.	We'd have to think about avoiding recalculation of
 	 * volatile arguments of aggregate functions, too.
 	 */
 
@@ -554,7 +554,7 @@ eval_windowaggregates(WindowAggState *winstate)
 	 * Advance until we reach a row not in frame (or end of partition).
 	 *
 	 * Note the loop invariant: agg_row_slot is either empty or holds the row
-	 * at position aggregatedupto.  We advance aggregatedupto after processing
+	 * at position aggregatedupto.	We advance aggregatedupto after processing
 	 * a row.
 	 */
 	for (;;)
@@ -1024,13 +1024,14 @@ row_is_in_frame(WindowAggState *winstate, int64 pos, TupleTableSlot *slot)
  *
  * Uses the winobj's read pointer for any required fetches; hence, if the
  * frame mode is one that requires row comparisons, the winobj's mark must
- * not be past the currently known frame head.  Also uses the specified slot
+ * not be past the currently known frame head.	Also uses the specified slot
  * for any required fetches.
  */
 static void
 update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
 {
 	WindowAggState *winstate = winobj->winstate;
+	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
 	int			frameOptions = winstate->frameOptions;
 
 	if (winstate->framehead_valid)
@@ -1055,6 +1056,14 @@ update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
 		else if (frameOptions & FRAMEOPTION_RANGE)
 		{
 			int64		fhprev;
+
+			/* If no ORDER BY, all rows are peers with each other */
+			if (node->ordNumCols == 0)
+			{
+				winstate->frameheadpos = 0;
+				winstate->framehead_valid = true;
+				return;
+			}
 
 			/*
 			 * In RANGE START_CURRENT mode, frame head is the first row that
@@ -1144,13 +1153,14 @@ update_frameheadpos(WindowObject winobj, TupleTableSlot *slot)
  *
  * Uses the winobj's read pointer for any required fetches; hence, if the
  * frame mode is one that requires row comparisons, the winobj's mark must
- * not be past the currently known frame tail.  Also uses the specified slot
+ * not be past the currently known frame tail.	Also uses the specified slot
  * for any required fetches.
  */
 static void
 update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
 {
 	WindowAggState *winstate = winobj->winstate;
+	WindowAgg  *node = (WindowAgg *) winstate->ss.ps.plan;
 	int			frameOptions = winstate->frameOptions;
 
 	if (winstate->frametail_valid)
@@ -1225,6 +1235,15 @@ update_frametailpos(WindowObject winobj, TupleTableSlot *slot)
 		else if (frameOptions & FRAMEOPTION_RANGE)
 		{
 			int64		ftnext;
+
+			/* If no ORDER BY, all rows are peers with each other */
+			if (node->ordNumCols == 0)
+			{
+				spool_tuples(winstate, -1);
+				winstate->frametailpos = winstate->spooled_rows - 1;
+				winstate->frametail_valid = true;
+				return;
+			}
 
 			/*
 			 * Else we have to search for the first row that's not within

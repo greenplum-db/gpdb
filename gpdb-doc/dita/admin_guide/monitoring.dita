@@ -324,18 +324,6 @@ WHERE logseverity in ('FATAL', 'ERROR')
                 <entry>Run repair scripts for any issues detected.</entry>
               </section>
 </parml>
-              <section><title>Check persistent table catalog</title>
-<parml>
-                <entry>Run a persistent table catalog check.<p>Recommended frequency:
-                    monthly</p><pt>Severity</pt>
-<pd>CRITICAL</pd></entry>
-                <entry>During a downtime, with no users on the system, run the Greenplum
-                    <codeph>gpcheckcat</codeph> utility in each
-                  database:<codeblock>gpcheckcat -R persistent</codeblock></entry>
-                <entry>If any problems are identified, contact Pivotal support for
-                  assistance.</entry>
-              </section>
-</parml>
               <section><title></title>
 <parml>
                 <entry>Check for <codeph>pg_class</codeph> entries that have no corresponding

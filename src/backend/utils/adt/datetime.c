@@ -3,12 +3,12 @@
  * datetime.c
  *	  Support functions for date/time types.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.208 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.212 2010/05/09 02:15:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -3897,6 +3897,12 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 					tm->tm_hour, tm->tm_min);
 
 			AppendTimestampSeconds(str + strlen(str), tm, fsec);
+
+			/*
+			 * Note: the uses of %.*s in this function would be risky if the
+			 * timezone names ever contain non-ASCII characters.  However, all
+			 * TZ abbreviations in the Olson database are plain ASCII.
+			 */
 
 			if (tzp != NULL && tm->tm_isdst >= 0)
 			{

@@ -3,6 +3,8 @@ test: compat_informix/charfuncs
 test: compat_informix/rfmtdate
 test: compat_informix/rfmtlong
 test: compat_informix/rnull
+test: compat_informix/sqlda
+test: compat_informix/describe
 test: compat_informix/test_informix
 test: compat_informix/test_informix2
 test: connect/test2
@@ -13,14 +15,17 @@ test: pgtypeslib/dt_test
 test: pgtypeslib/dt_test2
 test: pgtypeslib/num_test
 test: pgtypeslib/num_test2
+test: pgtypeslib/nan_test
 test: preproc/array_of_struct
 test: preproc/autoprep
 test: preproc/comment
+test: preproc/cursor
 test: preproc/define
 test: preproc/init
 test: preproc/strings
 test: preproc/type
 test: preproc/variable
+test: preproc/outofscope
 test: preproc/whenever
 test: sql/array
 test: sql/binary
@@ -28,6 +33,8 @@ test: sql/code100
 test: sql/copystdout
 test: sql/define
 test: sql/desc
+test: sql/sqlda
+test: sql/describe
 test: sql/dynalloc
 test: sql/dynalloc2
 test: sql/dyntest

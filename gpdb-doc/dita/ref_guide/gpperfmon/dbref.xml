@@ -39,10 +39,6 @@
         store query workload information for a Greenplum Database instance.</li>
       <li>The <codeph><xref href="db-diskspace.xml#db-diskspac">diskspace_*</xref></codeph> tables
         store diskspace metrics.</li>
-      <li>The <codeph><xref href="db-filerep.xml#db-filerep">filerep_*</xref></codeph> tables store
-        health and status metrics for the file replication process. This process is how
-        high-availability/mirroring is achieved in a Greenplum Database instance. Statistics are
-        maintained for each primary-mirror pair.</li>
       <li>The <codeph><xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
             >log_alert_*</xref></codeph> tables store error and warning messages from <codeph>pg_log</codeph>.</li>
       <li>The <codeph><xref href="db-queries.xml#db-queries">queries_*</xref></codeph> tables store

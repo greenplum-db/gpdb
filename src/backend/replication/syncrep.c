@@ -44,6 +44,7 @@
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
 #include "utils/ps_status.h"
+#include "utils/faultinjector.h"
 #include "pgstat.h"
 #include "cdb/cdbvars.h"
 /* User-settable parameters for sync rep */
@@ -299,19 +300,25 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		}
 
 		/*
-		 * It's unclear what to do if a query cancel interrupt arrives.  We
-		 * can't actually abort at this point, but ignoring the interrupt
-		 * altogether is not helpful, so we just terminate the wait with a
-		 * suitable warning.
+		 * GPDB: There are multiple code paths going through this function,
+		 * e.g. prepare, commit, and abort. To ensure MPP cluster consistency,
+		 * if primary already changed, then this backend has to wait for the
+		 * xlog record replicate to the mirror to avoid inconsistency between
+		 * the primary and the mirror, since they are under synced replication.
+		 *
+		 * If the mirror is indeed offline and prevents xlog to be synced, FTS
+		 * will detect the mirror goes down, and failure handling will kick-in
+		 * and mark the mirror down and out-of-sync with the primary to prevent
+		 * failover. Then the syncrep will be turned off by the FTS to unblock
+		 * backends waiting here.
 		 */
 		if (QueryCancelPending)
 		{
 			QueryCancelPending = false;
 			ereport(WARNING,
-					(errmsg("canceling wait for synchronous replication due to user request"),
-					 errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
-			SyncRepCancelWait();
-			break;
+					(errmsg("ignoring query cancel request for synchronous replication to ensure cluster consistency."),
+					 errdetail("The transaction has already changed locally, it has to be replicated to standby.")));
+			SIMPLE_FAULT_INJECTOR(SyncRepQueryCancel);
 		}
 
 		/*
@@ -645,23 +652,16 @@ SyncRepWakeQueue(bool all, int mode)
  * if synchronous_standby_names is unset.  It's safe to check the current value
  * without the lock, because it's only ever updated by one process.  But we
  * must take the lock to change it.
- *
- * In Postgres, the SyncRepLock is taken inside this function since only the
- * Checkpointer process calls this function.
- *
- * In GPDB, the SyncRepLock is taken outside this function because FTS probe
- * handler will also call this function to bypass sending a SIGHUP to
- * Checkpointer process for configuration reload.
  */
 void
 SyncRepUpdateSyncStandbysDefined(void)
 {
 	bool		sync_standbys_defined = SyncStandbysDefined();
 
-	Assert(LWLockHeldByMe(SyncRepLock));
-
 	if (sync_standbys_defined != WalSndCtl->sync_standbys_defined)
 	{
+		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
+
 		/*
 		 * If synchronous_standby_names has been reset to empty, it's futile
 		 * for backends to continue to waiting.  Since the user no longer
@@ -683,6 +683,8 @@ SyncRepUpdateSyncStandbysDefined(void)
 		 * the queue (and never wake up).  This prevents that.
 		 */
 		WalSndCtl->sync_standbys_defined = sync_standbys_defined;
+
+		LWLockRelease(SyncRepLock);
 	}
 }
 

@@ -3,12 +3,12 @@
  * parse_node.c
  *	  various routines that make nodes for querytrees
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_node.c,v 1.105 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_node.c,v 1.108 2010/02/14 18:42:15 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -54,7 +54,12 @@ make_parsestate(ParseState *parentParseState)
 	if (parentParseState)
 	{
 		pstate->p_sourcetext = parentParseState->p_sourcetext;
-		pstate->p_variableparams = parentParseState->p_variableparams;
+		/* all hooks are copied from parent */
+		pstate->p_pre_columnref_hook = parentParseState->p_pre_columnref_hook;
+		pstate->p_post_columnref_hook = parentParseState->p_post_columnref_hook;
+		pstate->p_paramref_hook = parentParseState->p_paramref_hook;
+		pstate->p_coerce_param_hook = parentParseState->p_coerce_param_hook;
+		pstate->p_ref_hook_state = parentParseState->p_ref_hook_state;
 	}
 
 	return pstate;
@@ -242,9 +247,7 @@ transformArrayType(Oid arrayType)
 	Form_pg_type type_struct_array;
 
 	/* Get the type tuple for the array */
-	type_tuple_array = SearchSysCache(TYPEOID,
-									  ObjectIdGetDatum(arrayType),
-									  0, 0, 0);
+	type_tuple_array = SearchSysCache1(TYPEOID, ObjectIdGetDatum(arrayType));
 	if (!HeapTupleIsValid(type_tuple_array))
 		elog(ERROR, "cache lookup failed for type %u", arrayType);
 	type_struct_array = (Form_pg_type) GETSTRUCT(type_tuple_array);

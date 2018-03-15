@@ -190,9 +190,9 @@ start_postmaster(migratorContext *ctx, Cluster whichCluster, bool quiet)
 	}
 
 	if (ctx->dispatcher_mode)
-		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=-1";
+		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=-1 --xid_warn_limit=10000000";
 	else
-		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=0";
+		gpdb_options = "--gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=0 --xid_warn_limit=10000000";
 
 	/*
 	 * On Win32, we can't send both pg_upgrade output and pg_ctl output to the

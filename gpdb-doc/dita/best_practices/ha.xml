@@ -254,13 +254,6 @@
               off-cluster location when the backup is complete. Backup files and database files that
               reside on the same storage can be lost simultaneously.</li>
             <li dir="ltr">
-              <p dir="ltr">If your operating system supports direct I/O, set the
-                  <codeph>gp_backup_directIO</codeph> configuration parameter to reduce CPU usage
-                during backups. See <xref
-                  href="http://gpdb.docs.pivotal.io/latest/admin_guide/managing/backup-direct-io.html"
-                  format="html" scope="external">Using Direct I/O</xref> for more information. </p>
-            </li>
-            <li dir="ltr">
               <p dir="ltr">If backups are saved to NFS mounts, use a scale-out NFS solution such as
                 Dell EMC Isilon to prevent IO bottlenecks.</p>
             </li>

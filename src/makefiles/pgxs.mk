@@ -1,6 +1,6 @@
 # PGXS: PostgreSQL extensions makefile
 
-# $PostgreSQL: pgsql/src/makefiles/pgxs.mk,v 1.15 2008/10/03 08:00:16 petere Exp $ 
+# $PostgreSQL: pgsql/src/makefiles/pgxs.mk,v 1.22 2010/07/05 23:40:13 tgl Exp $ 
 
 # This file contains generic rules to build many kinds of simple
 # extension modules.  You only need to set a few variables and include
@@ -70,7 +70,14 @@ override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS)
 
 ifdef MODULES
 override CFLAGS += $(CFLAGS_SL)
-SHLIB_LINK += $(BE_DLLLIBS)
+endif
+
+ifdef MODULEDIR
+datamoduledir = $(MODULEDIR)
+docmoduledir = $(MODULEDIR)
+else
+datamoduledir = contrib
+docmoduledir = contrib
 endif
 
 ifdef MODULEDIR
@@ -272,6 +279,7 @@ installcheck: submake
 check:
 	@echo "'make check' is not supported."
 	@echo "Do 'make install', then 'make installcheck' instead."
+	@exit 1
 endif # REGRESS
 
 
@@ -284,5 +292,5 @@ endif
 
 ifdef PROGRAM
 $(PROGRAM): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS) $(LDFLAGS) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 endif

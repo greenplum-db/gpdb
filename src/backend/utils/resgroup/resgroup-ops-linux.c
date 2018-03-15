@@ -49,6 +49,7 @@
 
 #define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
+#define MAX_RETRY 10
 
 static char * buildPath(Oid group, const char *base, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
@@ -321,6 +322,7 @@ removeDir(Oid group, const char *comp, bool unassign)
 {
 	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
+	int retry = 0;
 	int fddir;
 
 	buildPath(group, NULL, comp, "", path, pathsize);
@@ -336,24 +338,36 @@ removeDir(Oid group, const char *comp, bool unassign)
 		return true;
 	}
 
-	if (unassign)
-		unassignGroup(group, comp, fddir);
-
-	if (rmdir(path))
+	while (++retry <= MAX_RETRY)
 	{
-		int err = errno;
+		if (unassign)
+			unassignGroup(group, comp, fddir);
 
-		close(fddir);
+		if (rmdir(path))
+		{
+			int err = errno;
 
-		/*
-		 * we don't check for ENOENT again as we already accquired the lock
-		 * on this dir and the dir still exist at that time, so if then
-		 * it's removed by other processes then it's a bug.
-		 */
-		CGROUP_ERROR("can't remove dir: %s: %s", path, strerror(err));
+			if (err == EBUSY && unassign && retry < MAX_RETRY)
+			{
+				elog(DEBUG1, "can't remove dir, will retry: %s: %s",
+					 path, strerror(err));
+				pg_usleep(1000);
+				continue;
+			}
+
+			/*
+			 * we don't check for ENOENT again as we already accquired the lock
+			 * on this dir and the dir still exist at that time, so if then
+			 * it's removed by other processes then it's a bug.
+			 */
+			elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
+				 path, strerror(err));
+		}
+		break;
 	}
 
-	elog(DEBUG1, "cgroup dir '%s' removed", path);
+	if (retry <= MAX_RETRY)
+		elog(DEBUG1, "cgroup dir '%s' removed", path);
 
 	/* close() also releases the lock */
 	close(fddir);
@@ -551,8 +565,29 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 static void
 getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
 {
+	char path[MAXPGPATH];
+	size_t pathsize = sizeof(path);
+
 	*cgram = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.limit_in_bytes");
-	*cgmemsw = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.memsw.limit_in_bytes");
+
+	/*
+	 * cgroup/memory/memory.memsw.limit_in_bytes is only available if
+	 * CONFIG_MEMCG_SWAP_ENABLED is on in kernel config or
+	 * swapaccount=1 in cmdline. Without this file we have to assume swap is
+	 * unlimited in container.
+	 */
+	buildPath(RESGROUP_ROOT_ID, "",
+			  "memory", "memory.memsw.limit_in_bytes", path, pathsize);
+	if (access(path, R_OK) == 0)
+	{
+		*cgmemsw = readInt64(RESGROUP_ROOT_ID, "",
+							 "memory", "memory.memsw.limit_in_bytes");
+	}
+	else
+	{
+		elog(DEBUG1, "swap memory is unlimited");
+		*cgmemsw = (uint64) -1LL;
+	}
 }
 
 /* get vm.overcommit_ratio */
@@ -700,13 +735,13 @@ ResGroupOps_CreateGroup(Oid group)
 	 * although the group dir is created the interface files may not be
 	 * created yet, so we check them repeatedly until everything is ready.
 	 */
-	while (++retry <= 10 && !checkPermission(group, false))
+	while (++retry <= MAX_RETRY && !checkPermission(group, false))
 		pg_usleep(1000);
 
-	if (retry > 10)
+	if (retry > MAX_RETRY)
 	{
 		/*
-		 * still not ready after 10 retries, might be a real error,
+		 * still not ready after MAX_RETRY retries, might be a real error,
 		 * raise the error.
 		 */
 		checkPermission(group, true);

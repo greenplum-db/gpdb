@@ -7,9 +7,11 @@ include $(top_srcdir)/$(subdir)/../Makefile.regress
 TESTS = array_of_struct array_of_struct.c \
 	autoprep autoprep.c \
 	comment comment.c \
+	cursor cursor.c \
 	define define.c \
 	init init.c \
 	strings strings.c \
+	outofscope outofscope.c \
 	type type.c \
 	variable variable.c \
 	whenever whenever.c
@@ -22,3 +24,5 @@ array_of_struct.c:	array_of_struct.pgc ../regression.h
 autoprep.c:     autoprep.pgc ../regression.h
 	$(ECPG) -r prepare -o $@ -I$(srcdir) $<
 
+strings.c:     strings.pgc strings.h ../regression.h
+	$(ECPG) -i -o $@ -I$(srcdir) $<

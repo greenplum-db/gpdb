@@ -12,7 +12,7 @@ DELETE 4
 SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
 state|tupcount|modcount
 -----+--------+--------
-1    |10      |2
+1    |10      |2       
 (1 row)
 VACUUM ao;
 VACUUM

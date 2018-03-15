@@ -5,6 +5,8 @@
 
 #include "../xlogutils.c"
 
+#include "catalog/pg_tablespace.h"
+
 /*
  * Test that the invalid_page_tab hash table is properly used when invalid AO
  * segment files are encountered.

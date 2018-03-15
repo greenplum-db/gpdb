@@ -4,11 +4,11 @@
  *	  fetch tuples from a GiST scan.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistget.c,v 1.81 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistget.c,v 1.85 2010/02/26 02:00:33 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,13 +32,8 @@ static bool gistindex_keytest(IndexTuple tuple, IndexScanDesc scan,
 static void
 killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
-	Page        p;
+	Page		p;
 	OffsetNumber offset;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	LockBuffer(so->curbuf, GIST_SHARE);
 	gistcheckpage(r, so->curbuf);
@@ -49,7 +44,6 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 		/* page unchanged, so all is simple */
 		offset = ItemPointerGetOffsetNumber(iptr);
 		ItemIdMarkDead(PageGetItemId(p, offset));
-
 		MarkBufferDirtyHint(so->curbuf, r);
 	}
 	else
@@ -58,7 +52,7 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 
 		for (offset = FirstOffsetNumber; offset <= maxoff; offset = OffsetNumberNext(offset))
 		{
-			IndexTuple  ituple = (IndexTuple) PageGetItem(p, PageGetItemId(p, offset));
+			IndexTuple	ituple = (IndexTuple) PageGetItem(p, PageGetItemId(p, offset));
 
 			if (ItemPointerEquals(&(ituple->t_tid), iptr))
 			{
@@ -71,9 +65,6 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 	}
 
 	LockBuffer(so->curbuf, GIST_UNLOCK);
-
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
 }
 
 /*
@@ -144,8 +135,6 @@ gistgetbitmap(PG_FUNCTION_ARGS)
 static int64
 gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	Page		p;
 	OffsetNumber n;
 	GISTScanOpaque so;
@@ -158,9 +147,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 
 	if (so->qual_ok == false)
 		return 0;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	if (so->curbuf == InvalidBuffer)
 	{
@@ -181,9 +167,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 		}
 		else
 		{
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
 			/* scan is finished */
 			return 0;
 		}
@@ -210,9 +193,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 
 			so->curPageData++;
 
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
 			return 1;
 		}
 		else
@@ -229,9 +209,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 			{
 				ReleaseBuffer(so->curbuf);
 				so->curbuf = InvalidBuffer;
-
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
 
 				return ntids;
 			}
@@ -286,9 +263,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 				ReleaseBuffer(so->curbuf);
 				so->curbuf = InvalidBuffer;
 
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
-
 				return ntids;
 			}
 
@@ -311,8 +285,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 				if (!tbm && so->nPageData)
 				{
 					LockBuffer(so->curbuf, GIST_UNLOCK);
-					MIRROREDLOCK_BUFMGR_UNLOCK;
-
 					return gistnext(scan, NULL);
 				}
 
@@ -356,9 +328,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 				{
 					ReleaseBuffer(so->curbuf);
 					so->curbuf = InvalidBuffer;
-					
-					MIRROREDLOCK_BUFMGR_UNLOCK;
-					// -------- MirroredLock ----------
 					
 					return ntids;
 				}
@@ -414,9 +383,6 @@ gistnext(IndexScanDesc scan, TIDBitmap *tbm)
 			n = OffsetNumberNext(n);
 		}
 	}
-
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
 
 	return ntids;
 }
@@ -477,14 +443,21 @@ gistindex_keytest(IndexTuple tuple,
 		{
 			/*
 			 * On non-leaf page we can't conclude that child hasn't NULL
-			 * values because of assumption in GiST: uinon (VAL, NULL) is VAL
-			 * But if on non-leaf page key IS  NULL then all childs has NULL.
+			 * values because of assumption in GiST: union (VAL, NULL) is VAL.
+			 * But if on non-leaf page key IS NULL, then all children are
+			 * NULL.
 			 */
-
-			Assert(key->sk_flags & SK_SEARCHNULL);
-
-			if (GistPageIsLeaf(p) && !isNull)
-				return false;
+			if (key->sk_flags & SK_SEARCHNULL)
+			{
+				if (GistPageIsLeaf(p) && !isNull)
+					return false;
+			}
+			else
+			{
+				Assert(key->sk_flags & SK_SEARCHNOTNULL);
+				if (isNull)
+					return false;
+			}
 		}
 		else if (isNull)
 		{

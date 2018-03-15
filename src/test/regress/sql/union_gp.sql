@@ -80,7 +80,9 @@ INSERT INTO T_b2 SELECT i, i%5 from generate_series(1,20) i;
 CREATE TABLE T_random (c1 int, c2 int);
 INSERT INTO T_random SELECT i, i%5 from generate_series(1,30) i;
 
+--start_ignore
 create language plpythonu;
+--end_ignore
 
 create or replace function count_operator(query text, operator text) returns int as
 $$

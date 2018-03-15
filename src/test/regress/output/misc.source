@@ -452,13 +452,13 @@ SELECT class, aa, a FROM a_star*;
 --
 SELECT p.name, name(p.hobbies) FROM ONLY person p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 --
 -- as above, but jeff also does post_hacking.
 --
 SELECT p.name, name(p.hobbies) FROM person* p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 --
 -- the next two queries demonstrate how functions generate bogus duplicates.
 -- this is a "feature" ..
@@ -466,10 +466,10 @@ DETAIL:  SQL function "hobbies" during startup
 SELECT DISTINCT hobbies_r.name, name(hobbies_r.equipment) FROM hobbies_r
   ORDER BY 1,2;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
-DETAIL:  SQL function "equipment" during startup
+CONTEXT:  SQL function "equipment" during startup
 SELECT hobbies_r.name, (hobbies_r.equipment).name FROM hobbies_r;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
-DETAIL:  SQL function "equipment" during startup
+CONTEXT:  SQL function "equipment" during startup
 --
 -- mike needs advil and peet's coffee,
 -- joe and sally need hightops, and
@@ -477,29 +477,29 @@ DETAIL:  SQL function "equipment" during startup
 --
 SELECT p.name, name(p.hobbies), name(equipment(p.hobbies)) FROM ONLY person p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 --
 -- as above, but jeff needs advil and peet's coffee as well.
 --
 SELECT p.name, name(p.hobbies), name(equipment(p.hobbies)) FROM person* p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 --
 -- just like the last two, but make sure that the target list fixup and
 -- unflattening is being done correctly.
 --
 SELECT name(equipment(p.hobbies)), p.name, name(p.hobbies) FROM ONLY person p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 SELECT (p.hobbies).equipment.name, p.name, name(p.hobbies) FROM person* p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 SELECT (p.hobbies).equipment.name, name(p.hobbies), p.name FROM ONLY person p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 SELECT name(equipment(p.hobbies)), name(p.hobbies), p.name FROM person* p;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.hobbies_r"
-DETAIL:  SQL function "hobbies" during startup
+CONTEXT:  SQL function "hobbies" during startup
 SELECT user_relns() AS user_relns
    ORDER BY user_relns;
                user_relns               
@@ -698,10 +698,10 @@ SELECT name(equipment(ROW('skywalking', 'mer')));
 
 SELECT *, name(equipment(h.*)) FROM hobbies_r h;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
-DETAIL:  SQL function "equipment" during startup
+CONTEXT:  SQL function "equipment" during startup
 SELECT *, (equipment(CAST((h.*) AS hobbies_r))).name FROM hobbies_r h;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.equipment_r"
-DETAIL:  SQL function "equipment" during startup
+CONTEXT:  SQL function "equipment" during startup
 --
 -- check that old-style C functions work properly with TOASTed values
 --

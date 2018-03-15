@@ -504,13 +504,6 @@ select security_definer_test();
 
 drop function security_definer_test();
 
--- ---------------------------------------------------------------------
--- coverage for cdbpersistentbuild.c
--- ---------------------------------------------------------------------
-
-select gp_persistent_reset_all();
-select gp_persistent_build_all(false);
-
 -- clean up
 drop schema caql_schema cascade;
 drop role caql_luser;

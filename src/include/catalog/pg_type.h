@@ -5,13 +5,13 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_type.h,v 1.206 2009/06/18 10:22:09 petere Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_type.h,v 1.212 2010/01/05 01:06:57 tgl Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -32,8 +32,9 @@
  * ----------------
  */
 #define TypeRelationId	1247
+#define TypeRelation_Rowtype_Id  71
 
-CATALOG(pg_type,1247) BKI_BOOTSTRAP
+CATALOG(pg_type,1247) BKI_BOOTSTRAP BKI_ROWTYPE_OID(71) BKI_SCHEMA_MACRO
 {
 	NameData	typname;		/* type name */
 	Oid			typnamespace;	/* OID of namespace containing this type */
@@ -275,9 +276,7 @@ typedef FormData_pg_type *Form_pg_type;
  * Keep the following ordered by OID so that later changes can be made more
  * easily.
  *
- * For types used in the system catalogs, make sure the typlen, typbyval, and
- * typalign values here match the initial values for attlen, attbyval, and
- * attalign in both places in pg_attribute.h for every instance.  Also see
+ * For types used in the system catalogs, make sure the values here match
  * TypInfo[] in bootstrap.c.
  */
 
@@ -342,28 +341,13 @@ DATA(insert OID = 30 (	oidvector  PGNSP PGUID -1 f b A f t \054 0	26 1013 oidvec
 DESCR("array of oids, used in system tables");
 #define OIDVECTOROID	30
 
-/* hand-built rowtype entries for bootstrapped catalogs: */
+/* hand-built rowtype entries for bootstrapped catalogs */
+/* NB: OIDs assigned here must match the BKI_ROWTYPE_OID declarations */
 
 DATA(insert OID = 71 (	pg_type			PGNSP PGUID -1 f c C f t \054 1247 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_TYPE_RELTYPE_OID 71
 DATA(insert OID = 75 (	pg_attribute	PGNSP PGUID -1 f c C f t \054 1249 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_ATTRIBUTE_RELTYPE_OID 75
 DATA(insert OID = 81 (	pg_proc			PGNSP PGUID -1 f c C f t \054 1255 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_PROC_RELTYPE_OID 81
 DATA(insert OID = 83 (	pg_class		PGNSP PGUID -1 f c C f t \054 1259 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_CLASS_RELTYPE_OID 83
-
-DATA(insert OID = 2967 (	pg_authid	   PGNSP PGUID -1 f c C f t \054 1260 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_AUTHID_RELTYPE_OID 2967
-
-DATA(insert OID = 2966 (	pg_auth_members	   PGNSP PGUID -1 f c C f t \054 1261 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_AUTH_MEMBERS_RELTYPE_OID 2966
-
-DATA(insert OID = 6996 (	pg_database	   PGNSP PGUID -1 f c C f t \054 1262 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_DATABASE_RELTYPE_OID 6996
-
-DATA(insert OID = 6995 (	gp_global_sequence	   PGNSP PGUID -1 f c C f t \054 5096 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define GP_GLOBAL_SEQUENCE_RELTYPE_OID 6995
 
 /* OIDS 100 - 199 */
 DATA(insert OID = 142 ( xml		   PGNSP PGUID -1 f b U f t \054 0 0 143 xml_in xml_out xml_recv xml_send - - - i x f 0 -1 0 _null_ _null_ ));
@@ -410,7 +394,7 @@ DESCR("geometric polygon '(pt1,...)'");
 #define POLYGONOID		604
 
 DATA(insert OID = 628 (  line	   PGNSP PGUID 32 f b G f t \054 0 701 629 line_in line_out line_recv line_send - - - d p f 0 -1 0 _null_ _null_ ));
-DESCR("geometric line (not implemented)'");
+DESCR("geometric line (not implemented)");
 #define LINEOID			628
 DATA(insert OID = 629 (  _line	   PGNSP PGUID	-1 f b A f t \054 0 628 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
 DESCR("");
@@ -510,10 +494,10 @@ DESCR("varchar(length), non-blank-padded string, variable storage length");
 #define VARCHAROID		1043
 
 DATA(insert OID = 1082 ( date		 PGNSP PGUID	4 t b D f t \054 0	0 1182 date_in date_out date_recv date_send - - - i p f 0 -1 0 _null_ _null_ ));
-DESCR("ANSI SQL date");
+DESCR("date");
 #define DATEOID			1082
 DATA(insert OID = 1083 ( time		 PGNSP PGUID	8 FLOAT8PASSBYVAL b D f t \054 0	0 1183 time_in time_out time_recv time_send timetypmodin timetypmodout - d p f 0 -1 0 _null_ _null_ ));
-DESCR("hh:mm:ss, ANSI SQL time");
+DESCR("time of day");
 #define TIMEOID			1083
 
 /* OIDS 1100 - 1199 */
@@ -535,7 +519,7 @@ DATA(insert OID = 1187 ( _interval	 PGNSP PGUID	-1 f b A f t \054 0 1186 0 array
 /* OIDS 1200 - 1299 */
 DATA(insert OID = 1231 (  _numeric	 PGNSP PGUID -1 f b A f t \054 0	1700 0 array_in array_out array_recv array_send numerictypmodin numerictypmodout - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1266 ( timetz		 PGNSP PGUID 12 f b D f t \054 0	0 1270 timetz_in timetz_out timetz_recv timetz_send timetztypmodin timetztypmodout - d p f 0 -1 0 _null_ _null_ ));
-DESCR("hh:mm:ss, ANSI SQL time");
+DESCR("time of day with time zone");
 #define TIMETZOID		1266
 DATA(insert OID = 1270 ( _timetz	 PGNSP PGUID -1 f b A f t \054 0	1266 0 array_in array_out array_recv array_send timetztypmodin timetztypmodout - d x f 0 -1 0 _null_ _null_ ));
 
@@ -676,24 +660,6 @@ DATA(insert OID = 3500 ( anyenum		PGNSP PGUID  4 t p P f t \054 0 0 0 anyenum_in
 DATA(insert OID = 3053 ( anytable		PGNSP PGUID -1 f p P f t \054 0	0 0 anytable_in anytable_out - - - - - d x f 0 -1 0 _null_ _null_ ));
 DESCR("Represents a generic TABLE value expression");
 #define ANYTABLEOID     3053
-
-/* 
- * These tables must be created with standardized oids because they are
- * accessed by the cdbdirectopen.c mechanism.
- *
- * Note: For this to work correctly it requires some hackery in bootparse.y
- * When extending this list make sure to update there as well.
- */
-DATA(insert OID = 6990 (gp_persistent_relation_node PGNSP PGUID -1 f c C f t \054 5090 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_));
-#define GP_PERSISTENT_RELATION_NODE_OID 6990
-DATA(insert OID = 6991 (gp_persistent_database_node PGNSP PGUID -1 f c C f t \054 5091 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_));
-#define GP_PERSISTENT_DATABASE_NODE_OID 6991
-DATA(insert OID = 6992 (gp_persistent_tablespace_node PGNSP PGUID -1 f c C f t \054 5092 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_));
-#define GP_PERSISTENT_TABLESPACE_NODE_OID 6992
-DATA(insert OID = 6993 (gp_persistent_filespace_node PGNSP PGUID -1 f c C f t \054 5093 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_));
-#define GP_PERSISTENT_FILESPACE_NODE_OID 6993
-DATA(insert OID = 6994 (gp_relation_node PGNSP PGUID -1 f c C f t \054 5094 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_));
-#define GP_RELATION_NODE_OID 6994
 
 
 /*

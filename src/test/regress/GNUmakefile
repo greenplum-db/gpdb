@@ -3,10 +3,10 @@
 # GNUmakefile--
 #    Makefile for src/test/regress (the regression tests)
 #
-# Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.77 2009/01/01 17:24:04 momjian Exp $
+# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.83 2010/07/05 18:54:38 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -25,9 +25,6 @@ PGPORT?=15432
 
 # where to find psql for testing an existing installation
 PSQLDIR = $(bindir)
-
-# default encoding
-##MULTIBYTE = LATIN1
 
 # maximum simultaneous connections for parallel tests
 MAXCONNOPT =
@@ -85,7 +82,7 @@ install: all installdirs
 	$(INSTALL_PROGRAM) GPTest.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/GPTest.pm'
 
 installdirs:
-	$(mkinstalldirs) '$(DESTDIR)$(pgxsdir)/$(subdir)'
+	$(MKDIR_P) '$(DESTDIR)$(pgxsdir)/$(subdir)'
 
 uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/pg_regress$(X)'
@@ -129,16 +126,16 @@ regress_data_files = \
 install-tests: all install install-lib installdirs-tests
 	$(MAKE) -C $(top_builddir)/contrib/spi install
 	for file in $(regress_data_files); do \
-	  $(INSTALL_DATA) $$file '$(DESTDIR)$(pkglibdir)/regress/'$$file; \
+	  $(INSTALL_DATA) $$file '$(DESTDIR)$(pkglibdir)/regress/'$$file || exit; \
 	done
 
 installdirs-tests: installdirs
-	$(mkinstalldirs)  $(patsubst $(srcdir)/%/,'$(DESTDIR)$(pkglibdir)/regress/%',$(sort $(dir $(regress_data_files))))
+	$(MKDIR_P)  $(patsubst $(srcdir)/%/,'$(DESTDIR)$(pkglibdir)/regress/%',$(sort $(dir $(regress_data_files))))
 
 
 # Get some extra C modules from contrib/spi...
 
-all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest query_info_hook_test
 
 refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
 	cp $< $@
@@ -171,18 +168,15 @@ includecheck:
 hooktest:
 	$(MAKE) -C $< $@
 
+.PHONY: query_info_hook_test
+query_info_hook_test:
+	$(MAKE) -C $< $@
+
 ##
 ## Run tests
 ##
 
-pg_regress_call = ./pg_regress --inputdir=$(srcdir) --dlpath=. --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
-
-# These are currently skipped because they don't work yet for segment wal replication
-# segspace: cannot restart database at the moment
-# filespace: segment wal replication does not handle filespaces yet
-ifeq ($(enable_segwalrep), yes)
-pg_regress_call := $(pg_regress_call) --exclude-tests="segspace_setup segspace segspace_cleanup filespace"
-endif
+pg_regress_call = ./pg_regress --inputdir=$(srcdir) --dlpath=. $(if $(MULTIBYTE),--multibyte=$(MULTIBYTE)) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 
 check: all
 	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --schedule=$(srcdir)/parallel_schedule 
@@ -190,7 +184,7 @@ check: all
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule 
 
-installcheck-good: all twophase_pqexecparams hooktest
+installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao; \
 	else \
@@ -202,6 +196,9 @@ testbouncer: all
 	bash -c "bouncer/setup.sh"
 	$(pg_regress_call)  --port=65432 --psqldir=$(PSQLDIR) --schedule=./minimal_schedule --host=`hostname`;
 	bash -c "bouncer/stop.sh"
+
+standbycheck: all
+	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/standby_schedule --use-existing
 
 # old interfaces follow...
 
@@ -226,6 +223,7 @@ clean distclean maintainer-clean: clean-lib
 # things built by `all' target
 	$(MAKE) -C $(top_builddir)/contrib/spi clean
 	$(MAKE) -C hooktest/ clean
+	$(MAKE) -C query_info_hook_test/ clean
 	rm -f twophase_pqexecparams
 # things created by dynamic configs
 	find sql -type l | xargs rm -f

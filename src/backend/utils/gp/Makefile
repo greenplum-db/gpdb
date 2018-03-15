@@ -17,7 +17,7 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
-OBJS = segadmin.o persistentutil.o
+OBJS = segadmin.o
 
 
 include $(top_srcdir)/src/backend/common.mk

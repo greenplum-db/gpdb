@@ -165,7 +165,7 @@ end
 $$ language plpgsql stable modifies sql data;
 select * from func1_mod_int_stb(5) order by 1;
 ERROR:  UPDATE is not allowed in a non-volatile function
-CONTEXT:  SQL statement "update bar set d = d+1 where c =  $1 "
+CONTEXT:  SQL statement "update bar set d = d+1 where c = $1"
 PL/pgSQL function "func1_mod_int_stb" line 2 at SQL statement
 drop function func2(anyelement, anyelement, bool);
 drop function func3();
@@ -341,11 +341,11 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON MASTER;
@@ -353,11 +353,11 @@ alter function test_srf() EXECUTE ON MASTER;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | master     | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | master     | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ALL SEGMENTS;
@@ -365,11 +365,11 @@ alter function test_srf() EXECUTE ON ALL SEGMENTS;
                                                                               List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access |  Execute on  | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+--------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | all segments | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                        : begin                  
-                                                                                                                                        :   return next 'foo';   
-                                                                                                                                        : end;                   
-                                                                                                                                        :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | all segments | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |              |            |             |          | begin               +| 
+        |          |                  |                     |        |             |              |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |              |            |             |          | end;                +| 
+        |          |                  |                     |        |             |              |            |             |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ANY;
@@ -377,12 +377,30 @@ alter function test_srf() EXECUTE ON ANY;
                                                                              List of functions
  Schema |   Name   | Result data type | Argument data types |  Type  | Data access | Execute on | Volatility |    Owner    | Language |     Source code      | Description 
 --------+----------+------------------+---------------------+--------+-------------+------------+------------+-------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                      | 
-                                                                                                                                      : begin                  
-                                                                                                                                      :   return next 'foo';   
-                                                                                                                                      : end;                   
-                                                                                                                                      :                        
+ public | test_srf | SETOF text       |                     | normal | no sql      | any        | immutable  | srftestuser | plpgsql  |                     +| 
+        |          |                  |                     |        |             |            |            |             |          | begin               +| 
+        |          |                  |                     |        |             |            |            |             |          |   return next 'foo';+| 
+        |          |                  |                     |        |             |            |            |             |          | end;                +| 
+        |          |                  |                     |        |             |            |            |             |          |                      | 
 (1 row)
 
 DROP FUNCTION test_srf();
 DROP ROLE srftestuser;
+-- Test error propagation from segments
+CREATE TABLE uniq_test(id int primary key);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "uniq_test_pkey" for table "uniq_test"
+CREATE OR REPLACE FUNCTION trigger_unique() RETURNS void AS $$
+BEGIN
+	INSERT INTO uniq_test VALUES (1);
+	INSERT INTO uniq_test VALUES (1);
+	EXCEPTION WHEN unique_violation THEN
+		raise notice 'unique_violation';
+END;
+$$ LANGUAGE plpgsql volatile;
+SELECT trigger_unique();
+NOTICE:  unique_violation
+ trigger_unique 
+----------------
+ 
+(1 row)
+

@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/vacuumdb.sgml,v 1.44 2009/02/26 16:02:37 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/vacuumdb.sgml,v 1.54 2010/04/03 07:23:02 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="APP-VACUUMDB">
  <refmeta>
-  <refentrytitle id="APP-VACUUMDB-TITLE"><application>vacuumdb</application></refentrytitle>
+  <refentrytitle><application>vacuumdb</application></refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
@@ -24,24 +24,25 @@ PostgreSQL documentation
    <command>vacuumdb</command>
    <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <group><arg>--full</arg><arg>-f</arg></group>
+   <group><arg>--freeze</arg><arg>-F</arg></group>
    <group><arg>--verbose</arg><arg>-v</arg></group>
    <group><arg>--analyze</arg><arg>-z</arg></group>
-   <group><arg>--freeze</arg><arg>-F</arg></group>
+   <group><arg>--analyze-only</arg><arg>-Z</arg></group>
    <arg>--table | -t <replaceable>table</replaceable>
     <arg>( <replaceable class="parameter">column</replaceable> [,...] )</arg>
    </arg>
    <arg><replaceable>dbname</replaceable></arg>
    <sbr>
    <command>vacuumdb</command>
-   <arg rep="repeat"><replaceable>connection-options</replaceable></arg>
-   <group><arg>--all</arg><arg>-a</arg></group>
+   <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <group><arg>--full</arg><arg>-f</arg></group>
+   <group><arg>--freeze</arg><arg>-F</arg></group>
    <group><arg>--verbose</arg><arg>-v</arg></group>
    <group><arg>--analyze</arg><arg>-z</arg></group>
-   <group><arg>--freeze</arg><arg>-F</arg></group>
+   <group><arg>--analyze-only</arg><arg>-Z</arg></group>
+   <group><arg>--all</arg><arg>-a</arg></group>
   </cmdsynopsis>
  </refsynopsisdiv>
- 
 
  <refsect1>
   <title>Description</title>
@@ -55,9 +56,10 @@ PostgreSQL documentation
 
   <para>
    <application>vacuumdb</application> is a wrapper around the SQL
-   command <xref linkend="SQL-VACUUM" endterm="SQL-VACUUM-title">.
-   There is no effective difference between vacuuming databases via
-   this utility and via other methods for accessing the server.
+   command <xref linkend="SQL-VACUUM">.
+   There is no effective difference between vacuuming and analyzing
+   databases via this utility and via other methods for accessing the
+   server.
   </para>
 
  </refsect1>
@@ -68,7 +70,6 @@ PostgreSQL documentation
 
    <para>
     <application>vacuumdb</application> accepts the following command-line arguments:
-    
     <variablelist>
      <varlistentry>
       <term><option>-a</option></term>
@@ -117,6 +118,16 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>-F</option></term>
+      <term><option>--freeze</option></term>
+      <listitem>
+       <para>
+        Aggressively <quote>freeze</quote> tuples.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>-q</></term>
       <term><option>--quiet</></term>
       <listitem>
@@ -133,7 +144,7 @@ PostgreSQL documentation
        <para>
         Clean or analyze <replaceable class="parameter">table</replaceable> only.
         Column names can be specified only in conjunction with
-        the <option>--analyze</option> option.
+        the <option>--analyze</option> or <option>--analyze-only</option> options.
        </para>
        <tip>
         <para>
@@ -155,40 +166,60 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>vacuumdb</application> version and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>-z</option></term>
       <term><option>--analyze</option></term>
       <listitem>
        <para>
-        Calculate statistics for use by the optimizer.
+        Also calculate statistics for use by the optimizer.
        </para>
       </listitem>
      </varlistentry>
 
      <varlistentry>
-      <term><option>-F</option></term>
-      <term><option>--freeze</option></term>
+      <term><option>-Z</option></term>
+      <term><option>--analyze-only</option></term>
       <listitem>
        <para>
-        Aggressively <quote>freeze</quote> tuples.
+        Only calculate statistics for use by the optimizer (no vacuum).
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
+       <para>
+       Show help about <application>vacuumdb</application> command line
+       arguments, and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
     </variablelist>
    </para>
 
    <para>
-    <application>vacuumdb</application> also accepts 
+    <application>vacuumdb</application> also accepts
     the following command-line arguments for connection parameters:
-    
     <variablelist>
      <varlistentry>
       <term><option>-h <replaceable class="parameter">host</replaceable></></term>
       <term><option>--host <replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
-        Specifies the host name of the machine on which the 
-        server
-        is running.  If the value begins with a slash, it is used 
+        Specifies the host name of the machine on which the server
+        is running.  If the value begins with a slash, it is used
         as the directory for the Unix domain socket.
        </para>
       </listitem>
@@ -199,7 +230,7 @@ PostgreSQL documentation
       <term><option>--port <replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-        Specifies the TCP port or local Unix domain socket file 
+        Specifies the TCP port or local Unix domain socket file
         extension on which the server
         is listening for connections.
        </para>
@@ -237,7 +268,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Force <application>vacuumdb</application> to prompt for a
-        password before connecting to a database.  
+        password before connecting to a database.
        </para>
 
        <para>
@@ -287,8 +318,8 @@ PostgreSQL documentation
   <title>Diagnostics</title>
 
   <para>
-   In case of difficulty, see <xref linkend="SQL-VACUUM"
-   endterm="sql-vacuum-title"> and <xref linkend="APP-PSQL"> for
+   In case of difficulty, see <xref linkend="SQL-VACUUM">
+   and <xref linkend="APP-PSQL"> for
    discussions of potential problems and error messages.
    The database server must be running at the
    targeted host.  Also, any default connection settings and environment
@@ -345,7 +376,7 @@ PostgreSQL documentation
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-vacuum" endterm="sql-vacuum-title"></member>
+   <member><xref linkend="sql-vacuum"></member>
   </simplelist>
  </refsect1>
 

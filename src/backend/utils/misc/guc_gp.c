@@ -24,7 +24,6 @@
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbdisp.h"
-#include "cdb/cdbfilerep.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
@@ -74,9 +73,6 @@ static const char *assign_gp_workfile_compress_algorithm(const char *newval, boo
 static const char *assign_optimizer_minidump(const char *newval,
 						  bool doit, GucSource source);
 static bool assign_optimizer(bool newval, bool doit, GucSource source);
-static bool assign_codegen(bool newval, bool doit, GucSource source);
-static bool assign_codegen_optimization_level(int newval, bool doit,
-							GucSource source);
 static bool assign_dispatch_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_gp_hashagg_default_nbatches(int newval, bool doit, GucSource source);
 
@@ -106,7 +102,6 @@ char	   *Debug_dtm_action_sql_command_tag;
 bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_print_qd_mirroring = false;
-bool		Debug_print_semaphore_detail = false;
 bool		Debug_disable_distributed_snapshot = false;
 bool		Debug_abort_after_distributed_prepared = false;
 bool		Debug_abort_after_segment_prepared = false;
@@ -131,24 +126,19 @@ bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
 bool		Debug_resource_group = false;
 bool		gp_crash_recovery_abort_suppress_fatal = false;
-bool		gp_persistent_statechange_suppress_error = false;
 bool		Debug_bitmap_print_insert = false;
 bool		Test_appendonly_override = false;
 bool		Test_print_direct_dispatch_info = false;
 bool		gp_test_orientation_override = false;
-bool		gp_permit_persistent_metadata_update = false;
 bool		gp_permit_relation_node_change = false;
 int			Test_compresslevel_override = 0;
 int			Test_blocksize_override = 0;
 int			Test_safefswritesize_override = 0;
-bool		Master_mirroring_administrator_disable = false;
 int			gp_max_local_distributed_cache = 1024;
 bool		gp_appendonly_verify_block_checksums = true;
 bool		gp_appendonly_verify_write_block = false;
-bool		gp_appendonly_verify_eof = true;
 bool		gp_appendonly_compaction = true;
 int			gp_appendonly_compaction_threshold = 0;
-bool		gp_heap_verify_checksums_on_mirror = false;
 bool		gp_heap_require_relhasoids_match = true;
 bool		Debug_appendonly_rezero_quicklz_compress_scratch = false;
 bool		Debug_appendonly_rezero_quicklz_decompress_scratch = false;
@@ -156,16 +146,6 @@ bool		Debug_appendonly_guard_end_quicklz_scratch = false;
 bool		gp_local_distributed_cache_stats = false;
 bool		Debug_xlog_insert_print = false;
 bool		debug_xlog_record_read = false;
-bool		Debug_persistent_print = false;
-int			Debug_persistent_print_level = LOG;
-bool		Debug_persistent_recovery_print = true;
-int			Debug_persistent_recovery_print_level = LOG;
-bool		Disable_persistent_recovery_logging = false;
-bool		Debug_persistent_store_print = false;
-int			Debug_persistent_store_print_level = LOG;
-bool		Debug_persistent_bootstrap_print = false;
-bool		persistent_integrity_checks = true;
-bool		Debug_persistent_appendonly_commit_count_print = false;
 bool		Debug_cancel_print = false;
 bool		Debug_datumstream_write_print_small_varlena_info = false;
 bool		Debug_datumstream_write_print_large_varlena_info = false;
@@ -174,7 +154,6 @@ bool		Debug_datumstream_block_read_check_integrity = false;
 bool		Debug_datumstream_block_write_check_integrity = false;
 bool		Debug_datumstream_read_print_varlena_info = false;
 bool		Debug_datumstream_write_use_small_initial_buffers = false;
-bool		gp_temporary_files_filespace_repair = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 bool		gp_enable_exchange_default_partition = false;
@@ -187,41 +166,11 @@ char	   *memory_profiler_run_id = "none";
 char	   *memory_profiler_dataset_id = "none";
 char	   *memory_profiler_query_id = "none";
 int			memory_profiler_dataset_size = 0;
-bool		gp_dump_memory_usage = FALSE;
-
-
-#define VERIFY_CHECKPOINT_INTERVAL_DEFAULT 180
-int			verify_checkpoint_interval =
-VERIFY_CHECKPOINT_INTERVAL_DEFAULT;
 
 bool		rle_type_compression_stats = false;
 
 bool		Debug_database_command_print = false;
-int			Debug_database_command_print_level = LOG;
-#define GP_MAX_DATABASES_DEFAULT 16
-int			gp_max_databases = GP_MAX_DATABASES_DEFAULT;
-#define GP_MAX_TABLESPACES_DEFAULT 16
-int			gp_max_tablespaces = GP_MAX_TABLESPACES_DEFAULT;
-#define GP_MAX_FILESPACES_DEFAULT 8
-int			gp_max_filespaces = GP_MAX_FILESPACES_DEFAULT;
-bool		gp_initdb_mirrored = false;
-bool		gp_before_persistence_work = false;
-bool		gp_before_filespace_setup = false;
 bool		gp_startup_integrity_checks = true;
-bool		gp_change_tracking = true;
-bool		gp_persistent_repair_global_sequence = false;
-bool		gp_validate_pt_info_relcache = false;
-bool		Debug_print_xlog_relation_change_info = false;
-bool		Debug_print_xlog_relation_change_info_skip_issues_only = false;
-bool		Debug_print_xlog_relation_change_info_backtrace_skip_issues = false;
-
-bool		Debug_filerep_crc_on = true;
-bool		Debug_filerep_print = false;
-bool		Debug_filerep_gcov = false;
-bool		Debug_filerep_config_print = false;
-bool		Debug_filerep_memory_log_flush = false;
-bool		filerep_mirrorvalidation_during_resync = false;
-bool		log_filerep_to_syslogger = false;
 
 /* WAL based replication debug GUCs */
 bool		debug_walrepl_snd = false;
@@ -235,7 +184,6 @@ bool		debug_latch = false;
 bool		gp_crash_recovery_suppress_ao_eof = false;
 bool		gp_keep_all_xlog = false;
 int			keep_wal_segments = 0;
-int			ddboost_buf_size = 512 * 1024;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
 bool		Debug_dtm_action_primary = DEBUG_DTM_ACTION_PRIMARY_DEFAULT;
@@ -267,16 +215,9 @@ bool		gp_encoding_check_locale_compatibility;
 
 int			gp_connection_send_timeout;
 
-int			gp_filerep_tcp_keepalives_idle;
-int			gp_filerep_tcp_keepalives_interval;
-int			gp_filerep_tcp_keepalives_count;
-int			gp_filerep_ct_batch_size;
-
 int			WalSendClientTimeout = 30000;		/* 30 seconds. */
 
-#ifdef USE_SEGWALREP
 char	   *gp_replication_config_filename = NULL;
-#endif
 
 char	   *data_directory;
 
@@ -296,11 +237,6 @@ char	   *gp_snmp_use_inform_or_trap;
 char	   *gp_snmp_debug_log;
 #endif
 
-static char *gp_log_gang_str;
-static char *gp_log_fts_str;
-static char *gp_log_interconnect_str;
-static char *gp_interconnect_type_str;
-static char *gp_interconnect_fc_method_str;
 static char *gp_resource_manager_str;
 
 /*
@@ -328,7 +264,6 @@ double		gp_resource_group_memory_limit;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
-static char *gpperfmon_log_alert_level_str;
 
 /* Perfmon debug GUC */
 bool		gp_perfmon_print_packet_info;
@@ -374,20 +309,17 @@ char	   *gp_auth_time_override_str = NULL;
 /* Password hashing */
 int			password_hash_algorithm = PASSWORD_HASH_MD5;
 
-/* system cache invalidation mode*/
-int			gp_test_system_cache_flush_force = SysCacheFlushForce_Off;
-
 /* include file/line information to stack traces */
 bool		gp_log_stack_trace_lines;
 
+/* ignore INTO error-table clauses for backwards compatibility */
+bool		gp_ignore_error_table = false;
 
 /*
  * If set to true, we will silently insert into the correct leaf
  * part even if the user specifies a wrong leaf part as a insert target
  */
 bool		dml_ignore_target_partition_check = false;
-
-bool		fts_diskio_check = false;
 
 /* Planner gucs */
 bool		gp_enable_hashjoin_size_heuristic = false;
@@ -518,22 +450,13 @@ bool		optimizer_enable_space_pruning;
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
 
-/**
- * GUCs related to code generation.
- **/
-bool		init_codegen;
-bool		codegen;
-bool		codegen_validate_functions;
-bool		codegen_exec_variable_list;
-bool		codegen_slot_getattr;
-bool		codegen_exec_eval_expr;
-bool		codegen_advance_aggregate;
-int		codegen_varlen_tolerance;
-int		codegen_optimization_level;
-
 /* System Information */
 static int	gp_server_version_num;
 static char *gp_server_version_string;
+
+/* Query Metrics */
+bool		gp_enable_query_metrics = false;
+int			gp_instrument_shmem_size = 5120;
 
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
@@ -582,14 +505,6 @@ static const struct config_enum_entry optimizer_log_failure_options[] = {
 	{NULL, 0}
 };
 
-static const struct config_enum_entry codegen_optimization_level_options[] = {
-	{"none", CODEGEN_OPTIMIZATION_LEVEL_NONE},
-	{"less", CODEGEN_OPTIMIZATION_LEVEL_LESS},
-	{"default", CODEGEN_OPTIMIZATION_LEVEL_DEFAULT},
-	{"aggressive", CODEGEN_OPTIMIZATION_LEVEL_AGGRESSIVE},
-	{NULL, 0}
-};
-
 static const struct config_enum_entry optimizer_cost_model_options[] = {
 	{"legacy", OPTIMIZER_GPDB_LEGACY},
 	{"calibrated", OPTIMIZER_GPDB_CALIBRATED},
@@ -600,13 +515,6 @@ static const struct config_enum_entry explain_memory_verbosity_options[] = {
 	{"suppress", EXPLAIN_MEMORY_VERBOSITY_SUPPRESS},
 	{"summary", EXPLAIN_MEMORY_VERBOSITY_SUMMARY},
 	{"detail", EXPLAIN_MEMORY_VERBOSITY_DETAIL},
-	{NULL, 0}
-};
-
-static const struct config_enum_entry system_cache_flush_force_options[] = {
-	{"off", SysCacheFlushForce_Off},
-	{"recursive", SysCacheFlushForce_Recursive},
-	{"plain", SysCacheFlushForce_NonRecursive},
 	{NULL, 0}
 };
 
@@ -626,9 +534,53 @@ static const struct config_enum_entry debug_dtm_action_target_options[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry gp_autostats_modes[] = {
+	{"none", GP_AUTOSTATS_NONE},
+	{"on_change", GP_AUTOSTATS_ON_CHANGE},
+	{"onchange", GP_AUTOSTATS_ON_CHANGE},
+	{"on_no_stats", GP_AUTOSTATS_ON_NO_STATS},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_interconnect_fc_methods[] = {
+	{"loss", INTERCONNECT_FC_METHOD_LOSS},
+	{"capacity", INTERCONNECT_FC_METHOD_CAPACITY},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_interconnect_types[] = {
+	{"udpifc", INTERCONNECT_TYPE_UDPIFC},
+	{"tcp", INTERCONNECT_TYPE_TCP},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_log_verbosity[] = {
+	{"terse", GPVARS_VERBOSITY_TERSE},
+	{"off", GPVARS_VERBOSITY_OFF},
+	{"verbose", GPVARS_VERBOSITY_VERBOSE},
+	{"debug", GPVARS_VERBOSITY_DEBUG},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_resqueue_memory_policies[] = {
+	{"none", RESMANAGER_MEMORY_POLICY_NONE},
+	{"auto", RESMANAGER_MEMORY_POLICY_AUTO},
+	{"eager_free", RESMANAGER_MEMORY_POLICY_EAGER_FREE},
+	{NULL, 0}
+};
+
 static const struct config_enum_entry gp_workfile_type_hashjoin_options[] = {
 	{"bfz", BFZ},
 	{"buffile", BUFFILE},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
+	{"none", GPPERFMON_LOG_ALERT_LEVEL_NONE},
+	{"warning", GPPERFMON_LOG_ALERT_LEVEL_WARNING},
+	{"error", GPPERFMON_LOG_ALERT_LEVEL_ERROR},
+	{"fatal", GPPERFMON_LOG_ALERT_LEVEL_FATAL},
+	{"panic", GPPERFMON_LOG_ALERT_LEVEL_PANIC},
 	{NULL, 0}
 };
 
@@ -756,15 +708,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&force_bitmap_table_scan,
-		false, NULL, NULL
-	},
-	{
-		{"gp_workfile_faultinject", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Fault inject a torn page to an executor workfile."),
-			gettext_noop("Used to simulate a failure and test workfile checksumming."),
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_workfile_faultinject,
 		false, NULL, NULL
 	},
 	{
@@ -945,16 +888,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_dump_memory_usage", PGC_USERSET, CLIENT_CONN_OTHER,
-			gettext_noop("Save memory usage in each segment."),
-			NULL,
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_dump_memory_usage,
-		false, NULL, NULL
-	},
-
-	{
 		{"gp_enable_sort_limit", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable LIMIT operation to be performed while sorting."),
 			gettext_noop("Sort more efficiently when plan requires the first <n> rows at most.")
@@ -1086,15 +1019,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_crash_recovery_abort_suppress_fatal,
 		false, NULL, NULL
 	},
-	{
-		{"gp_persistent_statechange_suppress_error", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Warning about persistent state-change issue"),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_persistent_statechange_suppress_error,
-		false, NULL, NULL
-	},
+
 	{
 		{"gp_select_invisible", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Use dummy snapshot for MVCC visibility calculation."),
@@ -1113,16 +1038,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_enable_slow_writer_testmode,
 		false, NULL, NULL
-	},
-
-	{
-		{"gp_fts_probe_pause", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Stop active probes."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_fts_probe_pause,
-		false, gpvars_assign_gp_fts_probe_pause, NULL
 	},
 
 	{
@@ -1166,16 +1081,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_appendonly_verify_eof", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Verify append-only eof integrity before writing."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_appendonly_verify_eof,
-		true, NULL, NULL
-	},
-
-	{
 		{"gp_appendonly_compaction", PGC_SUSET, APPENDONLY_TABLES,
 			gettext_noop("Perform append-only compaction instead of eof truncation on vacuum."),
 			NULL,
@@ -1183,16 +1088,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_appendonly_compaction,
 		true, NULL, NULL
-	},
-
-	{
-		{"gp_heap_verify_checksums_on_mirror", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Verify the heap checksums on mirror after receiving block from primary before writing to disk."),
-		 NULL,
-		 GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_heap_verify_checksums_on_mirror,
-		false, NULL, NULL
 	},
 
 	{
@@ -1232,6 +1127,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&Debug_appendonly_rezero_quicklz_decompress_scratch,
+		false, NULL, NULL
+	},
+
+	{
+		{"debug_burn_xids", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Consume a lot of XIDs, for testing purposes."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Debug_burn_xids,
 		false, NULL, NULL
 	},
 
@@ -1292,15 +1197,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_reraise_signal,
 		true, NULL, NULL
-	},
-
-	{
-		{"gp_backup_directIO", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable direct IO dump"),
-			NULL
-		},
-		&gp_backup_directIO,
-		false, NULL, NULL
 	},
 
 	{
@@ -1413,16 +1309,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_print_qd_mirroring,
-		false, NULL, NULL
-	},
-
-	{
-		{"Debug_print_semaphore_detail", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Print semaphore detailed information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_semaphore_detail,
 		false, NULL, NULL
 	},
 
@@ -1637,76 +1523,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_persistent_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print persistent file-system object debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_persistent_print,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_recovery_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print persistent recovery debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_persistent_recovery_print,
-		false, NULL, NULL
-	},
-
-	{
-		{"Disable_persistent_recovery_logging", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("By default important persistent recovery information is logged, setting this GUC allows to disable it if required"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Disable_persistent_recovery_logging,
-		true, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_store_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print persistent file-system object store debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_persistent_store_print,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_bootstrap_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print persistent store debugging information during bootstrap."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_persistent_bootstrap_print,
-		false, NULL, NULL
-	},
-
-	{
-		{"persistent_integrity_checks", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("When set enables all set of integrity checks for persistent tables."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&persistent_integrity_checks,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_appendonly_commit_count_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print persistent Append-Only resync commit count information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_persistent_appendonly_commit_count_print,
-		true, NULL, NULL
-	},
-
-	{
 		{"debug_cancel_print", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("Print cancel detail information."),
 			NULL,
@@ -1797,76 +1613,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_initdb_mirrored", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Indicate we are initializing a mirrored cluster during initdb."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_initdb_mirrored,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_before_persistence_work", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Indicate we are initializing / upgrading and do not want to do persistence work yet."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_before_persistence_work,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_before_filespace_setup", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Indicates that the gp_persistent_filespace_node table is not setup and should not be used for lookups."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_before_filespace_setup,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_startup_integrity_checks", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Perform integrity checks after performing startup but before allowing connections in."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_startup_integrity_checks,
-		true, NULL, NULL
-	},
-
-	{
-		{"debug_print_xlog_relation_change_info", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print relation change information"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_xlog_relation_change_info,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_print_xlog_relation_change_info_skip_issues_only", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print relation change information only when there is a skip issue"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_xlog_relation_change_info_skip_issues_only,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_print_xlog_relation_change_info_backtrace_skip_issues", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print relation change information backtrace when there is a skip issue"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_xlog_relation_change_info_backtrace_skip_issues,
-		false, NULL, NULL
-	},
-
-	{
 		{"test_appendonly_override", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("For testing purposes, change the default of the appendonly create table option."),
 			NULL,
@@ -1893,36 +1639,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_bitmap_print_insert,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_permit_persistent_metadata_update", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Permit updates to persistent metadata tables."),
-			gettext_noop("For system repair by experts."),
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_permit_persistent_metadata_update,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_permit_relation_node_change", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Permit updates to gp_relation_node tables."),
-			gettext_noop("For system repair by experts."),
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_permit_relation_node_change,
-		false, NULL, NULL
-	},
-
-	{
-		{"master_mirroring_administrator_disable", PGC_POSTMASTER, GP_ARRAY_CONFIGURATION,
-			gettext_noop("Used by gpstart to indicate the standby master was not started by the administrator."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Master_mirroring_administrator_disable,
 		false, NULL, NULL
 	},
 
@@ -1995,6 +1711,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_enable_query_metrics", PGC_POSTMASTER, UNGROUPED,
+			gettext_noop("Enable all query metrics collection."),
+			NULL	
+		},
+		&gp_enable_query_metrics,
+		false, NULL, NULL
+	},
+
+	{
 		{"gp_mapreduce_define", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prepare mapreduce object creation"),	/* turn off statement
 																 * logging */
@@ -2048,46 +1773,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_change_tracking", PGC_SUSET, UNGROUPED,
-			gettext_noop("Allows disabling change tracking."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_change_tracking,
-		true, NULL, NULL
-	},
-
-	{
-		{"gp_persistent_repair_global_sequence", PGC_SUSET, UNGROUPED,
-			gettext_noop("Repair a global sequence number to use the maximum scanned value."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_persistent_repair_global_sequence,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_validate_pt_info_relcache", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Validate persistent TID and serial number in relcache entry."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_validate_pt_info_relcache,
-		false, NULL, NULL
-	},
-
-	{
-		{"filerep_crc_on", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("enable adler 32 crc in filerep"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_crc_on,
-		false, NULL, NULL
-	},
-
-	{
 		{"rle_type_compression_stats", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("show compression ratio stats for rle_type compression"),
 			NULL,
@@ -2098,72 +1783,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_filerep_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("enable filerep logs"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_print,
-		false, NULL, NULL
-	},
-
-	{
-		{"log_filerep_to_syslogger", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("log all filerep related log messages to the server log files"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&log_filerep_to_syslogger,
-		true, NULL, NULL
-	},
-
-	{
-		{"debug_filerep_gcov", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("workaround for filerep gcov issue"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_gcov,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_filerep_config_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("enable filerep config logs"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_config_print,
-		true, NULL, NULL
-	},
-
-	{
-		{"debug_filerep_memory_log_flush", PGC_SIGHUP, DEVELOPER_OPTIONS,
-			gettext_noop("enable filerep config logs"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_filerep_memory_log_flush,
-		false, NULL, NULL
-	},
-
-	{
 		{"debug_resource_group", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prints resource groups debug logs."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_resource_group,
-		false, NULL, NULL
-	},
-
-	{
-		{"filerep_mirrorvalidation_during_resync", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Setting enables checking for file existence for all relations on mirror during incremental resynchronization"),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&filerep_mirrorvalidation_during_resync,
 		false, NULL, NULL
 	},
 
@@ -2235,16 +1860,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_encoding_check_locale_compatibility,
 		true, NULL, NULL
-	},
-
-	{
-		{"gp_temporary_files_filespace_repair", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Change the filespace inconsistency to a warning"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_temporary_files_filespace_repair,
-		false, NULL, NULL
 	},
 
 	/* for pljava */
@@ -3122,16 +2737,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"fts_diskio_check", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Controls if FTS should perform disk IO checks on primary segments as part of probe"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&fts_diskio_check,
-		true, NULL, NULL
-	},
-
-	{
 		{"dml_ignore_target_partition_check", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Ignores checking whether the user provided correct partition during a direct insert to a leaf partition"),
 			NULL,
@@ -3182,102 +2787,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"init_codegen", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Enable just-in-time code generation."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&init_codegen,
-#ifdef USE_CODEGEN
-		true,
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-
-	{
-		{"codegen", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Perform just-in-time code generation."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen,
-		false,
-		assign_codegen, NULL
-	},
-
-	{
-		{"codegen_validate_functions", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Perform verify for generated functions to catch any error before compiling"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&codegen_validate_functions,
-#if defined(USE_ASSERT_CHECKING) && defined(USE_CODEGEN)
-		true, 	/* true by default on debug builds. */
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-	{
-		{"codegen_exec_variable_list", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable codegen for ExecVariableList"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_exec_variable_list,
-#ifdef USE_CODEGEN
-		true,
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-	{
-		{"codegen_slot_getattr", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable codegen for slot_get_attr"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_slot_getattr,
-#ifdef USE_CODEGEN
-		true,
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-	{
-		{"codegen_exec_eval_expr", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable codegen for ExecEvalExpr"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_exec_eval_expr,
-#ifdef USE_CODEGEN
-		true,
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-	{
-		{"codegen_advance_aggregate", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable codegen for AdvanceAggregate"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_advance_aggregate,
-#ifdef USE_CODEGEN
-		true,
-#else
-		false,
-#endif
-		assign_codegen, NULL
-	},
-	{
 		{"vmem_process_interrupt", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Checks for interrupts before reserving VMEM"),
 			NULL,
@@ -3286,6 +2795,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&vmem_process_interrupt,
 		false, NULL, NULL
 	},
+
 	{
 		{"execute_pruned_plan", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prune plan to discard unwanted plan nodes for each slice before execution"),
@@ -3295,6 +2805,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&execute_pruned_plan,
 		true, NULL, NULL
 	},
+
 	{
 		{"pljava_classpath_insecure", PGC_POSTMASTER, CUSTOM_OPTIONS,
 			gettext_noop("Allow pljava_classpath to be set by user per session"),
@@ -3304,6 +2815,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&pljava_classpath_insecure,
 		false, assign_pljava_classpath_insecure, NULL
 	},
+
 	{
 		{"gp_enable_segment_copy_checking", PGC_USERSET, CUSTOM_OPTIONS,
 			gettext_noop("Enable check the distribution key restriction on segment for command \"COPY FROM ON SEGMENT\"."),
@@ -3313,6 +2825,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_segment_copy_checking,
 		true, NULL, NULL
 	},
+
+	{
+		{"gp_ignore_error_table", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Ignore INTO error-table in external table and COPY."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&gp_ignore_error_table,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -3321,17 +2844,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 struct config_int ConfigureNamesInt_gp[] =
 {
-	/* maximum read/write I/O size for DD Boost is 1MB */
-	{
-		{"ddboost_buf_size", PGC_SIGHUP, DEVELOPER_OPTIONS,
-			gettext_noop("size of ddboost dump/restore buffer"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&ddboost_buf_size,
-		524288, 65536, 1048576, NULL, NULL
-	},
-
 	{
 		{"readable_external_table_timeout", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Cancel the query if no data read within N seconds."),
@@ -3369,33 +2881,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_local_distributed_cache,
 		1024, 0, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_max_databases", PGC_POSTMASTER, RESOURCES_MEM,
-			gettext_noop("Sets the maximum number of databases."),
-			NULL
-		},
-		&gp_max_databases,
-		GP_MAX_DATABASES_DEFAULT, 8, 256, NULL, NULL
-	},
-
-	{
-		{"gp_max_tablespaces", PGC_POSTMASTER, RESOURCES_MEM,
-			gettext_noop("Sets the maximum number of tablespaces."),
-			NULL
-		},
-		&gp_max_tablespaces,
-		GP_MAX_TABLESPACES_DEFAULT, 8, 2048, NULL, NULL
-	},
-
-	{
-		{"gp_max_filespaces", PGC_POSTMASTER, RESOURCES_MEM,
-			gettext_noop("Sets the maximum number of filespaces."),
-			NULL
-		},
-		&gp_max_filespaces,
-		GP_MAX_FILESPACES_DEFAULT, 8, 256, NULL, NULL
 	},
 
 	{
@@ -3575,7 +3060,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&xid_stop_limit,
-		1000000000, 10000000, INT_MAX, NULL, NULL
+		100000000, 10000000, INT_MAX, NULL, NULL
 	},
 	{
 		{"xid_warn_limit", PGC_POSTMASTER, WAL,
@@ -3617,16 +3102,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_standby_dbid", PGC_POSTMASTER, PRESET_OPTIONS,
-			gettext_noop("Sets DBID of standby master."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&GpStandbyDbid,
-		0, INT_MIN, 32767, NULL, NULL
-	},
-
-	{
 		{"gp_max_csv_line_length", PGC_USERSET, EXTERNAL_TABLES,
 			gettext_noop("Maximum allowed length of a csv input data row in bytes"),
 			NULL,
@@ -3646,47 +3121,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_connection_send_timeout,
 		3600, 0, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_filerep_tcp_keepalives_idle", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Seconds between issuing TCP keepalives for FileRep connection."),
-			gettext_noop("A value of 0 uses the system default."),
-			GUC_UNIT_S
-		},
-		&gp_filerep_tcp_keepalives_idle,
-		60, 0, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_filerep_tcp_keepalives_interval", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Seconds between TCP keepalive retransmits for FileRep connection."),
-			gettext_noop("A value of 0 uses the system default."),
-			GUC_UNIT_S
-		},
-		&gp_filerep_tcp_keepalives_interval,
-		30, 0, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_filerep_tcp_keepalives_count", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Maximum number of TCP keepalive retransmits for FileRep connection."),
-			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
-						 "lost before a connection is considered dead. A value of 0 uses the "
-						 "system default."),
-		},
-		&gp_filerep_tcp_keepalives_count,
-		2, 0, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_filerep_ct_batch_size", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Maximum number of blocks from changetracking log that"
-						 " a filerep resync worker processes at one time."),
-		 NULL,
-		},
-		&gp_filerep_ct_batch_size,
-		64 * 1024, 1, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -4049,16 +3483,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"verify_checkpoint_interval", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("set the online verification checkpoint interval (seconds)"),
-			gettext_noop("0 means do not checkpoint"),
-			GUC_UNIT_S | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&verify_checkpoint_interval,
-		VERIFY_CHECKPOINT_INTERVAL_DEFAULT, 0, 1800, NULL, NULL
-	},
-
-	{
 		{"gp_fts_probe_retries", PGC_POSTMASTER, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
@@ -4086,36 +3510,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_fts_probe_interval,
 		60, 10, 3600, NULL, NULL
-	},
-
-	{
-		{"gp_fts_probe_threadcount", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Use this number of threads for probing the segments."),
-			gettext_noop("The number of threads to create at each probe interval expiration."),
-			GUC_NOT_IN_SAMPLE
-		},
-		&gp_fts_probe_threadcount,
-		16, 1, 128, NULL, NULL
-	},
-
-	{
-		{"gp_fts_transition_retries", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("The number of retries for FTS to request a segment state transition."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_fts_transition_retries,
-		5, 1, 100, NULL, NULL
-	},
-
-	{
-		{"gp_fts_transition_timeout", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Timeout (in seconds) for FTS to request a segment state transition."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_UNIT_S
-		},
-		&gp_fts_transition_timeout,
-		3600, 1, 36000, NULL, NULL
 	},
 
 	{
@@ -4238,6 +3632,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_instrument_shmem_size", PGC_POSTMASTER, UNGROUPED,
+			gettext_noop("Sets the size of shmem allocated for instrumentation."),
+			NULL,
+			GUC_UNIT_KB
+		},
+		&gp_instrument_shmem_size,
+		5120, 0, 131072, NULL, NULL
+	},
+
+	{
 		{"gp_vmem_protect_limit", PGC_POSTMASTER, RESOURCES_MEM,
 			gettext_noop("Virtual memory limit (in MB) of Greenplum memory protection."),
 			NULL,
@@ -4346,56 +3750,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"filerep_message_body_length", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("size (in bytes) for filerep message body."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&file_rep_message_body_length,
-		32768, 32768, 262144, NULL, NULL
-	},
-
-	{
-		{"filerep_buffer_size", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("size (in bytes) for filerep shared memory"),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&file_rep_buffer_size,
-		2097152, 1048576, 16777216, NULL, NULL
-	},
-
-	{
-		{"filerep_ack_buffer_size", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("size (in bytes) for filerep ack shared memory"),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&file_rep_ack_buffer_size,
-		524288, 131072, 1048576, NULL, NULL
-	},
-
-	{
-		{"filerep_min_data_before_flush", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("size (in bytes) that a filerep buffer must reach before the client flushes the data"),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&file_rep_min_data_before_flush,
-		128 * 1024, 8 * 1024, 16 * 1024 * 1024, NULL, NULL
-	},
-
-	{
-		{"filerep_socket_timeout", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Timeout (in seconds) if we cannot write to socket (the socket is blocking)"),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&file_rep_socket_timeout,
-		10, 0, 300, NULL, NULL
-	},
-
-	{
 		{"gp_blockdirectory_entry_min_range", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Minimal range in bytes one block directory entry covers."),
 			gettext_noop("Used to reduce the size of a block directory."),
@@ -4476,15 +3830,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resgroup_memory_policy_auto_fixed_mem,
 		100, 50, INT_MAX, NULL, NULL
-	},
-
-	{
-		{"gp_backup_directIO_read_chunk_mb", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Size of read Chunk buffer in directIO dump (in MB)"),
-			NULL,
-		},
-		&gp_backup_directIO_read_chunk_mb,
-		20, 1, 200, NULL, NULL
 	},
 
 	{
@@ -4635,16 +3980,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"log_count_recovered_files_batch", PGC_POSTMASTER, DEVELOPER_OPTIONS,
-			gettext_noop("Logs the total number of files shipped to the mirror after every batch of size specified by this value"),
-			NULL,
-			GUC_NOT_IN_SAMPLE,
-		},
-		&log_count_recovered_files_batch,
-		1000, 0, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"gp_indexcheck_insert", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Validate that a unique index does not already have the new tid during insert."),
 			NULL,
@@ -4662,21 +3997,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		(int *) &gp_indexcheck_vacuum,
 		INDEX_CHECK_NONE, 0, INDEX_CHECK_ALL, NULL, NULL
-	},
-
-	{
-		{"codegen_varlen_tolerance", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Minimum number of initial fixed length attributes in the table to generate code for deforming tuples."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_varlen_tolerance,
-#ifdef USE_CODEGEN
-		5,
-#else
-		0,
-#endif
-		0, INT_MAX, NULL, NULL
 	},
 
 	{
@@ -4893,15 +4213,6 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gpperfmon_log_alert_level", PGC_USERSET, LOGGING,
-			gettext_noop("Specify the log alert level used by gpperfmon."),
-			gettext_noop("Valid values are 'none', 'warning', 'error', 'fatal', 'panic'.")
-		},
-		&gpperfmon_log_alert_level_str,
-		"none", gpvars_assign_gp_gpperfmon_log_alert_level, gpvars_show_gp_gpperfmon_log_alert_level
-	},
-
-	{
 		{"memory_profiler_run_id", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set the unique run ID for memory profiling"),
 			gettext_noop("Any string is acceptable"),
@@ -4961,66 +4272,6 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_fault_action", PGC_POSTMASTER, DEFUNCT_OPTIONS,
-			gettext_noop("Sets the fault action for fault tolerance management."),
-			gettext_noop("Valid values are CONTINUE, READONLY, and SHUTDOWN."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_fault_action_string,
-		"continue", NULL, NULL
-	},
-
-	{
-		{"gp_log_gang", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to worker process creation and management."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_gang_str,
-		"off", gpvars_assign_gp_log_gang, gpvars_show_gp_log_gang
-	},
-
-	{
-		{"gp_log_fts", PGC_SIGHUP, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to fault probing."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_fts_str,
-		"terse", gpvars_assign_gp_log_fts, gpvars_show_gp_log_fts
-	},
-
-	{
-		{"gp_log_interconnect", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Sets the verbosity of logged messages pertaining to connections between worker processes."),
-			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_interconnect_str,
-		"terse", gpvars_assign_gp_log_interconnect, gpvars_show_gp_log_interconnect
-	},
-
-	{
-		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
-			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Valid values are \"tcp\" and \"udpifc\"."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_interconnect_type_str,
-		"udpifc", gpvars_assign_gp_interconnect_type, gpvars_show_gp_interconnect_type
-	},
-
-	{
-		{"gp_interconnect_fc_method", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Sets the flow control method used for UDP interconnect."),
-			gettext_noop("Valid values are \"capacity\" and \"loss\"."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_interconnect_fc_method_str,
-		"loss", gpvars_assign_gp_interconnect_fc_method, gpvars_show_gp_interconnect_fc_method
-	},
-
-	{
 		{"gp_qd_hostname", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Shows the QD Hostname. Blank when run on the QD"),
 			NULL,
@@ -5039,22 +4290,7 @@ struct config_string ConfigureNamesString_gp[] =
 		&Debug_dtm_action_sql_command_tag,
 		"", NULL, NULL
 	},
-	{
-		{"gp_autostats_mode", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the autostats mode."),
-			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
-		},
-		&gp_autostats_mode_string,
-		"none", gpvars_assign_gp_autostats_mode, gpvars_show_gp_autostats_mode
-	},
-	{
-		{"gp_autostats_mode_in_functions", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the autostats mode for statements in procedural language functions."),
-			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
-		},
-		&gp_autostats_mode_in_functions_string,
-		"none", gpvars_assign_gp_autostats_mode_in_functions, gpvars_show_gp_autostats_mode_in_functions
-	},
+
 	{
 		{"gp_resqueue_priority_default_value", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Default weight when one cannot be associated with a statement."),
@@ -5173,28 +4409,10 @@ struct config_string ConfigureNamesString_gp[] =
 		{"pljava_classpath", PGC_SUSET, CUSTOM_OPTIONS,
 			gettext_noop("classpath used by the the JVM"),
 			NULL,
-			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE 
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
 		},
 		&pljava_classpath,
 		"", NULL, NULL
-	},
-
-	{
-		{"gp_resqueue_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are NONE, AUTO, EAGER_FREE.")
-		},
-		&gp_resqueue_memory_policy_str,
-		"none", gpvars_assign_gp_resqueue_memory_policy, gpvars_show_gp_resqueue_memory_policy
-	},
-
-	{
-		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are AUTO, EAGER_FREE.")
-		},
-		&gp_resgroup_memory_policy_str,
-		"eager_free", gpvars_assign_gp_resgroup_memory_policy, gpvars_show_gp_resgroup_memory_policy
 	},
 
 	{
@@ -5276,54 +4494,6 @@ struct config_string ConfigureNamesString_gp[] =
 struct config_enum ConfigureNamesEnum_gp[] =
 {
 	{
-		{"debug_persistent_print_level", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the persistent relation debug message levels that are logged."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
-			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
-						 "includes all the levels that follow it."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
-		},
-		&Debug_persistent_print_level,
-		DEBUG1, server_message_level_options, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_recovery_print_level", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the persistent recovery debug message levels that are logged."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
-			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
-						 "includes all the levels that follow it."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
-		},
-		&Debug_persistent_recovery_print_level,
-		DEBUG1, server_message_level_options, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_store_print_level", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the persistent relation store debug message levels that are logged."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
-			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
-						 "includes all the levels that follow it."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
-		},
-		&Debug_persistent_store_print_level,
-		DEBUG1, server_message_level_options, NULL, NULL
-	},
-
-	{
-		{"debug_database_command_error_level", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the database command debug message levels that are logged."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
-			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
-						 "includes all the levels that follow it."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
-		},
-		&Debug_database_command_print_level,
-		LOG, server_message_level_options, NULL, NULL
-	},
-
-		{
 		{"gp_workfile_caching_loglevel", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("Sets the logging level for workfile caching debugging messages"),
 			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, "
@@ -5409,21 +4579,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
-		{"codegen_optimization_level", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets optimizer level to use when compiling generated code."),
-			gettext_noop("Valid values are none, less, default, aggressive."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&codegen_optimization_level,
-#ifdef USE_CODEGEN
-		CODEGEN_OPTIMIZATION_LEVEL_DEFAULT,
-#else
-		CODEGEN_OPTIMIZATION_LEVEL_NONE,
-#endif
-		codegen_optimization_level_options, assign_codegen_optimization_level, NULL
-	},
-
-	{
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
 			gettext_noop("Valid values are legacy, calibrated"),
@@ -5441,16 +4596,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&explain_memory_verbosity,
 		EXPLAIN_MEMORY_VERBOSITY_SUPPRESS, explain_memory_verbosity_options, NULL, NULL
-	},
-
-	{
-		{"gp_test_system_cache_flush_force", PGC_USERSET, GP_ERROR_HANDLING,
-			gettext_noop("Force invalidation of system caches on each access"),
-			gettext_noop("Valid values are OFF, PLAIN and RECURSIVE."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_test_system_cache_flush_force,
-		SysCacheFlushForce_Off, system_cache_flush_force_options, NULL, NULL
 	},
 
 	{
@@ -5474,6 +4619,83 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
+		{"gp_autostats_mode", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the autostats mode."),
+			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
+		},
+		&gp_autostats_mode,
+		GP_AUTOSTATS_NONE, gp_autostats_modes, NULL, NULL
+	},
+
+	{
+		{"gp_autostats_mode_in_functions", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the autostats mode for statements in procedural language functions."),
+			gettext_noop("Valid values are NONE, ON_CHANGE, ON_NO_STATS. ON_CHANGE requires setting gp_autostats_on_change_threshold.")
+		},
+		&gp_autostats_mode_in_functions,
+		GP_AUTOSTATS_NONE, gp_autostats_modes, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_fc_method", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Sets the flow control method used for UDP interconnect."),
+			gettext_noop("Valid values are \"capacity\" and \"loss\"."),
+			GUC_GPDB_ADDOPT
+		},
+		&Gp_interconnect_fc_method,
+		INTERCONNECT_FC_METHOD_LOSS, gp_interconnect_fc_methods, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
+			gettext_noop("Sets the protocol used for inter-node communication."),
+			gettext_noop("Valid values are \"tcp\" and \"udpifc\"."),
+			GUC_GPDB_ADDOPT
+		},
+		&Gp_interconnect_type,
+		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types, NULL, NULL
+	},
+
+	{
+		{"gp_log_fts", PGC_SIGHUP, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to fault probing."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_fts,
+		GPVARS_VERBOSITY_TERSE, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_log_gang", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to worker process creation and management."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_gang,
+		GPVARS_VERBOSITY_OFF, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_log_interconnect", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Sets the verbosity of logged messages pertaining to connections between worker processes."),
+			gettext_noop("Valid values are \"off\", \"terse\", \"verbose\" and \"debug\"."),
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_interconnect,
+		GPVARS_VERBOSITY_TERSE, gp_log_verbosity, NULL, NULL
+	},
+
+	{
+		{"gp_resqueue_memory_policy", PGC_SUSET, RESOURCES_MGM,
+			gettext_noop("Sets the policy for memory allocation of queries."),
+			gettext_noop("Valid values are NONE, AUTO, EAGER_FREE.")
+		},
+		&gp_resqueue_memory_policy,
+		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies, NULL, NULL
+	},
+
+	{
 		{"gp_workfile_type_hashjoin", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Specify the type of work files to use for executing hash join plans."),
 			gettext_noop("Valid values are \"BFZ\", \"BUFFILE\"."),
@@ -5481,6 +4703,15 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&gp_workfile_type_hashjoin,
 		BFZ, gp_workfile_type_hashjoin_options, NULL, NULL
+	},
+
+	{
+		{"gpperfmon_log_alert_level", PGC_USERSET, LOGGING,
+			gettext_noop("Specify the log alert level used by gpperfmon."),
+			gettext_noop("Valid values are 'none', 'warning', 'error', 'fatal', 'panic'.")
+		},
+		&gpperfmon_log_alert_level,
+		GPPERFMON_LOG_ALERT_LEVEL_NONE, gp_gpperfmon_log_alert_level, NULL, NULL
 	},
 
 	{
@@ -5505,23 +4736,15 @@ assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source)
 	if ( newval == true )
 	{
 		struct config_generic *pljava_cp = find_option("pljava_classpath", false, ERROR);
-		pljava_cp->context = PGC_USERSET;
+		if (pljava_cp != NULL)
+		{
+			pljava_cp->context = PGC_USERSET;
+		}
+		else
+		{
+			elog(ERROR, "Failed to set insecure PLJAVA classpath");
+		}
 	}
-	return true;
-}
-
-static bool
-assign_codegen_optimization_level(int val, bool assign, GucSource source) {
-#ifndef USE_CODEGEN
-	if (val != CODEGEN_OPTIMIZATION_LEVEL_NONE)
-	{
-		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("Code generation is not supported by this build")));
-		return false;
-	}
-#endif
-
 	return true;
 }
 
@@ -5581,19 +4804,6 @@ assign_optimizer(bool newval, bool doit, GucSource source)
 			return false;
 		}
 	}
-
-	return true;
-}
-
-static bool
-assign_codegen(bool newval, bool doit, GucSource source)
-{
-#ifndef USE_CODEGEN
-	if (newval)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Code generation is not supported by this build")));
-#endif
 
 	return true;
 }
@@ -5757,7 +4967,6 @@ assign_gp_default_storage_options(const char *newval,
 	return doit ? storageOptToString() : newval;
 }
 
-#ifdef USE_SEGWALREP
 bool
 select_gp_replication_config_files(const char *configdir, const char *progname)
 {
@@ -5796,10 +5005,10 @@ select_gp_replication_config_files(const char *configdir, const char *progname)
  * values before writing them.
  */
 static void
-write_gp_replication_conf_file(int fd, const char *filename, struct name_value_pair *head)
+write_gp_replication_conf_file(int fd, const char *filename, ConfigVariable *head)
 {
 	StringInfoData buf;
-	struct name_value_pair *item;
+	ConfigVariable *item;
 
 	initStringInfo(&buf);
 
@@ -5864,11 +5073,10 @@ write_gp_replication_conf_file(int fd, const char *filename, struct name_value_p
  * or deleting the entry for item "name" (delete if "value" == NULL).
  */
 static void
-replace_gp_replication_config_value(struct name_value_pair  **head_p, struct name_value_pair **tail_p,
+replace_gp_replication_config_value(ConfigVariable **head_p, ConfigVariable **tail_p,
                                     const char *name, const char *value)
 {
-	struct name_value_pair  *item,
-			*prev = NULL;
+	ConfigVariable *item, *prev = NULL;
 
 	/* Search the list for an existing match (we assume there's only one) */
 	for (item = *head_p; item != NULL; item = item->next)
@@ -6042,8 +5250,8 @@ validate_gp_replication_conf_option(struct config_generic *record,
 void
 set_gp_replication_config(const char *name, const char *value)
 {
-	struct name_value_pair *head = NULL;
-	struct name_value_pair *tail = NULL;
+	ConfigVariable *head = NULL;
+	ConfigVariable *tail = NULL;
 	volatile int Tmpfd;
 	char GpReplicationConfigTempFilename[MAXPGPATH];
 	char GpReplicationConfigFilename[MAXPGPATH];
@@ -6084,7 +5292,7 @@ set_gp_replication_config(const char *name, const char *value)
 					               GpReplicationConfigFilename)));
 
 		/* parse it */
-		if (!ParseConfigFile(GpReplicationConfigFilename, NULL, 0, PGC_SUSET, LOG, &head, &tail))
+		if (!ParseConfigFile(GpReplicationConfigFilename, 0, PGC_SUSET, LOG, &head, &tail))
 			ereport(ERROR,
 			        (errcode(ERRCODE_CONFIG_FILE_ERROR),
 					        errmsg("could not parse contents of file \"%s\"",
@@ -6179,4 +5387,46 @@ set_gp_replication_config(const char *name, const char *value)
 
 	LWLockRelease(GpReplicationConfigFileLock);
 }
-#endif
+
+/*
+ * lookup_loglevel_by_name
+ *
+ * Return the enum value for the specified name. This is a specialized version
+ * of config_enum_lookup_by_value() for use by syslogger.c where the severity
+ * is matched with perfmon log alert levels.
+ */
+GpperfmonLogAlertLevel
+lookup_loglevel_by_name(const char *name)
+{
+	const struct config_enum_entry *entry;
+
+	for (entry = gp_gpperfmon_log_alert_level; entry && entry->name; entry++)
+	{
+		if (pg_strcasecmp(entry->name, name) == 0)
+			return entry->val;
+	}
+
+	return GPPERFMON_LOG_ALERT_LEVEL_NONE;
+}
+
+/*
+ * lookup_autostats_mode_by_value
+ *
+ * Return the string value name for the specified value. This is essentially a
+ * specialized version of config_enum_lookup_by_value() for use by autostats.c
+ * debugging code.
+ */
+const char *
+lookup_autostats_mode_by_value(GpAutoStatsModeValue val)
+{
+	const struct config_enum_entry *entry;
+
+	for (entry = gp_autostats_modes; entry && entry->name; entry++)
+	{
+		if (entry->val == val)
+			return entry->name;
+	}
+
+	elog(ERROR, "could not find autostats mode %d", val);
+	return NULL;				/* silence compiler */
+}

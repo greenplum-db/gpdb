@@ -222,7 +222,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 * planning to the underlying tables, and don't appear anywhere in the
 	 * resulting plan.
 	 */
-	extract_query_dependencies(list_make1(pqueryCopy),
+	extract_query_dependencies((Node *) pqueryCopy,
 							   &relationOids,
 							   &invalItems);
 	glob->relationOids = list_concat(glob->relationOids, relationOids);

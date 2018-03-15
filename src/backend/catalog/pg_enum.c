@@ -3,11 +3,11 @@
  * pg_enum.c
  *	  routines to support manipulation of the pg_enum relation
  *
- * Copyright (c) 2006-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2006-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_enum.c,v 1.9 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_enum.c,v 1.14 2010/02/26 02:00:37 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -63,11 +63,7 @@ EnumValuesCreate(Oid enumTypeOid, List *vals,
 	tupDesc = pg_enum->rd_att;
 
 	/*
-	 * Allocate oids.  While this method does not absolutely guarantee that we
-	 * generate no duplicate oids (since we haven't entered each oid into the
-	 * table before allocating the next), trouble could only occur if the oid
-	 * counter wraps all the way around before we finish. Which seems
-	 * unlikely.
+	 * Allocate oids
 	 */
 	oids = (Oid *) palloc(num_elems * sizeof(Oid));
 	if (OidIsValid(binary_upgrade_next_pg_enum_oid))
@@ -81,6 +77,13 @@ EnumValuesCreate(Oid enumTypeOid, List *vals,
 	}
 	else
 	{
+		/*
+		 * While this method does not absolutely guarantee that we generate no
+		 * duplicate oids (since we haven't entered each oid into the table
+		 * before allocating the next), trouble could only occur if the oid
+		 * counter wraps all the way around before we finish. Which seems
+		 * unlikely.
+		 */
 		for (elemno = 0; elemno < num_elems; elemno++)
 		{
 			/*

@@ -6,11 +6,11 @@
  * These routines represent a fairly thin layer on top of SysV shared
  * memory functionality.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/sysv_shmem.c,v 1.54 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/sysv_shmem.c,v 1.57 2010/07/06 19:18:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -103,8 +103,10 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 		 * against SHMMIN in the preexisting-segment case, so we will not get
 		 * EINVAL a second time if there is such a segment.
 		 */
-		if (shmget_errno == EINVAL)
+		if (errno == EINVAL)
 		{
+			int			save_errno = errno;
+
 			shmid = shmget(memKey, 0, IPC_CREAT | IPC_EXCL | IPCProtection);
 
 			if (shmid < 0)
@@ -130,6 +132,8 @@ InternalIpcMemoryCreate(IpcMemoryKey memKey, Size size)
 					elog(LOG, "shmctl(%d, %d, 0) failed: %m",
 						 (int) shmid, IPC_RMID);
 			}
+
+			errno = save_errno;
 		}
 
 		/*

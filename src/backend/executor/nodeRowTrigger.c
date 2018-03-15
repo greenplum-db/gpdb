@@ -570,7 +570,7 @@ ExecInitRowTrigger(RowTrigger *node, EState *estate, int eflags)
 	ExecSetSlotDescriptor(rowTriggerState->oldTuple, tupDesc);
 	ExecSetSlotDescriptor(rowTriggerState->triggerTuple, tupDesc);
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        rowTriggerState->ps.cdbexplainbuf = makeStringInfo();
 
@@ -590,13 +590,6 @@ ExecEndRowTrigger(RowTriggerState *node)
 	ExecFreeExprContext(&node->ps);
 	ExecEndNode(outerPlanState(node));
 	EndPlanStateGpmonPkt(&node->ps);
-}
-
-/* Return number of TupleTableSlots used by RowTrigger node.*/
-int
-ExecCountSlotsRowTrigger(RowTrigger *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + ROWTRIGGER_NSLOTS;
 }
 
 /* Tracing execution for GP Monitor. */

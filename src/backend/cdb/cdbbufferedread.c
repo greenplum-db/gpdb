@@ -14,8 +14,9 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres.h"
+
 #include "cdb/cdbbufferedread.h"
-#include <unistd.h>				/* for read() */
 #include "utils/guc.h"
 #include "miscadmin.h"
 

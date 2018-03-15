@@ -4,10 +4,10 @@
  *	  POSTGRES low-level lock mechanism
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.116 2009/04/04 17:40:36 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lock.h,v 1.119 2010/02/26 02:01:27 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,6 +17,7 @@
 #include "storage/backendid.h"
 #include "storage/lwlock.h"
 #include "storage/shmem.h"
+
 
 /* struct PGPROC is declared in proc.h, but must forward-reference it */
 typedef struct PGPROC PGPROC;
@@ -192,8 +193,6 @@ typedef enum LockTagType
 	/* ID info for a transaction is its TransactionId */
 	LOCKTAG_VIRTUALTRANSACTION, /* virtual transaction (ditto) */
 	/* ID info for a virtual transaction is its VirtualTransactionId */
-	LOCKTAG_RELATION_RESYNCHRONIZE,			/* whole relation for resynchronize */
-	/* ID info for a relation is DB OID + REL OID; DB OID = 0 if shared */
 	LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE,	/* Segment file within an Append-Only relation */
 	/* ID info for a relation is DB OID + REL OID + (LOGICAL) SEGMENT FILE # */
 	LOCKTAG_OBJECT,				/* non-relation database object */
@@ -280,14 +279,6 @@ typedef struct LOCKTAG
 	 (locktag).locktag_field3 = 0, \
 	 (locktag).locktag_field4 = 0, \
 	 (locktag).locktag_type = LOCKTAG_VIRTUALTRANSACTION, \
-	 (locktag).locktag_lockmethodid = DEFAULT_LOCKMETHOD)
-
-#define SET_LOCKTAG_RELATION_RESYNCHRONIZE(locktag,dboid,reloid) \
-	((locktag).locktag_field1 = (dboid), \
-	 (locktag).locktag_field2 = (reloid), \
-	 (locktag).locktag_field3 = 0, \
-	 (locktag).locktag_field4 = 0, \
-	 (locktag).locktag_type = LOCKTAG_RELATION_RESYNCHRONIZE, \
 	 (locktag).locktag_lockmethodid = DEFAULT_LOCKMETHOD)
 
 #define SET_LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE(locktag,dboid,reloid,segno) \
@@ -547,6 +538,11 @@ extern LockAcquireResult LockAcquire(const LOCKTAG *locktag,
 			LOCKMODE lockmode,
 			bool sessionLock,
 			bool dontWait);
+extern LockAcquireResult LockAcquireExtended(const LOCKTAG *locktag,
+					LOCKMODE lockmode,
+					bool sessionLock,
+					bool dontWait,
+					bool report_memory_error);
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
@@ -566,6 +562,17 @@ extern void RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode);
 extern void RemoveLocalLock(LOCALLOCK *locallock);
 extern Size LockShmemSize(void);
 extern LockData *GetLockStatusData(void);
+
+extern void ReportLockTableError(bool report);
+
+typedef struct xl_standby_lock
+{
+	TransactionId xid;			/* xid of holder of AccessExclusiveLock */
+	Oid			dbOid;
+	Oid			relOid;
+} xl_standby_lock;
+
+extern xl_standby_lock *GetRunningTransactionLocks(int *nlocks);
 extern const char *GetLockmodeName(LOCKMETHODID lockmethodid, LOCKMODE mode);
 
 extern void lock_twophase_recover(TransactionId xid, uint16 info,
@@ -574,6 +581,8 @@ extern void lock_twophase_postcommit(TransactionId xid, uint16 info,
 						 void *recdata, uint32 len);
 extern void lock_twophase_postabort(TransactionId xid, uint16 info,
 						void *recdata, uint32 len);
+extern void lock_twophase_standby_recover(TransactionId xid, uint16 info,
+							  void *recdata, uint32 len);
 
 extern DeadLockState DeadLockCheck(PGPROC *proc);
 extern PGPROC *GetBlockingAutoVacuumPgproc(void);

@@ -5,7 +5,7 @@
  *	Implements the basic DB functions used by the archiver.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_db.c,v 1.84 2009/06/11 14:49:07 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_db.c,v 1.90 2010/02/26 02:01:16 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -547,4 +547,31 @@ void
 CommitTransaction(ArchiveHandle *AH)
 {
 	ExecuteSqlCommand(AH, "COMMIT", "could not commit database transaction");
+}
+
+void
+DropBlobIfExists(ArchiveHandle *AH, Oid oid)
+{
+	/*
+	 * If we are not restoring to a direct database connection, we have to
+	 * guess about how to detect whether the blob exists.  Assume new-style.
+	 */
+	if (AH->connection == NULL ||
+		PQserverVersion(AH->connection) >= 90000)
+	{
+		ahprintf(AH,
+				 "SELECT pg_catalog.lo_unlink(oid) "
+				 "FROM pg_catalog.pg_largeobject_metadata "
+				 "WHERE oid = '%u';\n",
+				 oid);
+	}
+	else
+	{
+		/* Restoring to pre-9.0 server, so do it the old way */
+		ahprintf(AH,
+				 "SELECT CASE WHEN EXISTS("
+				 "SELECT 1 FROM pg_catalog.pg_largeobject WHERE loid = '%u'"
+				 ") THEN pg_catalog.lo_unlink('%u') END;\n",
+				 oid, oid);
+	}
 }

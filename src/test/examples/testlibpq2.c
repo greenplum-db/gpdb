@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/src/test/examples/testlibpq2.c,v 1.15 2009/06/11 14:49:15 momjian Exp $
+ * $PostgreSQL: pgsql/src/test/examples/testlibpq2.c,v 1.17 2010/07/06 19:19:01 momjian Exp $
  *
  *
  * testlibpq2.c
@@ -24,11 +24,16 @@
  *
  *	 INSERT INTO TBL1 VALUES (10);
  */
+
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include "libpq-fe.h"
 
 static void
@@ -103,7 +108,7 @@ main(int argc, char **argv)
 			break;				/* shouldn't happen */
 
 		FD_ZERO(&input_mask);
-		FD_SET		(sock, &input_mask);
+		FD_SET(sock, &input_mask);
 
 		if (select(sock + 1, &input_mask, NULL, NULL, NULL) < 0)
 		{

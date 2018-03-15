@@ -15,6 +15,8 @@
 
 #define FAULT_NAME_MAX_LENGTH	256
 
+#define OCCURRENCE_UNDEFINED 0xFFFFFFFF
+
 /*
  *
  */

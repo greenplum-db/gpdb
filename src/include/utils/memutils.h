@@ -9,10 +9,10 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/memutils.h,v 1.65 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/memutils.h,v 1.66 2010/01/02 16:58:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 
 #include "nodes/memnodes.h"
 #include "utils/memaccounting.h"
+
 
 /*
  * MaxAllocSize

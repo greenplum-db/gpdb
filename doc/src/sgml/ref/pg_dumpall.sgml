@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.79 2009/03/22 16:44:26 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.82 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="APP-PG-DUMPALL">
  <refmeta>
-  <refentrytitle id="APP-PG-DUMPALL-TITLE"><application>pg_dumpall</application></refentrytitle>
+  <refentrytitle><application>pg_dumpall</application></refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
@@ -22,6 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
   <cmdsynopsis>
    <command>pg_dumpall</command>
+   <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg rep="repeat"><replaceable>option</replaceable></arg>
   </cmdsynopsis>
  </refsynopsisdiv>
@@ -53,8 +54,8 @@ PostgreSQL documentation
   </para>
 
   <para>
-   The SQL script will be written to the standard output.  Shell
-   operators should be used to redirect it into a file.
+   The SQL script will be written to the standard output.  Use the
+   [-f|file] option or shell operators to redirect it into a file.
   </para>
 
   <para>
@@ -183,13 +184,13 @@ PostgreSQL documentation
       <listitem>
        <para>
         Do not wait forever to acquire shared table locks at the beginning of
-        the dump. Instead fail if unable to lock a table within the specified
+        the dump. Instead, fail if unable to lock a table within the specified
         <replaceable class="parameter">timeout</>. The timeout may be
         specified in any of the formats accepted by <command>SET
-        statement_timeout</>.  (Allowed values vary depending on the server
+        statement_timeout</>.  Allowed values vary depending on the server
         version you are dumping from, but an integer number of milliseconds
         is accepted by all versions since 7.3.  This option is ignored when
-        dumping from a pre-7.3 server.)
+        dumping from a pre-7.3 server.
        </para>
       </listitem>
      </varlistentry>
@@ -210,7 +211,7 @@ PostgreSQL documentation
       <term><option>--roles-only</option></term>
       <listitem>
        <para>
-        Dump only roles, no databases, tablespaces or filespaces.
+        Dump only roles, no databases or tablespaces.
        </para>
       </listitem>
      </varlistentry>
@@ -259,6 +260,16 @@ PostgreSQL documentation
         It will also enable verbose output in <application>pg_dump</>.
        </para>
       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>pg_dumpall</application> version and exit.
+       </para>
+       </listitem>
      </varlistentry>
 
      <varlistentry>
@@ -357,6 +368,17 @@ PostgreSQL documentation
         properly.
        </para>
       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
+       <para>
+       Show help about <application>pg_dumpall</application> command line
+       arguments, and exit.
+       </para>
+       </listitem>
      </varlistentry>
 
     </variablelist>
@@ -524,7 +546,7 @@ PostgreSQL documentation
 
   <para>
    <application>pg_dumpall</application> requires all needed
-   tablespace directories to exist before the restore, else
+   tablespace directories to exist before the restore;  otherwise, 
    database creation will fail for databases in non-default
    locations.
   </para>
@@ -548,7 +570,7 @@ PostgreSQL documentation
   </para>
 
   <para>
-   To reload this database use, for example:
+   To reload database(s) from this file, you can use:
 <screen>
 <prompt>$</prompt> <userinput>psql -f db.out postgres</userinput>
 </screen>

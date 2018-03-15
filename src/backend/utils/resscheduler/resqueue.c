@@ -24,6 +24,7 @@
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "catalog/pg_resourcetype.h"
 #include "catalog/pg_resqueue.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbgang.h"
@@ -2173,7 +2174,7 @@ uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId)
 	/**
 	 * If user requests more using statement_mem, grant that.
 	 */
-	if (queryMem < statement_mem * 1024L)
+	if (queryMem < (uint64) statement_mem * 1024L)
 	{
 		queryMem = (uint64) statement_mem * 1024L;
 	}

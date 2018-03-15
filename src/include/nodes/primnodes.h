@@ -9,10 +9,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.149 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.156 2010/02/26 02:01:25 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -240,7 +240,7 @@ typedef enum AggStage
  * ressortgroupref indexes to let them be referenced by SortGroupClause
  * entries in the aggorder and/or aggdistinct lists.  This represents ORDER BY
  * and DISTINCT operations to be applied to the aggregate input rows before
- * they are passed to the transition function.  The grammar only allows a
+ * they are passed to the transition function.	The grammar only allows a
  * simple "DISTINCT" specifier for the arguments, but we use the full
  * query-level representation to allow more code sharing.
  *
@@ -440,6 +440,29 @@ typedef struct FuncExpr
 } FuncExpr;
 
 /*
+ * NamedArgExpr - a named argument of a function
+ *
+ * This node type can only appear in the args list of a FuncCall or FuncExpr
+ * node.  We support pure positional call notation (no named arguments),
+ * named notation (all arguments are named), and mixed notation (unnamed
+ * arguments followed by named ones).
+ *
+ * Parse analysis sets argnumber to the positional index of the argument,
+ * but doesn't rearrange the argument list.
+ *
+ * The planner will convert argument lists to pure positional notation
+ * during expression preprocessing, so execution never sees a NamedArgExpr.
+ */
+typedef struct NamedArgExpr
+{
+	Expr		xpr;
+	Expr	   *arg;			/* the argument expression */
+	char	   *name;			/* the name */
+	int			argnumber;		/* argument's number in positional notation */
+	int			location;		/* argument name location, or -1 if unknown */
+} NamedArgExpr;
+
+/*
  * OpExpr - expression node for an operator invocation
  *
  * Semantically, this is essentially the same as a function call.
@@ -581,7 +604,7 @@ typedef enum SubLinkType
 	EXPR_SUBLINK,
 	ARRAY_SUBLINK,
 	CTE_SUBLINK,				/* for SubPlans only */
-	NOT_EXISTS_SUBLINK   /* GPDB_84_MERGE_FIXME: Does ORCA really need this? */
+	NOT_EXISTS_SUBLINK /* GPORCA uses NOT_EXIST_SUBLINK to implement correlated left anti semijoin. */
 } SubLinkType;
 
 
@@ -1055,9 +1078,7 @@ typedef OpExpr NullIfExpr;
  * The appropriate test is performed and returned as a boolean Datum.
  *
  * NOTE: the semantics of this for rowtype inputs are noticeably different
- * from the scalar case.  It would probably be a good idea to include an
- * "argisrow" flag in the struct to reflect that, but for the moment,
- * we do not do so to avoid forcing an initdb during 8.2beta.
+ * from the scalar case.  We provide an "argisrow" flag to reflect that.
  * ----------------
  */
 
@@ -1071,6 +1092,7 @@ typedef struct NullTest
 	Expr		xpr;
 	Expr	   *arg;			/* input expression */
 	NullTestType nulltesttype;	/* IS NULL, IS NOT NULL */
+	bool		argisrow;		/* T if input is of a composite type */
 } NullTest;
 
 /*
@@ -1287,8 +1309,8 @@ typedef struct RangeTblRef
 /*----------
  * JoinExpr - for SQL JOIN expressions
  *
- * isNatural, using, and quals are interdependent.	The user can write only
- * one of NATURAL, USING(), or ON() (this is enforced by the grammar).
+ * isNatural, usingClause, and quals are interdependent.  The user can write
+ * only one of NATURAL, USING(), or ON() (this is enforced by the grammar).
  * If he writes NATURAL then parse analysis generates the equivalent USING()
  * list, and from that fills in "quals" with the right equality comparisons.
  * If he writes USING() then "quals" is filled with equality comparisons.

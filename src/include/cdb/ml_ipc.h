@@ -125,6 +125,8 @@ extern void TeardownInterconnect(ChunkTransportState *transportStates,
 								 MotionLayerState *mlStates,
 								 bool forceEOS, bool hasError);
 
+extern void WaitInterconnectQuit(void);
+
 extern void SetupSequenceServer(const char *host, int port);
 extern void TeardownSequenceServer(void);
 

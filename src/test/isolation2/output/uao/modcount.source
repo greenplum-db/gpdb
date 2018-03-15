@@ -10,26 +10,26 @@ INSERT 10
 SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
 state|tupcount|modcount
 -----+--------+--------
-1    |10      |1
+1    |10      |1       
 (1 row)
 INSERT INTO ao VALUES (11, 11);
 INSERT 1
 SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
 state|tupcount|modcount
 -----+--------+--------
-1    |11      |2
+1    |11      |2       
 (1 row)
 DELETE FROM ao WHERE a = 11;
 DELETE 1
 SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
 state|tupcount|modcount
 -----+--------+--------
-1    |11      |3
+1    |11      |3       
 (1 row)
 UPDATE AO SET b = 0 WHERE a = 10;
 UPDATE 1
 SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
 state|tupcount|modcount
 -----+--------+--------
-1    |12      |4
+1    |12      |4       
 (1 row)

@@ -2,10 +2,10 @@
  *
  * vacuumdb
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/vacuumdb.c,v 1.26 2009/04/28 02:37:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/vacuumdb.c,v 1.38 2010/06/11 23:58:24 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -14,12 +14,13 @@
 #include "common.h"
 
 
-static void vacuum_one_database(const char *dbname, bool full, bool verbose, bool analyze,
-					bool freeze, const char *table,
-					const char *host, const char *port,
+static void vacuum_one_database(const char *dbname, bool full, bool verbose,
+					bool and_analyze, bool analyze_only, bool freeze,
+					const char *table, const char *host, const char *port,
 					const char *username, enum trivalue prompt_password,
 					const char *progname, bool echo);
-static void vacuum_all_databases(bool full, bool verbose, bool analyze, bool freeze,
+static void vacuum_all_databases(bool full, bool verbose, bool and_analyze,
+					 bool analyze_only, bool freeze,
 					 const char *host, const char *port,
 					 const char *username, enum trivalue prompt_password,
 					 const char *progname, bool echo, bool quiet);
@@ -40,6 +41,7 @@ main(int argc, char *argv[])
 		{"quiet", no_argument, NULL, 'q'},
 		{"dbname", required_argument, NULL, 'd'},
 		{"analyze", no_argument, NULL, 'z'},
+		{"analyze-only", no_argument, NULL, 'Z'},
 		{"freeze", no_argument, NULL, 'F'},
 		{"all", no_argument, NULL, 'a'},
 		{"table", required_argument, NULL, 't'},
@@ -59,7 +61,8 @@ main(int argc, char *argv[])
 	enum trivalue prompt_password = TRI_DEFAULT;
 	bool		echo = false;
 	bool		quiet = false;
-	bool		analyze = false;
+	bool		and_analyze = false;
+	bool		analyze_only = false;
 	bool		freeze = false;
 	bool		alldb = false;
 	char	   *table = NULL;
@@ -71,7 +74,7 @@ main(int argc, char *argv[])
 
 	handle_help_version_opts(argc, argv, "vacuumdb", help);
 
-	while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:zaFt:fv", long_options, &optindex)) != -1)
+	while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:zZFat:fv", long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
@@ -100,7 +103,10 @@ main(int argc, char *argv[])
 				dbname = optarg;
 				break;
 			case 'z':
-				analyze = true;
+				and_analyze = true;
+				break;
+			case 'Z':
+				analyze_only = true;
 				break;
 			case 'F':
 				freeze = true;
@@ -137,6 +143,23 @@ main(int argc, char *argv[])
 			exit(1);
 	}
 
+	if (analyze_only)
+	{
+		if (full)
+		{
+			fprintf(stderr, _("%s: cannot use the \"full\" option when performing only analyze\n"),
+					progname);
+			exit(1);
+		}
+		if (freeze)
+		{
+			fprintf(stderr, _("%s: cannot use the \"freeze\" option when performing only analyze\n"),
+					progname);
+			exit(1);
+		}
+		/* allow 'and_analyze' with 'analyze_only' */
+	}
+
 	setup_cancel_handler();
 
 	if (alldb)
@@ -154,7 +177,7 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
-		vacuum_all_databases(full, verbose, analyze, freeze,
+		vacuum_all_databases(full, verbose, and_analyze, analyze_only, freeze,
 							 host, port, username, prompt_password,
 							 progname, echo, quiet);
 	}
@@ -170,7 +193,8 @@ main(int argc, char *argv[])
 				dbname = get_user_name(progname);
 		}
 
-		vacuum_one_database(dbname, full, verbose, analyze, freeze, table,
+		vacuum_one_database(dbname, full, verbose, and_analyze, analyze_only,
+							freeze, table,
 							host, port, username, prompt_password,
 							progname, echo);
 	}
@@ -180,8 +204,8 @@ main(int argc, char *argv[])
 
 
 static void
-vacuum_one_database(const char *dbname, bool full, bool verbose, bool analyze,
-					bool freeze, const char *table,
+vacuum_one_database(const char *dbname, bool full, bool verbose, bool and_analyze,
+					bool analyze_only, bool freeze, const char *table,
 					const char *host, const char *port,
 					const char *username, enum trivalue prompt_password,
 					const char *progname, bool echo)
@@ -192,20 +216,62 @@ vacuum_one_database(const char *dbname, bool full, bool verbose, bool analyze,
 
 	initPQExpBuffer(&sql);
 
-	appendPQExpBuffer(&sql, "VACUUM");
-	if (full)
-		appendPQExpBuffer(&sql, " FULL");
-	if (verbose)
-		appendPQExpBuffer(&sql, " VERBOSE");
-	if (freeze)
-		appendPQExpBuffer(&sql, " FREEZE");
-	if (analyze)
-		appendPQExpBuffer(&sql, " ANALYZE");
+	conn = connectDatabase(dbname, host, port, username, prompt_password, progname);
+
+	if (analyze_only)
+	{
+		appendPQExpBuffer(&sql, "ANALYZE");
+		if (verbose)
+			appendPQExpBuffer(&sql, " VERBOSE");
+	}
+	else
+	{
+		appendPQExpBuffer(&sql, "VACUUM");
+		if (PQserverVersion(conn) >= 90000)
+		{
+			const char *paren = " (";
+			const char *comma = ", ";
+			const char *sep = paren;
+
+			if (full)
+			{
+				appendPQExpBuffer(&sql, "%sFULL", sep);
+				sep = comma;
+			}
+			if (freeze)
+			{
+				appendPQExpBuffer(&sql, "%sFREEZE", sep);
+				sep = comma;
+			}
+			if (verbose)
+			{
+				appendPQExpBuffer(&sql, "%sVERBOSE", sep);
+				sep = comma;
+			}
+			if (and_analyze)
+			{
+				appendPQExpBuffer(&sql, "%sANALYZE", sep);
+				sep = comma;
+			}
+			if (sep != paren)
+				appendPQExpBuffer(&sql, ")");
+		}
+		else
+		{
+			if (full)
+				appendPQExpBuffer(&sql, " FULL");
+			if (freeze)
+				appendPQExpBuffer(&sql, " FREEZE");
+			if (verbose)
+				appendPQExpBuffer(&sql, " VERBOSE");
+			if (and_analyze)
+				appendPQExpBuffer(&sql, " ANALYZE");
+		}
+	}
 	if (table)
 		appendPQExpBuffer(&sql, " %s", table);
 	appendPQExpBuffer(&sql, ";\n");
 
-	conn = connectDatabase(dbname, host, port, username, prompt_password, progname);
 	if (!executeMaintenanceCommand(conn, sql.data, echo))
 	{
 		if (table)
@@ -223,8 +289,8 @@ vacuum_one_database(const char *dbname, bool full, bool verbose, bool analyze,
 
 
 static void
-vacuum_all_databases(bool full, bool verbose, bool analyze, bool freeze,
-					 const char *host, const char *port,
+vacuum_all_databases(bool full, bool verbose, bool and_analyze, bool analyze_only,
+					 bool freeze, const char *host, const char *port,
 					 const char *username, enum trivalue prompt_password,
 					 const char *progname, bool echo, bool quiet)
 {
@@ -246,8 +312,8 @@ vacuum_all_databases(bool full, bool verbose, bool analyze, bool freeze,
 			fflush(stdout);
 		}
 
-		vacuum_one_database(dbname, full, verbose, analyze, freeze, NULL,
-							host, port, username, prompt_password,
+		vacuum_one_database(dbname, full, verbose, and_analyze, analyze_only,
+						 freeze, NULL, host, port, username, prompt_password,
 							progname, echo);
 	}
 
@@ -270,7 +336,8 @@ help(const char *progname)
 	printf(_("  -q, --quiet                     don't write any messages\n"));
 	printf(_("  -t, --table='TABLE[(COLUMNS)]'  vacuum specific table only\n"));
 	printf(_("  -v, --verbose                   write a lot of output\n"));
-	printf(_("  -z, --analyze                   update optimizer hints\n"));
+	printf(_("  -z, --analyze                   update optimizer statistics\n"));
+	printf(_("  -Z, --analyze-only              only update optimizer statistics\n"));
 	printf(_("  --help                          show this help, then exit\n"));
 	printf(_("  --version                       output version information, then exit\n"));
 	printf(_("\nConnection options:\n"));

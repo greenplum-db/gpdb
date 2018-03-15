@@ -13,7 +13,7 @@ with recursive r(i) as (
    select i + 1 from r
 )
 select * from recursive_table_1 where recursive_table_1.id IN (select * from r limit 10);
- id
+ id 
 ----
   1
   2
@@ -26,7 +26,7 @@ with recursive r(i) as (
    select i + 1 from r
 )
 select * from recursive_table_1 where recursive_table_1.id NOT IN (select * from r limit 10);
- id
+ id  
 -----
  100
 (1 row)
@@ -38,7 +38,7 @@ with recursive r(i) as (
    select i + 1 from r
 )
 select * from recursive_table_1 where EXISTS (select * from r limit 10);
- id
+ id  
 -----
    1
    2
@@ -52,7 +52,7 @@ with recursive r(i) as (
    select i + 1 from r
 )
 select * from recursive_table_1 where NOT EXISTS (select * from r limit 10);
- id
+ id 
 ----
 (0 rows)
 
@@ -65,7 +65,7 @@ with recursive r(i) as (
 	select r.i + 1 from r, recursive_table_2 where r.i = recursive_table_2.id
 )
 select recursive_table_1.id from recursive_table_1, recursive_table_2 where recursive_table_1.id IN (select * from r where r.i = recursive_table_2.id);
- id
+ id 
 ----
 (0 rows)
 
@@ -76,7 +76,7 @@ with recursive r(i) as (
 	select r.i + 1 from r, recursive_table_2 where r.i = recursive_table_2.id
 )
 select recursive_table_1.id from recursive_table_1, recursive_table_2 where recursive_table_1.id NOT IN (select * from r where r.i = recursive_table_2.id);
- id
+ id  
 -----
    1
    1
@@ -96,7 +96,7 @@ with recursive r(i) as (
 	select r.i + 1 from r, recursive_table_2 where r.i = recursive_table_2.id
 )
 select recursive_table_1.id from recursive_table_1, recursive_table_2 where recursive_table_1.id = recursive_table_2.id and EXISTS (select * from r where r.i = recursive_table_2.id);
- id
+ id 
 ----
 (0 rows)
 
@@ -107,7 +107,7 @@ with recursive r(i) as (
 	select r.i + 1 from r, recursive_table_2 where r.i = recursive_table_2.id
 )
 select recursive_table_1.id from recursive_table_1, recursive_table_2 where recursive_table_1.id = recursive_table_2.id and NOT EXISTS (select * from r where r.i = recursive_table_2.id);
- id
+ id 
 ----
 (0 rows)
 
@@ -118,7 +118,7 @@ with recursive r(i) as (
    select i + 1 from r
 )
 select * from recursive_table_1 where recursive_table_1.id >= (select i from r limit 1) order by recursive_table_1.id;
- id
+ id  
 -----
    1
    2
@@ -138,7 +138,7 @@ y(i) as (
     select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and EXISTS (select * from r limit 10)
 )
 select * from y limit 10;
- i
+ i 
 ---
  1
  2
@@ -158,7 +158,7 @@ y(i) as (
     select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and NOT EXISTS (select * from r limit 10)
 )
 select * from y limit 10;
- i
+ i 
 ---
  1
 (1 row)
@@ -174,7 +174,7 @@ y as (
     select * from recursive_table_1 where recursive_table_1.id IN (select * from r limit 10)
 )
 select * from y;
- id
+ id 
 ----
   1
 (1 row)
@@ -190,7 +190,7 @@ y as (
     select * from recursive_table_1 where recursive_table_1.id NOT IN (select * from r limit 10)
 )
 select * from y;
- id
+ id  
 -----
    2
  100
@@ -207,7 +207,7 @@ y as (
     select * from recursive_table_1 where EXISTS (select * from r limit 10)
 )
 select * from y;
- id
+ id  
 -----
    1
    2
@@ -225,7 +225,7 @@ y as (
     select * from recursive_table_1 where NOT EXISTS (select * from r limit 10)
 )
 select * from y;
- id
+ id 
 ----
 (0 rows)
 
@@ -240,7 +240,7 @@ y(i) as (
     select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and EXISTS (select * from r)
 )
 select * from y limit 10;
- i
+ i 
 ---
  1
  2
@@ -258,7 +258,7 @@ y(i) as (
     select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and NOT EXISTS (select * from r)
 )
 select * from y limit 10;
- i
+ i 
 ---
  1
 (1 row)
@@ -272,7 +272,7 @@ y as (
     select * from recursive_table_1 where id IN (select * from r)
 )
 select * from y;
- id
+ id 
 ----
 (0 rows)
 
@@ -285,7 +285,7 @@ y as (
     select * from recursive_table_1 where id NOT IN (select * from r)
 )
 select * from y;
- id
+ id  
 -----
    1
    2
@@ -301,7 +301,7 @@ y as (
     select * from recursive_table_1 where EXISTS (select * from r)
 )
 select * from y;
- id
+ id  
 -----
    1
    2
@@ -317,9 +317,80 @@ y as (
     select * from recursive_table_1 where NOT EXISTS (select * from r)
 )
 select * from y;
- id
+ id 
 ----
 (0 rows)
+
+-- WITH RECURSIVE ref used within a IN subquery in another recursive CTE
+with recursive
+r(i) as (
+    select 1
+    union all
+    select r.i + 1 from r, recursive_table_2 where i = recursive_table_2.id
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i IN (select * from r limit 10)
+)
+select * from y limit 10;
+ i 
+---
+ 1
+ 2
+(2 rows)
+
+-- WITH RECURSIVE ref used within a NOT IN subquery in another recursive CTE
+with recursive
+r(i) as (
+    select 1
+    union all
+    select r.i + 1 from r, recursive_table_2 where i = recursive_table_2.id
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i NOT IN (select * from r limit 10)
+)
+select * from y limit 10;
+ i 
+---
+ 1
+(1 row)
+
+-- WITH RECURSIVE non-recursive ref used within an IN subquery in a recursive CTE
+with recursive
+r as (
+    select * from recursive_table_2
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i IN (select * from r)
+)
+select * from y limit 10;
+ i 
+---
+ 1
+(1 row)
+
+-- WITH RECURSIVE non-recursive ref used within a NOT IN subquery in a recursive CTE
+with recursive
+r as (
+    select * from recursive_table_2
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i NOT IN (select * from r)
+)
+select * from y limit 10;
+ i 
+---
+ 1
+ 2
+ 3
+(3 rows)
 
 create table recursive_table_3(id int, a int);
 insert into recursive_table_3 values (1, 2), (2, 3);
@@ -347,7 +418,7 @@ with recursive r(i) as (
 select sum(i) from r;
 $$ language sql;
 select sum_to_zero(10);
- sum_to_zero
+ sum_to_zero 
 -------------
           55
 (1 row)
@@ -366,7 +437,7 @@ with recursive r(person) as (
 select * from r;
 $$ language sql;
 select get_lineage('d');
- get_lineage
+ get_lineage 
 -------------
  d
  c
@@ -462,7 +533,7 @@ select * from recursive_table_4 where a > ALL (
 	)
 	select * from r
 );
- a | b
+ a | b 
 ---+---
  1 | 2
 (1 row)

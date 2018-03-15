@@ -6,10 +6,12 @@
  */
 
 #include "postgres.h"
+
 #include "catalog/gp_segment_config.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "utils/fmgroids.h"
+#include "utils/tqual.h"
 
 /*
  * Tell the caller whether any segment mirrors exist.

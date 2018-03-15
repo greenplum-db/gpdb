@@ -22,6 +22,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
+#include "catalog/pg_resgroupcapability.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
@@ -519,6 +520,7 @@ GetResGroupIdForRole(Oid roleid)
 {
 	HeapTuple	tuple;
 	Oid			groupId;
+	bool		isNull;
 	Relation	rel;
 	ScanKeyData	key;
 	SysScanDesc	 sscan;
@@ -550,7 +552,7 @@ GetResGroupIdForRole(Oid roleid)
 
 	/* must access tuple before systable_endscan */
 	groupId = DatumGetObjectId(heap_getattr(tuple, Anum_pg_authid_rolresgroup,
-							   rel->rd_att, NULL));
+							   rel->rd_att, &isNull));
 
 	systable_endscan(sscan);
 

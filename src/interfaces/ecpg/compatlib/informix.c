@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/compatlib/informix.c,v 1.59 2009/06/11 14:49:13 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/compatlib/informix.c,v 1.64 2010/02/26 02:01:29 momjian Exp $ */
 
 #define POSTGRES_ECPG_INTERNAL
 #include "postgres_fe.h"
@@ -16,6 +16,34 @@
 #include <sqlca.h>
 #include <ecpgerrno.h>
 
+/* this is also defined in ecpglib/misc.c, by defining it twice we don't have to export the symbol */
+
+static struct sqlca_t sqlca_init =
+{
+	{
+		'S', 'Q', 'L', 'C', 'A', ' ', ' ', ' '
+	},
+	sizeof(struct sqlca_t),
+	0,
+	{
+		0,
+		{
+			0
+		}
+	},
+	{
+		'N', 'O', 'T', ' ', 'S', 'E', 'T', ' '
+	},
+	{
+		0, 0, 0, 0, 0, 0
+	},
+	{
+		0, 0, 0, 0, 0, 0, 0, 0
+	},
+	{
+		'0', '0', '0', '0', '0'
+	}
+};
 static int
 deccall2(decimal *arg1, decimal *arg2, int (*ptr) (numeric *, numeric *))
 {
@@ -204,7 +232,7 @@ deccvasc(char *cp, int len, decimal *np)
 		{
 			int			i = PGTYPESnumeric_to_decimal(result, np);
 
-			free(result);
+			PGTYPESnumeric_free(result);
 			if (i != 0)
 				ret = ECPG_INFORMIX_NUM_OVERFLOW;
 		}
@@ -739,13 +767,12 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 	size_t		fmt_len = strlen(fmt);
 	size_t		temp_len;
 	int			i,
-				j,
+				j,				/* position in temp */
 				k,
 				dotpos;
 	int			leftalign = 0,
 				blank = 0,
 				sign = 0,
-				entity = 0,
 				entitydone = 0,
 				signdone = 0,
 				brackets_ok = 0;
@@ -783,7 +810,6 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 
 	/* start to parse the formatstring */
 	temp[0] = '\0';
-	j = 0;						/* position in temp */
 	k = value.digits - 1;		/* position in the value_string */
 	for (i = fmt_len - 1, j = 0; i >= 0; i--, j++)
 	{
@@ -791,9 +817,7 @@ rfmtlong(long lng_val, char *fmt, char *outbuf)
 		if (k < 0)
 		{
 			blank = 1;
-			if (k == -2)
-				entity = 1;
-			else if (k == -1)
+			if (k == -1)
 				sign = 1;
 			if (leftalign)
 			{
@@ -980,60 +1004,24 @@ rtypwidth(int sqltype, int sqllen)
 	return 0;
 }
 
-static struct var_list
-{
-	int			number;
-	void	   *pointer;
-	struct var_list *next;
-}	*ivlist = NULL;
-
 void
 ECPG_informix_set_var(int number, void *pointer, int lineno)
 {
-	struct var_list *ptr;
-
-	for (ptr = ivlist; ptr != NULL; ptr = ptr->next)
-	{
-		if (ptr->number == number)
-		{
-			/* already known => just change pointer value */
-			ptr->pointer = pointer;
-			return;
-		}
-	}
-
-	/* a new one has to be added */
-	ptr = (struct var_list *) calloc(1L, sizeof(struct var_list));
-	if (!ptr)
-	{
-		struct sqlca_t *sqlca = ECPGget_sqlca();
-
-		/* replace constant for strncpy() below to avoid bogus warning from gcc-4.1.1 on kite12 */
-		char my_msg[5] = { 'Y', 'E', '0', '0', '1' };
-
-		sqlca->sqlcode = ECPG_OUT_OF_MEMORY;
-		strncpy(sqlca->sqlstate, my_msg, sizeof(my_msg));
-		snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc), "Out of memory in line %d.", lineno);
-		sqlca->sqlerrm.sqlerrml = strlen(sqlca->sqlerrm.sqlerrmc);
-		/* free all memory we have allocated for the user */
-		ECPGfree_auto_mem();
-	}
-	else
-	{
-		ptr->number = number;
-		ptr->pointer = pointer;
-		ptr->next = ivlist;
-		ivlist = ptr;
-	}
+	ECPGset_var(number, pointer, lineno);
 }
 
 void *
 ECPG_informix_get_var(int number)
 {
-	struct var_list *ptr;
+	return ECPGget_var(number);
+}
 
-	for (ptr = ivlist; ptr != NULL && ptr->number != number; ptr = ptr->next);
-	return (ptr) ? ptr->pointer : NULL;
+void
+ECPG_informix_reset_sqlca(void)
+{
+	struct sqlca_t *sqlca = ECPGget_sqlca();
+
+	memcpy((char *) sqlca, (char *) &sqlca_init, sizeof(struct sqlca_t));
 }
 
 int

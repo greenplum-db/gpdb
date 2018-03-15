@@ -99,12 +99,6 @@ typedef struct AppendOnlyStorageWrite
 	int32		segmentFileNum;
 
 	/*
-	 * Persistence information for current write open.
-	 */
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum;
-
-	/*
 	 * The number of blocks written since the beginning of the segment file.
 	 */
 	int64		bufferCount;
@@ -190,27 +184,18 @@ extern void AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storage
 
 extern void AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrite,
 											 char *filePathName,
-											 int64 logicalEof,
 											 RelFileNode *relFileNode,
-											 int32 segmentFileNum,
-											 ItemPointer persistentTid,
-											 int64 *persistentSerialNum);
+											 int32 segmentFileNum);
 extern void AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 								char *filePathName,
 								int version,
 								int64 logicalEof,
 								int64 fileLen_uncompressed,
 								RelFileNode *relFileNode,
-								int32 segmentFileNum,
-								ItemPointer persistentTid,
-								int64 persistentSerialNum);
+								int32 segmentFileNum);
 extern void AppendOnlyStorageWrite_FlushAndCloseFile(AppendOnlyStorageWrite *storageWrite,
 											 int64 *newLogicalEof,
-											 int64 *fileLen_uncompressed,
-											 bool *mirrorDataLossOccurred,
-											 bool *mirrorCatchupRequired,
-			MirrorDataLossTrackingState *originalMirrorDataLossTrackingState,
-							int64 *originalMirrorDataLossTrackingSessionNum);
+											 int64 *fileLen_uncompressed);
 extern void AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *storageWrite,
 													int64 *newLogicalEof,
 												int64 *fileLen_uncompressed);

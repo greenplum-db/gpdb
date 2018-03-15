@@ -22,7 +22,7 @@ fi
 # AIX uses yet another library path variable
 # Also, Python on AIX requires special copies of some libraries.  Hence, lib/pware.
 if [ xAIX = x`uname -s` ]; then
-  LIBPATH=${GPHOME_LOADERS}/lib/pware:${GPHOME_LOADERS}/lib:${GPHOME_LOADERS}/ext/python/lib:/usr/lib/threads:${LIBPATH}
+  LIBPATH=${GPHOME_LOADERS}/lib/pware:${GPHOME_LOADERS}/lib:${GPHOME_LOADERS}/ext/python/lib64:/usr/lib/threads:${LIBPATH}
   export LIBPATH
   GP_LIBPATH_FOR_PYTHON=${GPHOME_LOADERS}/lib/pware
   export GP_LIBPATH_FOR_PYTHON

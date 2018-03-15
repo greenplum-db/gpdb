@@ -11,7 +11,7 @@ NOTICE:  table "exttabtest_options_r" does not exist, skipping
     EXCEPT ALL
     SELECT * FROM exttabtest;
 ERROR:  This is greenplum. (gpextprotocol.c:54)
-DETAIL:  External table exttabtest_options_r, file demoprot://exttabtest.txt
+CONTEXT:  External table exttabtest_options_r, file demoprot://exttabtest.txt
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
 NOTICE:  table "exttabtest_w" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
@@ -28,7 +28,7 @@ NOTICE:  table "exttabtest_r" does not exist, skipping
     select urilocation,fmttype,fmtopts,encoding,writable from pg_exttable 
     where reloid='exttabtest_r'::regclass 
        or reloid='exttabtest_w'::regclass;
-         urilocation         | fmttype |                fmtopts                 | encoding | writable
+         urilocation         | fmttype |                fmtopts                 | encoding | writable 
 -----------------------------+---------+----------------------------------------+----------+----------
  {demoprot://exttabtest.txt} | t       | delimiter '     ' null '\N' escape '\' |        6 | t
  {demoprot://exttabtest.txt} | t       | delimiter '     ' null '\N' escape '\' |        6 | f
@@ -168,7 +168,7 @@ NOTICE:  table "exttabtest_w_2url" does not exist, skipping
 ----+------+--------+--------
 (0 rows)
 
-    -- verify data should be evenly distributed
+-- verify data should be evenly distributed
 with t as (
   SELECT gp_segment_id as segid, count(*) as cnt from exttabtest_r_2url group by gp_segment_id
 )
@@ -203,7 +203,7 @@ select max(cnt) - min(cnt)  > 20 from t;
 ----+------+--------+--------
 (0 rows)
 
-    -- verify data should be evenly distributed
+-- verify data should be evenly distributed
 with t as (
   SELECT gp_segment_id as segid, count(*) as cnt from exttabtest_r_2url group by gp_segment_id
 )
@@ -345,7 +345,7 @@ NOTICE:  table "exttabtest_w_misspath" does not exist, skipping
     insert into exttabtest_w_misspath (select * from exttabletest);
 ERROR:  relation "exttabletest" does not exist
 LINE 1: insert into exttabtest_w_misspath (select * from exttabletes...
-                                                         ^    
+                                                         ^
 -- Test 17: Negative - invalid URL: missing protocol
     CREATE READABLE EXTERNAL TABLE exttabtest_r_missprot(like exttabtest)
         LOCATION('exttabtest.txt') 
@@ -377,12 +377,12 @@ NOTICE:  table "exttabtest_r_20records" does not exist, skipping
     INSERT INTO exttabtest_w_20records (SELECT * FROM exttabtest where id<=20);
     -- read from RET
     SELECT * FROM exttabtest_r_20records order by id;
- id | name  | value1 | value2 
+ id |  name  | value1 | value2 
 ----+--------+--------+--------
-  1 | name1 |      2 |      3
-  2 | name2 |      4 |      6
-  3 | name3 |      6 |      9
-  4 | name4 |      8 |     12
+  1 | name1  |      2 |      3
+  2 | name2  |      4 |      6
+  3 | name3  |      6 |      9
+  4 | name4  |      8 |     12
   5 | name5  |     10 |     15
   6 | name6  |     12 |     18
   7 | name7  |     14 |     21
@@ -401,7 +401,7 @@ NOTICE:  table "exttabtest_r_20records" does not exist, skipping
  20 | name20 |     40 |     60
 (20 rows)
 
-    -- verify data should be evenly distributed
+-- verify data should be evenly distributed
 with t as (
   SELECT gp_segment_id as segid, count(*) as cnt from exttabtest_r_20records group by gp_segment_id
 )
@@ -435,7 +435,7 @@ NOTICE:  table "exttabtest_r_1record" does not exist, skipping
     -- and will cause following SElECT query to fail
     SELECT * FROM exttabtest_r_1record order by id;
 ERROR:  demoprot_import: could not open file "exttabtest_1record.txt" for reading: No such file or directory  (seg0 slice1 rh55-qavm55:7532 pid=23845)
-DETAIL:  External table exttabtest_r_1record, file demoprot://exttabtest_1record.txt
+CONTEXT:  External table exttabtest_r_1record, file demoprot://exttabtest_1record.txt
     -- Drop External Tables
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_1record;
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_1record;
@@ -629,7 +629,7 @@ NOTICE:  protocol "demoprot" does not exist, skipping
         writefunc = write_to_file_stable
     );
     -- CREATE PROTOCOL
-     CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
+    CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
     FORMAT 'text';
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
@@ -850,7 +850,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_s');
     -- Displaying table info
     \d format_w
-      External table "exttableext.format_w"
+   External table "exttableext.format_w"
  Column |         Type          | Modifiers 
 --------+-----------------------+-----------
  name   | character varying(40) | 
@@ -921,7 +921,7 @@ Execute on: all segments
    100
 (1 row)
 
-    -- verify data should be evenly distributed
+-- verify data should be evenly distributed
 with t as (
   SELECT gp_segment_id as segid, count(*) as cnt from format_r group by gp_segment_id
 )
@@ -1305,7 +1305,7 @@ ERROR:  formatter_export error: unsupported data type (gpformatter.c:100)  (seg1
     -- select should fail since INT type is not supported
     select count(*) from format_long_r;
 ERROR:  demoprot_import: could not open file "format_long_test13" for reading: No such file or directory  (seg1 slice1 rh55-qavm55:7533 pid=27134)
-DETAIL:  External table format_long_r
+CONTEXT:  External table format_long_r
     -- ERROR:  formatter_import error: unsupported data type (gpformatter.c:256)  (seg1 slice1 rh55-qavm57:5533 pid=20204) (cdbdisp.c:1458)
 -- Test 75: External table contains dropped columns
 -- SAS example formatter does NOT support dropping column from external table (both RET and WET).
@@ -1347,7 +1347,7 @@ ERROR:  formatter_export: dropped columns (gpformatter.c:80)  (seg0 rh55-qavm55:
     -- Read from RET using data file format_long_test13 create by previous test
     select count(*) from format_r;
 ERROR:  demoprot_import: could not open file "format_long_test13" for reading: No such file or directory  (seg0 slice1 rh55-qavm55:7532 pid=27212)
-DETAIL:  External table format_r
+CONTEXT:  External table format_r
     -- ERROR:  formatter_import: dropped columns (gpformatter.c:244)  (seg2 slice1 rh55-qavm58:5532 pid=20911) (cdbdisp.c:1458)
 -- Test 76: External table contains added column
 -- Add column to external table is fine.
@@ -1545,11 +1545,11 @@ ERROR:  protocol attribute "validatorproc" not recognized
     drop role if exists demoprot_super;
     create role demoprot_super with SUPERUSER LOGIN;
     -- Create a non-privileged user demoprot_nopriv
-   drop role if exists demoprot_nopriv;
+    drop role if exists demoprot_nopriv;
     create role demoprot_nopriv with login ;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
     -- Create a gphdfs_user with CREATEEXTTABLE privilege using gphdfs protocol
-   drop role if exists gphdfs_user;
+    drop role if exists gphdfs_user;
     create role gphdfs_user with login CREATEEXTTABLE (protocol='gphdfs');
 WARNING:  GRANT/REVOKE on gphdfs is deprecated
 HINT:  Issue the GRANT or REVOKE on the protocol itself
@@ -1599,7 +1599,7 @@ NOTICE:  table "exttabtest_r" does not exist, skipping
 
     -- Check existing ext table that created still refer to old protocol name
     \d exttabtest_r
-    External table "exttableext.exttabtest_r"
+ External table "exttableext.exttabtest_r"
  Column |         Type          | Modifiers 
 --------+-----------------------+-----------
  id     | integer               | 
@@ -1636,7 +1636,7 @@ ERROR:  protocol "demoprot" does not exist  (seg0 slice1 rh55-qavm55:7532 pid=18
     -- therefore the error is expected.
     select count(*) from exttabtest_r_new;
 ERROR:  internal error: demoprot called with a different protocol (demoprot_new) (gpextprotocol.c:106)  (seg0 slice1 rh55-qavm55:7532 pid=18394) (cdbdisp.c:1453)
-DETAIL:  External table exttabtest_r_new, file demoprot_new://exttabtest.txt
+CONTEXT:  External table exttabtest_r_new, file demoprot_new://exttabtest.txt
     -- Rename protocol name back to demoprot
     ALTER PROTOCOL demoprot_new RENAME to demoprot;
     -- Verify access old ext table that referencing old protocol name would succeed
@@ -1852,7 +1852,7 @@ RESET ROLE;
 --------
 (0 rows)
 
-   -- Verify superuser "demoprot_super" can create new ext table using untrusted protocol demoprot
+    -- Verify superuser "demoprot_super" can create new ext table using untrusted protocol demoprot
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
 NOTICE:  table "exttabtest_r_new" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE exttabtest_r_new(like exttabtest)

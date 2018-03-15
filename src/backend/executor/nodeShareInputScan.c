@@ -32,7 +32,6 @@
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"
 #include "miscadmin.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "utils/faultinjector.h"
 #include "utils/gp_alloc.h"
 #include "utils/tuplesort.h"
@@ -49,17 +48,8 @@ typedef struct ShareInput_Lk_Context
 	char lkname_done[MAXPGPATH];
 } ShareInput_Lk_Context;
 
-static TupleTableSlot *ShareInputNext(ShareInputScanState *node);
 static void writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice);
 
-/* ------------------------------------------------------------------
- * 	ExecShareInputScan 
- * ------------------------------------------------------------------
- */
-TupleTableSlot *ExecShareInputScan(ShareInputScanState *node)
-{
-	return ExecScan(&node->ss, (ExecScanAccessMtd) ShareInputNext);
-}
 
 /*
  * init_tuplestore_state
@@ -145,12 +135,12 @@ init_tuplestore_state(ShareInputScanState *node)
 
 
 /* ------------------------------------------------------------------
- * ShareInputNext
+ * 	ExecShareInputScan
  * 	Retrieve a tuple from the ShareInputScan
  * ------------------------------------------------------------------
  */
-TupleTableSlot * 
-ShareInputNext(ShareInputScanState *node)
+TupleTableSlot *
+ExecShareInputScan(ShareInputScanState *node)
 {
 	EState *estate;
 	ScanDirection dir;
@@ -304,18 +294,6 @@ ExecSliceDependencyShareInputScan(ShareInputScanState *node)
 }
 
 /* ------------------------------------------------------------------
- * 	ExecCountSlotsShareInputScan 
- * ------------------------------------------------------------------
- */
-int 
-ExecCountSlotsShareInputScan(ShareInputScan* node)
-{
-#define SHAREINPUT_NSLOTS 2
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) 
-		+ SHAREINPUT_NSLOTS;
-}
-
-/* ------------------------------------------------------------------
  * 	ExecEndShareInputScan
  * ------------------------------------------------------------------
  */
@@ -408,26 +386,27 @@ void ExecShareInputScanReScan(ShareInputScanState *node, ExprContext *exprCtxt)
 
 void shareinput_create_bufname_prefix(char* p, int size, int share_id)
 {
-	snprintf(p, size, "%s_SIRW_%d_%d_%d", 
-            PG_TEMP_FILE_PREFIX, 
+	snprintf(p, size, "SIRW_%d_%d_%d",
             gp_session_id, gp_command_count, share_id);
 }
 
 /* Here we use the absolute path name as the lock name.  See fd.c 
  * for how the name is created (GP_TEMP_FILE_DIR and make_database_relative).
  */
-static void sisc_lockname(char* p, int size, int share_id, const char* name)
+static void
+sisc_lockname(char *p, int size, int share_id, const char* name)
 {
-	if (snprintf(p, size,
-			"%s/%s/%s_gpcdb2.sisc_%d_%d_%d_%d_%s",
-			getCurrentTempFilePath, PG_TEMP_FILES_DIR, PG_TEMP_FILE_PREFIX, 
-			Gp_segment, gp_session_id, gp_command_count, share_id, name
-			) > size)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s/%s_gpcdb2.sisc_%d_%d_%d_%d_%s",
-                        getCurrentTempFilePath, PG_TEMP_FILES_DIR, PG_TEMP_FILE_PREFIX,
-                        Gp_segment, gp_session_id, gp_command_count, share_id, name)));
-	}
+	char		filename[MAXPGPATH];
+	char	   *path;
+
+	snprintf(filename, sizeof(filename),
+			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
+			 Gp_segment, gp_session_id, gp_command_count, share_id, name);
+
+	path = GetTempFilePath(filename, true);
+	if (strlen(path) >= size)
+		elog(ERROR, "path to temporary file too long: %s", path);
+	strcpy(p, path);
 }
 
 static void shareinput_clean_lk_ctxt(ShareInput_Lk_Context *lk_ctxt)
@@ -480,28 +459,15 @@ static void XCallBack_ShareInput_FIFO(XactEvent ev, void* vp)
 	shareinput_clean_lk_ctxt(lk_ctxt);
 }
 
-static void create_tmp_fifo(const char *fifoname)
+static void
+create_tmp_fifo(const char *fifoname)
 {
 #ifdef WIN32
 	elog(ERROR, "mkfifo not supported on win32");
 #else
 	int err = mkfifo(fifoname, 0600);
-	if(err < 0)
-	{
-		/* first try may be due to pgsql_tmp dir is not created yet. */
-		char tmpdir[MAXPGPATH];
-		if (snprintf(tmpdir, MAXPGPATH, "%s/%s", getCurrentTempFilePath, PG_TEMP_FILES_DIR) > MAXPGPATH)
-		{
-			ereport(ERROR, (errmsg("cannot create dir path %s/%s", getCurrentTempFilePath, PG_TEMP_FILES_DIR)));
-		}
-		mkdir(tmpdir, S_IRWXU);
-
-		/* then try it again */
-		err = mkfifo(fifoname, 0600);
-
-		if(err < 0 && errno != EEXIST)
-			elog(ERROR, "could not create temporary fifo \"%s\": %m", fifoname);
-	}
+	if (err < 0 && errno != EEXIST)
+		elog(ERROR, "could not create temporary fifo \"%s\": %m", fifoname);
 #endif
 }
 
@@ -587,7 +553,6 @@ shareinput_reader_waitready(int share_id, PlanGenerator planGen)
 	struct timeval tval;
 	int n;
 	char a;
-
 	ShareInput_Lk_Context *pctxt = gp_malloc(sizeof(ShareInput_Lk_Context));
 
 	if(!pctxt)

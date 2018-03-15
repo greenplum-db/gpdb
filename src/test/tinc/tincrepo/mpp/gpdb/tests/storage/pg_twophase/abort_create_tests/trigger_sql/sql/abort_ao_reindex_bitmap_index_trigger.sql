@@ -1,4 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
+BEGIN;
 REINDEX INDEX cr_ao_reindex_bitmap_idx1;
+COMMIT;

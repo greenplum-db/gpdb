@@ -5,18 +5,6 @@
 
 #include "postgres.h"
 
-/* include this here to disable MIRRORED macros */
-#include "cdb/cdbpersistentstore.h"
-
-#undef MIRRORED_LOCK_DECLARE
-#define MIRRORED_LOCK_DECLARE
-
-#undef MIRRORED_LOCK
-#define MIRRORED_LOCK
-
-#undef MIRRORED_UNLOCK
-#define MIRRORED_UNLOCK
-
 /* Also ignore elog */
 #include "utils/elog.h"
 

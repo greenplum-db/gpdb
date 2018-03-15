@@ -65,7 +65,6 @@ If a script file is not referenced in any of the directories it is considered ab
 There are some exceptions to this rule.
 Please do not create any more exceptions, and remove these as the occasion arises:
 
-* `cpplint.py` is being used by codegen
 * `package_tarball.bash` is being used by
   [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 

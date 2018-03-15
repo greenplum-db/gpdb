@@ -134,16 +134,8 @@ OPTIONS
  Specifies the name of the expansion configuration file, which contains 
  one line for each segment to be added in the format of:
 
-  <hostname>:<address>:<port>:<fselocation>:<dbid>:<content>:<preferred_role>:<replication_port>
+  <hostname>:<address>:<port>:<datadir>:<dbid>:<content>:<preferred_role>
 
- If your system has filespaces, gpexpand will expect a filespace configuration 
- file (<input_file_name>.fs) to exist in the same directory as your 
- expansion configuration file. The filespace configuration file is 
- in the format of:
-
-  filespaceOrder=<filespace1_name>:<filespace2_name>: ...
-  dbid:</path/for/filespace1>:</path/for/filespace2>: ...
-  dbid:</path/for/filespace1>:</path/for/filespace2>: ...
   ...
 
 

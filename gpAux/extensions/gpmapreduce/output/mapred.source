@@ -554,7 +554,7 @@ STDERR> Error: INPUT: Missing NAME, at line 138
 STDERR> Error: INPUT: Missing FILE, GPFDIST, TABLE, QUERY, or EXEC, at line 138
 STDERR> Error: INPUT 'mystart': Duplicate QUERY for INPUT, at line 144
 STDERR> Error: parse failure
-STDERR>
+STDERR> 
 STDOUT>
 
 (3 rows)
@@ -630,7 +630,7 @@ value|value
 -- Test setup
 CREATE TABLE simple (m int,n int) distributed randomly;
 INSERT INTO simple VALUES (1,10), (2,20), (2,21), (2,22), (3,30), (4,40), (5,50), (5,50), (10,100), (2,21);
-CREATE FUNCTION tran (value int, value int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
+CREATE FUNCTION tran (state int, arg2 int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
 CREATE FUNCTION tran (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'tran';
 CREATE FUNCTION final (state int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'final';
 CREATE FUNCTION cons (state int, value int, out output int) returns int language 'C' AS '@abs_srcdir@/regress.so', 'cons';

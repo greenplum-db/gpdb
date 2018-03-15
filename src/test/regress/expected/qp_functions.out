@@ -549,7 +549,7 @@ select child_list('grand_parent');
 
 select name, child_list(name) from fun_tree;
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.fun_tree"  (seg0 slice1 krajaraman:25432 pid=57476)
-DETAIL:  SQL function "child_list" during startup
+CONTEXT:  SQL function "child_list" during startup
 -- start_ignore
 create or replace function fun_array(anyelement,anyelement) returns anyarray AS $$ select array[$1,$2]; $$ language sql;
 -- end_ignore

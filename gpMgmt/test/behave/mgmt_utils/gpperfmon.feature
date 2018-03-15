@@ -17,7 +17,7 @@ Feature: gpperfmon
         Given the database "gpperfmon" does not exist
         When the user runs "gpperfmon_install --port 15432 --enable --password foo"
         Then gpperfmon_install should return a return code of 0
-        Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level='warning'"
+        Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
         Then verify that the last line of the file "pg_hba.conf" in the master data directory contains the string "host     all         gpmon         ::1/128    md5"
         And verify that there is a "heap" table "database_history" in "gpperfmon"
 
@@ -87,9 +87,9 @@ Feature: gpperfmon
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
 
     """
-    The gpperfmon_skew_cpu_and_cpu_elapsed does not work on MacOS because of Sigar lib limitations.
+    The gpperfmon_queries_history_metrics does not work on MacOS because of Sigar lib limitations.
     To run all the other scenarios and omit this test on MacOS, use:
-    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
+    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_queries_history_metrics
     """
     @gpperfmon_queries_history_metrics
     Scenario: gpperfmon records cpu_elapsed, skew_cpu, skew_rows and rows_out

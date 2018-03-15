@@ -3,11 +3,11 @@
  * ts_selfuncs.c
  *	  Selectivity estimation functions for text search operators.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_selfuncs.c,v 1.4 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_selfuncs.c,v 1.7 2010/01/04 02:44:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -159,27 +159,22 @@ tsquerysel(VariableStatData *vardata, Datum constval)
 	if (HeapTupleIsValid(vardata->statsTuple))
 	{
 		Form_pg_statistic stats;
-		Datum	   *values;
-		int			nvalues;
-		float4	   *numbers;
-		int			nnumbers;
+		AttStatsSlot sslot;
 
 		stats = (Form_pg_statistic) GETSTRUCT(vardata->statsTuple);
 
 		/* MCELEM will be an array of TEXT elements for a tsvector column */
-		if (get_attstatsslot(vardata->statsTuple,
-							 TEXTOID, -1,
+		if (get_attstatsslot(&sslot, vardata->statsTuple,
 							 STATISTIC_KIND_MCELEM, InvalidOid,
-							 &values, &nvalues,
-							 &numbers, &nnumbers))
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
 		{
 			/*
 			 * There is a most-common-elements slot for the tsvector Var, so
 			 * use that.
 			 */
-			selec = mcelem_tsquery_selec(query, values, nvalues,
-										 numbers, nnumbers);
-			free_attstatsslot(TEXTOID, values, nvalues, numbers, nnumbers);
+			selec = mcelem_tsquery_selec(query, sslot.values, sslot.nvalues,
+										 sslot.numbers, sslot.nnumbers);
+			free_attstatsslot(&sslot);
 		}
 		else
 		{
@@ -307,7 +302,7 @@ tsquery_opr_selec(QueryItem *item, char *operand,
 	}
 
 	/* Current TSQuery node is an operator */
-	switch (item->operator.oper)
+	switch (item->qoperator.oper)
 	{
 		case OP_NOT:
 			selec = 1.0 - tsquery_opr_selec(item + 1, operand,
@@ -317,7 +312,7 @@ tsquery_opr_selec(QueryItem *item, char *operand,
 		case OP_AND:
 			s1 = tsquery_opr_selec(item + 1, operand,
 								   lookup, length, minfreq);
-			s2 = tsquery_opr_selec(item + item->operator.left, operand,
+			s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
 								   lookup, length, minfreq);
 			selec = s1 * s2;
 			break;
@@ -325,13 +320,13 @@ tsquery_opr_selec(QueryItem *item, char *operand,
 		case OP_OR:
 			s1 = tsquery_opr_selec(item + 1, operand,
 								   lookup, length, minfreq);
-			s2 = tsquery_opr_selec(item + item->operator.left, operand,
+			s2 = tsquery_opr_selec(item + item->qoperator.left, operand,
 								   lookup, length, minfreq);
 			selec = s1 + s2 - s1 * s2;
 			break;
 
 		default:
-			elog(ERROR, "unrecognized operator: %d", item->operator.oper);
+			elog(ERROR, "unrecognized operator: %d", item->qoperator.oper);
 			selec = 0;			/* keep compiler quiet */
 			break;
 	}

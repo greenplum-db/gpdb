@@ -78,8 +78,8 @@ SELECT p1.oid, p1.proname
 FROM pg_proc AS p1
 WHERE (pronargdefaults <> 0) != (proargdefaults IS NOT NULL);
  oid | proname 
- -----+---------
- (0 rows)
+-----+---------
+(0 rows)
 
 -- probin should be non-empty for C functions, null everywhere else
 SELECT p1.oid, p1.proname
@@ -302,7 +302,7 @@ WHERE p1.oid != p2.oid AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[7] < p2.proargtypes[7])
-ORDER BY 1, 2; -- order none 
+ORDER BY 1, 2; -- order none
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)
@@ -312,16 +312,7 @@ ORDER BY 1, 2; -- order none
 SELECT proname, pronargs 
 FROM pg_proc 
 WHERE pronargs > 8 and prolang = 12 AND
-	prosrc NOT IN ('gp_deprecated') AND
-	proname NOT IN ('gp_add_persistent_filespace_node_entry',
-					'gp_add_persistent_relation_node_entry',
-					'gp_update_persistent_filespace_node_entry',
-					'gp_update_persistent_relation_node_entry',
-					'gp_add_persistent_database_node_entry',
-					'gp_add_persistent_tablespace_node_entry',
-					'gp_update_persistent_database_node_entry',
-					'gp_update_persistent_tablespace_node_entry',
-					'gp_add_segment') AND
+	proname NOT IN ('gp_add_segment') AND
     NOT proisagg AND 
     NOT proiswindow;
  proname | pronargs 
@@ -1065,10 +1056,18 @@ ORDER BY 1, 2, 3;
         783 |            8 | <@
         783 |            9 | &<|
         783 |           10 | <<|
+        783 |           10 | <^
+        783 |           11 | >^
         783 |           11 | |>>
         783 |           12 | |&>
         783 |           13 | ~
         783 |           14 | @
+        783 |           27 | @>
+        783 |           28 | <@
+        783 |           47 | @>
+        783 |           48 | <@
+        783 |           67 | @>
+        783 |           68 | <@
        2742 |            1 | &&
        2742 |            1 | @@
        2742 |            2 | @>
@@ -1084,7 +1083,7 @@ ORDER BY 1, 2, 3;
        7013 |            4 | ~>=~
        7013 |            5 | >
        7013 |            5 | ~>~
-(44 rows)
+(52 rows)
 
 -- Check that all operators linked to by opclass entries have selectivity
 -- estimators.  This is not absolutely required, but it seems a reasonable
@@ -1252,7 +1251,7 @@ FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
 WHERE am.amname <> 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) != amsupport OR amprocfamily IS NULL;
-amname | opcname | count 
+ amname | opcname | count 
 --------+---------+-------
 (0 rows)
 
@@ -1263,7 +1262,7 @@ FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
 WHERE am.amname = 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) < amsupport - 1 OR amprocfamily IS NULL;
-  amname |   opcname    | count 
+ amname |   opcname    | count 
 --------+--------------+-------
  gin    | _complex_ops |     1
 (1 row)

@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_language.sgml,v 1.8 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_language.sgml,v 1.10 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERLANGUAGE">
  <refmeta>
-  <refentrytitle id="SQL-ALTERLANGUAGE-title">ALTER LANGUAGE</refentrytitle>
+  <refentrytitle>ALTER LANGUAGE</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER [ PROCEDURAL ] LANGUAGE <replaceable>name</replaceable> RENAME TO <replaceable>newname</replaceable>
+ALTER [ PROCEDURAL ] LANGUAGE <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
 ALTER [ PROCEDURAL ] LANGUAGE <replaceable>name</replaceable> OWNER TO <replaceable>new_owner</replaceable>
 </synopsis>
  </refsynopsisdiv>
@@ -51,7 +51,7 @@ ALTER [ PROCEDURAL ] LANGUAGE <replaceable>name</replaceable> OWNER TO <replacea
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable>newname</replaceable></term>
+    <term><replaceable>new_name</replaceable></term>
     <listitem>
      <para>
       The new name of the language
@@ -83,8 +83,8 @@ ALTER [ PROCEDURAL ] LANGUAGE <replaceable>name</replaceable> OWNER TO <replacea
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createlanguage" endterm="sql-createlanguage-title"></member>
-   <member><xref linkend="sql-droplanguage" endterm="sql-droplanguage-title"></member>
+   <member><xref linkend="sql-createlanguage"></member>
+   <member><xref linkend="sql-droplanguage"></member>
   </simplelist>
  </refsect1>
 

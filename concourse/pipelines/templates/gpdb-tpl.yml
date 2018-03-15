@@ -1,21 +1,8 @@
 ## ======================================================================
 {% set cs_walrep_suites = ['walrep_1',
                            'walrep_2'] %}
-{% set cs_pg_twophase_suites = ['pg_twophase_01_10',
-                                'pg_twophase_11_20',
-                                'pg_twophase_21_30',
-                                'pg_twophase_31_40',
-                                'pg_twophase_41_49',
-                                'switch_01_12'] %}
-{% set cs_crash_recovery_suite = ['crash_recovery_schema_topology',
-                                  'crash_recovery_04_10',
-                                  'crash_recovery_11_20',
-                                  'crash_recovery_21_30',
-                                  'crash_recovery_31_42'] %}
-{% set cs_filerep_end_to_end_suites = ['filerep_end_to_end_full_mirror',
-                                'filerep_end_to_end_incr_mirror',
-                                'filerep_end_to_end_full_primary',
-                                'filerep_end_to_end_incr_primary'] %}
+{% set cs_pg_twophase_suites = ['pg_twophase'] %}
+
 {% set MM_1_suites = ['gprecoverseg',
                       'gpcheckcat'] %}
 {% set MM_2_suites = ['analyzedb',
@@ -24,8 +11,6 @@
                       'gpinitstandby'] %}
 {% set MM_gpexpand_suites = ['gpexpand_1',
                              'gpexpand_2'] %}
-{% set hadoop_platforms = ['HDP',
-                           'CDH'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___ 
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -43,7 +28,6 @@ groups:
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
-  - compile_gpdb_segwalrep_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
@@ -70,10 +54,8 @@ groups:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
-  - icw_gporca_segwalrep_centos6
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - icw_planner_segwalrep_centos6
   - QP_memory-accounting
 {% endif %}
 {% if 'centos6' in os_types or 'ubuntu16' in os_types %}
@@ -100,12 +82,9 @@ groups:
   ## --------------------------------------------------------------------
   - gate_cs_start
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
   - cs_[[ test_name ]]
 {% endfor %}
-  - fts
-  - storage
   - segwalrep_mirrorless_centos6
   - gate_cs_end
 {% endif %}
@@ -132,7 +111,6 @@ groups:
 {% endfor %}
   - MM_gpcheck
   - MM_gppkg
-  - MM_pt-rebuild
   - MU_check_centos
   - gate_mm_end
 {% endif %}
@@ -141,26 +119,14 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - DPM_backup-restore
   - gate_dpm_end
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_ud_start
-{% for hadoop_platform in hadoop_platforms %}
-  - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-  - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+  - regression_tests_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
-{% endif %}
-{% if "FileRep" in test_sections %}
-  ## --------------------------------------------------------------------
-  - gate_filerep_start
-{% for test_name in cs_filerep_end_to_end_suites %}
-  - cs_[[ test_name ]]
-{% endfor %}
-  - gate_filerep_end
 {% endif %}
 
 {% if pipeline_type == "prod" %}
@@ -180,7 +146,6 @@ groups:
   - compile_gpdb_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
-  - compile_gpdb_segwalrep_centos6
 {% endif %}
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
@@ -209,10 +174,8 @@ groups:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
-  - icw_gporca_segwalrep_centos6
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
-  - icw_planner_segwalrep_centos6
   - QP_memory-accounting
 {% endif %}
 {% if 'centos6' in os_types or 'ubuntu16' in os_types %}
@@ -243,26 +206,12 @@ groups:
   jobs:
   - gate_cs_start
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
   - cs_[[ test_name ]]
 {% endfor %}
-  - fts
-  - storage
   - segwalrep_mirrorless_centos6
   - gate_cs_end
 
-## ======================================================================
-
-{% if "centos6" in os_types %}
-- name: G:SegWALRep
-  jobs:
-  - compile_gpdb_segwalrep_centos6
-  - icw_planner_segwalrep_centos6
-  - icw_gporca_segwalrep_centos6
-  - segwalrep_mirrorless_centos6
-
-{% endif %}
 {% endif %}
 {% if "MPP" in test_sections %}
 ## ======================================================================
@@ -294,7 +243,6 @@ groups:
 {% endfor %}
   - MM_gpcheck
   - MM_gppkg
-  - MM_pt-rebuild
   - MU_check_centos
   - gate_mm_end
 
@@ -307,7 +255,6 @@ groups:
   - gate_dpm_start
   - DPM_gptransfer_43x_to_master
   - DPM_gptransfer
-  - DPM_backup-restore
   - gate_dpm_end
 
 {% endif %}
@@ -317,24 +264,9 @@ groups:
 - name: G:UD
   jobs:
   - gate_ud_start
-{% for hadoop_platform in hadoop_platforms %}
-  - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-  - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+  - regression_tests_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
-
-{% endif %}
-{% if "FileRep" in test_sections %}
-## ======================================================================
-
-- name: G:FileRep
-  jobs:
-  - gate_filerep_start
-{% for test_name in cs_filerep_end_to_end_suites %}
-  - cs_[[ test_name ]]
-{% endfor %}
-  - gate_filerep_end
 
 {% endif %}
 ## ======================================================================
@@ -363,7 +295,6 @@ resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "CS"      in test_sections or
       "DPM"     in test_sections or
-      "FileRep" in test_sections or
       "MPP"     in test_sections or
       "MM"      in test_sections %}
 - name: ccp_src
@@ -394,6 +325,7 @@ resources:
 {% endif %}
 {% endif %}
 {% if "DPM" in test_sections %}
+# a second cluster for gptransfer tests
 - name: terraform2
   type: terraform
   source:
@@ -445,14 +377,6 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
-- name: pxf_src
-  type: git
-  source:
-    branch: {{pxf-git-branch}}
-    tag_filter: {{pxf-git-filter}}
-    private_key: {{pxf-git-key}}
-    uri: {{pxf-git-remote}}
-
 {% if "UD" in test_sections %}
 - name: pxf_infra_src
   type: git
@@ -460,8 +384,12 @@ resources:
     branch: {{pxf_infra-git-branch}}
     private_key: {{pxf_infra-git-key}}
     uri: {{pxf_infra-git-remote}}
-    paths:
-    - pxf_automation
+
+- name: centos6-gpdb-dev-pxf-hdp
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb-dev
+    tag: centos6-pxf-hdp-server
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -512,14 +440,27 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
-- name: bin_gpdb_segwalrep_centos6
+{% endif %}
+{% if pipeline_type == "prod" %}
+- name: bin_gpdb_centos6_icw_green
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{segwalrep_gpdb_centos_versioned_file}}
+    versioned_file: bin_gpdb_centos6/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
+
+{% endif %}
+{% if "UD" in test_sections %}
+- name: pxf_tarball
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{pxf-aws-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf_artifacts/prod/gpdb_branch_master/stable/pxf.tar.gz
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -633,19 +574,6 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
-{% if "UD" in test_sections %}
-{% for hadoop_platform in hadoop_platforms %}
-- name: singlecluster-[[ hadoop_platform ]]
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    secret_access_key: {{bucket-secret-access-key}}
-    bucket: {{pxf-aws-bucket-name}}
-    region_name: {{aws-region}}
-    versioned_file: singlecluster-without-pxf/singlecluster-[[ hadoop_platform ]].tar.gz
-
-{% endfor %}
-{% endif %}
 {% if 'DPM' in test_sections + os_types or 'aix7' in test_sections + os_types %}
 - name: nightly-trigger
   type: time
@@ -696,7 +624,7 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
-ccp_destroy_2_cluster_anchor: &ccp_destroy_2_cluster
+ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
   do:
   - *ccp_destroy
   - put: terraform2
@@ -741,7 +669,7 @@ set_failed_anchor: &set_failed
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
 
-set_failed_anchor_2: &set_failed_2_cluster
+set_failed_anchor_two_clusters: &set_failed_two_clusters
   do:
   - *set_failed
   - task: on_failure_set_failed
@@ -822,8 +750,6 @@ cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
   image: centos-gpdb-dev-6
   on_success:
     <<: *ccp_destroy
-  on_failure:
-    <<: *set_failed
 
 ## ======================================================================
 ##    _       _         
@@ -852,8 +778,6 @@ jobs:
       trigger: true
     - get: gpaddon_src
       trigger: true
-    - get: pxf_src
-      trigger: true
 {% if "centos6" in os_types %}
     - get: gpdb_src_binary_swap
       trigger: true
@@ -881,9 +805,6 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      trigger: true
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -903,38 +824,6 @@ jobs:
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
-- name: compile_gpdb_segwalrep_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_compile_start]
-      trigger: ((gpdb_src-trigger-flag))
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpaddon_src
-      passed: [gate_compile_start]
-    - get: pxf_src
-      trigger: true
-      passed: [gate_compile_start]
-    - get: centos-gpdb-dev-6
-      passed: [gate_compile_start]
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: bin_gpdb_segwalrep_centos6
-      params:
-        file: gpdb_artifacts/bin_gpdb.tar.gz
-
 {% endif %}
 {% if "centos7" in os_types %}
 - name: compile_gpdb_centos7
@@ -948,9 +837,6 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
-      trigger: true
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -981,8 +867,6 @@ jobs:
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-      passed: [gate_compile_start]
-    - get: pxf_src
       passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
@@ -1069,8 +953,6 @@ jobs:
       passed: [gate_compile_start]
     - get: gpaddon_src
       passed: [gate_compile_start]
-    - get: pxf_src
-      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -1101,9 +983,6 @@ jobs:
       passed: [gate_compile_start]
       tags: ["wix"]
     - get: gpaddon_src
-      passed: [gate_compile_start]
-      tags: ["wix"]
-    - get: pxf_src
       passed: [gate_compile_start]
       tags: ["wix"]
     - get: centos-mingw
@@ -1153,10 +1032,10 @@ jobs:
     file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
     image: centos-gpdb-dev-6
     params:
-      REMOTE_HOST: {{remote_host}}
-      REMOTE_PORT: {{remote_port}}
-      REMOTE_USER: {{remote_user}}
-      REMOTE_KEY: {{remote_key}}
+      REMOTE_HOST: {{remote_host_build}}
+      REMOTE_PORT: {{remote_port_build}}
+      REMOTE_USER: {{remote_user_build}}
+      REMOTE_KEY: {{remote_key_build}}
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
@@ -1200,20 +1079,20 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BLD_TARGETS: "clients loaders"
-      REMOTE_HOST: {{remote_host}}
-      REMOTE_PORT: {{remote_port}}
-      REMOTE_USER: {{remote_user}}
-      REMOTE_KEY: {{remote_key}}
+      REMOTE_HOST: {{remote_host_test}}
+      REMOTE_PORT: {{remote_port_test}}
+      REMOTE_USER: {{remote_user_test}}
+      REMOTE_KEY: {{remote_key_test}}
     ensure:
       do:
       - task: cleanup_aix
         file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
         image: centos-gpdb-dev-6
         params:
-          REMOTE_HOST: {{remote_host}}
-          REMOTE_PORT: {{remote_port}}
-          REMOTE_USER: {{remote_user}}
-          REMOTE_KEY: {{remote_key}}
+          REMOTE_HOST: {{remote_host_test}}
+          REMOTE_PORT: {{remote_port_test}}
+          REMOTE_USER: {{remote_user_test}}
+          REMOTE_KEY: {{remote_key_test}}
       - put: aix_environments
         params: {release: aix_environments}
 
@@ -1226,7 +1105,6 @@ jobs:
 {% if "centos6" in os_types %}
       - compile_gpdb_centos6
       - compile_gpdb_open_source_centos6
-      - compile_gpdb_segwalrep_centos6
 {% endif %}
 {% if "centos7" in os_types %}
       - compile_gpdb_centos7
@@ -1250,9 +1128,6 @@ jobs:
     - get: bin_gpdb_centos6
       passed:
       - compile_gpdb_centos6
-    - get: bin_gpdb_segwalrep_centos6
-      passed:
-      - compile_gpdb_segwalrep_centos6
 {% endif %}
 {% if "centos7" in os_types %}
     - get: bin_gpdb_centos7
@@ -1301,9 +1176,6 @@ jobs:
       - get: bin_gpdb_centos6
         passed:
         - gate_compile_end
-      - get: bin_gpdb_segwalrep_centos6
-        passed:
-        - gate_compile_end
 {% endif %}
 {% if "ubuntu16" in os_types %}
       - get: compiled_bits_ubuntu16
@@ -1330,7 +1202,7 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
@@ -1355,42 +1227,6 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_planner_segwalrep_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_segwalrep_centos6
-      passed: [gate_icw_start]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-      TEST_OS: centos
-      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
-
-- name: icw_gporca_segwalrep_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_segwalrep_centos6
-      passed: [gate_icw_start]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      TEST_OS: centos
-      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
 
 - name: icw_gporca_centos6_gpos_memory
   plan:
@@ -1507,6 +1343,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         platform: sles12
+        aws_ebs_volume_size: 128
         aws_instance-node-instance_type: m4.xlarge
         number_of_nodes: 1
   - task: gen_cluster
@@ -1516,8 +1353,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
       # platform is necessary to generate correct ssh config
       platform: sles12
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
@@ -1527,8 +1362,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1554,6 +1387,7 @@ jobs:
       vars:
         <<: *ccp_default_vars
         platform: sles12
+        aws_ebs_volume_size: 128
         aws_instance-node-instance_type: m4.xlarge
         number_of_nodes: 1
   - task: gen_cluster
@@ -1563,8 +1397,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
       # platform is necessary to generate correct ssh config
       platform: sles12
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
@@ -1574,8 +1406,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1694,15 +1524,23 @@ jobs:
 - name: gate_icw_end
   plan:
   - aggregate:
+{% if "centos6" in os_types %}
+    - get: bin_gpdb_centos6
+      passed:
+      - icw_gporca_centos6
+      - icw_gporca_centos6_gpos_memory
+      - icw_planner_centos6
+      - icw_planner_ictcp_centos6
+      - QP_memory-accounting
+      - icw_extensions_gpcloud
+{% endif %}
     - get: gpdb_src
       passed:
 {% if "centos6" in os_types %}
       - icw_gporca_centos6
       - icw_gporca_centos6_gpos_memory
-      - icw_gporca_segwalrep_centos6
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
-      - icw_planner_segwalrep_centos6
       - QP_memory-accounting
 {% endif %}
 {% if 'centos6' in os_types or 'ubuntu16' in os_types %}
@@ -1721,6 +1559,11 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
+{% if pipeline_type == "prod" and "centos6" in os_types %}
+  - put: bin_gpdb_centos6_icw_green
+    params:
+      file: bin_gpdb_centos6/bin_gpdb.tar.gz
+{% endif %}
 
 {% endif %}
 {% if "CS" in test_sections %}
@@ -1734,6 +1577,8 @@ jobs:
 
 - name: gate_cs_start
   plan:
+{% if stagger_sections %}
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -1744,6 +1589,7 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep `expr 1 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
+{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -1763,9 +1609,6 @@ jobs:
       - gate_compile_end
 {% endif %}
     - get: bin_gpdb_centos6
-      passed:
-      - gate_compile_end
-    - get: bin_gpdb_segwalrep_centos6
       passed:
       - gate_compile_end
 
@@ -1804,8 +1647,6 @@ jobs:
       TINC_TARGET: [[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -1848,102 +1689,10 @@ jobs:
       TINC_TARGET: test_[[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
 {% endfor %}
-{% for test_name in cs_crash_recovery_suite %}
-- name: cs_[[ test_name ]]
-  plan:
-  - aggregate: *cs_ccp_aggregate_cluster_start
-  - put: terraform
-    <<: *cs_ccp_terraform_params
-  - task: gen_cluster
-    <<: *cs_ccp_gen_cluster_params
-  - task: run_tests
-    <<: *cs_ccp_run_tests_params
-    params:
-      TINC_TARGET: [[ test_name ]]
-  ensure:
-    <<: *set_failed
-
-{% endfor %}
-- name: fts
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      passed: [gate_cs_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - aggregate:
-{% for test_id in range(1,4) %}
-    - task: fts_transitions_part0[[ test_id ]]
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: fts_transitions_part0[[ test_id ]]
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-{% endfor %}
-
-- name: storage
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      passed: [gate_cs_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: aocoalter_catalog_loaders
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: aocoalter_catalog_loaders
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-    - task: storage_persistent_accessmethods_and_vacuum
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_persistent_accessmethods_and_vacuum
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_filerep
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_filerep
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_uao_transactionmanagement
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_uao_and_transactionmanagement
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_vacuum_xidlimits
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_vacuum_xidlimits
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
 
 - name: segwalrep_mirrorless_centos6
   plan:
@@ -1951,9 +1700,9 @@ jobs:
     - get: gpdb_src
       passed: [gate_cs_start]
     - get: bin_gpdb
-      resource: bin_gpdb_segwalrep_centos6
+      resource: bin_gpdb_centos6
       passed: [gate_cs_start]
-      trigger: true
+      trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
@@ -1961,7 +1710,7 @@ jobs:
     params:
       MAKE_TEST_COMMAND: "-C src/test/regress && make -C src/test/walrep install installcheck"
       TEST_OS: centos
-      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
+      CONFIGURE_FLAGS: {{configure_flags}}
       WITH_MIRRORS: false
 
 - name: gate_cs_end
@@ -1970,12 +1719,9 @@ jobs:
     - get: gpdb_src
       passed: &gate_cs_passed
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite %}
+                    cs_pg_twophase_suites %}
       - cs_[[ test_name ]]
 {% endfor %}
-      - fts
-      - storage
       - segwalrep_mirrorless_centos6
       trigger: true
 
@@ -1991,6 +1737,8 @@ jobs:
 
 - name: gate_mpp_start
   plan:
+{% if stagger_sections %}
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2001,6 +1749,7 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep `expr 2 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
+{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -2059,12 +1808,11 @@ jobs:
           ssh -t centos@mdw << 'SSH_CMD'
             sudo yum --cacheonly list installed kernel-devel-$(uname -r)
           SSH_CMD
-    on_failure:
-      <<: *set_failed
   - task: run_tests
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: mpp_interconnect
+    # ccp_destroy should be part of *cs_ccp_run_tests_params_anchor
   ensure:
     <<: *set_failed
 
@@ -2102,8 +1850,6 @@ jobs:
       TEST_OS: centos6
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2143,8 +1889,6 @@ jobs:
       TEST_OS: centos7
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2187,8 +1931,6 @@ jobs:
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2220,6 +1962,8 @@ jobs:
 
 - name: gate_mm_start
   plan:
+{% if stagger_sections %}
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2230,6 +1974,7 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep `expr 3 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
+{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -2291,8 +2036,6 @@ jobs:
       BEHAVE_FLAGS: --tags=gppkg
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2334,8 +2077,6 @@ jobs:
       BEHAVE_FLAGS: --tags=[[ test_name ]]
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2371,23 +2112,6 @@ jobs:
       BEHAVE_TAGS: [[ test_name ]]
 
 {% endfor %}
-- name: MM_pt-rebuild
-  plan:
-  - aggregate: *gets_for_behave
-  - aggregate:
-    - task: persistent_table_rebuild
-      file: gpdb_src/concourse/tasks/behave_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        BEHAVE_TAGS: persistent_rebuild
-    - task: persistent_table_rebuild_crash_recovery
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: persistent_table_rebuild
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-
 - name: MU_check_centos
   plan:
   - aggregate:
@@ -2439,8 +2163,6 @@ jobs:
     tags: ["ccp"]
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    on_failure:
-      <<: *set_failed
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -2450,8 +2172,6 @@ jobs:
       CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
     on_success:
       <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
   ensure:
     <<: *set_failed
 
@@ -2468,9 +2188,8 @@ jobs:
 {% endfor %}
       - MM_gpcheck
       - MM_gppkg
-      - MM_pt-rebuild
       - MU_check_centos
-      
+
       trigger: true
 
 {% endif %}
@@ -2485,6 +2204,8 @@ jobs:
 
 - name: gate_dpm_start
   plan:
+{% if stagger_sections %}
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2495,6 +2216,7 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep `expr 4 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
+{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -2541,8 +2263,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2562,17 +2282,6 @@ jobs:
           gpdb_binary: gpdb4_binary
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -2601,11 +2310,9 @@ jobs:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
-      <<: *ccp_destroy_2_cluster
-    on_failure:
-      <<: *set_failed_2_cluster
+      <<: *ccp_destroy_two_clusters
   ensure:
-    <<: *set_failed_2_cluster
+    <<: *set_failed_two_clusters
 
 - name: DPM_gptransfer
   plan:
@@ -2638,8 +2345,6 @@ jobs:
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
-        on_failure:
-          <<: *ccp_destroy
     - do:
       - put: terraform2
         tags: ["ccp"]
@@ -2658,17 +2363,6 @@ jobs:
           terraform: terraform2
         output_mapping:
           cluster_env_files: cluster_env_files2
-        on_failure:
-          put: terraform2
-          params:
-            action: destroy
-            env_name_file: terraform2/name
-            terraform_source: ccp_src/aws/
-            vars:
-              <<: *ccp_default_vars
-              cluster_suffix: "-2"
-          get_params:
-            action: destroy
   - task: gptransfer_pre_test_setup
     tags: ["ccp"]
     config:
@@ -2697,53 +2391,9 @@ jobs:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
     on_success:
-      <<: *ccp_destroy_2_cluster
-    on_failure:
-      <<: *set_failed_2_cluster
+      <<: *ccp_destroy_two_clusters
   ensure:
-    <<: *set_failed_2_cluster
-
-- name: DPM_backup-restore
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["ccp"]
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_dpm_start]
-    - get: gpdb_binary
-      tags: ["ccp"]
-      resource: bin_gpdb_centos6
-      passed: [gate_dpm_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-      tags: ["ccp"]
-    - get: centos-gpdb-dev-6
-      tags: ["ccp"]
-  - put: terraform
-    tags: ["ccp"]
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    tags: ["ccp"]
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: run_tests
-    tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
-    on_success:
-      <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
-  ensure:
-    <<: *set_failed
+    <<: *set_failed_two_clusters
 
 - name: gate_dpm_end
   plan:
@@ -2753,7 +2403,6 @@ jobs:
       passed:
       - DPM_gptransfer_43x_to_master
       - DPM_gptransfer
-      - DPM_backup-restore
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -2767,6 +2416,8 @@ jobs:
 
 - name: gate_ud_start
   plan:
+{% if stagger_sections %}
+  # stagger starts on prod pipelines
   - task: sleep_before_starting
     config:
       platform: linux
@@ -2777,6 +2428,7 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep `expr 5 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
+{% endif %}
   - aggregate:
     - get: gpdb_src
       passed:
@@ -2791,8 +2443,7 @@ jobs:
       - gate_compile_end
 {% endif %}
 
-{% for hadoop_platform in hadoop_platforms %}
-- name: regression_tests_pxf_[[ hadoop_platform ]]_rpm
+- name: regression_tests_pxf
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2801,48 +2452,19 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [gate_ud_start]
       trigger: [[ test_trigger ]]
-    - get: singlecluster
-      resource: singlecluster-[[ hadoop_platform ]]
+    - get: pxf_tarball
       trigger: [[ test_trigger ]]
     - get: pxf_infra_src
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
+    - get: centos6-gpdb-dev-pxf-hdp
+  - task: test_pxf
+    file: pxf_infra_src/concourse/test_pxf.yml
+    image: centos6-gpdb-dev-pxf-hdp
     params:
-      GROUP: {{pxf_infra_test_group}}
-      HADOOP_CLIENT: [[ hadoop_platform ]]
+      GROUP: smoke
+      HADOOP_CLIENT: HDP
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
-{% endfor %}
-{% for hadoop_platform in hadoop_platforms %}
-- name: regression_tests_pxf_[[ hadoop_platform ]]_tar
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-    - get: singlecluster
-      resource: singlecluster-[[ hadoop_platform ]]
-      trigger: [[ test_trigger ]]
-    - get: pxf_infra_src
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_infra_test_group}}
-      HADOOP_CLIENT: TAR
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-{% endfor %}
 - name: regression_tests_gphdfs_centos
   plan:
   - aggregate:
@@ -2865,99 +2487,8 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-{% for hadoop_platform in hadoop_platforms %}
-      - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-      - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+      - regression_tests_pxf
       - regression_tests_gphdfs_centos
-      trigger: true
-
-{% endif %}
-{% if "FileRep" in test_sections %}
-## ======================================================================
-##  _____ _ _      ____            
-## |  ___(_) | ___|  _ \ ___ _ __  
-## | |_  | | |/ _ \ |_) / _ \ '_ \ 
-## |  _| | | |  __/  _ <  __/ |_) |
-## |_|   |_|_|\___|_| \_\___| .__/ 
-##                          |_|    
-## ======================================================================
-
-- name: gate_filerep_start
-  plan:
-  - task: sleep_before_starting
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep `expr 6 \* {{group_start_delay}} + 1 + $RANDOM % {{group_delay_jitter}}`']
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - gate_compile_end
-      trigger: true
-    - get: bin_gpdb_centos6
-      passed:
-      - gate_compile_end
-
-{% for test_name in cs_filerep_end_to_end_suites %}
-- name: cs_[[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["ccp"]
-      passed: [gate_filerep_start]
-    - get: gpdb_binary
-      tags: ["ccp"]
-      resource: bin_gpdb_centos6
-      passed: [gate_filerep_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-      tags: ["ccp"]
-    - get: centos-gpdb-dev-6
-      tags: ["ccp"]
-  - put: terraform
-    tags: ["ccp"]
-    params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
-{% if test_name != 'filerep_end_to_end_full_primary' %}
-        number_of_nodes: 1
-{% endif %}
-  - task: gen_cluster
-    tags: ["ccp"]
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: run_tests
-    tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: [[ test_name ]]
-    on_success:
-      <<: *ccp_destroy
-    on_failure:
-      <<: *set_failed
-  ensure:
-    <<: *set_failed
-
-{% endfor %}
-- name: gate_filerep_end
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-{% for test_name in cs_filerep_end_to_end_suites %}
-      - cs_[[ test_name ]]
-{% endfor %}
       trigger: true
 
 {% endif %}
@@ -2982,7 +2513,6 @@ jobs:
     - compile_gpdb_ubuntu16
     - compile_gpdb_windows_cl
     - compile_gpdb_aix7_remote
-    - compile_gpdb_segwalrep_centos6
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
@@ -2994,28 +2524,18 @@ jobs:
     - test_gpdb_debian_package
     - icw_planner_ictcp_centos6
     - icw_extensions_gpcloud
-    - icw_planner_segwalrep_centos6
-    - icw_gporca_segwalrep_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
     - mpp_resource_group_centos7
     - mpp_resource_group_sles12
-    - DPM_backup-restore
-    - fts
-    - storage
     - segwalrep_mirrorless_centos6
 {% for test_name in cs_walrep_suites +
-                    cs_pg_twophase_suites +
-                    cs_crash_recovery_suite +
-                    cs_filerep_end_to_end_suites %}
+                    cs_pg_twophase_suites %}
     - cs_[[ test_name ]]
 {% endfor %}
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
-{% for hadoop_platform in hadoop_platforms %}
-    - regression_tests_pxf_[[ hadoop_platform ]]_rpm
-    - regression_tests_pxf_[[ hadoop_platform ]]_tar
-{% endfor %}
+    - regression_tests_pxf
 {% for test_name in MM_1_suites +
                     MM_2_suites +
                     MM_gpexpand_suites %}
@@ -3023,7 +2543,6 @@ jobs:
 {% endfor %}
     - MM_gpcheck
     - MM_gppkg
-    - MM_pt-rebuild
     - MU_check_centos
     - DPM_gptransfer_43x_to_master
     - DPM_gptransfer

@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/prepare_transaction.sgml,v 1.9 2009/04/23 00:23:45 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/prepare_transaction.sgml,v 1.11 2010/04/03 07:23:02 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-PREPARE-TRANSACTION">
  <refmeta>
-  <refentrytitle id="sql-prepare-transaction-title">PREPARE TRANSACTION</refentrytitle>
+  <refentrytitle>PREPARE TRANSACTION</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -39,8 +39,8 @@ PREPARE TRANSACTION <replaceable class="PARAMETER">transaction_id</replaceable>
 
   <para>
    Once prepared, a transaction can later be committed or rolled back
-   with <xref linkend="sql-commit-prepared" endterm="sql-commit-prepared-title">
-   or <xref linkend="sql-rollback-prepared" endterm="sql-rollback-prepared-title">,
+   with <xref linkend="sql-commit-prepared">
+   or <xref linkend="sql-rollback-prepared">,
    respectively.  Those commands can be issued from any session, not
    only the one that executed the original transaction.
   </para>
@@ -83,8 +83,17 @@ PREPARE TRANSACTION <replaceable class="PARAMETER">transaction_id</replaceable>
   <title>Notes</title>
 
   <para>
+   <command>PREPARE TRANSACTION</> is not intended for use in applications
+   or interactive sessions. It's purpose is to allow an external
+   transaction manager to perform atomic global transactions across multiple
+   databases or other transactional resources. Unless you're writing a
+   transaction manager, you probably shouldn't be using <command>PREPARE
+   TRANSACTION</>.
+  </para>
+
+  <para>
    This command must be used inside a transaction block. Use <xref
-   linkend="sql-begin" endterm="sql-begin-title"> to start one.
+   linkend="sql-begin"> to start one.
   </para>
 
   <para>
@@ -152,8 +161,8 @@ PREPARE TRANSACTION 'foobar';
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-commit-prepared" endterm="sql-commit-prepared-title"></member>
-   <member><xref linkend="sql-rollback-prepared" endterm="sql-rollback-prepared-title"></member>
+   <member><xref linkend="sql-commit-prepared"></member>
+   <member><xref linkend="sql-rollback-prepared"></member>
   </simplelist>
  </refsect1>
 

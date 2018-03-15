@@ -7,12 +7,12 @@
  * This is a modified version of src/backend/parser/scan.l
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/pgc.l,v 1.163 2008/02/17 18:14:29 meskes Exp $
+ *	  $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/pgc.l,v 1.174 2010/05/30 18:10:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,12 @@ static char *scanbuf;
 static char    *literalbuf = NULL;		/* expandable buffer */
 static int		literallen;				/* actual current length */
 static int		literalalloc;			/* current allocated buffer size */
+
+/* Used for detecting global state together with braces_open */
+static int		parenths_open;
+
+/* Used to tell parse_include() whether the command was #include or #include_next */
+static bool		include_next;
 
 #define startlit()	(literalbuf[0] = '\0', literallen = 0)
 static void addlit(char *ytext, int yleng);
@@ -224,6 +230,8 @@ identifier		{ident_start}{ident_cont}*
 
 array			({ident_cont}|{whitespace}|[\[\]\+\-\*\%\/\(\)\>\.])*
 typecast		"::"
+dot_dot			\.\.
+colon_equals	":="
 
 /*
  * "self" is the set of chars that should be returned as single-character
@@ -307,11 +315,14 @@ other			.
 
 /* some stuff needed for ecpg */
 exec			[eE][xX][eE][cC]
-sql				[sS][qQ][lL]
+sql			[sS][qQ][lL]
 define			[dD][eE][fF][iI][nN][eE]
 include 		[iI][nN][cC][lL][uU][dD][eE]
+include_next 		[iI][nN][cC][lL][uU][dD][eE]_[nN][eE][xX][tT]
+import	 		[iI][mM][pP][oO][rR][tT]
 undef			[uU][nN][dD][eE][fF]
 
+if			[iI][fF]
 ifdef			[iI][fF][dD][eE][fF]
 ifndef			[iI][fF][nN][dD][eE][fF]
 else			[eE][lL][sS][eE]
@@ -322,13 +333,17 @@ struct			[sS][tT][rR][uU][cC][tT]
 
 exec_sql		{exec}{space}*{sql}{space}*
 ipdigit			({digit}|{digit}{digit}|{digit}{digit}{digit})
-ip				{ipdigit}\.{ipdigit}\.{ipdigit}\.{ipdigit}
+ip			{ipdigit}\.{ipdigit}\.{ipdigit}\.{ipdigit}
 
 /* we might want to parse all cpp include files */
 cppinclude 		{space}*#{include}{space}*
+cppinclude_next		{space}*#{include_next}{space}*
 
-/* Take care of cpp lines, they may also be continuated */
-cppline			{space}*#(.*\\{space})*.*{newline}
+/* take care of cpp lines, they may also be continuated */
+/* first a general line for all commands not starting with "i" */
+/* and then the other commands starting with "i", we have to add these
+ * seperately because the cppline production would match on "include" too */
+cppline			{space}*#([^i][A-Za-z]*|{if}|{ifdef}|{ifndef}|{import})(.*\\{space})*.*{newline}
 
 /*
  * Dollar quoted strings are totally opaque, and no escaping is done on them.
@@ -582,6 +597,8 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 					}
 <xdc>{xdcinside}	{ addlit(yytext, yyleng); }
 <SQL>{typecast}		{ return TYPECAST; }
+<SQL>{dot_dot}		{ return DOT_DOT; }
+<SQL>{colon_equals}	{ return COLON_EQUALS; }
 <SQL>{informix_special}	{
 			  /* are we simulating Informix? */
 				if (INFORMIX_MODE)
@@ -774,6 +791,19 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 <C>{cppinclude}		{
 						if (system_includes)
 						{
+							include_next = false;
+							BEGIN(incl);
+						}
+						else
+					 	{
+							yylval.str = mm_strdup(yytext);
+							return(CPP_LINE);
+					  	}
+					}
+<C>{cppinclude_next}		{
+						if (system_includes)
+						{
+							include_next = true;
 							BEGIN(incl);
 						}
 						else
@@ -788,7 +818,17 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 					}
 <C>{identifier} 	{
 						const ScanKeyword		*keyword;
-							
+
+						/*
+						 * Try to detect a function name:
+						 * look for identifiers at the global scope
+						 * keep the last identifier before the first '(' and '{' */
+						if (braces_open == 0 && parenths_open == 0)
+						{
+							if (current_function)
+								free(current_function);
+							current_function = mm_strdup(yytext);
+						}
 						/* Informix uses SQL defines only in SQL space */
 						/* however, some defines have to be taken care of for compatibility */
 						if ((!INFORMIX_MODE || !isinformixdefine()) && !isdefine())
@@ -811,8 +851,8 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 <C>"/"				{ return('/'); }
 <C>"+"				{ return('+'); }
 <C>"-"				{ return('-'); }
-<C>"("				{ return('('); }
-<C>")"				{ return(')'); }
+<C>"("				{ parenths_open++; return('('); }
+<C>")"				{ parenths_open--; return(')'); }
 <C,xskip>{space}		{ ECHO; }
 <C>\{				{ return('{'); }
 <C>\}				{ return('}'); }
@@ -987,7 +1027,7 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 							BEGIN(xskip);
 					}
 				}
-<C,xskip>{informix_special}{else}{space}*	{
+<C,xskip>{informix_special}{else}{space}*";"	{
 					/* are we simulating Informix? */
 					if (INFORMIX_MODE)
 					{
@@ -1178,6 +1218,8 @@ void
 lex_init(void)
 {
 	braces_open = 0;
+	parenths_open = 0;
+	current_function = NULL;
 
 	preproc_tos = 0;
 	yylineno = 1;
@@ -1306,6 +1348,12 @@ parse_include(void)
 					strcat(inc_file, ".h");
 					yyin = fopen( inc_file, "r" );
 				}
+			}
+			/* if the command was "include_next" we have to disregard the first hit */
+			if (yyin && include_next)
+			{
+				yyin = NULL;
+				include_next = false;
 			}
 		}
 	}

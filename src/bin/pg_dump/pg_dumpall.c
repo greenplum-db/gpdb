@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.126 2009/06/11 14:49:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.134 2010/02/26 02:01:17 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,8 +35,6 @@ static const char *progname;
 
 static void help(void);
 
-static void dropFilespaces(PGconn *conn);
-static void dumpFilespaces(PGconn *conn);
 static void dumpResQueues(PGconn *conn);
 static void dumpResGroups(PGconn *conn);
 static void dumpRoleConstraints(PGconn *conn);
@@ -50,8 +48,10 @@ static void dropDBs(PGconn *conn);
 static void dumpCreateDB(PGconn *conn);
 static void dumpDatabaseConfig(PGconn *conn, const char *dbname);
 static void dumpUserConfig(PGconn *conn, const char *username);
+static void dumpDbRoleConfig(PGconn *conn);
 static void makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
-					   const char *type, const char *name);
+					   const char *type, const char *name, const char *type2,
+					   const char *name2);
 static void dumpDatabases(PGconn *conn);
 static void dumpTimestamp(char *msg);
 static void doShellQuoting(PQExpBuffer buf, const char *str);
@@ -68,7 +68,6 @@ static char pg_dump_bin[MAXPGPATH];
 static PQExpBuffer pgdumpopts;
 static bool skip_acls = false;
 static bool verbose = false;
-static bool filespaces = false;
 
 static int	resource_queues = 0;
 static int	resource_groups = 0;
@@ -131,7 +130,6 @@ main(int argc, char *argv[])
 		{"password", no_argument, NULL, 'W'},
 		{"no-privileges", no_argument, NULL, 'x'},
 		{"no-acl", no_argument, NULL, 'x'},
-		{"filespaces", no_argument, NULL, 'F'},
 
 		/*
 		 * the following options don't have an equivalent short option letter
@@ -261,10 +259,6 @@ main(int argc, char *argv[])
 			case 'r':
 				fprintf(stderr, _("-r option is not supported. Did you mean --roles-only or --resource-queues?\n"));
 				exit(1);
-				break;
-
-			case 'F':
-				filespaces = true;
 				break;
 
 			case 's':
@@ -541,9 +535,6 @@ main(int argc, char *argv[])
 					dropTablespaces(conn);
 			}
 
-			if (!roles_only && !tablespaces_only)
-				dropFilespaces(conn);
-
 			if (!tablespaces_only)
 				dropRoles(conn);
 		}
@@ -570,10 +561,6 @@ main(int argc, char *argv[])
 
 			/* Dump role constraints */
 			dumpRoleConstraints(conn);
-
-			/* Dump filespaces */
-			if (filespaces)
-				dumpFilespaces(conn);
 		}
 
 		if (!roles_only && !no_tablespaces)
@@ -585,6 +572,13 @@ main(int argc, char *argv[])
 		/* Dump CREATE DATABASE commands */
 		if (!globals_only && !roles_only && !tablespaces_only)
 			dumpCreateDB(conn);
+
+		/* Dump role/database settings */
+		if (!tablespaces_only && !roles_only)
+		{
+			if (server_version >= 90000)
+				dumpDbRoleConfig(conn);
+		}
 	}
 
 	if (!globals_only && !roles_only && !tablespaces_only)
@@ -610,7 +604,6 @@ help(void)
 	printf(_("Usage:\n"));
 	printf(_("  %s [OPTION]...\n"), progname);
 
-
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -f, --file=FILENAME         output file name\n"));
 	printf(_("  --lock-wait-timeout=TIMEOUT fail after waiting TIMEOUT for a table lock\n"));
@@ -629,7 +622,6 @@ help(void)
 	printf(_("  -S, --superuser=NAME        superuser user name to use in the dump\n"));
 	printf(_("  -t, --tablespaces-only      dump only tablespaces, no databases or roles\n"));
 	printf(_("  -x, --no-privileges         do not dump privileges (grant/revoke)\n"));
-	printf(_("  -F, --filespaces            dump filespace data\n"));
 	printf(_("  --resource-queues           dump resource queue data\n"));
 	printf(_("  --resource-groups           dump resource group data\n"));
 	printf(_("  --binary-upgrade            for use by upgrade utilities only\n"));
@@ -1313,141 +1305,6 @@ dumpRoleConstraints(PGconn *conn)
 
 
 /*
- * Drop filespace.
- *
- * GPDB_84_MERGE_FIXME: I wrote this without any testing at all. Needs testing.
- */
-static void
-dropFilespaces(PGconn *conn)
-{
-	PGresult   *res;
-	int			i;
-
-	/*
-	 * Get all filespaces except built-in ones (which we assume are named
-	 * pg_xxx) (GPDB_84_MERGE_FIXME: are there any built-in filespaces?)
-	 */
-	res = executeQuery(conn, "SELECT fsname "
-					   "FROM pg_catalog.pg_filespace "
-					   "WHERE fsname !~ '^pg_' "
-					   "ORDER BY 1");
-
-	if (PQntuples(res) > 0)
-		fprintf(OPF, "--\n-- Drop filespaces\n--\n\n");
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		char	   *fsname = PQgetvalue(res, i, 0);
-
-		fprintf(OPF, "DROP FILESPACE %s;\n", fmtId(fsname));
-	}
-
-	PQclear(res);
-
-	fprintf(OPF, "\n\n");
-}
-
-/*
- * Dump filespaces.
- */
-static void
-dumpFilespaces(PGconn *conn)
-{
-	int			i,
-				j;
-	PGresult   *res;
-
-	/*
-	 * Get all filespaces except built-in ones (named pg_xxx)
-	 */
-	if (server_version < 80214)
-	{
-		/* Filespaces were introduced in GP 4.0 (server_version 8.2.14) */
-		return;
-	}
-	else
-	{
-		res = executeQuery(conn,
-						   "SELECT fsname, oid, "
-						   "       pg_catalog.pg_get_userbyid(fsowner) as fsowner, "
-						   "       pg_catalog.shobj_description(oid, 'pg_filespace') "
-						   "FROM pg_catalog.pg_filespace "
-						   "WHERE fsname !~ '^pg_' "
-						   "ORDER BY 1");
-	}
-
-	if (PQntuples(res) > 0)
-			fprintf(OPF, "--\n-- Filespaces\n--\n\n");
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		PQExpBuffer buf = createPQExpBuffer();
-		char	   *fsname = PQgetvalue(res, i, 0);
-		char	   *fsoid = PQgetvalue(res, i, 1);
-		char	   *fsowner = PQgetvalue(res, i, 2);
-		char	   *fsdesc = PQgetvalue(res, i, 3);
-		PQExpBuffer subbuf;
-		PGresult   *entries = NULL;
-
-		/* quote name if needed */
-		fsname = strdup(fmtId(fsname));
-
-		/* Begin creating the filespace definition */
-		appendPQExpBuffer(buf, "CREATE FILESPACE %s", fsname);
-		appendPQExpBuffer(buf, " OWNER %s", fmtId(fsowner));
-		appendPQExpBuffer(buf, " (\n");
-
-		/*
-		 * We still need to lookup all of the paths associated with this
-		 * filespace, look them up in the pg_filespace_entry table.
-		 */
-		subbuf = createPQExpBuffer();
-		appendPQExpBuffer(subbuf,
-						  "SELECT fsedbid, fselocation "
-						  "FROM pg_catalog.pg_filespace_entry "
-						  "WHERE fsefsoid = %s "
-						  "ORDER BY 1",
-						  fsoid);
-		entries = executeQuery(conn, subbuf->data);
-		destroyPQExpBuffer(subbuf);
-
-		/* append the filespace location information to output */
-		for (j = 0; j < PQntuples(entries); j++)
-		{
-			char	   *dbid = PQgetvalue(entries, j, 0);
-			char	   *location = PQgetvalue(entries, j, 1);
-
-			if (j > 0)
-				appendPQExpBuffer(buf, ",\n");
-			appendPQExpBuffer(buf, "  %s: ", dbid);
-			appendStringLiteralConn(buf, location, conn);
-		}
-		PQclear(entries);
-
-		/* Finish off the statement */
-		appendPQExpBuffer(buf, "\n);\n");
-
-		/* Add a comment on the filespace if specified */
-		if (fsdesc && strlen(fsdesc))
-		{
-			appendPQExpBuffer(buf, "COMMENT ON FILESPACE %s IS ", fsname);
-			appendStringLiteralConn(buf, fsdesc, conn);
-			appendPQExpBuffer(buf, ";\n");
-		}
-
-		/* Output the results */
-		fprintf(OPF, "%s", buf->data);
-
-		free(fsname);
-		destroyPQExpBuffer(buf);
-	}
-
-	PQclear(res);
-	fprintf(OPF, "\n\n");
-}
-
-
-/*
  * Drop tablespaces.
  */
 static void
@@ -1489,6 +1346,8 @@ dumpTablespaces(PGconn *conn)
 	PGresult   *res;
 	int			i;
 
+	// WALREP_FIXME: filespaces are gone. How do we deal with that here?
+	
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
 	 *
@@ -1501,16 +1360,27 @@ dumpTablespaces(PGconn *conn)
 		/* Filespaces were introduced in GP 4.0 (server_version 8.2.14) */
 		return;
 	}
-	else
-	{
+
+	if (server_version >= 90000)
 		res = executeQuery(conn, "SELECT spcname, "
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
-						   "fsname, spcacl, "
-					  "pg_catalog.shobj_description(t.oid, 'pg_tablespace') "
-						   "FROM pg_catalog.pg_tablespace t, "
-						   "pg_catalog.pg_filespace fs "
-						   "WHERE t.spcfsoid = fs.oid AND spcname !~ '^pg_' "
+						   "spclocation, spcacl, "
+						   "array_to_string(spcoptions, ', '),"
+						"pg_catalog.shobj_description(oid, 'pg_tablespace') "
+						   "FROM pg_catalog.pg_tablespace "
+						   "WHERE spcname !~ '^pg_' "
 						   "ORDER BY 1");
+	else if (server_version >= 80200)
+		res = executeQuery(conn, "SELECT spcname, "
+						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
+						   "spclocation, spcacl, null, "
+						"pg_catalog.shobj_description(oid, 'pg_tablespace') "
+						   "FROM pg_catalog.pg_tablespace "
+						   "WHERE spcname !~ '^pg_' "
+						   "ORDER BY 1");
+	else
+	{
+		error_unsupported_server_version(conn);
 	}
 
 	if (PQntuples(res) > 0)
@@ -1521,24 +1391,32 @@ dumpTablespaces(PGconn *conn)
 		PQExpBuffer buf = createPQExpBuffer();
 		char	   *spcname = PQgetvalue(res, i, 0);
 		char	   *spcowner = PQgetvalue(res, i, 1);
-		char	   *fsname = PQgetvalue(res, i, 2);
+		char	   *spclocation = PQgetvalue(res, i, 2);
 		char	   *spcacl = PQgetvalue(res, i, 3);
-		char	   *spccomment = PQgetvalue(res, i, 4);
+		char	   *spcoptions = PQgetvalue(res, i, 4);
+		char	   *spccomment = PQgetvalue(res, i, 5);
+		char	   *fspcname;
 
 		/* needed for buildACLCommands() */
-		spcname = strdup(fmtId(spcname));
+		fspcname = strdup(fmtId(spcname));
 
 		appendPQExpBuffer(buf, "CREATE TABLESPACE %s", spcname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(spcowner));
-		appendPQExpBuffer(buf, " FILESPACE %s;\n", fmtId(fsname));
 
-		/* Build Acls */
+		appendPQExpBuffer(buf, " LOCATION ");
+		appendStringLiteralConn(buf, spclocation, conn);
+		appendPQExpBuffer(buf, ";\n");
+
+		if (spcoptions && spcoptions[0] != '\0')
+			appendPQExpBuffer(buf, "ALTER TABLESPACE %s SET (%s);\n",
+							  fspcname, spcoptions);
+
 		if (!skip_acls &&
-			!buildACLCommands(spcname, NULL, "TABLESPACE", spcacl, spcowner,
-							  server_version, buf))
+			!buildACLCommands(fspcname, NULL, "TABLESPACE", spcacl, spcowner,
+							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for tablespace \"%s\"\n"),
-					progname, spcacl, spcname);
+					progname, spcacl, fspcname);
 			PQfinish(conn);
 			exit(1);
 		}
@@ -1546,14 +1424,14 @@ dumpTablespaces(PGconn *conn)
 		/* Set comments */
 		if (spccomment && strlen(spccomment))
 		{
-			appendPQExpBuffer(buf, "COMMENT ON TABLESPACE %s IS ", spcname);
+			appendPQExpBuffer(buf, "COMMENT ON TABLESPACE %s IS ", fspcname);
 			appendStringLiteralConn(buf, spccomment, conn);
 			appendPQExpBuffer(buf, ";\n");
 		}
 
 		fprintf(OPF, "%s", buf->data);
 
-		free(spcname);
+		free(fspcname);
 		destroyPQExpBuffer(buf);
 	}
 
@@ -1789,7 +1667,7 @@ dumpCreateDB(PGconn *conn)
 
 		if (!skip_acls &&
 			!buildACLCommands(fdbname, NULL, "DATABASE", dbacl, dbowner,
-							  server_version, buf))
+							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for database \"%s\"\n"),
 					progname, dbacl, fdbname);
@@ -1824,15 +1702,24 @@ dumpDatabaseConfig(PGconn *conn, const char *dbname)
 	{
 		PGresult   *res;
 
-		printfPQExpBuffer(buf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
+		if (server_version >= 90000)
+			printfPQExpBuffer(buf, "SELECT setconfig[%d] FROM pg_db_role_setting WHERE "
+							  "setrole = 0 AND setdatabase = (SELECT oid FROM pg_database WHERE datname = ", count);
+		else
+			printfPQExpBuffer(buf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
 		appendStringLiteralConn(buf, dbname, conn);
+
+		if (server_version >= 90000)
+			appendPQExpBuffer(buf, ")");
+
 		appendPQExpBuffer(buf, ";");
 
 		res = executeQuery(conn, buf->data);
-		if (!PQgetisnull(res, 0, 0))
+		if (PQntuples(res) == 1 &&
+			!PQgetisnull(res, 0, 0))
 		{
 			makeAlterConfigCommand(conn, PQgetvalue(res, 0, 0),
-								   "DATABASE", dbname);
+								   "DATABASE", dbname, NULL, NULL);
 			PQclear(res);
 			count++;
 		}
@@ -1861,16 +1748,24 @@ dumpUserConfig(PGconn *conn, const char *username)
 	{
 		PGresult   *res;
 
-		printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
-
+		if (server_version >= 90000)
+			printfPQExpBuffer(buf, "SELECT setconfig[%d] FROM pg_db_role_setting WHERE "
+							  "setdatabase = 0 AND setrole = "
+					   "(SELECT oid FROM pg_authid WHERE rolname = ", count);
+		else if (server_version >= 80100)
+			printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
+		else
+			printfPQExpBuffer(buf, "SELECT useconfig[%d] FROM pg_shadow WHERE usename = ", count);
 		appendStringLiteralConn(buf, username, conn);
+		if (server_version >= 90000)
+			appendPQExpBuffer(buf, ")");
 
 		res = executeQuery(conn, buf->data);
 		if (PQntuples(res) == 1 &&
 			!PQgetisnull(res, 0, 0))
 		{
 			makeAlterConfigCommand(conn, PQgetvalue(res, 0, 0),
-								   "ROLE", username);
+								   "ROLE", username, NULL, NULL);
 			PQclear(res);
 			count++;
 		}
@@ -1885,13 +1780,47 @@ dumpUserConfig(PGconn *conn, const char *username)
 }
 
 
+/*
+ * Dump user-and-database-specific configuration
+ */
+static void
+dumpDbRoleConfig(PGconn *conn)
+{
+	PQExpBuffer buf = createPQExpBuffer();
+	PGresult   *res;
+	int			i;
+
+	printfPQExpBuffer(buf, "SELECT rolname, datname, unnest(setconfig) "
+					  "FROM pg_db_role_setting, pg_authid, pg_database "
+		  "WHERE setrole = pg_authid.oid AND setdatabase = pg_database.oid");
+	res = executeQuery(conn, buf->data);
+
+	if (PQntuples(res) > 0)
+	{
+		fprintf(OPF, "--\n-- Per-Database Role Settings \n--\n\n");
+
+		for (i = 0; i < PQntuples(res); i++)
+		{
+			makeAlterConfigCommand(conn, PQgetvalue(res, i, 2),
+								   "ROLE", PQgetvalue(res, i, 0),
+								   "DATABASE", PQgetvalue(res, i, 1));
+		}
+
+		fprintf(OPF, "\n\n");
+	}
+
+	PQclear(res);
+	destroyPQExpBuffer(buf);
+}
+
 
 /*
  * Helper function for dumpXXXConfig().
  */
 static void
 makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
-					   const char *type, const char *name)
+					   const char *type, const char *name,
+					   const char *type2, const char *name2)
 {
 	char	   *pos;
 	char	   *mine;
@@ -1904,6 +1833,8 @@ makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
 
 	*pos = 0;
 	appendPQExpBuffer(buf, "ALTER %s %s ", type, fmtId(name));
+	if (type2 != NULL && name2 != NULL)
+		appendPQExpBuffer(buf, "IN %s %s ", type2, fmtId(name2));
 	appendPQExpBuffer(buf, "SET %s TO ", fmtId(mine));
 
 	/*

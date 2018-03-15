@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-HDFS is the primary distributed storage mechanism used by Apache Hadoop applications. The PXF HDFS connector reads file data stored in HDFS. The connector supports plain delimited and comma-separated-value format data.  The HDFS connector also supports JSON and the Avro binary format.
+HDFS is the primary distributed storage mechanism used by Apache Hadoop applications. The PXF HDFS connector reads file data stored in HDFS. The connector supports plain delimited and comma-separated-value format data.  The HDFS connector also supports JSON and the Parquet and Avro binary formats.
 
 This section describes how to use PXF to access HDFS data, including how to create and query an external table referencing files in the HDFS data store.
 
@@ -41,6 +41,7 @@ The PXF HDFS connector supports reading the following data formats:
 - Text - comma-separated value (.csv) or delimited format plain text data
 - Avro - JSON-defined, schema-based data serialization format
 - JSON - JSON format data
+- Parquet - Compressed columnar data format
 
 The PXF HDFS connector provides the following profiles to read the data formats listed above:
 
@@ -50,7 +51,9 @@ The PXF HDFS connector provides the following profiles to read the data formats 
 | Text | HdfsTextMulti | Read delimited single or multi-line records with quoted linefeeds from plain text data on HDFS. |
 | Avro | Avro | Read Avro format binary data (\<filename\>.avro). |
 | JSON | Json | Read JSON format data (\<filename\>.json). |
+| Parquet | Parquet | Read Parquet format data (\<filename\>.parq). |
 
+**Note:** You can also use the PXF Hive connector to read Hive tables stored in Parquet format. The Hive connector `Hive` profile supports both primitive and complex data types. See [Accessing Hive Table Data with PXF](hive_pxf.html). 
 
 ## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer
 Hadoop includes command-line tools that interact directly with your HDFS file system. These tools support typical file system operations including copying and listing files, changing file permissions, and so forth.
@@ -97,7 +100,7 @@ Use the following syntax to create a Greenplum Database readable external table 
 CREATE EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-hdfs-file>
-    ?PROFILE=HdfsTextSimple|HdfsTextMulti|Avro|Json[&<custom-option>=<value>[...]]')
+    ?PROFILE=HdfsTextSimple|HdfsTextMulti|Avro|Json|Parquet[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
 
@@ -109,7 +112,7 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, or `Json`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
 | FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value data.  |
-| FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with  the `Avro` and `Json` profiles. The `Avro` and `Json` `'CUSTOM'` `FORMAT`s require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
+| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `Avro`, `Json`, and `Parquet` profiles. The `Avro`, `Json`, and `Parquet` `'CUSTOM'` `FORMAT`s also require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
@@ -689,4 +692,43 @@ To query the JSON data in this external table:
 
 ``` sql
 SELECT * FROM multiline_json_tbl;
+```
+
+## <a id="profile_hdfparquet"></a>Reading Parquet Data
+
+The PXF `Parquet` profile supports reading HDFS files that are stored in Parquet format.
+
+### <a id="profile_hdfsparquetoptions" class="no-quick-link"></a>Parquet-Specific Options
+
+The \<formatting-properties\> required by the `Parquet` profile include:
+
+| Keyword  | Syntax, Example | Description |
+|-------|--------------|-----------------------|
+| formatter    | `(formatter='pxfwritable_import')` | Must identify `pxfwritable_import`.|
+
+### <a id="profile_hdfsparquetdatamap" class="no-quick-link"></a>Data Type Mapping
+
+To represent Parquet data types in Greenplum Database, map data values to Greenplum Database columns of the same type. The following table summarizes external mapping rules for Parquet data.
+
+<a id="parquet_type_mapping_table"></a>
+
+| Parquet Data Type | PXF/Greenplum Data Type |
+|-------------------|-------------------------|
+| boolean | boolean |
+| byte_array | bytea, text |
+| double | float8 |
+| fixed\_len\_byte\_array | numeric |
+| float | real |
+| int\_8, int\_16 | smallint, integer |
+| int64 | bigint |
+| int96 | timestamp |
+
+### <a id="profile_parquetexample" class="no-quick-link"></a> Example: Reading a Parquet File
+
+Use the following [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) SQL command to create a readable external table that references a Parquet file in HDFS:
+
+``` sql
+postgres=# CREATE EXTERNAL TABLE pxf_parquet_file (location text, month text, number_of_orders int, total_sales double precision)
+    LOCATION ('pxf://data/pxf_examples/pxf_hdfs_parquet.parq?PROFILE=Parquet')
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```

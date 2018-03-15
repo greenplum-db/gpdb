@@ -2,38 +2,49 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic48">
-   <title>Past PostgreSQL Version Compatibility Parameters</title>
+   <title>Past Version Compatibility Parameters</title>
    <body>
-      <p>The following parameters provide compatibility with older PostgreSQL versions. You do not
-          need to change these parameters in Greenplum Database.</p>
-      <simpletable id="kh162083">
-         <strow>
-            <stentry>
-               <p>
-                  <codeph>add_missing_from</codeph>
-               </p>
-               <p>
-                  <codeph>array_nulls</codeph>
-               </p>
-               <p>
-                  <codeph>backslash_quote</codeph>
-               </p>
-               <p>
-                  <codeph>escape_string_warning</codeph>
-               </p>
-            </stentry>
-            <stentry>
-               <p>
-                  <codeph>regex_flavor</codeph>
-               </p>
-               <p>
-                  <codeph>standard_conforming_strings</codeph>
-               </p>
-               <p>
-                  <codeph>transform_null_equals</codeph>
-               </p>
-            </stentry>
-         </strow>
-      </simpletable>
+      <p>The following parameters provide compatibility with older PostgreSQL and Greenplum Database
+         versions. You do not need to change these parameters in Greenplum Database.</p>
    </body>
+   <topic id="topic_ckr_tbv_bdb">
+      <title>PostgreSQL</title>
+      <body>
+         <simpletable id="simpletable_pj5_vbv_bdb">
+            <strow>
+               <stentry>
+                  <p>
+                     <codeph>add_missing_from</codeph>
+                  </p>
+                  <p>
+                     <codeph>array_nulls</codeph>
+                  </p>
+                  <p>
+                     <codeph>backslash_quote</codeph>
+                  </p>
+                  <p>
+                     <codeph>escape_string_warning</codeph>
+                  </p>
+               </stentry>
+               <stentry>
+                  <p>
+                     <codeph>regex_flavor</codeph>
+                  </p>
+                  <p>
+                     <codeph>standard_conforming_strings</codeph>
+                  </p>
+                  <p>
+                     <codeph>transform_null_equals</codeph>
+                  </p>
+               </stentry>
+            </strow>
+         </simpletable>
+      </body>
+   </topic>
+   <topic id="topic_mgw_xbv_bdb">
+      <title>Greenplum Database</title>
+      <body>
+         <p><codeph>gp_ignore_error_table</codeph></p>
+      </body>
+   </topic>
 </topic>

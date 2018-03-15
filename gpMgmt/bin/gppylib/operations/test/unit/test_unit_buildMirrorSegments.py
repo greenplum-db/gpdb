@@ -120,7 +120,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
     def test_startAll_fails(self, mock1, mock2):
         result = StartSegmentsResult()
         failed_segment = Segment.initFromString(
-            "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+            "2|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         result.addFailure(failed_segment, 'reason', 'reasoncode')
         mock1.return_value.startSegments.return_value = result
         result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])

@@ -4,11 +4,11 @@
  *	  Implement PGSemaphores using SysV semaphore facilities
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/sysv_sema.c,v 1.25 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/sysv_sema.c,v 1.26 2010/01/02 16:57:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -269,10 +269,6 @@ IpcSemaphoreCreate(int numSems)
 	mysema.semNum = numSems;
 	PGSemaphoreUnlock(&mysema);
 
-	elog((Debug_print_semaphore_detail ? LOG : DEBUG5),
-		 "created SYSV semaphore set semId %d, semNum %d",
-		 mysema.semId, mysema.semNum);
-
 	return semId;
 }
 
@@ -305,10 +301,6 @@ PGReserveSemaphores(int maxSemas, int port)
 	numSemaSets = 0;
 	nextSemaKey = port * 1000;
 	nextSemaNumber = SEMAS_PER_SET;		/* force sema set alloc on 1st call */
-
-	elog((Debug_print_semaphore_detail ? LOG : DEBUG5),
-		 "maxSemaSets %d, nextSemaKey %d, nextSemaNumber %d",
-		 maxSemaSets, nextSemaKey, nextSemaNumber);
 
 	on_shmem_exit(ReleaseSemaphores, 0);
 }
@@ -353,10 +345,6 @@ PGSemaphoreCreate(PGSemaphore sema)
 	sema->semNum = nextSemaNumber++;
 	/* Initialize it to count 1 */
 	IpcSemaphoreInitialize(sema->semId, sema->semNum, 1);
-
-	elog((Debug_print_semaphore_detail ? LOG : DEBUG5),
-		 "created SYSV semaphore semId %d, semNum %d",
-		 sema->semId, sema->semNum);
 }
 
 /*

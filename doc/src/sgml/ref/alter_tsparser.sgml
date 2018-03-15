@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tsparser.sgml,v 1.2 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tsparser.sgml,v 1.4 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTSPARSER">
  <refmeta>
-  <refentrytitle id="SQL-ALTERTSPARSER-TITLE">ALTER TEXT SEARCH PARSER</refentrytitle>
+  <refentrytitle>ALTER TEXT SEARCH PARSER</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER TEXT SEARCH PARSER <replaceable>name</replaceable> RENAME TO <replaceable>newname</replaceable>
+ALTER TEXT SEARCH PARSER <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
 </synopsis>
  </refsynopsisdiv>
   
@@ -53,7 +53,7 @@ ALTER TEXT SEARCH PARSER <replaceable>name</replaceable> RENAME TO <replaceable>
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newname</replaceable></term>
+    <term><replaceable class="parameter">new_name</replaceable></term>
     <listitem>
      <para>
       The new name of the text search parser.
@@ -76,8 +76,8 @@ ALTER TEXT SEARCH PARSER <replaceable>name</replaceable> RENAME TO <replaceable>
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createtsparser" endterm="sql-createtsparser-title"></member>
-   <member><xref linkend="sql-droptsparser" endterm="sql-droptsparser-title"></member>
+   <member><xref linkend="sql-createtsparser"></member>
+   <member><xref linkend="sql-droptsparser"></member>
   </simplelist>
  </refsect1>
 </refentry>

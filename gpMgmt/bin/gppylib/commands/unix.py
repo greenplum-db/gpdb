@@ -575,7 +575,7 @@ class RemoveDirectoryContents(Command):
         unique_dir = "/tmp/emptyForRemove%s" % uuid.uuid4()
         cmd_str = "if [ -d {target_dir} ]; then " \
                   "mkdir -p {unique_dir}  &&  " \
-                  "{cmd} -a --delete {unique_dir}/ {target_dir}/  &&  " \
+                  "{cmd} -a --no-perms --delete {unique_dir}/ {target_dir}/  &&  " \
                   "rmdir {unique_dir} ; fi".format(
                     unique_dir=unique_dir,
                     cmd=findCmdInPath('rsync'),

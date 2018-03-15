@@ -14,7 +14,7 @@ UPDATE 10
 VACUUM uao_update_toast;
 VACUUM
 SELECT a, b, md5(c::text) FROM uao_update_toast;
- a  | b  |               md5
+ a  | b  |               md5                
 ----+----+----------------------------------
   1 |  1 | d41d8cd98f00b204e9800998ecf8427e
   2 |  1 | d41d8cd98f00b204e9800998ecf8427e

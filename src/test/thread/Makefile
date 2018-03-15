@@ -2,9 +2,9 @@
 #
 # Makefile for tools/thread
 #
-# Copyright (c) 2003-2009, PostgreSQL Global Development Group
+# Copyright (c) 2003-2010, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/test/thread/Makefile,v 1.5 2009/01/01 17:24:04 momjian Exp $
+# $PostgreSQL: pgsql/src/test/thread/Makefile,v 1.7 2010/07/05 18:54:38 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ all: thread_test
 
 thread_test: thread_test.o
 # no need for $LIBS, might not be compiled yet
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(PTHREAD_LIBS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) $^ $(PTHREAD_LIBS) -o $@
 
 clean distclean maintainer-clean:
 	rm -f thread_test$(X) thread_test.o

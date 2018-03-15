@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/drop_owned.sgml,v 1.6 2008/11/14 10:22:46 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/drop_owned.sgml,v 1.8 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-DROP-OWNED">
  <refmeta>
-  <refentrytitle id="SQL-DROP-OWNED-TITLE">DROP OWNED</refentrytitle>
+  <refentrytitle>DROP OWNED</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -88,8 +88,7 @@ DROP OWNED BY <replaceable class="PARAMETER">name</replaceable> [, ...] [ CASCAD
   </para>
 
   <para>
-   The <xref linkend="sql-reassign-owned"
-   endterm="sql-reassign-owned-title"> command is an alternative that
+   The <xref linkend="sql-reassign-owned"> command is an alternative that
    reassigns the ownership of all the database objects owned by one or
    more roles.
   </para>
@@ -112,8 +111,8 @@ DROP OWNED BY <replaceable class="PARAMETER">name</replaceable> [, ...] [ CASCAD
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-reassign-owned" endterm="sql-reassign-owned-title"></member>
-   <member><xref linkend="sql-droprole" endterm="sql-droprole-title"></member>
+   <member><xref linkend="sql-reassign-owned"></member>
+   <member><xref linkend="sql-droprole"></member>
   </simplelist>
  </refsect1>
 

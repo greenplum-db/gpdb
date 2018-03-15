@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/droplang.sgml,v 1.32 2009/02/26 16:02:37 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/droplang.sgml,v 1.34 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="APP-DROPLANG">
  <refmeta>
-  <refentrytitle id="APP-DROPLANG-TITLE"><application>droplang</application></refentrytitle>
+  <refentrytitle><application>droplang</application></refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
@@ -50,7 +50,7 @@ PostgreSQL documentation
    several <acronym>SQL</acronym> commands, it is recommended to use
    <application>droplang</application> because it performs a number
    of checks and is much easier to use. See
-   <xref linkend="sql-droplanguage" endterm="sql-droplanguage-title">
+   <xref linkend="sql-droplanguage">
    for more.
   </para>
  </refsect1>
@@ -102,6 +102,27 @@ PostgreSQL documentation
         Show a list of already installed languages in the target database.
        </para>
       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>droplang</application> version and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
+     <varlistentry>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
+       <para>
+       Show help about <application>droplang</application> command line
+       arguments, and exit.
+       </para>
+       </listitem>
      </varlistentry>
 
     </variablelist>
@@ -254,7 +275,7 @@ PostgreSQL documentation
 
   <simplelist type="inline">
    <member><xref linkend="app-createlang"></member>
-   <member><xref linkend="sql-droplanguage" endterm="sql-droplanguage-title"></member>
+   <member><xref linkend="sql-droplanguage"></member>
   </simplelist>
  </refsect1>
 

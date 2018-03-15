@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.184 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.200 2010/07/06 19:19:00 momjian Exp $
  */
 
 /*----------------------------------------------------------------------
@@ -602,7 +602,7 @@ static PGresult *exec_query(const char *query);
 
 static char *previous_word(int point, int skip);
 
-#ifdef NOT_USED
+#if 0
 static char *quote_file_name(char *text, int match_type, char *quote_pointer);
 static char *dequote_file_name(char *text, char quote_char);
 #endif
@@ -725,7 +725,7 @@ psql_completion(char *text, int start, int end)
 	{
 		static const char *const list_ALTER[] =
 		{"AGGREGATE", "CONVERSION", "DATABASE", "DEFAULT PRIVILEGES", "DOMAIN", "EXTENSION", "FOREIGN DATA WRAPPER", "FUNCTION",
-		"GROUP", "INDEX", "LANGUAGE", "LARGE OBJECT", "OPERATOR", "ROLE", "SCHEMA", "SERVER", "SEQUENCE", "TABLE",
+			"GROUP", "INDEX", "LANGUAGE", "LARGE OBJECT", "OPERATOR", "ROLE", "SCHEMA", "SERVER", "SEQUENCE", "TABLE",
 		"TABLESPACE", "TEXT SEARCH", "TRIGGER", "TYPE", "USER", "USER MAPPING FOR", "VIEW", NULL};
 
 		COMPLETE_WITH_LIST(list_ALTER);
@@ -1614,16 +1614,16 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev2_wd, "TABLESPACE") == 0)
 	{
 		static const char *const list_CREATETABLESPACE[] =
-		{"OWNER", "FILESPACE", NULL};
+		{"OWNER", "LOCATION", NULL};
 
 		COMPLETE_WITH_LIST(list_CREATETABLESPACE);
 	}
-	/* Complete CREATE TABLESPACE name OWNER name with "FILESPACE" */
+	/* Complete CREATE TABLESPACE name OWNER name with "LOCATION" */
 	else if (pg_strcasecmp(prev5_wd, "CREATE") == 0 &&
 			 pg_strcasecmp(prev4_wd, "TABLESPACE") == 0 &&
 			 pg_strcasecmp(prev2_wd, "OWNER") == 0)
 	{
-		COMPLETE_WITH_CONST("FILESPACE");
+		COMPLETE_WITH_CONST("LOCATION");
 	}
 
 /* CREATE TEXT SEARCH */
@@ -2031,6 +2031,16 @@ psql_completion(char *text, int start, int end)
 								   " UNION SELECT 'LARGE OBJECT'"
 								   " UNION SELECT 'SCHEMA'"
 								   " UNION SELECT 'TABLESPACE'");
+	else if ((pg_strcasecmp(prev4_wd, "GRANT") == 0 ||
+			  pg_strcasecmp(prev4_wd, "REVOKE") == 0) &&
+			 pg_strcasecmp(prev2_wd, "ON") == 0 &&
+			 pg_strcasecmp(prev_wd, "FOREIGN") == 0)
+	{
+		static const char *const list_privilege_foreign[] =
+		{"DATA WRAPPER", "SERVER", NULL};
+
+		COMPLETE_WITH_LIST(list_privilege_foreign);
+	}
 
 	/* Complete "GRANT/REVOKE * ON * " with "TO/FROM" */
 	else if ((pg_strcasecmp(prev4_wd, "GRANT") == 0 ||
@@ -2162,10 +2172,6 @@ psql_completion(char *text, int start, int end)
 		   COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(relname) FROM pg_catalog.pg_listener WHERE substring(pg_catalog.quote_ident(relname),1,%d)='%s'");
 	   else
 	       COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(channel) FROM pg_catalog.pg_listening_channels() AS channel WHERE substring(pg_catalog.quote_ident(channel),1,%d)='%s'");
-		
-/* OPTIONS */
-	else if (pg_strcasecmp(prev_wd, "OPTIONS") == 0)
-		COMPLETE_WITH_CONST("(");
 
 /* OPTIONS */
 	else if (pg_strcasecmp(prev_wd, "OPTIONS") == 0)
@@ -2409,9 +2415,10 @@ psql_completion(char *text, int start, int end)
 /* UNLISTEN */
 	else if (pg_strcasecmp(prev_wd, "UNLISTEN") == 0)
 	    if (pset.sversion >= 80210 && pset.sversion < 80220)
-		   COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(relname) FROM pg_catalog.pg_listener WHERE substring(pg_catalog.quote_ident(relname),1,%d)='%s'");
+			COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(relname) FROM pg_catalog.pg_listener WHERE substring(pg_catalog.quote_ident(relname),1,%d)='%s'");
 		else
-		   COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(channel) FROM pg_catalog.pg_listening_channels() AS channel WHERE substring(pg_catalog.quote_ident(channel),1,%d)='%s' UNION SELECT '*'");
+			COMPLETE_WITH_QUERY("SELECT pg_catalog.quote_ident(channel) FROM pg_catalog.pg_listening_channels() AS channel WHERE substring(pg_catalog.quote_ident(channel),1,%d)='%s' UNION SELECT '*'");
+
 /* UPDATE */
 	/* If prev. word is UPDATE suggest a list of tables */
 	else if (pg_strcasecmp(prev_wd, "UPDATE") == 0)
@@ -2444,7 +2451,10 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev3_wd, "USER") == 0 &&
 			 pg_strcasecmp(prev2_wd, "MAPPING") == 0 &&
 			 pg_strcasecmp(prev_wd, "FOR") == 0)
-		COMPLETE_WITH_QUERY(Query_for_list_of_roles);
+		COMPLETE_WITH_QUERY(Query_for_list_of_roles
+							" UNION SELECT 'CURRENT_USER'"
+							" UNION SELECT 'PUBLIC'"
+							" UNION SELECT 'USER'");
 	else if ((pg_strcasecmp(prev4_wd, "ALTER") == 0 ||
 			  pg_strcasecmp(prev4_wd, "DROP") == 0) &&
 			 pg_strcasecmp(prev3_wd, "USER") == 0 &&
@@ -3150,7 +3160,7 @@ previous_word(int point, int skip)
 	return s;
 }
 
-#ifdef NOT_USED
+#if 0
 
 /*
  * Surround a string with single quotes. This works for both SQL and

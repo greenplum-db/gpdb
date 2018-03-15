@@ -37,7 +37,7 @@ select localoid::regclass, attrnums from gp_distribution_policy where localoid =
  atsdb    | {2}
 (1 row)
 
--- verify that the data is correctly redistributed by building a fresh 
+-- verify that the data is correctly redistributed by building a fresh
 -- table with the same policy
 create table ats_test (i int, j text) distributed by (j);
 insert into ats_test :DATA;
@@ -123,7 +123,7 @@ insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 -- check that we're an AO table
 select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
- count
+ count 
 -------
      1
 (1 row)
@@ -137,7 +137,7 @@ select count(*) from atsdb_ao;
 alter table atsdb_ao set distributed by (j);
 -- Still AO?
 select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
- count
+ count 
 -------
      1
 (1 row)
@@ -153,7 +153,7 @@ delete from atsdb_ao where i = any(array(select generate_series(1,90)));
 vacuum analyze atsdb_ao;
 alter table atsdb_ao set distributed randomly;
 select count(*) from atsdb_ao;
- count
+ count 
 -------
     20
 (1 row)
@@ -183,7 +183,7 @@ select count(*) from atsdb;
 -- and compare how the tuples have been distributed.
 create table atsdb_1 (like atsdb_1_prt_1) distributed by (i);
 copy atsdb_1 from stdin delimiter '|';
-select gp_segment_id, * from atsdb where k = 1 except 
+select gp_segment_id, * from atsdb where k = 1 except
 select gp_segment_id, * from atsdb_1;
  gp_segment_id | i | j | k 
 ---------------+---+---+---
@@ -358,7 +358,7 @@ select * from distcheck where rel = 'atsdb';
 
 alter table atsdb drop column n;
 alter table atsdb set with(appendonly = true, compresslevel = 3);
-select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid = 
+select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
  relname | ?column? |            reloptions             
 ---------+----------+-----------------------------------
@@ -700,7 +700,7 @@ select * from atsdb order by 1, 2, 3;
 (9 rows)
 
 alter table atsdb set with(appendonly = true);
-select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where 
+select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
 relname  like 'atsdb%' and c.oid = a.relid order by 1;
     relname    | blocksize | compresslevel | compresstype | checksum 
 ---------------+-----------+---------------+--------------+----------
@@ -797,11 +797,9 @@ CREATE TABLE test_add_drop_rename_column_change_datatype(
  a_ts_without timestamp without time zone,
  b_ts_with timestamp with time zone,
  date_column date) distributed randomly;
- 
 insert into test_add_drop_rename_column_change_datatype values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000');
 insert into test_add_drop_rename_column_change_datatype values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001');
 insert into test_add_drop_rename_column_change_datatype values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002');
- 
 ALTER TABLE test_add_drop_rename_column_change_datatype ADD COLUMN added_col character varying(30);
 ALTER TABLE test_add_drop_rename_column_change_datatype DROP COLUMN drop_col ;
 ALTER TABLE test_add_drop_rename_column_change_datatype RENAME COLUMN before_rename_col TO after_rename_col;
@@ -1241,13 +1239,13 @@ create table owner_test(i int, toast text) distributed randomly;
 alter table owner_test owner to atsdb;
 alter table owner_test set with (reorganize = true) distributed by (i);
 -- verify, atsdb should own all three
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from pg_class a, pg_class b, pg_class c, 
+from pg_class a, pg_class b, pg_class c,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid = b.oid 
+where a.reltoastrelid = b.oid
   and b.reltoastidxid=c.oid
   and a.relname='owner_test'
   and x.oid = a.relowner
@@ -1259,13 +1257,13 @@ where a.reltoastrelid = b.oid
 (1 row)
 
 -- MPP-9663 - Check that the ownership is consistent on the segments as well
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a, 
-	 gp_dist_random('pg_class') b, 
-	 gp_dist_random('pg_class') c, 
+from gp_dist_random('pg_class') a,
+	 gp_dist_random('pg_class') b,
+	 gp_dist_random('pg_class') c,
      pg_authid x, pg_authid y, pg_authid z
 where a.reltoastrelid=b.oid
   and b.reltoastidxid=c.oid
@@ -1285,13 +1283,13 @@ where a.reltoastrelid=b.oid
 alter table owner_test add column d text;
 alter table owner_test drop column d;
 alter table owner_test set with (reorganize = true) distributed by (i);
-select a.relname, 
-       x.rolname as relowner, 
+select a.relname,
+       x.rolname as relowner,
        y.rolname as toastowner,
 	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a, 
-	 gp_dist_random('pg_class') b, 
-	 gp_dist_random('pg_class') c, 
+from gp_dist_random('pg_class') a,
+	 gp_dist_random('pg_class') b,
+	 gp_dist_random('pg_class') c,
      pg_authid x, pg_authid y, pg_authid z
 where a.reltoastrelid=b.oid
   and b.reltoastidxid=c.oid
@@ -1330,7 +1328,7 @@ drop table if exists distrib_index_test;
 create table distrib_index_test (a int, b text) distributed by (a);
 select count(*) from gp_distribution_policy
 	where localoid in (select oid from pg_class where relname='distrib_index_test');
- count
+ count 
 -------
      1
 (1 row)
@@ -1340,7 +1338,7 @@ drop table distrib_index_test;
 rollback;
 select count(*) from gp_distribution_policy
 	where localoid in (select oid from pg_class where relname='distrib_index_test');
- count
+ count 
 -------
      1
 (1 row)
@@ -1375,11 +1373,11 @@ NOTICE:  building index for child partition "distrib_part_test_1_prt_part1"
 ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;
 -- MPP-23801
 --
--- ALTER TABLE set distribution key should check compatible with unique index. 
+-- ALTER TABLE set distribution key should check compatible with unique index.
 -- case 1
 CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "t_dist1_pkey" for table "t_dist1"
-ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1); 
+ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
 -- case 2
@@ -1387,18 +1385,18 @@ CREATE TABLE t_dist2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4 INTEGER) DIS
 CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
 CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col3);
 CREATE UNIQUE INDEX idx3_t_dist2 ON t_dist2(col1, col2, col4);
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1);
 WARNING:  distribution policy of relation "t_dist2" already set to (col1)
 HINT:  Use ALTER TABLE "t_dist2" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (col1) to force redistribution
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
 -- Altering distribution policy for subpartitioned tables

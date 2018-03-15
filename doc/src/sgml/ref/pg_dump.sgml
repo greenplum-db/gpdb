@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dump.sgml,v 1.113 2009/03/22 16:44:26 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dump.sgml,v 1.117 2010/02/23 17:28:09 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -25,6 +25,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
   <cmdsynopsis>
    <command>pg_dump</command>
+   <arg rep="repeat"><replaceable>connection-option</replaceable></arg>
    <arg rep="repeat"><replaceable>option</replaceable></arg>
    <arg><replaceable>dbname</replaceable></arg>
   </cmdsynopsis>
@@ -51,7 +52,7 @@ PostgreSQL documentation
    saved. To restore from such a script, feed it to <xref
    linkend="app-psql">. Script files
    can be used to reconstruct the database even on other machines and
-   other architectures; with some modifications even on other SQL
+   other architectures; with some modifications, even on other SQL
    database products.
   </para>
 
@@ -76,8 +77,8 @@ PostgreSQL documentation
    the <quote>custom</quote> format (<option>-Fc</option>). It allows
    for selection and reordering of all archived items, and is compressed
    by default. The <application>tar</application> format
-   (<option>-Ft</option>) is not compressed and it is not possible to
-   reorder data when loading, but it is otherwise quite flexible;
+   (<option>-Ft</option>) is not compressed and has restrictions on
+   reordering data when loading, but it is otherwise quite flexible;
    moreover, it can be manipulated with standard Unix tools such as
    <command>tar</command>.
   </para>
@@ -223,10 +224,11 @@ PostgreSQL documentation
          <term><literal>custom</></term>
          <listitem>
           <para>
-           Output a custom archive suitable for input into
-           <application>pg_restore</application>. This is the most flexible
-           format in that it allows reordering of loading data as well
-           as object definitions. This format is also compressed by default.
+           Output a custom-format archive suitable for input into
+           <application>pg_restore</application>.
+           This is the most flexible output format in that it allows manual
+           selection and reordering of archived items during restore.
+           This format is also compressed by default.
           </para>
          </listitem>
         </varlistentry>
@@ -236,11 +238,14 @@ PostgreSQL documentation
          <term><literal>tar</></term>
          <listitem>
           <para>
-           Output a <command>tar</command> archive suitable for input into
-           <application>pg_restore</application>. Using this archive format
-           allows reordering and/or exclusion of database objects
-           at the time the database is restored. It is also possible to limit
-           which data is reloaded at restore time.
+           Output a <command>tar</command>-format archive suitable for input
+           into <application>pg_restore</application>.
+           This output format allows manual selection and reordering of
+           archived items during restore, but there is a restriction: the
+           relative order of table data items cannot be changed during
+           restore.  Also, <command>tar</command> format does not support
+           compression and has a limit of 8 GB on the size of individual
+           tables.
           </para>
          </listitem>
         </varlistentry>
@@ -474,6 +479,16 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+       <term><option>-V</></term>
+       <term><option>--version</></term>
+       <listitem>
+       <para>
+       Print the <application>pg_dump</application> version and exit.
+       </para>
+       </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>-x</></term>
       <term><option>--no-privileges</></term>
       <term><option>--no-acl</></term>
@@ -521,7 +536,7 @@ PostgreSQL documentation
         than <command>COPY</command>).  This will make restoration very slow;
         it is mainly useful for making dumps that can be loaded into
         non-<productname>PostgreSQL</productname> databases.
-        Also, since this option generates a separate command for each row,
+        However, since this option generates a separate command for each row,
         an error in reloading a row causes only that row to be lost rather
         than the entire table contents.
         Note that
@@ -544,7 +559,7 @@ PostgreSQL documentation
         ...</literal>).  This will make restoration very slow; it is mainly
         useful for making dumps that can be loaded into
         non-<productname>PostgreSQL</productname> databases.
-        Also, since this option generates a separate command for each row,
+        However, since this option generates a separate command for each row,
         an error in reloading a row causes only that row to be lost rather
         than the entire table contents.
        </para>
@@ -627,7 +642,7 @@ PostgreSQL documentation
        <para>
         Output SQL-standard <command>SET SESSION AUTHORIZATION</> commands
         instead of <command>ALTER OWNER</> commands to determine object
-        ownership.  This makes the dump more standards compatible, but
+        ownership.  This makes the dump more standards-compatible, but
         depending on the history of the objects in the dump, might not restore
         properly.  Also, a dump using <command>SET SESSION AUTHORIZATION</>
         will certainly require superuser privileges to restore correctly,
@@ -637,21 +652,16 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-Z <replaceable class="parameter">0..9</replaceable></option></term>
-      <term><option>--compress=<replaceable class="parameter">0..9</replaceable></option></term>
-      <listitem>
+       <term><option>-?</></term>
+       <term><option>--help</></term>
+       <listitem>
        <para>
-        Specify the compression level to use.  Zero means no compression.
-        For the custom archive format, this specifies compression of
-        individual table-data segments, and the default is to compress
-        at a moderate level.
-        For plain text output, setting a nonzero compression level causes
-        the entire output file to be compressed, as though it had been
-        fed through <application>gzip</>; but the default is not to compress.
-        The tar archive format currently does not support compression at all.
+       Show help about <application>pg_dump</application> command line
+       arguments, and exit.
        </para>
-      </listitem>
+       </listitem>
      </varlistentry>
+
     </variablelist>
    </para>
 
@@ -842,7 +852,9 @@ CREATE DATABASE foo WITH TEMPLATE template0;
    does not contain the statistics used by the optimizer to make
    query planning decisions.  Therefore, it is wise to run
    <command>ANALYZE</command> after restoring from a dump file
-   to ensure good performance.  The dump file also does not
+   to ensure optimal performance; see <xref linkend="vacuum-for-statistics">
+   and <xref linkend="autovacuum"> for more information.
+   The dump file also does not
    contain any <command>ALTER DATABASE ... SET</> commands;
    these settings are dumped by <xref linkend="app-pg-dumpall">,
    along with database users and other installation-wide settings.

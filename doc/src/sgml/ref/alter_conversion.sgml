@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_conversion.sgml,v 1.9 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_conversion.sgml,v 1.11 2010/04/03 07:22:56 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERCONVERSION">
  <refmeta>
-  <refentrytitle id="SQL-ALTERCONVERSION-TITLE">ALTER CONVERSION</refentrytitle>
+  <refentrytitle>ALTER CONVERSION</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,8 +21,8 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER CONVERSION <replaceable>name</replaceable> RENAME TO <replaceable>newname</replaceable>
-ALTER CONVERSION <replaceable>name</replaceable> OWNER TO <replaceable>newowner</replaceable>
+ALTER CONVERSION <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
+ALTER CONVERSION <replaceable>name</replaceable> OWNER TO <replaceable>new_owner</replaceable>
 </synopsis>
  </refsynopsisdiv>
   
@@ -59,7 +59,7 @@ ALTER CONVERSION <replaceable>name</replaceable> OWNER TO <replaceable>newowner<
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newname</replaceable></term>
+    <term><replaceable class="parameter">new_name</replaceable></term>
     <listitem>
      <para>
       The new name of the conversion.
@@ -68,7 +68,7 @@ ALTER CONVERSION <replaceable>name</replaceable> OWNER TO <replaceable>newowner<
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newowner</replaceable></term>
+    <term><replaceable class="parameter">new_owner</replaceable></term>
     <listitem>
      <para>
       The new owner of the conversion.
@@ -111,8 +111,8 @@ ALTER CONVERSION iso_8859_1_to_utf8 OWNER TO joe;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createconversion" endterm="sql-createconversion-title"></member>
-   <member><xref linkend="sql-dropconversion" endterm="sql-dropconversion-title"></member>
+   <member><xref linkend="sql-createconversion"></member>
+   <member><xref linkend="sql-dropconversion"></member>
   </simplelist>
  </refsect1>
 </refentry>

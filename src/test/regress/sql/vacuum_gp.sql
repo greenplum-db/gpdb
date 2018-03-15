@@ -178,5 +178,3 @@ insert into ao_t1 select i, i from generate_series(1, 10000) i;
 update ao_t1 set b = b + 1;
 vacuum full ao_t1;
 drop table ao_t1;
-
-vacuum full gp_persistent_relation_node;

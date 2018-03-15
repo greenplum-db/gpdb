@@ -2,9 +2,9 @@
 #
 # Makefile for src/tools/findoidjoins
 #
-# Copyright (c) 2003-2009, PostgreSQL Global Development Group
+# Copyright (c) 2003-2010, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/tools/findoidjoins/Makefile,v 1.6 2009/01/01 17:24:05 momjian Exp $
+# $PostgreSQL: pgsql/src/tools/findoidjoins/Makefile,v 1.8 2010/07/05 18:54:38 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ OBJS= findoidjoins.o
 all: submake-libpq submake-libpgport findoidjoins
 
 findoidjoins: findoidjoins.o $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) findoidjoins.o $(libpq_pgport) $(LDFLAGS) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) findoidjoins.o $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 clean distclean maintainer-clean:
 	rm -f findoidjoins$(X) $(OBJS)

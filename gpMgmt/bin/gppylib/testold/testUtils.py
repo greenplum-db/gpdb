@@ -207,7 +207,7 @@ def testOutputGpArray(gpArray):
 
     lines.append([
             "dbid", "content", "role", "preferred_role", "mode", "status",
-            "hostname", "address", "port", "datadir", "replication_port"
+            "hostname", "address", "port", "datadir"
             ])
     for seg in segs:
         line = [
@@ -221,7 +221,6 @@ def testOutputGpArray(gpArray):
                 str(seg.getSegmentAddress()),
                 str(seg.getSegmentPort()),
                 str(seg.getSegmentDataDirectory()),
-                str(seg.getSegmentReplicationPort()),
                 ]
 
         lines.append(line)

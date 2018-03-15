@@ -60,12 +60,6 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 							  "LANGUAGE C STRICT;"));
 	PQclear(executeQueryOrDie(ctx, conn,
 							  "CREATE OR REPLACE FUNCTION "
-							  "binary_upgrade.preassign_filespace_oid(OID, TEXT) "
-							  "RETURNS VOID "
-							  "AS '$libdir/pg_upgrade_support' "
-							  "LANGUAGE C STRICT;"));
-	PQclear(executeQueryOrDie(ctx, conn,
-							  "CREATE OR REPLACE FUNCTION "
 							  "binary_upgrade.preassign_tablespace_oid(OID, TEXT) "
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "

@@ -4,10 +4,10 @@
  *	  header file for postgres btree access method implementation.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/nbtree.h,v 1.124 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/nbtree.h,v 1.135 2010/07/06 19:19:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -214,12 +214,16 @@ typedef struct BTMetaPageData
 #define XLOG_BTREE_SPLIT_R		0x40	/* as above, new item on right */
 #define XLOG_BTREE_SPLIT_L_ROOT 0x50	/* add tuple with split of root */
 #define XLOG_BTREE_SPLIT_R_ROOT 0x60	/* as above, new item on right */
-#define XLOG_BTREE_DELETE		0x70	/* delete leaf index tuple */
+#define XLOG_BTREE_DELETE		0x70	/* delete leaf index tuples for a page */
 #define XLOG_BTREE_DELETE_PAGE	0x80	/* delete an entire page */
 #define XLOG_BTREE_DELETE_PAGE_META 0x90		/* same, and update metapage */
 #define XLOG_BTREE_NEWROOT		0xA0	/* new root page */
 #define XLOG_BTREE_DELETE_PAGE_HALF 0xB0		/* page deletion that makes
 												 * parent half-dead */
+#define XLOG_BTREE_VACUUM		0xC0	/* delete entries on a page during
+										 * vacuum */
+#define XLOG_BTREE_REUSE_PAGE	0xD0	/* old page is about to be reused from
+										 * FSM */
 
 /*
  * All that we need to find changed index tuple
@@ -227,43 +231,8 @@ typedef struct BTMetaPageData
 typedef struct xl_btreetid
 {
 	RelFileNode node;
-	ItemPointerData persistentTid;
-	int64 persistentSerialNum;
 	ItemPointerData tid;		/* changed tuple id */
 } xl_btreetid;
-
-inline static void xl_btreetid_set(
-	struct xl_btreetid	*btreeid,
-
-	Relation rel,
-
-	BlockNumber itup_blkno,
-	
-	OffsetNumber itup_off)
-{
-	btreeid->node = rel->rd_node;
-	btreeid->persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
-	btreeid->persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
-	ItemPointerSet(&(btreeid->tid), itup_blkno, itup_off);
-}
-
-typedef struct xl_btreenode
-{
-	RelFileNode node;
-	ItemPointerData persistentTid;
-	int64 persistentSerialNum;
-} xl_btreenode;
-
-inline static void xl_btreenode_set(
-	struct xl_btreenode	*btreenode,
-
-	Relation rel)
-{
-	btreenode->node = rel->rd_node;
-	btreenode->persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
-	btreenode->persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
-}
-
 
 /*
  * All that we need to regenerate the meta-data page
@@ -317,9 +286,6 @@ typedef struct xl_btree_split
 	uint32		level;			/* tree level of page being split */
 	OffsetNumber firstright;	/* first item moved to right page */
 
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum;
-
 	/*
 	 * If level > 0, BlockIdData downlink follows.	(We use BlockIdData rather
 	 * than BlockNumber for alignment reasons: SizeOfBtreeSplit is only 16-bit
@@ -339,28 +305,76 @@ typedef struct xl_btree_split
 	 */
 } xl_btree_split;
 
-#define SizeOfBtreeSplit	(offsetof(xl_btree_split, persistentSerialNum) + sizeof(int64))
+#define SizeOfBtreeSplit	(offsetof(xl_btree_split, firstright) + sizeof(OffsetNumber))
 
 /*
  * This is what we need to know about delete of individual leaf index tuples.
  * The WAL record can represent deletion of any number of index tuples on a
- * single index page.
+ * single index page when *not* executed by VACUUM.
  */
 typedef struct xl_btree_delete
 {
-	xl_btreenode btreenode;
+	RelFileNode node;			/* RelFileNode of the index */
 	BlockNumber block;
+	RelFileNode hnode;			/* RelFileNode of the heap the index currently
+								 * points at */
+	int			nitems;
+
 	/* TARGET OFFSET NUMBERS FOLLOW AT THE END */
 } xl_btree_delete;
 
-#define SizeOfBtreeDelete	(offsetof(xl_btree_delete, block) + sizeof(BlockNumber))
+#define SizeOfBtreeDelete	(offsetof(xl_btree_delete, nitems) + sizeof(int))
+
+/*
+ * This is what we need to know about page reuse within btree.
+ */
+typedef struct xl_btree_reuse_page
+{
+	RelFileNode node;
+	BlockNumber block;
+	TransactionId latestRemovedXid;
+} xl_btree_reuse_page;
+
+#define SizeOfBtreeReusePage	(sizeof(xl_btree_reuse_page))
+
+/*
+ * This is what we need to know about vacuum of individual leaf index tuples.
+ * The WAL record can represent deletion of any number of index tuples on a
+ * single index page when executed by VACUUM.
+ *
+ * The correctness requirement for applying these changes during recovery is
+ * that we must do one of these two things for every block in the index:
+ *		* lock the block for cleanup and apply any required changes
+ *		* EnsureBlockUnpinned()
+ * The purpose of this is to ensure that no index scans started before we
+ * finish scanning the index are still running by the time we begin to remove
+ * heap tuples.
+ *
+ * Any changes to any one block are registered on just one WAL record. All
+ * blocks that we need to run EnsureBlockUnpinned() are listed as a block range
+ * starting from the last block vacuumed through until this one. Individual
+ * block numbers aren't given.
+ *
+ * Note that the *last* WAL record in any vacuum of an index is allowed to
+ * have a zero length array of offsets. Earlier records must have at least one.
+ */
+typedef struct xl_btree_vacuum
+{
+	RelFileNode node;
+	BlockNumber block;
+	BlockNumber lastBlockVacuumed;
+
+	/* TARGET OFFSET NUMBERS FOLLOW */
+} xl_btree_vacuum;
+
+#define SizeOfBtreeVacuum	(offsetof(xl_btree_vacuum, lastBlockVacuumed) + sizeof(BlockNumber))
 
 /*
  * This is what we need to know about deletion of a btree page.  The target
  * identifies the tuple removed from the parent page (note that we remove
  * this tuple's downlink and the *following* tuple's key).	Note we do not
  * store any content for the deleted page --- it is just rewritten as empty
- * during recovery.
+ * during recovery, apart from resetting the btpo.xact.
  */
 typedef struct xl_btree_delete_page
 {
@@ -368,10 +382,11 @@ typedef struct xl_btree_delete_page
 	BlockNumber deadblk;		/* child block being deleted */
 	BlockNumber leftblk;		/* child block's left sibling, if any */
 	BlockNumber rightblk;		/* child block's right sibling */
+	TransactionId btpo_xact;	/* value of btpo.xact for use in recovery */
 	/* xl_btree_metadata FOLLOWS IF XLOG_BTREE_DELETE_PAGE_META */
 } xl_btree_delete_page;
 
-#define SizeOfBtreeDeletePage	(offsetof(xl_btree_delete_page, rightblk) + sizeof(BlockNumber))
+#define SizeOfBtreeDeletePage	(offsetof(xl_btree_delete_page, btpo_xact) + sizeof(TransactionId))
 
 /*
  * New root log record.  There are zero tuples if this is to establish an
@@ -382,7 +397,7 @@ typedef struct xl_btree_delete_page
  */
 typedef struct xl_btree_newroot
 {
-	xl_btreenode btreenode;
+	RelFileNode node;
 	BlockNumber rootblk;		/* location of new root */
 	uint32		level;			/* its tree level */
 	/* 0 or 2 INDEX TUPLES FOLLOW AT END OF STRUCT */
@@ -555,8 +570,8 @@ extern Datum btoptions(PG_FUNCTION_ARGS);
 /*
  * prototypes for functions in nbtinsert.c
  */
-extern void _bt_doinsert(Relation rel, IndexTuple itup,
-			 bool index_is_unique, Relation heapRel);
+extern bool _bt_doinsert(Relation rel, IndexTuple itup,
+			 IndexUniqueCheck checkUnique, Relation heapRel);
 extern Buffer _bt_getstackbuf(Relation rel, BTStack stack, int access);
 extern void _bt_insert_parent(Relation rel, Buffer buf, Buffer rbuf,
 				  BTStack stack, bool is_root, bool is_only);
@@ -574,10 +589,11 @@ extern Buffer _bt_relandgetbuf(Relation rel, Buffer obuf,
 extern void _bt_relbuf(Relation rel, Buffer buf);
 extern void _bt_pageinit(Page page, Size size);
 extern bool _bt_page_recyclable(Page page);
-extern void _bt_delitems(Relation rel, Buffer buf,
-			 OffsetNumber *itemnos, int nitems, bool inVacuum);
-extern int _bt_pagedel(Relation rel, Buffer buf,
-			BTStack stack, bool vacuum_full);
+extern void _bt_delitems_delete(Relation rel, Buffer buf,
+					OffsetNumber *itemnos, int nitems, Relation heapRel);
+extern void _bt_delitems_vacuum(Relation rel, Buffer buf,
+		   OffsetNumber *itemnos, int nitems, BlockNumber lastBlockVacuumed);
+extern int	_bt_pagedel(Relation rel, Buffer buf, BTStack stack);
 
 /*
  * prototypes for functions in nbtsearch.c

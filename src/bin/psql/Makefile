@@ -43,7 +43,7 @@ LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 all: submake-libpq submake-libpgport psql
 
 psql: $(OBJS) $(libpq_builddir)/libpq.a
-	$(CC) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) $(OBJS) $(libpq_pgport) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 help.o: sql_help.h
 
@@ -60,7 +60,7 @@ sql_help.h: create_help.pl $(wildcard $(REFDOCDIR)/*.sgml)
 # psqlscan is compiled as part of mainloop
 mainloop.o: psqlscan.c
 
-$(srcdir)/psqlscan.c: psqlscan.l
+psqlscan.c: psqlscan.l
 ifdef FLEX
 	$(FLEX) $(FLEXFLAGS) -o'$(srcdir)/psqlscan.c' $<
 else

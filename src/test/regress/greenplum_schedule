@@ -15,10 +15,17 @@
 #   hitting max_connections limit on segments.
 #
 
-test: gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi spi_processed64bit gp_xml pgoptions shared_scan null
+# enable query metrics cluster GUC
+test: instr_in_shmem_setup
+# run separately - because slot counter may influenced by other parallel queries
+test: instr_in_shmem
+
+test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan
+test: spi_processed64bit
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain
+
 test: bitmap_index gp_dump_query_oids analyze gp_owner_permission
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
@@ -33,6 +40,9 @@ test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill 
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
 
+# Check for shmem leak for instrumentation slots before gpdb restart
+test: instr_in_shmem_verify
+
 # This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.
 test: segspace_setup
@@ -44,7 +54,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
 
 test: rangefuncs_cdb gp_aggregates gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish
 
@@ -62,27 +72,29 @@ test: sreh
 #test: olap_window
 #test: tpch500GB
 
-# FIXME: These tests no longer work, because they try to set
-# gp_interconnect_type, which doesn't work:
-# ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
-
-ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression compression_zstd eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
-test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
-ignore: icudp_full
-
-test: resource_queue
-test: resource_queue_function
-test: resource_group
-test: wrkloadadmin
-
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
 # might not happen if other backends are holding transactions open, preventing
 # vacuum from removing dead tuples.
 test: gp_toolkit
 
-test: gp_toolkit_ao_funcs filespace trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
-test: rle rle_delta dsp
+# FIXME: These tests no longer work, because they try to set
+# gp_interconnect_type, which doesn't work:
+# ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
+
+ignore: gp_portal_error
+test: external_table external_table_create_privs column_compression compression_zstd eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges aocs
+test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
+test: ic
+ignore: icudp_full
+
+test: resource_queue
+test: resource_queue_function
+test: resource_queue_stat
+test: resource_group
+test: wrkloadadmin
+
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation gp_numeric_agg partindex_test partition_pruning runtime_stats
+test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
@@ -130,6 +142,9 @@ test: olap_setup
 test: qp_olap_group qp_olap_group2
 
 test: hooktest partition_rank
+
+# Test query_info_collect_hook are called in expected sequence on normal query, query error/abort
+test: query_info_hook_test
 
 ignore: tpch500GB_orca
 
@@ -182,10 +197,13 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
-test: ao_checksum_corruption AOCO_Compression2 table_statistics
+test: ao_checksum_corruption AOCO_Compression2 table_statistics fts_error
 test: metadata_track
 test: workfile_mgr_test
 
 test: psql_gp_commands pg_resetxlog
+
+# Check for shmem leak for instrumentation slots
+test: instr_in_shmem_verify
 
 # end of tests

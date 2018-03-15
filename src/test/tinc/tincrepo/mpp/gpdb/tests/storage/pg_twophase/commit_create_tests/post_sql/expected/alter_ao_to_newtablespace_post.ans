@@ -44,7 +44,7 @@ Compression Level: 0
 Block Size: 32768
 Checksum: f
 Distributed by: (phase)
-Tablespace: "ao_ts2"
+Tablespace: "twophase_test_ts2"
 
 INSERT INTO ao_table_for_alter VALUES ('sync1_ao1',generate_series(1,10),'a',11,true,'111', repeat('text_',10), '{1,2,3,4,5}', 'Hello .. how are you 1
 ', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
@@ -53,7 +53,3 @@ INSERT INTO ao_table_for_alter VALUES ('sync1_ao1',generate_series(1,10),'a',11,
 INSERT 0 10
 DROP table ao_table_for_alter;
 DROP TABLE
-drop tablespace ao_ts1;
-DROP TABLESPACE
-drop tablespace ao_ts2;
-DROP TABLESPACE

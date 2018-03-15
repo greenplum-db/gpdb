@@ -5,11 +5,26 @@
 #include "access/gist_private.h"
 #include "access/gin.h"
 #include "commands/sequence.h"
+#include "postmaster/bgwriter.h"
 #include "replication/walsender_private.h"
 #include "replication/walsender.h"
+#include "catalog/catalog.h"
+#include "catalog/pg_tablespace.h"
+#include "storage/fd.h"
 #include "utils/builtins.h"
 #include "utils/hsearch.h"
+#include "utils/tqual.h"
 
+/*
+ * If a file comparison fails, how many times to retry before admitting
+ * that it really differs?
+ */
+#define NUM_RETRIES		3
+
+/*
+ * How many seconds to wait for checkpoint record to be applied in standby?
+ */
+#define NUM_CHECKPOINT_SYNC_TIMEOUT 60
 
 /*
  * Not all the FSM and VM changes are WAL-logged and its OK if they are out of
@@ -30,6 +45,7 @@ typedef struct RelfilenodeEntry
 	Oid relfilenode;
 	int relam;
 	int relkind;
+	char relname[NAMEDATALEN];
 	char relstorage;
 	List *segments;
 } RelfilenodeEntry;
@@ -57,8 +73,7 @@ static void init_relation_types(char *include_relation_types);
 static RelationTypeData get_relation_type_data(int relam, char relstorage, int relkind);
 static void mask_block(char *pagedata, BlockNumber blkno, int relam, int relkind);
 static bool compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *rentry);
-static XLogRecPtr* get_synced_lsns();
-static bool compare_sent_lsns(XLogRecPtr *start_sent_lsns, XLogRecPtr *end_sent_lsns);
+static bool sync_wait(void);
 static HTAB* get_relfilenode_map();
 static RelfilenodeEntry* get_relfilenode_entry(char *relfilenode, HTAB *relfilenode_map);
 
@@ -174,96 +189,40 @@ mask_block(char *pagedata, BlockNumber blockno, int relam, int relkind)
 	}
 }
 
+/*
+ * Perform a checkpoint, and wait for it to be sent to and applied in all
+ * replicas.
+ */
 static bool
-compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *rentry)
+sync_wait(void)
 {
-	File primaryFile = 0;
-	File mirrorFile = 0;
-	char primaryFileBuf[BLCKSZ];
-	char mirrorFileBuf[BLCKSZ];
-	int primaryFileBytesRead;
-	int mirrorFileBytesRead;
-	int blockno = 0;
-	bool match = false;
+	int			retry;
+	XLogRecPtr	ckpt_lsn;
 
-	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
-	if (primaryFile < 0)
+	CHECK_FOR_INTERRUPTS();
+
+	/*
+	 * Request a checkpoint on first call, to flush out data changes from
+	 * shared buffer to disk.
+	 */
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+
+	ckpt_lsn = GetRedoRecPtr();
+
+	retry = 0;
+	while (retry < NUM_CHECKPOINT_SYNC_TIMEOUT)
 	{
-		elog(WARNING, "Unable to open file %s", primaryfilepath);
-		return false;
-	}
+		int			i;
 
-	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
-	if (mirrorFile < 0)
-	{
-		elog(WARNING, "Unable to open file %s", mirrorfilepath);
-		FileClose(primaryFile);
-		return false;
-	}
-
-	while (true)
-	{
-		memset(primaryFileBuf, 0, BLCKSZ);
-		memset(mirrorFileBuf, 0, BLCKSZ);
-
-		primaryFileBytesRead = FileRead(primaryFile, primaryFileBuf, sizeof(primaryFileBuf));
-		mirrorFileBytesRead = FileRead(mirrorFile, mirrorFileBuf, sizeof(mirrorFileBuf));
-
-		if (primaryFileBytesRead != mirrorFileBytesRead
-			|| primaryFileBytesRead < 0)
-			break; /* extra bits found */
-
-		if (primaryFileBytesRead == 0)
-		{
-			match = true;
-			break; /* reached EOF */
-		}
-
-		if (rentry->relstorage == RELSTORAGE_HEAP)
-		{
-			mask_block(primaryFileBuf, blockno, rentry->relam, rentry->relkind);
-			mask_block(mirrorFileBuf, blockno, rentry->relam, rentry->relkind);
-		}
-
-
-		if (memcmp(primaryFileBuf, mirrorFileBuf, BLCKSZ) != 0)
-			break; /* block mismatch */
-
-		blockno++;
-	}
-
-	if (!match)
-		ereport(WARNING,
-				(errmsg("%s files %s and %s mismatch at blockno %d",
-						get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-						primaryfilepath, mirrorfilepath, blockno)));
-
-	FileClose(primaryFile);
-	FileClose(mirrorFile);
-
-	return match;
-}
-
-static XLogRecPtr*
-get_synced_lsns()
-{
-	const int max_retry = 60;
-	int retry = 0;
-	XLogRecPtr *sent_lsns = (XLogRecPtr *)palloc(max_wal_senders * sizeof(XLogRecPtr));
-
-	while (retry < max_retry)
-	{
-		int i;
+		CHECK_FOR_INTERRUPTS();
 
 		LWLockAcquire(SyncRepLock, LW_SHARED);
 		for (i = 0; i < max_wal_senders; i++)
 		{
 			if (WalSndCtl->walsnds[i].pid == 0
 				|| WalSndCtl->walsnds[i].state != WALSNDSTATE_STREAMING
-				|| !XLByteEQ(WalSndCtl->walsnds[i].flush, WalSndCtl->walsnds[i].apply))
+				|| !XLByteLE(ckpt_lsn, WalSndCtl->walsnds[i].apply))
 				break;
-
-			sent_lsns[i] = WalSndCtl->walsnds[i].sentPtr;
 		}
 		LWLockRelease(SyncRepLock);
 
@@ -272,25 +231,228 @@ get_synced_lsns()
 		 * all be in sync.
 		 */
 		if (i == max_wal_senders)
-			return sent_lsns;
+			return true;
 
 		pg_usleep(1000000 /* 1 second */);
 		retry++;
 	}
 
-	return NULL;
+	return false;
 }
 
 static bool
-compare_sent_lsns(XLogRecPtr *start_sent_lsns, XLogRecPtr *end_sent_lsns)
+compare_files(char *primaryfilepath, char *mirrorfilepath, RelfilenodeEntry *rentry)
 {
-	int i;
+	File		primaryFile = -1;
+	File		mirrorFile = -1;
+	BlockNumber blockno;
+	int			attempts = 0;
+	bool		any_retries = false;
+	bool		primaryFileExists;
+	bool		mirrorFileExists;
 
-	for (i = 0; i < max_wal_senders; ++i)
+	blockno = 0;
+
+	/*
+	 * If there's any discrepancy between the files below, we will loop back
+	 * here. If NUM_RETRIES is reached, return error.
+	 */
+retry:
+	CHECK_FOR_INTERRUPTS();
+
+	/* If the files were still open from previous attempt, close them first. */
+	if (primaryFile != -1)
 	{
-		if (!XLByteEQ(start_sent_lsns[i], end_sent_lsns[i]))
+		FileClose(primaryFile);
+		primaryFile = -1;
+	}
+	if (mirrorFile != -1)
+	{
+		FileClose(mirrorFile);
+		mirrorFile = -1;
+	}
+
+	if (attempts == NUM_RETRIES)
+	{
+		ereport(WARNING,
+				(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %d, gave up after %d retries",
+						get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+						primaryfilepath, mirrorfilepath, rentry->relname, blockno, attempts)));
+		return false;
+	}
+	attempts++;
+
+	if (attempts > 1)
+	{
+		any_retries = true;
+		/*
+		 * Request a checkpoint on first call, to flush out data changes from
+		 * shared buffer to disk.
+		 */
+		if (!sync_wait())
 			return false;
 	}
+
+	/*
+	 * Attempt to open both files.
+	 */
+	primaryFileExists = true;
+	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
+	if (primaryFile < 0)
+	{
+		if (errno == ENOENT)
+			primaryFileExists = false;
+		else
+			elog(WARNING, "could not open file \"%s\": %m", primaryfilepath);
+	}
+
+	mirrorFileExists = true;
+	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
+	if (mirrorFile < 0)
+	{
+		if (errno == ENOENT)
+			mirrorFileExists = false;
+		else
+			elog(WARNING, "could not open file \"%s\": %m", mirrorfilepath);
+	}
+
+	/* Did it succeed? Neither one, just one of them, or both? */
+	if (!primaryFileExists && !mirrorFileExists)
+	{
+		elog(NOTICE, "file \"%s\" was concurrently deleted on primary and mirror", primaryfilepath);
+		return true;
+	}
+
+	if (!primaryFileExists && mirrorFileExists)
+	{
+		elog(NOTICE, "file \"%s\" was concurrently deleted on primary", primaryfilepath);
+		goto retry;
+	}
+
+	if (primaryFileExists && !mirrorFileExists)
+	{
+		elog(NOTICE, "file \"%s\" was concurrently deleted on mirror", mirrorfilepath);
+		goto retry;
+	}
+
+	/*
+	 * Otherwise, both files were opened successfully. Compare them block-by block.
+	 *
+	 * Note: if this is not the first attempt, we keep the block number across attempts,
+	 * rather than always starting from the beginning of the file.
+	 */
+	while (true)
+	{
+		char		primaryFileBuf[BLCKSZ];
+		char		mirrorFileBuf[BLCKSZ];
+		int			primaryFileBytesRead;
+		int			mirrorFileBytesRead;
+		int			diff;
+
+		CHECK_FOR_INTERRUPTS();
+
+		if (FileSeek(primaryFile, (int64) blockno * BLCKSZ, SEEK_SET) < 0)
+		{
+			elog(NOTICE, "seek in file \"%s\" failed: %m", primaryfilepath);
+			goto retry;
+		}
+		if (FileSeek(mirrorFile, (int64) blockno * BLCKSZ, SEEK_SET) < 0)
+		{
+			elog(NOTICE, "seek in file \"%s\" failed: %m", mirrorFileBuf);
+			goto retry;
+		}
+
+		primaryFileBytesRead = FileRead(primaryFile, primaryFileBuf, sizeof(primaryFileBuf));
+		if (primaryFileBytesRead < 0)
+		{
+			elog(NOTICE, "could not read from file \"%s\", block %u: %m", primaryfilepath, blockno);
+			goto retry;
+		}
+		mirrorFileBytesRead = FileRead(mirrorFile, mirrorFileBuf, sizeof(mirrorFileBuf));
+		if (mirrorFileBytesRead < 0)
+		{
+			elog(NOTICE, "could not read from file \"%s\", block %u: %m", mirrorfilepath, blockno);
+			goto retry;
+		}
+
+		if (primaryFileBytesRead != mirrorFileBytesRead)
+		{
+			/* length mismatch */
+			ereport(NOTICE,
+					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch at blockno %u, primary length: %i, mirror length: %i",
+							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+							primaryfilepath, mirrorfilepath, rentry->relname, blockno,
+							primaryFileBytesRead, mirrorFileBytesRead)));
+			goto retry;
+		}
+
+		if (primaryFileBytesRead == 0)
+			break; /* reached EOF */
+
+		if (rentry->relstorage == RELSTORAGE_HEAP)
+		{
+			if (primaryFileBytesRead != BLCKSZ)
+			{
+				elog(NOTICE, "short read of %d bytes from heap file \"%s\", block %u: %m", primaryFileBytesRead, primaryfilepath, blockno);
+				goto retry;
+			}
+			/*
+			 * Perform some basic sanity checks before handing the block to
+			 * mask_block(). It might throw a hard ERROR on a bogus block,
+			 * so we better catch that here so we can retry.
+			 */
+			if (!PageIsVerified(primaryFileBuf, blockno))
+			{
+				elog(NOTICE, "invalid page header or checksum in heap file \"%s\", block %u: %m", primaryfilepath, blockno);
+				goto retry;
+			}
+			if (!PageIsVerified(mirrorFileBuf, blockno))
+			{
+				elog(NOTICE, "invalid page header or checksum in heap file \"%s\", block %u: %m", mirrorfilepath, blockno);
+				goto retry;
+			}
+
+			if (!PageIsNew(primaryFileBuf) && !PageIsNew(mirrorFileBuf))
+			{
+				mask_block(primaryFileBuf, blockno, rentry->relam, rentry->relkind);
+				mask_block(mirrorFileBuf, blockno, rentry->relam, rentry->relkind);
+			}
+		}
+
+		if ((diff = memcmp(primaryFileBuf, mirrorFileBuf, primaryFileBytesRead)) != 0)
+		{
+			/* different contents */
+			ereport(NOTICE,
+					(errmsg("%s files \"%s\" and \"%s\" for relation \"%s\" mismatch by %i at blockno %u",
+							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
+							primaryfilepath, mirrorfilepath, rentry->relname,
+							diff, blockno)));
+			goto retry;
+		}
+
+		/* Success! Advance to next block, and reset the retry-counter */
+		attempts = 1;
+		blockno++;
+	}
+
+	/* Reached end of file successfully! */
+
+	if (primaryFile != -1)
+		FileClose(primaryFile);
+	if (mirrorFile != -1)
+		FileClose(mirrorFile);
+
+	/*
+	 * The NOTICEs about differences can make the user think that something's
+	 * wrong, even though they are normal if there is any concurrent activity.
+	 * So if we emitted those NOTICEs, emit another NOTICE to reassure the
+	 * user it was all right in the end.
+	 *
+	 * (It's next to impossible to quiesce the cluster so well that there would be
+	 * no activity. Hint bits can be set even by read-only queries, for example.)
+	 */
+	if (any_retries)
+		elog(NOTICE, "succeeded after retrying");
 
 	return true;
 }
@@ -332,6 +494,7 @@ get_relfilenode_map()
 		rentry->relam = classtuple->relam;
 		rentry->relkind = classtuple->relkind;
 		rentry->relstorage = classtuple->relstorage;
+		strlcpy(rentry->relname, NameStr(classtuple->relname), sizeof(rentry->relname));
 	}
 	heap_endscan(scan);
 	heap_close(pg_class, AccessShareLock);
@@ -366,17 +529,29 @@ gp_replica_check(PG_FUNCTION_ARGS)
 
 	init_relation_types(relation_types);
 
+	/* TODO: Currently, we only scan the default tablespace */
+	primarydirpath = psprintf("%s/%s",
+							  primarydirpath,
+							  GetDatabasePath(MyDatabaseId, DEFAULTTABLESPACE_OID));
+	mirrordirpath = psprintf("%s/%s",
+							 mirrordirpath,
+							 GetDatabasePath(MyDatabaseId, DEFAULTTABLESPACE_OID));
+
 	DIR *primarydir = AllocateDir(primarydirpath);
 	DIR *mirrordir = AllocateDir(mirrordirpath);
 
-	/* Store the LSN to compare at the end to make sure no IO was done during the replication check */
-	XLogRecPtr *start_sent_lsns = get_synced_lsns();
-	if (start_sent_lsns == NULL)
-	{
-		ereport(WARNING,
-				(errmsg("unable to obtain start synced LSN values between primary and mirror")));
-		PG_RETURN_BOOL(false);
-	}
+	/*
+	 * Checkpoint, so that all the changes are on disk.
+	 *
+	 * XXX: There is currently no guarantee that the standby has performed a
+	 * restartpoint based on the checkpoint record. If it hasn't, any recent
+	 * changes are not visible to us in the standby yet, and the file
+	 * comparison will find that the files don't match. That's OK, we will
+	 * issue a new checkpoint, wait, and retry a few times, so the standby
+	 * should converge to the same state as the master eventually, hopefully
+	 * before we give up.
+	 */
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 	/* Store information from pg_class for each relfilenode */
 	HTAB *relfilenode_map = get_relfilenode_map();
@@ -417,8 +592,8 @@ gp_replica_check(PG_FUNCTION_ARGS)
 		if (d_name_copy != NULL)
 			rentry->segments = lappend_int(rentry->segments, atoi(d_name_copy));
 
-		sprintf(primaryfilename, "%s/%s", primarydirpath, dent->d_name);
-		sprintf(mirrorfilename, "%s/%s", mirrordirpath, dent->d_name);
+		snprintf(primaryfilename, MAXPGPATH, "%s/%s", primarydirpath, dent->d_name);
+		snprintf(mirrorfilename, MAXPGPATH, "%s/%s", mirrordirpath, dent->d_name);
 
 		/* do the file comparison */
 		match = compare_files(primaryfilename, mirrorfilename, rentry);
@@ -431,6 +606,8 @@ gp_replica_check(PG_FUNCTION_ARGS)
 	{
 		char *d_name_copy;
 		char *relfilenode;
+
+		CHECK_FOR_INTERRUPTS();
 
 		if (should_skip(dent->d_name))
 			continue;
@@ -470,23 +647,6 @@ gp_replica_check(PG_FUNCTION_ARGS)
 	}
 	FreeDir(mirrordir);
 	hash_destroy(relfilenode_map);
-
-	/* Compare stored last commit with now */
-	XLogRecPtr *end_sent_lsns = get_synced_lsns();
-	if (end_sent_lsns == NULL)
-	{
-		ereport(WARNING,
-				(errmsg("unable to obtain end synced LSN values between primary and mirror")));
-		PG_RETURN_BOOL(false);
-	}
-
-	if (!compare_sent_lsns(start_sent_lsns, end_sent_lsns))
-	{
-		ereport(WARNING,
-				(errmsg("results may not be correct"),
-				 errdetail("IO may have been performed during the check")));
-		PG_RETURN_BOOL(false);
-	}
 
 	PG_RETURN_BOOL(dir_equal);
 }

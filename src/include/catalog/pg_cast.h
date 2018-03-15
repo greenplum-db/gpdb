@@ -10,12 +10,12 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2002-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.42 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.44 2010/01/05 01:06:56 tgl Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -360,14 +360,14 @@ DATA(insert ( 1562 1562 1687 i f ));
 DATA(insert ( 1700 1700 1703 i f ));
 
 /* complex type */
-DATA(insert OID=9069 (701  195 3584 i f));
-DATA(insert OID=9070 (700  195 3585 i f));
-DATA(insert OID=9088 (20   195 3586 i f));
-DATA(insert OID=9089 (23   195 3587 i f));
-DATA(insert OID=9090 (21   195 3588 i f));
-DATA(insert OID=9091 (600  195 0 e b));
-DATA(insert OID=9092 (195  600 0 e b));
-DATA(insert OID=9093 (1700 195 3592 i f));
+DATA(insert (701  195 3584 i f));
+DATA(insert (700  195 3585 i f));
+DATA(insert (20   195 3586 i f));
+DATA(insert (23   195 3587 i f));
+DATA(insert (21   195 3588 i f));
+DATA(insert (600  195 0 e b));
+DATA(insert (195  600 0 e b));
+DATA(insert (1700 195 3592 i f));
 
 /*
  * CDB: Allow explicit cast from tid to int8

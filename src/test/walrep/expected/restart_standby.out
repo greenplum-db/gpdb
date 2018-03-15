@@ -1,0 +1,16 @@
+CREATE OR REPLACE FUNCTION restart_standby(opts text)
+RETURNS void
+EXECUTE ON MASTER AS
+$func$
+   import subprocess
+
+   cmd = 'gpinitstandby ' + opts
+   subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+$func$ LANGUAGE plpythonu;
+SELECT restart_standby((SELECT opts FROM init_standby_opts LIMIT 1));
+ restart_standby 
+-----------------
+ 
+(1 row)
+
+DROP TABLE IF EXISTS init_standby_opts;

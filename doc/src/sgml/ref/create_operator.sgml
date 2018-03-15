@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_operator.sgml,v 1.50 2008/11/14 10:22:46 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_operator.sgml,v 1.54 2010/07/08 16:30:13 tgl Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEOPERATOR">
  <refmeta>
-  <refentrytitle id="sql-createoperator-title">CREATE OPERATOR</refentrytitle>
+  <refentrytitle>CREATE OPERATOR</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -22,8 +22,8 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 CREATE OPERATOR <replaceable>name</replaceable> (
-    PROCEDURE = <replaceable class="parameter">funcname</replaceable>
-    [, LEFTARG = <replaceable class="parameter">lefttype</replaceable> ] [, RIGHTARG = <replaceable class="parameter">righttype</replaceable> ]
+    PROCEDURE = <replaceable class="parameter">function_name</replaceable>
+    [, LEFTARG = <replaceable class="parameter">left_type</replaceable> ] [, RIGHTARG = <replaceable class="parameter">right_type</replaceable> ]
     [, COMMUTATOR = <replaceable class="parameter">com_op</replaceable> ] [, NEGATOR = <replaceable class="parameter">neg_op</replaceable> ]
     [, RESTRICT = <replaceable class="parameter">res_proc</replaceable> ] [, JOIN = <replaceable class="parameter">join_proc</replaceable> ]
     [, HASHES ] [, MERGES ]
@@ -71,6 +71,12 @@ CREATE OPERATOR <replaceable>name</replaceable> (
      parse SQL-compliant commands without requiring spaces between tokens.
      </para>
     </listitem>
+    <listitem>
+     <para>
+     The use of <literal>=&gt;</> as an operator name is deprecated.  It may
+     be disallowed altogether in a future release.
+     </para>
+    </listitem>
    </itemizedlist>
   </para>
 
@@ -88,7 +94,7 @@ CREATE OPERATOR <replaceable>name</replaceable> (
   </para>
 
   <para>
-   The <replaceable class="parameter">funcname</replaceable>
+   The <replaceable class="parameter">function_name</replaceable>
    procedure must have been previously defined using <command>CREATE
    FUNCTION</command> and must be defined to accept the correct number
    of arguments (either one or two) of the indicated types.
@@ -120,7 +126,7 @@ CREATE OPERATOR <replaceable>name</replaceable> (
      </varlistentry>
 
      <varlistentry>
-      <term><replaceable class="parameter">funcname</replaceable></term>
+      <term><replaceable class="parameter">function_name</replaceable></term>
       <listitem>
        <para>
         The function used to implement this operator.
@@ -129,7 +135,7 @@ CREATE OPERATOR <replaceable>name</replaceable> (
      </varlistentry>
 
      <varlistentry>
-      <term><replaceable class="parameter">lefttype</replaceable></term>
+      <term><replaceable class="parameter">left_type</replaceable></term>
       <listitem>
        <para>
         The data type of the operator's left operand, if any.
@@ -139,7 +145,7 @@ CREATE OPERATOR <replaceable>name</replaceable> (
      </varlistentry>
 
      <varlistentry>
-      <term><replaceable class="parameter">righttype</replaceable></term>
+      <term><replaceable class="parameter">right_type</replaceable></term>
       <listitem>
        <para>
         The data type of the operator's right operand, if any.
@@ -221,6 +227,12 @@ COMMUTATOR = OPERATOR(myschema.===) ,
   </para>
 
   <para>
+   It is not possible to specify an operator's lexical precedence in
+   <command>CREATE OPERATOR</>, because the parser's precedence behavior
+   is hard-wired.  See <xref linkend="sql-precedence"> for precedence details.
+  </para>
+
+  <para>
    The obsolete options <literal>SORT1</>, <literal>SORT2</>,
    <literal>LTCMP</>, and <literal>GTCMP</> were formerly used to
    specify the names of sort operators associated with a merge-joinable
@@ -231,10 +243,8 @@ COMMUTATOR = OPERATOR(myschema.===) ,
   </para>
 
   <para>
-   Use <xref linkend="sql-dropoperator"
-   endterm="sql-dropoperator-title"> to delete user-defined operators
-   from a database.  Use <xref linkend="sql-alteroperator"
-   endterm="sql-alteroperator-title"> to modify operators in a
+   Use <xref linkend="sql-dropoperator"> to delete user-defined operators
+   from a database.  Use <xref linkend="sql-alteroperator"> to modify operators in a
    database.
   </para>
  </refsect1>
@@ -274,9 +284,9 @@ CREATE OPERATOR === (
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alteroperator" endterm="sql-alteroperator-title"></member>
-   <member><xref linkend="sql-createopclass" endterm="sql-createopclass-title"></member>
-   <member><xref linkend="sql-dropoperator" endterm="sql-dropoperator-title"></member>
+   <member><xref linkend="sql-alteroperator"></member>
+   <member><xref linkend="sql-createopclass"></member>
+   <member><xref linkend="sql-dropoperator"></member>
   </simplelist>
  </refsect1>
 </refentry>

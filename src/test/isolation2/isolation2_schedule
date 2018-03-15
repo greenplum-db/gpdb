@@ -1,18 +1,14 @@
-test: pt_io_in_progress_deadlock
-test: pg_terminate_backend
-test: deadlock_under_entry_db_singleton
-test: starve_case
+test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+
+test: reindex
 test: commit_transaction_block_checkpoint
-test: pg_views_concurrent_drop
-test: resource_queue
-test: alter_blocks_for_update_and_viceversa
-test: reader_waits_for_lock
-test: drop_rename
+test: instr_in_shmem_setup
+test: instr_in_shmem_terminate
+test: vacuum_recently_dead_tuple_due_to_distributed_snapshot
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
-test: uao/alter_while_vacuum_row
-test: uao/alter_while_vacuum2_row
+test: uao/alter_while_vacuum_row uao/alter_while_vacuum2_row
 test: uao/compaction_full_stats_row
 test: uao/compaction_utility_row
 test: uao/compaction_utility_insert_row
@@ -57,8 +53,7 @@ test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
 
 # Tests on Append-Optimized tables (column-oriented).
-test: uao/alter_while_vacuum_column
-test: uao/alter_while_vacuum2_column
+test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
 test: uao/compaction_full_stats_column
 test: uao/compaction_utility_column
 test: uao/compaction_utility_insert_column
@@ -103,3 +98,35 @@ test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
+
+# Tests for FTS
+test: segwalrep/commit_blocking
+test: segwalrep/fts_unblock_primary
+test: segwalrep/mirror_promotion
+test: segwalrep/cancel_commit_pending_replication
+
+# Tests for crash recovery
+test: crash_recovery
+test: crash_recovery_redundant_dtx
+test: crash_recovery_dtm
+test: uao_crash_compaction_row
+test: uao_crash_compaction_column
+test: udf_exception_blocks_panic_scenarios
+
+# Reindex tests
+test: reindex/abort_reindex
+test: reindex/createidx_while_reindex_ao_partition
+test: reindex/createidx_while_reindex_ao_gist reindex/createidx_while_reindex_heap_gist reindex/createidx_while_reindex_aoco_gist
+test: reindex/createidx_while_reindex_idx_ao_btree reindex/createidx_while_reindex_idx_heap_btree reindex/createidx_while_reindex_idx_aoco_btree
+test: reindex/createidx_while_reindex_idx_ao_bitmap reindex/createidx_while_reindex_idx_heap_bitmap reindex/createidx_while_reindex_idx_aoco_bitmap
+test: reindex/reindextable_while_addpart_ao_part_btree reindex/reindextable_while_addpart_heap_part_btree reindex/reindextable_while_addpart_aoco_part_btree
+test: reindex/reindextable_while_altertable_ao_part_btree reindex/reindextable_while_altertable_heap_part_btree reindex/reindextable_while_altertable_aoco_part_btree
+test: reindex/reindextable_while_dropindex_ao_part_btree reindex/reindextable_while_dropindex_heap_part_btree reindex/reindextable_while_dropindex_aoco_part_btree
+test: reindex/reindextable_while_reindex_idx_ao_part_btree reindex/reindextable_while_reindex_idx_heap_part_btree reindex/reindextable_while_reindex_idx_aoco_part_btree
+test: reindex/reindextable_while_reindex_idx_ao_bitmap reindex/reindextable_while_reindex_idx_heap_bitmap reindex/reindextable_while_reindex_idx_aoco_bitmap
+test: reindex/serializable_reindex_with_drop_column_ao_part reindex/serializable_reindex_with_drop_column_heap
+test: reindex/serializable_reindex_with_drop_column_part_heap
+test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reindex_with_drop_index_heap
+test: reindex/serializable_reindex_with_insert_heap
+test: reindex/serializable_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
+test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast

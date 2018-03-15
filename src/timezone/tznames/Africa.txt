@@ -142,12 +142,12 @@ GMT         0    # Greenwich Mean Time
                  #     (Etc/GMT)
                  #     (Europe/Dublin)
                  #     (Europe/London)
+# CONFLICT! SAST is not unique
+# Other timezones:
+#  - SAST South Australian Standard Time (not in IANA database)
 SAST     7200    # South Africa Standard Time
-                 # Australian South Standard Time
-                 #     (Africa/Maseru)
-                 #     (Africa/Mbabane)
-WAST     7200 D  # West Africa Summer Time
-                 #     (Africa/Windhoek)
+                 #     (Africa/Johannesburg)
+WAST     7200 D  # West Africa Summer Time (obsolete)
 WAT      3600    # West Africa Time
                  #     (Africa/Bangui)
                  #     (Africa/Brazzaville)

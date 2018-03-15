@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.97 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.101 2010/04/19 00:55:26 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -76,6 +76,7 @@ extern bool enable_sort;
 extern bool enable_hashagg;
 extern bool enable_groupagg;
 extern bool enable_nestloop;
+extern bool enable_material;
 extern bool enable_mergejoin;
 extern bool enable_hashjoin;
 extern int	constraint_exclusion;
@@ -117,9 +118,9 @@ extern void cost_recursive_union(Plan *runion, Plan *nrterm, Plan *rterm);
 extern void cost_sort(Path *path, PlannerInfo *root,
 		  List *pathkeys, Cost input_cost, double tuples, int width,
 		  double limit_tuples);
-extern bool sort_exceeds_work_mem(Sort *sort);
 extern void cost_material(Path *path, PlannerInfo *root,
-			  Cost input_cost, double tuples, int width);
+			  Cost input_startup_cost, Cost input_total_cost,
+			  double tuples, int width);
 extern void cost_agg(Path *path, PlannerInfo *root,
 					 AggStrategy aggstrategy, int numAggs,
 					 int numGroupCols, double numGroups,

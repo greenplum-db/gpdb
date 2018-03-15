@@ -2,7 +2,7 @@ create schema uao_dml_select_@orientation@;
 set search_path=uao_dml_select_@orientation@;
 SET gp_default_storage_options='orientation=@orientation@';
 -- @Description select with aggregate function
--- 
+--
 DROP TABLE IF EXISTS city_uao cascade;
 DROP TABLE IF EXISTS country_uao cascade;
 DROP TABLE IF EXISTS countrylanguage_uao cascade;
@@ -76,7 +76,7 @@ select
 (5 rows)
 
 -- @Description select with between
--- 
+--
 -- Reuse the country_uao table from previous test.
 -- Using  the BETWEEN clause
 --query
@@ -92,7 +92,7 @@ and gnp between 80000 and 100000;
 (1 row)
 
 -- @Description select with CASE WHEN.. ELSE
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_limit_offset;
 CREATE TABLE sto_uao_emp_limit_offset (
    empno    INT  ,
@@ -149,7 +149,7 @@ from sto_uao_emp_limit_offset  order by 1;
 (17 rows)
 
 -- @Description select inner/right join
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_crossjoin cascade;
 CREATE TABLE sto_uao_emp_crossjoin (
    empno    INT  ,
@@ -191,7 +191,7 @@ insert into sto_uao_dept_crossjoin values
 ,(4, 'OPERATIONS','SEATTLE');
 select ename,loc from sto_uao_emp_crossjoin cross join sto_uao_dept_crossjoin
 order by 1 asc, 2 asc LIMIT 10;
- ename |   loc
+ ename |   loc    
 -------+----------
  ADAMS | ATLANTA
  ADAMS | BOSTON
@@ -206,7 +206,7 @@ order by 1 asc, 2 asc LIMIT 10;
 (10 rows)
 
 -- @Description select distinct
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_seldistinct cascade;
 CREATE TABLE sto_uao_emp_seldistinct (
    empno    INT  ,
@@ -246,7 +246,7 @@ SELECT distinct(dept) FROM sto_uao_emp_seldistinct order by dept;
 (5 rows)
 
 -- @description : Create Data and execute select statements on UAO tables EXCEPT
--- 
+--
 DROP TABLE IF EXISTS city_uao cascade;
 DROP TABLE IF EXISTS country_uao cascade;
 DROP TABLE IF EXISTS countrylanguage_uao cascade;
@@ -312,7 +312,7 @@ select * from city_uao where countrycode in ('MEX','USA');
 (13 rows)
 
 -- @description : Create Data and execute select statements on UAO tables GROUP BY
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_groupby;
 NOTICE:  table "sto_uao_emp_groupby" does not exist, skipping
 CREATE TABLE sto_uao_emp_groupby (
@@ -490,7 +490,7 @@ order by loc,job ;
 (18 rows)
 
 -- @description : Create Data and execute select statements on UAO tables  HAVING
--- 
+--
 DROP TABLE IF EXISTS city_uao cascade;
 DROP TABLE IF EXISTS country_uao cascade;
 DROP TABLE IF EXISTS countrylanguage_uao cascade;
@@ -561,7 +561,7 @@ LIMIT 10;
 (10 rows)
 
 -- @Description select inner/right join
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_rightjoin cascade;
 CREATE TABLE sto_uao_emp_rightjoin (
    empno    INT  ,
@@ -606,7 +606,7 @@ ERROR:  syntax error at or near "inner"
 LINE 1: select ename, loc from sto_uao_emp_rightjoin left inner join...
                                                           ^
 -- @description : Create Data and execute select statements on UAO tables INTERSECT
--- 
+--
 DROP TABLE IF EXISTS city_uao cascade;
 DROP TABLE IF EXISTS country_uao cascade;
 DROP TABLE IF EXISTS countrylanguage_uao cascade;
@@ -658,7 +658,7 @@ select population from city_uao where countrycode = 'MEX';
 (1 row)
 
 -- @description : Create Data and execute select statements on UAO tables LIMIT OFFSET 
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_limit_offset;
 CREATE TABLE sto_uao_emp_limit_offset (
    empno    INT  ,
@@ -712,7 +712,7 @@ select * from sto_uao_emp_limit_offset  order by empno LIMIT 7 OFFSET 5;
 (7 rows)
 
 -- @description : Create Data and execute select statements on UAO tables ORDER BY ASC DESC USING 
--- 
+--
 --
 DROP TABLE IF EXISTS city_uao_using cascade;
 DROP TABLE IF EXISTS country_uao_using cascade;
@@ -862,7 +862,7 @@ order by capitals_uao.code USING < , 2 using < LIMIT 10;
 (10 rows)
 
 -- @Description select outer/left join
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_leftjoin cascade;
 CREATE TABLE sto_uao_emp_leftjoin (
    empno    INT  ,
@@ -925,7 +925,7 @@ select ename, loc from sto_uao_emp_leftjoin left join sto_uao_dept_leftjoin on  
 (17 rows)
 
 -- @Description select with subquery
--- 
+--
 DROP TABLE IF EXISTS country_uao_subq cascade;
 BEGIN;
 CREATE TABLE country_uao_subq (
@@ -961,7 +961,7 @@ and code in (select code from country_uao_subq where  indepyear between 1800 and
 (1 row)
 
 -- @Description select with with UNION , UNION ALL 
--- 
+--
 DROP TABLE IF EXISTS city_uao_union cascade;
 DROP TABLE IF EXISTS country_uao_union cascade;
 DROP TABLE IF EXISTS countrylanguage_uao_union cascade;
@@ -1212,7 +1212,7 @@ LIMIT 10;
 (10 rows)
 
 -- @description : Create view and execute select from view
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_forview cascade;
 CREATE TABLE sto_uao_emp_forview (
    empno    INT  ,
@@ -1276,7 +1276,7 @@ select * from sto_uao_emp_view  where mgr is not NULL order by 1;
 (16 rows)
 
 -- @Description select with where clause
--- 
+--
 DROP TABLE IF EXISTS city_uao_where cascade;
 DROP TABLE IF EXISTS country_uao_where cascade;
 DROP TABLE IF EXISTS countrylanguage_uao_where cascade;
@@ -1353,7 +1353,7 @@ where foo_uao.cnt = (select max(lang_count) from lang_total_uao) order by foo_ua
 (5 rows)
 
 -- @Description select wildcard 
--- 
+--
 DROP TABLE IF EXISTS sto_uao_emp_wildcard cascade;
 CREATE TABLE sto_uao_emp_wildcard (
    empno    INT  ,
@@ -1402,7 +1402,7 @@ AND ename like 'H%' order by 1 asc LIMIT 15;
 (2 rows)
 
 -- @Description select with window 
--- 
+--
 DROP TABLE IF EXISTS uao_orders;
 CREATE TABLE uao_orders(order_id serial , customer_id integer, 
       order_datetime timestamp, order_total numeric(10,2)) with (appendonly=true); 
@@ -1417,7 +1417,7 @@ VALUES (1,'2009-05-01 10:00 AM', 500),
        (3,'2009-04-11 11:00 PM', 100),
           (1,'2009-05-20 11:00 AM', 3);
 select * from uao_orders order by order_id;
- order_id | customer_id |   order_datetime    | order_total 
+ order_id | customer_id |      order_datetime      | order_total 
 ----------+-------------+--------------------------+-------------
         1 |           1 | Fri May 01 10:00:00 2009 |      500.00
         2 |           1 | Fri May 15 11:00:00 2009 |      650.00

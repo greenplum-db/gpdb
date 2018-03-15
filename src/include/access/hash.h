@@ -4,10 +4,10 @@
  *	  header file for postgres hash access method implementation
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/hash.h,v 1.93 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/hash.h,v 1.96 2010/01/02 16:58:00 momjian Exp $
  *
  * NOTES
  *		modeled after Margo Seltzer's hash implementation for unix.
@@ -99,8 +99,11 @@ typedef struct HashScanOpaqueData
 	 */
 	Buffer		hashso_curbuf;
 
-	/* Current position of the scan */
+	/* Current position of the scan, as an index TID */
 	ItemPointerData hashso_curpos;
+
+	/* Current position of the scan, as a heap TID */
+	ItemPointerData hashso_heappos;
 } HashScanOpaqueData;
 
 typedef HashScanOpaqueData *HashScanOpaque;
@@ -280,6 +283,8 @@ extern Datum hash_uint32(uint32 k);
 
 /* hashinsert.c */
 extern void _hash_doinsert(Relation rel, IndexTuple itup);
+extern OffsetNumber _hash_pgaddtup(Relation rel, Buffer buf,
+			   Size itemsize, IndexTuple itup);
 
 /* hashovfl.c */
 extern Buffer _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf);

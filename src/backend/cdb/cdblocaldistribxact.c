@@ -26,12 +26,10 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbvars.h"
 #include "storage/proc.h"
-#include "cdb/cdbshareddoublylinked.h"
 #include "utils/hsearch.h"
 #include "miscadmin.h"
 #include "utils/memutils.h"
 #include "cdb/cdbdoublylinked.h"
-#include "cdb/cdbpersistentstore.h"
 
 /*  ***************************************************************************** */
 

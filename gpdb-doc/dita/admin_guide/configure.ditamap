@@ -59,7 +59,6 @@
          <topicref href="topics/g-workload-management-parameters.xml" type="topic"/>
          <topicref href="topics/g-external-table-parameters.xml" type="topic"/>
          <topicref href="topics/g-append-optimized-table-parameters.xml" type="topic"/>
-         <topicref href="topics/g-database-and-tablespace-filespace-parameters.xml" type="topic"/>
          <topicref href="topics/g-past-postgresql-version-compatibility-parameters.xml" type="topic"/>
          <topicref href="topics/g-greenplum-array-configuration-parameters.xml" type="topic">
             <topicref href="topics/g-interconnect-configuration-parameters.xml" type="topic"/>

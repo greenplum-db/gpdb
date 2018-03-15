@@ -5,11 +5,11 @@
  * to contain some useful information. Mechanism differs wildly across
  * platforms.
  *
- * $PostgreSQL: pgsql/src/backend/utils/misc/ps_status.c,v 1.39 2009/01/01 17:23:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/misc/ps_status.c,v 1.42 2010/07/06 19:18:59 momjian Exp $
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  * various details abducted from various places
  *--------------------------------------------------------------------
  */
@@ -383,7 +383,7 @@ set_ps_display(const char *activity, bool force)
 
 	/* Append caller's activity string. */
 	strlcpy(ps_buffer + real_act_prefix_size, activity,
-		ps_buffer_size - real_act_prefix_size);
+			ps_buffer_size - real_act_prefix_size);
 
 	ps_buffer_cur_len = strlen(ps_buffer);
 

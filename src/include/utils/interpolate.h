@@ -14,7 +14,6 @@
 #ifndef _INTERPOLATE_H_
 #define _INTERPOLATE_H_
 
-#include "postgres.h"
 #include "fmgr.h"
 
 extern Datum

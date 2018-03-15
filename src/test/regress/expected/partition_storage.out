@@ -14,12 +14,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_ghi" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_dft" for table "pt_heap_tab"
 --Create indexes on the table
  -- Partial index
---start_ignore
-drop index if exists heap_idx1 cascade;
-NOTICE:  index "heap_idx1" does not exist, skipping
-drop index if exists heap_idx2 cascade;
-NOTICE:  index "heap_idx2" does not exist, skipping
---end_ignore
  create index heap_idx1 on pt_heap_tab(a) where c > 10;
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_abc"
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_def"
@@ -87,11 +81,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_xyz2" for table "
 
 --Exchange partition
  -- Create candidate table
---start_ignore
-drop table if exists heap_can cascade;
-drop table if exists ao_can cascade;
-drop table if exists co_can cascade;
---end_ignore
  create table heap_can(like pt_heap_tab);  
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table ao_can(like pt_heap_tab) with (appendonly=true);   
@@ -120,8 +109,8 @@ NOTICE:  exchanged partition "pqr" of relation "pt_heap_tab" with relation "heap
  success | boolean |           | plain    | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_heap_tab_1_prt_pqr_a_key" btree (a) WHERE c > 10
-    "pt_heap_tab_1_prt_pqr_key" btree (upper(b))
+    "pt_heap_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_1_prt_pqr_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Has OIDs: no
@@ -162,8 +151,8 @@ Distributed by: (a)
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_heap_tab_1_prt_abc1_a_key" btree (a) WHERE c > 10
-    "pt_heap_tab_1_prt_abc1_key" btree (upper(b))
+    "pt_heap_tab_1_prt_abc1_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_1_prt_abc1_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_1_prt_abc1_check" CHECK (b = 'abc'::text OR b = 'abc2'::text)
 Has OIDs: no
@@ -174,12 +163,6 @@ Distributed by: (a)
  alter table pt_heap_tab drop partition jkl;
  truncate table pt_heap_tab;
 --Further create some more indexes
---start_ignore
-drop index if exists heap_idx3 cascade;
-NOTICE:  index "heap_idx3" does not exist, skipping
-drop index if exists heap_idx4 cascade;
-NOTICE:  index "heap_idx4" does not exist, skipping
---end_ignore
  create index heap_idx3 on pt_heap_tab(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_mno"
 NOTICE:  building index for child partition "pt_heap_tab_1_prt_abc2"
@@ -210,9 +193,6 @@ NOTICE:  dropped partition "dft" for relation "pt_heap_tab"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_uvw" for table "pt_heap_tab"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_dft" for table "pt_heap_tab"
 --Create an AO table with partitions ( having diff storage parameters)
---start_ignore
- drop table if exists pt_ao_tab cascade;
---end_ignore
  Create table  pt_ao_tab(a int, b text, c int , d int, e numeric,success bool) with ( appendonly=true )
  distributed by (a)
  partition by list(b)
@@ -228,12 +208,6 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_1_prt_ghi" for table "pt_
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_1_prt_dft" for table "pt_ao_tab"
 --Create indexes on the table
  -- Partial index
---start_ignore
-drop index if exists ao_idx1 cascade;
-NOTICE:  index "ao_idx1" does not exist, skipping
-drop index if exists ao_idx2 cascade;
-NOTICE:  index "ao_idx2" does not exist, skipping
---end_ignore
  create index ao_idx1 on pt_ao_tab(a) where c > 10;
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_abc"
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_def"
@@ -336,8 +310,8 @@ NOTICE:  exchanged partition "pqr" of relation "pt_ao_tab" with relation "heap_c
  success | boolean |           | plain    | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_ao_tab_1_prt_pqr_a_key" btree (a) WHERE c > 10
-    "pt_ao_tab_1_prt_pqr_key" btree (upper(b))
+    "pt_ao_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_1_prt_pqr_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Has OIDs: no
@@ -378,8 +352,8 @@ Distributed by: (a)
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_ao_tab_1_prt_stu_a_key" btree (a) WHERE c > 10
-    "pt_ao_tab_1_prt_stu_key" btree (upper(b))
+    "pt_ao_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_1_prt_stu_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_1_prt_stu_check" CHECK (b = 'stu'::text OR b = 'stu1'::text OR b = 'stu2'::text)
 Has OIDs: no
@@ -390,12 +364,6 @@ Distributed by: (a)
  alter table pt_ao_tab drop partition jkl;
  truncate table pt_ao_tab;
 --Further create some more indexes
---start_ignore
-drop index if exists ao_idx4 cascade;
-NOTICE:  index "ao_idx4" does not exist, skipping
-drop index if exists ao_idx3 cascade;
-NOTICE:  index "ao_idx3" does not exist, skipping
---end_ignore
  create index ao_idx3 on pt_ao_tab(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_mno"
 NOTICE:  building index for child partition "pt_ao_tab_1_prt_abc1"
@@ -554,8 +522,8 @@ NOTICE:  exchanged partition "xyz2" of relation "pt_co_tab" with relation "heap_
  success | boolean |           | plain    | zlib             | 5                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_co_tab_1_prt_xyz2_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_1_prt_xyz2_key" btree (upper(b))
+    "pt_co_tab_1_prt_xyz2_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_1_prt_xyz2_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_1_prt_xyz2_check" CHECK (b = 'xyz1'::text)
 Has OIDs: no
@@ -577,8 +545,8 @@ Compression Level: 5
 Block Size: 32768
 Checksum: t
 Indexes:
-    "pt_co_tab_1_prt_pqr_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_1_prt_pqr_key" btree (upper(b))
+    "pt_co_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_1_prt_pqr_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Has OIDs: no
@@ -596,8 +564,8 @@ Distributed by: (a)
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_co_tab_1_prt_stu_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_1_prt_stu_key" btree (upper(b))
+    "pt_co_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_1_prt_stu_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_1_prt_stu_check" CHECK (b = 'stu'::text OR b = 'stu1'::text OR b = 'stu2'::text)
 Has OIDs: no
@@ -656,12 +624,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_3" for table 
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_4" for table "pt_heap_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_5" for table "pt_heap_tab_rng"
 -- Create indexes on the table
---start_ignore
-drop index if exists heap_rng_idx1 cascade;
-NOTICE:  index "heap_rng_idx1" does not exist, skipping
-drop index if exists heap_rng_idx2 cascade;
-NOTICE:  index "heap_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index heap_rng_idx1 on pt_heap_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_dft"
@@ -753,8 +715,8 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_newao" for ta
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_heap_tab_rng_1_prt_heap1_a_key" btree (a) WHERE c > 10
-    "pt_heap_tab_rng_1_prt_heap1_key" btree (upper(b))
+    "pt_heap_tab_rng_1_prt_heap1_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_rng_1_prt_heap1_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_rng_1_prt_heap1_check" CHECK (a >= 21 AND a < 23)
 Has OIDs: no
@@ -776,8 +738,8 @@ Compression Level: 0
 Block Size: 32768
 Checksum: t
 Indexes:
-    "pt_heap_tab_rng_1_prt_newao_a_key" btree (a) WHERE c > 10
-    "pt_heap_tab_rng_1_prt_newao_key" btree (upper(b))
+    "pt_heap_tab_rng_1_prt_newao_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_rng_1_prt_newao_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_rng_1_prt_newao_check" CHECK (a >= 40 AND a < 45)
 Has OIDs: no
@@ -796,8 +758,8 @@ Distributed by: (a)
  success | boolean |           | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_heap_tab_rng_1_prt_newco_a_key" btree (a) WHERE c > 10
-    "pt_heap_tab_rng_1_prt_newco_key" btree (upper(b))
+    "pt_heap_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_rng_1_prt_newco_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_rng_1_prt_newco_check" CHECK (a >= 36 AND a < 40)
 Has OIDs: no
@@ -805,12 +767,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists heap_rng_idx4 cascade;
-NOTICE:  index "heap_rng_idx4" does not exist, skipping
-drop index if exists heap_rng_idx3 cascade;
-NOTICE:  index "heap_rng_idx3" does not exist, skipping
---end_ignore
  create index heap_rng_idx3 on pt_heap_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_heap_tab_rng_1_prt_3"
@@ -863,12 +819,6 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_3" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_4" for table "pt_ao_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_5" for table "pt_ao_tab_rng"
 --Create indexes on the table
---start_ignore
-drop index if exists ao_rng_idx1 cascade;
-NOTICE:  index "ao_rng_idx1" does not exist, skipping
-drop index if exists ao_rng_idx2 cascade;
-NOTICE:  index "ao_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index ao_rng_idx1 on pt_ao_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_dft"
@@ -960,8 +910,8 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_newheap" for ta
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_ao_tab_rng_1_prt_newheap_a_key" btree (a) WHERE c > 10
-    "pt_ao_tab_rng_1_prt_newheap_key" btree (upper(b))
+    "pt_ao_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_rng_1_prt_newheap_check" CHECK (a >= 40 AND a < 45)
 Has OIDs: no
@@ -983,8 +933,8 @@ Compression Level: 0
 Block Size: 32768
 Checksum: t
 Indexes:
-    "pt_ao_tab_rng_1_prt_ao1_a_key" btree (a) WHERE c > 10
-    "pt_ao_tab_rng_1_prt_ao1_key" btree (upper(b))
+    "pt_ao_tab_rng_1_prt_ao1_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_rng_1_prt_ao1_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_rng_1_prt_ao1_check" CHECK (a >= 25 AND a < 27)
 Has OIDs: no
@@ -1003,8 +953,8 @@ Distributed by: (a)
  success | boolean |           | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_ao_tab_rng_1_prt_newco_a_key" btree (a) WHERE c > 10
-    "pt_ao_tab_rng_1_prt_newco_key" btree (upper(b))
+    "pt_ao_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_rng_1_prt_newco_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_rng_1_prt_newco_check" CHECK (a >= 36 AND a < 40)
 Has OIDs: no
@@ -1012,12 +962,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists ao_rng_idx4 cascade;
-NOTICE:  index "ao_rng_idx4" does not exist, skipping
-drop index if exists ao_rng_idx3 cascade;
-NOTICE:  index "ao_rng_idx3" does not exist, skipping
---end_ignore
  create index ao_rng_idx3 on pt_ao_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_ao_tab_rng_1_prt_3"
@@ -1070,12 +1014,6 @@ NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_3" for table "p
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_4" for table "pt_co_tab_rng"
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_5" for table "pt_co_tab_rng"
 --Create indexes on the table
---start_ignore
-drop index if exists co_rng_idx1 cascade;
-NOTICE:  index "co_rng_idx1" does not exist, skipping
-drop index if exists co_rng_idx2 cascade;
-NOTICE:  index "co_rng_idx2" does not exist, skipping
---end_ignore
  -- partial index
  create index co_rng_idx1 on pt_co_tab_rng(a) where c > 10;
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_dft"
@@ -1167,8 +1105,8 @@ NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_newheap" for ta
  e       | numeric |           | main     | 
  success | boolean |           | plain    | 
 Indexes:
-    "pt_co_tab_rng_1_prt_newheap_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_rng_1_prt_newheap_key" btree (upper(b))
+    "pt_co_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_rng_1_prt_newheap_check" CHECK (a >= 40 AND a < 45)
 Has OIDs: no
@@ -1190,8 +1128,8 @@ Compression Level: 0
 Block Size: 32768
 Checksum: t
 Indexes:
-    "pt_co_tab_rng_1_prt_newao_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_rng_1_prt_newao_key" btree (upper(b))
+    "pt_co_tab_rng_1_prt_newao_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_rng_1_prt_newao_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_rng_1_prt_newao_check" CHECK (a >= 36 AND a < 40)
 Has OIDs: no
@@ -1210,8 +1148,8 @@ Distributed by: (a)
  success | boolean |           | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "pt_co_tab_rng_1_prt_co1_a_key" btree (a) WHERE c > 10
-    "pt_co_tab_rng_1_prt_co1_key" btree (upper(b))
+    "pt_co_tab_rng_1_prt_co1_a_idx" btree (a) WHERE c > 10
+    "pt_co_tab_rng_1_prt_co1_upper_idx" btree (upper(b))
 Check constraints:
     "pt_co_tab_rng_1_prt_co1_check" CHECK (a >= 31 AND a < 33)
 Has OIDs: no
@@ -1219,12 +1157,6 @@ Options: appendonly=true, orientation=column
 Distributed by: (a)
 
 -- Create more index indexes
---start_ignore
-drop index if exists co_rng_idx4 cascade;
-NOTICE:  index "co_rng_idx4" does not exist, skipping
-drop index if exists co_rng_idx3 cascade;
-NOTICE:  index "co_rng_idx3" does not exist, skipping
---end_ignore
  create index co_rng_idx3 on pt_co_tab_rng(c,d) where a = 40 OR a = 50; -- multicol indx
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_2"
 NOTICE:  building index for child partition "pt_co_tab_rng_1_prt_3"

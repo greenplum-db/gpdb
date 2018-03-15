@@ -3,7 +3,7 @@ CREATE READABLE EXTERNAL TABLE s3write_lots_of_files_read (date text, time text,
 CREATE WRITABLE EXTERNAL TABLE s3write_lots_of_files_write (date text, time text, status bool, sample1 float, sample2 float,
         volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/lotsoffiles/ config=@config_file@') FORMAT 'csv';
 SELECT count(*) FROM s3write_lots_of_files_read;
- count
+ count 
 -------
      0
 (1 row)
@@ -23,13 +23,13 @@ BEGIN
 END;
 $$ LANGUAGE 'plpgsql';
 SELECT * FROM write_lots_of_files(20);
- write_lots_of_files
+ write_lots_of_files 
 ---------------------
  Insert 20 files
 (1 row)
 
 select min(volume), max(volume), count(volume) from s3write_lots_of_files_read;
- min | max | count
+ min | max | count 
 -----+-----+-------
    1 |  20 |    20
 (1 row)

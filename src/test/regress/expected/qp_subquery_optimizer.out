@@ -1162,7 +1162,7 @@ select * from Tbl04 where (x,y) not in (select x,y from Tbl10);
 ---+---
  3 | 4
 (1 row)
-                      
+
 -- start_ignore
 create table TblText1(a text, b text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -1219,7 +1219,7 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
 ---------------------------------------------------------------------------------------------------------
  Delete  (cost=0.00..862.04 rows=1 width=1)
    ->  Result  (cost=0.00..862.00 rows=1 width=26)
-         ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=18)
+         ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
                Hash Cond: qp_subquery.tabdel1.a = tabdel3.a
                ->  Table Scan on tabdel1  (cost=0.00..431.00 rows=1 width=18)
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
@@ -1235,7 +1235,7 @@ explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- s
  Delete  (cost=0.00..862.04 rows=1 width=1)
    ->  Result  (cost=0.00..862.00 rows=1 width=26)
          ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=18)
-               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=18)
+               ->  Hash Left Anti Semi (Not-In) Join  (cost=0.00..862.00 rows=1 width=18)
                      Hash Cond: qp_subquery.tabdel2.a = tabdel4.a
                      ->  Table Scan on tabdel2  (cost=0.00..431.00 rows=1 width=18)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/ecpg-ref.sgml,v 1.32 2007/01/31 23:26:03 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/ecpg-ref.sgml,v 1.34 2010/02/19 14:36:45 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -159,16 +159,7 @@ PostgreSQL documentation
      <listitem>
       <para>
        Print additional information including the version and the
-       include path.
-      </para>
-     </listitem>
-    </varlistentry>
-
-    <varlistentry>
-     <term><option>--help</option></term>
-     <listitem>
-      <para>
-       Show a brief summary of the command usage, then exit.
+       "include" path.
       </para>
      </listitem>
     </varlistentry>
@@ -177,10 +168,21 @@ PostgreSQL documentation
      <term><option>--version</option></term>
      <listitem>
       <para>
-       Output version information, then exit.
+       Print the <application>ecpg</application> version and exit.
       </para>
      </listitem>
     </varlistentry>
+
+    <varlistentry>
+     <term><option>--help</option></term>
+     <listitem>
+      <para>
+       Show help about <application>ecpg</application> command line
+       arguments, and exit.
+      </para>
+     </listitem>
+    </varlistentry>
+
    </variablelist>
   </para>
  </refsect1>
@@ -192,7 +194,7 @@ PostgreSQL documentation
   <para>
    When compiling the preprocessed C code files, the compiler needs to
    be able to find the <application>ECPG</> header files in the
-   <productname>PostgreSQL</> include directory.  Therefore, one might
+   <productname>PostgreSQL</> include directory.  Therefore, you might
    have to use the <option>-I</> option when invoking the compiler
    (e.g., <literal>-I/usr/local/pgsql/include</literal>).
   </para>

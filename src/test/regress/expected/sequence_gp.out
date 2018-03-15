@@ -8,13 +8,13 @@ INSERT INTO tmp_table VALUES (0),(1),(2),(3);
 -- Test execution of nextval on master with CACHE 1
 CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2 START 1 CACHE 1 NO CYCLE;
 SELECT nextval('tmp_seq');
- nextval
+ nextval 
 ---------
        1
 (1 row)
 
 SELECT nextval('tmp_seq');
- nextval
+ nextval 
 ---------
        2
 (1 row)
@@ -26,7 +26,7 @@ DROP SEQUENCE tmp_seq;
 -- Test that ORCA and Planner return the same results although they produce different execution plans.
 CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 4 START 1 CACHE 1 NO CYCLE;
 SELECT val from (SELECT nextval('tmp_seq'), a as val FROM tmp_table ORDER BY a) as val ORDER BY val;
- val
+ val 
 -----
    0
    1
@@ -38,13 +38,13 @@ DROP SEQUENCE tmp_seq;
 -- Test execution of nextval on master with CACHE > 1
 CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2 START 1 CACHE 20 NO CYCLE;
 SELECT nextval('tmp_seq');
- nextval
+ nextval 
 ---------
        1
 (1 row)
 
 SELECT nextval('tmp_seq');
- nextval
+ nextval 
 ---------
        2
 (1 row)

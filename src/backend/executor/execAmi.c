@@ -3,10 +3,10 @@
  * execAmi.c
  *	  miscellaneous executor access method routines
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.103 2009/01/01 17:23:41 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/executor/execAmi.c,v 1.108 2010/02/14 18:42:14 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,8 +27,10 @@
 #include "executor/nodeHashjoin.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeLimit.h"
+#include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
 #include "executor/nodeMergejoin.h"
+#include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
 #include "executor/nodeResult.h"
@@ -135,6 +137,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 	{
 		case T_ResultState:
 			ExecReScanResult((ResultState *) node, exprCtxt);
+			break;
+
+		case T_ModifyTableState:
+			ExecReScanModifyTable((ModifyTableState *) node, exprCtxt);
 			break;
 
 		case T_AppendState:
@@ -269,6 +275,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 
 		case T_SetOpState:
 			ExecReScanSetOp((SetOpState *) node, exprCtxt);
+			break;
+
+		case T_LockRowsState:
+			ExecReScanLockRows((LockRowsState *) node, exprCtxt);
 			break;
 
 		case T_LimitState:
@@ -551,8 +561,9 @@ ExecSupportsBackwardScan(Plan *node)
 			/* these don't evaluate tlist */
 			return true;
 
+		case T_LockRows:
 		case T_Limit:
-			/* doesn't evaluate tlist */
+			/* these don't evaluate tlist */
 			return ExecSupportsBackwardScan(outerPlan(node));
 
 		default:
@@ -847,17 +858,13 @@ IndexSupportsBackwardScan(Oid indexid)
 	Form_pg_am	amrec;
 
 	/* Fetch the pg_class tuple of the index relation */
-	ht_idxrel = SearchSysCache(RELOID,
-							   ObjectIdGetDatum(indexid),
-							   0, 0, 0);
+	ht_idxrel = SearchSysCache1(RELOID, ObjectIdGetDatum(indexid));
 	if (!HeapTupleIsValid(ht_idxrel))
 		elog(ERROR, "cache lookup failed for relation %u", indexid);
 	idxrelrec = (Form_pg_class) GETSTRUCT(ht_idxrel);
 
 	/* Fetch the pg_am tuple of the index' access method */
-	ht_am = SearchSysCache(AMOID,
-						   ObjectIdGetDatum(idxrelrec->relam),
-						   0, 0, 0);
+	ht_am = SearchSysCache1(AMOID, ObjectIdGetDatum(idxrelrec->relam));
 	if (!HeapTupleIsValid(ht_am))
 		elog(ERROR, "cache lookup failed for access method %u",
 			 idxrelrec->relam);
@@ -869,4 +876,32 @@ IndexSupportsBackwardScan(Oid indexid)
 	ReleaseSysCache(ht_am);
 
 	return result;
+}
+
+/*
+ * ExecMaterializesOutput - does a plan type materialize its output?
+ *
+ * Returns true if the plan node type is one that automatically materializes
+ * its output (typically by keeping it in a tuplestore).  For such plans,
+ * a rescan without any parameter change will have zero startup cost and
+ * very low per-tuple cost.
+ */
+bool
+ExecMaterializesOutput(NodeTag plantype)
+{
+	switch (plantype)
+	{
+		case T_Material:
+		case T_FunctionScan:
+		case T_CteScan:
+		case T_WorkTableScan:
+		case T_Sort:
+		case T_ShareInputScan:
+			return true;
+
+		default:
+			break;
+	}
+
+	return false;
 }

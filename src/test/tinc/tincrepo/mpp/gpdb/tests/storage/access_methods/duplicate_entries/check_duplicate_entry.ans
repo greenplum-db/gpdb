@@ -1,5 +1,0 @@
-select gp_segment_id, oid, count(*) from gp_dist_random('pg_class') group by 1, 2 having count(*) > 1;
- gp_segment_id | oid | count 
----------------+-----+-------
-(0 rows)
-

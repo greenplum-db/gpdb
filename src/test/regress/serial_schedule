@@ -1,5 +1,6 @@
-# $PostgreSQL: pgsql/src/test/regress/serial_schedule,v 1.52 2009/01/27 12:40:15 petere Exp $
+# $PostgreSQL: pgsql/src/test/regress/serial_schedule,v 1.56 2010/02/12 17:33:21 tgl Exp $
 # This should probably be in an order similar to parallel_schedule.
+test: tablespace
 test: boolean
 test: char
 test: name
@@ -59,6 +60,7 @@ test: create_operator
 test: create_index
 test: drop_if_exists
 test: inherit
+test: typed_table
 test: vacuum
 test: create_view
 test: sanity_check
@@ -88,9 +90,9 @@ ignore: prepared_xacts
 test: privileges
 test: lock
 test: misc
+test: rules
 test: select_views
 test: portals_p2
-test: rules
 test: foreign_key
 test: cluster
 test: dependency
@@ -101,6 +103,7 @@ test: tsearch
 test: tsdicts
 test: foreign_data
 test: window
+test: xmlmap
 test: plancache
 test: json
 test: limit
@@ -123,4 +126,3 @@ ignore: largeobject
 test: with
 test: xml
 test: stats
-ignore: tablespace

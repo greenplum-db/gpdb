@@ -161,7 +161,7 @@ CREATE TABLE tmp2 (a int primary key) distributed by (a);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "tmp2_pkey" for table "tmp2"
 CREATE TABLE tmp3 (a int, b int);
 CREATE TABLE tmp4 (a int, b int, unique(a,b)) distributed by (a);
-NOTICE:  CREATE TABLE / UNIQUE will create implicit index "tmp4_a_key" for table "tmp4"
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "tmp4_a_b_key" for table "tmp4"
 CREATE TABLE tmp5 (a int, b int);
 -- Insert rows into tmp2 (pktable)
 INSERT INTO tmp2 values (1);
@@ -440,12 +440,12 @@ drop table atacc1;
 create table atacc1 ( test int, test2 int) distributed by (test);
 -- add a unique constraint
 alter table atacc1 add constraint atacc_test1 unique (test, test2);
-NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "atacc1_test_key" for table "atacc1"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "atacc1_test_test2_key" for table "atacc1"
 -- insert initial value
 insert into atacc1 (test,test2) values (4,4);
 -- should fail
 insert into atacc1 (test,test2) values (4,4);
-ERROR:  duplicate key value violates unique constraint "atacc1_test_key"
+ERROR:  duplicate key value violates unique constraint "atacc1_test_test2_key"
 DETAIL:  Key (test, test2)=(4, 4) already exists.
 -- should all succeed
 insert into atacc1 (test,test2) values (4,5);
@@ -1189,6 +1189,12 @@ alter table gc1 drop column name;
 ERROR:  column "name" of relation "gc1" does not exist
 -- should work and drop the attribute in all tables
 alter table p2 drop column height;
+-- IF EXISTS test
+create table dropColumnExists ();
+alter table dropColumnExists drop column non_existing; --fail
+ERROR:  column "non_existing" of relation "dropcolumnexists" does not exist
+alter table dropColumnExists drop column if exists non_existing; --succeed
+NOTICE:  column "non_existing" of relation "dropcolumnexists" does not exist, skipping
 select relname, attname, attinhcount, attislocal
 from pg_class join pg_attribute on (pg_class.oid = pg_attribute.attrelid)
 where relname in ('p1','p2','c1','gc1') and attnum > 0 and not attisdropped
@@ -1284,7 +1290,6 @@ select * from altinhoid;
 
 alter table altwithoid set with oids;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 select oid > 0, * from altwithoid;
  ?column? | col 
 ----------+-----
@@ -1315,8 +1320,8 @@ select oid > 0, * from altinhoid;
 (1 row)
 
 alter table altwithoid set with oids;
-NOTICE:  merging definition of column "oid" for child "altinhoid"
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  merging definition of column "oid" for child "altinhoid"
 select oid > 0, * from altwithoid;
  ?column? | col 
 ----------+-----
@@ -1470,6 +1475,10 @@ alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end; -- fails
 ERROR:  cannot alter type of a column used in a distribution policy
 alter table anothertab drop constraint anothertab_chk;
+alter table anothertab drop constraint anothertab_chk; -- fails
+ERROR:  constraint "anothertab_chk" of relation "anothertab" does not exist
+alter table anothertab drop constraint IF EXISTS anothertab_chk; -- succeeds
+NOTICE:  constraint "anothertab_chk" of relation "anothertab" does not exist, skipping
 alter table anothertab alter column atcol1 type boolean
         using case when atcol1 % 2 = 0 then true else false end;
 ERROR:  cannot alter type of a column used in a distribution policy

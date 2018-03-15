@@ -36,9 +36,6 @@ try:
     from gppylib.operations.utils import ParallelOperation
     from gppylib.parseutils import line_reader, parse_gpexpand_segment_line, \
         canonicalize_address
-    from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, \
-        GP_TEMPORARY_FILES_FILESPACE, GetCurrentFilespaceEntries, GetFilespaceEntries, GetFilespaceEntriesDict, \
-        RollBackFilespaceChanges, GetMoveOperationList, FileType, UpdateFlatFiles
     from gppylib.heapchecksum import HeapChecksum
 
 except ImportError, e:
@@ -52,9 +49,7 @@ GPDB_STOPPED = 1
 GPDB_STARTED = 2
 GPDB_UTILITY = 3
 
-FILE_SPACES_INPUT_FILENAME_SUFFIX = ".fs"
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
-FILE_SPACES_INPUT_FILE_LINE_1_PREFIX = "filespaceOrder"
 
 #global var
 _gp_expand = None
@@ -125,8 +120,6 @@ def parseargs():
                       help='remove the expansion schema.')
     parser.add_option('-r', '--rollback', action='store_true',
                       help='rollback failed expansion setup.')
-    parser.add_option('-V', '--novacuum', action='store_true',
-                      help='Do not vacuum catalog tables before creating schema copy.')
     parser.add_option('-a', '--analyze', action='store_true',
                       help='Analyze the expanded table after redistribution.')
     parser.add_option('-d', '--duration', type='duration', metavar='[h][:m[:s]]',
@@ -639,13 +632,12 @@ class SegmentTemplate:
 
     def __init__(self, logger, statusLogger, pool,
                  gparray, masterDataDirectory,
-                 dburl, conn, noVacuumCatalog, tempDir, batch_size,
+                 dburl, conn, tempDir, batch_size,
                  segTarDir='.', schemaTarFile='gpexpand_schema.tar'):
         self.logger = logger
         self.statusLogger = statusLogger
         self.pool = pool
         self.gparray = gparray
-        self.noVacuumCatalog = noVacuumCatalog
         self.tempDir = tempDir
         self.batch_size = batch_size
         self.dburl = dburl
@@ -707,10 +699,6 @@ class SegmentTemplate:
         """Creates the schema template that is used by new segments"""
         self.logger.info('Creating segment template')
 
-        if not self.noVacuumCatalog:
-            self.logger.info('VACUUM FULL on the catalog tables')
-            catalog.vacuum_catalog(self.dburl, self.conn, full=True, utility=True)
-
         MakeDirectory.local('gpexpand create temp dir', self.tempDir)
 
         self._select_src_segment()
@@ -768,6 +756,44 @@ class SegmentTemplate:
         self.pool.join()
         self.pool.check_results()
 
+    def _start_new_primary_segments(self):
+        newSegments = self.gparray.getExpansionSegDbList()
+        for seg in newSegments:
+            if seg.isSegmentMirror():
+                continue
+            """ Start all the new segments in utilty mode. """
+            segStartCmd = SegmentStart(
+                name="Starting new segment dbid %s on host %s." % (str(seg.getSegmentDbId()), seg.getSegmentHostName())
+                , gpdb=seg
+                , numContentsInCluster=0  # Starting seg on it's own.
+                , era=None
+                , mirrormode=MIRROR_MODE_MIRRORLESS
+                , utilityMode=True
+                , ctxt=REMOTE
+                , remoteHost=seg.getSegmentHostName()
+                , pg_ctl_wait=True
+                , timeout=SEGMENT_TIMEOUT_DEFAULT)
+            self.pool.addCommand(segStartCmd)
+        self.pool.join()
+        self.pool.check_results()
+
+    def _stop_new_primary_segments(self):
+        newSegments = self.gparray.getExpansionSegDbList()
+        for seg in newSegments:
+            if seg.isSegmentMirror() == True:
+                continue
+            segStopCmd = SegmentStop(
+                name="Stopping new segment dbid %s on host %s." % (str(seg.getSegmentDbId), seg.getSegmentHostName())
+                , dataDir=seg.getSegmentDataDirectory()
+                , mode='smart'
+                , nowait=False
+                , ctxt=REMOTE
+                , remoteHost=seg.getSegmentHostName()
+            )
+            self.pool.addCommand(segStopCmd)
+        self.pool.join()
+        self.pool.check_results()
+
     def _configure_new_segments(self):
         """Configures new segments.  This includes modifying the postgresql.conf file
         and setting up the gp_id table"""
@@ -775,8 +801,9 @@ class SegmentTemplate:
         self.logger.info('Configuring new segments (primary)')
         new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
                                                                              primaryMirror='primary')
+        self.logger.info(new_segment_info)
         for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
                                             tarFile=self.segTarFile, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
@@ -785,30 +812,33 @@ class SegmentTemplate:
         self.pool.join()
         self.pool.check_results()
 
+        self._start_new_primary_segments()
+
         self.logger.info('Configuring new segments (mirror)')
-        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(self.gparray.getExpansionSegDbList(),
-                                                                             primaryMirror='mirror')
+
+        # This loop enriches segments which are mirrors with two fields, primaryHostname and primarySegmentPort.
+        mirrorsList = []
+        for segPair in self.gparray.getExpansionSegPairList():
+            if segPair.mirrorDB is None:
+                continue
+            mirror = segPair.mirrorDB
+            mirror.primaryHostname = segPair.primaryDB.getSegmentHostName()
+            mirror.primarySegmentPort = segPair.primaryDB.getSegmentPort()
+            mirrorsList.append(mirror)
+
+        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(mirrorsList, primaryMirror='mirror')
+
         for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', new_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
                                             tarFile=self.schema_tar_file, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
-                                            ctxt=REMOTE, remoteHost=host, validationOnly=True)
+                                            ctxt=REMOTE, remoteHost=host, validationOnly=False)
             self.pool.addCommand(segCfgCmd)
 
         self.pool.join()
         self.pool.check_results()
 
-    def _get_transaction_filespace_dir(self, transaction_flat_file):
-        filespace_dir = None
-
-        with open(transaction_flat_file) as tfile:
-            for line in tfile:
-                fs_info = line.split()
-                if len(fs_info) != 2:
-                    continue
-                filespace_dir = fs_info[1]
-
-        return filespace_dir
+        self._stop_new_primary_segments()
 
     def _fixup_template(self):
         """Copies postgresql.conf and pg_hba.conf files from a valid segment on the system.
@@ -829,27 +859,6 @@ class SegmentTemplate:
                            self.tempDir, ctxt=REMOTE, remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
 
-        # Copy the transaction directories into template
-        pg_system_filespace_entries = GetFilespaceEntriesDict(GetFilespaceEntries(self.gparray,
-                                                                                  PG_SYSTEM_FILESPACE).run()).run()
-        transaction_flat_file = os.path.join(pg_system_filespace_entries[1][2], GP_TRANSACTION_FILES_FILESPACE)
-        filespace_dir = None
-        if os.path.exists(transaction_flat_file):
-            filespace_dir = self._get_transaction_filespace_dir(transaction_flat_file)
-            logger.debug('Filespace location = %s' % filespace_dir)
-
-            if filespace_dir:
-                transaction_files_dir = ['pg_xlog', 'pg_multixact', 'pg_subtrans', 'pg_clog',
-                                         'pg_distributedlog', 'pg_distributedxidmap']
-                for directory in transaction_files_dir:
-                    dst_dir = os.path.join(self.tempDir, directory)
-                    src_dir = os.path.join(filespace_dir, directory)
-
-                    mkCmd = MakeDirectory('gpexpand creating transaction directories in template', dst_dir)
-                    mkCmd.run(validateAfter=True)
-                    cpCmd = LocalDirCopy('gpexpand copying dir %s' % src_dir, src_dir, dst_dir)
-                    cpCmd.run(validateAfter=True)
-
         # Don't need log files and gpperfmon files in template.
         rmCmd = RemoveDirectory('gpexpand remove gppermfon data from template',
                                 self.tempDir + '/gpperfmon/data')
@@ -867,14 +876,6 @@ class SegmentTemplate:
         rmCmd.run(validateAfter=True)
         rmCmd = RemoveGlob('gpexpand remove gpexpand files from template',
                             self.tempDir + '/gpexpand.*')
-        rmCmd.run(validateAfter=True)
-
-        # We dont need the flat files
-        rmCmd = RemoveFile('gpexpand remove transaction flat file from template',
-                            self.tempDir + '/' + GP_TRANSACTION_FILES_FILESPACE)
-        rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFile('gpexpand remove temporary flat file from template',
-                            self.tempDir + '/' + GP_TEMPORARY_FILES_FILESPACE)
         rmCmd.run(validateAfter=True)
 
         self.logger.info('Adding new segments into template pg_hba.conf')
@@ -935,12 +936,10 @@ class SegmentTemplate:
         if removeDataDirs:
             for seg in gparray.getExpansionSegDbList():
                 hostname = seg.getSegmentHostName()
-                filespaces = seg.getSegmentFilespaces()
-                for oid in filespaces:
-                    datadir = filespaces[oid]
-                    rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
-                                            datadir, ctxt=REMOTE, remoteHost=hostname)
-                    pool.addCommand(rmCmd)
+                datadir = seg.getSegmentDataDirectory()
+                rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
+                                        datadir, ctxt=REMOTE, remoteHost=hostname)
+                pool.addCommand(rmCmd)
         pool.join()
         pool.check_results()
 
@@ -955,7 +954,7 @@ class SegmentTemplate:
 # ------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------
 class NewSegmentInput:
-    def __init__(self, hostname, address, port, datadir, dbid, contentId, role, replicationPort=None, fileSpaces=None):
+    def __init__(self, hostname, address, port, datadir, dbid, contentId, role):
         self.hostname = hostname
         self.address = address
         self.port = port
@@ -963,8 +962,6 @@ class NewSegmentInput:
         self.dbid = dbid
         self.contentId = contentId
         self.role = role
-        self.replicationPort = replicationPort
-        self.fileSpaces = fileSpaces
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -1301,54 +1298,9 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                                 , db.getSegmentContentId()
                                                 , db.getSegmentPreferredRole()
                                                 )
-            if db.getSegmentReplicationPort() != None:
-                tempStr = tempStr + ':' + str(db.getSegmentReplicationPort())
             outfile.write(tempStr + "\n")
 
         outfile.close()
-
-        return outputfile
-
-    # ------------------------------------------------------------------------
-    def generate_filespaces_inputfile(self, outFileNamePrefix):
-        """
-        Writes a gpexpand filespace input file based on expansion segments
-        added to gparray by the gpexpand interview. If the new segments
-        contain filespaces, then return the name of the file, else return
-        None.
-        """
-        filespaces = self.gparray.getFilespaces(includeSystemFilespace=False)
-        if filespaces != None and len(filespaces) > 0:
-            outputfile = outFileNamePrefix + FILE_SPACES_INPUT_FILENAME_SUFFIX
-        else:
-            outputfile = None
-
-        if outputfile != None:
-            outfileFD = open(outputfile, 'w')
-
-            logger.info("Generating filespaces input file...")
-
-            firstLine = FILE_SPACES_INPUT_FILE_LINE_1_PREFIX + "="
-            firstFs = True
-            for fs in filespaces:
-                if firstFs == True:
-                    firstLine = firstLine + fs.getName()
-                    firstFs = False
-                else:
-                    firstLine = firstLine + ":" + fs.getName()
-            outfileFD.write(firstLine + '\n')
-
-            for db in self.gparray.getExpansionSegDbList():
-                dbid = db.getSegmentDbId()
-                outLine = str(dbid)
-                segmentFilespaces = db.getSegmentFilespaces()
-                for fs in filespaces:
-                    oid = fs.getOid()
-                    path = segmentFilespaces[oid]
-                    outLine = outLine + ":" + path
-                outfileFD.write(outLine + '\n')
-
-            outfileFD.close()
 
         return outputfile
 
@@ -1362,8 +1314,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                          , address=seg.address.strip()
                                          , port=int(seg.port)
                                          , datadir=os.path.abspath(seg.datadir.strip())
-                                         , replication_port=seg.replicationPort
-                                         , fileSpaces=seg.fileSpaces
                                          )
         try:
             self.gparray.validateExpansionSegs()
@@ -1381,67 +1331,15 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         if self.options.filename:
             inputFilename = self.options.filename
-        fsInputFilename = inputFilename + FILE_SPACES_INPUT_FILENAME_SUFFIX
-        fsOidList = []
-        fsDictionary = {}
         f = None
-        try:
-            existsCmd = FileDirExists(name="gpexpand see if .fs file exists", directory=fsInputFilename)
-            existsCmd.run(validateAfter=True)
-            exists = existsCmd.filedir_exists()
-            if exists == False and len(self.gparray.getFilespaces(includeSystemFilespace=False)) != 0:
-                raise ExpansionError("Expecting filespaces input file: " + fsInputFilename)
-            if exists == True:
-                f = open(fsInputFilename, 'r')
-                for lineNumber, l in line_reader(f):
-                    if lineNumber == 1:
-                        fsNameString = l.strip().split("=")
-                        fsNameList = fsNameString[1].strip().split(":")
-                        for name in fsNameList:
-                            oid = self.gparray.getFileSpaceOid(name)
-                            if oid == None:
-                                raise ExpansionError("Unknown filespace name: " + str(name))
-                            fsOidList.append(oid)
-                        # Make sure all the filespace names are specified.
-                        if len(fsNameList) != len(self.gparray.getFilespaces(includeSystemFilespace=False)):
-                            missingFsNames = []
-                            filespaces = self.gparray.getFilespaces()
-                            for fs in filespaces:
-                                if fs.getName() not in fsNameList:
-                                    missingFsNames.append(fs.getName())
-                            raise ExpansionError("Missing filespaces: " + str(missingFsNames))
-
-                    else:
-                        fsLine = l.strip().split(":")
-                        try:
-                            fsDictionary[fsLine[0]] = fsLine[1:]
-                        except Exception, e:
-                            raise ExpansionError("Problem with inputfile %s, line number %s, exceptin %s." % \
-                                                 (fsInputFilename, str(lineNumber), str(e)))
-
-        except IOError, ioe:
-            raise ExpansionError('Problem with filespace input file: %s. Exception: %s' % (fsInputFilename, str(ioe)))
-        finally:
-            if f != None:
-                f.close()
 
         try:
             f = open(inputFilename, 'r')
             try:
                 for line, l in line_reader(f):
 
-                    hostname, address, port, datadir, dbid, contentId, role, replicationPort \
+                    hostname, address, port, datadir, dbid, contentId, role \
                         = parse_gpexpand_segment_line(inputFilename, line, l)
-
-                    filespaces = {}
-                    if len(fsDictionary) > 0:
-                        fileSpacesPathList = fsDictionary[dbid]
-                    else:
-                        fileSpacesPathList = []
-                    index = 0
-                    for oid in fsOidList:
-                        filespaces[oid] = fileSpacesPathList[index]
-                        index = index + 1
 
                     # Check that input values look reasonable.
                     if hostname == None or len(hostname) == 0:
@@ -1458,8 +1356,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                         raise ExpansionError("Invalid contentId on line " + str(line))
                     if role == None or len(role) > 1 or (role != 'p' and role != 'm'):
                         raise ExpansionError("Invalid role on line " + str(line))
-                    if replicationPort != None and int(replicationPort) < 0:
-                        raise ExpansionError("Invalid replicationPort on line " + str(line))
 
                     retValue.append(NewSegmentInput(hostname=hostname
                                                     , port=port
@@ -1468,8 +1364,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                                     , dbid=dbid
                                                     , contentId=contentId
                                                     , role=role
-                                                    , replicationPort=replicationPort
-                                                    , fileSpaces=filespaces
                                                     ))
             except ValueError:
                 raise ExpansionError('Missing or invalid value on line %d.' % line)
@@ -1490,7 +1384,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                            masterDataDirectory=self.options.master_data_directory,
                                            dburl=self.dburl,
                                            conn=self.conn,
-                                           noVacuumCatalog=self.options.novacuum,
                                            tempDir=self.tempDir,
                                            segTarDir=self.options.tardir,
                                            batch_size=self.options.batch_size)
@@ -1604,7 +1497,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.logger.info('Restoring original segments catalog tables')
         orig_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(originalArray.getSegDbList())
         for host in iter(orig_segment_info):
-            segCfgCmd = ConfigureNewSegment('gpexpand configure new segments', orig_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=orig_segment_info[host],
                                             verbose=gplog.logging_is_verbose(), batchSize=self.options.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)
@@ -1615,23 +1508,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             self.pool.check_results()
         except ExecutionError:
             raise ExpansionError('Failed to restore original segments')
-
-    def _construct_filespace_parameter(self, seg, gpFSobjList):
-        """ return a string containing a filespace parameter appropriate for use in sql functions. """
-        filespaces = []
-        segFilespaces = seg.getSegmentFilespaces()
-        filespaceNames = []
-        filespaceLocations = []
-        for entry in gpFSobjList:
-            name = entry.getName()
-            oid = entry.getOid()
-            location = segFilespaces[oid]
-            filespaceNames.append(name)
-            filespaceLocations.append(location)
-        for i in range(len(filespaceNames)):
-            entry = [filespaceNames[i], filespaceLocations[i]]
-            filespaces.append(entry)
-        return str(filespaces)
 
     def update_catalog(self):
         """
@@ -1686,48 +1562,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.statusLogger.set_status('UPDATE_CATALOG_DONE')
 
     # --------------------------------------------------------------------------
-    def configure_new_segment_filespaces(self):
-        """
-        This method is called after all new segments have been configured.
-        """
-
-        self.logger.info('Configuring new segment filespaces')
-        newSegments = self.gparray.getExpansionSegDbList()
-        fsObjList = self.gparray.getFilespaces(includeSystemFilespace=False)
-
-        if len(fsObjList) == 0:
-            # No filespaces to configure
-            return
-
-        """ Connect to the back end of each new segment directly, and call the filespace setup function. """
-        for seg in newSegments:
-            if seg.isSegmentMirror() == True:
-                continue
-            name = "gpexpand prep new segment filespaces. host = %s, sysdatadir = %s" % (
-                seg.getSegmentHostName(), seg.getSegmentDataDirectory())
-            segFilespaces = seg.getSegmentFilespaces()
-            filespaceNames = []
-            filespaceLocations = []
-            for entry in fsObjList:
-                fsname = entry.getName()
-                oid = entry.getOid()
-                location = segFilespaces[oid]
-                filespaceNames.append(fsname)
-                filespaceLocations.append(location)
-            prepCmd = PrepFileSpaces(name=name
-                                     , filespaceNames=filespaceNames
-                                     , filespaceLocations=filespaceLocations
-                                     , sysDataDirectory=seg.getSegmentDataDirectory()
-                                     , dbid=seg.getSegmentDbId()
-                                     , contentId=seg.getSegmentContentId()
-                                     , ctxt=REMOTE
-                                     , remoteHost=seg.getSegmentHostName()
-                                     )
-            self.pool.addCommand(prepCmd)
-        self.pool.join()
-        self.pool.check_results()
-
-    # --------------------------------------------------------------------------
     def cleanup_new_segments(self):
         """
         This method is called after all new segments have been configured.
@@ -1751,8 +1585,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         """
         Connect to each database in each segment and do some cleanup of tables that have stuff in them as a result of copying the segment from the master.
-        Note, this functionaliy used to be in segcopy and was therefore done just once to the original copy of the master. We need to do it separately for
-        each segment now since filespaces may contain the databases.
+        Note, this functionality used to be in segcopy and was therefore done just once to the original copy of the master.
         """
         for seg in newSegments:
             if seg.isSegmentMirror() == True:
@@ -1767,7 +1600,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 , utilityMode=True
                 , ctxt=REMOTE
                 , remoteHost=seg.getSegmentHostName()
-                , noWait=False
+                , pg_ctl_wait=True
                 , timeout=SEGMENT_TIMEOUT_DEFAULT)
             self.pool.addCommand(segStartCmd)
         self.pool.join()
@@ -1905,13 +1738,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             finally:
                 if restore_conn != None:
                     restore_conn.close()
-
-    def sync_new_mirrors(self):
-        """ This method will execute gprecoverseg so that all new segments sync with their mirrors."""
-        if self.gparray.get_mirroring_enabled() == True:
-            self.logger.info('Starting new mirror segment synchronization')
-            cmd = GpRecoverSeg(name="gpexpand syncing mirrors", options="-a -F")
-            cmd.run(validateAfter=True)
 
     def start_prepare(self):
         """Inserts into gpexpand.status that expansion preparation has started."""
@@ -2399,90 +2225,6 @@ UPDATE gp_distribution_policy
             logger.exception('Syncing of Greenplum Database extensions has failed.')
             logger.warning('Please run gppkg --clean after successful expansion.')
 
-    def move_filespaces(self):
-        """
-            Move filespaces for temporary and transaction files.
-        """
-
-        segments = self.gparray.getExpansionSegDbList()
-
-        cur_filespace_entries = GetFilespaceEntriesDict(GetFilespaceEntries(self.gparray,
-                                                                            PG_SYSTEM_FILESPACE
-                                                                            ).run()).run()
-        pg_system_filespace_entries = cur_filespace_entries
-        cur_filespace_name = self.gparray.getFileSpaceName(int(cur_filespace_entries[1][0]))
-        segments = self.gparray.getExpansionSegDbList()
-
-        logger.info('Checking if Transaction filespace was moved')
-        if os.path.exists(os.path.join(cur_filespace_entries[1][2], GP_TRANSACTION_FILES_FILESPACE)):
-            logger.info('Transaction filespace was moved')
-            new_filespace_entries = GetFilespaceEntriesDict(GetCurrentFilespaceEntries(self.gparray,
-                                                                                       FileType.TRANSACTION_FILES
-                                                                                       ).run()).run()
-            new_filespace_name = self.gparray.getFileSpaceName(int(new_filespace_entries[1][0]))
-            operations_list = GetMoveOperationList(segments,
-                                                   FileType.TRANSACTION_FILES,
-                                                   new_filespace_name,
-                                                   new_filespace_entries,
-                                                   cur_filespace_entries,
-                                                   pg_system_filespace_entries
-                                                   ).run()
-
-            logger.info('Moving Transaction filespace on expansion segments')
-            ParallelOperation(operations_list).run()
-
-            logger.debug('Checking results of transaction files move')
-            for operation in operations_list:
-                try:
-                    operation.get_ret()
-                except Exception as _:
-                    logger.info('Transaction filespace move failed on expansion segment')
-                    RollBackFilespaceChanges(segments,
-                                             FileType.TRANSACTION_FILES,
-                                             cur_filespace_name,
-                                             cur_filespace_entries,
-                                             new_filespace_entries,
-                                             pg_system_filespace_entries,
-                                             ).run()
-                    raise
-
-        logger.info('Checking if Temporary filespace was moved')
-        if os.path.exists(os.path.join(cur_filespace_entries[1][2], GP_TEMPORARY_FILES_FILESPACE)):
-            logger.info('Temporary filespace was moved')
-            new_filespace_entries = GetFilespaceEntriesDict(GetCurrentFilespaceEntries(self.gparray,
-                                                                                       FileType.TEMPORARY_FILES
-                                                                                       ).run()).run()
-            new_filespace_name = self.gparray.getFileSpaceName(int(new_filespace_entries[1][0]))
-            operations_list = GetMoveOperationList(segments,
-                                                   FileType.TEMPORARY_FILES,
-                                                   new_filespace_name,
-                                                   new_filespace_entries,
-                                                   cur_filespace_entries,
-                                                   pg_system_filespace_entries
-                                                   ).run()
-
-            logger.info('Moving Temporary filespace on expansion segments')
-            ParallelOperation(operations_list).run()
-
-            logger.debug('Checking results of temporary files move')
-            for operation in operations_list:
-                try:
-                    operation.get_ret()
-                except Exception:
-                    logger.info('Temporary filespace move failed on expansion segment')
-                    RollBackFilespaceChanges(segments,
-                                             FileType.TEMPORARY_FILES,
-                                             cur_filespace_name,
-                                             cur_filespace_entries,
-                                             new_filespace_entries,
-                                             pg_system_filespace_entries
-                                             ).run()
-                    raise
-
-        # Update flat files on mirrors
-        UpdateFlatFiles(self.gparray, primaries=False, expansion=True).run()
-
-
     def validate_heap_checksums(self):
         num_workers = min(len(self.gparray.get_hostlist()), MAX_PARALLEL_EXPANDS)
         heap_checksum_util = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=self.logger)
@@ -2635,30 +2377,6 @@ class ExpandTable():
         logger.debug(sql.decode('utf-8'))
         dbconn.execSQL(status_conn, sql)
         status_conn.commit()
-
-
-# -----------------------------------------------
-class PrepFileSpaces(Command):
-    """
-    This class will connect to a segment backend and execute the gp_prep_new_segment function to setup the file spaces.
-    """
-
-    def __init__(self, name, filespaceNames, filespaceLocations, sysDataDirectory, dbid, contentId, ctxt=LOCAL,
-                 remoteHost=None):
-        self.name = name
-        self.filespaceNames = filespaceNames
-        self.filespaceLocations = filespaceLocations
-        self.sysDataDirectory = sysDataDirectory
-        self.dbid = dbid
-        self.contentId = contentId
-        self.filespaces = []
-        for i in range(len(filespaceNames)):
-            entry = [filespaceNames[i], filespaceLocations[i]]
-            self.filespaces.append(entry)
-        cmdStr = """echo "select * from gp_prep_new_segment( array %s )" """ % (str(self.filespaces))
-        cmdStr += """ | $GPHOME/bin/postgres --single --gp_num_contents_in_cluster=1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true  -E -D %s --gp_dbid=%s --gp_contentid=%s template1""" % (
-            self.sysDataDirectory, str(self.dbid), str(self.contentId))
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
 # -----------------------------------------------
@@ -2947,29 +2665,12 @@ before continuing by re-running this utility and providing the input file. """
 
     if num_new_datadirs > 0:
         new_datadirs = []
-        new_fsDirs = []
         new_mirrordirs = []
-        new_mirrorFsDirs = []
-
-        gpFSobjList = gparray.getFilespaces(includeSystemFilespace=False)
 
         for i in range(1, num_new_datadirs + 1):
             new_datadir = ask_input(None, 'Enter new primary data directory %d' % i, '',
                                     '/data/gpdb_p%d' % i, datadir_validator, None)
             new_datadirs.append(new_datadir.strip())
-
-            fsDict = {}
-            for fsObj in gpFSobjList:
-                # Prompt the user for a location for each filespace
-                fsLoc = ask_input(None
-                                  , 'Enter new file space location for file space name: %s' % fsObj.getName()
-                                  , ''
-                                  , ''
-                                  , datadir_validator
-                                  , None
-                                  )
-                fsDict[fsObj.getOid()] = fsLoc.strip()
-            new_fsDirs.append(fsDict)
 
         if len(new_datadirs) != num_new_datadirs:
             raise ExpansionError(
@@ -2981,19 +2682,6 @@ before continuing by re-running this utility and providing the input file. """
                                           '/data/gpdb_m%d' % i, datadir_validator, None)
                 new_mirrordirs.append(new_mirrordir.strip())
 
-                fsDict = {}
-                for fsObj in gpFSobjList:
-                    # Prompt the user for a location for each filespace
-                    fsLoc = ask_input(None
-                                      , 'Enter new file space location for file space name: %s' % fsObj.getName()
-                                      , ''
-                                      , ''
-                                      , datadir_validator
-                                      , None
-                                      )
-                    fsDict[fsObj.getOid()] = fsLoc.strip()
-                new_mirrorFsDirs.append(fsDict)
-
             if len(new_mirrordirs) != num_new_datadirs:
                 raise ExpansionError(
                     'The number of new mirror data directories entered does not match the number of segments added')
@@ -3001,8 +2689,6 @@ before continuing by re-running this utility and providing the input file. """
         gparray.addExpansionDatadirs(datadirs=new_datadirs
                                      , mirrordirs=new_mirrordirs
                                      , mirror_type=mirror_type
-                                     , fs_dirs=new_fsDirs
-                                     , fs_mirror_dirs=new_mirrorFsDirs
                                      )
         try:
             gparray.validateExpansionSegs()
@@ -3016,13 +2702,9 @@ before continuing by re-running this utility and providing the input file. """
     print "\nGenerating configuration file...\n"
 
     outfile = _gp_expand.generate_inputfile()
-    outFilespaceFileName = _gp_expand.generate_filespaces_inputfile(outFileNamePrefix=outfile)
 
     outFileStr = ""
-    if outfile != None:
-        outFileStr = """\nInput configuration files were written to '%s' and '%s'.""" % (outfile, outFilespaceFileName)
-    else:
-        outFileStr = """\nInput configuration file was written to '%s'.""" % (outfile)
+    outFileStr = """\nInput configuration file was written to '%s'.""" % (outfile)
 
     print outFileStr
     print """Please review the file and make sure that it is correct then re-run
@@ -3152,14 +2834,12 @@ def main(options, args, parser):
             _gp_expand.add_segments()
             _gp_expand.update_original_segments()
             _gp_expand.update_catalog()
-            _gp_expand.move_filespaces()
-            _gp_expand.configure_new_segment_filespaces()
             _gp_expand.cleanup_new_segments()
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
             logger.info('Starting Greenplum Database')
             GpStart.local('gpexpand expansion prepare final start')
-            _gp_expand.sync_new_mirrors()
+            # When the mirrors come up, it should sync with the primary on its own.
             logger.info('************************************************')
             logger.info('Initialization of the system expansion complete.')
             logger.info('To begin table expansion onto the new segments')

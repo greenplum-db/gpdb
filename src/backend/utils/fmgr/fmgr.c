@@ -3,12 +3,12 @@
  * fmgr.c
  *	  The Postgres function manager.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.126 2009/06/11 14:49:05 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.131 2010/02/26 02:01:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -208,9 +208,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	}
 
 	/* Otherwise we need the pg_proc entry */
-	procedureTuple = SearchSysCache(PROCOID,
-									ObjectIdGetDatum(functionId),
-									0, 0, 0);
+	procedureTuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(functionId));
 	if (!HeapTupleIsValid(procedureTuple))
 		elog(ERROR, "cache lookup failed for function %u", functionId);
 	procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
@@ -398,9 +396,7 @@ fmgr_info_other_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
 	Form_pg_language languageStruct;
 	FmgrInfo	plfinfo;
 
-	languageTuple = SearchSysCache(LANGOID,
-								   ObjectIdGetDatum(language),
-								   0, 0, 0);
+	languageTuple = SearchSysCache1(LANGOID, ObjectIdGetDatum(language));
 	if (!HeapTupleIsValid(languageTuple))
 		elog(ERROR, "cache lookup failed for language %u", language);
 	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
@@ -961,7 +957,7 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 
 	if (OidIsValid(fcache->userid))
 		SetUserIdAndSecContext(fcache->userid,
-							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+							save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	if (fcache->proconfig)
 	{
@@ -2091,24 +2087,10 @@ OidSendFunctionCall(Oid functionId, Datum val)
 Datum
 Int64GetDatum(int64 X)
 {
-#ifndef INT64_IS_BUSTED
 	int64	   *retval = (int64 *) palloc(sizeof(int64));
 
 	*retval = X;
 	return PointerGetDatum(retval);
-#else							/* INT64_IS_BUSTED */
-
-	/*
-	 * On a machine with no 64-bit-int C datatype, sizeof(int64) will not be
-	 * 8, but we want Int64GetDatum to return an 8-byte object anyway, with
-	 * zeroes in the unused bits.  This is needed so that, for example, hash
-	 * join of int8 will behave properly.
-	 */
-	int64	   *retval = (int64 *) palloc0(Max(sizeof(int64), 8));
-
-	*retval = X;
-	return PointerGetDatum(retval);
-#endif   /* INT64_IS_BUSTED */
 }
 #endif   /* USE_FLOAT8_BYVAL */
 

@@ -4,10 +4,10 @@
  *	  Definitions for using the POSTGRES copy command.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/copy.h,v 1.32 2009/01/01 17:23:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/copy.h,v 1.33 2010/01/02 16:58:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -277,7 +277,7 @@ typedef CopyStateData *CopyState;
 
 extern void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 								 char *null_print, char *quote, char *escape,
-								 List *force_quote, List *force_notnull,
+								 List *force_quote, bool force_quote_all, List *force_notnull,
 								 bool header_line, bool fill_missing, char *newline,
 								 int numcols);
 extern uint64 DoCopy(const CopyStmt *stmt, const char *queryString);

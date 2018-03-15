@@ -16,14 +16,14 @@ count
 -----
 81   
 (1 row)
-2U: VACUUM foo;
+0U: VACUUM foo;
 VACUUM
 SELECT COUNT(*) FROM foo;
 count
 -----
 81   
 (1 row)
-2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('foo');
+0U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('foo');
 segno|case
 -----+----
 0    |many

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/extern.h,v 1.35 2009/05/20 16:13:18 meskes Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/ecpglib/extern.h,v 1.41 2010/05/25 14:32:55 meskes Exp $ */
 
 #ifndef _ECPG_LIB_EXTERN_H
 #define _ECPG_LIB_EXTERN_H
@@ -6,6 +6,8 @@
 #include "postgres_fe.h"
 #include "libpq-fe.h"
 #include "sqlca.h"
+#include "sqlda-native.h"
+#include "sqlda-compat.h"
 #include "ecpg_config.h"
 #ifndef CHAR_BIT
 #include <limits.h>
@@ -24,6 +26,8 @@ enum ARRAY_TYPE
 {
 	ECPG_ARRAY_ERROR, ECPG_ARRAY_NOT_SET, ECPG_ARRAY_ARRAY, ECPG_ARRAY_VECTOR, ECPG_ARRAY_NONE
 };
+
+#define ECPG_IS_ARRAY(X) ((X) == ECPG_ARRAY_ARRAY || (X) == ECPG_ARRAY_VECTOR)
 
 /* A generic varchar type. */
 struct ECPGgeneric_varchar
@@ -56,6 +60,15 @@ struct statement
 	bool		questionmarks;
 	struct variable *inlist;
 	struct variable *outlist;
+};
+
+/* structure to store prepared statements for a connection */
+struct prepared_statement
+{
+	char	   *name;
+	bool		prepared;
+	struct statement *stmt;
+	struct prepared_statement *next;
 };
 
 /* structure to store connections */
@@ -129,12 +142,16 @@ bool		ecpg_init(const struct connection *, const char *, const int);
 char	   *ecpg_strdup(const char *, int);
 const char *ecpg_type_name(enum ECPGttype);
 int			ecpg_dynamic_type(Oid);
+int			sqlda_dynamic_type(Oid, enum COMPAT_MODE);
 void		ecpg_free_auto_mem(void);
 void		ecpg_clear_auto_mem(void);
 
 struct descriptor *ecpggetdescp(int, char *);
 
 struct descriptor *ecpg_find_desc(int line, const char *name);
+
+struct prepared_statement *ecpg_find_prepared_statement(const char *,
+						  struct connection *, struct prepared_statement **);
 
 bool ecpg_store_result(const PGresult *results, int act_field,
 				  const struct statement * stmt, struct variable * var);
@@ -148,6 +165,11 @@ bool		ecpg_deallocate_all_conn(int lineno, enum COMPAT_MODE c, struct connection
 void		ecpg_log(const char *format,...);
 bool		ecpg_auto_prepare(int, const char *, const int, char **, const char *);
 void		ecpg_init_sqlca(struct sqlca_t * sqlca);
+
+struct sqlda_compat *ecpg_build_compat_sqlda(int, PGresult *, int, enum COMPAT_MODE);
+void		ecpg_set_compat_sqlda(int, struct sqlda_compat **, const PGresult *, int, enum COMPAT_MODE);
+struct sqlda_struct *ecpg_build_native_sqlda(int, PGresult *, int, enum COMPAT_MODE);
+void		ecpg_set_native_sqlda(int, struct sqlda_struct **, const PGresult *, int, enum COMPAT_MODE);
 
 /* SQLSTATE values generated or processed by ecpglib (intentionally
  * not exported -- users should refer to the codes directly) */

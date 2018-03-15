@@ -39,6 +39,7 @@ insert into t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,1) i;
 create table t1 as select * from t;
 
 insert into pt1 select * from pt;
+insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
 
 analyze pt;
 analyze pt1;

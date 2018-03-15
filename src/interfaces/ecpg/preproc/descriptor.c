@@ -1,7 +1,7 @@
 /*
  * functions needed for descriptor handling
  *
- * $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/descriptor.c,v 1.28 2009/01/23 12:43:32 petere Exp $
+ * $PostgreSQL: pgsql/src/interfaces/ecpg/preproc/descriptor.c,v 1.34 2010/04/01 10:30:53 meskes Exp $
  *
  * since descriptor might be either a string constant or a string var
  * we need to check for a constant if we expect a constant
@@ -188,7 +188,7 @@ output_get_descr(char *desc_name, char *index)
 				break;
 		}
 		fprintf(yyout, "%s,", get_dtype(results->value));
-		ECPGdump_a_type(yyout, v->name, v->type, NULL, NULL, NULL, NULL, make_str("0"), NULL, NULL);
+		ECPGdump_a_type(yyout, v->name, v->type, v->brace_level, NULL, NULL, -1, NULL, NULL, make_str("0"), NULL, NULL);
 	}
 	drop_assignments();
 	fputs("ECPGd_EODT);\n", yyout);
@@ -293,7 +293,7 @@ output_set_descr(char *desc_name, char *index)
 			case ECPGd_length:
 			case ECPGd_type:
 				fprintf(yyout, "%s,", get_dtype(results->value));
-				ECPGdump_a_type(yyout, v->name, v->type, NULL, NULL, NULL, NULL, make_str("0"), NULL, NULL);
+				ECPGdump_a_type(yyout, v->name, v->type, v->brace_level, NULL, NULL, -1, NULL, NULL, make_str("0"), NULL, NULL);
 				break;
 
 			default:
@@ -317,7 +317,7 @@ struct variable *
 descriptor_variable(const char *name, int input)
 {
 	static char descriptor_names[2][MAX_DESCRIPTOR_NAMELEN];
-	static const struct ECPGtype descriptor_type = {ECPGt_descriptor, NULL, NULL, {NULL}, 0};
+	static const struct ECPGtype descriptor_type = {ECPGt_descriptor, NULL, NULL, NULL, {NULL}, 0};
 	static const struct variable varspace[2] = {
 		{descriptor_names[0], (struct ECPGtype *) & descriptor_type, 0, NULL},
 		{descriptor_names[1], (struct ECPGtype *) & descriptor_type, 0, NULL}
@@ -325,4 +325,22 @@ descriptor_variable(const char *name, int input)
 
 	strlcpy(descriptor_names[input], name, sizeof(descriptor_names[input]));
 	return (struct variable *) & varspace[input];
+}
+
+struct variable *
+sqlda_variable(const char *name)
+{
+	struct variable *p = (struct variable *) mm_alloc(sizeof(struct variable));
+
+	p->name = mm_strdup(name);
+	p->type = (struct ECPGtype *) mm_alloc(sizeof(struct ECPGtype));
+	p->type->type = ECPGt_sqlda;
+	p->type->size = NULL;
+	p->type->struct_sizeof = NULL;
+	p->type->u.element = NULL;
+	p->type->counter = 0;
+	p->brace_level = 0;
+	p->next = NULL;
+
+	return p;
 }

@@ -1,13 +1,34 @@
+-- gp_dump_query_oids() doesn't list built-in functions, so we need a UDF to test with.
+CREATE FUNCTION dumptestfunc(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+
+-- The function returns OIDs. We need to replace them with something reproducable.
+CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
+declare
+  dumptestfunc_oid oid;
+  dumptestfunc2_oid oid;
+begin
+    dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
+    dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
+
+    t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
+    t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
+
+    RETURN t;
+end;
+$$ LANGUAGE plpgsql;
+
 -- Test the built-in gp_dump_query function.
-SELECT gp_dump_query_oids('SELECT 123');
-SELECT gp_dump_query_oids('SELECT * FROM pg_proc');
-SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc');
+SELECT sanitize_output(gp_dump_query_oids('SELECT 123'));
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM pg_proc'));
+SELECT sanitize_output(gp_dump_query_oids('SELECT length(proname) FROM pg_proc'));
+SELECT sanitize_output(gp_dump_query_oids('SELECT dumptestfunc(proname) FROM pg_proc'));
 
 -- with EXPLAIN
-SELECT gp_dump_query_oids('explain SELECT length(proname) FROM pg_proc');
+SELECT sanitize_output(gp_dump_query_oids('explain SELECT dumptestfunc(proname) FROM pg_proc'));
 
 -- with a multi-query statement
-SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc; SELECT abs(relpages) FROM pg_class');
+SELECT sanitize_output(gp_dump_query_oids('SELECT dumptestfunc(proname) FROM pg_proc; SELECT dumptestfunc2(relname) FROM pg_class'));
 
 -- Test error reporting on an invalid query.
 SELECT gp_dump_query_oids('SELECT * FROM nonexistent_table');
@@ -58,3 +79,5 @@ DROP TABLE cctable;
 DROP TABLE ctable;
 DROP TABLE ptable;
 DROP TABLE minirepro_partition_test;
+DROP FUNCTION dumptestfunc(text);
+DROP FUNCTION dumptestfunc2(text);

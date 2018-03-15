@@ -2,7 +2,7 @@
 #
 # Makefile for src/backend/snowball
 #
-# $PostgreSQL: pgsql/src/backend/snowball/Makefile,v 1.6 2008/04/07 14:15:58 petere Exp $
+# $PostgreSQL: pgsql/src/backend/snowball/Makefile,v 1.8 2009/08/28 20:26:19 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -71,11 +71,7 @@ LANGUAGES=  \
 SQLSCRIPT= snowball_create.sql
 DICTDIR=tsearch_data
 
-ifdef VPATH
-override VPATH := $(srcdir)/libstemmer:$(VPATH)
-else
-VPATH = $(srcdir)/libstemmer
-endif
+VPATH += $(srcdir)/libstemmer
 
 NAME := dict_snowball
 rpath =
@@ -125,7 +121,7 @@ install: all installdirs install-lib
 	done
 
 installdirs: installdirs-lib
-	$(mkinstalldirs) '$(DESTDIR)$(datadir)' '$(DESTDIR)$(datadir)/$(DICTDIR)'
+	$(MKDIR_P) '$(DESTDIR)$(datadir)' '$(DESTDIR)$(datadir)/$(DICTDIR)'
 
 uninstall: uninstall-lib
 	rm -f '$(DESTDIR)$(datadir)/$(SQLSCRIPT)'

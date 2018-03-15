@@ -12,7 +12,7 @@ Anyone who wants to develop code for GPDB. This guide targets the
 freelance developer who typically has a laptop and wants to develop
 GPDB code on it. In other words, such a typical developer does not necessarily
 have 24x7 access to a cluster, and needs a miminal stand-alone development
-enviroment.
+environment.
 
 The instructions here were verified on the configurations below.
 

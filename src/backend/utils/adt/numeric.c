@@ -11,10 +11,10 @@
  * Transactions on Mathematical Software, Vol. 24, No. 4, December 1998,
  * pages 359-367.
  *
- * Copyright (c) 1998-2009, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.118 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.123 2010/02/26 02:01:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -284,6 +284,7 @@ static void init_ro_var_from_var(NumericVar *value, NumericVar *dest);
 static void init_var_from_num(Numeric value, NumericVar *dest);
 static void init_ro_var_from_num(Numeric value, NumericVar *dest);
 static char *get_str_from_var(NumericVar *var, int dscale);
+static char *get_str_from_var_sci(NumericVar *var, int rscale);
 
 /* ----------
  * CAUTION: These routines perform a  free_var(var)
@@ -468,6 +469,31 @@ numeric_out(PG_FUNCTION_ARGS)
 	free_var(&x);
 
 	PG_RETURN_CSTRING(str);
+}
+
+/*
+ * numeric_out_sci() -
+ *
+ *	Output function for numeric data type in scientific notation.
+ */
+char *
+numeric_out_sci(Numeric num, int scale)
+{
+	NumericVar	x;
+	char	   *str;
+
+	/*
+	 * Handle NaN
+	 */
+	if (NUMERIC_IS_NAN(num))
+		return pstrdup("NaN");
+
+	init_var_from_num(num, &x);
+
+	str = get_str_from_var_sci(&x, scale);
+
+	free_var(&x);
+	return str;
 }
 
 /*
@@ -2854,14 +2880,14 @@ int2_sum(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
+	 * If we're invoked as an aggregate, we can cheat and modify our first
 	 * parameter in-place to avoid palloc overhead. If not, we need to return
 	 * the new value of the transition variable. (If int8 is pass-by-value,
 	 * then of course this is useless as well as incorrect, so just ifdef it
 	 * out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
-	if (fcinfo->context && IsA(fcinfo->context, AggState))
+	if (AggCheckCallContext(fcinfo, NULL))
 	{
 		int64	   *oldsum = (int64 *) PG_GETARG_POINTER(0);
 
@@ -2903,14 +2929,14 @@ int4_sum(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * If we're invoked by nodeAgg, we can cheat and modify our first
+	 * If we're invoked as an aggregate, we can cheat and modify our first
 	 * parameter in-place to avoid palloc overhead. If not, we need to return
 	 * the new value of the transition variable. (If int8 is pass-by-value,
 	 * then of course this is useless as well as incorrect, so just ifdef it
 	 * out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
-	if (fcinfo->context && IsA(fcinfo->context, AggState))
+	if (AggCheckCallContext(fcinfo, NULL))
 	{
 		int64	   *oldsum = (int64 *) PG_GETARG_POINTER(0);
 
@@ -2953,7 +2979,7 @@ int8_sum(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * Note that we cannot special-case the nodeAgg case here, as we do for
+	 * Note that we cannot special-case the aggregate case here, as we do for
 	 * int2_sum and int4_sum: numeric is of variable size, so we cannot modify
 	 * our first parameter in-place.
 	 */
@@ -3076,8 +3102,21 @@ int8_invsum(PG_FUNCTION_ARGS)
 										NumericGetDatum(oldsum), newval));
 }
 
-inline
-Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, float8 newval, bool acc)
+/*
+ * Routines for avg int type.  The transition datatype is a int64 for count, and a float8 for sum.
+ */
+
+typedef struct IntFloatAvgTransdata
+{
+	int32   _len; /* len for varattrib, do not touch directly */
+#if 1
+	int32   pad;  /* pad so int64 and float64 will be 8 bytes aligned */
+#endif
+	int64 	count;
+	float8 sum;
+} IntFloatAvgTransdata;
+
+static inline Datum intfloat_avg_accum_decum(IntFloatAvgTransdata *transdata, float8 newval, bool acc)
 {
 	if(transdata == NULL || VARSIZE(transdata) != sizeof(IntFloatAvgTransdata))
 	{
@@ -4061,6 +4100,110 @@ get_str_from_var(NumericVar *var, int dscale)
 	 * terminate the string and return it
 	 */
 	*cp = '\0';
+	return str;
+}
+
+/*
+ * get_str_from_var_sci() -
+ *
+ *	Convert a var to a normalised scientific notation text representation.
+ *	This function does the heavy lifting for numeric_out_sci().
+ *
+ *	This notation has the general form a * 10^b, where a is known as the
+ *	"significand" and b is known as the "exponent".
+ *
+ *	Because we can't do superscript in ASCII (and because we want to copy
+ *	printf's behaviour) we display the exponent using E notation, with a
+ *	minimum of two exponent digits.
+ *
+ *	For example, the value 1234 could be output as 1.2e+03.
+ *
+ *	We assume that the exponent can fit into an int32.
+ *
+ *	rscale is the number of decimal digits desired after the decimal point in
+ *	the output, negative values will be treated as meaning zero.
+ *
+ *	CAUTION: var's contents may be modified by rounding!
+ *
+ *	Returns a palloc'd string.
+ */
+static char *
+get_str_from_var_sci(NumericVar *var, int rscale)
+{
+	int32		exponent;
+	NumericVar	denominator;
+	NumericVar	significand;
+	int			denom_scale;
+	size_t		len;
+	char	   *str;
+	char	   *sig_out;
+
+	if (rscale < 0)
+		rscale = 0;
+
+	/*
+	 * Determine the exponent of this number in normalised form.
+	 *
+	 * This is the exponent required to represent the number with only one
+	 * significant digit before the decimal place.
+	 */
+	if (var->ndigits > 0)
+	{
+		exponent = (var->weight + 1) * DEC_DIGITS;
+
+		/*
+		 * Compensate for leading decimal zeroes in the first numeric digit by
+		 * decrementing the exponent.
+		 */
+		exponent -= DEC_DIGITS - (int) log10(var->digits[0]);
+	}
+	else
+	{
+		/*
+		 * If var has no digits, then it must be zero.
+		 *
+		 * Zero doesn't technically have a meaningful exponent in normalised
+		 * notation, but we just display the exponent as zero for consistency
+		 * of output.
+		 */
+		exponent = 0;
+	}
+
+	/*
+	 * The denominator is set to 10 raised to the power of the exponent.
+	 *
+	 * We then divide var by the denominator to get the significand, rounding
+	 * to rscale decimal digits in the process.
+	 */
+	if (exponent < 0)
+		denom_scale = -exponent;
+	else
+		denom_scale = 0;
+
+	init_var(&denominator);
+	init_var(&significand);
+
+	int8_to_numericvar((int64) 10, &denominator);
+	power_var_int(&denominator, exponent, &denominator, denom_scale);
+	div_var(var, &denominator, &significand, rscale, true);
+	sig_out = get_str_from_var(&significand, rscale);
+
+	free_var(&denominator);
+	free_var(&significand);
+
+	/*
+	 * Allocate space for the result.
+	 *
+	 * In addition to the significand, we need room for the exponent
+	 * decoration ("e"), the sign of the exponent, up to 10 digits for the
+	 * exponent itself, and of course the null terminator.
+	 */
+	len = strlen(sig_out) + 13;
+	str = palloc(len);
+	snprintf(str, len, "%se%+03d", sig_out, exponent);
+
+	pfree(sig_out);
+
 	return str;
 }
 

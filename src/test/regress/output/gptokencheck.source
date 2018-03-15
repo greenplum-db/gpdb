@@ -11,9 +11,6 @@
 -- gpwhich_gpmapreduce  #is_transformed_to# @gpwhich_gpmapreduce@
 -- gpwhich_get_ereport.pl  #is_transformed_to# @gpwhich_get_ereport.pl@
 -- gpcurusername #is_transformed_to# @gpcurusername@
--- gpfilespace_regressionfs1 #is_transformed_to# @gpfilespace_regressionfs1@ 
--- gpfilespace_regressionfs2 #is_transformed_to# @gpfilespace_regressionfs2@ 
--- gpfilespace_regressionfs3 #is_transformed_to# @gpfilespace_regressionfs3@ 
 -- gp_glob_connect  #is_transformed_to# @gp_glob_connect@
 --
 -- 

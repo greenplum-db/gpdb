@@ -23,10 +23,13 @@ AND dbNode = (SELECT oid FROM pg_database WHERE datname = current_database())
 ORDER BY gp_segment_id, xrecoff;
  gp_segment_id |        relname         |      record_type       | segment_filenum | recordlen | file_offset 
 ---------------+------------------------+------------------------+-----------------+-----------+-------------
+             0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
              0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        64 |           0
+             1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
              1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        64 |           0
+             2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
              2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        64 |           0
-(3 rows)
+(6 rows)
 
 -- Store the latest xlog offset
 DELETE FROM tmp;
@@ -51,9 +54,12 @@ ORDER BY gp_segment_id, xrecoff;
 ---------------+------------------------+--------------------------+-----------------+-----------+-------------
              0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        96 |          40
              0 | generate_ao_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          40
+             0 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |       152 |          40
              1 | generate_ao_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          40
+             1 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
              2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |       112 |          40
              2 | generate_ao_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          40
-(6 rows)
+             2 | generate_ao_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
+(9 rows)
 

@@ -5,7 +5,7 @@
  * All types that can be handled for host variable declarations has to
  * be handled eventually.
  *
- * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpgtype.h,v 1.37 2007/08/14 10:01:52 meskes Exp $
+ * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpgtype.h,v 1.40 2010/02/26 02:01:31 momjian Exp $
  */
 
 /*
@@ -61,7 +61,9 @@ enum ECPGttype
 	ECPGt_const,				/* a constant is needed sometimes */
 	ECPGt_EOIT,					/* End of insert types. */
 	ECPGt_EORT,					/* End of result types. */
-	ECPGt_NO_INDICATOR			/* no indicator */
+	ECPGt_NO_INDICATOR,			/* no indicator */
+	ECPGt_string,				/* trimmed (char *) type */
+	ECPGt_sqlda					/* C struct descriptor */
 };
 
  /* descriptor items */
@@ -86,7 +88,7 @@ enum ECPGdtype
 	ECPGd_cardinality
 };
 
-#define IS_SIMPLE_TYPE(type) ((type) >= ECPGt_char && (type) <= ECPGt_interval)
+#define IS_SIMPLE_TYPE(type) (((type) >= ECPGt_char && (type) <= ECPGt_interval) || ((type) == ECPGt_string))
 
 /* we also have to handle different statement types */
 enum ECPG_statement_type

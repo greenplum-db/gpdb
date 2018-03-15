@@ -70,10 +70,3 @@ CREATE FUNCTION oldstyle_length(int4, text)
 -- Function dynamic loading
 --
 LOAD '@libdir@/regress@DLSUFFIX@';
-
--- Persistent table check
--- It's not the right place, but good fit to put misc UDFs.
-CREATE FUNCTION checkRelationAfterInvalidation() RETURNS boolean
-AS '@libdir@/regress@DLSUFFIX@', 'checkRelationAfterInvalidation' LANGUAGE C;
-
-SELECT checkRelationAfterInvalidation();

@@ -70,7 +70,7 @@ DIFF FILE: \${diff_file}
 ----------------------------------------------------------------------
 
 FEOF
-                cat "\${diff_file}"
+                head -1000 "\${diff_file}"
               done
             exit 1
         }

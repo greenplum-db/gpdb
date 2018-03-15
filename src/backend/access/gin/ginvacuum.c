@@ -4,11 +4,11 @@
  *	  delete & vacuum routines for the postgres GIN
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginvacuum.c,v 1.30 2009/06/11 14:48:53 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginvacuum.c,v 1.33 2010/02/08 04:33:52 tgl Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -159,8 +159,6 @@ ginVacuumPostingTreeLeaves(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, 
 	Page		page;
 	bool		hasVoidPage = FALSE;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	buffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, blkno,
 								RBM_NORMAL, gvs->strategy);
 	page = BufferGetPage(buffer);
@@ -252,8 +250,6 @@ ginDeletePage(GinVacuumState *gvs, BlockNumber deleteBlkno, BlockNumber leftBlkn
 	Buffer		pBuffer;
 	Page		page,
 				parentPage;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	dBuffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, deleteBlkno,
 								 RBM_NORMAL, gvs->strategy);
@@ -395,8 +391,6 @@ typedef struct DataPageDeleteStack
 static bool
 ginScanToDelete(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, DataPageDeleteStack *parent, OffsetNumber myoff)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	DataPageDeleteStack *me;
 	Buffer		buffer;
 	Page		page;
@@ -418,9 +412,6 @@ ginScanToDelete(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, DataPageDel
 		else
 			me = parent->child;
 	}
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	buffer = ReadBufferExtended(gvs->index, MAIN_FORKNUM, blkno,
 								RBM_NORMAL, gvs->strategy);
@@ -455,10 +446,7 @@ ginScanToDelete(GinVacuumState *gvs, BlockNumber blkno, bool isRoot, DataPageDel
 			}
 		}
 	}
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	ReleaseBuffer(buffer);
 
 	if (!meDelete)
@@ -572,7 +560,8 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 
 				value = gin_index_getattr(&gvs->ginstate, itup);
 				attnum = gintuple_get_attrnum(&gvs->ginstate, itup);
-				itup = GinFormTuple(&gvs->ginstate, attnum, value, GinGetPosting(itup), newN);
+				itup = GinFormTuple(gvs->index, &gvs->ginstate, attnum, value,
+									GinGetPosting(itup), newN, true);
 				PageIndexTupleDelete(tmppage, i);
 
 				if (PageAddItem(tmppage, (Item) itup, IndexTupleSize(itup), i, false, false) != i)
@@ -590,8 +579,6 @@ ginVacuumEntryPage(GinVacuumState *gvs, Buffer buffer, BlockNumber *roots, uint3
 Datum
 ginbulkdelete(PG_FUNCTION_ARGS)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	IndexVacuumInfo *info = (IndexVacuumInfo *) PG_GETARG_POINTER(0);
 	IndexBulkDeleteResult *stats = (IndexBulkDeleteResult *) PG_GETARG_POINTER(1);
 	IndexBulkDeleteCallback callback = (IndexBulkDeleteCallback) PG_GETARG_POINTER(2);
@@ -608,9 +595,6 @@ ginbulkdelete(PG_FUNCTION_ARGS)
 	gvs.callback_state = callback_state;
 	gvs.strategy = info->strategy;
 	initGinState(&gvs.ginstate, index);
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	/* first time through? */
 	if (stats == NULL)
@@ -705,18 +689,13 @@ ginbulkdelete(PG_FUNCTION_ARGS)
 									RBM_NORMAL, info->strategy);
 		LockBuffer(buffer, GIN_EXCLUSIVE);
 	}
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	PG_RETURN_POINTER(gvs.result);
 }
 
 Datum
 ginvacuumcleanup(PG_FUNCTION_ARGS)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	IndexVacuumInfo *info = (IndexVacuumInfo *) PG_GETARG_POINTER(0);
 	IndexBulkDeleteResult *stats = (IndexBulkDeleteResult *) PG_GETARG_POINTER(1);
 	Relation	index = info->index;
@@ -762,13 +741,9 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 	stats->estimated_count = info->estimated_count;
 
 	/*
-	 * If vacuum full, we already have exclusive lock on the index. Otherwise,
-	 * need lock unless it's local to this backend.
+	 * Need lock unless it's local to this backend.
 	 */
-	if (info->vacuum_full)
-		needLock = false;
-	else
-		needLock = !RELATION_IS_LOCAL(index);
+	needLock = !RELATION_IS_LOCAL(index);
 
 	if (needLock)
 		LockRelationForExtension(index, ExclusiveLock);
@@ -785,9 +760,6 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 
 		vacuum_delay_point();
 
-		// -------- MirroredLock ----------
-		MIRROREDLOCK_BUFMGR_LOCK;
-
 		buffer = ReadBufferExtended(index, MAIN_FORKNUM, blkno,
 									RBM_NORMAL, info->strategy);
 		LockBuffer(buffer, GIN_SHARE);
@@ -802,22 +774,8 @@ ginvacuumcleanup(PG_FUNCTION_ARGS)
 			lastFilledBlock = blkno;
 
 		UnlockReleaseBuffer(buffer);
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
 	}
 	lastBlock = npages - 1;
-
-	if (info->vacuum_full && lastBlock > lastFilledBlock)
-	{
-		/* try to truncate index */
-		RelationTruncate(index, lastFilledBlock + 1,
-						 /* markPersistentAsPhysicallyTruncated */ true);
-
-		stats->pages_removed = lastBlock - lastFilledBlock;
-		totFreePages = totFreePages - stats->pages_removed;
-	}
 
 	/* Finally, vacuum the FSM */
 	IndexFreeSpaceMapVacuum(info->index);

@@ -16,7 +16,6 @@
 #ifndef AOCATALOG_H
 #define AOCATALOG_H
 
-#include "postgres.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 
@@ -26,6 +25,7 @@ extern bool CreateAOAuxiliaryTable(
 		char relkind,
 		TupleDesc tupledesc,
 		IndexInfo  *indexInfo,
+		List *indexColNames,
 		Oid	*classObjectId,
 		int16 *coloptions);
 

@@ -9,7 +9,7 @@ include $(top_builddir)/src/backend/mock.mk
 nodeSubplan.t: \
 	$(MOCK_DIR)/backend/cdb/dispatcher/cdbdisp_mock.o \
 	$(MOCK_DIR)/backend/cdb/dispatcher/cdbdisp_query_mock.o \
-	$(MOCK_DIR)/backend/cdb/cdbexplain_mock.o \
+	$(MOCK_DIR)/backend/commands/explain_mock.o \
 	$(MOCK_DIR)/backend/cdb/cdbtm_mock.o \
 	$(MOCK_DIR)/backend/cdb/motion/ic_common_mock.o \
 	$(MOCK_DIR)/backend/tcop/pquery_mock.o

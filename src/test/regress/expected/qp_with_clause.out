@@ -8689,7 +8689,7 @@ select CITY,POPULATION from
 ) FOO1 order by city
 ) FOO0 group by city order by avg_p,city
 LIMIT 20;
- avg_p  |       city       
+ avg_p  |      city      
 --------+----------------
  410000 | Port Harcourt
  410102 | Alberton

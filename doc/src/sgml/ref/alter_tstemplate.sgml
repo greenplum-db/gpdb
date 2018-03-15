@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tstemplate.sgml,v 1.2 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_tstemplate.sgml,v 1.4 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTSTEMPLATE">
  <refmeta>
-  <refentrytitle id="SQL-ALTERTSTEMPLATE-TITLE">ALTER TEXT SEARCH TEMPLATE</refentrytitle>
+  <refentrytitle>ALTER TEXT SEARCH TEMPLATE</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceable>newname</replaceable>
+ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceable>new_name</replaceable>
 </synopsis>
  </refsynopsisdiv>
   
@@ -53,7 +53,7 @@ ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceabl
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">newname</replaceable></term>
+    <term><replaceable class="parameter">new_name</replaceable></term>
     <listitem>
      <para>
       The new name of the text search template.
@@ -76,8 +76,8 @@ ALTER TEXT SEARCH TEMPLATE <replaceable>name</replaceable> RENAME TO <replaceabl
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createtstemplate" endterm="sql-createtstemplate-title"></member>
-   <member><xref linkend="sql-droptstemplate" endterm="sql-droptstemplate-title"></member>
+   <member><xref linkend="sql-createtstemplate"></member>
+   <member><xref linkend="sql-droptstemplate"></member>
   </simplelist>
  </refsect1>
 </refentry>

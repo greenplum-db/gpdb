@@ -32,8 +32,6 @@ AlterTableCreateAoSegTable(Oid relOid, bool is_part_child)
 	TupleDesc	tupdesc;
 	Relation	rel;
 	const char *prefix;
-	Oid			classObjectId[1];
-	int16		coloptions[1];
 
 	/*
 	 * Grab an exclusive lock on the target table, which we will NOT release
@@ -155,12 +153,9 @@ AlterTableCreateAoSegTable(Oid relOid, bool is_part_child)
 		return;
 	}
 
-	classObjectId[0] = INT4_BTREE_OPS_OID;
-
-	coloptions[0] = 0;
-
 	(void) CreateAOAuxiliaryTable(rel, prefix, RELKIND_AOSEGMENTS,
-								  tupdesc, NULL, classObjectId, coloptions);
+								  tupdesc,
+								  NULL, NIL, NULL, NULL);
 
 	heap_close(rel, NoLock);
 }

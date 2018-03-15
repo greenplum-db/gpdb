@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_tar.c,v 1.65 2009/06/04 19:16:48 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_tar.c,v 1.69 2010/02/26 02:01:16 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,13 +74,9 @@ typedef struct
 /*
  * Maximum file size for a tar member: The limit inherent in the
  * format is 2^33-1 bytes (nearly 8 GB).  But we don't want to exceed
- * what we can represent by an pgoff_t.
+ * what we can represent in pgoff_t.
  */
-#ifdef INT64_IS_BUSTED
-#define MAX_TAR_MEMBER_FILELEN INT_MAX
-#else
 #define MAX_TAR_MEMBER_FILELEN (((int64) 1 << Min(33, sizeof(pgoff_t)*8 - 1)) - 1)
-#endif
 
 typedef struct
 {
@@ -214,8 +210,7 @@ InitArchiveFmt_Tar(ArchiveHandle *AH)
 		 * positioning.
 		 */
 		if (AH->compression != 0)
-			die_horribly(NULL, modulename, "compression not supported by tar output format\n");
-
+			die_horribly(NULL, modulename, "compression is not supported by tar archive format\n");
 	}
 	else
 	{							/* Read Mode */
@@ -351,12 +346,19 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 		tm = _tarPositionTo(AH, filename);
 		if (!tm)				/* Not found */
 		{
-			if (filename)		/* Couldn't find the requested file. Future:
-								 * DO SEEK(0) and retry. */
-				die_horribly(AH, modulename, "could not find file %s in archive\n", filename);
+			if (filename)
+			{
+				/*
+				 * Couldn't find the requested file. Future: do SEEK(0) and
+				 * retry.
+				 */
+				die_horribly(AH, modulename, "could not find file \"%s\" in archive\n", filename);
+			}
 			else
-				/* Any file OK, non left, so return NULL */
+			{
+				/* Any file OK, none left, so return NULL */
 				return NULL;
+			}
 		}
 
 #ifdef HAVE_LIBZ
@@ -364,7 +366,7 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 		if (AH->compression == 0)
 			tm->nFH = ctx->tarFH;
 		else
-			die_horribly(AH, modulename, "compression support is disabled in this format\n");
+			die_horribly(AH, modulename, "compression is not supported by tar archive format\n");
 		/* tm->zFH = gzdopen(dup(fileno(ctx->tarFH)), "rb"); */
 #else
 		tm->nFH = ctx->tarFH;
@@ -432,7 +434,6 @@ tarOpen(ArchiveHandle *AH, const char *filename, char mode)
 	tm->tarFH = ctx->tarFH;
 
 	return tm;
-
 }
 
 /*
@@ -817,7 +818,7 @@ _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
 			{
 				ahlog(AH, 1, "restoring large object with OID %u\n", oid);
 
-				StartRestoreBlob(AH, oid);
+				StartRestoreBlob(AH, oid, ropt->dropSchema);
 
 				while ((cnt = tarRead(buf, 4095, th)) > 0)
 				{
@@ -1275,8 +1276,8 @@ _tarPositionTo(ArchiveHandle *AH, const char *filename)
 
 		id = atoi(th->targetFile);
 		if ((TocIDRequired(AH, id, AH->ropt) & REQ_DATA) != 0)
-			die_horribly(AH, modulename, "dumping data out of order is not supported in this archive format: "
-				"%s is required, but comes before %s in the archive file.\n",
+			die_horribly(AH, modulename, "restoring data out of order is not supported in this archive format: "
+						 "\"%s\" is required, but comes before \"%s\" in the archive file.\n",
 						 th->targetFile, filename);
 
 		/* Header doesn't match, so read to next header */

@@ -22,7 +22,6 @@
 #ifndef APPENDONLY_VISIMAP_H
 #define APPENDONLY_VISIMAP_H
 
-#include "postgres.h"
 #include "access/appendonlytid.h"
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"

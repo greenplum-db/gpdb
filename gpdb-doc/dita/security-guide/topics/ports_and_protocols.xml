@@ -38,6 +38,15 @@
       connections are created during operations such as query execution. Transient connections for
       query execution processes, data movement, and statistics collection use available ports in the
       range 1025 to 65535 with both TCP and UDP protocols. </p>
+    <note>To avoid port conflicts between Greenplum Database and other applications when
+      initializing Greenplum Database, do not specify Greenplum Database ports in the range
+      specified by the operating system parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For
+      example, if <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could set the
+      Greenplum Database base port numbers to values outside of that
+      range:<codeblock>PORT_BASE = 6000
+MIRROR_PORT_BASE = 7000
+REPLICATION_PORT_BASE = 8000
+MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
     <p>Some add-on products and services that work with Greenplum Database have additional
       networking requirements. The following table lists ports and protocols used within the
       Greenplum cluster, and includes services and applications that integrate with Greenplum
@@ -143,6 +152,12 @@
               external tables. The URL in the <codeph>LOCATION</codeph> clause of the <codeph>CREATE
                 EXTERNAL TABLE</codeph> command specifies the host address and port number for the
               Hadoop namenode service. </entry>
+          </row>
+          <row>
+            <entry>Greenplum Platform Extension Framework (PXF)</entry>
+            <entry>TCP 5888</entry>
+            <entry>The PXF Java service runs on port number 5888 on each Greenplum Database
+              segment host.</entry>
           </row>
           <row otherprops="pivotal">
             <entry morerows="2">Greenplum Workload Manager (GP-WLM)</entry>

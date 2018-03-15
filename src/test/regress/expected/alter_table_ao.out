@@ -3,7 +3,7 @@
 --
 ---
 --- basic support for alter add column with NULL default to AO tables
---- 
+---
 drop table if exists ao1;
 NOTICE:  table "ao1" does not exist, skipping
 create table ao1(col1 varchar(2), col2 int) WITH (APPENDONLY=TRUE) distributed randomly;
@@ -51,7 +51,7 @@ select * from ao1;
 alter table ao1 alter column col2 set default 2;
 select adsrc from pg_attrdef pdef, pg_attribute pattr
     where pdef.adrelid='ao1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='col2';
- adsrc
+ adsrc 
 -------
  2
 (1 row)
@@ -60,35 +60,35 @@ alter table ao1 rename col2 to col2_renamed;
 -- check dropping column
 alter table ao1 drop column col4;
 select attname from pg_attribute where attrelid='ao1'::regclass and attname='col4';
- attname
+ attname 
 ---------
 (0 rows)
 
 -- change the storage type of a column
 alter table ao1 alter column col3 set storage plain;
 select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
- attname | attstorage
+ attname | attstorage 
 ---------+------------
  col3    | p
 (1 row)
 
 alter table ao1 alter column col3 set storage main;
 select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
- attname | attstorage
+ attname | attstorage 
 ---------+------------
  col3    | m
 (1 row)
 
 alter table ao1 alter column col3 set storage external;
 select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
- attname | attstorage
+ attname | attstorage 
 ---------+------------
  col3    | e
 (1 row)
 
 alter table ao1 alter column col3 set storage extended;
 select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
- attname | attstorage
+ attname | attstorage 
 ---------+------------
  col3    | x
 (1 row)
@@ -133,9 +133,9 @@ select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where att
  ao1     | col3    | NULL::bpchar
 (1 row)
 
---- 
+---
 --- check with IS NOT NULL constraint
---- 
+---
 drop table if exists ao1;
 create table ao1(col1 varchar(2), col2 int) WITH (APPENDONLY=TRUE) distributed randomly;
 insert into ao1 values('a', 1); 
@@ -174,7 +174,7 @@ select * from ao1;
 --
 ---
 --- basic support for alter add column with NULL default to AO/CO tables
---- 
+---
 drop table if exists aoco1;
 NOTICE:  table "aoco1" does not exist, skipping
 create table aoco1(col1 varchar(2), col2 int)
@@ -256,9 +256,9 @@ select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where att
  aoco1   | col3    | NULL::bpchar
 (1 row)
 
---- 
+---
 --- check with IS NOT NULL constraint
---- 
+---
 drop table if exists aoco1;
 create table aoco1(col1 varchar(2), col2 int)
 WITH (APPENDONLY=TRUE, ORIENTATION=column) distributed randomly;
@@ -267,7 +267,7 @@ insert into aoco1 values('a', 1);
 alter table aoco1 add column col3 char(1) not null default NULL; 
 ERROR:  column "col3" contains null values  (seg0 usxxreddyr3mbp1.corp.emc.com:40000 pid=87838)
 alter table aoco1 add column c5 int check (c5 IS NOT NULL) default NULL;
-ERROR:  check constraint "aoco1_c5_check" is violated
+ERROR:  check constraint "aoco1_c5_check" is violated by some row
 -- should fail (rewrite needs to do constraint checking) 
 insert into aoco1(col1, col2) values('a', NULL);
 alter table aoco1 alter column col2 set not null; 
@@ -441,21 +441,21 @@ create table testbug_char5_exchange (timest character varying(6), user_id numeri
 insert into testbug_char5_exchange values ('201205', 3333, '2', '2');
 alter table testbug_char5 truncate partition part201205;
 select count(*) from testbug_char5;
- count
+ count 
 -------
      7
 (1 row)
 
 alter table testbug_char5 exchange partition part201205 with table testbug_char5_exchange;
 select count(*) from testbug_char5;
- count
+ count 
 -------
      8
 (1 row)
 
 rollback work;
 select count(*) from testbug_char5;
- count
+ count 
 -------
      9
 (1 row)
@@ -477,7 +477,7 @@ alter table ao_multi_level_part_table add partition part3 start(date '2010-01-01
 -- Add default partition (defaults to heap storage unless set with AO)
 alter table ao_multi_level_part_table add default partition yearYYYY (default subpartition def);
 select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count
+ count 
 -------
      0
 (1 row)
@@ -486,7 +486,7 @@ alter table ao_multi_level_part_table drop partition yearYYYY;
 NOTICE:  dropped partition "yearyyyy" for relation "ao_multi_level_part_table" and its children
 alter table ao_multi_level_part_table add default partition yearYYYY with (appendonly=true) (default subpartition def);
 select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
- count
+ count 
 -------
      1
 (1 row)
@@ -494,21 +494,21 @@ select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_
 -- index on atts 1, 4
 create index ao_mlp_idx on ao_multi_level_part_table(date, amount);
 select indexname from pg_indexes where tablename='ao_multi_level_part_table';
- indexname
+ indexname  
 ------------
  ao_mlp_idx
 (1 row)
 
 alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
 select indexname from pg_indexes where tablename='ao_multi_level_part_table';
-     indexname
+     indexname      
 --------------------
  ao_mlp_idx_renamed
 (1 row)
 
 -- truncate partitions until table is empty
 select * from ao_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Utah    |  10.05
@@ -518,7 +518,7 @@ select * from ao_multi_level_part_table;
 
 truncate ao_multi_level_part_table_1_prt_part1_2_prt_asia;
 select * from ao_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2008 | usa    | Texas   |  10.05
  02-02-2009 | usa    | Utah    |  10.05
@@ -528,7 +528,7 @@ select * from ao_multi_level_part_table;
 alter table ao_multi_level_part_table truncate partition for (rank(1));
 NOTICE:  truncated partition "part1" for relation "ao_multi_level_part_table" and its children
 select * from ao_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  02-02-2009 | usa    | Utah    |  10.05
  03-03-2009 | asia   | Japan   |   1.01
@@ -537,7 +537,7 @@ select * from ao_multi_level_part_table;
 alter table ao_multi_level_part_table alter partition part2 truncate partition usa;
 NOTICE:  truncated partition "usa" for partition "part2" of relation "ao_multi_level_part_table"
 select * from ao_multi_level_part_table;
-    date    | region | region1 | amount
+    date    | region | region1 | amount 
 ------------+--------+---------+--------
  03-03-2009 | asia   | Japan   |   1.01
 (1 row)
@@ -545,20 +545,20 @@ select * from ao_multi_level_part_table;
 alter table ao_multi_level_part_table truncate partition part2;
 NOTICE:  truncated partition "part2" for relation "ao_multi_level_part_table" and its children
 select * from ao_multi_level_part_table;
- date | region | region1 | amount
+ date | region | region1 | amount 
 ------+--------+---------+--------
 (0 rows)
 
 -- drop column in the partition table
 select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
- count
+ count 
 -------
      1
 (1 row)
 
 alter table ao_multi_level_part_table drop column region1;
 select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
- count
+ count 
 -------
      0
 (1 row)

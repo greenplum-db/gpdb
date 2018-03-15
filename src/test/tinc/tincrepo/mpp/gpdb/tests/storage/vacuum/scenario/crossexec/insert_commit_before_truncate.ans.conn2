@@ -1,8 +1,0 @@
-set client_min_messages=WARNING;
-SET
-begin;
-BEGIN
-insert into xheap select 1, 100+i, 'c' from generate_series(1, 10)i;
-INSERT 0 10
-commit;
-COMMIT

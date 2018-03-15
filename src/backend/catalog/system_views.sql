@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.60 2009/04/07 00:31:26 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.66 2010/04/26 14:22:37 momjian Exp $
  */
 
 CREATE VIEW pg_roles AS 
@@ -20,28 +20,30 @@ CREATE VIEW pg_roles AS
         rolconnlimit,
         '********'::text as rolpassword,
         rolvaliduntil,
-        rolconfig,
+        setconfig as rolconfig,
 		rolresqueue,
-        oid,
+        pg_authid.oid,
         rolcreaterextgpfd,
         rolcreaterexthttp,
         rolcreatewextgpfd,
         rolcreaterexthdfs,
         rolcreatewexthdfs,
         rolresgroup
-    FROM pg_authid;
+    FROM pg_authid LEFT JOIN pg_db_role_setting s
+    ON (pg_authid.oid = setrole AND setdatabase = 0);
 
 CREATE VIEW pg_shadow AS
     SELECT
         rolname AS usename,
-        oid AS usesysid,
+        pg_authid.oid AS usesysid,
         rolcreatedb AS usecreatedb,
         rolsuper AS usesuper,
         rolcatupdate AS usecatupd,
         rolpassword AS passwd,
         rolvaliduntil::abstime AS valuntil,
-        rolconfig AS useconfig
-    FROM pg_authid
+        setconfig AS useconfig
+    FROM pg_authid LEFT JOIN pg_db_role_setting s
+    ON (pg_authid.oid = setrole AND setdatabase = 0)
     WHERE rolcanlogin;
 
 REVOKE ALL on pg_shadow FROM public;
@@ -116,6 +118,7 @@ CREATE VIEW pg_stats AS
         nspname AS schemaname, 
         relname AS tablename, 
         attname AS attname, 
+        stainherit AS inherited, 
         stanullfrac AS null_frac, 
         stawidth AS avg_width, 
         stadistinct AS n_distinct, 
@@ -355,13 +358,13 @@ CREATE VIEW pg_stat_activity AS
             S.usesysid,
             U.rolname AS usename,
             S.application_name,
-            S.current_query,
-            S.waiting,
-            S.xact_start,
-            S.query_start,
-            S.backend_start,
             S.client_addr,
             S.client_port,
+            S.backend_start,
+            S.xact_start,
+            S.query_start,
+            S.waiting,
+            S.current_query,
 
             S.waiting_reason,
             S.rsgid,
@@ -786,29 +789,6 @@ FROM pg_database a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
 pg_namespace.oid FROM pg_namespace WHERE (pg_namespace.nspname =
 'pg_catalog'::name)))))))
 UNION 
-SELECT
-'pg_filespace' AS classname, a.fsname AS objname, 
-c.objid,  NULL AS schemaname,
-CASE WHEN 
-((b.oid = c.stasysid) AND (b.rolname = c.stausename) )
-THEN 'CURRENT'
- WHEN 
-(b.rolname != c.stausename)
-THEN 'CHANGED'
-ELSE 'DROPPED' END AS usestatus, 
-CASE WHEN b.rolname IS NULL THEN c.stausename
-ELSE b.rolname END AS usename, 
-c.staactionname AS actionname, 
-c.stasubtype AS subtype,
---
-c.statime
-FROM pg_filespace a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
-((b.oid = c.stasysid))) WHERE ((a.oid = c.objid) AND (c.classid =
-(SELECT pg_class.oid FROM pg_class WHERE ((pg_class.relname =
-'pg_filespace'::name) AND (pg_class.relnamespace = (SELECT
-pg_namespace.oid FROM pg_namespace WHERE (pg_namespace.nspname =
-'pg_catalog'::name)))))))
-UNION
 SELECT
 'pg_tablespace' AS classname, a.spcname AS objname, 
 c.objid,  NULL AS schemaname,

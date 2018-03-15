@@ -299,7 +299,7 @@ select string_agg(b || 'txt') over (partition by a+1) from foo order by 1;
  ccctxt
 (3 rows)
 
--- fall back and planner's plan produces unsupported execution
+-- fall back
 select string_agg(b) over (partition by a order by a) from foo order by 1;
  string_agg 
 ------------
@@ -1569,6 +1569,40 @@ select array_agg(a order by b desc nulls last) from aggordertest;
  {NULL,3,1,2,1,2}
 (1 row)
 
+-- begin MPP-14125: if prelim function is missing, do not choose hash agg.
+create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+explain select string_agg(a) from mpp14125 group by b;
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.07 rows=10 width=8)
+   ->  Result  (cost=0.00..431.07 rows=4 width=8)
+         ->  GroupAggregate  (cost=0.00..431.07 rows=4 width=8)
+               Group Key: b
+               ->  Sort  (cost=0.00..431.06 rows=34 width=55)
+                     Sort Key: b
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=34 width=55)
+                           Hash Key: b
+                           ->  Table Scan on mpp14125  (cost=0.00..431.00 rows=34 width=55)
+ Optimizer: PQO version 2.55.0
+(10 rows)
+
+-- end MPP-14125
+-- Test unsupported ORCA feature: agg(set returning function)
+CREATE TABLE tbl_agg_srf (foo int[]) DISTRIBUTED RANDOMLY;
+INSERT INTO tbl_agg_srf VALUES (array[1,2,3]);
+EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Aggregate  (cost=1.09..1.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.07 rows=1 width=8)
+         ->  Aggregate  (cost=1.02..1.03 rows=1 width=8)
+               ->  Seq Scan on tbl_agg_srf  (cost=0.00..1.01 rows=1 width=33)
+ Optimizer: legacy query optimizer
+(5 rows)
+
+SELECT count(unnest(foo)) FROM tbl_agg_srf;
+ERROR:  set-valued function called in context that cannot accept a set  (seg1 slice1 127.0.0.1:25433 pid=43559)
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

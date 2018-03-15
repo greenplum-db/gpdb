@@ -3,12 +3,12 @@
  * nodeCtescan.c
  *	  routines to handle CteScan nodes.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeCtescan.c,v 1.5 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeCtescan.c,v 1.8 2010/01/02 16:57:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -131,21 +131,30 @@ CteScanNext(CteScanState *node)
 	return ExecClearTuple(slot);
 }
 
+/*
+ * CteScanRecheck -- access method routine to recheck a tuple in EvalPlanQual
+ */
+static bool
+CteScanRecheck(CteScanState *node, TupleTableSlot *slot)
+{
+	/* nothing to check */
+	return true;
+}
+
 /* ----------------------------------------------------------------
  *		ExecCteScan(node)
  *
  *		Scans the CTE sequentially and returns the next qualifying tuple.
- *		It calls the ExecScan() routine and passes it the access method
- *		which retrieves tuples sequentially.
+ *		We call the ExecScan() routine and pass it the appropriate
+ *		access method functions.
  * ----------------------------------------------------------------
  */
 TupleTableSlot *
 ExecCteScan(CteScanState *node)
 {
-	/*
-	 * use CteScanNext as access method
-	 */
-	return ExecScan(&node->ss, (ExecScanAccessMtd) CteScanNext);
+	return ExecScan(&node->ss,
+					(ExecScanAccessMtd) CteScanNext,
+					(ExecScanRecheckMtd) CteScanRecheck);
 }
 
 
@@ -237,8 +246,6 @@ ExecInitCteScan(CteScan *node, EState *estate, int eflags)
 		ExecInitExpr((Expr *) node->scan.plan.qual,
 					 (PlanState *) scanstate);
 
-#define CTESCAN_NSLOTS 2
-
 	/*
 	 * tuple table initialization
 	 */
@@ -259,14 +266,6 @@ ExecInitCteScan(CteScan *node, EState *estate, int eflags)
 	ExecAssignScanProjectionInfo(&scanstate->ss);
 
 	return scanstate;
-}
-
-int
-ExecCountSlotsCteScan(CteScan *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		CTESCAN_NSLOTS;
 }
 
 /* ----------------------------------------------------------------
@@ -308,6 +307,8 @@ ExecCteScanReScan(CteScanState *node, ExprContext *exprCtxt)
 	Tuplestorestate *tuplestorestate = node->leader->cte_table;
 
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+
+	ExecScanReScan(&node->ss);
 
 	if (node->leader == node)
 	{

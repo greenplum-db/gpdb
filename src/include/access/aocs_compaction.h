@@ -13,7 +13,6 @@
 #ifndef AOCS_COMPACTION_H
 #define AOCS_COMPACTION_H
 
-#include "postgres.h"
 #include "nodes/pg_list.h"
 #include "utils/rel.h"
 

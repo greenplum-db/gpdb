@@ -22,6 +22,7 @@ import pexpect as pexpect
 
 import tinctest
 from tinctest.lib import local_path
+from gppylib.commands import base
 from gppylib.commands.base import Command
 from mpp.lib.config import GPDBConfig
 from mpp.lib.PSQL import PSQL
@@ -54,9 +55,10 @@ class GpinitStandby(object):
             return False
         return True
 
-    def verify_gpinitstandby(self, primary_pid):  
+    def verify_gpinitstandby(self, primary_pid, datadir):
         '''Verify the presence of standby in recovery mode '''
-        if (self.stdby.check_gp_segment_config()) and (self.stdby.check_pg_stat_replication()) and (self.stdby.check_standby_processes())and self.compare_primary_pid(primary_pid) :
+        tinctest.logger.info("verify standby...")
+        if self.stdby.check_gp_segment_config(datadir) and self.stdby.check_pg_stat_replication() and self.stdby.check_standby_processes() and self.compare_primary_pid(primary_pid) :
             return True
         return False
 
@@ -117,19 +119,14 @@ class GpinitStandby(object):
     def initstand_by_with_default(self):
         master_host = self.get_masterhost()
         gp_cmd =  "/bin/bash -c 'gpinitstandby -s %s'" % (master_host)
-        logfile = open(local_path('install.log'),'w')
-
-        child = pexpect.spawn(gp_cmd, timeout=400)
-        child.logfile = logfile
+        cmd = Command(name='Running the command', cmdStr = gp_cmd)
+        tinctest.logger.info('%s' % cmd)
+        cmd.run(validateAfter=False)
         sleep(2)
-        check = child.expect(['.* Enter standby filespace location for filespace pg_system .*', ' '])
-        if check != 0:
-            child.close()
-
-        l_file = open(local_path('install.log'),'r')
-        lines = l_file.readlines()
+        result = cmd.get_results()
+        lines = result.stdout.splitlines()
         for line in lines:
-            if 'default: NA' in line:
+            if 'Data directory already exists' in line:
                 return True
         return False
 
@@ -151,3 +148,10 @@ class GpinitStandby(object):
             return False
         child.close()
         return True
+
+    def check_dir_exist_on_standby(self, standby, location):
+        tinctest.logger.info('standby host %s,tablespace location %s' % (standby, location))
+        cmd = Command(name='check directory if exists on standby', cmdStr='ls -l %s' % location, ctxt=base.REMOTE, remoteHost=standby)
+        cmd.run(validateAfter=True)
+        result = cmd.get_results()
+        return result.rc ==0

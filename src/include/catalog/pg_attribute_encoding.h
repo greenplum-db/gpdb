@@ -3,6 +3,9 @@
  * pg_attribute_encoding.h
  *	  some where to stash column level ENCODING () clauses
  *
+ * GPDB_90_MERGE_FIXME: pg_attribute now has an attoptions field. We should
+ * get rid of this table, and start using pg_attribute.attoptions instead.
+ *
  * Portions Copyright (c) EMC, 2011
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *

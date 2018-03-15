@@ -156,8 +156,9 @@ class _ScenarioStep(object):
                     continue
                 tinctest.logger.error("Worker %s failed execution \n %s" %(ret[0], ret[1]))
                 error_msg = ''
-                if ret[1] and len(ret[1].split('\n')) >= 2:
-                    error_msg = ret[1].split('\n')[-2]
+                #if ret[1] and len(ret[1].split('\n')) >= 2:
+                #    error_msg = ret[1].split('\n')[-2]
+                error_msg = ret[1]
                 if self.fail_fast:
                     raise ScenarioExecutionException("Failing step at the first failure. Worker %s failed execution : %s\n" %(ret[0], error_msg))
                 else:

@@ -870,6 +870,9 @@ MemTuple memtuple_form_to(
 bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 {
 	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
+	unsigned char 		*nullp;
+	MemTupleAttrBinding *attrbind;
+
 	Assert(mtup && pbind && pbind->tupdesc);
 	Assert(attnum > 0);
 	
@@ -890,7 +893,9 @@ bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 	if(!memtuple_get_hasnull(mtup))
 		return false;
 	
-	return (mtup->PRIVATE_mt_bits[colbind->bindings[attnum-1].null_byte] & colbind->bindings[attnum-1].null_mask);
+	nullp = memtuple_get_nullp(mtup, pbind);
+	attrbind = &(colbind->bindings[attnum - 1]);
+	return (nullp[attrbind->null_byte] & attrbind->null_mask);
 }
 
 static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull, bool use_null_saves_aligned)

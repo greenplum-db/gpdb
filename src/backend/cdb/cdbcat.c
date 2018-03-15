@@ -16,17 +16,19 @@
 #include "postgres.h"
 
 #include "access/genam.h"
+#include "catalog/gp_policy.h"
+#include "catalog/indexing.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
-#include "catalog/gp_policy.h"
-#include "utils/builtins.h"
-#include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
+#include "catalog/pg_type.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdbvars.h"		/* Gp_role */
-#include "catalog/pg_type.h"
 #include "utils/array.h"
+#include "utils/builtins.h"
+#include "utils/fmgroids.h"
+#include "utils/lsyscache.h"
+#include "utils/tqual.h"
 
 static void extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp);
 

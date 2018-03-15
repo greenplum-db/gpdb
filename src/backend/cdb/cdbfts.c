@@ -33,7 +33,6 @@
 #include "executor/spi.h"
 
 #include "postmaster/fts.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "utils/faultinjection.h"
 
 #include "utils/fmgroids.h"
@@ -43,7 +42,6 @@
 #define MASTER_SEGMENT_ID -1
 
 FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
-volatile bool *ftsEnabled;
 volatile bool *ftsShutdownMaster;
 static LWLockId ftsControlLock;
 
@@ -80,7 +78,6 @@ FtsShmemInit(void)
 
 	/* Initialize locks and shared memory area */
 
-	ftsEnabled = &shared->ftsEnabled;
 	ftsShutdownMaster = &shared->ftsShutdownMaster;
 	ftsControlLock = shared->ControlLock;
 
@@ -102,11 +99,9 @@ FtsShmemInit(void)
 		shared->ftsAdminRequestedRO = gp_set_read_only;
 
 		shared->fts_probe_info.fts_probePid = 0;
-		shared->fts_probe_info.fts_pauseProbes = false;
-		shared->fts_probe_info.fts_discardResults = false;
 		shared->fts_probe_info.fts_statusVersion = 0;
+		shared->fts_probe_info.fts_status_initialized = false;
 
-		shared->ftsEnabled = true;	/* ??? */
 		shared->ftsShutdownMaster = false;
 	}
 }
@@ -150,36 +145,6 @@ FtsNotifyProber(void)
 	}
 }
 
-
-/*
- * Check if master needs to shut down
- */
-bool
-FtsMasterShutdownRequested()
-{
-	return *ftsShutdownMaster;
-}
-
-
-/*
- * Set flag indicating that master needs to shut down
- */
-void
-FtsRequestMasterShutdown()
-{
-#ifdef USE_ASSERT_CHECKING
-	Assert(!*ftsShutdownMaster);
-
-	PrimaryMirrorMode pm_mode;
-
-	getPrimaryMirrorStatusCodes(&pm_mode, NULL, NULL, NULL);
-	Assert(pm_mode == PMModeMaster);
-#endif							/* USE_ASSERT_CHECKING */
-
-	*ftsShutdownMaster = true;
-}
-
-
 /*
  * Test-Connection: This is called from the threaded context inside the
  * dispatcher: ONLY CALL THREADSAFE FUNCTIONS -- elog() is NOT threadsafe.
@@ -195,12 +160,25 @@ FtsTestConnection(CdbComponentDatabaseInfo *failedDBInfo, bool fullScan)
 
 	if (!fullScan)
 	{
-		return FTS_STATUS_ISALIVE(failedDBInfo->dbid, ftsProbeInfo->fts_status);
+		/*
+		 * if fullscan not requested, caller is just trying to optimize on
+		 * cached version but if we haven't populated yet the fts_status, we
+		 * don't have one and hence just return positively back. This is
+		 * mainly to avoid queries incorrectly failing just after QD restarts
+		 * if FTS process is yet to start and complete initializing the
+		 * fts_status. We shouldn't be checking against uninitialzed variable.
+		 */
+		if (ftsProbeInfo->fts_status_initialized)
+			return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
+
+		return true;
 	}
 
 	FtsNotifyProber();
 
-	return FTS_STATUS_ISALIVE(failedDBInfo->dbid, ftsProbeInfo->fts_status);
+	Assert(ftsProbeInfo->fts_status_initialized);
+
+	return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
 }
 
 /*
@@ -248,8 +226,6 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 	int			i = 0;
 	bool		forceRescan = true;
 
-	Assert(isFTSEnabled());
-
 	for (i = 0; i < size; i++)
 	{
 		CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
@@ -274,9 +250,6 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 void
 FtsCondSetTxnReadOnly(bool *XactFlag)
 {
-	if (!isFTSEnabled())
-		return;
-
 	if (*ftsReadOnlyFlag && Gp_role != GP_ROLE_UTILITY)
 		*XactFlag = true;
 }

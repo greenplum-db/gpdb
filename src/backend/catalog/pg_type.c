@@ -3,12 +3,12 @@
  * pg_type.c
  *	  routines to support manipulation of the pg_type relation
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.126 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.133 2010/02/26 02:00:37 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -400,10 +400,9 @@ TypeCreateWithOptions(Oid newTypeOid,
 	 */
 	pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(TYPENAMENSP,
-							 CStringGetDatum(typeName),
-							 ObjectIdGetDatum(typeNamespace),
-							 0, 0);
+	tup = SearchSysCacheCopy2(TYPENAMENSP,
+							  CStringGetDatum(typeName),
+							  ObjectIdGetDatum(typeNamespace));
 	if (HeapTupleIsValid(tup))
 	{
 		/*
@@ -447,9 +446,10 @@ TypeCreateWithOptions(Oid newTypeOid,
 							  values,
 							  nulls);
 
-		/* Force the OID if requested by caller, else heap_insert does it */
+		/* Force the OID if requested by caller */
 		if (OidIsValid(newTypeOid))
 			HeapTupleSetOid(tup, newTypeOid);
+		/* else allow system to assign oid */
 
 		typeObjectId = simple_heap_insert(pg_type_desc, tup);
 	}
@@ -743,9 +743,7 @@ RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
 
 	pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
-	tuple = SearchSysCacheCopy(TYPEOID,
-							   ObjectIdGetDatum(typeOid),
-							   0, 0, 0);
+	tuple = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for type %u", typeOid);
 	typ = (Form_pg_type) GETSTRUCT(tuple);
@@ -756,10 +754,9 @@ RenameTypeInternal(Oid typeOid, const char *newTypeName, Oid typeNamespace)
 	arrayOid = typ->typarray;
 
 	/* Just to give a more friendly error than unique-index violation */
-	if (SearchSysCacheExists(TYPENAMENSP,
-							 CStringGetDatum(newTypeName),
-							 ObjectIdGetDatum(typeNamespace),
-							 0, 0))
+	if (SearchSysCacheExists2(TYPENAMENSP,
+							  CStringGetDatum(newTypeName),
+							  ObjectIdGetDatum(typeNamespace)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("type \"%s\" already exists", newTypeName)));
@@ -816,10 +813,9 @@ makeArrayTypeName(const char *typeName, Oid typeNamespace)
 			memcpy(arr + i, typeName, NAMEDATALEN - i);
 			truncate_identifier(arr, NAMEDATALEN, false);
 		}
-		if (!SearchSysCacheExists(TYPENAMENSP,
-								  CStringGetDatum(arr),
-								  ObjectIdGetDatum(typeNamespace),
-								  0, 0))
+		if (!SearchSysCacheExists2(TYPENAMENSP,
+								   CStringGetDatum(arr),
+								   ObjectIdGetDatum(typeNamespace)))
 			break;
 	}
 

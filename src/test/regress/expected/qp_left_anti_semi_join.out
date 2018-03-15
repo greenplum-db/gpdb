@@ -212,7 +212,7 @@ SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
   1 |   2
   1 |  12
   1 | 102
-    |
+    |    
 (7 rows)
 
 -- outer with nulls, inner with partial nulls
@@ -455,7 +455,7 @@ SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
   1 |   2
   1 |  12
   1 | 102
-    |
+    |    
 (7 rows)
 
 -- outer with nulls, inner with partial nulls

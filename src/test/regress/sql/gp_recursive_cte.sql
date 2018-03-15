@@ -226,6 +226,58 @@ y as (
 )
 select * from y;
 
+-- WITH RECURSIVE ref used within a IN subquery in another recursive CTE
+with recursive
+r(i) as (
+    select 1
+    union all
+    select r.i + 1 from r, recursive_table_2 where i = recursive_table_2.id
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i IN (select * from r limit 10)
+)
+select * from y limit 10;
+
+-- WITH RECURSIVE ref used within a NOT IN subquery in another recursive CTE
+with recursive
+r(i) as (
+    select 1
+    union all
+    select r.i + 1 from r, recursive_table_2 where i = recursive_table_2.id
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i NOT IN (select * from r limit 10)
+)
+select * from y limit 10;
+
+-- WITH RECURSIVE non-recursive ref used within an IN subquery in a recursive CTE
+with recursive
+r as (
+    select * from recursive_table_2
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i IN (select * from r)
+)
+select * from y limit 10;
+
+-- WITH RECURSIVE non-recursive ref used within a NOT IN subquery in a recursive CTE
+with recursive
+r as (
+    select * from recursive_table_2
+),
+y(i) as (
+    select 1
+    union all
+    select i + 1 from y, recursive_table_1 where i = recursive_table_1.id and i NOT IN (select * from r)
+)
+select * from y limit 10;
+
 create table recursive_table_3(id int, a int);
 insert into recursive_table_3 values (1, 2), (2, 3);
 -- WITH RECURSIVE ref used within a window function

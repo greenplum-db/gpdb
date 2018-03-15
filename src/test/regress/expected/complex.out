@@ -74,35 +74,35 @@ SELECT id, c FROM complex_ttbl ORDER BY orderid;
 SELECT COMPLEX '10e400';
 ERROR:  "10e400" is out of range for type double precision
 LINE 1: SELECT COMPLEX '10e400';
-               ^
+                       ^
 SELECT COMPLEX '10e400i';
 ERROR:  "10e400i" is out of range for type double precision
 LINE 1: SELECT COMPLEX '10e400i';
-               ^
+                       ^
 SELECT COMPLEX '-10e400';
 ERROR:  "-10e400" is out of range for type double precision
 LINE 1: SELECT COMPLEX '-10e400';
-               ^
+                       ^
 SELECT COMPLEX '-10e400i';
 ERROR:  "-10e400i" is out of range for type double precision
 LINE 1: SELECT COMPLEX '-10e400i';
-               ^
+                       ^
 SELECT COMPLEX '10e-400';
 ERROR:  "10e-400" is out of range for type double precision
 LINE 1: SELECT COMPLEX '10e-400';
-               ^
+                       ^
 SELECT COMPLEX '10e-400i';
 ERROR:  "10e-400i" is out of range for type double precision
 LINE 1: SELECT COMPLEX '10e-400i';
-               ^
+                       ^
 SELECT COMPLEX '-10e-400';
 ERROR:  "-10e-400" is out of range for type double precision
 LINE 1: SELECT COMPLEX '-10e-400';
-               ^
+                       ^
 SELECT COMPLEX '-10e-400i';
 ERROR:  "-10e-400i" is out of range for type double precision
 LINE 1: SELECT COMPLEX '-10e-400i';
-               ^
+                       ^
 -- bad input  
 INSERT INTO complex_ttbl(c) VALUES ('');
 ERROR:  invalid input syntax for type complex: ""

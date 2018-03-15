@@ -47,8 +47,8 @@ $ENV{PATH} = "../../../$Config/libpq;../../$Config/libpq;$ENV{PATH}";
 my $schedule = shift;
 unless ($schedule)
 {
-	$schedule = "serial";
-	$schedule = "parallel" if ($what eq 'CHECK' || $what =~ /PARALLEL/);
+    $schedule = "serial";
+    $schedule = "parallel" if ($what eq 'CHECK' || $what =~ /PARALLEL/);
 }
 
 my $topdir = getcwd();
@@ -61,7 +61,7 @@ $maxconn = "--max_connections=$ENV{MAX_CONNECTIONS}"
 
 my $temp_config = "";
 $temp_config = "--temp-config=\"$ENV{TEMP_CONFIG}\""
-	if $ENV{TEMP_CONFIG};
+  if $ENV{TEMP_CONFIG};
 
 chdir "src/test/regress";
 
@@ -86,13 +86,9 @@ exit 0;
 sub installcheck
 {
     my @args = (
-        "../../../$Config/pg_regress/pg_regress",
-        "--dlpath=.",
-        "--psqldir=../../../$Config/psql",
-        "--schedule=${schedule}_schedule",
-        "--multibyte=SQL_ASCII",
-        "--load-language=plpgsql",
-        "--no-locale"
+        "../../../$Config/pg_regress/pg_regress","--dlpath=.",
+        "--psqldir=../../../$Config/psql","--schedule=${schedule}_schedule",
+        "--multibyte=SQL_ASCII","--no-locale"
     );
     push(@args,$maxconn) if $maxconn;
     system(@args);
@@ -103,18 +99,13 @@ sub installcheck
 sub check
 {
     my @args = (
-        "../../../$Config/pg_regress/pg_regress",
-        "--dlpath=.",
-        "--psqldir=../../../$Config/psql",
-        "--schedule=${schedule}_schedule",
-        "--multibyte=SQL_ASCII",
-        "--load-language=plpgsql",
-        "--no-locale",
-        "--temp-install=./tmp_check",
-        "--top-builddir=\"$topdir\""
+        "../../../$Config/pg_regress/pg_regress","--dlpath=.",
+        "--psqldir=../../../$Config/psql","--schedule=${schedule}_schedule",
+        "--multibyte=SQL_ASCII","--no-locale",
+        "--temp-install=./tmp_check","--top-builddir=\"$topdir\""
     );
     push(@args,$maxconn) if $maxconn;
-	push(@args,$temp_config) if $temp_config;
+    push(@args,$temp_config) if $temp_config;
     system(@args);
     my $status = $? >>8;
     exit $status if $status;
@@ -135,7 +126,6 @@ sub ecpgcheck
         "--create-role=connectuser,connectdb",
         "--schedule=${schedule}_schedule",
         "--multibyte=SQL_ASCII",
-        "--load-language=plpgsql",
         "--no-locale",
         "--temp-install=./tmp_chk",
         "--top-builddir=\"$topdir\""
@@ -156,14 +146,30 @@ sub plcheck
         my $lang = $pl eq 'tcl' ? 'pltcl' : $pl;
         next unless -d "../../$Config/$lang";
         $lang = 'plpythonu' if $lang eq 'plpython';
+        my @lang_args = ("--load-language=$lang");
         chdir $pl;
-		print "============================================================\n";
-        print "Checking $lang\n";
         my @tests = fetchTests();
+        if ($lang eq 'plperl')
+        {
+
+            # run both trusted and untrusted perl tests
+            push(@lang_args, "--load-language=plperlu");
+
+            # assume we're using this perl to built postgres
+            # test if we can run two interpreters in one backend, and if so
+            # run the trusted/untrusted interaction tests
+            use Config;
+            if ($Config{usemultiplicity} eq 'define')
+            {
+                push(@tests,'plperl_plperlu');
+            }
+        }
+        print "============================================================\n";
+        print "Checking $lang\n";
         my @args = (
             "../../../$Config/pg_regress/pg_regress",
             "--psqldir=../../../$Config/psql",
-            "--dbname=pl_regression","--load-language=$lang",@tests
+            "--dbname=pl_regression",@lang_args,@tests
         );
         system(@args);
         my $status = $? >> 8;
@@ -180,18 +186,20 @@ sub contribcheck
     my $mstat = 0;
     foreach my $module (glob("*"))
     {
-		next if ($module eq 'xml2' && ! $config->{xml});
-        next unless -d "$module/sql" && 
-			-d "$module/expected" && 
-			(-f "$module/Makefile" || -f "$module/GNUmakefile");
+        next if ($module eq 'xml2' && !$config->{xml});
+        next
+          unless -d "$module/sql"
+              &&-d "$module/expected"
+              &&(-f "$module/GNUmakefile" || -f "$module/Makefile");
         chdir $module;
-		print "============================================================\n";
+        print "============================================================\n";
         print "Checking $module\n";
         my @tests = fetchTests();
+        my @opts = fetchRegressOpts();
         my @args = (
             "../../$Config/pg_regress/pg_regress",
             "--psqldir=../../$Config/psql",
-            "--dbname=contrib_regression",@tests
+            "--dbname=contrib_regression",@opts,@tests
         );
         system(@args);
         my $status = $? >> 8;
@@ -201,12 +209,32 @@ sub contribcheck
     exit $mstat if $mstat;
 }
 
+sub fetchRegressOpts
+{
+    my $handle;
+    open($handle,"<GNUmakefile")
+      || open($handle,"<Makefile")
+      || die "Could not open Makefile";
+    local($/) = undef;
+    my $m = <$handle>;
+    close($handle);
+    my @opts;
+    if ($m =~ /^\s*REGRESS_OPTS\s*=(.*)/m)
+    {
+
+        # ignore options that use makefile variables - can't handle those
+        # ignore anything that isn't an option staring with --
+        @opts = grep { $_ !~ /\$\(/ && $_ =~ /^--/ } split(/\s+/,$1);
+    }
+    return @opts;
+}
+
 sub fetchTests
 {
 
     my $handle;
-    open($handle,"<Makefile")
-      || open($handle,"<GNUmakefile")
+    open($handle,"<GNUmakefile")
+      || open($handle,"<Makefile")
       || die "Could not open Makefile";
     local($/) = undef;
     my $m = <$handle>;
@@ -255,7 +283,7 @@ sub GetTests
 sub usage
 {
     print STDERR
-		"Usage: vcregress.pl ",
-		"<check|installcheck|plcheck|contribcheck|ecpgcheck> [schedule]\n" ;
-	exit(1);
+      "Usage: vcregress.pl ",
+      "<check|installcheck|plcheck|contribcheck|ecpgcheck> [schedule]\n";
+    exit(1);
 }

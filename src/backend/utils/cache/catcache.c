@@ -3,12 +3,12 @@
  * catcache.c
  *	  System catalog cache for tuples matching a key.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.147 2009/06/11 14:49:05 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.153 2010/07/06 19:18:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -685,6 +685,46 @@ ResetCatalogCaches(void)
 		ResetCatalogCache(cache);
 
 	CACHE1_elog(DEBUG2, "end of ResetCatalogCaches call");
+}
+
+/*
+ *		CatalogCacheFlushCatalog
+ *
+ *	Flush all catcache entries that came from the specified system catalog.
+ *	This is needed after VACUUM FULL/CLUSTER on the catalog, since the
+ *	tuples very likely now have different TIDs than before.  (At one point
+ *	we also tried to force re-execution of CatalogCacheInitializeCache for
+ *	the cache(s) on that catalog.  This is a bad idea since it leads to all
+ *	kinds of trouble if a cache flush occurs while loading cache entries.
+ *	We now avoid the need to do it by copying cc_tupdesc out of the relcache,
+ *	rather than relying on the relcache to keep a tupdesc for us.  Of course
+ *	this assumes the tupdesc of a cachable system table will not change...)
+ */
+void
+CatalogCacheFlushCatalog(Oid catId)
+{
+	CatCache   *cache;
+
+	CACHE2_elog(DEBUG2, "CatalogCacheFlushCatalog called for %u", catId);
+
+	for (cache = CacheHdr->ch_caches; cache; cache = cache->cc_next)
+	{
+		/* We can ignore uninitialized caches, since they must be empty */
+		if (cache->cc_tupdesc == NULL)
+			continue;
+
+		/* Does this cache store tuples of the target catalog? */
+		if (cache->cc_tupdesc->attrs[0]->attrelid == catId)
+		{
+			/* Yes, so flush all its contents */
+			ResetCatalogCache(cache);
+
+			/* Tell inval.c to call syscache callbacks for this cache */
+			CallSyscacheCallbacks(cache->id, NULL);
+		}
+	}
+
+	CACHE1_elog(DEBUG2, "end of CatalogCacheFlushCatalog call");
 }
 
 /*

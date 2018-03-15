@@ -23,13 +23,19 @@ AND dbNode = (SELECT oid FROM pg_database WHERE datname = current_database())
 ORDER BY gp_segment_id, xrecoff;
  gp_segment_id |         relname          |      record_type       | segment_filenum | recordlen | file_offset 
 ---------------+--------------------------+------------------------+-----------------+-----------+-------------
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        24 |           0
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        72 |           0
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        72 |           0
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        24 |           0
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        72 |           0
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        72 |           0
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        24 |           0
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        24 |           0
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |               1 |        72 |           0
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT |             129 |        72 |           0
-(6 rows)
+(12 rows)
 
 -- Store the latest xlog offset
 DELETE FROM tmp;
@@ -56,13 +62,19 @@ ORDER BY gp_segment_id, xrecoff;
              0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        72 |          48
              0 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
              0 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
+             0 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        88 |          48
              1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        88 |          48
              1 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
              1 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
+             1 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               1 |        80 |          48
              2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             129 |        80 |          48
              2 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |               1 |        24 |          48
              2 | generate_aoco_xlog_table | XLOG_AYPENDONLY_TRUNCATE |             129 |        24 |          48
-(12 rows)
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |               2 |        24 |           0
+             2 | generate_aoco_xlog_table | XLOG_APPENDONLY_INSERT   |             130 |        24 |           0
+(18 rows)
 

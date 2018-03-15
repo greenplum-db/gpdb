@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/interfaces/ecpg/pgtypeslib/numeric.c,v 1.33 2006/10/04 00:30:12 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/interfaces/ecpg/pgtypeslib/numeric.c,v 1.35 2010/02/02 16:09:12 meskes Exp $ */
 
 #include "postgres_fe.h"
 #include <ctype.h>
@@ -173,6 +173,25 @@ set_var_from_str(char *str, char **ptr, numeric *dest)
 		(*ptr)++;
 	}
 
+	if (pg_strncasecmp(*ptr, "NaN", 3) == 0)
+	{
+		*ptr += 3;
+		dest->sign = NUMERIC_NAN;
+
+		/* Should be nothing left but spaces */
+		while (*(*ptr))
+		{
+			if (!isspace((unsigned char) *(*ptr)))
+			{
+				errno = PGTYPES_NUM_BAD_NUMERIC;
+				return -1;
+			}
+			(*ptr)++;
+		}
+
+		return 0;
+	}
+
 	if (alloc_var(dest, strlen((*ptr))) < 0)
 		return -1;
 	dest->weight = -1;
@@ -295,6 +314,15 @@ get_str_from_var(numeric *var, int dscale)
 	char	   *cp;
 	int			i;
 	int			d;
+
+	if (var->sign == NUMERIC_NAN)
+	{
+		str = (char *) pgtypes_alloc(4);
+		if (str == NULL)
+			return NULL;
+		sprintf(str, "NaN");
+		return str;
+	}
 
 	/*
 	 * Check if we must round up before printing the value and do so.
@@ -1050,7 +1078,6 @@ select_div_scale(numeric *var1, numeric *var2, int *rscale)
 	NumericDigit firstdigit1,
 				firstdigit2;
 	int			res_dscale;
-	int			res_rscale;
 
 	/*
 	 * The result scale of a division isn't specified in any SQL standard. For
@@ -1102,7 +1129,7 @@ select_div_scale(numeric *var1, numeric *var2, int *rscale)
 	res_dscale = Min(res_dscale, NUMERIC_MAX_DISPLAY_SCALE);
 
 	/* Select result scale */
-	*rscale = res_rscale = res_dscale + 4;
+	*rscale = res_dscale + 4;
 
 	return res_dscale;
 }
@@ -1544,9 +1571,8 @@ int
 PGTYPESnumeric_to_double(numeric *nv, double *dp)
 {
 	double		tmp;
-	int			i;
 
-	if ((i = numericvar_to_double(nv, &tmp)) != 0)
+	if (numericvar_to_double(nv, &tmp) != 0)
 		return -1;
 	*dp = tmp;
 	return 0;

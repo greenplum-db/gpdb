@@ -20,9 +20,9 @@ INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 analyze dd_singlecol_1;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48152"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16427"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b from public.dd_singlecol_1 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b  from public.dd_singlecol_1 as Ta  limit 30000 "
 -- ctas tests
 create table dd_ctas_1 as select * from dd_singlecol_1 where a=1 distributed by (a);
 INFO:  Dispatch command to ALL contents
@@ -327,20 +327,20 @@ INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 analyze dd_singlecol_idx;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48490"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16557"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_idx as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_idx as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48516"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16571"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48535"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16585"
 analyze dd_singlecol_idx2;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48554"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16586"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_idx2 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_idx2 as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48580"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16600"
 -- disjunction with index scans
 select * from dd_singlecol_idx where (a=1 or a=3) and b<3;
 INFO:  Dispatch command to ALL contents
@@ -390,13 +390,13 @@ INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 analyze dd_singlecol_bitmap_idx;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48599"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16601"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_bitmap_idx as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_bitmap_idx as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48625"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16615"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48646"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16632"
 -- disjunction with bitmap index scans
 select * from dd_singlecol_bitmap_idx where (a=1 or a=3) and b<3;
 INFO:  Dispatch command to ALL contents
@@ -486,41 +486,39 @@ INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 analyze dd_singlecol_part_bitmap_idx;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48719"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16655"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_bitmap_idx_1_prt_2 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_bitmap_idx_1_prt_2 as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48969"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16780"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48746"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16671"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48773"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16687"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48800"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16703"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48827"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16719"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48693"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16639"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_bitmap_idx_1_prt_extra as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_bitmap_idx_1_prt_extra as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48948"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16763"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48719"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16655"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48746"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16671"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48773"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16687"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48800"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16703"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48827"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16719"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48693"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16639"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_bitmap_idx as Ta  limit 7500 "
-INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=48927"
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_bitmap_idx as Ta  limit 30000 "
 -- bitmap indexes on partitioned tables
 select * from dd_singlecol_part_bitmap_idx where a=1 and b=0;
 INFO:  Dispatch command to SINGLE content
@@ -567,11 +565,11 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 analyze dd_multicol_idx;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49074"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16852"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_multicol_idx as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_multicol_idx as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49100"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16866"
 select count(*) from dd_multicol_idx;
 INFO:  Dispatch command to ALL contents
  count 
@@ -720,78 +718,74 @@ INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 analyze dd_singlecol_part_idx;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49171"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16886"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx_1_prt_2 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx_1_prt_2 as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49417"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17005"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49198"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16902"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49225"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16918"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49252"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16934"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49279"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16950"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49145"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16870"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx_1_prt_extra as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx_1_prt_extra as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49398"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16991"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49171"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16886"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49198"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16902"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49225"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16918"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49252"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16934"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49279"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16950"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49145"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=16870"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx as Ta  limit 7500 "
-INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49379"
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx as Ta  limit 30000 "
 analyze dd_singlecol_part_idx2;
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49564"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17081"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx2_1_prt_2 as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx2_1_prt_2 as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49810"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17200"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49591"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17097"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49618"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17113"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49645"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17129"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49672"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17145"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49538"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17065"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx2_1_prt_extra as Ta  limit 7500 "
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx2_1_prt_extra as Ta  limit 30000 "
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49791"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17186"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49564"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17081"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49591"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17097"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49618"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17113"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49645"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17129"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49672"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17145"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49538"
+CONTEXT:  SQL statement "select pg_catalog.sum(pg_catalog.gp_statistics_estimate_reltuples_relpages_oid(c.oid))::pg_catalog.float4[] from pg_catalog.gp_dist_random('pg_catalog.pg_class') c where c.oid=17065"
 INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select Ta.a, Ta.b, Ta.c from public.dd_singlecol_part_idx2 as Ta  limit 7500 "
-INFO:  Dispatch command to ALL contents
-CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=49772"
+CONTEXT:  SQL statement "select Ta.a , Ta.b , Ta.c  from public.dd_singlecol_part_idx2 as Ta  limit 30000 "
 -- indexes on partitioned tables
 select * from dd_singlecol_part_idx where a=1 and b>0;
 INFO:  Dispatch command to SINGLE content

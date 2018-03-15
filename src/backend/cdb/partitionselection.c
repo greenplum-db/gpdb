@@ -580,12 +580,11 @@ change_varattnos_of_a_node(Node *node, const AttrNumber *newattno)
 	 * Only attempt re-mapping if re-mapping is necessary (i.e., non-null
 	 * newattno map)
 	 */
-	if (newattno)
-	{
-		change_varattnos_of_a_varno(node, newattno, 1	/* varno is hard-coded
-														 * to 1 (i.e., only
-									  * first RTE) */ );
-	}
+	if (!newattno)
+		return;
+
+	/* varno is hard-coded * to 1 (i.e., only * first RTE) */
+	(void) change_varattnos_of_a_varno(node, newattno, 1);
 }
 
 /*

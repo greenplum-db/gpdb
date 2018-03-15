@@ -179,8 +179,6 @@
         <li id="ix155050">The Greenplum distribution key columns may not be updated.</li>
         <li id="ix142137">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
-        <li id="ix154711">Greenplum Database does not support the <codeph>RETURNING</codeph>
-          clause.</li>
         <li id="ix155339">Greenplum Database partitioning columns cannot be updated.</li>
       </ul>
     </body>
@@ -207,8 +205,6 @@
       <ul>
         <li id="ix155065">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
-        <li id="ix154839">The <codeph>RETURNING</codeph> clause is not supported in Greenplum
-          Database.</li>
       </ul>
     </body>
     <topic id="topic6" xml:lang="en">

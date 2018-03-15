@@ -76,8 +76,6 @@ DtxStateToString(DtxState state)
 			return "Retry Commit Prepared";
 		case DTX_STATE_RETRY_ABORT_PREPARED:
 			return "Retry Abort Prepared";
-		case DTX_STATE_CRASH_COMMITTED:
-			return "Crash Committed";
 		default:
 			return "Unknown";
 	}

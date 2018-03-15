@@ -147,7 +147,6 @@ SCRIPTDIR="`$DIRNAME $PSQLBIN`/bin"
 #******************************************************************************
 GPINITSYSTEM=$SCRIPTDIR/gpinitsystem
 GPCONFIG=$SCRIPTDIR/gpconfig
-GPCRONDUMP=$SCRIPTDIR/gpcrondump
 GPINITSTANDBY=$SCRIPTDIR/gpinitstandby
 GPRECOVERSEG=$SCRIPTDIR/gprecoverseg
 GPSTART=$SCRIPTDIR/gpstart
@@ -188,14 +187,6 @@ if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi
 PG_CONF_ADD_FILE=$WORKDIR/postgresql_conf_gp_additions
 SCHEMA_FILE=cdb_schema.sql
 DEFAULTDB=template1
-
-CONFIG_TABLE="(SELECT dbid, content, role, preferred_role, mode, status,
-               hostname, address, port, fselocation as datadir,
-               replication_port
-        FROM gp_segment_configuration
-        JOIN pg_filespace_entry ON (dbid = fsedbid)
-        JOIN pg_filespace fs ON (fs.oid = fsefsoid)
-        WHERE fsname = 'pg_system')"
 
 GP_PG_VIEW="(SELECT dbid, role = 'p' as isprimary, content, status = 'u' as valid,
 		preferred_role = 'p' as definedprimary FROM gp_segment_configuration)"
@@ -876,7 +867,7 @@ quantum = 15
 min_query_time = 20
 
 # This should be a percentage between 0 and 100 and should be
-# less than the error_disk_space_percentage.  If a filesystem’s
+# less than the error_disk_space_percentage.  If a filesystem's
 # disk space used percentage equals or exceeds this value a
 # warning will be logged and a warning email/snmp trap may be
 # sent.  If this configuration is set to 0 or not specified, no
@@ -885,7 +876,7 @@ min_query_time = 20
 
 # This should be a percentage between 0 and 100 and should be
 # greater than the warning_disk_space_percentage. If a
-# filesystem’s disk space used percentage equals or exceeds
+# filesystem's disk space used percentage equals or exceeds
 # this value an error will be logged and a error email/snmp
 # trap may be sent.  If this configuration is set to 0 or not
 # specified, no errors are sent.
@@ -956,67 +947,6 @@ ORDER BY 1;" >> $LOG_FILE 2>&1
 			fi
 		fi
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_QD_DB_NAME () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-		CHK_DB_RUNNING
-		#Check if we have PGDATABASE environment variable set, if so see if that database exists
-		if [ x"" != x"$PGDATABASE" ];then
-			LOG_MSG "[INFO]:-PGDATABASE set, checking for this database"
-			QD_DBNAME_THERE=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select 1 from pg_database where datname='${PGDATABASE}';"|$WC -l`
-			ERROR_CHK $? "check for $PGDATABASE" 2
-			if [ $QD_DBNAME_THERE -eq 1 ];then
-				QD_DBNAME=$PGDATABASE
-			else
-				QD_DBNAME_THERE=""
-			fi
-		fi
-		if [ x"" = x"$QD_DBNAME_THERE" ];then
-			LOG_MSG "[INFO]:-Checking for a non-system database"
-			QD_DBNAME=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"$GPLISTDATABASEQTY " 2>/dev/null|$GREP -v postgres|$GREP -v template0|$HEAD -1|$CUT -d"|" -f1`
-			ERROR_CHK $? "obtain database name" 2
-		fi
-		MASTER_DIR_CHK=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select 1 from ${CONFIG_TABLE} a;"|$WC -l`
-		if [ $MASTER_DIR_CHK -eq 0 ];then
-			ERROR_EXIT "[FATAL]:-MASTER_DATA_DIRECTORY value of $MASTER_DATA_DIRECTORY is incorrect" 2;fi
-		if [ x"" == x"$QD_DBNAME" ]; then
-				LOG_MSG "[INFO]:-Unable to obtain a non-system database name, setting value to "$DEFAULTDB""
-				QD_DBNAME="$DEFAULTDB"
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-GET_QE_DETAILS () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		GET_QD_DB_NAME
-		if [ x"" == x"$PGUSER" ];then
-		    DBUSER=$USER
-		else
-		    DBUSER=$PGUSER
-		fi
-
-		if [ $# -eq 0 ];then
-			QE_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -U $DBUSER -d "$QD_DBNAME" -A -t -c"select a.hostname, a.datadir, a.port, b.valid, b.definedprimary from $CONFIG_TABLE a, $GP_PG_VIEW b where a.dbid=b.dbid and a.content<>-1 order by b.dbid;"`) > /dev/null 2>&1
-		else
-			QE_ARRAY=(`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -q -p $MASTER_PORT -U $DBUSER -d "$QD_DBNAME" -A -t -c"select a.hostname, a.datadir, a.port, b.valid, b.definedprimary from $CONFIG_TABLE a, $GP_PG_VIEW b where a.dbid=b.dbid and a.content<>-1 order by a.port;"`) > /dev/null 2>&1
-		fi
-		RETVAL=$?
-		if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Unable to obtain segment instance host details from Master db, error code $RETVAL returned" 1
-				EXIT_STATUS=1
-		fi
-		QE_ARRAY_COUNT=${#QE_ARRAY[@]}
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
-CHK_MIRRORS_CONFIGURED () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	MIRROR_COUNT=`${EXPORT_LIB_PATH};env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"select count(dbid)/count(distinct(content)) from $CONFIG_TABLE a where content<>-1;"`
-	ERROR_CHK $? "obtain mirror count from master instance" 2
-	LOG_MSG "[INFO]:-Obtained $MIRROR_COUNT as check value"
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 GET_PG_PID_ACTIVE () {

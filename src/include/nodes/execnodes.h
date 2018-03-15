@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.205 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.219 2010/02/26 02:01:25 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,7 +42,6 @@ struct MemTupleBinding;
 struct MemTupleData;
 struct HeapScanDescData;
 struct FileScanDescData;
-struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
 
 /* ----------------
@@ -59,6 +58,9 @@ struct SliceTable;
  *		ExpressionsState	exec state for expressions, or NIL if none
  *		Predicate			partial-index predicate, or NIL if none
  *		PredicateState		exec state for predicate, or NIL if none
+ *		ExclusionOps		Per-column exclusion operators, or NULL if none
+ *		ExclusionProcs		Underlying function OIDs for ExclusionOps
+ *		ExclusionStrats		Opclass strategy numbers for ExclusionOps
  *		Unique				is it a unique index?
  *		ReadyForInserts		is it valid for inserts?
  *		Concurrent			are we doing a concurrent index build?
@@ -77,6 +79,9 @@ typedef struct IndexInfo
 	List	   *ii_ExpressionsState;	/* list of ExprState */
 	List	   *ii_Predicate;	/* list of Expr */
 	List	   *ii_PredicateState;		/* list of ExprState */
+	Oid		   *ii_ExclusionOps;	/* array with one entry per column */
+	Oid		   *ii_ExclusionProcs;		/* array with one entry per column */
+	uint16	   *ii_ExclusionStrats;		/* array with one entry per column */
 	bool		ii_Unique;
 	bool		ii_ReadyForInserts;
 	bool		ii_Concurrent;
@@ -210,14 +215,6 @@ typedef struct ReturnSetInfo
 	TupleDesc	setDesc;		/* actual descriptor for returned tuples */
 } ReturnSetInfo;
 
-typedef struct ExecVariableListCodegenInfo
-{
-	/* Pointer to store ExecVariableListCodegen from Codegen */
-	void* code_generator;
-	/* Function pointer that points to either regular or generated slot_deform_tuple */
-	ExecVariableListFn ExecVariableList_fn;
-} ExecVariableListCodegenInfo;
-
 /* ----------------
  *		ProjectionInfo node information
  *
@@ -272,10 +269,6 @@ typedef struct ProjectionInfo
 	int			pi_lastInnerVar;
 	int			pi_lastOuterVar;
 	int			pi_lastScanVar;
-
-#ifdef USE_CODEGEN
-    ExecVariableListCodegenInfo ExecVariableList_gen_info;
-#endif
 } ProjectionInfo;
 
 /* ----------------
@@ -333,6 +326,7 @@ typedef void *RelationDeleteDesc;
  *		IndexRelationInfo		array of key/attr info for indices
  *		TrigDesc				triggers to be fired, if any
  *		TrigFunctions			cached lookup info for trigger functions
+ *		TrigWhenExprs			array of trigger WHEN expr states
  *		TrigInstrument			optional runtime measurements for triggers
  *		ConstraintExprs			array of constraint-checking expr states
  *		junkFilter				for removing junk attributes from tuples
@@ -360,6 +354,7 @@ typedef struct ResultRelInfo
 	IndexInfo **ri_IndexRelationInfo;
 	TriggerDesc *ri_TrigDesc;
 	FmgrInfo   *ri_TrigFunctions;
+	List	  **ri_TrigWhenExprs;
 	struct Instrumentation *ri_TrigInstrument;
 	List	  **ri_ConstraintExprs;
 	JunkFilter *ri_junkFilter;
@@ -537,6 +532,9 @@ typedef struct EState
 	Snapshot	es_snapshot;	/* time qual to use */
 	Snapshot	es_crosscheck_snapshot; /* crosscheck time qual for RI */
 	List	   *es_range_table; /* List of RangeTblEntry */
+	PlannedStmt *es_plannedstmt;	/* link to top of plan tree */
+
+	JunkFilter *es_junkFilter;	/* top-level junk filter, if any */
 
 	/* If query can insert/delete tuples, the command ID to mark them with */
 	CommandId	es_output_cid;
@@ -545,7 +543,6 @@ typedef struct EState
 	ResultRelInfo *es_result_relations; /* array of ResultRelInfos */
 	int			es_num_result_relations;		/* length of array */
 	ResultRelInfo *es_result_relation_info;		/* currently active array elt */
-	JunkFilter *es_junkFilter;	/* currently active junk filter */
 
 	/* Stuff used for firing triggers: */
 	List	   *es_trig_target_relations;		/* trigger-only ResultRelInfos */
@@ -557,6 +554,7 @@ typedef struct EState
 	List	   *es_result_aosegnos;
 
 	TupleTableSlot *es_trig_tuple_slot; /* for trigger output tuples */
+	TupleTableSlot *es_trig_oldtup_slot;		/* for trigger old tuples */
 
 	/* Parameter info: */
 	ParamListInfo es_param_list_info;	/* values of external params */
@@ -567,11 +565,12 @@ typedef struct EState
 
 	List	   *es_tupleTable;	/* List of TupleTableSlots */
 
+	List	   *es_rowMarks;	/* List of ExecRowMarks */
+
 	uint64		es_processed;	/* # of tuples processed */
 	Oid			es_lastoid;		/* last oid processed (by INSERT) */
-	List	   *es_rowMarks;	/* not good place, but there is no other */
 
-	bool		es_instrument;	/* true requests runtime instrumentation */
+	int			es_instrument;	/* OR of InstrumentOption flags */
 	bool		es_select_into; /* true if doing SELECT INTO */
 	bool		es_into_oids;	/* true to generate OIDs in SELECT INTO */
 
@@ -586,12 +585,18 @@ typedef struct EState
 	 */
 	ExprContext *es_per_tuple_exprcontext;
 
-	/* Below is to re-evaluate plan qual in READ COMMITTED mode */
-	PlannedStmt *es_plannedstmt;	/* link to top of plan tree */
-	struct evalPlanQual *es_evalPlanQual;		/* chain of PlanQual states */
-	bool	   *es_evTupleNull; /* local array of EPQ status */
-	HeapTuple  *es_evTuple;		/* shared array of EPQ substitute tuples */
-	bool		es_useEvalPlan; /* evaluating EPQ tuples? */
+	/*
+	 * These fields are for re-evaluating plan quals when an updated tuple is
+	 * substituted in READ COMMITTED mode.	es_epqTuple[] contains tuples that
+	 * scan plan nodes should return instead of whatever they'd normally
+	 * return, or NULL if nothing to return; es_epqTupleSet[] is true if a
+	 * particular array entry is valid; and es_epqScanDone[] is state to
+	 * remember if the tuple has been returned already.  Arrays are of size
+	 * list_length(es_range_table) and are indexed by scan node scanrelid - 1.
+	 */
+	HeapTuple  *es_epqTuple;	/* array of EPQ substitute tuples */
+	bool	   *es_epqTupleSet; /* true if EPQ tuple is provided */
+	bool	   *es_epqScanDone; /* true if EPQ tuple has been fetched */
 
 	/* Additions for MPP plan slicing. */
 	struct SliceTable *es_sliceTable;
@@ -665,24 +670,36 @@ struct MotionState;
 
 extern struct MotionState *getMotionState(struct PlanState *ps, int sliceIndex);
 extern int LocallyExecutingSliceIndex(EState *estate);
+extern int PrimaryWriterSliceIndex(EState *estate);
 extern int RootSliceIndex(EState *estate);
 #ifdef USE_ASSERT_CHECKING
 extern void SliceLeafMotionStateAreValid(struct MotionState *ms);
 #endif
 
 /*
- * es_rowMarks is a list of these structs.	See RowMarkClause for details
- * about rti and prti.	toidAttno is not used in a "plain" rowmark.
+ * ExecRowMark -
+ *	   runtime representation of FOR UPDATE/SHARE clauses
+ *
+ * When doing UPDATE, DELETE, or SELECT FOR UPDATE/SHARE, we should have an
+ * ExecRowMark for each non-target relation in the query (except inheritance
+ * parent RTEs, which can be ignored at runtime).  See PlanRowMark for details
+ * about most of the fields.
+ *
+ * es_rowMarks is a list of these structs.	Each LockRows node has its own
+ * list, which is the subset of locks that it is supposed to enforce; note
+ * that the per-node lists point to the same structs that are in the global
+ * list.
  */
 typedef struct ExecRowMark
 {
-	Relation	relation;		/* opened and RowShareLock'd relation */
+	Relation	relation;		/* opened and suitably locked relation */
 	Index		rti;			/* its range table index */
 	Index		prti;			/* parent range table index, if child */
-	bool		forUpdate;		/* true = FOR UPDATE, false = FOR SHARE */
+	RowMarkType markType;		/* see enum in nodes/plannodes.h */
 	bool		noWait;			/* NOWAIT option */
-	AttrNumber	ctidAttNo;		/* resno of its ctid junk attribute */
+	AttrNumber	ctidAttNo;		/* resno of ctid junk attribute, if any */
 	AttrNumber	toidAttNo;		/* resno of tableoid junk attribute, if any */
+	AttrNumber	wholeAttNo;		/* resno of whole-row junk attribute, if any */
 	ItemPointerData curCtid;	/* ctid of currently locked tuple, if any */
 } ExecRowMark;
 
@@ -811,11 +828,6 @@ struct ExprState
 	NodeTag		type;
 	Expr	   *expr;			/* associated Expr node */
 	ExprStateEvalFunc evalfunc; /* routine to run to execute node */
-
-#ifdef USE_CODEGEN
-	void *ExecEvalExpr_code_generator;
-#endif
-
 };
 
 /* ----------------
@@ -1186,11 +1198,9 @@ typedef struct ConvertRowtypeExprState
 	ExprState  *arg;			/* input tuple value */
 	TupleDesc	indesc;			/* tupdesc for source rowtype */
 	TupleDesc	outdesc;		/* tupdesc for result rowtype */
-	AttrNumber *attrMap;		/* indexes of input fields, or 0 for null */
-	Datum	   *invalues;		/* workspace for deconstructing source */
-	bool	   *inisnull;
-	Datum	   *outvalues;		/* workspace for constructing result */
-	bool	   *outisnull;
+	/* use "struct" so we needn't include tupconvert.h here */
+	struct TupleConversionMap *map;
+	bool		initialized;
 } ConvertRowtypeExprState;
 
 /* ----------------
@@ -1295,8 +1305,7 @@ typedef struct NullTestState
 {
 	ExprState	xprstate;
 	ExprState  *arg;			/* input expression */
-	bool		argisrow;		/* T if input is of a composite type */
-	/* used only if argisrow: */
+	/* used only if input is of composite type: */
 	TupleDesc	argdesc;		/* tupdesc for most recent input */
 } NullTestState;
 
@@ -1394,9 +1403,6 @@ typedef struct PlanState
 	ExprContext *ps_ExprContext;	/* node's expression-evaluation context */
 	ProjectionInfo *ps_ProjInfo;	/* info for doing tuple projection */
 
-	/* The manager manages all the code generators and generation process */
-	void *CodegenManager;
-
 	/*
 	 * EXPLAIN ANALYZE statistics collection
 	 */
@@ -1410,6 +1416,8 @@ typedef struct PlanState
 	 */
 	int		gpmon_plan_tick;
 	gpmon_packet_t gpmon_pkt;
+
+	bool		fHadSentNodeStart;
 } PlanState;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
@@ -1433,6 +1441,21 @@ static inline void Gpmon_Incr_Rows_Out(gpmon_packet_t *pkt)
  */
 #define innerPlanState(node)		(((PlanState *)(node))->righttree)
 #define outerPlanState(node)		(((PlanState *)(node))->lefttree)
+
+/*
+ * EPQState is state for executing an EvalPlanQual recheck on a candidate
+ * tuple in ModifyTable or LockRows.  The estate and planstate fields are
+ * NULL if inactive.
+ */
+typedef struct EPQState
+{
+	EState	   *estate;			/* subsidiary EState */
+	PlanState  *planstate;		/* plan state tree ready to be executed */
+	TupleTableSlot *origslot;	/* original output tuple to be rechecked */
+	Plan	   *plan;			/* plan tree to be executed */
+	List	   *rowMarks;		/* ExecRowMarks (non-locking only) */
+	int			epqParam;		/* ID of Param to force scan node re-eval */
+} EPQState;
 
 
 /* ----------------
@@ -1466,12 +1489,25 @@ typedef struct RepeatState
 } RepeatState;
 
 /* ----------------
+ *	 ModifyTableState information
+ * ----------------
+ */
+typedef struct ModifyTableState
+{
+	PlanState	ps;				/* its first field is NodeTag */
+	CmdType		operation;
+	PlanState **mt_plans;		/* subplans (one per target rel) */
+	int			mt_nplans;		/* number of plans in the array */
+	int			mt_whichplan;	/* which one is being executed (0..n-1) */
+	EPQState	mt_epqstate;	/* for evaluating EvalPlanQual rechecks */
+	bool		fireBSTriggers; /* do we need to fire stmt triggers? */
+} ModifyTableState;
+
+/* ----------------
  *	 AppendState information
  *
- *		nplans			how many plans are in the list
+ *		nplans			how many plans are in the array
  *		whichplan		which plan is being executed (0 .. n-1)
- *		firstplan		first plan to execute (usually 0)
- *		lastplan		last plan to execute (usually n-1)
  * ----------------
  */
 typedef struct AppendState
@@ -1481,8 +1517,6 @@ typedef struct AppendState
 	int			eflags;			/* used to initialize each subplan */
 	int			as_nplans;
 	int			as_whichplan;
-	int			as_firstplan;
-	int			as_lastplan;
 } AppendState;
 
 /*
@@ -1663,6 +1697,7 @@ typedef struct
 {
 	ScanKey		scan_key;		/* scankey to put value into */
 	ExprState  *key_expr;		/* expr to evaluate to get value */
+	bool		key_toastable;	/* is expr's result a toastable datatype? */
 } IndexRuntimeKeyInfo;
 
 typedef struct
@@ -2214,6 +2249,7 @@ typedef struct NestLoopState
  *		Clauses			   info for each mergejoinable clause
  *		JoinState		   current "state" of join.  see execdefs.h
  *		ExtraMarks		   true to issue extra Mark operations on inner scan
+ *		ConstFalseJoin	   true if we have a constant-false joinqual
  *		FillOuter		   true if should emit unjoined outer tuples anyway
  *		FillInner		   true if should emit unjoined inner tuples anyway
  *		MatchedOuter	   true if found a join match for current outer tuple
@@ -2237,6 +2273,7 @@ typedef struct MergeJoinState
 	MergeJoinClause mj_Clauses; /* array of length mj_NumClauses */
 	int			mj_JoinState;
 	bool		mj_ExtraMarks;
+	bool		mj_ConstFalseJoin;
 	bool		mj_FillOuter;
 	bool		mj_FillInner;
 	bool		mj_MatchedOuter;
@@ -2412,15 +2449,6 @@ typedef struct SortState
  *	expressions and run the aggregate transition functions.
  * -------------------------
  */
-
-typedef struct AdvanceAggregatesCodegenInfo
-{
-	/* Pointer to store AdvanceAggregatesCodegen from Codegen */
-	void* code_generator;
-	/* Function pointer that points to either regular or generated advance_aggregates */
-	AdvanceAggregatesFn AdvanceAggregates_fn;
-} AdvanceAggregatesCodegenInfo;
-
 /* these structs are private in nodeAgg.c: */
 typedef struct AggStatePerAggData *AggStatePerAgg;
 typedef struct AggStatePerGroupData *AggStatePerGroup;
@@ -2479,9 +2507,6 @@ typedef struct AggState
 	/* set if the operator created workfiles */
 	bool		workfiles_created;
 
-#ifdef USE_CODEGEN
-	AdvanceAggregatesCodegenInfo AdvanceAggregates_gen_info;
-#endif
 } AggState;
 
 /* ----------------
@@ -2636,6 +2661,19 @@ typedef struct SetOpState
 	bool		table_filled;	/* hash table filled yet? */
 	TupleHashIterator hashiter; /* for iterating through hash table */
 } SetOpState;
+
+/* ----------------
+ *	 LockRowsState information
+ *
+ *		LockRows nodes are used to enforce FOR UPDATE/FOR SHARE locking.
+ * ----------------
+ */
+typedef struct LockRowsState
+{
+	PlanState	ps;				/* its first field is NodeTag */
+	List	   *lr_rowMarks;	/* List of ExecRowMarks */
+	EPQState	lr_epqstate;	/* for evaluating EvalPlanQual rechecks */
+} LockRowsState;
 
 /* ----------------
  *	 LimitState information

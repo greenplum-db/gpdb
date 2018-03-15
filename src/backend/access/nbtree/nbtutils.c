@@ -3,12 +3,12 @@
  * nbtutils.c
  *	  Utility code for Postgres btree implementation.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtutils.c,v 1.93 2009/01/05 17:14:28 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtutils.c,v 1.98 2010/02/26 02:00:34 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,7 +32,7 @@
 static bool _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 						 ScanKey leftarg, ScanKey rightarg,
 						 bool *result);
-static void _bt_mark_scankey_with_indoption(ScanKey skey, int16 *indoption);
+static bool _bt_fix_scankey_strategy(ScanKey skey, int16 *indoption);
 static void _bt_mark_scankey_required(ScanKey skey);
 static bool _bt_check_rowcompare(ScanKey skey,
 					 IndexTuple tuple, TupleDesc tupdesc,
@@ -265,29 +265,9 @@ _bt_preprocess_keys(IndexScanDesc scan)
 	/* We can short-circuit most of the work if there's just one key */
 	if (numberOfKeys == 1)
 	{
-		/*
-		 * We treat all btree operators as strict (even if they're not so
-		 * marked in pg_proc).	This means that it is impossible for an
-		 * operator condition with a NULL comparison constant to succeed, and
-		 * we can reject it right away.
-		 *
-		 * However, we now also support "x IS NULL" clauses as search
-		 * conditions, so in that case keep going.	The planner has not filled
-		 * in any particular strategy in this case, so set it to
-		 * BTEqualStrategyNumber --- we can treat IS NULL as an equality
-		 * operator for purposes of search strategy.
-		 */
-		if (cur->sk_flags & SK_ISNULL)
-		{
-			if (cur->sk_flags & SK_SEARCHNULL)
-			{
-				cur->sk_strategy = BTEqualStrategyNumber;
-				cur->sk_subtype = InvalidOid;
-			}
-			else
-				so->qual_ok = false;
-		}
-		_bt_mark_scankey_with_indoption(cur, indoption);
+		/* Apply indoption to scankey (might change sk_strategy!) */
+		if (!_bt_fix_scankey_strategy(cur, indoption))
+			so->qual_ok = false;
 		memcpy(outkeys, cur, sizeof(ScanKeyData));
 		so->numberOfKeys = 1;
 		/* We can mark the qual as required if it's for first index col */
@@ -320,20 +300,12 @@ _bt_preprocess_keys(IndexScanDesc scan)
 	{
 		if (i < numberOfKeys)
 		{
-			/* See comments above about NULLs and IS NULL handling. */
-			/* Note: we assume SK_ISNULL is never set in a row header key */
-			if (cur->sk_flags & SK_ISNULL)
+			/* Apply indoption to scankey (might change sk_strategy!) */
+			if (!_bt_fix_scankey_strategy(cur, indoption))
 			{
-				if (cur->sk_flags & SK_SEARCHNULL)
-				{
-					cur->sk_strategy = BTEqualStrategyNumber;
-					cur->sk_subtype = InvalidOid;
-				}
-				else
-				{
-					so->qual_ok = false;
-					return;
-				}
+				/* NULL can't be matched, so give up */
+				so->qual_ok = false;
+				return;
 			}
 		}
 
@@ -364,13 +336,6 @@ _bt_preprocess_keys(IndexScanDesc scan)
 
 					if (!chk || j == (BTEqualStrategyNumber - 1))
 						continue;
-
-					/* IS NULL together with any other predicate must fail */
-					if (eq->sk_flags & SK_SEARCHNULL)
-					{
-						so->qual_ok = false;
-						return;
-					}
 
 					if (_bt_compare_scankey_args(scan, chk, eq, chk,
 												 &test_result))
@@ -452,9 +417,6 @@ _bt_preprocess_keys(IndexScanDesc scan)
 			memset(xform, 0, sizeof(xform));
 		}
 
-		/* apply indoption to scankey (might change sk_strategy!) */
-		_bt_mark_scankey_with_indoption(cur, indoption);
-
 		/* check strategy this key's operator corresponds to */
 		j = cur->sk_strategy - 1;
 
@@ -484,23 +446,6 @@ _bt_preprocess_keys(IndexScanDesc scan)
 		else
 		{
 			/* yup, keep only the more restrictive key */
-
-			/* if either arg is NULL, don't try to compare */
-			if ((cur->sk_flags | xform[j]->sk_flags) & SK_ISNULL)
-			{
-				/* at least one of them must be an IS NULL clause */
-				Assert(j == (BTEqualStrategyNumber - 1));
-				Assert((cur->sk_flags | xform[j]->sk_flags) & SK_SEARCHNULL);
-				/* if one is and one isn't, the search must fail */
-				if ((cur->sk_flags ^ xform[j]->sk_flags) & SK_SEARCHNULL)
-				{
-					so->qual_ok = false;
-					return;
-				}
-				/* we have duplicate IS NULL clauses, ignore the newer one */
-				continue;
-			}
-
 			if (_bt_compare_scankey_args(scan, cur, cur, xform[j],
 										 &test_result))
 			{
@@ -534,8 +479,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
 }
 
 /*
- * Compare two scankey values using a specified operator.  Both values
- * must be already known non-NULL.
+ * Compare two scankey values using a specified operator.
  *
  * The test we want to perform is logically "leftarg op rightarg", where
  * leftarg and rightarg are the sk_argument values in those ScanKeys, and
@@ -555,8 +499,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
  *
  * Note: this routine needs to be insensitive to any DESC option applied
  * to the index column.  For example, "x < 4" is a tighter constraint than
- * "x < 5" regardless of which way the index is sorted.  We don't worry about
- * NULLS FIRST/LAST either, since the given values are never nulls.
+ * "x < 5" regardless of which way the index is sorted.
  */
 static bool
 _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
@@ -570,6 +513,64 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 				opcintype,
 				cmp_op;
 	StrategyNumber strat;
+
+	/*
+	 * First, deal with cases where one or both args are NULL.	This should
+	 * only happen when the scankeys represent IS NULL/NOT NULL conditions.
+	 */
+	if ((leftarg->sk_flags | rightarg->sk_flags) & SK_ISNULL)
+	{
+		bool		leftnull,
+					rightnull;
+
+		if (leftarg->sk_flags & SK_ISNULL)
+		{
+			Assert(leftarg->sk_flags & (SK_SEARCHNULL | SK_SEARCHNOTNULL));
+			leftnull = true;
+		}
+		else
+			leftnull = false;
+		if (rightarg->sk_flags & SK_ISNULL)
+		{
+			Assert(rightarg->sk_flags & (SK_SEARCHNULL | SK_SEARCHNOTNULL));
+			rightnull = true;
+		}
+		else
+			rightnull = false;
+
+		/*
+		 * We treat NULL as either greater than or less than all other values.
+		 * Since true > false, the tests below work correctly for NULLS LAST
+		 * logic.  If the index is NULLS FIRST, we need to flip the strategy.
+		 */
+		strat = op->sk_strategy;
+		if (op->sk_flags & SK_BT_NULLS_FIRST)
+			strat = BTCommuteStrategyNumber(strat);
+
+		switch (strat)
+		{
+			case BTLessStrategyNumber:
+				*result = (leftnull < rightnull);
+				break;
+			case BTLessEqualStrategyNumber:
+				*result = (leftnull <= rightnull);
+				break;
+			case BTEqualStrategyNumber:
+				*result = (leftnull == rightnull);
+				break;
+			case BTGreaterEqualStrategyNumber:
+				*result = (leftnull >= rightnull);
+				break;
+			case BTGreaterStrategyNumber:
+				*result = (leftnull > rightnull);
+				break;
+			default:
+				elog(ERROR, "unrecognized StrategyNumber: %d", (int) strat);
+				*result = false;	/* keep compiler quiet */
+				break;
+		}
+		return true;
+	}
 
 	/*
 	 * The opfamily we need to worry about is identified by the index column.
@@ -611,8 +612,8 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 	 * indexscan initiated by syscache lookup will use cross-data-type
 	 * operators.)
 	 *
-	 * If the sk_strategy was flipped by _bt_mark_scankey_with_indoption, we
-	 * have to un-flip it to get the correct opfamily member.
+	 * If the sk_strategy was flipped by _bt_fix_scankey_strategy, we have to
+	 * un-flip it to get the correct opfamily member.
 	 */
 	strat = op->sk_strategy;
 	if (op->sk_flags & SK_BT_DESC)
@@ -641,11 +642,19 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 }
 
 /*
- * Mark a scankey with info from the index's indoption array.
+ * Adjust a scankey's strategy and flags setting as needed for indoptions.
  *
  * We copy the appropriate indoption value into the scankey sk_flags
  * (shifting to avoid clobbering system-defined flag bits).  Also, if
  * the DESC option is set, commute (flip) the operator strategy number.
+ *
+ * A secondary purpose is to check for IS NULL/NOT NULL scankeys and set up
+ * the strategy field correctly for them.
+ *
+ * Lastly, for ordinary scankeys (not IS NULL/NOT NULL), we check for a
+ * NULL comparison value.  Since all btree operators are assumed strict,
+ * a NULL means that the qual cannot be satisfied.	We return TRUE if the
+ * comparison value isn't NULL, or FALSE if the scan should be abandoned.
  *
  * This function is applied to the *input* scankey structure; therefore
  * on a rescan we will be looking at already-processed scankeys.  Hence
@@ -654,16 +663,67 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
  * there shouldn't be any problem, since the index's indoptions are certainly
  * not going to change while the scankey survives.
  */
-static void
-_bt_mark_scankey_with_indoption(ScanKey skey, int16 *indoption)
+static bool
+_bt_fix_scankey_strategy(ScanKey skey, int16 *indoption)
 {
 	int			addflags;
 
 	addflags = indoption[skey->sk_attno - 1] << SK_BT_INDOPTION_SHIFT;
+
+	/*
+	 * We treat all btree operators as strict (even if they're not so marked
+	 * in pg_proc). This means that it is impossible for an operator condition
+	 * with a NULL comparison constant to succeed, and we can reject it right
+	 * away.
+	 *
+	 * However, we now also support "x IS NULL" clauses as search conditions,
+	 * so in that case keep going. The planner has not filled in any
+	 * particular strategy in this case, so set it to BTEqualStrategyNumber
+	 * --- we can treat IS NULL as an equality operator for purposes of search
+	 * strategy.
+	 *
+	 * Likewise, "x IS NOT NULL" is supported.	We treat that as either "less
+	 * than NULL" in a NULLS LAST index, or "greater than NULL" in a NULLS
+	 * FIRST index.
+	 */
+	if (skey->sk_flags & SK_ISNULL)
+	{
+		/* SK_ISNULL shouldn't be set in a row header scankey */
+		Assert(!(skey->sk_flags & SK_ROW_HEADER));
+
+		/* Set indoption flags in scankey (might be done already) */
+		skey->sk_flags |= addflags;
+
+		/* Set correct strategy for IS NULL or NOT NULL search */
+		if (skey->sk_flags & SK_SEARCHNULL)
+		{
+			skey->sk_strategy = BTEqualStrategyNumber;
+			skey->sk_subtype = InvalidOid;
+		}
+		else if (skey->sk_flags & SK_SEARCHNOTNULL)
+		{
+			if (skey->sk_flags & SK_BT_NULLS_FIRST)
+				skey->sk_strategy = BTGreaterStrategyNumber;
+			else
+				skey->sk_strategy = BTLessStrategyNumber;
+			skey->sk_subtype = InvalidOid;
+		}
+		else
+		{
+			/* regular qual, so it cannot be satisfied */
+			return false;
+		}
+
+		/* Needn't do the rest */
+		return true;
+	}
+
+	/* Adjust strategy for DESC, if we didn't already */
 	if ((addflags & SK_BT_DESC) && !(skey->sk_flags & SK_BT_DESC))
 		skey->sk_strategy = BTCommuteStrategyNumber(skey->sk_strategy);
 	skey->sk_flags |= addflags;
 
+	/* If it's a row header, fix row member flags and strategies similarly */
 	if (skey->sk_flags & SK_ROW_HEADER)
 	{
 		ScanKey		subkey = (ScanKey) DatumGetPointer(skey->sk_argument);
@@ -680,6 +740,8 @@ _bt_mark_scankey_with_indoption(ScanKey skey, int16 *indoption)
 			subkey++;
 		}
 	}
+
+	return true;
 }
 
 /*
@@ -844,11 +906,18 @@ _bt_checkkeys(IndexScanDesc scan,
 
 		if (key->sk_flags & SK_ISNULL)
 		{
-			/* Handle IS NULL tests */
-			Assert(key->sk_flags & SK_SEARCHNULL);
-
-			if (isNull)
-				continue;		/* tuple satisfies this qual */
+			/* Handle IS NULL/NOT NULL tests */
+			if (key->sk_flags & SK_SEARCHNULL)
+			{
+				if (isNull)
+					continue;	/* tuple satisfies this qual */
+			}
+			else
+			{
+				Assert(key->sk_flags & SK_SEARCHNOTNULL);
+				if (!isNull)
+					continue;	/* tuple satisfies this qual */
+			}
 
 			/*
 			 * Tuple fails this qual.  If it's a required qual for the current
@@ -1114,8 +1183,6 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, TupleDesc tupdesc,
 void
 _bt_killitems(IndexScanDesc scan, bool haveLock)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Page		page;
 	BTPageOpaque opaque;
@@ -1128,16 +1195,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	Assert(BufferIsValid(so->currPos.buf));
 
 	if (!haveLock)
-	{
-		// -------- MirroredLock ----------
-		MIRROREDLOCK_BUFMGR_LOCK;
-		
 		LockBuffer(so->currPos.buf, BT_READ);
-	}
-	else
-	{
-		MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-	}
 
 	page = BufferGetPage(so->currPos.buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -1183,13 +1241,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	}
 
 	if (!haveLock)
-	{
 		LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
-	}
 
 	/*
 	 * Always reset the scan state, so we don't look for same items on other

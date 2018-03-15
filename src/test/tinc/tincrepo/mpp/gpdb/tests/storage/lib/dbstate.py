@@ -67,8 +67,9 @@ class DbStateClass(MPPTestCase):
         3. check_mastermirrorintegrity 
         ''' 
         self.check_catalog()
-        self.check_mirrorintegrity()
-        if self.config.has_master_mirror():
-            self.check_mirrorintegrity(master=True)
 
-
+        # WALREP_FIXME: Skip gpcheckmirrorseg calls for now. That utility no longer works with
+        # WAL replication. Replace with gp_replica_check?
+        #self.check_mirrorintegrity()
+        #if self.config.has_master_mirror():
+        #    self.check_mirrorintegrity(master=True)

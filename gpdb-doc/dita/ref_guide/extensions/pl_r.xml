@@ -67,15 +67,12 @@
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-2.3.1-gp5-rhel6-x86_64.gppkg
-</codeblock></li>
-            <li id="py215420">Restart the database.<codeblock>$ gpstop -r
-</codeblock></li>
+              system:<codeblock>$ gppkg -i plr-2.3.1-gp5-rhel6-x86_64.gppkg</codeblock></li>
+            <li id="py215420">Restart the database.<codeblock>$ gpstop -r</codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
           </ol>
           <p>The extension and the R environment is installed in this directory:</p>
-          <codeblock>$GPHOME/ext/R-3.3.3/
-</codeblock>
+          <codeblock>$GPHOME/ext/R-3.3.3/</codeblock>
           <note type="note">The version of some shared libraries installed with the operating system
             might not be compatible with the Greenplum Database PL/R extension. <p>If a shared
               library is not compatible, edit the file <codeph>$GPHOME/greenplum_path.sh</codeph> in
@@ -253,10 +250,11 @@ CREATE TABLE wj_model_results_roi AS SELECT *
           <li id="py219006">From the command line, use the <codeph>wget</codeph> utility to download
             the <codeph>tar.gz</codeph> files for the arm package to the Greenplum Database master
             host:<codeblock>wget http://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget http://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
-          <li id="py219012">Use the <codeph>gpscp</codeph> utility and the hosts_all file to copy
-            the <codeph>tar.gz</codeph> files to the same directory on all nodes of the Greenplum
-            cluster. The <codeph>hosts_all</codeph> file contains a list of all the Greenplum
-            Database segment hosts. You might require root access to do
+          <li id="py219012">Use the <codeph>gpscp</codeph> utility and the
+              <codeph>hosts_all</codeph> file to copy the <codeph>tar.gz</codeph> files to the same
+            directory on all nodes of the Greenplum Database cluster. The <codeph>hosts_all</codeph>
+            file contains a list of all the Greenplum Database segment hosts. You might require root
+            access to do
             this.<codeblock>gpscp -f hosts_all Matrix_0.9996875-1.tar.gz =:/home/gpadmin </codeblock><codeblock>gpscp -f /hosts_all arm_1.5-03.tar.gz =:/home/gpadmin</codeblock></li>
           <li id="py219020">Use the <codeph>gpssh</codeph> utility in interactive mode to log into
             each Greenplum Database segment host (<codeph>gpssh -f all_hosts</codeph>). Install the
@@ -268,7 +266,10 @@ CREATE TABLE wj_model_results_roi AS SELECT *
               <codeph>$R_HOME/library</codeph> directory on all the segments (the
               <codeph>gpssh</codeph> can be use to install the package). For example, this
               <codeph>gpssh</codeph> command list the contents of the R library
-            directory.<codeblock>gpssh -f all_hosts "ls $R_HOME/library"</codeblock></li>
+              directory.<codeblock>gpssh -s -f all_hosts "ls $R_HOME/library"</codeblock><p>The
+                <codeph>gpssh</codeph> option <codeph>-s</codeph> sources the
+                <codeph>greenplum_path.sh</codeph> file before running commands on the remote hosts.
+            </p></li>
           <li id="py219025">Test if the R package can be loaded. <p>This function performs a simple
               test to if an R package can be
               loaded:</p><codeblock>CREATE OR REPLACE FUNCTION R_test_require(fname text)
@@ -318,15 +319,14 @@ LANGUAGE 'plr';</codeblock><p>This
     <topic id="topic15" xml:lang="en">
       <title id="py216497">References</title>
       <body>
-        <p>
-          <xref href="http://www.r-project.org/" scope="external" format="html"
+        <p><xref href="http://www.r-project.org/" scope="external" format="html"
             >http://www.r-project.org/</xref> - The R Project home page</p>
         <p><xref href="https://cran.r-project.org/web/packages/PivotalR/" format="html"
             scope="external">https://cran.r-project.org/web/packages/PivotalR/</xref> - The home
           page for PivotalR, a package that provides an R interface to operate on Greenplum Database
           tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
-          supports using the machine learning package <xref
-            href="http://madlib.apache.org/" format="html" scope="external">MADlib</xref> directly from R.</p>
+          supports using the machine learning package <xref href="http://madlib.apache.org/"
+            format="html" scope="external">MADlib</xref> directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
           <codeph>$GPHOME/ext/R-3.3.1/doc</codeph>
@@ -356,9 +356,9 @@ LANGUAGE 'plr';</codeblock><p>This
         <title>Aggregate Functions in R</title>
         <body>
           <ul id="ul_jly_5l2_4p">
-            <li id="py214459">See <xref
-                href="http://www.joeconway.com/doc/plr-aggregate-funcs.html" scope="external"
-                format="html">http://www.joeconway.com/doc/plr-aggregate-funcs.html</xref></li>
+            <li id="py214459">See <xref href="http://www.joeconway.com/doc/plr-aggregate-funcs.html"
+                scope="external" format="html"
+                >http://www.joeconway.com/doc/plr-aggregate-funcs.html</xref></li>
           </ul>
         </body>
       </topic>

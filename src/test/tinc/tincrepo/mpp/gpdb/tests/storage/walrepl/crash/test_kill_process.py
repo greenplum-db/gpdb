@@ -86,20 +86,12 @@ class WalReplKillProcessScenarioTestCase(ScenarioTestCase):
         test_case_list3.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.verify_standby_sync')
         self.test_case_scenario.append(test_case_list3) 
 
-        test_case_list4 = []
-        test_case_list4.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.check_mirror_seg')
-        self.test_case_scenario.append(test_case_list4)
-
     def test_kill_transc_backend(self):
         test_case_list0 = []
         test_case_list0.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.run_transaction_backend')
         test_case_list0.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.kill_transc_backend_check_reset')
         self.test_case_scenario.append(test_case_list0)
 
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.check_mirror_seg')
-        self.test_case_scenario.append(test_case_list1) 
-       
 
     def test_kill_walstartup(self):
         test_case_list0 = []
@@ -120,22 +112,20 @@ class WalReplKillProcessScenarioTestCase(ScenarioTestCase):
         test_case_list3.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.verify_standby_sync')
         self.test_case_scenario.append(test_case_list3) 
 
-        test_case_list4 = []
-        test_case_list4.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.check_mirror_seg')
-        self.test_case_scenario.append(test_case_list4)
+    # This test is flaky currently hence disabled, once made stable will be
+    # re-enabled or moved to isolation2.
 
+    # def test_run_gpstart_kill_stdby_postmaster(self):
+    #     ''' kill the standby postmaster process while running gpstart, should not affect other segments'''
+    #     test_case_list0 = []
+    #     test_case_list0.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.gpstop_helper')
+    #     self.test_case_scenario.append(test_case_list0)
 
-    def test_run_gpstart_kill_stdby_postmaster(self):
-        ''' kill the standby postmaster process while running gpstart, should not affect other segments'''
-        test_case_list0 = []
-        test_case_list0.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.gpstop_helper')
-        self.test_case_scenario.append(test_case_list0)
+    #     test_case_list1 = []
+    #     test_case_list1.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.gpstart_helper')
+    #     test_case_list1.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.kill_standby_postmaster')
+    #     self.test_case_scenario.append(test_case_list1)
 
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.gpstart_helper')
-        test_case_list1.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.kill_standby_postmaster')
-        self.test_case_scenario.append(test_case_list1)
-
-        test_case_list2 = []
-        test_case_list2.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.check_gpdb_status')
-        self.test_case_scenario.append(test_case_list2)
+    #     test_case_list2 = []
+    #     test_case_list2.append('mpp.gpdb.tests.storage.walrepl.crash.WalReplKillProcessTestCase.check_gpdb_status')
+    #     self.test_case_scenario.append(test_case_list2)

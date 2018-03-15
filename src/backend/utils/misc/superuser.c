@@ -9,12 +9,12 @@
  * the single-user case works.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/misc/superuser.c,v 1.39 2009/01/01 17:23:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/misc/superuser.c,v 1.41 2010/02/14 18:42:18 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -76,9 +76,7 @@ superuser_arg(Oid roleid)
 		return true;
 
 	/* OK, look up the information in pg_authid */
-	rtup = SearchSysCache(AUTHOID,
-						  ObjectIdGetDatum(roleid),
-						  0, 0, 0);
+	rtup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
 	if (HeapTupleIsValid(rtup))
 	{
 		result = ((Form_pg_authid) GETSTRUCT(rtup))->rolsuper;

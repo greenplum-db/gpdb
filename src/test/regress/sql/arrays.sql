@@ -351,14 +351,6 @@ drop type _comptype;
 drop table comptable;
 drop type comptype;
 
--- Insert/update on a column that is array of composite
-
-create temp table t1 (f1 int8_tbl[], distkey int4) distributed by (distkey);
-insert into t1 (f1[5].q1) values(42);
-select f1 from t1;
-update t1 set f1[5].q2 = 43;
-select f1 from t1;
-
 create or replace function unnest1(anyarray) 
 returns setof anyelement as $$
 select $1[s] from generate_subscripts($1,1) g(s);
@@ -417,6 +409,14 @@ select unnest(array[1,2,3,4.5]::float8[]);
 select unnest(array[1,2,3,4.5]::numeric[]);
 select unnest(array[1,2,3,null,4,null,null,5,6]);
 select unnest(array[1,2,3,null,4,null,null,5,6]::text[]);
+
+-- Insert/update on a column that is array of composite
+
+create temp table t1 (f1 int8_tbl[], distkey int4) distributed by (distkey);
+insert into t1 (f1[5].q1) values(42);
+select f1 from t1;
+update t1 set f1[5].q2 = 43;
+select f1 from t1;
 
 -- Suppress NOTICE messages when users/groups don't exist
 SET client_min_messages TO 'error';

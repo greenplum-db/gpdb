@@ -65,12 +65,8 @@ autostats_issue_analyze(Oid relationOid)
 	relation = makeRangeVar(get_namespace_name(get_rel_namespace(relationOid)), get_rel_name(relationOid), -1);
 	analyzeStmt = makeNode(VacuumStmt);
 	/* Set up command parameters */
-	analyzeStmt->vacuum = false;
-	analyzeStmt->full = false;
-	analyzeStmt->analyze = true;
+	analyzeStmt->options = VACOPT_ANALYZE;
 	analyzeStmt->freeze_min_age = -1;
-	analyzeStmt->verbose = false;
-	analyzeStmt->rootonly = false;
 	analyzeStmt->relation = relation;	/* not used since we pass relids list */
 	analyzeStmt->va_cols = NIL;
 	vacuum(analyzeStmt, InvalidOid, false, NULL, false, false);
@@ -290,7 +286,7 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 	if (!policyCheck)
 	{
 		elog(DEBUG3, "In mode %s, command %s on (dboid,tableoid)=(%d,%d) modifying " UINT64_FORMAT " tuples did not issue Auto-ANALYZE.",
-			 gpvars_show_gp_autostats_mode(),
+			 lookup_autostats_mode_by_value(actual_gp_autostats_mode),
 			 autostats_cmdtype_to_string(cmdType),
 			 MyDatabaseId,
 			 relationOid,
@@ -301,18 +297,8 @@ auto_stats(AutoStatsCmdType cmdType, Oid relationOid, uint64 ntuples, bool inFun
 
 	if (log_autostats)
 	{
-		const char *autostats_mode;
-
-		if (inFunction)
-		{
-			autostats_mode = gpvars_show_gp_autostats_mode_in_functions();
-		}
-		else
-		{
-			autostats_mode = gpvars_show_gp_autostats_mode();
-		}
 		elog(LOG, "In mode %s, command %s on (dboid,tableoid)=(%d,%d) modifying " UINT64_FORMAT " tuples caused Auto-ANALYZE.",
-			 autostats_mode,
+			 lookup_autostats_mode_by_value(actual_gp_autostats_mode),
 			 autostats_cmdtype_to_string(cmdType),
 			 MyDatabaseId,
 			 relationOid,

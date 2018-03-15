@@ -14,12 +14,12 @@
  *
  *	Initial author: Simon Riggs		simon@2ndquadrant.com
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/pgarch.c,v 1.40 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/pgarch.c,v 1.42 2010/05/11 16:42:28 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -44,7 +44,6 @@
 #include "storage/pmsignal.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
-#include "postmaster/primary_mirror_mode.h"
 
 /* ----------
  * Timer definitions.
@@ -491,13 +490,8 @@ pgarch_archiveXlog(char *xlog)
 	char	   *endp;
 	const char *sp;
 	int			rc;
-	char		*xlogDir = makeRelativeToTxnFilespace(XLOGDIR);
 
-	if (snprintf(pathname, MAXPGPATH, "%s/%s", xlogDir, xlog) > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s", xlogDir, xlog)));
-	}
-	pfree(xlogDir);
+	snprintf(pathname, MAXPGPATH, XLOGDIR "/%s", xlog);
 
 	/*
 	 * construct the command to be executed
@@ -659,15 +653,8 @@ pgarch_readyXlog(char *xlog)
 	DIR		   *rldir;
 	struct dirent *rlde;
 	bool		found = false;
-	char		*xlogDir = NULL;
 
-	xlogDir = makeRelativeToTxnFilespace(XLOGDIR);
-	if (snprintf(XLogArchiveStatusDir, MAXPGPATH, "%s/archive_status", xlogDir) > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/archive_status", xlogDir)));
-	}
-	pfree(xlogDir);
-
+	snprintf(XLogArchiveStatusDir, MAXPGPATH, XLOGDIR "/archive_status");
 	rldir = AllocateDir(XLogArchiveStatusDir);
 	if (rldir == NULL)
 		ereport(ERROR,

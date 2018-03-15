@@ -3,12 +3,12 @@
  * parse_oper.c
  *		handle operator things for parser
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_oper.c,v 1.109 2009/06/13 15:42:09 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_oper.c,v 1.113 2010/02/26 02:00:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -229,11 +229,12 @@ get_sort_group_operators(Oid argtype,
 				lt_opr = gt_opr = InvalidOid;
 			}
 #else
+
 			/*
 			 * ... but for the moment we have to do this.  This is because
 			 * anyarray has sorting but not hashing support.  So, if the
-			 * element type is only hashable, there is nothing we can do
-			 * with the array type.
+			 * element type is only hashable, there is nothing we can do with
+			 * the array type.
 			 */
 			if (!OidIsValid(typentry->lt_opr) ||
 				!OidIsValid(typentry->eq_opr) ||
@@ -421,9 +422,7 @@ oper(ParseState *pstate, List *opname, Oid ltypeId, Oid rtypeId,
 		operOid = find_oper_cache_entry(&key);
 		if (OidIsValid(operOid))
 		{
-			tup = SearchSysCache(OPEROID,
-								 ObjectIdGetDatum(operOid),
-								 0, 0, 0);
+			tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 			if (HeapTupleIsValid(tup))
 				return (Operator) tup;
 		}
@@ -463,9 +462,7 @@ oper(ParseState *pstate, List *opname, Oid ltypeId, Oid rtypeId,
 	}
 
 	if (OidIsValid(operOid))
-		tup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(operOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 
 	if (HeapTupleIsValid(tup))
 	{
@@ -571,9 +568,7 @@ right_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 		operOid = find_oper_cache_entry(&key);
 		if (OidIsValid(operOid))
 		{
-			tup = SearchSysCache(OPEROID,
-								 ObjectIdGetDatum(operOid),
-								 0, 0, 0);
+			tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 			if (HeapTupleIsValid(tup))
 				return (Operator) tup;
 		}
@@ -605,9 +600,7 @@ right_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 	}
 
 	if (OidIsValid(operOid))
-		tup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(operOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 
 	if (HeapTupleIsValid(tup))
 	{
@@ -653,9 +646,7 @@ left_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 		operOid = find_oper_cache_entry(&key);
 		if (OidIsValid(operOid))
 		{
-			tup = SearchSysCache(OPEROID,
-								 ObjectIdGetDatum(operOid),
-								 0, 0, 0);
+			tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 			if (HeapTupleIsValid(tup))
 				return (Operator) tup;
 		}
@@ -699,9 +690,7 @@ left_oper(ParseState *pstate, List *op, Oid arg, bool noError, int location)
 	}
 
 	if (OidIsValid(operOid))
-		tup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(operOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(OPEROID, ObjectIdGetDatum(operOid));
 
 	if (HeapTupleIsValid(tup))
 	{
@@ -1100,9 +1089,6 @@ find_oper_cache_entry(OprCacheKey *key)
 	{
 		/* First time through: initialize the hash table */
 		HASHCTL		ctl;
-
-		if (!CacheMemoryContext)
-			CreateCacheMemoryContext();
 
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(OprCacheKey);

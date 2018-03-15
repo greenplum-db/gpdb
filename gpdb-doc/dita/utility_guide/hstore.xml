@@ -199,8 +199,12 @@ b</codeblock>
   <section>
    <title>Indexes</title>
    <p><codeph>hstore</codeph> has index support for <codeph>@&gt;</codeph> and <codeph>?</codeph>
-    operators. You can use the GiST index type. For example:</p>
-   <codeblock>CREATE INDEX hidx ON testhstore USING GIST(h);</codeblock>
+    operators. You can use either GiST or GIN index types. For example:</p>
+   <codeblock>
+CREATE INDEX hidx ON testhstore USING GIST(h);
+
+CREATE INDEX hidx ON testhstore USING GIN(h);
+   </codeblock>
   </section>
   <section>
    <title>Examples</title>

@@ -478,3 +478,27 @@ NOTICE:  Success:
 
 commit;
 drop table ic_test_1;
+/*
+ * If message queue of connection is failed to be allocated in
+ * SetupUDPIFCInterconnect_Internal() , it should be handled properly
+ * in TeardownUDPIFCInterconnect_Internal().
+ */
+CREATE TABLE a (i INT, j INT) DISTRIBUTED BY (i);
+INSERT INTO a (SELECT i, i * i FROM generate_series(1, 10) as i);
+SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT * FROM a;
+ERROR:  fault triggered, fault name:'interconnect_setup_palloc' fault type:'error'
+DROP TABLE a;
+SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+

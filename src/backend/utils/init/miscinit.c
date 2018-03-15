@@ -3,12 +3,12 @@
  * miscinit.c
  *	  miscellaneous initialization support stuff
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.175 2009/06/11 14:49:05 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.184 2010/04/20 23:48:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,6 +34,8 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
+#include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -42,6 +44,7 @@
 #include "storage/procarray.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"
+#include "utils/memutils.h"
 #include "utils/resgroup.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
@@ -67,62 +70,6 @@ static char socketLockFile[MAXPGPATH];
 
 bool		IgnoreSystemIndexes = false;
 
-/* ----------------------------------------------------------------
- *		system index reindexing support
- *
- * When we are busy reindexing a system index, this code provides support
- * for preventing catalog lookups from using that index.
- * ----------------------------------------------------------------
- */
-
-static Oid	currentlyReindexedHeap = InvalidOid;
-static Oid	currentlyReindexedIndex = InvalidOid;
-
-/*
- * ReindexIsProcessingHeap
- *		True if heap specified by OID is currently being reindexed.
- */
-bool
-ReindexIsProcessingHeap(Oid heapOid)
-{
-	return heapOid == currentlyReindexedHeap;
-}
-
-/*
- * ReindexIsProcessingIndex
- *		True if index specified by OID is currently being reindexed.
- */
-bool
-ReindexIsProcessingIndex(Oid indexOid)
-{
-	return indexOid == currentlyReindexedIndex;
-}
-
-/*
- * SetReindexProcessing
- *		Set flag that specified heap/index are being reindexed.
- */
-void
-SetReindexProcessing(Oid heapOid, Oid indexOid)
-{
-	Assert(OidIsValid(heapOid) && OidIsValid(indexOid));
-	/* Reindexing is not re-entrant. */
-	if (OidIsValid(currentlyReindexedIndex))
-		elog(ERROR, "cannot reindex while reindexing");
-	currentlyReindexedHeap = heapOid;
-	currentlyReindexedIndex = indexOid;
-}
-
-/*
- * ResetReindexProcessing
- *		Unset reindexing status.
- */
-void
-ResetReindexProcessing(void)
-{
-	currentlyReindexedHeap = InvalidOid;
-	currentlyReindexedIndex = InvalidOid;
-}
 
 /* ----------------------------------------------------------------
  *				database path / name support stuff
@@ -132,20 +79,9 @@ ResetReindexProcessing(void)
 void
 SetDatabasePath(const char *path)
 {
-	if (DatabasePath)
-	{
-		free(DatabasePath);
-		DatabasePath = NULL;
-	}
-	/* use strdup since this is done before memory contexts are set up */
-	if (path)
-	{
-		DatabasePath = strdup(path);
-		if(!DatabasePath)
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY),
-					errmsg("Set database path failed: out of memory")));
-		AssertState(DatabasePath);
-	}
+	/* This should happen only once per process */
+	Assert(!DatabasePath);
+	DatabasePath = MemoryContextStrdup(TopMemoryContext, path);
 }
 
 /*
@@ -385,7 +321,7 @@ GetAuthenticatedUserId(void)
  * Currently there are two valid bits in SecurityRestrictionContext:
  *
  * SECURITY_LOCAL_USERID_CHANGE indicates that we are inside an operation
- * that is temporarily changing CurrentUserId via these functions.  This is
+ * that is temporarily changing CurrentUserId via these functions.	This is
  * needed to indicate that the actual value of CurrentUserId is not in sync
  * with guc.c's internal state, so SET ROLE has to be disallowed.
  *
@@ -446,7 +382,7 @@ InSecurityRestrictedOperation(void)
 /*
  * These are obsolete versions of Get/SetUserIdAndSecContext that are
  * only provided for bug-compatibility with some rather dubious code in
- * pljava.  We allow the userid to be set, but only when not inside a
+ * pljava.	We allow the userid to be set, but only when not inside a
  * security restriction context.
  */
 void
@@ -492,9 +428,7 @@ InitializeSessionUserId(const char *rolename)
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
 
-	roleTup = SearchSysCache(AUTHNAME,
-							 PointerGetDatum(rolename),
-							 0, 0, 0);
+	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(rolename));
 	if (!HeapTupleIsValid(roleTup))
 		ereport(FATAL,
 				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
@@ -517,10 +451,8 @@ InitializeSessionUserId(const char *rolename)
 	 * These next checks are not enforced when in standalone mode, so that
 	 * there is a way to recover from sillinesses like "UPDATE pg_authid SET
 	 * rolcanlogin = false;".
-	 *
-	 * We do not enforce them for the autovacuum process either.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess())
+	if (IsUnderPostmaster)
 	{
 		/*
 		 * Is role allowed to login at all?
@@ -581,8 +513,12 @@ InitializeSessionUserId(const char *rolename)
 void
 InitializeSessionUserIdStandalone(void)
 {
-	/* This function should only be called in a single-user backend. */
-	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup);
+	/*
+	 * This function should only be called in single-user mode and in
+	 * autovacuum workers.
+	 */
+	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup
+				|| (am_ftshandler && am_mirror));
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
@@ -705,9 +641,7 @@ GetUserNameFromId(Oid roleid)
 	HeapTuple	tuple;
 	char	   *result;
 
-	tuple = SearchSysCache(AUTHOID,
-						   ObjectIdGetDatum(roleid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -778,7 +712,47 @@ CreateLockFile(const char *filename, bool amPostmaster,
 	int			len;
 	int			encoded_pid;
 	pid_t		other_pid;
-	pid_t		my_pid = getpid();
+	pid_t		my_pid,
+				my_p_pid,
+				my_gp_pid;
+	const char *envvar;
+
+	/*
+	 * If the PID in the lockfile is our own PID or our parent's or
+	 * grandparent's PID, then the file must be stale (probably left over from
+	 * a previous system boot cycle).  We need to check this because of the
+	 * likelihood that a reboot will assign exactly the same PID as we had in
+	 * the previous reboot, or one that's only one or two counts larger and
+	 * hence the lockfile's PID now refers to an ancestor shell process.  We
+	 * allow pg_ctl to pass down its parent shell PID (our grandparent PID)
+	 * via the environment variable PG_GRANDPARENT_PID; this is so that
+	 * launching the postmaster via pg_ctl can be just as reliable as
+	 * launching it directly.  There is no provision for detecting
+	 * further-removed ancestor processes, but if the init script is written
+	 * carefully then all but the immediate parent shell will be root-owned
+	 * processes and so the kill test will fail with EPERM.  Note that we
+	 * cannot get a false negative this way, because an existing postmaster
+	 * would surely never launch a competing postmaster or pg_ctl process
+	 * directly.
+	 */
+	my_pid = getpid();
+
+#ifndef WIN32
+	my_p_pid = getppid();
+#else
+
+	/*
+	 * Windows hasn't got getppid(), but doesn't need it since it's not using
+	 * real kill() either...
+	 */
+	my_p_pid = 0;
+#endif
+
+	envvar = getenv("PG_GRANDPARENT_PID");
+	if (envvar)
+		my_gp_pid = atoi(envvar);
+	else
+		my_gp_pid = 0;
 
 	/*
 	 * We need a loop here because of race conditions.	But don't loop forever
@@ -840,17 +814,11 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		/*
 		 * Check to see if the other process still exists
 		 *
-		 * If the PID in the lockfile is our own PID or our parent's PID, then
-		 * the file must be stale (probably left over from a previous system
-		 * boot cycle).  We need this test because of the likelihood that a
-		 * reboot will assign exactly the same PID as we had in the previous
-		 * reboot.	Also, if there is just one more process launch in this
-		 * reboot than in the previous one, the lockfile might mention our
-		 * parent's PID.  We can reject that since we'd never be launched
-		 * directly by a competing postmaster.	We can't detect grandparent
-		 * processes unfortunately, but if the init script is written
-		 * carefully then all but the immediate parent shell will be
-		 * root-owned processes and so the kill test will fail with EPERM.
+		 * Per discussion above, my_pid, my_p_pid, and my_gp_pid can be
+		 * ignored as false matches.
+		 *
+		 * Normally kill() will fail with ESRCH if the given PID doesn't
+		 * exist.
 		 *
 		 * We can treat the EPERM-error case as okay because that error
 		 * implies that the existing process has a different userid than we
@@ -867,18 +835,9 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		 * Unix socket file belonging to an instance of Postgres being run by
 		 * someone else, at least on machines where /tmp hasn't got a
 		 * stickybit.)
-		 *
-		 * Windows hasn't got getppid(), but doesn't need it since it's not
-		 * using real kill() either...
-		 *
-		 * Normally kill() will fail with ESRCH if the given PID doesn't
-		 * exist.
 		 */
-		if (other_pid != my_pid
-#ifndef WIN32
-			&& other_pid != getppid()
-#endif
-			)
+		if (other_pid != my_pid && other_pid != my_p_pid &&
+			other_pid != my_gp_pid)
 		{
 			if (kill(other_pid, 0) == 0 ||
 				(errno != ESRCH && errno != EPERM))

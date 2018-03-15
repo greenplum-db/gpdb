@@ -299,11 +299,15 @@ select count(*) from mpp3283_nation;
 copy mpp3283_nation to '/dev/null' delimiter '|';
 drop table mpp3283_nation;
 
-CREATE TABLE mpp3240(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
+-- Check that DROP TABLE still works, after adding a default partition.
+CREATE TABLE mpp3240(a int, b int, c int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 alter table mpp3240 add default partition default_part;
 drop table mpp3240;
+
+-- Check that after dropping a partition, you can create a new partition with
+-- the same name.
 CREATE TABLE mpp3259 (
         unique1         int4,
         unique2         int4,
@@ -322,7 +326,7 @@ CREATE TABLE mpp3259 (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-( partition aa start (0) end (1000) every (100), default partition default_part );
+( partition aa start (0) end (500) every (100), default partition default_part );
 
 alter table mpp3259 drop partition default_part;
 alter table mpp3259 add default partition default_part;
@@ -333,24 +337,10 @@ select * from mpp3259_1_prt_default_part;
 
 drop table mpp3259;
 
-
+-- Check that DROP PARTITION for (n) gives sensible error if there is no matching partition.
 CREATE TABLE mpp3265 (
         unique1         int4,
-        unique2         int4,
-        two                     int4,
-        four            int4,
-        ten                     int4,
-        twenty          int4,
-        hundred         int4,
-        thousand        int4,
-        twothousand     int4,
-        fivethous       int4,
-        tenthous        int4,
-        odd                     int4,
-        even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
+        unique2         int4
 ) partition by range (unique1)
 ( partition aa start (0) end (500),
   partition bb start (500) end (1000),
@@ -453,11 +443,12 @@ SUBPARTITION BY LIST (company_no) subpartition template
 \d mpp2564_transactions*
 
 DROP TABLE mpp2564_transactions;
-CREATE TABLE mpp3363(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
-partition by range (a)
-( partition aa start (1) end (10) every (1) );
 
--- MPP-3363
+-- Check that DEFAULT can be used as partition's name with ALTER TABLE ADD PARTITION. (MPP-3363)
+CREATE TABLE mpp3363(a int, b int, c int)
+partition by range (a)
+( partition aa start (1) end (3) every (1) );
+
 alter table mpp3363 add default partition default;
 
 drop table mpp3363;
@@ -469,7 +460,7 @@ drop table mpp3363;
 -- 1 level partition
 CREATE TABLE mpp3059(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059';
 
 alter table mpp3059 rename to mpp3059_rename; 
@@ -497,8 +488,8 @@ CREATE TABLE mpp3059a (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-subpartition by range (unique2) subpartition template ( start (0) end (1000) every (100) )
-( start (0) end (1000) every (100));
+subpartition by range (unique2) subpartition template ( start (0) end (500) every (100) )
+( start (0) end (500) every (100));
 alter table mpp3059a rename to mpp3059a_rename; 
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary from pg_partitions where tablename = 'mpp3059a_rename';
 
@@ -549,6 +540,7 @@ drop table mpp3059c;
 drop table mpp3059d;
 drop table mpp3216a;
 drop table mpp3216_rename;
+
 create table test_khush (a integer, b date, c varchar(30))
 partition by range(b)
 ( start ('2008-01-01') end ('2008-04-01') );
@@ -562,6 +554,7 @@ alter table test_khush add column d varchar(20);
 insert into test_khush values (5,'05-Feb-2008','hgjhg','Test');
 
 drop table test_khush;
+
 CREATE TABLE mpp3244(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
 subpartition by range (b) subpartition template ( start (1) end (10) every (1))( partition aa start (1) end (10) every (1) );
@@ -580,6 +573,7 @@ select count(*) from mpp3244a;
 
 drop table mpp3244;
 drop table mpp3244a;
+
 CREATE TABLE mpp3256 (
         unique1         int4,
         unique2         int4,
@@ -722,12 +716,14 @@ alter table mpp3375a drop partition default_part;
 
 drop table mpp3375a;
 drop table mpp3375;
-CREATE TABLE mpp3241(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
-partition by range (a)
-( partition aa start (1) end (10) every (1) );
-alter table mpp3241 add partition zz start (-1) end (0);
 
+-- Check that a negative number can be used in START, without quotes.
+CREATE TABLE mpp3241(a int, b int, c int)
+partition by range (a)
+( partition aa start (1) end (5) every (1) );
+alter table mpp3241 add partition zz start (-1) end (0);
 DROP TABLE mpp3241;
+
 set enable_partition_rules = off;
 
 CREATE TABLE mpp3438 (
@@ -951,31 +947,31 @@ drop table mpp3260;
 drop table mpp3260a;
 CREATE TABLE mpp3080_int8(q1 int8, q2 int8)
 partition by range (q1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_float4 (f1  float4)
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_float8(i INT DEFAULT 1, f1 float8)
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_floatreal(i INT DEFAULT 1, f1 float(24))
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_floatdouble(i INT DEFAULT 1, f1 float(53))
 partition by range (f1)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_numeric (id int4, val numeric(210,10))
 partition by range (val)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 
 CREATE TABLE mpp3080_numericbig (id int4, val numeric(1000,800))
 partition by range (val)
-(start (1) end (10) every (1));
+(start (1) end (5) every (1));
 -- order 1,5
 select tablename, partitionlevel, partitiontablename, partitionname, partitionrank, partitionboundary 
   from pg_partitions where tablename like 'mpp3080%' order by tablename;
@@ -993,4 +989,3 @@ partition by range (f1)
   start (time '09:00') end (time '17:00') EVERY (INTERVAL '1 hour'),
   default partition default_part
 );
-

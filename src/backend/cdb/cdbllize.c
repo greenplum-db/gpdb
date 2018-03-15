@@ -195,6 +195,23 @@ cdbparallelize(PlannerInfo *root,
 		case CMD_INSERT:
 		case CMD_UPDATE:
 		case CMD_DELETE:
+			/*
+			 * GPDB_90_MERGE_FIXME: Because of this block, we were marking a dummy
+			 * UPDATE that the planner could prove to be a no-op, e.g
+			 * "update target set b = 10 where c = 10;" where 'target' is partitioned
+			 * table and there is no partition for c = 10. The planner would turn
+			 * that into just a dummy Result node. This block nevertheless marked the
+			 * query with 'resultSegments = true', causing the executor to dispatch
+			 * the query. That caused confusion at commit time, because there was no
+			 * active two-phase transaction in the segmetns, but the QD thought that
+			 * there should be.
+			 *
+			 * There is a test case like that in 'update_gp'. I have a feeling that
+			 * we should still have code like this in apply_motion_mutator(), when
+			 * traversing into a ModifyTable node. But everything seems to work
+			 * without it. Go figure...
+			 */
+#if 0
 			{
 				/*
 				 * Since this is a data modification command, we need to
@@ -222,23 +239,8 @@ cdbparallelize(PlannerInfo *root,
 
 				if (policy)
 					pfree(policy);
-
-				/* RETURNING is not yet implemented for partitioned tables. */
-				if (query->returningList &&
-					context->resultSegments)
-				{
-					const char *cmd = (query->commandType == CMD_INSERT) ? "INSERT"
-					: (query->commandType == CMD_UPDATE) ? "UPDATE"
-					: "DELETE";
-
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-									errmsg("The RETURNING clause of the %s "
-										   "statement is not yet supported in "
-										   "this version of " PACKAGE_NAME ".",
-										   cmd)
-									));
-				}
 			}
+#endif
 			break;
 
 		default:
@@ -951,6 +953,8 @@ pull_up_Flow(Plan *plan, Plan *subplan)
 		Assert(subplan == plan->lefttree || subplan == plan->righttree);
 	else if (IsA(plan, Append))
 		Assert(list_member(((Append *) plan)->appendplans, subplan));
+	else if (IsA(plan, ModifyTable))
+		Assert(list_member(((ModifyTable *) plan)->plans, subplan));
 	else
 		Assert(subplan == plan->lefttree);
 

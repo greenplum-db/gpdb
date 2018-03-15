@@ -890,7 +890,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		return 1;
 	}
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(_AIX)
 	if (!is_win_pipe && (flags == GFILE_OPEN_FOR_READ))
 	{
 		/* Restrict only one reader session for each PIPE */

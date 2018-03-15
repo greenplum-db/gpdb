@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 CREATE TABLE cr_hybrid_part (
                 PS_PARTKEY INTEGER,
                 PS_SUPPKEY INTEGER,

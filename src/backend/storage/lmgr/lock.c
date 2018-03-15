@@ -3,12 +3,12 @@
  * lock.c
  *	  POSTGRES primary lock mechanism
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.188 2009/06/11 14:49:02 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.197 2010/04/28 16:54:16 tgl Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -39,6 +39,7 @@
 #include "pg_trace.h"
 #include "pgstat.h"
 #include "storage/lmgr.h"
+#include "storage/standby.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
@@ -338,8 +339,6 @@ InitLocks(void)
 									   max_table_size,
 									   &info,
 									   hash_flags);
-	if (!LockMethodLockHash)
-		elog(FATAL, "could not initialize lock hash table");
 
 	/* Assume an average of 2 holders per lock */
 	max_table_size *= 2;
@@ -360,8 +359,6 @@ InitLocks(void)
 										   max_table_size,
 										   &info,
 										   hash_flags);
-	if (!LockMethodProcLockHash)
-		elog(FATAL, "could not initialize proclock hash table");
 
 	/*
 	 * Allocate non-shared hash table for LOCALLOCK structs.  This stores lock
@@ -483,6 +480,25 @@ LockAcquire(const LOCKTAG *locktag,
 			bool sessionLock,
 			bool dontWait)
 {
+	return LockAcquireExtended(locktag, lockmode, sessionLock, dontWait, true);
+}
+
+/*
+ * LockAcquireExtended - allows us to specify additional options
+ *
+ * reportMemoryError specifies whether a lock request that fills the
+ * lock table should generate an ERROR or not. This allows a priority
+ * caller to note that the lock table is full and then begin taking
+ * extreme action to reduce the number of other lock holders before
+ * retrying the action.
+ */
+LockAcquireResult
+LockAcquireExtended(const LOCKTAG *locktag,
+					LOCKMODE lockmode,
+					bool sessionLock,
+					bool dontWait,
+					bool reportMemoryError)
+{
 	LOCKMETHODID lockmethodid = locktag->locktag_lockmethodid;
 	LockMethod	lockMethodTable;
 	LOCALLOCKTAG localtag;
@@ -503,6 +519,16 @@ LockAcquire(const LOCKTAG *locktag,
 	lockMethodTable = LockMethods[lockmethodid];
 	if (lockmode <= 0 || lockmode > lockMethodTable->numLockModes)
 		elog(ERROR, "unrecognized lock mode: %d", lockmode);
+
+	if (RecoveryInProgress() && !InRecovery &&
+		(locktag->locktag_type == LOCKTAG_OBJECT ||
+		 locktag->locktag_type == LOCKTAG_RELATION) &&
+		lockmode > RowExclusiveLock)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("cannot acquire lock mode %s on database objects while recovery is in progress",
+						lockMethodTable->lockModeNames[lockmode]),
+				 errhint("Only RowExclusiveLock or less can be acquired on database objects during recovery.")));
 
 #ifdef LOCK_DEBUG
 	if (LOCK_DEBUG_ENABLED(locktag))
@@ -639,10 +665,13 @@ LockAcquire(const LOCKTAG *locktag,
 	if (!lock)
 	{
 		LWLockRelease(partitionLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+		if (reportMemoryError)
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of shared memory"),
+					 errhint("You might need to increase max_locks_per_transaction.")));
+		else
+			return LOCKACQUIRE_NOT_AVAIL;
 	}
 	locallock->lock = lock;
 
@@ -707,10 +736,13 @@ LockAcquire(const LOCKTAG *locktag,
 				elog(PANIC, "lock table corrupted");
 		}
 		LWLockRelease(partitionLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+		if (reportMemoryError)
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of shared memory"),
+					 errhint("You might need to increase max_locks_per_transaction.")));
+		else
+			return LOCKACQUIRE_NOT_AVAIL;
 	}
 	locallock->proclock = proclock;
 
@@ -956,6 +988,13 @@ LockAcquire(const LOCKTAG *locktag,
 		}
 		
 		/*
+		 * In Hot Standby perform early deadlock detection in normal backends.
+		 * If deadlock found we release partition lock but do not return.
+		 */
+		if (RecoveryInProgress() && !InRecovery)
+			CheckRecoveryConflictDeadlock(partitionLock);
+
+		/*
 		 * Set bitmask of locks this process already holds on this object.
 		 */
 		MyProc->heldLocks = proclock->holdMask;
@@ -1003,6 +1042,27 @@ LockAcquire(const LOCKTAG *locktag,
 	}
 
 	LWLockRelease(partitionLock);
+
+	/*
+	 * Emit a WAL record if acquisition of this lock need to be replayed in a
+	 * standby server. Only AccessExclusiveLocks can conflict with lock types
+	 * that read-only transactions can acquire in a standby server.
+	 *
+	 * Make sure this definition matches the one GetRunningTransactionLocks().
+	 */
+	if (lockmode >= AccessExclusiveLock &&
+		locktag->locktag_type == LOCKTAG_RELATION &&
+		!RecoveryInProgress() &&
+		XLogStandbyInfoActive())
+	{
+		/*
+		 * Decode the locktag back to the original values, to avoid sending
+		 * lots of empty bytes with every message.	See lock.h to check how a
+		 * locktag is defined for LOCKTAG_RELATION
+		 */
+		LogAccessExclusiveLock(locktag->locktag_field1,
+							   locktag->locktag_field2);
+	}
 
 	return LOCKACQUIRE_OK;
 }
@@ -2030,7 +2090,7 @@ LockReassignOwner(LOCALLOCK *locallock, ResourceOwner parent)
 VirtualTransactionId *
 GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode)
 {
-	VirtualTransactionId *vxids;
+	static VirtualTransactionId *vxids;
 	LOCKMETHODID lockmethodid = locktag->locktag_lockmethodid;
 	LockMethod	lockMethodTable;
 	LOCK	   *lock;
@@ -2050,10 +2110,18 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode)
 	/*
 	 * Allocate memory to store results, and fill with InvalidVXID.  We only
 	 * need enough space for MaxBackends + a terminator, since prepared xacts
-	 * don't count.
+	 * don't count. InHotStandby allocate once in TopMemoryContext.
 	 */
-	vxids = (VirtualTransactionId *)
-		palloc0(sizeof(VirtualTransactionId) * (MaxBackends + 1));
+	if (InHotStandby)
+	{
+		if (vxids == NULL)
+			vxids = (VirtualTransactionId *)
+				MemoryContextAlloc(TopMemoryContext,
+						   sizeof(VirtualTransactionId) * (MaxBackends + 1));
+	}
+	else
+		vxids = (VirtualTransactionId *)
+			palloc0(sizeof(VirtualTransactionId) * (MaxBackends + 1));
 
 	/*
 	 * Look up the lock object matching the tag.
@@ -2553,6 +2621,79 @@ GetLockStatusData(void)
 	return data;
 }
 
+/*
+ * Returns a list of currently held AccessExclusiveLocks, for use
+ * by GetRunningTransactionData().
+ */
+xl_standby_lock *
+GetRunningTransactionLocks(int *nlocks)
+{
+	PROCLOCK   *proclock;
+	HASH_SEQ_STATUS seqstat;
+	int			i;
+	int			index;
+	int			els;
+	xl_standby_lock *accessExclusiveLocks;
+
+	/*
+	 * Acquire lock on the entire shared lock data structure.
+	 *
+	 * Must grab LWLocks in partition-number order to avoid LWLock deadlock.
+	 */
+	for (i = 0; i < NUM_LOCK_PARTITIONS; i++)
+		LWLockAcquire(FirstLockMgrLock + i, LW_SHARED);
+
+	/* Now scan the tables to copy the data */
+	hash_seq_init(&seqstat, LockMethodProcLockHash);
+
+	/* Now we can safely count the number of proclocks */
+	els = hash_get_num_entries(LockMethodProcLockHash);
+
+	/*
+	 * Allocating enough space for all locks in the lock table is overkill,
+	 * but it's more convenient and faster than having to enlarge the array.
+	 */
+	accessExclusiveLocks = palloc(els * sizeof(xl_standby_lock));
+
+	/*
+	 * If lock is a currently granted AccessExclusiveLock then it will have
+	 * just one proclock holder, so locks are never accessed twice in this
+	 * particular case. Don't copy this code for use elsewhere because in the
+	 * general case this will give you duplicate locks when looking at
+	 * non-exclusive lock types.
+	 */
+	index = 0;
+	while ((proclock = (PROCLOCK *) hash_seq_search(&seqstat)))
+	{
+		/* make sure this definition matches the one used in LockAcquire */
+		if ((proclock->holdMask & LOCKBIT_ON(AccessExclusiveLock)) &&
+			proclock->tag.myLock->tag.locktag_type == LOCKTAG_RELATION)
+		{
+			PGPROC	   *proc = proclock->tag.myProc;
+			LOCK	   *lock = proclock->tag.myLock;
+
+			accessExclusiveLocks[index].xid = proc->xid;
+			accessExclusiveLocks[index].dbOid = lock->tag.locktag_field1;
+			accessExclusiveLocks[index].relOid = lock->tag.locktag_field2;
+
+			index++;
+		}
+	}
+
+	/*
+	 * And release locks.  We do this in reverse order for two reasons: (1)
+	 * Anyone else who needs more than one of the locks will be trying to lock
+	 * them in increasing order; we don't want to release the other process
+	 * until it can get all the locks it needs. (2) This avoids O(N^2)
+	 * behavior inside LWLockRelease.
+	 */
+	for (i = NUM_LOCK_PARTITIONS; --i >= 0;)
+		LWLockRelease(FirstLockMgrLock + i);
+
+	*nlocks = index;
+	return accessExclusiveLocks;
+}
+
 /* Provide the textual name of any lock mode */
 const char *
 GetLockmodeName(LOCKMETHODID lockmethodid, LOCKMODE mode)
@@ -2648,6 +2789,24 @@ DumpAllLocks(void)
  * Because this function is run at db startup, re-acquiring the locks should
  * never conflict with running transactions because there are none.  We
  * assume that the lock state represented by the stored 2PC files is legal.
+ *
+ * When switching from Hot Standby mode to normal operation, the locks will
+ * be already held by the startup process. The locks are acquired for the new
+ * procs without checking for conflicts, so we don'get a conflict between the
+ * startup process and the dummy procs, even though we will momentarily have
+ * a situation where two procs are holding the same AccessExclusiveLock,
+ * which isn't normally possible because the conflict. If we're in standby
+ * mode, but a recovery snapshot hasn't been established yet, it's possible
+ * that some but not all of the locks are already held by the startup process.
+ *
+ * This approach is simple, but also a bit dangerous, because if there isn't
+ * enough shared memory to acquire the locks, an error will be thrown, which
+ * is promoted to FATAL and recovery will abort, bringing down postmaster.
+ * A safer approach would be to transfer the locks like we do in
+ * AtPrepare_Locks, but then again, in hot standby mode it's possible for
+ * read-only backends to use up all the shared lock memory anyway, so that
+ * replaying the WAL record that needs to acquire a lock will throw an error
+ * and PANIC anyway.
  */
 void
 lock_twophase_recover(TransactionId xid, uint16 info,
@@ -2805,12 +2964,45 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 	}
 
 	/*
-	 * We ignore any possible conflicts and just grant ourselves the lock.
+	 * We ignore any possible conflicts and just grant ourselves the lock. Not
+	 * only because we don't bother, but also to avoid deadlocks when
+	 * switching from standby to normal mode. See function comment.
 	 */
 	GrantLock(lock, proclock, lockmode);
 
 	LWLockRelease(partitionLock);
 }
+
+/*
+ * Re-acquire a lock belonging to a transaction that was prepared, when
+ * when starting up into hot standby mode.
+ */
+void
+lock_twophase_standby_recover(TransactionId xid, uint16 info,
+							  void *recdata, uint32 len)
+{
+	TwoPhaseLockRecord *rec = (TwoPhaseLockRecord *) recdata;
+	LOCKTAG    *locktag;
+	LOCKMODE	lockmode;
+	LOCKMETHODID lockmethodid;
+
+	Assert(len == sizeof(TwoPhaseLockRecord));
+	locktag = &rec->locktag;
+	lockmode = rec->lockmode;
+	lockmethodid = locktag->locktag_lockmethodid;
+
+	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
+		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
+
+	if (lockmode == AccessExclusiveLock &&
+		locktag->locktag_type == LOCKTAG_RELATION)
+	{
+		StandbyAcquireAccessExclusiveLock(xid,
+										locktag->locktag_field1 /* dboid */ ,
+									  locktag->locktag_field2 /* reloid */ );
+	}
+}
+
 
 /*
  * 2PC processing routine for COMMIT PREPARED case.

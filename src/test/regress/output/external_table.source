@@ -163,7 +163,7 @@ ERROR:  table "bad_whois" does not exist
 --
 -- try a bad location
 --
-create external table badt1 (x text) 
+create external table badt1 (x text)
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text' (delimiter '|');
 select * from badt1;
@@ -174,14 +174,14 @@ drop external table badt1;
 --
 -- try a bad protocol
 --
-create external table badt2 (x text) 
+create external table badt2 (x text)
 location ('bad_protocol://@hostname@@abs_srcdir@/data/no/such/place/badt2.tbl' )
 format 'text' (delimiter '|');
 ERROR:  protocol "bad_protocol" does not exist
 --
 -- ALTER (partial support)
 --
-create external table ext (a int, x text) 
+create external table ext (a int, x text)
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text';
 alter table ext drop column a; -- should pass with warning
@@ -366,19 +366,19 @@ NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_11" for table "mpp17
 NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_12" for table "mpp17980"
 INSERT INTO mpp17980 VALUES ( 1,'2008-02-20',122.11);
 SELECT COUNT(*) FROM ext_mpp17980 WHERE id IN ( 1 ) ;  -- This returns 18 tuples
- count
+ count 
 -------
     18
 (1 row)
 
 SELECT COUNT(*) FROM ext_mpp17980 WHERE id IN ( SELECT id FROM mpp17980 ) ; -- This should return 18 tuples but returns only 1
- count
+ count 
 -------
     18
 (1 row)
 
 SELECT ctid, * FROM ext_mpp17980;
-  ctid  | id | id1 | id2
+  ctid  | id | id1 | id2 
 --------+----+-----+-----
  (0,1)  |  1 |   1 |   1
  (0,2)  |  1 |   2 |   2
@@ -537,13 +537,13 @@ create writable external table wet_too_many_uris(a text, b text) location(
 ) format 'text';
 insert into wet_too_many_uris values ('foo', 'bar');
 ERROR:  External table has more URLs than available primary segments that can write into them  (seg2 127.0.0.1:40002 pid=24162)
--- Test for error log functionality 
+-- Test for error log functionality
 -- Scan with no errors
-CREATE EXTERNAL TABLE exttab_basic_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_basic_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
--- Empty error log 
-SELECT * FROM gp_read_error_log('exttab_basic_1'); 
+-- Empty error log
+SELECT * FROM gp_read_error_log('exttab_basic_1');
  cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
 ---------+---------+----------+---------+---------+--------+---------+----------
 (0 rows)
@@ -593,7 +593,7 @@ LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- should error out as segment reject limit will be reached
 SELECT * FROM exttab_basic_3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=95343)
-DETAIL:  External table exttab_basic_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_basic_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Error log should be populated
 select count(*) > 0 from gp_read_error_log('exttab_basic_3');
  ?column? 
@@ -602,8 +602,8 @@ select count(*) > 0 from gp_read_error_log('exttab_basic_3');
 (1 row)
 
 -- Insert into another table
-CREATE EXTERNAL TABLE exttab_basic_4( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_basic_4( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 100;
 CREATE TABLE exttab_insert_1 (LIKE exttab_basic_4);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
@@ -618,13 +618,13 @@ select count(*) > 0 from gp_read_error_log('exttab_basic_4');
 (1 row)
 
 -- Use the same error log above
-CREATE EXTERNAL TABLE exttab_basic_5( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_basic_5( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 5;
 -- Insert should fail
 INSERT INTO exttab_insert_1 select * from exttab_basic_5;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=95610)
-DETAIL:  External table exttab_basic_5, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_basic_5, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT * from exttab_insert_1 order by i;
  i  |     j     
 ----+-----------
@@ -694,7 +694,7 @@ CREATE TABLE exttab_ctas_2 AS select * from exttab_basic_7;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=95610)
-DETAIL:  External table exttab_basic_7, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_basic_7, line 18 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Table should not exist
 SELECT * from exttab_ctas_2 order by i;
 ERROR:  relation "exttab_ctas_2" does not exist
@@ -708,8 +708,8 @@ SELECT count(*) from gp_read_error_log('exttab_basic_7');
 (1 row)
 
 -- pg_exttable.fmterrtbl references to itself for external table with error logs
-CREATE EXTERNAL TABLE exttab_error_log( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_error_log( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 SELECT reloid = fmterrtbl FROM pg_exttable
 WHERE reloid = (SELECT oid from pg_class where relname ilike 'exttab_error_log');
@@ -721,8 +721,8 @@ WHERE reloid = (SELECT oid from pg_class where relname ilike 'exttab_error_log')
 -- Drop external table gets rid off error logs
 DROP EXTERNAL TABLE IF EXISTS exttab_error_log;
 NOTICE:  table "exttab_error_log" does not exist, skipping
-CREATE EXTERNAL TABLE exttab_error_log( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_error_log( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 SELECT COUNT(*) FROM exttab_error_log;
  count 
@@ -744,8 +744,8 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_error_log');
 (1 row)
 
 -- Insert into another table with unique constraints
-CREATE EXTERNAL TABLE exttab_constraints_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_constraints_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- Should not error out
 SELECT COUNT(*) FROM exttab_constraints_1;
@@ -781,21 +781,21 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_constraints_1');
 
 -- CTE with segment reject limit reached
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_cte_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_cte_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_cte_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_cte_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
-with cte1 as 
+with cte1 as
 (
 SELECT e1.i, e2.j FROM exttab_cte_2 e1, exttab_cte_1 e2
 WHERE e1.i = e2.i ORDER BY e1.i
 )
 SELECT * FROM cte1 ORDER BY cte1.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=95621)
-DETAIL:  External table exttab_cte_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_cte_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 select count(*) from gp_read_error_log('exttab_cte_2');
  count 
 -------
@@ -832,12 +832,12 @@ NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related
 
 -- Define a cursor on an external table scan query with segment reject limit reached
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Test to make sure error logs are populated when cursors are used
 -- The total number of formatting errors reported by the query is dependant on the number of rows parsed on
@@ -877,11 +877,11 @@ SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i 
 UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i;
 -- Should not fail as we would not have reached segment reject limit yet. This fails currently though
--- because how cursors scan the rows internally is implementation dependant. 
+-- because how cursors scan the rows internally is implementation dependant.
 -- The test is here to track the issue.
 FETCH exttab_cur1;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 subraa4-mac:40000 pid=70279)
-DETAIL:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
 -- This should have errors populated already
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
@@ -970,12 +970,12 @@ COMMIT;
 NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
 -- Check permissions with gp_truncate_error_log and gp_read_error_log
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit
-CREATE EXTERNAL TABLE exttab_permissions_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_permissions_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- generate some error logs
 SELECT COUNT(*) FROM exttab_permissions_1;
@@ -987,7 +987,7 @@ NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related
 
 SELECT COUNT(*) FROM exttab_permissions_2;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=51006)
-DETAIL:  External table exttab_permissions_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_permissions_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Only superuser can do gp_truncate_error_log('*.*')
 DROP ROLE IF EXISTS exttab_non_superuser;
 CREATE ROLE exttab_non_superuser WITH NOSUPERUSER LOGIN CREATEDB;
@@ -1062,8 +1062,8 @@ CREATE DATABASE exttab_db WITH OWNER=exttab_user1;
 \c exttab_db
 -- generate some error logs in this db
 NOTICE:  table "exttab_permissions_1" does not exist, skipping
-CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 SELECT COUNT(*) FROM exttab_permissions_1 e1, exttab_permissions_1 e2;
 NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
@@ -1116,9 +1116,9 @@ NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE errlog_exttab_user4 WITH NOSUPERUSER LOGIN;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- generate some error logs in this db
-CREATE EXTERNAL TABLE exttab_permissions_3( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
-LOG ERRORS SEGMENT REJECT LIMIT 10; 
+CREATE EXTERNAL TABLE exttab_permissions_3( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
+LOG ERRORS SEGMENT REJECT LIMIT 10;
 SELECT COUNT(*) FROM exttab_permissions_3 e1, exttab_permissions_3 e2;
 NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
  count 
@@ -1183,19 +1183,19 @@ SELECT * FROM gp_read_error_log('exttab_permissions_3');
 
 -- Subqueries reaching segment reject limit
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_subq_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_subq_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_subq_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_subq_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subq_2 WHERE i < 10) e2
 group by e1.j;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=66875)
-DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_subq_1')
@@ -1225,7 +1225,7 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 group by e1.j
 HAVING sum(distinct e1.i) > (SELECT max(i) FROM exttab_subq_2);
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice4 @hostname@:40000 pid=66866)
-DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_subq_1')
@@ -1298,7 +1298,7 @@ SELECT gp_truncate_error_log('exttab_subq_2');
 
 SELECT e1.i , e1.j FROM
 exttab_subq_1 e1, exttab_subq_1 e2
-WHERE e1.j = e2.j and 
+WHERE e1.j = e2.j and
 e1.i + 1 IN ( SELECT i from exttab_subq_1 WHERE i <= e1.i);
 NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related input data.
  i | j 
@@ -1321,7 +1321,7 @@ SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=49348)
-DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- CSQ
 SELECT gp_truncate_error_log('exttab_subq_1');
  gp_truncate_error_log 
@@ -1337,10 +1337,10 @@ SELECT gp_truncate_error_log('exttab_subq_2');
 
 SELECT e1.i , e1.j FROM
 exttab_subq_1 e1, exttab_subq_1 e2
-WHERE e1.j = e2.j and 
+WHERE e1.j = e2.j and
 e1.i + 1 IN ( SELECT i from exttab_subq_2 WHERE i <= e1.i);
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=66875)
-DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_subq_1')
@@ -1368,7 +1368,7 @@ SELECT ( SELECT i FROM exttab_subq_2 WHERE i <= e1.i) as i, e1.j
 FROM exttab_subq_2 e1, exttab_subq_1 e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=66866)
-DETAIL:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subq_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_subq_1')
@@ -1382,12 +1382,12 @@ SELECT * FROM gp_read_error_log('exttab_subq_2')
 
 -- TRUNCATE / delete / write to error logs within subtransactions
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_subtxs_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_subtxs_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_subtxs_2( i int, j text ) 
-LOCATION ('file://@hostname@:@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_subtxs_2( i int, j text )
+LOCATION ('file://@hostname@:@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Populate error logs before transaction
 SELECT e1.i, e2.j FROM
@@ -1496,9 +1496,9 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_2 WHERE i < 10) e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=70905)
-DETAIL:  External table exttab_subtxs_2, line 7 of file://@hostname@:@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_subtxs_2, line 7 of file://@hostname@:@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
--- Error logs should not have been rolled back. 
+-- Error logs should not have been rolled back.
 -- Check that number of errors is greater than 12 instead of checking for
 -- actual number of errors, since the transaction might get aborted even before
 -- rows are scanned on other segments if one of the segments hits the segment
@@ -1516,12 +1516,12 @@ SELECT * FROM gp_read_error_log('exttab_subtxs_2')
 
 -- TRUNCATE error logs within tx , abort transaction
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_txs_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_txs_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_txs_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_txs_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Populate error log before transaction
 SELECT e1.i, e2.j FROM
@@ -1632,10 +1632,10 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_2 WHERE i < 10) e2
 WHERE e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=76719)
-DETAIL:  External table exttab_txs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_txs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
 -- Additional error rows should have been inserted into the error logs even if the tx is aborted.
--- Truncate of error logs should not be rolled back even if the transaction is aborted. All operation on error logs are persisted. 
+-- Truncate of error logs should not be rolled back even if the transaction is aborted. All operation on error logs are persisted.
 -- Check that number of errors is greater than zero instead of checking for
 -- actual number of errors, since the transaction might get aborted even before
 -- rows are scanned on other segments if one of the segments hits the segment
@@ -1671,12 +1671,12 @@ NOTICE:  table "exttab_txs_4" does not exist, skipping
 BEGIN;
 -- create an external table that will reach segment reject limit
 -- reaches reject limit
-CREATE EXTERNAL TABLE exttab_txs_3( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_txs_3( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- new error log, within segment reject limit
-CREATE EXTERNAL TABLE exttab_txs_4( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_txs_4( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_4 WHERE i < 5 ) e1,
@@ -1703,9 +1703,9 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_4 WHERE i < 10) e2
 WHERE e1.i = e2.i order by e1.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=76727)
-DETAIL:  External table exttab_txs_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_txs_3, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 COMMIT;
--- Error logs should not exist for these tables that would have been rolled back 
+-- Error logs should not exist for these tables that would have been rolled back
 SELECT count(*) FROM gp_read_error_log('exttab_txs_3');
  count 
 -------
@@ -1729,12 +1729,12 @@ LINE 1: SELECT count(*) FROM exttab_txs_4;
                              ^
 -- UDFS with segment reject limit reached
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_udfs_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_udfs_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_udfs_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_udfs_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 CREATE OR REPLACE FUNCTION exttab_udfs_func1 ()
 RETURNS boolean
@@ -1751,14 +1751,14 @@ LANGUAGE plpgsql volatile;
 -- Should fail
 SELECT * FROM exttab_udfs_func1();
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=77376)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
 	   (SELECT i, j FROM exttab_udfs_2 WHERE i < 10) e2
 	   group by e1.j"
 PL/pgSQL function "exttab_udfs_func1" line 2 at EXECUTE statement
 -- Should be populated
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1790,8 +1790,8 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 -- Should fail
 INSERT INTO exttab_udfs_insert_1 SELECT * FROM exttab_udfs_func1();
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=77376)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "SELECT sum(distinct e1.i) as sum_i, sum(distinct e2.i) as sum_j, e1.j as j FROM
 	   (SELECT i, j FROM exttab_udfs_1 WHERE i < 5 ) e1,
 	   (SELECT i, j FROM exttab_udfs_2 WHERE i < 10) e2
 	   group by e1.j"
@@ -1802,7 +1802,7 @@ SELECT * FROM exttab_udfs_insert_1;
 (0 rows)
 
 -- Error table should be populated correctly
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1874,13 +1874,15 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 -- All this should fail, error logs should be populated even if the UDF gets aborted as we persist error rows written within aborted txs.
 SELECT * FROM exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_1"
+CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_1"
 PL/pgSQL function "exttab_udfs_func2" line 8 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 @hostname@:40000 pid=63695)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_2"
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_2"
 PL/pgSQL function "exttab_udfs_func2" line 24 at SQL statement
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1905,13 +1907,15 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 
 SELECT exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_1"
+CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_1"
 PL/pgSQL function "exttab_udfs_func2" line 8 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 @hostname@:40000 pid=63695)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_2"
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_2"
 PL/pgSQL function "exttab_udfs_func2" line 24 at SQL statement
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1936,13 +1940,15 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 
 INSERT INTO exttab_udfs_insert_1 SELECT * FROM exttab_udfs_func2();
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_1"
+CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_1"
 PL/pgSQL function "exttab_udfs_func2" line 8 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 @hostname@:40000 pid=63695)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_2"
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_2"
 PL/pgSQL function "exttab_udfs_func2" line 24 at SQL statement
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1969,13 +1975,15 @@ CREATE TABLE exttab_udfs_ctas_2 AS SELECT * FROM exttab_udfs_func2();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'exttab_udfs_func2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_1"
+CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_1"
 PL/pgSQL function "exttab_udfs_func2" line 8 at SQL statement
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 @hostname@:40000 pid=63695)
-DETAIL:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2 SELECT i, j from exttab_udfs_2"
+CONTEXT:  External table exttab_udfs_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SQL statement "INSERT INTO exttab_udfs_insert_2
+  SELECT i, j from exttab_udfs_2"
 PL/pgSQL function "exttab_udfs_func2" line 24 at SQL statement
-SELECT COUNT(*) > 0 FROM 
+SELECT COUNT(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_udfs_1')
 UNION ALL
@@ -1996,12 +2004,12 @@ SELECT * FROM exttab_udfs_insert_2;
 -- does not reach reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_union_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_union_2;
-CREATE EXTERNAL TABLE exttab_union_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_union_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit
-CREATE EXTERNAL TABLE exttab_union_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_union_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Should error out as exttab_union_2 would reach it's reject limit
 SELECT * FROM
@@ -2012,7 +2020,7 @@ SELECT * FROM exttab_union_2
 ) FOO
 order by FOO.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=78596)
-DETAIL:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Error table count
 select count(*) > 0 from
 (
@@ -2047,7 +2055,7 @@ SELECT e1.i, e2.j from exttab_union_2 e1 INNER JOIN exttab_union_2 e2 ON e1.i = 
 UNION ALL
 SELECT e1.i, e2.j from exttab_union_2 e1 INNER JOIN exttab_union_2 e2 ON e1.i = e2.i;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice4 @hostname@:40000 pid=78649)
-DETAIL:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_union_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- should return 0 rows
 SELECT * from exttab_union_insert_1;
  i | j 
@@ -2055,7 +2063,7 @@ SELECT * from exttab_union_insert_1;
 (0 rows)
 
 -- Error table count, should have more than 0 rows, the total number is non-deterministic
-select count(*) > 0 from 
+select count(*) > 0 from
 (
 SELECT * FROM gp_read_error_log('exttab_union_1')
 UNION ALL
@@ -2104,12 +2112,12 @@ NOTICE:  table "exttab_views_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_views_2 CASCADE;
 NOTICE:  table "exttab_views_2" does not exist, skipping
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_views_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_views_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_views_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_views_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 DROP VIEW IF EXISTS exttab_views_3;
 NOTICE:  view "exttab_views_3" does not exist, skipping
@@ -2133,7 +2141,7 @@ SELECT gp_truncate_error_log('exttab_views_2');
 -- This should error out
 SELECT * FROM exttab_views_3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=79499)
-DETAIL:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Error table should be populated
 SELECT count(*) > 0 FROM
 (
@@ -2167,9 +2175,9 @@ SELECT gp_truncate_error_log('exttab_views_2');
 -- Should fail
 INSERT INTO exttab_views_insert_1 SELECT * FROM exttab_views_3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=79496)
-DETAIL:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- should not have any rows
-SELECT * FROM exttab_views_insert_1; 
+SELECT * FROM exttab_views_insert_1;
  i | j | k 
 ---+---+---
 (0 rows)
@@ -2201,12 +2209,12 @@ SELECT gp_truncate_error_log('exttab_views_2');
  t
 (1 row)
 
--- Should fail 
-CREATE TABLE exttab_views_ctas_1 AS SELECT * FROM exttab_views_3 where j::integer < 100;
+-- Should fail
+CREATE TABLE exttab_views_ctas_1 AS SELECT * FROM exttab_views_3 where length(j) < 100;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=79505)
-DETAIL:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT * FROM exttab_views_ctas_1;
 ERROR:  relation "exttab_views_ctas_1" does not exist
 LINE 1: SELECT * FROM exttab_views_ctas_1;
@@ -2238,12 +2246,12 @@ SELECT gp_truncate_error_log('exttab_views_2');
  t
 (1 row)
 
--- Should fail here 
+-- Should fail here
 CREATE TABLE exttab_views_ctas_1 AS SELECT * FROM exttab_views_3;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=79499)
-DETAIL:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_views_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- Relation should not exist
 SELECT * FROM exttab_views_ctas_1;
 ERROR:  relation "exttab_views_ctas_1" does not exist
@@ -2267,12 +2275,12 @@ NOTICE:  table "exttab_windows_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_windows_2;
 NOTICE:  table "exttab_windows_2" does not exist, skipping
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_windows_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_windows_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit
-CREATE EXTERNAL TABLE exttab_windows_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_windows_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- without reaching segment reject limit
 with cte1 as(
@@ -2357,8 +2365,8 @@ WHERE c1.i = c2.i
 ORDER BY c1.i
 limit 5;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice6 @hostname@:40000 pid=79568)
-DETAIL:  External table exttab_windows_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-SELECT COUNT(*) > 0 
+CONTEXT:  External table exttab_windows_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SELECT COUNT(*) > 0
 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_windows_1')
@@ -2376,22 +2384,22 @@ NOTICE:  table "exttab_limit_1" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS exttab_limit_2 cascade;
 NOTICE:  table "exttab_limit_2" does not exist, skipping
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_limit_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_limit_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_limit_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_limit_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Note that even though we use exttab_limit_2 here , the LIMIT 3 will not throw a segment reject limit error
-with cte1 as 
+with cte1 as
 (
 SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
 WHERE e1.i = e2.i LIMIT 5
 )
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice4 @hostname@:40000 pid=49348)
-DETAIL:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT count(*) FROM gp_read_error_log('exttab_limit_2');
  count 
 -------
@@ -2459,14 +2467,14 @@ SELECT gp_truncate_error_log('exttab_limit_2');
  t
 (1 row)
 
-with cte1 as 
+with cte1 as
 (
 SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
 WHERE e1.i = e2.i LIMIT 3
 )
 SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i ORDER BY cte1.i LIMIT 5;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=35568)
-DETAIL:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_limit_2');
  ?column? 
 ----------
@@ -2514,7 +2522,7 @@ NOTICE:  Found 8 data formatting errors (8 or more input rows). Rejected related
  6 | 6_number
 (5 rows)
 
-SELECT count(*) > 0 FROM 
+SELECT count(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_limit_1')
 UNION ALL
@@ -2540,8 +2548,8 @@ SELECT gp_truncate_error_log('exttab_limit_2');
 
 SELECT * FROM exttab_limit_1 e1, exttab_limit_2 e2 where e1.i = e2.i LIMIT 3;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 @hostname@:40000 pid=9815)
-DETAIL:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
-SELECT count(*) > 0 FROM 
+CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
+SELECT count(*) > 0 FROM
 (
 SELECT * FROM gp_read_error_log('exttab_limit_1')
 UNION ALL
@@ -2555,7 +2563,7 @@ SELECT * FROM gp_read_error_log('exttab_limit_2')
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
--- this guc, the database continues to load the data. 
+-- this guc, the database continues to load the data.
 -- default should be 1000
 SHOW gp_initial_bad_row_limit;
  gp_initial_bad_row_limit 
@@ -2565,13 +2573,13 @@ SHOW gp_initial_bad_row_limit;
 
 DROP EXTERNAL TABLE IF EXISTS exttab_first_reject_limit_1 cascade;
 NOTICE:  table "exttab_first_reject_limit_1" does not exist, skipping
-CREATE EXTERNAL TABLE exttab_first_reject_limit_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_first_reject_limit_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 20000;
 -- should fail with an appropriate error message
 SELECT COUNT(*) FROM exttab_first_reject_limit_1;
 ERROR:  All 1000 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=28213)
-DETAIL:  External table exttab_first_reject_limit_1, line 1000 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
+CONTEXT:  External table exttab_first_reject_limit_1, line 1000 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
 SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_first_reject_limit_1');
  ?column? 
 ----------
@@ -2602,14 +2610,14 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_first_reject_limit_1');
 -- first segment reject limit should be checked before segment reject limit
 DROP EXTERNAL TABLE IF EXISTS exttab_first_reject_limit_2;
 NOTICE:  table "exttab_first_reject_limit_2" does not exist, skipping
-CREATE EXTERNAL TABLE exttab_first_reject_limit_2( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_first_reject_limit_2( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_first_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 500;
 -- should report an error saying first rows were rejected
 SET gp_initial_bad_row_limit = 2;
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
 ERROR:  All 2 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=28213)
-DETAIL:  External table exttab_first_reject_limit_2, line 2 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
+CONTEXT:  External table exttab_first_reject_limit_2, line 2 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 
 ----------
@@ -2626,7 +2634,7 @@ SELECT gp_truncate_error_log('exttab_first_reject_limit_2');
 
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=28213)
-DETAIL:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
+CONTEXT:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 
 ----------
@@ -2643,7 +2651,7 @@ SELECT gp_truncate_error_log('exttab_first_reject_limit_2');
 
 SELECT COUNT(*) FROM exttab_first_reject_limit_2;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice1 @hostname@:40000 pid=28213)
-DETAIL:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
+CONTEXT:  External table exttab_first_reject_limit_2, line 500 of file://@hostname@@abs_srcdir@/data/exttab_first_errors.data: "error_0"
 SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
  ?column? 
 ----------
@@ -2653,15 +2661,15 @@ SELECT COUNT(*) > 0 from gp_read_error_log('exttab_first_reject_limit_2');
 DROP EXTERNAL TABLE IF EXISTS exttab_heap_join_1;
 NOTICE:  table "exttab_heap_join_1" does not exist, skipping
 -- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_heap_join_1( i int, j text ) 
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
+CREATE EXTERNAL TABLE exttab_heap_join_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 DROP TABLE IF EXISTS test_ext_heap_join;
 NOTICE:  table "test_ext_heap_join" does not exist, skipping
 CREATE TABLE test_ext_heap_join( i int, j text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- Turn off stats 
+-- Turn off stats
 SET gp_autostats_mode = 'NONE';
 INSERT INTO test_ext_heap_join SELECT i, i || '_number' FROM generate_series(1, 10) i;
 SELECT COUNT(*) FROM test_ext_heap_join, exttab_heap_join_1;
@@ -2706,7 +2714,7 @@ OPTIONS (hello 'world');
 CREATE EXTERNAL TABLE exttab_with_options( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
-\d exttab_with_options 
+\d exttab_with_options
 External table "public.exttab_with_options"
  Column |  Type   | Modifiers 
 --------+---------+-----------
@@ -2716,11 +2724,11 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '|' null '\N' escape '\'
-External options: {hello=world,bonjour=again,"nihao=again and again"} 
+External options: {hello=world,bonjour=again,"nihao=again and again"}
 External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
 Execute on: all segments
 
-\d exttab_with_option_empty 
+\d exttab_with_option_empty
 External table "public.exttab_with_option_empty"
  Column |  Type   | Modifiers 
 --------+---------+-----------
@@ -2730,7 +2738,7 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '|' null '\N' escape '\'
-External options: {} 
+External options: {}
 External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
 Execute on: all segments
 
@@ -2847,7 +2855,7 @@ ALTER PROTOCOL demoprot RENAME TO demoprot2;
 select distinct ptcname from (
         select ptcname AS ptcname from gp_dist_random('pg_extprotocol')
 ) all_segments where ptcname = 'demoprot2';
-  ptcname
+  ptcname  
 -----------
  demoprot2
 (1 row)
@@ -2884,8 +2892,8 @@ LANGUAGE plpgSQL READS SQL DATA;
 SET gp_log_gang TO DEBUG;
 SELECT * FROM exttab_error_context_callback_func();
 ERROR:  missing data for column "c2"  (seg1 slice2 @hostname@:25532 pid=20960)
-DETAIL:  External table exttab_error_context_callback, line 1 of file://@hostname@@abs_srcdir@/data/exttab.data: "1|1_number"
-CONTEXT:  PL/pgSQL function "exttab_error_context_callback_func" line 4 at FOR over SELECT rows
+CONTEXT:  External table exttab_error_context_callback, line 1 of file://@hostname@@abs_srcdir@/data/exttab.data: "1|1_number"
+PL/pgSQL function "exttab_error_context_callback_func" line 4 at FOR over SELECT rows
 SET gp_log_gang TO DEFAULT;
 DROP FUNCTION exttab_error_context_callback_func();
 DROP EXTERNAL TABLE exttab_error_context_callback;

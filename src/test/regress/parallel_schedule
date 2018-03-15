@@ -1,9 +1,14 @@
 # ----------
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.55 2009/01/27 12:40:15 petere Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.61 2010/02/12 17:33:21 tgl Exp $
 #
 # By convention, we put no more than twenty tests in any one parallel group;
 # this limits the number of connections needed to run the tests.
 # ----------
+
+# run tablespace by itself, and first, because it forces a checkpoint;
+# we'd prefer not to have checkpoints later in the tests because that
+# interferes with crash-recovery testing.
+test: tablespace
 
 # ----------
 # The first group of parallel tests
@@ -47,7 +52,7 @@ test: copy copyselect
 # ----------
 # Another group of parallel tests
 # ----------
-test: constraints create_misc create_aggregate create_operator vacuum drop_if_exists create_cast
+test: constraints create_misc create_aggregate create_operator typed_table vacuum drop_if_exists create_cast
 
 # 'inherit' test is disabled in GPDB. FIXME: why?
 #test: inherit
@@ -98,19 +103,21 @@ test: namespace
 test: privileges
 test: misc
 
-# ----------
-# Another group of parallel tests
-# ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window json
-
-# GPDB_84_MERGE_FIXME: While disabling this was not really an effect of the 8.4
-# merge, it was done a long time ago, it's time to revisit this so we can re-
-# enable it
+# rules cannot run concurrently with any test that creates a view
 #
 # 'rules' test is disabled in GPDB. Maintaining the list of views in it is
 # too painful, and there are also errors because of cross-segment UPDATEs
 # and functions.
+#
+# GPDB_84_MERGE_FIXME: While disabling this was not really an effect of the 8.4
+# merge, it was done a long time ago, it's time to revisit this so we can re-
+# enable it
 #test: rules
+
+# ----------
+# Another group of parallel tests
+# ----------
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap json
 
 # Output of the 'combocid' test contains ctid and cmin values, which will
 # differ depending on how many segments are used. Hence disabled in GPDB.
@@ -125,14 +132,13 @@ test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts f
 # NB: temp.sql does a reconnect which transiently uses 2 connections,
 # so keep this parallel group to at most 19 tests
 # ----------
-# "plpgsql" cannot run concurrently with "rules", nor can "plancache"
 test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes with xml
 
 # GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 # test: largeobject
 
 # INSERT RETURNING is not supported by GPDB
-#test: returning
+test: returning
 
 # run stats by itself because its delay may be insufficient under heavy load
 #
@@ -140,8 +146,3 @@ test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid c
 # GUCs stats_block_level and stats_row_level, which have been removed from
 # GPDB.
 #test: stats
-
-# run tablespace by itself
-# Disabled because tablespaces live in filespaces in GPDB, so the syntax
-# is quite different.
-#test: tablespace

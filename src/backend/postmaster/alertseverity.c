@@ -123,6 +123,7 @@ int set_alert_severity(const GpErrorData * errorData,
 		snmp_severity[0] = '7';  //gpdbSevSystemDown
 		email_priority[0] = '1'; // 1 == highest priority
 	}
+	// WALREP_FIXME: these strings ought to be updated with whatever errors we print nowadays.
 	else if (strstr(errorData->error_message, gettext("Master mirroring synchronization lost"))  != NULL ||
 			  strstr(errorData->error_message, gettext("Error from sending to standby master"))  != NULL ||
 			  strstr(errorData->error_message, gettext("error received sending data to standby master"))  != NULL ||

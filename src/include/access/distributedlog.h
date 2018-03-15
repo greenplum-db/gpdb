@@ -58,6 +58,11 @@ extern bool DistributedLog_ScanForPrevCommitted(
 									DistributedTransactionTimeStamp *distribTimeStamp,
 									DistributedTransactionId *distribXid);
 
+extern TransactionId DistributedLog_AdvanceOldestXmin(TransactionId oldestInProgressLocalXid,
+								 DistributedTransactionTimeStamp distribTimeStamp,
+								 DistributedTransactionId oldestDistribXid);
+extern TransactionId DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin);
+
 extern Size DistributedLog_ShmemSize(void);
 extern void DistributedLog_ShmemInit(void);
 extern void DistributedLog_BootStrap(void);
@@ -68,7 +73,6 @@ extern void DistributedLog_Startup(
 extern void DistributedLog_Shutdown(void);
 extern void DistributedLog_CheckPoint(void);
 extern void DistributedLog_Extend(TransactionId newestXid);
-extern void DistributedLog_Truncate(TransactionId oldestXid);
 extern bool DistributedLog_GetLowWaterXid(
 							  TransactionId *lowWaterXid);
 

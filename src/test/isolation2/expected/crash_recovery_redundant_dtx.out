@@ -1,0 +1,54 @@
+1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+1:CREATE TABLE crash_test_redundant(c1 int);
+CREATE
+
+-- transaction of session 2 suspend after inserted 'COMMIT' record
+1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+-- checkpoint suspend before scanning proc array
+1:select gp_inject_fault('checkpoint_dtx_info', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1&:CHECKPOINT;  <waiting ...>
+
+-- the 'COMMIT' record is logically after REDO pointer
+2&:insert into crash_test_redundant values (1);  <waiting ...>
+
+-- resume checkpoint
+3:select gp_inject_fault('checkpoint_dtx_info', 'resume', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1<:  <... completed>
+CHECKPOINT
+
+-- trigger crash
+1:select gp_inject_fault('before_read_command', 'panic', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1:select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+2<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+-- transaction of session 2 should be recovered properly
+4:select * from crash_test_redundant;
+c1
+--
+1 
+(1 row)

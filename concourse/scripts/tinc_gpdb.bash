@@ -15,7 +15,7 @@ function gen_env(){
 		echo "=================================================================="
 		echo "The differences that caused some tests to fail can also be viewed in the file saved at \${TINCDIR}/regression.diffs."
 		echo "=================================================================="
-		cat "\${TINCDIR}/regression.diffs"
+		head -1000 "\${TINCDIR}/regression.diffs"
 		exit 1
 		}
 

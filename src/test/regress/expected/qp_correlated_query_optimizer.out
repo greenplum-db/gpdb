@@ -53,6 +53,23 @@ insert into C values(99,7);
 insert into C values(78,62);
 insert into C values(2,7);
 analyze C;
+create table D(i integer, j integer) distributed by (j);
+insert into D values(1,1);
+insert into D values(19,5);
+insert into D values(99,62);
+insert into D values(1,1);
+insert into D values(78,-1);
+analyze D;
+create table E(i integer, j integer) distributed by (i);
+insert into E values(1,889);
+insert into E values(288,1);
+insert into E values(-1,625);
+insert into E values(32,65);
+insert into E values(32,62);
+insert into E values(3,-1);
+insert into E values(99,7);
+insert into E values(78,62);
+analyze E;
 -- end_ignore
 -- -- -- --
 -- Basic queries with IN clause
@@ -186,6 +203,19 @@ select * from A where exists (select * from B,C where C.j = A.j and B.i not in (
  78 | -1
  99 | 62
 (4 rows)
+
+select * from A,B where exists (select * from E where E.j = A.j and B.i not in (select E.i from E where E.i != 10)) order by 1,2,3,4;
+ i  | j  | i  | j 
+----+----+----+---
+  1 |  1 |  2 | 7
+  1 |  1 |  2 | 7
+  1 |  1 | 88 | 1
+  1 |  1 | 88 | 1
+ 78 | -1 |  2 | 7
+ 78 | -1 | 88 | 1
+ 99 | 62 |  2 | 7
+ 99 | 62 | 88 | 1
+(8 rows)
 
 select * from B where not exists (select * from A,C where C.j = A.j and B.i in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
  i  | j  
@@ -694,9 +724,13 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i = all (s
 
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 select * from A,B where exists (select * from C where C.j = A.j and B.i = all (select min(C.j) from C where C.j = B.j)) order by 1,2,3,4;
- i | j | i | j 
----+---+---+---
-(0 rows)
+ i  | j  | i | j 
+----+----+---+---
+  1 |  1 | 1 | 1
+  1 |  1 | 1 | 1
+ 78 | -1 | 1 | 1
+ 99 | 62 | 1 | 1
+(4 rows)
 
 explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
                                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                                  
@@ -776,7 +810,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
          ->  Limit  (cost=0.00..1391061420469.59 rows=4 width=12)
                ->  Sort  (cost=0.00..1391061420469.59 rows=36 width=12)
                      Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-                     ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=0.00..1391061420469.58 rows=36 width=12)
+                     ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=0.00..1391061420469.58 rows=36 width=12)
                            Join Filter: qp_correlated_query.a.j >= qp_correlated_query.c.j
                            ->  Nested Loop  (cost=0.00..1356692610.50 rows=90 width=16)
                                  Join Filter: true
@@ -1430,15 +1464,6 @@ insert into qp_csq_t4 values (3,4);
 insert into qp_csq_t4 values (5,6);
 insert into qp_csq_t4 values (7,8);
 analyze qp_csq_t4;
-drop table if exists D;
-NOTICE:  table "d" does not exist, skipping
-create table D(i integer, j integer) distributed by (j);
-insert into D values(1,1);
-insert into D values(19,5);
-insert into D values(99,62);
-insert into D values(1,1);
-insert into D values(78,-1);
-analyze D;
 -- end_ignore
 -- -- -- --
 -- Basic CSQ with UPDATE statements

@@ -38,10 +38,12 @@
               <li><cmdname>ROWCOMPARE</cmdname></li>
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
-          <li>Multiple <cmdname>DISTINCT</cmdname> qualified aggregate functions </li>
+          <li>Aggregate functions that take set operators as input arguments</li>
           <li>Inverse distribution functions</li>
           <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
               <codeph>ON ALL SEGMENTS</codeph> attribute</li>
+          <li>Queries that contain UNICODE characters in metadata names, such as table names, and
+            the characters are not compatible with the host system locale</li>
         </ul></p>
     </body>
   </topic>

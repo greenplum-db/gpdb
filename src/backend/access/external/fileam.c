@@ -117,7 +117,7 @@ elog(DEBUG2, "external_getnext returning tuple")
 * ----------------
 */
 FileScanDesc
-external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
+external_beginscan(Relation relation, uint32 scancounter,
 			   List *uriList, List *fmtOpts, char fmtType, bool isMasterOnly,
 			  int rejLimit, bool rejLimitInRows, Oid fmterrtbl, int encoding)
 {
@@ -146,7 +146,6 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 	ItemPointerSetInvalid(&scan->fs_ctup.t_self);
 	scan->fs_cbuf = InvalidBuffer;
 	scan->fs_rd = relation;
-	scan->fs_scanrelid = scanrelid;
 	scan->fs_scancounter = scancounter;
 	scan->fs_noop = false;
 	scan->fs_file = NULL;
@@ -2438,7 +2437,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	char	   *encoded_delim;
 	int			line_delim_len;
 
-	sprintf(extvar->GP_CSVOPT,
+	snprintf(extvar->GP_CSVOPT, sizeof(extvar->GP_CSVOPT),
 			"m%dx%dq%dn%dh%d",
 			csv ? 1 : 0,
 			escape ? 255 & *escape : 0,

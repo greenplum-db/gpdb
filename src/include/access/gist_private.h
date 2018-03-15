@@ -4,10 +4,10 @@
  *	  private declarations for GiST -- declarations related to the
  *	  internal implementation of GiST, not the public API
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/gist_private.h,v 1.37 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/gist_private.h,v 1.38 2010/01/02 16:58:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -98,8 +98,6 @@ typedef GISTScanOpaqueData *GISTScanOpaque;
 typedef struct gistxlogPageUpdate
 {
 	RelFileNode 	node;
-	ItemPointerData persistentTid;
-	int64 			persistentSerialNum;
 	BlockNumber 	blkno;
 
 	/*
@@ -118,9 +116,6 @@ typedef struct gistxlogPageUpdate
 typedef struct gistxlogPageSplit
 {
 	RelFileNode 	node;
-	ItemPointerData persistentTid;
-	int64 			persistentSerialNum;
-
 	BlockNumber  origblkno;		/* splitted page */
 	bool		origleaf;		/* was splitted page a leaf page? */
 	uint16		npage;
@@ -132,14 +127,6 @@ typedef struct gistxlogPageSplit
 	 * follow: 1. gistxlogPage and array of IndexTupleData per page
 	 */
 } gistxlogPageSplit;
-
-typedef struct gistxlogCreateIndex
-{
-	RelFileNode 	node;
-	ItemPointerData persistentTid;
-	int64 			persistentSerialNum;
-
-} gistxlogCreateIndex;
 
 typedef struct gistxlogPage
 {
@@ -156,8 +143,6 @@ typedef struct gistxlogInsertComplete
 typedef struct gistxlogPageDelete
 {
 	RelFileNode 	node;
-	ItemPointerData persistentTid;
-	int64 			persistentSerialNum;
 	BlockNumber 	blkno;
 } gistxlogPageDelete;
 
@@ -270,15 +255,13 @@ extern bool gist_safe_restartpoint(void);
 extern IndexTuple gist_form_invalid_tuple(BlockNumber blkno);
 extern void gist_mask(char *pagedata, BlockNumber blkno);
 
-extern XLogRecData *formUpdateRdata(Relation r, Buffer buffer,
+extern XLogRecData *formUpdateRdata(RelFileNode node, Buffer buffer,
 				OffsetNumber *todelete, int ntodelete,
 				IndexTuple *itup, int ituplen, ItemPointer key);
 
-extern XLogRecData *formSplitRdata(Relation r,
+extern XLogRecData *formSplitRdata(RelFileNode node,
 			   BlockNumber blkno, bool page_is_leaf,
 			   ItemPointer key, SplitedPageLayout *dist);
-
-extern XLogRecData *formCreateRData(Relation r);
 
 extern XLogRecPtr gistxlogInsertCompletion(RelFileNode node, ItemPointerData *keys, int len);
 

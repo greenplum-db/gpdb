@@ -1,5 +1,3 @@
-SELECT * FROM  pg_filespace;
-
 SELECT * FROM tbl1_ts;
 
 \c db_ts;

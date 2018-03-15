@@ -103,6 +103,14 @@ SHOW data_checksums;
  on
 (1 row)
 
+-- skip FTS probes always
+SELECT gp_inject_fault('fts_probe', 'skip', '', '', '', -1, 0, 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 --  Corrupt a heap table
 create table corrupt_table(a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -227,9 +235,6 @@ checkpoint;
 -- skip all further checkpoint
 select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
@@ -275,9 +280,6 @@ ERROR:  invalid page in block 0 of relation base/81967/81939  (seg0 slice1 127.0
 -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
 select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'panic', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
@@ -302,9 +304,6 @@ select count(*) from corrupt_heap_checksum.mark_buffer_dirty_hint;
 -- reset the fault injector
 select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
@@ -314,9 +313,6 @@ NOTICE:  Success:
 (4 rows)
 
 select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -330,3 +326,11 @@ NOTICE:  Success:
 reset search_path;
 DROP SCHEMA corrupt_heap_checksum CASCADE;
 NOTICE:  drop cascades to 13 other objects
+-- resume fts
+SELECT gp_inject_fault('fts_probe', 'reset', '', '', '', -1, 0, 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+

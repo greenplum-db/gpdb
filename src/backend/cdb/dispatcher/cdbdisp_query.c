@@ -25,6 +25,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsrlz.h"
+#include "cdb/tupleremap.h"
 #include "tcop/tcopprot.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
@@ -34,6 +35,7 @@
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"
+#include "utils/typcache.h"
 #include "miscadmin.h"
 
 #include "cdb/cdbdisp.h"
@@ -138,6 +140,8 @@ static void cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 				  struct CdbDispatcherState *ds);
 
 static int *buildSliceIndexGangIdMap(SliceVec *sliceVec, int numSlices, int numTotalSlices);
+
+static char *serializeParamListInfo(ParamListInfo paramLI, int *len_p);
 
 /*
  * Compose and dispatch the MPPEXEC commands corresponding to a plan tree
@@ -439,7 +443,6 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 {
 	struct CdbDispatcherState ds = {NULL, NULL, NULL};
 	CdbDispatchResults *dispatchresults = NULL;
-	StringInfoData qeErrorMsg;
 
 	DispatchCommandQueryParms *pQueryParms;
 	Gang	   *primaryGang;
@@ -508,9 +511,10 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	cdbdisp_makeDispatcherState(&ds, /* slice count */ 1, cancelOnError, queryText, queryTextLength);
 	ds.primaryResults->writer_gang = primaryGang;
 
-	initStringInfo(&qeErrorMsg);
 	PG_TRY();
 	{
+		ErrorData *qeError;
+
 		cdbdisp_dispatchToGang(&ds, primaryGang, -1, DEFAULT_DISP_DIRECT);
 
 		cdbdisp_waitDispatchFinish(&ds);
@@ -519,32 +523,19 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 		 * Block until valid results is available or one or more QEs got
 		 * errors.
 		 */
-		dispatchresults = cdbdisp_getDispatchResults(&ds, &qeErrorMsg);
+		dispatchresults = cdbdisp_getDispatchResults(&ds, &qeError);
 
 		/*
 		 * If QEs have errors, throw it up
 		 */
 		if (!dispatchresults)
 		{
-			/*
-			 * debug_string_query is not meaningful for utility statement
-			 */
-			/*
-			 * XXX: It would be nice to get more details from the segment, not
-			 * just the error message. In particular, an error code would be
-			 * nice. DATA_EXCEPTION is a pretty wild guess on the real cause.
-			 */
-			if (serializedQuerytree != NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATA_EXCEPTION),
-						 errmsg("%s", qeErrorMsg.data)));
+			if (qeError)
+				ReThrowError(qeError);
 			else
-
 				ereport(ERROR,
-						(errcode(ERRCODE_DATA_EXCEPTION),
-						 errmsg("could not execute command on QE"),
-						 errdetail("%s", qeErrorMsg.data),
-						 errhint("command: '%s'", strCommand)));
+						(errmsg("could not execute command on QE"),
+						 errdetail("Command: \"%s\"", strCommand)));
 		}
 
 		if (cdb_pgresults)
@@ -618,73 +609,7 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 
 	if (queryDesc->params != NULL && queryDesc->params->numParams > 0)
 	{
-		ParamListInfoData *pli;
-		ParamExternData *pxd;
-		StringInfoData parambuf;
-		Size		length;
-		int32		iparam;
-
-		/*
-		 * Allocate buffer for params
-		 */
-		initStringInfo(&parambuf);
-
-		/*
-		 * Copy ParamListInfoData header and ParamExternData array
-		 */
-		pli = queryDesc->params;
-		length = (char *) &pli->params[pli->numParams] - (char *) pli;
-		appendBinaryStringInfo(&parambuf, pli, length);
-
-		/*
-		 * Copy pass-by-reference param values.
-		 */
-		for (iparam = 0; iparam < queryDesc->params->numParams; iparam++)
-		{
-			int16		typlen;
-			bool		typbyval;
-
-			/*
-			 * Recompute pli each time in case parambuf.data is repalloc'ed
-			 */
-			pli = (ParamListInfoData *) parambuf.data;
-			pxd = &pli->params[iparam];
-
-			if (pxd->ptype == InvalidOid)
-				continue;
-
-			/*
-			 * Does pxd->value contain the value itself, or a pointer?
-			 */
-			get_typlenbyval(pxd->ptype, &typlen, &typbyval);
-			if (!typbyval)
-			{
-				char	   *s = DatumGetPointer(pxd->value);
-
-				if (pxd->isnull || !PointerIsValid(s))
-				{
-					pxd->isnull = true;
-					pxd->value = 0;
-				}
-				else
-				{
-					length = datumGetSize(pxd->value, typbyval, typlen);
-
-					/*
-					 * We *must* set this before we append. Appending may
-					 * realloc, which will invalidate our pxd ptr. (obviously
-					 * we could append first if we recalculate pxd from the
-					 * new base address)
-					 */
-					pxd->value = Int32GetDatum(length);
-
-					appendBinaryStringInfo(&parambuf, &iparam, sizeof(iparam));
-					appendBinaryStringInfo(&parambuf, s, length);
-				}
-			}
-		}
-		sparams = parambuf.data;
-		sparams_len = parambuf.len;
+		sparams = serializeParamListInfo(queryDesc->params, &sparams_len);
 	}
 	else
 	{
@@ -1528,4 +1453,174 @@ buildSliceIndexGangIdMap(SliceVec *sliceVec, int numSlices, int numTotalSlices)
 	}
 
 	return sliceIndexGangIdMap;
+}
+
+/*
+ * Serialization of query parameters (ParamListInfos).
+ *
+ * When a query is dispatched from QD to QE, we also need to dispatch any
+ * query parameters, contained in the ParamListInfo struct. We need to
+ * serialize ParamListInfo, but there are a few complications:
+ *
+ * - ParamListInfo is not a Node type, so we cannot use the usual
+ * nodeToStringBinary() function directly. We turn the array of
+ * ParamExternDatas into a List of SerializedParamExternData nodes,
+ * which we can then pass to nodeToStringBinary().
+ *
+ * - The paramFetch callback, which could be used in this process to fetch
+ * parameter values on-demand, cannot be used in a different process.
+ * Therefore, fetch all parameters before serializing them. When
+ * deserializing, leave the callbacks NULL.
+ *
+ * - In order to deserialize correctly, the receiver needs the typlen and
+ * typbyval information for each datatype. The receiver has access to the
+ * catalogs, so it could look them up, but for the sake of simplicity and
+ * robustness in the receiver, we include that information in
+ * SerializedParamExternData.
+ *
+ * - RECORD types. Type information of transient record is kept only in
+ * backend private memory, indexed by typmod. The recipient will not know
+ * what a record type's typmod means. And record types can also be nested.
+ * Because of that, if there are any RECORD, we include a copy of the whole
+ * transient record type cache.
+ *
+ * If there are no record types involved, we dispatch a list of
+ * SerializedParamListInfos, i.e.
+ *
+ * List<SerializedParamListInfo>
+ *
+ * With record types, we dispatch:
+ *
+ * List(List<TupleDescNode>, List<SerializedParamListInfo>)
+ *
+ * XXX: Sending *all* record types can be quite bulky, but ATM there is no
+ * easy way to extract just the needed record types.
+ */
+static char *
+serializeParamListInfo(ParamListInfo paramLI, int *len_p)
+{
+	int			i;
+	List	   *sparams;
+	bool		found_records = false;
+
+	/* Construct a list of SerializedParamExternData */
+	sparams = NIL;
+	for (i = 0; i < paramLI->numParams; i++)
+	{
+		ParamExternData *prm = &paramLI->params[i];
+		SerializedParamExternData *sprm;
+
+		/*
+		 * First, use paramFetch to fetch any "lazy" parameters. (The callback
+		 * function is of no use in the QE.)
+		 */
+		if (paramLI->paramFetch && !OidIsValid(prm->ptype))
+			(*paramLI->paramFetch) (paramLI, i + 1);
+
+		sprm = makeNode(SerializedParamExternData);
+
+		sprm->value = prm->value;
+		sprm->isnull = prm->isnull;
+		sprm->pflags = prm->pflags;
+		sprm->ptype = prm->ptype;
+
+		if (OidIsValid(prm->ptype))
+		{
+			get_typlenbyval(prm->ptype, &sprm->plen, &sprm->pbyval);
+
+			if (prm->ptype == RECORDOID && !prm->isnull)
+			{
+				/*
+				 * Note: We don't want to use lookup_rowtype_tupdesc_copy here, because
+				 * it copies defaults and constraints too. We don't want those.
+				 */
+				found_records = true;
+			}
+		}
+		else
+		{
+			sprm->plen = 0;
+			sprm->pbyval = true;
+		}
+
+		sparams = lappend(sparams, sprm);
+	}
+
+	/*
+	 * If there were any record types, include the transient record type cache.
+	 */
+	if (found_records)
+		sparams = lcons(build_tuple_node_list(0), sparams);
+
+	return nodeToBinaryStringFast(sparams, len_p);
+}
+
+ParamListInfo
+deserializeParamListInfo(const char *str, int slen)
+{
+	List	   *sparams;
+	ListCell   *lc;
+	TupleRemapper *remapper;
+	ParamListInfo paramLI;
+	int			numParams;
+	int			iparam;
+
+	sparams = (List *) readNodeFromBinaryString(str, slen);
+	if (!IsA(sparams, List))
+		elog(ERROR, "could not deserialize query parameters");
+
+	if (!sparams)
+		return NULL;;
+
+	/*
+	 * If a transient record type cache was included, load it into
+	 * a TupleRemapper.
+	 */
+	if (IsA(linitial(sparams), List))
+	{
+		List *typelist = (List *) linitial(sparams);
+		sparams = list_delete_first(sparams);
+
+		remapper = CreateTupleRemapper();
+		TRHandleTypeLists(remapper, typelist);
+	}
+	else
+		remapper = NULL;
+
+	/*
+	 * Build a new ParamListInfo.
+	 */
+	numParams = list_length(sparams);
+
+	paramLI = palloc(offsetof(ParamListInfoData, params) + numParams * sizeof(ParamExternData));
+	/* this clears the callback fields, among others */
+	memset(paramLI, 0, offsetof(ParamListInfoData, params));
+	paramLI->numParams = numParams;
+
+	/*
+	 * Read the ParamExternDatas
+	 */
+	iparam = 0;
+	foreach(lc, sparams)
+	{
+		SerializedParamExternData *sprm = (SerializedParamExternData *) lfirst(lc);
+		ParamExternData *prm = &paramLI->params[iparam];
+
+		if (!IsA(sprm, SerializedParamExternData))
+			elog(ERROR, "could not deserialize query parameters");
+
+		prm->ptype = sprm->ptype;
+		prm->isnull = sprm->isnull;
+		prm->pflags = sprm->pflags;
+
+		/* If remapping record types is needed, do it. */
+		if (remapper && prm->ptype != InvalidOid)
+			prm->value = TRRemapDatum(remapper, sprm->ptype, sprm->value);
+		else
+			prm->value = sprm->value;
+
+		iparam++;
+	}
+
+	return paramLI;
 }

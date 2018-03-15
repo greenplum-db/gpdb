@@ -12,12 +12,12 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.261 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.270 2010/02/26 02:01:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -94,10 +94,12 @@
 #include <math.h>
 
 #include "access/sysattr.h"
+#include "catalog/index.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_constraint.h"
+#include "executor/executor.h"
 #include "mb/pg_wchar.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -120,7 +122,9 @@
 #include "utils/nabstime.h"
 #include "utils/pg_locale.h"
 #include "utils/selfuncs.h"
+#include "utils/spccache.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbvars.h"                /* getgpsegmentCount */
 
@@ -134,7 +138,8 @@ static double var_eq_const(VariableStatData *vardata, Oid operator,
 static double var_eq_non_const(VariableStatData *vardata, Oid operator,
 				 Node *other,
 				 bool varonleft);
-static double ineq_histogram_selectivity(VariableStatData *vardata,
+static double ineq_histogram_selectivity(PlannerInfo *root,
+						   VariableStatData *vardata,
 						   FmgrInfo *opproc, bool isgt,
 						   Datum constval, Oid consttype);
 static double eqjoinsel_inner(Oid operator,
@@ -155,7 +160,12 @@ static double convert_one_bytea_to_scalar(unsigned char *value, int valuelen,
 							int rangelo, int rangehi);
 static bool get_variable_range(PlannerInfo *root, VariableStatData *vardata,
 				   Oid sortop, Datum *min, Datum *max);
-static Selectivity prefix_selectivity(VariableStatData *vardata,
+static bool get_actual_variable_range(PlannerInfo *root,
+						  VariableStatData *vardata,
+						  Oid sortop,
+						  Datum *min, Datum *max);
+static Selectivity prefix_selectivity(PlannerInfo *root,
+				   VariableStatData *vardata,
 				   Oid vartype, Oid opfamily, Const *prefixcon);
 static Selectivity like_selectivity(const char *patt, int pattlen,
 									bool case_insensitive);
@@ -165,14 +175,6 @@ static Selectivity regex_selectivity(const char *patt, int pattlen,
 static Datum string_to_datum(const char *str, Oid datatype);
 static Const *string_to_const(const char *str, Oid datatype);
 static Const *string_to_bytea_const(const char *str, size_t str_len);
-
-static Selectivity
-mcv_selectivity_cdb(VariableStatData   *vardata,
-                    FmgrInfo           *opproc,
-				    Datum               constval,
-                    bool                varonleft,
-				    Selectivity        *sumcommonp,     /* OUT */
-                    double             *nvaluesp);      /* OUT */
 
 
 /*
@@ -253,10 +255,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 	if (HeapTupleIsValid(vardata->statsTuple))
 	{
 		Form_pg_statistic stats;
-		Datum	   *values;
-		int			nvalues;
-		float4	   *numbers;
-		int			nnumbers;
+		AttStatsSlot sslot;
 		bool		match = false;
 		int			i;
 
@@ -269,27 +268,25 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 		 * don't like this, maybe you shouldn't be using eqsel for your
 		 * operator...)
 		 */
-		if (get_attstatsslot(vardata->statsTuple,
-							 vardata->atttype, vardata->atttypmod,
+		if (get_attstatsslot(&sslot, vardata->statsTuple,
 							 STATISTIC_KIND_MCV, InvalidOid,
-							 &values, &nvalues,
-							 &numbers, &nnumbers))
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
 		{
 			FmgrInfo	eqproc;
 
 			fmgr_info(get_opcode(operator), &eqproc);
 
-			for (i = 0; i < nvalues; i++)
+			for (i = 0; i < sslot.nvalues; i++)
 			{
 				/* be careful to apply operator right way 'round */
 				if (varonleft)
 					match = DatumGetBool(FunctionCall2(&eqproc,
-													   values[i],
+													   sslot.values[i],
 													   constval));
 				else
 					match = DatumGetBool(FunctionCall2(&eqproc,
 													   constval,
-													   values[i]));
+													   sslot.values[i]));
 				if (match)
 					break;
 			}
@@ -297,9 +294,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 		else
 		{
 			/* no most-common-value info available */
-			values = NULL;
-			numbers = NULL;
-			i = nvalues = nnumbers = 0;
+			i = 0;				/* keep compiler quiet */
 		}
 
 		if (match)
@@ -308,7 +303,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 			 * Constant is "=" to this common value.  We know selectivity
 			 * exactly (or as exactly as ANALYZE could calculate it, anyway).
 			 */
-			selec = numbers[i];
+			selec = sslot.numbers[i];
 		}
 		else
 		{
@@ -320,8 +315,8 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 			double		sumcommon = 0.0;
 			double		otherdistinct;
 
-			for (i = 0; i < nnumbers; i++)
-				sumcommon += numbers[i];
+			for (i = 0; i < sslot.nnumbers; i++)
+				sumcommon += sslot.numbers[i];
 			selec = 1.0 - sumcommon - stats->stanullfrac;
 			CLAMP_PROBABILITY(selec);
 
@@ -330,7 +325,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 			 * all the not-common values share this remaining fraction
 			 * equally, so we divide by the number of other distinct values.
 			 */
-			otherdistinct = get_variable_numdistinct(vardata) - nnumbers;
+			otherdistinct = get_variable_numdistinct(vardata) - sslot.nnumbers;
 			if (otherdistinct > 1)
 				selec /= otherdistinct;
 
@@ -338,12 +333,11 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 			 * Another cross-check: selectivity shouldn't be estimated as more
 			 * than the least common "most common value".
 			 */
-			if (nnumbers > 0 && selec > numbers[nnumbers - 1])
-				selec = numbers[nnumbers - 1];
+			if (sslot.nnumbers > 0 && selec > sslot.numbers[sslot.nnumbers - 1])
+				selec = sslot.numbers[sslot.nnumbers - 1];
 		}
 
-		free_attstatsslot(vardata->atttype, values, nvalues,
-						  numbers, nnumbers);
+		free_attstatsslot(&sslot);
 	}
 	else
 	{
@@ -384,8 +378,7 @@ var_eq_non_const(VariableStatData *vardata, Oid operator,
 	{
 		Form_pg_statistic stats;
 		double		ndistinct;
-		float4	   *numbers;
-		int			nnumbers;
+		AttStatsSlot sslot;
 
 		stats = (Form_pg_statistic) GETSTRUCT(vardata->statsTuple);
 
@@ -408,15 +401,13 @@ var_eq_non_const(VariableStatData *vardata, Oid operator,
 		 * Cross-check: selectivity should never be estimated as more than the
 		 * most common value's.
 		 */
-		if (get_attstatsslot(vardata->statsTuple,
-							 vardata->atttype, vardata->atttypmod,
+		if (get_attstatsslot(&sslot, vardata->statsTuple,
 							 STATISTIC_KIND_MCV, InvalidOid,
-							 NULL, NULL,
-							 &numbers, &nnumbers))
+							 ATTSTATSSLOT_NUMBERS))
 		{
-			if (nnumbers > 0 && selec > numbers[0])
-				selec = numbers[0];
-			free_attstatsslot(vardata->atttype, NULL, 0, numbers, nnumbers);
+			if (sslot.nnumbers > 0 && selec > sslot.numbers[0])
+				selec = sslot.numbers[0];
+			free_attstatsslot(&sslot);
 		}
 	}
 	else
@@ -521,7 +512,7 @@ scalarineqsel(PlannerInfo *root, Oid operator, bool isgt,
 	 * If there is a histogram, determine which bin the constant falls in, and
 	 * compute the resulting contribution to selectivity.
 	 */
-	hist_selec = ineq_histogram_selectivity(vardata, &opproc, isgt,
+	hist_selec = ineq_histogram_selectivity(root, vardata, &opproc, isgt,
 											constval, consttype);
 
 	/*
@@ -531,7 +522,7 @@ scalarineqsel(PlannerInfo *root, Oid operator, bool isgt,
 	 */
 	selec = 1.0 - stats->stanullfrac - sumcommon;
 
-	if (hist_selec > 0.0)
+	if (hist_selec >= 0.0)
 		selec *= hist_selec;
 	else
 	{
@@ -562,31 +553,18 @@ scalarineqsel(PlannerInfo *root, Oid operator, bool isgt,
  * total population is returned into *sumcommonp.  Zeroes are returned
  * if there is no MCV list.
  *
- * CDB: The number of MCVs is returned into *nvaluesp.
  */
-double
-mcv_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
-				Datum constval, bool varonleft,
-				double *sumcommonp)
-{
-    return mcv_selectivity_cdb(vardata, opproc, constval, varonleft,
-                               sumcommonp, NULL);
-}
 
-static Selectivity
-mcv_selectivity_cdb(VariableStatData   *vardata,
+double
+mcv_selectivity(VariableStatData   *vardata,
                     FmgrInfo           *opproc,
 				    Datum               constval,
                     bool                varonleft,
-				    Selectivity        *sumcommonp,     /* OUT */
-                    double             *nvaluesp)       /* OUT */
+				    double        *sumcommonp)     /* OUT */
 {
 	double		mcv_selec,
 				sumcommon;
-	Datum	   *values;
-	int			nvalues = 0;
-	float4	   *numbers;
-	int			nnumbers;
+	AttStatsSlot sslot;
 	int			i;
 	HeapTuple	tp = getStatsTuple(vardata);
 
@@ -594,31 +572,26 @@ mcv_selectivity_cdb(VariableStatData   *vardata,
 	sumcommon = 0.0;
 
 	if (HeapTupleIsValid(tp) &&
-		get_attstatsslot(tp,
-						 vardata->atttype, vardata->atttypmod,
+		get_attstatsslot(&sslot, tp,
 						 STATISTIC_KIND_MCV, InvalidOid,
-						 &values, &nvalues,
-						 &numbers, &nnumbers))
+						 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
 	{
-		for (i = 0; i < nvalues; i++)
+		for (i = 0; i < sslot.nvalues; i++)
 		{
 			if (varonleft ?
 				DatumGetBool(FunctionCall2(opproc,
-										   values[i],
+										   sslot.values[i],
 										   constval)) :
 				DatumGetBool(FunctionCall2(opproc,
 										   constval,
-										   values[i])))
-				mcv_selec += numbers[i];
-			sumcommon += numbers[i];
+										   sslot.values[i])))
+				mcv_selec += sslot.numbers[i];
+			sumcommon += sslot.numbers[i];
 		}
-		free_attstatsslot(vardata->atttype, values, nvalues,
-						  numbers, nnumbers);
+		free_attstatsslot(&sslot);
 	}
 
 	*sumcommonp = sumcommon;
-	if (nvaluesp)
-		*nvaluesp = nvalues;
 	return mcv_selec;
 }
 
@@ -661,43 +634,40 @@ histogram_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 					  int *hist_size)
 {
 	double		result;
-	Datum	   *values;
-	int			nvalues;
 	HeapTuple	tp = getStatsTuple(vardata);
+	AttStatsSlot sslot;
 
 	/* check sanity of parameters */
 	Assert(n_skip >= 0);
 	Assert(min_hist_size > 2 * n_skip);
 
 	if (HeapTupleIsValid(tp) &&
-		get_attstatsslot(tp,
-						 vardata->atttype, vardata->atttypmod,
+		get_attstatsslot(&sslot, tp,
 						 STATISTIC_KIND_HISTOGRAM, InvalidOid,
-						 &values, &nvalues,
-						 NULL, NULL))
+						 ATTSTATSSLOT_VALUES))
 	{
-		*hist_size = nvalues;
-		if (nvalues >= min_hist_size)
+		*hist_size = sslot.nvalues;
+		if (sslot.nvalues >= min_hist_size)
 		{
 			int			nmatch = 0;
 			int			i;
 
-			for (i = n_skip; i < nvalues - n_skip; i++)
+			for (i = n_skip; i < sslot.nvalues - n_skip; i++)
 			{
 				if (varonleft ?
 					DatumGetBool(FunctionCall2(opproc,
-											   values[i],
+											   sslot.values[i],
 											   constval)) :
 					DatumGetBool(FunctionCall2(opproc,
 											   constval,
-											   values[i])))
+											   sslot.values[i])))
 					nmatch++;
 			}
-			result = ((double) nmatch) / ((double) (nvalues - 2 * n_skip));
+			result = ((double) nmatch) / ((double) (sslot.nvalues - 2 * n_skip));
 		}
 		else
 			result = -1;
-		free_attstatsslot(vardata->atttype, values, nvalues, NULL, 0);
+		free_attstatsslot(&sslot);
 	}
 	else
 	{
@@ -714,24 +684,23 @@ histogram_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
  * Determine the fraction of the variable's histogram population that
  * satisfies the inequality condition, ie, VAR < CONST or VAR > CONST.
  *
- * Returns zero if there is no histogram (valid results will always be
- * greater than zero).
+ * Returns -1 if there is no histogram (valid results will always be >= 0).
  *
  * Note that the result disregards both the most-common-values (if any) and
  * null entries.  The caller is expected to combine this result with
  * statistics for those portions of the column population.
  */
 static double
-ineq_histogram_selectivity(VariableStatData *vardata,
+ineq_histogram_selectivity(PlannerInfo *root,
+						   VariableStatData *vardata,
 						   FmgrInfo *opproc, bool isgt,
 						   Datum constval, Oid consttype)
 {
 	double		hist_selec;
-	Datum	   *values;
-	int			nvalues;
 	HeapTuple	tp = getStatsTuple(vardata);
+	AttStatsSlot sslot;
 
-	hist_selec = 0.0;
+	hist_selec = -1.0;
 
 	/*
 	 * Someday, ANALYZE might store more than one histogram per rel/att,
@@ -744,13 +713,11 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 	 * the reverse way if isgt is TRUE.
 	 */
 	if (HeapTupleIsValid(tp) &&
-		get_attstatsslot(tp,
-						 vardata->atttype, vardata->atttypmod,
+		get_attstatsslot(&sslot, tp,
 						 STATISTIC_KIND_HISTOGRAM, InvalidOid,
-						 &values, &nvalues,
-						 NULL, NULL))
+						 ATTSTATSSLOT_VALUES))
 	{
-		if (nvalues > 1)
+		if (sslot.nvalues > 1)
 		{
 			/*
 			 * Use binary search to find proper location, ie, the first slot
@@ -758,18 +725,58 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 			 * actually sort-compatible with the histogram, you'll get garbage
 			 * results ... but probably not any more garbage-y than you would
 			 * from the old linear search.)
+			 *
+			 * If the binary search accesses the first or last histogram
+			 * entry, we try to replace that endpoint with the true column min
+			 * or max as found by get_actual_variable_range().	This
+			 * ameliorates misestimates when the min or max is moving as a
+			 * result of changes since the last ANALYZE.  Note that this could
+			 * result in effectively including MCVs into the histogram that
+			 * weren't there before, but we don't try to correct for that.
 			 */
 			double		histfrac;
 			int			lobound = 0;	/* first possible slot to search */
-			int			hibound = nvalues;		/* last+1 slot to search */
+			int			hibound = sslot.nvalues;		/* last+1 slot to search */
+			bool		have_end = false;
+
+			/*
+			 * If there are only two histogram entries, we'll want up-to-date
+			 * values for both.  (If there are more than two, we need at most
+			 * one of them to be updated, so we deal with that within the
+			 * loop.)
+			 */
+			if (sslot.nvalues == 2)
+				have_end = get_actual_variable_range(root,
+													 vardata,
+													 sslot.staop,
+													 &sslot.values[0],
+													 &sslot.values[1]);
 
 			while (lobound < hibound)
 			{
 				int			probe = (lobound + hibound) / 2;
 				bool		ltcmp;
 
+				/*
+				 * If we find ourselves about to compare to the first or last
+				 * histogram entry, first try to replace it with the actual
+				 * current min or max (unless we already did so above).
+				 */
+				if (probe == 0 && sslot.nvalues > 2)
+					have_end = get_actual_variable_range(root,
+														 vardata,
+														 sslot.staop,
+														 &sslot.values[0],
+														 NULL);
+				else if (probe == sslot.nvalues - 1 && sslot.nvalues > 2)
+					have_end = get_actual_variable_range(root,
+														 vardata,
+														 sslot.staop,
+														 NULL,
+														 &sslot.values[probe]);
+
 				ltcmp = DatumGetBool(FunctionCall2(opproc,
-												   values[probe],
+												   sslot.values[probe],
 												   constval));
 				if (isgt)
 					ltcmp = !ltcmp;
@@ -784,7 +791,7 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 				/* Constant is below lower histogram boundary. */
 				histfrac = 0.0;
 			}
-			else if (lobound >= nvalues)
+			else if (lobound >= sslot.nvalues)
 			{
 				/* Constant is above upper histogram boundary. */
 				histfrac = 1.0;
@@ -798,14 +805,14 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 				double		binfrac;
 
 				/*
-				 * We have values[i-1] < constant < values[i].
+				 * We have values[i-1] <= constant <= values[i].
 				 *
 				 * Convert the constant and the two nearest bin boundary
 				 * values to a uniform comparison scale, and do a linear
 				 * interpolation within this bin.
 				 */
 				if (convert_to_scalar(constval, consttype, &val,
-									  values[i - 1], values[i],
+									  sslot.values[i - 1], sslot.values[i],
 									  vardata->vartype,
 									  &low, &high, isgt))
 				{
@@ -852,7 +859,7 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 				 * binfrac partial bin below the constant.
 				 */
 				histfrac = (double) (i - 1) + binfrac;
-				histfrac /= (double) (nvalues - 1);
+				histfrac /= (double) (sslot.nvalues - 1);
 			}
 
 			/*
@@ -866,15 +873,21 @@ ineq_histogram_selectivity(VariableStatData *vardata,
 			/*
 			 * The histogram boundaries are only approximate to begin with,
 			 * and may well be out of date anyway.	Therefore, don't believe
-			 * extremely small or large selectivity estimates.
+			 * extremely small or large selectivity estimates --- unless we
+			 * got actual current endpoint values from the table.
 			 */
-			if (hist_selec < 0.0001)
-				hist_selec = 0.0001;
-			else if (hist_selec > 0.9999)
-				hist_selec = 0.9999;
+			if (have_end)
+				CLAMP_PROBABILITY(hist_selec);
+			else
+			{
+				if (hist_selec < 0.0001)
+					hist_selec = 0.0001;
+				else if (hist_selec > 0.9999)
+					hist_selec = 0.9999;
+			}
 		}
 
-		free_attstatsslot(vardata->atttype, values, nvalues, NULL, 0);
+		free_attstatsslot(&sslot);
 	}
 
 	return hist_selec;
@@ -1230,7 +1243,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 			Selectivity prefixsel;
 
 			if (pstatus == Pattern_Prefix_Partial)
-				prefixsel = prefix_selectivity(&vardata, vartype,
+				prefixsel = prefix_selectivity(root, &vardata, vartype,
 											   opfamily, prefix);
 			else
 				prefixsel = 1.0;
@@ -1387,22 +1400,17 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
 	{
 		Form_pg_statistic stats;
 		double		freq_null;
-		Datum	   *values;
-		int			nvalues;
-		float4	   *numbers;
-		int			nnumbers;
-		HeapTuple	tp = getStatsTuple(&vardata);
+		AttStatsSlot sslot;
 
+		HeapTuple	tp = getStatsTuple(&vardata);
 
 		stats = (Form_pg_statistic) GETSTRUCT(tp);
 		freq_null = stats->stanullfrac;
 
-		if (get_attstatsslot(tp,
-							 vardata.atttype, vardata.atttypmod,
+		if (get_attstatsslot(&sslot, tp,
 							 STATISTIC_KIND_MCV, InvalidOid,
-							 &values, &nvalues,
-							 &numbers, &nnumbers)
-			&& nnumbers > 0)
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS)
+			&& sslot.nnumbers > 0)
 		{
 			double		freq_true;
 			double		freq_false;
@@ -1410,10 +1418,10 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
 			/*
 			 * Get first MCV frequency and derive frequency for true.
 			 */
-			if (DatumGetBool(values[0]))
-				freq_true = numbers[0];
+			if (DatumGetBool(sslot.values[0]))
+				freq_true = sslot.numbers[0];
 			else
-				freq_true = 1.0 - numbers[0] - freq_null;
+				freq_true = 1.0 - sslot.numbers[0] - freq_null;
 
 			/*
 			 * Next derive frequency for false. Then use these as appropriate
@@ -1454,8 +1462,7 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
 					break;
 			}
 
-			free_attstatsslot(vardata.atttype, values, nvalues,
-							  numbers, nnumbers);
+			free_attstatsslot(&sslot);
 		}
 		else
 		{
@@ -2035,43 +2042,33 @@ eqjoinsel_inner(Oid operator,
 	Form_pg_statistic stats1 = NULL;
 	Form_pg_statistic stats2 = NULL;
 	bool		have_mcvs1 = false;
-	Datum	   *values1 = NULL;
-	int			nvalues1 = 0;
-	float4	   *numbers1 = NULL;
-	int			nnumbers1 = 0;
 	bool		have_mcvs2 = false;
-	Datum	   *values2 = NULL;
-	int			nvalues2 = 0;
-	float4	   *numbers2 = NULL;
-	int			nnumbers2 = 0;
+	AttStatsSlot sslot1;
+	AttStatsSlot sslot2;
 
 	nd1 = get_variable_numdistinct(vardata1);
 	nd2 = get_variable_numdistinct(vardata2);
+
+	memset(&sslot1, 0, sizeof(sslot1));
+	memset(&sslot2, 0, sizeof(sslot2));
 
 	if (HeapTupleIsValid(getStatsTuple(vardata1)))
 	{
 		HeapTuple tp = getStatsTuple(vardata1);
 		stats1 = (Form_pg_statistic) GETSTRUCT(tp);
-		have_mcvs1 = get_attstatsslot(tp,
-									  vardata1->atttype,
-									  vardata1->atttypmod,
-									  STATISTIC_KIND_MCV,
-									  InvalidOid,
-									  &values1, &nvalues1,
-									  &numbers1, &nnumbers1);
+		have_mcvs1 = get_attstatsslot(&sslot1, tp,
+									  STATISTIC_KIND_MCV, InvalidOid,
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
+
 	}
 
 	if (HeapTupleIsValid(getStatsTuple(vardata2)))
 	{
 		HeapTuple tp = getStatsTuple(vardata2);
 		stats2 = (Form_pg_statistic) GETSTRUCT(tp);
-		have_mcvs2 = get_attstatsslot(tp,
-									  vardata2->atttype,
-									  vardata2->atttypmod,
-									  STATISTIC_KIND_MCV,
-									  InvalidOid,
-									  &values2, &nvalues2,
-									  &numbers2, &nnumbers2);
+		have_mcvs2 = get_attstatsslot(&sslot2, tp,
+									  STATISTIC_KIND_MCV, InvalidOid,
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 	}
 
 	if (have_mcvs1 && have_mcvs2)
@@ -2106,8 +2103,8 @@ eqjoinsel_inner(Oid operator,
 					nmatches;
 
 		fmgr_info(get_opcode(operator), &eqproc);
-		hasmatch1 = (bool *) palloc0(nvalues1 * sizeof(bool));
-		hasmatch2 = (bool *) palloc0(nvalues2 * sizeof(bool));
+		hasmatch1 = (bool *) palloc0(sslot1.nvalues * sizeof(bool));
+		hasmatch2 = (bool *) palloc0(sslot2.nvalues * sizeof(bool));
 
 		/*
 		 * Note we assume that each MCV will match at most one member of the
@@ -2117,20 +2114,20 @@ eqjoinsel_inner(Oid operator,
 		 */
 		matchprodfreq = 0.0;
 		nmatches = 0;
-		for (i = 0; i < nvalues1; i++)
+		for (i = 0; i < sslot1.nvalues; i++)
 		{
 			int			j;
 
-			for (j = 0; j < nvalues2; j++)
+			for (j = 0; j < sslot2.nvalues; j++)
 			{
 				if (hasmatch2[j])
 					continue;
 				if (DatumGetBool(FunctionCall2(&eqproc,
-											   values1[i],
-											   values2[j])))
+											   sslot1.values[i],
+											   sslot2.values[j])))
 				{
 					hasmatch1[i] = hasmatch2[j] = true;
-					matchprodfreq += numbers1[i] * numbers2[j];
+					matchprodfreq += sslot1.numbers[i] * sslot2.numbers[j];
 					nmatches++;
 					break;
 				}
@@ -2139,22 +2136,22 @@ eqjoinsel_inner(Oid operator,
 		CLAMP_PROBABILITY(matchprodfreq);
 		/* Sum up frequencies of matched and unmatched MCVs */
 		matchfreq1 = unmatchfreq1 = 0.0;
-		for (i = 0; i < nvalues1; i++)
+		for (i = 0; i < sslot1.nvalues; i++)
 		{
 			if (hasmatch1[i])
-				matchfreq1 += numbers1[i];
+				matchfreq1 += sslot1.numbers[i];
 			else
-				unmatchfreq1 += numbers1[i];
+				unmatchfreq1 += sslot1.numbers[i];
 		}
 		CLAMP_PROBABILITY(matchfreq1);
 		CLAMP_PROBABILITY(unmatchfreq1);
 		matchfreq2 = unmatchfreq2 = 0.0;
-		for (i = 0; i < nvalues2; i++)
+		for (i = 0; i < sslot2.nvalues; i++)
 		{
 			if (hasmatch2[i])
-				matchfreq2 += numbers2[i];
+				matchfreq2 += sslot2.numbers[i];
 			else
-				unmatchfreq2 += numbers2[i];
+				unmatchfreq2 += sslot2.numbers[i];
 		}
 		CLAMP_PROBABILITY(matchfreq2);
 		CLAMP_PROBABILITY(unmatchfreq2);
@@ -2179,15 +2176,15 @@ eqjoinsel_inner(Oid operator,
 		 * MCVs plus non-MCV values.
 		 */
 		totalsel1 = matchprodfreq;
-		if (nd2 > nvalues2)
-			totalsel1 += unmatchfreq1 * otherfreq2 / (nd2 - nvalues2);
+		if (nd2 > sslot2.nvalues)
+			totalsel1 += unmatchfreq1 * otherfreq2 / (nd2 - sslot2.nvalues);
 		if (nd2 > nmatches)
 			totalsel1 += otherfreq1 * (otherfreq2 + unmatchfreq2) /
 				(nd2 - nmatches);
 		/* Same estimate from the point of view of relation 2. */
 		totalsel2 = matchprodfreq;
-		if (nd1 > nvalues1)
-			totalsel2 += unmatchfreq2 * otherfreq1 / (nd1 - nvalues1);
+		if (nd1 > sslot1.nvalues)
+			totalsel2 += unmatchfreq2 * otherfreq1 / (nd1 - sslot1.nvalues);
 		if (nd1 > nmatches)
 			totalsel2 += otherfreq2 * (otherfreq1 + unmatchfreq1) /
 				(nd1 - nmatches);
@@ -2244,12 +2241,8 @@ eqjoinsel_inner(Oid operator,
 			selec /= nd2;
 	}
 
-	if (have_mcvs1)
-		free_attstatsslot(vardata1->atttype, values1, nvalues1,
-						  numbers1, nnumbers1);
-	if (have_mcvs2)
-		free_attstatsslot(vardata2->atttype, values2, nvalues2,
-						  numbers2, nnumbers2);
+	free_attstatsslot(&sslot1);
+	free_attstatsslot(&sslot2);
 
 	return selec;
 }
@@ -2270,41 +2263,31 @@ eqjoinsel_semi(Oid operator,
 	Form_pg_statistic stats1 = NULL;
 	Form_pg_statistic stats2 = NULL;
 	bool		have_mcvs1 = false;
-	Datum	   *values1 = NULL;
-	int			nvalues1 = 0;
-	float4	   *numbers1 = NULL;
-	int			nnumbers1 = 0;
 	bool		have_mcvs2 = false;
-	Datum	   *values2 = NULL;
-	int			nvalues2 = 0;
-	float4	   *numbers2 = NULL;
-	int			nnumbers2 = 0;
+	AttStatsSlot sslot1;
+	AttStatsSlot sslot2;
 
 	nd1 = get_variable_numdistinct(vardata1);
 	nd2 = get_variable_numdistinct(vardata2);
 
+	memset(&sslot1, 0, sizeof(sslot1));
+	memset(&sslot2, 0, sizeof(sslot2));
+
 	if (HeapTupleIsValid(vardata1->statsTuple))
 	{
 		stats1 = (Form_pg_statistic) GETSTRUCT(vardata1->statsTuple);
-		have_mcvs1 = get_attstatsslot(vardata1->statsTuple,
-									  vardata1->atttype,
-									  vardata1->atttypmod,
-									  STATISTIC_KIND_MCV,
-									  InvalidOid,
-									  &values1, &nvalues1,
-									  &numbers1, &nnumbers1);
+		have_mcvs1 = get_attstatsslot(&sslot1, vardata1->statsTuple,
+									  STATISTIC_KIND_MCV, InvalidOid,
+							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 	}
 
 	if (HeapTupleIsValid(vardata2->statsTuple))
 	{
 		stats2 = (Form_pg_statistic) GETSTRUCT(vardata2->statsTuple);
-		have_mcvs2 = get_attstatsslot(vardata2->statsTuple,
-									  vardata2->atttype,
-									  vardata2->atttypmod,
-									  STATISTIC_KIND_MCV,
-									  InvalidOid,
-									  &values2, &nvalues2,
-									  &numbers2, &nnumbers2);
+		have_mcvs2 = get_attstatsslot(&sslot2, vardata2->statsTuple,
+									  STATISTIC_KIND_MCV, InvalidOid,
+									  ATTSTATSSLOT_VALUES);
+		/* note: currently don't need stanumbers from RHS */
 	}
 
 	if (have_mcvs1 && have_mcvs2 && OidIsValid(operator))
@@ -2326,8 +2309,8 @@ eqjoinsel_semi(Oid operator,
 					nmatches;
 
 		fmgr_info(get_opcode(operator), &eqproc);
-		hasmatch1 = (bool *) palloc0(nvalues1 * sizeof(bool));
-		hasmatch2 = (bool *) palloc0(nvalues2 * sizeof(bool));
+		hasmatch1 = (bool *) palloc0(sslot1.nvalues * sizeof(bool));
+		hasmatch2 = (bool *) palloc0(sslot2.nvalues * sizeof(bool));
 
 		/*
 		 * Note we assume that each MCV will match at most one member of the
@@ -2336,17 +2319,17 @@ eqjoinsel_semi(Oid operator,
 		 * and because the math wouldn't add up...
 		 */
 		nmatches = 0;
-		for (i = 0; i < nvalues1; i++)
+		for (i = 0; i < sslot1.nvalues; i++)
 		{
 			int			j;
 
-			for (j = 0; j < nvalues2; j++)
+			for (j = 0; j < sslot2.nvalues; j++)
 			{
 				if (hasmatch2[j])
 					continue;
 				if (DatumGetBool(FunctionCall2(&eqproc,
-											   values1[i],
-											   values2[j])))
+											   sslot1.values[i],
+											   sslot2.values[j])))
 				{
 					hasmatch1[i] = hasmatch2[j] = true;
 					nmatches++;
@@ -2356,10 +2339,10 @@ eqjoinsel_semi(Oid operator,
 		}
 		/* Sum up frequencies of matched MCVs */
 		matchfreq1 = 0.0;
-		for (i = 0; i < nvalues1; i++)
+		for (i = 0; i < sslot1.nvalues; i++)
 		{
 			if (hasmatch1[i])
-				matchfreq1 += numbers1[i];
+				matchfreq1 += sslot1.numbers[i];
 		}
 		CLAMP_PROBABILITY(matchfreq1);
 		pfree(hasmatch1);
@@ -2406,12 +2389,8 @@ eqjoinsel_semi(Oid operator,
 			selec = (nd2 / nd1) * (1.0 - nullfrac1);
 	}
 
-	if (have_mcvs1)
-		free_attstatsslot(vardata1->atttype, values1, nvalues1,
-						  numbers1, nnumbers1);
-	if (have_mcvs2)
-		free_attstatsslot(vardata2->atttype, values2, nvalues2,
-						  numbers2, nnumbers2);
+	free_attstatsslot(&sslot1);
+	free_attstatsslot(&sslot2);
 
 	return selec;
 }
@@ -3234,8 +3213,7 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets)
 				stanullfrac,
 				mcvfreq,
 				avgfreq;
-	float4	   *numbers;
-	int			nnumbers;
+	AttStatsSlot sslot;
 
 	examine_variable(root, hashkey, 0, &vardata);
 
@@ -3297,19 +3275,16 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets)
 	if (HeapTupleIsValid(getStatsTuple(&vardata)))
 	{
 		HeapTuple tp = getStatsTuple(&vardata);
-
-		if (get_attstatsslot(tp,
-							 vardata.atttype, vardata.atttypmod,
+		if (get_attstatsslot(&sslot, tp,
 							 STATISTIC_KIND_MCV, InvalidOid,
-							 NULL, NULL, &numbers, &nnumbers))
+							 ATTSTATSSLOT_NUMBERS))
 		{
 			/*
 			 * The first MCV stat is for the most common value.
 			 */
-			if (nnumbers > 0)
-				mcvfreq = numbers[0];
-			free_attstatsslot(vardata.atttype, NULL, 0,
-							  numbers, nnumbers);
+			if (sslot.nnumbers > 0)
+				mcvfreq = sslot.numbers[0];
+			free_attstatsslot(&sslot);
 		}
 	}
 
@@ -3737,8 +3712,7 @@ convert_string_datum(Datum value, Oid typid)
 		/*
 		 *
 		 * http://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?
-		 * FeedbackID=99694
-		 */
+		 * FeedbackID=99694 */
 		{
 			char		x[1];
 
@@ -4165,7 +4139,7 @@ static void inline adjust_partition_table_statistic_for_parent(HeapTuple statsTu
  *	freefunc: pointer to a function to release statsTuple with.
  *	vartype: exposed type of the expression; this should always match
  *		the declared input type of the operator we are estimating for.
- *	atttype, atttypmod: type data to pass to get_attstatsslot().  This is
+ *	atttype, atttypmod: actual type/typmod of the "var" expression.  This is
  *		commonly the same as the exposed type of the variable argument,
  *		but can be different in binary-compatible-type cases.
  *	isunique: TRUE if we were able to match the var to a unique index,
@@ -4277,10 +4251,10 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 					/*
 					 * Get statistics from the child partition.
 					 */
-					vardata->statsTuple = SearchSysCache(STATRELATT,
-														 ObjectIdGetDatum(child_rte->relid),
-														 Int16GetDatum(var->varattno),
-														 0, 0);
+					vardata->statsTuple = SearchSysCache3(STATRELATTINH,
+														  ObjectIdGetDatum(child_rte->relid),
+														  Int16GetDatum(var->varattno),
+														  BoolGetDatum(rte->inh));
 
 					if (vardata->statsTuple != NULL)
 					{
@@ -4292,10 +4266,10 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 		}
 		else if (rte->rtekind == RTE_RELATION)
 		{
-			vardata->statsTuple = SearchSysCache(STATRELATT,
-												 ObjectIdGetDatum(rte->relid),
-												 Int16GetDatum(var->varattno),
-												 0, 0);
+			vardata->statsTuple = SearchSysCache3(STATRELATTINH,
+												ObjectIdGetDatum(rte->relid),
+												Int16GetDatum(var->varattno),
+												  BoolGetDatum(rte->inh));
 			vardata->freefunc = ReleaseSysCache;
 		}
 		else
@@ -4432,10 +4406,10 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 						else if (index->indpred == NIL)
 						{
 							vardata->statsTuple =
-								SearchSysCache(STATRELATT,
+								SearchSysCache3(STATRELATTINH,
 										   ObjectIdGetDatum(index->indexoid),
-											   Int16GetDatum(pos + 1),
-											   0, 0);
+												Int16GetDatum(pos + 1),
+												BoolGetDatum(false));
 							vardata->freefunc = ReleaseSysCache;
 						}
 						if (vardata->statsTuple)
@@ -4590,10 +4564,21 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	Form_pg_statistic stats;
 	int16		typLen;
 	bool		typByVal;
-	Datum	   *values;
-	int			nvalues;
+	AttStatsSlot sslot;
 	int			i;
 	HeapTuple	tp = getStatsTuple(vardata);
+
+	/*
+	 * XXX It's very tempting to try to use the actual column min and max, if
+	 * we can get them relatively-cheaply with an index probe.	However, since
+	 * this function is called many times during join planning, that could
+	 * have unpleasant effects on planning speed.  Need more investigation
+	 * before enabling this.
+	 */
+#ifdef NOT_USED
+	if (get_actual_variable_range(root, vardata, sortop, min, max))
+		return true;
+#endif
 
 	if (!HeapTupleIsValid(tp))
 	{
@@ -4611,27 +4596,23 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	 * the one we want, fail --- this suggests that there is data we can't
 	 * use.
 	 */
-	if (get_attstatsslot(tp,
-						 vardata->atttype, vardata->atttypmod,
+	if (get_attstatsslot(&sslot, tp,
 						 STATISTIC_KIND_HISTOGRAM, sortop,
-						 &values, &nvalues,
-						 NULL, NULL))
+						 ATTSTATSSLOT_VALUES))
 	{
-		if (nvalues > 0)
+		if (sslot.nvalues > 0)
 		{
-			tmin = datumCopy(values[0], typByVal, typLen);
-			tmax = datumCopy(values[nvalues - 1], typByVal, typLen);
+			tmin = datumCopy(sslot.values[0], typByVal, typLen);
+			tmax = datumCopy(sslot.values[sslot.nvalues - 1], typByVal, typLen);
 			have_data = true;
 		}
-		free_attstatsslot(vardata->atttype, values, nvalues, NULL, 0);
+		free_attstatsslot(&sslot);
 	}
-	else if (get_attstatsslot(tp,
-							  vardata->atttype, vardata->atttypmod,
+	else if (get_attstatsslot(&sslot, tp,
 							  STATISTIC_KIND_HISTOGRAM, InvalidOid,
-							  &values, &nvalues,
-							  NULL, NULL))
+							  0))
 	{
-		free_attstatsslot(vardata->atttype, values, nvalues, NULL, 0);
+		free_attstatsslot(&sslot);
 		return false;
 	}
 
@@ -4641,11 +4622,9 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	 * the MCVs.  However, usually the MCVs will not be the extreme values, so
 	 * avoid unnecessary data copying.
 	 */
-	if (get_attstatsslot(tp,
-						 vardata->atttype, vardata->atttypmod,
+	if (get_attstatsslot(&sslot, tp,
 						 STATISTIC_KIND_MCV, InvalidOid,
-						 &values, &nvalues,
-						 NULL, NULL))
+						 ATTSTATSSLOT_VALUES))
 	{
 		bool		tmin_is_mcv = false;
 		bool		tmax_is_mcv = false;
@@ -4653,22 +4632,33 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 
 		fmgr_info(get_opcode(sortop), &opproc);
 
-		for (i = 0; i < nvalues; i++)
+		/*
+		 * GPDB: Some extra paranoia. GPDB allows users to modify
+		 * pg_statistics.stavalues with UPDATEs (PostgreSQL complaints about
+		 * the table row type not matching). So just in case that the type of
+		 * the values in pg_statistics isn't what we'd expect, give an error
+		 * rather than crash. That shouldn't happen, but better safe than sorry.
+		 */
+		if (!IsBinaryCoercible(sslot.valuetype, vardata->atttype))
+			elog(ERROR, "invalid MCV array of type %s, for attribute of type %s",
+				 format_type_be(sslot.valuetype), format_type_be(vardata->atttype));
+
+		for (i = 0; i < sslot.nvalues; i++)
 		{
 			if (!have_data)
 			{
-				tmin = tmax = values[i];
+				tmin = tmax = sslot.values[i];
 				tmin_is_mcv = tmax_is_mcv = have_data = true;
 				continue;
 			}
-			if (DatumGetBool(FunctionCall2(&opproc, values[i], tmin)))
+			if (DatumGetBool(FunctionCall2(&opproc, sslot.values[i], tmin)))
 			{
-				tmin = values[i];
+				tmin = sslot.values[i];
 				tmin_is_mcv = true;
 			}
-			if (DatumGetBool(FunctionCall2(&opproc, tmax, values[i])))
+			if (DatumGetBool(FunctionCall2(&opproc, tmax, sslot.values[i])))
 			{
-				tmax = values[i];
+				tmax = sslot.values[i];
 				tmax_is_mcv = true;
 			}
 		}
@@ -4676,11 +4666,210 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 			tmin = datumCopy(tmin, typByVal, typLen);
 		if (tmax_is_mcv)
 			tmax = datumCopy(tmax, typByVal, typLen);
-		free_attstatsslot(vardata->atttype, values, nvalues, NULL, 0);
+		free_attstatsslot(&sslot);
 	}
 
 	*min = tmin;
 	*max = tmax;
+	return have_data;
+}
+
+
+/*
+ * get_actual_variable_range
+ *		Attempt to identify the current *actual* minimum and/or maximum
+ *		of the specified variable, by looking for a suitable btree index
+ *		and fetching its low and/or high values.
+ *		If successful, store values in *min and *max, and return TRUE.
+ *		(Either pointer can be NULL if that endpoint isn't needed.)
+ *		If no data available, return FALSE.
+ *
+ * sortop is the "<" comparison operator to use.
+ */
+static bool
+get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
+						  Oid sortop,
+						  Datum *min, Datum *max)
+{
+	bool		have_data = false;
+	RelOptInfo *rel = vardata->rel;
+	RangeTblEntry *rte;
+	ListCell   *lc;
+
+	/* No hope if no relation or it doesn't have indexes */
+	if (rel == NULL || rel->indexlist == NIL)
+		return false;
+	/* If it has indexes it must be a plain relation */
+	rte = root->simple_rte_array[rel->relid];
+	Assert(rte->rtekind == RTE_RELATION);
+
+	/* Search through the indexes to see if any match our problem */
+	foreach(lc, rel->indexlist)
+	{
+		IndexOptInfo *index = (IndexOptInfo *) lfirst(lc);
+		ScanDirection indexscandir;
+
+		/* Ignore non-btree indexes */
+		if (index->relam != BTREE_AM_OID)
+			continue;
+
+		/*
+		 * Ignore partial indexes --- we only want stats that cover the entire
+		 * relation.
+		 */
+		if (index->indpred != NIL)
+			continue;
+
+		/*
+		 * The index list might include fictitious indexes inserted by a
+		 * get_relation_info hook --- don't try to access them.
+		 */
+		if (!OidIsValid(index->indexoid))
+			continue;
+
+		/*
+		 * The first index column must match the desired variable and sort
+		 * operator --- but we can use a descending-order index.
+		 */
+		if (sortop == index->fwdsortop[0])
+			indexscandir = ForwardScanDirection;
+		else if (sortop == index->revsortop[0])
+			indexscandir = BackwardScanDirection;
+		else
+			continue;
+		if (!match_index_to_operand(vardata->var, 0, index))
+			continue;
+
+		/*
+		 * Found a suitable index to extract data from.  We'll need an EState
+		 * and a bunch of other infrastructure.
+		 */
+		{
+			EState	   *estate;
+			ExprContext *econtext;
+			MemoryContext tmpcontext;
+			MemoryContext oldcontext;
+			Relation	heapRel;
+			Relation	indexRel;
+			IndexInfo  *indexInfo;
+			TupleTableSlot *slot;
+			int16		typLen;
+			bool		typByVal;
+			ScanKeyData scankeys[1];
+			IndexScanDesc index_scan;
+			HeapTuple	tup;
+			Datum		values[INDEX_MAX_KEYS];
+			bool		isnull[INDEX_MAX_KEYS];
+
+			estate = CreateExecutorState();
+			econtext = GetPerTupleExprContext(estate);
+			/* Make sure any cruft is generated in the econtext's memory */
+			tmpcontext = econtext->ecxt_per_tuple_memory;
+			oldcontext = MemoryContextSwitchTo(tmpcontext);
+
+			/*
+			 * Open the table and index so we can read from them.  We should
+			 * already have at least AccessShareLock on the table, but not
+			 * necessarily on the index.
+			 */
+			heapRel = heap_open(rte->relid, NoLock);
+			indexRel = index_open(index->indexoid, AccessShareLock);
+
+			/* extract index key information from the index's pg_index info */
+			indexInfo = BuildIndexInfo(indexRel);
+
+			/* some other stuff */
+			slot = MakeSingleTupleTableSlot(RelationGetDescr(heapRel));
+			econtext->ecxt_scantuple = slot;
+			get_typlenbyval(vardata->atttype, &typLen, &typByVal);
+
+			/* set up an IS NOT NULL scan key so that we ignore nulls */
+			ScanKeyEntryInitialize(&scankeys[0],
+								   SK_ISNULL | SK_SEARCHNOTNULL,
+								   1,	/* index col to scan */
+								   InvalidStrategy,		/* no strategy */
+								   InvalidOid,	/* no strategy subtype */
+								   InvalidOid,	/* no reg proc for this */
+								   (Datum) 0);	/* constant */
+
+			have_data = true;
+
+			/* If min is requested ... */
+			if (min)
+			{
+				index_scan = index_beginscan(heapRel, indexRel, SnapshotNow,
+											 1, scankeys);
+
+				/* Fetch first tuple in sortop's direction */
+				if ((tup = index_getnext(index_scan,
+										 indexscandir)) != NULL)
+				{
+					/* Extract the index column values from the heap tuple */
+					ExecStoreHeapTuple(tup, slot, InvalidBuffer, false);
+					FormIndexDatum(indexInfo, slot, estate,
+								   values, isnull);
+
+					/* Shouldn't have got a null, but be careful */
+					if (isnull[0])
+						elog(ERROR, "found unexpected null value in index \"%s\"",
+							 RelationGetRelationName(indexRel));
+
+					/* Copy the index column value out to caller's context */
+					MemoryContextSwitchTo(oldcontext);
+					*min = datumCopy(values[0], typByVal, typLen);
+					MemoryContextSwitchTo(tmpcontext);
+				}
+				else
+					have_data = false;
+
+				index_endscan(index_scan);
+			}
+
+			/* If max is requested, and we didn't find the index is empty */
+			if (max && have_data)
+			{
+				index_scan = index_beginscan(heapRel, indexRel, SnapshotNow,
+											 1, scankeys);
+
+				/* Fetch first tuple in reverse direction */
+				if ((tup = index_getnext(index_scan,
+										 -indexscandir)) != NULL)
+				{
+					/* Extract the index column values from the heap tuple */
+					ExecStoreHeapTuple(tup, slot, InvalidBuffer, false);
+					FormIndexDatum(indexInfo, slot, estate,
+								   values, isnull);
+
+					/* Shouldn't have got a null, but be careful */
+					if (isnull[0])
+						elog(ERROR, "found unexpected null value in index \"%s\"",
+							 RelationGetRelationName(indexRel));
+
+					/* Copy the index column value out to caller's context */
+					MemoryContextSwitchTo(oldcontext);
+					*max = datumCopy(values[0], typByVal, typLen);
+					MemoryContextSwitchTo(tmpcontext);
+				}
+				else
+					have_data = false;
+
+				index_endscan(index_scan);
+			}
+
+			/* Clean everything up */
+			ExecDropSingleTupleTableSlot(slot);
+
+			index_close(indexRel, AccessShareLock);
+			heap_close(heapRel, NoLock);
+
+			MemoryContextSwitchTo(oldcontext);
+			FreeExecutorState(estate);
+
+			/* And we're done */
+			break;
+		}
+	}
+
 	return have_data;
 }
 
@@ -4929,7 +5118,7 @@ pattern_fixed_prefix(Const *patt, Pattern_Type ptype,
  * more useful to use the upper-bound code than not.
  */
 static Selectivity
-prefix_selectivity(VariableStatData *vardata,
+prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
 				   Oid vartype, Oid opfamily, Const *prefixcon)
 {
 	Selectivity prefixsel;
@@ -4944,11 +5133,11 @@ prefix_selectivity(VariableStatData *vardata,
 		elog(ERROR, "no >= operator for opfamily %u", opfamily);
 	fmgr_info(get_opcode(cmpopr), &opproc);
 
-	prefixsel = ineq_histogram_selectivity(vardata, &opproc, true,
+	prefixsel = ineq_histogram_selectivity(root, vardata, &opproc, true,
 										   prefixcon->constvalue,
 										   prefixcon->consttype);
 
-	if (prefixsel <= 0.0)
+	if (prefixsel < 0.0)
 	{
 		/* No histogram is present ... return a suitable default estimate */
 		return DEFAULT_MATCH_SEL;
@@ -4970,12 +5159,12 @@ prefix_selectivity(VariableStatData *vardata,
 	{
 		Selectivity topsel;
 
-		topsel = ineq_histogram_selectivity(vardata, &opproc, false,
+		topsel = ineq_histogram_selectivity(root, vardata, &opproc, false,
 											greaterstrcon->constvalue,
 											greaterstrcon->consttype);
 
 		/* ineq_histogram_selectivity worked before, it shouldn't fail now */
-		Assert(topsel > 0.0);
+		Assert(topsel >= 0.0);
 
 		/*
 		 * Merge the two selectivities in the same way as for a range query
@@ -5447,6 +5636,7 @@ genericcostestimate(PlannerInfo *root,
 	QualCost	index_qual_cost;
 	double		qual_op_cost;
 	double		qual_arg_cost;
+	double		spc_random_page_cost;
 	List	   *selectivityQuals;
 	ListCell   *l;
 
@@ -5556,6 +5746,11 @@ genericcostestimate(PlannerInfo *root,
 	else
 		numIndexPages = 1.0;
 
+	/* fetch estimated page cost for schema containing index */
+	get_tablespace_page_costs(index->reltablespace,
+							  &spc_random_page_cost,
+							  NULL);
+
 	/*
 	 * Now compute the disk access costs.
 	 *
@@ -5602,15 +5797,16 @@ genericcostestimate(PlannerInfo *root,
 		 * share for each outer scan.  (Don't pro-rate for ScalarArrayOpExpr,
 		 * since that's internal to the indexscan.)
 		 */
-		*indexTotalCost = (pages_fetched * random_page_cost) / num_outer_scans;
+		*indexTotalCost = (pages_fetched * spc_random_page_cost)
+			/ num_outer_scans;
 	}
 	else
 	{
 		/*
-		 * For a single index scan, we just charge random_page_cost per page
-		 * touched.
+		 * For a single index scan, we just charge spc_random_page_cost per
+		 * page touched.
 		 */
-		*indexTotalCost = numIndexPages * random_page_cost;
+		*indexTotalCost = numIndexPages * spc_random_page_cost;
 	}
 
 	/*
@@ -5625,11 +5821,11 @@ genericcostestimate(PlannerInfo *root,
 	 *
 	 * We can deal with this by adding a very small "fudge factor" that
 	 * depends on the index size.  The fudge factor used here is one
-	 * random_page_cost per 100000 index pages, which should be small enough
-	 * to not alter index-vs-seqscan decisions, but will prevent indexes of
-	 * different sizes from looking exactly equally attractive.
+	 * spc_random_page_cost per 100000 index pages, which should be small
+	 * enough to not alter index-vs-seqscan decisions, but will prevent
+	 * indexes of different sizes from looking exactly equally attractive.
 	 */
-	*indexTotalCost += index->pages * random_page_cost / 100000.0;
+	*indexTotalCost += index->pages * spc_random_page_cost / 100000.0;
 
 	/*
 	 * CPU cost: any complex expressions in the indexquals will need to be
@@ -5696,7 +5892,7 @@ btcostestimate(PG_FUNCTION_ARGS)
 	int			indexcol;
 	bool		eqQualHere;
 	bool		found_saop;
-	bool		found_null_op;
+	bool		found_is_null_op;
 	double		num_sa_scans;
 	ListCell   *l;
 
@@ -5730,7 +5926,7 @@ btcostestimate(PG_FUNCTION_ARGS)
 	indexcol = 0;
 	eqQualHere = false;
 	found_saop = false;
-	found_null_op = false;
+	found_is_null_op = false;
 	num_sa_scans = 1;
 	foreach(l, indexQuals)
 	{
@@ -5771,12 +5967,14 @@ btcostestimate(PG_FUNCTION_ARGS)
 		{
 			NullTest   *nt = (NullTest *) clause;
 
-			Assert(nt->nulltesttype == IS_NULL);
 			leftop = (Node *) nt->arg;
 			rightop = NULL;
 			clause_op = InvalidOid;
-			found_null_op = true;
-			is_null_op = true;
+			if (nt->nulltesttype == IS_NULL)
+			{
+				found_is_null_op = true;
+				is_null_op = true;
+			}
 		}
 		else
 		{
@@ -5816,16 +6014,7 @@ btcostestimate(PG_FUNCTION_ARGS)
 			}
 		}
 		/* check for equality operator */
-		if (is_null_op)
-		{
-			/* IS NULL is like = for purposes of selectivity determination */
-			eqQualHere = true;
-
-            /* CDB: Count leading indexcols having '=' quals. */
-            if (!IsA(clause, ScalarArrayOpExpr))
-                index->num_leading_eq = indexcol + 1;
-		}
-		else
+		if (OidIsValid(clause_op))
 		{
 			op_strategy = get_op_opfamily_strategy(clause_op,
 												   index->opfamily[indexcol]);
@@ -5838,6 +6027,15 @@ btcostestimate(PG_FUNCTION_ARGS)
 				if (!IsA(clause, ScalarArrayOpExpr))
 					index->num_leading_eq = indexcol + 1;
 			}
+		}
+		else if (is_null_op)
+		{
+			/* IS NULL is like = for purposes of selectivity determination */
+			eqQualHere = true;
+
+            /* CDB: Count leading indexcols having '=' quals. */
+            if (!IsA(clause, ScalarArrayOpExpr))
+                index->num_leading_eq = indexcol + 1;
 		}
 		/* count up number of SA scans induced by indexBoundQuals only */
 		if (IsA(clause, ScalarArrayOpExpr))
@@ -5861,7 +6059,7 @@ btcostestimate(PG_FUNCTION_ARGS)
         index->num_leading_eq == index->ncolumns &&
 		eqQualHere &&
 		!found_saop &&
-		!found_null_op)
+		!found_is_null_op)
 		numIndexTuples = 1.0;
 	else
 	{
@@ -5926,10 +6124,10 @@ btcostestimate(PG_FUNCTION_ARGS)
 		}
 		else
 		{
-			vardata.statsTuple = SearchSysCache(STATRELATT,
-												ObjectIdGetDatum(relid),
-												Int16GetDatum(colnum),
-												0, 0);
+			vardata.statsTuple = SearchSysCache3(STATRELATTINH,
+												 ObjectIdGetDatum(relid),
+												 Int16GetDatum(colnum),
+												 BoolGetDatum(rte->inh));
 			vardata.freefunc = ReleaseSysCache;
 		}
 	}
@@ -5952,52 +6150,49 @@ btcostestimate(PG_FUNCTION_ARGS)
 		}
 		else
 		{
-			vardata.statsTuple = SearchSysCache(STATRELATT,
-												ObjectIdGetDatum(relid),
-												Int16GetDatum(colnum),
-												0, 0);
+			vardata.statsTuple = SearchSysCache3(STATRELATTINH,
+												 ObjectIdGetDatum(relid),
+												 Int16GetDatum(colnum),
+												 BoolGetDatum(false));
 			vardata.freefunc = ReleaseSysCache;
 		}
 	}
 
 	if (HeapTupleIsValid(vardata.statsTuple))
 	{
-		float4	   *numbers;
-		int			nnumbers;
+		AttStatsSlot sslot;
 
-		if (get_attstatsslot(vardata.statsTuple, InvalidOid, 0,
-							 STATISTIC_KIND_CORRELATION,
-							 index->fwdsortop[0],
-							 NULL, NULL, &numbers, &nnumbers))
+		if (get_attstatsslot(&sslot, vardata.statsTuple,
+							 STATISTIC_KIND_CORRELATION, index->fwdsortop[0],
+							 ATTSTATSSLOT_NUMBERS))
 		{
 			double		varCorrelation;
 
-			Assert(nnumbers == 1);
-			varCorrelation = numbers[0];
+			Assert(sslot.nnumbers == 1);
+			varCorrelation = sslot.numbers[0];
 
 			if (index->ncolumns > 1)
 				*indexCorrelation = varCorrelation * 0.75;
 			else
 				*indexCorrelation = varCorrelation;
 
-			free_attstatsslot(InvalidOid, NULL, 0, numbers, nnumbers);
+			free_attstatsslot(&sslot);
 		}
-		else if (get_attstatsslot(vardata.statsTuple, InvalidOid, 0,
-								  STATISTIC_KIND_CORRELATION,
-								  index->revsortop[0],
-								  NULL, NULL, &numbers, &nnumbers))
+		else if (get_attstatsslot(&sslot, vardata.statsTuple,
+							      STATISTIC_KIND_CORRELATION, index->revsortop[0],
+							      ATTSTATSSLOT_NUMBERS))
 		{
 			double		varCorrelation;
 
-			Assert(nnumbers == 1);
-			varCorrelation = numbers[0];
+			Assert(sslot.nnumbers == 1);
+			varCorrelation = sslot.numbers[0];
 
 			if (index->ncolumns > 1)
 				*indexCorrelation = -varCorrelation * 0.75;
 			else
 				*indexCorrelation = -varCorrelation;
 
-			free_attstatsslot(InvalidOid, NULL, 0, numbers, nnumbers);
+			free_attstatsslot(&sslot);
 		}
 	}
 

@@ -5,10 +5,10 @@
  *	  However, we define it here so that the format is documented.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.43 2009/01/01 17:23:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.57 2010/06/03 20:37:13 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,11 +26,12 @@
  * The first three digits is the PostgreSQL version number. The last
  * four digits indicates the GPDB version.
  */
-#define PG_CONTROL_VERSION	8430600
+#define PG_CONTROL_VERSION	9030600
 
 /*
  * Body of CheckPoint XLOG records.  This is declared here because we keep
  * a copy of the latest one in pg_control for possible disaster recovery.
+ * Changing this struct requires a PG_CONTROL_VERSION bump.
  */
 typedef struct CheckPoint
 {
@@ -43,10 +44,19 @@ typedef struct CheckPoint
 	Oid			nextRelfilenode;	/* next free Relfilenode */
 	MultiXactId nextMulti;		/* next free MultiXactId */
 	MultiXactOffset nextMultiOffset;	/* next free MultiXact offset */
+	TransactionId oldestXid;	/* cluster-wide minimum datfrozenxid */
+	Oid			oldestXidDB;	/* database with minimum datfrozenxid */
 	pg_time_t	time;			/* time stamp of checkpoint */
 
-	/* IN XLOG RECORD, MORE DATA FOLLOWS AT END OF STRUCT FOR DTM CHECKPOINT */
+	/*
+	 * Oldest XID still running. This is only needed to initialize hot standby
+	 * mode from an online checkpoint, so we only bother calculating this for
+	 * online checkpoints and only when archiving is enabled. Otherwise it's
+	 * set to InvalidTransactionId.
+	 */
+	TransactionId oldestActiveXid;
 
+	/* IN XLOG RECORD, MORE DATA FOLLOWS AT END OF STRUCT FOR DTM CHECKPOINT */
 } CheckPoint;
 
 /* XLOG info values for XLOG rmgr */
@@ -56,21 +66,25 @@ typedef struct CheckPoint
 #define XLOG_NEXTOID					0x30
 #define XLOG_SWITCH						0x40
 #define XLOG_BACKUP_END					0x50
-#define XLOG_NEXTRELFILENODE			0x60
-#define XLOG_HINT						0x70
+#define XLOG_PARAMETER_CHANGE			0x60
+#define XLOG_NEXTRELFILENODE			0x70
+#define XLOG_HINT						0x80
 
 
-/* System status indicator */
+/*
+ * System status indicator.  Note this is stored in pg_control; if you change
+ * it, you must bump PG_CONTROL_VERSION
+ */
 typedef enum DBState
 {
 	DB_STARTUP = 0,
 	DB_SHUTDOWNED,
+	DB_SHUTDOWNED_IN_RECOVERY,
 	DB_SHUTDOWNING,
 	DB_IN_CRASH_RECOVERY,
 	DB_IN_ARCHIVE_RECOVERY,
 	DB_IN_STANDBY_MODE,
 	DB_IN_STANDBY_PROMOTED,
-	DB_IN_STANDBY_NEW_TLI_SET,
 	DB_IN_PRODUCTION
 } DBState;
 
@@ -140,9 +154,18 @@ typedef struct ControlFileData
 	 * file was found at startup but it may have been a leftover from a stray
 	 * pg_start_backup() call, not accompanied by pg_stop_backup().
 	 */
-	XLogRecPtr	minRecoveryPoint;		/* must replay xlog to here */
-	XLogRecPtr		backupStartPoint;
+	XLogRecPtr	minRecoveryPoint;
+	XLogRecPtr	backupStartPoint;
 	bool		backupEndRequired;
+
+	/*
+	 * Parameter settings that determine if the WAL can be used for archival
+	 * or hot standby.
+	 */
+	int			wal_level;
+	int			MaxConnections;
+	int			max_prepared_xacts;
+	int			max_locks_per_xact;
 
 	/*
 	 * This data is used to check for hardware-architecture compatibility of

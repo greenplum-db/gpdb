@@ -26,7 +26,7 @@ OBJS = mapred_test.o
 
 include $(top_srcdir)/src/Makefile.shlib
 
-override CPPFLAGS += $(BLD_CPPFLAGS_SOLARIS_OLD_VERSIONS) -DFRONTEND -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
+override CPPFLAGS += $(BLD_CPPFLAGS_SOLARIS_OLD_VERSIONS) -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
 override LDFLAGS  += -lyaml
 
 FILES     = main.o mapred.o parse.o yaml_scan.o yaml_parse.o 
@@ -36,6 +36,8 @@ MAPREDOBJS= $(addprefix $(BUILDDIR)/, $(FILES))
 GENOBJS   = $(addprefix $(SRCDIR)/, $(GENFILES))
 
 FLEXFLAGS = -i
+
+$(MAPREDOBJS): override CPPFLAGS += -DFRONTEND
 
 all: submake-libpq gpmapreduce all-lib
 

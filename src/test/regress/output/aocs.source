@@ -84,7 +84,7 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_aocs6 |   1048576 | zlib         |             6 | t
 (6 rows)
 
--------------------- 
+--------------------
 -- supported sql
 --------------------
 -- COPY
@@ -180,8 +180,8 @@ SELECT count(*) FROM tenk_aocs4;
 
 --
 -- Test that the catalog eof entry doesn't change even if the file gets
--- larger due to bad data that isn't cleaned up until the next VACUUM. 
--- make sure the SELECT stops at eof (count is the same). 
+-- larger due to bad data that isn't cleaned up until the next VACUUM.
+-- make sure the SELECT stops at eof (count is the same).
 -- The first row is good (so it grows the file), the second is bad.
 --
 COPY tenk_aocs1 FROM STDIN;
@@ -226,7 +226,7 @@ SELECT aototal('tenk_aocs1'), aototal('tenk_aocs2'), aototal('tenk_aocs3'), aoto
    40000 |   40000 |   60000 |   80000
 (1 row)
 
--------------------- 
+--------------------
 -- transactionality
 --------------------
 -- rollback
@@ -464,7 +464,7 @@ SELECT count(*) FROM tenk_aocs4;
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
 SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_nocopy_storage';
- count
+ count 
 -------
      0
 (1 row)
@@ -473,7 +473,7 @@ SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_no
 CREATE TABLE tenk_truly_decoupled (LIKE tenk_aocs4);
 ALTER TABLE tenk_aocs4 DROP COLUMN two;
 SELECT count(two) FROM tenk_truly_decoupled;
- count
+ count 
 -------
      0
 (1 row)
@@ -508,62 +508,62 @@ SELECT count(*) FROM tenk_aocs1 t1, tenk_heap_for_aocs t2 where t1.unique1 = t2.
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
- count
+ count 
 -------
      1
 (1 row)
 
 CREATE TABLE empty_aocs_table_for_join (like tenk_heap_for_aocs) with (appendonly=true, orientation=column) distributed by (unique1);
 SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
      0
 (1 row)
 
 SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
- count
+ count 
 -------
  10000
 (1 row)
@@ -582,19 +582,35 @@ SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
 SELECT count(*) FROM tenk_aocs2;
- count
+ count 
 -------
      0
 (1 row)
 
 -- OID with aocs NYI
 -- OIDS
--- 
+--
 -- MPP-8058: should fail
 CREATE TABLE aocswithoids(a int, b int) WITH (appendonly=true, orientation=column, oids=true);
 ERROR:  OIDS=TRUE is not allowed on tables that use column-oriented storage. Use OIDS=FALSE
 -- INDEX
 CREATE INDEX tenk_aocs1_unique1 ON tenk_aocs1 USING btree(unique1 int4_ops);
+-- Verify that the visimap and block-directory indexes have unique and
+-- primary key constraints on them
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aovisimap_' || (select oid from pg_class where relname = 'tenk_aocs1') || '_index');
+ indisunique | indisprimary 
+-------------+--------------
+ t           | t
+(1 row)
+
+select indisunique, indisprimary from pg_index
+       where indexrelid = (select oid from pg_class where relname = 'pg_aoblkdir_' || (select oid from pg_class where relname = 'tenk_aocs1') || '_index');
+ indisunique | indisprimary 
+-------------+--------------
+ t           | t
+(1 row)
+
 drop table if exists co;
 create table co (i int, j int, k varchar) with(appendonly=true, orientation=column);
 insert into co values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
@@ -635,7 +651,7 @@ create index co_ij on co (i, j) with (fillfactor=10);
 alter index co_ij set (fillfactor=20);
 reindex index co_ij;
 select indexname from pg_indexes where tablename = 'co' order by indexname;
- indexname
+ indexname 
 -----------
  co_ij
  co_j
@@ -649,7 +665,7 @@ HINT:  DROP the index first, and recreate it after the ALTER
 alter table co rename j to j_renamed;
 alter table co drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
- tablename | attname | avg_width | n_distinct
+ tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
  co        | i       |         4 |         -1
  co        | k       |         5 |         -1
@@ -658,21 +674,21 @@ select tablename, attname, avg_width, n_distinct from pg_stats where tablename =
 create index co_i on co (i) where i = 9;
 analyze co;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
- tablename | attname | avg_width | n_distinct
+ tablename | attname | avg_width | n_distinct 
 -----------+---------+-----------+------------
  co        | i       |         4 |  -0.666667
  co        | k       |         5 |       -0.5
 (2 rows)
 
 select indexname from pg_indexes where tablename = 'co' order by indexname;
- indexname
+ indexname 
 -----------
  co_i
  co_k
 (2 rows)
 
 select * from co where i = 9;
- i | k
+ i | k 
 ---+---
  9 | b
  9 | b
@@ -680,7 +696,7 @@ select * from co where i = 9;
 
 alter index co_i rename to co_i_renamed;
 select indexname from pg_indexes where tablename = 'co' order by indexname;
-  indexname
+  indexname   
 --------------
  co_i_renamed
  co_k
@@ -762,13 +778,13 @@ create temp table temp_tenk_aocs5 with (appendonly=true, orientation=column, com
     as select * from tenk_aocs5 distributed by (unique1);
 create index temp_even_index on temp_tenk_aocs5 (even);
 select count(*) from temp_tenk_aocs5;
- count
+ count 
 -------
  10000
 (1 row)
 
 select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_aocs5';
-    tablename    |    indexname    |                              indexdef
+    tablename    |    indexname    |                              indexdef                              
 -----------------+-----------------+--------------------------------------------------------------------
  temp_tenk_aocs5 | temp_even_index | CREATE INDEX temp_even_index ON temp_tenk_aocs5 USING btree (even)
 (1 row)
@@ -777,7 +793,7 @@ insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
 update temp_tenk_aocs5 set unique2 = 99998889 where unique2 = 99998888;
 delete from temp_tenk_aocs5 where unique2 = 99998889;
 select count(*) from temp_tenk_aocs5;
- count
+ count 
 -------
  10000
 (1 row)
@@ -786,24 +802,24 @@ truncate table temp_tenk_aocs5;
 vacuum analyze temp_tenk_aocs5;
 \d temp_tenk_aocs5
 Append-Only Columnar Table "pg_temp_274.temp_tenk_aocs5"
-   Column    |  Type   | Modifiers
+   Column    |  Type   | Modifiers 
 -------------+---------+-----------
- unique1     | integer |
- unique2     | integer |
- two         | integer |
- four        | integer |
- ten         | integer |
- twenty      | integer |
- hundred     | integer |
- thousand    | integer |
- twothousand | integer |
- fivethous   | integer |
- tenthous    | integer |
- odd         | integer |
- even        | integer |
- stringu1    | name    |
- stringu2    | name    |
- string4     | name    |
+ unique1     | integer | 
+ unique2     | integer | 
+ two         | integer | 
+ four        | integer | 
+ ten         | integer | 
+ twenty      | integer | 
+ hundred     | integer | 
+ thousand    | integer | 
+ twothousand | integer | 
+ fivethous   | integer | 
+ tenthous    | integer | 
+ odd         | integer | 
+ even        | integer | 
+ stringu1    | name    | 
+ stringu2    | name    | 
+ string4     | name    | 
 Checksum: t
 Indexes:
     "temp_even_index" btree (even)
@@ -811,7 +827,7 @@ Distributed by: (unique1)
 
 insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
 select unique1 from temp_tenk_aocs5;
- unique1
+ unique1  
 ----------
  99998888
 (1 row)
@@ -822,7 +838,7 @@ prepare tenk_aocs5_prep(int4) as select * from tenk_aocs5 where unique1 > 8000;
 create temp table tenk_aocs5_temp_drop with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit drop as execute tenk_aocs5_prep(8095);
 select count(*) from tenk_aocs5_temp_drop;
- count
+ count 
 -------
   1999
 (1 row)
@@ -837,14 +853,14 @@ begin;
 create temp table tenk_aocs5_temp_delete_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit delete rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
 select count(*) from tenk_aocs5_temp_delete_rows;
- count
+ count 
 -------
   1999
 (1 row)
 
 commit;
 select count(*) from tenk_aocs5_temp_delete_rows;
- count
+ count 
 -------
      0
 (1 row)
@@ -854,14 +870,14 @@ begin;
 create temp table tenk_aocs5_temp_pres_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
     on commit preserve rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
 select count(*) from tenk_aocs5_temp_pres_rows;
- count
+ count 
 -------
   1999
 (1 row)
 
 commit;
 select count(*) from tenk_aocs5_temp_pres_rows;
- count
+ count 
 -------
   1999
 (1 row)
@@ -925,8 +941,8 @@ SELECT ctid FROM syscoltest;
 (1 row)
 
 DROP TABLE syscoltest;
--------------------- 
--- supported sql 
+--------------------
+-- supported sql
 --------------------
 DROP TABLE tenk_heap_for_aocs;
 DROP TABLE tenk_aocs1;
@@ -1005,7 +1021,7 @@ select get_ao_compression_ratio('aocs_compress_table') > 1.2 and get_ao_compress
 (1 row)
 
 select get_ao_distribution('aocs_compress_table');
- get_ao_distribution
+ get_ao_distribution 
 ---------------------
  (0,1)
 (1 row)
@@ -1013,7 +1029,7 @@ select get_ao_distribution('aocs_compress_table');
 truncate table aocs_compress_table; -- after truncate, reclaim space from the table and index
 insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
 select count(*) from (select distinct * from aocs_compress_results) temp; -- should give 2 after reclaiming space
- count
+ count 
 -------
      2
 (1 row)
@@ -1032,12 +1048,12 @@ create index bms_ao_bug_ix1 on bms_ao_bug (c2);
 set enable_seqscan=off;
 set work_mem=256;
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
-select 
+select
 a.c1,
 count(*) row_cnt
-from bms_ao_bug a 
+from bms_ao_bug a
 where a.c2 = 1
-group by 
+group by
 a.c1
 ;
  c1 | row_cnt 
@@ -1046,3 +1062,50 @@ a.c1
 (1 row)
 
 drop table bms_ao_bug;
+-- Small content as well as bulk dense content headers need to be used
+-- appropriately if compression is found to be not useful.  This test
+-- cover a bug where only small content headers were generated in such
+-- a case.
+create table aocs_small_and_dense_content (a int, b int) with
+(appendonly =true, orientation=column, blocksize=409600,
+ compresstype=rle_type, compresslevel=4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into aocs_small_and_dense_content select i,i from
+generate_series(1,800000)i;
+create extension if not exists gp_inject_fault;
+-- Inject fault on one primary segment that will cause compression to
+-- be considered not useful.
+select gp_inject_fault('appendonly_skip_compression', 'skip', '', '',
+'aocs_small_and_dense_content', -1, 0, dbid)
+from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+insert into aocs_small_and_dense_content select i,i from
+generate_series(1,800000)i;
+select gp_inject_fault('appendonly_skip_compression',
+'wait_until_triggered', dbid) from gp_segment_configuration where
+role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+-- This should not fail if small content or bulk dense content headers
+-- are used correctly in spite of compression not possible.
+select count(*) from aocs_small_and_dense_content;
+  count  
+---------
+ 1600000
+(1 row)
+
+select gp_inject_fault('appendonly_skip_compression', 'reset', dbid)
+from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+

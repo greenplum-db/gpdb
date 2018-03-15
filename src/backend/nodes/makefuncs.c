@@ -4,12 +4,12 @@
  *	  creator functions for primitive nodes. The functions here are for
  *	  the most frequently created nodes.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.64 2009/04/04 21:12:31 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.66 2010/01/02 16:57:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -319,11 +319,11 @@ makeTypeNameFromNameList(List *names)
  *	build a TypeName node to represent a type already known by OID/typmod.
  */
 TypeName *
-makeTypeNameFromOid(Oid typid, int32 typmod)
+makeTypeNameFromOid(Oid typeOid, int32 typmod)
 {
 	TypeName   *n = makeNode(TypeName);
 
-	n->typid = typid;
+	n->typeOid = typeOid;
 	n->typemod = typmod;
 	n->location = -1;
 	return n;
@@ -377,12 +377,12 @@ makeDefElem(char *name, Node *arg)
  *	build a DefElem node with all fields available to be specified
  */
 DefElem *
-makeDefElemExtended(char *namespace, char *name, Node *arg,
+makeDefElemExtended(char *nameSpace, char *name, Node *arg,
 					DefElemAction defaction)
 {
 	DefElem    *res = makeNode(DefElem);
 
-	res->defnamespace = namespace;
+	res->defnamespace = nameSpace;
 	res->defname = name;
 	res->arg = arg;
 	res->defaction = defaction;

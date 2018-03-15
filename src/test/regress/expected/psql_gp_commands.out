@@ -39,8 +39,8 @@ CREATE ROLE test_psql_du_2 WITH SUPERUSER CREATEDB CREATEROLE CREATEEXTTABLE LOG
                                    List of roles
    Role name    |                      Attributes                      | Member of 
 ----------------+------------------------------------------------------+-----------
- test_psql_du_2 | Superuser, Create role, Create DB, Ext gpfdist Table | {}
-                : 5 connections                                          
+ test_psql_du_2 | Superuser, Create role, Create DB, Ext gpfdist Table+| {}
+                | 5 connections                                        | 
 
 DROP ROLE test_psql_du_2;
 -- pg_catalog.pg_roles.rolcreaterextgpfd

@@ -810,11 +810,7 @@ _bitmap_log_newpage(Relation rel, uint8 info, Buffer buf)
 
 	page = BufferGetPage(buf);
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	xlNewPage.bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlNewPage.bm_persistentTid, &xlNewPage.bm_persistentSerialNum);
 	xlNewPage.bm_new_blkno = BufferGetBlockNumber(buf);
 
 	elog(DEBUG1, "_bitmap_log_newpage: blkno=%d", xlNewPage.bm_new_blkno);
@@ -841,13 +837,9 @@ _bitmap_log_metapage(Relation rel, Page page)
 	XLogRecPtr			recptr;
 	XLogRecData			rdata[1];
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	xlMeta = (xl_bm_metapage *)
 		palloc(MAXALIGN(sizeof(xl_bm_metapage)));
 	xlMeta->bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlMeta->bm_persistentTid, &xlMeta->bm_persistentSerialNum);
 	xlMeta->bm_lov_heapId = metapage->bm_lov_heapId;
 	xlMeta->bm_lov_indexId = metapage->bm_lov_indexId;
 	xlMeta->bm_lov_lastpage = metapage->bm_lov_lastpage;
@@ -874,11 +866,7 @@ _bitmap_log_bitmap_lastwords(Relation rel, Buffer lovBuffer,
 	XLogRecPtr				recptr;
 	XLogRecData				rdata[1];
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	xlLastwords.bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlLastwords.bm_persistentTid, &xlLastwords.bm_persistentSerialNum);
 	xlLastwords.bm_last_compword = lovItem->bm_last_compword;
 	xlLastwords.bm_last_word = lovItem->bm_last_word;
 	xlLastwords.lov_words_header = lovItem->lov_words_header;
@@ -911,13 +899,9 @@ _bitmap_log_lovitem(Relation rel, Buffer lovBuffer, OffsetNumber offset,
 	XLogRecPtr		recptr;
 	XLogRecData		rdata[1];
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	Assert(BufferGetBlockNumber(lovBuffer) > 0);
 
 	xlLovItem.bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlLovItem.bm_persistentTid, &xlLovItem.bm_persistentSerialNum);
 	xlLovItem.bm_lov_blkno = BufferGetBlockNumber(lovBuffer);
 	xlLovItem.bm_lov_offset = offset;
 	memcpy(&(xlLovItem.bm_lovItem), lovItem, sizeof(BMLOVItemData));
@@ -966,9 +950,6 @@ _bitmap_log_bitmapwords(Relation rel, Buffer bitmapBuffer, Buffer lovBuffer,
 	int					hwords_size;
 	Page lovPage = BufferGetPage(lovBuffer);
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	lastTids_size = buf->curword * sizeof(uint64);
 	cwords_size = buf->curword * sizeof(BM_HRL_WORD);
 	hwords_size = (BM_CALC_H_WORDS(buf->curword)) *
@@ -983,7 +964,6 @@ _bitmap_log_bitmapwords(Relation rel, Buffer bitmapBuffer, Buffer lovBuffer,
 				MAXALIGN(cwords_size) + MAXALIGN(hwords_size));
 
 	xlBitmapWords->bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlBitmapWords->bm_persistentTid, &xlBitmapWords->bm_persistentSerialNum);
 	xlBitmapWords->bm_blkno = BufferGetBlockNumber(bitmapBuffer);
 	xlBitmapWords->bm_next_blkno = nextBlkno;
 	xlBitmapWords->bm_last_tid = bitmapPageOpaque->bm_last_tid_location;
@@ -1041,14 +1021,10 @@ _bitmap_log_updateword(Relation rel, Buffer bitmapBuffer, int word_no)
 	XLogRecPtr			recptr;
 	XLogRecData			rdata[1];
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	bitmapPage = BufferGetPage(bitmapBuffer);
 	bitmap = (BMBitmap) PageGetContentsMaxAligned(bitmapPage);
 
 	xlBitmapWord.bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlBitmapWord.bm_persistentTid, &xlBitmapWord.bm_persistentSerialNum);
 	xlBitmapWord.bm_blkno = BufferGetBlockNumber(bitmapBuffer);
 	xlBitmapWord.bm_word_no = word_no;
 	xlBitmapWord.bm_cword = bitmap->cwords[word_no];
@@ -1132,11 +1108,7 @@ _bitmap_log_updatewords(Relation rel,
 		xlBitmapWords.bm_next_blkno = secondOpaque->bm_bitmap_next;
 	}
 
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
-
 	xlBitmapWords.bm_node = rel->rd_node;
-	RelationGetPTInfo(rel, &xlBitmapWords.bm_persistentTid, &xlBitmapWords.bm_persistentSerialNum);
 	xlBitmapWords.bm_lov_blkno = BufferGetBlockNumber(lovBuffer);
 	xlBitmapWords.bm_lov_offset = lovOffset;
 	xlBitmapWords.bm_new_lastpage = new_lastpage;

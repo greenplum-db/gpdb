@@ -13,89 +13,32 @@
 #include "postgres.h"
 
 #include "catalog/pg_inherits_fn.h"
-#include "funcapi.h"
-#include "optimizer/prep.h"
-#include "utils/builtins.h"
-#include "rewrite/rewriteHandler.h"
+#include "catalog/pg_proc.h"
 #include "tcop/tcopprot.h"
-
-#define atooid(x)  ((Oid) strtoul((x), NULL, 10))
+#include "optimizer/planmain.h"
+#include "utils/builtins.h"
+#include "utils/syscache.h"
+#include "utils/tqual.h"
 
 Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 
 /*
- * Find all child table relids including inheritances, interior and leaf
- * partitions of given root table oid, append them into string buffer.
+ * Append a list of Oids to a StringInfo, separated by commas.
  */
 static void
-appendChildrenRelids(StringInfoData *relbuf, Oid relid)
+appendOids(StringInfo buf, List *oids)
 {
-	List	   *relids;
 	ListCell   *lc;
+	bool		first = true;
 
-	relids = find_all_inheritors(relid, NoLock);
-	if (list_length(relids) <= 1)
-		return;
-
-	relids = list_delete_first(relids);
-	foreach(lc, relids)
+	foreach(lc, oids)
 	{
-		appendStringInfo(relbuf, ",%u", lfirst_oid(lc));
-	}
-}
-
-static void
-traverseQueryOids
-	(
-	Query          *pquery,
-	HTAB           *relhtab,
-	StringInfoData *relbuf,
-	HTAB           *funchtab,
-	StringInfoData *funcbuf
-	)
-{
-	bool	   found;
-	const char *whitespace = " \t\n\r";
-	char	   *query = nodeToString(pquery);
-	char	   *token = strtok(query, whitespace);
-
-	while (token)
-	{
-		if (pg_strcasecmp(token, ":relid") == 0)
-		{
-			token = strtok(NULL, whitespace);
-			if (token)
-			{
-				Oid relid = atooid(token);
-				hash_search(relhtab, (void *)&relid, HASH_ENTER, &found);
-				if (!found)
-				{
-					if (relbuf->len != 0)
-						appendStringInfo(relbuf, "%s", ",");
-					appendStringInfo(relbuf, "%u", relid);
-					appendChildrenRelids(relbuf, relid);
-				}
-			}
-		}
-		else if (pg_strcasecmp(token, ":funcid") == 0)
-		{
-			token = strtok(NULL, whitespace);
-			if (token)
-			{
-				Oid funcid = atooid(token);
-				hash_search(funchtab, (void *)&funcid, HASH_ENTER, &found);
-				if (!found)
-				{
-					if (funcbuf->len != 0)
-						appendStringInfo(funcbuf, "%s", ",");
-					appendStringInfo(funcbuf, "%u", funcid);
-				}
-			}
-		}
-
-		token = strtok(NULL, whitespace);
+		if (!first)
+			appendStringInfoChar(buf, ',');
+		appendStringInfo(buf, "%u", lfirst_oid(lc));
+		first = false;
 	}
 }
 
@@ -126,23 +69,16 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 {
 	char	   *sqlText = text_to_cstring(PG_GETARG_TEXT_P(0));
 	List	   *queryList;
-	List	   *expanded_queryList = NIL;
 	ListCell   *lc;
 	HASHCTL		ctl;
-	HTAB	   *relhtab;
-	HTAB	   *funchtab;
-	StringInfoData relbuf,
-				funcbuf;
+	HTAB	   *dedup_htab;
 	StringInfoData str;
 	ErrorContextCallback sqlerrcontext;
-
-	memset(&ctl, 0, sizeof(HASHCTL));
-	ctl.keysize = sizeof(Oid);
-	ctl.entrysize = sizeof(Oid);
-	ctl.hash = oid_hash;
-
-	relhtab = hash_create("relid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
-	funchtab = hash_create("funcid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+	Relation	procRelation;
+	List	   *invalidItems = NIL;
+	List	   *relationOids = NIL;
+	List	   *deduped_relationOids = NIL;
+	List	   *procOids = NIL;
 
 	/*
 	 * Setup error traceback support for ereport().
@@ -153,43 +89,116 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 	error_context_stack = &sqlerrcontext;
 
 	/*
-	 * Traverse through the query list. For EXPLAIN statements, the query list
-	 * contains an ExplainStmt with the raw parse tree of the actual query.
-	 * Analyze the explained queries instead of the ExplainStmt itself.
+	 * Parse and analyze the query.
 	 */
 	queryList = pg_parse_and_rewrite(sqlText, NULL, 0);
-	foreach(lc, queryList)
-	{
-		Query	   *query = (Query *) lfirst(lc);
-
-		if (query->commandType == CMD_UTILITY &&
-			IsA(query->utilityStmt, ExplainStmt))
-		{
-			ExplainStmt *estmt = (ExplainStmt *) query->utilityStmt;
-			List	   *l;
-
-			l = pg_analyze_and_rewrite(estmt->query, sqlText, NULL, 0);
-
-			expanded_queryList = list_concat(expanded_queryList, l);
-		}
-		else
-			expanded_queryList = lappend(expanded_queryList, query);
-	}
 
 	error_context_stack = sqlerrcontext.previous;
 
 	/* Then scan each Query and scrape any relation and function OIDs */
-	initStringInfo(&relbuf);
-	initStringInfo(&funcbuf);
-
-	foreach(lc, expanded_queryList)
+	foreach(lc, queryList)
 	{
-		traverseQueryOids((Query *) lfirst(lc), relhtab, &relbuf, funchtab, &funcbuf);
+		Query	   *q = lfirst(lc);
+		List	   *q_relationOids = NIL;
+		List	   *q_invalidItems = NIL;
+
+		extract_query_dependencies((Node *) q, &q_relationOids, &q_invalidItems);
+
+		relationOids = list_concat(relationOids, q_relationOids);
+		invalidItems = list_concat(invalidItems, q_invalidItems);
 	}
 
-	/* Construct the final output */
+	/*
+	 * Deduplicate the relation oids
+	 */
+	memset(&ctl, 0, sizeof(HASHCTL));
+	ctl.keysize = sizeof(Oid);
+	ctl.entrysize = sizeof(Oid);
+	ctl.hash = oid_hash;
+	dedup_htab = hash_create("relid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+
+	deduped_relationOids = NIL;
+	foreach(lc, relationOids)
+	{
+		Oid			relid = lfirst_oid(lc);
+		bool		found;
+
+		hash_search(dedup_htab, (void *) &relid, HASH_ENTER, &found);
+		if (!found)
+		{
+			deduped_relationOids = lappend_oid(deduped_relationOids, relid);
+
+			/*
+			 * Also find all child table relids including inheritances,
+			 * interior and leaf partitions of given root table oid
+			 */
+			List *child_relids = find_all_inheritors(relid, NoLock, NULL);
+
+			if (child_relids)
+			{
+				child_relids = list_delete_first(child_relids);
+				deduped_relationOids = list_concat(deduped_relationOids, child_relids);
+			}
+		}
+	}
+	relationOids = deduped_relationOids;
+
+	/*
+	 * Fetch the procedure OIDs based on the PlanInvalItems. Deduplicate them as
+	 * we go.
+	 */
+	procRelation = heap_open(ProcedureRelationId, AccessShareLock);
+
+	memset(&ctl, 0, sizeof(HASHCTL));
+	ctl.keysize = sizeof(Oid);
+	ctl.entrysize = sizeof(Oid);
+	ctl.hash = oid_hash;
+	dedup_htab = hash_create("funcid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+
+	foreach (lc, invalidItems)
+	{
+		PlanInvalItem *inval_item = (PlanInvalItem *) lfirst(lc);
+
+		if (inval_item->cacheId == PROCOID)
+		{
+			HeapTupleData htup;
+			Buffer		buf = InvalidBuffer;
+
+			htup.t_self = inval_item->tupleId;
+
+			if (heap_fetch(procRelation,
+						   SnapshotAny,
+						   &htup,
+						   &buf,
+						   false,
+						   NULL))
+			{
+				Oid			funcId = HeapTupleGetOid(&htup);
+				bool		found;
+
+				hash_search(dedup_htab, (void *) &funcId, HASH_ENTER, &found);
+				if (!found)
+					 procOids = lappend_oid(procOids, funcId);
+			}
+
+			if (BufferIsValid(buf))
+				ReleaseBuffer(buf);
+		}
+	}
+
+	heap_close(procRelation, AccessShareLock);
+
+	/*
+	 * Construct the final output
+	 */
 	initStringInfo(&str);
-	appendStringInfo(&str, "{\"relids\": \"%s\", \"funcids\": \"%s\"}", relbuf.data, funcbuf.data);
+
+	appendStringInfo(&str, "{\"relids\": \"");
+	appendOids(&str, relationOids);
+
+	appendStringInfoString(&str, "\", \"funcids\": \"");
+	appendOids(&str, procOids);
+	appendStringInfo(&str, "\"}");
 
 	PG_RETURN_TEXT_P(cstring_to_text(str.data));
 }

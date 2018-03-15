@@ -10,10 +10,10 @@
  *	  Over time, this has also become the preferred place for widely known
  *	  resource-limitation stuff, such as work_mem and check_stack_depth().
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.211 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.221 2010/06/17 17:44:40 tgl Exp $
  *
  * NOTES
  *	  some of the information in this file should be moved to other files.
@@ -348,6 +348,13 @@ extern pg_stack_base_t set_stack_base(void);
 extern void restore_stack_base(pg_stack_base_t base);
 extern void check_stack_depth(void);
 
+/* in tcop/utility.c */
+extern void PreventCommandIfReadOnly(const char *cmdname);
+extern void PreventCommandDuringRecovery(const char *cmdname);
+
+/* in utils/misc/guc.c */
+extern int	trace_recovery_messages;
+extern int	trace_recovery(int trace_level);
 
 /*****************************************************************************
  *	  pdir.h --																 *
@@ -458,10 +465,6 @@ extern PGDLLIMPORT bool process_shared_preload_libraries_in_progress;
 extern char *shared_preload_libraries_string;
 extern char *local_preload_libraries_string;
 
-extern void SetReindexProcessing(Oid heapOid, Oid indexOid);
-extern void ResetReindexProcessing(void);
-extern bool ReindexIsProcessingHeap(Oid heapOid);
-extern bool ReindexIsProcessingIndex(Oid indexOid);
 extern void CreateDataDirLockFile(bool amPostmaster);
 extern void CreateSocketLockFile(const char *socketfile, bool amPostmaster);
 extern void TouchSocketLockFile(void);
@@ -485,20 +488,17 @@ typedef enum
 	CheckerProcess = 0,
 	BootstrapProcess,
 	StartupProcess,
-	StartupPass2Process,
-	StartupPass3Process,
-	StartupPass4Process,
 	BgWriterProcess,
 	CheckpointerProcess,
 	WalWriterProcess,
 	WalReceiverProcess,
-	FilerepProcess,
-	FilerepResetPeerProcess
+
+	NUM_AUXPROCTYPES			/* Must be last! */
 } AuxProcType;
 
 extern AuxProcType MyAuxProcType; /* bootstrap.c */
 #define AmBootstrapProcess()        (MyAuxProcType == BootstrapProcess)
-#define AmStartupProcess()          (MyAuxProcType >= StartupProcess && MyAuxProcType <= StartupPass4Process)
+#define AmStartupProcess()          (MyAuxProcType == StartupProcess)
 #define AmBackgroundWriterProcess() (MyAuxProcType == BgWriterProcess)
 #define AmCheckpointerProcess()     (MyAuxProcType == CheckpointerProcess)
 #define AmWalWriterProcess()        (MyAuxProcType == WalWriterProcess)

@@ -56,6 +56,7 @@ typedef struct PolicyAutoContext
 static bool PolicyAutoPrelimWalker(Node *node, PolicyAutoContext *context);
 static bool	PolicyAutoAssignWalker(Node *node, PolicyAutoContext *context);
 static bool IsAggMemoryIntensive(Agg *agg);
+static bool IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt);
 
 struct OperatorGroupNode;
 
@@ -210,7 +211,7 @@ IsBlockingOperator(Node *node)
  * Is a result node memory intensive? It is if it contains function calls.
  */
 bool
-IsResultMemoryIntesive(Result *res)
+IsResultMemoryIntensive(Result *res)
 {
 
 	List *funcNodes = extract_nodes(NULL /* glob */,
@@ -234,7 +235,7 @@ IsResultMemoryIntesive(Result *res)
 /**
  * Is an operator memory intensive?
  */
-bool
+static bool
 IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt)
 {
 	Assert(is_plan_node(node));
@@ -257,7 +258,7 @@ IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt)
 		case T_Result:
 			{
 				Result *res = (Result *) node;
-				return IsResultMemoryIntesive(res);
+				return IsResultMemoryIntensive(res);
 			}
 		default:
 			return false;
@@ -292,7 +293,6 @@ static bool PolicyAutoPrelimWalker(Node *node, PolicyAutoContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 	if (is_plan_node(node))
 	{
@@ -322,7 +322,6 @@ static bool PolicyAutoAssignWalker(Node *node, PolicyAutoContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	if (is_plan_node(node))
@@ -770,7 +769,6 @@ PolicyEagerFreePrelimWalker(Node *node, PolicyEagerFreeContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	OperatorGroupNode *parentGroupNode = NULL;
@@ -803,7 +801,7 @@ PolicyEagerFreePrelimWalker(Node *node, PolicyEagerFreeContext *context)
 	Assert(!result);
 
 	/*
-	 * If this node is the top nodoe in a group, at this point, we should have all info about
+	 * If this node is the top node in a group, at this point, we should have all info about
 	 * its child groups. We then calculate the maximum number of potential concurrently
 	 * active memory-intensive operators and non-memory-intensive operators in all
 	 * child groups.
@@ -849,7 +847,6 @@ PolicyEagerFreeAssignWalker(Node *node, PolicyEagerFreeContext *context)
 		return false;
 	}
 
-	Assert(node);
 	Assert(context);
 
 	const uint64 nonMemIntenseOpMemKB = (uint64)(*gp_resmanager_memory_policy_auto_fixed_mem);

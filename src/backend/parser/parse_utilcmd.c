@@ -16,10 +16,10 @@
  * a quick copyObject() call before manipulating the query tree.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.21 2009/06/11 14:49:00 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.40 2010/02/26 02:00:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,10 +35,13 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_constraint.h"
 #include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_opclass.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_type_encoding.h"
+#include "commands/comment.h"
 #include "commands/defrem.h"
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
@@ -46,7 +49,6 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
-#include "parser/gramparse.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_partition.h"
@@ -54,6 +56,7 @@
 #include "parser/parse_target.h"
 #include "parser/parse_type.h"
 #include "parser/parse_utilcmd.h"
+#include "parser/parser.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -62,11 +65,13 @@
 #include "utils/memutils.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
+#include "utils/typcache.h"
 
 #include "cdb/cdbhash.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "cdb/cdbvars.h"
+#include "utils/tqual.h"
 
 
 /* State shared by transformCreateSchemaStmt and its subroutines */
@@ -90,6 +95,9 @@ static void transformColumnDefinition(ParseState *pstate,
 static void transformTableConstraint(ParseState *pstate,
 						 CreateStmtContext *cxt,
 						 Constraint *constraint);
+static void transformOfType(ParseState *pstate, CreateStmtContext *cxt,
+				TypeName *ofTypename);
+static char *chooseIndexName(const RangeVar *relation, IndexStmt *index_stmt);
 static IndexStmt *generateClonedIndexStmt(CreateStmtContext *cxt,
 						Relation source_idx,
 						const AttrNumber *attmap, int attmap_length);
@@ -102,7 +110,7 @@ static void transformFKConstraints(ParseState *pstate,
 					   CreateStmtContext *cxt,
 					   bool skipValidation,
 					   bool isAddConstraint);
-static void transformConstraintAttrs(List *constraintList);
+static void transformConstraintAttrs(ParseState *pstate, List *constraintList);
 static void transformColumnType(ParseState *pstate, ColumnDef *column);
 static void setSchemaName(char *context_schema, char **stmt_schema_name);
 
@@ -208,6 +216,11 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	cxt.pkey = NULL;
 	cxt.hasoids = interpretOidsOption(stmt->options);
 
+	Assert(!stmt->ofTypename || !stmt->inhRelations);	/* grammar enforces */
+
+	if (stmt->ofTypename)
+		transformOfType(pstate, &cxt, stmt->ofTypename);
+
 	stmt->policy = NULL;
 
 	/* Disallow inheritance in combination with partitioning. */
@@ -244,11 +257,6 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 			case T_Constraint:
 				transformTableConstraint(pstate, &cxt,
 										 (Constraint *) element);
-				break;
-
-			case T_FkConstraint:
-				/* No pre-transformation needed */
-				cxt.fkconstraints = lappend(cxt.fkconstraints, element);
 				break;
 
 			case T_InhRelation:
@@ -401,8 +409,9 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 
 	/* Check for SERIAL pseudo-types */
 	is_serial = false;
-	if (list_length(column->typeName->names) == 1 &&
-		!column->typeName->pct_type)
+	if (column->typeName
+		&& list_length(column->typeName->names) == 1
+		&& !column->typeName->pct_type)
 	{
 		char	   *typname = strVal(linitial(column->typeName->names));
 
@@ -411,14 +420,14 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		{
 			is_serial = true;
 			column->typeName->names = NIL;
-			column->typeName->typid = INT4OID;
+			column->typeName->typeOid = INT4OID;
 		}
 		else if (strcmp(typname, "bigserial") == 0 ||
 				 strcmp(typname, "serial8") == 0)
 		{
 			is_serial = true;
 			column->typeName->names = NIL;
-			column->typeName->typid = INT8OID;
+			column->typeName->typeOid = INT8OID;
 		}
 
 		/*
@@ -429,11 +438,13 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		if (is_serial && column->typeName->arrayBounds != NIL)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("array of serial is not implemented")));
+					 errmsg("array of serial is not implemented"),
+					 parser_errposition(pstate, column->typeName->location)));
 	}
 
 	/* Do necessary work on the column type declaration */
-	transformColumnType(pstate, column);
+	if (column->typeName)
+		transformColumnType(pstate, column);
 
 	/* Special actions for SERIAL pseudo-types */
 	if (is_serial)
@@ -524,6 +535,7 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		funccallnode = makeNode(FuncCall);
 		funccallnode->funcname = SystemFuncName("nextval");
 		funccallnode->args = list_make1(castnode);
+		funccallnode->agg_order = NIL;
 		funccallnode->agg_star = false;
 		funccallnode->agg_distinct = false;
 		funccallnode->func_variadic = false;
@@ -531,18 +543,19 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 
 		constraint = makeNode(Constraint);
 		constraint->contype = CONSTR_DEFAULT;
+		constraint->location = -1;
 		constraint->raw_expr = (Node *) funccallnode;
 		constraint->cooked_expr = NULL;
-		constraint->keys = NIL;
 		column->constraints = lappend(column->constraints, constraint);
 
 		constraint = makeNode(Constraint);
 		constraint->contype = CONSTR_NOTNULL;
+		constraint->location = -1;
 		column->constraints = lappend(column->constraints, constraint);
 	}
 
 	/* Process column constraints, if any... */
-	transformConstraintAttrs(column->constraints);
+	transformConstraintAttrs(pstate, column->constraints);
 
 	saw_nullable = false;
 	saw_default = false;
@@ -550,21 +563,6 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 	foreach(clist, column->constraints)
 	{
 		constraint = lfirst(clist);
-
-		/*
-		 * If this column constraint is a FOREIGN KEY constraint, then we fill
-		 * in the current attribute's name and throw it into the list of FK
-		 * constraints to be processed later.
-		 */
-		if (IsA(constraint, FkConstraint))
-		{
-			FkConstraint *fkconstraint = (FkConstraint *) constraint;
-
-			fkconstraint->fk_attrs = list_make1(makeString(column->colname));
-			cxt->fkconstraints = lappend(cxt->fkconstraints, fkconstraint);
-			continue;
-		}
-
 		Assert(IsA(constraint, Constraint));
 
 		switch (constraint->contype)
@@ -574,7 +572,9 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 					ereport(ERROR,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("conflicting NULL/NOT NULL declarations for column \"%s\" of table \"%s\"",
-								  column->colname, cxt->relation->relname)));
+									column->colname, cxt->relation->relname),
+							 parser_errposition(pstate,
+												constraint->location)));
 				column->is_not_null = FALSE;
 				saw_nullable = true;
 				break;
@@ -584,7 +584,9 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 					ereport(ERROR,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("conflicting NULL/NOT NULL declarations for column \"%s\" of table \"%s\"",
-								  column->colname, cxt->relation->relname)));
+									column->colname, cxt->relation->relname),
+							 parser_errposition(pstate,
+												constraint->location)));
 				column->is_not_null = TRUE;
 				saw_nullable = true;
 				break;
@@ -594,10 +596,16 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 					ereport(ERROR,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("multiple default values specified for column \"%s\" of table \"%s\"",
-								  column->colname, cxt->relation->relname)));
+									column->colname, cxt->relation->relname),
+							 parser_errposition(pstate,
+												constraint->location)));
 				column->raw_default = constraint->raw_expr;
 				Assert(constraint->cooked_expr == NULL);
 				saw_default = true;
+				break;
+
+			case CONSTR_CHECK:
+				cxt->ckconstraints = lappend(cxt->ckconstraints, constraint);
 				break;
 
 			case CONSTR_PRIMARY:
@@ -607,8 +615,19 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 				cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
 				break;
 
-			case CONSTR_CHECK:
-				cxt->ckconstraints = lappend(cxt->ckconstraints, constraint);
+			case CONSTR_EXCLUSION:
+				/* grammar does not allow EXCLUDE as a column constraint */
+				elog(ERROR, "column exclusion constraints are not supported");
+				break;
+
+			case CONSTR_FOREIGN:
+
+				/*
+				 * Fill in the current attribute's name and throw it into the
+				 * list of FK constraints to be processed later.
+				 */
+				constraint->fk_attrs = list_make1(makeString(column->colname));
+				cxt->fkconstraints = lappend(cxt->fkconstraints, constraint);
 				break;
 
 			case CONSTR_ATTR_DEFERRABLE:
@@ -638,11 +657,16 @@ transformTableConstraint(ParseState *pstate, CreateStmtContext *cxt,
 	{
 		case CONSTR_PRIMARY:
 		case CONSTR_UNIQUE:
+		case CONSTR_EXCLUSION:
 			cxt->ixconstraints = lappend(cxt->ixconstraints, constraint);
 			break;
 
 		case CONSTR_CHECK:
 			cxt->ckconstraints = lappend(cxt->ckconstraints, constraint);
+			break;
+
+		case CONSTR_FOREIGN:
+			cxt->fkconstraints = lappend(cxt->fkconstraints, constraint);
 			break;
 
 		case CONSTR_NULL:
@@ -682,10 +706,7 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	TupleConstr *constr;
 	AttrNumber *attmap;
 	AclResult	aclresult;
-	bool		including_defaults = false;
-	bool		including_constraints = false;
-	bool		including_indexes = false;
-	ListCell   *elem;
+	char	   *comment;
 
 	relation = parserOpenTable(pstate, inhRelation->relation, AccessShareLock,
 							   false, NULL);
@@ -708,37 +729,7 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	tupleDesc = RelationGetDescr(relation);
 	constr = tupleDesc->constr;
 
-	foreach(elem, inhRelation->options)
-	{
-		int			option = lfirst_int(elem);
-
-		switch (option)
-		{
-			case CREATE_TABLE_LIKE_INCLUDING_DEFAULTS:
-				including_defaults = true;
-				break;
-			case CREATE_TABLE_LIKE_EXCLUDING_DEFAULTS:
-				including_defaults = false;
-				break;
-			case CREATE_TABLE_LIKE_INCLUDING_CONSTRAINTS:
-				including_constraints = true;
-				break;
-			case CREATE_TABLE_LIKE_EXCLUDING_CONSTRAINTS:
-				including_constraints = false;
-				break;
-			case CREATE_TABLE_LIKE_INCLUDING_INDEXES:
-				including_indexes = true;
-				break;
-			case CREATE_TABLE_LIKE_EXCLUDING_INDEXES:
-				including_indexes = false;
-				break;
-			default:
-				elog(ERROR, "unrecognized CREATE TABLE LIKE option: %d",
-					 option);
-		}
-	}
-
-	if (forceBareCol && (including_indexes || including_constraints || including_defaults))
+	if (forceBareCol && inhRelation->options != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("LIKE INCLUDING may not be used with this kind of relation")));
@@ -793,9 +784,10 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 		/*
 		 * Copy default, if present and the default has been requested
 		 */
-		if (attribute->atthasdef && including_defaults)
+		if (attribute->atthasdef &&
+			(inhRelation->options & CREATE_TABLE_LIKE_DEFAULTS))
 		{
-			char	   *this_default = NULL;
+			Node	   *this_default = NULL;
 			AttrDefault *attrdef;
 			int			i;
 
@@ -806,7 +798,7 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 			{
 				if (attrdef[i].adnum == parent_attno)
 				{
-					this_default = attrdef[i].adbin;
+					this_default = stringToNode(attrdef[i].adbin);
 					break;
 				}
 			}
@@ -817,7 +809,31 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 			 * but it can't; so default is ready to apply to child.
 			 */
 
-			def->cooked_default = pstrdup(this_default);
+			def->cooked_default = this_default;
+		}
+
+		/* Likewise, copy storage if requested */
+		if (inhRelation->options & CREATE_TABLE_LIKE_STORAGE)
+			def->storage = attribute->attstorage;
+		else
+			def->storage = 0;
+
+		/* Likewise, copy comment if requested */
+		if ((inhRelation->options & CREATE_TABLE_LIKE_COMMENTS) &&
+			(comment = GetComment(attribute->attrelid,
+								  RelationRelationId,
+								  attribute->attnum)) != NULL)
+		{
+			CommentStmt *stmt = makeNode(CommentStmt);
+
+			stmt->objtype = OBJECT_COLUMN;
+			stmt->objname = list_make3(makeString(cxt->relation->schemaname),
+									   makeString(cxt->relation->relname),
+									   makeString(def->colname));
+			stmt->objargs = NIL;
+			stmt->comment = comment;
+
+			cxt->alist = lappend(cxt->alist, stmt);
 		}
 	}
 
@@ -825,7 +841,8 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	 * Copy CHECK constraints if requested, being careful to adjust attribute
 	 * numbers so they match the child.
 	 */
-	if (including_constraints && tupleDesc->constr)
+	if ((inhRelation->options & CREATE_TABLE_LIKE_CONSTRAINTS) &&
+		tupleDesc->constr)
 	{
 		int			ccnum;
 
@@ -857,18 +874,38 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 								   RelationGetRelationName(relation))));
 
 			n->contype = CONSTR_CHECK;
-			n->name = pstrdup(ccname);
+			n->location = -1;
+			n->conname = pstrdup(ccname);
 			n->raw_expr = NULL;
 			n->cooked_expr = nodeToString(ccbin_node);
-			n->indexspace = NULL;
-			cxt->ckconstraints = lappend(cxt->ckconstraints, (Node *) n);
+			cxt->ckconstraints = lappend(cxt->ckconstraints, n);
+
+			/* Copy comment on constraint */
+			if ((inhRelation->options & CREATE_TABLE_LIKE_COMMENTS) &&
+				(comment = GetComment(get_constraint_oid(RelationGetRelid(relation),
+														 n->conname,  false),
+									  ConstraintRelationId,
+									  0)) != NULL)
+			{
+				CommentStmt *stmt = makeNode(CommentStmt);
+
+				stmt->objtype = OBJECT_CONSTRAINT;
+				stmt->objname = list_make3(makeString(cxt->relation->schemaname),
+										   makeString(cxt->relation->relname),
+										   makeString(n->conname));
+				stmt->objargs = NIL;
+				stmt->comment = comment;
+
+				cxt->alist = lappend(cxt->alist, stmt);
+			}
 		}
 	}
 
 	/*
 	 * Likewise, copy indexes if requested
 	 */
-	if (including_indexes && relation->rd_rel->relhasindex)
+	if ((inhRelation->options & CREATE_TABLE_LIKE_INDEXES) &&
+		relation->rd_rel->relhasindex)
 	{
 		List	   *parent_indexes;
 		ListCell   *l;
@@ -887,6 +924,35 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 			index_stmt = generateClonedIndexStmt(cxt, parent_index,
 												 attmap, tupleDesc->natts);
 
+			/* Copy comment on index */
+			if (inhRelation->options & CREATE_TABLE_LIKE_COMMENTS)
+			{
+				comment = GetComment(parent_index_oid, RelationRelationId, 0);
+
+				if (comment != NULL)
+				{
+					CommentStmt *stmt;
+
+					/*
+					 * We have to assign the index a name now, so that we can
+					 * reference it in CommentStmt.
+					 */
+					if (index_stmt->idxname == NULL)
+						index_stmt->idxname = chooseIndexName(cxt->relation,
+															  index_stmt);
+
+					stmt = makeNode(CommentStmt);
+					stmt->objtype = OBJECT_INDEX;
+					stmt->objname =
+						list_make2(makeString(cxt->relation->schemaname),
+								   makeString(index_stmt->idxname));
+					stmt->objargs = NIL;
+					stmt->comment = comment;
+
+					cxt->alist = lappend(cxt->alist, stmt);
+				}
+			}
+
 			/* Save it in the inh_indexes list for the time being */
 			cxt->inh_indexes = lappend(cxt->inh_indexes, index_stmt);
 
@@ -902,6 +968,69 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	heap_close(relation, NoLock);
 }
 
+static void
+transformOfType(ParseState *pstate, CreateStmtContext *cxt, TypeName *ofTypename)
+{
+	HeapTuple	tuple;
+	Form_pg_type typ;
+	TupleDesc	tupdesc;
+	int			i;
+	Oid			ofTypeId;
+
+	AssertArg(ofTypename);
+
+	tuple = typenameType(NULL, ofTypename, NULL);
+	typ = (Form_pg_type) GETSTRUCT(tuple);
+	ofTypeId = HeapTupleGetOid(tuple);
+	ofTypename->typeOid = ofTypeId;		/* cached for later */
+
+	if (typ->typtype != TYPTYPE_COMPOSITE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("type %s is not a composite type",
+						format_type_be(ofTypeId))));
+
+	tupdesc = lookup_rowtype_tupdesc(ofTypeId, -1);
+	for (i = 0; i < tupdesc->natts; i++)
+	{
+		Form_pg_attribute attr = tupdesc->attrs[i];
+		ColumnDef  *n = makeNode(ColumnDef);
+
+		n->colname = pstrdup(NameStr(attr->attname));
+		n->typeName = makeTypeNameFromOid(attr->atttypid, attr->atttypmod);
+		n->constraints = NULL;
+		n->is_local = true;
+		n->is_from_type = true;
+		cxt->columns = lappend(cxt->columns, n);
+	}
+	DecrTupleDescRefCount(tupdesc);
+
+	ReleaseSysCache(tuple);
+}
+
+/*
+ * chooseIndexName
+ *
+ * Compute name for an index.  This must match code in indexcmds.c.
+ *
+ * XXX this is inherently broken because the indexes aren't created
+ * immediately, so we fail to resolve conflicts when the same name is
+ * derived for multiple indexes.  However, that's a reasonably uncommon
+ * situation, so we'll live with it for now.
+ */
+static char *
+chooseIndexName(const RangeVar *relation, IndexStmt *index_stmt)
+{
+	Oid			namespaceId;
+	List	   *colnames;
+
+	namespaceId = RangeVarGetCreationNamespace(relation);
+	colnames = ChooseIndexColumnNames(index_stmt->indexParams);
+	return ChooseIndexName(relation->relname, namespaceId,
+						   colnames, index_stmt->excludeOpNames,
+						   index_stmt->primary, index_stmt->isconstraint);
+}
+
 /*
  * Generate an IndexStmt node using information from an already existing index
  * "source_idx".  Attribute numbers should be adjusted according to attmap.
@@ -911,6 +1040,7 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 						const AttrNumber *attmap, int attmap_length)
 {
 	Oid			source_relid = RelationGetRelid(source_idx);
+	Form_pg_attribute *attrs = RelationGetDescr(source_idx)->attrs;
 	HeapTuple	ht_idxrel;
 	HeapTuple	ht_idx;
 	Form_pg_class idxrelrec;
@@ -921,7 +1051,7 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	List	   *indexprs;
 	ListCell   *indexpr_item;
 	Oid			indrelid;
-	Oid			conoid = InvalidOid;
+	Oid			constraintId;
 	int			keyno;
 	Oid			keycoltype;
 	Datum		datum;
@@ -931,9 +1061,7 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	 * Fetch pg_class tuple of source index.  We can't use the copy in the
 	 * relcache entry because it doesn't include optional fields.
 	 */
-	ht_idxrel = SearchSysCache(RELOID,
-							   ObjectIdGetDatum(source_relid),
-							   0, 0, 0);
+	ht_idxrel = SearchSysCache1(RELOID, ObjectIdGetDatum(source_relid));
 	if (!HeapTupleIsValid(ht_idxrel))
 		elog(ERROR, "cache lookup failed for relation %u", source_relid);
 	idxrelrec = (Form_pg_class) GETSTRUCT(ht_idxrel);
@@ -946,7 +1074,7 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	/* Fetch pg_am tuple for source index from relcache entry */
 	amrec = source_idx->rd_am;
 
-	/* Must get indclass the hard way, since it's not stored in relcache */
+	/* Extract indclass from the pg_index tuple */
 	datum = SysCacheGetAttr(INDEXRELID, ht_idx,
 							Anum_pg_index_indclass, &isnull);
 	Assert(!isnull);
@@ -972,19 +1100,84 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	index->idxname = NULL;
 
 	/*
-	 * If the index is marked PRIMARY, it's certainly from a constraint; else,
-	 * if it's not marked UNIQUE, it certainly isn't; else, we have to search
-	 * pg_depend to see if there's an associated unique constraint.
+	 * If the index is marked PRIMARY or has an exclusion condition, it's
+	 * certainly from a constraint; else, if it's not marked UNIQUE, it
+	 * certainly isn't.  If it is or might be from a constraint, we have to
+	 * fetch the pg_constraint record.
 	 */
-	if (index->primary)
-		index->isconstraint = true;
-	else if (!index->unique)
-		index->isconstraint = false;
-	else
+	if (index->primary || index->unique || idxrelrec->relhasexclusion)
 	{
-		conoid = get_index_constraint(source_relid);
-		index->isconstraint = OidIsValid(conoid);
+		constraintId = get_index_constraint(source_relid);
+
+		if (OidIsValid(constraintId))
+		{
+			HeapTuple	ht_constr;
+			Form_pg_constraint conrec;
+
+			ht_constr = SearchSysCache1(CONSTROID,
+										ObjectIdGetDatum(constraintId));
+			if (!HeapTupleIsValid(ht_constr))
+				elog(ERROR, "cache lookup failed for constraint %u",
+					 constraintId);
+			conrec = (Form_pg_constraint) GETSTRUCT(ht_constr);
+
+			index->isconstraint = true;
+			index->deferrable = conrec->condeferrable;
+			index->initdeferred = conrec->condeferred;
+
+			/* If it's an exclusion constraint, we need the operator names */
+			if (idxrelrec->relhasexclusion)
+			{
+				Datum	   *elems;
+				int			nElems;
+				int			i;
+
+				Assert(conrec->contype == CONSTRAINT_EXCLUSION);
+				/* Extract operator OIDs from the pg_constraint tuple */
+				datum = SysCacheGetAttr(CONSTROID, ht_constr,
+										Anum_pg_constraint_conexclop,
+										&isnull);
+				if (isnull)
+					elog(ERROR, "null conexclop for constraint %u",
+						 constraintId);
+
+				deconstruct_array(DatumGetArrayTypeP(datum),
+								  OIDOID, sizeof(Oid), true, 'i',
+								  &elems, NULL, &nElems);
+
+				for (i = 0; i < nElems; i++)
+				{
+					Oid			operid = DatumGetObjectId(elems[i]);
+					HeapTuple	opertup;
+					Form_pg_operator operform;
+					char	   *oprname;
+					char	   *nspname;
+					List	   *namelist;
+
+					opertup = SearchSysCache1(OPEROID,
+											  ObjectIdGetDatum(operid));
+					if (!HeapTupleIsValid(opertup))
+						elog(ERROR, "cache lookup failed for operator %u",
+							 operid);
+					operform = (Form_pg_operator) GETSTRUCT(opertup);
+					oprname = pstrdup(NameStr(operform->oprname));
+					/* For simplicity we always schema-qualify the op name */
+					nspname = get_namespace_name(operform->oprnamespace);
+					namelist = list_make2(makeString(nspname),
+										  makeString(oprname));
+					index->excludeOpNames = lappend(index->excludeOpNames,
+													namelist);
+					ReleaseSysCache(opertup);
+				}
+			}
+
+			ReleaseSysCache(ht_constr);
+		}
+		else
+			index->isconstraint = false;
 	}
+	else
+		index->isconstraint = false;
 
 	/*
 	 * If the index backs a constraint, use the same name for the constraint
@@ -996,10 +1189,10 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	{
 		char	   *conname;
 
-		if (!OidIsValid(conoid))
-			conoid = get_index_constraint(source_relid);
+		if (!OidIsValid(constraintId))
+			constraintId = get_index_constraint(source_relid);
 
-		conname = GetConstraintNameByOid(conoid);
+		conname = GetConstraintNameByOid(constraintId);
 		if (!conname)
 			elog(ERROR, "could not find constraint that index \"%s\" backs in source table",
 				 RelationGetRelationName(source_idx));
@@ -1073,6 +1266,9 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 
 			keycoltype = exprType(indexkey);
 		}
+
+		/* Copy the original index column name */
+		iparam->indexcolname = pstrdup(NameStr(attrs[keyno]->attname));
 
 		/* Add the operator class name, if non-default */
 		iparam->opclass = get_opclass(indclass->values[keyno], keycoltype);
@@ -1162,9 +1358,7 @@ get_opclass(Oid opclass, Oid actual_datatype)
 	Form_pg_opclass opc_rec;
 	List	   *result = NIL;
 
-	ht_opc = SearchSysCache(CLAOID,
-							ObjectIdGetDatum(opclass),
-							0, 0, 0);
+	ht_opc = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclass));
 	if (!HeapTupleIsValid(ht_opc))
 		elog(ERROR, "cache lookup failed for opclass %u", opclass);
 	opc_rec = (Form_pg_opclass) GETSTRUCT(ht_opc);
@@ -1229,7 +1423,6 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 				break;
 
 			case T_Constraint:
-			case T_FkConstraint:
 				/* should never happen. If it does fix gram.y */
 				elog(ERROR, "node type %d not supported for external tables",
 					 (int) nodeTag(element));
@@ -2104,7 +2297,7 @@ fillin_encoding(List *list)
 
 /*
  * transformIndexConstraints
- *		Handle UNIQUE and PRIMARY KEY constraints, which create indexes.
+ *		Handle UNIQUE, PRIMARY KEY, EXCLUDE constraints, which create indexes.
  *		We also merge in any index definitions arising from
  *		LIKE ... INCLUDING INDEXES.
  */
@@ -2117,8 +2310,9 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 
 	/*
 	 * Run through the constraints that need to generate an index. For PRIMARY
-	 * KEY, mark each column as NOT NULL and create an index. For UNIQUE,
-	 * create an index as for PRIMARY KEY, but do not insist on NOT NULL.
+	 * KEY, mark each column as NOT NULL and create an index. For UNIQUE or
+	 * EXCLUDE, create an index as for PRIMARY KEY, but do not insist on NOT
+	 * NULL.
 	 */
 	foreach(lc, cxt->ixconstraints)
 	{
@@ -2126,7 +2320,8 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 
 		Assert(IsA(constraint, Constraint));
 		Assert(constraint->contype == CONSTR_PRIMARY ||
-			   constraint->contype == CONSTR_UNIQUE);
+			   constraint->contype == CONSTR_UNIQUE ||
+			   constraint->contype == CONSTR_EXCLUSION);
 
 		index = transformIndexConstraint(constraint, cxt);
 
@@ -2185,7 +2380,10 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 
 			if (equal(index->indexParams, priorindex->indexParams) &&
 				equal(index->whereClause, priorindex->whereClause) &&
-				strcmp(index->accessMethod, priorindex->accessMethod) == 0)
+				equal(index->excludeOpNames, priorindex->excludeOpNames) &&
+				strcmp(index->accessMethod, priorindex->accessMethod) == 0 &&
+				index->deferrable == priorindex->deferrable &&
+				index->initdeferred == priorindex->initdeferred)
 			{
 				priorindex->unique |= index->unique;
 
@@ -2245,19 +2443,18 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 
 /*
  * transformIndexConstraint
- *		Transform one UNIQUE or PRIMARY KEY constraint for
+ *		Transform one UNIQUE, PRIMARY KEY, or EXCLUDE constraint for
  *		transformIndexConstraints.
  */
 static IndexStmt *
 transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 {
 	IndexStmt  *index;
-	ListCell   *keys;
-	IndexElem  *iparam;
+	ListCell   *lc;
 
 	index = makeNode(IndexStmt);
 
-	index->unique = true;
+	index->unique = (constraint->contype != CONSTR_EXCLUSION);
 	index->primary = (constraint->contype == CONSTR_PRIMARY);
 	if (index->primary)
 	{
@@ -2274,6 +2471,8 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 		 */
 	}
 	index->isconstraint = true;
+	index->deferrable = constraint->deferrable;
+	index->initdeferred = constraint->initdeferred;
 
 	/*
 	 * We used to force the index name to be the constraint name, but they
@@ -2282,28 +2481,58 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 	 * name in the IndexStmt, for use in DefineIndex.
 	 */
 	index->idxname = NULL;	/* DefineIndex will choose name */
-	index->altconname = constraint->name; /* User may have picked the name. */
+	index->altconname = constraint->conname; /* User may have picked the name. */
 
 	index->relation = cxt->relation;
-	index->accessMethod = DEFAULT_INDEX_TYPE;
+	index->accessMethod = constraint->access_method ? constraint->access_method : DEFAULT_INDEX_TYPE;
 	index->options = constraint->options;
 	index->tableSpace = constraint->indexspace;
+	index->whereClause = constraint->where_clause;
 	index->indexParams = NIL;
-	index->whereClause = NULL;
+	index->excludeOpNames = NIL;
 	index->concurrent = false;
 
 	/*
+	 * If it's an EXCLUDE constraint, the grammar returns a list of pairs of
+	 * IndexElems and operator names.  We have to break that apart into
+	 * separate lists.
+	 */
+	if (constraint->contype == CONSTR_EXCLUSION)
+	{
+		foreach(lc, constraint->exclusions)
+		{
+			List	   *pair = (List *) lfirst(lc);
+			IndexElem  *elem;
+			List	   *opname;
+
+			Assert(list_length(pair) == 2);
+			elem = (IndexElem *) linitial(pair);
+			Assert(IsA(elem, IndexElem));
+			opname = (List *) lsecond(pair);
+			Assert(IsA(opname, List));
+
+			index->indexParams = lappend(index->indexParams, elem);
+			index->excludeOpNames = lappend(index->excludeOpNames, opname);
+		}
+
+		return index;
+	}
+
+	/*
+	 * For UNIQUE and PRIMARY KEY, we just have a list of column names.
+	 *
 	 * Make sure referenced keys exist.  If we are making a PRIMARY KEY index,
 	 * also make sure they are NOT NULL, if possible. (Although we could leave
 	 * it to DefineIndex to mark the columns NOT NULL, it's more efficient to
 	 * get it right the first time.)
 	 */
-	foreach(keys, constraint->keys)
+	foreach(lc, constraint->keys)
 	{
-		char	   *key = strVal(lfirst(keys));
+		char	   *key = strVal(lfirst(lc));
 		bool		found = false;
 		ColumnDef  *column = NULL;
 		ListCell   *columns;
+		IndexElem  *iparam;
 
 		foreach(columns, cxt->columns)
 		{
@@ -2409,6 +2638,7 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 		iparam = makeNode(IndexElem);
 		iparam->name = pstrdup(key);
 		iparam->expr = NULL;
+		iparam->indexcolname = NULL;
 		iparam->opclass = NIL;
 		iparam->ordering = SORTBY_DEFAULT;
 		iparam->nulls_ordering = SORTBY_NULLS_DEFAULT;
@@ -2439,9 +2669,9 @@ transformFKConstraints(ParseState *pstate, CreateStmtContext *cxt,
 	{
 		foreach(fkclist, cxt->fkconstraints)
 		{
-			FkConstraint *fkconstraint = (FkConstraint *) lfirst(fkclist);
+			Constraint *constraint = (Constraint *) lfirst(fkclist);
 
-			fkconstraint->skip_validation = true;
+			constraint->skip_validation = true;
 		}
 	}
 
@@ -2466,12 +2696,12 @@ transformFKConstraints(ParseState *pstate, CreateStmtContext *cxt,
 
 		foreach(fkclist, cxt->fkconstraints)
 		{
-			FkConstraint *fkconstraint = (FkConstraint *) lfirst(fkclist);
+			Constraint *constraint = (Constraint *) lfirst(fkclist);
 			AlterTableCmd *altercmd = makeNode(AlterTableCmd);
 
 			altercmd->subtype = AT_ProcessedConstraint;
 			altercmd->name = NULL;
-			altercmd->def = (Node *) fkconstraint;
+			altercmd->def = (Node *) constraint;
 			alterstmt->cmds = lappend(alterstmt->cmds, altercmd);
 		}
 
@@ -2688,6 +2918,11 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 
 		if (ielem->expr)
 		{
+			/* Extract preliminary index col name before transforming expr */
+			if (ielem->indexcolname == NULL)
+				ielem->indexcolname = FigureIndexColname(ielem->expr);
+
+			/* Now do parse transformation of the expression */
 			ielem->expr = transformExpr(pstate, ielem->expr,
 										EXPR_KIND_INDEX_EXPRESSION);
 
@@ -2775,10 +3010,10 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString,
 	 * qualification.
 	 */
 	oldrte = addRangeTableEntryForRelation(pstate, rel,
-										   makeAlias("*OLD*", NIL),
+										   makeAlias("old", NIL),
 										   false, false);
 	newrte = addRangeTableEntryForRelation(pstate, rel,
-										   makeAlias("*NEW*", NIL),
+										   makeAlias("new", NIL),
 										   false, false);
 	/* Must override addRangeTableEntry's default access-check flags */
 	oldrte->requiredPerms = 0;
@@ -2870,10 +3105,10 @@ transformRuleStmt(RuleStmt *stmt, const char *queryString,
 			 * them in the joinlist.
 			 */
 			oldrte = addRangeTableEntryForRelation(sub_pstate, rel,
-												   makeAlias("*OLD*", NIL),
+												   makeAlias("old", NIL),
 												   false, false);
 			newrte = addRangeTableEntryForRelation(sub_pstate, rel,
-												   makeAlias("*NEW*", NIL),
+												   makeAlias("new", NIL),
 												   false, false);
 			oldrte->requiredPerms = 0;
 			newrte->requiredPerms = 0;
@@ -3128,14 +3363,14 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				 * The original AddConstraint cmd node doesn't go to newcmds
 				 */
 				if (IsA(cmd->def, Constraint))
+				{
 					transformTableConstraint(pstate, &cxt,
 											 (Constraint *) cmd->def);
-				else if (IsA(cmd->def, FkConstraint))
-				{
-					cxt.fkconstraints = lappend(cxt.fkconstraints, cmd->def);
-
-					/* GPDB: always skip validation of foreign keys */
-					skipValidation = true;
+					if (((Constraint *) cmd->def)->contype == CONSTR_FOREIGN)
+					{
+						/* GPDB: always skip validation of foreign keys */
+						skipValidation = true;
+					}
 				}
 				else
 					elog(ERROR, "unrecognized node type: %d",
@@ -3268,109 +3503,118 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
  * to attach constraint attributes to their primary constraint nodes
  * and detect inconsistent/misplaced constraint attributes.
  *
- * NOTE: currently, attributes are only supported for FOREIGN KEY primary
- * constraints, but someday they ought to be supported for other constraints.
+ * NOTE: currently, attributes are only supported for FOREIGN KEY, UNIQUE,
+ * and PRIMARY KEY constraints, but someday they ought to be supported
+ * for other constraint types.
  */
 static void
-transformConstraintAttrs(List *constraintList)
+transformConstraintAttrs(ParseState *pstate, List *constraintList)
 {
-	Node	   *lastprimarynode = NULL;
+	Constraint *lastprimarycon = NULL;
 	bool		saw_deferrability = false;
 	bool		saw_initially = false;
 	ListCell   *clist;
 
+#define SUPPORTS_ATTRS(node)				\
+	((node) != NULL &&						\
+	 ((node)->contype == CONSTR_PRIMARY ||	\
+	  (node)->contype == CONSTR_UNIQUE ||	\
+	  (node)->contype == CONSTR_EXCLUSION || \
+	  (node)->contype == CONSTR_FOREIGN))
+
 	foreach(clist, constraintList)
 	{
-		Node	   *node = lfirst(clist);
+		Constraint *con = (Constraint *) lfirst(clist);
 
-		if (!IsA(node, Constraint))
+		if (!IsA(con, Constraint))
+			elog(ERROR, "unrecognized node type: %d",
+				 (int) nodeTag(con));
+		switch (con->contype)
 		{
-			lastprimarynode = node;
-			/* reset flags for new primary node */
-			saw_deferrability = false;
-			saw_initially = false;
-		}
-		else
-		{
-			Constraint *con = (Constraint *) node;
+			case CONSTR_ATTR_DEFERRABLE:
+				if (!SUPPORTS_ATTRS(lastprimarycon))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("misplaced DEFERRABLE clause"),
+							 parser_errposition(pstate, con->location)));
+				if (saw_deferrability)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed"),
+							 parser_errposition(pstate, con->location)));
+				saw_deferrability = true;
+				lastprimarycon->deferrable = true;
+				break;
 
-			switch (con->contype)
-			{
-				case CONSTR_ATTR_DEFERRABLE:
-					if (lastprimarynode == NULL ||
-						!IsA(lastprimarynode, FkConstraint))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("misplaced DEFERRABLE clause")));
-					if (saw_deferrability)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed")));
-					saw_deferrability = true;
-					((FkConstraint *) lastprimarynode)->deferrable = true;
-					break;
-				case CONSTR_ATTR_NOT_DEFERRABLE:
-					if (lastprimarynode == NULL ||
-						!IsA(lastprimarynode, FkConstraint))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("misplaced NOT DEFERRABLE clause")));
-					if (saw_deferrability)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed")));
-					saw_deferrability = true;
-					((FkConstraint *) lastprimarynode)->deferrable = false;
-					if (saw_initially &&
-						((FkConstraint *) lastprimarynode)->initdeferred)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE")));
-					break;
-				case CONSTR_ATTR_DEFERRED:
-					if (lastprimarynode == NULL ||
-						!IsA(lastprimarynode, FkConstraint))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("misplaced INITIALLY DEFERRED clause")));
-					if (saw_initially)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed")));
-					saw_initially = true;
-					((FkConstraint *) lastprimarynode)->initdeferred = true;
+			case CONSTR_ATTR_NOT_DEFERRABLE:
+				if (!SUPPORTS_ATTRS(lastprimarycon))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("misplaced NOT DEFERRABLE clause"),
+							 parser_errposition(pstate, con->location)));
+				if (saw_deferrability)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("multiple DEFERRABLE/NOT DEFERRABLE clauses not allowed"),
+							 parser_errposition(pstate, con->location)));
+				saw_deferrability = true;
+				lastprimarycon->deferrable = false;
+				if (saw_initially &&
+					lastprimarycon->initdeferred)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE"),
+							 parser_errposition(pstate, con->location)));
+				break;
 
-					/*
-					 * If only INITIALLY DEFERRED appears, assume DEFERRABLE
-					 */
-					if (!saw_deferrability)
-						((FkConstraint *) lastprimarynode)->deferrable = true;
-					else if (!((FkConstraint *) lastprimarynode)->deferrable)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE")));
-					break;
-				case CONSTR_ATTR_IMMEDIATE:
-					if (lastprimarynode == NULL ||
-						!IsA(lastprimarynode, FkConstraint))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-							errmsg("misplaced INITIALLY IMMEDIATE clause")));
-					if (saw_initially)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed")));
-					saw_initially = true;
-					((FkConstraint *) lastprimarynode)->initdeferred = false;
-					break;
-				default:
-					/* Otherwise it's not an attribute */
-					lastprimarynode = node;
-					/* reset flags for new primary node */
-					saw_deferrability = false;
-					saw_initially = false;
-					break;
-			}
+			case CONSTR_ATTR_DEFERRED:
+				if (!SUPPORTS_ATTRS(lastprimarycon))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("misplaced INITIALLY DEFERRED clause"),
+							 parser_errposition(pstate, con->location)));
+				if (saw_initially)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed"),
+							 parser_errposition(pstate, con->location)));
+				saw_initially = true;
+				lastprimarycon->initdeferred = true;
+
+				/*
+				 * If only INITIALLY DEFERRED appears, assume DEFERRABLE
+				 */
+				if (!saw_deferrability)
+					lastprimarycon->deferrable = true;
+				else if (!lastprimarycon->deferrable)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("constraint declared INITIALLY DEFERRED must be DEFERRABLE"),
+							 parser_errposition(pstate, con->location)));
+				break;
+
+			case CONSTR_ATTR_IMMEDIATE:
+				if (!SUPPORTS_ATTRS(lastprimarycon))
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("misplaced INITIALLY IMMEDIATE clause"),
+							 parser_errposition(pstate, con->location)));
+				if (saw_initially)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("multiple INITIALLY IMMEDIATE/DEFERRED clauses not allowed"),
+							 parser_errposition(pstate, con->location)));
+				saw_initially = true;
+				lastprimarycon->initdeferred = false;
+				break;
+
+			default:
+				/* Otherwise it's not an attribute */
+				lastprimarycon = con;
+				/* reset flags for new primary node */
+				saw_deferrability = false;
+				saw_initially = false;
+				break;
 		}
 	}
 }
@@ -3946,7 +4190,12 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt
 					c->encoding = copyObject(deflt->encoding);
 				else
 				{
-					List *te = TypeNameGetStorageDirective(d->typeName);
+					List	   *te;
+
+					if (d->typeName)
+						te = TypeNameGetStorageDirective(d->typeName);
+					else
+						te = NIL;
 
 					if (te)
 						c->encoding = copyObject(te);

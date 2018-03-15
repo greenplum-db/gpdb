@@ -3,12 +3,12 @@
  * int.c
  *	  Functions for the built-in integer types (except int8).
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/int.c,v 1.84 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/int.c,v 1.89 2010/02/26 02:01:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -224,13 +224,21 @@ int2vectorrecv(PG_FUNCTION_ARGS)
 
 	Assert(!locfcinfo.isnull);
 
-	/* sanity checks: int2vector must be 1-D, no nulls */
+	/* sanity checks: int2vector must be 1-D, 0-based, no nulls */
 	if (ARR_NDIM(result) != 1 ||
 		ARR_HASNULL(result) ||
-		ARR_ELEMTYPE(result) != INT2OID)
+		ARR_ELEMTYPE(result) != INT2OID ||
+		ARR_LBOUND(result)[0] != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 				 errmsg("invalid int2vector data")));
+
+	/* check length for consistency with int2vectorin() */
+	if (ARR_DIMS(result)[0] > FUNC_MAX_ARGS)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("oidvector has too many elements")));
+
 	PG_RETURN_POINTER(result);
 }
 

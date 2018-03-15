@@ -3,12 +3,12 @@
  * md.c
  *	  This code manages relations that reside on magnetic disk.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.148 2009/06/26 20:29:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.151 2010/02/26 02:01:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,9 +32,6 @@
 #include "pg_trace.h"
 
 #include "catalog/pg_tablespace.h"
-#include "cdb/cdbmirroredbufferpool.h"
-#include "cdb/cdbpersistenttablespace.h"
-#include "cdb/cdbfilerepprimary.h"
 #include "utils/faultinjector.h"
 
 
@@ -109,12 +106,8 @@
 typedef struct _MdfdVec
 {
 	File		mdfd_vfd;		/* fd number in fd.c's pool */
-	MirroredBufferPoolOpen		mdmir_open;
-
 	BlockNumber mdfd_segno;		/* segment number, from 0 */
 	struct _MdfdVec *mdfd_chain;	/* next segment, or NULL */
-
-
 } MdfdVec;
 
 static MemoryContext MdCxt;		/* context for all md.c allocations */
@@ -178,6 +171,8 @@ static void register_dirty_segment(SMgrRelation reln, ForkNumber forknum,
 					   MdfdVec *seg);
 static void register_unlink(RelFileNode rnode);
 static MdfdVec *_fdvec_alloc(void);
+static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
+			  BlockNumber segno);
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
@@ -262,15 +257,6 @@ mdcreate(SMgrRelation reln, ForkNumber forkNum, bool isRedo)
 {
 	char	   *path;
 	File		fd;
-	MirroredBufferPoolOpen inactiveMirroredOpen = { false /* isActive */};
-
-	/*
-	 * Currently, this is only for use with the extra FSM and VM forks.
-	 * The main fork is mirrored, with filerep, and initializing the
-	 * mirroring needs some extra information. Use mdmirroredcreate().
-	 */
-	if (forkNum == MAIN_FORKNUM)
-		elog(ERROR, "non-mirred mdcreate() called on main fork. Call mdmirroredcreate() instead.");
 
 	if (isRedo && reln->md_fd[forkNum] != NULL)
 		return;					/* created and opened already... */
@@ -299,7 +285,7 @@ mdcreate(SMgrRelation reln, ForkNumber forkNum, bool isRedo)
 			errno = save_errno;
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not create relation %s: %m", path)));
+					 errmsg("could not create file \"%s\": %m", path)));
 		}
 	}
 
@@ -308,48 +294,36 @@ mdcreate(SMgrRelation reln, ForkNumber forkNum, bool isRedo)
 	reln->md_fd[forkNum] = _fdvec_alloc();
 
 	reln->md_fd[forkNum]->mdfd_vfd = fd;
-	reln->md_fd[forkNum]->mdmir_open = inactiveMirroredOpen;
 	reln->md_fd[forkNum]->mdfd_segno = 0;
 	reln->md_fd[forkNum]->mdfd_chain = NULL;
 }
 
 /*
- *	mdmirroredcreate - a version of mdcreate(), with extra mirroring-related args.
+ *	mdcreate_ao() -- Create a AO segfile
  *
- * This needs to be used to create the main fork.
+ * If isRedo is true, it's okay for the file to exist already.
  */
 void
-mdmirroredcreate(
-	SMgrRelation 				reln,
-	char						*relationName,
-					/* For tracing only.  Can be NULL in some execution paths. */
-	MirrorDataLossTrackingState mirrorDataLossTrackingState,
-	int64						mirrorDataLossTrackingSessionNum,
-	bool						ignoreAlreadyExists,
-	bool						*mirrorDataLossOccurred)
+mdcreate_ao(RelFileNode rnode, int32 segmentFileNum, bool isRedo)
 {
-	MirroredBufferPoolOpen		mirroredOpen;
-	int			primaryError;
+	char	   *path;
+	char		buf[MAXPGPATH];
+	File		fd;
 
-	*mirrorDataLossOccurred = false;
+	path = relpath(rnode, MAIN_FORKNUM);
 
-	if (reln->md_fd[MAIN_FORKNUM] != NULL)
-		mdclose(reln, MAIN_FORKNUM);		// Don't assume it has been created -- make sure it gets created on both mirrors.
-
-	Assert(reln->md_fd[MAIN_FORKNUM] == NULL);
-	
-	MirroredBufferPool_Create(
-					&mirroredOpen,
-					&reln->smgr_rnode,
-					/* segmentFileNum */ 0,
-					relationName,
-					mirrorDataLossTrackingState,
-					mirrorDataLossTrackingSessionNum,
-					&primaryError,
-					mirrorDataLossOccurred);
-	if (primaryError != 0)
+	if (segmentFileNum != 0)
 	{
-		int			openPrimaryError;
+		snprintf(buf, MAXPGPATH, "%s.%d", path, segmentFileNum);
+		pfree(path);
+		path = buf;
+	}
+
+	fd = PathNameOpenFile(path, O_RDWR | O_CREAT | O_EXCL | PG_BINARY, 0600);
+
+	if (fd < 0)
+	{
+		int			save_errno = errno;
 
 		/*
 		 * During bootstrap, there are cases where a system relation will be
@@ -357,32 +331,20 @@ mdmirroredcreate(
 		 * script nominally creates it.  Therefore, allow the file to exist
 		 * already, even if isRedo is not set.	(See also mdopen)
 		 */
-		if (ignoreAlreadyExists || IsBootstrapProcessingMode())
-			MirroredBufferPool_Open(
-						&mirroredOpen,
-						&reln->smgr_rnode,
-						/* segmentFileNum */ 0,
-						relationName,
-						&openPrimaryError,
-						mirrorDataLossOccurred);
-		if (!MirroredBufferPool_IsActive(&mirroredOpen))
+		if (isRedo || IsBootstrapProcessingMode())
+			fd = PathNameOpenFile(path, O_RDWR | PG_BINARY, 0600);
+		if (fd < 0)
 		{
 			/* be sure to report the error reported by create, not open */
-			errno = primaryError;
+			errno = save_errno;
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not create relation file '%s', relation name '%s': %m",
-							relpath(reln->smgr_rnode, MAIN_FORKNUM),
-							relationName)));
+					 errmsg("could not create relation %s: %m", path)));
 		}
 	}
 
-	reln->md_fd[MAIN_FORKNUM] = _fdvec_alloc();
-
-	reln->md_fd[MAIN_FORKNUM]->mdfd_vfd = -1;
-	reln->md_fd[MAIN_FORKNUM]->mdmir_open = mirroredOpen;
-	reln->md_fd[MAIN_FORKNUM]->mdfd_segno = 0;
-	reln->md_fd[MAIN_FORKNUM]->mdfd_chain = NULL;
+	if (path != buf)
+		pfree(path);
 }
 
 
@@ -410,7 +372,13 @@ mdmirroredcreate(
  * number until it's safe, because relfilenode assignment skips over any
  * existing file.
  *
- * If isRedo is true, it's okay for the relation to be already gone.
+ * All the above applies only to the relation's main fork; other forks can
+ * just be removed immediately, since they are not needed to prevent the
+ * relfilenode number from being recycled.  Also, we do not carefully
+ * track whether other forks have been created or not, but just attempt to
+ * unlink them unconditionally; so we should never complain about ENOENT.
+ *
+ * If isRedo is true, it's unsurprising for the relation to be already gone.
  * Also, we should remove the file immediately instead of queuing a request
  * for later, since during redo there's no possibility of creating a
  * conflicting relation.
@@ -424,9 +392,6 @@ mdunlink(RelFileNode rnode, ForkNumber forkNum, bool isRedo)
 	char	   *path;
 	int			ret;
 
-	if (forkNum == MAIN_FORKNUM)
-		elog(ERROR, "non-mirred mdunlink() called on main fork");
-
 	/*
 	 * We have to clean out any pending fsync requests for the doomed
 	 * relation, else the next mdsync() will fail.
@@ -439,7 +404,13 @@ mdunlink(RelFileNode rnode, ForkNumber forkNum, bool isRedo)
 	 * Delete or truncate the first segment.
 	 */
 	if (isRedo || forkNum != MAIN_FORKNUM)
+	{
 		ret = unlink(path);
+		if (ret < 0 && errno != ENOENT)
+			ereport(WARNING,
+					(errcode_for_file_access(),
+					 errmsg("could not remove file \"%s\": %m", path)));
+	}
 	else
 	{
 		/* truncate(2) would be easier here, but Windows hasn't got it */
@@ -457,19 +428,19 @@ mdunlink(RelFileNode rnode, ForkNumber forkNum, bool isRedo)
 		}
 		else
 			ret = -1;
-	}
-	if (ret < 0)
-	{
-		if (!isRedo || errno != ENOENT)
+		if (ret < 0 && errno != ENOENT)
 			ereport(WARNING,
 					(errcode_for_file_access(),
-					 errmsg("could not remove relation %s: %m", path)));
+					 errmsg("could not truncate file \"%s\": %m", path)));
+
+		/* Register request to unlink first segment later */
+		register_unlink(rnode);
 	}
 
 	/*
 	 * Delete any additional segments.
 	 */
-	else
+	if (ret >= 0)
 	{
 		char	   *segpath = (char *) palloc(strlen(path) + 12);
 		BlockNumber segno;
@@ -487,190 +458,101 @@ mdunlink(RelFileNode rnode, ForkNumber forkNum, bool isRedo)
 				if (errno != ENOENT)
 					ereport(WARNING,
 							(errcode_for_file_access(),
-					 errmsg("could not remove segment %u of relation %s: %m",
-							segno, path)));
+					   errmsg("could not remove file \"%s\": %m", segpath)));
 				break;
 			}
 		}
+
+		/*
+		 * Delete All segment file extensions, in case it was an AO or AOCS
+		 * table.
+		 *
+		 * WALREP_FIXME: This currently works by scanning the directory, looking
+		 * for the pattern "<relfilenode>.<segno>". That is slow. We used to do
+		 * do this before, and had to switch over to the information from the
+		 * persistent tables for performance reasons somewhere around GPDB 3.X
+		 * or 4.X. Persistent tables are no more, so we had to go back to
+		 * scanning the directory, but we know that's going to be unacceptably
+		 * slow if there are a lot of files in the directory.
+		 *
+		 * There are different rules for the naming of the files, depending on
+		 * the type of table:
+		 *
+		 *   Heap Tables: contiguous extensions, no upper bound
+		 *   AO Tables: non contiguous extensions [.1 - .127]
+		 *   CO Tables: non contiguous extensions
+		 *          [  .1 - .127] for first column
+		 *          [.128 - .255] for second column
+		 *          [.256 - .283] for third column
+		 *          etc
+		 *
+		 * However, we don't try to be smart here, we just always scan the
+		 * directory. We don't know what kind of a table it was down here.
+		 *
+		 * NOTE: If you find a smarter way to do this than by scanning the dir,
+		 * consider changing copy_append_only_data(), in tablecmds.c, to also
+		 * use the smarter way.
+		 */
+		if (forkNum == MAIN_FORKNUM)
+		{
+			DIR		   *dir;
+			struct dirent *de;
+			char	   *dirpart;
+			char	   *filepart;
+			char	   *filedot;
+
+			/*
+			 * The base path is like "<path>/<rnode>". Split it into
+			 * path and filename parts.
+			 */
+			reldir_and_filename(rnode, forkNum, &dirpart, &filepart);
+			filedot = psprintf("%s.", filepart);
+
+			/* Scan the directory */
+			dir = AllocateDir(dirpart);
+			while ((de = ReadDir(dir, dirpart)) != NULL)
+			{
+				char	   *suffix;
+
+				if (strcmp(de->d_name, ".") == 0 ||
+					strcmp(de->d_name, "..") == 0)
+					continue;
+
+				/* Does it begin with the relfilenode? */
+				if (strlen(de->d_name) <= strlen(filedot) ||
+					strncmp(de->d_name, filedot, strlen(filedot)) != 0)
+					continue;
+
+				/*
+				 * Does it have a digits-only suffix? (This is not really
+				 * necessary to check, but better be conservative when deleting
+				 * files.)
+				 */
+				suffix = de->d_name + strlen(filedot);
+				if (strspn(suffix, "0123456789") != strlen(suffix) ||
+					strlen(suffix) > 10)
+					continue;
+
+				/* Looks like a match. Go ahead and delete it. */
+				sprintf(segpath, "%s.%s", path, suffix);
+				if (unlink(segpath) < 0)
+				{
+					ereport(WARNING,
+							(errcode_for_file_access(),
+							 errmsg("could not remove segment %s of relation %s: %m",
+									suffix, path)));
+				}
+			}
+			FreeDir(dir);
+			pfree(filedot);
+			pfree(filepart);
+			pfree(dirpart);
+		}
+
 		pfree(segpath);
 	}
 
 	pfree(path);
-
-	/* Register request to unlink first segment later */
-	if (!isRedo && forkNum == MAIN_FORKNUM)
-		register_unlink(rnode);
-}
-
-
-/*
- *	mdunlink() -- Unlink a relation.
- *
- * Note that we're passed a RelFileNode --- by the time this is called,
- * there won't be an SMgrRelation hashtable entry anymore.
- *
- * Actually, we don't unlink the first segment file of the relation, but
- * just truncate it to zero length, and record a request to unlink it after
- * the next checkpoint.  Additional segments can be unlinked immediately,
- * however.  Leaving the empty file in place prevents that relfilenode
- * number from being reused.  The scenario this protects us from is:
- * 1. We delete a relation (and commit, and actually remove its file).
- * 2. We create a new relation, which by chance gets the same relfilenode as
- *	  the just-deleted one (OIDs must've wrapped around for that to happen).
- * 3. We crash before another checkpoint occurs.
- * During replay, we would delete the file and then recreate it, which is fine
- * if the contents of the file were repopulated by subsequent WAL entries.
- * But if we didn't WAL-log insertions, but instead relied on fsyncing the
- * file after populating it (as for instance CLUSTER and CREATE INDEX do),
- * the contents of the file would be lost forever.	By leaving the empty file
- * until after the next checkpoint, we prevent reassignment of the relfilenode
- * number until it's safe, because relfilenode assignment skips over any
- * existing file.
- *
- * If isRedo is true, it's okay for the relation to be already gone.
- * Also, we should remove the file immediately instead of queuing a request
- * for later, since during redo there's no possibility of creating a
- * conflicting relation.
- *
- * Note: any failure should be reported as WARNING not ERROR, because
- * we are usually not in a transaction anymore when this is called.
- */
-void
-mdmirroredunlink(RelFileNode rnode, 
-				 char *relationName, /* For tracing only.  Can be NULL in some execution paths. */
-				 bool primaryOnly,
-				 bool isRedo,
-				 bool ignoreNonExistence,
-				 bool *mirrorDataLossOccurred)
-{
-	int			 primaryError = 0;
-	char		 tmp[MAXPGPATH];
-	char	   *path;
-	int			 segmentFileNum;
-
-	/*
-	 * We have to clean out any pending fsync requests for the doomed
-	 * relation, else the next mdsync() will fail.
-	 */
-	ForgetRelationFsyncRequests(rnode, MAIN_FORKNUM);
-
-	/* 
-	 * Delete All segment file extensions
-	 *
-	 * This code used to be implemented via glob(), but globbing data is slow
-	 * when there are many files in a directory, so using glob is to be avoided.
-	 * Instead we perform point lookups for files and delete the ones we find.
-	 * There are different rules for this depending on the type of table:
-	 *
-	 *   Heap Tables: contiguous extensions, no upper bound
-	 *   AO Tables: non contiguous extensions [.1 - .127]
-	 *   CO Tables: non contiguous extensions
-	 *          [  .1 - .127] for first column
-	 *          [.128 - .255] for second column
-	 *          [.256 - .283] for third column
-	 *          etc
-	 *
-	 * mdunlink is only called on Heap Tables, AO/CO tables are handled by a
-	 * different code path.  The following logic assumes that the files are
-	 * a single contiguous range of numbers.
-	 *
-	 * UNDONE: Probably should have mirror do pattern match too.
-	 *    It is conceivably possible that the primary/mirror may have a 
-	 *    different set of segment files, so doing the pattern match only
-	 *    in one place is dangerous.
-	 *
-	 * UNDONE: This is broken for mirroring !!!
-	 *    The fundamental problem is that if we drop a file on the mirror
-	 *    then fail over before we have dropped the file on the primary
-	 *    then the mirror is unaware that the file still needs to be dropped
-	 *    on the old primary.  
-	 *
-	 * The above two issues are tracked in MPP-11724
-	 */
-
-	/* 
-	 * We do this in two passes because it is safer to drop the files in reverse
-	 * order so as to prevent the creation of holes, but we need to scan forward
-	 * to know what files actually exist.
-	 */
-	path = relpath(rnode, MAIN_FORKNUM);
-	for (segmentFileNum = 0; /* break in code */ ; segmentFileNum++)
-	{
-		struct stat sbuf;
-		
-		/* the zero segment file does not have the ".0" extension */
-		if (segmentFileNum == 0)
-			snprintf(tmp, sizeof(tmp), "%s", path);
-		else
-			snprintf(tmp, sizeof(tmp), "%s.%d", path, segmentFileNum);
-
-		if (stat(tmp, &sbuf) < 0)
-			break;  /* No such file, loop is done */
-	}
-	pfree(path);
-
-	/* If the zero segment didn't exist raise an error if requested */
-	if (segmentFileNum == 0)
-	{
-		if (!ignoreNonExistence)
-		{
-			ereport(WARNING,
-					(errcode_for_file_access(),
-					 errmsg("could not remove relation %u/%u/%u: %m",
-							rnode.spcNode,
-							rnode.dbNode,
-							rnode.relNode)));
-		}
-		else
-		{
-			/* 
-			 * Mirror can still have the file, so lets attempt to delete 
-			 * atleast zero segment file.
-			 */
-			int temp_primaryError = 0;
-			MirroredBufferPool_Drop(&rnode, segmentFileNum, relationName, 
-						primaryOnly, isRedo, &temp_primaryError,
-						mirrorDataLossOccurred);
-		}
-	}
-
-	/* second pass perform the drops in reverse order: important for REDO */
-	for(segmentFileNum--; segmentFileNum >= 0; segmentFileNum--)
-	{
-		MirroredBufferPool_Drop(&rnode, segmentFileNum, relationName, 
-								primaryOnly, isRedo, &primaryError,
-								mirrorDataLossOccurred);
-		if (primaryError != 0)
-		{
-			if (segmentFileNum == 0)
-				ereport(WARNING,
-						(errcode_for_file_access(),
-						 errmsg("could not remove relation %u/%u/%u: %m",
-								rnode.spcNode,
-								rnode.dbNode,
-								rnode.relNode)));
-			else
-				ereport(WARNING,
-						(errcode_for_file_access(),
-						 errmsg("could not remove segment %u of relation %u/%u/%u: %m",
-								segmentFileNum,
-								rnode.spcNode,
-								rnode.dbNode,
-								rnode.relNode)));
-			break;
-		}
-	}
-
-	/*
-	 * In PostgreSQL, register_unlink is called to let the checkpoint process to clean up the files.
-	 * In GPDB, the cleanup is handled by persistent table. Hence, we don't need to register the
-	 * unlink request.
-	 */
-#if 0 /* Upstream code not applicable to GPDB */
-	/* Register request to unlink first segment later */
-	if (!isRedo)
-		register_unlink(rnode);
-#endif
 }
 
 /*
@@ -703,7 +585,7 @@ mdextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 	if (blocknum == InvalidBlockNumber)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("cannot extend relation %s beyond %u blocks",
+				 errmsg("cannot extend file \"%s\" beyond %u blocks",
 						relpath(reln->smgr_rnode, forknum),
 						InvalidBlockNumber)));
 
@@ -713,24 +595,6 @@ mdextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
-if (forknum == MAIN_FORKNUM)
-{
-	if (!MirroredBufferPool_Write(
-							&v->mdmir_open,
-							seekpos,
-							buffer,
-							BLCKSZ))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not extend relation %u/%u/%u: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode),
-				 errhint("Check free disk space.")));
-	// UNDONE: What do we do with this partial write / truncate back madness????
-}
-else
-{
 	/*
 	 * Note: because caller usually obtained blocknum by calling mdnblocks,
 	 * which did a seek(SEEK_END), this seek is often redundant and will be
@@ -743,27 +607,26 @@ else
 	if (FileSeek(v->mdfd_vfd, seekpos, SEEK_SET) != seekpos)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not seek to block %u of relation %s: %m",
-						blocknum,
-						relpath(reln->smgr_rnode, forknum))));
+				 errmsg("could not seek to block %u in file \"%s\": %m",
+						blocknum, FilePathName(v->mdfd_vfd))));
 
 	if ((nbytes = FileWrite(v->mdfd_vfd, buffer, BLCKSZ)) != BLCKSZ)
 	{
 		if (nbytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not extend relation %s: %m",
-							relpath(reln->smgr_rnode, forknum)),
+					 errmsg("could not extend file \"%s\": %m",
+							FilePathName(v->mdfd_vfd)),
 					 errhint("Check free disk space.")));
 		/* short write: complain appropriately */
 		ereport(ERROR,
 				(errcode(ERRCODE_DISK_FULL),
-				 errmsg("could not extend relation %s: wrote only %d of %d bytes at block %u",
-						relpath(reln->smgr_rnode, forknum),
+				 errmsg("could not extend file \"%s\": wrote only %d of %d bytes at block %u",
+						FilePathName(v->mdfd_vfd),
 						nbytes, BLCKSZ, blocknum),
 				 errhint("Check free disk space.")));
 	}
-}
+
 	if (!isTemp)
 		register_dirty_segment(reln, forknum, v);
 
@@ -786,71 +649,11 @@ mdopen(SMgrRelation reln, ForkNumber forknum, ExtensionBehavior behavior)
 	MdfdVec    *mdfd;
 	char	   *path;
 	File		fd = -1;
-	MirroredBufferPoolOpen mirroredOpen = { false /* isActive */};
 
 	/* No work if already open */
 	if (reln->md_fd[forknum])
 		return reln->md_fd[forknum];
 
-if (forknum == MAIN_FORKNUM)
-{
-	int			primaryError;
-	bool		mirrorDataLossOccurred;
-
-	MirroredBufferPool_Open(
-				&mirroredOpen,
-				&reln->smgr_rnode,
-				/* segmentFileNum */ 0,
-				/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-				&primaryError,
-				&mirrorDataLossOccurred);
-	if (primaryError != 0)
-	{
-		/*
-		 * During bootstrap, there are cases where a system relation will be
-		 * accessed (by internal backend processes) before the bootstrap
-		 * script nominally creates it.  Therefore, accept mdopen() as a
-		 * substitute for mdcreate() in bootstrap mode only. (See mdcreate)
-		 */
-		if (IsBootstrapProcessingMode())
-		{
-			MirrorDataLossTrackingState mirrorDataLossTrackingState;
-			int64						mirrorDataLossTrackingSessionNum;
-			
-			mirrorDataLossTrackingState = 
-						FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
-														&mirrorDataLossTrackingSessionNum);
-			MirroredBufferPool_Create(
-							&mirroredOpen,
-							&reln->smgr_rnode,
-							/* segmentFileNum */ 0,
-							/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-							mirrorDataLossTrackingState,
-							mirrorDataLossTrackingSessionNum,
-							&primaryError,
-							&mirrorDataLossOccurred);
-		}
-		if (!MirroredBufferPool_IsActive(&mirroredOpen))
-		{
-			int saved_err;
-
-			if (behavior == EXTENSION_RETURN_NULL && FILE_POSSIBLY_DELETED(errno))
-				return NULL;
-
-			saved_err = errno;
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not open relation %u/%u/%u: %s",
-							reln->smgr_rnode.spcNode,
-							reln->smgr_rnode.dbNode,
-							reln->smgr_rnode.relNode,
-							strerror(saved_err)),
-					 errdetail_nonexistent_relation(saved_err, &reln->smgr_rnode)));
-		}
-	}
-}
-else
-{
 	path = relpath(reln->smgr_rnode, forknum);
 
 	fd = PathNameOpenFile(path, O_RDWR | PG_BINARY, 0600);
@@ -875,15 +678,13 @@ else
 			}
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not open relation %s: %m", path)));
+					 errmsg("could not open file \"%s\": %m", path)));
 		}
 	}
 	pfree(path);
-}
 
 	reln->md_fd[forknum] = mdfd = _fdvec_alloc();
 
-	mdfd->mdmir_open = mirroredOpen;
 	mdfd->mdfd_vfd = fd;
 	mdfd->mdfd_segno = 0;
 	mdfd->mdfd_chain = NULL;
@@ -913,8 +714,6 @@ mdclose(SMgrRelation reln, ForkNumber forknum)
 		/* if not closed already */
 		if (v->mdfd_vfd >= 0)
 			FileClose(v->mdfd_vfd);
-		if (MirroredBufferPool_IsActive(&v->mdmir_open))
-			MirroredBufferPool_Close(&v->mdmir_open);
 		/* Now free vector */
 		v = v->mdfd_chain;
 		pfree(ov);
@@ -937,10 +736,7 @@ mdprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
 
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
-	if (forknum == MAIN_FORKNUM)
-		(void) FilePrefetch(v->mdmir_open.primaryFile, seekpos, BLCKSZ);
-	else
-		(void) FilePrefetch(v->mdfd_vfd, seekpos, BLCKSZ);
+	(void) FilePrefetch(v->mdfd_vfd, seekpos, BLCKSZ);
 #endif   /* USE_PREFETCH */
 }
 
@@ -967,29 +763,13 @@ mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
-if (forknum == MAIN_FORKNUM)
-{
-	if (MirroredBufferPool_SeekSet(&v->mdmir_open, seekpos) != seekpos)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not seek to block %u of relation %u/%u/%u: %m",
-						blocknum,
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
-
-	nbytes = MirroredBufferPool_Read(&v->mdmir_open, seekpos, buffer, BLCKSZ);
-}
-else
-{
 	if (FileSeek(v->mdfd_vfd, seekpos, SEEK_SET) != seekpos)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not seek to block %u of relation %s: %m",
-						blocknum, relpath(reln->smgr_rnode, forknum))));
+				 errmsg("could not seek to block %u in file \"%s\": %m",
+						blocknum, FilePathName(v->mdfd_vfd))));
 
 	nbytes = FileRead(v->mdfd_vfd, buffer, BLCKSZ);
-}
 
 	TRACE_POSTGRESQL_SMGR_MD_READ_DONE(forknum, blocknum,
 									   reln->smgr_rnode.spcNode,
@@ -1003,8 +783,8 @@ else
 		if (nbytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not read block %u of relation %s: %m",
-							blocknum, relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not read block %u in file \"%s\": %m",
+							blocknum, FilePathName(v->mdfd_vfd))));
 
 		/*
 		 * Short read: we are at or past EOF, or we read a partial block at
@@ -1019,8 +799,8 @@ else
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("could not read block %u of relation %s: read only %d of %d bytes",
-							blocknum, relpath(reln->smgr_rnode, forknum),
+					 errmsg("could not read block %u in file \"%s\": read only %d of %d bytes",
+							blocknum, FilePathName(v->mdfd_vfd),
 							nbytes, BLCKSZ)));
 	}
 }
@@ -1056,23 +836,13 @@ mdwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
-if (forknum == MAIN_FORKNUM)
-{
-	if (!MirroredBufferPool_Write(&v->mdmir_open, seekpos, buffer, BLCKSZ))
-		nbytes = -1;
-	else
-		nbytes = BLCKSZ;
-}
-else
-{
 	if (FileSeek(v->mdfd_vfd, seekpos, SEEK_SET) != seekpos)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not seek to block %u of relation %s: %m",
-						blocknum, relpath(reln->smgr_rnode, forknum))));
+				 errmsg("could not seek to block %u in file \"%s\": %m",
+						blocknum, FilePathName(v->mdfd_vfd))));
 
 	nbytes = FileWrite(v->mdfd_vfd, buffer, BLCKSZ);
-}
 
 	TRACE_POSTGRESQL_SMGR_MD_WRITE_DONE(forknum, blocknum,
 										reln->smgr_rnode.spcNode,
@@ -1086,14 +856,14 @@ else
 		if (nbytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not write block %u of relation %s: %m",
-							blocknum, relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not write block %u in file \"%s\": %m",
+							blocknum, FilePathName(v->mdfd_vfd))));
 		/* short write: complain appropriately */
 		ereport(ERROR,
 				(errcode(ERRCODE_DISK_FULL),
-				 errmsg("could not write block %u of relation %s: wrote only %d of %d bytes",
+				 errmsg("could not write block %u in file \"%s\": wrote only %d of %d bytes",
 						blocknum,
-						relpath(reln->smgr_rnode, forknum),
+						FilePathName(v->mdfd_vfd),
 						nbytes, BLCKSZ),
 				 errhint("Check free disk space.")));
 	}
@@ -1160,9 +930,8 @@ mdnblocks(SMgrRelation reln, ForkNumber forknum)
 			if (v->mdfd_chain == NULL)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-					   errmsg("could not open segment %u of relation %s: %m",
-							  segno,
-							  relpath(reln->smgr_rnode, forknum))));
+						 errmsg("could not open file \"%s\": %m",
+								_mdfd_segpath(reln, forknum, segno))));
 		}
 
 		v = v->mdfd_chain;
@@ -1197,17 +966,12 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 		if (InRecovery || allowNotFound)
 			return;
 		ereport(ERROR,
-				(errmsg("could not truncate relation %s to %u blocks: it's only %u blocks now",
+				(errmsg("could not truncate file \"%s\" to %u blocks: it's only %u blocks now",
 						relpath(reln->smgr_rnode, forknum),
 						nblocks, curnblk)));
 	}
 
-	/*
-	 * Resync issues truncate to mirror only. In that case on primary nblocks
-	 * will be always identical to curnblock since nblocks is allocated while
-	 * holding LockRelationForResyncExtension.
-	 */
-	if (nblocks == curnblk && (forknum != MAIN_FORKNUM || !FileRepPrimary_IsResyncWorker()))
+	if (nblocks == curnblk && (forknum != MAIN_FORKNUM))
 		return;					/* no work */
 
 	v = mdopen(reln, forknum, EXTENSION_FAIL);
@@ -1224,19 +988,12 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 			 * from the mdfd_chain). We truncate the file, but do not delete
 			 * it, for reasons explained in the header comments.
 			 */
-			bool		success;
-
-			if (forknum == MAIN_FORKNUM)
-				success = MirroredBufferPool_Truncate(&v->mdmir_open, 0);
-			else
-				success = (FileTruncate(v->mdfd_vfd, 0) >= 0);
-
-			if (!success)
+			if (FileTruncate(v->mdfd_vfd, 0) <  0)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-					errmsg("could not truncate relation %s to %u blocks: %m",
-						   relpath(reln->smgr_rnode, forknum),
-						   nblocks)));
+						 errmsg("could not truncate file \"%s\": %m",
+								FilePathName(v->mdfd_vfd))));
+
 			if (!isTemp)
 				register_dirty_segment(reln, forknum, v);
 			v = v->mdfd_chain;
@@ -1255,18 +1012,12 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 			 * given in the header comments.
 			 */
 			BlockNumber lastsegblocks = nblocks - priorblocks;
-			bool		success;
 
-			if (forknum == MAIN_FORKNUM)
-				success = MirroredBufferPool_Truncate(&v->mdmir_open, (off_t) lastsegblocks * BLCKSZ);
-			else
-				success = (FileTruncate(v->mdfd_vfd, (off_t) lastsegblocks * BLCKSZ) >= 0);
-
-			if (!success)
+			if (FileTruncate(v->mdfd_vfd, (off_t) lastsegblocks * BLCKSZ) <  0)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-					errmsg("could not truncate relation %s to %u blocks: %m",
-						   relpath(reln->smgr_rnode, forknum),
+					errmsg("could not truncate file \"%s\" to %u blocks: %m",
+						   FilePathName(v->mdfd_vfd),
 						   nblocks)));
 			if (!isTemp)
 				register_dirty_segment(reln, forknum, v);
@@ -1307,19 +1058,11 @@ mdimmedsync(SMgrRelation reln, ForkNumber forknum)
 
 	while (v != NULL)
 	{
-		bool		success;
-
-		if (forknum == MAIN_FORKNUM)
-			success = MirroredBufferPool_Flush(&v->mdmir_open);
-		else
-			success = (FileSync(v->mdfd_vfd) >= 0);
-
-		if (!success)
+		if (FileSync(v->mdfd_vfd) < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not fsync segment %u of relation %s: %m",
-							v->mdfd_segno,
-							relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not fsync file \"%s\": %m",
+							FilePathName(v->mdfd_vfd))));
 		v = v->mdfd_chain;
 	}
 }
@@ -1493,36 +1236,27 @@ mdsync(void)
 				seg = _mdfd_getseg(reln, entry->tag.forknum,
 							  entry->tag.segno * ((BlockNumber) RELSEG_SIZE),
 								   false, EXTENSION_RETURN_NULL);
-				if (seg != NULL)
-				{
-					if (entry->tag.forknum == MAIN_FORKNUM &&
-						MirroredBufferPool_Flush(&seg->mdmir_open))
-					{
-						break;		/* success; break out of retry loop */
-					}
-					else if (FileSync(seg->mdfd_vfd) >= 0)
-					{
-						break;		/* success; break out of retry loop */
-					}
-				}
+				if (seg != NULL &&
+					FileSync(seg->mdfd_vfd) >= 0)
+					break;		/* success; break out of retry loop */
 
 				/*
 				 * XXX is there any point in allowing more than one retry?
 				 * Don't see one at the moment, but easy to change the test
 				 * here if so.
 				 */
-				path = relpath(entry->tag.rnode, entry->tag.forknum);
+				path = _mdfd_segpath(reln, entry->tag.forknum,
+									 entry->tag.segno);
 				if (!FILE_POSSIBLY_DELETED(errno) ||
 					failures > 0)
 					ereport(ERROR,
 							(errcode_for_file_access(),
-					  errmsg("could not fsync segment %u of relation %s: %m",
-							 entry->tag.segno, path)));
+						   errmsg("could not fsync file \"%s\": %m", path)));
 				else
 					ereport(DEBUG1,
 							(errcode_for_file_access(),
-							 errmsg("could not fsync segment %u of relation %s but retrying: %m",
-									entry->tag.segno, path)));
+					   errmsg("could not fsync file \"%s\" but retrying: %m",
+							  path)));
 				pfree(path);
 
 				/*
@@ -1626,7 +1360,7 @@ mdpostckpt(void)
 			if (errno != ENOENT)
 				ereport(WARNING,
 						(errcode_for_file_access(),
-						 errmsg("could not remove relation %s: %m", path)));
+						 errmsg("could not remove file \"%s\": %m", path)));
 		}
 		pfree(path);
 
@@ -1660,9 +1394,8 @@ register_dirty_segment(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 		if (FileSync(seg->mdfd_vfd) < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not fsync segment %u of relation %s: %m",
-							seg->mdfd_segno,
-							relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not fsync file \"%s\": %m",
+							FilePathName(seg->mdfd_vfd))));
 	}
 }
 
@@ -1865,12 +1598,12 @@ ForgetRelationFsyncRequests(RelFileNode rnode, ForkNumber forknum)
  * ForgetDatabaseFsyncRequests -- forget any fsyncs and unlinks for a DB
  */
 void
-ForgetDatabaseFsyncRequests(Oid tblspc, Oid dbid)
+ForgetDatabaseFsyncRequests(Oid dbid)
 {
 	RelFileNode rnode;
 
 	rnode.dbNode = dbid;
-	rnode.spcNode = tblspc;
+	rnode.spcNode = 0;
 	rnode.relNode = 0;
 
 	if (pendingOpsTable)
@@ -1898,61 +1631,11 @@ _fdvec_alloc(void)
 }
 
 /*
- * Open the specified segment of the relation,
- * and make a MdfdVec object for it.  Returns NULL on failure.
+ * Return the filename for the specified segment of the relation. The
+ * returned string is palloc'd.
  */
-static MdfdVec *
-_mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
-			  int oflags)
-{
-	MdfdVec    *v;
-	int			fd = -1;
-	MirroredBufferPoolOpen mirroredOpen = { false /* isActive */};
-
-if (forknum == MAIN_FORKNUM)
-{
-	int			primaryError;
-	bool		mirrorDataLossOccurred;
-
-	/* open the file */
-	MirroredBufferPool_Open(
-					&mirroredOpen,
-					&reln->smgr_rnode,
-					segno,
-					/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-					&primaryError,
-					&mirrorDataLossOccurred);
-
-	if (!MirroredBufferPool_IsActive(&mirroredOpen))
-	{
-	    if ((oflags & O_CREAT) != 0 )
-	    {
-            MirrorDataLossTrackingState mirrorDataLossTrackingState;
-            int64						mirrorDataLossTrackingSessionNum;
-
-            mirrorDataLossTrackingState =
-                FileRepPrimary_GetMirrorDataLossTrackingSessionNum(&mirrorDataLossTrackingSessionNum);
-
-	        MirroredBufferPool_Create(
-					&mirroredOpen,
-					&reln->smgr_rnode,
-					segno,
-					/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-					mirrorDataLossTrackingState,
-					mirrorDataLossTrackingSessionNum,
-					&primaryError,
-					&mirrorDataLossOccurred);
-
-        }
-
-        /* check again now that we may have done create */
-        if (!MirroredBufferPool_IsActive(&mirroredOpen))
-        {
-            return NULL;
-        }
-    }
-}
-else
+static char *
+_mdfd_segpath(SMgrRelation reln, ForkNumber forknum, BlockNumber segno)
 {
 	char	   *path,
 			   *fullpath;
@@ -1969,6 +1652,23 @@ else
 	else
 		fullpath = path;
 
+	return fullpath;
+}
+
+/*
+ * Open the specified segment of the relation,
+ * and make a MdfdVec object for it.  Returns NULL on failure.
+ */
+static MdfdVec *
+_mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
+			  int oflags)
+{
+	MdfdVec    *v;
+	int			fd;
+	char	   *fullpath;
+
+	fullpath = _mdfd_segpath(reln, forknum, segno);
+
 	/* open the file */
 	fd = PathNameOpenFile(fullpath, O_RDWR | PG_BINARY | oflags, 0600);
 
@@ -1976,13 +1676,11 @@ else
 
 	if (fd < 0)
 		return NULL;
-}
 
 	/* allocate an mdfdvec entry for it */
 	v = _fdvec_alloc();
 
 	/* fill the entry */
-	v->mdmir_open = mirroredOpen;
 	v->mdfd_vfd = fd;
 	v->mdfd_segno = segno;
 	v->mdfd_chain = NULL;
@@ -2057,10 +1755,9 @@ _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
 					return NULL;
 				ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not open segment %u of relation %s (target block %u): %m",
-								nextsegno,
-								relpath(reln->smgr_rnode, forknum),
-								blkno)));
+				   errmsg("could not open file \"%s\" (target block %u): %m",
+						  _mdfd_segpath(reln, forknum, nextsegno),
+						  blkno)));
 			}
 		}
 		v = v->mdfd_chain;
@@ -2076,20 +1773,12 @@ _mdnblocks(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 {
 	off_t		len;
 
-	if (forknum == MAIN_FORKNUM)
-	{
-		Assert(MirroredBufferPool_IsActive(&seg->mdmir_open));
-
-		len = MirroredBufferPool_SeekEnd(&seg->mdmir_open);
-	}
-	else
-		len = FileSeek(seg->mdfd_vfd, 0L, SEEK_END);
-
+	len = FileSeek(seg->mdfd_vfd, 0L, SEEK_END);
 	if (len < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-			 errmsg("could not seek to end of segment %u of relation %s: %m",
-					seg->mdfd_segno, relpath(reln->smgr_rnode, forknum))));
+				 errmsg("could not seek to end of file \"%s\": %m",
+						FilePathName(seg->mdfd_vfd))));
 	/* note that this calculation will ignore any partial block at EOF */
 	return (BlockNumber) (len / BLCKSZ);
 }

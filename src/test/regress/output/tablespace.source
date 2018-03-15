@@ -1,5 +1,12 @@
 -- create a tablespace we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
+-- try setting and resetting some properties for the new tablespace
+ALTER TABLESPACE testspace SET (random_page_cost = 1.0);
+ALTER TABLESPACE testspace SET (some_nonexistent_parameter = true);  -- fail
+ERROR:  unrecognized parameter "some_nonexistent_parameter"
+ALTER TABLESPACE testspace RESET (random_page_cost = 2.0); -- fail
+ERROR:  RESET must not include values for parameters
+ALTER TABLESPACE testspace RESET (random_page_cost, seq_page_cost); -- ok
 -- create a schema we can use
 CREATE SCHEMA testschema;
 -- try a table
@@ -43,6 +50,7 @@ SELECT relname, spcname FROM pg_catalog.pg_tablespace t, pg_catalog.pg_class c
 
 -- let's try moving a table from one place to another
 CREATE TABLE testschema.atable AS VALUES (1), (2);
+alter table testschema.atable set with (reorganize=true) distributed by (column1);
 CREATE UNIQUE INDEX anindex ON testschema.atable(column1);
 ALTER TABLE testschema.atable SET TABLESPACE testspace;
 ALTER INDEX testschema.anindex SET TABLESPACE testspace;
@@ -58,7 +66,7 @@ SELECT COUNT(*) FROM testschema.atable;		-- checks heap
 
 -- Will fail with bad path
 CREATE TABLESPACE badspace LOCATION '/no/such/location';
-ERROR:  could not set permissions on directory "/no/such/location": No such file or directory
+ERROR:  directory "/no/such/location" does not exist
 -- No such tablespace
 CREATE TABLE bar (i int) TABLESPACE nosuchspace;
 ERROR:  tablespace "nosuchspace" does not exist

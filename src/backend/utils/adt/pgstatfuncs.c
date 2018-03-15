@@ -3,12 +3,12 @@
  * pgstatfuncs.c
  *	  Functions for accessing the statistics collector data
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.54 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.60 2010/02/26 02:01:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -93,6 +93,9 @@ extern Datum pg_renice_session(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_clear_snapshot(PG_FUNCTION_ARGS);
 extern Datum pg_stat_reset(PG_FUNCTION_ARGS);
+extern Datum pg_stat_reset_shared(PG_FUNCTION_ARGS);
+extern Datum pg_stat_reset_single_table_counters(PG_FUNCTION_ARGS);
+extern Datum pg_stat_reset_single_function_counters(PG_FUNCTION_ARGS);
 
 /* Global bgwriter statistics, from bgwriter.c */
 extern PgStat_MsgBgWriter bgwriterStats;
@@ -1311,6 +1314,38 @@ Datum
 pg_stat_reset(PG_FUNCTION_ARGS)
 {
 	pgstat_reset_counters();
+
+	PG_RETURN_VOID();
+}
+
+/* Reset some shared cluster-wide counters */
+Datum
+pg_stat_reset_shared(PG_FUNCTION_ARGS)
+{
+	char	   *target = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+	pgstat_reset_shared_counters(target);
+
+	PG_RETURN_VOID();
+}
+
+/* Reset a a single counter in the current database */
+Datum
+pg_stat_reset_single_table_counters(PG_FUNCTION_ARGS)
+{
+	Oid			taboid = PG_GETARG_OID(0);
+
+	pgstat_reset_single_counter(taboid, RESET_TABLE);
+
+	PG_RETURN_VOID();
+}
+
+Datum
+pg_stat_reset_single_function_counters(PG_FUNCTION_ARGS)
+{
+	Oid			funcoid = PG_GETARG_OID(0);
+
+	pgstat_reset_single_counter(funcoid, RESET_FUNCTION);
 
 	PG_RETURN_VOID();
 }

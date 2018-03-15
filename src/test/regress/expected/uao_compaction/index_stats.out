@@ -8,7 +8,7 @@ CREATE TABLE mytab(
 Create index mytab_int_idx1 on mytab(col_int);
 insert into mytab values(1,'aa',1001,101),(2,'bb',1002,102);
 select * from mytab;
- col_int | col_text | col_numeric | col_unq
+ col_int | col_text | col_numeric | col_unq 
 ---------+----------+-------------+---------
        1 | aa       |        1001 |     101
        2 | bb       |        1002 |     102
@@ -16,7 +16,7 @@ select * from mytab;
 
 update mytab set col_text=' new value' where col_int = 1;
 select * from mytab;
- col_int |  col_text  | col_numeric | col_unq
+ col_int |  col_text  | col_numeric | col_unq 
 ---------+------------+-------------+---------
        2 | bb         |        1002 |     102
        1 |  new value |        1001 |     101
@@ -24,13 +24,13 @@ select * from mytab;
 
 vacuum mytab;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'mytab';
- relname | reltuples
+ relname | reltuples 
 ---------+-----------
  mytab   |         2
 (1 row)
 
 SELECT relname, reltuples FROM pg_class WHERE relname = 'mytab_int_idx1';
-    relname     | reltuples
+    relname     | reltuples 
 ----------------+-----------
  mytab_int_idx1 |         2
 (1 row)

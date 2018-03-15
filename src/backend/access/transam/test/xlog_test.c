@@ -24,7 +24,6 @@ test_GetXLogCleanUpToForMaster(void **state)
 	GetXLogCleanUpTo(pointer, &actual_logId, &actual_logSeg);
 }
 
-#ifdef USE_SEGWALREP
 void
 test_GetXLogCleanUpToForSegments(void **state)
 {
@@ -43,7 +42,6 @@ test_GetXLogCleanUpToForSegments(void **state)
 
 	GetXLogCleanUpTo(pointer, &actual_logId, &actual_logSeg);
 }
-#endif
 
 void
 test_CheckKeepWalSegments(void **state)
@@ -184,9 +182,7 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test_CheckKeepWalSegments)
 		, unit_test(test_GetXLogCleanUpToForMaster)
-#ifdef USE_SEGWALREP
 		, unit_test(test_GetXLogCleanUpToForSegments)
-#endif
 	};
 	return run_tests(tests);
 }

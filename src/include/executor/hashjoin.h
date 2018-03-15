@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/hashjoin.h,v 1.51 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/hashjoin.h,v 1.53 2010/02/01 15:43:36 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -165,7 +165,7 @@ typedef struct HashJoinTableData
 
 	bool		growEnabled;	/* flag to shut off nbatch increases */
 
-	double		totalTuples;	/* # tuples obtained from inner plan */
+	uint64		totalTuples;	/* # tuples obtained from inner plan */
 
 	/*
 	 * These arrays are allocated for the life of the hash join, but only if
@@ -193,6 +193,7 @@ typedef struct HashJoinTableData
 
 	Size		spaceUsed;		/* memory space currently used by tuples */
 	Size		spaceAllowed;	/* upper limit for space used */
+	Size		spacePeak;		/* peak space used */
 	Size		spaceUsedSkew;	/* skew hash table's current space usage */
 	Size		spaceAllowedSkew;		/* upper limit for skew hashtable */
 

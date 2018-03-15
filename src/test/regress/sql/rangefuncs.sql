@@ -70,7 +70,7 @@ DROP VIEW vw_getfoo;
 DROP FUNCTION getfoo(int);
 CREATE FUNCTION getfoo(int) RETURNS RECORD AS 'SELECT * FROM foo WHERE fooid = $1 ORDER BY fooname DESC /* ORDER BY to force the Joe row to be returned */ ;' LANGUAGE SQL;
 SELECT * FROM getfoo(1) AS t1(fooid int, foosubid int, fooname text);
-CREATE VIEW vw_getfoo AS SELECT * FROM getfoo(1) AS 
+CREATE VIEW vw_getfoo AS SELECT * FROM getfoo(1) AS
 (fooid int, foosubid int, fooname text);
 SELECT * FROM vw_getfoo;
 
@@ -251,7 +251,13 @@ SELECT dup('xyz');	-- fails
 SELECT dup('xyz'::text);
 SELECT * FROM dup('xyz'::text);
 
--- equivalent specification
+-- fails, as we are attempting to rename first argument
+CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
+AS 'select $1, array[$1,$1]' LANGUAGE sql;
+
+DROP FUNCTION dup(anyelement);
+
+-- equivalent behavior, though different name exposed for input arg
 CREATE OR REPLACE FUNCTION dup (inout f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 SELECT dup(22);
@@ -284,12 +290,6 @@ DROP FUNCTION foo(int);
 -- some tests on SQL functions with RETURNING
 --
 
--- start_ignore
--- GPDB_90_MERGE_FIXME: GPDB doesn't currently support the RETURNING clause.
--- These tests have therefore been disabled. I'm marking this as a FIXME for
--- the 9.0 merge, because I think we'll tackle the RETURNING clause and try
--- to make that work again at that time, once we merge the ModifyTable node
--- from the upstream.
 create temp table tt(f1 serial, data text);
 
 create function insert_tt(text) returns int as
@@ -345,9 +345,6 @@ select * from tt;
 -- which is expected.
 select * from tt_log;
 
--- end of disabled RETURNING tests.
--- end_ignore
-
 -- test case for a whole-row-variable bug
 create function foo1(n integer, out a text, out b text)
   returns setof record
@@ -373,8 +370,6 @@ select array_to_set(array['one', 'two']);
 select * from array_to_set(array['one', 'two']) as t(f1 int,f2 text);
 select * from array_to_set(array['one', 'two']); -- fail
 
--- start_ignore
--- GPDB_90_MERGE_FIXME: disable RETURNING clause tests (see above).
 create temp table foo(f1 int8, f2 int8);
 
 create function testfoo() returns record as $$
@@ -396,8 +391,44 @@ select * from testfoo() as t(f1 int8,f2 int8);
 select * from testfoo(); -- fail
 
 drop function testfoo();
--- end of disabled RETURNING tests.
--- end_ignore
+
+--
+-- Check some cases involving dropped columns in a rowtype result
+--
+
+create temp table users (userid text, email text, todrop bool, enabled bool);
+insert into users values ('id','email',true,true);
+insert into users values ('id2','email2',true,true);
+alter table users drop column todrop;
+
+create or replace function get_first_user() returns users as
+$$ SELECT * FROM users ORDER BY userid LIMIT 1; $$
+language sql stable;
+
+SELECT get_first_user();
+SELECT * FROM get_first_user();
+
+create or replace function get_users() returns setof users as
+$$ SELECT * FROM users ORDER BY userid; $$
+language sql stable;
+
+SELECT get_users();
+SELECT * FROM get_users();
+
+drop function get_first_user();
+drop function get_users();
+drop table users;
+
+-- this won't get inlined because of type coercion, but it shouldn't fail
+
+create or replace function foobar() returns setof text as
+$$ select 'foo'::varchar union all select 'bar'::varchar ; $$
+language sql stable;
+
+select foobar();
+select * from foobar();
+
+drop function foobar();
 
 -- check handling of a SQL function with multiple OUT params (bug #5777)
 

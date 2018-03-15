@@ -4,18 +4,19 @@
  *	  local buffer manager. Fast buffer manager for temporary tables,
  *	  which never need to be WAL-logged or checkpointed, etc.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/localbuf.c,v 1.87 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/buffer/localbuf.c,v 1.89 2010/01/02 16:57:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "catalog/catalog.h"
+#include "executor/instrument.h"
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
 #include "storage/smgr.h"
@@ -200,10 +201,7 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum,
 		/* Find smgr relation for buffer */
 		oreln = smgropen(bufHdr->tag.rnode);
 
-		// -------- MirroredLock ----------
 		// UNDONE: Unfortunately, I think we write temp relations to the mirror...
-		LWLockAcquire(MirroredLock, LW_SHARED);
-
 		PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 
 		/* And write... */
@@ -213,13 +211,10 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum,
 				  localpage,
 				  true);
 
-		LWLockRelease(MirroredLock);
-		// -------- MirroredLock ----------
-
 		/* Mark not-dirty now in case we error out below */
 		bufHdr->flags &= ~BM_DIRTY;
 
-		LocalBufferFlushCount++;
+		pgBufferUsage.local_blks_written++;
 	}
 
 	/*

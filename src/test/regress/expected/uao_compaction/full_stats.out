@@ -9,13 +9,13 @@ SET enable_seqscan=false;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats';
     relname     | reltuples 
 ----------------+-----------
- uao_full_stats | 100
+ uao_full_stats |       100
 (1 row)
 
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats_index';
        relname        | reltuples 
 ----------------------+-----------
- uao_full_stats_index | 100
+ uao_full_stats_index |       100
 (1 row)
 
 DELETE FROM uao_full_stats WHERE a < 16;
@@ -23,12 +23,12 @@ VACUUM FULL uao_full_stats;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats';
     relname     | reltuples 
 ----------------+-----------
- uao_full_stats     | 85
- (1 row)
+ uao_full_stats |        85
+(1 row)
 
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats_index';
        relname        | reltuples 
 ----------------------+-----------
- uao_full_stats_index | 85
+ uao_full_stats_index |        85
 (1 row)
 

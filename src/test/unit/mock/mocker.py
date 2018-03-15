@@ -18,6 +18,8 @@ class CFile(object):
     # __attribute__((XXX)): it gets difficult to match arguments.
     # Remove it as it's a noisy keyword for us.
     attribute_pat = re.compile(r'__attribute__\s*\(\((format\s*\([^\)]+\)\s*|format_arg\s*\(\d+\)\s*|.+?)\)\)')
+    # #include <filename>.c
+    include_c_pat = re.compile(r'#include ".+\.c"')
 
     # function pattern
     func_pat = re.compile(
@@ -62,6 +64,12 @@ class CFile(object):
         if 'be-secure' not in self.path and 'guc_gp.c' not in self.path:
             content = CFile.s_comment_pat.sub('', content)
         content = CFile.attribute_pat.sub('', content)
+        # .c files included in other .c files can generally not be found from
+        # where the mock files are located which leads to compilation failure.
+        # Since we thus far arent interested in handling this anyways, let's
+        # skip this for now except for the guc special case
+        if 'guc' not in self.path:
+            content = CFile.include_c_pat.sub('', content)
         return content
 
     def skip_func_body(self, content, index):

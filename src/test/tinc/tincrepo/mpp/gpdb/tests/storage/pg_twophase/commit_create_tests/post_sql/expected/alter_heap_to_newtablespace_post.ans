@@ -40,7 +40,7 @@
  col039 | time without time zone      | 
  col040 | timestamp without time zone | 
 Distributed by: (phase)
-Tablespace: "heap_ts2"
+Tablespace: "twophase_test_ts2"
 
 INSERT INTO heap_table_for_alter VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', repeat('text_',10), '{1,2,3,4,5}', 'Hello .. how are you 1
 ', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
@@ -49,7 +49,3 @@ INSERT INTO heap_table_for_alter VALUES ('sync1_heap1',generate_series(1,10),'a'
 INSERT 0 10
 DROP table heap_table_for_alter;
 DROP TABLE
-drop tablespace heap_ts1;
-DROP TABLESPACE
-drop tablespace heap_ts2;
-DROP TABLESPACE

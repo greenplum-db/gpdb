@@ -30,11 +30,11 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/combocid.c,v 1.6 2009/01/01 17:23:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/combocid.c,v 1.7 2010/01/02 16:57:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -469,7 +469,9 @@ dumpSharedComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax, Com
 		 * transaction.  We would then need to keep combocid_map_count
 		 * synchronized with open files at (sub-) xact boundaries.
 		 */
-		combocid_map = BufFileCreateTemp_ReaderWriter(path, true, true);
+		combocid_map = BufFileCreateNamedTemp(path,
+											  true /* delOnClose */,
+											  true /* interXact */);
 		MemoryContextSwitchTo(oldCtx);
 	}
 	Assert(combocid_map != NULL);
@@ -522,7 +524,9 @@ loadSharedComboCommandId(TransactionId xmin, CommandId combocid, CommandId *cmin
 		ComboCidMapName(path, gp_session_id, lockHolderProcPtr->pid);
 		/* open our file, as appropriate: this will throw an error if the create-fails. */
 		oldCtx = MemoryContextSwitchTo(TopMemoryContext);
-		combocid_map = BufFileCreateTemp_ReaderWriter(path, false, true);
+		combocid_map = BufFileOpenNamedTemp(path,
+											false /* delOnClose */,
+											true /* interXact */);
 		MemoryContextSwitchTo(oldCtx);
 	}
 	Assert(combocid_map != NULL);

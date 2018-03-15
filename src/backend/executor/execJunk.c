@@ -3,12 +3,12 @@
  * execJunk.c
  *	  Junk attribute support stuff....
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execJunk.c,v 1.58 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execJunk.c,v 1.60 2010/01/02 16:57:40 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,9 +34,7 @@
  * called 'resjunk'. If the value of this field is true then the
  * corresponding attribute is a "junk" attribute.
  *
- * When we initialize a plan we call ExecInitJunkFilter to create
- * and store the appropriate information in the es_junkFilter attribute of
- * EState.
+ * When we initialize a plan we call ExecInitJunkFilter to create a filter.
  *
  * We then execute the plan, treating the resjunk attributes like any others.
  *
@@ -44,7 +42,7 @@
  * ExecFindJunkAttribute/ExecGetJunkAttribute to retrieve the values of the
  * junk attributes we are interested in, and ExecFilterJunk or ExecRemoveJunk
  * to remove all the junk attributes from a tuple. This new "clean" tuple is
- * then printed, replaced, deleted or inserted.
+ * then printed, inserted, or updated.
  *
  *-------------------------------------------------------------------------
  */

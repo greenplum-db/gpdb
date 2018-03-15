@@ -3,12 +3,12 @@
  * genam.c
  *	  general index access method routines
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/genam.c,v 1.74 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/index/genam.c,v 1.81 2010/02/26 02:00:33 momjian Exp $
  *
  * NOTES
  *	  many of the old access method routines have been turned into
@@ -21,6 +21,7 @@
 
 #include "access/relscan.h"
 #include "access/transam.h"
+#include "catalog/index.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
@@ -91,8 +92,19 @@ RelationGetIndexScan(Relation indexRelation,
 	else
 		scan->keyData = NULL;
 
+	/*
+	 * During recovery we ignore killed tuples and don't bother to kill them
+	 * either. We do this because the xmin on the primary node could easily be
+	 * later than the xmin on the standby node, so that what the primary
+	 * thinks is killed is supposed to be visible on standby. So for correct
+	 * MVCC for queries during recovery we must ignore these hints and check
+	 * all tuples. Do *not* set ignore_killed_tuples to true when running in a
+	 * transaction that was started during recovery. xactStartedInRecovery
+	 * should not be altered by index AMs.
+	 */
 	scan->kill_prior_tuple = false;
-	scan->ignore_killed_tuples = true;	/* default setting */
+	scan->xactStartedInRecovery = TransactionStartedDuringRecovery();
+	scan->ignore_killed_tuples = !scan->xactStartedInRecovery;
 
 	scan->opaque = NULL;
 
@@ -137,20 +149,17 @@ IndexScanEnd(IndexScanDesc scan)
  *
  * Construct a string describing the contents of an index entry, in the
  * form "(key_name, ...)=(key_value, ...)".  This is currently used
- * only for building unique-constraint error messages, but we don't want
- * to hardwire the spelling of the messages here.
+ * for building unique-constraint and exclusion-constraint error messages.
+ *
+ * The passed-in values/nulls arrays are the "raw" input to the index AM,
+ * e.g. results of FormIndexDatum --- this is not necessarily what is stored
+ * in the index, but it's what the user perceives to be stored.
  */
 char *
 BuildIndexValueDescription(Relation indexRelation,
 						   Datum *values, bool *isnull)
 {
-	/*
-	 * XXX for the moment we use the index's tupdesc as a guide to the
-	 * datatypes of the values.  This is okay for btree indexes but is in
-	 * fact the wrong thing in general.  This will have to be fixed if we
-	 * are ever to support non-btree unique indexes.
-	 */
-	TupleDesc	tupdesc = RelationGetDescr(indexRelation);
+	int			natts = indexRelation->rd_rel->relnatts;
 	StringInfoData buf;
 	int			i;
 
@@ -159,18 +168,28 @@ BuildIndexValueDescription(Relation indexRelation,
 					 pg_get_indexdef_columns(RelationGetRelid(indexRelation),
 											 true));
 
-	for (i = 0; i < tupdesc->natts; i++)
+	for (i = 0; i < natts; i++)
 	{
-		char   *val;
+		char	   *val;
 
 		if (isnull[i])
 			val = "null";
 		else
 		{
-			Oid		foutoid;
-			bool	typisvarlena;
+			Oid			foutoid;
+			bool		typisvarlena;
 
-			getTypeOutputInfo(tupdesc->attrs[i]->atttypid,
+			/*
+			 * The provided data is not necessarily of the type stored in the
+			 * index; rather it is of the index opclass's input type. So look
+			 * at rd_opcintype not the index tupdesc.
+			 *
+			 * Note: this is a bit shaky for opclasses that have pseudotype
+			 * input types such as ANYARRAY or RECORD.	Currently, the
+			 * typoutput functions associated with the pseudotypes will work
+			 * okay, but we might have to try harder in future.
+			 */
+			getTypeOutputInfo(indexRelation->rd_opcintype[i],
 							  &foutoid, &typisvarlena);
 			val = OidOutputFunctionCall(foutoid, values[i]);
 		}
@@ -340,10 +359,6 @@ bool
 systable_recheck_tuple(SysScanDesc sysscan, HeapTuple tup)
 {
 	bool		result;
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
-	/* -------- MirroredLock ---------- */
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	if (sysscan->irel)
 	{
@@ -369,10 +384,6 @@ systable_recheck_tuple(SysScanDesc sysscan, HeapTuple tup)
 											  scan->rs_cbuf);
 		LockBuffer(scan->rs_cbuf, BUFFER_LOCK_UNLOCK);
 	}
-
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	/* -------- MirroredLock ---------- */
-
 	return result;
 }
 
@@ -423,7 +434,7 @@ systable_beginscan_ordered(Relation heapRelation,
 
 	/* REINDEX can probably be a hard error here ... */
 	if (ReindexIsProcessingIndex(RelationGetRelid(indexRelation)))
-		elog(ERROR, "cannot do ordered scan on index \"%s\", because it is the current REINDEX target",
+		elog(ERROR, "cannot do ordered scan on index \"%s\", because it is being reindexed",
 			 RelationGetRelationName(indexRelation));
 	/* ... but we only throw a warning about violating IgnoreSystemIndexes */
 	if (IgnoreSystemIndexes)

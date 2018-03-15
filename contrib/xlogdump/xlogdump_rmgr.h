@@ -76,10 +76,6 @@ void print_rmgr_hash(XLogRecPtr, XLogRecord *, uint8);
 void print_rmgr_gin(XLogRecPtr, XLogRecord *, uint8);
 void print_rmgr_gist(XLogRecPtr, XLogRecord *, uint8);
 void print_rmgr_seq(XLogRecPtr, XLogRecord *, uint8);
-void print_rmgr_mmxlog(XLogRecPtr, XLogRecord *, uint8);
-
-#ifdef USE_SEGWALREP
 void print_rmgr_ao(XLogRecPtr, XLogRecord *, uint8);
-#endif      /* USE_SEGWALREP */
 
 #endif /* __XLOGDUMP_RMGR_H__ */

@@ -17,7 +17,7 @@
 #include "catalog/pg_proc.h"	/* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"	/* INT8OID */
 #include "nodes/makefuncs.h"	/* makeFuncExpr() */
-#include "nodes/relation.h"		/* PlannerInfo, RelOptInfo, CdbRelDedupInfo */
+#include "nodes/relation.h"		/* PlannerInfo, RelOptInfo */
 #include "optimizer/cost.h"		/* cpu_tuple_cost */
 #include "optimizer/pathnode.h" /* Path, pathnode_walker() */
 #include "optimizer/paths.h"
@@ -800,8 +800,8 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	CdbPathLocus_MakeNull(&outer.move_to);
 	CdbPathLocus_MakeNull(&inner.move_to);
 
-	Assert(cdbpathlocus_is_valid(outer.locus) &&
-		   cdbpathlocus_is_valid(inner.locus));
+	Assert(cdbpathlocus_is_valid(outer.locus));
+	Assert(cdbpathlocus_is_valid(inner.locus));
 
 	outer.has_wts = cdbpath_contains_wts(outer.path);
 	inner.has_wts = cdbpath_contains_wts(inner.path);
@@ -853,7 +853,11 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			inner.ok_to_replicate = false;
 			break;
 		default:
-			Assert(0);
+			/*
+			 * The caller should already have transformed JOIN_UNIQUE_INNER/OUTER
+			 * and JOIN_DEDUP_SEMI/SEMI_REVERSE into JOIN_INNER
+			 */
+			elog(ERROR, "unexpected join type %d", jointype);
 	}
 
 	/* Get rel sizes. */
@@ -1278,8 +1282,8 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 		}
 	}
 
-	uniquePath->distinct_on_exprs = list_concat(ctid_exprs, other_vars);
-	uniquePath->distinct_on_eq_operators = list_concat(ctid_operators, other_operators);
+	uniquePath->uniq_exprs = list_concat(ctid_exprs, other_vars);
+	uniquePath->in_operators = list_concat(ctid_operators, other_operators);
 
 	/* To repartition, add a MotionPath below this UniquePath. */
 	if (uniquePath->must_repartition)

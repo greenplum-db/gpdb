@@ -16,13 +16,13 @@ BEGIN
 2: UPDATE ao SET b = 42 WHERE a = 1;
 UPDATE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
-coalesce|mode               |locktype                |node
+coalesce|mode               |locktype                |node  
 --------+-------------------+------------------------+------
 ao      |AccessExclusiveLock|append-only segment file|master
 ao      |ExclusiveLock      |relation                |master
 (2 rows)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
-coalesce|mode               |locktype                |node
+coalesce|mode               |locktype                |node     
 --------+-------------------+------------------------+---------
 ao      |AccessExclusiveLock|append-only segment file|1 segment
 ao      |RowExclusiveLock   |relation                |1 segment
@@ -42,7 +42,7 @@ a|b
 3|3 
 4|4 
 (4 rows)
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
+0U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
 tid             |segno|row_num
 ----------------+-----+-------
 (33554432,32769)|1    |1      

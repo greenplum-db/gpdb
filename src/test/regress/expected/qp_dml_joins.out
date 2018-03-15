@@ -547,7 +547,7 @@ SELECT COUNT(*) FROM dml_ao_pt_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -961,7 +961,7 @@ SELECT COUNT(*) FROM dml_ao_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -1099,7 +1099,7 @@ SELECT COUNT(*) FROM dml_ao_r;
    113
 (1 row)
 
---Insert data that satisfy the check constraints 
+--Insert data that satisfy the check constraints
 begin;
 SELECT COUNT(*) FROM dml_co_check_s;
  count 
@@ -1413,7 +1413,7 @@ SELECT COUNT(*) FROM dml_co_pt_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1827,7 +1827,7 @@ SELECT COUNT(*) FROM dml_co_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1965,7 +1965,7 @@ SELECT COUNT(*) FROM dml_co_r;
    113
 (1 row)
 
---Insert data that satisfy the check constraints 
+--Insert data that satisfy the check constraints
 begin;
 SELECT COUNT(*) FROM dml_heap_check_s;
  count 
@@ -2059,7 +2059,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
    105
 (1 row)
 
---Update data that satisfy the check constraints 
+--Update data that satisfy the check constraints
 begin;
 SELECT SUM(d) FROM dml_heap_check_s;
  sum 
@@ -2082,7 +2082,7 @@ ERROR:  moving tuple from partition "dml_heap_check_s_1_prt_11" to partition "dm
 UPDATE dml_heap_check_s SET b = NULL FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.b and dml_heap_check_s.b = 99;
 ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 --Negative test - Update moving tuple across partition .also violates the check constraint
-UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a ; 
+UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a;
 ERROR:  moving tuple from partition "dml_heap_check_s_1_prt_2" to partition "dml_heap_check_s_1_prt_def" not supported  (seg0 127.0.0.1:40000 pid=18972)
 --Delete with generate_series
 begin;
@@ -2148,7 +2148,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
---Delete and using  
+--Delete and using
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2156,7 +2156,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
-DELETE FROM dml_heap_r USING dml_heap_s; 
+DELETE FROM dml_heap_r USING dml_heap_s;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -2173,7 +2173,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
-DELETE FROM dml_heap_r USING dml_heap_s; 
+DELETE FROM dml_heap_r USING dml_heap_s;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -2205,7 +2205,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
-DELETE FROM dml_heap_r USING (SELECT 1)foo; 
+DELETE FROM dml_heap_r USING (SELECT 1)foo;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -2221,7 +2221,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
-DELETE FROM dml_heap_r USING (SELECT 1 as t) foo WHERE foo.t = dml_heap_r.a; 
+DELETE FROM dml_heap_r USING (SELECT 1 as t) foo WHERE foo.t = dml_heap_r.a;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -2324,7 +2324,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 
 --Delete from table
 begin;
-SELECT COUNT(*) FROM dml_heap_pt_s; 
+SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
    115
@@ -2380,7 +2380,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s WHERE a is NULL;
      3
 (1 row)
 
-DELETE FROM dml_heap_pt_s WHERE a is NULL; 
+DELETE FROM dml_heap_pt_s WHERE a is NULL;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
@@ -2452,7 +2452,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
---Delete and using  
+--Delete and using
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2460,7 +2460,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
-DELETE FROM dml_heap_pt_r USING dml_heap_pt_s; 
+DELETE FROM dml_heap_pt_r USING dml_heap_pt_s;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -2477,7 +2477,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
-DELETE FROM dml_heap_pt_r USING dml_heap_pt_s; 
+DELETE FROM dml_heap_pt_r USING dml_heap_pt_s;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -2509,7 +2509,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
-DELETE FROM dml_heap_pt_r USING (SELECT 1)foo; 
+DELETE FROM dml_heap_pt_r USING (SELECT 1)foo;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -2525,7 +2525,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
-DELETE FROM dml_heap_pt_r USING (SELECT 1 as t) foo WHERE foo.t = dml_heap_pt_r.a; 
+DELETE FROM dml_heap_pt_r USING (SELECT 1 as t) foo WHERE foo.t = dml_heap_pt_r.a;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -2846,7 +2846,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -3416,7 +3416,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 
 UPDATE dml_heap_pt_r SET b = dml_heap_pt_r.a + 3000000 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a;
 ERROR:  no partition for partitioning key  (seg1 127.0.0.1:40001 pid=18973)
-SELECT SUM(b) FROM dml_heap_pt_r; 
+SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
  15150
@@ -3639,7 +3639,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
---Join with different column order 
+--Join with different column order
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3966,7 +3966,7 @@ SELECT SUM(b) FROM dml_heap_r;
  5050
 (1 row)
 
---Negative test - Update with aggregates 
+--Negative test - Update with aggregates
 SELECT SUM(b) FROM dml_heap_r;
  sum  
 ------

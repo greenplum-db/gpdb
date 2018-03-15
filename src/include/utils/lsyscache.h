@@ -3,10 +3,10 @@
  * lsyscache.h
  *	  Convenience routines for common queries in the system catalog cache.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.128 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.133 2010/04/24 16:20:32 sriggs Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,28 @@ typedef enum CmpType
 	CmptGEq, 	// greater or equal to
 	CmptOther	// other operator
 } CmpType;
+
+/* Flag bits for get_attstatsslot */
+#define ATTSTATSSLOT_VALUES		0x01
+#define ATTSTATSSLOT_NUMBERS	0x02
+
+/* Result struct for get_attstatsslot */
+typedef struct AttStatsSlot
+{
+	/* Always filled: */
+	Oid			staop;			/* Actual staop for the found slot */
+	/* Filled if ATTSTATSSLOT_VALUES is specified: */
+	Oid			valuetype;		/* Actual datatype of the values */
+	Datum	   *values;			/* slot's "values" array, or NULL if none */
+	int			nvalues;		/* length of values[], or 0 */
+	/* Filled if ATTSTATSSLOT_NUMBERS is specified: */
+	float4	   *numbers;		/* slot's "numbers" array, or NULL if none */
+	int			nnumbers;		/* length of numbers[], or 0 */
+
+	/* Remaining fields are private to get_attstatsslot/free_attstatsslot */
+	void	   *values_arr;		/* palloc'd values array, if any */
+	void	   *numbers_arr;	/* palloc'd numbers array, if any */
+} AttStatsSlot;
 
 /* Hook for plugins to get control in get_attavgwidth() */
 typedef int32 (*get_attavgwidth_hook_type) (Oid relid, AttrNumber attnum);
@@ -96,6 +118,7 @@ extern Oid get_trigger_funcid(Oid triggerid);
 extern int32 get_trigger_type(Oid triggerid);
 extern bool trigger_enabled(Oid triggerid);
 extern char *get_func_name(Oid funcid);
+extern Oid	get_func_namespace(Oid funcid);
 extern Oid	get_func_rettype(Oid funcid);
 extern void pfree_ptr_array(char **ptrarray, int nelements);
 extern List *get_func_output_arg_types(Oid funcid);
@@ -160,14 +183,9 @@ extern Oid	getBaseTypeAndTypmod(Oid typid, int32 *typmod);
 extern int32 get_typavgwidth(Oid typid, int32 typmod);
 extern int32 get_attavgwidth(Oid relid, AttrNumber attnum);
 extern HeapTuple get_att_stats(Oid relid, AttrNumber attnum);
-extern bool get_attstatsslot(HeapTuple statstuple,
-				 Oid atttype, int32 atttypmod,
-				 int reqkind, Oid reqop,
-				 Datum **values, int *nvalues,
-				 float4 **numbers, int *nnumbers);
-extern void free_attstatsslot(Oid atttype,
-				  Datum *values, int nvalues,
-				  float4 *numbers, int nnumbers);
+extern bool get_attstatsslot(AttStatsSlot *sslot, HeapTuple statstuple,
+				 int reqkind, Oid reqop, int flags);
+extern void free_attstatsslot(AttStatsSlot *sslot);
 extern char *get_namespace_name(Oid nspid);
 extern Oid	get_roleid(const char *rolname);
 extern Oid	get_roleid_checked(const char *rolname);

@@ -471,16 +471,16 @@ WHERE total <> fourcount + twosum;
 SELECT avg(four) OVER (PARTITION BY four ORDER BY thousand / 100) FROM tenk1 WHERE unique2 < 10;
  avg 
 -----
- 0
- 0
- 0
- 1
- 1
- 1
- 1
- 2
- 3
- 3
+   0
+   0
+   0
+   1
+   1
+   1
+   1
+   2
+   3
+   3
 (10 rows)
 
 SELECT ten, two, sum(hundred) AS gsum, sum(sum(hundred)) OVER win AS wsum 
@@ -979,7 +979,9 @@ ERROR:  window functions are not allowed in WHERE
 LINE 1: DELETE FROM empsalary WHERE (rank() OVER (ORDER BY random())...
                                      ^
 DELETE FROM empsalary RETURNING rank() OVER (ORDER BY random());
-ERROR:  The RETURNING clause of the DELETE statement is not supported in this version of Greenplum Database.
+ERROR:  window functions are not allowed in RETURNING
+LINE 1: DELETE FROM empsalary RETURNING rank() OVER (ORDER BY random...
+                                        ^
 SELECT count(*) OVER w FROM tenk1 WINDOW w AS (ORDER BY unique1), w AS (ORDER BY unique1);
 ERROR:  window "w" is already defined
 LINE 1: ...w FROM tenk1 WINDOW w AS (ORDER BY unique1), w AS (ORDER BY ...

@@ -802,6 +802,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	bool		fill_missing = false;
 	List	   *force_notnull = NIL;
 	List	   *force_quote = NIL;
+	bool		force_quote_all = false;
 	StringInfoData fnn,
 				fq,
 				nl;
@@ -875,6 +876,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 							 errmsg("conflicting or redundant options")));
 				force_quote = (List *) defel->arg;
 			}
+			/* GPDB_90_MERGE_FIXME: add 'force_quote_all' here */
 			else if (strcmp(defel->defname, "fill_missing_fields") == 0)
 			{
 				if (fill_missing)
@@ -980,6 +982,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 							 quote,
 							 escape,
 							 force_quote,
+							 force_quote_all,
 							 force_notnull,
 							 header_line,
 							 fill_missing,

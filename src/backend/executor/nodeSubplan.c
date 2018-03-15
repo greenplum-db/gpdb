@@ -5,11 +5,11 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubplan.c,v 1.99 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubplan.c,v 1.101 2010/01/02 16:57:45 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1157,7 +1157,7 @@ PG_TRY();
 		queryDesc->estate->dispatcherState->primaryResults)
 	{
 		/* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
-		if (planstate->instrument)
+		if (planstate->instrument && planstate->instrument->need_cdb)
 		{
 			/* Wait for all gangs to finish. */
 			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
@@ -1196,7 +1196,7 @@ PG_TRY();
 PG_CATCH();
 {
 	/* If EXPLAIN ANALYZE, collect local and distributed execution stats. */
-	if (planstate->instrument)
+	if (planstate->instrument && planstate->instrument->need_cdb)
 	{
 		cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
 		if (!explainRecvStats &&
@@ -1247,7 +1247,7 @@ PG_END_TRY();
 	planstate->state->currentSubplanLevel--;
 
 	/* If EXPLAIN ANALYZE, collect local execution stats. */
-	if (planstate->instrument)
+	if (planstate->instrument && planstate->instrument->need_cdb)
 		cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
 
 	/* Restore memory high-water mark for root slice of main query. */

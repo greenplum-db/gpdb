@@ -4,12 +4,12 @@
  *	  BTree-specific page management code for the Postgres btree access
  *	  method.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.113 2009/05/05 19:02:22 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.123 2010/07/06 19:18:55 momjian Exp $
  *
  *	NOTES
  *	   Postgres btree pages look like ordinary relation pages.	The opaque
@@ -105,8 +105,6 @@ _bt_getroot(Relation rel, int access)
 	uint32		rootlevel;
 	BTMetaPageData *metad;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	/*
 	 * Try to use previously-cached metapage data to find the root.  This
 	 * normally saves one buffer access per index search, which is a very
@@ -180,9 +178,6 @@ _bt_getroot(Relation rel, int access)
 			return InvalidBuffer;
 		}
 
-		// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-		RelationFetchGpRelationNodeForXLog(rel);
-		
 		/* trade in our read lock for a write lock */
 		LockBuffer(metabuf, BUFFER_LOCK_UNLOCK);
 		LockBuffer(metabuf, BT_WRITE);
@@ -236,7 +231,7 @@ _bt_getroot(Relation rel, int access)
 			XLogRecPtr	recptr;
 			XLogRecData rdata;
 
-			xl_btreenode_set(&(xlrec.btreenode), rel);
+			xlrec.node = rel->rd_node;
 			xlrec.rootblk = rootblkno;
 			xlrec.level = 0;
 
@@ -346,8 +341,6 @@ _bt_gettrueroot(Relation rel)
 	uint32		rootlevel;
 	BTMetaPageData *metad;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	/*
 	 * We don't try to use cached metapage data here, since (a) this path is
 	 * not performance-critical, and (b) if we are here it suggests our cache
@@ -454,6 +447,48 @@ _bt_checkpage(Relation rel, Buffer buf)
 }
 
 /*
+ * Log the reuse of a page from the FSM.
+ */
+static void
+_bt_log_reuse_page(Relation rel, BlockNumber blkno, TransactionId latestRemovedXid)
+{
+	if (rel->rd_istemp)
+		return;
+
+	/* No ereport(ERROR) until changes are logged */
+	START_CRIT_SECTION();
+
+	/*
+	 * We don't do MarkBufferDirty here because we're about initialise the
+	 * page, and nobody else can see it yet.
+	 */
+
+	/* XLOG stuff */
+	{
+		XLogRecPtr	recptr;
+		XLogRecData rdata[1];
+		xl_btree_reuse_page xlrec_reuse;
+
+		xlrec_reuse.node = rel->rd_node;
+		xlrec_reuse.block = blkno;
+		xlrec_reuse.latestRemovedXid = latestRemovedXid;
+		rdata[0].data = (char *) &xlrec_reuse;
+		rdata[0].len = SizeOfBtreeReusePage;
+		rdata[0].buffer = InvalidBuffer;
+		rdata[0].next = NULL;
+
+		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_REUSE_PAGE, rdata);
+
+		/*
+		 * We don't do PageSetLSN or PageSetTLI here because we're about
+		 * initialise the page, so no need.
+		 */
+	}
+
+	END_CRIT_SECTION();
+}
+
+/*
  *	_bt_getbuf() -- Get a buffer by block number for read or write.
  *
  *		blkno == P_NEW means to get an unallocated index page.	The page
@@ -468,8 +503,6 @@ Buffer
 _bt_getbuf(Relation rel, BlockNumber blkno, int access)
 {
 	Buffer		buf;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	if (blkno != P_NEW)
 	{
@@ -520,6 +553,18 @@ _bt_getbuf(Relation rel, BlockNumber blkno, int access)
 				page = BufferGetPage(buf);
 				if (_bt_page_recyclable(page))
 				{
+					/*
+					 * If we are generating WAL for Hot Standby then create a
+					 * WAL record that will allow us to conflict with queries
+					 * running on standby.
+					 */
+					if (XLogStandbyInfoActive())
+					{
+						BTPageOpaque opaque = (BTPageOpaque) PageGetSpecialPointer(page);
+
+						_bt_log_reuse_page(rel, blkno, opaque->btpo.xact);
+					}
+
 					/* Okay to use page.  Re-initialize and return it */
 					_bt_pageinit(page, BufferGetPageSize(buf));
 					return buf;
@@ -590,8 +635,6 @@ _bt_relandgetbuf(Relation rel, Buffer obuf, BlockNumber blkno, int access)
 {
 	Buffer		buf;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	Assert(blkno != P_NEW);
 	if (BufferIsValid(obuf))
 		LockBuffer(obuf, BUFFER_LOCK_UNLOCK);
@@ -609,8 +652,6 @@ _bt_relandgetbuf(Relation rel, Buffer obuf, BlockNumber blkno, int access)
 void
 _bt_relbuf(Relation rel __attribute__((unused)), Buffer buf)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	UnlockReleaseBuffer(buf);
 }
 
@@ -666,35 +707,39 @@ _bt_page_recyclable(Page page)
  *
  * This routine assumes that the caller has pinned and locked the buffer.
  * Also, the given itemnos *must* appear in increasing order in the array.
+ *
+ * We record VACUUMs and b-tree deletes differently in WAL. InHotStandby
+ * we need to be able to pin all of the blocks in the btree in physical
+ * order when replaying the effects of a VACUUM, just as we do for the
+ * original VACUUM itself. lastBlockVacuumed allows us to tell whether an
+ * intermediate range of blocks has had no changes at all by VACUUM,
+ * and so must be scanned anyway during replay. We always write a WAL record
+ * for the last block in the index, whether or not it contained any items
+ * to be removed. This allows us to scan right up to end of index to
+ * ensure correct locking.
  */
 void
-_bt_delitems(Relation rel, Buffer buf,
-			 OffsetNumber *itemnos, int nitems,
-			 bool inVacuum)
+_bt_delitems_vacuum(Relation rel, Buffer buf,
+			OffsetNumber *itemnos, int nitems, BlockNumber lastBlockVacuumed)
 {
 	Page		page;
 	BTPageOpaque opaque;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	page = BufferGetPage(buf);
-
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
 
 	/* No ereport(ERROR) until changes are logged */
 	START_CRIT_SECTION();
 
 	/* Fix the page */
-	PageIndexMultiDelete(page, itemnos, nitems);
+	if (nitems > 0)
+		PageIndexMultiDelete(page, itemnos, nitems);
 
 	/*
 	 * If this is within VACUUM, we can clear the vacuum cycle ID since this
 	 * page has certainly been processed by the current vacuum scan.
 	 */
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
-	if (inVacuum)
-		opaque->btpo_cycleid = 0;
+	opaque->btpo_cycleid = 0;
 
 	/*
 	 * Mark the page as not containing any LP_DEAD items.  This is not
@@ -710,15 +755,17 @@ _bt_delitems(Relation rel, Buffer buf,
 	/* XLOG stuff */
 	if (!rel->rd_istemp)
 	{
-		xl_btree_delete xlrec;
 		XLogRecPtr	recptr;
 		XLogRecData rdata[2];
 
-		xl_btreenode_set(&(xlrec.btreenode), rel);
-		xlrec.block = BufferGetBlockNumber(buf);
+		xl_btree_vacuum xlrec_vacuum;
 
-		rdata[0].data = (char *) &xlrec;
-		rdata[0].len = SizeOfBtreeDelete;
+		xlrec_vacuum.node = rel->rd_node;
+		xlrec_vacuum.block = BufferGetBlockNumber(buf);
+
+		xlrec_vacuum.lastBlockVacuumed = lastBlockVacuumed;
+		rdata[0].data = (char *) &xlrec_vacuum;
+		rdata[0].len = SizeOfBtreeVacuum;
 		rdata[0].buffer = InvalidBuffer;
 		rdata[0].next = &(rdata[1]);
 
@@ -740,6 +787,80 @@ _bt_delitems(Relation rel, Buffer buf,
 		rdata[1].buffer = buf;
 		rdata[1].buffer_std = true;
 		rdata[1].next = NULL;
+
+		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_VACUUM, rdata);
+
+		PageSetLSN(page, recptr);
+	}
+
+	END_CRIT_SECTION();
+}
+
+void
+_bt_delitems_delete(Relation rel, Buffer buf,
+					OffsetNumber *itemnos, int nitems, Relation heapRel)
+{
+	Page		page = BufferGetPage(buf);
+	BTPageOpaque opaque;
+
+	Assert(nitems > 0);
+
+	/* No ereport(ERROR) until changes are logged */
+	START_CRIT_SECTION();
+
+	/* Fix the page */
+	PageIndexMultiDelete(page, itemnos, nitems);
+
+	/*
+	 * We can clear the vacuum cycle ID since this page has certainly been
+	 * processed by the current vacuum scan.
+	 */
+	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
+	opaque->btpo_cycleid = 0;
+
+	/*
+	 * Mark the page as not containing any LP_DEAD items.  This is not
+	 * certainly true (there might be some that have recently been marked, but
+	 * weren't included in our target-item list), but it will almost always be
+	 * true and it doesn't seem worth an additional page scan to check it.
+	 * Remember that BTP_HAS_GARBAGE is only a hint anyway.
+	 */
+	opaque->btpo_flags &= ~BTP_HAS_GARBAGE;
+
+	MarkBufferDirty(buf);
+
+	/* XLOG stuff */
+	if (!rel->rd_istemp)
+	{
+		XLogRecPtr	recptr;
+		XLogRecData rdata[3];
+
+		xl_btree_delete xlrec_delete;
+
+		xlrec_delete.node = rel->rd_node;
+		xlrec_delete.hnode = heapRel->rd_node;
+		xlrec_delete.block = BufferGetBlockNumber(buf);
+		xlrec_delete.nitems = nitems;
+
+		rdata[0].data = (char *) &xlrec_delete;
+		rdata[0].len = SizeOfBtreeDelete;
+		rdata[0].buffer = InvalidBuffer;
+		rdata[0].next = &(rdata[1]);
+
+		/*
+		 * We need the target-offsets array whether or not we store the to
+		 * allow us to find the latestRemovedXid on a standby server.
+		 */
+		rdata[1].data = (char *) itemnos;
+		rdata[1].len = nitems * sizeof(OffsetNumber);
+		rdata[1].buffer = InvalidBuffer;
+		rdata[1].next = &(rdata[2]);
+
+		rdata[2].data = NULL;
+		rdata[2].len = 0;
+		rdata[2].buffer = buf;
+		rdata[2].buffer_std = true;
+		rdata[2].next = NULL;
 
 		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_DELETE, rdata);
 
@@ -775,8 +896,6 @@ _bt_parent_deletion_safe(Relation rel, BlockNumber target, BTStack stack)
 	Buffer		pbuf;
 	Page		page;
 	BTPageOpaque opaque;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
 	/*
 	 * In recovery mode, assume the deletion being replayed is valid.  We
@@ -862,7 +981,7 @@ _bt_parent_deletion_safe(Relation rel, BlockNumber target, BTStack stack)
  * frequently.
  */
 int
-_bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
+_bt_pagedel(Relation rel, Buffer buf, BTStack stack)
 {
 	int			result;
 	BlockNumber target,
@@ -888,11 +1007,6 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 	BTMetaPageData *metad = NULL;
 	Page		page;
 	BTPageOpaque opaque;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	RelationFetchGpRelationNodeForXLog(rel);
 
 	/*
 	 * We can never delete rightmost pages nor root pages.	While at it, check
@@ -1227,14 +1341,13 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 
 	/*
 	 * Mark the page itself deleted.  It can be recycled when all current
-	 * transactions are gone; or immediately if we're doing VACUUM FULL.
+	 * transactions are gone.
 	 */
 	page = BufferGetPage(buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 	opaque->btpo_flags &= ~BTP_HALF_DEAD;
 	opaque->btpo_flags |= BTP_DELETED;
-	opaque->btpo.xact =
-		vacuum_full ? FrozenTransactionId : ReadNewTransactionId();
+	opaque->btpo.xact = ReadNewTransactionId();
 
 	/* And update the metapage, if needed */
 	if (BufferIsValid(metabuf))
@@ -1261,10 +1374,12 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 		XLogRecData rdata[5];
 		XLogRecData *nextrdata;
 
-		xl_btreetid_set(&(xlrec.target), rel, parent, poffset);
+		xlrec.target.node = rel->rd_node;
+		ItemPointerSet(&(xlrec.target.tid), parent, poffset);
 		xlrec.deadblk = target;
 		xlrec.leftblk = leftsib;
 		xlrec.rightblk = rightsib;
+		xlrec.btpo_xact = opaque->btpo.xact;
 
 		rdata[0].data = (char *) &xlrec;
 		rdata[0].len = SizeOfBtreeDeletePage;
@@ -1364,7 +1479,7 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 	{
 		/* recursive call will release pbuf */
 		_bt_relbuf(rel, rbuf);
-		result = _bt_pagedel(rel, pbuf, stack->bts_parent, vacuum_full) + 1;
+		result = _bt_pagedel(rel, pbuf, stack->bts_parent) + 1;
 		_bt_relbuf(rel, buf);
 	}
 	else if (parent_one_child && rightsib_empty)
@@ -1372,7 +1487,7 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 		_bt_relbuf(rel, pbuf);
 		_bt_relbuf(rel, buf);
 		/* recursive call will release rbuf */
-		result = _bt_pagedel(rel, rbuf, stack, vacuum_full) + 1;
+		result = _bt_pagedel(rel, rbuf, stack) + 1;
 	}
 	else
 	{

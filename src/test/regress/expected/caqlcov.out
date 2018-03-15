@@ -613,21 +613,6 @@ select security_definer_test();
 (1 row)
 
 drop function security_definer_test();
--- ---------------------------------------------------------------------
--- coverage for cdbpersistentbuild.c
--- ---------------------------------------------------------------------
-select gp_persistent_reset_all();
- gp_persistent_reset_all
--------------------------
-                       1
-(1 row)
-
-select gp_persistent_build_all(false);
- gp_persistent_build_all
--------------------------
-                       1
-(1 row)
-
 -- clean up
 drop schema caql_schema cascade;
 NOTICE:  drop cascades to sequence caql_schema.caql_sequence

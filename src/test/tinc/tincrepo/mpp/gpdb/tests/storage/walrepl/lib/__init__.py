@@ -19,7 +19,7 @@ limitations under the License.
 # The plan is to deprecate walrepl.lib.dbconn
 import gppylib.db.dbconn
 from gppylib.commands.base import *
-from gppylib.gparray import GpArray, SYSTEM_FILESPACE
+from gppylib.gparray import GpArray
 
 import os
 import re
@@ -117,7 +117,7 @@ def cleanupTablespaces(conn):
     """
 
     tablespaces = conn.execute("SELECT oid, spcname FROM pg_tablespace "
-                               "WHERE spcfsoid <> 3052")
+                               "WHERE spcname <> 'pg_default' AND spcname <> 'pg_global'")
     for tblspc in tablespaces:
         tsoid = tblspc.oid
         tables = conn.execute(
@@ -142,8 +142,7 @@ def cleanupFilespaces(dbname):
 
     with DbConn(dbname=dbname) as conn:
         cleanupTablespaces(conn)
-        for fs in gparray.getFilespaces(includeSystemFilespace=False):
-            conn.execute("DROP FILESPACE {0}".format(fs.getName()))
+
 
 class PreprocessFileMixin(object):
     """

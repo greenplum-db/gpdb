@@ -80,7 +80,7 @@
           <row>
             <entry colname="col1">Query Failure</entry>
             <entry colname="col2">Query may fail immediately if not enough memory</entry>
-            <entry colname="col3">Query may fail after reaching transaction memory limit</entry>
+            <entry colname="col3">Query may fail after reaching transaction fixed memory limit when no shared resource group memory exists and the transaction requests more memory</entry>
           </row>
           <row>
             <entry colname="col1">Limit Bypass</entry>

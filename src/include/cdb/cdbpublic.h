@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * cdbpublic.c
+ * cdbpublic.h
  *
  *		Greenplum specific structures and typedefs exposed to the
  *      outside world.

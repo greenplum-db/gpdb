@@ -556,8 +556,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_1_prt_new_
  a42    | integer                     |                                                                       | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a1_key" bitmap (a1)
-    "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a9_key" btree (a9)
+    "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_cr_sub_partzlib8192_1_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
@@ -621,8 +621,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_1_prt_df_p
  a42    | integer                     |                                                                       | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a1_key" bitmap (a1)
-    "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a9_key" btree (a9)
+    "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_1_prt_df_p
@@ -1026,8 +1026,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_ne
  a42    | integer                     |                                                                         | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a1_key" bitmap (a1)
-    "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a9_key" btree (a9)
+    "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
@@ -1094,8 +1094,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_df
  a42    | integer                     |                                                                         | plain    | none             | 0                 | 32768      | 
 Checksum: t
 Indexes:
-    "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a1_key" bitmap (a1)
-    "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a9_key" btree (a9)
+    "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_df_p
@@ -1229,8 +1229,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_p1
  a42    | integer                     |                                                                         | plain    | zlib             | 1                 | 8192       | 
 Checksum: t
 Indexes:
-    "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a1_key" bitmap (a1)
-    "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a9_key" btree (a9)
+    "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_check" CHECK (a2 = 'F    '::bpchar)
@@ -1573,8 +1573,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_1_prt_
  a42    | integer                     |                                                                           | plain    | zlib             | 1                 | 32768      | 
 Checksum: t
 Indexes:
-    "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a1_key" bitmap (a1)
-    "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a9_key" btree (a9)
+    "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
@@ -1638,8 +1638,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_1_prt_
  a42    | integer                     |                                                                           | plain    | rle_type         | 1                 | 8192       | 
 Checksum: t
 Indexes:
-    "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a1_key" bitmap (a1)
-    "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a9_key" btree (a9)
+    "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_1_prt_df_p
@@ -2037,8 +2037,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a42    | integer                     |                                                                             | plain    | rle_type         | 1                 | 8192       | 
 Checksum: t
 Indexes:
-    "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a1_key" bitmap (a1)
-    "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a9_key" btree (a9)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
@@ -2105,8 +2105,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a42    | integer                     |                                                                             | plain    | rle_type         | 1                 | 8192       | 
 Checksum: t
 Indexes:
-    "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a1_key" bitmap (a1)
-    "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a9_key" btree (a9)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_df_p
@@ -2240,8 +2240,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a42    | integer                     |                                                                             | plain    | rle_type         | 1                 | 8192       | 
 Checksum: t
 Indexes:
-    "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a1_key" bitmap (a1)
-    "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a9_key" btree (a9)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_check" CHECK (a2 = 'F    '::bpchar)
@@ -2587,8 +2587,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_1_prt_new_
  a42    | integer                     |                                                                       | plain    | zlib             | 1                 | 32768      | 
 Checksum: t
 Indexes:
-    "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a1_key" bitmap (a1)
-    "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a9_key" btree (a9)
+    "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
@@ -2655,8 +2655,8 @@ Compression Level: 5
 Block Size: 8192
 Checksum: t
 Indexes:
-    "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a1_key" bitmap (a1)
-    "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a9_key" btree (a9)
+    "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_1_prt_df_p
@@ -3063,8 +3063,8 @@ Compression Level: 5
 Block Size: 8192
 Checksum: t
 Indexes:
-    "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a1_key" bitmap (a1)
-    "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a9_key" btree (a9)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
@@ -3134,8 +3134,8 @@ Compression Level: 5
 Block Size: 8192
 Checksum: t
 Indexes:
-    "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a1_key" bitmap (a1)
-    "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a9_key" btree (a9)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_df_p
@@ -3275,8 +3275,8 @@ Compression Level: 5
 Block Size: 8192
 Checksum: t
 Indexes:
-    "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a1_key" bitmap (a1)
-    "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a9_key" btree (a9)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_check" CHECK (a2 = 'F    '::bpchar)

@@ -48,13 +48,12 @@ Coding Principles
 
     This is unclear:
         db = Segment(-1, 'p', 0, 'm', 's', 'u', 'localhost', 'localhost', 5432,
-		          datadir, None)
+		          datadir)
 
     This is better:
         db = Segment(content = -1, preferred_role = 'p', dbid = 0, role = 'p',
 				  mode = 's', status = 'u', hostname = 'localhost',
-				  address = 'localhost', port = 5432, datadir = '/gpdata/gp-1',
-				  replicationPort = None)
+				  address = 'localhost', port = 5432, datadir = '/gpdata/gp-1')
 
   * Avoid masking functions in the builtin namespace:
 

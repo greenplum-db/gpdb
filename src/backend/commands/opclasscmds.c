@@ -4,12 +4,12 @@
  *
  *	  Routines for opclass (and opfamily) manipulation commands
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/opclasscmds.c,v 1.64 2009/01/01 17:23:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/opclasscmds.c,v 1.68 2010/07/06 19:18:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -262,11 +262,10 @@ CreateOpFamily(char *amname, char *opfname, Oid namespaceoid, Oid amoid)
 	 * Make sure there is no existing opfamily of this name (this is just to
 	 * give a more friendly error message than "duplicate key").
 	 */
-	if (SearchSysCacheExists(OPFAMILYAMNAMENSP,
-							 ObjectIdGetDatum(amoid),
-							 CStringGetDatum(opfname),
-							 ObjectIdGetDatum(namespaceoid),
-							 0))
+	if (SearchSysCacheExists3(OPFAMILYAMNAMENSP,
+							  ObjectIdGetDatum(amoid),
+							  CStringGetDatum(opfname),
+							  ObjectIdGetDatum(namespaceoid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("operator family \"%s\" for access method \"%s\" already exists",
@@ -358,9 +357,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 					   get_namespace_name(namespaceoid));
 
 	/* Get necessary info about access method */
-	tup = SearchSysCache(AMNAME,
-						 CStringGetDatum(stmt->amname),
-						 0, 0, 0);
+	tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -434,11 +431,10 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	else
 	{
 		/* Lookup existing family of same name and namespace */
-		tup = SearchSysCache(OPFAMILYAMNAMENSP,
-							 ObjectIdGetDatum(amoid),
-							 PointerGetDatum(opcname),
-							 ObjectIdGetDatum(namespaceoid),
-							 0);
+		tup = SearchSysCache3(OPFAMILYAMNAMENSP,
+							  ObjectIdGetDatum(amoid),
+							  PointerGetDatum(opcname),
+							  ObjectIdGetDatum(namespaceoid));
 		if (HeapTupleIsValid(tup))
 		{
 			opfamilyoid = HeapTupleGetOid(tup);
@@ -593,11 +589,10 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	 * Make sure there is no existing opclass of this name (this is just to
 	 * give a more friendly error message than "duplicate key").
 	 */
-	if (SearchSysCacheExists(CLAAMNAMENSP,
-							 ObjectIdGetDatum(amoid),
-							 CStringGetDatum(opcname),
-							 ObjectIdGetDatum(namespaceoid),
-							 0))
+	if (SearchSysCacheExists3(CLAAMNAMENSP,
+							  ObjectIdGetDatum(amoid),
+							  CStringGetDatum(opcname),
+							  ObjectIdGetDatum(namespaceoid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("operator class \"%s\" for access method \"%s\" already exists",
@@ -757,9 +752,7 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
 					   get_namespace_name(namespaceoid));
 
 	/* Get necessary info about access method */
-	tup = SearchSysCache(AMNAME,
-						 CStringGetDatum(stmt->amname),
-						 0, 0, 0);
+	tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -789,11 +782,10 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
 	 * Make sure there is no existing opfamily of this name (this is just to
 	 * give a more friendly error message than "duplicate key").
 	 */
-	if (SearchSysCacheExists(OPFAMILYAMNAMENSP,
-							 ObjectIdGetDatum(amoid),
-							 CStringGetDatum(opfname),
-							 ObjectIdGetDatum(namespaceoid),
-							 0))
+	if (SearchSysCacheExists3(OPFAMILYAMNAMENSP,
+							  ObjectIdGetDatum(amoid),
+							  CStringGetDatum(opfname),
+							  ObjectIdGetDatum(namespaceoid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("operator family \"%s\" for access method \"%s\" already exists",
@@ -870,9 +862,7 @@ AlterOpFamily(AlterOpFamilyStmt *stmt)
 	Form_pg_am	pg_am;
 
 	/* Get necessary info about access method */
-	tup = SearchSysCache(AMNAME,
-						 CStringGetDatum(stmt->amname),
-						 0, 0, 0);
+	tup = SearchSysCache1(AMNAME, CStringGetDatum(stmt->amname));
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1162,9 +1152,7 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 	Form_pg_operator opform;
 
 	/* Fetch the operator definition */
-	optup = SearchSysCache(OPEROID,
-						   ObjectIdGetDatum(member->object),
-						   0, 0, 0);
+	optup = SearchSysCache1(OPEROID, ObjectIdGetDatum(member->object));
 	if (optup == NULL)
 		elog(ERROR, "cache lookup failed for operator %u", member->object);
 	opform = (Form_pg_operator) GETSTRUCT(optup);
@@ -1203,9 +1191,7 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 	Form_pg_proc procform;
 
 	/* Fetch the procedure definition */
-	proctup = SearchSysCache(PROCOID,
-							 ObjectIdGetDatum(member->object),
-							 0, 0, 0);
+	proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(member->object));
 	if (proctup == NULL)
 		elog(ERROR, "cache lookup failed for function %u", member->object);
 	procform = (Form_pg_proc) GETSTRUCT(proctup);
@@ -1341,11 +1327,11 @@ storeOperators(List *opfamilyname, Oid amoid,
 		 * existing pg_amop entry (just to give a nicer error message)
 		 */
 		if (isAdd &&
-			SearchSysCacheExists(AMOPSTRATEGY,
-								 ObjectIdGetDatum(opfamilyoid),
-								 ObjectIdGetDatum(op->lefttype),
-								 ObjectIdGetDatum(op->righttype),
-								 Int16GetDatum(op->number)))
+			SearchSysCacheExists4(AMOPSTRATEGY,
+								  ObjectIdGetDatum(opfamilyoid),
+								  ObjectIdGetDatum(op->lefttype),
+								  ObjectIdGetDatum(op->righttype),
+								  Int16GetDatum(op->number)))
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 					 errmsg("operator %d(%s,%s) already exists in operator family \"%s\"",
@@ -1441,11 +1427,11 @@ storeProcedures(List *opfamilyname, Oid amoid,
 		 * existing pg_amproc entry (just to give a nicer error message)
 		 */
 		if (isAdd &&
-			SearchSysCacheExists(AMPROCNUM,
-								 ObjectIdGetDatum(opfamilyoid),
-								 ObjectIdGetDatum(proc->lefttype),
-								 ObjectIdGetDatum(proc->righttype),
-								 Int16GetDatum(proc->number)))
+			SearchSysCacheExists4(AMPROCNUM,
+								  ObjectIdGetDatum(opfamilyoid),
+								  ObjectIdGetDatum(proc->lefttype),
+								  ObjectIdGetDatum(proc->righttype),
+								  Int16GetDatum(proc->number)))
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 					 errmsg("function %d(%s,%s) already exists in operator family \"%s\"",
@@ -1527,11 +1513,11 @@ dropOperators(List *opfamilyname, Oid amoid, Oid opfamilyoid,
 		Oid			amopid;
 		ObjectAddress object;
 
-		amopid = GetSysCacheOid(AMOPSTRATEGY,
-								ObjectIdGetDatum(opfamilyoid),
-								ObjectIdGetDatum(op->lefttype),
-								ObjectIdGetDatum(op->righttype),
-								Int16GetDatum(op->number));
+		amopid = GetSysCacheOid4(AMOPSTRATEGY,
+								 ObjectIdGetDatum(opfamilyoid),
+								 ObjectIdGetDatum(op->lefttype),
+								 ObjectIdGetDatum(op->righttype),
+								 Int16GetDatum(op->number));
 		if (!OidIsValid(amopid))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1567,11 +1553,11 @@ dropProcedures(List *opfamilyname, Oid amoid, Oid opfamilyoid,
 		Oid			amprocid;
 		ObjectAddress object;
 
-		amprocid = GetSysCacheOid(AMPROCNUM,
-								  ObjectIdGetDatum(opfamilyoid),
-								  ObjectIdGetDatum(op->lefttype),
-								  ObjectIdGetDatum(op->righttype),
-								  Int16GetDatum(op->number));
+		amprocid = GetSysCacheOid4(AMPROCNUM,
+								   ObjectIdGetDatum(opfamilyoid),
+								   ObjectIdGetDatum(op->lefttype),
+								   ObjectIdGetDatum(op->righttype),
+								   Int16GetDatum(op->number));
 		if (!OidIsValid(amprocid))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1719,9 +1705,7 @@ RemoveOpFamilyById(Oid opfamilyOid)
 
 	rel = heap_open(OperatorFamilyRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(OPFAMILYOID,
-						 ObjectIdGetDatum(opfamilyOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfamilyOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for opfamily %u", opfamilyOid);
 
@@ -1740,9 +1724,7 @@ RemoveOpClassById(Oid opclassOid)
 
 	rel = heap_open(OperatorClassRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(CLAOID,
-						 ObjectIdGetDatum(opclassOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for opclass %u", opclassOid);
 
@@ -1827,9 +1809,7 @@ RenameOpClass(List *name, const char *access_method, const char *newname)
 	Relation	rel;
 	AclResult	aclresult;
 
-	amOid = GetSysCacheOid(AMNAME,
-						   CStringGetDatum(access_method),
-						   0, 0, 0);
+	amOid = GetSysCacheOid1(AMNAME, CStringGetDatum(access_method));
 	if (!OidIsValid(amOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1847,11 +1827,10 @@ RenameOpClass(List *name, const char *access_method, const char *newname)
 	{
 		namespaceOid = LookupExplicitNamespace(schemaname);
 
-		tup = SearchSysCacheCopy(CLAAMNAMENSP,
-								 ObjectIdGetDatum(amOid),
-								 PointerGetDatum(opcname),
-								 ObjectIdGetDatum(namespaceOid),
-								 0);
+		tup = SearchSysCacheCopy3(CLAAMNAMENSP,
+								  ObjectIdGetDatum(amOid),
+								  PointerGetDatum(opcname),
+								  ObjectIdGetDatum(namespaceOid));
 		if (!HeapTupleIsValid(tup))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1869,9 +1848,7 @@ RenameOpClass(List *name, const char *access_method, const char *newname)
 					 errmsg("operator class \"%s\" does not exist for access method \"%s\"",
 							opcname, access_method)));
 
-		tup = SearchSysCacheCopy(CLAOID,
-								 ObjectIdGetDatum(opcOid),
-								 0, 0, 0);
+		tup = SearchSysCacheCopy1(CLAOID, ObjectIdGetDatum(opcOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for opclass %u", opcOid);
 
@@ -1879,11 +1856,10 @@ RenameOpClass(List *name, const char *access_method, const char *newname)
 	}
 
 	/* make sure the new name doesn't exist */
-	if (SearchSysCacheExists(CLAAMNAMENSP,
-							 ObjectIdGetDatum(amOid),
-							 CStringGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0))
+	if (SearchSysCacheExists3(CLAAMNAMENSP,
+							  ObjectIdGetDatum(amOid),
+							  CStringGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
@@ -1927,9 +1903,7 @@ RenameOpFamily(List *name, const char *access_method, const char *newname)
 	Relation	rel;
 	AclResult	aclresult;
 
-	amOid = GetSysCacheOid(AMNAME,
-						   CStringGetDatum(access_method),
-						   0, 0, 0);
+	amOid = GetSysCacheOid1(AMNAME, CStringGetDatum(access_method));
 	if (!OidIsValid(amOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1947,11 +1921,10 @@ RenameOpFamily(List *name, const char *access_method, const char *newname)
 	{
 		namespaceOid = LookupExplicitNamespace(schemaname);
 
-		tup = SearchSysCacheCopy(OPFAMILYAMNAMENSP,
-								 ObjectIdGetDatum(amOid),
-								 PointerGetDatum(opfname),
-								 ObjectIdGetDatum(namespaceOid),
-								 0);
+		tup = SearchSysCacheCopy3(OPFAMILYAMNAMENSP,
+								  ObjectIdGetDatum(amOid),
+								  PointerGetDatum(opfname),
+								  ObjectIdGetDatum(namespaceOid));
 		if (!HeapTupleIsValid(tup))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1969,9 +1942,7 @@ RenameOpFamily(List *name, const char *access_method, const char *newname)
 					 errmsg("operator family \"%s\" does not exist for access method \"%s\"",
 							opfname, access_method)));
 
-		tup = SearchSysCacheCopy(OPFAMILYOID,
-								 ObjectIdGetDatum(opfOid),
-								 0, 0, 0);
+		tup = SearchSysCacheCopy1(OPFAMILYOID, ObjectIdGetDatum(opfOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for opfamily %u", opfOid);
 
@@ -1979,11 +1950,10 @@ RenameOpFamily(List *name, const char *access_method, const char *newname)
 	}
 
 	/* make sure the new name doesn't exist */
-	if (SearchSysCacheExists(OPFAMILYAMNAMENSP,
-							 ObjectIdGetDatum(amOid),
-							 CStringGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0))
+	if (SearchSysCacheExists3(OPFAMILYAMNAMENSP,
+							  ObjectIdGetDatum(amOid),
+							  CStringGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
@@ -2024,9 +1994,7 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 	char	   *opcname;
 	char	   *schemaname;
 
-	amOid = GetSysCacheOid(AMNAME,
-						   CStringGetDatum(access_method),
-						   0, 0, 0);
+	amOid = GetSysCacheOid1(AMNAME, CStringGetDatum(access_method));
 	if (!OidIsValid(amOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -2046,11 +2014,10 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 
 		namespaceOid = LookupExplicitNamespace(schemaname);
 
-		tup = SearchSysCacheCopy(CLAAMNAMENSP,
-								 ObjectIdGetDatum(amOid),
-								 PointerGetDatum(opcname),
-								 ObjectIdGetDatum(namespaceOid),
-								 0);
+		tup = SearchSysCacheCopy3(CLAAMNAMENSP,
+								  ObjectIdGetDatum(amOid),
+								  PointerGetDatum(opcname),
+								  ObjectIdGetDatum(namespaceOid));
 		if (!HeapTupleIsValid(tup))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -2068,9 +2035,7 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 					 errmsg("operator class \"%s\" does not exist for access method \"%s\"",
 							opcname, access_method)));
 
-		tup = SearchSysCacheCopy(CLAOID,
-								 ObjectIdGetDatum(opcOid),
-								 0, 0, 0);
+		tup = SearchSysCacheCopy1(CLAOID, ObjectIdGetDatum(opcOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for opclass %u", opcOid);
 	}
@@ -2087,12 +2052,12 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 void
 AlterOpClassOwner_oid(Oid opclassOid, Oid newOwnerId)
 {
-	HeapTuple       tup;
-	Relation        rel;
+	HeapTuple	tup;
+	Relation	rel;
 
 	rel = heap_open(OperatorClassRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(CLAOID, ObjectIdGetDatum(opclassOid), 0, 0, 0);
+	tup = SearchSysCacheCopy1(CLAOID, ObjectIdGetDatum(opclassOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for opclass %u", opclassOid);
 
@@ -2224,9 +2189,7 @@ AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwnerId)
 	char	   *opfname;
 	char	   *schemaname;
 
-	amOid = GetSysCacheOid(AMNAME,
-						   CStringGetDatum(access_method),
-						   0, 0, 0);
+	amOid = GetSysCacheOid1(AMNAME, CStringGetDatum(access_method));
 	if (!OidIsValid(amOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -2246,11 +2209,10 @@ AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwnerId)
 
 		namespaceOid = LookupExplicitNamespace(schemaname);
 
-		tup = SearchSysCacheCopy(OPFAMILYAMNAMENSP,
-								 ObjectIdGetDatum(amOid),
-								 PointerGetDatum(opfname),
-								 ObjectIdGetDatum(namespaceOid),
-								 0);
+		tup = SearchSysCacheCopy3(OPFAMILYAMNAMENSP,
+								  ObjectIdGetDatum(amOid),
+								  PointerGetDatum(opfname),
+								  ObjectIdGetDatum(namespaceOid));
 		if (!HeapTupleIsValid(tup))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -2268,9 +2230,7 @@ AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwnerId)
 					 errmsg("operator family \"%s\" does not exist for access method \"%s\"",
 							opfname, access_method)));
 
-		tup = SearchSysCacheCopy(OPFAMILYOID,
-								 ObjectIdGetDatum(opfOid),
-								 0, 0, 0);
+		tup = SearchSysCacheCopy1(OPFAMILYOID, ObjectIdGetDatum(opfOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for opfamily %u", opfOid);
 	}
@@ -2287,13 +2247,12 @@ AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwnerId)
 void
 AlterOpFamilyOwner_oid(Oid opfamilyOid, Oid newOwnerId)
 {
-	HeapTuple       tup;
-	Relation        rel;
+	HeapTuple	tup;
+	Relation	rel;
 
 	rel = heap_open(OperatorFamilyRelationId, RowExclusiveLock);
 
-	tup = SearchSysCacheCopy(OPFAMILYOID, ObjectIdGetDatum(opfamilyOid),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(OPFAMILYOID, ObjectIdGetDatum(opfamilyOid));
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for opfamily %u", opfamilyOid);
 

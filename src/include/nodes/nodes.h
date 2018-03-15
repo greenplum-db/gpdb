@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.223 2009/06/11 14:49:11 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.234 2010/03/28 22:59:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,12 +55,13 @@ typedef enum NodeTag
 	T_Scan,
 	T_Join,
 
-	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
+	/* Real plan node starts below.  Scan and Join are "Virtual nodes",
 	 * It will take the form of IndexScan, SeqScan, etc.
 	 * CteScan will take the form of SubqueryScan.
 	 */
 	T_Result,
 	T_Plan_Start = T_Result,
+	T_ModifyTable,
 	T_Append,
 	T_RecursiveUnion,
 	T_Sequence,
@@ -96,6 +97,7 @@ typedef enum NodeTag
 	T_Unique,
 	T_Hash,
 	T_SetOp,
+	T_LockRows,
 	T_Limit,
 	T_Motion,
 	T_ShareInputScan,
@@ -106,7 +108,8 @@ typedef enum NodeTag
 	T_AssertOp,
 	T_PartitionSelector,
 	T_Plan_End,
-	/* this one isn't a subclass of Plan: */
+	/* these aren't subclasses of Plan: */
+	T_PlanRowMark,
 	T_PlanInvalItem,
 
 	/*
@@ -122,6 +125,7 @@ typedef enum NodeTag
 	 * It will take the form of IndexScan, SeqScan, etc.
 	 */
 	T_ResultState,
+	T_ModifyTableState,
 	T_AppendState,
 	T_RecursiveUnionState,
 	T_SequenceState,
@@ -157,6 +161,7 @@ typedef enum NodeTag
 	T_UniqueState,
 	T_HashState,
 	T_SetOpState,
+	T_LockRowsState,
 	T_LimitState,
 	T_MotionState,
 	T_ShareInputScanState,
@@ -166,7 +171,13 @@ typedef enum NodeTag
 	T_RowTriggerState,
 	T_AssertOpState,
 	T_PartitionSelectorState,
+
+	/*
+	 * TupleDesc and ParamListInfo are not Nodes as such, but you can wrap
+	 * them in TupleDescNode and SerializedParamExternData structs for serialization.
+	 */
 	T_TupleDescNode,
+	T_SerializedParamExternData,
 
 	/*
 	 * TAGS FOR PRIMITIVE NODES (primnodes.h)
@@ -181,6 +192,7 @@ typedef enum NodeTag
 	T_WindowFunc,
 	T_ArrayRef,
 	T_FuncExpr,
+	T_NamedArgExpr,
 	T_OpExpr,
 	T_DistinctExpr,
 	T_ScalarArrayOpExpr,
@@ -295,7 +307,6 @@ typedef enum NodeTag
 	T_ResultPath,
 	T_MaterialPath,
 	T_UniquePath,
-	T_CtePath,
 	T_EquivalenceClass,
 	T_EquivalenceMember,
 	T_PathKey,
@@ -314,7 +325,6 @@ typedef enum NodeTag
 
     /* Tags for MPP planner nodes (relation.h) */
     T_CdbMotionPath = 580,
-    T_CdbRelDedupInfo,
     T_CdbRelColumnInfo,
 
 	/*
@@ -356,6 +366,7 @@ typedef enum NodeTag
 	T_SetOperationStmt,
 	T_GrantStmt,
 	T_GrantRoleStmt,
+	T_AlterDefaultPrivilegesStmt,
 	T_ClosePortalStmt,
 	T_ClusterStmt,
 	T_CopyStmt,
@@ -443,6 +454,8 @@ typedef enum NodeTag
 	T_CreateUserMappingStmt,
 	T_AlterUserMappingStmt,
 	T_DropUserMappingStmt,
+	T_AlterTableSpaceOptionsStmt,
+	/* GPDB additions */
 	T_PartitionBy,
 	T_PartitionElem,
 	T_PartitionRangeItem,
@@ -490,9 +503,8 @@ typedef enum NodeTag
 	T_RangeTblEntry,
 	T_GroupingClause,
 	T_GroupingFunc,
-	T_WindowClause,
 	T_SortGroupClause,
-	T_FkConstraint,
+	T_WindowClause,
 	T_PrivGrantee,
 	T_FuncWithArgs,
 	T_AccessPriv,
@@ -524,8 +536,8 @@ typedef enum NodeTag
 	T_TriggerData = 950,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
 	T_WindowObjectData,			/* private in nodeWindowAgg.c */
-	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
 	T_TIDBitmap,				/* in nodes/tidbitmap.h */
+	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
     T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */
@@ -611,9 +623,10 @@ extern char *nodeToString(void *obj);
  * nodes/outfast.c. This special version of nodeToString is only used by serializeNode.
  * It's a quick hack that allocates 8K buffer for StringInfo struct through initStringIinfoSizeOf
  */
-extern char *nodeToBinaryStringFast(void *obj, int * size);
+extern char *nodeToBinaryStringFast(void *obj, int *length);
 
 extern Node *readNodeFromBinaryString(const char *str, int len);
+
 /*
  * nodes/{readfuncs.c,read.c}
  */
@@ -691,25 +704,31 @@ typedef enum JoinType
 	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
 	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row is
 	 * guaranteed to be null-extended.
-     *
-     * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
-     * JOIN_UNIQUE_INNER.  The definitions are retained in case they
-     * might be referenced in the source code of user-defined
-     * selectivity functions brought over from PostgreSQL.
 	 */
 	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
 	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
 	JOIN_LASJ_NOTIN,			/* Left Anti Semi Join with Not-In semantics:
 									If any NULL values are produced by inner side,
 									return no join results. Otherwise, same as LASJ */
-	JOIN_REVERSE_IN,			/* at most one result per inner row */
 
 	/*
 	 * These codes are used internally in the planner, but are not supported
 	 * by the executor (nor, indeed, by most of the planner).
 	 */
 	JOIN_UNIQUE_OUTER,			/* LHS path must be made unique */
-	JOIN_UNIQUE_INNER			/* RHS path must be made unique */
+	JOIN_UNIQUE_INNER,			/* RHS path must be made unique */
+
+	/*
+	 * GDPB: Like JOIN_UNIQUE_OUTER/INNER, these codes are used internally
+	 * in the planner, but are not supported by the executor or by most of the
+	 * planner. A JOIN_DEDUP_SEMI join indicates a semi-join, but to be
+	 * implemented by performing a normal inner join, and eliminating the
+	 * duplicates with a UniquePath above the join. That can be useful in
+	 * an MPP enviroment, if performing the join as an inner join avoids
+	 * moving the larger of the two relations.
+	 */
+	JOIN_DEDUP_SEMI,			/* inner join, LHS path must be made unique afterwards */
+	JOIN_DEDUP_SEMI_REVERSE		/* inner join, RHS path must be made unique afterwards */
 
 	/*
 	 * We might need additional join types someday.

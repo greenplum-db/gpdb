@@ -886,7 +886,7 @@ SET
 -- ALTER should fail and the memory_limit in both catalog and share memory are
 -- still 5%
 ALTER RESOURCE GROUP rg_test_group set memory_limit 1;
-ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1509599543-0000000983. (cdbtm.c:698)
+ERROR:  Raise ERROR for debug_dtm_action = 2, debug_dtm_action_protocol = Distributed Prepare
 
 RESET debug_dtm_action;
 RESET

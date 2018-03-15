@@ -56,15 +56,6 @@
 #include "utils/builtins.h"
 #include "utils/visibility_summary.h"
 
-static void PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo,
-									   int totalsegs,
-									   bool *segmentFileNumMap);
-
-static void CheckCOConsistencyWithGpRelationNode(Snapshot snapshot,
-									 Relation rel,
-									 int totalsegs,
-									 AOCSFileSegInfo **allseginfo);
-
 AOCSFileSegInfo *
 NewAOCSFileSegInfo(int4 segno, int4 nvp)
 {
@@ -254,11 +245,6 @@ GetAllAOCSFileSegInfo(Relation prel,
 												   pg_aocsseg_rel,
 												   appendOnlyMetaDataSnapshot,
 												   totalseg);
-
-	CheckCOConsistencyWithGpRelationNode(appendOnlyMetaDataSnapshot,
-										 prel,
-										 *totalseg,
-										 results);
 
 	heap_close(pg_aocsseg_rel, AccessShareLock);
 
@@ -1854,124 +1840,4 @@ FreeAllAOCSSegFileInfo(AOCSFileSegInfo **allAOCSSegInfo, int totalSegFiles)
 
 		pfree(allAOCSSegInfo[file_no]);
 	}
-}
-
-
-void
-PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo, int totalsegs, bool *segmentFileNumMap)
-{
-	char		segnumArray[600];
-	char		delimiter[5] = " ";
-	char		tmp[10] = {0};
-
-	memset(segnumArray, 0, sizeof(segnumArray));
-
-	char	   *head = segnumArray;
-	const char *tail = segnumArray + sizeof(segnumArray);
-
-	for (int i = 0; i < totalsegs; i++)
-	{
-		snprintf(tmp, sizeof(tmp), "%d", allseginfo[i]->segno);
-
-		if (strlen(tmp) + strlen(delimiter) >= (tail - head))
-			break;
-
-		head += strlcpy(head, tmp, tail - head);
-		head += strlcpy(head, delimiter, tail - head);
-	}
-	elog(LOG, "pg_aocsseg segno entries: %s", segnumArray);
-
-	memset(segnumArray, 0, sizeof(segnumArray));
-	head = segnumArray;
-
-	for (int i = 0; i < AOTupleId_MaxSegmentFileNum; i++)
-	{
-		if (segmentFileNumMap[i] == true)
-		{
-			snprintf(tmp, sizeof(tmp), "%d", i);
-
-			if (strlen(tmp) + strlen(delimiter) >= (tail - head))
-				break;
-
-			head += strlcpy(head, tmp, tail - head);
-			head += strlcpy(head, delimiter, tail - head);
-		}
-	}
-	elog(LOG, "gp_relation_node segno entries: %s", segnumArray);
-}
-
-void
-CheckCOConsistencyWithGpRelationNode(Snapshot snapshot, Relation rel, int totalsegs, AOCSFileSegInfo **allseginfo)
-{
-	GpRelationNodeScan gpRelationNodeScan;
-	int			segmentFileNum = 0;
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum = 0;
-	int			segmentCount = 0;
-	Relation	gp_relation_node;
-
-	if (!gp_appendonly_verify_eof)
-	{
-		return;
-	}
-
-	/*
-	 * gp_relation_node always has a zero as its first entry. Hence we use
-	 * Segment File number plus one in order to accomodate the zero.
-	 */
-	const int	num_gp_relation_node_entries = AOTupleId_MaxSegmentFileNum + 1;
-	bool	   *segmentFileNumMap = (bool *) palloc0(sizeof(bool) * num_gp_relation_node_entries);
-
-	gp_relation_node = heap_open(GpRelationNodeRelationId, AccessShareLock);
-	GpRelationNodeBeginScan(
-							snapshot,
-							gp_relation_node,
-							rel->rd_id,
-							rel->rd_rel->reltablespace,
-							rel->rd_rel->relfilenode,
-							&gpRelationNodeScan);
-	while ((NULL != GpRelationNodeGetNext(
-										  &gpRelationNodeScan,
-										  &segmentFileNum,
-										  &persistentTid,
-										  &persistentSerialNum)))
-	{
-		if (!segmentFileNumMap[segmentFileNum % num_gp_relation_node_entries])
-		{
-			segmentFileNumMap[segmentFileNum % num_gp_relation_node_entries] = true;
-			segmentCount++;
-		}
-
-		if (segmentCount > totalsegs + 1)
-		{
-			elog(ERROR, "gp_relation_node (%d) has more entries than pg_aocsseg (%d) for relation %s",
-				 segmentCount,
-				 totalsegs,
-				 RelationGetRelationName(rel));
-		}
-	}
-
-	GpRelationNodeEndScan(&gpRelationNodeScan);
-	heap_close(gp_relation_node, AccessShareLock);
-
-	for (int i = 0, j = 1; j < num_gp_relation_node_entries; j++)
-	{
-		if (segmentFileNumMap[j])
-		{
-			while (i < totalsegs && allseginfo[i]->segno != j)
-			{
-				i++;
-			}
-
-			if (i == totalsegs)
-			{
-				PrintPgaocssegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-				elog(ERROR, "Missing gp_relation_node entry %d in pg_aocsseg for relation %s",
-					 j,
-					 RelationGetRelationName(rel));
-			}
-		}
-	}
-
-	pfree(segmentFileNumMap);
 }

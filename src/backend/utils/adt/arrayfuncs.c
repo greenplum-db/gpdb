@@ -3,12 +3,12 @@
  * arrayfuncs.c
  *	  Support functions for arrays.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/arrayfuncs.c,v 1.160 2009/06/22 04:37:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/arrayfuncs.c,v 1.164 2010/02/26 02:01:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -330,6 +330,12 @@ array_in(PG_FUNCTION_ARGS)
 	SET_VARSIZE(retval, nbytes);
 	retval->ndim = ndim;
 	retval->dataoffset = dataoffset;
+
+	/*
+	 * This comes from the array's pg_type.typelem (which points to the base
+	 * data type's pg_type.oid) and stores system oids in user tables. This
+	 * oid must be preserved by binary upgrades.
+	 */
 	retval->elemtype = element_type;
 	memcpy(ARR_DIMS(retval), dim, ndim * sizeof(int));
 	memcpy(ARR_LBOUND(retval), lBound, ndim * sizeof(int));
@@ -1209,8 +1215,17 @@ array_recv(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < ndim; i++)
 	{
+		int			ub;
+
 		dim[i] = pq_getmsgint(buf, 4);
 		lBound[i] = pq_getmsgint(buf, 4);
+
+		ub = lBound[i] + dim[i] - 1;
+		/* overflow? */
+		if (lBound[i] > ub)
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("integer out of range")));
 	}
 
 	/* This checks for overflow of array dimensions */
@@ -4276,12 +4291,12 @@ accumArrayResult(ArrayBuildState *astate,
 	}
 
 	/*
-	 * Ensure pass-by-ref stuff is copied into mcontext; and detoast it too
-	 * if it's varlena.  (You might think that detoasting is not needed here
+	 * Ensure pass-by-ref stuff is copied into mcontext; and detoast it too if
+	 * it's varlena.  (You might think that detoasting is not needed here
 	 * because construct_md_array can detoast the array elements later.
 	 * However, we must not let construct_md_array modify the ArrayBuildState
-	 * because that would mean array_agg_finalfn damages its input, which
-	 * is verboten.  Also, this way frequently saves one copying step.)
+	 * because that would mean array_agg_finalfn damages its input, which is
+	 * verboten.  Also, this way frequently saves one copying step.)
 	 */
 	if (!disnull && !astate->typbyval)
 	{

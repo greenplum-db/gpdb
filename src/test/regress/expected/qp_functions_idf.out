@@ -903,7 +903,7 @@ LINE 1: ...elect percentile_cont(0.2) within group (order by stddev(b) ...
 select median(avg(a) over()) from perct;
 ERROR:  aggregate function calls cannot contain window function calls
 LINE 1: select median(avg(a) over()) from perct;
-               ^
+                      ^
 -- SQL with math expression as input to median
 select b+1 as col1 ,median(a+b) from perct group by b order by b desc;
  col1 | median 
@@ -1089,7 +1089,7 @@ select DISTINCT percentile_cont(0.7) within group (order by a) from perct group 
 create view idf_v1 as select median (( select median((select median(a) from perct)) from perct ));
 -- end_ignore
 select pg_get_viewdef('idf_v1');  
-                                                       pg_get_viewdef                                                        
+                                                   pg_get_viewdef                                                    
 ---------------------------------------------------------------------------------------------------------------------
  SELECT MEDIAN((SELECT MEDIAN((SELECT MEDIAN(perct.a) AS "median" FROM perct)) AS "median" FROM perct)) AS "median";
 (1 row)

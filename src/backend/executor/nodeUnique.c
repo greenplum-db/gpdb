@@ -11,12 +11,12 @@
  * (It's debatable whether the savings justifies carrying two plan node
  * types, though.)
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.61 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.63 2010/01/02 16:57:45 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -138,8 +138,6 @@ ExecInitUnique(Unique *node, EState *estate, int eflags)
 							  ALLOCSET_DEFAULT_INITSIZE,
 							  ALLOCSET_DEFAULT_MAXSIZE);
 
-#define UNIQUE_NSLOTS 1
-
 	/*
 	 * Tuple table initialization
 	 */
@@ -165,14 +163,6 @@ ExecInitUnique(Unique *node, EState *estate, int eflags)
 							   node->uniqOperators);
 
 	return uniquestate;
-}
-
-int
-ExecCountSlotsUnique(Unique *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		UNIQUE_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

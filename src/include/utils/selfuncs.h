@@ -5,10 +5,10 @@
  *	  standard operators and index access methods.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/selfuncs.h,v 1.49 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/selfuncs.h,v 1.50 2010/01/02 16:58:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -73,8 +73,8 @@ typedef struct VariableStatData
 	double		numdistinctFromPrimaryKey; /* this is the numdistinct as estimated from the primary key relation. If this is < 0, then it is ignored. */
 	void		(*freefunc) (HeapTuple tuple);	/* how to free statsTuple */
 	Oid			vartype;		/* exposed type of expression */
-	Oid			atttype;		/* type to pass to get_attstatsslot */
-	int32		atttypmod;		/* typmod to pass to get_attstatsslot */
+	Oid			atttype;		/* actual type (after stripping relabel) */
+	int32		atttypmod;		/* actual typmod (after stripping relabel) */
 	bool		isunique;		/* true if matched to a unique index */
 } VariableStatData;
 
@@ -86,6 +86,7 @@ typedef struct VariableStatData
 		if (HeapTupleIsValid((vardata).statsTuple)) \
 			(* (vardata).freefunc) ((vardata).statsTuple); \
 	} while(0)
+
 
 typedef enum
 {

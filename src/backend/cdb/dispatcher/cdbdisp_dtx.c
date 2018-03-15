@@ -64,9 +64,8 @@ static char *buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
  * produced; the caller must PQclear() them and free() the array.
  * A NULL entry follows the last used entry in the array.
  *
- * Any error messages - whether or not they are associated with
- * PGresult objects - are appended to a StringInfo buffer provided
- * by the caller.
+ * Any error message - whether or not it is associated with an
+ * PGresult object - is returned in *qeError.
  */
 struct pg_result **
 CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
@@ -74,7 +73,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  char *dtxProtocolCommandLoggingStr,
 							  char *gid,
 							  DistributedTransactionId gxid,
-							  StringInfo errmsgbuf,
+							  ErrorData **qeError,
 							  int *numresults,
 							  bool *badGangs,
 							  CdbDispatchDirectDesc *direct,
@@ -97,6 +96,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		 direct->directed_dispatch ? direct->content[0] : -1);
 
 	*badGangs = false;
+	*qeError = NULL;
 
 	MemSet(&dtxProtocolParms, 0, sizeof(dtxProtocolParms));
 	dtxProtocolParms.dtxProtocolCommand = dtxProtocolCommand;
@@ -143,7 +143,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		/*
 		 * Wait for all QEs to finish.	Don't cancel.
 		 */
-		pr = cdbdisp_getDispatchResults(&ds, errmsgbuf);
+		pr = cdbdisp_getDispatchResults(&ds, qeError);
 
 		if (!GangOK(primaryGang))
 		{

@@ -23,7 +23,7 @@ gplog.enable_verbose_logging()
 #TODO:  incomplete list.
 catalog_names = ['pg_aggregate','pg_amop','pg_attrdef','pg_auth_members',
                  'pg_autovacuum','pg_class','pg_conversion','pg_database','pg_description',
-                 'pg_group','pg_indexes','pg_language','pg_listener',
+                 'pg_group','pg_indexes','pg_language',
                  'pg_max_external_files','pg_opclass','pg_partition']
 
 datatypes = {'oid':True , 'int2':True, 'regproc':True, 'text':True, 'bool':True,

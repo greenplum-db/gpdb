@@ -1,11 +1,11 @@
 SELECT XMLPARSE(CONTENT '<abc>x</abc>'::text STRIP WHITESPACE) AS "xmlparse";
-   xmlparse
+   xmlparse   
 --------------
  <abc>x</abc>
 (1 row)
 
 SELECT XMLPARSE(CONTENT '<abc>x</abc>'::text PRESERVE WHITESPACE) AS "xmlparse";
-   xmlparse
+   xmlparse   
 --------------
  <abc>x</abc>
 (1 row)

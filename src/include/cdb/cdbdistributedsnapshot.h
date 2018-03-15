@@ -74,9 +74,6 @@ typedef enum
 	DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE
 } DistributedSnapshotCommitted;
 
-extern bool
-localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid);
-
 extern DistributedSnapshotCommitted DistributedSnapshotWithLocalMapping_CommittedTest(
 	DistributedSnapshotWithLocalMapping		*dslm,
 	TransactionId 							localXid,

@@ -51,26 +51,6 @@ select nonempty_segno('temp_delrows'::regclass)
 ----------------
 (0 rows)
 
--- PT should contain entry for segno = 0 only, segno = 1 files
--- have been deleted by "ON COMMIT DELETE ROWS" action.
-select pt.segment_file_num from gp_relation_node pt inner join pg_class c
- on c.relfilenode = pt.relfilenode_oid where c.relname = 'temp_delrows'
- and c.relnamespace = pg_my_temp_schema();
- segment_file_num 
-------------------
-                0
-(1 row)
-
-select distinct pt.segment_file_num from
- gp_dist_random('gp_relation_node') pt inner join
- gp_dist_random('pg_class') c on c.gp_segment_id = pt.gp_segment_id and
- c.relfilenode = pt.relfilenode_oid where c.relname = 'temp_delrows' and
- c.relnamespace = pg_my_temp_schema();
- segment_file_num 
-------------------
-                0
-(1 row)
-
 -- DML after delete rows action.
 begin;
 insert into temp_delrows select i, i from generate_series(1,50)i;

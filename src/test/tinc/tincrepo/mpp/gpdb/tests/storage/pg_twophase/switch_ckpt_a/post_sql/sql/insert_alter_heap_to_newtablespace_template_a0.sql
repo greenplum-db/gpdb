@@ -7,5 +7,3 @@ INSERT INTO pg2_heap_table_for_alter_a0 VALUES ('sync1_heap1',generate_series(1,
 '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '
 ((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
 DROP table pg2_heap_table_for_alter_a0;
-drop tablespace pg2_heap_ts1_a0;
-drop tablespace pg2_heap_ts2_a0;

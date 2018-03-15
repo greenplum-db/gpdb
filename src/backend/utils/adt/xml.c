@@ -848,7 +848,7 @@ xml_is_document(xmltype *arg)
  * pg_xml_init --- set up for use of libxml
  *
  * This should be called by each function that is about to use libxml
- * facilities.  It has two responsibilities: verify compatibility with the
+ * facilities.	It has two responsibilities: verify compatibility with the
  * loaded libxml version (done on first call in a session) and establish
  * or re-establish our libxml error handler.  The latter needs to be done
  * anytime we might have passed control to add-on modules (eg libperl) which

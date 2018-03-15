@@ -3,12 +3,12 @@
  * varlena.c
  *	  Functions for the variable-length built-in types.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varlena.c,v 1.171 2009/06/11 14:49:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varlena.c,v 1.177 2010/02/26 02:01:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,7 +31,7 @@
 #include "utils/memutils.h"
 
 /* GUC variable */
-int 	bytea_output = BYTEA_OUTPUT_ESCAPE;
+int			bytea_output = BYTEA_OUTPUT_HEX;
 
 typedef struct varlena unknown;
 
@@ -75,11 +75,20 @@ static int	text_cmp(text *arg1, text *arg2);
 static int32 text_length(Datum str);
 static int	text_position_next(int start_pos, TextPositionState *state);
 static void text_position_cleanup(TextPositionState *state);
+static text *text_catenate(text *t1, text *t2);
 static text *text_substring(Datum str,
 			   int32 start,
 			   int32 length,
 			   bool length_not_specified);
+static text *text_overlay(text *t1, text *t2, int sp, int sl);
 static void appendStringInfoText(StringInfo str, const text *t);
+static bytea *bytea_catenate(bytea *t1, bytea *t2);
+static bytea *bytea_substring(Datum str,
+				int S,
+				int L,
+				bool length_not_specified);
+static bytea *bytea_overlay(bytea *t1, bytea *t2, int sp, int sl);
+static StringInfo makeStringAggState(FunctionCallInfo fcinfo);
 
 
 /*****************************************************************************
@@ -209,13 +218,14 @@ byteain(PG_FUNCTION_ARGS)
 	bytea	   *result;
 
 	/* Recognize hex input */
-	if (inputText[0] == '\\' && inputText[1] == 'x' )
+	if (inputText[0] == '\\' && inputText[1] == 'x')
 	{
-		size_t len = strlen(inputText);
-		bc = (len-2)/2 + VARHDRSZ;		/* maximum possible length */
+		size_t		len = strlen(inputText);
+
+		bc = (len - 2) / 2 + VARHDRSZ;	/* maximum possible length */
 		result = palloc(bc);
-		bc =  hex_decode(inputText + 2, len - 2, VARDATA(result));
-		SET_VARSIZE(result, bc + VARHDRSZ); /* actual length */
+		bc = hex_decode(inputText + 2, len - 2, VARDATA(result));
+		SET_VARSIZE(result, bc + VARHDRSZ);		/* actual length */
 
 		PG_RETURN_BYTEA_P(result);
 	}
@@ -311,47 +321,47 @@ byteaout(PG_FUNCTION_ARGS)
 	}
 	else if (bytea_output == BYTEA_OUTPUT_ESCAPE)
 	{
-	/* Print traditional escaped format */
-	char	   *vp;
-	int			len;
-	int			i;
+		/* Print traditional escaped format */
+		char	   *vp;
+		int			len;
+		int			i;
 
-	len = 1;					/* empty string has 1 char */
-	vp = VARDATA_ANY(vlena);
-	for (i = VARSIZE_ANY_EXHDR(vlena); i != 0; i--, vp++)
-	{
-		if (*vp == '\\')
-			len += 2;
-		else if ((unsigned char) *vp < 0x20 || (unsigned char) *vp > 0x7e)
-			len += 4;
-		else
-			len++;
-	}
-	rp = result = (char *) palloc(len);
-	vp = VARDATA_ANY(vlena);
-	for (i = VARSIZE_ANY_EXHDR(vlena); i != 0; i--, vp++)
-	{
-		if (*vp == '\\')
+		len = 1;				/* empty string has 1 char */
+		vp = VARDATA_ANY(vlena);
+		for (i = VARSIZE_ANY_EXHDR(vlena); i != 0; i--, vp++)
 		{
-			*rp++ = '\\';
-			*rp++ = '\\';
+			if (*vp == '\\')
+				len += 2;
+			else if ((unsigned char) *vp < 0x20 || (unsigned char) *vp > 0x7e)
+				len += 4;
+			else
+				len++;
 		}
-		else if ((unsigned char) *vp < 0x20 || (unsigned char) *vp > 0x7e)
+		rp = result = (char *) palloc(len);
+		vp = VARDATA_ANY(vlena);
+		for (i = VARSIZE_ANY_EXHDR(vlena); i != 0; i--, vp++)
 		{
-			int			val;			/* holds unprintable chars */
+			if (*vp == '\\')
+			{
+				*rp++ = '\\';
+				*rp++ = '\\';
+			}
+			else if ((unsigned char) *vp < 0x20 || (unsigned char) *vp > 0x7e)
+			{
+				int			val;	/* holds unprintable chars */
 
-			val = *vp;
-			rp[0] = '\\';
-			rp[3] = DIG(val & 07);
-			val >>= 3;
-			rp[2] = DIG(val & 07);
-			val >>= 3;
-			rp[1] = DIG(val & 03);
-			rp += 4;
+				val = *vp;
+				rp[0] = '\\';
+				rp[3] = DIG(val & 07);
+				val >>= 3;
+				rp[2] = DIG(val & 07);
+				val >>= 3;
+				rp[1] = DIG(val & 03);
+				rp += 4;
+			}
+			else
+				*rp++ = *vp;
 		}
-		else
-			*rp++ = *vp;
-	}
 	}
 	else
 	{
@@ -573,17 +583,31 @@ textcat(PG_FUNCTION_ARGS)
 {
 	text	   *t1 = PG_GETARG_TEXT_PP(0);
 	text	   *t2 = PG_GETARG_TEXT_PP(1);
+
+	PG_RETURN_TEXT_P(text_catenate(t1, t2));
+}
+
+/*
+ * text_catenate
+ *	Guts of textcat(), broken out so it can be used by other functions
+ *
+ * Arguments can be in short-header form, but not compressed or out-of-line
+ */
+static text *
+text_catenate(text *t1, text *t2)
+{
+	text	   *result;
 	int			len1,
 				len2,
 				len;
-	text	   *result;
 	char	   *ptr;
 
 	len1 = VARSIZE_ANY_EXHDR(t1);
+	len2 = VARSIZE_ANY_EXHDR(t2);
+
+	/* paranoia ... probably should throw error instead? */
 	if (len1 < 0)
 		len1 = 0;
-
-	len2 = VARSIZE_ANY_EXHDR(t2);
 	if (len2 < 0)
 		len2 = 0;
 
@@ -600,7 +624,7 @@ textcat(PG_FUNCTION_ARGS)
 	if (len2 > 0)
 		memcpy(ptr + len1, VARDATA_ANY(t2), len2);
 
-	PG_RETURN_TEXT_P(result);
+	return result;
 }
 
 /*
@@ -936,6 +960,67 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 
 	/* not reached: suppress compiler warning */
 	return NULL;
+}
+
+/*
+ * textoverlay
+ *	Replace specified substring of first string with second
+ *
+ * The SQL standard defines OVERLAY() in terms of substring and concatenation.
+ * This code is a direct implementation of what the standard says.
+ */
+Datum
+textoverlay(PG_FUNCTION_ARGS)
+{
+	text	   *t1 = PG_GETARG_TEXT_PP(0);
+	text	   *t2 = PG_GETARG_TEXT_PP(1);
+	int			sp = PG_GETARG_INT32(2);		/* substring start position */
+	int			sl = PG_GETARG_INT32(3);		/* substring length */
+
+	PG_RETURN_TEXT_P(text_overlay(t1, t2, sp, sl));
+}
+
+Datum
+textoverlay_no_len(PG_FUNCTION_ARGS)
+{
+	text	   *t1 = PG_GETARG_TEXT_PP(0);
+	text	   *t2 = PG_GETARG_TEXT_PP(1);
+	int			sp = PG_GETARG_INT32(2);		/* substring start position */
+	int			sl;
+
+	sl = text_length(PointerGetDatum(t2));		/* defaults to length(t2) */
+	PG_RETURN_TEXT_P(text_overlay(t1, t2, sp, sl));
+}
+
+static text *
+text_overlay(text *t1, text *t2, int sp, int sl)
+{
+	text	   *result;
+	text	   *s1;
+	text	   *s2;
+	int			sp_pl_sl;
+
+	/*
+	 * Check for possible integer-overflow cases.  For negative sp, throw a
+	 * "substring length" error because that's what should be expected
+	 * according to the spec's definition of OVERLAY().
+	 */
+	if (sp <= 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_SUBSTRING_ERROR),
+				 errmsg("negative substring length not allowed")));
+	sp_pl_sl = sp + sl;
+	if (sp_pl_sl <= sl)
+		ereport(ERROR,
+				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+				 errmsg("integer out of range")));
+
+	s1 = text_substring(PointerGetDatum(t1), 1, sp - 1, false);
+	s2 = text_substring(PointerGetDatum(t1), sp_pl_sl, -1, true);
+	result = text_catenate(s1, t2);
+	result = text_catenate(result, s2);
+
+	return result;
 }
 
 /*
@@ -1734,17 +1819,31 @@ byteacat(PG_FUNCTION_ARGS)
 {
 	bytea	   *t1 = PG_GETARG_BYTEA_PP(0);
 	bytea	   *t2 = PG_GETARG_BYTEA_PP(1);
+
+	PG_RETURN_BYTEA_P(bytea_catenate(t1, t2));
+}
+
+/*
+ * bytea_catenate
+ *	Guts of byteacat(), broken out so it can be used by other functions
+ *
+ * Arguments can be in short-header form, but not compressed or out-of-line
+ */
+static bytea *
+bytea_catenate(bytea *t1, bytea *t2)
+{
+	bytea	   *result;
 	int			len1,
 				len2,
 				len;
-	bytea	   *result;
 	char	   *ptr;
 
 	len1 = VARSIZE_ANY_EXHDR(t1);
+	len2 = VARSIZE_ANY_EXHDR(t2);
+
+	/* paranoia ... probably should throw error instead? */
 	if (len1 < 0)
 		len1 = 0;
-
-	len2 = VARSIZE_ANY_EXHDR(t2);
 	if (len2 < 0)
 		len2 = 0;
 
@@ -1761,7 +1860,7 @@ byteacat(PG_FUNCTION_ARGS)
 	if (len2 > 0)
 		memcpy(ptr + len1, VARDATA_ANY(t2), len2);
 
-	PG_RETURN_BYTEA_P(result);
+	return result;
 }
 
 #define PG_STR_GET_BYTEA(str_) \
@@ -1785,24 +1884,49 @@ byteacat(PG_FUNCTION_ARGS)
 Datum
 bytea_substr(PG_FUNCTION_ARGS)
 {
-	int			S = PG_GETARG_INT32(1); /* start position */
+	PG_RETURN_BYTEA_P(bytea_substring(PG_GETARG_DATUM(0),
+									  PG_GETARG_INT32(1),
+									  PG_GETARG_INT32(2),
+									  false));
+}
+
+/*
+ * bytea_substr_no_len -
+ *	  Wrapper to avoid opr_sanity failure due to
+ *	  one function accepting a different number of args.
+ */
+Datum
+bytea_substr_no_len(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_BYTEA_P(bytea_substring(PG_GETARG_DATUM(0),
+									  PG_GETARG_INT32(1),
+									  -1,
+									  true));
+}
+
+static bytea *
+bytea_substring(Datum str,
+				int S,
+				int L,
+				bool length_not_specified)
+{
 	int			S1;				/* adjusted start position */
 	int			L1;				/* adjusted substring length */
 
 	S1 = Max(S, 1);
 
-	if (fcinfo->nargs == 2)
+	if (length_not_specified)
 	{
 		/*
-		 * Not passed a length - PG_GETARG_BYTEA_P_SLICE() grabs everything to
-		 * the end of the string if we pass it a negative value for length.
+		 * Not passed a length - DatumGetByteaPSlice() grabs everything to the
+		 * end of the string if we pass it a negative value for length.
 		 */
 		L1 = -1;
 	}
 	else
 	{
 		/* end position */
-		int			E = S + PG_GETARG_INT32(2);
+		int			E = S + L;
 
 		/*
 		 * A negative value for L is the only way for the end position to be
@@ -1819,28 +1943,78 @@ bytea_substr(PG_FUNCTION_ARGS)
 		 * string.
 		 */
 		if (E < 1)
-			PG_RETURN_BYTEA_P(PG_STR_GET_BYTEA(""));
+			return PG_STR_GET_BYTEA("");
 
 		L1 = E - S1;
 	}
 
 	/*
 	 * If the start position is past the end of the string, SQL99 says to
-	 * return a zero-length string -- PG_GETARG_TEXT_P_SLICE() will do that
-	 * for us. Convert to zero-based starting position
+	 * return a zero-length string -- DatumGetByteaPSlice() will do that for
+	 * us. Convert to zero-based starting position
 	 */
-	PG_RETURN_BYTEA_P(PG_GETARG_BYTEA_P_SLICE(0, S1 - 1, L1));
+	return DatumGetByteaPSlice(str, S1 - 1, L1);
 }
 
 /*
- * bytea_substr_no_len -
- *	  Wrapper to avoid opr_sanity failure due to
- *	  one function accepting a different number of args.
+ * byteaoverlay
+ *	Replace specified substring of first string with second
+ *
+ * The SQL standard defines OVERLAY() in terms of substring and concatenation.
+ * This code is a direct implementation of what the standard says.
  */
 Datum
-bytea_substr_no_len(PG_FUNCTION_ARGS)
+byteaoverlay(PG_FUNCTION_ARGS)
 {
-	return bytea_substr(fcinfo);
+	bytea	   *t1 = PG_GETARG_BYTEA_PP(0);
+	bytea	   *t2 = PG_GETARG_BYTEA_PP(1);
+	int			sp = PG_GETARG_INT32(2);		/* substring start position */
+	int			sl = PG_GETARG_INT32(3);		/* substring length */
+
+	PG_RETURN_BYTEA_P(bytea_overlay(t1, t2, sp, sl));
+}
+
+Datum
+byteaoverlay_no_len(PG_FUNCTION_ARGS)
+{
+	bytea	   *t1 = PG_GETARG_BYTEA_PP(0);
+	bytea	   *t2 = PG_GETARG_BYTEA_PP(1);
+	int			sp = PG_GETARG_INT32(2);		/* substring start position */
+	int			sl;
+
+	sl = VARSIZE_ANY_EXHDR(t2); /* defaults to length(t2) */
+	PG_RETURN_BYTEA_P(bytea_overlay(t1, t2, sp, sl));
+}
+
+static bytea *
+bytea_overlay(bytea *t1, bytea *t2, int sp, int sl)
+{
+	bytea	   *result;
+	bytea	   *s1;
+	bytea	   *s2;
+	int			sp_pl_sl;
+
+	/*
+	 * Check for possible integer-overflow cases.  For negative sp, throw a
+	 * "substring length" error because that's what should be expected
+	 * according to the spec's definition of OVERLAY().
+	 */
+	if (sp <= 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_SUBSTRING_ERROR),
+				 errmsg("negative substring length not allowed")));
+	sp_pl_sl = sp + sl;
+	if (sp_pl_sl <= sl)
+		ereport(ERROR,
+				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+				 errmsg("integer out of range")));
+
+	s1 = bytea_substring(PointerGetDatum(t1), 1, sp - 1, false);
+	s2 = bytea_substring(PointerGetDatum(t1), sp_pl_sl, -1, true);
+	result = bytea_catenate(s1, t2);
+	result = bytea_catenate(result, s2);
+
+	return result;
 }
 
 /*
@@ -3461,7 +3635,6 @@ pg_column_size(PG_FUNCTION_ARGS)
 
 	PG_RETURN_INT32(result);
 }
-
 
 /*
  * string_agg - Concatenates values and returns string.

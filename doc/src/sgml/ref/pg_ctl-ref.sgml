@@ -1,18 +1,18 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_ctl-ref.sgml,v 1.46 2008/06/26 01:12:19 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_ctl-ref.sgml,v 1.51 2010/06/22 16:19:36 momjian Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="app-pg-ctl">
  <refmeta>
-  <refentrytitle id="app-pg-ctl-title"><application>pg_ctl</application></refentrytitle>
+  <refentrytitle><application>pg_ctl</application></refentrytitle>
   <manvolnum>1</manvolnum>
   <refmiscinfo>Application</refmiscinfo>
  </refmeta>
 
  <refnamediv>
   <refname>pg_ctl</refname>
-  <refpurpose>start, stop, or restart a <productname>PostgreSQL</productname> server</refpurpose>
+  <refpurpose>initialize, start, stop, or restart a <productname>PostgreSQL</productname> server</refpurpose>
  </refnamediv>
 
  <indexterm zone="app-pg-ctl">
@@ -21,6 +21,13 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
   <cmdsynopsis>
+
+   <command>pg_ctl</command>
+   <arg choice="plain">init[db]</arg>
+   <arg>-s</arg>
+   <arg>-D <replaceable>datadir</replaceable></arg>
+   <arg>-o <replaceable>options</replaceable></arg>
+   <sbr>
 
    <command>pg_ctl</command>
    <arg choice="plain">start</arg>
@@ -106,7 +113,8 @@ PostgreSQL documentation
  <refsect1 id="app-pg-ctl-description">
   <title>Description</title>
   <para>
-   <application>pg_ctl</application> is a utility for starting,
+   <application>pg_ctl</application> is a utility for initializing a
+   <productname>PostgreSQL</productname> database cluster, starting,
    stopping, or restarting the <productname>PostgreSQL</productname>
    backend server (<xref linkend="app-postgres">), or displaying the
    status of a running server.  Although the server can be started
@@ -117,17 +125,29 @@ PostgreSQL documentation
   </para>
 
   <para>
+   The <option>init</option> or <option>initdb</option> mode creates a
+   new
+   <productname>PostgreSQL</productname> database cluster.  A database
+   cluster is a collection of databases that are managed by a single
+   server instance.  This mode invokes the <command>initdb</command>
+   command.  See <xref linkend="app-initdb"> for details.
+  </para>
+
+  <para>
    In <option>start</option> mode, a new server is launched.  The
-   server is started in the background, and standard input is attached to
-   <filename>/dev/null</filename>.  The standard output and standard
-   error are either appended to a log file (if the <option>-l</option>
-   option is used), or redirected to <application>pg_ctl</application>'s 
-   standard output (not standard error).  If no log file is chosen, the 
-   standard output of <application>pg_ctl</application> should be redirected 
-   to a file or piped to another process such as a log rotating program
-   like <application>rotatelogs</>; otherwise <command>postgres</command> 
-   will write its output to the controlling terminal (from the background) 
-   and will not leave the shell's process group.
+   server is started in the background, and standard input is attached
+   to <filename>/dev/null</filename> (or <literal>nul</> on Windows).
+   On Unix-like systems, by default, the server's standard output and
+   standard error are send to <application>pg_ctl</application>'s
+   standard output (not standard error).  The standard output of
+   <application>pg_ctl</application> should then be redirected to a
+   file or piped to another process such as a log rotating program
+   like <application>rotatelogs</>; otherwise <command>postgres</command>
+   will write its output to the controlling terminal (from the
+   background) and will not leave the shell's process group.  On
+   Windows, by default the server's standard output and standard error
+   are sent to the terminal.  These default  behaviors can be changed
+   by using <option>-l</option> to append server output to a log file.
   </para>
 
   <para>
@@ -136,6 +156,8 @@ PostgreSQL documentation
    shutdown methods can be selected with the <option>-m</option>
    option: <quote>Smart</quote> mode waits for online backup mode
    to finish and all the clients to disconnect.  This is the default.
+   If the server is in recovery, recovery and streaming replication
+   will be terminated once all clients have disconnected.
    <quote>Fast</quote> mode does not wait for clients to disconnect and
    will terminate an online backup in progress.  All active transactions are
    rolled back and clients are forcibly disconnected, then the
@@ -264,6 +286,12 @@ PostgreSQL documentation
         option unless you are doing something unusual and get errors
         that the <filename>postgres</filename> executable was not found.
        </para>
+
+       <para>
+        In <literal>init</literal> mode, this option analogously
+        specifies the location of the <filename>initdb</filename>
+        executable.
+       </para>
       </listitem>
      </varlistentry>
 
@@ -371,14 +399,26 @@ PostgreSQL documentation
    </varlistentry>
 
    <varlistentry>
+    <term><envar>PGHOST</envar></term>
+
+    <listitem>
+     <para>
+      Default hostname or Unix-domain socket location for <xref
+      linkend="app-psql"> (used by the -w option).
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><envar>PGPORT</envar></term>
 
     <listitem>
      <para>
-      Default port for <xref linkend="app-psql"> (used by the -w option).
+      Default port number for <xref linkend="app-psql"> (used by the -w option).
      </para>
     </listitem>
    </varlistentry>
+
   </variablelist>
 
   <para>
@@ -543,9 +583,10 @@ Command line was:
  <refsect1>
   <title>See Also</title>
 
-  <para>
-   <xref linkend="app-postgres">
-  </para>
+  <simplelist type="inline">
+   <member><xref linkend="app-initdb"></member>
+   <member><xref linkend="app-postgres"></member>
+  </simplelist>
  </refsect1>
 
 </refentry>

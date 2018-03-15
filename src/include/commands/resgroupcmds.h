@@ -15,6 +15,7 @@
 #define RESGROUPCMDS_H
 
 #include "nodes/parsenodes.h"
+#include "storage/lock.h"
 #include "utils/resgroup.h"
 #include "utils/relcache.h"
 

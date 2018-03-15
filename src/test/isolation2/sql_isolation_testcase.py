@@ -27,10 +27,20 @@ import socket
 from optparse import OptionParser
 import traceback
 
+def is_digit(n):
+    try:
+        int(n)
+        return True
+    except ValueError:
+        return  False
+
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
-        self.command_pattern = re.compile(r"^(\d+)([&\\<\\>Uq]*?)\:(.*)")
+        # The re.S flag makes the "." in the regex match newlines.
+        # When matched against a command in process_command(), all
+        # lines in the command are matched and sent as SQL query.
+        self.command_pattern = re.compile(r"^(-?\d+)([&\\<\\>Uq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
@@ -120,22 +130,48 @@ class SQLIsolationExecutor(object):
             self.dbname = dbname
             if self.utility_mode:
                 (hostname, port) = self.get_utility_mode_port(name)
-                self.con = pygresql.pg.connect(host=hostname, 
-                    port=port, 
-                    opt="-c gp_session_role=utility",
-                    dbname=self.dbname)
+                self.con = self.connectdb(given_dbname=self.dbname,
+                                          given_host=hostname,
+                                          given_port=port,
+                                          given_opt="-c gp_session_role=utility")
+
             else:
-                self.con = pygresql.pg.connect(dbname=self.dbname)
+                self.con = self.connectdb(self.dbname)
+
+        def connectdb(self, given_dbname, given_host = None, given_port = None, given_opt = None):
+            con = None
+            retry = 1000
+            while retry:
+                try:
+                    if (given_port is None):
+                        con = pygresql.pg.connect(host= given_host,
+                                          opt= given_opt,
+                                          dbname= given_dbname)
+                    else:
+                        con = pygresql.pg.connect(host= given_host,
+                                                  port= given_port,
+                                                  opt= given_opt,
+                                                  dbname= given_dbname)
+                    break
+                except Exception as e:
+                    if (("the database system is starting up" in str(e) or
+                         "the database system is in recovery mode" in str(e)) and
+                        retry > 1):
+                        retry -= 1
+                        time.sleep(0.1)
+                    else:
+                        raise
+            return con
 
         def get_utility_mode_port(self, name):
             """
                 Gets the port number/hostname combination of the
-                dbid with the id = name
+                contentid = name and role = primary
             """
-            con = pygresql.pg.connect(dbname=self.dbname)
-            r = con.query("SELECT hostname, port FROM gp_segment_configuration WHERE dbid = %s" % name).getresult()
+            con = self.connectdb(self.dbname)
+            r = con.query("SELECT hostname, port FROM gp_segment_configuration WHERE content = %s and role = 'p'" % name).getresult()
             if len(r) == 0:
-                raise Exception("Invalid dbid %s" % name)
+                raise Exception("Invalid content %s" % name)
             if r[0][0] == socket.gethostname():
                 return (None, int(r[0][1]))
             return (r[0][0], int(r[0][1]))
@@ -191,11 +227,12 @@ class SQLIsolationExecutor(object):
 
                 (c, wait) = self.pipe.recv()
 
+
     def get_process(self, out_file, name, utility_mode=False, dbname=""):
         """
             Gets or creates the process by the given name
         """
-        if len(name) > 0 and not name.isdigit():
+        if len(name) > 0 and not is_digit(name):
             raise Exception("Name should be a number")
         if len(name) > 0 and not utility_mode and int(name) >= 1024:
             raise Exception("Session name should be smaller than 1024 unless it is utility mode number")
@@ -210,7 +247,7 @@ class SQLIsolationExecutor(object):
         """
         Quits a process with the given name
         """
-        if len(name) > 0 and not name.isdigit():
+        if len(name) > 0 and not is_digit(name):
             raise Exception("Name should be a number")
         if len(name) > 0 and not utility_mode and int(name) >= 1024:
             raise Exception("Session name should be smaller than 1024 unless it is utility mode number")
@@ -253,9 +290,29 @@ class SQLIsolationExecutor(object):
                 sql = sql_parts[1]
         if not flag:
             if sql.startswith('!'):
-                cmd_output = subprocess.Popen(sql[1:].strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
+                sql = sql[1:]
+
+                # Check for execution mode. E.g.
+                #     !\retcode path/to/executable --option1 --option2 ...
+                #
+                # At the moment, we only recognize the \retcode mode, which
+                # ignores all program output in the diff (it's still printed)
+                # and adds the return code.
+                mode = None
+                if sql.startswith('\\'):
+                    mode, sql = sql.split(None, 1)
+                    if mode != '\\retcode':
+                        raise Exception('Invalid execution mode: {}'.format(mode))
+
+                cmd_output = subprocess.Popen(sql.strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
+                stdout, _ = cmd_output.communicate()
                 print >> output_file
-                print >> output_file, cmd_output.stdout.read()
+                if mode == '\\retcode':
+                    print >> output_file, '-- start_ignore'
+                print >> output_file, stdout
+                if mode == '\\retcode':
+                    print >> output_file, '-- end_ignore'
+                    print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
             else:
                 self.get_process(output_file, process_name, dbname=dbname).query(sql.strip())
         elif flag == "&":
@@ -301,7 +358,7 @@ class SQLIsolationExecutor(object):
                     command_part = line.partition("--")[0] # remove comment from line
                 if command_part == "" or command_part == "\n":
                     print >>output_file 
-                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^\d+U[q\\<]:$", line):
+                elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^-?\d+U[q\\<]:$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file)
@@ -327,14 +384,14 @@ class SQLIsolationTestCase:
         executing transactions. This is mainly used to test isolation behavior.
 
         [<#>[flag]:] <sql> | ! <shell scripts or command>
-        #: just any integer indicating an unique session or dbid if followed by U
+        #: just any integer indicating an unique session or content-id if followed by U
         flag:
             &: expect blocking behavior
             >: running in background without blocking
             <: join an existing session
             q: quit the given session
 
-            U: connect in utility mode to dbid from gp_segment_configuration
+            U: connect in utility mode to primary contentid from gp_segment_configuration
             U&: expect blocking behavior in utility mode
             U<: join an existing utility mode session
 

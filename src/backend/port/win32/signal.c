@@ -3,10 +3,10 @@
  * signal.c
  *	  Microsoft Windows Win32 Signal Emulation Functions
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/win32/signal.c,v 1.22 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/win32/signal.c,v 1.25 2010/02/26 02:00:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -312,8 +312,9 @@ pg_signal_thread(LPVOID param)
 				CloseHandle(hThread);
 
 			/*
-			 * Background thread is running with our instance of the pipe. So replace our reference
-			 * with the newly created one and loop back up for another run.
+			 * Background thread is running with our instance of the pipe. So
+			 * replace our reference with the newly created one and loop back
+			 * up for another run.
 			 */
 			pipe = newpipe;
 		}
@@ -322,8 +323,8 @@ pg_signal_thread(LPVOID param)
 			/*
 			 * Connection failed. Cleanup and try again.
 			 *
-			 * This should never happen. If it does, we have a small race condition until we loop
-			 * up and re-create the pipe.
+			 * This should never happen. If it does, we have a small race
+			 * condition until we loop up and re-create the pipe.
 			 */
 			CloseHandle(pipe);
 			pipe = INVALID_HANDLE_VALUE;

@@ -2,13 +2,15 @@
 #
 # Makefile for src/bin/pg_resetxlog
 #
-# Copyright (c) 1998-2009, PostgreSQL Global Development Group
+# Copyright (c) 1998-2010, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/bin/pg_resetxlog/Makefile,v 1.20 2009/01/01 17:23:54 momjian Exp $
+# $PostgreSQL: pgsql/src/bin/pg_resetxlog/Makefile,v 1.24 2010/07/05 18:54:38 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
 PGFILEDESC = "pg_resetxlog - reset PostgreSQL WAL log"
+PGAPPICON=win32
+
 subdir = src/bin/pg_resetxlog
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
@@ -23,7 +25,7 @@ OBJS= pg_resetxlog.o $(WIN32RES)
 all: submake-libpgport pg_resetxlog
 
 pg_resetxlog: $(OBJS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 install: all installdirs
 	$(INSTALL_PROGRAM) pg_resetxlog$(X) '$(DESTDIR)$(bindir)/pg_resetxlog$(X)'

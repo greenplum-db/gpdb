@@ -13,7 +13,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2003-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.29 2009/03/04 10:55:00 petere Exp $
+ * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.32 2010/03/13 14:55:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -357,7 +357,7 @@
 #define ERRCODE_ADMIN_SHUTDOWN				MAKE_SQLSTATE('5','7', 'P','0','1')
 #define ERRCODE_CRASH_SHUTDOWN				MAKE_SQLSTATE('5','7', 'P','0','2')
 #define ERRCODE_CANNOT_CONNECT_NOW			MAKE_SQLSTATE('5','7', 'P','0','3')
-#define ERRCODE_MIRROR_OR_QUIESCENT			MAKE_SQLSTATE('5','7', 'M','0','1')
+#define ERRCODE_MIRROR_READY				MAKE_SQLSTATE('5','7', 'M','0','2')
 
 /* Class 58 - System Error (class borrowed from DB2) */
 /* (we define this as errors external to PostgreSQL itself) */

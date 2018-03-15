@@ -25,9 +25,6 @@
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbpersistentfilesysobj.h"
-#include "cdb/cdbmirroredfilesysobj.h"
-#include "cdb/cdbpersistentstore.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
@@ -38,50 +35,52 @@
 #include "utils/guc.h"
 #include "miscadmin.h"
 
-/**
+/*
  * Drops a segment file.
  *
+ * Actually, we just truncate the segfile to 0 bytes, to reclaim the space.
+ * Before GPDB 6, we used to remove the file, but with WAL replication, we
+ * no longer have a convenient function to remove a single segment of a
+ * relation. An empty file is as almost as good as a non-existent file. If
+ * the relation is dropped later, the code in mdunlink() will remove all
+ * segments, including any empty ones we've left behind.
  */
 static void
 AOCSCompaction_DropSegmentFile(Relation aorel,
 							   int segno)
 {
-	ItemPointerData persistentTid;
-	int64		persistentSerialNum;
-	int			pseudoSegNo;
 	int			col;
 
 	Assert(RelationIsAoCols(aorel));
 
 	for (col = 0; col < RelationGetNumberOfAttributes(aorel); col++)
 	{
-		pseudoSegNo = (col * AOTupleId_MultiplierSegmentFileNum) + segno;
+		char		filenamepath[MAXPGPATH];
+		int			pseudoSegNo;
+		File		fd;
 
-		if (!ReadGpRelationNode(
-								aorel->rd_rel->reltablespace,
-								aorel->rd_rel->relfilenode,
-								pseudoSegNo,
-								&persistentTid,
-								&persistentSerialNum))
-		{
-			/* There is nothing to drop */
-			return;
-		}
+		/* Open and truncate the relation segfile */
+		MakeAOSegmentFileName(aorel, segno, col, &pseudoSegNo, filenamepath);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Drop segment file: "
 			   "segno %d",
 			   pseudoSegNo);
 
-		MirroredFileSysObj_ScheduleDropAppendOnlyFile(
-													  &aorel->rd_node,
-													  pseudoSegNo,
-													  RelationGetRelationName(aorel),
-													  &persistentTid,
-													  persistentSerialNum);
-
-		DeleteGpRelationNodeTuple(aorel,
-								  pseudoSegNo);
+		fd = OpenAOSegmentFile(aorel, filenamepath, pseudoSegNo, 0);
+		if (fd >= 0)
+		{
+			TruncateAOSegmentFile(fd, aorel, pseudoSegNo, 0);
+			CloseAOSegmentFile(fd);
+		}
+		else
+		{
+			/*
+			 * The file we were about to drop/truncate didn't exist. That's normal,
+			 * for example, if a column is added with ALTER TABLE ADD COLUMN.
+			 */
+			elog(DEBUG1, "could not truncate segfile %s, because it does not exist", filenamepath);
+		}
 	}
 }
 
@@ -111,13 +110,13 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 		int64		segeof;
 		char		filenamepath[MAXPGPATH];
 		AOCSVPInfoEntry *entry;
-		MirroredAppendOnlyOpen mirroredOpened;
+		File		fd;
 		int32		fileSegNo;
 
 		entry = getAOCSVPEntry(fsinfo, j);
 		segeof = entry->eof;
 
-		/* Open and truncate the relation segfile beyond its eof */
+		/* Open and truncate the relation segfile to its eof */
 		MakeAOSegmentFileName(aorel, segno, j, &fileSegNo, filenamepath);
 
 		elogif(Debug_appendonly_print_compaction, LOG,
@@ -131,10 +130,11 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 			   fileSegNo,
 			   segeof);
 
-		if (OpenAOSegmentFile(aorel, filenamepath, fileSegNo, segeof, &mirroredOpened))
+		fd = OpenAOSegmentFile(aorel, filenamepath, fileSegNo, segeof);
+		if (fd >= 0)
 		{
-			TruncateAOSegmentFile(&mirroredOpened, aorel, segeof);
-			CloseAOSegmentFile(&mirroredOpened);
+			TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
+			CloseAOSegmentFile(fd);
 
 			elogif(Debug_appendonly_print_compaction, LOG,
 				   "Successfully truncated AO COL relation \"%s.%s\", relation id %u, relfilenode %u column #%d, logical segment #%d (physical segment file #%d, logical EOF " INT64_FORMAT ")",
@@ -264,7 +264,7 @@ AOCSMoveTuple(TupleTableSlot *slot,
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate, true);
+		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate);
 		ResetPerTupleExprContext(estate);
 	}
 

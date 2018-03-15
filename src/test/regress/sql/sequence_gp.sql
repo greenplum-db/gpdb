@@ -30,4 +30,4 @@ CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 4 START 1 CACHE 20 NO CY
 SELECT nextval('tmp_seq'), a FROM tmp_table ORDER BY a;
 DROP SEQUENCE tmp_seq;
 
-DROP TABLE tmp_table; 
+DROP TABLE tmp_table;

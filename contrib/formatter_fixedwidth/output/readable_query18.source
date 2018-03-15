@@ -9,4 +9,4 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10',
     n5='10', n6='10', n7='15');
 select * from tbl_ext_fixedwidth order by s1;
 ERROR:  the fixed width formatter requires a length specification for each one of the external table columns being used (missing field <s_2>  (seg0 slice1 killnz1:64100 pid=7503)
-DETAIL:  External table tbl_ext_fixedwidth
+CONTEXT:  External table tbl_ext_fixedwidth

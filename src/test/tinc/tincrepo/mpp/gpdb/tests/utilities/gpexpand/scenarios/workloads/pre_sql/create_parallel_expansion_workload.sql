@@ -1,4 +1,4 @@
-CREATE TABLESPACE test_ts filespace expand_filespace;
+CREATE TABLESPACE test_ts;
 
 DROP TABLE IF EXISTS users_dur_pkey;
 CREATE TABLE users_dur_pkey (

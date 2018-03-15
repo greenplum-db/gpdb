@@ -3,9 +3,9 @@
  * ts_type.h
  *	  Definitions for the tsvector and tsquery types
  *
- * Copyright (c) 1998-2009, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/ts_type.h,v 1.15 2009/01/01 17:24:01 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tsearch/ts_type.h,v 1.17 2010/01/02 16:58:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -218,8 +218,8 @@ typedef struct
 typedef union
 {
 	QueryItemType type;
-	QueryOperator operator;
-	QueryOperand operand;
+	QueryOperator qoperator;
+	QueryOperand qoperand;
 } QueryItem;
 
 /*

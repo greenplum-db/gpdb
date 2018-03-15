@@ -6,12 +6,12 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootparse.y,v 1.96 2009/01/01 17:23:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootparse.y,v 1.105 2010/02/07 20:48:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,7 +35,6 @@
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_database.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/toasting.h"
@@ -102,7 +101,7 @@ do_end(void)
 }
 
 
-int num_columns_read = 0;
+static int num_columns_read = 0;
 
 %}
 
@@ -120,16 +119,16 @@ int num_columns_read = 0;
 
 %type <list>  boot_index_params
 %type <ielem> boot_index_param
-%type <ival>  boot_const boot_ident
+%type <str>   boot_const boot_ident
 %type <ival>  optbootstrap optsharedrelation optwithoutoids
-%type <ival>  boot_tuple boot_tuplelist
-%type <oidval> oidspec optoideq
+%type <oidval> oidspec optoideq optrowtypeoid
 
-%token <ival> CONST_P ID
+%token <str> CONST_P ID
 %token OPEN XCLOSE XCREATE INSERT_TUPLE
 %token XDECLARE INDEX ON USING XBUILD INDICES UNIQUE XTOAST
 %token COMMA EQUALS LPAREN RPAREN
-%token OBJ_ID XBOOTSTRAP XSHARED_RELATION XWITHOUT_OIDS NULLVAL
+%token OBJ_ID XBOOTSTRAP XSHARED_RELATION XWITHOUT_OIDS XROWTYPE_OID NULLVAL
+
 %start TopLevel
 
 %nonassoc low
@@ -162,7 +161,7 @@ Boot_OpenStmt:
 		  OPEN boot_ident
 				{
 					do_start();
-					boot_openrel(LexIDStr($2));
+					boot_openrel($2);
 					do_end();
 				}
 		;
@@ -171,7 +170,7 @@ Boot_CloseStmt:
 		  XCLOSE boot_ident %prec low
 				{
 					do_start();
-					closerel(LexIDStr($2));
+					closerel($2);
 					do_end();
 				}
 		| XCLOSE %prec high
@@ -183,29 +182,44 @@ Boot_CloseStmt:
 		;
 
 Boot_CreateStmt:
-		  XCREATE optbootstrap optsharedrelation optwithoutoids boot_ident oidspec LPAREN
+		  XCREATE boot_ident oidspec optbootstrap optsharedrelation optwithoutoids optrowtypeoid LPAREN
 				{
 					do_start();
 					numattr = 0;
 					elog(DEBUG4, "creating%s%s relation %s %u",
-						 $2 ? " bootstrap" : "",
-						 $3 ? " shared" : "",
-						 LexIDStr($5),
-						 $6);
+						 $4 ? " bootstrap" : "",
+						 $5 ? " shared" : "",
+						 $2,
+						 $3);
 				}
-		  boot_typelist
+		  boot_column_list
 				{
 					do_end();
 				}
 		  RPAREN
 				{
 					TupleDesc tupdesc;
+					bool	shared_relation;
+					bool	mapped_relation;
 
 					do_start();
 
-					tupdesc = CreateTupleDesc(numattr, !($4), attrtypes);
+					tupdesc = CreateTupleDesc(numattr, !($6), attrtypes);
 
-					if ($2)
+					shared_relation = $5;
+
+					/*
+					 * The catalogs that use the relation mapper are the
+					 * bootstrap catalogs plus the shared catalogs.  If this
+					 * ever gets more complicated, we should invent a BKI
+					 * keyword to mark the mapped catalogs, but for now a
+					 * quick hack seems the most appropriate thing.  Note in
+					 * particular that all "nailed" heap rels (see formrdesc
+					 * in relcache.c) must be mapped.
+					 */
+					mapped_relation = ($4 || shared_relation);
+
+					if ($4)
 					{
 						if (boot_reldesc)
 						{
@@ -213,44 +227,45 @@ Boot_CreateStmt:
 							closerel(NULL);
 						}
 
-						boot_reldesc = heap_create(LexIDStr($5),
+						boot_reldesc = heap_create($2,
 												   PG_CATALOG_NAMESPACE,
-												   $3 ? GLOBALTABLESPACE_OID : 0,
-												   $6,
+												   shared_relation ? GLOBALTABLESPACE_OID : 0,
+												   $3,
 												   tupdesc,
 												   /* relam */ InvalidOid,
 												   RELKIND_RELATION,
 												   RELSTORAGE_HEAP,
-												   $3,
-												   true,
-												   /* bufferPoolBulkLoad */ false);
+												   shared_relation,
+												   mapped_relation,
+												   true);
 						elog(DEBUG4, "bootstrap relation created");
 					}
 					else
 					{
 						Oid id;
 
-						id = heap_create_with_catalog(LexIDStr($5),
+						id = heap_create_with_catalog($2,
 													  PG_CATALOG_NAMESPACE,
-													  $3 ? GLOBALTABLESPACE_OID : 0,
-													  $6,
+													  shared_relation ? GLOBALTABLESPACE_OID : 0,
+													  $3,
+													  $7,
+													  InvalidOid,
 													  BOOTSTRAP_SUPERUSERID,
 													  tupdesc,
 													  NIL,
 													  /* relam */ InvalidOid,
 													  RELKIND_RELATION,
 													  RELSTORAGE_HEAP,
-													  $3,
+													  shared_relation,
+													  mapped_relation,
 													  true,
-													  /* bufferPoolBulkLoad */ false,
 													  0,
 													  ONCOMMIT_NOOP,
 													  NULL,			/*CDB*/
 													  (Datum) 0,
+													  false,
 													  true,
-													  /* valid_opts */ false,
-						 					  		  /* persistentTid */ NULL,
-						 					  		  /* persistentSerialNum */ NULL);
+													  /* valid_opts */ false);
 						elog(DEBUG4, "relation created with oid %u", id);
 					}
 					do_end();
@@ -267,7 +282,7 @@ Boot_InsertStmt:
 						elog(DEBUG4, "inserting row");
 					num_columns_read = 0;
 				}
-		  LPAREN  boot_tuplelist RPAREN
+		  LPAREN boot_column_val_list RPAREN
 				{
 					if (num_columns_read != numattr)
 						elog(ERROR, "incorrect number of columns in row (expected %d, got %d)",
@@ -284,14 +299,14 @@ Boot_DeclareIndexStmt:
 				{
 					do_start();
 
-					DefineIndex(makeRangeVar(NULL, LexIDStr($6), -1),
-								LexIDStr($3),
+					DefineIndex(makeRangeVar(NULL, $6, -1),
+								$3,
 								$4,
-								LexIDStr($8),
+								$8,
 								NULL,
 								$10,
-								NULL, NIL,
-								false, false, false,
+								NULL, NIL, NIL,
+								false, false, false, false, false,
 								false, false, true, false, false,
 								NULL);
 					do_end();
@@ -303,14 +318,14 @@ Boot_DeclareUniqueIndexStmt:
 				{
 					do_start();
 
-					DefineIndex(makeRangeVar(NULL, LexIDStr($7), -1),
-								LexIDStr($4),
+					DefineIndex(makeRangeVar(NULL, $7, -1),
+								$4,
 								$5,
-								LexIDStr($9),
+								$9,
 								NULL,
 								$11,
-								NULL, NIL,
-								true, false, false,
+								NULL, NIL, NIL,
+								true, false, false, false, false,
 								false, false, true, false, false,
 								NULL);
 					do_end();
@@ -322,7 +337,7 @@ Boot_DeclareToastStmt:
 				{
 					do_start();
 
-					BootstrapToastTable(LexIDStr($6), $3, $4);
+					BootstrapToastTable($6, $3, $4);
 					do_end();
 				}
 		;
@@ -346,9 +361,10 @@ boot_index_param:
 		boot_ident boot_ident
 				{
 					IndexElem *n = makeNode(IndexElem);
-					n->name = LexIDStr($1);
+					n->name = $1;
 					n->expr = NULL;
-					n->opclass = list_make1(makeString(LexIDStr($2)));
+					n->indexcolname = NULL;
+					n->opclass = list_make1(makeString($2));
 					n->ordering = SORTBY_DEFAULT;
 					n->nulls_ordering = SORTBY_NULLS_DEFAULT;
 					$$ = n;
@@ -370,50 +386,55 @@ optwithoutoids:
 		|					{ $$ = 0; }
 		;
 
-boot_typelist:
-		  boot_type_thing
-		| boot_typelist COMMA boot_type_thing
+optrowtypeoid:
+			XROWTYPE_OID oidspec	{ $$ = $2; }
+		|							{ $$ = InvalidOid; }
 		;
 
-boot_type_thing:
+boot_column_list:
+		  boot_column_def
+		| boot_column_list COMMA boot_column_def
+		;
+
+boot_column_def:
 		  boot_ident EQUALS boot_ident
 				{
 				   if (++numattr > MAXATTR)
 						elog(FATAL, "too many columns");
-				   DefineAttr(LexIDStr($1),LexIDStr($3),numattr-1);
+				   DefineAttr($1, $3, numattr-1);
 				}
 		;
 
 oidspec:
-			boot_ident							{ $$ = atooid(LexIDStr($1)); }
+			boot_ident							{ $$ = atooid($1); }
 		;
 
 optoideq:
 			OBJ_ID EQUALS oidspec				{ $$ = $3; }
-		|										{ $$ = (Oid) 0; }
+		|										{ $$ = InvalidOid; }
 		;
 
-boot_tuplelist:
-		   boot_tuple
-		|  boot_tuplelist boot_tuple
-		|  boot_tuplelist COMMA boot_tuple
+boot_column_val_list:
+		   boot_column_val
+		|  boot_column_val_list boot_column_val
+		|  boot_column_val_list COMMA boot_column_val
 		;
 
-boot_tuple:
+boot_column_val:
 		  boot_ident
-			{ InsertOneValue(LexIDStr($1), num_columns_read++); }
+			{ InsertOneValue($1, num_columns_read++); }
 		| boot_const
-			{ InsertOneValue(LexIDStr($1), num_columns_read++); }
+			{ InsertOneValue($1, num_columns_read++); }
 		| NULLVAL
 			{ InsertOneNull(num_columns_read++); }
 		;
 
 boot_const :
-		  CONST_P { $$=yylval.ival; }
+		  CONST_P { $$ = yylval.str; }
 		;
 
 boot_ident :
-		  ID	{ $$=yylval.ival; }
+		  ID	{ $$ = yylval.str; }
 		;
 %%
 

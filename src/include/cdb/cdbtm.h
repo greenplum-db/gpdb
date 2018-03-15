@@ -15,6 +15,7 @@
 #include "cdb/cdbdtxcontextinfo.h"
 #include "cdb/cdbpublic.h"
 #include "nodes/plannodes.h"
+#include "storage/s_lock.h"
 
 /**
  * DTX states, used to track the state of the distributed transaction
@@ -76,8 +77,7 @@ typedef enum
 	 */
 	DTX_STATE_NOTIFYING_ABORT_PREPARED,
 	DTX_STATE_RETRY_COMMIT_PREPARED,
-	DTX_STATE_RETRY_ABORT_PREPARED,
-	DTX_STATE_CRASH_COMMITTED
+	DTX_STATE_RETRY_ABORT_PREPARED
 }	DtxState;
 
 /**
@@ -205,6 +205,12 @@ typedef struct TMGXACT
 	 * but it a good idea.
 	 */
 	char						gid[TMGIDSIZE];
+
+	/*
+	 * Like PGPROC->xid to local transaction, gxid is set if distributed
+	 * transaction needs two-phase, and it's reset when distributed
+	 * transaction ends, with ProcArrayLock held.
+	 */
 	DistributedTransactionId	gxid;
 
 	/*
@@ -251,25 +257,31 @@ typedef struct TMGALLXACTSTATUS
 typedef struct TmControlBlock
 {
 	LWLockId					ControlLock;
+	slock_t 					ControlSeqnoLock;
+
 	bool						recoverred;
 	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId	seqno;
 	bool						DtmStarted;
 	uint32						NextSnapshotId;
-	int							num_active_xacts;
+	int							num_committed_xacts;
 
-    /* Array [0..max_tm_gxacts-1] of TMGXACT ptrs is appended starting here */
-	TMGXACT  			       *gxact_array[1];
+    /* Array [0..max_tm_gxacts-1] of TMGXACT_LOG ptrs is appended starting here */
+	TMGXACT_LOG  			    committed_gxact_array[1];
 }	TmControlBlock;
 
 
 #define TMCONTROLBLOCK_BYTES(num_gxacts) \
-	(offsetof(TmControlBlock, gxact_array) + sizeof(TMGXACT) * (num_gxacts))
+	(offsetof(TmControlBlock, committed_gxact_array) + sizeof(TMGXACT_LOG) * (num_gxacts))
 
 extern DtxContext DistributedTransactionContext;
 
 /* state variables for how much of the log file has been flushed */
 extern volatile bool *shmDtmStarted;
+extern volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
+extern uint32 *shmNextSnapshotId;
+extern TMGXACT_LOG *shmCommittedGxactArray;
+extern volatile int *shmNumCommittedGxacts;
 
 extern char *DtxStateToString(DtxState state);
 extern char *DtxProtocolCommandToString(DtxProtocolCommand command);
@@ -281,8 +293,8 @@ extern void dtxCrackOpenGid(const char	*gid,
 extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
-extern void createDtx(DistributedTransactionId	*distribXid);
-extern bool CreateDistributedSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
+extern void initGxact(TMGXACT *gxact);
+extern void setCurrentGxact(void);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
@@ -291,6 +303,7 @@ extern void notifyCommittedDtxTransaction(void);
 extern void	rollbackDtxTransaction(void);
 extern DistributedTransactionId getMaxDistributedXid(void);
 
+extern bool includeInCheckpointIsNeeded(TMGXACT *gxact);
 extern void insertingDistributedCommitted(void);
 extern void insertedDistributedCommitted(void);
 extern void forcedDistributedCommitted(XLogRecPtr *recptr);
@@ -315,13 +328,7 @@ extern void tmShmemInit(void);
 extern int	tmShmemSize(void);
 extern void initTM(void);
 
-extern void getDtxCheckPointInfoAndLock(char **result, int *result_size);
-extern void freeDtxCheckPointInfoAndUnlock(char *info, int info_size, XLogRecPtr *recptr);
-
 extern void verify_shared_snapshot_ready(void);
-
-void		getTmLock(void);
-void		releaseTmLock(void);
 
 int			mppTxnOptions(bool needTwoPhase);
 int			mppTxOptions_IsoLevel(int txnOptions);

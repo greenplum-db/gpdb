@@ -512,13 +512,13 @@ select linear_interpolate('10:25:00'::time, '10:20:00'::time, '11:20:00'::time, 
 select linear_interpolate(200::numeric, 100::numeric, 2000::numeric, 100::numeric, 2250::numeric);
  linear_interpolate 
 --------------------
- 
+                   
 (1 row)
 
 select linear_interpolate(200::float4, 100::float4, 2000::float4, 100::float4, 2250::float4);
  linear_interpolate 
 --------------------
- 
+                   
 (1 row)
 
 -- Abscissa: timestamp, Ordinate: int4

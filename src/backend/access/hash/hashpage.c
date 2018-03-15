@@ -3,12 +3,12 @@
  * hashpage.c
  *	  Hash table page management code for the Postgres hash access method
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.80 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.83 2010/02/26 02:00:33 momjian Exp $
  *
  * NOTES
  *	  Postgres hash pages look like ordinary relation pages.  The opaque
@@ -123,8 +123,6 @@ _hash_getbuf(Relation rel, BlockNumber blkno, int access, int flags)
 {
 	Buffer		buf;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	if (blkno == P_NEW)
 		elog(ERROR, "hash AM does not use P_NEW");
 
@@ -194,8 +192,6 @@ _hash_getnewbuf(Relation rel, BlockNumber blkno)
 	BlockNumber nblocks = RelationGetNumberOfBlocks(rel);
 	Buffer		buf;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	if (blkno == P_NEW)
 		elog(ERROR, "hash AM does not use P_NEW");
 	if (blkno > nblocks)
@@ -259,8 +255,6 @@ _hash_getbuf_with_strategy(Relation rel, BlockNumber blkno,
 void
 _hash_relbuf(Relation rel __attribute__((unused)), Buffer buf)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	UnlockReleaseBuffer(buf);
 }
 
@@ -290,8 +284,6 @@ _hash_dropbuf(Relation rel __attribute__((unused)), Buffer buf)
 void
 _hash_wrtbuf(Relation rel __attribute__((unused)), Buffer buf)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	MarkBufferDirty(buf);
 	UnlockReleaseBuffer(buf);
 }
@@ -314,8 +306,6 @@ _hash_chgbufaccess(Relation rel __attribute__((unused)),
 				   int from_access,
 				   int to_access)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	if (from_access == HASH_WRITE)
 		MarkBufferDirty(buf);
 	if (from_access != HASH_NOLOCK)
@@ -340,8 +330,6 @@ _hash_chgbufaccess(Relation rel __attribute__((unused)),
 uint32
 _hash_metapinit(Relation rel, double num_tuples)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	HashMetaPage metap;
 	HashPageOpaque pageopaque;
 	Buffer		metabuf;
@@ -374,9 +362,6 @@ _hash_metapinit(Relation rel, double num_tuples)
 	if (ffactor < 10)
 		ffactor = 10;
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	/*
 	 * Choose the number of initial bucket pages to match the fill factor
 	 * given the estimated number of tuples.  We round up the result to the
@@ -491,10 +476,6 @@ _hash_metapinit(Relation rel, double num_tuples)
 
 	/* all done */
 	_hash_wrtbuf(rel, metabuf);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
 
 	return num_buckets;
 }
@@ -522,8 +503,6 @@ _hash_pageinit(Page page, Size size)
 void
 _hash_expandtable(Relation rel, Buffer metabuf)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	HashMetaPage metap;
 	Bucket		old_bucket;
 	Bucket		new_bucket;
@@ -533,9 +512,6 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	uint32		maxbucket;
 	uint32		highmask;
 	uint32		lowmask;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	/*
 	 * Obtain the page-zero lock to assert the right to begin a split (see
@@ -705,10 +681,7 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	/* Release bucket locks, allowing others to access them */
 	_hash_droplock(rel, start_oblkno, HASH_EXCLUSIVE);
 	_hash_droplock(rel, start_nblkno, HASH_EXCLUSIVE);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	return;
 
 	/* Here if decide not to split or fail to acquire old bucket lock */
@@ -719,10 +692,6 @@ fail:
 
 	/* Release split lock */
 	_hash_droplock(rel, 0, HASH_EXCLUSIVE);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
 }
 
 
@@ -800,22 +769,14 @@ _hash_splitbucket(Relation rel,
 				  uint32 highmask,
 				  uint32 lowmask)
 {
-	Bucket		bucket;
-	Buffer		obuf;
-	Buffer		nbuf;
 	BlockNumber oblkno;
 	BlockNumber nblkno;
-	HashPageOpaque oopaque;
-	HashPageOpaque nopaque;
-	IndexTuple	itup;
-	Size		itemsz;
-	OffsetNumber ooffnum;
-	OffsetNumber noffnum;
-	OffsetNumber omaxoffnum;
+	Buffer		obuf;
+	Buffer		nbuf;
 	Page		opage;
 	Page		npage;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
+	HashPageOpaque oopaque;
+	HashPageOpaque nopaque;
 
 	/*
 	 * It should be okay to simultaneously write-lock pages from each bucket,
@@ -842,95 +803,100 @@ _hash_splitbucket(Relation rel,
 	/*
 	 * Partition the tuples in the old bucket between the old bucket and the
 	 * new bucket, advancing along the old bucket's overflow bucket chain and
-	 * adding overflow pages to the new bucket as needed.
+	 * adding overflow pages to the new bucket as needed.  Outer loop iterates
+	 * once per page in old bucket.
 	 */
-	ooffnum = FirstOffsetNumber;
-	omaxoffnum = PageGetMaxOffsetNumber(opage);
 	for (;;)
 	{
-		/*
-		 * at each iteration through this loop, each of these variables should
-		 * be up-to-date: obuf opage oopaque ooffnum omaxoffnum
-		 */
+		OffsetNumber ooffnum;
+		OffsetNumber omaxoffnum;
+		OffsetNumber deletable[MaxOffsetNumber];
+		int			ndeletable = 0;
 
-		/* check if we're at the end of the page */
-		if (ooffnum > omaxoffnum)
+		/* Scan each tuple in old page */
+		omaxoffnum = PageGetMaxOffsetNumber(opage);
+		for (ooffnum = FirstOffsetNumber;
+			 ooffnum <= omaxoffnum;
+			 ooffnum = OffsetNumberNext(ooffnum))
 		{
-			/* at end of page, but check for an(other) overflow page */
-			oblkno = oopaque->hasho_nextblkno;
-			if (!BlockNumberIsValid(oblkno))
-				break;
+			IndexTuple	itup;
+			Size		itemsz;
+			Bucket		bucket;
 
 			/*
-			 * we ran out of tuples on this particular page, but we have more
-			 * overflow pages; advance to next page.
+			 * Fetch the item's hash key (conveniently stored in the item) and
+			 * determine which bucket it now belongs in.
 			 */
-			_hash_wrtbuf(rel, obuf);
+			itup = (IndexTuple) PageGetItem(opage,
+											PageGetItemId(opage, ooffnum));
+			bucket = _hash_hashkey2bucket(_hash_get_indextuple_hashkey(itup),
+										  maxbucket, highmask, lowmask);
 
-			obuf = _hash_getbuf(rel, oblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
-			opage = BufferGetPage(obuf);
-			oopaque = (HashPageOpaque) PageGetSpecialPointer(opage);
-			ooffnum = FirstOffsetNumber;
-			omaxoffnum = PageGetMaxOffsetNumber(opage);
-			continue;
+			if (bucket == nbucket)
+			{
+				/*
+				 * insert the tuple into the new bucket.  if it doesn't fit on
+				 * the current page in the new bucket, we must allocate a new
+				 * overflow page and place the tuple on that page instead.
+				 */
+				itemsz = IndexTupleDSize(*itup);
+				itemsz = MAXALIGN(itemsz);
+
+				if (PageGetFreeSpace(npage) < itemsz)
+				{
+					/* write out nbuf and drop lock, but keep pin */
+					_hash_chgbufaccess(rel, nbuf, HASH_WRITE, HASH_NOLOCK);
+					/* chain to a new overflow page */
+					nbuf = _hash_addovflpage(rel, metabuf, nbuf);
+					npage = BufferGetPage(nbuf);
+					/* we don't need nblkno or nopaque within the loop */
+				}
+
+				/*
+				 * Insert tuple on new page, using _hash_pgaddtup to ensure
+				 * correct ordering by hashkey.  This is a tad inefficient
+				 * since we may have to shuffle itempointers repeatedly.
+				 * Possible future improvement: accumulate all the items for
+				 * the new page and qsort them before insertion.
+				 */
+				(void) _hash_pgaddtup(rel, nbuf, itemsz, itup);
+
+				/*
+				 * Mark tuple for deletion from old page.
+				 */
+				deletable[ndeletable++] = ooffnum;
+			}
+			else
+			{
+				/*
+				 * the tuple stays on this page, so nothing to do.
+				 */
+				Assert(bucket == obucket);
+			}
 		}
 
+		oblkno = oopaque->hasho_nextblkno;
+
 		/*
-		 * Fetch the item's hash key (conveniently stored in the item) and
-		 * determine which bucket it now belongs in.
+		 * Done scanning this old page.  If we moved any tuples, delete them
+		 * from the old page.
 		 */
-		itup = (IndexTuple) PageGetItem(opage, PageGetItemId(opage, ooffnum));
-		bucket = _hash_hashkey2bucket(_hash_get_indextuple_hashkey(itup),
-									  maxbucket, highmask, lowmask);
-
-		if (bucket == nbucket)
+		if (ndeletable > 0)
 		{
-			/*
-			 * insert the tuple into the new bucket.  if it doesn't fit on the
-			 * current page in the new bucket, we must allocate a new overflow
-			 * page and place the tuple on that page instead.
-			 */
-			itemsz = IndexTupleDSize(*itup);
-			itemsz = MAXALIGN(itemsz);
-
-			if (PageGetFreeSpace(npage) < itemsz)
-			{
-				/* write out nbuf and drop lock, but keep pin */
-				_hash_chgbufaccess(rel, nbuf, HASH_WRITE, HASH_NOLOCK);
-				/* chain to a new overflow page */
-				nbuf = _hash_addovflpage(rel, metabuf, nbuf);
-				npage = BufferGetPage(nbuf);
-				/* we don't need nopaque within the loop */
-			}
-
-			noffnum = OffsetNumberNext(PageGetMaxOffsetNumber(npage));
-			if (PageAddItem(npage, (Item) itup, itemsz, noffnum, false, false)
-				== InvalidOffsetNumber)
-				elog(ERROR, "failed to add index item to \"%s\"",
-					 RelationGetRelationName(rel));
-
-			/*
-			 * now delete the tuple from the old bucket.  after this section
-			 * of code, 'ooffnum' will actually point to the ItemId to which
-			 * we would point if we had advanced it before the deletion
-			 * (PageIndexTupleDelete repacks the ItemId array).  this also
-			 * means that 'omaxoffnum' is exactly one less than it used to be,
-			 * so we really can just decrement it instead of calling
-			 * PageGetMaxOffsetNumber.
-			 */
-			PageIndexTupleDelete(opage, ooffnum);
-			omaxoffnum = OffsetNumberPrev(omaxoffnum);
+			PageIndexMultiDelete(opage, deletable, ndeletable);
+			_hash_wrtbuf(rel, obuf);
 		}
 		else
-		{
-			/*
-			 * the tuple stays on this page.  we didn't move anything, so we
-			 * didn't delete anything and therefore we don't have to change
-			 * 'omaxoffnum'.
-			 */
-			Assert(bucket == obucket);
-			ooffnum = OffsetNumberNext(ooffnum);
-		}
+			_hash_relbuf(rel, obuf);
+
+		/* Exit loop if no more overflow pages in old bucket */
+		if (!BlockNumberIsValid(oblkno))
+			break;
+
+		/* Else, advance to next old page */
+		obuf = _hash_getbuf(rel, oblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
+		opage = BufferGetPage(obuf);
+		oopaque = (HashPageOpaque) PageGetSpecialPointer(opage);
 	}
 
 	/*
@@ -939,7 +905,6 @@ _hash_splitbucket(Relation rel,
 	 * tuples remaining in the old bucket (including the overflow pages) are
 	 * packed as tightly as possible.  The new bucket is already tight.
 	 */
-	_hash_wrtbuf(rel, obuf);
 	_hash_wrtbuf(rel, nbuf);
 
 	_hash_squeezebucket(rel, obucket, start_oblkno, NULL);

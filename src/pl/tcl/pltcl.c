@@ -2,7 +2,7 @@
  * pltcl.c		- PostgreSQL support for Tcl as
  *				  procedural language (PL)
  *
- *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.128 2009/06/11 14:49:14 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.134 2010/07/06 19:19:01 momjian Exp $
  *
  **********************************************************************/
 
@@ -539,7 +539,7 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 	buflen = strlen(pmrelname) + 100;
 	buf = (char *) palloc(buflen);
 	snprintf(buf, buflen,
-			 "select modsrc from %s where modname = 'unknown' order by modseq",
+		   "select modsrc from %s where modname = 'unknown' order by modseq",
 			 pmrelname);
 
 	spi_rc = SPI_execute(buf, false, 0);
@@ -1090,9 +1090,8 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted)
 			 * Lookup the attribute type in the syscache
 			 * for the input function
 			 ************************************************************/
-			typeTup = SearchSysCache(TYPEOID,
-					  ObjectIdGetDatum(tupdesc->attrs[attnum - 1]->atttypid),
-									 0, 0, 0);
+			typeTup = SearchSysCache1(TYPEOID,
+					 ObjectIdGetDatum(tupdesc->attrs[attnum - 1]->atttypid));
 			if (!HeapTupleIsValid(typeTup))
 				elog(ERROR, "cache lookup failed for type %u",
 					 tupdesc->attrs[attnum - 1]->atttypid);
@@ -1183,9 +1182,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 	pltcl_proc_desc *prodesc;
 
 	/* We'll need the pg_proc tuple in any case... */
-	procTup = SearchSysCache(PROCOID,
-							 ObjectIdGetDatum(fn_oid),
-							 0, 0, 0);
+	procTup = SearchSysCache1(PROCOID, ObjectIdGetDatum(fn_oid));
 	if (!HeapTupleIsValid(procTup))
 		elog(ERROR, "cache lookup failed for function %u", fn_oid);
 	procStruct = (Form_pg_proc) GETSTRUCT(procTup);
@@ -1293,9 +1290,9 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 		 ************************************************************/
 		if (!is_trigger)
 		{
-			typeTup = SearchSysCache(TYPEOID,
-									 ObjectIdGetDatum(procStruct->prorettype),
-									 0, 0, 0);
+			typeTup =
+				SearchSysCache1(TYPEOID,
+								ObjectIdGetDatum(procStruct->prorettype));
 			if (!HeapTupleIsValid(typeTup))
 			{
 				free(prodesc->user_proname);
@@ -1358,9 +1355,8 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 			proc_internal_args[0] = '\0';
 			for (i = 0; i < prodesc->nargs; i++)
 			{
-				typeTup = SearchSysCache(TYPEOID,
-						 ObjectIdGetDatum(procStruct->proargtypes.values[i]),
-										 0, 0, 0);
+				typeTup = SearchSysCache1(TYPEOID,
+						ObjectIdGetDatum(procStruct->proargtypes.values[i]));
 				if (!HeapTupleIsValid(typeTup))
 				{
 					free(prodesc->user_proname);
@@ -2076,7 +2072,7 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 	 * Allocate the new querydesc structure
 	 ************************************************************/
 	qdesc = (pltcl_query_desc *) malloc(sizeof(pltcl_query_desc));
-	snprintf(qdesc->qname, sizeof(qdesc->qname), "%lx", (long) qdesc);
+	snprintf(qdesc->qname, sizeof(qdesc->qname), "%p", qdesc);
 	qdesc->nargs = nargs;
 	qdesc->argtypes = (Oid *) malloc(nargs * sizeof(Oid));
 	qdesc->arginfuncs = (FmgrInfo *) malloc(nargs * sizeof(FmgrInfo));
@@ -2458,9 +2454,8 @@ pltcl_set_tuple_values(Tcl_Interp *interp, CONST84 char *arrayname,
 		 * Lookup the attribute type in the syscache
 		 * for the output function
 		 ************************************************************/
-		typeTup = SearchSysCache(TYPEOID,
-							   ObjectIdGetDatum(tupdesc->attrs[i]->atttypid),
-								 0, 0, 0);
+		typeTup = SearchSysCache1(TYPEOID,
+							  ObjectIdGetDatum(tupdesc->attrs[i]->atttypid));
 		if (!HeapTupleIsValid(typeTup))
 			elog(ERROR, "cache lookup failed for type %u",
 				 tupdesc->attrs[i]->atttypid);
@@ -2527,9 +2522,8 @@ pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc,
 		 * Lookup the attribute type in the syscache
 		 * for the output function
 		 ************************************************************/
-		typeTup = SearchSysCache(TYPEOID,
-							   ObjectIdGetDatum(tupdesc->attrs[i]->atttypid),
-								 0, 0, 0);
+		typeTup = SearchSysCache1(TYPEOID,
+							  ObjectIdGetDatum(tupdesc->attrs[i]->atttypid));
 		if (!HeapTupleIsValid(typeTup))
 			elog(ERROR, "cache lookup failed for type %u",
 				 tupdesc->attrs[i]->atttypid);

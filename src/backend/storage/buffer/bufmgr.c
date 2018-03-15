@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/bufmgr.c,v 1.252 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/buffer/bufmgr.c,v 1.256 2010/02/26 02:00:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "catalog/catalog.h"
+#include "executor/instrument.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
 #include "pgstat.h"
@@ -46,13 +47,12 @@
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "storage/smgr.h"
+#include "storage/standby.h"
 #include "utils/rel.h"
 #include "utils/resowner.h"
 #include "utils/faultinjector.h"
 #include "pgstat.h"
 #include "access/heapam.h"
-#include "cdb/cdbpersistentrelation.h"
-#include "cdb/cdbfilerepprimary.h"
 
 #include "access/aosegfiles.h"
 #include "access/aocssegfiles.h"
@@ -178,23 +178,6 @@ static inline bool ConditionalAcquireContentLock( volatile BufferDesc *buf, LWLo
         return true;
     }
     else return false;
-}
-
-/*
- * Read Buffer for pages to be Resynced
- */
-Buffer
-ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum)
-{
-	bool		isHit;
-
-	return ReadBuffer_common(reln,
-							 false, /* isLocalBuf */
-							 MAIN_FORKNUM,
-							 blockNum,
-							 RBM_NORMAL, /* mode */
-							 NULL,	/* strategy */
-							 &isHit);
 }
 
 /*
@@ -371,8 +354,6 @@ ReadBuffer_common(SMgrRelation smgr, bool isLocalBuf, ForkNumber forkNum,
 				  BlockNumber blockNum, ReadBufferMode mode,
 				  BufferAccessStrategy strategy, bool *hit)
 {
-		//MIRROREDLOCK_BUFMGR_DECLARE;
-
 	volatile BufferDesc *bufHdr;
 	Block		bufBlock;
 	bool		found;
@@ -382,8 +363,6 @@ ReadBuffer_common(SMgrRelation smgr, bool isLocalBuf, ForkNumber forkNum,
 
 	Assert(smgr != NULL);
 
-	if (forkNum == MAIN_FORKNUM)
-		MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 	/* Make sure we will have room to remember the buffer pin */
 	ResourceOwnerEnlargeBuffers(CurrentResourceOwner);
 
@@ -401,29 +380,26 @@ ReadBuffer_common(SMgrRelation smgr, bool isLocalBuf, ForkNumber forkNum,
 		blockNum = smgrnblocks(smgr, forkNum);
 
 //	pgstat_count_buffer_read(smgr);
-	
-	// -------- MirroredLock ----------
-	// UNDONE: Unfortunately, I think we write temp relations to the mirror...
-	//MIRROREDLOCK_BUFMGR_LOCK;
-	
+
 	if (isLocalBuf)
 	{
-		ReadLocalBufferCount++;
 		bufHdr = LocalBufferAlloc(smgr, forkNum, blockNum, &found);
 		if (found)
-			LocalBufferHitCount++;
+			pgBufferUsage.local_blks_hit++;
+		else
+			pgBufferUsage.local_blks_read++;
 	}
 	else
 	{
-		ReadBufferCount++;
-
 		/*
 		 * lookup the buffer.  IO_IN_PROGRESS is set if the requested block is
 		 * not currently in memory.
 		 */
 		bufHdr = BufferAlloc(smgr, forkNum, blockNum, strategy, &found);
 		if (found)
-			BufferHitCount++;
+			pgBufferUsage.shared_blks_hit++;
+		else
+			pgBufferUsage.shared_blks_read++;
 	}
 
 	/* At this point we do NOT hold any locks. */
@@ -563,9 +539,6 @@ ReadBuffer_common(SMgrRelation smgr, bool isLocalBuf, ForkNumber forkNum,
 	done:
 	if (VacuumCostActive)
 		VacuumCostBalance += VacuumCostPageMiss;
-
-	//MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
 
 	TRACE_POSTGRESQL_BUFFER_READ_DONE(forkNum, blockNum,
 									  smgr->smgr_rnode.spcNode,
@@ -1102,8 +1075,6 @@ ReleaseAndReadBuffer(Buffer buffer,
 {
 	ForkNumber	forkNum = MAIN_FORKNUM;
 	volatile BufferDesc *bufHdr;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD_BUF(buffer);
 
 	if (BufferIsValid(buffer))
 	{
@@ -1721,13 +1692,8 @@ BgBufferSync(void)
 static int
 SyncOneBuffer(int buf_id, bool skip_recently_used)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-	
 	volatile BufferDesc *bufHdr = &BufferDescriptors[buf_id];
 	int			result = 0;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 	
 	/*
 	 * Check whether buffer needs writing.
@@ -1746,8 +1712,6 @@ SyncOneBuffer(int buf_id, bool skip_recently_used)
 	{
 		/* Caller told us not to write recently-used buffers */
 		UnlockBufHdr(bufHdr);
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
 		return result;
 	}
 
@@ -1755,9 +1719,6 @@ SyncOneBuffer(int buf_id, bool skip_recently_used)
 	{
 		/* It's clean, so nothing to do */
 		UnlockBufHdr(bufHdr);
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-
 		return result;
 	}
 
@@ -1773,60 +1734,9 @@ SyncOneBuffer(int buf_id, bool skip_recently_used)
 	ReleaseContentLock(bufHdr);
 	UnpinBuffer(bufHdr, true);
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	return result | BUF_WRITTEN;
 }
 
-
-/*
- * Return a palloc'd string containing buffer usage statistics.
- */
-char *
-ShowBufferUsage(void)
-{
-	StringInfoData str;
-	float		hitrate;
-	float		localhitrate;
-
-	initStringInfo(&str);
-
-	if (ReadBufferCount == 0)
-		hitrate = 0.0;
-	else
-		hitrate = (float) BufferHitCount *100.0 / ReadBufferCount;
-
-	if (ReadLocalBufferCount == 0)
-		localhitrate = 0.0;
-	else
-		localhitrate = (float) LocalBufferHitCount *100.0 / ReadLocalBufferCount;
-
-	appendStringInfo(&str,
-	"!\tShared blocks: %10ld read, %10ld written, buffer hit rate = %.2f%%\n",
-				ReadBufferCount - BufferHitCount, BufferFlushCount, hitrate);
-	appendStringInfo(&str,
-	"!\tLocal  blocks: %10ld read, %10ld written, buffer hit rate = %.2f%%\n",
-					 ReadLocalBufferCount - LocalBufferHitCount, LocalBufferFlushCount, localhitrate);
-	appendStringInfo(&str,
-					 "!\tDirect blocks: %10ld read, %10ld written\n",
-					 BufFileReadCount, BufFileWriteCount);
-
-	return str.data;
-}
-
-void
-ResetBufferUsage(void)
-{
-	BufferHitCount = 0;
-	ReadBufferCount = 0;
-	BufferFlushCount = 0;
-	LocalBufferHitCount = 0;
-	ReadLocalBufferCount = 0;
-	LocalBufferFlushCount = 0;
-	BufFileReadCount = 0;
-	BufFileWriteCount = 0;
-}
 
 /*
  *		AtEOXact_Buffers - clean up at end of transaction.
@@ -2110,7 +2020,7 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 			  bufToWrite,
 			  false);
 
-	BufferFlushCount++;
+	pgBufferUsage.shared_blks_written++;
 
 	/*
 	 * Mark the buffer as clean (unless BM_JUST_DIRTIED has become set) and
@@ -2257,7 +2167,7 @@ DropRelFileNodeBuffers(RelFileNode rnode, ForkNumber forkNum, bool istemp,
  * --------------------------------------------------------------------
  */
 void
-DropDatabaseBuffers(Oid tblspc, Oid dbid)
+DropDatabaseBuffers(Oid dbid)
 {
 	int			i;
 	volatile BufferDesc *bufHdr;
@@ -2271,13 +2181,8 @@ DropDatabaseBuffers(Oid tblspc, Oid dbid)
 	{
 		bufHdr = &BufferDescriptors[i];
 		LockBufHdr(bufHdr);
-		if (!OidIsValid(tblspc) || bufHdr->tag.rnode.spcNode == tblspc)
-		{
-			if (bufHdr->tag.rnode.dbNode == dbid)
-				InvalidateBuffer(bufHdr);	/* releases spinlock */
-			else
-				UnlockBufHdr(bufHdr);
-		}
+		if (bufHdr->tag.rnode.dbNode == dbid)
+			InvalidateBuffer(bufHdr);	/* releases spinlock */
 		else
 			UnlockBufHdr(bufHdr);
 	}
@@ -2375,18 +2280,12 @@ FlushRelationBuffers(Relation rel)
 				Page					localpage;
 
 				localpage = (char *) LocalBufHdrGetBlock(bufHdr);
-
-				MIRROREDLOCK_BUFMGR_DECLARE;
 				
 				/* Setup error traceback support for ereport() */
 				errcontext.callback = buffer_write_error_callback;
 				errcontext.arg = (void *) bufHdr;
 				errcontext.previous = error_context_stack;
 				error_context_stack = &errcontext;
-
-				// -------- MirroredLock ----------
-				// UNDONE: Unfortunately, I think we write temp relations to the mirror...
-				MIRROREDLOCK_BUFMGR_LOCK;
 
 				PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 				
@@ -2395,9 +2294,6 @@ FlushRelationBuffers(Relation rel)
 						  bufHdr->tag.blockNum,
 						  localpage,
 						  rel->rd_istemp);
-
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
 
 				bufHdr->flags &= ~(BM_DIRTY | BM_JUST_DIRTIED);
 
@@ -2414,11 +2310,6 @@ FlushRelationBuffers(Relation rel)
 
 	for (i = 0; i < NBuffers; i++)
 	{
-		MIRROREDLOCK_BUFMGR_DECLARE;
-				
-		// -------- MirroredLock ----------
-		MIRROREDLOCK_BUFMGR_LOCK;
-		
 		bufHdr = &BufferDescriptors[i];
 		LockBufHdr(bufHdr);
 		if (RelFileNodeEquals(bufHdr->tag.rnode, rel->rd_node) &&
@@ -2432,10 +2323,6 @@ FlushRelationBuffers(Relation rel)
 		}
 		else
 			UnlockBufHdr(bufHdr);
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
 	}
 }
 
@@ -2519,8 +2406,6 @@ ReleaseBuffer(Buffer buffer)
 void
 UnlockReleaseBuffer(Buffer buffer)
 {
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD_BUF(buffer);
-
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 	ReleaseBuffer(buffer);
 }
@@ -2733,8 +2618,6 @@ LockBuffer(Buffer buffer, int mode)
 {
 	volatile BufferDesc *buf;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD_BUF(buffer);
-
 	Assert(BufferIsValid(buffer));
 	if (BufferIsLocal(buffer))
 		return;					/* local buffers need no lock */
@@ -2760,8 +2643,6 @@ bool
 ConditionalLockBuffer(Buffer buffer)
 {
 	volatile BufferDesc *buf;
-
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD_BUF(buffer);
 
 	Assert(BufferIsValid(buffer));
 	if (BufferIsLocal(buffer))
@@ -2837,11 +2718,46 @@ LockBufferForCleanup(Buffer buffer)
 		PinCountWaitBuf = bufHdr;
 		UnlockBufHdr(bufHdr);
 		LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
+
 		/* Wait to be signaled by UnpinBuffer() */
-		ProcWaitForSignal();
+		if (InHotStandby)
+		{
+			/* Share the bufid that Startup process waits on */
+			SetStartupBufferPinWaitBufId(buffer - 1);
+			/* Set alarm and then wait to be signaled by UnpinBuffer() */
+			ResolveRecoveryConflictWithBufferPin();
+			SetStartupBufferPinWaitBufId(-1);
+		}
+		else
+			ProcWaitForSignal();
+
 		PinCountWaitBuf = NULL;
 		/* Loop back and try again */
 	}
+}
+
+/*
+ * Check called from RecoveryConflictInterrupt handler when Startup
+ * process requests cancelation of all pin holders that are blocking it.
+ */
+bool
+HoldingBufferPinThatDelaysRecovery(void)
+{
+	int			bufid = GetStartupBufferPinWaitBufId();
+
+	/*
+	 * If we get woken slowly then it's possible that the Startup process was
+	 * already woken by other backends before we got here. Also possible that
+	 * we get here by multiple interrupts or interrupts at inappropriate
+	 * times, so make sure we do nothing if the bufid is not set.
+	 */
+	if (bufid < 0)
+		return false;
+
+	if (PrivateRefCount[bufid] > 0)
+		return true;
+
+	return false;
 }
 
 /*

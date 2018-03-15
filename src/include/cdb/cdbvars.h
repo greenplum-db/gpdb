@@ -239,21 +239,7 @@ extern bool Debug_print_slice_table;
 
 extern bool Debug_resource_group;
 
-/*
- * gp_backup_directIO
- *
- * when set to 'true' the dump with direct I\O is enabled
- */
-extern bool gp_backup_directIO;
-
-
-/*
- * gp_backup_directIO_readChunk
- *
- *  This parameter controls the readChunk that is used during directI\O backup
- *  The value of this parameter is in megabyte
- */
-extern int gp_backup_directIO_read_chunk_mb;
+extern bool Debug_burn_xids;
 
 /*
  * gp_external_enable_exec
@@ -311,11 +297,6 @@ extern int gp_safefswritesize;
  */
 extern bool Gp_write_shared_snapshot;
 
-/*
- * Request a pause to the fault-prober.
- */
-extern bool gp_fts_probe_pause;
-
 extern int gp_fts_transition_retries;
 extern int gp_fts_transition_timeout;
 
@@ -355,8 +336,6 @@ extern int32 gp_subtrans_warn_limit;
 
 extern bool assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source);
 
-extern char *gp_fault_action_string;	/* Use by guc.c as user defined fault
-										 * action */
 extern bool gp_set_read_only;
 
 extern const char *role_to_string(GpRoleValue role);
@@ -396,22 +375,21 @@ extern int	Gp_max_packet_size;	/* GUC var */
 /*
  * Support for multiple "types" of interconnect
  */
-
-#define INTERCONNECT_TYPE_TCP    (0)
-#define INTERCONNECT_TYPE_UDPIFC (1)
+typedef enum GpVars_Interconnect_Type
+{
+	INTERCONNECT_TYPE_TCP = 0,
+	INTERCONNECT_TYPE_UDPIFC,
+} GpVars_Interconnect_Type;
 
 extern int Gp_interconnect_type;
 
-extern const char *gpvars_assign_gp_interconnect_type(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-extern const char *gpvars_show_gp_interconnect_type(void);
-
-#define INTERCONNECT_FC_METHOD_CAPACITY (0)
-#define INTERCONNECT_FC_METHOD_LOSS     (2)
+typedef enum GpVars_Interconnect_Method
+{
+	INTERCONNECT_FC_METHOD_CAPACITY = 0,
+	INTERCONNECT_FC_METHOD_LOSS = 2,
+} GpVars_Interconnect_Method;
 
 extern int Gp_interconnect_fc_method;
-
-extern const char *gpvars_assign_gp_interconnect_fc_method(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-extern const char *gpvars_show_gp_interconnect_fc_method(void);
 
 /*
  * Parameter Gp_interconnect_queue_depth
@@ -476,7 +454,7 @@ extern bool gp_interconnect_full_crc;
 /*
  * Parameter gp_interconnect_log_stats
  *
- * Emit inteconnect statistics at log-level, instead of debug1
+ * Emit interconnect statistics at log-level, instead of debug1
  */
 extern bool gp_interconnect_log_stats;
 
@@ -551,7 +529,7 @@ extern bool gp_enable_direct_dispatch;
 #define GP_DIST_RANDOM_NAME "GP_DIST_RANDOM"
 
 /*
- * gp_log_gang (string)
+ * gp_log_gang
  *
  * Should creation, reallocation and cleanup of gangs of QE processes be logged?
  * "OFF"     -> only errors are logged
@@ -562,13 +540,10 @@ extern bool gp_enable_direct_dispatch;
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-extern GpVars_Verbosity    gp_log_gang;
-
-const char *gpvars_assign_gp_log_gang(const char *newval, bool doit, GucSource source);
-const char *gpvars_show_gp_log_gang(void);
+extern int gp_log_gang;
 
 /*
- * gp_log_fts (string)
+ * gp_log_fts
  *
  * What kind of messages should be logged by the fault-prober
  * "OFF"     -> only errors are logged
@@ -579,13 +554,10 @@ const char *gpvars_show_gp_log_gang(void);
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-extern GpVars_Verbosity    gp_log_fts;
-
-const char *gpvars_assign_gp_log_fts(const char *newval, bool doit, GucSource source);
-const char *gpvars_show_gp_log_fts(void);
+extern int gp_log_fts;
 
 /*
- * gp_log_interconnect (string)
+ * gp_log_interconnect
  *
  * Should connections between internal processes be logged?  (qDisp/qExec/etc)
  * "OFF"     -> connection errors are logged
@@ -596,10 +568,7 @@ const char *gpvars_show_gp_log_fts(void);
  * The messages that are enabled by the TERSE and VERBOSE settings are
  * written with a severity level of LOG.
  */
-extern GpVars_Verbosity    gp_log_interconnect;
-
-const char *gpvars_assign_gp_log_interconnect(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-const char *gpvars_show_gp_log_interconnect(void);
+extern int gp_log_interconnect;
 
 /* --------------------------------------------------------------------------------------------------
  * Greenplum Optimizer GUCs
@@ -839,14 +808,6 @@ extern int gp_segworker_relative_priority;
 /*  Max size of dispatched plans; 0 if no limit */
 extern int gp_max_plan_size;
 
-/* The maximum number of times on average that the hybrid hashed aggregation
- * algorithm will plan to spill an input row to disk before including it in
- * an aggregation.  Increasing this parameter will cause the planner to choose
- * hybrid hashed aggregation at lower settings of work_mem than it otherwise
- * would.
- */
-extern double gp_hashagg_rewrite_limit;
-
 /* If we use two stage hashagg, we can stream the bottom half */
 extern bool gp_hashagg_streambottom;
 
@@ -877,12 +838,13 @@ extern bool gpvars_assign_gp_enable_gpperfmon(bool newval, bool doit, GucSource 
 extern bool gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source);
 extern bool gp_enable_gpperfmon;
 extern int gp_gpperfmon_send_interval;
+extern bool gp_enable_query_metrics;
+extern int gp_instrument_shmem_size;
 extern bool force_bitmap_table_scan;
 
 extern bool dml_ignore_target_partition_check;
 
-/*gpmon alert level*/
-/* control log alert level used by gpperfmon */
+/* gpmon alert level, control log alert level used by gpperfmon */
 typedef enum 
 {
 	GPPERFMON_LOG_ALERT_LEVEL_NONE,
@@ -891,11 +853,7 @@ typedef enum
 	GPPERFMON_LOG_ALERT_LEVEL_FATAL,
 	GPPERFMON_LOG_ALERT_LEVEL_PANIC
 } GpperfmonLogAlertLevel;
-extern GpperfmonLogAlertLevel gpperfmon_log_alert_level;
-extern const char *gpperfmon_log_alert_level_to_string(GpperfmonLogAlertLevel level);
-extern GpperfmonLogAlertLevel gpperfmon_log_alert_level_from_string(const char *level_string);
-extern const char *gpvars_assign_gp_gpperfmon_log_alert_level(const char *newval, bool doit, GucSource source);
-extern const char *gpvars_show_gp_gpperfmon_log_alert_level(void);
+extern int gpperfmon_log_alert_level;
 
 
 extern int gp_workfile_compress_algorithm;
@@ -905,7 +863,6 @@ extern double gp_workfile_limit_per_query;
 extern int gp_workfile_limit_files_per_query;
 extern int gp_workfile_caching_loglevel;
 extern int gp_sessionstate_loglevel;
-extern bool gp_workfile_faultinject;
 extern int gp_workfile_bytes_to_checksum;
 /* The type of work files that HashJoin should use */
 extern int gp_workfile_type_hashjoin;
@@ -914,24 +871,24 @@ extern int gp_workfile_type_hashjoin;
 extern bool gp_mapreduce_define;
 extern bool coredump_on_memerror;
 
-/* Autostats feature for MPP-4082. */
+/*
+ * Autostats feature, whether or not to to automatically run ANALYZE after 
+ * insert/delete/update/ctas or after ctas/copy/insert in case the target
+ * table has no statistics
+ */
 typedef enum
 {
-	GP_AUTOSTATS_NONE = 0,		/* Autostats is switched off */
-	GP_AUTOSTATS_ON_CHANGE,		/* Autostats is enabled on change (insert/delete/update/ctas) */
-	GP_AUTOSTATS_ON_NO_STATS,		/* Autostats is enabled on ctas or copy or insert if no stats are present */
+	GP_AUTOSTATS_NONE = 0,			/* Autostats is switched off */
+	GP_AUTOSTATS_ON_CHANGE,			/* Autostats is enabled on change
+									 * (insert/delete/update/ctas) */
+	GP_AUTOSTATS_ON_NO_STATS,		/* Autostats is enabled on ctas or copy or
+									 * insert if no stats are present */
 } GpAutoStatsModeValue;
-extern GpAutoStatsModeValue gp_autostats_mode;
-extern char                *gp_autostats_mode_string;
-extern GpAutoStatsModeValue gp_autostats_mode_in_functions;
-extern char                *gp_autostats_mode_in_functions_string;
-extern int                  gp_autostats_on_change_threshold;
-extern bool					log_autostats;
-/* hook functions to set gp_autostats_mode and gp_autostats_mode_in_functions */
-extern const char *gpvars_assign_gp_autostats_mode(const char *newval, bool doit, GucSource source);
-extern const char *gpvars_show_gp_autostats_mode(void);
-extern const char *gpvars_assign_gp_autostats_mode_in_functions(const char *newval, bool doit, GucSource source);
-extern const char *gpvars_show_gp_autostats_mode_in_functions(void);
+
+extern int	gp_autostats_mode;
+extern int	gp_autostats_mode_in_functions;
+extern int	gp_autostats_on_change_threshold;
+extern bool	log_autostats;
 
 
 /* --------------------------------------------------------------------------------------------------
@@ -993,7 +950,6 @@ typedef struct GpId
  */
 extern GpId GpIdentity;
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
-extern int GpStandbyDbid;
 
 
 /* Stores the listener port that this process uses to listen for incoming
@@ -1027,15 +983,15 @@ extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, b
 
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 
-extern const char *gpvars_assign_gp_resgroup_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
-
-extern const char *gpvars_show_gp_resgroup_memory_policy(void);
-
 extern bool gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern void increment_command_count(void);
 
 /* default to RANDOM distribution for CREATE TABLE without DISTRIBUTED BY */
 extern bool gp_create_table_random_default_distribution;
+
+/* Functions in guc_gp.c to lookup values in enum GUCs */
+extern GpperfmonLogAlertLevel lookup_loglevel_by_name(const char *name);
+extern const char * lookup_autostats_mode_by_value(GpAutoStatsModeValue val);
 
 #endif   /* CDBVARS_H */

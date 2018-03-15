@@ -1,0 +1,69 @@
+-- money check
+-- In PostgreSQL, this test uses WITH OIDS, but in GPDB, OIDs are not unique
+-- across segments, so use a 'serial' column instead.
+CREATE TABLE moneytmp (a money, oid serial);
+NOTICE:  CREATE TABLE will create implicit sequence "moneytmp_oid_seq" for serial column "moneytmp.oid"
+\copy moneytmp (a) from 'data/cash.data'
+SET enable_seqscan=on;
+SELECT count(*) FROM moneytmp WHERE a <  '22649.64';
+ count 
+-------
+   289
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a <= '22649.64';
+ count 
+-------
+   290
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a  = '22649.64';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a >= '22649.64';
+ count 
+-------
+   254
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a >  '22649.64';
+ count 
+-------
+   253
+(1 row)
+
+CREATE INDEX moneyidx ON moneytmp USING gist ( a );
+SET enable_seqscan=off;
+SELECT count(*) FROM moneytmp WHERE a <  '22649.64'::money;
+ count 
+-------
+   289
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a <= '22649.64'::money;
+ count 
+-------
+   290
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a  = '22649.64'::money;
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a >= '22649.64'::money;
+ count 
+-------
+   254
+(1 row)
+
+SELECT count(*) FROM moneytmp WHERE a >  '22649.64'::money;
+ count 
+-------
+   253
+(1 row)
+

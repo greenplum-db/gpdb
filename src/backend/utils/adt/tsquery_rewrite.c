@@ -3,11 +3,11 @@
  * tsquery_rewrite.c
  *	  Utilities for reconstructing tsquery
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.14 2009/01/07 13:44:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.17 2010/01/02 16:57:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,7 +57,7 @@ findeq(QTNode *node, QTNode *ex, QTNode *subs, bool *isfind)
 
 	if (node->valnode->type == QI_OPR)
 	{
-		if (node->valnode->operator.oper != ex->valnode->operator.oper)
+		if (node->valnode->qoperator.oper != ex->valnode->qoperator.oper)
 			return node;
 
 		if (node->nchild == ex->nchild)
@@ -154,7 +154,7 @@ findeq(QTNode *node, QTNode *ex, QTNode *subs, bool *isfind)
 	{
 		Assert(node->valnode->type == QI_VAL);
 
-		if (node->valnode->operand.valcrc != ex->valnode->operand.valcrc)
+		if (node->valnode->qoperand.valcrc != ex->valnode->qoperand.valcrc)
 			return node;
 		else if (QTNEq(node, ex))
 		{
@@ -222,7 +222,7 @@ dropvoidsubtree(QTNode *root)
 			QTNFree(root);
 			root = NULL;
 		}
-		else if (root->nchild == 1 && root->valnode->operator.oper != OP_NOT)
+		else if (root->nchild == 1 && root->valnode->qoperator.oper != OP_NOT)
 		{
 			QTNode	   *nroot = root->child[0];
 

@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.63 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.69 2010/02/26 02:01:29 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +22,7 @@
 #include "nodes/bitmapset.h"
 #include "nodes/pg_list.h"
 #include "catalog/pg_class.h"
+
 
 typedef struct RelationData *Relation;
 
@@ -48,6 +49,10 @@ extern Oid	RelationGetOidIndex(Relation relation);
 extern List *RelationGetIndexExpressions(Relation relation);
 extern List *RelationGetIndexPredicate(Relation relation);
 extern Bitmapset *RelationGetIndexAttrBitmap(Relation relation);
+extern void RelationGetExclusionInfo(Relation indexRelation,
+						 Oid **operators,
+						 Oid **procs,
+						 uint16 **strategies);
 
 extern void RelationSetIndexList(Relation relation,
 					 List *indexIds, Oid oidIndex);
@@ -60,7 +65,7 @@ extern void RelationInitIndexAccessInfo(Relation relation);
 extern void RelationCacheInitialize(void);
 extern void RelationCacheInitializePhase2(void);
 extern void RelationCacheInitializePhase3(void);
-	
+
 /*
  * Routine to create a relcache entry for an about-to-be-created relation
  */
@@ -70,7 +75,14 @@ extern Relation RelationBuildLocalRelation(const char *relname,
 						   Oid relid,
 						   Oid reltablespace,
 			               char relkind,            /*CDB*/
-						   bool shared_relation);
+						   bool shared_relation,
+						   bool mapped_relation);
+
+/*
+ * Routine to manage assignment of new relfilenode to a relation
+ */
+extern void RelationSetNewRelfilenode(Relation relation,
+						  TransactionId freezeXid);
 
 /*
  * Routines for flushing/rebuilding relcache entries in various scenarios
@@ -81,14 +93,14 @@ extern void RelationCacheInvalidateEntry(Oid relationId);
 
 extern void RelationCacheInvalidate(void);
 
+extern void RelationCloseSmgrByOid(Oid relationId);
+
 extern void AtEOXact_RelationCache(bool isCommit);
 extern void AtEOSubXact_RelationCache(bool isCommit, SubTransactionId mySubid,
 						  SubTransactionId parentSubid);
 
-extern void RelationCacheMarkNewRelfilenode(Relation rel);
-
 /*
- * Routines to help manage rebuilding of relcache init file
+ * Routines to help manage rebuilding of relcache init files
  */
 extern bool RelationIdIsInInitFile(Oid relationId);
 extern void RelationCacheInitFilePreInvalidate(void);
@@ -106,6 +118,8 @@ extern void IndexSupportInitialize(oidvector *indclass,
 
 /* should be used only by relcache.c and catcache.c */
 extern bool criticalRelcachesBuilt;
+
+/* should be used only by relcache.c and postinit.c */
 extern bool criticalSharedRelcachesBuilt;
 
 #endif   /* RELCACHE_H */

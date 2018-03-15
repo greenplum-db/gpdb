@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.64 2009/01/12 05:10:45 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.68 2010/02/26 02:01:27 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -64,18 +64,11 @@ extern int	max_files_per_process;
 /* Operations on virtual Files --- equivalent to Unix kernel file ops */
 extern File PathNameOpenFile(FileName fileName, int fileFlags, int fileMode);
 
-File
-OpenTemporaryFile(const char   *fileName,
-                  bool          makenameunique,
-                  bool          create,
-                  bool          delOnClose,
-                  bool          closeAtEOXact);
-
-File
-OpenNamedFile(const char   *fileName,
-                  bool          create,
-                  bool          delOnClose,
-                  bool          closeAtEOXact);
+extern File OpenNamedTemporaryFile(const char *fileName,
+								   bool create,
+								   bool delOnClose,
+								   bool interXact);
+extern File OpenTemporaryFile(bool interXact, const char *filePrefix);
 
 extern void FileClose(File file);
 extern int	FilePrefetch(File file, off_t offset, int amount);
@@ -85,6 +78,7 @@ extern int	FileSync(File file);
 extern int64 FileSeek(File file, int64 offset, int whence);
 extern int64 FileNonVirtualCurSeek(File file);
 extern int	FileTruncate(File file, int64 offset);
+extern char *FilePathName(File file);
 extern int64 FileDiskSize(File file);
 
 /* Operations that allow use of regular stdio --- USE WITH CAUTION */
@@ -114,18 +108,19 @@ extern void AtEOXact_Files(void);
 extern void AtEOSubXact_Files(bool isCommit, SubTransactionId mySubid,
 				  SubTransactionId parentSubid);
 extern void RemovePgTempFiles(void);
-extern void SetDeleteOnExit(File file);
 
 extern int	pg_fsync(int fd);
 extern int	pg_fsync_no_writethrough(int fd);
 extern int	pg_fsync_writethrough(int fd);
 extern int	pg_fdatasync(int fd);
+extern int	pg_flush_data(int fd, off_t offset, off_t amount);
+
 extern int gp_retry_close(int fd);
 
 /* Filename components for OpenTemporaryFile */
 #define PG_TEMP_FILES_DIR "pgsql_tmp"
 #define PG_TEMP_FILE_PREFIX "pgsql_tmp"
 
-extern size_t GetTempFilePrefix(char * buf, size_t buflen, const char * fileName);
+extern char *GetTempFilePath(const char *filename, bool createdir);
 
 #endif   /* FD_H */

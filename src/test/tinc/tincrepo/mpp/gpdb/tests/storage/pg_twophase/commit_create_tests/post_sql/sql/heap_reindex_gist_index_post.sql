@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_create_table_random_default_distribution=off;
--- end_ignore
 INSERT INTO cr_heap_reindex_table_gist_index (id, property) VALUES (6, '( (0,0), (6,6) )');
 \d cr_heap_reindex_table_gist_index
 SELECT COUNT(*) FROM cr_heap_reindex_table_gist_index;

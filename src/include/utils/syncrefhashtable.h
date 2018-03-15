@@ -18,7 +18,6 @@
 #ifndef SYNCREFHASHTABLE_H_
 #define SYNCREFHASHTABLE_H_
 
-#include "postgres.h"
 #include "utils/hsearch.h"
 #include "storage/lwlock.h"
 

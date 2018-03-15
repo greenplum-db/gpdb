@@ -23,7 +23,7 @@
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resqueue.h"
-#include "catalog/pg_tablespace.h"
+#include "catalog/pg_resqueuecapability.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
@@ -44,15 +44,16 @@
 #include "utils/memutils.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
+#include "utils/metrics_utils.h"
+#include "utils/tqual.h"
 
 /*
  * GUC variables.
  */
-char                		*gp_resqueue_memory_policy_str = NULL;
-ResManagerMemoryPolicy     	gp_resqueue_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
-bool						gp_log_resqueue_memory = false;
-int							gp_resqueue_memory_policy_auto_fixed_mem;
-bool						gp_resqueue_print_operator_memory_limits = false;
+int 	gp_resqueue_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
+bool	gp_log_resqueue_memory = false;
+int		gp_resqueue_memory_policy_auto_fixed_mem;
+bool	gp_resqueue_print_operator_memory_limits = false;
 
 
 int		MaxResourceQueues;						/* Max # of queues. */
@@ -71,7 +72,7 @@ static uint32	portalId = 0;		/* id of portal, for tracking cursors. */
 static int32	numHoldPortals = 0;	/* # of holdable cursors tracked. */
 
 /*
- * ResSchedulerShmemSize -- estimate size the schedular structures will need in
+ * ResSchedulerShmemSize -- estimate size the scheduler structures will need in
  *	shared memory.
  *
  */
@@ -118,7 +119,7 @@ ResPortalIncrementShmemSize(void)
 
 
 /*
- * InitResScheduler -- initialize the schedular queues hash in shared memory.
+ * InitResScheduler -- initialize the scheduler queues hash in shared memory.
  *
  * The queuek hash table has no data in it as yet (InitResQueues cannot be 
  * called until catalog access is available.
@@ -293,7 +294,7 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 
 	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
 	
-	/* If the new queue pointer is NULL, then we are out of queueus. */
+	/* If the new queue pointer is NULL, then we are out of queues. */
 	if (ResScheduler->num_queues >= MaxResourceQueues)
 		return false;
 
@@ -304,7 +305,7 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	queue = ResQueueHashNew(queueid);
 	Assert(queue != NULL);
 	
-	/* Set queue oid and offset in the schedular array */
+	/* Set queue oid and offset in the scheduler array */
 	queue->queueid = queueid;
 
 	/* Set the number of limits 0 initially. */
@@ -705,6 +706,10 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 
 				/* If we had acquired the resource queue lock, release it and clean up */	
 				ResLockRelease(&tag, portal->portalId);
+			
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook)
+					(*query_info_collect_hook)(METRICS_QUERY_ERROR, qDesc);
 
 				/*
 				 * Perfmon related stuff: clean up if we got cancelled

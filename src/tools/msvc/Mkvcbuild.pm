@@ -3,7 +3,7 @@ package Mkvcbuild;
 #
 # Package that generates build files for msvc build
 #
-# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.40 2009/06/05 18:29:56 adunstan Exp $
+# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.59 2010/07/02 23:25:27 adunstan Exp $
 #
 use Carp;
 use Win32;
@@ -28,15 +28,17 @@ my $libpq;
 
 my $contrib_defines = {'refint' => 'REFINT_VERBOSE'};
 # for GPDB, I've added xlogdump
-my @contrib_uselibpq = ('dblink', 'oid2name', 'pgbench', 'vacuumlo', 'xlogdump');
-my @contrib_uselibpgport = ('oid2name', 'pgbench', 'pg_standby', 'vacuumlo', 'xlogdump');
+my @contrib_uselibpq = ('dblink', 'oid2name', 'pgbench', 'pg_upgrade', 
+						'vacuumlo', 'xlogdump');
+my @contrib_uselibpgport = ('oid2name', 'pgbench', 'pg_standby', 
+							'pg_archivecleanup', 'pg_upgrade', 'vacuumlo', 'xlogdump');
 my $contrib_extralibs = {'pgbench' => ['wsock32.lib']};
 my $contrib_extraincludes = {'tsearch2' => ['contrib/tsearch2'], 'dblink' => ['src/backend']};
 my $contrib_extrasource = {
     'cube' => ['cubescan.l','cubeparse.y'],
     'seg' => ['segscan.l','segparse.y']
 };
-my @contrib_excludes = ('pgcrypto','intagg','uuid-ossp','bufferedtest', 'varblocktest', 'hstore', 'gp_filedump', 'tsearch2', 'dblink', 'xlogdump', 'changetrackingdump','gp_sparse_vector','xml2','adminpack');
+my @contrib_excludes = ('pgcrypto','intagg','uuid-ossp', 'hstore', 'gp_filedump', 'tsearch2', 'dblink', 'xlogdump', 'gp_sparse_vector','xml2','adminpack');
 
 sub mkvcbuild
 {
@@ -49,8 +51,8 @@ sub mkvcbuild
 
     our @pgportfiles = qw(
       chklocale.c crypt.c fseeko.c getrusage.c inet_aton.c random.c srandom.c
-      getaddrinfo.c gettimeofday.c kill.c open.c rand.c
-      snprintf.c strlcat.c strlcpy.c copydir.c dirmod.c exec.c noblock.c path.c pipe.c
+      getaddrinfo.c gettimeofday.c kill.c open.c erand48.c
+      snprintf.c strlcat.c strlcpy.c dirmod.c exec.c noblock.c path.c pipe.c
       pgsleep.c pgstrcasecmp.c qsort.c qsort_arg.c sprompt.c thread.c
       getopt.c getopt_long.c dirent.c rint.c win32env.c win32error.c glob.c);
 
@@ -84,14 +86,17 @@ sub mkvcbuild
     $postgres->FullExportDLL('postgres.lib');
 
     my $snowball = $solution->AddProject('dict_snowball','dll','','src\backend\snowball');
-    $snowball->RelocateFiles('src\backend\snowball\libstemmer', sub {
-        return shift !~ /dict_snowball.c$/;
-    });
+    $snowball->RelocateFiles(
+        'src\backend\snowball\libstemmer',
+        sub {
+            return shift !~ /dict_snowball.c$/;
+        }
+    );
     $snowball->AddIncludeDir('src\include\snowball');
     $snowball->AddReference($postgres);
 
     my $plpgsql = $solution->AddProject('plpgsql','dll','PLs','src\pl\plpgsql\src');
-    $plpgsql->AddFiles('src\pl\plpgsql\src','scan.l','gram.y');
+    $plpgsql->AddFiles('src\pl\plpgsql\src', 'gram.y');
     $plpgsql->AddReference($postgres);
     $plpgsql->AddLibrary('wsock32.lib');
     $plpgsql->AddLibrary('ws2_32.lib');
@@ -108,24 +113,23 @@ sub mkvcbuild
             if (Solution::IsNewer("$plperlsrc$xsc","$plperlsrc$xs"))
             {
                 print "Building $plperlsrc$xsc...\n";
-            system( $solution->{options}->{perl}
-                  . '/bin/perl '
-                  . $solution->{options}->{perl}
-                  . '/lib/ExtUtils/xsubpp -typemap '
-                  . $solution->{options}->{perl}
+                system( $solution->{options}->{perl}
+                      . '/bin/perl '
+                      . $solution->{options}->{perl}
+                      . '/lib/ExtUtils/xsubpp -typemap '
+                      . $solution->{options}->{perl}
                       . '/lib/ExtUtils/typemap '
                       . "$plperlsrc$xs "
                       . ">$plperlsrc$xsc");
                 if ((!(-f "$plperlsrc$xsc")) || -z "$plperlsrc$xsc")
-            {
+                {
                     unlink("$plperlsrc$xsc"); # if zero size
                     die "Failed to create $xsc.\n";
                 }
             }
         }
         if (  Solution::IsNewer('src\pl\plperl\perlchunks.h','src\pl\plperl\plc_perlboot.pl')
-            ||Solution::IsNewer('src\pl\plperl\perlchunks.h','src\pl\plperl\plc_safe_bad.pl')
-            ||Solution::IsNewer('src\pl\plperl\perlchunks.h','src\pl\plperl\plc_safe_ok.pl'))
+            ||Solution::IsNewer('src\pl\plperl\perlchunks.h','src\pl\plperl\plc_trusted.pl'))
         {
             print 'Building src\pl\plperl\perlchunks.h ...' . "\n";
             my $basedir = getcwd;
@@ -134,13 +138,29 @@ sub mkvcbuild
                   . '/bin/perl '
                   . 'text2macro.pl '
                   . '--strip="^(\#.*|\s*)$$" '
-                  . 'plc_perlboot.pl plc_safe_bad.pl plc_safe_ok.pl '
+                  . 'plc_perlboot.pl plc_trusted.pl '
                   .	'>perlchunks.h');
             chdir $basedir;
             if ((!(-f 'src\pl\plperl\perlchunks.h')) || -z 'src\pl\plperl\perlchunks.h')
             {
                 unlink('src\pl\plperl\perlchunks.h'); # if zero size
                 die 'Failed to create perlchunks.h' . "\n";
+            }
+        }
+        if (  Solution::IsNewer('src\pl\plperl\plperl_opmask.h','src\pl\plperl\plperl_opmask.pl'))
+        {
+            print 'Building src\pl\plperl\plperl_opmask.h ...' . "\n";
+            my $basedir = getcwd;
+            chdir 'src\pl\plperl';
+            system( $solution->{options}->{perl}
+                  . '/bin/perl '
+                  . 'plperl_opmask.pl '
+                  .	'plperl_opmask.h');
+            chdir $basedir;
+            if ((!(-f 'src\pl\plperl\plperl_opmask.h')) || -z 'src\pl\plperl\plperl_opmask.h')
+            {
+                unlink('src\pl\plperl\plperl_opmask.h'); # if zero size
+                die 'Failed to create plperl_opmask.h' . "\n";
             }
         }
         $plperl->AddReference($postgres);
@@ -150,10 +170,10 @@ sub mkvcbuild
         {
             $plperl->AddLibrary($perl_libs[0]);
         }
-		else
-		{
-			die "could not identify perl library version";
-		}
+        else
+        {
+            die "could not identify perl library version";
+        }
     }
 
     if ($solution->{options}->{python})
@@ -170,8 +190,7 @@ sub mkvcbuild
         chomp($pyver);
         close(P);
 
-        # Sometimes (always?) if python is not present, the execution
-        # appears to work, but gives no data...
+  # Sometimes (always?) if python is not present, the execution actually works, but gives no data...
         die "Failed to query python for version information\n"
           if (!(defined($pyprefix) && defined($pyver)));
 
@@ -198,7 +217,7 @@ sub mkvcbuild
 
     $libpq = $solution->AddProject('libpq','dll','interfaces','src\interfaces\libpq');
     $libpq->AddDefine('FRONTEND');
-	$libpq->AddDefine('UNSAFE_STAT_OK');
+    $libpq->AddDefine('UNSAFE_STAT_OK');
     $libpq->AddIncludeDir('src\port');
     $libpq->AddLibrary('wsock32.lib');
     $libpq->AddLibrary('secur32.lib');
@@ -207,6 +226,11 @@ sub mkvcbuild
     $libpq->UseDef('src\interfaces\libpq\libpqdll.def');
     $libpq->ReplaceFile('src\interfaces\libpq\libpqrc.c','src\interfaces\libpq\libpq.rc');
     $libpq->AddReference($libpgport);
+
+    my $libpqwalreceiver = $solution->AddProject('libpqwalreceiver', 'dll', '',
+        'src\backend\replication\libpqwalreceiver');
+    $libpqwalreceiver->AddIncludeDir('src\interfaces\libpq');
+    $libpqwalreceiver->AddReference($postgres,$libpq);
 
     my $pgtypes =
       $solution->AddProject('libpgtypes','dll','interfaces','src\interfaces\ecpg\pgtypeslib');
@@ -337,12 +361,12 @@ sub mkvcbuild
 
     if ($solution->{options}->{uuid})
     {
-       $contrib_extraincludes->{'uuid-ossp'} = [ $solution->{options}->{uuid} . '\include' ];
-       $contrib_extralibs->{'uuid-ossp'} = [ $solution->{options}->{uuid} . '\lib\uuid.lib' ];
+        $contrib_extraincludes->{'uuid-ossp'} = [ $solution->{options}->{uuid} . '\include' ];
+        $contrib_extralibs->{'uuid-ossp'} = [ $solution->{options}->{uuid} . '\lib\uuid.lib' ];
     }
-	 else
+    else
     {
-       push @contrib_excludes,'uuid-ossp';
+        push @contrib_excludes,'uuid-ossp';
     }
 
     # Pgcrypto makefile too complex to parse....
@@ -385,7 +409,7 @@ sub mkvcbuild
 
     $mf = Project::read_file('src\backend\utils\mb\conversion_procs\Makefile');
     $mf =~ s{\\s*[\r\n]+}{}mg;
-    $mf =~ m{DIRS\s*=\s*(.*)$}m || die 'Could not match in conversion makefile' . "\n";
+    $mf =~ m{SUBDIRS\s*=\s*(.*)$}m || die 'Could not match in conversion makefile' . "\n";
     foreach my $sub (split /\s+/,$1)
     {
         my $mf = Project::read_file('src\backend\utils\mb\conversion_procs\\' . $sub . '\Makefile');
@@ -528,10 +552,10 @@ sub AddContrib
 
         my $proj = $solution->AddProject($dn, 'dll', 'contrib');
         $mf =~ /^OBJS\s*=\s*(.*)$/gm || croak "Could not find objects in MODULE_big for $n\n";
-		my $objs = $1;
+        my $objs = $1;
         while ($objs =~ /\b([\w-]+\.o)\b/g)
         {
-			my $o = $1;
+            my $o = $1;
             $o =~ s/\.o$/.c/;
             $proj->AddFile('contrib\\' . $n . '\\' . $o);
         }
@@ -545,9 +569,9 @@ sub AddContrib
                 $mf2 =~ /^SUBOBJS\s*=\s*(.*)\s*$/gm
                   || croak "Could not find objects in MODULE_big for $n, subdir $d\n";
                 $objs = $1;
-				while ($objs =~ /\b([\w-]+\.o)\b/g)
-				{
-					my $o = $1;
+                while ($objs =~ /\b([\w-]+\.o)\b/g)
+                {
+                    my $o = $1;
                     $o =~ s/\.o$/.c/;
                     $proj->AddFile('contrib\\' . $n . '\\' . $d . '\\' . $o);
                 }
@@ -568,11 +592,12 @@ sub AddContrib
     elsif ($mf =~ m/^PROGRAM\s*=\s*(.*)\s*$/mg)
     {
         my $proj = $solution->AddProject($1, 'exe', 'contrib');
-        $mf =~ /^OBJS\s*=\s*(.*)$/gm || croak "Could not find objects in MODULE_big for $n\n";
+        $mf =~ s{\\\s*[\r\n]+}{}mg;
+        $mf =~ /^OBJS\s*=\s*(.*)$/gm || croak "Could not find objects in PROGRAM for $n\n";
         my $objs = $1;
         while ($objs =~ /\b([\w-]+\.o)\b/g)
         {
-			my $o = $1;
+            my $o = $1;
             $o =~ s/\.o$/.c/;
             $proj->AddFile('contrib\\' . $n . '\\' . $o);
         }

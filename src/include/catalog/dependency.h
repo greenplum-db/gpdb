@@ -4,10 +4,10 @@
  *	  Routines to support inter-object dependencies.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.40 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.45 2010/04/05 01:09:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -125,6 +125,7 @@ typedef enum ObjectClass
 	OCLASS_CONVERSION,			/* pg_conversion */
 	OCLASS_DEFAULT,				/* pg_attrdef */
 	OCLASS_LANGUAGE,			/* pg_language */
+	OCLASS_LARGEOBJECT,			/* pg_largeobject */
 	OCLASS_OPERATOR,			/* pg_operator */
 	OCLASS_OPCLASS,				/* pg_opclass */
 	OCLASS_OPFAMILY,			/* pg_opfamily */
@@ -143,10 +144,10 @@ typedef enum ObjectClass
 	OCLASS_FDW,					/* pg_foreign_data_wrapper */
 	OCLASS_FOREIGN_SERVER,		/* pg_foreign_server */
 	OCLASS_USER_MAPPING,		/* pg_user_mapping */
-	OCLASS_FILESPACE,           /* pg_filespace */
+	OCLASS_DEFACL,				/* pg_default_acl */
+	OCLASS_EXTENSION,			/* pg_extension */
 	OCLASS_EXTPROTOCOL,			/* pg_extprotocol */
 	OCLASS_COMPRESSION,			/* pg_compression */
-	OCLASS_EXTENSION,			/* pg_extension */
 	MAX_OCLASS					/* MUST BE LAST */
 } ObjectClass;
 
@@ -241,12 +242,14 @@ extern void changeDependencyOnOwner(Oid classId, Oid objectId,
 						Oid newOwnerId);
 
 extern void updateAclDependencies(Oid classId, Oid objectId, int32 objectSubId,
-					  Oid ownerId, bool isGrant,
+					  Oid ownerId,
 					  int noldmembers, Oid *oldmembers,
 					  int nnewmembers, Oid *newmembers);
 
 extern bool checkSharedDependencies(Oid classId, Oid objectId,
 						char **detail_msg, char **detail_log_msg);
+
+extern void shdepLockAndCheckObject(Oid classId, Oid objectId);
 
 extern void copyTemplateDependencies(Oid templateDbId, Oid newDbId);
 

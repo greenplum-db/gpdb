@@ -6,6 +6,10 @@
 
 CREATE TEMP TABLE foo (f1 serial, f2 text, f3 int default 42);
 
+-- GPDB: otherwise the UPDATE tests fail with:
+-- ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+ALTER TABLE foo SET DISTRIBUTED RANDOMLY;
+
 INSERT INTO foo (f2,f3)
   VALUES ('test', DEFAULT), ('More', 11), (upper('more'), 7+9)
   RETURNING *, f1+f3 AS sum;
@@ -144,6 +148,7 @@ CREATE TEMP VIEW joinview AS
 
 SELECT * FROM joinview;
 
+-- GPDB_90_MERGE_FIXME: This CREATE RULE fails in GPDB. Why?
 CREATE RULE joinview_u AS ON UPDATE TO joinview DO INSTEAD
   UPDATE foo SET f1 = new.f1, f3 = new.f3
     FROM joinme WHERE f2 = f2j AND f2 = old.f2

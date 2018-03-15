@@ -64,7 +64,7 @@ from optparse import OptionParser
 from pygresql import pgdb
 from datetime import datetime
 
-version = '1.11'
+version = '1.12'
 PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
@@ -221,9 +221,9 @@ def dump_stats(cur, oid_str, f_out):
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \
         '--\n' \
-        'DELETE FROM pg_statistic WHERE starelid={2} AND staattnum={3};\n' \
+        '{2}DELETE FROM pg_statistic WHERE starelid={3} AND staattnum={4};\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
-        '{4});\n\n'
+        '{5});\n\n'
     types = ['smallint',  # staattnum
              'real',
              'integer',
@@ -247,6 +247,7 @@ def dump_stats(cur, oid_str, f_out):
     for vals in result_iter(cur):
         starelid = "'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))
         rowVals = ["\t%s" % (starelid)]
+        schemaname = vals[1]
 
         if vals[3][0] == '_':
             rowTypes = types + [vals[3]] * 4
@@ -258,7 +259,14 @@ def dump_stats(cur, oid_str, f_out):
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = "E'%s'" % E(val)
             rowVals.append('\t{0}::{1}'.format(val, typ))
-        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), starelid, vals[5], ',\n'.join(rowVals)))
+
+        # For non-catalog tables we don't need to delete stats first
+        # stats need to be deleted only for catalog tables
+        linecomment = ''
+        if schemaname != 'pg_catalog':
+            linecomment = '-- ' # This will comment out the DELETE query
+
+        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), linecomment, starelid, vals[5], ',\n'.join(rowVals)))
 
 def main():
     parser = parse_cmd_line()

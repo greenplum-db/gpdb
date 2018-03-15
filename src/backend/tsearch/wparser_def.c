@@ -3,11 +3,11 @@
  * wparser_def.c
  *		Default text search parser
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser_def.c,v 1.23 2009/03/11 16:03:40 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser_def.c,v 1.32 2010/05/09 02:15:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -322,11 +322,57 @@ TParserInit(char *str, int len)
 	prs->state->state = TPS_Base;
 
 #ifdef WPARSER_TRACE
+	/*
+	 * Use of %.*s here is a bit risky since it can misbehave if the data
+	 * is not in what libc thinks is the prevailing encoding.  However,
+	 * since this is just a debugging aid, we choose to live with that.
+	 */
 	fprintf(stderr, "parsing \"%.*s\"\n", len, str);
 #endif
 
 	return prs;
 }
+
+/*
+ * As an alternative to a full TParserInit one can create a
+ * TParserCopy which basically is a regular TParser without a private
+ * copy of the string - instead it uses the one from another TParser.
+ * This is useful because at some places TParsers are created
+ * recursively and the repeated copying around of the strings can
+ * cause major inefficiency if the source string is long.
+ * The new parser starts parsing at the original's current position.
+ *
+ * Obviously one must not close the original TParser before the copy.
+ */
+static TParser *
+TParserCopyInit(const TParser *orig)
+{
+	TParser    *prs = (TParser *) palloc0(sizeof(TParser));
+
+	prs->charmaxlen = orig->charmaxlen;
+	prs->str = orig->str + orig->state->posbyte;
+	prs->lenstr = orig->lenstr - orig->state->posbyte;
+
+#ifdef USE_WIDE_UPPER_LOWER
+	prs->usewide = orig->usewide;
+
+	if (orig->pgwstr)
+		prs->pgwstr = orig->pgwstr + orig->state->poschar;
+	if (orig->wstr)
+		prs->wstr = orig->wstr + orig->state->poschar;
+#endif
+
+	prs->state = newTParserPosition(NULL);
+	prs->state->state = TPS_Base;
+
+#ifdef WPARSER_TRACE
+	/* See note above about %.*s */
+	fprintf(stderr, "parsing copy of \"%.*s\"\n", prs->lenstr, prs->str);
+#endif
+
+	return prs;
+}
+
 
 static void
 TParserClose(TParser *prs)
@@ -346,8 +392,32 @@ TParserClose(TParser *prs)
 		pfree(prs->pgwstr);
 #endif
 
+#ifdef WPARSER_TRACE
+	fprintf(stderr, "closing parser\n");
+#endif
 	pfree(prs);
 }
+
+/*
+ * Close a parser created with TParserCopyInit
+ */
+static void
+TParserCopyClose(TParser *prs)
+{
+	while (prs->state)
+	{
+		TParserPosition *ptr = prs->state->prev;
+
+		pfree(prs->state);
+		prs->state = ptr;
+	}
+
+#ifdef WPARSER_TRACE
+	fprintf(stderr, "closing parser copy\n");
+#endif
+	pfree(prs);
+}
+
 
 /*
  * Character-type support functions, equivalent to is* macros, but
@@ -519,6 +589,35 @@ p_isasclet(TParser *prs)
 	return (p_isascii(prs) && p_isalpha(prs)) ? 1 : 0;
 }
 
+static int
+p_isurlchar(TParser *prs)
+{
+	char		ch;
+
+	/* no non-ASCII need apply */
+	if (prs->state->charlen != 1)
+		return 0;
+	ch = *(prs->str + prs->state->posbyte);
+	/* no spaces or control characters */
+	if (ch <= 0x20 || ch >= 0x7F)
+		return 0;
+	/* reject characters disallowed by RFC 3986 */
+	switch (ch)
+	{
+		case '"':
+		case '<':
+		case '>':
+		case '\\':
+		case '^':
+		case '`':
+		case '{':
+		case '|':
+		case '}':
+			return 0;
+	}
+	return 1;
+}
+
 
 /* deliberately suppress unused-function complaints for the above */
 void		_make_compiler_happy(void);
@@ -617,7 +716,7 @@ p_isignore(TParser *prs)
 static int
 p_ishost(TParser *prs)
 {
-	TParser    *tmpprs = TParserInit(prs->str + prs->state->posbyte, prs->lenstr - prs->state->posbyte);
+	TParser	   *tmpprs = TParserCopyInit(prs);
 	int			res = 0;
 
 	tmpprs->wanthost = true;
@@ -631,7 +730,7 @@ p_ishost(TParser *prs)
 		prs->state->charlen = tmpprs->state->charlen;
 		res = 1;
 	}
-	TParserClose(tmpprs);
+	TParserCopyClose(tmpprs);
 
 	return res;
 }
@@ -639,13 +738,13 @@ p_ishost(TParser *prs)
 static int
 p_isURLPath(TParser *prs)
 {
-	TParser    *tmpprs = TParserInit(prs->str + prs->state->posbyte, prs->lenstr - prs->state->posbyte);
+	TParser	   *tmpprs = TParserCopyInit(prs);
 	int			res = 0;
 
 	tmpprs->state = newTParserPosition(tmpprs->state);
-	tmpprs->state->state = TPS_InFileFirst;
+	tmpprs->state->state = TPS_InURLPathFirst;
 
-	if (TParserGet(tmpprs) && (tmpprs->type == URLPATH || tmpprs->type == FILEPATH))
+	if (TParserGet(tmpprs) && tmpprs->type == URLPATH)
 	{
 		prs->state->posbyte += tmpprs->lenbytetoken;
 		prs->state->poschar += tmpprs->lenchartoken;
@@ -654,7 +753,7 @@ p_isURLPath(TParser *prs)
 		prs->state->charlen = tmpprs->state->charlen;
 		res = 1;
 	}
-	TParserClose(tmpprs);
+	TParserCopyClose(tmpprs);
 
 	return res;
 }
@@ -983,6 +1082,7 @@ static const TParserStateActionItem actionTPS_InAsciiWord[] = {
 	{p_iseqC, '.', A_PUSH, TPS_InFileNext, 0, NULL},
 	{p_iseqC, '-', A_PUSH, TPS_InHostFirstAN, 0, NULL},
 	{p_iseqC, '-', A_PUSH, TPS_InHyphenAsciiWordFirst, 0, NULL},
+	{p_iseqC, '_', A_PUSH, TPS_InHostFirstAN, 0, NULL},
 	{p_iseqC, '@', A_PUSH, TPS_InEmail, 0, NULL},
 	{p_iseqC, ':', A_PUSH, TPS_InProtocolFirst, 0, NULL},
 	{p_iseqC, '/', A_PUSH, TPS_InFileFirst, 0, NULL},
@@ -1311,6 +1411,7 @@ static const TParserStateActionItem actionTPS_InHostDomainSecond[] = {
 	{p_isasclet, 0, A_NEXT, TPS_InHostDomain, 0, NULL},
 	{p_isdigit, 0, A_PUSH, TPS_InHost, 0, NULL},
 	{p_iseqC, '-', A_PUSH, TPS_InHostFirstAN, 0, NULL},
+	{p_iseqC, '_', A_PUSH, TPS_InHostFirstAN, 0, NULL},
 	{p_iseqC, '.', A_PUSH, TPS_InHostFirstDomain, 0, NULL},
 	{p_iseqC, '@', A_PUSH, TPS_InEmail, 0, NULL},
 	{NULL, 0, A_POP, TPS_Null, 0, NULL}
@@ -1322,6 +1423,7 @@ static const TParserStateActionItem actionTPS_InHostDomain[] = {
 	{p_isdigit, 0, A_PUSH, TPS_InHost, 0, NULL},
 	{p_iseqC, ':', A_PUSH, TPS_InPortFirst, 0, NULL},
 	{p_iseqC, '-', A_PUSH, TPS_InHostFirstAN, 0, NULL},
+	{p_iseqC, '_', A_PUSH, TPS_InHostFirstAN, 0, NULL},
 	{p_iseqC, '.', A_PUSH, TPS_InHostFirstDomain, 0, NULL},
 	{p_iseqC, '@', A_PUSH, TPS_InEmail, 0, NULL},
 	{p_isdigit, 0, A_POP, TPS_Null, 0, NULL},
@@ -1358,6 +1460,7 @@ static const TParserStateActionItem actionTPS_InHost[] = {
 	{p_iseqC, '@', A_PUSH, TPS_InEmail, 0, NULL},
 	{p_iseqC, '.', A_PUSH, TPS_InHostFirstDomain, 0, NULL},
 	{p_iseqC, '-', A_PUSH, TPS_InHostFirstAN, 0, NULL},
+	{p_iseqC, '_', A_PUSH, TPS_InHostFirstAN, 0, NULL},
 	{NULL, 0, A_POP, TPS_Null, 0, NULL}
 };
 
@@ -1373,7 +1476,6 @@ static const TParserStateActionItem actionTPS_InFileFirst[] = {
 	{p_isdigit, 0, A_NEXT, TPS_InFile, 0, NULL},
 	{p_iseqC, '.', A_NEXT, TPS_InPathFirst, 0, NULL},
 	{p_iseqC, '_', A_NEXT, TPS_InFile, 0, NULL},
-	{p_iseqC, '?', A_PUSH, TPS_InURLPathFirst, 0, NULL},
 	{p_iseqC, '~', A_PUSH, TPS_InFileTwiddle, 0, NULL},
 	{NULL, 0, A_POP, TPS_Null, 0, NULL}
 };
@@ -1420,7 +1522,6 @@ static const TParserStateActionItem actionTPS_InFile[] = {
 	{p_iseqC, '_', A_NEXT, TPS_InFile, 0, NULL},
 	{p_iseqC, '-', A_NEXT, TPS_InFile, 0, NULL},
 	{p_iseqC, '/', A_PUSH, TPS_InFileFirst, 0, NULL},
-	{p_iseqC, '?', A_PUSH, TPS_InURLPathFirst, 0, NULL},
 	{NULL, 0, A_BINGO, TPS_Base, FILEPATH, NULL}
 };
 
@@ -1434,9 +1535,7 @@ static const TParserStateActionItem actionTPS_InFileNext[] = {
 
 static const TParserStateActionItem actionTPS_InURLPathFirst[] = {
 	{p_isEOF, 0, A_POP, TPS_Null, 0, NULL},
-	{p_iseqC, '"', A_POP, TPS_Null, 0, NULL},
-	{p_iseqC, '\'', A_POP, TPS_Null, 0, NULL},
-	{p_isnotspace, 0, A_CLEAR, TPS_InURLPath, 0, NULL},
+	{p_isurlchar, 0, A_NEXT, TPS_InURLPath, 0, NULL},
 	{NULL, 0, A_POP, TPS_Null, 0, NULL},
 };
 
@@ -1446,9 +1545,7 @@ static const TParserStateActionItem actionTPS_InURLPathStart[] = {
 
 static const TParserStateActionItem actionTPS_InURLPath[] = {
 	{p_isEOF, 0, A_BINGO, TPS_Base, URLPATH, NULL},
-	{p_iseqC, '"', A_BINGO, TPS_Base, URLPATH, NULL},
-	{p_iseqC, '\'', A_BINGO, TPS_Base, URLPATH, NULL},
-	{p_isnotspace, 0, A_NEXT, TPS_InURLPath, 0, NULL},
+	{p_isurlchar, 0, A_NEXT, TPS_InURLPath, 0, NULL},
 	{NULL, 0, A_BINGO, TPS_Base, URLPATH, NULL}
 };
 
@@ -1951,7 +2048,7 @@ hlCover(HeadlineParsedText *prs, TSQuery query, int *p, int *q)
 		}
 		for (i = pos; i < prs->curwords; i++)
 		{
-			if (prs->words[i].item == &item->operand)
+			if (prs->words[i].item == &item->qoperand)
 			{
 				if (i > *q)
 					*q = i;
@@ -1974,7 +2071,7 @@ hlCover(HeadlineParsedText *prs, TSQuery query, int *p, int *q)
 		}
 		for (i = *q; i >= pos; i--)
 		{
-			if (prs->words[i].item == &item->operand)
+			if (prs->words[i].item == &item->qoperand)
 			{
 				if (i < *p)
 					*p = i;

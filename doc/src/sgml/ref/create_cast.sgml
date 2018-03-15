@@ -1,8 +1,8 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.31 2008/11/14 10:22:45 petere Exp $ -->
+<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.33 2010/04/03 07:22:58 petere Exp $ -->
 
 <refentry id="SQL-CREATECAST">
  <refmeta>
-  <refentrytitle id="SQL-CREATECAST-TITLE">CREATE CAST</refentrytitle>
+  <refentrytitle>CREATE CAST</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -18,15 +18,15 @@
 
  <refsynopsisdiv>
 <synopsis>
-CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>)
-    WITH FUNCTION <replaceable>funcname</replaceable> (<replaceable>argtypes</replaceable>)
+CREATE CAST (<replaceable>source_type</replaceable> AS <replaceable>target_type</replaceable>)
+    WITH FUNCTION <replaceable>function_name</replaceable> (<replaceable>argument_type</replaceable> [, ...])
     [ AS ASSIGNMENT | AS IMPLICIT ]
 
-CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>)
+CREATE CAST (<replaceable>source_type</replaceable> AS <replaceable>target_type</replaceable>)
     WITHOUT FUNCTION
     [ AS ASSIGNMENT | AS IMPLICIT ]
 
-CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>)
+CREATE CAST (<replaceable>source_type</replaceable> AS <replaceable>target_type</replaceable>)
     WITH INOUT
     [ AS ASSIGNMENT | AS IMPLICIT ]
 </synopsis>
@@ -150,7 +150,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
     ambiguity that cannot be avoided as above.  The parser has a fallback
     heuristic based on <firstterm>type categories</> and <firstterm>preferred
     types</> that can help to provide desired behavior in such cases.  See
-    <xref linkend="sql-createtype" endterm="sql-createtype-title"> for
+    <xref linkend="sql-createtype"> for
     more information.
    </para>
   </note>
@@ -168,7 +168,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
 
    <variablelist>
     <varlistentry>
-     <term><replaceable>sourcetype</replaceable></term>
+     <term><replaceable>source_type</replaceable></term>
 
      <listitem>
       <para>
@@ -178,7 +178,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable>targettype</replaceable></term>
+     <term><replaceable>target_type</replaceable></term>
 
      <listitem>
       <para>
@@ -188,7 +188,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
     </varlistentry>
 
     <varlistentry>
-     <term><replaceable>funcname</replaceable>(<replaceable>argtypes</replaceable>)</term>
+     <term><replaceable>function_name</replaceable>(<replaceable>argument_type</replaceable> [, ...])</term>
 
      <listitem>
       <para>
@@ -290,8 +290,7 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
   <title>Notes</title>
 
   <para>
-   Use <xref linkend="sql-dropcast"
-   endterm="sql-dropcast-title"> to remove user-defined casts.
+   Use <xref linkend="sql-dropcast"> to remove user-defined casts.
   </para>
 
   <para>
@@ -401,9 +400,9 @@ CREATE CAST (bigint AS int4) WITH FUNCTION int4(bigint) AS ASSIGNMENT;
   <title>See Also</title>
 
   <para>
-   <xref linkend="sql-createfunction" endterm="sql-createfunction-title">,
-   <xref linkend="sql-createtype" endterm="sql-createtype-title">,
-   <xref linkend="sql-dropcast" endterm="sql-dropcast-title">
+   <xref linkend="sql-createfunction">,
+   <xref linkend="sql-createtype">,
+   <xref linkend="sql-dropcast">
   </para>
  </refsect1>
 

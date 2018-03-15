@@ -4,9 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS = ps_status bitstream bitmap_compression
 
-ifeq ($(enable_segwalrep), yes)
 TARGETS += guc_gp
-endif
 
 include $(top_builddir)/src/backend/mock.mk
 

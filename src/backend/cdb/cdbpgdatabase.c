@@ -108,24 +108,11 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		values[3] = BoolGetDatum(false);
 		if (db->status == GP_SEGMENT_CONFIGURATION_STATUS_UP)
 		{
-#ifdef USE_SEGWALREP
 			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
 				db->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC)
 			{
 				values[3] = BoolGetDatum(true);
 			}
-#else
-			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
-				db->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
-			{
-				values[3] = BoolGetDatum(true);
-			}
-			else if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_RESYNC &&
-					 db->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
-			{
-				values[3] = BoolGetDatum(true);
-			}
-#endif
 		}
 		values[4] = BoolGetDatum(db->preferred_role ==
 								 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);

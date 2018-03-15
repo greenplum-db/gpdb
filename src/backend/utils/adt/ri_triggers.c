@@ -13,9 +13,9 @@
  *	plan --- consider improving this someday.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.113 2009/06/11 14:49:04 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.118 2010/02/14 18:42:16 rhaas Exp $
  *
  * ----------
  */
@@ -2901,9 +2901,7 @@ ri_GenerateQual(StringInfo buf,
 	char	   *oprname;
 	char	   *nspname;
 
-	opertup = SearchSysCache(OPEROID,
-							 ObjectIdGetDatum(opoid),
-							 0, 0, 0);
+	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opoid));
 	if (!HeapTupleIsValid(opertup))
 		elog(ERROR, "cache lookup failed for operator %u", opoid);
 	operform = (Form_pg_operator) GETSTRUCT(opertup);
@@ -2940,9 +2938,7 @@ ri_add_cast_to(StringInfo buf, Oid typid)
 	char	   *typname;
 	char	   *nspname;
 
-	typetup = SearchSysCache(TYPEOID,
-							 ObjectIdGetDatum(typid),
-							 0, 0, 0);
+	typetup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
 	if (!HeapTupleIsValid(typetup))
 		elog(ERROR, "cache lookup failed for type %u", typid);
 	typform = (Form_pg_type) GETSTRUCT(typetup);
@@ -3071,9 +3067,7 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 				 errhint("Remove this referential integrity trigger and its mates, then do ALTER TABLE ADD CONSTRAINT.")));
 
 	/* OK, fetch the tuple */
-	tup = SearchSysCache(CONSTROID,
-						 ObjectIdGetDatum(constraintOid),
-						 0, 0, 0);
+	tup = SearchSysCache1(CONSTROID, ObjectIdGetDatum(constraintOid));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for constraint %u", constraintOid);
 	conForm = (Form_pg_constraint) GETSTRUCT(tup);
@@ -3965,8 +3959,9 @@ ri_HashCompareOp(Oid eq_opr, Oid typeid)
 			{
 				/*
 				 * The declared input type of the eq_opr might be a
-				 * polymorphic type such as ANYARRAY or ANYENUM.  If so,
-				 * assume the coercion is valid; otherwise complain.
+				 * polymorphic type such as ANYARRAY or ANYENUM, or other
+				 * special cases such as RECORD; find_coercion_pathway
+				 * currently doesn't subsume these special cases.
 				 */
 				if (!IsBinaryCoercible(typeid, lefttype))
 					elog(ERROR, "no conversion function from %s to %s",

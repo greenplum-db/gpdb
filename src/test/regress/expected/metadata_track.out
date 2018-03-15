@@ -369,7 +369,7 @@ drop table mdt_table_set_storage_parameters2;
           price NUMERIC(9,2),
           UNIQUE (apn, effective)
           ) distributed by (apn, effective);
-NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_price_change_apn_key" for table "mdt_price_change"
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_price_change_apn_effective_key" for table "mdt_price_change"
           CREATE TABLE mdt_stock(
           mdt_stock_apn CHARACTER(15) NOT NULL,
           mdt_stock_effective TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

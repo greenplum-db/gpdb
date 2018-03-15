@@ -3,12 +3,12 @@
  * rewriteRemove.c
  *	  routines for removing rewrite rules
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteRemove.c,v 1.78 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteRemove.c,v 1.80 2010/02/14 18:42:15 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -47,10 +47,9 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 	/*
 	 * Find the tuple for the target rule.
 	 */
-	tuple = SearchSysCache(RULERELNAME,
-						   ObjectIdGetDatum(owningRel),
-						   PointerGetDatum(ruleName),
-						   0, 0);
+	tuple = SearchSysCache2(RULERELNAME,
+							ObjectIdGetDatum(owningRel),
+							PointerGetDatum(ruleName));
 
 	/*
 	 * complain if no rule with such name exists

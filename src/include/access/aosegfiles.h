@@ -64,31 +64,6 @@ typedef enum FileSegInfoState
 	AOSEG_STATE_AWAITING_DROP = 2
 } FileSegInfoState;
 
-/*
- * pg_aoseg_nnnnnn table values for FormData_pg_attribute.
- *
- * [Similar examples are Schema_pg_type, Schema_pg_proc, Schema_pg_attribute, etc, in
- *  pg_attribute.h]
- */
-#define Schema_pg_aoseg \
-{ -1, {"segno"}, 				 23, -1, 4, 1, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ -1, {"eof"},					 20, -1, 8, 2, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
-{ -1, {"tupcount"},				 20, -1, 8, 3, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
-{ -1, {"varblockcount"},		 20, -1, 8, 4, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
-{ -1, {"eofuncompressed"},		 20, -1, 8, 5, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
-{ -1, {"modcount"}, 			 20, -1, 8, 6, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ -1, {"formatversion"},		 21, -1, 2, 7, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }, \
-{ -1, {"state"}, 				 21, -1, 2, 8, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }
-
-/*
- * pg_aoseg_nnnnnn table values for FormData_pg_class.
- */
-#define Class_pg_aoseg \
-  {"pg_appendonly"}, PG_CATALOG_NAMESPACE, -1, BOOTSTRAP_SUPERUSERID, 0, \
-               -1, DEFAULTTABLESPACE_OID, \
-               25, 10000, 0, 0, false, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_aoseg, \
-               0, false, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
-
 
 /*
  * GUC variables

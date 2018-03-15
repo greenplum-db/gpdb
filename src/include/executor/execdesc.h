@@ -7,10 +7,10 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.40 2009/01/02 20:42:00 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.42 2010/01/02 16:58:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -132,7 +132,7 @@ typedef struct SliceTable
 	int			nInitPlans;		/* The number of initplan slices allocated */
 	int			localSlice;		/* Index of the slice to execute. */
 	List	   *slices;			/* List of slices */
-	bool		doInstrument;	/* true => collect stats for EXPLAIN ANALYZE */
+	int			instrument_options;	/* OR of InstrumentOption flags */
 	uint32		ic_instance_id;
 } SliceTable;
 
@@ -242,7 +242,7 @@ typedef struct QueryDesc
 	Snapshot	crosscheck_snapshot;	/* crosscheck for RI update/delete */
 	DestReceiver *dest;			/* the destination for tuple output */
 	ParamListInfo params;		/* param values being passed in */
-	bool		doInstrument;	/* TRUE requests runtime instrumentation */
+	int			instrument_options;		/* OR of InstrumentOption flags */
 
 	/* These fields are set by ExecutorStart */
 	TupleDesc	tupDesc;		/* descriptor for result tuples */
@@ -274,7 +274,7 @@ extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
 				Snapshot crosscheck_snapshot,
 				DestReceiver *dest,
 				ParamListInfo params,
-				bool doInstrument);
+				int instrument_options);
 
 extern QueryDesc *CreateUtilityQueryDesc(Node *utilitystmt,
 					   const char *sourceText,

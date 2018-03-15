@@ -4,12 +4,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.122 2009/06/11 14:49:01 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.127 2010/02/26 02:00:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -93,7 +93,6 @@ contain_aggs_of_level_walker(Node *node,
 			return true;		/* abort the tree traversal and return true */
 		/* else fall through to examine argument */
 	}
-
 	if (IsA(node, Query))
 	{
 		/* Recurse into subselects */
@@ -420,7 +419,6 @@ OffsetVarNodes(Node *node, int offset, int sublevels_up)
 				RowMarkClause *rc = (RowMarkClause *) lfirst(l);
 
 				rc->rti += offset;
-				rc->prti += offset;
 			}
 		}
 		query_tree_walker(qry, OffsetVarNodes_walker,
@@ -436,7 +434,7 @@ offset_relid_set(Relids relids, int offset)
 	Relids		result = NULL;
 	Relids		tmprelids;
 	int			rtindex;
-	
+
 	tmprelids = bms_copy(relids);
 	while ((rtindex = bms_first_member(tmprelids)) >= 0)
 		result = bms_add_member(result, rtindex + offset);
@@ -512,7 +510,7 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
 	if (IsA(node, PlaceHolderVar))
 	{
 		PlaceHolderVar *phv = (PlaceHolderVar *) node;
-		
+
 		if (phv->phlevelsup == context->sublevels_up)
 		{
 			phv->phrels = adjust_relid_set(phv->phrels,
@@ -590,8 +588,6 @@ ChangeVarNodes(Node *node, int rt_index, int new_index, int sublevels_up)
 
 				if (rc->rti == rt_index)
 					rc->rti = new_index;
-				if (rc->prti == rt_index)
-					rc->prti = new_index;
 			}
 		}
 		query_tree_walker(qry, ChangeVarNodes_walker,
@@ -982,15 +978,15 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
 
 	/*
 	 * Currently, this is ONLY applied to rule-action queries, and so we
-	 * expect to find the *OLD* and *NEW* placeholder entries in the given
-	 * query.  If they're not there, it must be an INSERT/SELECT in which
-	 * they've been pushed down to the SELECT.
+	 * expect to find the OLD and NEW placeholder entries in the given query.
+	 * If they're not there, it must be an INSERT/SELECT in which they've been
+	 * pushed down to the SELECT.
 	 */
 	if (list_length(parsetree->rtable) >= 2 &&
 		strcmp(rt_fetch(PRS2_OLD_VARNO, parsetree->rtable)->eref->aliasname,
-			   "*OLD*") == 0 &&
+			   "old") == 0 &&
 		strcmp(rt_fetch(PRS2_NEW_VARNO, parsetree->rtable)->eref->aliasname,
-			   "*NEW*") == 0)
+			   "new") == 0)
 		return parsetree;
 	Assert(parsetree->jointree && IsA(parsetree->jointree, FromExpr));
 	if (list_length(parsetree->jointree->fromlist) != 1)
@@ -1004,9 +1000,9 @@ getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr)
 		elog(ERROR, "expected to find SELECT subquery");
 	if (list_length(selectquery->rtable) >= 2 &&
 		strcmp(rt_fetch(PRS2_OLD_VARNO, selectquery->rtable)->eref->aliasname,
-			   "*OLD*") == 0 &&
+			   "old") == 0 &&
 		strcmp(rt_fetch(PRS2_NEW_VARNO, selectquery->rtable)->eref->aliasname,
-			   "*NEW*") == 0)
+			   "new") == 0)
 	{
 		if (subquery_ptr)
 			*subquery_ptr = &(selectrte->subquery);
@@ -1103,6 +1099,7 @@ AddInvertedQual(Query *parsetree, Node *qual)
 
 	AddQual(parsetree, (Node *) invqual);
 }
+
 
 /*
  * replace_rte_variables() finds all Vars in an expression tree
@@ -1362,12 +1359,7 @@ map_variable_attnos(Node *node,
  * relation.  This is needed to handle whole-row Vars referencing the target.
  * We expand such Vars into RowExpr constructs.
  *
- * Note: the business with inserted_sublink is needed to update hasSubLinks
- * in subqueries when the replacement adds a subquery inside a subquery.
- * Messy, isn't it?  We do not need to do similar pushups for hasAggs,
- * because it isn't possible for this transformation to insert a level-zero
- * aggregate reference into a subquery --- it could only insert outer aggs.
- * Likewise for hasWindowFuncs.
+ * outer_hasSubLinks works the same as for replace_rte_variables().
  */
 
 typedef struct
@@ -1393,11 +1385,11 @@ ResolveNew_callback(Var *var,
 		List	   *fields;
 
 		/*
-		 * If generating an expansion for a var of a named rowtype
-		 * (ie, this is a plain relation RTE), then we must include
-		 * dummy items for dropped columns.  If the var is RECORD (ie,
-		 * this is a JOIN), then omit dropped columns.	Either way,
-		 * attach column names to the RowExpr for use of ruleutils.c.
+		 * If generating an expansion for a var of a named rowtype (ie, this
+		 * is a plain relation RTE), then we must include dummy items for
+		 * dropped columns.  If the var is RECORD (ie, this is a JOIN), then
+		 * omit dropped columns.  Either way, attach column names to the
+		 * RowExpr for use of ruleutils.c.
 		 */
 		expandRTE(rcon->target_rte,
 				  var->varno, var->varlevelsup, var->location,
@@ -1415,7 +1407,7 @@ ResolveNew_callback(Var *var,
 
 		return (Node *) rowexpr;
 	}
-	
+
 	/* Normal case referencing one targetlist element */
 	tle = get_tle_by_resno(rcon->targetlist, var->varattno);
 

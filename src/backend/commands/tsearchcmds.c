@@ -4,12 +4,12 @@
  *
  *	  Routines for tsearch manipulation commands
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tsearchcmds.c,v 1.17 2009/06/11 14:48:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tsearchcmds.c,v 1.20 2010/02/14 18:42:14 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -110,7 +110,7 @@ get_ts_parser_func(DefElem *defel, int attnum)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("function %s should return type %s",
-						func_signature_string(funcName, nargs, typeId),
+						func_signature_string(funcName, nargs, NIL, typeId),
 						format_type_be(retTypeId))));
 
 	return ObjectIdGetDatum(procOid);
@@ -360,9 +360,7 @@ RemoveTSParserById(Oid prsId)
 
 	relation = heap_open(TSParserRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(TSPARSEROID,
-						 ObjectIdGetDatum(prsId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSPARSEROID, ObjectIdGetDatum(prsId));
 
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for text search parser %u", prsId);
@@ -394,19 +392,16 @@ RenameTSParser(List *oldname, const char *newname)
 
 	prsId = TSParserGetPrsid(oldname, false);
 
-	tup = SearchSysCacheCopy(TSPARSEROID,
-							 ObjectIdGetDatum(prsId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSPARSEROID, ObjectIdGetDatum(prsId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search parser %u", prsId);
 
 	namespaceOid = ((Form_pg_ts_parser) GETSTRUCT(tup))->prsnamespace;
 
-	if (SearchSysCacheExists(TSPARSERNAMENSP,
-							 PointerGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0, 0))
+	if (SearchSysCacheExists2(TSPARSERNAMENSP,
+							  PointerGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("text search parser \"%s\" already exists",
@@ -472,9 +467,7 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
 	if (!IsUnderPostmaster)
 		return;
 
-	tup = SearchSysCache(TSTEMPLATEOID,
-						 ObjectIdGetDatum(tmplId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(tmplId));
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search template %u",
 			 tmplId);
@@ -629,9 +622,7 @@ RenameTSDictionary(List *oldname, const char *newname)
 
 	dictId = TSDictionaryGetDictid(oldname, false);
 
-	tup = SearchSysCacheCopy(TSDICTOID,
-							 ObjectIdGetDatum(dictId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSDICTOID, ObjectIdGetDatum(dictId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search dictionary %u",
@@ -639,10 +630,9 @@ RenameTSDictionary(List *oldname, const char *newname)
 
 	namespaceOid = ((Form_pg_ts_dict) GETSTRUCT(tup))->dictnamespace;
 
-	if (SearchSysCacheExists(TSDICTNAMENSP,
-							 PointerGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0, 0))
+	if (SearchSysCacheExists2(TSDICTNAMENSP,
+							  PointerGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("text search dictionary \"%s\" already exists",
@@ -712,9 +702,7 @@ RemoveTSDictionaries(DropStmt *drop)
 			continue;
 		}
 
-		tup = SearchSysCache(TSDICTOID,
-							 ObjectIdGetDatum(dictOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictOid));
 		if (!HeapTupleIsValid(tup))		/* should not happen */
 			elog(ERROR, "cache lookup failed for text search dictionary %u",
 				 dictOid);
@@ -751,9 +739,7 @@ RemoveTSDictionaryById(Oid dictId)
 
 	relation = heap_open(TSDictionaryRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(TSDICTOID,
-						 ObjectIdGetDatum(dictId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictId));
 
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for text search dictionary %u",
@@ -788,9 +774,7 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 
 	rel = heap_open(TSDictionaryRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(TSDICTOID,
-						 ObjectIdGetDatum(dictId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSDICTOID, ObjectIdGetDatum(dictId));
 
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for text search dictionary %u",
@@ -906,9 +890,7 @@ AlterTSDictionaryOwner(List *name, Oid newOwnerId)
 
 	dictId = TSDictionaryGetDictid(name, false);
 
-	tup = SearchSysCacheCopy(TSDICTOID,
-							 ObjectIdGetDatum(dictId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSDICTOID, ObjectIdGetDatum(dictId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search dictionary %u",
@@ -992,7 +974,7 @@ get_ts_template_func(DefElem *defel, int attnum)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("function %s should return type %s",
-						func_signature_string(funcName, nargs, typeId),
+						func_signature_string(funcName, nargs, NIL, typeId),
 						format_type_be(retTypeId))));
 
 	return ObjectIdGetDatum(procOid);
@@ -1156,9 +1138,7 @@ RenameTSTemplate(List *oldname, const char *newname)
 
 	tmplId = TSTemplateGetTmplid(oldname, false);
 
-	tup = SearchSysCacheCopy(TSTEMPLATEOID,
-							 ObjectIdGetDatum(tmplId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSTEMPLATEOID, ObjectIdGetDatum(tmplId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search template %u",
@@ -1166,10 +1146,9 @@ RenameTSTemplate(List *oldname, const char *newname)
 
 	namespaceOid = ((Form_pg_ts_template) GETSTRUCT(tup))->tmplnamespace;
 
-	if (SearchSysCacheExists(TSTEMPLATENAMENSP,
-							 PointerGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0, 0))
+	if (SearchSysCacheExists2(TSTEMPLATENAMENSP,
+							  PointerGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("text search template \"%s\" already exists",
@@ -1254,9 +1233,7 @@ RemoveTSTemplateById(Oid tmplId)
 
 	relation = heap_open(TSTemplateRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(TSTEMPLATEOID,
-						 ObjectIdGetDatum(tmplId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSTEMPLATEOID, ObjectIdGetDatum(tmplId));
 
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for text search template %u",
@@ -1285,9 +1262,7 @@ GetTSConfigTuple(List *names)
 	if (!OidIsValid(cfgId))
 		return NULL;
 
-	tup = SearchSysCache(TSCONFIGOID,
-						 ObjectIdGetDatum(cfgId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search configuration %u",
@@ -1440,9 +1415,7 @@ DefineTSConfiguration(List *names, List *parameters)
 	{
 		Form_pg_ts_config cfg;
 
-		tup = SearchSysCache(TSCONFIGOID,
-							 ObjectIdGetDatum(sourceOid),
-							 0, 0, 0);
+		tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(sourceOid));
 		if (!HeapTupleIsValid(tup))
 			elog(ERROR, "cache lookup failed for text search configuration %u",
 				 sourceOid);
@@ -1570,9 +1543,7 @@ RenameTSConfiguration(List *oldname, const char *newname)
 
 	cfgId = TSConfigGetCfgid(oldname, false);
 
-	tup = SearchSysCacheCopy(TSCONFIGOID,
-							 ObjectIdGetDatum(cfgId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search configuration %u",
@@ -1580,10 +1551,9 @@ RenameTSConfiguration(List *oldname, const char *newname)
 
 	namespaceOid = ((Form_pg_ts_config) GETSTRUCT(tup))->cfgnamespace;
 
-	if (SearchSysCacheExists(TSCONFIGNAMENSP,
-							 PointerGetDatum(newname),
-							 ObjectIdGetDatum(namespaceOid),
-							 0, 0))
+	if (SearchSysCacheExists2(TSCONFIGNAMENSP,
+							  PointerGetDatum(newname),
+							  ObjectIdGetDatum(namespaceOid)))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("text search configuration \"%s\" already exists",
@@ -1689,9 +1659,7 @@ RemoveTSConfigurationById(Oid cfgId)
 	/* Remove the pg_ts_config entry */
 	relCfg = heap_open(TSConfigRelationId, RowExclusiveLock);
 
-	tup = SearchSysCache(TSCONFIGOID,
-						 ObjectIdGetDatum(cfgId),
-						 0, 0, 0);
+	tup = SearchSysCache1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for text search dictionary %u",
@@ -1741,9 +1709,7 @@ AlterTSConfigurationOwner(List *name, Oid newOwnerId)
 
 	cfgId = TSConfigGetCfgid(name, false);
 
-	tup = SearchSysCacheCopy(TSCONFIGOID,
-							 ObjectIdGetDatum(cfgId),
-							 0, 0, 0);
+	tup = SearchSysCacheCopy1(TSCONFIGOID, ObjectIdGetDatum(cfgId));
 
 	if (!HeapTupleIsValid(tup)) /* should not happen */
 		elog(ERROR, "cache lookup failed for text search configuration %u",

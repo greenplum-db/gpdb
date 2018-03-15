@@ -5,12 +5,12 @@
  *	  wherein you authenticate a user by seeing what IP address the system
  *	  says he comes from and choosing authentication method based on it).
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/hba.c,v 1.188 2009/06/24 13:39:42 mha Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/hba.c,v 1.209 2010/07/06 19:18:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,7 +30,6 @@
 #include "regex/regex.h"
 #include "replication/walsender.h"
 #include "storage/fd.h"
-#include "utils/flatfiles.h"
 #include "utils/acl.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
@@ -67,23 +66,6 @@ static List *parsed_hba_lines = NIL;
  */
 static List *ident_lines = NIL;
 static List *ident_line_nums = NIL;
-
-/* pre-parsed content of flat auth file and corresponding line #s */
-static List *role_lines = NIL;
-static List *role_line_nums = NIL;
-
-/* sorted entries so we can do binary search lookups */
-static List **role_sorted = NULL;		/* sorted role list, for bsearch() */
-static int	role_length;
-
-/* pre-parsed content of flat auth time file and corresponding line #s */
-static List *role_interval_lines = NIL;
-static List *role_interval_line_nums = NIL;
-
-/* sorted entries so we can do binary search lookups */
-static List **role_interval_sorted = NULL;
-static int  role_interval_length;
-
 
 static void tokenize_file(const char *filename, FILE *file,
 			  List **lines, List **line_nums);
@@ -463,122 +445,26 @@ tokenize_file(const char *filename, FILE *file,
 }
 
 /*
- * Compare two lines based on their role/member names.
- *
- * Used for bsearch() lookup.
- */
-static int
-role_bsearch_cmp(const void *role, const void *list)
-{
-	char	   *role2 = linitial(*(List **) list);
-
-	return strcmp(role, role2);
-}
-
-
-/*
- * Lookup a role name in the pg_auth file
- */
-List	  **
-get_role_line(const char *role)
-{
-	/* On some versions of Solaris, bsearch of zero items dumps core */
-	if (role_length == 0)
-		return NULL;
-
-	return (List **) bsearch((void *) role,
-							 (void *) role_sorted,
-							 role_length,
-							 sizeof(List *),
-							 role_bsearch_cmp);
-}
-
-/*
- * get_role_intervals - return a List of elements from role_interval_sorted[]
- * 						whose role names match the given one
- *
- * In other words, we return a List of Lists, where the outer List is fabricated
- * here and the inner List is a preexisting List of tokens that role_interval_sorted
- * had referenced.
- *
- * Note: caller is responsible for list_freeing ONLY the returned (outer) List
- */
-List *
-get_role_intervals(const char *role)
-{
-	List	*ret;
-	List 	**needle, 
-			**temp; 
-
-	if (role_interval_length == 0)
-		return NIL;
-	
-	/*  Find ONE entry that pertains to role. There may be more. See below. */
-	needle = bsearch((void *) role,
-				  	 (void *) role_interval_sorted,
-				  	 role_interval_length,
-				  	 sizeof(List *),
-				  	 role_bsearch_cmp);
-
-	/* If no relevant auth constraints, no reason to deny. */
-	if (needle == NULL)
-		return NIL;
-
-	ret = list_make1(*needle);
-
-	/* Find first constraint for *role in role_interval. */
-	char	*myrole;
-	for (temp = needle - 1; temp >= role_interval_sorted; temp--)
-	{	
-		myrole = linitial(*temp);
-		if (strcmp(role, myrole) != 0)
-			break;
-		ret = lcons(*temp, ret);
-	}
-
-	for (temp = needle + 1; temp < role_interval_sorted + role_interval_length; temp++)
-	{
-		myrole = linitial(*temp);
-		if (strcmp(role, myrole) != 0)
-			break;
-		ret = lappend(ret, *temp);
-	} 
-
-	return ret;
-}
-
-/*
  * Does user belong to role?
  *
- * user is always the name given as the attempted login identifier.
+ * userid is the OID of the role given as the attempted login identifier.
  * We check to see if it is a member of the specified role name.
  */
 static bool
-is_member(const char *user, const char *role)
+is_member(Oid userid, const char *role)
 {
-	List	  **line;
-	ListCell   *line_item;
+	Oid			roleid;
 
-	if ((line = get_role_line(user)) == NULL)
+	if (!OidIsValid(userid))
 		return false;			/* if user not exist, say "no" */
 
-	/* A user always belongs to its own role */
-	if (strcmp(user, role) == 0)
-		return true;
+	roleid = get_roleid(role);
 
-	/*
-	 * skip over the role name, password, valuntil, examine all the membership
-	 * entries
-	 */
-	if (list_length(*line) < 4)
-		return false;
-	for_each_cell(line_item, lnext(lnext(lnext(list_head(*line)))))
-	{
-		if (strcmp((char *) lfirst(line_item), role) == 0)
-			return true;
-	}
+	if (!OidIsValid(roleid))
+		return false;			/* if target role not exist, say "no" */
 
-	return false;
+	/* See if user is directly or indirectly a member of role */
+	return is_member_of_role(userid, roleid);
 }
 
 /*
@@ -589,7 +475,7 @@ is_member(const char *user, const char *role)
  * and so it doesn't matter that we clobber the stored hba info.
  */
 static bool
-check_role(const char *role, char *param_str)
+check_role(const char *role, Oid roleid, char *param_str)
 {
 	char	   *tok;
 
@@ -599,7 +485,7 @@ check_role(const char *role, char *param_str)
 	{
 		if (tok[0] == '+')
 		{
-			if (is_member(role, tok + 1))
+			if (is_member(roleid, tok + 1))
 				return true;
 		}
 		else if (strcmp(tok, role) == 0 ||
@@ -618,7 +504,7 @@ check_role(const char *role, char *param_str)
  * and so it doesn't matter that we clobber the stored hba info.
  */
 static bool
-check_db(const char *dbname, const char *role, char *param_str)
+check_db(const char *dbname, const char *role, Oid roleid, char *param_str)
 {
 	char	   *tok;
 
@@ -642,7 +528,7 @@ check_db(const char *dbname, const char *role, char *param_str)
 		else if (strcmp(tok, "samegroup\n") == 0 ||
 				 strcmp(tok, "samerole\n") == 0)
 		{
-			if (is_member(role, dbname))
+			if (is_member(roleid, dbname))
 				return true;
 		}
 		else if (strcmp(tok, "replication\n") == 0)
@@ -953,13 +839,13 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
 										  parsedline->addr.ss_family) < 0)
 				{
-					*cidr_slash = '/';			/* restore token for message */
+					*cidr_slash = '/';	/* restore token for message */
 					ereport(LOG,
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("invalid CIDR mask in address \"%s\"",
 									token),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					pfree(token);
 					return false;
 				}
@@ -974,9 +860,9 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				{
 					ereport(LOG,
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
-							 errmsg("end-of-line before netmask specification"),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						  errmsg("end-of-line before netmask specification"),
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					return false;
 				}
 				token = lfirst(line_item);
@@ -988,8 +874,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("invalid IP mask \"%s\": %s",
 									token, gai_strerror(ret)),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					if (gai_result)
 						pg_freeaddrinfo_all(hints.ai_family, gai_result);
 					return false;
@@ -1004,8 +890,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					ereport(LOG,
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("IP address and mask do not match"),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					return false;
 				}
 			}
@@ -1217,8 +1103,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 								(errcode(ERRCODE_CONFIG_FILE_ERROR),
 								 errmsg("client certificates can only be checked if a root certificate store is available"),
 								 errhint("Make sure the root.crt file is present and readable."),
-								 errcontext("line %d of configuration file \"%s\"",
-											line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 						return false;
 					}
 					parsedline->clientcert = true;
@@ -1441,6 +1327,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		MANDATORY_AUTH_ARG(parsedline->radiussecret, "radiussecret", "radius");
 	}
 
+	if (parsedline->auth_method == uaRADIUS)
+	{
+		MANDATORY_AUTH_ARG(parsedline->radiusserver, "radiusserver", "radius");
+		MANDATORY_AUTH_ARG(parsedline->radiussecret, "radiussecret", "radius");
+	}
+
 	/*
 	 * Enforce any parameters implied by other settings.
 	 */
@@ -1460,18 +1352,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 static bool
 check_hba(hbaPort *port)
 {
-	//Oid			roleid;
+	Oid			roleid;
 	ListCell   *line;
 	HbaLine    *hba;
 
 	/* Get the target role's OID.  Note we do not error out for bad role. */
-
-	// GPDB_90_MERGE_FIXME:  Can't get roleid yet, because the RelCache isn't
-	// ready, and we don't have the code to deal with shared tables during
-	// startup like Postgres 9 does.  So, do things the old way, just by name.
-	// This relies on the existence of the flat-file version of pg_auth
-
-	//roleid = get_roleid(port->user_name);
+	roleid = get_roleid(port->user_name);
 
 	foreach(line, parsed_hba_lines)
 	{
@@ -1530,11 +1416,11 @@ check_hba(hbaPort *port)
 		}						/* != ctLocal */
 
 		/* Check database and role */
-		if (!check_db(port->database_name, port->user_name,
+		if (!check_db(port->database_name, port->user_name, roleid,
 					  hba->database))
 			continue;
 
-		if (!check_role(port->user_name, hba->role))
+		if (!check_role(port->user_name, roleid, hba->role))
 			continue;
 
 		/* Found a record that matched! */
@@ -1552,138 +1438,6 @@ check_hba(hbaPort *port)
 	 * XXX: Return false only happens if we have a parsing error, which we can
 	 * no longer have (parsing now in postmaster). Consider changing API.
 	 */
-}
-
-
-/*
- *	 Load role/password mapping file
- *
- *	 We use a flat-file version of pg_auth that is written whenever pg_auth is updated.
- *
- *	 Postgres no longer uses this method, instead it has code that can handle
- *	 pg_auth relcache lookups during startup.
- */
-void
-load_role(void)
-{
-	char	   *filename;
-	FILE	   *role_file;
-
-	/* Discard any old data */
-	if (role_lines || role_line_nums)
-		free_lines(&role_lines, &role_line_nums);
-	if (role_sorted)
-		pfree(role_sorted);
-	role_sorted = NULL;
-	role_length = 0;
-
-	/* Read in the file contents */
-	filename = auth_getflatfilename();
-	role_file = AllocateFile(filename, "r");
-
-	if (role_file == NULL)
-	{
-		/* no complaint if not there */
-		if (errno != ENOENT)
-			ereport(LOG,
-					(errcode_for_file_access(),
-					 errmsg("could not open file \"%s\": %m", filename)));
-		pfree(filename);
-		return;
-	}
-
-	tokenize_file(filename, role_file, &role_lines, &role_line_nums);
-
-	FreeFile(role_file);
-	pfree(filename);
-
-	/* create array for binary searching */
-	role_length = list_length(role_lines);
-	if (role_length)
-	{
-		int			i = 0;
-		ListCell   *line;
-
-		/* We assume the flat file was written already-sorted */
-		role_sorted = palloc(role_length * sizeof(List *));
-		foreach(line, role_lines)
-			role_sorted[i++] = lfirst(line);
-	}
-
-	load_role_interval();
-}
-
-/*
- *   Load role time constraint file
- *
- *   We use a flat-file version of pg_auth_time_constraint that is written whenever the catalog is updated.
- */
-void
-load_role_interval(void)
-{
-	char		*filename;
-	FILE		*role_interval_file;
-
-	/* Discard any old data */
-	if (role_interval_lines || role_interval_line_nums)
-		free_lines(&role_interval_lines, &role_interval_line_nums);
-	if (role_interval_sorted)
-		pfree(role_interval_sorted);
-	role_interval_sorted = NULL;
-	role_interval_length = 0;
-
-	/* Read in the file contents */
-	filename = auth_time_getflatfilename();
-	role_interval_file = AllocateFile(filename, "r");
-
-	if (role_interval_file == NULL)
-	{
-		/* no complaint if not there */
-		if (errno != ENOENT)
-			ereport(LOG,
-					(errcode_for_file_access(),
-					 errmsg("could not open file \"%s\": %m", filename)));
-		pfree(filename);
-		return;
-	}
-
-	tokenize_file(filename, role_interval_file, &role_interval_lines, &role_interval_line_nums);
-
-	FreeFile(role_interval_file);
-	pfree(filename);
-
-	/* create array for binary searching */
-	role_interval_length = list_length(role_interval_lines);
-	if (role_interval_length)
-	{
-		int			i = 0;
-		ListCell   	*line;
-
-		/* We assume the flat file was written already-sorted */
-		role_interval_sorted = palloc(role_interval_length * sizeof(List *));
-		foreach(line, role_interval_lines)
-			role_interval_sorted[i++] = lfirst(line);
-	}
-}
-
-/*
- * The primary purpose of this function is to ensure that the role information
- * is available to the backend process, for the sake of unit testing through SQL queries.
- * 
- * Traditionally, load_role is invoked after the postmaster forks to the backend, but while
- * the backend retains the PostmasterContext. Once this context is released, the pointers
- * mentioned in this function are, in some sense, stale. Thus, we reinitialize them here.
- */
-void
-force_load_role(void)
-{
-	role_lines      		= NIL;
-	role_line_nums  		= NIL;
-	role_sorted     		= NULL;
-	role_interval_lines     = NIL;
-	role_interval_line_nums = NIL;
-	role_interval_sorted    = NULL;
-	return load_role();
 }
 
 /*
@@ -1806,52 +1560,6 @@ load_hba(void)
 	clean_hba_list(parsed_hba_lines);
 	parsed_hba_lines = new_parsed_lines;
 
-	return true;
-}
-
-/*
- * Read and parse one line from the flat pg_database file.
- *
- * Returns TRUE on success, FALSE if EOF; bad data causes elog(FATAL).
- *
- * Output parameters:
- *	dbname: gets database name (must be of size NAMEDATALEN bytes)
- *	dboid: gets database OID
- *	dbtablespace: gets database's default tablespace's OID
- *	dbfrozenxid: gets database's frozen XID
- *
- * This is not much related to the other functions in hba.c, but we put it
- * here because it uses the next_token() infrastructure.
- */
-bool
-read_pg_database_line(FILE *fp, char *dbname, Oid *dboid,
-					  Oid *dbtablespace, TransactionId *dbfrozenxid)
-{
-	char		buf[MAX_TOKEN];
-	bool		initial_quote;
-
-	if (feof(fp))
-		return false;
-	if (!next_token(fp, buf, sizeof(buf), &initial_quote))
-		return false;
-	if (strlen(buf) >= NAMEDATALEN)
-		elog(FATAL, "bad data in flat pg_database file");
-	strcpy(dbname, buf);
-	next_token(fp, buf, sizeof(buf), &initial_quote);
-	if (!isdigit((unsigned char) buf[0]))
-		elog(FATAL, "bad data in flat pg_database file");
-	*dboid = atooid(buf);
-	next_token(fp, buf, sizeof(buf), &initial_quote);
-	if (!isdigit((unsigned char) buf[0]))
-		elog(FATAL, "bad data in flat pg_database file");
-	*dbtablespace = atooid(buf);
-	next_token(fp, buf, sizeof(buf), &initial_quote);
-	if (!isdigit((unsigned char) buf[0]))
-		elog(FATAL, "bad data in flat pg_database file");
-	*dbfrozenxid = atoxid(buf);
-	/* expect EOL next */
-	if (next_token(fp, buf, sizeof(buf), &initial_quote))
-		elog(FATAL, "bad data in flat pg_database file");
 	return true;
 }
 

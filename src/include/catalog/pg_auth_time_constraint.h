@@ -35,8 +35,9 @@
  * ----------------
  */
 #define AuthTimeConstraintRelationId	6070
+#define AuthTimeConstraint_Rowtype_Id	6071
 
-CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS BKI_ROWTYPE_OID(6071) BKI_SCHEMA_MACRO
 {
 	Oid		authid;		/* foreign key to pg_authid.oid, */
 	int2	start_day;	/* [0,6] denoting start of interval */

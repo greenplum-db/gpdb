@@ -52,9 +52,6 @@ set timezone = 'Asia/Kolkata';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Kolkata;
 set timezone = 'Asia/Shanghai';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Shanghai;
--- verify some newly added timezones
-set timezone = 'Asia/Khandyga';
-SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Khandyga;
 -- Casablanca time has changed in new timezone db lets verify it
 set timezone = 'Africa/Casablanca';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Casablanca;

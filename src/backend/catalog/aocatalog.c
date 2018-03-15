@@ -40,12 +40,14 @@ CreateAOAuxiliaryTable(
 		char relkind,
 		TupleDesc tupledesc,
 		IndexInfo  *indexInfo,
+		List *indexColNames,
 		Oid	*classObjectId,
 		int16 *coloptions)
 {
 	char aoauxiliary_relname[NAMEDATALEN];
 	char aoauxiliary_idxname[NAMEDATALEN];
 	bool shared_relation;
+	bool mapped_relation;
 	Oid relOid, aoauxiliary_relid = InvalidOid;
 	Oid aoauxiliary_idxid = InvalidOid;
 	ObjectAddress baseobject;
@@ -55,7 +57,6 @@ CreateAOAuxiliaryTable(
 	Assert(RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	Assert(auxiliaryNamePrefix);
 	Assert(tupledesc);
-	Assert(classObjectId);
 	if (relkind != RELKIND_AOSEGMENTS)
 		Assert(indexInfo);
 
@@ -69,6 +70,9 @@ CreateAOAuxiliaryTable(
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("shared tables cannot have append-only auxiliary relations after initdb")));
+
+	/* It's mapped if and only if its parent is, too */
+	mapped_relation = RelationIsMapped(rel);
 
 	relOid = RelationGetRelid(rel);
 
@@ -115,6 +119,8 @@ CreateAOAuxiliaryTable(
 											     PG_AOSEGMENT_NAMESPACE,
 											     rel->rd_rel->reltablespace,
 											     InvalidOid,
+												 InvalidOid,
+												 InvalidOid,
 											     rel->rd_rel->relowner,
 											     tupledesc,
 												 NIL,
@@ -122,16 +128,15 @@ CreateAOAuxiliaryTable(
 											     relkind,
 											     RELSTORAGE_HEAP,
 											     shared_relation,
+												 mapped_relation,
 											     true,
-											     /* bufferPoolBulkLoad */ false,
 											     0,
 											     ONCOMMIT_NOOP,
 											     NULL, /* GP Policy */
 											     (Datum) 0,
+												 /* use_user_acl */ false,
 											     true,
-												 /* valid_opts */ false,
-											     /* persistentTid */ NULL,
-											     /* persistentSerialNum */ NULL);
+												 /* valid_opts */ false);
 
 	/* Make this table visible, else index creation will fail */
 	CommandCounterIncrement();
@@ -143,11 +148,12 @@ CreateAOAuxiliaryTable(
 										 aoauxiliary_idxname,
 										 InvalidOid,
 										 indexInfo,
+										 indexColNames,
 										 BTREE_AM_OID,
 										 rel->rd_rel->reltablespace,
 										 classObjectId, coloptions, (Datum) 0,
-										 true, false, true, false,
-										 false, NULL);
+										 true, false, false, false,
+										 true, false, false, NULL);
 
 		/* Unlock target table -- no one can see it */
 		UnlockRelationOid(aoauxiliary_relid, ShareLock);

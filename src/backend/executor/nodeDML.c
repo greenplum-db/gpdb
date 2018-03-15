@@ -141,6 +141,13 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	dmlstate->ps.plan = (Plan *)node;
 	dmlstate->ps.state = estate;
 
+	/*
+	 * Initialize es_result_relation_info, just like ModifyTable.
+	 * GPDB_90_MERGE_FIXME: do we need to consolidate the ModifyTable and DML
+	 * logic?
+	 */
+	estate->es_result_relation_info = estate->es_result_relations;
+
 	ExecInitResultTupleSlot(estate, &dmlstate->ps);
 
 	dmlstate->ps.targetlist = (List *)
@@ -189,7 +196,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	ReleaseTupleDesc(dmlstate->junkfilter->jf_cleanTupType);
 	dmlstate->junkfilter->jf_cleanTupType = cleanTupType;
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        dmlstate->ps.cdbexplainbuf = makeStringInfo();
 
@@ -213,12 +220,4 @@ ExecEndDML(DMLState *node)
 	ExecEndNode(outerPlanState(node));
 	EndPlanStateGpmonPkt(&node->ps);
 }
-
-/* Return number of TupleTableSlots used by nodeDML.*/
-int
-ExecCountSlotsDML(DML *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) + DML_NSLOTS;
-}
-
 /* EOF */

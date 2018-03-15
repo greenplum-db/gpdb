@@ -117,5 +117,6 @@ extern XLogRecPtr GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart);
 extern int	GetReplicationApplyDelay(void);
 extern int	GetReplicationTransferLatency(void);
 extern const char *WalRcvGetStateString(WalRcvState state);
+extern XLogRecPtr WaitNextXLogAvailable(XLogRecPtr recptr, bool *finished);
 
 #endif   /* _WALRECEIVER_H */

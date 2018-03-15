@@ -4,10 +4,10 @@
  *	  Two-phase-commit related declarations.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/twophase.h,v 1.11 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/twophase.h,v 1.15 2010/04/13 14:17:46 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,7 +15,6 @@
 #define TWOPHASE_H
 
 #include "access/xlogdefs.h"
-#include "access/xlogmm.h"
 #include "storage/backendid.h"
 #include "storage/proc.h"
 #include "utils/timestamp.h"
@@ -75,8 +74,11 @@ extern GlobalTransaction MarkAsPreparing(TransactionId xid,
 
 extern void StartPrepare(GlobalTransaction gxact);
 extern void EndPrepare(GlobalTransaction gxact);
+extern bool StandbyTransactionIdIsPrepared(TransactionId xid);
 
-extern TransactionId PrescanPreparedTransactions(void);
+extern TransactionId PrescanPreparedTransactions(TransactionId **xids_p,
+							int *nxids_p);
+extern void StandbyRecoverPreparedTransactions(bool overwriteOK);
 extern void RecoverPreparedTransactions(void);
 
 extern void RecreateTwoPhaseFile(TransactionId xid, void *content, int len, XLogRecPtr *xlogrecptr);
@@ -84,13 +86,7 @@ extern void RemoveTwoPhaseFile(TransactionId xid, bool giveWarning);
 
 extern void CheckPointTwoPhase(XLogRecPtr redo_horizon);
 
-extern void PrepareIntentAppendOnlyCommitWork(char *gid);
-
-extern void PrepareDecrAppendOnlyCommitWork(char *gid);
-
 extern bool FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFound);
-
-extern int TwoPhaseRecoverMirror(void);
 
 extern void TwoPhaseAddPreparedTransactionInit(
 					        prepared_transaction_agg_state **ptas

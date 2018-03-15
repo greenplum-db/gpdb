@@ -3,7 +3,6 @@
 #include "access/aocssegfiles.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
-#include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbvars.h"
 #include "storage/bufmgr.h"
 #include "utils/builtins.h"
@@ -42,8 +41,6 @@ double			gp_statistics_sampling_threshold = 10000;
  */
 static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 *reltuples, float4 *relpages)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	float4		nrowsseen = 0;	/* # rows seen (including dead rows) */
 	float4		nrowsdead = 0;	/* # rows dead */
 	float4		totalEmptyPages = 0; /* # of empty pages with only dead rows */
@@ -110,9 +107,6 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 			 * could get added to it, but we ignore such tuples.
 			 */
 
-			// -------- MirroredLock ----------
-			MIRROREDLOCK_BUFMGR_LOCK;
-
 			targbuffer = ReadBuffer(rel, targblock);
 			LockBuffer(targbuffer, BUFFER_LOCK_SHARE);
 			targpage = BufferGetPage(targbuffer);
@@ -152,9 +146,6 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 
 			/* Now release the pin on the page */
 			UnlockReleaseBuffer(targbuffer);
-
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
 
 			/* detect empty pages: pageRowsSeen == pageRowsDead, also log the nrowsseen (total) and nrowsdead (total) */
 			if (pageRowsSeen == pageRowsDead && pageRowsSeen > 0)

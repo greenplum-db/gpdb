@@ -4,11 +4,11 @@
  *	  Support for finding the values associated with Param nodes.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/params.c,v 1.11 2009/01/01 17:23:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/params.c,v 1.15 2010/02/26 02:00:43 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "nodes/params.h"
+#include "parser/parse_param.h"
 #include "utils/datum.h"
 #include "utils/lsyscache.h"
 
@@ -24,6 +25,11 @@
  * Copy a ParamListInfo structure.
  *
  * The result is allocated in CurrentMemoryContext.
+ *
+ * Note: the intent of this function is to make a static, self-contained
+ * set of parameter values.  If dynamic parameter hooks are present, we
+ * intentionally do not copy them into the result.	Rather, we forcibly
+ * instantiate all available parameter values and copy the datum values.
  */
 ParamListInfo
 copyParamList(ParamListInfo from)
@@ -40,54 +46,32 @@ copyParamList(ParamListInfo from)
 		(from->numParams - 1) *sizeof(ParamExternData);
 
 	retval = (ParamListInfo) palloc(size);
-	memcpy(retval, from, size);
+	retval->paramFetch = NULL;
+	retval->paramFetchArg = NULL;
+	retval->parserSetup = NULL;
+	retval->parserSetupArg = NULL;
+	retval->numParams = from->numParams;
 
-	/*
-	 * Flat-copy is not good enough for pass-by-ref data values, so make a
-	 * pass over the array to copy those.
-	 */
-	for (i = 0; i < retval->numParams; i++)
+	for (i = 0; i < from->numParams; i++)
 	{
-		ParamExternData *prm = &retval->params[i];
+		ParamExternData *oprm = &from->params[i];
+		ParamExternData *nprm = &retval->params[i];
 		int16		typLen;
 		bool		typByVal;
 
-		if (prm->isnull || !OidIsValid(prm->ptype))
+		/* give hook a chance in case parameter is dynamic */
+		if (!OidIsValid(oprm->ptype) && from->paramFetch != NULL)
+			(*from->paramFetch) (from, i + 1);
+
+		/* flat-copy the parameter info */
+		*nprm = *oprm;
+
+		/* need datumCopy in case it's a pass-by-reference datatype */
+		if (nprm->isnull || !OidIsValid(nprm->ptype))
 			continue;
-		get_typlenbyval(prm->ptype, &typLen, &typByVal);
-		prm->value = datumCopy(prm->value, typByVal, typLen);
+		get_typlenbyval(nprm->ptype, &typLen, &typByVal);
+		nprm->value = datumCopy(nprm->value, typByVal, typLen);
 	}
 
 	return retval;
-}
-
-/*
- * Extract an array of parameter type OIDs from a ParamListInfo.
- *
- * The result is allocated in CurrentMemoryContext.
- */
-void
-getParamListTypes(ParamListInfo params,
-				  Oid **param_types, int *num_params)
-{
-	Oid		   *ptypes;
-	int			i;
-
-	if (params == NULL || params->numParams <= 0)
-	{
-		*param_types = NULL;
-		*num_params = 0;
-		return;
-	}
-
-	ptypes = (Oid *) palloc(params->numParams * sizeof(Oid));
-	*param_types = ptypes;
-	*num_params = params->numParams;
-
-	for (i = 0; i < params->numParams; i++)
-	{
-		ParamExternData *prm = &params->params[i];
-
-		ptypes[i] = prm->ptype;
-	}
 }

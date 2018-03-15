@@ -25,6 +25,7 @@ brew link --force apr-util
 # Installing Golang
 mkdir -p ~/go/src
 brew install go # Or get the latest from https://golang.org/dl/
+brew install dep
 
 # Installing python libraries
 brew install python
@@ -86,8 +87,8 @@ EOF
 
 # Step: GOPATH for Golang
 cat >> ~/.bash_profile << EOF
-export GOPATH=\$HOME/go:\$HOME/workspace/gpdb/gpMgmt/go-utils
-export PATH=\$GOPATH/bin:\$PATH
+export GOPATH=\$HOME/go
+export PATH=\$HOME/go/bin:\$PATH
 EOF
 
 # Step: speed up compile time (optional)

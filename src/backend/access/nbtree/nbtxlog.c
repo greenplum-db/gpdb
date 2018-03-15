@@ -4,22 +4,25 @@
  *	  WAL replay logic for btrees.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.55 2009/06/11 14:48:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.69 2010/07/06 19:18:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include "access/nbtree.h"
 #include "access/transam.h"
+#include "access/xact.h"
 #include "storage/bufmgr.h"
+#include "storage/procarray.h"
+#include "storage/standby.h"
+#include "miscadmin.h"
 
 #include "access/bufmask.h"
-#include "miscadmin.h"
-#include "utils/guc.h"
 
 /*
  * We must keep track of expected insertions due to page splits, and apply
@@ -162,8 +165,6 @@ _bt_restore_meta(RelFileNode rnode, XLogRecPtr lsn,
 	BTMetaPageData *md;
 	BTPageOpaque pageop;
 
-	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
-
 	metabuf = XLogReadBuffer(rnode, BTREE_METAPAGE, true);
 	Assert(BufferIsValid(metabuf));
 	metapg = BufferGetPage(metabuf);
@@ -197,8 +198,6 @@ static void
 btree_xlog_insert(bool isleaf, bool ismeta,
 				  XLogRecPtr lsn, XLogRecord *record)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	xl_btree_insert *xlrec = (xl_btree_insert *) XLogRecGetData(record);
 	Buffer		buffer;
 	Page		page;
@@ -225,20 +224,15 @@ btree_xlog_insert(bool isleaf, bool ismeta,
 	if ((IsBkpBlockApplied(record, 0)) && !ismeta && isleaf)
 		return;					/* nothing to do */
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
 	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		buffer = XLogReadBuffer(xlrec->target.node,
 							 ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 								false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 		if (BufferIsValid(buffer))
 		{
 			page = (Page) BufferGetPage(buffer);
 
-			REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 			if (XLByteLE(lsn, PageGetLSN(page)))
 			{
 				UnlockReleaseBuffer(buffer);
@@ -262,9 +256,6 @@ btree_xlog_insert(bool isleaf, bool ismeta,
 						 md.root, md.level,
 						 md.fastroot, md.fastlevel);
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
 	/* Forget any split this insertion completes */
 	if (!isleaf)
 		forget_matching_split(xlrec->target.node, downlink, false);
@@ -274,8 +265,6 @@ static void
 btree_xlog_split(bool onleft, bool isroot,
 				 XLogRecPtr lsn, XLogRecord *record)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	xl_btree_split *xlrec = (xl_btree_split *) XLogRecGetData(record);
 	Buffer		rbuf;
 	Page		rpage;
@@ -287,9 +276,6 @@ btree_xlog_split(bool onleft, bool isroot,
 	Size		newitemsz = 0;
 	Item		left_hikey = NULL;
 	Size		left_hikeysz = 0;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	datapos = (char *) xlrec + SizeOfBtreeSplit;
 	datalen = record->xl_len - SizeOfBtreeSplit;
@@ -468,60 +454,87 @@ btree_xlog_split(bool onleft, bool isroot,
 		}
 	}
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	/* The job ain't done till the parent link is inserted... */
 	log_incomplete_split(xlrec->node,
 						 xlrec->leftsib, xlrec->rightsib, isroot);
 }
 
 static void
-btree_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
+btree_xlog_vacuum(XLogRecPtr lsn, XLogRecord *record)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
-	xl_btree_delete *xlrec;
+	xl_btree_vacuum *xlrec;
 	Buffer		buffer;
 	Page		page;
 	BTPageOpaque opaque;
 
-	if (IsBkpBlockApplied(record, 0))
-		return;
+	xlrec = (xl_btree_vacuum *) XLogRecGetData(record);
 
-	xlrec = (xl_btree_delete *) XLogRecGetData(record);
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-
-	buffer = XLogReadBuffer(xlrec->btreenode.node, xlrec->block, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->btreenode.node, xlrec->block, buffer, lsn);
-	if (!BufferIsValid(buffer))
+	/*
+	 * If queries might be active then we need to ensure every block is
+	 * unpinned between the lastBlockVacuumed and the current block, if there
+	 * are any. This ensures that every block in the index is touched during
+	 * VACUUM as required to ensure scans work correctly.
+	 */
+	if (standbyState == STANDBY_SNAPSHOT_READY &&
+		(xlrec->lastBlockVacuumed + 1) != xlrec->block)
 	{
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		return;
+		BlockNumber blkno = xlrec->lastBlockVacuumed + 1;
+
+		for (; blkno < xlrec->block; blkno++)
+		{
+			/*
+			 * XXX we don't actually need to read the block, we just need to
+			 * confirm it is unpinned. If we had a special call into the
+			 * buffer manager we could optimise this so that if the block is
+			 * not in shared_buffers we confirm it as unpinned.
+			 *
+			 * Another simple optimization would be to check if there's any
+			 * backends running; if not, we could just skip this.
+			 */
+			buffer = XLogReadBufferExtended(xlrec->node, MAIN_FORKNUM, blkno, RBM_NORMAL);
+			if (BufferIsValid(buffer))
+			{
+				LockBufferForCleanup(buffer);
+				UnlockReleaseBuffer(buffer);
+			}
+		}
 	}
+
+	/*
+	 * If the block was restored from a full page image, nothing more to do.
+	 * The RestoreBkpBlocks() call already pinned and took cleanup lock on it.
+	 * XXX: Perhaps we should call RestoreBkpBlocks() *after* the loop above,
+	 * to make the disk access more sequential.
+	 */
+	if (record->xl_info & XLR_BKP_BLOCK_1)
+		return;
+
+	/*
+	 * Like in btvacuumpage(), we need to take a cleanup lock on every leaf
+	 * page. See nbtree/README for details.
+	 */
+	buffer = XLogReadBufferExtended(xlrec->node, MAIN_FORKNUM, xlrec->block, RBM_NORMAL);
+	if (!BufferIsValid(buffer))
+		return;
+	LockBufferForCleanup(buffer);
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(&xlrec->btreenode.node, xlrec->block, page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))
 	{
 		UnlockReleaseBuffer(buffer);
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
 		return;
 	}
 
-	if (record->xl_len > SizeOfBtreeDelete)
+	if (record->xl_len > SizeOfBtreeVacuum)
 	{
 		OffsetNumber *unused;
 		OffsetNumber *unend;
 
-		unused = (OffsetNumber *) ((char *) xlrec + SizeOfBtreeDelete);
+		unused = (OffsetNumber *) ((char *) xlrec + SizeOfBtreeVacuum);
 		unend = (OffsetNumber *) ((char *) xlrec + record->xl_len);
 
-		PageIndexMultiDelete(page, unused, unend - unused);
+		if ((unend - unused) > 0)
+			PageIndexMultiDelete(page, unused, unend - unused);
 	}
 
 	/*
@@ -534,17 +547,200 @@ btree_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	PageSetLSN(page, lsn);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+}
+
+/*
+ * Get the latestRemovedXid from the heap pages pointed at by the index
+ * tuples being deleted. This puts the work for calculating latestRemovedXid
+ * into the recovery path rather than the primary path.
+ *
+ * It's possible that this generates a fair amount of I/O, since an index
+ * block may have hundreds of tuples being deleted. Repeat accesses to the
+ * same heap blocks are common, though are not yet optimised.
+ *
+ * XXX optimise later with something like XLogPrefetchBuffer()
+ */
+static TransactionId
+btree_xlog_delete_get_latestRemovedXid(XLogRecord *record)
+{
+	xl_btree_delete *xlrec = (xl_btree_delete *) XLogRecGetData(record);
+	OffsetNumber *unused;
+	Buffer		ibuffer,
+				hbuffer;
+	Page		ipage,
+				hpage;
+	ItemId		iitemid,
+				hitemid;
+	IndexTuple	itup;
+	HeapTupleHeader htuphdr;
+	BlockNumber hblkno;
+	OffsetNumber hoffnum;
+	TransactionId latestRemovedXid = InvalidTransactionId;
+	TransactionId htupxid = InvalidTransactionId;
+	int			i;
+
+	/*
+	 * If there's nothing running on the standby we don't need to derive a
+	 * full latestRemovedXid value, so use a fast path out of here. That
+	 * returns InvalidTransactionId, and so will conflict with users, but
+	 * since we just worked out that's zero people, its OK.
+	 */
+	if (CountDBBackends(InvalidOid) == 0)
+		return latestRemovedXid;
+
+	/*
+	 * Get index page
+	 */
+	ibuffer = XLogReadBuffer(xlrec->node, xlrec->block, false);
+	if (!BufferIsValid(ibuffer))
+		return InvalidTransactionId;
+	ipage = (Page) BufferGetPage(ibuffer);
+
+	/*
+	 * Loop through the deleted index items to obtain the TransactionId from
+	 * the heap items they point to.
+	 */
+	unused = (OffsetNumber *) ((char *) xlrec + SizeOfBtreeDelete);
+
+	for (i = 0; i < xlrec->nitems; i++)
+	{
+		/*
+		 * Identify the index tuple about to be deleted
+		 */
+		iitemid = PageGetItemId(ipage, unused[i]);
+		itup = (IndexTuple) PageGetItem(ipage, iitemid);
+
+		/*
+		 * Locate the heap page that the index tuple points at
+		 */
+		hblkno = ItemPointerGetBlockNumber(&(itup->t_tid));
+		hbuffer = XLogReadBuffer(xlrec->hnode, hblkno, false);
+		if (!BufferIsValid(hbuffer))
+		{
+			UnlockReleaseBuffer(ibuffer);
+			return InvalidTransactionId;
+		}
+		hpage = (Page) BufferGetPage(hbuffer);
+
+		/*
+		 * Look up the heap tuple header that the index tuple points at by
+		 * using the heap node supplied with the xlrec. We can't use
+		 * heap_fetch, since it uses ReadBuffer rather than XLogReadBuffer.
+		 * Note that we are not looking at tuple data here, just headers.
+		 */
+		hoffnum = ItemPointerGetOffsetNumber(&(itup->t_tid));
+		hitemid = PageGetItemId(hpage, hoffnum);
+
+		/*
+		 * Follow any redirections until we find something useful.
+		 */
+		while (ItemIdIsRedirected(hitemid))
+		{
+			hoffnum = ItemIdGetRedirect(hitemid);
+			hitemid = PageGetItemId(hpage, hoffnum);
+			CHECK_FOR_INTERRUPTS();
+		}
+
+		/*
+		 * If the heap item has storage, then read the header. Some LP_DEAD
+		 * items may not be accessible, so we ignore them.
+		 */
+		if (ItemIdHasStorage(hitemid))
+		{
+			htuphdr = (HeapTupleHeader) PageGetItem(hpage, hitemid);
+
+			/*
+			 * Get the heap tuple's xmin/xmax and ratchet up the
+			 * latestRemovedXid. No need to consider xvac values here.
+			 */
+			htupxid = HeapTupleHeaderGetXmin(htuphdr);
+			if (TransactionIdFollows(htupxid, latestRemovedXid))
+				latestRemovedXid = htupxid;
+
+			htupxid = HeapTupleHeaderGetXmax(htuphdr);
+			if (TransactionIdFollows(htupxid, latestRemovedXid))
+				latestRemovedXid = htupxid;
+		}
+		else if (ItemIdIsDead(hitemid))
+		{
+			/*
+			 * Conjecture: if hitemid is dead then it had xids before the xids
+			 * marked on LP_NORMAL items. So we just ignore this item and move
+			 * onto the next, for the purposes of calculating
+			 * latestRemovedxids.
+			 */
+		}
+		else
+			Assert(!ItemIdIsUsed(hitemid));
+
+		UnlockReleaseBuffer(hbuffer);
+	}
+
+	UnlockReleaseBuffer(ibuffer);
+
+	/*
+	 * Note that if all heap tuples were LP_DEAD then we will be returning
+	 * InvalidTransactionId here. That can happen if we are re-replaying this
+	 * record type, though that will be before the consistency point and will
+	 * not cause problems. It should happen very rarely after the consistency
+	 * point, though note that we can't tell the difference between this and
+	 * the fast path exit above. May need to change that in future.
+	 */
+	return latestRemovedXid;
+}
+
+static void
+btree_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
+{
+	xl_btree_delete *xlrec;
+	Buffer		buffer;
+	Page		page;
+	BTPageOpaque opaque;
+
+	if (IsBkpBlockApplied(record, 0))
+		return;
+
+	xlrec = (xl_btree_delete *) XLogRecGetData(record);
+
+	/*
+	 * We don't need to take a cleanup lock to apply these changes. See
+	 * nbtree/README for details.
+	 */
+	buffer = XLogReadBuffer(xlrec->node, xlrec->block, false);
+	if (!BufferIsValid(buffer))
+		return;
+	page = (Page) BufferGetPage(buffer);
+
+	if (XLByteLE(lsn, PageGetLSN(page)))
+	{
+		UnlockReleaseBuffer(buffer);
+		return;
+	}
+
+	if (record->xl_len > SizeOfBtreeDelete)
+	{
+		OffsetNumber *unused;
+
+		unused = (OffsetNumber *) ((char *) xlrec + SizeOfBtreeDelete);
+
+		PageIndexMultiDelete(page, unused, xlrec->nitems);
+	}
+
+	/*
+	 * Mark the page as not containing any LP_DEAD items --- see comments in
+	 * _bt_delitems().
+	 */
+	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
+	opaque->btpo_flags &= ~BTP_HAS_GARBAGE;
+
+	PageSetLSN(page, lsn);
+	MarkBufferDirty(buffer);
+	UnlockReleaseBuffer(buffer);
 }
 
 static void
 btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	xl_btree_delete_page *xlrec = (xl_btree_delete_page *) XLogRecGetData(record);
 	BlockNumber parent;
 	BlockNumber target;
@@ -559,19 +755,14 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 	leftsib = xlrec->leftblk;
 	rightsib = xlrec->rightblk;
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-
 	/* parent page */
 	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		buffer = XLogReadBuffer(xlrec->target.node, parent, false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, parent, buffer, lsn);
 		if (BufferIsValid(buffer))
 		{
 			page = (Page) BufferGetPage(buffer);
 			pageop = (BTPageOpaque) PageGetSpecialPointer(page);
-			REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, parent, page, lsn);
 			if (XLByteLE(lsn, PageGetLSN(page)))
 			{
 				UnlockReleaseBuffer(buffer);
@@ -613,11 +804,9 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 	if (!(IsBkpBlockApplied(record, 1)))
 	{
 		buffer = XLogReadBuffer(xlrec->target.node, rightsib, false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, rightsib, buffer, lsn);
 		if (BufferIsValid(buffer))
 		{
 			page = (Page) BufferGetPage(buffer);
-			REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, rightsib, page, lsn);
 			if (XLByteLE(lsn, PageGetLSN(page)))
 			{
 				UnlockReleaseBuffer(buffer);
@@ -640,11 +829,9 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 		if (leftsib != P_NONE)
 		{
 			buffer = XLogReadBuffer(xlrec->target.node, leftsib, false);
-			REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, leftsib, buffer, lsn);
 			if (BufferIsValid(buffer))
 			{
 				page = (Page) BufferGetPage(buffer);
-				REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, leftsib, page, lsn);
 				if (XLByteLE(lsn, PageGetLSN(page)))
 				{
 					UnlockReleaseBuffer(buffer);
@@ -672,7 +859,7 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 
 	pageop->btpo_prev = leftsib;
 	pageop->btpo_next = rightsib;
-	pageop->btpo.xact = FrozenTransactionId;
+	pageop->btpo.xact = xlrec->btpo_xact;
 	pageop->btpo_flags = BTP_DELETED;
 	pageop->btpo_cycleid = 0;
 
@@ -692,9 +879,6 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 						 md.fastroot, md.fastlevel);
 	}
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	/* Forget any completed deletion */
 	forget_matching_deletion(xlrec->target.node, target);
 
@@ -706,18 +890,13 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 static void
 btree_xlog_newroot(XLogRecPtr lsn, XLogRecord *record)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	xl_btree_newroot *xlrec = (xl_btree_newroot *) XLogRecGetData(record);
 	Buffer		buffer;
 	Page		page;
 	BTPageOpaque pageop;
 	BlockNumber downlink = 0;
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = XLogReadBuffer(xlrec->btreenode.node, xlrec->rootblk, true);
+	buffer = XLogReadBuffer(xlrec->node, xlrec->rootblk, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -748,16 +927,13 @@ btree_xlog_newroot(XLogRecPtr lsn, XLogRecord *record)
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 
-	_bt_restore_meta(xlrec->btreenode.node, lsn,
+	_bt_restore_meta(xlrec->node, lsn,
 					 xlrec->rootblk, xlrec->level,
 					 xlrec->rootblk, xlrec->level);
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	/* Check to see if this satisfies any incomplete insertions */
 	if (record->xl_len > SizeOfBtreeNewroot)
-		forget_matching_split(xlrec->btreenode.node, downlink, true);
+		forget_matching_split(xlrec->node, downlink, true);
 }
 
 
@@ -766,7 +942,53 @@ btree_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 
-	RestoreBkpBlocks(lsn, record, false);
+	if (InHotStandby)
+	{
+		switch (info)
+		{
+			case XLOG_BTREE_DELETE:
+
+				/*
+				 * Btree delete records can conflict with standby queries. You
+				 * might think that vacuum records would conflict as well, but
+				 * we've handled that already. XLOG_HEAP2_CLEANUP_INFO records
+				 * provide the highest xid cleaned by the vacuum of the heap
+				 * and so we can resolve any conflicts just once when that
+				 * arrives. After that any we know that no conflicts exist
+				 * from individual btree vacuum records on that index.
+				 */
+				{
+					TransactionId latestRemovedXid = btree_xlog_delete_get_latestRemovedXid(record);
+					xl_btree_delete *xlrec = (xl_btree_delete *) XLogRecGetData(record);
+
+					ResolveRecoveryConflictWithSnapshot(latestRemovedXid, xlrec->node);
+				}
+				break;
+
+			case XLOG_BTREE_REUSE_PAGE:
+
+				/*
+				 * Btree reuse page records exist to provide a conflict point
+				 * when we reuse pages in the index via the FSM. That's all it
+				 * does though.
+				 */
+				{
+					xl_btree_reuse_page *xlrec = (xl_btree_reuse_page *) XLogRecGetData(record);
+
+					ResolveRecoveryConflictWithSnapshot(xlrec->latestRemovedXid, xlrec->node);
+				}
+				return;
+
+			default:
+				break;
+		}
+	}
+
+	/*
+	 * Vacuum needs to pin and take cleanup lock on every leaf page, a regular
+	 * exclusive lock is enough for all other purposes.
+	 */
+	RestoreBkpBlocks(lsn, record, (info == XLOG_BTREE_VACUUM));
 
 	switch (info)
 	{
@@ -791,6 +1013,9 @@ btree_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		case XLOG_BTREE_SPLIT_R_ROOT:
 			btree_xlog_split(false, true, lsn, record);
 			break;
+		case XLOG_BTREE_VACUUM:
+			btree_xlog_vacuum(lsn, record);
+			break;
 		case XLOG_BTREE_DELETE:
 			btree_xlog_delete(lsn, record);
 			break;
@@ -801,6 +1026,9 @@ btree_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			break;
 		case XLOG_BTREE_NEWROOT:
 			btree_xlog_newroot(lsn, record);
+			break;
+		case XLOG_BTREE_REUSE_PAGE:
+			/* Handled above before restoring bkp block */
 			break;
 		default:
 			elog(PANIC, "btree_redo: unknown op code %u", info);
@@ -1012,13 +1240,24 @@ btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 								 xlrec->level, xlrec->firstright);
 				break;
 			}
+		case XLOG_BTREE_VACUUM:
+			{
+				xl_btree_vacuum *xlrec = (xl_btree_vacuum *) rec;
+
+				appendStringInfo(buf, "vacuum: rel %u/%u/%u; blk %u, lastBlockVacuumed %u",
+								 xlrec->node.spcNode, xlrec->node.dbNode,
+								 xlrec->node.relNode, xlrec->block,
+								 xlrec->lastBlockVacuumed);
+				break;
+			}
 		case XLOG_BTREE_DELETE:
 			{
 				xl_btree_delete *xlrec = (xl_btree_delete *) rec;
 
-				appendStringInfo(buf, "delete: rel %u/%u/%u; blk %u",
-								 xlrec->btreenode.node.spcNode, xlrec->btreenode.node.dbNode,
-								 xlrec->btreenode.node.relNode, xlrec->block);
+				appendStringInfo(buf, "delete: index %u/%u/%u; iblk %u, heap %u/%u/%u;",
+				xlrec->node.spcNode, xlrec->node.dbNode, xlrec->node.relNode,
+								 xlrec->block,
+								 xlrec->hnode.spcNode, xlrec->hnode.dbNode, xlrec->hnode.relNode);
 				out_delete(buf, record);
 				break;
 			}
@@ -1040,9 +1279,18 @@ btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 				xl_btree_newroot *xlrec = (xl_btree_newroot *) rec;
 
 				appendStringInfo(buf, "newroot: rel %u/%u/%u; root %u lev %u",
-								 xlrec->btreenode.node.spcNode, xlrec->btreenode.node.dbNode,
-								 xlrec->btreenode.node.relNode,
+								 xlrec->node.spcNode, xlrec->node.dbNode,
+								 xlrec->node.relNode,
 								 xlrec->rootblk, xlrec->level);
+				break;
+			}
+		case XLOG_BTREE_REUSE_PAGE:
+			{
+				xl_btree_reuse_page *xlrec = (xl_btree_reuse_page *) rec;
+
+				appendStringInfo(buf, "reuse_page: rel %u/%u/%u; latestRemovedXid %u",
+								 xlrec->node.spcNode, xlrec->node.dbNode,
+							   xlrec->node.relNode, xlrec->latestRemovedXid);
 				break;
 			}
 		default:
@@ -1060,8 +1308,6 @@ btree_xlog_startup(void)
 void
 btree_xlog_cleanup(void)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	ListCell   *l;
 
 	foreach(l, incomplete_actions)
@@ -1079,9 +1325,6 @@ btree_xlog_cleanup(void)
 						rpageop;
 			bool		is_only;
 			Relation	reln;
-
-			// -------- MirroredLock ----------
-			MIRROREDLOCK_BUFMGR_LOCK;
 
 			lbuf = XLogReadBuffer(action->node, action->leftblk, false);
 			/* failure is impossible because we wrote this page earlier */
@@ -1103,17 +1346,11 @@ btree_xlog_cleanup(void)
 			_bt_insert_parent(reln, lbuf, rbuf, NULL,
 							  action->is_root, is_only);
 			FreeFakeRelcacheEntry(reln);
-
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
 		}
 		else
 		{
 			/* finish an incomplete deletion (of a half-dead page) */
 			Buffer		buf;
-
-			// -------- MirroredLock ----------
-			MIRROREDLOCK_BUFMGR_LOCK;
 
 			buf = XLogReadBuffer(action->node, action->delblk, false);
 			if (BufferIsValid(buf))
@@ -1121,13 +1358,10 @@ btree_xlog_cleanup(void)
 				Relation	reln;
 
 				reln = CreateFakeRelcacheEntry(action->node);
-				if (_bt_pagedel(reln, buf, NULL, true) == 0)
-					elog(PANIC, "btree_xlog_cleanup: _bt_pagdel failed");
+				if (_bt_pagedel(reln, buf, NULL) == 0)
+					elog(PANIC, "btree_xlog_cleanup: _bt_pagedel failed");
 				FreeFakeRelcacheEntry(reln);
 			}
-
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
 		}
 	}
 	incomplete_actions = NIL;

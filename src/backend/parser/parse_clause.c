@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.189 2009/06/11 14:49:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.198 2010/02/26 02:00:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -699,7 +699,8 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 	/*
 	 * Analyze and transform the subquery.
 	 */
-	query = parse_sub_analyze(r->subquery, pstate);
+	query = parse_sub_analyze(r->subquery, pstate, NULL,
+							  getLockedRefname(pstate, r->alias->aliasname));
 
 	/* Restore state */
 	pstate->p_expr_kind = EXPR_KIND_NONE;
@@ -869,7 +870,7 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 		tupdesc = BuildDescFromLists(rte->eref->colnames,
 									 rte->funccoltypes,
 									 rte->funccoltypmods);
-		CheckAttributeNamesTypes(tupdesc, RELKIND_COMPOSITE_TYPE);
+		CheckAttributeNamesTypes(tupdesc, RELKIND_COMPOSITE_TYPE, false);
 	}
 
 	return rte;
@@ -1060,7 +1061,7 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 			ListCell   *lx,
 					   *rx;
 
-			Assert(j->usingClause == NIL);	/* shouldn't have USING() too */
+			Assert(j->usingClause == NIL);		/* shouldn't have USING() too */
 
 			foreach(lx, l_colnames)
 			{
@@ -1647,9 +1648,9 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
  *
  * This function supports the old SQL92 ORDER BY interpretation, where the
  * expression is an output column name or number.  If we fail to find a
- * match of that sort, we fall through to the SQL99 rules.  For historical
+ * match of that sort, we fall through to the SQL99 rules.	For historical
  * reasons, Postgres also allows this interpretation for GROUP BY, though
- * the standard never did.  However, for GROUP BY we prefer a SQL99 match.
+ * the standard never did.	However, for GROUP BY we prefer a SQL99 match.
  * This function is *not* used for WINDOW definitions.
  *
  * node		the ORDER BY, GROUP BY, or DISTINCT ON expression to be matched
@@ -1688,8 +1689,7 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 	 * 2. IntegerConstant
 	 *	  This means to use the n'th item in the existing target list.
 	 *	  Note that it would make no sense to order/group/distinct by an
-	 *	  actual constant, so this does not create a conflict with our
-	 *	  extension to order/group by an expression.
+	 *	  actual constant, so this does not create a conflict with SQL99.
 	 *	  GROUP BY column-number is not allowed by SQL92, but since
 	 *	  the standard has no other behavior defined for this syntax,
 	 *	  we may as well accept this common extension.
@@ -2142,6 +2142,9 @@ make_group_clause(TargetEntry *tle, List *targetlist,
  *
  * GROUP BY items will be added to the targetlist (as resjunk columns)
  * if not already present, so the targetlist must be passed by reference.
+ *
+ * This is also used for window PARTITION BY clauses (which act almost the
+ * same, but are always interpreted per SQL99 rules).
  */
 List *
 transformGroupClause(ParseState *pstate, List *grouplist,
@@ -2452,20 +2455,18 @@ transformWindowDefinitions(ParseState *pstate,
 		 * almost exactly like top-level GROUP BY and ORDER BY clauses,
 		 * including the special handling of nondefault operator semantics.
 		 */
-		orderClause =
-			transformSortClause(pstate,
-								windef->orderClause,
-								targetlist,
-								EXPR_KIND_WINDOW_ORDER,
-								true /* fix unknowns */ ,
-								true /* force SQL99 rules */ );
-		partitionClause =
-			transformSortClause(pstate,
-								windef->partitionClause,
-								targetlist,
-								EXPR_KIND_WINDOW_PARTITION,
-								true /* fix unknowns */ ,
-								true /* force SQL99 rules */ );
+		orderClause = transformSortClause(pstate,
+										  windef->orderClause,
+										  targetlist,
+										  EXPR_KIND_WINDOW_ORDER,
+										  true /* fix unknowns */ ,
+										  true /* force SQL99 rules */ );
+		partitionClause = transformSortClause(pstate,
+											  windef->partitionClause,
+											  targetlist,
+											  EXPR_KIND_WINDOW_PARTITION,
+											  true /* fix unknowns */ ,
+											  true /* force SQL99 rules */ );
 
 		/*
 		 * And prepare the new WindowClause.

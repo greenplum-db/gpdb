@@ -3,6 +3,11 @@
 --
 -- Changes here should also be made to olap_window_seq.sql
 
+-- start_ignore
+create schema olap_window_seq;
+set search_path to olap_window_seq, public;
+-- end_ignore
+
 ---- 1 -- Null window specification -- OVER () ----
 
 select row_number() over (), cn,pn,vn 
@@ -1491,8 +1496,6 @@ group by
 select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 preceding) from sale;
 -- End MPP-12913
 -- MPP-13710
--- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes redundant SORT operators
--- while GPDB did generate such plans
 create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
 -- End of MPP-13710
@@ -1526,8 +1529,8 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
        sum(n) over(order by d range between current row and interval '1 day' following),
        avg(n) over(order by d range between current row and interval '1 day' following), n from olap_window_seq_test;
 
--- This test examines the case that a statement invokes multiple lead functions, 
--- which are not sorted regarding the rows that they use and projected attributes are varlen. 
+-- This test examines the case that a statement invokes multiple lead functions,
+-- which are not sorted regarding the rows that they use and projected attributes are varlen.
 DROP TABLE IF EXISTS empsalary;
 CREATE TABLE empsalary(
   depname varchar,
@@ -1540,15 +1543,15 @@ INSERT INTO empsalary VALUES('develop', 8, '6000', '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, '5200', '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, '4500', '2008/01/01');
 
--- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one 
--- gets data from one tuple ahead again.  
+-- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one
+-- gets data from one tuple ahead again.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
 
--- Lead functions are in order. 
+-- Lead functions are in order.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
@@ -1586,7 +1589,7 @@ INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
 
--- Similar to the first statement using int. 
+-- Similar to the first statement using int.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
@@ -1639,7 +1642,7 @@ create table foo (a int, b int) distributed by (a);
 create table bar (c int, d int) distributed by (c);
 insert into foo select i,i from generate_series(1,10) i;
 insert into bar select i,i from generate_series(1,10) i;
-set optimizer_segments to 1; 
+set optimizer_segments to 1;
 SELECT bar.*, count(*) OVER() AS e FROM foo, bar where foo.b = bar.d;
 
 reset optimizer_segments;
@@ -1649,11 +1652,6 @@ drop table foo, bar;
 CREATE TABLE foo (a int, b int, c int, d int);
 insert into foo select i,i,i,i from generate_series(1, 10) i;
 
--- Check that the planner can spot ORDER BYs that are supersets of each
--- other, and sort directly to the longest sort order. This query can
--- be satisfied with just two Sorts.
--- GPDB_84_MERGE_FIXME: Postgres does not generate a plan which removes
--- redundant SORT operators, while GPDB did generate such plans
 EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
        count(*) over (PARTITION BY a ORDER BY b, c) as count2,
        count(*) over (PARTITION BY a ORDER BY b) as count3,

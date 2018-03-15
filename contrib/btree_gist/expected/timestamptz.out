@@ -1,0 +1,186 @@
+-- timestamptz check
+CREATE TABLE timestamptztmp (a timestamptz);
+\copy timestamptztmp from 'data/timestamptz.data'
+SET enable_seqscan=on;
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+3';
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+3';
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+3';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+3';
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+3';
+ count 
+-------
+   157
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+2';
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+2';
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+2';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+2';
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+2';
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+4';
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+4';
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+4';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+4';
+ count 
+-------
+   157
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+4';
+ count 
+-------
+   157
+(1 row)
+
+CREATE INDEX timestamptzidx ON timestamptztmp USING gist ( a );
+SET enable_seqscan=off;
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+3'::timestamptz;
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+3'::timestamptz;
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+3'::timestamptz;
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+3'::timestamptz;
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+3'::timestamptz;
+ count 
+-------
+   157
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+2'::timestamptz;
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+2'::timestamptz;
+ count 
+-------
+   391
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+2'::timestamptz;
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+2'::timestamptz;
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+2'::timestamptz;
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <  '2018-12-18 10:59:54 GMT+4'::timestamptz;
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a <= '2018-12-18 10:59:54 GMT+4'::timestamptz;
+ count 
+-------
+   392
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a  = '2018-12-18 10:59:54 GMT+4'::timestamptz;
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >= '2018-12-18 10:59:54 GMT+4'::timestamptz;
+ count 
+-------
+   157
+(1 row)
+
+SELECT count(*) FROM timestamptztmp WHERE a >  '2018-12-18 10:59:54 GMT+4'::timestamptz;
+ count 
+-------
+   157
+(1 row)
+

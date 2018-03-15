@@ -59,21 +59,27 @@
  *	  is used to run finalize functions and compute the output tuple;
  *	  this context can be reset once per output tuple.
  *
- *	  Beginning in PostgreSQL 8.1, the executor's AggState node is passed as
- *	  the fmgr "context" value in all transfunc and finalfunc calls.  It is
- *	  not really intended that the transition functions will look into the
- *	  AggState node, but they can use code like
- *			if (fcinfo->context && IsA(fcinfo->context, AggState))
- *	  to verify that they are being called by nodeAgg.c and not as ordinary
- *	  SQL functions.  The main reason a transition function might want to know
- *	  that is that it can avoid palloc'ing a fixed-size pass-by-ref transition
- *	  value on every call: it can instead just scribble on and return its left
- *	  input.  Ordinarily it is completely forbidden for functions to modify
- *	  pass-by-ref inputs, but in the aggregate case we know the left input is
- *	  either the initial transition value or a previous function result, and
- *	  in either case its value need not be preserved.  See int8inc() for an
- *	  example.	Notice that advance_transition_function() is coded to avoid a
- *	  data copy step when the previous transition value pointer is returned.
+ *	  The executor's AggState node is passed as the fmgr "context" value in
+ *	  all transfunc and finalfunc calls.  It is not recommended that the
+ *	  transition functions look at the AggState node directly, but they can
+ *	  use AggCheckCallContext() to verify that they are being called by
+ *	  nodeAgg.c (and not as ordinary SQL functions).  The main reason a
+ *	  transition function might want to know this is so that it can avoid
+ *	  palloc'ing a fixed-size pass-by-ref transition value on every call:
+ *	  it can instead just scribble on and return its left input.  Ordinarily
+ *	  it is completely forbidden for functions to modify pass-by-ref inputs,
+ *	  but in the aggregate case we know the left input is either the initial
+ *	  transition value or a previous function result, and in either case its
+ *	  value need not be preserved.  See int8inc() for an example.  Notice that
+ *	  advance_transition_function() is coded to avoid a data copy step when
+ *	  the previous transition value pointer is returned.  Also, some
+ *	  transition functions want to store working state in addition to the
+ *	  nominal transition value; they can use the memory context returned by
+ *	  AggCheckCallContext() to do that.
+ *
+ *	  Note: AggCheckCallContext() is available as of PostgreSQL 9.0.  The
+ *	  AggState is available as context in earlier releases (back to 8.1),
+ *	  but direct examination of the node is needed to use it before 9.0.
  *
  *	  As of 9.4, aggregate transition functions can also use AggGetAggref()
  *	  to get hold of the Aggref expression node for their aggregate call.
@@ -82,13 +88,14 @@
  *	  need some fallback logic to use this, since there's no Aggref node
  *	  for a window function.)
  *
+ *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.167 2009/06/17 16:05:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.175 2010/02/26 02:00:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -125,7 +132,7 @@
  * AggStatePerAggData -- per-aggregate working state
  * AggStatePerGroupData - per-aggregate-per-group working state
  *
- * Definition moved to nodeAgg.c to provide visibility to execHHashagg.c
+ * Definition moved to nodeAgg.h to provide visibility to execHHashagg.c
  */
 
 
@@ -165,8 +172,6 @@ static void clear_agg_object(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_direct(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_hash_table(AggState *aggstate);
 static void ExecAggExplainEnd(PlanState *planstate, struct StringInfoData *buf);
-static int count_extra_agg_slots(Node *node);
-static bool count_extra_agg_slots_walker(Node *node, int *count);
 
 
 Datum
@@ -275,7 +280,7 @@ initialize_aggregates(AggState *aggstate,
 			 * CDB: If EXPLAIN ANALYZE, let all of our tuplesort operations
 			 * share our Instrumentation object and message buffer.
 			 */
-			if (aggstate->ss.ps.instrument)
+			if (aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 				tuplesort_set_instrument(peraggstate->sortstate,
 										 aggstate->ss.ps.instrument,
 										 aggstate->ss.ps.cdbexplainbuf);
@@ -574,7 +579,7 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 /*
  * Run the transition function for a DISTINCT or ORDER BY aggregate
  * with only one input.  This is called after we have completed
- * entering all the input values into the sort object.  We complete the
+ * entering all the input values into the sort object.	We complete the
  * sort, read out the values in sorted order, and run the transition
  * function on each value (applying DISTINCT if appropriate).
  *
@@ -669,7 +674,7 @@ process_ordered_aggregate_single(AggState *aggstate,
 /*
  * Run the transition function for a DISTINCT or ORDER BY aggregate
  * with more than one input.  This is called after we have completed
- * entering all the input values into the sort object.  We complete the
+ * entering all the input values into the sort object.	We complete the
  * sort, read out the values in sorted order, and run the transition
  * function on each value (applying DISTINCT if appropriate).
  *
@@ -998,9 +1003,9 @@ ExecAgg(AggState *node)
 #endif
 
 	/*
-	 * Exit if nothing left to do.  (We must do the ps_TupFromTlist check
-	 * first, because in some cases agg_done gets set before we emit the
-	 * final aggregate tuple, and we have to finish running SRFs for it.)
+	 * Exit if nothing left to do.	(We must do the ps_TupFromTlist check
+	 * first, because in some cases agg_done gets set before we emit the final
+	 * aggregate tuple, and we have to finish running SRFs for it.)
 	 */
 	if (node->agg_done)
 		return NULL;
@@ -1073,7 +1078,7 @@ ExecAgg(AggState *node)
 				case HASHAGG_END_OF_PASSES:
 					node->agg_done = true;
 					/* Append stats before destroying the htable for EXPLAIN ANALYZE */
-					if (node->ss.ps.instrument)
+					if (node->ss.ps.instrument && (node->ss.ps.instrument)->need_cdb)
 					{
 						agg_hash_explain(node);
 					}
@@ -1316,7 +1321,7 @@ agg_retrieve_direct(AggState *aggstate)
 					if (!aggstate->has_partial_agg)
 					{
 						has_partial_agg = true;
-						call_AdvanceAggregates(aggstate, pergroup, &(aggstate->mem_manager));
+						advance_aggregates(aggstate, pergroup, &(aggstate->mem_manager));
 					}
 
 					/* Reset per-input-tuple context after each tuple */
@@ -1390,7 +1395,7 @@ agg_retrieve_direct(AggState *aggstate)
 							{
 								has_partial_agg = true;
 								tmpcontext->ecxt_outertuple = outerslot;
-								call_AdvanceAggregates(aggstate, pergroup, &(aggstate->mem_manager));
+								advance_aggregates(aggstate, pergroup, &(aggstate->mem_manager));
 							}
 
 							passthru_ready = true;
@@ -1434,7 +1439,7 @@ agg_retrieve_direct(AggState *aggstate)
 			ResetExprContext(tmpcontext);
 			tmpcontext->ecxt_outertuple = outerslot;
 
-			call_AdvanceAggregates(aggstate, perpassthru, &(aggstate->mem_manager));
+			advance_aggregates(aggstate, perpassthru, &(aggstate->mem_manager));
 		}
 
 		/*
@@ -1746,7 +1751,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	 * structures and transition values.  NOTE: the details of what is stored
 	 * in aggcontext and what is stored in the regular per-query memory
 	 * context are driven by a simple decision: we want to reset the
-	 * aggcontext in ExecReScanAgg to recover no-longer-wanted space.
+	 * aggcontext at group boundaries (if not hashing) and in ExecReScanAgg to
+	 * recover no-longer-wanted space.
 	 */
 	aggstate->aggcontext =
 		AllocSetContextCreate(CurrentMemoryContext,
@@ -1754,8 +1760,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 							  ALLOCSET_DEFAULT_MINSIZE,
 							  ALLOCSET_DEFAULT_INITSIZE,
 							  ALLOCSET_DEFAULT_MAXSIZE);
-
-#define AGG_NSLOTS 3
 
 	/*
 	 * tuple table initialization
@@ -1783,7 +1787,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	/*
 	 * CDB: Offer extra info for EXPLAIN ANALYZE.
 	 */
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 		/* Allocate string buffer. */
 		aggstate->ss.ps.cdbexplainbuf = makeStringInfo();
@@ -1980,9 +1984,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			HeapTuple	procTuple;
 			Oid			aggOwner;
 
-			procTuple = SearchSysCache(PROCOID,
-									   ObjectIdGetDatum(aggref->aggfnoid),
-									   0, 0, 0);
+			procTuple = SearchSysCache1(PROCOID,
+										ObjectIdGetDatum(aggref->aggfnoid));
 			if (!HeapTupleIsValid(procTuple))
 				elog(ERROR, "cache lookup failed for function %u",
 					 aggref->aggfnoid);
@@ -2283,31 +2286,6 @@ GetAggInitVal(Datum textInitVal, Oid transtype)
 	return initVal;
 }
 
-/*
- * Standard API to count tuple table slots used by an execution
- * instance of an Agg node.
- *
- * GPDB precomputes tuple table size, but use of projection means
- * aggregates use a slot.  Since the count is needed earlier, we
- * than the determination of then number of different aggregate
- * call that happens during initializaiton, we just count Aggref
- * nodes.  This may be an over count (in case some aggregate
- * calls are duplicated), but shouldn't be too bad.
- */
-int
-ExecCountSlotsAgg(Agg *node)
-{
-	int			nextraslots = 0;
-
-	nextraslots += count_extra_agg_slots((Node *) node->plan.targetlist);
-	nextraslots += count_extra_agg_slots((Node *) node->plan.qual);
-
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		nextraslots +			/* may be high due to duplicate Aggref nodes. */
-		AGG_NSLOTS;
-}
-
 void
 ExecEndAgg(AggState *node)
 {
@@ -2510,7 +2488,6 @@ AggGetPerAggEContext(FunctionCallInfo fcinfo)
 	return NULL;
 }
 
-
 /*
  * aggregate_dummy - dummy execution routine for aggregate functions
  *
@@ -2597,32 +2574,6 @@ get_grouping_groupid(TupleTableSlot *slot, int grping_attno)
 	grouping = DatumGetInt64(grping_datum);
 
 	return grouping;
-}
-
-/*
- * Subroutines for ExecCountSlotsAgg.
- */
-int
-count_extra_agg_slots(Node *node)
-{
-	int			count = 0;
-
-	count_extra_agg_slots_walker(node, &count);
-	return count;
-}
-
-bool
-count_extra_agg_slots_walker(Node *node, int *count)
-{
-	if (node == NULL)
-		return false;
-
-	if (IsA(node, Aggref))
-	{
-		(*count)++;
-	}
-
-	return expression_tree_walker(node, count_extra_agg_slots_walker, (void *) count);
 }
 
 void

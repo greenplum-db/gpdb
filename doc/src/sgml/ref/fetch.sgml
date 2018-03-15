@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/fetch.sgml,v 1.43 2009/04/10 17:56:21 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/fetch.sgml,v 1.47 2010/04/03 07:23:01 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-FETCH">
  <refmeta>
-  <refentrytitle id="SQL-FETCH-TITLE">FETCH</refentrytitle>
+  <refentrytitle>FETCH</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -26,9 +26,9 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-FETCH [ <replaceable class="PARAMETER">direction</replaceable> { FROM | IN } ] <replaceable class="PARAMETER">cursorname</replaceable>
+FETCH [ <replaceable class="PARAMETER">direction</replaceable> [ FROM | IN ] ] <replaceable class="PARAMETER">cursor_name</replaceable>
 
-where <replaceable class="PARAMETER">direction</replaceable> can be empty or one of:
+<phrase>where <replaceable class="PARAMETER">direction</replaceable> can be empty or one of:</phrase>
 
     NEXT
     PRIOR
@@ -285,7 +285,7 @@ where <replaceable class="PARAMETER">direction</replaceable> can be empty or one
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="PARAMETER">cursorname</replaceable></term>
+    <term><replaceable class="PARAMETER">cursor_name</replaceable></term>
     <listitem>
      <para>
       An open cursor's name.
@@ -337,9 +337,9 @@ FETCH <replaceable class="parameter">count</replaceable>
   </para>
 
   <para>
-   <xref linkend="sql-declare" endterm="sql-declare-title">
+   <xref linkend="sql-declare">
    is used to define a cursor.  Use
-   <xref linkend="sql-move" endterm="sql-move-title">
+   <xref linkend="sql-move">
    to change cursor position without retrieving data.
   </para>
  </refsect1>
@@ -404,7 +404,8 @@ COMMIT WORK;
 
   <para>
    The SQL standard allows only <literal>FROM</> preceding the cursor
-   name; the option to use <literal>IN</> is an extension.
+   name; the option to use <literal>IN</>, or to leave them out altogether, is
+   an extension.
   </para>
  </refsect1>
 
@@ -412,9 +413,9 @@ COMMIT WORK;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-close" endterm="sql-close-title"></member>
-   <member><xref linkend="sql-declare" endterm="sql-declare-title"></member>
-   <member><xref linkend="sql-move" endterm="sql-move-title"></member>
+   <member><xref linkend="sql-close"></member>
+   <member><xref linkend="sql-declare"></member>
+   <member><xref linkend="sql-move"></member>
   </simplelist>
  </refsect1>
 </refentry>

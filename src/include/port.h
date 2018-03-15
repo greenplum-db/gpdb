@@ -3,10 +3,10 @@
  * port.h
  *	  Header for src/port/ compatibility functions.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/port.h,v 1.125 2009/06/11 14:49:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/port.h,v 1.134 2010/05/15 14:44:13 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,19 +69,24 @@ extern void pgfnames_cleanup(char **filenames);
  *	By making this a macro we avoid needing to include path.c in libpq.
  */
 #ifndef WIN32
+#define IS_DIR_SEP(ch)	((ch) == '/')
+
 #define is_absolute_path(filename) \
 ( \
-	((filename)[0] == '/') \
+	IS_DIR_SEP((filename)[0]) \
 )
 #else
+#define IS_DIR_SEP(ch)	((ch) == '/' || (ch) == '\\')
+
+/* See path_is_relative_and_below_cwd() for how we handle 'E:abc'. */
 #define is_absolute_path(filename) \
 ( \
-	((filename)[0] == '/') || \
-	(filename)[0] == '\\' || \
+	IS_DIR_SEP((filename)[0]) || \
 	(isalpha((unsigned char) ((filename)[0])) && (filename)[1] == ':' && \
-	((filename)[2] == '\\' || (filename)[2] == '/')) \
+	 IS_DIR_SEP((filename)[2])) \
 )
 #endif
+
 
 /* Portable locale initialization (in exec.c) */
 extern void set_pglocale_pgservice(const char *argv0, const char *app);

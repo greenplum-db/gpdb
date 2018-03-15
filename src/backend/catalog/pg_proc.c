@@ -3,12 +3,12 @@
  * pg_proc.c
  *	  routines to support manipulation of the pg_proc relation
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.164 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.176 2010/07/06 19:18:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,12 +42,19 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 #include "cdb/cdbvars.h"
 
 
 Datum		fmgr_internal_validator(PG_FUNCTION_ARGS);
 Datum		fmgr_c_validator(PG_FUNCTION_ARGS);
 Datum		fmgr_sql_validator(PG_FUNCTION_ARGS);
+
+typedef struct
+{
+	char	   *proname;
+	char	   *prosrc;
+} parse_error_callback_arg;
 
 static void sql_function_parse_error_callback(void *arg);
 static int match_prosrc_to_query(const char *prosrc, const char *queryText,
@@ -101,6 +108,7 @@ ProcedureCreate(const char *procedureName,
 	bool		internalOutParam = false;
 	Oid			variadicType = InvalidOid;
 	Oid			proowner = GetUserId();
+	Acl		   *proacl = NULL;
 	Relation	rel;
 	HeapTuple	tup;
 	HeapTuple	oldtup;
@@ -348,8 +356,7 @@ ProcedureCreate(const char *procedureName,
 		values[Anum_pg_proc_proconfig - 1] = proconfig;
 	else
 		nulls[Anum_pg_proc_proconfig - 1] = true;
-	/* start out with empty permissions */
-	nulls[Anum_pg_proc_proacl - 1] = true;
+	/* proacl will be determined later */
 	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
 	values[Anum_pg_proc_proexeclocation - 1] = CharGetDatum(proexeclocation);
 
@@ -357,16 +364,17 @@ ProcedureCreate(const char *procedureName,
 	tupDesc = RelationGetDescr(rel);
 
 	/* Check for pre-existing definition */
-	oldtup = SearchSysCache(PROCNAMEARGSNSP,
-							PointerGetDatum(procedureName),
-							PointerGetDatum(parameterTypes),
-							ObjectIdGetDatum(procNamespace),
-							0);
+	oldtup = SearchSysCache3(PROCNAMEARGSNSP,
+							 PointerGetDatum(procedureName),
+							 PointerGetDatum(parameterTypes),
+							 ObjectIdGetDatum(procNamespace));
 
 	if (HeapTupleIsValid(oldtup))
 	{
 		/* There is one; okay to replace it? */
 		Form_pg_proc oldproc = (Form_pg_proc) GETSTRUCT(oldtup);
+		Datum		proargnames;
+		bool		isnull;
 		Oid oldOid = HeapTupleGetOid(oldtup);
 
 		if (!replace)
@@ -414,6 +422,49 @@ ProcedureCreate(const char *procedureName,
 		}
 
 		/*
+		 * If there were any named input parameters, check to make sure the
+		 * names have not been changed, as this could break existing calls. We
+		 * allow adding names to formerly unnamed parameters, though.
+		 */
+		proargnames = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+									  Anum_pg_proc_proargnames,
+									  &isnull);
+		if (!isnull)
+		{
+			Datum		proargmodes;
+			char	  **old_arg_names;
+			char	  **new_arg_names;
+			int			n_old_arg_names;
+			int			n_new_arg_names;
+			int			j;
+
+			proargmodes = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+										  Anum_pg_proc_proargmodes,
+										  &isnull);
+			if (isnull)
+				proargmodes = PointerGetDatum(NULL);	/* just to be sure */
+
+			n_old_arg_names = get_func_input_arg_names(proargnames,
+													   proargmodes,
+													   &old_arg_names);
+			n_new_arg_names = get_func_input_arg_names(parameterNames,
+													   parameterModes,
+													   &new_arg_names);
+			for (j = 0; j < n_old_arg_names; j++)
+			{
+				if (old_arg_names[j] == NULL)
+					continue;
+				if (j >= n_new_arg_names || new_arg_names[j] == NULL ||
+					strcmp(old_arg_names[j], new_arg_names[j]) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					   errmsg("cannot change name of input parameter \"%s\"",
+							  old_arg_names[j]),
+							 errhint("Use DROP FUNCTION first.")));
+			}
+		}
+
+		/*
 		 * If there are existing defaults, check compatibility: redefinition
 		 * must not remove any defaults nor change their types.  (Removing a
 		 * default might cause a function to fail to satisfy an existing call.
@@ -424,7 +475,6 @@ ProcedureCreate(const char *procedureName,
 		if (oldproc->pronargdefaults != 0)
 		{
 			Datum		proargdefaults;
-			bool		isnull;
 			List	   *oldDefaults;
 			ListCell   *oldlc;
 			ListCell   *newlc;
@@ -556,6 +606,15 @@ ProcedureCreate(const char *procedureName,
 	else
 	{
 		/* Creating a new procedure */
+
+		/* First, get default permissions and set up proacl */
+		proacl = get_user_default_acl(ACL_OBJECT_FUNCTION, proowner,
+									  procNamespace);
+		if (proacl != NULL)
+			values[Anum_pg_proc_proacl - 1] = PointerGetDatum(proacl);
+		else
+			nulls[Anum_pg_proc_proacl - 1] = true;
+
 		tup = heap_form_tuple(tupDesc, values, nulls);
 		simple_heap_insert(rel, tup);
 		is_update = false;
@@ -628,6 +687,19 @@ ProcedureCreate(const char *procedureName,
 	if (!is_update)
 		recordDependencyOnOwner(ProcedureRelationId, retval, proowner);
 
+	/* dependency on any roles mentioned in ACL */
+	if (!is_update && proacl != NULL)
+	{
+		int			nnewmembers;
+		Oid		   *newmembers;
+
+		nnewmembers = aclmembers(proacl, &newmembers);
+		updateAclDependencies(ProcedureRelationId, retval, 0,
+							  proowner,
+							  0, NULL,
+							  nnewmembers, newmembers);
+	}
+
 	/* dependency on extension */
 	recordDependencyOnCurrentExtension(&myself, is_update);
 
@@ -646,7 +718,7 @@ ProcedureCreate(const char *procedureName,
 
 		/* Set per-function configuration parameters */
 		set_items = (ArrayType *) DatumGetPointer(proconfig);
-		if (set_items)		/* Need a new GUC nesting level */
+		if (set_items)			/* Need a new GUC nesting level */
 		{
 			save_nestlevel = NewGUCNestLevel();
 			ProcessGUCArray(set_items,
@@ -655,7 +727,7 @@ ProcedureCreate(const char *procedureName,
 							GUC_ACTION_SAVE);
 		}
 		else
-			save_nestlevel = 0;		/* keep compiler quiet */
+			save_nestlevel = 0; /* keep compiler quiet */
 
 		OidFunctionCall1(languageValidator, ObjectIdGetDatum(retval));
 
@@ -692,9 +764,7 @@ fmgr_internal_validator(PG_FUNCTION_ARGS)
 	 * name will be found later if it isn't there now.
 	 */
 
-	tuple = SearchSysCache(PROCOID,
-						   ObjectIdGetDatum(funcoid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
 	proc = (Form_pg_proc) GETSTRUCT(tuple);
@@ -745,9 +815,7 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
 	 * and for pg_dump loading it's much better if we *do* check.
 	 */
 
-	tuple = SearchSysCache(PROCOID,
-						   ObjectIdGetDatum(funcoid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
 	proc = (Form_pg_proc) GETSTRUCT(tuple);
@@ -786,6 +854,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 	bool		isnull;
 	Datum		tmp;
 	char	   *prosrc;
+	parse_error_callback_arg callback_arg;
 	ErrorContextCallback sqlerrcontext;
 	bool		haspolyarg;
 	int			i;
@@ -793,9 +862,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 	if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
 		PG_RETURN_VOID();
 
-	tuple = SearchSysCache(PROCOID,
-						   ObjectIdGetDatum(funcoid),
-						   0, 0, 0);
+	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcoid);
 	proc = (Form_pg_proc) GETSTRUCT(tuple);
@@ -840,8 +907,11 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 		/*
 		 * Setup error traceback support for ereport().
 		 */
+		callback_arg.proname = NameStr(proc->proname);
+		callback_arg.prosrc = prosrc;
+
 		sqlerrcontext.callback = sql_function_parse_error_callback;
-		sqlerrcontext.arg = tuple;
+		sqlerrcontext.arg = (void *) &callback_arg;
 		sqlerrcontext.previous = error_context_stack;
 		error_context_stack = &sqlerrcontext;
 
@@ -861,7 +931,7 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 												  proc->pronargs);
 			(void) check_sql_fn_retval(funcoid, proc->prorettype,
 									   querytree_list,
-									   false, NULL);
+									   NULL, NULL);
 		}
 		else
 			querytree_list = pg_parse_query(prosrc);
@@ -880,30 +950,19 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 static void
 sql_function_parse_error_callback(void *arg)
 {
-	HeapTuple	tuple = (HeapTuple) arg;
-	Form_pg_proc proc = (Form_pg_proc) GETSTRUCT(tuple);
-	bool		isnull;
-	Datum		tmp;
-	char	   *prosrc;
+	parse_error_callback_arg *callback_arg = (parse_error_callback_arg *) arg;
 
 	/* See if it's a syntax error; if so, transpose to CREATE FUNCTION */
-	tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
-	if (isnull)
-		elog(ERROR, "null prosrc");
-	prosrc = TextDatumGetCString(tmp);
-
-	if (!function_parse_error_transpose(prosrc))
+	if (!function_parse_error_transpose(callback_arg->prosrc))
 	{
 		/* If it's not a syntax error, push info onto context stack */
-		errcontext("SQL function \"%s\"", NameStr(proc->proname));
+		errcontext("SQL function \"%s\"", callback_arg->proname);
 	}
-
-	pfree(prosrc);
 }
 
 /*
  * Adjust a syntax error occurring inside the function body of a CREATE
- * FUNCTION or DO command.  This can be used by any function validator or
+ * FUNCTION or DO command.	This can be used by any function validator or
  * anonymous-block handler, not only for SQL-language functions.
  * It is assumed that the syntax error position is initially relative to the
  * function body string (as passed in).  If possible, we adjust the position

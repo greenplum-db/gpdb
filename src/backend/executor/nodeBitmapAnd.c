@@ -3,12 +3,12 @@
  * nodeBitmapAnd.c
  *	  routines to handle BitmapAnd nodes.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapAnd.c,v 1.11 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapAnd.c,v 1.13 2010/01/02 16:57:41 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,8 +77,6 @@ ExecInitBitmapAnd(BitmapAnd *node, EState *estate, int eflags)
 	 * ExecQual or ExecProject.  They don't need any tuple slots either.
 	 */
 
-#define BITMAPAND_NSLOTS 0
-
 	/*
 	 * call ExecInitNode on each of the plans to be executed and save the
 	 * results into the array "bitmapplanstates".
@@ -92,17 +90,6 @@ ExecInitBitmapAnd(BitmapAnd *node, EState *estate, int eflags)
 	}
 
 	return bitmapandstate;
-}
-
-int
-ExecCountSlotsBitmapAnd(BitmapAnd *node)
-{
-	ListCell   *plan;
-	int			nSlots = 0;
-
-	foreach(plan, node->bitmapplans)
-		nSlots += ExecCountSlotsNode((Plan *) lfirst(plan));
-	return nSlots + BITMAPAND_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

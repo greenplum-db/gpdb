@@ -19,13 +19,13 @@
  * some don't pay attention to non-default functions at all.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_amproc.h,v 1.75 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_amproc.h,v 1.78 2010/01/14 16:31:09 teodor Exp $
  *
  * NOTES
- *	  the genbki.sh script reads this file and generates .bki
+ *	  the genbki.pl script reads this file and generates .bki
  *	  information from the DATA() statements.
  *
  *-------------------------------------------------------------------------
@@ -205,6 +205,13 @@ DATA(insert (	3702   3615 3615 4 3696 ));
 DATA(insert (	3702   3615 3615 5 3700 ));
 DATA(insert (	3702   3615 3615 6 3697 ));
 DATA(insert (	3702   3615 3615 7 3699 ));
+DATA(insert (	1029   600 600 1 2179 ));
+DATA(insert (	1029   600 600 2 2583 ));
+DATA(insert (	1029   600 600 3 1030 ));
+DATA(insert (	1029   600 600 4 2580 ));
+DATA(insert (	1029   600 600 5 2581 ));
+DATA(insert (	1029   600 600 6 2582 ));
+DATA(insert (	1029   600 600 7 2584 ));
 
 
 /* gin */

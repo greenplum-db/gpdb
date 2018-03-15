@@ -15,11 +15,10 @@
 #include "storage/gp_compress.h"
 #include "cdb/cdbappendonlystorage_int.h"
 #include "cdb/cdbappendonlystorage.h"
+#include "cdb/cdbappendonlyxlog.h"
 #include "utils/guc.h"
 
-#ifdef USE_SEGWALREP
 #include "cdb/cdbappendonlyam.h"
-#endif							/* USE_SEGWALREP */
 
 
 int32
@@ -40,7 +39,6 @@ AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)
 	return result;
 }
 
-#ifdef USE_SEGWALREP
 void
 appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
@@ -104,4 +102,3 @@ appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 			appendStringInfo(buf, "UNKNOWN");
 	}
 }
-#endif

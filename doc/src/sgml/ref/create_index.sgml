@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_index.sgml,v 1.71 2009/03/24 20:17:08 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_index.sgml,v 1.74 2010/04/03 07:22:58 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEINDEX">
  <refmeta>
-  <refentrytitle id="sql-createindex-title">CREATE INDEX</refentrytitle>
+  <refentrytitle>CREATE INDEX</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -22,7 +22,7 @@ PostgreSQL documentation
  <refsynopsisdiv>
 <synopsis>
 
-CREATE [UNIQUE] INDEX name ON table 
+CREATE [UNIQUE] INDEX [name] ON table
        [USING btree|bitmap|gist]
        ( {column | (expression)} [opclass] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
        [ WITH ( FILLFACTOR = value ) ]
@@ -37,8 +37,8 @@ CREATE [UNIQUE] INDEX name ON table
   <title>Description</title>
 
   <para>
-   <command>CREATE INDEX</command> constructs an index named <replaceable
-   class="parameter">name</replaceable> on the specified table.
+   <command>CREATE INDEX</command> constructs an index
+   on the specified column(s) of the specified table.
    Indexes are primarily used to enhance database performance (though
    inappropriate use can result in slower performance).
   </para>
@@ -136,7 +136,9 @@ CREATE [UNIQUE] INDEX name ON table
        <para>
         The name of the index to be created.  No schema name can be included
         here; the index is always created in the same schema as its parent
-        table.
+        table.  If the name is omitted, <productname>PostgreSQL</> chooses a
+        suitable name based on the parent table's name and the indexed column
+        name(s).
        </para>
       </listitem>
      </varlistentry>
@@ -268,10 +270,10 @@ CREATE [UNIQUE] INDEX name ON table
    <title id="SQL-CREATEINDEX-storage-parameters-title">Index Storage Parameters</title>
 
    <para>
-    The <literal>WITH</> clause can specify <firstterm>storage parameters</>
-    for indexes.  Each index method can have its own set of allowed storage
-    parameters.  The <literal>B-tree</literal>, <literal>hash</literal> and
-    <literal>GiST</literal> built-in index methods all accept a single parameter:
+    The optional <literal>WITH</> clause specifies <firstterm>storage
+    parameters</> for the index.  Each index method has its own set of allowed
+    storage parameters.  The B-tree, hash and GiST index methods all accept a
+    single parameter:
    </para>
 
    <variablelist>
@@ -283,10 +285,11 @@ CREATE [UNIQUE] INDEX name ON table
       The fillfactor for an index is a percentage that determines how full
       the index method will try to pack index pages.  For B-trees, leaf pages
       are filled to this percentage during initial index build, and also
-      when extending the index at the right (largest key values).  If pages
+      when extending the index at the right (adding new largest key values).
+      If pages
       subsequently become completely full, they will be split, leading to
       gradual degradation in the index's efficiency.  B-trees use a default
-      fillfactor of 90, but any value from 10 to 100 can be selected.
+      fillfactor of 90, but any integer value from 10 to 100 can be selected.
       If the table is static then fillfactor 100 is best to minimize the
       index's physical size, but for heavily updated tables a smaller
       fillfactor is better to minimize the need for page splits.  The
@@ -299,7 +302,7 @@ CREATE [UNIQUE] INDEX name ON table
    </variablelist>
 
    <para>
-    <literal>GIN</literal> indexes accept a different parameter:
+    GIN indexes accept a different parameter:
    </para>
 
    <variablelist>
@@ -375,7 +378,7 @@ CREATE [UNIQUE] INDEX name ON table
     command will fail but leave behind an <quote>invalid</> index. This index
     will be ignored for querying purposes because it might be incomplete;
     however it will still consume update overhead. The <application>psql</>
-    <command>\d</> command will mark such an index as <literal>INVALID</>:
+    <command>\d</> command will report such an index as <literal>INVALID</>:
 
 <programlisting>
 postgres=# \d tab
@@ -459,8 +462,8 @@ Indexes:
   <para>
    For index methods that support ordered scans (currently, only B-tree),
    the optional clauses <literal>ASC</>, <literal>DESC</>, <literal>NULLS
-   FIRST</>, and/or <literal>NULLS LAST</> can be specified to reverse
-   the normal sort direction of the index.  Since an ordered index can be
+   FIRST</>, and/or <literal>NULLS LAST</> can be specified to modify
+   the sort ordering of the index.  Since an ordered index can be
    scanned either forward or backward, it is not normally useful to create a
    single-column <literal>DESC</> index &mdash; that sort ordering is already
    available with a regular index.  The value of these options is that
@@ -489,7 +492,7 @@ Indexes:
   </para>
 
   <para>
-   Use <xref linkend="sql-dropindex" endterm="sql-dropindex-title">
+   Use <xref linkend="sql-dropindex">
    to remove an index.
   </para>
 
@@ -518,8 +521,10 @@ CREATE UNIQUE INDEX title_idx ON films (title);
    To create an index on the expression <literal>lower(title)</>,
    allowing efficient case-insensitive searches:
 <programlisting>
-CREATE INDEX lower_title_idx ON films ((lower(title)));
+CREATE INDEX ON films ((lower(title)));
 </programlisting>
+   (In this example we have chosen to omit the index name, so the system
+   will choose a name, typically <literal>films_lower_idx</>.)
   </para>
 
   <caution>
@@ -551,7 +556,7 @@ CREATE UNIQUE INDEX title_idx ON films (title) WITH (fillfactor = 70);
   <para>
    To create a <acronym>GIN</> index with fast updates disabled:
 <programlisting>
-CREATE INDEX gin_idx ON documents_table (locations) WITH (fastupdate = off);
+CREATE INDEX gin_idx ON documents_table USING gin (locations) WITH (fastupdate = off);
 </programlisting>
   </para>
 
@@ -560,26 +565,21 @@ CREATE INDEX gin_idx ON documents_table (locations) WITH (fastupdate = off);
    <literal>films</> and have the index reside in the tablespace
    <literal>indexspace</>:
 <programlisting>
-CREATE INDEX code_idx ON films(code) TABLESPACE indexspace;
+CREATE INDEX code_idx ON films (code) TABLESPACE indexspace;
 </programlisting>
   </para>
 
-<!--
-<comment>
-Is this example correct?
-</comment>
   <para>
    To create a GiST index on a point attribute so that we
    can efficiently use box operators on the result of the
    conversion function:
   <programlisting>
 CREATE INDEX pointloc
-    ON points USING GIST (point2box(location) box_ops);
+    ON points USING gist (box(location,location));
 SELECT * FROM points
-    WHERE point2box(points.pointloc) = boxes.box;
+    WHERE box(location,location) &amp;&amp; '(0,0),(1,1)'::box;
   </programlisting>
   </para>
--->
 
   <para>
    To create an index without locking out writes to the table:
@@ -604,8 +604,8 @@ CREATE INDEX CONCURRENTLY sales_quantity_index ON sales_table (quantity);
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterindex" endterm="sql-alterindex-title"></member>
-   <member><xref linkend="sql-dropindex" endterm="sql-dropindex-title"></member>
+   <member><xref linkend="sql-alterindex"></member>
+   <member><xref linkend="sql-dropindex"></member>
   </simplelist>
  </refsect1>
 </refentry>

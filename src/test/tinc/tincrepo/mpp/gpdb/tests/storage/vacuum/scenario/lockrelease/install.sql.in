@@ -1,3 +1,0 @@
-CREATE OR REPLACE FUNCTION lockrelease(oid, int) RETURNS void AS
-'$libdir/lockrelease'
-LANGUAGE 'C' STRICT;

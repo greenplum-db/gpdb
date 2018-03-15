@@ -56,17 +56,10 @@
             <entry colname="col4">True if trigger is enabled.</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>tgisconstraint</codeph></entry>
+            <entry colname="col1"><codeph>tgisinternal</codeph></entry>
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
-            <entry colname="col4">True if trigger implements a referential integrity
-              constraint.</entry>
-          </row>
-          <row>
-            <entry colname="col1"><codeph>tgconstrname</codeph></entry>
-            <entry colname="col2">name</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Referential integrity constraint name.</entry>
+            <entry colname="col4">True if trigger is internally generated (usually, to enforce the constraint identified by tgconstraint).</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>tgconstrrelid</codeph></entry>

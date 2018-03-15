@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
- * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.102 2009/06/11 14:49:13 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.113 2010/03/25 14:44:34 alvherre Exp $
  *--------------------------------------------------------------------
  */
 #ifndef GUC_H
@@ -101,6 +101,7 @@ typedef enum
 	PGC_S_ARGV,					/* postmaster command line */
 	PGC_S_DATABASE,				/* per-database setting */
 	PGC_S_USER,					/* per-user setting */
+	PGC_S_DATABASE_USER,		/* per-user-and-database setting */
 	PGC_S_CLIENT,				/* from client connection request */
 	PGC_S_RESGROUP,				/* per-resgroup setting */
 	PGC_S_OVERRIDE,				/* special case to forcibly set default */
@@ -108,6 +109,26 @@ typedef enum
 	PGC_S_TEST,					/* test per-database or per-user setting */
 	PGC_S_SESSION				/* SET command */
 } GucSource;
+
+/*
+ * Parsing the configuation file will return a list of name-value pairs
+ */
+typedef struct ConfigVariable
+{
+	char       *name;
+	char       *value;
+	char	   *filename;
+	int			sourceline;
+	struct ConfigVariable  *next;
+} ConfigVariable;
+
+extern bool ParseConfigFile(const char *config_file, const char *calling_file,
+				int depth, int elevel,
+				ConfigVariable **head_p, ConfigVariable **tail_p);
+extern bool ParseConfigFp(FILE *fp, const char *config_file,
+			  int depth, int elevel,
+			  ConfigVariable **head_p, ConfigVariable **tail_p);
+extern void FreeConfigVariables(ConfigVariable *list);
 
 /*
  * Enum values are made up of an array of name-value pairs
@@ -118,21 +139,6 @@ struct config_enum_entry
 	int			val;
 	bool		hidden;
 };
-
-typedef struct name_value_pair
-{
-	char       *name;
-	char       *value;
-	char	   *filename;
-	int			sourceline;
-	struct name_value_pair *next;
-} name_value_pair;
-
-extern bool ParseConfigFile(const char *config_file, const char *calling_file,
-							int depth, GucContext context, int elevel,
-							struct name_value_pair **head_p,
-							struct name_value_pair **tail_p);
-extern void free_name_value_list(struct name_value_pair * list);
 
 typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
 typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
@@ -176,6 +182,8 @@ typedef enum
 #define GUC_UNIT_MIN			0x4000	/* value is in minutes */
 #define GUC_UNIT_TIME			0x7000	/* mask for MS, S, MIN */
 
+#define GUC_NOT_WHILE_SEC_REST	0x8000	/* can't set if security restricted */
+
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
 extern List    *gp_guc_list_for_no_plan;
@@ -190,7 +198,6 @@ extern bool Debug_pretty_print;
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool	Debug_print_qd_mirroring;
-extern bool Debug_print_semaphore_detail;
 extern bool Debug_disable_distributed_snapshot;
 extern bool Debug_abort_after_distributed_prepared;
 extern bool Debug_abort_after_segment_prepared;
@@ -211,21 +218,15 @@ extern int  Debug_appendonly_bad_header_print_level;
 extern bool Debug_appendonly_print_datumstream;
 extern bool Debug_appendonly_print_visimap;
 extern bool Debug_appendonly_print_compaction;
-extern bool Debug_gp_relation_node_fetch_wait_for_debugging;
 extern bool gp_crash_recovery_abort_suppress_fatal;
-extern bool gp_persistent_statechange_suppress_error;
 extern bool Debug_bitmap_print_insert;
 extern bool Test_appendonly_override;
-extern bool	gp_permit_persistent_metadata_update;
-extern bool gp_permit_relation_node_change;
 extern bool enable_checksum_on_tables;
 extern int  Test_compresslevel_override;
-extern bool Master_mirroring_administrator_disable;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;
 extern bool gp_appendonly_verify_block_checksums;
 extern bool gp_appendonly_verify_write_block;
-extern bool gp_appendonly_verify_eof;
 extern bool gp_appendonly_compaction;
 
 /*
@@ -237,24 +238,12 @@ extern bool gp_appendonly_compaction;
  * 10% of the tuples are hidden.
  */ 
 extern int  gp_appendonly_compaction_threshold;
-extern bool gp_heap_verify_checksums_on_mirror;
 extern bool gp_heap_require_relhasoids_match;
 extern bool	Debug_appendonly_rezero_quicklz_compress_scratch;
 extern bool	Debug_appendonly_rezero_quicklz_decompress_scratch;
 extern bool	Debug_appendonly_guard_end_quicklz_scratch;
 extern bool	Debug_xlog_insert_print;
 extern bool	debug_xlog_record_read;
-extern bool	Debug_persistent_print;
-extern int	Debug_persistent_print_level;
-extern bool	Debug_persistent_recovery_print;
-extern int	Debug_persistent_recovery_print_level;
-extern bool Disable_persistent_recovery_logging;
-extern bool	Debug_persistent_store_print;
-extern bool Debug_persistent_bootstrap_print;
-extern bool persistent_integrity_checks;
-extern bool debug_persistent_ptcat_verification;
-extern bool debug_print_persistent_checks;
-extern bool Debug_persistent_appendonly_commit_count_print;
 extern bool Debug_cancel_print;
 extern bool Debug_datumstream_write_print_small_varlena_info;
 extern bool Debug_datumstream_write_print_large_varlena_info;
@@ -263,30 +252,9 @@ extern bool Debug_datumstream_block_read_check_integrity;
 extern bool Debug_datumstream_block_write_check_integrity;
 extern bool Debug_datumstream_read_print_varlena_info;
 extern bool Debug_datumstream_write_use_small_initial_buffers;
-extern int	Debug_persistent_store_print_level;
 extern bool	Debug_database_command_print;
-extern int	Debug_database_command_print_level;
-extern int	gp_max_databases;
-extern int	gp_max_tablespaces;
-extern int	gp_max_filespaces;
-extern bool gp_initdb_mirrored;
-extern bool gp_before_persistence_work;
-extern bool gp_before_filespace_setup;
 extern bool gp_startup_integrity_checks;
-extern bool gp_change_tracking;
-extern bool	gp_persistent_repair_global_sequence;
-extern bool gp_validate_pt_info_relcache;
-extern bool Debug_print_xlog_relation_change_info;
-extern bool Debug_print_xlog_relation_change_info_skip_issues_only;
-extern bool Debug_print_xlog_relation_change_info_backtrace_skip_issues;
-extern bool Debug_filerep_crc_on;
-extern bool Debug_filerep_print;
-extern bool Debug_filerep_gcov;
-extern bool Debug_filerep_config_print;
-extern bool Debug_filerep_memory_log_flush;
 extern bool Debug_resource_group;
-extern bool filerep_mirrorvalidation_during_resync;
-extern bool log_filerep_to_syslogger;
 extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
@@ -310,7 +278,7 @@ extern bool gp_allow_rename_relation_without_lock;
 
 extern bool gp_ignore_window_exclude;
 
-extern int verify_checkpoint_interval;
+extern bool gp_ignore_error_table;
 
 extern bool rle_type_compression_stats;
 
@@ -338,8 +306,6 @@ extern int	log_temp_files;
 
 extern int	num_temp_buffers;
 
-extern int ddboost_buf_size;
-
 extern bool gp_cancel_query_print_log;
 extern int gp_cancel_query_delay_time;
 extern bool vmem_process_interrupt;
@@ -348,9 +314,7 @@ extern bool execute_pruned_plan;
 extern bool gp_partitioning_dynamic_selection_log;
 extern int gp_max_partition_level;
 
-extern bool gp_temporary_files_filespace_repair;
 extern bool gp_perfmon_print_packet_info;
-extern bool fts_diskio_check;
 
 extern bool gp_enable_relsize_collection;
 
@@ -382,6 +346,7 @@ extern int Debug_dtm_action_protocol;
 extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
+extern char *data_directory;
 extern char *ConfigFileName;
 extern char *HbaFileName;
 extern char *IdentFileName;
@@ -401,11 +366,6 @@ extern int	tcp_keepalives_interval;
 extern int	tcp_keepalives_count;
 
 extern int	gp_connection_send_timeout;
-
-extern int	gp_filerep_tcp_keepalives_idle;
-extern int	gp_filerep_tcp_keepalives_interval;
-extern int	gp_filerep_tcp_keepalives_count;
-extern int	gp_filerep_ct_batch_size;
 
 extern int  WalSendClientTimeout;
 
@@ -538,20 +498,6 @@ extern bool optimizer_use_gpdb_allocators;
 
 
 /**
- * GUCs related to code generation.
- **/
-#define CODEGEN_OPTIMIZATION_LEVEL_NONE          0
-#define CODEGEN_OPTIMIZATION_LEVEL_LESS          1
-#define CODEGEN_OPTIMIZATION_LEVEL_DEFAULT       2
-#define CODEGEN_OPTIMIZATION_LEVEL_AGGRESSIVE    3
-
-extern bool init_codegen;
-extern bool codegen;
-extern bool codegen_validate_functions;
-extern int codegen_varlen_tolerance;
-extern int codegen_optimization_level;
-
-/**
  * Enable logging of DPE match in optimizer.
  */
 extern bool	optimizer_partition_selection_log;
@@ -590,15 +536,6 @@ extern char  *gp_default_storage_options;
 
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
-
-/*
- * This is the batch size used when we want to display the number of files that
- * have been shipped to the mirror during crash recovery.
- * For e.g if this value is set to 1000, after shipping 1000 files during
- * a message gets printed out which indicates the total number of files shipped to
- * the mirror for a particular directory.
- */
-extern int log_count_recovered_files_batch;
 
 extern int writable_external_table_bufsize;
 
@@ -688,9 +625,8 @@ extern void DefineCustomEnumVariable(
 
 extern void EmitWarningsOnPlaceholders(const char *className);
 
-extern const char *GetConfigOption(const char *name);
+extern const char *GetConfigOption(const char *name, bool restrict_superuser);
 extern const char *GetConfigOptionResetString(const char *name);
-extern bool IsSuperuserConfigOption(const char *name);
 extern void ProcessConfigFile(GucContext context);
 extern void InitializeGUCOptions(void);
 extern bool SelectConfigFiles(const char *userDoption, const char *progname);
@@ -726,20 +662,16 @@ extern ArrayType *GUCArrayReset(ArrayType *array);
 
 extern int	GUC_complaint_elevel(GucSource source);
 
-extern void pg_timezone_abbrev_initialize(void);
-
-extern char *gp_guc_list_show(GucSource excluding, List *guclist);
+extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);
 
-#ifdef USE_SEGWALREP
 extern char  *gp_replication_config_filename;
 
 extern bool select_gp_replication_config_files(const char *configdir, const char *progname);
 
 extern void set_gp_replication_config(const char *name, const char *value);
-#endif
 
 extern bool parse_real(const char *value, double *result);
 

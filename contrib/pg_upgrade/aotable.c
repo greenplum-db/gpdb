@@ -168,7 +168,7 @@ restore_aosegment_tables(migratorContext *ctx)
 	prep_status(ctx, "Restoring append-only auxiliary tables in new cluster");
 
 	/*
-	 * Rebuilding gp_relation_node can potentially take some time in a large
+	 * Rebuilding AO auxiliary tables can potentially take some time in a large
 	 * cluster so swap out the current progress file before starting so that
 	 * the user can see what's going on.
 	 */
@@ -188,33 +188,11 @@ restore_aosegment_tables(migratorContext *ctx)
 		PQclear(executeQueryOrDie(ctx, conn,
 								  "set allow_system_table_mods='dml'"));
 
-		/*
-		 * There are further safeguards for gp_relation_node. Bypass those too.
-		 */
-		PQclear(executeQueryOrDie(ctx, conn,
-								  "set gp_permit_relation_node_change = on"));
-
 		for (relnum = 0; relnum < olddb->rel_arr.nrels; relnum++)
 			restore_aosegment_table(ctx, conn, &olddb->rel_arr.rels[relnum]);
 
 		PQfinish(conn);
 	}
-
-	check_ok(ctx);
-}
-
-void
-restore_persistent_tables(migratorContext *ctx)
-{
-	PGconn	   *conn = connectToServer(ctx, "template1", CLUSTER_NEW);
-
-	prep_status(ctx, "Rebuild gp_relation_node in new cluster");
-	report_progress(ctx, CLUSTER_NEW, FIXUP, "Rebuild gp_relation_node");
-
-	PQclear(executeQueryOrDie(ctx, conn, "checkpoint"));
-	PQclear(executeQueryOrDie(ctx, conn, "select gp_persistent_reset_all()"));
-	PQclear(executeQueryOrDie(ctx, conn, "select gp_persistent_build_all(false)"));
-	PQfinish(conn);
 
 	check_ok(ctx);
 }

@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.312 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.327 2010/04/28 16:10:41 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,6 +32,7 @@
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbpartition.h"
 #include "commands/copy.h"
+#include "commands/defrem.h"
 #include "commands/tablecmds.h"
 #include "commands/trigger.h"
 #include "commands/queue.h"
@@ -53,6 +54,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
+#include "utils/metrics_utils.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbcopy.h"
@@ -848,7 +850,7 @@ CopyGetInt16(CopyState cstate, int16 *val)
  */
 void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 						char *null_print, char *quote, char *escape,
-						List *force_quote, List *force_notnull,
+						  List *force_quote, bool force_quote_all, List *force_notnull,
 						bool header_line, bool fill_missing, char *newline,
 						int num_columns)
 {
@@ -1013,11 +1015,11 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 	/*
 	 * FORCE QUOTE
 	 */
-	if (!csv_mode && force_quote != NIL)
+	if (!csv_mode && (force_quote != NIL || force_quote_all))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				errmsg("force quote available only in CSV mode")));
-	if (force_quote != NIL && load)
+	if ((force_quote != NIL || force_quote_all) && load)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				errmsg("force quote only available for data unloading, not loading")));
@@ -1107,6 +1109,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	List	   *attnamelist = stmt->attlist;
 	List	   *force_quote = NIL;
 	List	   *force_notnull = NIL;
+	bool		force_quote_all = false;
+	bool		format_specified = false;
 	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
 	AclMode		relPerms;
 	AclMode		remainingPerms;
@@ -1123,13 +1127,25 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	{
 		DefElem    *defel = (DefElem *) lfirst(option);
 
-		if (strcmp(defel->defname, "binary") == 0)
+		if (strcmp(defel->defname, "format") == 0)
 		{
-			if (cstate->binary)
+			char	   *fmt = defGetString(defel);
+
+			if (format_specified)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->binary = intVal(defel->arg);
+			format_specified = true;
+			if (strcmp(fmt, "text") == 0)
+				 /* default format */ ;
+			else if (strcmp(fmt, "csv") == 0)
+				cstate->csv_mode = true;
+			else if (strcmp(fmt, "binary") == 0)
+				cstate->binary = true;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("COPY format \"%s\" not recognized", fmt)));
 		}
 		else if (strcmp(defel->defname, "oids") == 0)
 		{
@@ -1137,7 +1153,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->oids = intVal(defel->arg);
+			cstate->oids = defGetBoolean(defel);
 		}
 		else if (strcmp(defel->defname, "delimiter") == 0)
 		{
@@ -1145,7 +1161,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->delim = strVal(defel->arg);
+			cstate->delim = defGetString(defel);
 		}
 		else if (strcmp(defel->defname, "null") == 0)
 		{
@@ -1153,7 +1169,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->null_print = strVal(defel->arg);
+			cstate->null_print = defGetString(defel);
 
 			/*
 			 * MPP-2010: unfortunately serialization function doesn't
@@ -1164,21 +1180,13 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			if(!cstate->null_print)
 				cstate->null_print = "";
 		}
-		else if (strcmp(defel->defname, "csv") == 0)
-		{
-			if (cstate->csv_mode)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->csv_mode = intVal(defel->arg);
-		}
 		else if (strcmp(defel->defname, "header") == 0)
 		{
 			if (cstate->header_line)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->header_line = intVal(defel->arg);
+			cstate->header_line = defGetBoolean(defel);
 		}
 		else if (strcmp(defel->defname, "quote") == 0)
 		{
@@ -1186,7 +1194,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->quote = strVal(defel->arg);
+			cstate->quote = defGetString(defel);
 		}
 		else if (strcmp(defel->defname, "escape") == 0)
 		{
@@ -1194,23 +1202,37 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			cstate->escape = strVal(defel->arg);
+			cstate->escape = defGetString(defel);
 		}
 		else if (strcmp(defel->defname, "force_quote") == 0)
 		{
-			if (force_quote)
+			if (force_quote || force_quote_all)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			force_quote = (List *) defel->arg;
+			if (defel->arg && IsA(defel->arg, A_Star))
+				force_quote_all = true;
+			else if (defel->arg && IsA(defel->arg, List))
+				force_quote = (List *) defel->arg;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("argument to option \"%s\" must be a list of column names",
+								defel->defname)));
 		}
-		else if (strcmp(defel->defname, "force_notnull") == 0)
+		else if (strcmp(defel->defname, "force_not_null") == 0)
 		{
 			if (force_notnull)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			force_notnull = (List *) defel->arg;
+			if (defel->arg && IsA(defel->arg, List))
+				force_notnull = (List *) defel->arg;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("argument to option \"%s\" must be a list of column names",
+								defel->defname)));
 		}
 		else if (strcmp(defel->defname, "fill_missing_fields") == 0)
 		{
@@ -1237,13 +1259,16 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			cstate->on_segment = TRUE;
 		}
 		else
-			elog(ERROR, "option \"%s\" not recognized",
-				 defel->defname);
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("option \"%s\" not recognized",
+							defel->defname)));
 	}
 
-	/* Set defaults */
-
-	/* Check for incompatible options */
+	/*
+	 * Check for incompatible options (must do these two before inserting
+	 * defaults)
+	 */
 	if (cstate->binary && cstate->delim)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
@@ -1267,11 +1292,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot specify HEADER in BINARY mode")));
-
-	if (cstate->binary && cstate->csv_mode)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify CSV in BINARY mode")));
 
 	if (cstate->binary && cstate->null_print)
 		ereport(ERROR,
@@ -1357,6 +1377,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 						 cstate->quote,
 						 cstate->escape,
 						 force_quote,
+						 force_quote_all,
 						 force_notnull,
 						 cstate->header_line,
 						 cstate->fill_missing,
@@ -1543,9 +1564,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 		/* check read-only transaction */
 		if (XactReadOnly && is_from && !cstate->rel->rd_islocaltemp)
-			ereport(ERROR,
-					(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
-					 errmsg("transaction is read-only")));
+			PreventCommandIfReadOnly("COPY FROM");
 
 		/* Don't allow COPY w/ OIDs to or from a table without them */
 		if (cstate->oids && !cstate->rel->rd_rel->relhasoids)
@@ -1618,7 +1637,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		cstate->queryDesc = CreateQueryDesc(plan, queryString,
 											GetActiveSnapshot(),
 											InvalidSnapshot,
-											dest, NULL, false);
+											dest, NULL,
+											GP_INSTRUMENT_OPTS);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -1630,6 +1650,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					GetResqueueName(GetResQueueId()),
 					GetResqueuePriority(GetResQueueId()));
 		}
+
+		/* GPDB hook for collecting query info */
+		if (query_info_collect_hook)
+			(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, cstate->queryDesc);
 
 		/*
 		 * Call ExecutorStart to prepare the plan for execution.
@@ -1649,7 +1673,14 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	/* Convert FORCE QUOTE name list to per-column flags, check validity */
 	cstate->force_quote_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
-	if (force_quote)
+	if (force_quote_all)
+	{
+		int			i;
+
+		for (i = 0; i < num_phys_attrs; i++)
+			cstate->force_quote_flags[i] = true;
+	}
+	else if (force_quote)
 	{
 		List	   *attnums;
 		ListCell   *cur;
@@ -1988,8 +2019,9 @@ DoCopy(const CopyStmt *stmt, const char *queryString)
 	{
 		if (!(!cstate->on_segment && Gp_role == GP_ROLE_EXECUTE))
 		{
-			if (cstate->is_program)
+			if (cstate->is_program && cstate->program_pipes)
 			{
+				kill(cstate->program_pipes->pid, 9);
 				close_program_pipes(cstate, false);
 			}
 		}
@@ -4361,8 +4393,12 @@ CopyFrom(CopyState cstate)
 	resultRelInfo->ri_RelationDesc = cstate->rel;
 	resultRelInfo->ri_TrigDesc = CopyTriggerDesc(cstate->rel->trigdesc);
 	if (resultRelInfo->ri_TrigDesc)
+	{
 		resultRelInfo->ri_TrigFunctions = (FmgrInfo *)
 			palloc0(resultRelInfo->ri_TrigDesc->numtriggers * sizeof(FmgrInfo));
+		resultRelInfo->ri_TrigWhenExprs = (List **)
+			palloc0(resultRelInfo->ri_TrigDesc->numtriggers * sizeof(List *));
+	}
 	resultRelInfo->ri_TrigInstrument = NULL;
 	ResultRelInfoSetSegno(resultRelInfo, cstate->ao_segnos);
 
@@ -4376,7 +4412,8 @@ CopyFrom(CopyState cstate)
 	CopyInitPartitioningState(estate);
 
 	/* Set up a tuple slot too */
-	baseSlot = MakeSingleTupleTableSlot(tupDesc);
+	baseSlot = ExecInitExtraTupleSlot(estate);
+	ExecSetSlotDescriptor(baseSlot, tupDesc);
 
 	econtext = GetPerTupleExprContext(estate);
 
@@ -4958,6 +4995,7 @@ PROCESS_SEGMENT_DATA:
 
 				if (!skip_tuple)
 				{
+					List	   *recheckIndexes = NIL;
 					char relstorage = RelinfoGetStorage(resultRelInfo);
 					ItemPointerData insertedTid;
 
@@ -5003,7 +5041,7 @@ PROCESS_SEGMENT_DATA:
 					}
 
 					if (resultRelInfo->ri_NumIndices > 0)
-						ExecInsertIndexTuples(slot, &insertedTid, estate, false);
+						recheckIndexes = ExecInsertIndexTuples(slot, &insertedTid, estate);
 
 					/* AFTER ROW INSERT Triggers */
 					if (resultRelInfo->ri_TrigDesc &&
@@ -5012,8 +5050,11 @@ PROCESS_SEGMENT_DATA:
 						HeapTuple tuple;
 
 						tuple = ExecFetchSlotHeapTuple(slot);
-						ExecARInsertTriggers(estate, resultRelInfo, tuple);
+						ExecARInsertTriggers(estate, resultRelInfo, tuple,
+											 recheckIndexes);
 					}
+
+					list_free(recheckIndexes);
 
 					/*
 					 * We count only tuples not suppressed by a BEFORE INSERT trigger;
@@ -5132,8 +5173,7 @@ PROCESS_SEGMENT_DATA:
 	/* NB: do not pfree baseValues/baseNulls and partValues/partNulls here, since
 	 * there may be duplicate free in ExecDropSingleTupleTableSlot; if not, they
 	 * would be freed by FreeExecutorState anyhow */
-
-	ExecDropSingleTupleTableSlot(baseSlot);
+	ExecResetTupleTable(estate->es_tupleTable, false);
 
 	/*
 	 * If we skipped writing WAL, then we need to sync the heap (but not
@@ -8158,10 +8198,13 @@ close_program_pipes(CopyState cstate, bool ifThrow)
 		cstate->copy_file = NULL;
 	}
 
-	if (kill(cstate->program_pipes->pid, 0) == 0) /* process exists */
+	/* just return if pipes not created, like when relation does not exist */
+	if (!cstate->program_pipes)
 	{
-		ret = pclose_with_stderr(cstate->program_pipes->pid, cstate->program_pipes->pipes, &sinfo);
+		return;
 	}
+	
+	ret = pclose_with_stderr(cstate->program_pipes->pid, cstate->program_pipes->pipes, &sinfo);
 
 	if (ret == 0 || !ifThrow)
 	{

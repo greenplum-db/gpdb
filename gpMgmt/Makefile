@@ -10,11 +10,8 @@ SET_VERSION_SCRIPTS = \
 	bin/gpactivatestandby \
 	bin/gpaddmirrors \
 	bin/gpcheckperf \
-	bin/gpcrondump \
-	bin/gpdbrestore \
 	bin/gpdeletesystem \
 	bin/gpexpand \
-	bin/gpfilespace \
 	bin/gpinitstandby \
 	bin/gpinitsystem \
 	bin/gpload.py \

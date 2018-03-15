@@ -245,16 +245,7 @@ ORDER BY 1, 2; -- order none
 SELECT proname, pronargs 
 FROM pg_proc 
 WHERE pronargs > 8 and prolang = 12 AND
-	prosrc NOT IN ('gp_deprecated') AND
-	proname NOT IN ('gp_add_persistent_filespace_node_entry',
-					'gp_add_persistent_relation_node_entry',
-					'gp_update_persistent_filespace_node_entry',
-					'gp_update_persistent_relation_node_entry',
-					'gp_add_persistent_database_node_entry',
-					'gp_add_persistent_tablespace_node_entry',
-					'gp_update_persistent_database_node_entry',
-					'gp_update_persistent_tablespace_node_entry',
-					'gp_add_segment') AND
+	proname NOT IN ('gp_add_segment') AND
     NOT proisagg AND 
     NOT proiswindow;
 

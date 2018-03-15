@@ -238,7 +238,6 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 71:DECLARE c1 CURSOR for select c1, c2 from foo_concurrency_test order by c1 limit 10;
 71:DECLARE c2 CURSOR for select c1, c2 from bar_concurrency_test order by c1 limit 10;
 71:DECLARE c3 CURSOR for select count(*) from foo_concurrency_test t1, bar_concurrency_test t2 where t1.c2 = t2.c2;
-71:
 71:Fetch ALL FROM c1;
 71:Fetch ALL FROM c2;
 71:Fetch ALL FROM c3;

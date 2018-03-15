@@ -2,5 +2,5 @@ CREATE READABLE EXTERNAL TABLE s3regress_invalid_header (date text, time text, o
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@') format 'csv';
 SELECT count(*) FROM s3regress_invalid_header;
 ERROR:  invalid input syntax for type double precision: "open"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=23220)
-DETAIL:  External table s3regress_invalid_header, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@, column open
+CONTEXT:  External table s3regress_invalid_header, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@, column open
 DROP EXTERNAL TABLE s3regress_invalid_header;

@@ -3,12 +3,12 @@
  * xid.c
  *	  POSTGRES transaction identifier and command identifier datatypes.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/xid.c,v 1.12 2009/01/01 17:23:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/xid.c,v 1.14 2010/01/02 16:57:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -167,6 +167,25 @@ xid_age(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32((int32) (now - xid));
 }
 
+/*
+ * xidComparator
+ *		qsort comparison function for XIDs
+ *
+ * We can't use wraparound comparison for XIDs because that does not respect
+ * the triangle inequality!  Any old sort order will do.
+ */
+int
+xidComparator(const void *arg1, const void *arg2)
+{
+	TransactionId xid1 = *(const TransactionId *) arg1;
+	TransactionId xid2 = *(const TransactionId *) arg2;
+
+	if (xid1 > xid2)
+		return 1;
+	if (xid1 < xid2)
+		return -1;
+	return 0;
+}
 
 /*****************************************************************************
  *	 COMMAND IDENTIFIER ROUTINES											 *

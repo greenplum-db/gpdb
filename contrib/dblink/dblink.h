@@ -8,8 +8,8 @@
  * Darko Prenosil <Darko.Prenosil@finteh.hr>
  * Shridhar Daithankar <shridhar_daithankar@persistent.co.in>
  *
- * $PostgreSQL: pgsql/contrib/dblink/dblink.h,v 1.22 2009/06/09 17:41:02 tgl Exp $
- * Copyright (c) 2001-2009, PostgreSQL Global Development Group
+ * $PostgreSQL: pgsql/contrib/dblink/dblink.h,v 1.24 2010/01/02 16:57:32 momjian Exp $
+ * Copyright (c) 2001-2010, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
  * Permission to use, copy, modify, and distribute this software and its
@@ -57,5 +57,6 @@ extern Datum dblink_build_sql_insert(PG_FUNCTION_ARGS);
 extern Datum dblink_build_sql_delete(PG_FUNCTION_ARGS);
 extern Datum dblink_build_sql_update(PG_FUNCTION_ARGS);
 extern Datum dblink_current_query(PG_FUNCTION_ARGS);
+extern Datum dblink_get_notify(PG_FUNCTION_ARGS);
 
 #endif   /* DBLINK_H */

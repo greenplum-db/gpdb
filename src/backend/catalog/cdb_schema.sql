@@ -44,13 +44,6 @@ CREATE OR REPLACE VIEW gp_distributed_log AS
 
 GRANT SELECT ON gp_distributed_log TO PUBLIC;
 
-
-------------------------------------------------------------------
--- plpgsql is created by default in 3.4, but it is still a "user" language,
--- rather than an "internal" language.
-------------------------------------------------------------------
-CREATE LANGUAGE plpgsql;
-
 ALTER RESOURCE QUEUE pg_default WITH (priority=medium, memory_limit='-1');
 
 CREATE SCHEMA gp_toolkit;

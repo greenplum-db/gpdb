@@ -4,10 +4,10 @@
  *
  * PostgreSQL object comments utility code.
  *
- * Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.107 2009/06/11 14:48:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.115 2010/06/13 17:43:12 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,9 +24,9 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_description.h"
 #include "catalog/pg_extension.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_largeobject.h"
+#include "catalog/pg_largeobject_metadata.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -45,8 +45,8 @@
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
 #include "commands/extension.h"
-#include "commands/filespace.h"
 #include "commands/tablespace.h"
+#include "libpq/be-fsstubs.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
@@ -91,7 +91,6 @@ static void CommentOpFamily(List *qualname, List *arguments, char *comment);
 static void CommentLargeObject(List *qualname, char *comment);
 static void CommentCast(List *qualname, List *arguments, char *comment);
 static void CommentTablespace(List *qualname, char *comment);
-static void CommentFilespace(List *qualname, char *comment);
 static void CommentRole(List *qualname, char *comment);
 static void CommentResourceQueue(List *qualname, char *comment);
 static void CommentTSParser(List *qualname, char *comment);
@@ -168,9 +167,6 @@ CommentObject(CommentStmt *stmt)
 			break;
 		case OBJECT_TABLESPACE:
 			CommentTablespace(stmt->objname, stmt->comment);
-			break;
-		case OBJECT_FILESPACE:
-			CommentFilespace(stmt->objname, stmt->comment);
 			break;
 		case OBJECT_RESQUEUE:
 			CommentResourceQueue(stmt->objname, stmt->comment);
@@ -492,6 +488,61 @@ DeleteSharedComments(Oid oid, Oid classoid)
 }
 
 /*
+ * GetComment -- get the comment for an object, or null if not found.
+ */
+char *
+GetComment(Oid oid, Oid classoid, int32 subid)
+{
+	Relation	description;
+	ScanKeyData skey[3];
+	SysScanDesc sd;
+	TupleDesc	tupdesc;
+	HeapTuple	tuple;
+	char	   *comment;
+
+	/* Use the index to search for a matching old tuple */
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_description_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_description_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+	ScanKeyInit(&skey[2],
+				Anum_pg_description_objsubid,
+				BTEqualStrategyNumber, F_INT4EQ,
+				Int32GetDatum(subid));
+
+	description = heap_open(DescriptionRelationId, AccessShareLock);
+	tupdesc = RelationGetDescr(description);
+
+	sd = systable_beginscan(description, DescriptionObjIndexId, true,
+							SnapshotNow, 3, skey);
+
+	comment = NULL;
+	while ((tuple = systable_getnext(sd)) != NULL)
+	{
+		Datum		value;
+		bool		isnull;
+
+		/* Found the tuple, get description field */
+		value = heap_getattr(tuple, Anum_pg_description_description, tupdesc, &isnull);
+		if (!isnull)
+			comment = TextDatumGetCString(value);
+		break;					/* Assume there can be only one match */
+	}
+
+	systable_endscan(sd);
+
+	/* Done */
+	heap_close(description, AccessShareLock);
+
+	return comment;
+}
+
+/*
  * CommentRelation --
  *
  * This routine is used to add/drop a comment from a relation, where
@@ -599,6 +650,21 @@ CommentAttribute(List *qualname, char *comment)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   RelationGetRelationName(relation));
 
+	/*
+	 * Allow comments only on columns of tables, views, and composite types
+	 * (which are the only relkinds for which pg_dump will dump per-column
+	 * comments).  In particular we wish to disallow comments on index
+	 * columns, because the naming of an index's columns may change across PG
+	 * versions, so dumping per-column comments could create reload failures.
+	 */
+	if (relation->rd_rel->relkind != RELKIND_RELATION &&
+		relation->rd_rel->relkind != RELKIND_VIEW &&
+		relation->rd_rel->relkind != RELKIND_COMPOSITE_TYPE)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a table, view, or composite type",
+						RelationGetRelationName(relation))));
+
 	/* Now, fetch the attribute number from the system cache */
 
 	attnum = get_attnum(RelationGetRelid(relation), attrname);
@@ -690,47 +756,6 @@ CommentTablespace(List *qualname, char *comment)
 }
 
 /*
- * CommentFilespace --
- *
- * This routine is used to add/drop any user-comments a user might
- * have regarding a filespace.  The filespace is specified by name
- * and, if found, and the user has appropriate permissions, a
- * comment will be added/dropped using the CreateSharedComments() routine.
- *
- */
-static void
-CommentFilespace(List *qualname, char *comment)
-{
-	Relation    rel;
-	char	   *filespace;
-	Oid			oid;
-
-	if (list_length(qualname) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("filespace name may not be qualified")));
-	filespace = strVal(linitial(qualname));
-
-	rel = heap_open(FileSpaceRelationId, RowShareLock);
-	oid = get_filespace_oid(rel, filespace);
-	heap_close(rel, RowShareLock);
-	if (!OidIsValid(oid))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("filespace \"%s\" does not exist", filespace)));
-		return;
-	}
-
-	/* Check object security */
-	if (!pg_filespace_ownercheck(oid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_FILESPACE, filespace);
-
-	/* Call CreateSharedComments() to create/drop the comments */
-	CreateSharedComments(oid, FileSpaceRelationId, comment);
-}
-
-/*
  * CommentRole --
  *
  * This routine is used to add/drop any user-comments a user might
@@ -783,9 +808,7 @@ CommentNamespace(List *qualname, char *comment)
 				 errmsg("schema name cannot be qualified")));
 	namespace = strVal(linitial(qualname));
 
-	oid = GetSysCacheOid(NAMESPACENAME,
-						 CStringGetDatum(namespace),
-						 0, 0, 0);
+	oid = GetSysCacheOid1(NAMESPACENAME, CStringGetDatum(namespace));
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -889,10 +912,9 @@ CommentRule(List *qualname, char *comment)
 		reloid = RelationGetRelid(relation);
 
 		/* Find the rule's pg_rewrite tuple, get its OID */
-		tuple = SearchSysCache(RULERELNAME,
-							   ObjectIdGetDatum(reloid),
-							   PointerGetDatum(rulename),
-							   0, 0);
+		tuple = SearchSysCache2(RULERELNAME,
+								ObjectIdGetDatum(reloid),
+								PointerGetDatum(rulename));
 		if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1122,12 +1144,8 @@ CommentConstraint(List *qualname, char *comment)
 	List	   *relName;
 	char	   *conName;
 	RangeVar   *rel;
-	Relation	pg_constraint,
-				relation;
-	HeapTuple	tuple;
-	SysScanDesc scan;
-	ScanKeyData skey[1];
-	Oid			conOid = InvalidOid;
+	Relation	relation;
+	Oid			conOid;
 
 	/* Separate relname and constraint name */
 	nnames = list_length(qualname);
@@ -1146,50 +1164,12 @@ CommentConstraint(List *qualname, char *comment)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
 					   RelationGetRelationName(relation));
 
-	/*
-	 * Fetch the constraint tuple from pg_constraint.  There may be more than
-	 * one match, because constraints are not required to have unique names;
-	 * if so, error out.
-	 */
-	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
-
-	ScanKeyInit(&skey[0],
-				Anum_pg_constraint_conrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(relation)));
-
-	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
-							  SnapshotNow, 1, skey);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
-	{
-		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
-
-		if (strcmp(NameStr(con->conname), conName) == 0)
-		{
-			if (OidIsValid(conOid))
-				ereport(ERROR,
-						(errcode(ERRCODE_DUPLICATE_OBJECT),
-				 errmsg("table \"%s\" has multiple constraints named \"%s\"",
-						RelationGetRelationName(relation), conName)));
-			conOid = HeapTupleGetOid(tuple);
-		}
-	}
-
-	systable_endscan(scan);
-
-	/* If no constraint exists for the relation specified, notify user */
-	if (!OidIsValid(conOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("constraint \"%s\" for table \"%s\" does not exist",
-						conName, RelationGetRelationName(relation))));
+	conOid = get_constraint_oid(RelationGetRelid(relation), conName, false);
 
 	/* Call CreateComments() to create/drop the comments */
 	CreateComments(conOid, ConstraintRelationId, 0, comment);
 
 	/* Done, but hold lock on relation */
-	heap_close(pg_constraint, AccessShareLock);
 	heap_close(relation, NoLock);
 }
 
@@ -1239,9 +1219,7 @@ CommentLanguage(List *qualname, char *comment)
 				 errmsg("language name cannot be qualified")));
 	language = strVal(linitial(qualname));
 
-	oid = GetSysCacheOid(LANGNAME,
-						 CStringGetDatum(language),
-						 0, 0, 0);
+	oid = GetSysCacheOid1(LANGNAME, CStringGetDatum(language));
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -1282,9 +1260,7 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 	/*
 	 * Get the access method's OID.
 	 */
-	amID = GetSysCacheOid(AMNAME,
-						  CStringGetDatum(amname),
-						  0, 0, 0);
+	amID = GetSysCacheOid1(AMNAME, CStringGetDatum(amname));
 	if (!OidIsValid(amID))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1304,11 +1280,10 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 		Oid			namespaceId;
 
 		namespaceId = LookupExplicitNamespace(schemaname);
-		tuple = SearchSysCache(CLAAMNAMENSP,
-							   ObjectIdGetDatum(amID),
-							   PointerGetDatum(opcname),
-							   ObjectIdGetDatum(namespaceId),
-							   0);
+		tuple = SearchSysCache3(CLAAMNAMENSP,
+								ObjectIdGetDatum(amID),
+								PointerGetDatum(opcname),
+								ObjectIdGetDatum(namespaceId));
 	}
 	else
 	{
@@ -1319,9 +1294,7 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("operator class \"%s\" does not exist for access method \"%s\"",
 							opcname, amname)));
-		tuple = SearchSysCache(CLAOID,
-							   ObjectIdGetDatum(opcID),
-							   0, 0, 0);
+		tuple = SearchSysCache1(CLAOID, ObjectIdGetDatum(opcID));
 	}
 
 	if (!HeapTupleIsValid(tuple))
@@ -1370,9 +1343,7 @@ CommentOpFamily(List *qualname, List *arguments, char *comment)
 	/*
 	 * Get the access method's OID.
 	 */
-	amID = GetSysCacheOid(AMNAME,
-						  CStringGetDatum(amname),
-						  0, 0, 0);
+	amID = GetSysCacheOid1(AMNAME, CStringGetDatum(amname));
 	if (!OidIsValid(amID))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1392,11 +1363,10 @@ CommentOpFamily(List *qualname, List *arguments, char *comment)
 		Oid			namespaceId;
 
 		namespaceId = LookupExplicitNamespace(schemaname);
-		tuple = SearchSysCache(OPFAMILYAMNAMENSP,
-							   ObjectIdGetDatum(amID),
-							   PointerGetDatum(opfname),
-							   ObjectIdGetDatum(namespaceId),
-							   0);
+		tuple = SearchSysCache3(OPFAMILYAMNAMENSP,
+								ObjectIdGetDatum(amID),
+								PointerGetDatum(opfname),
+								ObjectIdGetDatum(namespaceId));
 	}
 	else
 	{
@@ -1407,9 +1377,7 @@ CommentOpFamily(List *qualname, List *arguments, char *comment)
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("operator family \"%s\" does not exist for access method \"%s\"",
 							opfname, amname)));
-		tuple = SearchSysCache(OPFAMILYOID,
-							   ObjectIdGetDatum(opfID),
-							   0, 0, 0);
+		tuple = SearchSysCache1(OPFAMILYOID, ObjectIdGetDatum(opfID));
 	}
 
 	if (!HeapTupleIsValid(tuple))
@@ -1444,32 +1412,9 @@ static void
 CommentLargeObject(List *qualname, char *comment)
 {
 	Oid			loid;
-	Node	   *node;
 
 	Assert(list_length(qualname) == 1);
-	node = (Node *) linitial(qualname);
-
-	switch (nodeTag(node))
-	{
-		case T_Integer:
-			loid = intVal(node);
-			break;
-		case T_Float:
-
-			/*
-			 * Values too large for int4 will be represented as Float
-			 * constants by the lexer.	Accept these if they are valid OID
-			 * strings.
-			 */
-			loid = DatumGetObjectId(DirectFunctionCall1(oidin,
-											 CStringGetDatum(strVal(node))));
-			break;
-		default:
-			elog(ERROR, "unrecognized node type: %d",
-				 (int) nodeTag(node));
-			/* keep compiler quiet */
-			loid = InvalidOid;
-	}
+	loid = oidparse((Node *) linitial(qualname));
 
 	/* check that the large object exists */
 	if (!LargeObjectExists(loid))
@@ -1477,7 +1422,19 @@ CommentLargeObject(List *qualname, char *comment)
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("large object %u does not exist", loid)));
 
-	/* Call CreateComments() to create/drop the comments */
+	/* Permission checks */
+	if (!lo_compat_privileges &&
+		!pg_largeobject_ownercheck(loid, GetUserId()))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be owner of large object %u", loid)));
+
+	/*
+	 * Call CreateComments() to create/drop the comments
+	 *
+	 * See the comment in the inv_create() which describes the reason why
+	 * LargeObjectRelationId is used instead of LargeObjectMetadataRelationId.
+	 */
 	CreateComments(loid, LargeObjectRelationId, 0, comment);
 }
 
@@ -1511,10 +1468,9 @@ CommentCast(List *qualname, List *arguments, char *comment)
 	sourcetypeid = typenameTypeId(NULL, sourcetype, NULL);
 	targettypeid = typenameTypeId(NULL, targettype, NULL);
 
-	tuple = SearchSysCache(CASTSOURCETARGET,
-						   ObjectIdGetDatum(sourcetypeid),
-						   ObjectIdGetDatum(targettypeid),
-						   0, 0);
+	tuple = SearchSysCache2(CASTSOURCETARGET,
+							ObjectIdGetDatum(sourcetypeid),
+							ObjectIdGetDatum(targettypeid));
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),

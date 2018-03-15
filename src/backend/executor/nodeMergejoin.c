@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.97 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.103 2010/07/06 19:18:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -282,7 +282,7 @@ MJExamineQuals(List *mergeclauses,
  * input, since we assume mergejoin operators are strict.  If the NULL
  * is in the first join column, and that column sorts nulls last, then
  * we can further conclude that no following tuple can match anything
- * either, since they must all have nulls in the first column.  However,
+ * either, since they must all have nulls in the first column.	However,
  * that case is only interesting if we're not in FillOuter mode, else
  * we have to visit all the tuples anyway.
  *
@@ -467,8 +467,13 @@ MJCompare(MergeJoinState *mergestate)
 	 * want to report that the tuples are equal.  Instead, if result is still
 	 * 0, change it to +1.	This will result in advancing the inner side of
 	 * the join.
+	 *
+	 * Likewise, if there was a constant-false joinqual, do not report
+	 * equality.  We have to check this as part of the mergequals, else the
+	 * rescan logic will do the wrong thing.
 	 */
-	if (nulleqnull && result == 0)
+	if (result == 0 &&
+		(nulleqnull || mergestate->mj_ConstFalseJoin))
 		result = 1;
 
 	MemoryContextSwitchTo(oldContext);
@@ -540,6 +545,32 @@ MJFillInner(MergeJoinState *node)
 	}
 
 	return NULL;
+}
+
+
+/*
+ * Check that a qual condition is constant true or constant false.
+ * If it is constant false (or null), set *is_const_false to TRUE.
+ *
+ * Constant true would normally be represented by a NIL list, but we allow an
+ * actual bool Const as well.  We do expect that the planner will have thrown
+ * away any non-constant terms that have been ANDed with a constant false.
+ */
+static bool
+check_constant_qual(List *qual, bool *is_const_false)
+{
+	ListCell   *lc;
+
+	foreach(lc, qual)
+	{
+		Const	   *con = (Const *) lfirst(lc);
+
+		if (!con || !IsA(con, Const))
+			return false;
+		if (con->constisnull || !DatumGetBool(con->constvalue))
+			*is_const_false = true;
+	}
+	return true;
 }
 
 
@@ -851,16 +882,9 @@ ExecMergeJoin(MergeJoinState *node)
 				innerTupleSlot = node->mj_InnerTupleSlot;
 				econtext->ecxt_innertuple = innerTupleSlot;
 
-				/* GPDB_84_MERGE_FIXME: why is this condition different from upstream? */
-				if (node->js.jointype == JOIN_SEMI &&
-					node->mj_MatchedOuter)
-					qualResult = false;
-				else
-				{
-					qualResult = (joinqual == NIL ||
-								  ExecQual(joinqual, econtext, false));
-					MJ_DEBUG_QUAL(joinqual, qualResult);
-				}
+				qualResult = (joinqual == NIL ||
+							  ExecQual(joinqual, econtext, false));
+				MJ_DEBUG_QUAL(joinqual, qualResult);
 
 				if (qualResult)
 				{
@@ -941,6 +965,7 @@ ExecMergeJoin(MergeJoinState *node)
 				switch (MJEvalInnerValues(node, innerTupleSlot))
 				{
 					case MJEVAL_MATCHABLE:
+
 						/*
 						 * Test the new inner tuple to see if it matches
 						 * outer.
@@ -963,6 +988,7 @@ ExecMergeJoin(MergeJoinState *node)
 						}
 						break;
 					case MJEVAL_NONMATCHABLE:
+
 						/*
 						 * It contains a NULL and hence can't match any outer
 						 * tuple, so we can skip the comparison and assume the
@@ -971,6 +997,7 @@ ExecMergeJoin(MergeJoinState *node)
 						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
 						break;
 					case MJEVAL_ENDOFJOIN:
+
 						/*
 						 * No more inner tuples.  However, this might be
 						 * only effective and not physical end of inner plan,
@@ -1045,11 +1072,15 @@ ExecMergeJoin(MergeJoinState *node)
 				{
 					case MJEVAL_MATCHABLE:
 						if (((MergeJoin*)node->js.ps.plan)->unique_outer)
+						{
 							/* The current innerTuple will match with this outerTuple.*/
 							node->mj_JoinState = EXEC_MJ_JOINTUPLES;
+						}
 						else
+						{
 							/* Go test the new tuple against the marked tuple */
 							node->mj_JoinState = EXEC_MJ_TESTOUTER;
+						}
 						break;
 					case MJEVAL_NONMATCHABLE:
 						/* Can't match, so fetch next outer tuple */
@@ -1133,9 +1164,13 @@ ExecMergeJoin(MergeJoinState *node)
 					 * state for the rescanned inner tuples.  We know all of
 					 * them will match this new outer tuple and therefore
 					 * won't be emitted as fill tuples.  This works *only*
-					 * because we require the extra joinquals to be nil when
-					 * doing a right or full join --- otherwise some of the
-					 * rescanned tuples might fail the extra joinquals.
+					 * because we require the extra joinquals to be constant
+					 * when doing a right or full join --- otherwise some of
+					 * the rescanned tuples might fail the extra joinquals.
+					 * This obviously won't happen for a constant-true extra
+					 * joinqual, while the constant-false case is handled by
+					 * forcing the merge clause to never match, so we never
+					 * get here.
 					 */
 					ExecRestrPos(innerPlan);
 
@@ -1181,9 +1216,11 @@ ExecMergeJoin(MergeJoinState *node)
 							node->mj_JoinState = EXEC_MJ_SKIP_TEST;
 							break;
 						case MJEVAL_NONMATCHABLE:
+
 							/*
 							 * current inner can't possibly match any outer;
-							 * better to advance the inner scan than the outer.
+							 * better to advance the inner scan than the
+							 * outer.
 							 */
 							node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
 							break;
@@ -1393,6 +1430,7 @@ ExecMergeJoin(MergeJoinState *node)
 						node->mj_JoinState = EXEC_MJ_SKIP_TEST;
 						break;
 					case MJEVAL_NONMATCHABLE:
+
 						/*
 						 * current inner can't possibly match any outer;
 						 * better to advance the inner scan than the outer.
@@ -1576,6 +1614,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate->js.joinqual = (List *)
 		ExecInitExpr((Expr *) node->join.joinqual,
 					 (PlanState *) mergestate);
+	mergestate->mj_ConstFalseJoin = false;
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
 	mergestate->mj_squelchInner = true;
@@ -1611,8 +1650,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	else
 		mergestate->mj_ExtraMarks = false;
 
-#define MERGEJOIN_NSLOTS 4
-
 	/*
 	 * tuple table initialization
 	 */
@@ -1645,10 +1682,11 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 							  ExecGetResultType(outerPlanState(mergestate)));
 
 			/*
-			 * Can't handle right or full join with non-nil extra joinclauses.
-			 * This should have been caught by planner.
+			 * Can't handle right or full join with non-constant extra
+			 * joinclauses.  This should have been caught by planner.
 			 */
-			if (node->join.joinqual != NIL)
+			if (!check_constant_qual(node->join.joinqual,
+									 &mergestate->mj_ConstFalseJoin))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("RIGHT JOIN is only supported with merge-joinable join conditions")));
@@ -1664,9 +1702,11 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 							  ExecGetResultType(innerPlanState(mergestate)));
 
 			/*
-			 * Can't handle right or full join with non-nil extra joinclauses.
+			 * Can't handle right or full join with non-constant extra
+			 * joinclauses.  This should have been caught by planner.
 			 */
-			if (node->join.joinqual != NIL)
+			if (!check_constant_qual(node->join.joinqual,
+									 &mergestate->mj_ConstFalseJoin))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("FULL JOIN is only supported with merge-joinable join conditions")));
@@ -1711,14 +1751,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 			   "node initialized");
 
 	return mergestate;
-}
-
-int
-ExecCountSlotsMergeJoin(MergeJoin *node)
-{
-	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
-		ExecCountSlotsNode(innerPlan((Plan *) node)) +
-		MERGEJOIN_NSLOTS;
 }
 
 /* ----------------------------------------------------------------

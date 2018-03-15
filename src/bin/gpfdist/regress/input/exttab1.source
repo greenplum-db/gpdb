@@ -246,7 +246,7 @@ select count(*) from ext_whois;
 
 create table v_w as select * from ext_whois;
 
---  sort distinct spill to disk/external sort
+-- sort distinct spill to disk/external sort
 select count(*) from (select * from v_w union select * from ext_whois) as foo;
 select count(*) from (select * from v_w union all select * from ext_whois) as foo;
 select count(*) from (select distinct * from ext_whois) as foo;

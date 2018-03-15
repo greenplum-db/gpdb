@@ -3,11 +3,11 @@
  * int8.c
  *	  Internal 64-bit integer operations
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.74 2009/06/11 14:49:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.79 2010/02/26 02:01:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +19,6 @@
 
 #include "funcapi.h"
 #include "libpq/pqformat.h"
-#include "nodes/nodes.h"
 #include "utils/int8.h"
 
 
@@ -76,15 +75,12 @@ scanint8(const char *str, bool errorOK, int64 *result)
 		 * Do an explicit check for INT64_MIN.	Ugly though this is, it's
 		 * cleaner than trying to get the loop below to handle it portably.
 		 */
-#ifndef INT64_IS_BUSTED
 		if (strncmp(ptr, "9223372036854775808", 19) == 0)
 		{
 			tmp = -INT64CONST(0x7fffffffffffffff) - 1;
 			ptr += 19;
 			goto gotdigits;
 		}
-#endif
-
 		sign = -1;
 	}
 	else if (*ptr == '+')
@@ -575,12 +571,9 @@ int8mul(PG_FUNCTION_ARGS)
 	 * Since the division is likely much more expensive than the actual
 	 * multiplication, we'd like to skip it where possible.  The best bang for
 	 * the buck seems to be to check whether both inputs are in the int32
-	 * range; if so, no overflow is possible.  (But that only works if we
-	 * really have a 64-bit int64 datatype...)
+	 * range; if so, no overflow is possible.
 	 */
-#ifndef INT64_IS_BUSTED
 	if (arg1 != (int64) ((int32) arg1) || arg2 != (int64) ((int32) arg2))
-#endif
 	{
 		if (arg2 != 0 &&
 			((arg2 == -1 && arg1 < 0 && result < 0) ||
@@ -686,13 +679,13 @@ int8inc(PG_FUNCTION_ARGS)
 {
 	/*
 	 * When int8 is pass-by-reference, we provide this special case to avoid
-	 * palloc overhead for COUNT(): when called from nodeAgg, we know that the
-	 * argument is modifiable local storage, so just update it in-place. (If
-	 * int8 is pass-by-value, then of course this is useless as well as
+	 * palloc overhead for COUNT(): when called as an aggregate, we know that
+	 * the argument is modifiable local storage, so just update it in-place.
+	 * (If int8 is pass-by-value, then of course this is useless as well as
 	 * incorrect, so just ifdef it out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
-	if (fcinfo->context && IsA(fcinfo->context, AggState))
+	if (AggCheckCallContext(fcinfo, NULL))
 	{
 		int64	   *arg = (int64 *) PG_GETARG_POINTER(0);
 		int64		result;
@@ -710,7 +703,7 @@ int8inc(PG_FUNCTION_ARGS)
 	else
 #endif
 	{
-		/* Not called by nodeAgg, so just do it the dumb way */
+		/* Not called as an aggregate, so just do it the dumb way */
 		int64		arg = PG_GETARG_INT64(0);
 		int64		result;
 
@@ -1169,9 +1162,14 @@ int28div(PG_FUNCTION_ARGS)
 	int64		arg2 = PG_GETARG_INT64(1);
 
 	if (arg2 == 0)
+	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DIVISION_BY_ZERO),
 				 errmsg("division by zero")));
+		/* ensure compiler realizes we mustn't reach the division (gcc bug) */
+		PG_RETURN_NULL();
+	}
+
 	/* No overflow is possible */
 	PG_RETURN_INT64((int64) arg1 / arg2);
 }

@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.183 2009/06/11 14:48:58 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.194 2010/03/28 22:59:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,6 +31,7 @@
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
+#include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "optimizer/planshare.h"
 #include "parser/parse_clause.h"
@@ -301,10 +302,6 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		set_baserel_size_estimates(root, rel);
 	}
 
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
-
 	/*
 	 * Generate paths and add them to the rel's pathlist.
 	 *
@@ -469,6 +466,8 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		int			childRTindex;
 		RangeTblEntry *childRTE;
 		RelOptInfo *childrel;
+		List	   *childquals;
+		Node	   *childqual;
 		Path	   *childpath;
 		ListCell   *parentvars;
 		ListCell   *childvars;
@@ -493,10 +492,34 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		 * baserestrictinfo quals are needed before we can check for
 		 * constraint exclusion; so do that first and then check to see if we
 		 * can disregard this child.
+		 *
+		 * As of 8.4, the child rel's targetlist might contain non-Var
+		 * expressions, which means that substitution into the quals could
+		 * produce opportunities for const-simplification, and perhaps even
+		 * pseudoconstant quals.  To deal with this, we strip the RestrictInfo
+		 * nodes, do the substitution, do const-simplification, and then
+		 * reconstitute the RestrictInfo layer.
 		 */
-		childrel->baserestrictinfo = (List *)
-			adjust_appendrel_attrs(root, (Node *) rel->baserestrictinfo,
-								   appinfo);
+		childquals = get_all_actual_clauses(rel->baserestrictinfo);
+		childquals = (List *) adjust_appendrel_attrs(root, (Node *) childquals,
+													 appinfo);
+		childqual = eval_const_expressions(root, (Node *)
+										   make_ands_explicit(childquals));
+		if (childqual && IsA(childqual, Const) &&
+			(((Const *) childqual)->constisnull ||
+			 !DatumGetBool(((Const *) childqual)->constvalue)))
+		{
+			/*
+			 * Restriction reduces to constant FALSE or constant NULL after
+			 * substitution, so this child need not be scanned.
+			 */
+			set_dummy_rel_pathlist(root, childrel);
+			continue;
+		}
+		childquals = make_ands_implicit((Expr *) childqual);
+		childquals = make_restrictinfos_from_actual_clauses(root,
+															childquals);
+		childrel->baserestrictinfo = childquals;
 
 		if (relation_excluded_by_constraints(root, childrel, childRTE))
 		{
@@ -589,13 +612,6 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	}
 
 	/*
-	 * GPDB_84_MERGE_FIXME: review the estimation math here; 8.4 changed the
-	 * logic around. In particular, we capped the minimum parent_rows at 1,
-	 * whereas upstream will divide by any positive number. We also set
-	 * rel->width to width_avg if the parent_rows are zero, whereas upstream
-	 * sets it to zero.
-	 */
-	/*
 	 * Save the finished size estimates.
 	 */
 	rel->rows = parent_rows;
@@ -616,9 +632,6 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	else if (list_length(subpaths) == 1)
 		rel->onerow = ((Path *) linitial(subpaths))->parent->onerow;
 
-	/*
-	 * GPDB_84_MERGE_FIXME: ensure that this rel->tuples count works for us.
-	 */
 	/*
 	 * Set "raw tuples" count equal to "rows" for the appendrel; needed
 	 * because some places assume rel->tuples is valid for any baserel.
@@ -766,12 +779,14 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 									&subroot,
 									config);
 		rel->subrtable = subroot->parse->rtable;
+		rel->subrowmark = subroot->rowMarks;
 	}
 	else
 	{
 		/* This is a preplanned sub-query RTE. */
 		rel->subplan = rte->subquery_plan;
 		rel->subrtable = rte->subquery_rtable;
+		rel->subrowmark = NULL; /* GPDB_90_MERGE_FIXME: do we need to get rowmarks from somewhere? */
 		subroot = root;
 		/* XXX rel->onerow = ??? */
 	}
@@ -781,10 +796,6 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		rel->tuples = 1;
 	else
 		rel->tuples = rel->subplan->plan_rows;
-
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
@@ -813,10 +824,6 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
 	/* CDB: Could the function return more than one row? */
 	rel->onerow = !expression_returns_set(rte->funcexpr);
-
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Mark rel with estimated output rows, width, etc */
 	set_function_size_estimates(root, rel);
@@ -873,10 +880,6 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	/* Could the function return more than one row? */
 	rel->onerow = !expression_returns_set(rte->funcexpr);
 
-	/* Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
-
 	/* Mark rel with estimated output rows, width, etc */
 	set_table_function_size_estimates(root, rel);
 
@@ -900,10 +903,6 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/* CDB: Just one row? */
 	rel->onerow = (rel->tuples <= 1 &&
 				   !expression_returns_set((Node *) rte->values_lists));
-
-	/* CDB: Attach subquery duplicate suppression info. */
-	if (root->join_info_list)
-		rel->dedup_info = cdb_make_rel_dedup_info(root, rel);
 
 	/* Generate appropriate path */
 	add_path(root, rel, create_valuesscan_path(root, rel, rte));
@@ -1242,8 +1241,10 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 			rel = standard_join_search(root, levels_needed, initial_rels, false);
 			if (rel == NULL && root->config->gp_enable_fallback_plan)
 			{
+				elog(DEBUG1, "failed to build a plan; retrying with all plan types enabled");
 				root->join_rel_hash = NULL;
 				root->join_rel_list = NULL;
+				root->join_rel_level = NULL;
 				rel = standard_join_search(root, levels_needed, initial_rels, true);
 			}
 			return rel;
@@ -1283,11 +1284,17 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 RelOptInfo *
 standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, bool fallback)
 {
-	List	  **joinitems;
 	int			lev;
 	RelOptInfo *rel;
 
 	root->config->mpp_trying_fallback_plan = fallback;
+
+	/*
+	 * This function cannot be invoked recursively within any one planning
+	 * problem, so join_rel_level[] can't be in use already.
+	 */
+	if (!fallback)
+		Assert(root->join_rel_level == NULL);
 
 	/*
 	 * We employ a simple "dynamic programming" algorithm: we first find all
@@ -1296,68 +1303,75 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, b
 	 * joins, and so on until we have considered all ways to join all the
 	 * items into one rel.
 	 *
-	 * joinitems[j] is a list of all the j-item rels.  Initially we set
-	 * joinitems[1] to represent all the single-jointree-item relations.
+	 * root->join_rel_level[j] is a list of all the j-item rels.  Initially we
+	 * set root->join_rel_level[1] to represent all the single-jointree-item
+	 * relations.
 	 */
-	joinitems = (List **) palloc0((levels_needed + 1) * sizeof(List *));
+	root->join_rel_level = (List **) palloc0((levels_needed + 1) * sizeof(List *));
 
-	joinitems[1] = initial_rels;
+	root->join_rel_level[1] = initial_rels;
 
 	for (lev = 2; lev <= levels_needed; lev++)
 	{
-		ListCell   *w = NULL;
-		ListCell   *x;
-		ListCell   *y;
+		ListCell   *lc;
+		ListCell   *prev;
+		ListCell   *next;
+		List	   *backup;
 
 		/*
 		 * Determine all possible pairs of relations to be joined at this
 		 * level, and build paths for making each one from every available
 		 * pair of lower-level relations.
 		 */
-		joinitems[lev] = join_search_one_level(root, lev, joinitems);
+		join_search_one_level(root, lev);
 
 		/*
 		 * Do cleanup work on each just-processed rel.
 		 */
-		for (x = list_head(joinitems[lev]); x; x = y)	/* cannot use foreach */
+		backup = list_copy(root->join_rel_level[lev]);
+		prev = NULL;
+		for (lc = list_head(root->join_rel_level[lev]);
+			 lc != NULL;
+			 lc = next)
 		{
-			y = lnext(x);
-			rel = (RelOptInfo *) lfirst(x);
+			next = lnext(lc);
+			rel = (RelOptInfo *) lfirst(lc);
 
 			/* Find and save the cheapest paths for this rel */
 			set_cheapest(root, rel);
 
-			/* CDB: Prune this rel if it has no path. */
-			if (!rel->cheapest_total_path)
-				joinitems[lev] = list_delete_cell(joinitems[lev], x, w);
-
-			/* Keep this rel. */
-			else
-				w = x;
-
 #ifdef OPTIMIZER_DEBUG
 			debug_print_rel(root, rel);
 #endif
+
+			/* CDB: Prune this rel if it has no path. */
+			if (!rel->cheapest_total_path)
+				root->join_rel_level[lev] = list_delete_cell(root->join_rel_level[lev], lc, prev);
+			else
+				prev = lc;
 		}
-		/* If no paths found because enable_xxx=false, enable all & retry. */
-		if (!joinitems[lev] &&
+
+		/*
+		 * If no paths found because enable_xxx=false, enable all & retry.
+		 */
+		if (!root->join_rel_level[lev] &&
 			root->config->gp_enable_fallback_plan &&
 			!root->config->mpp_trying_fallback_plan)
 		{
-			root->config->mpp_trying_fallback_plan = true;
-			lev--;
+			break;
 		}
-
 	}
 
 	/*
 	 * We should have a single rel at the final level.
 	 */
-	if (joinitems[levels_needed] == NIL)
+	if (root->join_rel_level[levels_needed] == NIL)
 		return NULL;
-	Assert(list_length(joinitems[levels_needed]) == 1);
+	Assert(list_length(root->join_rel_level[levels_needed]) == 1);
 
-	rel = (RelOptInfo *) linitial(joinitems[levels_needed]);
+	rel = (RelOptInfo *) linitial(root->join_rel_level[levels_needed]);
+
+	root->join_rel_level = NULL;
 
 	return rel;
 }
@@ -1447,10 +1461,10 @@ push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
  * since that could change the set of rows returned.
  *
  * 2. If the subquery contains any window functions, we can't push quals
- * into it, because that would change the results.
+ * into it, because that could change the results.
  *
  * 3. If the subquery contains EXCEPT or EXCEPT ALL set ops we cannot push
- * quals into it, because that would change the results.
+ * quals into it, because that could change the results.
  *
  * 4. For subqueries using UNION/UNION ALL/INTERSECT/INTERSECT ALL, we can
  * push quals into each component query, but the quals can only reference
@@ -1836,24 +1850,40 @@ recurse_push_qual(Node *setOp, Query *topquery,
  * Raise error when the set of allowable paths for a query is empty.
  * Does not return.
  */
-void
+static void
 cdb_no_path_for_query(void)
 {
-	char	   *settings;
+	List	   *settings;
+	ListCell   *cell;
+	bool		first = true;
+	StringInfoData	str;
 
 	settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_no_plan);
 
-	if (*settings)
+	if (list_length(settings) > 0)
 	{
+		/*
+		 * Both settings and str will allocate memory which isn't freed, but
+		 * since we will error out it will be cleaned up anyways so avoid an
+		 * extra free here.
+		 */
+		initStringInfo(&str);
+		foreach(cell, settings)
+		{
+			char	*option = (char *) lfirst(cell);
+			appendStringInfo(&str, "%s%s", (first ? "" : "; "), option);
+			first = false;
+		}
+
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
 				 errmsg("Query requires a feature that has been disabled by a configuration setting."),
 				 errdetail("Could not devise a query plan for the given query."),
-				 errhint("Current settings:  %s", settings)));
+				 errhint("Current settings:  %s", str.data)));
 	}
 	else
 		elog(ERROR, "Could not devise a query plan for the given query.");
-}	/* cdb_no_path_for_query */
+}
 
 
 
@@ -1996,14 +2026,12 @@ print_path(PlannerInfo *root, Path *path, int indent)
 		{
 			MergePath  *mp = (MergePath *) path;
 
-			if (mp->outersortkeys || mp->innersortkeys)
-			{
-				for (i = 0; i < indent; i++)
-					printf("\t");
-				printf("  sortouter=%d sortinner=%d\n",
-					   ((mp->outersortkeys) ? 1 : 0),
-					   ((mp->innersortkeys) ? 1 : 0));
-			}
+			for (i = 0; i < indent; i++)
+				printf("\t");
+			printf("  sortouter=%d sortinner=%d materializeinner=%d\n",
+				   ((mp->outersortkeys) ? 1 : 0),
+				   ((mp->innersortkeys) ? 1 : 0),
+				   ((mp->materialize_inner) ? 1 : 0));
 		}
 
 		print_path(root, jp->outerjoinpath, indent + 1);

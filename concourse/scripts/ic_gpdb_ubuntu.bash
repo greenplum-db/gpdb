@@ -22,7 +22,11 @@ function setup_gpadmin_user() {
 
 function make_cluster() {
   source "${GREENPLUM_INSTALL_DIR}/greenplum_path.sh"
+  export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
+  # Currently, the max_concurrency tests in src/test/isolation2
+  # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150
+  export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
     su gpadmin -c "source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh && make create-demo-cluster"
   popd
@@ -40,7 +44,7 @@ function gen_icw_test_script(){
           ======================================================================
           DIFF FILE: \${diff_file}
           ----------------------------------------------------------------------
-          \$(cat "\${diff_file}")
+          \$(head -1000 "\${diff_file}")
 FEOF
       fi
     done

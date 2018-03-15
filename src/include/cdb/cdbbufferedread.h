@@ -18,7 +18,6 @@
 #ifndef CDBBUFFEREDREAD_H
 #define CDBBUFFEREDREAD_H
 
-#include "postgres.h"
 #include "storage/fd.h"
 
 typedef struct BufferedRead

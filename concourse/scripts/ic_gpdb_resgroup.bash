@@ -83,7 +83,7 @@ DIFF FILE: \$diff
 ----------------------------------------------------------------------
 
 EOF1
-                cat \$diff
+                head -1000 \$diff
               done
             exit \$errcode
         )

@@ -1,4 +1,6 @@
+-- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+-- end_ignore
 DROP TABLE IF EXISTS public.spi64bittest;
 NOTICE:  table "spi64bittest" does not exist, skipping
 -- use a sequence as primary key, so we can update the data later on
@@ -15,9 +17,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -31,9 +33,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, 
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -60,9 +62,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -83,9 +85,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, 
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -111,9 +113,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -134,9 +136,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, 
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -161,9 +163,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -219,9 +221,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, 
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t
@@ -259,9 +261,9 @@ SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0,
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
 NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=24141)
+NOTICE:  Success:  (seg1 127.0.0.1:40001 pid=24142)
+NOTICE:  Success:  (seg2 127.0.0.1:40002 pid=24143)
  gp_inject_fault 
 -----------------
  t

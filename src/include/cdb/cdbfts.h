@@ -12,35 +12,30 @@
 #include "utils/guc.h"
 #include "cdb/cdbgang.h"
 
-struct FtsSegDBState
-{
-	bool	valid;
-	bool	primary;
-	int16	id;
-};
-
 #define FTS_MAX_DBS (128 * 1024)
 
-#define FTS_STATUS_ALIVE				(1<<0)
-#define FTS_STATUS_PRIMARY				(1<<1)
-#define FTS_STATUS_DEFINEDPRIMARY		(1<<2)
-#define FTS_STATUS_SYNCHRONIZED			(1<<3)
-#define FTS_STATUS_CHANGELOGGING		(1<<4)
+/*
+ * There used to many more states here but currently dispatch is only checking
+ * if segment is UP or not. So just have that, when needed for other states
+ * this can be extended.
+ */
+#define FTS_STATUS_UP				(1<<0)
 
-#define FTS_STATUS_TEST(dbid, status, flag) (((status)[(dbid)] & (flag)) ? true : false)
-#define FTS_STATUS_ISALIVE(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_ALIVE)
-#define FTS_STATUS_ISPRIMARY(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_PRIMARY)
-#define FTS_STATUS_ISDEFINEDPRIMARY(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_DEFINEDPRIMARY)
-#define FTS_STATUS_IS_SYNCED(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_SYNCHRONIZED)
-#define FTS_STATUS_IS_CHANGELOGGING(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_CHANGELOGGING)
+#define FTS_STATUS_TEST(status, flag) (((status) & (flag)) ? true : false)
+#define FTS_STATUS_IS_UP(status) FTS_STATUS_TEST((status), FTS_STATUS_UP)
+
+#define FTS_STATUS_SET(status, flag) ((status) |= (flag))
+#define FTS_STATUS_SET_UP(status) FTS_STATUS_SET((status), FTS_STATUS_UP)
+
+#define FTS_STATUS_RESET(status, flag) ((status) &= ~(flag))
+#define FTS_STATUS_SET_DOWN(status) FTS_STATUS_RESET((status), FTS_STATUS_UP)
 
 typedef struct FtsProbeInfo
 {
 	volatile uint32		fts_probePid;
 	volatile uint64		fts_probeScanRequested;
 	volatile uint64		fts_statusVersion;
-	volatile bool		fts_pauseProbes;
-	volatile bool		fts_discardResults;
+	volatile bool       fts_status_initialized;
 	volatile uint8		fts_status[FTS_MAX_DBS];
 } FtsProbeInfo;
 
@@ -48,7 +43,6 @@ typedef struct FtsProbeInfo
 
 typedef struct FtsControlBlock
 {
-	bool		ftsEnabled;
 	bool		ftsShutdownMaster;
 
 	LWLockId	ControlLock;
@@ -60,13 +54,7 @@ typedef struct FtsControlBlock
 
 }	FtsControlBlock;
 
-extern volatile bool *ftsEnabled;
-
 extern FtsProbeInfo *ftsProbeInfo;
-
-#define isFTSEnabled() (ftsEnabled != NULL && *ftsEnabled)
-
-#define disableFTS() (*ftsEnabled = false)
 
 extern int	FtsShmemSize(void);
 extern void FtsShmemInit(void);

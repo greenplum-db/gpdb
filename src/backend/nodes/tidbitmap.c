@@ -20,10 +20,10 @@
  * point, but for now that seems useless complexity.
  *
  *
- * Copyright (c) 2003-2009, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2010, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/tidbitmap.c,v 1.19 2009/06/11 14:48:58 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/tidbitmap.c,v 1.20 2010/01/02 16:57:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -735,7 +735,9 @@ tbm_generic_iterate(GenericBMIterator *iterator)
 	{
 		case T_TIDBitmap:
 			{
+#ifdef USE_ASSERT_CHECKING
 				const TIDBitmap *hashBitmap = (const TIDBitmap *) tbm;
+#endif
 				TBMIterator *hashIterator = iterator->impl.hash;
 
 				Assert(hashIterator->tbm == hashBitmap);

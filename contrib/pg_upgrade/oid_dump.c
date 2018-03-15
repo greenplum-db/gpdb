@@ -147,7 +147,6 @@ dump_new_oids(migratorContext *ctx)
 	conn = connectToServer(ctx, "template1", CLUSTER_NEW);
 	PQclear(executeQueryOrDie(ctx, conn, "set search_path='pg_catalog';"));
 
-	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, fsname FROM pg_filespace", "preassign_filespace_oid");
 	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, spcname FROM pg_tablespace", "preassign_tablespace_oid");
 	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, rsqname FROM pg_resqueue", "preassign_resqueue_oid");
 	dump_rows(ctx, NULL, oid_dump, conn, "SELECT oid, resqueueid, restypid FROM pg_resqueuecapability", "preassign_resqueuecb_oid");

@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_user.sgml,v 1.45 2008/11/14 10:22:45 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_user.sgml,v 1.48 2010/04/03 07:22:57 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERUSER">
  <refmeta>
-  <refentrytitle id="sql-alteruser-title">ALTER USER</refentrytitle>
+  <refentrytitle>ALTER USER</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -23,7 +23,7 @@ PostgreSQL documentation
 <synopsis>
 ALTER USER <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replaceable class="PARAMETER">option</replaceable> [ ... ] ]
 
-where <replaceable class="PARAMETER">option</replaceable> can be:
+<phrase>where <replaceable class="PARAMETER">option</replaceable> can be:</phrase>
     
       SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
@@ -36,7 +36,7 @@ where <replaceable class="PARAMETER">option</replaceable> can be:
     | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
     | RESOURCE QUEUE <replaceable class="PARAMETER">queuename</replaceable>
 
-ALTER USER <replaceable class="PARAMETER">name</replaceable> RENAME TO <replaceable>newname</replaceable>
+ALTER USER <replaceable class="PARAMETER">name</replaceable> RENAME TO <replaceable>new_name</replaceable>
 
 ALTER USER <replaceable class="PARAMETER">name</replaceable> SET <replaceable>configuration_parameter</replaceable> { TO | = } { <replaceable>value</replaceable> | DEFAULT }
 ALTER USER <replaceable class="PARAMETER">name</replaceable> SET <replaceable>configuration_parameter</replaceable> FROM CURRENT
@@ -50,7 +50,7 @@ ALTER USER <replaceable class="PARAMETER">name</replaceable> RESET ALL
 
   <para>
    <command>ALTER USER</command> is now an alias for
-   <xref linkend="sql-alterrole" endterm="sql-alterrole-title">.
+   <xref linkend="sql-alterrole">.
   </para>
  </refsect1>
 
@@ -68,7 +68,7 @@ ALTER USER <replaceable class="PARAMETER">name</replaceable> RESET ALL
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterrole" endterm="sql-alterrole-title"></member>
+   <member><xref linkend="sql-alterrole"></member>
   </simplelist>
  </refsect1>
 </refentry>

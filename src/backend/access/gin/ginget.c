@@ -4,15 +4,16 @@
  *	  fetch tuples from a GIN scan.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.27 2009/06/11 14:48:53 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.30 2010/02/26 02:00:33 momjian Exp $
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
+
 #include "access/gin.h"
 #include "access/relscan.h"
 #include "catalog/index.h"
@@ -29,6 +30,7 @@ typedef struct pendingPosition
 	OffsetNumber firstOffset;
 	OffsetNumber lastOffset;
 	ItemPointerData item;
+	bool	   *hasMatchKey;
 } pendingPosition;
 
 
@@ -273,8 +275,6 @@ computePartialMatchList(GinBtreeData *btree, GinBtreeStack *stack, GinScanEntry 
 static void
 startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	GinBtreeData btreeEntry;
 	GinBtreeStack *stackEntry;
 	Page		page;
@@ -302,9 +302,6 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 
 	prepareEntryScan(&btreeEntry, index, entry->attnum, entry->entry, ginstate);
 	btreeEntry.searchMode = TRUE;
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
 
 	stackEntry = ginFindLeafPage(&btreeEntry, NULL);
 	page = BufferGetPage(stackEntry->buffer);
@@ -403,10 +400,7 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 
 	if (needUnlock)
 		LockBuffer(stackEntry->buffer, GIN_UNLOCK);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
+
 	freeGinBtreeStack(stackEntry);
 }
 
@@ -465,8 +459,6 @@ startScan(IndexScanDesc scan)
 static void
 entryGetNextItem(Relation index, GinScanEntry entry)
 {
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
 	Page		page;
 	BlockNumber blkno;
 
@@ -479,9 +471,6 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 			entry->curItem = entry->list[entry->offset - 1];
 			return;
 		}
-
-		// -------- MirroredLock ----------
-		MIRROREDLOCK_BUFMGR_LOCK;
 
 		LockBuffer(entry->buffer, GIN_SHARE);
 		page = BufferGetPage(entry->buffer);
@@ -496,9 +485,6 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 
 			LockBuffer(entry->buffer, GIN_UNLOCK);
 
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
 			if (blkno == InvalidBlockNumber)
 			{
 				ReleaseBuffer(entry->buffer);
@@ -507,9 +493,6 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 				entry->isFinished = TRUE;
 				return;
 			}
-
-			// -------- MirroredLock ----------
-			MIRROREDLOCK_BUFMGR_LOCK;
 
 			entry->buffer = ReleaseAndReadBuffer(entry->buffer, index, blkno);
 			LockBuffer(entry->buffer, GIN_SHARE);
@@ -526,9 +509,6 @@ entryGetNextItem(Relation index, GinScanEntry entry)
 				   GinPageGetOpaque(page)->maxoff * sizeof(ItemPointerData));
 
 				LockBuffer(entry->buffer, GIN_UNLOCK);
-
-				MIRROREDLOCK_BUFMGR_UNLOCK;
-				// -------- MirroredLock ----------
 
 				if (!ItemPointerIsValid(&entry->curItem) ||
 					compareItemPointers(&entry->curItem, entry->list + entry->offset - 1) == 0)
@@ -898,6 +878,18 @@ matchPartialInPendingList(GinState *ginstate, Page page,
 	return false;
 }
 
+static bool
+hasAllMatchingKeys(GinScanOpaque so, pendingPosition *pos)
+{
+	int			i;
+
+	for (i = 0; i < so->nkeys; i++)
+		if (pos->hasMatchKey[i] == false)
+			return false;
+
+	return true;
+}
+
 /*
  * Sets entryRes array for each key by looking at
  * every entry per indexed value (heap's row) in pending list.
@@ -914,7 +906,6 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 	IndexTuple	itup;
 	int			i,
 				j;
-	bool		hasMatch = false;
 
 	/*
 	 * Resets entryRes
@@ -925,6 +916,7 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 
 		memset(key->entryRes, FALSE, key->nentries);
 	}
+	memset(pos->hasMatchKey, FALSE, so->nkeys);
 
 	for (;;)
 	{
@@ -1030,7 +1022,7 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 												  entry->extra_data);
 				}
 
-				hasMatch |= key->entryRes[j];
+				pos->hasMatchKey[i] |= key->entryRes[j];
 			}
 		}
 
@@ -1042,7 +1034,7 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 			 * We scan all values from one tuple, go to next one
 			 */
 
-			return hasMatch;
+			return hasAllMatchingKeys(so, pos);
 		}
 		else
 		{
@@ -1059,7 +1051,7 @@ collectDatumForItem(IndexScanDesc scan, pendingPosition *pos)
 		}
 	}
 
-	return hasMatch;
+	return hasAllMatchingKeys(so, pos);
 }
 
 /*
@@ -1098,6 +1090,7 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 	LockBuffer(pos.pendingBuffer, GIN_SHARE);
 	pos.firstOffset = FirstOffsetNumber;
 	UnlockReleaseBuffer(metabuffer);
+	pos.hasMatchKey = palloc(sizeof(bool) * so->nkeys);
 
 	/*
 	 * loop for each heap row. scanGetCandidate returns full row or row's
@@ -1151,6 +1144,8 @@ scanPendingInsert(IndexScanDesc scan, TIDBitmap *tbm, int64 *ntids)
 			(*ntids)++;
 		}
 	}
+
+	pfree(pos.hasMatchKey);
 }
 
 /*
@@ -1249,7 +1244,7 @@ gingetbitmap(PG_FUNCTION_ARGS)
 		elog(ERROR, "non hash bitmap");
 	else
 		tbm = (TIDBitmap *)n;
- 
+
 	if (GinIsNewKey(scan))
 		newScanKey(scan);
 
@@ -1289,7 +1284,7 @@ gingetbitmap(PG_FUNCTION_ARGS)
 		else
 			tbm_add_tuples(tbm, &iptr, 1, recheck);
 		ntids++;
-	}	
+	}
 
 	PG_RETURN_POINTER(tbm);
 }

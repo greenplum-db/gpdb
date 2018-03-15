@@ -5,12 +5,12 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHash.c,v 1.121 2009/06/11 14:48:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHash.c,v 1.129 2010/02/26 02:00:42 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -205,8 +205,6 @@ ExecInitHash(Hash *node, EState *estate, int eflags)
 	 */
 	ExecAssignExprContext(estate, &hashstate->ps);
 
-#define HASH_NSLOTS 1
-
 	/*
 	 * initialize our result slot
 	 */
@@ -235,14 +233,6 @@ ExecInitHash(Hash *node, EState *estate, int eflags)
 	hashstate->ps.ps_ProjInfo = NULL;
 
 	return hashstate;
-}
-
-int
-ExecCountSlotsHash(Hash *node)
-{
-	return ExecCountSlotsNode(outerPlan(node)) +
-		ExecCountSlotsNode(innerPlan(node)) +
-		HASH_NSLOTS;
 }
 
 /* ---------------------------------------------------------------
@@ -338,9 +328,9 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable->innerBatchFile = NULL;
 	hashtable->outerBatchFile = NULL;
 	hashtable->work_set = NULL;
-	hashtable->state_file = NULL;
 	hashtable->spaceUsed = 0;
 	hashtable->spaceAllowed = operatorMemKB * 1024L;
+	hashtable->spacePeak = 0;
 	hashtable->spaceUsedSkew = 0;
 	hashtable->spaceAllowedSkew =
 		hashtable->spaceAllowed * SKEW_WORK_MEM_PERCENT / 100;
@@ -509,17 +499,18 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	{
 		skew_table_bytes = hash_table_bytes * SKEW_WORK_MEM_PERCENT / 100;
 
-		*num_skew_mcvs = skew_table_bytes / (
-		/* size of a hash tuple */
-											 tupsize +
-		/* worst-case size of skewBucket[] per MCV */
+		/*----------
+		 * Divisor is:
+		 * size of a hash tuple +
+		 * worst-case size of skewBucket[] per MCV +
+		 * size of skewBucketNums[] entry +
+		 * size of skew bucket struct itself
+		 *----------
+		 */
+		*num_skew_mcvs = skew_table_bytes / (tupsize +
 											 (8 * sizeof(HashSkewBucket *)) +
-		/* size of skewBucketNums[] entry */
 											 sizeof(int) +
-		/* size of skew bucket struct itself */
-											 SKEW_BUCKET_OVERHEAD
-			);
-
+											 SKEW_BUCKET_OVERHEAD);
 		if (*num_skew_mcvs > 0)
 			hash_table_bytes -= skew_table_bytes;
 	}
@@ -529,7 +520,7 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	/*
 	 * Set nbuckets to achieve an average bucket load of gp_hashjoin_tuples_per_bucket when
 	 * memory is filled.  Set nbatch to the smallest power of 2 that appears
-	 * sufficient.  The Min() steps limit the results so that the pointer
+	 * sufficient.	The Min() steps limit the results so that the pointer
 	 * arrays we'll try to allocate do not exceed work_mem.
 	 */
 	max_pointers = (operatorMemKB * 1024L) / sizeof(void *);
@@ -678,13 +669,6 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 			hashtable->innerBatchFile[i] = NULL;
 			hashtable->outerBatchFile[i] = NULL;
 		}
-	}
-
-	/* Close state file as well */
-	if (hashtable->state_file != NULL)
-	{
-		workfile_mgr_close_file(hashtable->work_set, hashtable->state_file);
-		hashtable->state_file = NULL;
 	}
 
 	if (hashtable->work_set != NULL)
@@ -919,8 +903,8 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 		hashTuple->next = hashtable->buckets[bucketno];
 		hashtable->buckets[bucketno] = hashTuple;
 		hashtable->spaceUsed += hashTupleSize;
-
-		/* Double the number of batches when too much data in hash table. */
+		if (hashtable->spaceUsed > hashtable->spacePeak)
+			hashtable->spacePeak = hashtable->spaceUsed;
 		if (hashtable->spaceUsed > hashtable->spaceAllowed)
 		{
 			ExecHashIncreaseNumBatches(hashtable);
@@ -1256,7 +1240,7 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
  * ExecHashTableExplainEnd
  *      Called before ExecutorEnd to finish EXPLAIN ANALYZE reporting.
  */
-void
+static void
 ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 {
     HashJoinState      *hjstate = (HashJoinState *)planstate;
@@ -1269,18 +1253,13 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
     if (!hashtable ||
         !hashtable->stats ||
         hashtable->nbatch < 1 ||
-        !jinstrument)
+        !jinstrument ||
+        !jinstrument->need_cdb)
         return;
 
     stats = hashtable->stats;
 
-	/* Check batchstats not null: If nodeHash failed to palloc batchstats, it will
-	 * throw.  Posgres will catch and handle it, but no matter what, postgres will 
-	 * try to get some explain results.  We must check here in this case or we will
-	 * segv.
-	 */
-	if(stats->batchstats == NULL)
-		return;
+	Assert(stats->batchstats);
 
 	if (!hashtable->eagerlyReleased)
 	{		
@@ -1382,7 +1361,7 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
  * ExecHashTableExplainBatches
  *      Report summary of EXPLAIN ANALYZE stats for a set of batches.
  */
-void
+static void
 ExecHashTableExplainBatches(HashJoinTable   hashtable,
                             StringInfo      buf,
                             int             ibatch_begin,
@@ -1610,10 +1589,7 @@ static void
 ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 {
 	HeapTupleData *statsTuple;
-	Datum	   *values;
-	int			nvalues;
-	float4	   *numbers;
-	int			nnumbers;
+	AttStatsSlot sslot;
 
 	/* Do nothing if planner didn't identify the outer relation's join key */
 	if (!OidIsValid(node->skewTable))
@@ -1625,25 +1601,24 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 	/*
 	 * Try to find the MCV statistics for the outer relation's join key.
 	 */
-	statsTuple = SearchSysCache(STATRELATT,
-								ObjectIdGetDatum(node->skewTable),
-								Int16GetDatum(node->skewColumn),
-								0, 0);
+	statsTuple = SearchSysCache3(STATRELATTINH,
+								 ObjectIdGetDatum(node->skewTable),
+								 Int16GetDatum(node->skewColumn),
+								 BoolGetDatum(node->skewInherit));
 	if (!HeapTupleIsValid(statsTuple))
 		return;
 
-	if (get_attstatsslot(statsTuple, node->skewColType, node->skewColTypmod,
+	if (get_attstatsslot(&sslot, statsTuple,
 						 STATISTIC_KIND_MCV, InvalidOid,
-						 &values, &nvalues,
-						 &numbers, &nnumbers))
+						 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
 	{
 		double		frac;
 		int			nbuckets;
 		FmgrInfo   *hashfunctions;
 		int			i;
 
-		if (mcvsToUse > nvalues)
-			mcvsToUse = nvalues;
+		if (mcvsToUse > sslot.nvalues)
+			mcvsToUse = sslot.nvalues;
 
 		/*
 		 * Calculate the expected fraction of outer relation that will
@@ -1652,11 +1627,10 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 		 */
 		frac = 0;
 		for (i = 0; i < mcvsToUse; i++)
-			frac += numbers[i];
+			frac += sslot.numbers[i];
 		if (frac < SKEW_MIN_OUTER_FRACTION)
 		{
-			free_attstatsslot(node->skewColType,
-							  values, nvalues, numbers, nnumbers);
+			free_attstatsslot(&sslot);
 			ReleaseSysCache(statsTuple);
 			return;
 		}
@@ -1669,9 +1643,9 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 		 * will be at least one null entry, so searches will always
 		 * terminate.)
 		 *
-		 * Note: this code could fail if mcvsToUse exceeds INT_MAX/8, but that
-		 * is not currently possible since we limit pg_statistic entries to
-		 * much less than that.
+		 * Note: this code could fail if mcvsToUse exceeds INT_MAX/8 or
+		 * MaxAllocSize/sizeof(void *)/8, but that is not currently possible
+		 * since we limit pg_statistic entries to much less than that.
 		 */
 		nbuckets = 2;
 		while (nbuckets <= mcvsToUse)
@@ -1698,6 +1672,8 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 			+ mcvsToUse * sizeof(int);
 		hashtable->spaceUsedSkew += nbuckets * sizeof(HashSkewBucket *)
 			+ mcvsToUse * sizeof(int);
+		if (hashtable->spaceUsed > hashtable->spacePeak)
+			hashtable->spacePeak = hashtable->spaceUsed;
 
 		/*
 		 * Create a skew bucket for each MCV hash value.
@@ -1716,7 +1692,7 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 			int			bucket;
 
 			hashvalue = DatumGetUInt32(FunctionCall1(&hashfunctions[0],
-													 values[i]));
+													 sslot.values[i]));
 
 			/*
 			 * While we have not hit a hole in the hashtable and have not hit
@@ -1746,10 +1722,11 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 			hashtable->nSkewBuckets++;
 			hashtable->spaceUsed += SKEW_BUCKET_OVERHEAD;
 			hashtable->spaceUsedSkew += SKEW_BUCKET_OVERHEAD;
+			if (hashtable->spaceUsed > hashtable->spacePeak)
+				hashtable->spacePeak = hashtable->spaceUsed;
 		}
 
-		free_attstatsslot(node->skewColType,
-						  values, nvalues, numbers, nnumbers);
+		free_attstatsslot(&sslot);
 	}
 
 	ReleaseSysCache(statsTuple);
@@ -1833,6 +1810,8 @@ ExecHashSkewTableInsert(HashState *hashState,
 	/* Account for space used, and back off if we've used too much */
 	hashtable->spaceUsed += hashTupleSize;
 	hashtable->spaceUsedSkew += hashTupleSize;
+	if (hashtable->spaceUsed > hashtable->spacePeak)
+		hashtable->spacePeak = hashtable->spaceUsed;
 	while (hashtable->spaceUsedSkew > hashtable->spaceAllowedSkew)
 		ExecHashRemoveNextSkewBucket(hashState, hashtable);
 

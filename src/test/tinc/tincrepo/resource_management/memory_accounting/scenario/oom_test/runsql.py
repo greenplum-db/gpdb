@@ -29,14 +29,3 @@ class verify(SQLTestCase):
         result = PSQL.run_sql_command( sql_cmd='%s ' %(sql_command), flags='-t -q' )
         # Verify that OOM log count is at least the number of slices in the query
         self.failUnless(int(result) >= 4, 'OOM log count should be at least the number of slices. OOM log count is ' + result)
-
-    def test_dumpusage(self):
-        # Verify that .mem files are generated when test sets GUC gp_dump_memory_usage to on
-        MASTER_DATA_DIRECTORY = os.environ['MASTER_DATA_DIRECTORY']
-        pg_logdir = os.path.join(MASTER_DATA_DIRECTORY, 'pg_log')
-        mem_file = ''
-        for f in os.listdir(pg_logdir):
-           if f.endswith('.mem'):
-               mem_file = f
-       
-        self.failUnless(mem_file != '', 'Memory usage files not generated with GUC gp_dump_memory_usage!')

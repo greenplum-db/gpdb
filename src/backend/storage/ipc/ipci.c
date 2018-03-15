@@ -3,12 +3,12 @@
  * ipci.c
  *	  POSTGRES inter-process communication initialization code.
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipci.c,v 1.100 2009/05/05 19:59:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipci.c,v 1.104 2010/02/16 22:34:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,27 +24,17 @@
 #include "access/twophase.h"
 #include "access/distributedlog.h"
 #include "access/appendonlywriter.h"
-#include "cdb/cdbfilerep.h"
-#include "cdb/cdbfilerepprimaryack.h"
-#include "cdb/cdbfilerepprimaryrecovery.h"
-#include "cdb/cdbfilerepresyncmanager.h"
 #include "cdb/cdblocaldistribxact.h"
-#include "cdb/cdbpersistentfilesysobj.h"
-#include "cdb/cdbpersistentfilespace.h"
-#include "cdb/cdbpersistenttablespace.h"
-#include "cdb/cdbpersistentdatabase.h"
-#include "cdb/cdbpersistentrelation.h"
-#include "cdb/cdbresynchronizechangetracking.h"
 #include "cdb/cdbvars.h"
+#include "commands/async.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
 #include "postmaster/postmaster.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "postmaster/seqserver.h"
-#include "replication/walsender.h"
 #include "replication/walreceiver.h"
+#include "replication/walsender.h"
 #include "storage/bufmgr.h"
 #include "storage/ipc.h"
 #include "storage/pg_shmem.h"
@@ -65,6 +55,7 @@
 #include "utils/tqual.h"
 #include "postmaster/backoff.h"
 #include "cdb/memquota.h"
+#include "executor/instrument.h"
 #include "executor/spi.h"
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
@@ -152,59 +143,39 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, XLOGShmemSize());
 		size = add_size(size, DistributedLog_ShmemSize());
 		size = add_size(size, CLOGShmemSize());
-		size = add_size(size, ChangeTrackingShmemSize());
 		size = add_size(size, SUBTRANSShmemSize());
 		size = add_size(size, TwoPhaseShmemSize());
 		size = add_size(size, MultiXactShmemSize());
 		size = add_size(size, LWLockShmemSize());
 		size = add_size(size, ProcArrayShmemSize());
 		size = add_size(size, BackendStatusShmemSize());
-		size = add_size(size, SharedSnapshotShmemSize());
-
 		size = add_size(size, SInvalShmemSize());
 		size = add_size(size, PMSignalShmemSize());
 		size = add_size(size, ProcSignalShmemSize());
-		size = add_size(size, primaryMirrorModeShmemSize());
-		//size = add_size(size, AutoVacuumShmemSize());
-		size = add_size(size, FtsShmemSize());
-		size = add_size(size, tmShmemSize());
-		size = add_size(size, SeqServerShmemSize());
-		size = add_size(size, PersistentFileSysObj_ShmemSize());
-		size = add_size(size, PersistentFilespace_ShmemSize());
-		size = add_size(size, PersistentTablespace_ShmemSize());
-		size = add_size(size, PersistentDatabase_ShmemSize());
-		size = add_size(size, PersistentRelation_ShmemSize());
-
-		if (GPAreFileReplicationStructuresRequired()) {
-			size = add_size(size, FileRep_SubProcShmemSize());
-			size = add_size(size, FileRep_ShmemSize());
-			size = add_size(size, FileRepAck_ShmemSize());
-			size = add_size(size, FileRepAckPrimary_ShmemSize());
-			size = add_size(size, FileRepResync_ShmemSize()); 
-			size = add_size(size, FileRepIpc_ShmemSize());
-			size = add_size(size, FileRepLog_ShmemSize());
-		}
-		
-#ifdef FAULT_INJECTOR
-		size = add_size(size, FaultInjector_ShmemSize());
-#endif			
-		
+		size = add_size(size, AutoVacuumShmemSize());
+		size = add_size(size, WalSndShmemSize());
+		size = add_size(size, WalRcvShmemSize());
+		size = add_size(size, BTreeShmemSize());
+		size = add_size(size, SyncScanShmemSize());
+		size = add_size(size, AsyncShmemSize());
 #ifdef EXEC_BACKEND
 		size = add_size(size, ShmemBackendArraySize());
 #endif
 
-		/* This elog happens before we know the name of the log file we are supposed to use */
-		elog(DEBUG1, "Size not including the buffer pool %lu",
-			 (unsigned long) size);
-
-		size = add_size(size, AutoVacuumShmemSize());
-		size = add_size(size, BTreeShmemSize());
-		size = add_size(size, SyncScanShmemSize());
+		size = add_size(size, SharedSnapshotShmemSize());
+		size = add_size(size, FtsShmemSize());
+		size = add_size(size, tmShmemSize());
+		size = add_size(size, SeqServerShmemSize());
 		size = add_size(size, CheckpointerShmemSize());
 		size = add_size(size, CancelBackendMsgShmemSize());
 
-		size = add_size(size, WalSndShmemSize());
-		size = add_size(size, WalRcvShmemSize());
+#ifdef FAULT_INJECTOR
+		size = add_size(size, FaultInjector_ShmemSize());
+#endif			
+
+		/* This elog happens before we know the name of the log file we are supposed to use */
+		elog(DEBUG1, "Size not including the buffer pool %lu",
+			 (unsigned long) size);
 
 		/* freeze the addin request size and include it */
 		addin_request_allowed = false;
@@ -215,6 +186,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 
 		/* Consider the size of the SessionState array */
 		size = add_size(size, SessionState_ShmemSize());
+
+		/* size of Instrumentation slots */
+		size = add_size(size, InstrShmemSize());
 
 		/*
 		 * Create the shmem segment
@@ -229,11 +203,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		numSemas = ProcGlobalSemas();
 		numSemas += SpinlockSemas();
 
-		if (GPAreFileReplicationStructuresRequired()) 
-		{
-			numSemas += FileRepSemas();
-		}
-		
 		elog(DEBUG3,"reserving %d semaphores",numSemas);
 		PGReserveSemaphores(numSemas, port);
 		
@@ -270,14 +239,11 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	InitShmemIndex();
 
-	primaryMirrorModeShmemInit();
-
 	/*
 	 * Set up xlog, clog, and buffers
 	 */
 	XLOGShmemInit();
 	CLOGShmemInit();
-	ChangeTrackingShmemInit();
 	DistributedLog_ShmemInit();
 	SUBTRANSShmemInit();
 	TwoPhaseShmemInit();
@@ -297,22 +263,16 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	if (Gp_role == GP_ROLE_DISPATCH)
 		InitAppendOnlyWriter();
 
-	PersistentFileSysObj_ShmemInit();
-	PersistentFilespace_ShmemInit();
-	PersistentTablespace_ShmemInit();
-	PersistentDatabase_ShmemInit();
-	PersistentRelation_ShmemInit();
-
 	/*
 	 * Set up resource manager 
 	 */
 	ResManagerShmemInit();
 
+	/*
+	 * Set up process table
+	 */
 	if (!IsUnderPostmaster)
-	{
-		/* Set up process table */
-		InitProcGlobal(PostmasterGetMppLocalProcessCounter());
-	}
+		InitProcGlobal();
 
 	/* Initialize SessionState shared memory array */
 	SessionState_ShmemInit();
@@ -345,20 +305,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	CheckpointerShmemInit();
 	WalSndShmemInit();
 	WalRcvShmemInit();
-	//AutoVacuumShmemInit();
+	AutoVacuumShmemInit();
 	SeqServerShmemInit();
 
-	if (GPAreFileReplicationStructuresRequired()) {
-	
-		FileRep_SubProcShmemInit();
-		FileRep_ShmemInit();
-		FileRepAck_ShmemInit();
-		FileRepAckPrimary_ShmemInit();
-		FileRepResync_ShmemInit();
-		FileRepIpc_ShmemInit();
-		FileRepLog_ShmemInit();
-	}
-	
 #ifdef FAULT_INJECTOR
 	FaultInjector_ShmemInit();
 #endif
@@ -368,8 +317,15 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	BTreeShmemInit();
 	SyncScanShmemInit();
+	AsyncShmemInit();
 	workfile_mgr_cache_init();
 	BackendCancelShmemInit();
+
+	/*
+	 * Set up Instrumentation free list
+	 */
+	if (!IsUnderPostmaster)
+		InstrShmemInit();
 
 #ifdef EXEC_BACKEND
 

@@ -4,10 +4,10 @@
  *	  POSTGRES relation scan descriptor definitions.
  *
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.67 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.70 2010/02/26 02:01:21 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,8 +18,6 @@
 #include "access/heapam.h"
 
 #include "access/formatter.h"
-#include "access/memtup.h"
-#include "access/aosegfiles.h"
 
 typedef struct HeapScanDescData
 {
@@ -71,6 +69,8 @@ typedef struct IndexScanDescData
 	/* signaling to index AM about killing index tuples */
 	bool		kill_prior_tuple;		/* last-returned tuple is dead */
 	bool		ignore_killed_tuples;	/* do not return killed entries */
+	bool		xactStartedInRecovery;	/* prevents killing/seeing killed
+										 * tuples */
 
 	/* index access method's private state */
 	void	   *opaque;			/* access-method-specific info */
@@ -94,7 +94,6 @@ typedef struct FileScanDescData
 {
 	/* scan parameters */
 	Relation	fs_rd;			/* target relation descriptor */
-	Index       fs_scanrelid;
 	struct URL_FILE *fs_file;	/* the file pointer to our URI */
 	char	   *fs_uri;			/* the URI string */
 	bool		fs_noop;		/* no op. this segdb has no file to scan */

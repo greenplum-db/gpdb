@@ -1,11 +1,11 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_user_mapping.sgml,v 1.6 2009/06/19 15:28:25 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_user_mapping.sgml,v 1.8 2010/04/03 07:23:00 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEUSERMAPPING">
  <refmeta>
-  <refentrytitle id="sql-createusermapping-title">CREATE USER MAPPING</refentrytitle>
+  <refentrytitle>CREATE USER MAPPING</refentrytitle>
   <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
@@ -21,8 +21,8 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-CREATE USER MAPPING FOR { <replaceable class="parameter">username</replaceable> | USER | CURRENT_USER | PUBLIC }
-    SERVER <replaceable class="parameter">servername</replaceable>
+CREATE USER MAPPING FOR { <replaceable class="parameter">user_name</replaceable> | USER | CURRENT_USER | PUBLIC }
+    SERVER <replaceable class="parameter">server_name</replaceable>
     [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [ , ... ] ) ]
 </synopsis>
  </refsynopsisdiv>
@@ -51,7 +51,7 @@ CREATE USER MAPPING FOR { <replaceable class="parameter">username</replaceable> 
 
   <variablelist>
    <varlistentry>
-    <term><replaceable class="parameter">username</replaceable></term>
+    <term><replaceable class="parameter">user_name</replaceable></term>
     <listitem>
      <para>
       The name of an existing user that is mapped to foreign server.
@@ -64,7 +64,7 @@ CREATE USER MAPPING FOR { <replaceable class="parameter">username</replaceable> 
    </varlistentry>
 
    <varlistentry>
-    <term><replaceable class="parameter">servername</replaceable></term>
+    <term><replaceable class="parameter">server_name</replaceable></term>
     <listitem>
      <para>
       The name of an existing server for which the user mapping is
@@ -111,10 +111,10 @@ CREATE USER MAPPING FOR bob SERVER foo OPTIONS (user 'bob', password 'secret');
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterusermapping" endterm="sql-alterusermapping-title"></member>
-   <member><xref linkend="sql-dropusermapping" endterm="sql-dropusermapping-title"></member>
-   <member><xref linkend="sql-createforeigndatawrapper" endterm="sql-createforeigndatawrapper-title"></member>
-   <member><xref linkend="sql-createserver" endterm="sql-createserver-title"></member>
+   <member><xref linkend="sql-alterusermapping"></member>
+   <member><xref linkend="sql-dropusermapping"></member>
+   <member><xref linkend="sql-createforeigndatawrapper"></member>
+   <member><xref linkend="sql-createserver"></member>
   </simplelist>
  </refsect1>
 

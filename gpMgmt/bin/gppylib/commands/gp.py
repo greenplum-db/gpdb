@@ -127,16 +127,11 @@ class CmdArgs(list):
 
     def set_segments(self, segments):
         """
-        The reduces the command line length of the gpsegstart.py and other
-        commands. There are shell limitations to the length and if there are a
-        large number of segments and filespaces this limit can be exceeded.
-        Since filespaces are not used by our callers, we remove all but one of them.
-
         @param segments - segments (from GpArray.getSegmentsByHostName)
         """
         for seg in segments:
-            cfg_array = repr(seg).split('|')[0:-1]
-            self.append("-D '%s'" % ('|'.join(cfg_array) + '|'))
+            cfg_array = repr(seg)
+            self.append("-D '%s'" % (cfg_array))
         return self
 
 
@@ -152,12 +147,12 @@ class PgCtlBackendOptions(CmdArgs):
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2 -E'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M mirror --gp_contentid=1'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(True))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment(1))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
@@ -189,23 +184,19 @@ class PgCtlBackendOptions(CmdArgs):
     # master/segment-specific options
     #
 
-    def set_master(self, standby_dbid, disable, seqserver):
+    def set_master(self, seqserver):
         """
-        @param standby_dbid: standby dbid
-        @param disable: start without master mirroring?
         @param seqserver: start with seqserver?
         """
-        self.extend(["-i", "-M", "master", "--gp_contentid=-1", "-x", str(standby_dbid)])
-        if disable: self.append("-y")
+        self.append("--gp_contentid=-1")
         if seqserver: self.append("-E")
         return self
 
-    def set_segment(self, mode, content):
+    def set_segment(self, content):
         """
-        @param mode: mirroring mode
         @param content: content id
         """
-        self.extend(["-i", "-M", str(mode), "--gp_contentid="+str(content)])
+        self.append("--gp_contentid="+str(content))
         return self
 
     #
@@ -305,9 +296,9 @@ class PgCtlStopArgs(CmdArgs):
 
 
 class MasterStart(Command):
-    def __init__(self, name, dataDir, port, dbid, standby_dbid, numContentsInCluster, era,
+    def __init__(self, name, dataDir, port, dbid, numContentsInCluster, era,
                  wrapper, wrapper_args, specialMode=None, restrictedMode=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
-                 max_connections=1, disableMasterMirror=False, utilityMode=False, ctxt=LOCAL, remoteHost=None,
+                 max_connections=1, utilityMode=False, ctxt=LOCAL, remoteHost=None,
                  wait=True
                  ):
         self.dataDir=dataDir
@@ -318,7 +309,7 @@ class MasterStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
-        b.set_master(standby_dbid, disableMasterMirror, seqserver=not utilityMode)
+        b.set_master(seqserver=not utilityMode)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
         b.set_restricted(restrictedMode, max_connections)
@@ -330,12 +321,12 @@ class MasterStart(Command):
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
 
     @staticmethod
-    def local(name, dataDir, port, dbid, standbydbid, numContentsInCluster, era,
+    def local(name, dataDir, port, dbid, numContentsInCluster, era,
               wrapper, wrapper_args, specialMode=None, restrictedMode=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
-              max_connections=1, disableMasterMirror=False, utilityMode=False):
-        cmd=MasterStart(name, dataDir, port, dbid, standbydbid, numContentsInCluster, era,
+              max_connections=1, utilityMode=False):
+        cmd=MasterStart(name, dataDir, port, dbid, numContentsInCluster, era,
                         wrapper, wrapper_args, specialMode, restrictedMode, timeout,
-                        max_connections, disableMasterMirror, utilityMode)
+                        max_connections, utilityMode)
         cmd.run(validateAfter=True)
 
 #-----------------------------------------------
@@ -361,7 +352,7 @@ class SegmentStart(Command):
 
     def __init__(self, name, gpdb, numContentsInCluster, era, mirrormode,
                  utilityMode=False, ctxt=LOCAL, remoteHost=None,
-                 noWait=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
+                 pg_ctl_wait=True, timeout=SEGMENT_TIMEOUT_DEFAULT,
                  specialMode=None, wrapper=None, wrapper_args=None):
 
         # This is referenced from calling code
@@ -375,12 +366,12 @@ class SegmentStart(Command):
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
-        b.set_segment(mirrormode, content)
+        b.set_segment(content)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
 
         # build pg_ctl command
-        c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, not noWait, timeout)
+        c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout)
         self.cmdStr = str(c) + ' 2>&1'
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -394,158 +385,6 @@ class SegmentStart(Command):
     def remote(name, remoteHost, gpdb, numContentsInCluster, era, mirrormode, utilityMode=False):
         cmd=SegmentStart(name, gpdb, numContentsInCluster, era, mirrormode, utilityMode, ctxt=REMOTE, remoteHost=remoteHost)
         cmd.run(validateAfter=True)
-
-
-#-----------------------------------------------
-class SendFilerepTransitionMessage(Command):
-
-    # see gpmirrortransition.c and primary_mirror_transition_client.h
-    TRANSITION_ERRCODE_SUCCESS                             = 0
-    TRANSITION_ERRCODE_ERROR_UNSPECIFIED                   = 1
-    TRANSITION_ERRCODE_ERROR_SERVER_DID_NOT_RETURN_DATA    = 10
-    TRANSITION_ERRCODE_ERROR_PROTOCOL_VIOLATED             = 11
-    TRANSITION_ERRCODE_ERROR_HOST_LOOKUP_FAILED            = 12
-    TRANSITION_ERRCODE_ERROR_INVALID_ARGUMENT              = 13
-    TRANSITION_ERRCODE_ERROR_READING_INPUT                 = 14
-    TRANSITION_ERRCODE_ERROR_SOCKET                        = 15
-
-    #
-    # note: this should be cleaned up -- there are two hosts involved,
-    #   the host on which to run gp_primarymirror, AND the host to pass to gp_primarymirror -h
-    #
-    # Right now, it uses the same for both which is pretty wrong for anything but a local context.
-    #
-    def __init__(self, name, inputFile, port=None,ctxt=LOCAL, remoteHost=None, dataDir=None):
-        if not remoteHost:
-            remoteHost = "localhost"
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s -i %s' % (remoteHost,port,inputFile)
-        self.dataDir = dataDir
-        Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
-
-    @staticmethod
-    def local(name,inputFile,port=None,remoteHost=None):
-        cmd=SendFilerepTransitionMessage(name, inputFile, port, LOCAL, remoteHost)
-        cmd.run(validateAfter=True)
-        return cmd
-
-    @staticmethod
-    def buildTransitionMessageCommand(transitionData, dir, port):
-        dbData = transitionData["dbsByPort"][int(port)]
-        targetMode = dbData["targetMode"]
-
-        argsArr = []
-        argsArr.append(targetMode)
-        if targetMode == 'mirror' or targetMode == 'primary':
-            mode = dbData["mode"]
-            if mode == 'r' and dbData["fullResyncFlag"]:
-                # full resync requested, convert 'r' to 'f'
-                argsArr.append( 'f' )
-            else:
-                # otherwise, pass the mode through
-                argsArr.append( dbData["mode"])
-            argsArr.append( dbData["hostName"])
-            argsArr.append( "%d" % dbData["hostPort"])
-            argsArr.append( dbData["peerName"])
-            argsArr.append( "%d" % dbData["peerPort"])
-            argsArr.append( "%d" % dbData["peerPMPort"])
-
-        #
-        # write arguments to input file.  We will leave this file around.  It can be useful for debugging
-        #
-        inputFile = os.path.join( dir, "gp_pmtransition_args" )
-        writeLinesToFile(inputFile, argsArr)
-
-        return SendFilerepTransitionMessage("Changing seg at dir %s" % dir, inputFile, port=port, dataDir=dir)
-
-class SendFilerepTransitionStatusMessage(Command):
-    def __init__(self, name, msg, dataDir=None, port=None,ctxt=LOCAL, remoteHost=None):
-        if not remoteHost:
-            remoteHost = "localhost"
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s' % (remoteHost,port)
-        self.dataDir = dataDir
-
-        logger.debug("Sending msg %s and cmdStr %s" % (msg, self.cmdStr))
-
-        Command.__init__(self, name, self.cmdStr, ctxt, remoteHost, stdin=msg)
-
-    def unpackSuccessLine(self):
-        """
-        After run() has been called on this cmd, call this to find the "Success" data in the output
-
-        That line is returned if successful, otherwise None is returned
-        """
-        res = self.get_results()
-        if res.rc != 0:
-            logger.warn("Error getting data stdout:\"%s\"  stderr:\"%s\"" % \
-                        (res.stdout.replace("\n", " "), res.stderr.replace("\n", " ")))
-            return None
-        else:
-            logger.info("Result: stdout:\"%s\"  stderr:\"%s\"" % \
-                        (res.stdout.replace("\n", " "), res.stderr.replace("\n", " ")))
-
-            line = res.stderr
-            if line.startswith("Success:"):
-                line = line[len("Success:"):]
-            return line
-
-#-----------------------------------------------
-class SendFilerepVerifyMessage(Command):
-
-    DEFAULT_IGNORE_FILES = [
-        'pg_internal.init', 'pgstat.stat', 'pga_hba.conf',
-        'pg_ident.conf', 'pg_fsm.cache', 'gp_dbid', 'gp_pmtransitions_args',
-        'gp_dump', 'postgresql.conf', 'postmaster.log', 'postmaster.opts',
-        'postmaser.pids', 'postgresql.conf.bak', 'core',  'wet_execute.tbl',
-        'recovery.done', 'gp_temporary_files_filespace', 'gp_transaction_files_filespace']
-
-    DEFAULT_IGNORE_DIRS = [
-        'pgsql_tmp', 'pg_xlog', 'pg_log', 'pg_stat_tmp', 'pg_changetracking', 'pg_verify', 'db_dumps', 'pg_utilitymodedtmredo', 'gpperfmon'
-    ]
-
-    def __init__(self, name, host, port, token, full=None, verify_file=None, verify_dir=None,
-                 abort=None, suspend=None, resume=None, ignore_dir=None, ignore_file=None,
-                 results=None, results_level=None, ctxt=LOCAL, remoteHost=None):
-        """
-        Sends gp_verify message to backend to either start or get results of a
-        mirror verification.
-        """
-
-        self.host = host
-        self.port = port
-
-        msg_contents = ['gp_verify']
-
-        ## The ordering of the following appends is critical.  Do not rearrange without
-        ## an associated change in gp_primarymirror
-
-        # full
-        msg_contents.append('true') if full else msg_contents.append('')
-        # verify_file
-        msg_contents.append(verify_file) if verify_file else msg_contents.append('')
-        # verify_dir
-        msg_contents.append(verify_dir) if verify_dir else msg_contents.append('')
-        # token
-        msg_contents.append(token)
-        # abort
-        msg_contents.append('true') if abort else msg_contents.append('')
-        # suspend
-        msg_contents.append('true') if suspend else msg_contents.append('')
-        # resume
-        msg_contents.append('true') if resume else msg_contents.append('')
-        # ignore_directory
-        ignore_dir_list = SendFilerepVerifyMessage.DEFAULT_IGNORE_DIRS + (ignore_dir.split(',') if ignore_dir else [])
-        msg_contents.append(','.join(ignore_dir_list))
-        # ignore_file
-        ignore_file_list = SendFilerepVerifyMessage.DEFAULT_IGNORE_FILES + (ignore_file.split(',') if ignore_file else [])
-        msg_contents.append(','.join(ignore_file_list))
-        # resultslevel
-        msg_contents.append(str(results_level)) if results_level else msg_contents.append('')
-
-        logger.debug("gp_verify message sent to %s:%s:\n%s" % (host, port, "\n".join(msg_contents)))
-
-        self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s' % (host, port)
-        Command.__init__(self, name, self.cmdStr, ctxt, remoteHost, stdin="\n".join(msg_contents))
-
 
 #-----------------------------------------------
 class SegmentStop(Command):
@@ -706,6 +545,8 @@ SEGSTART_ERROR_SERVER_DID_NOT_RESPOND = 7
 SEGSTART_ERROR_PG_CTL_FAILED = 8
 SEGSTART_ERROR_CHECKING_CONNECTION_AND_LOCALE_FAILED = 9
 SEGSTART_ERROR_PING_FAILED = 10 # not actually done inside GpSegStartCmd, done instead by caller
+SEGSTART_ERROR_PG_CONTROLDATA_FAILED = 11
+SEGSTART_ERROR_CHECKSUM_MISMATCH = 12
 SEGSTART_ERROR_OTHER = 1000
 
 
@@ -718,7 +559,7 @@ class GpSegStartArgs(CmdArgs):
     "$GPHOME/sbin/gpsegstart.py -M mirrorless -V 'gpversion' -n 1 --era 123 -t 600"
     """
 
-    def __init__(self, mirrormode, gpversion, num_cids, era, timeout):
+    def __init__(self, mirrormode, gpversion, num_cids, era, master_checksum_value, timeout):
         """
         @param mirrormode - mirror start mode (START_AS_PRIMARY_OR_MIRROR or START_AS_MIRRORLESS)
         @param gpversion - version (from postgres --gp-version)
@@ -726,14 +567,19 @@ class GpSegStartArgs(CmdArgs):
         @param era - master era
         @param timeout - seconds to wait before giving up
         """
-        CmdArgs.__init__(self, [
+        default_args = [
             "$GPHOME/sbin/gpsegstart.py",
             "-M", str(mirrormode),
             "-V '%s'" % gpversion,
             "-n", str(num_cids),
             "--era", str(era),
             "-t", str(timeout)
-        ])
+        ]
+        if master_checksum_value != None:
+            default_args.append("--master-checksum-version")
+            default_args.append(str(master_checksum_value))
+
+        CmdArgs.__init__(self, default_args)
 
     def set_special(self, special):
         """
@@ -758,7 +604,7 @@ class GpSegStartArgs(CmdArgs):
 
 class GpSegStartCmd(Command):
     def __init__(self, name, gphome, segments, gpversion,
-                 mirrormode, numContentsInCluster, era,
+                 mirrormode, numContentsInCluster, era, master_checksum_value=None,
                  timeout=SEGMENT_TIMEOUT_DEFAULT, verbose=False,
                  ctxt=LOCAL, remoteHost=None, pickledTransitionData=None,
                  specialMode=None, wrapper=None, wrapper_args=None,
@@ -768,7 +614,7 @@ class GpSegStartCmd(Command):
         self.dblist = [x for x in segments]
 
         # build gpsegstart command string
-        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, timeout)
+        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, master_checksum_value,timeout)
         c.set_verbose(verbose)
         c.set_special(specialMode)
         c.set_transition(pickledTransitionData)
@@ -849,12 +695,10 @@ class GpStandbyStart(MasterStart, object):
                 dataDir=datadir,
                 port=port,
                 dbid=dbid,
-                standby_dbid=0,
                 numContentsInCluster=ncontents,
                 era=era,
                 wrapper=wrapper,
                 wrapper_args=wrapper_args,
-                disableMasterMirror=True,
                 ctxt=ctxt,
                 remoteHost=remoteHost,
                 wait=False
@@ -1046,17 +890,17 @@ class GpCleanSegmentDirectories(Command):
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 #-----------------------------------------------
-class GpDumpDirsExist(Command):
+class GpDirsExist(Command):
     """
     Checks if gp_dump* directories exist in the given directory
     """
-    def __init__(self, name, baseDir, ctxt=LOCAL, remoteHost=None):
-        cmdStr = "find %s -name '*dump*' -print" % baseDir
+    def __init__(self, name, baseDir, dirName, ctxt=LOCAL, remoteHost=None):
+        cmdStr = "find %s -name %s -print" % (baseDir, dirName)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
-    def local(name, baseDir):
-        cmd = GpDumpDirsExist(name, baseDir)
+    def local(name, baseDir, dirName):
+        cmd = GpDirsExist(name, baseDir=baseDir, dirName=dirName)
         cmd.run(validateAfter=True)
         dirCount = len(cmd.get_results().stdout.split('\n'))
         # This is > 1 because the command output will terminate with \n
@@ -1111,10 +955,9 @@ class ConfigureNewSegment(Command):
                         : if primary then 'true' else 'false'
                         : if target is reused location then 'true' else 'false'
                         : <segment dbid>
-                      [ : <filespace oid> : <file space directory> ]...
-
         """
         result = {}
+
         for segIndex, seg in enumerate(segments):
             if primaryMirror == 'primary' and seg.isSegmentPrimary() == False:
                continue
@@ -1127,21 +970,25 @@ class ConfigureNewSegment(Command):
                 result[hostname] = ''
 
             isTargetReusedLocation = isTargetReusedLocationArr and isTargetReusedLocationArr[segIndex]
+            # only a mirror segment has these two attributes
+            # added on the fly, by callers
+            primaryHostname = getattr(seg, 'primaryHostname', "")
+            primarySegmentPort = getattr(seg, 'primarySegmentPort', "-1")
+            if primaryHostname == "":
+                isPrimarySegment =  "true" if seg.isSegmentPrimary(current_role=True) else "false"
+                isTargetReusedLocationString = "true" if isTargetReusedLocation else "false"
+            else:
+                isPrimarySegment = "false"
+                isTargetReusedLocationString = "false"
 
-            filespaces = []
-            for fsOid, path in seg.getSegmentFilespaces().iteritems():
-                if fsOid not in [gparray.SYSTEM_FILESPACE]:
-                    filespaces.append(str(fsOid) + ":" + path)
-
-            result[hostname] += '%s:%d:%s:%s:%d%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
-                        "true" if seg.isSegmentPrimary(current_role=True) else "false",
-                        "true" if isTargetReusedLocation else "false",
-                        seg.getSegmentDbId(),
-                        "" if len(filespaces) == 0 else (":" + ":".join(filespaces))
+            result[hostname] += '%s:%d:%s:%s:%d:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
+                                                          isPrimarySegment,
+                                                          isTargetReusedLocationString,
+                                                          seg.getSegmentDbId(),
+                                                          primaryHostname,
+                                                          primarySegmentPort
             )
         return result
-
-
 
 #-----------------------------------------------
 class GpVersion(Command):
