@@ -11,6 +11,6 @@ project(gpdb)
 
 include_directories(src/include)
 
-file(GLOB_RECURSE SOURCES *.c *.h *.cpp)
+file(GLOB_RECURSE SOURCES src/backend/*.c src/include/*.h src/backend/*.cpp)
 add_executable(gpdb \${SOURCES})
 EOF
