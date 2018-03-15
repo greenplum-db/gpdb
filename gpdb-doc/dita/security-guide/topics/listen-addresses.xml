@@ -7,15 +7,17 @@
       interfaces on the hosts in the cluster. This allows Greenplum Database to use all of the
       hosts' available network bandwidth and enhances high availability by allowing database network
       traffic to continue if an interface or subnet fails.</p>
-    <p>With the <codeph>pg_hba.conf</codeph> host-based authentication configuration file, you can
-      manage who can connect to databases, from which hosts, and the type of authentication
-      required. For greater security, you may also want to configure Greenplum Database to only
-      accept connections on some interfaces or subnets in order to prevent connections from insecure
-      networks. For example, consider a Greenplum Database cluster with hosts that have two NICs:
-      one configured on an internal 192.51.100.0/24 network and another on an external 192.0.2.0/24
-      subnet. To prevent access to the database from the external subnet, you can configure the
-      Greenplum Database <codeph>listen_addresses</codeph> server configuration parameter to listen
-      for connections only on the 198.51.100.0/24 subnet. </p>
+    <p>The standard method for guarding access to Greenplum Database is to use the
+        <codeph>pg_hba.conf</codeph> host-based authentication configuration file to specify which
+      users can connect to which databases, from which hosts, and with which authentication method. </p>
+    <p>For greater security, you can also configure Greenplum Database in the
+        <codeph>postgresql.conf</codeph> configuration file to only listen for connections on some
+      interfaces or subnets in order to prevent connections from insecure networks. For example,
+      consider a Greenplum Database cluster with hosts that have two NICs: one configured on an
+      internal 192.51.100.0/24 network and another on an external 192.0.2.0/24 subnet. To prevent
+      access to the database from the external subnet, you can configure the Greenplum Database
+        <codeph>listen_addresses</codeph> server configuration parameter to listen for connections
+      only on the 198.51.100.0/24 subnet. </p>
     <note>Greenplum Database releases before 5.6.0 do not use the <codeph>listen_addresses</codeph>
       parameter and listen on all interfaces.</note>
     <p>The <codeph>listen_addresses</codeph> parameter specifies network addresses Greenplum
@@ -33,10 +35,10 @@
       <li>You must include at least one TCP/IP interface in the address list.</li>
     </ul>
     <note type="warning">If you set the <codeph>listen_addresses</codeph> parameter, you may
-      experience problems with client applications and Greenplum Database management utilities, such
-      as <codeph>gpfdist</codeph>, <codeph>gpload</codeph>, and <codeph>gptransfer</codeph>. You
-      should test the utilities you use, including client applications, ETL systems, backup, and
-      restore, to ensure they work with your restricted network configuration.</note>
+      experience problems with client applications and utilities. You should test the external
+      programs you use with Greenplum Database, including client applications, utilities, ETL
+      systems, backup, and restore, to ensure they work with your restricted network
+      configuration.</note>
     <p>Because each interface in a network has a unique address, the
         <codeph>listen_addresses</codeph> configuration parameter must be set individually on each
       host. You cannot use the <codeph>gpconfig</codeph> utility to set the parameter. You must edit
