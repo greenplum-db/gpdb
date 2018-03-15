@@ -9,7 +9,7 @@ DIR_OF_THIS_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cmake_minimum_required(VERSION 2.4)
 project(gpdb)
 
-include_directories(src/include)
+include_directories(src/include src/test/unit/cmockery)
 
 file(GLOB_RECURSE SOURCES src/backend/*.c src/include/*.h src/backend/*.cpp)
 add_executable(gpdb \${SOURCES})
