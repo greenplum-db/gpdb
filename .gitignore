@@ -53,3 +53,4 @@ GTAGS
 /config.log
 /config.status
 /VERSION
+/CMakeLists.txt
