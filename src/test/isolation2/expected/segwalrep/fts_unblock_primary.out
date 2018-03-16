@@ -29,6 +29,11 @@ synchronous_standby_names
 -------------------------
 *                        
 (1 row)
+2U: show gp_fts_mark_mirror_down_grace_period;
+gp_fts_mark_mirror_down_grace_period
+------------------------------------
+30s                                 
+(1 row)
 
 -- create table and show commits are not blocked
 create table fts_unblock_primary (a int) distributed by (a);
@@ -89,7 +94,37 @@ gp_inject_fault
 t              
 (1 row)
 
---trigger fts probe and check to see primary marked n/u and mirror n/d
+-- trigger fts probe and check to see primary marked n/u and mirror still n/u as
+-- still should be in mirror down grace period.
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+select content, role, preferred_role, mode, status from gp_segment_configuration where content=2;
+content|role|preferred_role|mode|status
+-------+----+--------------+----+------
+2      |p   |p             |s   |u     
+2      |m   |m             |s   |u     
+(2 rows)
+
+-- set mirror down grace period to zero to instantly mark mirror down
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 1)
+
+2U: show gp_fts_mark_mirror_down_grace_period;
+gp_fts_mark_mirror_down_grace_period
+------------------------------------
+0                                   
+(1 row)
+
+-- trigger fts probe and check to see primary marked n/u and mirror n/d
 select gp_request_fts_probe_scan();
 gp_request_fts_probe_scan
 -------------------------
@@ -141,4 +176,18 @@ INSERT 10
 synchronous_standby_names
 -------------------------
 *                        
+(1 row)
+
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+2U: show gp_fts_mark_mirror_down_grace_period;
+gp_fts_mark_mirror_down_grace_period
+------------------------------------
+30s                                 
 (1 row)
