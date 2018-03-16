@@ -139,11 +139,6 @@ int			gp_fts_probe_interval = 60;
  */
 int			gp_fts_probe_threadcount = 16;
 
-/*
- * Controls parallel segment transition (failover).
- */
-bool		gp_fts_transition_parallel = true;
-
 /* The number of retries to request a segment state transition. */
 int			gp_fts_transition_retries = 5;
 

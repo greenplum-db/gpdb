@@ -1041,16 +1041,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_fts_transition_parallel", PGC_POSTMASTER, GP_ARRAY_TUNING,
-			gettext_noop("Activate parallel segment transition."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_fts_transition_parallel,
-		true, NULL, NULL
-	},
-
-	{
 		{"gp_debug_pgproc", PGC_POSTMASTER, DEVELOPER_OPTIONS,
 			gettext_noop("Print debug info relevant to PGPROC."),
 			NULL /* long description */ ,
@@ -3483,7 +3473,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_retries", PGC_POSTMASTER, GP_ARRAY_TUNING,
+		{"gp_fts_probe_retries", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
@@ -3493,7 +3483,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_timeout", PGC_USERSET, GP_ARRAY_TUNING,
+		{"gp_fts_probe_timeout", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Maximum time (in seconds) allowed for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
 			GUC_UNIT_S
@@ -3503,7 +3493,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_fts_probe_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+		{"gp_fts_probe_interval", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("A complete probe of all segments starts each time a timer with this period expires."),
 			gettext_noop("Used by the fts-probe process. "),
 			GUC_UNIT_S

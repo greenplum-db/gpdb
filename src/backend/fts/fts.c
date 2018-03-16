@@ -607,7 +607,6 @@ void FtsLoop()
 
 	prober_sleep:
 		{
-
 			/* check if we need to sleep before starting next iteration */
 			elapsed = time(NULL) - probe_start_time;
 			if (elapsed < gp_fts_probe_interval && !shutdown_requested)
