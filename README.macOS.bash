@@ -29,10 +29,8 @@ brew install dep
 
 # Installing python libraries
 brew install python2
-pip install lockfile psi paramiko pysql psutil setuptools
-pip install unittest2 parse pexpect mock pyyaml
-pip install git+https://github.com/behave/behave@v1.2.4
-pip install pylint
+pip install -r python-dependencies.txt
+pip install -r python-developer-dependencies.txt
 
 #echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
