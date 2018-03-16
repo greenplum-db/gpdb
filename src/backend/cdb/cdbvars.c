@@ -134,17 +134,11 @@ int			gp_fts_probe_timeout = 20;
 int			gp_fts_probe_interval = 60;
 
 /*
- * Number of threads to use for probe of segments (it is a good idea to have this
- * larger than the number of segments per host.
+ * If mirror disconnects and re-connects between this period, or just takes
+ * this much time during initial connection of cluster start, it will not get
+ * reported as down to FTS.
  */
-int			gp_fts_probe_threadcount = 16;
-
-/* The number of retries to request a segment state transition. */
-int			gp_fts_transition_retries = 5;
-
-/* Timeout to request a segment state transition. */
-int			gp_fts_transition_timeout = 3600;
-
+int gp_fts_mark_mirror_down_grace_period = 30;
 
 /*
  * When we have certain types of failures during gang creation which indicate

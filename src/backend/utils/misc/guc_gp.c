@@ -3503,6 +3503,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_fts_mark_mirror_down_grace_period", PGC_SIGHUP, GP_ARRAY_TUNING,
+			gettext_noop("Time (in seconds) allowed to mirror after disconnection, to reconnect before being marked as down in configuration by FTS."),
+			gettext_noop("Used by the fts-probe process."),
+			GUC_UNIT_S
+		},
+		&gp_fts_mark_mirror_down_grace_period,
+		30, 0, 3600, NULL, NULL
+	},
+
+	{
 		{"gp_gang_creation_retry_count", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("After a gang-creation fails, retry the number of times if failure is retryable."),
 			gettext_noop("A value of zero disables retries."),

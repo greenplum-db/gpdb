@@ -79,7 +79,7 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 	 * duration is taken into account.
 	 */
 	data.walsnds[0].marked_pid_zero_at_time =
-		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
 	 * Ensure the recovery finished before wal sender died.
@@ -107,12 +107,12 @@ test_GetMirrorStatus_RequestRetry(void **state)
 	 * Make the pid zero time within the grace period.
 	 */
 	data.walsnds[0].marked_pid_zero_at_time =
-		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD/2;
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
 
 	/*
 	 * Ensure recovery finished before wal sender died.
 	 */
-	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+	PMAcceptingConnectionsStartTime = data.walsnds[0].marked_pid_zero_at_time - gp_fts_mark_mirror_down_grace_period;
 
 	expect_lwlock(LW_SHARED);
 	expect_ereport();
@@ -138,14 +138,14 @@ test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 	 * Mirror will be marked down, and no retry.
 	 */
 	data.walsnds[0].marked_pid_zero_at_time =
-		((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD;
+		((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period;
 
 	/*
 	 * However the database was in recovery, hence
 	 * we are still within the grace period, and
 	 * we should retry.
 	 */
-	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL)) - FTS_MARKING_MIRROR_DOWN_GRACE_PERIOD/2;
+	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
 
 	expect_lwlock(LW_SHARED);
 	expect_ereport();
