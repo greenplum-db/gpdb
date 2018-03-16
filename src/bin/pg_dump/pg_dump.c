@@ -11252,7 +11252,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		else if (g_fout->remoteVersion >= 80214)
 		{
 			appendPQExpBuffer(query,
-					   "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
+					   "SELECT x.location, "
+							  "CASE WHEN x.command <> '' THEN x.location "
+								   "ELSE '{ALL_SEGMENTS}' "
+							  "END AS execlocation, "
+							  "x.fmttype, x.fmtopts, x.command, "
 							  "x.rejectlimit, x.rejectlimittype, "
 						 "n.nspname AS errnspname, d.relname AS errtblname, "
 					"pg_catalog.pg_encoding_to_char(x.encoding), x.writable "
@@ -11267,7 +11271,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		{
 
 			appendPQExpBuffer(query,
-					   "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
+					   "SELECT x.location, "
+							  "CASE WHEN x.command <> '' THEN x.location "
+								   "ELSE '{ALL_SEGMENTS}' "
+							  "END AS execlocation, "
+							  "x.fmttype, x.fmtopts, x.command, "
 							  "x.rejectlimit, x.rejectlimittype, "
 						 "n.nspname AS errnspname, d.relname AS errtblname, "
 			  "pg_catalog.pg_encoding_to_char(x.encoding), null as writable "
@@ -11282,7 +11290,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		{
 			/* not SREH and encoding colums yet */
 			appendPQExpBuffer(query,
-					   "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
+					   "SELECT x.location, "
+							  "CASE WHEN x.command <> '' THEN x.location "
+								   "ELSE '{ALL_SEGMENTS}' "
+							  "END AS execlocation, "
+							  "x.fmttype, x.fmtopts, x.command, "
 							  "-1 as rejectlimit, null as rejectlimittype,"
 							  "null as errnspname, null as errtblname, "
 							  "null as encoding, null as writable "
@@ -11329,22 +11341,19 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		else
 		{
 			urilocations = PQgetvalue(res, 0, 0);
-			fmttype = PQgetvalue(res, 0, 1);
-			fmtopts = PQgetvalue(res, 0, 2);
-			command = PQgetvalue(res, 0, 3);
-			rejlim = PQgetvalue(res, 0, 4);
-			rejlimtype = PQgetvalue(res, 0, 5);
-			errnspname = PQgetvalue(res, 0, 6);
-			errtblname = PQgetvalue(res, 0, 7);
-			extencoding = PQgetvalue(res, 0, 8);
-			writable = PQgetvalue(res, 0, 9);
-			execlocations = "";
+			execlocations = PQgetvalue(res, 0, 1);
+			fmttype = PQgetvalue(res, 0, 2);
+			fmtopts = PQgetvalue(res, 0, 3);
+			command = PQgetvalue(res, 0, 4);
+			rejlim = PQgetvalue(res, 0, 5);
+			rejlimtype = PQgetvalue(res, 0, 6);
+			errnspname = PQgetvalue(res, 0, 7);
+			errtblname = PQgetvalue(res, 0, 8);
+			extencoding = PQgetvalue(res, 0, 9);
+			writable = PQgetvalue(res, 0, 10);
 			options = "";
 
-			if (command && strlen(command) > 0)
-				on_clause = urilocations;
-			else
-				on_clause = NULL;
+			on_clause = execlocations;
 		}
 
 		if ((command && strlen(command) > 0) ||
@@ -11424,7 +11433,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		 * ON clauses were up until 5.0 supported only on EXECUTE, in 5.0
 		 * and thereafter they are allowed on all external tables.
 		 */
-		if (!iswritable && on_clause)
+		if (!iswritable)
 		{
 			/* remove curly braces */
 			on_clause[strlen(on_clause) - 1] = '\0';
@@ -11492,7 +11501,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			customfmt = NULL;
 		}
 
-		if (gpdb5OrLater)
+		if (options && options[0] != '\0')
 		{
 			appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
 		}
