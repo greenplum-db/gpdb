@@ -924,29 +924,39 @@ processResponse(fts_context *context)
 				Assert(IsPrimaryAlive);
 				if (ftsInfo->result.isSyncRepEnabled && !IsMirrorAlive)
 				{
-					/*
-					 * Primaries that have syncrep enabled continue to block
-					 * commits until FTS update the mirror status as down.
-					 */
-					is_updated |= updateConfiguration(
-						primary, mirror,
-						GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
-						GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
-						IsInSync, IsPrimaryAlive, IsMirrorAlive);
-					/*
-					 * If mirror was marked up in configuration, it must have
-					 * been marked down by updateConfiguration().
-					 */
-					AssertImply(SEGMENT_IS_ALIVE(mirror), is_updated);
-					/*
-					 * Now that the configuration is updated, FTS must notify
-					 * the primaries to unblock commits by sending syncrep off
-					 * message.
-					 */
-					ftsInfo->state = FTS_SYNCREP_OFF_SEGMENT;
-					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-						   "FTS turning syncrep off on (content=%d, dbid=%d)",
-						   primary->segindex, primary->dbid);
+					if (!ftsInfo->result.retryRequested)
+					{
+						/*
+						 * Primaries that have syncrep enabled continue to block
+						 * commits until FTS update the mirror status as down.
+						 */
+						is_updated |= updateConfiguration(
+							primary, mirror,
+							GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY,
+							GP_SEGMENT_CONFIGURATION_ROLE_MIRROR,
+							IsInSync, IsPrimaryAlive, IsMirrorAlive);
+						/*
+						 * If mirror was marked up in configuration, it must have
+						 * been marked down by updateConfiguration().
+						 */
+						AssertImply(SEGMENT_IS_ALIVE(mirror), is_updated);
+						/*
+						 * Now that the configuration is updated, FTS must notify
+						 * the primaries to unblock commits by sending syncrep off
+						 * message.
+						 */
+						ftsInfo->state = FTS_SYNCREP_OFF_SEGMENT;
+						elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+							   "FTS turning syncrep off on (content=%d, dbid=%d)",
+							   primary->segindex, primary->dbid);
+					}
+					else
+					{
+						elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+							   "FTS skipping mirror down update for (content=%d) as retryRequested",
+							   primary->segindex);
+						ftsInfo->state = FTS_RESPONSE_PROCESSED;
+					}
 				}
 				else if (ftsInfo->result.isRoleMirror)
 				{
