@@ -2216,8 +2216,7 @@ retry1:
 					 errmsg("sorry, too many clients already")));
 			break;
 		case CAC_WAITBACKUP:
-			/* GPDB_84_MERGE_FIXME: we don't have a WAITBACKUP state. 
-			 * Do we want to just remove this case entirely? */
+			/* Greenplum does not currently use WAITBACKUP state. */
 			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
 		case CAC_MIRROR_READY:
