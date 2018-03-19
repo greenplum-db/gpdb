@@ -748,6 +748,7 @@ COptTasks::PoconfCreate
 	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
 	ULONG ulJoinOrderThreshold = (ULONG) optimizer_join_order_threshold;
 	ULONG ulBroadcastThreshold = (ULONG) optimizer_penalize_broadcast_threshold;
+	ULONG ulNestloopFactor = (ULONG) optimizer_nestloop_factor;
 
 	return GPOS_NEW(pmp) COptimizerConfig
 						(
@@ -762,6 +763,7 @@ COptTasks::PoconfCreate
 								ulArrayExpansionThreshold,
 								ulJoinOrderThreshold,
 								ulBroadcastThreshold,
+								ulNestloopFactor,
 								false /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
 								),
@@ -861,22 +863,6 @@ COptTasks::SetCostModelParams
 	)
 {
 	GPOS_ASSERT(NULL != pcm);
-
-	if (optimizer_nestloop_factor > 1.0)
-	{
-		// change NLJ cost factor
-		ICostModelParams::SCostParam *pcp = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
-		{
-			pcp = pcm->Pcp()->PcpLookup(CCostModelParamsGPDB::EcpNLJFactor);
-		}
-		else
-		{
-			pcp = pcm->Pcp()->PcpLookup(CCostModelParamsGPDBLegacy::EcpNLJFactor);
-		}
-		CDouble dNLJFactor(optimizer_nestloop_factor);
-		pcm->Pcp()->SetParam(pcp->UlId(), dNLJFactor, dNLJFactor - 0.5, dNLJFactor + 0.5);
-	}
 
 	if (optimizer_sort_factor > 1.0 || optimizer_sort_factor < 1.0)
 	{
