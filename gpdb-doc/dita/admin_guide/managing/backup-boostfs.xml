@@ -13,7 +13,7 @@
          a Data Domain system as a standard file system mount point. With direct access to a BoostFS
          mount point, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> can leverage the
          storage and network efficiencies of the DD Boost protocol for backup and recovery.</p>
-      <p>To back up or restore with BoostFS, you include the option <codeph>-backup-dir</codeph>
+      <p>To back up or restore with BoostFS, you include the option <codeph>--backup-dir</codeph>
          with the <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> command to access the Data
          Domain system.</p>
    </body>
@@ -47,7 +47,7 @@
                point.<codeblock>&lt;<varname>mounted_directory</varname>> is a mountpoint</codeblock></li>
          </ol>
          <p>You can now run <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> with the
-               <codeph>-backup-dir</codeph> option to back up a database to
+               <codeph>--backup-dir</codeph> option to back up a database to
                   <codeph>&lt;<varname>mounted_directory</varname>></codeph> on the Data Domain
             system and restore data from the Data Domain system. </p>
       </body>
@@ -57,26 +57,26 @@
       <body>
          <p>These are required <codeph>gpbackup</codeph> options when backing up data to a Data
             Domain system with BoostFS.<ul id="ul_h3t_pcb_cdb">
-               <li><codeph>-backup-dir</codeph> - Specify the mounted Data Domain storage unit.</li>
-               <li><codeph>-no-compression</codeph> - Disable compression. Data compression
+               <li><codeph>--backup-dir</codeph> - Specify the mounted Data Domain storage unit.</li>
+               <li><codeph>--no-compression</codeph> - Disable compression. Data compression
                   interferes with DD Boost data de-duplication.</li>
-               <li><codeph>-single-data-file</codeph> - Create a single data file on each segment
+               <li><codeph>--single-data-file</codeph> - Create a single data file on each segment
                   host. A single data file avoids a BoostFS stream limitation.</li>
             </ul></p>
          <p>When you use <codeph>gprestore</codeph> to restore a backup from a Data Domain system
             with BoostFS, you must specify the mounted Data Domain storage unit with the option
-               <codeph>-backup-dir</codeph>.</p>
-         <p>When you use the <codeph>gpbackup</codeph> option <codeph>-single-data-file</codeph>,
-            you cannot specify the <codeph>-jobs</codeph> option to perform a parallel restore
+               <codeph>--backup-dir</codeph>.</p>
+         <p>When you use the <codeph>gpbackup</codeph> option <codeph>--single-data-file</codeph>,
+            you cannot specify the <codeph>--jobs</codeph> option to perform a parallel restore
             operation with <codeph>gprestore</codeph>.</p>
          <p>This example <codeph>gpbackup</codeph> command backs up the database
                <codeph>test</codeph>. The example assumes that the directory
                <codeph>/boostfs-test</codeph> is the mounted Data Domain storage unit.
-            <codeblock>$ gpbackup -dbname test -backup-dir /boostfs-test/ -single-data-file -no-compression</codeblock></p>
+            <codeblock>$ gpbackup --dbname test --backup-dir /boostfs-test/ --single-data-file --no-compression</codeblock></p>
          <p>These commands drop the database <codeph>test</codeph> and restore the database from the
             backup.
             <codeblock>$ dropdb test
-$ gprestore -backup-dir /boostfs-test/ -timestamp 20171103153156 -create-db</codeblock></p>
+$ gprestore --backup-dir /boostfs-test/ --timestamp 20171103153156 --create-db</codeblock></p>
          <p>The value <codeph>20171103153156</codeph> is the timestamp of the
                <codeph>gpbackup</codeph> backup set to restore. For information about how
                <codeph>gpbackup</codeph> uses timesamps when creating backups, see <xref
