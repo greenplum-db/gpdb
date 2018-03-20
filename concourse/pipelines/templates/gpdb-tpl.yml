@@ -50,7 +50,6 @@ groups:
 {% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
-  - gate_icw_start
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
@@ -170,7 +169,6 @@ groups:
 
 - name: G:ICW
   jobs:
-  - gate_icw_start
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
@@ -1149,52 +1147,18 @@ jobs:
 ## |___\____|  \_/\_/   
 ## ======================================================================
 
-- name: gate_icw_start
-  plan:
-    - aggregate:
-      - get: gpdb_src
-        passed:
-        - gate_compile_end
-        trigger: true
-{% if "sles" in os_types %}
-      - get: bin_gpdb_sles11
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "centos7" in os_types %}
-      - get: bin_gpdb_centos7
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "centos6" in os_types %}
-      - get: binary_swap_gpdb_centos6
-        passed:
-        - gate_compile_end
-      - get: bin_gpdb_centos6
-        passed:
-        - gate_compile_end
-{% endif %}
-{% if "ubuntu16" in os_types %}
-      - get: compiled_bits_ubuntu16
-        passed:
-        - gate_compile_end
-      - get: deb_package_ubuntu16
-        passed:
-        - gate_compile_end
-{% endif %}
-
 {% if "centos6" in os_types %}
 - name: icw_planner_centos6
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: binary_swap_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_binary_swap_centos6]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
@@ -1211,10 +1175,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1229,10 +1193,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1248,10 +1212,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-6
   - task: ic_gpdb
@@ -1265,10 +1229,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: memory-accounting
@@ -1286,10 +1250,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos7]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos7]
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-dev-7
   - task: ic_gpdb
@@ -1306,10 +1270,10 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: [[ test_trigger ]]
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
@@ -1323,11 +1287,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
       tags: ["ccp"]
@@ -1367,11 +1331,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["ccp"]
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
     - get: gpdb_binary
       tags: ["ccp"]
       resource: bin_gpdb_sles11
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
       tags: ["ccp"]
@@ -1412,9 +1376,9 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
     - get: compiled_bits_ubuntu16
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
       trigger: [[ test_trigger ]]
     - get: ubuntu-gpdb-dev-16
   - task: ic_gpdb
@@ -1430,9 +1394,9 @@ jobs:
     - get: gpdb_src
       params:
         submodules: none
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
     - get: bin_gpdb
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
       resource: compiled_bits_ubuntu16
       trigger: [[ test_trigger ]]
     - get: ubuntu-gpdb-dev-16
@@ -1447,11 +1411,11 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - gate_icw_start
+      - compile_gpdb_ubuntu16
     - get: ubuntu-gpdb-debian-dev-16
     - get: deb_package_ubuntu16
       passed:
-      - gate_icw_start
+      - compile_gpdb_ubuntu16
       trigger: [[ test_trigger ]]
   - task: test_gpdb_deb_package
     file: gpdb_src/concourse/tasks/deb_test_package.yml
@@ -1465,16 +1429,16 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6, compile_gpdb_ubuntu16]
       trigger: [[ test_trigger ]]
 {% if "centos6" in os_types %}
     - get: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: centos-gpdb-dev-6
 {% endif %}
 {% if "ubuntu16" in os_types %}
     - get: compiled_bits_ubuntu16
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_ubuntu16]
 {% endif %}
 {% if "ubuntu16" in os_types %}
     - get: ubuntu-gpdb-dev-16
