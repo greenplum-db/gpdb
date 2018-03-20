@@ -84,6 +84,9 @@ install: generate_greenplum_path_file
 	if [ -e bin/ext/paramiko ]; then \
 	    cp -rp bin/ext/paramiko $(DESTDIR)$(prefix)/lib/python ; \
 	fi
+	if [ -e bin/ext/ecdsa ]; then \
+	    cp -rp bin/ext/ecdsa $(DESTDIR)$(prefix)/lib/python ; \
+	fi
 	if [ -e bin/ext/psutil ]; then \
 	    cp -rp bin/ext/psutil $(DESTDIR)$(prefix)/lib/python ; \
 	fi
