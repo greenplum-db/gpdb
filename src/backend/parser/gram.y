@@ -254,9 +254,12 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <list>	ext_on_clause_list format_opt format_opt_list format_def_list
 				ext_options ext_options_opt ext_options_list
 				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
+				OptTableSpaceOptions
+				tblspace_options tblspace_options_list
 %type <defelt>	ext_on_clause_item format_opt_item format_def_item
 				ext_options_item
 				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
+				tblspace_options_item
 
 %type <ival>	opt_lock lock_type cast_context
 %type <ival>	vacuum_option_list vacuum_option_elem
@@ -5294,15 +5297,45 @@ opt_procedural:
  *
  *****************************************************************************/
 
-CreateTableSpaceStmt: CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst
+CreateTableSpaceStmt: CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst OptTableSpaceOptions
 				{
 					CreateTableSpaceStmt *n = makeNode(CreateTableSpaceStmt);
 					n->tablespacename = $3;
 					n->owner = $4;
 					n->location = $6;
+					n->options = $7;
 					$$ = (Node *) n;
 				}
 		;
+
+OptTableSpaceOptions:
+			OPTIONS tblspace_options			{ $$ = $2; }
+			| /* EMPTY */						{ $$ = NIL; }
+			;
+
+tblspace_options:
+			'(' tblspace_options_list ')'		{ $$ = $2; }
+			| '(' ')'							{ $$ = NIL; }
+			;
+
+
+tblspace_options_list:
+			tblspace_options_item
+			{
+				$$ = list_make1($1);
+			}
+			| tblspace_options_list ',' tblspace_options_item
+			{
+				$$ = lappend($1, $3);
+			}
+			;
+
+tblspace_options_item:
+			ColLabel Sconst
+			{
+				$$ = makeDefElem($1, (Node *) makeString($2));
+			}
+			;
 
 OptTableSpaceOwner: OWNER name			{ $$ = $2; }
 			| /*EMPTY */				{ $$ = NULL; }

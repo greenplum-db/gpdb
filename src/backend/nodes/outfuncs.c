@@ -4228,6 +4228,7 @@ _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_STRING_FIELD(owner);
 	WRITE_STRING_FIELD(location);
+	WRITE_NODE_FIELD(options);
 }
 
 static void

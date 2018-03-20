@@ -30,3 +30,18 @@ SELECT COUNT(*) FROM aoco_ts_table;
 drop table ao_ts_table;
 drop table aoco_ts_table;
 drop tablespace testspace;
+-- Greenplum tablespaces have the option to define tablespace location for specific segments
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content9999 '@testtablespace@_otherloc'); -- should fail
+ERROR:  segment content ID 9999 does not exist
+HINT:  Segment content IDs can be found in gp_segment_configuration table.
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content1 '@testtablespace@_otherloc');
+CREATE TABLE tblspc_otherloc_heap(a int, b text) distributed by (a);
+INSERT INTO tblspc_otherloc_heap select i, 'foo' || i from generate_series(1,10000)i;
+SELECT COUNT(*) FROM tblspc_otherloc_heap;
+ count 
+-------
+ 10000
+(1 row)
+
+DROP TABLE tblspc_otherloc_heap;
+DROP TABLESPACE testspace_otherloc;

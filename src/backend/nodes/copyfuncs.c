@@ -4090,6 +4090,7 @@ _copyCreateTableSpaceStmt(CreateTableSpaceStmt *from)
 	COPY_STRING_FIELD(tablespacename);
 	COPY_STRING_FIELD(owner);
 	COPY_STRING_FIELD(location);
+	COPY_NODE_FIELD(options);
 
 	return newnode;
 }

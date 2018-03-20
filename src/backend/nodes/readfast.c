@@ -2470,6 +2470,7 @@ _readCreateTableSpaceStmt(void)
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(owner);
 	READ_STRING_FIELD(location);
+	READ_NODE_FIELD(options);
 
 	READ_DONE();
 }

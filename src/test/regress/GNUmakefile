@@ -156,8 +156,8 @@ all: tablespace-setup
 
 .PHONY: tablespace-setup
 tablespace-setup:
-	rm -rf ./testtablespace
-	mkdir ./testtablespace
+	rm -rf ./testtablespace ./testtablespace_otherloc
+	mkdir ./testtablespace ./testtablespace_otherloc
 
 # Check for include files that are not being shipped
 .PHONY: includecheck
@@ -232,6 +232,7 @@ clean distclean maintainer-clean: clean-lib
 # things created by various check targets
 	rm -f $(output_files) $(input_files)
 	rm -rf testtablespace
+	rm -rf testtablespace_otherloc
 	rm -rf results tmp_check log
 	rm -f regression.diffs regression.out regress.out run_check.out
 	rm -f data/pg_class32.data
