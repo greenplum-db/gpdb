@@ -1364,7 +1364,7 @@ dumpTablespaces(PGconn *conn)
 	if (server_version >= 90000)
 		res = executeQuery(conn, "SELECT spcname, "
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
-						   "spclocation, spcacl, "
+						   "pg_catalog.pg_tablespace_location(oid), spcacl, "
 						   "array_to_string(spcoptions, ', '),"
 						"pg_catalog.shobj_description(oid, 'pg_tablespace') "
 						   "FROM pg_catalog.pg_tablespace "
