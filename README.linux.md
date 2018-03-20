@@ -77,8 +77,8 @@ then run command `ldconfig`.
    
    ```
    ssh-keygen
-   cp ~/.ssh/id_rsa.pub authorized_keys
-   chmod 600 authorized_keys
+   cp ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+   chmod 600 ~/.ssh/authorized_keys
    ```
 
 1. Verify that you can ssh to your machine name without a password
