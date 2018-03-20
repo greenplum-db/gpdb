@@ -55,9 +55,7 @@ extern volatile FtsProbeInfo *ftsProbeInfo;
 extern int	FtsShmemSize(void);
 extern void FtsShmemInit(void);
 
-extern bool FtsTestConnection(CdbComponentDatabaseInfo *db_to_test, bool full_scan);
-extern void FtsReConfigureMPP(bool create_new_gangs);
-extern void FtsHandleNetFailure(SegmentDatabaseDescriptor **, int);
+extern bool FtsIsSegmentUp(CdbComponentDatabaseInfo *dBInfo);
 extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *, int);
 
 extern bool verifyFtsSyncCount(void);

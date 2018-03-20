@@ -936,7 +936,7 @@ cdbdisp_checkSegmentDBAlive(DispatchCommandParms *pParms)
 		WRITE_LOG_DISPATCHER_DEBUG("testing connection %d of %d %s stillRunning %d",
 								   i + 1, pParms->db_count, segdbDesc->whoami, dispatchResult->stillRunning);
 
-		if (!FtsTestConnection(segdbDesc->segment_database_info, false))
+		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
 		{
 			cdbdisp_appendMessage(dispatchResult, LOG,
 								  "Lost connection to %s. FTS detected segment failures.",

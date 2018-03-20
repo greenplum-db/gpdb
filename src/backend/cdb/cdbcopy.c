@@ -28,6 +28,7 @@
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
+#include "storage/pmsignal.h"
 #include "tcop/tcopprot.h"
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
@@ -755,8 +756,12 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
 	if (failed_count > 0)
 	{
 		elog(LOG, "%s", c->err_msg.data);
-		elog(LOG, "COPY passes failed segment(s) information to FTS");
-		FtsHandleNetFailure(failedSegDBs, failed_count);
+		elog(LOG, "COPY signals FTS to probe segments");
+		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
+		DisconnectAndDestroyAllGangs(true);
+		ereport(ERROR,
+				(errmsg_internal("MPP detected %d segment failures, system is reconnected", failed_count),
+				 errSendAlert(true)));
 	}
 
 	pfree(results);
