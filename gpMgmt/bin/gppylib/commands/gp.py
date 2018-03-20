@@ -164,11 +164,11 @@ class PgCtlBackendOptions(CmdArgs):
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -M master --gp_contentid=-1 -x 2'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -M master --gp_contentid=-1 -x 2 -E'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2 -E'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1, 'sdw1'))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i sdw1 -M mirror --gp_contentid=1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -h sdw1 -M mirror --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
@@ -206,7 +206,7 @@ class PgCtlBackendOptions(CmdArgs):
         @param disable: start without master mirroring?
         @param seqserver: start with seqserver?
         """
-        self.extend(["-M", "master", "--gp_contentid=-1", "-x", str(standby_dbid)])
+        self.extend(["-i", "-M", "master", "--gp_contentid=-1", "-x", str(standby_dbid)])
         if disable: self.append("-y")
         if seqserver: self.append("-E")
         return self
@@ -216,7 +216,7 @@ class PgCtlBackendOptions(CmdArgs):
         @param mode: mirroring mode
         @param content: content id
         """
-        self.extend(["-i", str(host), "-M", str(mode), "--gp_contentid="+str(content)])
+        self.extend(["-h", str(host), "-M", str(mode), "--gp_contentid="+str(content)])
         return self
 
     #
@@ -429,7 +429,7 @@ class SendFilerepTransitionMessage(Command):
     #
     def __init__(self, name, inputFile, port=None,ctxt=LOCAL, remoteHost=None, dataDir=None):
         if not remoteHost:
-             remoteHost = '${PGHOST:-"localhost"}'
+            remoteHost = '${PGHOST:-"localhost"}'
         self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s -i %s' % (remoteHost,port,inputFile)
         self.dataDir = dataDir
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
