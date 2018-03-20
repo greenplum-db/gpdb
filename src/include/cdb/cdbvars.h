@@ -336,8 +336,6 @@ extern int32 gp_subtrans_warn_limit;
 
 extern bool assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source);
 
-extern bool gp_set_read_only;
-
 extern const char *role_to_string(GpRoleValue role);
 
 extern int	gp_segment_connect_timeout; /* GUC var - timeout specifier for gang creation */

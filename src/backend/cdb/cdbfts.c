@@ -43,11 +43,7 @@
 #define MASTER_SEGMENT_ID -1
 
 volatile FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
-
 static LWLockId ftsControlLock;
-
-static volatile bool *ftsReadOnlyFlag;
-static volatile bool *ftsAdminRequestedRO;
 
 /*
  * get fts share memory size
@@ -75,25 +71,13 @@ FtsShmemInit(void)
 		elog(FATAL, "FTS: could not initialize fault tolerance manager share memory");
 
 	/* Initialize locks and shared memory area */
-
 	ftsControlLock = shared->ControlLock;
-
-	ftsReadOnlyFlag = &shared->ftsReadOnlyFlag; /* global RO state */
-
-	ftsAdminRequestedRO = &shared->ftsAdminRequestedRO; /* Admin request --
-														 * guc-controlled RO
-														 * state */
-
 	ftsProbeInfo = &shared->fts_probe_info;
 
 	if (!IsUnderPostmaster)
 	{
 		shared->ControlLock = LWLockAssign();
 		ftsControlLock = shared->ControlLock;
-
-		/* initialize */
-		shared->ftsReadOnlyFlag = gp_set_read_only;
-		shared->ftsAdminRequestedRO = gp_set_read_only;
 
 		shared->fts_probe_info.fts_statusVersion = 0;
 	}
@@ -177,19 +161,6 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 	}
 
 	return false;
-}
-
-void
-FtsCondSetTxnReadOnly(bool *XactFlag)
-{
-	if (*ftsReadOnlyFlag && Gp_role != GP_ROLE_UTILITY)
-		*XactFlag = true;
-}
-
-bool
-isFtsReadOnlySet(void)
-{
-	return *ftsReadOnlyFlag;
 }
 
 uint8

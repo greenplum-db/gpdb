@@ -229,13 +229,6 @@ mirroring_sanity_check(int flags, const char *func)
 			elog(ERROR, "%s can only be run by a superuser", func);
 	}
 
-	if ((flags & READ_ONLY) == READ_ONLY)
-	{
-		if (gp_set_read_only != true)
-			elog(ERROR, "%s can only be run if the system is in read only mode",
-				 func);
-	}
-
 	if ((flags & SEGMENT_ONLY) == SEGMENT_ONLY)
 	{
 		if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)

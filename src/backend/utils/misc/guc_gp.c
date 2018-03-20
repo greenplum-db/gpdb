@@ -1141,16 +1141,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_set_read_only", PGC_SUSET, GP_ARRAY_CONFIGURATION,
-			gettext_noop("Sets the system read only"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_set_read_only,
-		false, NULL, NULL
-	},
-
-	{
 		{"gp_set_proc_affinity", PGC_POSTMASTER, RESOURCES_KERNEL,
 			gettext_noop("On postmaster startup, attempt to bind postmaster to a processor"),
 			NULL

@@ -344,8 +344,6 @@ static void DispatchRollbackToSavepoint(char *name);
 
 static bool IsCurrentTransactionIdForReader(TransactionId xid);
 
-extern void FtsCondSetTxnReadOnly(bool *);
-
 /* ----------------------------------------------------------------
  *	transaction state accessors
  * ----------------------------------------------------------------
@@ -2147,9 +2145,6 @@ StartTransaction(void)
 	forceSyncCommit = false;
 	MyXactAccessedTempRel = false;
 	seqXlogWrite = false;
-
-	/* set read only by fts, if any fts action is read only */
-	FtsCondSetTxnReadOnly(&XactReadOnly);
 
 	/*
 	 * reinitialize within-transaction counters
