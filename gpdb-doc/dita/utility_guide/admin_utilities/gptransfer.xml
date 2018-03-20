@@ -55,7 +55,8 @@
                         different destination system. If you specify the <codeph>--full</codeph>
                         option, you must specify both a source and destination system. The
                         destination system cannot contain any user-defined databases, only the
-                        default databases postgres, template0, and template1.</p></li>
+                        default databases <codeph>postgres</codeph>, <codeph>template0</codeph>, and
+                            <codeph>template1</codeph>.</p></li>
                 <li id="pk138461">Copy a set of user defined database tables to a destination
                     system. The <codeph>-f</codeph>, and <codeph>-t</codeph> options copy a
                     specified set of user defined tables, table data, and re-creates the table
@@ -118,6 +119,10 @@
                 might be more efficient to copy the schema and smaller tables to the destination
                 database using other methods, such as the SQL <cmdname>COPY</cmdname> command, and
                 then use <codeph>gptransfer</codeph> to transfer large tables in batches.</p>
+            <p>When transferring data between databases, you can run only one instance of
+                    <codeph>gptransfer</codeph> at a time.<ph otherprops="op-pivotal"> Running
+                    multiple, concurrent instances of <codeph>gptransfer</codeph> is not
+                    supported.</ph></p>
             <p>When copying database data between different Greenplum Database systems,
                     <codeph>gptransfer</codeph> requires a text file that lists all the source
                 segment host names and IP addresses. Specify the name and location of the file with
