@@ -216,7 +216,15 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 
 	/* sanity check, this shouldn't happen... */
 	if (TransactionIdFollows(oldestXmin, oldestLocalXmin))
-		elog(ERROR, "local snapshot's xmin is older than recorded distributed oldestxmin");
+	{
+#ifdef USE_ASSERT_CHECKING
+		elog(PANIC,
+#else
+		elog(ERROR,
+#endif
+			 "local snapshot's xmin (%u) is older than recorded distributed oldestxmin (%u)",
+			 oldestLocalXmin, oldestXmin);
+	}
 
 	currPage = -1;
 	while (!TransactionIdEquals(oldestXmin, oldestLocalXmin))
