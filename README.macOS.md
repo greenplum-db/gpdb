@@ -1,44 +1,23 @@
-# Readme
+We've confirmed that these steps work on a brand new installation of macOS
+Sierra or a brand new installation of macOS Sierra with [Pivotal's
+workstation-setup](https://github.com/pivotal/workstation-setup)
 
-We've confirmed that these steps work on a brand new installation of macOS Sierra or a 
-brand new installation of macOS Sierra with [Pivotal's workstation-setup](https://github.com/pivotal/workstation-setup)
 
-## Step: Disable System Integrity Protection
+## 1. Install needed dependencies
 
-Note that you may need to disable System Integrity Protection in order to bring
-up the gpdemo cluster. Without doing this, psql commands run in child processes
-spawned by gpinitsystem may have the DYLD_* environment variables removed from
-their environments.
+Execute the following, this script will start by caching the `sudo` password:
 
-## Step: install needed dependencies. This will install homebrew if missing
 ```
 ./README.macOS.bash
 source ~/.bash_profile
 ```
 
-## Step: Workaround for libreadline / libxml2 on OSX 10.11 (El Capitan)
+Note: This will install Homebrew if missing
 
-Symptoms:
-* Running `./configure`,
-* You see output
-  `configure: error: readline library not found`, and
-* in `config.log` you see
-  `ld: file not found: /usr/lib/system/libsystem_symptoms.dylib for architecture x86_64`
+## 2. Allow ssh to use the version of python in path, not the system python
 
-There is an issue with Xcode 8.1 on El Capitan. Here's a workaround:
+Execute the following in your terminal:
 
-```
-brew install libxml2
-brew link libxml2 --force
-```
-
-Other workarounds may include downgrading to Xcode 7.3, or installing the CLT
-package from Xcode 7.3.
-
-For more info, [this seems to be the best thread](https://github.com/Homebrew/brew/issues/972)
-
-## Step: Allow ssh to use the version of python in path, not the system python
-#
 ```
 mkdir -p "$HOME/.ssh"
 cat >> ~/.bash_profile << EOF
@@ -61,7 +40,6 @@ function start_agent {
 }
 
 # Source SSH settings, if applicable
-
 if [ -f "\${SSH_ENV}" ]; then
     . "\${SSH_ENV}" > /dev/null
     ps -ef | grep \${SSH_AGENT_PID} 2>/dev/null | grep ssh-agent$ > /dev/null || {
@@ -79,30 +57,92 @@ sudo tee -a /etc/ssh/sshd_config << EOF
 # Allow ssh to use the version of python in path, not the system python
 PermitUserEnvironment yes
 EOF
-
 ```
 
-## Step: verify that you can ssh to your machine name without a password
+## 3. Enable ssh to localhost without requiring a password
+
+Currently, the GPDB utilities require that it be possible to `ssh` to localhost
+without using a password.  To verify this, the following command should succeed
+without erroring, or requiring you to enter a password.
+
 ```
 ssh <hostname of your machine>  # e.g., ssh briarwood
 ```
-### If the hostname does not resolve, try adding your machine name to /etc/hosts
+
+However, if it is the first time that you are `ssh`'ing to localhost, you may
+need to accept the trust on first use prompt.
+
+```
+The authenticity of host '<your hostname>' can't be established.
+ECDSA key fingerprint is SHA256:<fingerprint here>.
+Are you sure you want to continue connecting (yes/no)?
+```
+
+If the hostname does not resolve, try adding your machine name to `/etc/hosts`,
+like so:
+
 ```
 echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
 ```
 
-### If you see 'ssh: connect to host <> port 22: Connection refused', enable remote login
-System Preferences -> Sharing -> Remote Login
+If you see `ssh: connect to host <> port 22: Connection refused`, enable remote
+login in:
 
-### If you see a password prompt, authorize your SSH key
+```
+System Preferences -> Sharing -> Remote Login
+```
+
+If you see a password prompt, add your SSH key to the `authorized_keys` file,
+like so:
+
 ```
 mkdir -p ~/.ssh
 ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 cat ~/.ssh/id_rsa.pub >>  ~/.ssh/authorized_keys
 ```
 
-### Verify that you can ssh without a password and that ~/.ssh/environment exists
+After troubleshooting,  verify one more time that you can ssh without a
+password and that `~/.ssh/environment` exists, by running:
+
 ```
 ssh <hostname of your machine> 
 ls ~/.ssh/environment
 ```
+
+If the ssh succeeded with out asking for a password, and that file exists, you
+are good to go.  Remember to exit all of your ssh session before moving on.
+
+## 4. Configure, compile, and install
+
+At this point head back the main [README.md](./README.md#build-the-optimizer),
+and continue from __Build the Optimizer__.
+
+## Troubleshooting macOS specific issues: 
+
+### Workaround for libreadline / libxml2 on OSX 10.11 (El Capitan)
+
+Symptoms:
+* After Running `./configure`,
+* You see output
+  `configure: error: readline library not found`, and
+* in `config.log` you see
+  `ld: file not found: /usr/lib/system/libsystem_symptoms.dylib for architecture x86_64`
+
+There is an issue with Xcode 8.1 on El Capitan. Here's a workaround:
+
+```
+brew install libxml2
+brew link libxml2 --force
+```
+
+Other workarounds may include downgrading to Xcode 7.3, or installing the CLT
+package from Xcode 7.3.
+
+For more info, [this seems to be the best thread](https://github.com/Homebrew/brew/issues/972)
+
+### Disable System Integrity Protection
+
+Note that you may need to disable System Integrity Protection in order to bring
+up the gpdemo cluster. Without doing this, psql commands run in child processes
+spawned by gpinitsystem may have the DYLD_* environment variables removed from
+their environments.
