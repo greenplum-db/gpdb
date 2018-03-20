@@ -329,7 +329,7 @@ LANGUAGE 'plr';</codeblock><p>This
             format="html" scope="external">MADlib</xref> directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
-          <codeph>$GPHOME/ext/R-3.3.1/doc</codeph>
+          <codeph>$GPHOME/ext/R-3.3.3/doc</codeph>
         </p>
       </body>
       <topic id="topic16" xml:lang="en">
