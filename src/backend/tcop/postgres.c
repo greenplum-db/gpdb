@@ -101,6 +101,7 @@
 
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
+#include "tcop/idle_resource_cleaner.h"
 
 extern char *optarg;
 extern int	optind;
@@ -5132,37 +5133,17 @@ PostgresMain(int argc, char *argv[],
 
 		/*
 		 * (2b) Check for temp table delete reset session work.
+		 * Also clean up idle resources.
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
+		{
 			CheckForResetSession();
+			StartIdleResourceCleanupTimers();
+		}
 
 		/*
 		 * (3) read a command (loop blocks here)
 		 */
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			/*
-			 * We want to check to see if our session goes "idle" (nobody sending us work to do)
-			 * We decide this it true if after waiting a while, we don't get a message from the client.
-			 * We can then free resources (right now, just the gangs on the segDBs).
-			 *
-			 * A Bit ugly:  We share the sig alarm timer with the deadlock detection.
-			 * We know which it is (deadlock detection needs to run or idle
-			 * session resource release) based on the DoingCommandRead flag.
-			 *
-			 * Perhaps instead of calling enable_sig_alarm, we should just call
-			 * setitimer() directly (we don't need to worry about the statement timeout timer
-			 * because it can't be running when we are idle).
-			 *
-			 * We want the time value to be long enough so we don't free gangs prematurely.
-			 * This means giving the end user enough time to type in the next SQL statement
-			 *
-			 */
-			if (IdleSessionGangTimeout > 0 && GangsExist())
-				if (!enable_sig_alarm( IdleSessionGangTimeout /* ms */, false))
-					elog(FATAL, "could not set timer for client wait timeout");
-		}
-
 		firstchar = ReadCommand(&input_message);
 
 		/*

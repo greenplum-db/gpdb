@@ -39,6 +39,7 @@
 #include "replication/walsender.h"
 #include "storage/bfz.h"
 #include "storage/proc.h"
+#include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"

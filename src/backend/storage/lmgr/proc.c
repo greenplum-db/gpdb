@@ -62,16 +62,15 @@
 #include "utils/sharedsnapshot.h"  /*SharedLocalSnapshotSlot*/
 
 #include "cdb/cdblocaldistribxact.h"
-#include "cdb/cdbgang.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
 #include "port/atomics.h"
 #include "utils/session_state.h"
+#include "tcop/idle_resource_cleaner.h"
 
 /* GUC variables */
 int			DeadlockTimeout = 1000;
 int			StatementTimeout = 0;
-int			IdleSessionGangTimeout = 18000;
 bool		log_lock_waits = false;
 
 /* Pointer to this process's PGPROC struct, if any */
@@ -1772,68 +1771,6 @@ disable_sig_alarm(bool is_statement_timeout)
 }
 
 /*
- * We get here when a session has been idle for a while (waiting for the
- * client to send us SQL to execute).  The idea is to consume less resources while sitting idle,
- * so we can support more sessions being logged on.
- *
- * The expectation is that if the session is logged on, but nobody is sending us work to do,
- * we want to free up whatever resources we can.  Usually it means there is a human being at the
- * other end of the connection, and that person has walked away from their terminal, or just hasn't
- * decided what to do next.  We could be idle for a very long time (many hours).
- *
- * Of course, freeing gangs means that the next time the user does send in an SQL statement,
- * we need to allocate gangs (at least the writer gang) to do anything.  This entails extra work,
- * so we don't want to do this if we don't think the session has gone idle.
- *
- * P.s:  Is there anything we can free up on the master (QD) side?  I can't think of anything.
- *
- */
-static void
-HandleClientWaitTimeout(void)
-{
-	elog(DEBUG2,"HandleClientWaitTimeout");
-
-	/*
-	 * cancel the timer, as there is no reason we need it to go off again.
-	 */
-	disable_sig_alarm(false);
-
-	/*
-	 * Free gangs to free up resources on the segDBs.
-	 */
-	if (GangsExist())
-	{
-		if (IsTransactionOrTransactionBlock() || TempNamespaceOidIsValid())
-		{
-			/*
-			 * If we are in a transaction, we can't release the writer gang,
-			 * as this will abort the transaction.
-			 *
-			 * If we have a TempNameSpace, we can't release the writer gang, as this
-			 * would drop any temp tables we own.
-			 *
-			 * Since we are idle, any reader gangs will be available but not allocated.
-			 */
-			disconnectAndDestroyIdleReaderGangs();
-		}
-		else
-		{
-			/*
-			 * Get rid of ALL gangs... Readers and primary writer.
-			 * After this, we have no resources being consumed on the segDBs at all.
-			 *
-			 * Our session wasn't destroyed due to an fatal error or FTS action, so
-			 * we don't need to do anything special.  Specifically, we DON'T want
-			 * to act like we are now in a new session, since that would be confusing
-			 * in the log.
-			 *
-			 */
-			DisconnectAndDestroyAllGangs(false);
-		}
-	}
-}
-
-/*
  * Check for statement timeout.  If the timeout time has come,
  * trigger a query-cancel interrupt; if not, reschedule the SIGALRM
  * interrupt to occur at the right time.
@@ -2043,7 +1980,7 @@ ProcessClientWaitTimeout(void)
 
 	clientWaitTimeoutInterruptOccurred = 0;
 
-	HandleClientWaitTimeout();
+	DoIdleResourceCleanup();
 
 	if (notify_enabled)
 		EnableNotifyInterrupt();
