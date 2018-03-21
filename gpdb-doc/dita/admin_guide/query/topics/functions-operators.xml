@@ -502,7 +502,7 @@ SELECT foo();</codeblock>
                                 </xref>
                             </entry>
                             <entry colname="col2"
-                                    >set_config<p>pg_cancel_backend</p><p>pg_reload_conf</p><p>pg_rotate_logfile</p><p>pg_start_backup</p><p>pg_stop_backup</p><p>pg_size_pretty</p><p>pg_ls_dir</p><p>pg_read_file</p><p>pg_stat_file</p></entry>
+                                    >set_config<p>pg_cancel_backend</p><p>pg_terminate_backend</p><p>pg_reload_conf</p><p>pg_rotate_logfile</p><p>pg_start_backup</p><p>pg_stop_backup</p><p>pg_size_pretty</p><p>pg_ls_dir</p><p>pg_read_file</p><p>pg_stat_file</p></entry>
                             <entry colname="col3">current_setting<p><i>All database object size
                                         functions</i></p></entry>
                             <entry colname="col4"><b>Note:</b> The function
