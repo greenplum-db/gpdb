@@ -1472,13 +1472,6 @@ initTM(void)
 			 */
 			PG_TRY();
 			{
-				/*
-				 * FtsNotifyProber could throw ERROR, so we should catch it if
-				 * it happens.
-				 */
-				if (!first)
-					FtsNotifyProber();
-
 				initTM_recover_as_needed();
 				succeeded = true;
 			}
