@@ -343,6 +343,15 @@ static const struct config_enum_entry constraint_exclusion_options[] = {
 	{NULL, 0, false}
 };
 
+
+static const struct config_enum_entry allow_system_table_mods_options[] = {
+	{"none", ALLOW_SYSTEM_TABLE_MODS_NONE, false},
+	{"ddl", ALLOW_SYSTEM_TABLE_MODS_DDL, false},
+	{"dml", ALLOW_SYSTEM_TABLE_MODS_DML, false},
+	{"all", ALLOW_SYSTEM_TABLE_MODS_DML, false},
+	{NULL, 0, false}
+};
+
 /*
  * Options for enum values stored in other modules
  */
@@ -432,20 +441,12 @@ static int	wal_segment_size;
 static bool	data_checksums;
 static bool integer_datetimes;
 static int	effective_io_concurrency;
-static char *allow_system_table_mods_str;
 
 /* should be static, but commands/variable.c needs to get at these */
 char	   *role_string;
 char	   *session_authorization_string;
 
-static const char *
-assign_allow_system_table_mods(const char *newval,
-							   bool doit,
-							   GucSource source);
-
-static const char *
-show_allow_system_table_mods(void);
-
+static bool assign_allow_system_table_mods(int newval, bool doit, GucSource source);
 
 /*
  * Displayable names for context types (enum GucContext)
@@ -2345,16 +2346,6 @@ static struct config_real ConfigureNamesReal[] =
 static struct config_string ConfigureNamesString[] =
 {
 	{
-		{"allow_system_table_mods", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("Allows ddl/dml modifications of system tables."),
-			gettext_noop("Valid values are \"NONE\", \"DDL\", \"DML\", \"ALL\". " ),
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&allow_system_table_mods_str,
-		"none", assign_allow_system_table_mods, show_allow_system_table_mods
-	},
-
-	{
 		{"archive_command", PGC_SIGHUP, WAL_ARCHIVING,
 			gettext_noop("Sets the shell command that will be called to archive a WAL file."),
 			NULL,
@@ -2832,6 +2823,16 @@ static struct config_string ConfigureNamesString[] =
 
 static struct config_enum ConfigureNamesEnum[] =
 {
+	{
+		{"allow_system_table_mods", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allows ddl/dml modifications of system tables."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&allowSystemTableModsMask,
+		ALLOW_SYSTEM_TABLE_MODS_NONE, allow_system_table_mods_options,
+		assign_allow_system_table_mods, NULL
+	},
 	{
 		{"backslash_quote", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
 			gettext_noop("Sets whether \"\\'\" is allowed in string literals."),
@@ -8699,56 +8700,19 @@ assign_application_name(const char *newval, bool doit, GucSource source)
  * 		- upgrade_mode GUC set
  * 		- in single user mode
  */
-static const char *
-assign_allow_system_table_mods(const char *newval,
-							   bool doit,
-							   GucSource source)
+static bool
+assign_allow_system_table_mods(int newval, bool doit, GucSource source)
 {
-	bool valueDDL = false;
-	bool valueDML = false;
-
-	if (newval == NULL || newval[0] == 0 ||
-		!pg_strcasecmp("none", newval));
-	else if (!pg_strcasecmp("dml", newval))
-		valueDML = true;
-	else if (!pg_strcasecmp("ddl", newval) && !IsUnderPostmaster)
-		valueDDL = true;
-	else if (!pg_strcasecmp("all", newval) && !IsUnderPostmaster)
+	if (IsUnderPostmaster && ((newval) & ALLOW_SYSTEM_TABLE_MODS_DDL) != 0)
 	{
-		valueDML = true;
-		valueDDL = true;
-	}
-	else
-	{
-		if (source >= PGC_S_INTERACTIVE)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("Unknown system table modification policy. (Current policy: '%s')",
-						show_allow_system_table_mods())));
-
-		return NULL;
+		/* allow_system_table_mods='ddl' is only allowed in single-user mode. */
+		return false;
 	}
 
 	if (doit)
-	{
-		allowSystemTableModsDML = valueDML;
-		allowSystemTableModsDDL = valueDDL;
-	}
+		allowSystemTableModsMask = newval;
 
-	return newval;
-}
-
-static const char *
-show_allow_system_table_mods(void)
-{
-	if (allowSystemTableModsDML && allowSystemTableModsDDL)
-		return "ALL";
-	else if (allowSystemTableModsDDL)
-		return "DDL";
-	else if (allowSystemTableModsDML)
-		return "DML";
-	else
-		return "NONE";
+	return true;
 }
 
 #include "guc-file.c"
