@@ -296,9 +296,12 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
      }
      cpuacct {
      }
+     memory {
+     }
  } </codeblock>
             <p>This content configures CPU and CPU accounting control groups managed by the
-                <codeph>gpadmin</codeph> user.</p>
+                <codeph>gpadmin</codeph> user. The <i>memory</i> control group is required,
+                though currently unused.</p>
           </li>
           <li>If not already installed and running, install the Control Groups operating system
             package and start the cgroups service on each Greenplum Database node. The commands you
