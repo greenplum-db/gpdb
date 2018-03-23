@@ -2099,15 +2099,6 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
       image: centos-gpdb-dev-6
       timeout: 3h
-    - task: storage_vacuum_xidlimits
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_vacuum_xidlimits
-        BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
 
 - name: gate_cs_end
   plan:

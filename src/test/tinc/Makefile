@@ -35,10 +35,6 @@ DISCOVER=discover
 # Refer to the properties of the pulse project and individual build
 # stages for configuration requirements.
 
-storage_vacuum_xidlimits:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/vacuum/xidlimits
-
 aocoalter_catalog_loaders:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
 	-s storage/aoco_alter \
