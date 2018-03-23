@@ -12000,11 +12000,27 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 									  tbinfo->attlen[j],
 									  tbinfo->attalign[j]);
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
-					appendPQExpBuffer(q, "\n  AND attrelid = ");
-					appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
-					appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
-
-					appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
+					if (gp_partitioning_available)
+					{
+						/*
+						 * Do for all descendants of a partition table.
+						 * No hurt if this is not a table with partitions.
+						 */
+						appendPQExpBuffer(q, "\n  AND attrelid IN (SELECT %u UNION "
+										  "SELECT pr.parchildrelid FROM "
+										  "pg_catalog.pg_partition_rule pr, "
+										  "pg_catalog.pg_partition p WHERE "
+										  "pr.parchildrelid != 0 AND "
+										  "pr.paroid = p.oid AND p.parrelid=%u);\n",
+										  tbinfo->dobj.catId.oid, tbinfo->dobj.catId.oid);
+					}
+					else
+					{
+						appendPQExpBuffer(q, "\n  AND attrelid = ");
+						appendStringLiteralAH(q, fmtId(tbinfo->dobj.name), fout);
+						appendPQExpBuffer(q, "::pg_catalog.regclass;\n");
+					}
+					appendPQExpBuffer(q, "ALTER TABLE %s ",
 									  fmtId(tbinfo->dobj.name));
 					appendPQExpBuffer(q, "DROP COLUMN %s;\n",
 									  fmtId(tbinfo->attnames[j]));
