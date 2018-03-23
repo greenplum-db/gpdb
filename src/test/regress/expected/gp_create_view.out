@@ -5,6 +5,11 @@ drop view if exists v_sourcetable cascade;
 NOTICE:  view "v_sourcetable" does not exist, skipping
 drop view if exists v_sourcetable1 cascade;
 NOTICE:  view "v_sourcetable1" does not exist, skipping
+-- Tests here check that the order of output rows satisfy the ORDER BY clause
+-- in the view definition.  This is a PostgreSQL/GPDB extension that is not
+-- part of SQL standard. Since ORCA does not honor ORDER BYs in
+-- views/sub-selects, disable ORCA for this test.
+set optimizer=off;
 -- end_ignore
 create table sourcetable 
 (
@@ -18,56 +23,55 @@ create table sourcetable
 ) distributed by (cn,vn,pn);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "sourcetable_pkey" for table "sourcetable"
 insert into sourcetable values
-  ( 2, 40, 100, '1401-1-1', 1100, 2400),
-  ( 1, 10, 200, '1401-3-1', 1, 0),
-  ( 3, 40, 200, '1401-4-1', 1, 0),
-  ( 1, 20, 100, '1401-5-1', 1, 0),
-  ( 1, 30, 300, '1401-5-2', 1, 0),
-  ( 1, 50, 400, '1401-6-1', 1, 0),
+  ( 2, 41, 100, '1401-1-1', 1100, 2400),
+  ( 1, 10, 200, '1401-3-1', 10, 0),
+  ( 3, 42, 200, '1401-4-1', 20, 0),
+  ( 1, 20, 100, '1401-5-1', 30, 0),
+  ( 1, 33, 300, '1401-5-2', 40, 0),
+  ( 1, 51, 400, '1401-6-1', 2, 0),
   ( 2, 50, 400, '1401-6-1', 1, 0),
-  ( 1, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 500, '1401-6-1', 12, 5),
-  ( 3, 30, 600, '1401-6-1', 12, 5),
-  ( 4, 40, 700, '1401-6-1', 1, 1),
-  ( 4, 40, 800, '1401-6-1', 1, 1);
+  ( 1, 31, 500, '1401-6-1', 15, 5),
+  ( 3, 32, 500, '1401-6-1', 25, 5),
+  ( 3, 30, 600, '1401-6-1', 16, 5),
+  ( 4, 43, 700, '1401-6-1', 3, 1),
+  ( 4, 40, 800, '1401-6-1', 4, 1);
 -- Check that the rows come out in order, if there's an ORDER BY in
 -- the view definition.
---
--- FIXME: gpdiff will unfortunately mask out any differences in the
--- row order, so this test wouldn't catch a bug in that.
 create view  v_sourcetable as select * from sourcetable order by vn;
-select * from v_sourcetable;
- cn | vn | pn  |     dt     | qty  | prc  
-----+----+-----+------------+------+------
-  1 | 10 | 200 | 03-01-1401 |    1 |    0
-  1 | 20 | 100 | 05-01-1401 |    1 |    0
-  3 | 30 | 600 | 06-01-1401 |   12 |    5
-  1 | 30 | 500 | 06-01-1401 |   12 |    5
-  1 | 30 | 300 | 05-02-1401 |    1 |    0
-  3 | 30 | 500 | 06-01-1401 |   12 |    5
-  4 | 40 | 700 | 06-01-1401 |    1 |    1
-  2 | 40 | 100 | 01-01-1401 | 1100 | 2400
-  4 | 40 | 800 | 06-01-1401 |    1 |    1
-  3 | 40 | 200 | 04-01-1401 |    1 |    0
-  2 | 50 | 400 | 06-01-1401 |    1 |    0
-  1 | 50 | 400 | 06-01-1401 |    1 |    0
+select row_number() over(), * from v_sourcetable;
+ row_number | cn | vn | pn  |     dt     | qty  | prc  
+------------+----+----+-----+------------+------+------
+          1 |  1 | 10 | 200 | 03-01-1401 |   10 |    0
+          2 |  1 | 20 | 100 | 05-01-1401 |   30 |    0
+          3 |  3 | 30 | 600 | 06-01-1401 |   16 |    5
+          4 |  1 | 31 | 500 | 06-01-1401 |   15 |    5
+          5 |  3 | 32 | 500 | 06-01-1401 |   25 |    5
+          6 |  1 | 33 | 300 | 05-02-1401 |   40 |    0
+          7 |  4 | 40 | 800 | 06-01-1401 |    4 |    1
+          8 |  2 | 41 | 100 | 01-01-1401 | 1100 | 2400
+          9 |  3 | 42 | 200 | 04-01-1401 |   20 |    0
+         10 |  4 | 43 | 700 | 06-01-1401 |    3 |    1
+         11 |  2 | 50 | 400 | 06-01-1401 |    1 |    0
+         12 |  1 | 51 | 400 | 06-01-1401 |    2 |    0
 (12 rows)
 
 create view v_sourcetable1 as SELECT sourcetable.qty, vn, pn FROM sourcetable union select sourcetable.qty, sourcetable.vn, sourcetable.pn from sourcetable order by qty;
-select * from v_sourcetable1;
- qty  | vn | pn  
-------+----+-----
-    1 | 20 | 100
-    1 | 40 | 200
-    1 | 40 | 700
-    1 | 10 | 200
-    1 | 40 | 800
-    1 | 50 | 400
-    1 | 30 | 300
-   12 | 30 | 600
-   12 | 30 | 500
- 1100 | 40 | 100
-(10 rows)
+select row_number() over(), * from v_sourcetable1;
+ row_number | qty  | vn | pn  
+------------+------+----+-----
+          1 |    1 | 50 | 400
+          2 |    2 | 51 | 400
+          3 |    3 | 43 | 700
+          4 |    4 | 40 | 800
+          5 |   10 | 10 | 200
+          6 |   15 | 31 | 500
+          7 |   16 | 30 | 600
+          8 |   20 | 42 | 200
+          9 |   25 | 32 | 500
+         10 |   30 | 20 | 100
+         11 |   40 | 33 | 300
+         12 | 1100 | 41 | 100
+(12 rows)
 
 -- Check that the row-comparison operator is serialized and deserialized
 -- correctly, when it's used in a view. This isn't particularly interesting,
@@ -81,16 +85,17 @@ create view v_sourcetable2 as
 select * from v_sourcetable2;
  cn | a_vn | b_vn | a_pn | b_pn 
 ----+------+------+------+------
-  1 |   10 |   30 |  200 |  500
-  1 |   10 |   30 |  200 |  300
-  1 |   10 |   50 |  200 |  400
+  1 |   10 |   31 |  200 |  500
   1 |   10 |   20 |  200 |  100
-  1 |   20 |   30 |  100 |  500
-  1 |   20 |   30 |  100 |  300
-  1 |   20 |   50 |  100 |  400
-  1 |   30 |   50 |  500 |  400
-  1 |   30 |   30 |  300 |  500
-  1 |   30 |   50 |  300 |  400
+  1 |   10 |   33 |  200 |  300
+  1 |   10 |   51 |  200 |  400
+  1 |   20 |   31 |  100 |  500
+  1 |   20 |   33 |  100 |  300
+  1 |   20 |   51 |  100 |  400
+  1 |   33 |   51 |  300 |  400
+  1 |   31 |   33 |  500 |  300
+  1 |   31 |   51 |  500 |  400
 (10 rows)
 
 drop view v_sourcetable2;
+reset optimizer;
