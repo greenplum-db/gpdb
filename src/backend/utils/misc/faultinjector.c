@@ -433,6 +433,7 @@ FaultInjector_InjectFaultNameIfSet(
 			for (ii=0; ii < cnt; ii++)
 			{
 				pg_usleep(1000000L); // sleep for 1 sec (1 sec * 3600 = 1 hour)
+				CHECK_FOR_INTERRUPTS();
 			}
 			break;
 		case FaultInjectorTypeDataCorruption:
