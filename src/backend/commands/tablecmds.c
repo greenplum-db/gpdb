@@ -12947,8 +12947,7 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 	PartitionElem *pelem;
 	List	   *colencs = NIL;
 
-	/* This whole function is QD only. */
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (!(Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
 		return;
 
 	if (att == AT_PartAddForSplit)
@@ -13133,7 +13132,8 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	if (!(atc->subtype == AT_PartExchange ||
 		  atc->subtype == AT_PartSplit ||
 		  atc->subtype == AT_SetDistributedBy) &&
-		Gp_role != GP_ROLE_DISPATCH)
+		  Gp_role != GP_ROLE_DISPATCH &&
+		  !IsBinaryUpgrade)
 		return;
 
 	switch (atc->subtype)
@@ -13176,7 +13176,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 							RelationGetRelationName(rel))));
 	}
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade)
 	{
 		pid2->idtype = AT_AP_IDList;
 		pid2->partiddef = (Node *)pidlst;
@@ -14053,7 +14053,7 @@ ATPExecPartSetTemplate(AlteredTableInfo *tab,
 	PgPartRule			*prule = NULL;
 	int					 lvl   = 1;
 
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (!(Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
 		return;
 
 	/* set template for top level table */

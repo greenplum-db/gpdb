@@ -37,4 +37,4 @@ installcheck: test_gpdb.sh all
 	bash $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 
 check: test_gpdb.sh all
-	bash $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+	bash $< -C -r -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
