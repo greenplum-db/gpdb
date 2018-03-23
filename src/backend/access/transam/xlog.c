@@ -7609,6 +7609,8 @@ StartupXLOG(void)
 		Assert(ControlFile->state == DB_IN_STANDBY_MODE);
 		StandbyMode = false;
 
+		elog(LOG, "updating pg_control to state DB_IN_STANDBY_PROMOTED");
+
 		/* Transition to promoted mode */
 		ControlFile->state = DB_IN_STANDBY_PROMOTED;
 		ControlFile->time = (pg_time_t) time(NULL);
@@ -7741,7 +7743,10 @@ StartupXLOG(void)
 	 * This could happen if the promoted standby goes through a restart.
 	 */
 	if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
+	{
+		elog(LOG, "pg_control state is DB_IN_STANDBY_PROMOTED hence renaming recovery file");
 		renameRecoveryFile();
+	}
 
 	/*
 	 * Prepare to write WAL starting at EndOfLog position, and init xlog

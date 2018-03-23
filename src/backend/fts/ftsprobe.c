@@ -326,7 +326,6 @@ static void
 ftsCheckTimeout(fts_segment_info *ftsInfo, pg_time_t now)
 {
 	if (!IsFtsMessageStateSuccess(ftsInfo->state) &&
-		ftsInfo->retry_count < gp_fts_probe_retries &&
 		(int) (now - ftsInfo->startTime) > gp_fts_probe_timeout)
 	{
 		elog(LOG,
@@ -380,7 +379,6 @@ ftsPoll(fts_context *context)
 	{
 		elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
 			   "FTS: ftsPoll() timed out, nfds %d", nfds);
-		return;
 	}
 
 	elogif(gp_log_fts == GPVARS_VERBOSITY_DEBUG, LOG,
@@ -393,6 +391,11 @@ ftsPoll(fts_context *context)
 	for (i = 0; i < context->num_pairs; i++)
 	{
 		fts_segment_info *ftsInfo = &context->perSegInfos[i];
+
+		/* skip segments not considered for polling */
+		if (ftsInfo->fd_index == -1)
+			continue;
+
 		if (ftsInfo->poll_events & (POLLIN|POLLOUT))
 		{
 			Assert(PollFds[ftsInfo->fd_index].fd == PQsocket(ftsInfo->conn));
@@ -433,10 +436,7 @@ ftsPoll(fts_context *context)
 					 ftsInfo->retry_count, ftsInfo->conn->status,
 					 ftsInfo->conn->asyncStatus);
 			}
-		}
-		else
-		{
-			ftsInfo->poll_revents = 0;
+			/* If poll timed-out above, check timeout */
 			ftsCheckTimeout(ftsInfo, now);
 		}
 	}
@@ -529,7 +529,7 @@ probeRecordResponse(fts_segment_info *ftsInfo, PGresult *result)
 	ftsInfo->result.isMirrorAlive = *isMirrorAlive;
 
 	int *isInSync = (int *) PQgetvalue(result, 0,
-									   Anum_fts_message_response_is_in_sync);
+								   Anum_fts_message_response_is_in_sync);
 	Assert (isInSync);
 	ftsInfo->result.isInSync = *isInSync;
 
