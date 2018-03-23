@@ -319,8 +319,8 @@ ftsConnect(fts_context *context)
 /*
  * Timeout is said to have occurred if greater than gp_fts_probe_timeout
  * seconds have elapsed since connection start and a response is not received.
- * Segments for which a response is received already or that have failed with
- * all retries exhausted are exempted from timeout evaluation.
+ * Segments for which a response is received already are exempted from timeout
+ * evaluation.
  */
 static void
 ftsCheckTimeout(fts_segment_info *ftsInfo, pg_time_t now)
@@ -392,10 +392,6 @@ ftsPoll(fts_context *context)
 	{
 		fts_segment_info *ftsInfo = &context->perSegInfos[i];
 
-		/* skip segments not considered for polling */
-		if (ftsInfo->fd_index == -1)
-			continue;
-
 		if (ftsInfo->poll_events & (POLLIN|POLLOUT))
 		{
 			Assert(PollFds[ftsInfo->fd_index].fd == PQsocket(ftsInfo->conn));
@@ -408,7 +404,6 @@ ftsPoll(fts_context *context)
 			if (ftsInfo->poll_revents & ftsInfo->poll_events)
 			{
 				ftsInfo->poll_events = 0;
-				ftsCheckTimeout(ftsInfo, now);
 			}
 			else if (ftsInfo->poll_revents & (POLLHUP | POLLERR))
 			{
