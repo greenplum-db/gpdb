@@ -1398,9 +1398,6 @@ RecordTransactionCommit(void)
 		if (max_wal_senders > 0)
 			WalSndWakeup();
 
-		if (isDtxPrepared)
-			forcedDistributedCommitted(&recptr);
-
 		/*
 		 * Now we may update the CLOG, if we wrote a COMMIT record above
 		 */

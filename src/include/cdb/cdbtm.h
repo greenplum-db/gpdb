@@ -306,7 +306,6 @@ extern DistributedTransactionId getMaxDistributedXid(void);
 extern bool includeInCheckpointIsNeeded(TMGXACT *gxact);
 extern void insertingDistributedCommitted(void);
 extern void insertedDistributedCommitted(void);
-extern void forcedDistributedCommitted(XLogRecPtr *recptr);
 
 extern void redoDtxCheckPoint(TMGXACT_CHECKPOINT *gxact_checkpoint);
 extern void redoDistributedCommitRecord(TMGXACT_LOG *gxact_log);

@@ -777,7 +777,7 @@ doNotifyingCommitPrepared(void)
 
 	copyDirectDispatchFromTransaction(&direct);
 
-	Assert(currentGxact->state == DTX_STATE_FORCED_COMMITTED);
+	Assert(currentGxact->state == DTX_STATE_INSERTED_COMMITTED);
 	setCurrentGxactState(DTX_STATE_NOTIFYING_COMMIT_PREPARED);
 
 	if (strlen(currentGxact->gid) >= TMGIDSIZE)
@@ -1212,7 +1212,6 @@ rollbackDtxTransaction(void)
 				 currentGxact->gid);
 			break;
 
-		case DTX_STATE_FORCED_COMMITTED:
 		case DTX_STATE_NOTIFYING_COMMIT_PREPARED:
 		case DTX_STATE_INSERTING_COMMITTED:
 		case DTX_STATE_INSERTED_COMMITTED:
@@ -2257,21 +2256,6 @@ insertedDistributedCommitted(void)
 
 	Assert(currentGxact->state == DTX_STATE_INSERTING_COMMITTED);
 	setCurrentGxactState(DTX_STATE_INSERTED_COMMITTED);
-}
-
-
-/*
- * Change state to DTX_STATE_FORCED_COMMITTED.
- */
-void
-forcedDistributedCommitted(XLogRecPtr *recptr)
-{
-	elog(DTM_DEBUG5,
-		 "forcedDistributedCommitted entering in state = %s for gid = %s (xlog record %X/%X)",
-		 DtxStateToString(currentGxact->state), currentGxact->gid, recptr->xlogid, recptr->xrecoff);
-
-	Assert(currentGxact->state == DTX_STATE_INSERTED_COMMITTED);
-	setCurrentGxactState(DTX_STATE_FORCED_COMMITTED);
 }
 
 /* generate global transaction id */
