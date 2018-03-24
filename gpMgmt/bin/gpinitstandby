@@ -841,6 +841,7 @@ def copy_master_filespaces_to_standby(options, array, master_filespace_map, stan
                         '-E', './db_dumps',
                         '-E', './gpperfmon/data',
                         '-E', './gpperfmon/logs',
+                        '-E', './promote',
                         '-D', standby_fs_dict['pg_system'],
                         '-h', array.master.getSegmentHostName(),
                         '-p', str(array.master.getSegmentPort())])
