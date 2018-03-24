@@ -837,41 +837,6 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	bool		isLogSwitch = (rmid == RM_XLOG_ID && info == XLOG_SWITCH);
 	uint8       extended_info = 0;
 
-    /* Safety check in case our assumption is ever broken. */
-	/* NOTE: This is slightly modified from the one in xact.c -- the test for */
- 	/* NOTE: seqXlogWrite is omitted... */
-	/* NOTE: some local-only changes are OK */
- 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
- 	{
- 		/*
- 	     * we better only do really minor things on the reader that result
- 	     * in writing to the xlog here at commit.  for now sequences
- 	     * should be the only one
- 	     */
-		if (DistributedTransactionContext == DTX_CONTEXT_LOCAL_ONLY)
-		{
-			/* MPP-1687: readers may under some circumstances extend the CLOG
-			 * rmid == RM_CLOG_ID and info having CLOG_ZEROPAGE set */
-			elog(LOG, "Reader qExec committing LOCAL_ONLY changes. (%d %d)", rmid, info);
-		}
-		else
-		{
-			/*
-			 * We are allowing the QE Reader to write to support error tables.
-			 */
-			elog(DEBUG1, "Reader qExec writing changes. (%d %d)", rmid, info);
-#ifdef nothing
-			ereport(ERROR,
-					(errmsg("Reader qExec had local changes to commit! (rmid = %u)",
-							rmid),
-					 errdetail("A Reader qExec tried to commit local changes.  "
-							   "Only the single Writer qExec can do so. "),
-					 errhint("This is most likely the result of a feature being turned "
-							 "on that violates the single WRITER principle")));
-#endif
-		}
- 	}
-
 	/* cross-check on whether we should be here or not */
 	if (!XLogInsertAllowed())
 		elog(ERROR, "cannot make new WAL entries during recovery");
