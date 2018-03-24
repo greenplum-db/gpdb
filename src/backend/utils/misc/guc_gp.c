@@ -3476,7 +3476,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"gp_fts_probe_retries", PGC_SIGHUP, GP_ARRAY_TUNING,
 			gettext_noop("Number of retries for FTS to complete probing a segment."),
 			gettext_noop("Used by the fts-probe process."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_UNIT_S
 		},
 		&gp_fts_probe_retries,
 		5, 0, 100, NULL, NULL
