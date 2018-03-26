@@ -27,14 +27,6 @@ returns text as $$
 
 	return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
-create or replace function hex_to_dec(text)
-returns bigint as $$
-	declare r bigint;
-	begin
-	execute E'select x\''||$1|| E'\'::bigint' into r;
-	return r;
-end
-$$ language plpgsql;
 -- Issue a checkpoint, and wait for it to be replayed on all segments.
 create or replace function checkpoint_and_wait_for_replication_replay (retries int) returns bool as
 $$
@@ -71,12 +63,10 @@ begin
 		all_caught_up = true;
 		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
 			-- PostgreSQL 9.4 got a pg_lsn datatype that we could
-			-- use here, once we merge up to 9.4. Till then need to
-			-- live with this little complicated logic to drop "/"
-			-- from xlog location and then convert hex to decimal
-			-- for comparison, which serves current test purpose.
+			-- use here, once we merge up to 9.4. Till then using
+			-- GPDB type gpxlogloc.
 			replay_locs[r.gp_segment_id] = r.loc;
-			if hex_to_dec(translate(r.loc, '/', '')) < hex_to_dec(translate(checkpoint_locs[r.gp_segment_id], '/', '')) then
+			if ('(' || r.loc || ')')::gpxlogloc < ('(' || checkpoint_locs[r.gp_segment_id] || ')')::gpxlogloc then
 				all_caught_up = false;
 				failed_for_segment[r.gp_segment_id] = 1;
 			else
