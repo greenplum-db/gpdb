@@ -493,6 +493,13 @@ CConfigParamMapping::PbsPack
 	pbs->Union(pbsJoinHeuristic);
 	pbsJoinHeuristic->Release();
 
+	// disable join associativity transform if the corresponding GUC
+	// is turned off independent of the join order algorithm chosen
+	if (!optimizer_enable_associativity)
+	{
+		pbs->FExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
+	}
+
 	return pbs;
 }
 

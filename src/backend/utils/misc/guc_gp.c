@@ -445,6 +445,7 @@ bool 		optimizer_parallel_union;
 bool		optimizer_array_constraints;
 bool		optimizer_cte_inlining;
 bool		optimizer_enable_space_pruning;
+bool		optimizer_enable_associativity;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -2813,6 +2814,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&gp_ignore_error_table,
+		false, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_associativity", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables Join Associativity in optimizer"),
+			NULL
+		},
+		&optimizer_enable_associativity,
 		false, NULL, NULL
 	},
 
