@@ -493,7 +493,7 @@ processCopyEndResults(CdbCopy *c,
 		pollRead->events = POLLIN;
 		pollRead->revents = 0;
 
-		while (PQisBusy(q->conn))
+		while (PQisBusy(q->conn) && PQstatus(q->conn) == CONNECTION_OK)
 		{
 			if ((Gp_role == GP_ROLE_DISPATCH) && InterruptPending)
 			{
