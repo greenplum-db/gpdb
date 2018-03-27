@@ -21,7 +21,7 @@ PG_LIBS = $(libpq_pgport)
 # We don't need to add tmp_check to the EXTRA_CLEAN since it's a default name
 # and thus already handled by PGXS "make clean"
 EXTRA_CLEAN = clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
-              hostfile
+              hostfile regression.diffs
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
@@ -37,4 +37,4 @@ installcheck: test_gpdb.sh all
 	bash $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 
 check: test_gpdb.sh all
-	bash $< -C -r -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+	bash $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)

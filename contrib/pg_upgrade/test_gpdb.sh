@@ -303,13 +303,13 @@ export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
 # shouldn't be a cause of difference in the files but it is. Partitioning info
 # is generated via backend functionality in the cluster being dumped, and not
 # in pg_dump, so whitespace changes can trip up the diff.
-rm -f dump_sql.diff
 if diff "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
+	rm -f regression.diffs
 	echo "Passed"
 	exit 0
 else
 	# To aid debugging in pipelines, print the diff to stdout
-	diff -du "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee dump_sql.diff
+	diff -du "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
 	echo "Error: before and after dumps differ"
 	exit 1
 fi
