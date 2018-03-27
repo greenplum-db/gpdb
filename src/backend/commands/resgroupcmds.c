@@ -535,7 +535,7 @@ int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode)
 	Relation pg_resgroupcapability_rel = heap_open(
 			ResGroupCapabilityRelationId, lockmode);
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
-	heap_close(pg_resgroupcapability_rel, AccessShareLock);
+	heap_close(pg_resgroupcapability_rel, lockmode);
 	return caps.memAuditor;
 }
 
