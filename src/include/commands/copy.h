@@ -141,8 +141,12 @@ typedef struct CopyStateData
 	QueryDesc  *queryDesc;		/* executable query to copy from */
 	List	   *attnumlist;		/* integer list of attnums to copy */
 	List	   *attnamelist;	/* list of attributes by name */
-	List	   *force_quote;	/* the raw fc column name list */
-	List	   *force_notnull;  /* the raw fnn column name list */
+	List	   *force_quote;	/* list of column names */
+	bool		force_quote_all;	/* FORCE QUOTE *? */
+	bool	   *force_quote_flags;		/* per-column CSV FQ flags */
+	List	   *force_notnull;	/* list of column names */
+	bool	   *force_notnull_flags;	/* per-column CSV FNN flags */
+
 	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
 	bool		is_program;		/* is 'filename' a program to popen? */
 	bool		custom;			/* custom format? */
@@ -156,8 +160,6 @@ typedef struct CopyStateData
 	char	   *delim;			/* column delimiter (must be 1 byte) */
 	char	   *quote;			/* CSV quote char (must be 1 byte) */
 	char	   *escape;			/* CSV escape char (must be 1 byte) */
-	bool	   *force_quote_flags;		/* per-column CSV FQ flags */
-	bool	   *force_notnull_flags;	/* per-column CSV FNN flags */
 	bool		fill_missing;	/* missing attrs at end of line are NULL */
 
 	/* these are just for error messages, see copy_in_error_callback */
@@ -275,12 +277,10 @@ typedef CopyStateData *CopyState;
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 #endif
 
-extern void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
-								 char *null_print, char *quote, char *escape,
-								 List *force_quote, bool force_quote_all, List *force_notnull,
-								 bool header_line, bool fill_missing, char *newline,
-								 int numcols);
 extern uint64 DoCopy(const CopyStmt *stmt, const char *queryString);
+
+extern void ProcessCopyOptions(CopyState cstate, bool is_from, List *options,
+							  int num_columns, bool is_copy);
 
 extern DestReceiver *CreateCopyDestReceiver(void);
 

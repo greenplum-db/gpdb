@@ -28,6 +28,7 @@
 #include "commands/tablecmds.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"
 #include "utils/syscache.h"
@@ -792,20 +793,9 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	ListCell   *option;
 	Datum		result;
 	char	   *format_str;
-	char	   *delim = NULL;
-	char	   *null_print = NULL;
-	char	   *quote = NULL;
-	char	   *escape = NULL;
-	char	   *eol_str = NULL;
 	char	   *formatter = NULL;
-	bool		header_line = false;
-	bool		fill_missing = false;
-	List	   *force_notnull = NIL;
-	List	   *force_quote = NIL;
-	bool		force_quote_all = false;
-	StringInfoData fnn,
-				fq,
-				nl;
+
+	CopyState cstate = palloc0(sizeof(CopyStateData));
 
 	Assert(fmttype_is_custom(formattype) ||
 		   fmttype_is_text(formattype) ||
@@ -820,78 +810,18 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		{
 			DefElem    *defel = (DefElem *) lfirst(option);
 
-			if (strcmp(defel->defname, "delimiter") == 0)
+			if (strcmp(defel->defname, "delimiter") == 0 ||
+				strcmp(defel->defname, "null") == 0 ||
+				strcmp(defel->defname, "header") == 0 ||
+				strcmp(defel->defname, "quote") == 0 ||
+				strcmp(defel->defname, "escape") == 0 ||
+				strcmp(defel->defname, "force_notnull") == 0 ||
+				strcmp(defel->defname, "force_quote") == 0 ||
+				/* GPDB_90_MERGE_FIXME: add 'force_quote_all' here */
+				strcmp(defel->defname, "fill_missing_fields") == 0 ||
+				strcmp(defel->defname, "newline") == 0)
 			{
-				if (delim)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				delim = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "null") == 0)
-			{
-				if (null_print)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				null_print = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "header") == 0)
-			{
-				if (header_line)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				header_line = intVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "quote") == 0)
-			{
-				if (quote)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				quote = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "escape") == 0)
-			{
-				if (escape)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				escape = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "force_notnull") == 0)
-			{
-				if (force_notnull)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				force_notnull = (List *) defel->arg;
-			}
-			else if (strcmp(defel->defname, "force_quote") == 0)
-			{
-				if (force_quote)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				force_quote = (List *) defel->arg;
-			}
-			/* GPDB_90_MERGE_FIXME: add 'force_quote_all' here */
-			else if (strcmp(defel->defname, "fill_missing_fields") == 0)
-			{
-				if (fill_missing)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				fill_missing = intVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "newline") == 0)
-			{
-				if (eol_str)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				eol_str = strVal(defel->arg);
+				/* ok */
 			}
 			else if (strcmp(defel->defname, "formatter") == 0)
 			{
@@ -904,43 +834,60 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 					 defel->defname);
 		}
 
-		/*
-		 * Set defaults
-		 */
-		if (!delim)
-			delim = fmttype_is_csv(formattype) ? "," : "\t";
-
-		if (!null_print)
-			null_print = fmttype_is_csv(formattype) ? "" : "\\N";
-
+		/* If CSV format was chosen, make it visible to ProcessCopyOptions. */
 		if (fmttype_is_csv(formattype))
 		{
-			if (!quote)
-				quote = "\"";
-			if (!escape)
-				escape = quote;
+			formatOpts = list_copy(formatOpts);
+			formatOpts = lappend(formatOpts, makeDefElem("format", (Node *)makeString("csv")));
 		}
 
-		if (!fmttype_is_csv(formattype) && !escape)
-			escape = "\\";		/* default escape for text mode */
+		/* verify all user supplied control char combinations are legal */
+		ProcessCopyOptions(cstate,
+						   !iswritable, /* is_from */
+						   formatOpts,
+						   numcols,
+						   false /* is_copy */);
+
+		/*
+		 * build the format option string that will get stored in the catalog.
+		 */
+		StringInfoData cfbuf;
+
+		initStringInfo(&cfbuf);
+
+		/*
+		 * NOTE: These are intentionally not escaped "correctly"! For
+		 * historical reasons, these options are stored in a weird format
+		 * that looks like they're SQL literals, but the escaping is
+		 * different. See comments in escape_fmtopts_string(), in
+		 * src/bin/pg_dump/dumputils.c.
+		 */
+		appendStringInfo(&cfbuf, "delimiter '%s'", cstate->delim);
+		appendStringInfo(&cfbuf, " null '%s'", cstate->null_print);
+		appendStringInfo(&cfbuf, " escape '%s'", cstate->escape);
+		if (fmttype_is_csv(formattype))
+			appendStringInfo(&cfbuf, " quote '%s'", cstate->quote);
+		if (cstate->header_line)
+			appendStringInfo(&cfbuf, " header");
+		if (cstate->fill_missing)
+			appendStringInfo(&cfbuf, " fill missing fields");
 
 		/*
 		 * re-construct the FORCE NOT NULL list string. TODO: is there no
 		 * existing util function that does this? can't find.
 		 */
-		if (force_notnull)
+		if (cstate->force_notnull)
 		{
 			ListCell   *l;
 			bool		is_first_col = true;
 
-			initStringInfo(&fnn);
-			appendStringInfo(&fnn, " force not null");
+			appendStringInfo(&cfbuf, " force not null");
 
-			foreach(l, force_notnull)
+			foreach(l, cstate->force_notnull)
 			{
 				const char *col_name = strVal(lfirst(l));
 
-				appendStringInfo(&fnn, (is_first_col ? " %s" : ",%s"),
+				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"),
 								 quote_identifier(col_name));
 				is_first_col = false;
 			}
@@ -949,71 +896,27 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		/*
 		 * re-construct the FORCE QUOTE list string.
 		 */
-		if (force_quote)
+		if (cstate->force_quote)
 		{
 			ListCell   *l;
 			bool		is_first_col = true;
 
-			initStringInfo(&fq);
-			appendStringInfo(&fq, " force quote");
+			appendStringInfo(&cfbuf, " force quote");
 
-			foreach(l, force_quote)
+			foreach(l, cstate->force_quote)
 			{
 				const char *col_name = strVal(lfirst(l));
 
-				appendStringInfo(&fq, (is_first_col ? " %s" : ",%s"),
+				appendStringInfo(&cfbuf, (is_first_col ? " %s" : ",%s"),
 								 quote_identifier(col_name));
 				is_first_col = false;
 			}
 		}
 
-		if (eol_str)
-		{
-			initStringInfo(&nl);
-			appendStringInfo(&nl, " newline '%s'", eol_str);
-		}
+		if (cstate->eol_str)
+			appendStringInfo(&cfbuf, " newline '%s'", cstate->eol_str);
 
-		/* verify all user supplied control char combinations are legal */
-		ValidateControlChars(false,
-							 !iswritable,
-							 fmttype_is_csv(formattype),
-							 delim,
-							 null_print,
-							 quote,
-							 escape,
-							 force_quote,
-							 force_quote_all,
-							 force_notnull,
-							 header_line,
-							 fill_missing,
-							 eol_str,
-							 numcols);
-
-		/*
-		 * build the format option string that will get stored in the catalog.
-		 */
-		/* +1 leaves room for sprintf's trailing null */
-		if (fmttype_is_text(formattype))
-		{
-			format_str = psprintf("delimiter '%s' null '%s' escape '%s'%s%s%s",
-					delim, null_print, escape, (header_line ? " header" : ""),
-					(fill_missing ? " fill missing fields" : ""), (eol_str ? nl.data : ""));
-		}
-		else if (fmttype_is_csv(formattype))
-		{
-			format_str = psprintf("delimiter '%s' null '%s' escape '%s' quote '%s'%s%s%s%s%s",
-			delim, null_print, escape, quote, (header_line ? " header" : ""),
-					(fill_missing ? " fill missing fields" : ""),
-			   (force_notnull ? fnn.data : ""), (force_quote ? fq.data : ""),
-					(eol_str ? nl.data : ""));
-		}
-		else
-		{
-			/* should never happen */
-			elog(ERROR, "unrecognized format type: %c", formattype);
-			format_str = NULL;
-		}
-
+		format_str = cfbuf.data;
 	}
 	else if (fmttype_is_avro(formattype) || fmttype_is_parquet(formattype))
 	{
@@ -1081,12 +984,6 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 
 	/* clean up */
 	pfree(format_str);
-	if (force_notnull)
-		pfree(fnn.data);
-	if (force_quote)
-		pfree(fq.data);
-	if (eol_str)
-		pfree(nl.data);
 
 	return result;
 

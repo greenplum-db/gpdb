@@ -828,239 +828,6 @@ CopyGetInt16(CopyState cstate, int16 *val)
 	return true;
 }
 
-
-/*
- * ValidateControlChars
- *
- * These routine is common for COPY and external tables. It validates the
- * control characters (delimiter, quote, etc..) and enforces the given rules.
- *
- * bool copy
- *  - pass true if you're COPY
- *  - pass false if you're an exttab
- *
- * bool load
- *  - pass true for inbound data (COPY FROM, SELECT FROM exttab)
- *  - pass false for outbound data (COPY TO, INSERT INTO exttab)
- */
-void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
-						char *null_print, char *quote, char *escape,
-						  List *force_quote, bool force_quote_all, List *force_notnull,
-						bool header_line, bool fill_missing, char *newline,
-						int num_columns)
-{
-	bool	delim_off = (pg_strcasecmp(delim, "off") == 0);
-
-	/*
-	 * DELIMITER
-	 *
-	 * Only single-byte delimiter strings are supported. In addition, if the
-	 * server encoding is a multibyte character encoding we only allow the
-	 * delimiter to be an ASCII character (like postgresql. For more info
-	 * on this see discussion and comments in MPP-3756).
-	 */
-	if (pg_database_encoding_max_length() == 1)
-	{
-		/* single byte encoding such as ascii, latinx and other */
-		if (strlen(delim) != 1 && !delim_off)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single one-byte character, or \'off\'")));
-	}
-	else
-	{
-		/* multi byte encoding such as utf8 */
-		if ((strlen(delim) != 1 || IS_HIGHBIT_SET(delim[0])) && !delim_off )
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single one-byte character, or \'off\'")));
-	}
-
-	if (strchr(delim, '\r') != NULL ||
-		strchr(delim, '\n') != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be newline or carriage return")));
-
-	if (strchr(null_print, '\r') != NULL ||
-		strchr(null_print, '\n') != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("null representation cannot use newline or carriage return")));
-
-	if (!csv_mode && strchr(delim, '\\') != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be backslash")));
-
-	if (strchr(null_print, delim[0]) != NULL && !delim_off)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("delimiter must not appear in the NULL specification")));
-
-	/*
-	 * Disallow unsafe delimiter characters in non-CSV mode.  We can't allow
-	 * backslash because it would be ambiguous.  We can't allow the other
-	 * cases because data characters matching the delimiter must be
-	 * backslashed, and certain backslash combinations are interpreted
-	 * non-literally by COPY IN.  Disallowing all lower case ASCII letters is
-	 * more than strictly necessary, but seems best for consistency and
-	 * future-proofing.  Likewise we disallow all digits though only octal
-	 * digits are actually dangerous.
-	 */
-	if (!csv_mode && !delim_off &&
-		strchr("\\.abcdefghijklmnopqrstuvwxyz0123456789", delim[0]) != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be \"%s\"", delim)));
-
-	if (delim_off)
-	{
-
-		/*
-		 * We don't support delimiter 'off' for COPY because the QD COPY
-		 * sometimes internally adds columns to the data that it sends to
-		 * the QE COPY modules, and it uses the delimiter for it. There
-		 * are ways to work around this but for now it's not important and
-		 * we simply don't support it.
-		 */
-		if (copy)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Using no delimiter is only supported for external tables")));
-
-		if (num_columns != 1)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Using no delimiter is only possible for a single column table")));
-
-	}
-
-	/*
-	 * HEADER
-	 */
-	if(header_line)
-	{
-		if(!copy && Gp_role == GP_ROLE_DISPATCH)
-		{
-			/* (exttab) */
-			if(load)
-			{
-				/* RET */
-				ereport(NOTICE,
-						(errmsg("HEADER means that each one of the data files "
-								"has a header row.")));				
-			}
-			else
-			{
-				/* WET */
-				ereport(ERROR,
-						(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-						errmsg("HEADER is not yet supported for writable external tables")));				
-			}
-		}
-	}
-
-	/*
-	 * QUOTE
-	 */
-	if (!csv_mode && quote != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("quote available only in CSV mode")));
-
-	if (csv_mode && strlen(quote) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("quote must be a single character")));
-
-	if (csv_mode && strchr(null_print, quote[0]) != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("CSV quote character must not appear in the NULL specification")));
-
-	if (csv_mode && delim[0] == quote[0])
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter and quote must be different")));
-
-	/*
-	 * ESCAPE
-	 */
-	if (csv_mode && strlen(escape) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("escape in CSV format must be a single character")));
-
-	if (!csv_mode &&
-		(strchr(escape, '\r') != NULL ||
-		strchr(escape, '\n') != NULL))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("escape representation in text format cannot use newline or carriage return")));
-
-	if (!csv_mode && strlen(escape) != 1)
-	{
-		if (pg_strcasecmp(escape, "off"))
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("escape must be a single character, or [OFF/off] to disable escapes")));
-	}
-
-	/*
-	 * FORCE QUOTE
-	 */
-	if (!csv_mode && (force_quote != NIL || force_quote_all))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force quote available only in CSV mode")));
-	if ((force_quote != NIL || force_quote_all) && load)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force quote only available for data unloading, not loading")));
-
-	/*
-	 * FORCE NOT NULL
-	 */
-	if (!csv_mode && force_notnull != NIL)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force not null available only in CSV mode")));
-	if (force_notnull != NIL && !load)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force not null only available for data loading, not unloading")));
-
-	if (fill_missing && !load)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("fill missing fields only available for data loading, not unloading")));
-
-	/*
-	 * NEWLINE
-	 */
-	if (newline)
-	{
-		if (!load)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-					errmsg("newline currently available for data loading only, not unloading")));
-		}
-		else
-		{
-			if(pg_strcasecmp(newline, "lf") != 0 &&
-			   pg_strcasecmp(newline, "cr") != 0 &&
-			   pg_strcasecmp(newline, "crlf") != 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("invalid value for NEWLINE (%s)", newline),
-						errhint("valid options are: 'LF', 'CRLF', 'CR'")));
-		}
-	}
-}
-
-
 /*
  *	 DoCopy executes the SQL COPY statement
  *
@@ -1100,219 +867,54 @@ uint64
 DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 {
 	bool		is_from = stmt->is_from;
-	bool		pipe = (stmt->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
 	List	   *attnamelist = stmt->attlist;
-	List	   *force_quote = NIL;
-	List	   *force_notnull = NIL;
-	bool		force_quote_all = false;
-	bool		format_specified = false;
 	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
 	AclMode		relPerms;
 	AclMode		remainingPerms;
-	ListCell   *option;
 	TupleDesc	tupDesc;
 	int			num_phys_attrs;
 	uint64		processed;
 	bool		qe_copy_from = (is_from && (Gp_role == GP_ROLE_EXECUTE));
 	/* save relationOid for auto-stats */
 	Oid			relationOid = InvalidOid;
+	bool		pipe = (stmt->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
 
 	/* Extract options from the statement node tree */
-	foreach(option, stmt->options)
-	{
-		DefElem    *defel = (DefElem *) lfirst(option);
-
-		if (strcmp(defel->defname, "format") == 0)
-		{
-			char	   *fmt = defGetString(defel);
-
-			if (format_specified)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			format_specified = true;
-			if (strcmp(fmt, "text") == 0)
-				 /* default format */ ;
-			else if (strcmp(fmt, "csv") == 0)
-				cstate->csv_mode = true;
-			else if (strcmp(fmt, "binary") == 0)
-				cstate->binary = true;
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("COPY format \"%s\" not recognized", fmt)));
-		}
-		else if (strcmp(defel->defname, "oids") == 0)
-		{
-			if (cstate->oids)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->oids = defGetBoolean(defel);
-		}
-		else if (strcmp(defel->defname, "delimiter") == 0)
-		{
-			if (cstate->delim)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->delim = defGetString(defel);
-		}
-		else if (strcmp(defel->defname, "null") == 0)
-		{
-			if (cstate->null_print)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->null_print = defGetString(defel);
-
-			/*
-			 * MPP-2010: unfortunately serialization function doesn't
-			 * distinguish between 0x0 and empty string. Therefore we
-			 * must assume that if NULL AS was indicated and has no value
-			 * the actual value is an empty string.
-			 */
-			if(!cstate->null_print)
-				cstate->null_print = "";
-		}
-		else if (strcmp(defel->defname, "header") == 0)
-		{
-			if (cstate->header_line)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->header_line = defGetBoolean(defel);
-		}
-		else if (strcmp(defel->defname, "quote") == 0)
-		{
-			if (cstate->quote)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->quote = defGetString(defel);
-		}
-		else if (strcmp(defel->defname, "escape") == 0)
-		{
-			if (cstate->escape)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->escape = defGetString(defel);
-		}
-		else if (strcmp(defel->defname, "force_quote") == 0)
-		{
-			if (force_quote || force_quote_all)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			if (defel->arg && IsA(defel->arg, A_Star))
-				force_quote_all = true;
-			else if (defel->arg && IsA(defel->arg, List))
-				force_quote = (List *) defel->arg;
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("argument to option \"%s\" must be a list of column names",
-								defel->defname)));
-		}
-		else if (strcmp(defel->defname, "force_not_null") == 0)
-		{
-			if (force_notnull)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			if (defel->arg && IsA(defel->arg, List))
-				force_notnull = (List *) defel->arg;
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("argument to option \"%s\" must be a list of column names",
-								defel->defname)));
-		}
-		else if (strcmp(defel->defname, "fill_missing_fields") == 0)
-		{
-			if (cstate->fill_missing)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->fill_missing = intVal(defel->arg);
-		}
-		else if (strcmp(defel->defname, "newline") == 0)
-		{
-			if (cstate->eol_str)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->eol_str = strVal(defel->arg);
-		}
-		else if (strcmp(defel->defname, "on_segment") == 0)
-		{
-			if (cstate->on_segment)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			cstate->on_segment = TRUE;
-		}
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("option \"%s\" not recognized",
-							defel->defname)));
-	}
-
-	/*
-	 * Check for incompatible options (must do these two before inserting
-	 * defaults)
-	 */
-	if (cstate->binary && cstate->delim)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify DELIMITER in BINARY mode")));
-
-	if (stmt->is_program && stmt->filename == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("STDIN/STDOUT not allowed with PROGRAM")));
+	ProcessCopyOptions(cstate, is_from, stmt->options,
+					   0, /* pass correct value when COPY supports no delim */
+					   true);
 
 	if (cstate->on_segment && stmt->filename == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("STDIN and STDOUT are not supported by 'COPY ON SEGMENT'")));
 
-	/*
-	 * In PostgreSQL, HEADER is not allowed in text mode either, but in GPDB,
-	 * only forbid it with BINARY.
-	 */
-	if (cstate->binary && cstate->header_line)
+	if (stmt->is_program && stmt->filename == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify HEADER in BINARY mode")));
+				 errmsg("STDIN/STDOUT not allowed with PROGRAM")));
 
-	if (cstate->binary && cstate->null_print)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("cannot specify NULL in BINARY mode")));
-
-	cstate->err_loc_type = ROWNUM_ORIGINAL;
-	cstate->eol_type = EOL_UNKNOWN;
-	cstate->escape_off = false;
-
-	if (!cstate->delim)
-		cstate->delim = cstate->csv_mode ? "," : "\t";
-
-	if (!cstate->null_print)
-		cstate->null_print = cstate->csv_mode ? "" : "\\N";
-
-	if (cstate->csv_mode)
+	/* Disallow COPY to/from file or program except to superusers. */
+	if (!pipe && !superuser())
 	{
-		if (!cstate->quote)
-			cstate->quote = "\"";
-		if (!cstate->escape)
-			cstate->escape = cstate->quote;
+		if (stmt->is_program)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("must be superuser to COPY to or from an external program"),
+					 errhint("Anyone can COPY to stdout or from stdin. "
+							 "psql's \\copy command also works for anyone.")));
+		else
+			ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to COPY to or from a file"),
+				 errhint("Anyone can COPY to stdout or from stdin. "
+						 "psql's \\copy command also works for anyone.")));
 	}
 
-	if (!cstate->csv_mode && !cstate->escape)
-		cstate->escape = "\\";			/* default escape for text mode */
+	if (stmt->sreh && !is_from)
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+				 errmsg("COPY single row error handling only available using COPY FROM")));
 
 	/*
 	 * Error handling setup
@@ -1324,11 +926,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		bool		log_to_file = false;
 
 		sreh = (SingleRowErrorDesc *)stmt->sreh;
-
-		if (!is_from)
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-					 errmsg("COPY single row error handling only available using COPY FROM")));
 
 		if (sreh->into_file)
 		{
@@ -1361,47 +958,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		cstate->partitions = stmt->partitions;
 	}
 
-	/*
-	 * Validate our control characters and their combination
-	 */
-	ValidateControlChars(true,
-						 is_from,
-						 cstate->csv_mode,
-						 cstate->delim,
-						 cstate->null_print,
-						 cstate->quote,
-						 cstate->escape,
-						 force_quote,
-						 force_quote_all,
-						 force_notnull,
-						 cstate->header_line,
-						 cstate->fill_missing,
-						 cstate->eol_str,
-						 0 /* pass correct value when COPY supports no delim */);
 
-	if (!pg_strcasecmp(cstate->escape, "off"))
-		cstate->escape_off = true;
-
-	/* set end of line type if NEWLINE keyword was specified */
-	if (cstate->eol_str)
-		CopyEolStrToType(cstate);
-
-	/* Disallow COPY to/from file or program except to superusers. */
-	if (!pipe && !superuser())
-	{
-		if (stmt->is_program)
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be superuser to COPY to or from an external program"),
-					 errhint("Anyone can COPY to stdout or from stdin. "
-							 "psql's \\copy command also works for anyone.")));
-		else
-			ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("must be superuser to COPY to or from a file"),
-				 errhint("Anyone can COPY to stdout or from stdin. "
-						 "psql's \\copy command also works for anyone.")));
-	}
 
 	cstate->copy_dest = COPY_FILE;		/* default */
 	if (Gp_role == GP_ROLE_EXECUTE)
@@ -1668,19 +1225,19 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	/* Convert FORCE QUOTE name list to per-column flags, check validity */
 	cstate->force_quote_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
-	if (force_quote_all)
+	if (cstate->force_quote_all)
 	{
 		int			i;
 
 		for (i = 0; i < num_phys_attrs; i++)
 			cstate->force_quote_flags[i] = true;
 	}
-	else if (force_quote)
+	else if (cstate->force_quote)
 	{
 		List	   *attnums;
 		ListCell   *cur;
 
-		attnums = CopyGetAttnums(tupDesc, cstate->rel, force_quote);
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_quote);
 
 		foreach(cur, attnums)
 		{
@@ -1697,12 +1254,12 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	/* Convert FORCE NOT NULL name list to per-column flags, check validity */
 	cstate->force_notnull_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
-	if (force_notnull)
+	if (cstate->force_notnull)
 	{
 		List	   *attnums;
 		ListCell   *cur;
 
-		attnums = CopyGetAttnums(tupDesc, cstate->rel, force_notnull);
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_notnull);
 
 		foreach(cur, attnums)
 		{
@@ -1715,9 +1272,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					   NameStr(tupDesc->attrs[attnum - 1]->attname))));
 			cstate->force_notnull_flags[attnum - 1] = true;
 		}
-
-		/* keep the raw version too, we will need it later */
-		cstate->force_notnull = force_notnull;
 	}
 
 	/* Set up variables to avoid per-attribute overhead. */
@@ -1998,6 +1552,469 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	pfree(cstate->line_buf.data);
 
 	return processed;
+}
+
+/*
+ * Process the statement option list for COPY.
+ *
+ * Scan the options list (a list of DefElem) and transpose the information
+ * into cstate, applying appropriate error checking.
+ *
+ * cstate is assumed to be filled with zeroes initially.
+ *
+ * This is exported so that external users of the COPY API can sanity-check
+ * a list of options.  In that usage, cstate should be passed as NULL
+ * (since external users don't know sizeof(CopyStateData)) and the collected
+ * data is just leaked until CurrentMemoryContext is reset.
+ *
+ * Note that additional checking, such as whether column names listed in FORCE
+ * QUOTE actually exist, has to be applied later.  This just checks for
+ * self-consistency of the options list.
+ */
+void
+ProcessCopyOptions(CopyState cstate,
+				   bool is_from,
+				   List *options,
+				   int num_columns, bool is_copy) /* false means external table */
+{
+	bool		format_specified = false;
+	ListCell   *option;
+
+	/* Support external use for option sanity checking */
+	if (cstate == NULL)
+		cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
+
+	/* Extract options from the statement node tree */
+	foreach(option, options)
+	{
+		DefElem    *defel = (DefElem *) lfirst(option);
+
+		if (strcmp(defel->defname, "format") == 0)
+		{
+			char	   *fmt = defGetString(defel);
+
+			if (format_specified)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			format_specified = true;
+			if (strcmp(fmt, "text") == 0)
+				 /* default format */ ;
+			else if (strcmp(fmt, "csv") == 0)
+				cstate->csv_mode = true;
+			else if (strcmp(fmt, "binary") == 0)
+				cstate->binary = true;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("COPY format \"%s\" not recognized", fmt)));
+		}
+		else if (strcmp(defel->defname, "oids") == 0)
+		{
+			if (cstate->oids)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->oids = defGetBoolean(defel);
+		}
+		else if (strcmp(defel->defname, "delimiter") == 0)
+		{
+			if (cstate->delim)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->delim = defGetString(defel);
+		}
+		else if (strcmp(defel->defname, "null") == 0)
+		{
+			if (cstate->null_print)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->null_print = defGetString(defel);
+
+			/*
+			 * MPP-2010: unfortunately serialization function doesn't
+			 * distinguish between 0x0 and empty string. Therefore we
+			 * must assume that if NULL AS was indicated and has no value
+			 * the actual value is an empty string.
+			 */
+			if(!cstate->null_print)
+				cstate->null_print = "";
+		}
+		else if (strcmp(defel->defname, "header") == 0)
+		{
+			if (cstate->header_line)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->header_line = defGetBoolean(defel);
+		}
+		else if (strcmp(defel->defname, "quote") == 0)
+		{
+			if (cstate->quote)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->quote = defGetString(defel);
+		}
+		else if (strcmp(defel->defname, "escape") == 0)
+		{
+			if (cstate->escape)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->escape = defGetString(defel);
+		}
+		else if (strcmp(defel->defname, "force_quote") == 0)
+		{
+			if (cstate->force_quote || cstate->force_quote_all)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			if (defel->arg && IsA(defel->arg, A_Star))
+				cstate->force_quote_all = true;
+			else if (defel->arg && IsA(defel->arg, List))
+				cstate->force_quote = (List *) defel->arg;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("argument to option \"%s\" must be a list of column names",
+								defel->defname)));
+		}
+		else if (strcmp(defel->defname, "force_not_null") == 0)
+		{
+			if (cstate->force_notnull)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			if (defel->arg && IsA(defel->arg, List))
+				cstate->force_notnull = (List *) defel->arg;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("argument to option \"%s\" must be a list of column names",
+								defel->defname)));
+		}
+		else if (strcmp(defel->defname, "fill_missing_fields") == 0)
+		{
+			if (cstate->fill_missing)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->fill_missing = intVal(defel->arg);
+		}
+		else if (strcmp(defel->defname, "newline") == 0)
+		{
+			if (cstate->eol_str)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->eol_str = strVal(defel->arg);
+		}
+		else if (strcmp(defel->defname, "on_segment") == 0)
+		{
+			if (cstate->on_segment)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			cstate->on_segment = TRUE;
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("option \"%s\" not recognized",
+							defel->defname)));
+	}
+
+	bool	delim_off = false;
+
+	if (cstate->delim && pg_strcasecmp(cstate->delim, "off") == 0)
+		delim_off = true;
+
+	/*
+	 * Check for incompatible options (must do these two before inserting
+	 * defaults)
+	 */
+	if (cstate->binary && cstate->delim)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify DELIMITER in BINARY mode")));
+
+	if (cstate->binary && cstate->null_print)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify NULL in BINARY mode")));
+
+	cstate->err_loc_type = ROWNUM_ORIGINAL;
+	cstate->eol_type = EOL_UNKNOWN;
+
+	/* Set defaults for omitted options */
+	if (!cstate->delim)
+		cstate->delim = cstate->csv_mode ? "," : "\t";
+
+	if (!cstate->null_print)
+		cstate->null_print = cstate->csv_mode ? "" : "\\N";
+	cstate->null_print_len = strlen(cstate->null_print);
+
+	if (cstate->csv_mode)
+	{
+		if (!cstate->quote)
+			cstate->quote = "\"";
+		if (!cstate->escape)
+			cstate->escape = cstate->quote;
+	}
+
+	if (!cstate->csv_mode && !cstate->escape)
+		cstate->escape = "\\";			/* default escape for text mode */
+
+	/* Only single-byte delimiter strings are supported. */
+	if (strlen(cstate->delim) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			  errmsg("COPY delimiter must be a single one-byte character")));
+
+	/* Disallow end-of-line characters */
+	if (strchr(cstate->delim, '\r') != NULL ||
+		strchr(cstate->delim, '\n') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+			 errmsg("COPY delimiter cannot be newline or carriage return")));
+
+	if (strchr(cstate->null_print, '\r') != NULL ||
+		strchr(cstate->null_print, '\n') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("COPY null representation cannot use newline or carriage return")));
+
+	/*
+	 * Disallow unsafe delimiter characters in non-CSV mode.  We can't allow
+	 * backslash because it would be ambiguous.  We can't allow the other
+	 * cases because data characters matching the delimiter must be
+	 * backslashed, and certain backslash combinations are interpreted
+	 * non-literally by COPY IN.  Disallowing all lower case ASCII letters is
+	 * more than strictly necessary, but seems best for consistency and
+	 * future-proofing.  Likewise we disallow all digits though only octal
+	 * digits are actually dangerous.
+	 */
+	if (!cstate->csv_mode && !delim_off &&
+		strchr("\\.abcdefghijklmnopqrstuvwxyz0123456789", cstate->delim[0]) != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("delimiter cannot be \"%s\"", cstate->delim)));
+
+	/* Check header */
+	/*
+	 * In PostgreSQL, HEADER is not allowed in text mode either, but in GPDB,
+	 * only forbid it with BINARY.
+	 */
+	if (cstate->binary && cstate->header_line)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify HEADER in BINARY mode")));
+
+	/* Check quote */
+	if (!cstate->csv_mode && cstate->quote != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("quote available only in CSV mode")));
+
+	if (cstate->csv_mode && strlen(cstate->quote) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("quote must be a single one-byte character")));
+
+	if (cstate->csv_mode && strchr(cstate->null_print, cstate->quote[0]) != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("CSV quote character must not appear in the NULL specification")));
+
+	if (cstate->csv_mode && cstate->delim[0] == cstate->quote[0])
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("delimiter and quote must be different")));
+
+	/* Check escape */
+	if (cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			errmsg("escape in CSV format must be a single character")));
+
+	if (!cstate->csv_mode && cstate->escape != NULL &&
+		(strchr(cstate->escape, '\r') != NULL ||
+		strchr(cstate->escape, '\n') != NULL))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("escape representation in text format cannot use newline or carriage return")));
+
+	if (!cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
+	{
+		if (pg_strcasecmp(cstate->escape, "off"))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("escape must be a single character, or [OFF/off] to disable escapes")));
+	}
+
+	/* Check force_quote */
+	if (!cstate->csv_mode && (cstate->force_quote != NIL || cstate->force_quote_all))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("force quote available only in CSV mode")));
+	if ((cstate->force_quote != NIL || cstate->force_quote_all) && is_from)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("force quote only available for data unloading, not loading")));
+
+	/* Check force_notnull */
+	if (!cstate->csv_mode && cstate->force_notnull != NIL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("force not null available only in CSV mode")));
+	if (cstate->force_notnull != NIL && !is_from)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("force not null only available for data loading, not unloading")));
+
+	/* Don't allow the delimiter to appear in the null string. */
+	if (strchr(cstate->null_print, cstate->delim[0]) != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		errmsg("COPY delimiter must not appear in the NULL specification")));
+
+	/* Don't allow the CSV quote char to appear in the null string. */
+	if (cstate->csv_mode &&
+		strchr(cstate->null_print, cstate->quote[0]) != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("CSV quote character must not appear in the NULL specification")));
+
+	/*
+	 * DELIMITER
+	 *
+	 * Only single-byte delimiter strings are supported. In addition, if the
+	 * server encoding is a multibyte character encoding we only allow the
+	 * delimiter to be an ASCII character (like postgresql. For more info
+	 * on this see discussion and comments in MPP-3756).
+	 */
+	if (pg_database_encoding_max_length() == 1)
+	{
+		/* single byte encoding such as ascii, latinx and other */
+		if (strlen(cstate->delim) != 1 && !delim_off)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("delimiter must be a single one-byte character, or \'off\'")));
+	}
+	else
+	{
+		/* multi byte encoding such as utf8 */
+		if ((strlen(cstate->delim) != 1 || IS_HIGHBIT_SET(cstate->delim[0])) && !delim_off )
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("delimiter must be a single one-byte character, or \'off\'")));
+	}
+
+	/* Disallow end-of-line characters */
+	if (strchr(cstate->delim, '\r') != NULL ||
+		strchr(cstate->delim, '\n') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("delimiter cannot be newline or carriage return")));
+
+	if (strchr(cstate->null_print, '\r') != NULL ||
+		strchr(cstate->null_print, '\n') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("null representation cannot use newline or carriage return")));
+
+	if (!cstate->csv_mode && strchr(cstate->delim, '\\') != NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("delimiter cannot be backslash")));
+
+	if (strchr(cstate->null_print, cstate->delim[0]) != NULL && !delim_off)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		errmsg("delimiter must not appear in the NULL specification")));
+
+	if (delim_off)
+	{
+
+		/*
+		 * We don't support delimiter 'off' for COPY because the QD COPY
+		 * sometimes internally adds columns to the data that it sends to
+		 * the QE COPY modules, and it uses the delimiter for it. There
+		 * are ways to work around this but for now it's not important and
+		 * we simply don't support it.
+		 */
+		if (is_copy)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("Using no delimiter is only supported for external tables")));
+
+		if (num_columns != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("Using no delimiter is only possible for a single column table")));
+
+	}
+
+
+	/* Check header */
+	if (cstate->header_line)
+	{
+		if(!is_copy && Gp_role == GP_ROLE_DISPATCH)
+		{
+			/* (exttab) */
+			if (is_from)
+			{
+				/* RET */
+				ereport(NOTICE,
+						(errmsg("HEADER means that each one of the data files has a header row.")));
+			}
+			else
+			{
+				/* WET */
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+						errmsg("HEADER is not yet supported for writable external tables")));
+			}
+		}
+	}
+
+	if (cstate->fill_missing && !is_from)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("fill missing fields only available for data loading, not unloading")));
+
+	/*
+	 * NEWLINE
+	 */
+	if (cstate->eol_str)
+	{
+		if (!is_from)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+					errmsg("newline currently available for data loading only, not unloading")));
+		}
+		else
+		{
+			if(pg_strcasecmp(cstate->eol_str, "lf") != 0 &&
+			   pg_strcasecmp(cstate->eol_str, "cr") != 0 &&
+			   pg_strcasecmp(cstate->eol_str, "crlf") != 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("invalid value for NEWLINE (%s)", cstate->eol_str),
+						errhint("valid options are: 'LF', 'CRLF', 'CR'")));
+		}
+	}
+
+	if (cstate->escape != NULL && !pg_strcasecmp(cstate->escape, "off"))
+		cstate->escape_off = true;
+
+	/* set end of line type if NEWLINE keyword was specified */
+	if (cstate->eol_str)
+		CopyEolStrToType(cstate);
 }
 
 uint64
