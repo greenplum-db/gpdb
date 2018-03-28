@@ -11259,7 +11259,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						   "x.fmttype, x.fmtopts, x.command, "
 						   "x.rejectlimit, x.rejectlimittype, "
 						   "n.nspname AS errnspname, d.relname AS errtblname, "
-						   "pg_catalog.pg_encoding_to_char(x.encoding), x.writable "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), "
+						   "x.writable, null AS options "
 					"FROM pg_catalog.pg_class c "
 					"JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
 					"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
@@ -11278,7 +11279,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						   "x.fmttype, x.fmtopts, x.command, "
 						   "x.rejectlimit, x.rejectlimittype, "
 						   "n.nspname AS errnspname, d.relname AS errtblname, "
-						   "pg_catalog.pg_encoding_to_char(x.encoding), null as writable "
+						   "pg_catalog.pg_encoding_to_char(x.encoding), "
+						   "null as writable, null as options "
 					"FROM pg_catalog.pg_class c "
 					"JOIN pg_catalog.pg_exttable x ON ( c.oid = x.reloid ) "
 					"LEFT JOIN pg_catalog.pg_class d ON ( d.oid = x.fmterrtbl ) "
@@ -11297,7 +11299,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						   "x.fmttype, x.fmtopts, x.command, "
 						   "-1 as rejectlimit, null as rejectlimittype,"
 						   "null as errnspname, null as errtblname, "
-						   "null as encoding, null as writable "
+						   "null as encoding, null as writable, "
+						   "null as options "
 					"FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
 					"WHERE x.reloid = c.oid AND c.oid = '%u'::oid",
 					tbinfo->dobj.catId.oid);
@@ -11321,40 +11324,20 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		}
 
 
-		if (gpdb5OrLater)
-		{
-			urilocations = PQgetvalue(res, 0, 0);
-			execlocations = PQgetvalue(res, 0, 1);
-			fmttype = PQgetvalue(res, 0, 2);
-			fmtopts = PQgetvalue(res, 0, 3);
-			command = PQgetvalue(res, 0, 4);
-			rejlim = PQgetvalue(res, 0, 5);
-			rejlimtype = PQgetvalue(res, 0, 6);
-			errnspname = PQgetvalue(res, 0, 7);
-			errtblname = PQgetvalue(res, 0, 8);
-			extencoding = PQgetvalue(res, 0, 9);
-			writable = PQgetvalue(res, 0, 10);
-			options = PQgetvalue(res, 0, 11);
+		urilocations = PQgetvalue(res, 0, 0);
+		execlocations = PQgetvalue(res, 0, 1);
+		fmttype = PQgetvalue(res, 0, 2);
+		fmtopts = PQgetvalue(res, 0, 3);
+		command = PQgetvalue(res, 0, 4);
+		rejlim = PQgetvalue(res, 0, 5);
+		rejlimtype = PQgetvalue(res, 0, 6);
+		errnspname = PQgetvalue(res, 0, 7);
+		errtblname = PQgetvalue(res, 0, 8);
+		extencoding = PQgetvalue(res, 0, 9);
+		writable = PQgetvalue(res, 0, 10);
+		options = PQgetvalue(res, 0, 11);
 
-			on_clause = execlocations;
-		}
-		else
-		{
-			urilocations = PQgetvalue(res, 0, 0);
-			execlocations = PQgetvalue(res, 0, 1);
-			fmttype = PQgetvalue(res, 0, 2);
-			fmtopts = PQgetvalue(res, 0, 3);
-			command = PQgetvalue(res, 0, 4);
-			rejlim = PQgetvalue(res, 0, 5);
-			rejlimtype = PQgetvalue(res, 0, 6);
-			errnspname = PQgetvalue(res, 0, 7);
-			errtblname = PQgetvalue(res, 0, 8);
-			extencoding = PQgetvalue(res, 0, 9);
-			writable = PQgetvalue(res, 0, 10);
-			options = "";
-
-			on_clause = execlocations;
-		}
+		on_clause = execlocations;
 
 		if ((command && strlen(command) > 0) ||
 			(strncmp(urilocations + 1, "http", strlen("http")) == 0))
