@@ -1670,6 +1670,25 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			best_path = sorted_path;
 
 		/*
+		 * Check to see if it's possible to optimize MIN/MAX aggregates.
+		 * If so, we will forget all the work we did so far to choose a
+		 * "regular" path ... but we had to do it anyway to be able to
+		 * tell which way is cheaper.
+		 */
+		result_plan = optimize_minmax_aggregates(root,
+												 tlist,
+												 best_path);
+		if (result_plan != NULL)
+		{
+			/*
+			 * optimize_minmax_aggregates generated the full plan, with the
+			 * right tlist, and it has no sort order.
+			 */
+			current_pathkeys = NIL;
+			mark_plan_entry(result_plan);
+		}
+
+		/*
 		 * CDB:  For now, we either - construct a general parallel plan, - let
 		 * the sequential planner handle the situation, or - construct a
 		 * sequential plan using the mix-max index optimization.
@@ -1677,7 +1696,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * Eventually we should add a parallel version of the min-max
 		 * optimization.  For now, it's either-or.
 		 */
-		if (Gp_role == GP_ROLE_DISPATCH)
+		if (Gp_role == GP_ROLE_DISPATCH && result_plan == NULL)
 		{
 			bool		querynode_changed = false;
 			bool		pass_subtlist = agg_counts.hasOrderedAggs;
@@ -1754,30 +1773,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 													  true);
 			}
 		}
-		else	/* Not GP_ROLE_DISPATCH */
-		{
-			/*
-			 * Check to see if it's possible to optimize MIN/MAX aggregates.
-			 * If so, we will forget all the work we did so far to choose a
-			 * "regular" path ... but we had to do it anyway to be able to
-			 * tell which way is cheaper.
-			 */
-			result_plan = optimize_minmax_aggregates(root,
-													 tlist,
-													 best_path);
-			if (result_plan != NULL)
-			{
-				/*
-				 * optimize_minmax_aggregates generated the full plan, with
-				 * the right tlist, and it has no sort order.
-				 */
-				current_pathkeys = NIL;
-				mark_plan_entry(result_plan);
-			}
 
-		}
-
-		if (result_plan == NULL)
+		if (result_plan == NULL)	/* Not GP_ROLE_DISPATCH */
 		{
 			/*
 			 * Normal case --- create a plan according to query_planner's

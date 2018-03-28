@@ -34,6 +34,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbllize.h"                   /* pull_up_Flow() */
+#include "cdb/cdbsetop.h"
 
 
 typedef struct
@@ -105,6 +106,12 @@ optimize_minmax_aggregates(PlannerInfo *root, List *tlist, Path *best_path)
 	 * so there's not much point in optimizing MIN/MAX.
 	 */
 	if (parse->groupClause || parse->hasWindowFuncs)
+		return NULL;
+
+	/*
+	 * Reject if disabled by caller.
+	 */
+	if (!root->config->gp_enable_minmax_optimization)
 		return NULL;
 
 	/*
@@ -564,6 +571,27 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 
 	attach_notnull_index_qual(info, iplan);
 
+	if (plan->flow->flotype == FLOW_SINGLETON)
+	{
+		/* ok */
+	}
+	else if (plan->flow->flotype == FLOW_PARTITIONED)
+	{
+		List	   *pathkeys;
+
+		/* Gather the results into a single node, preserving the order. */
+		pathkeys = make_pathkeys_for_sortclauses(root,
+												 list_make1(sortcl),
+												 plan->targetlist,
+												 true);
+		plan = (Plan *) make_motion_gather(&subroot, plan, -1,
+										   pathkeys);
+	}
+	else
+		elog(ERROR, "MIN/MAX subplan has unexpected flowtype: %d", plan->flow->type);
+
+	if (!focusPlan(plan, true, false))
+		elog(ERROR, "could not focus MIN/MAX subplan");
 	plan = (Plan *) make_limit(plan,
 							   subparse->limitOffset,
 							   subparse->limitCount,

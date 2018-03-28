@@ -588,6 +588,12 @@ extern double   gp_motion_cost_per_row;
 extern int      gp_segments_for_planner;
 
 /*
+ * Enable/disable the special optimization of MIN/MAX aggregates as
+ * Index Scan with limit.
+ */
+extern bool gp_enable_minmax_optimization;
+
+/*
  * "gp_enable_multiphase_agg"
  *
  * Unlike some other enable... vars, gp_enable_multiphase_agg is not cost based.

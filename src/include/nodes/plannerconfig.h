@@ -30,6 +30,7 @@ typedef struct PlannerConfig
 	int			cdbpath_segments;
 	int			constraint_exclusion;
 
+	bool		gp_enable_minmax_optimization;
 	bool		gp_enable_multiphase_agg;
 	bool		gp_enable_preunique;
 	bool		gp_eager_preunique;

@@ -325,6 +325,7 @@ bool		dml_ignore_target_partition_check = false;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
+bool		gp_enable_minmax_optimization = true;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
@@ -755,6 +756,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_create_index_concurrently,
 		false, NULL, NULL
+	},
+
+	{
+		{"gp_enable_minmax_optimization", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables the planner's use of index scans with limit to implement MIN/MAX."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_minmax_optimization,
+		true, NULL, NULL
 	},
 
 	{

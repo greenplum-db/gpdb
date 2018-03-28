@@ -89,3 +89,12 @@ reset enable_hashjoin;
 reset enable_mergejoin;
 
 drop table l, ps;
+
+-- This wouldn't work in GPDB, if the MIN/MAX optimization in the planner
+-- didn't turn this into an index scan with a Limit.
+-- This is the same test we have in the upstream 'aggregates' test.
+select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
+
+-- Same test with avg(), so that the optimization doesn't apply. Fails,
+-- currently.
+select avg(unique2), generate_series(1,3) as g from tenk1 order by g desc;
