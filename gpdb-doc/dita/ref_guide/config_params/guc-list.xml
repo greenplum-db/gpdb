@@ -663,6 +663,9 @@
               <xref href="#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
             </li>
+            <li><xref href="#optimizer_enable_associativity" type="section"
+                >optimizer_enable_associativity</xref>
+            </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref>
@@ -7483,8 +7486,10 @@
         used, then the legacy query optimizer is used. </p>
       <p>The <cmdname>optimizer</cmdname> parameter can be set for a database system, an individual
         database, or a session or query.</p>
-      <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
-          <cite>Greenplum Database Administrator Guide</cite>.</p>
+      <p>For information about the legacy query optimizer and GPORCA, see <xref
+          href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator
+        Guide</cite></ph>.</p>
       <table id="optimizer_guc_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7518,8 +7523,10 @@
             href="#optimizer" format="dita"/></codeph> to on, set the value of this parameter to on
         and run the command <cmdname>ANALYZE</cmdname> or <cmdname>ANALYZE ROOTPARTITION</cmdname>
         on partitioned tables to ensure the proper statistics have been collected. </p>
-      <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
-          <cite>Greenplum Database Administrator Guide</cite>.</p>
+      <p>For information about the legacy query optimizer and GPORCA, see <xref
+          href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator
+        Guide</cite></ph>.</p>
       <table id="table_gj5_k5l_vp">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7649,6 +7656,44 @@
       </table>
     </body>
   </topic>
+  <topic id="optimizer_enable_associativity">
+    <title>optimizer_enable_associativity</title>
+    <body>
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter controls whether the join
+        associativity transform is enabled during query optimization. The transform analyzes join
+        orders. For the default value <codeph>off</codeph>, only the GPORCA dynamic programming
+        algorithm for analyzing join orders is enabled. The join associativity transform largely
+        duplicates the functionality of the newer dynamic programming algorithm. </p>
+      <p dir="ltr">If the value is <codeph>on</codeph>, GPORCA can use the associativity transform
+        during query optimization.</p>
+      <p>The parameter can be set for a database system, an individual database, or a session or
+        query.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_zqr_knr_hdb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="optimizer_enable_master_only_queries">
     <title>optimizer_enable_master_only_queries</title>
     <body>
@@ -7660,8 +7705,9 @@
         query.</p>
       <note>Enabling this parameter decreases performance of short running catalog queries. To avoid
         this issue, set this parameter only for a session or a query. </note>
-      <p>For information about GPORCA, see the <cite>Greenplum Database Administrator
-        Guide</cite>.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
       <table id="table_ykk_rg5_gv">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7960,8 +8006,9 @@
         </ul></p>
       <p>Setting this parameter to <codeph>ALWAYS</codeph> generates a minidump for all queries. Set
         this parameter to <codeph>ONERROR</codeph> to minimize total optimization time. </p>
-      <p>For information about GPORCA, see "Querying Data" in the <cite>Greenplum Database
-          Administrator Guide</cite>.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
       <table id="optimizer_minidump">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

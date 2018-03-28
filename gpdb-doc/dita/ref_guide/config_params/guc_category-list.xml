@@ -327,7 +327,9 @@
     <title>GPORCA Parameters</title>
     <body>
       <p>These parameters control the usage of GPORCA by Greenplum Database. For information about
-        GPORCA, see "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite>. </p>
+        GPORCA, see <xref href="../../admin_guide/query/topics/query-piv-optimizer.xml">About
+          GPORCA</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
+            Guide</cite></ph>. </p>
       <simpletable frame="none" id="simpletable_nq5_z2c_kr">
         <strow>
           <stentry>
@@ -346,6 +348,8 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_control" type="section">optimizer_control</xref>
             </p>
+            <p><xref href="guc-list.xml#optimizer_enable_associativit" type="section"
+                >optimizer_enable_associativity</xref></p>
             <p><xref href="guc-list.xml#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_multistage_agg" type="section"

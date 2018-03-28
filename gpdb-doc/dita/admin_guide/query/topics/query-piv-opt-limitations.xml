@@ -42,6 +42,8 @@
           <li>Inverse distribution functions</li>
           <li>Queries that contain UNICODE characters in metadata names, such as table names, and
             the characters are not compatible with the host system locale</li>
+          <li><codeph>SELECT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> commands
+            where a table name is qualified by the <codeph>ONLY</codeph> keyword</li>
         </ul></p>
     </body>
   </topic>

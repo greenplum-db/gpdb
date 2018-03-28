@@ -12,7 +12,9 @@
                <p><codeph>optimizer_analyze_root_partition</codeph></p>
                <p><codeph>optimizer_array_expansion_threshold</codeph></p>
                <p><codeph>optimizer_cte_inlining_bound</codeph></p>
-               <p><codeph>optimizer_control optimizer_enable_master_only_queries</codeph></p>
+               <p><codeph>optimizer_enable_associativity</codeph></p>
+               <p><codeph>optimizer_control</codeph></p>
+               <p><codeph>optimizer_enable_master_only_queries</codeph></p>
                <p><codeph>optimizer_force_multistage_agg</codeph></p>
                <p><codeph>optimizer_force_three_stage_scalar_dqa</codeph></p>
             </stentry>
