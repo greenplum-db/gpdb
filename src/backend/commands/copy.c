@@ -24,20 +24,14 @@
 
 #include "access/fileam.h"
 #include "access/heapam.h"
-#include "access/appendonlywriter.h"
 #include "access/xact.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbappendonlyam.h"
-#include "cdb/cdbaocsam.h"
-#include "cdb/cdbpartition.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
-#include "commands/tablecmds.h"
 #include "commands/trigger.h"
 #include "commands/queue.h"
 #include "executor/executor.h"
-#include "executor/execDML.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "libpq/pqsignal.h"
@@ -54,17 +48,18 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
-#include "utils/metrics_utils.h"
 
-#include "cdb/cdbvars.h"
+#include "access/appendonlywriter.h"
+#include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbcopy.h"
+#include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
+#include "cdb/cdbvars.h"
+#include "executor/execDML.h"
 #include "postmaster/autostats.h"
+#include "utils/metrics_utils.h"
 #include "utils/resscheduler.h"
-
-extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
-extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
-extern char *make_command(const char *cmd, extvar_t *ev);
 
 /* DestReceiver for COPY (SELECT) TO */
 typedef struct
