@@ -11,7 +11,7 @@ from gp_segment_configuration where content = 0 and role = 'p';
 -- Upon failure to probe content 0 primary, FTS will try to update the
 -- configuration.  The update to configuration will hit error due to
 -- the "fts_update_config" fault.
-select gp_inject_fault('fts_update_config', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_update_config', 1, 1);
 
 select gp_inject_fault('fts_handle_message', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';

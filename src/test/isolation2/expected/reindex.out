@@ -12,10 +12,10 @@ t
 1:@db_name reindexdb1: CREATE TABLE heap1(a INT, b INT);
 CREATE
 1&:REINDEX DATABASE reindexdb1;  <waiting ...>
-SELECT gp_inject_fault('reindex_db', 'wait_until_triggered', '', '', '', 0, 0, 1);
-gp_inject_fault
----------------
-t              
+SELECT gp_wait_until_triggered_fault('reindex_db', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 2:@db_name reindexdb1:DROP TABLE heap1;
 DROP
@@ -48,10 +48,10 @@ gp_inject_fault
 t              
 (1 row)
 3&: REINDEX TABLE reindex_index1;  <waiting ...>
-SELECT gp_inject_fault('reindex_relation', 'wait_until_triggered', '', '', '', 0, 0, 1);
-gp_inject_fault
----------------
-t              
+SELECT gp_wait_until_triggered_fault('reindex_relation', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 -- create one more index
 CREATE INDEX reindex_index1_idx2 on reindex_index1 (a);

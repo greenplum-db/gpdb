@@ -74,27 +74,27 @@ t
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
 -- crash_recovery
-3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'wait_until_triggered', '', '', 'crash_before_cleanup_phase', 0, 0, 2);
-gp_inject_fault
----------------
-t              
+3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
-3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'wait_until_triggered', '', '', 'crash_before_segmentfile_drop', 0, 0, 2);
-gp_inject_fault
----------------
-t              
+3:SELECT gp_wait_until_triggered_fault('compaction_before_segmentfile_drop', 1, 2);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 3:VACUUM crash_vacuum_in_appendonly_insert;
-ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.1.1:25432 pid=11542)
+ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.1.1:25432 pid=7142)
 ERROR:  could not connect to segment: initialization of segworker group failed
 1<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=11554: server closed the connection unexpectedly
+ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=7153: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 ERROR:  could not connect to segment: initialization of segworker group failed
 2<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=11564: server closed the connection unexpectedly
+ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=7162: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -339,10 +339,10 @@ t
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
 -- crash_recovery
-SELECT gp_inject_fault('compaction_before_cleanup_phase', 'wait_until_triggered', '', '', 'crash_master_before_cleanup_phase', 0, 0, 1);
-gp_inject_fault
----------------
-t              
+SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 2:VACUUM crash_master_before_segmentfile_drop;
 PANIC:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic'

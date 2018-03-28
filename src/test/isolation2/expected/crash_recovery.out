@@ -13,10 +13,10 @@ t
 3&:create table crash_test_ddl(c1 int);  <waiting ...>
 
 -- wait session 2 and session 3 hit inject point
-1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'wait_until_triggered', '', '', '', 2, 0, 1);
-gp_inject_fault
----------------
-t              
+1:select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 2, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 1:CHECKPOINT;
 CHECKPOINT
@@ -25,10 +25,10 @@ CHECKPOINT
 4&:insert into crash_test_table values (2);  <waiting ...>
 
 -- wait session 4 hit inject point
-1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'wait_until_triggered', '', '', '', 3, 0, 1);
-gp_inject_fault
----------------
-t              
+1:select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 3, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 
 -- transaction of session 5 didn't insert 'COMMIT' record
@@ -40,10 +40,10 @@ t
 5&:INSERT INTO crash_test_table VALUES (3);  <waiting ...>
 
 -- wait session 5 hit inject point
-1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'wait_until_triggered', '', '', '', 1, 0, 1);
-gp_inject_fault
----------------
-t              
+1:select gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
 (1 row)
 
 -- check injector status

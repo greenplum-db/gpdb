@@ -41,8 +41,8 @@
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
 -- crash_recovery
-3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'wait_until_triggered', '', '', 'crash_before_cleanup_phase', 0, 0, 2);
-3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'wait_until_triggered', '', '', 'crash_before_segmentfile_drop', 0, 0, 2);
+3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
+3:SELECT gp_wait_until_triggered_fault('compaction_before_segmentfile_drop', 1, 2);
 3:VACUUM crash_vacuum_in_appendonly_insert;
 1<:
 2<:
@@ -110,7 +110,7 @@
 -- wait for suspend faults to trigger and then proceed to run next
 -- command which would trigger panic fault and help test
 -- crash_recovery
-SELECT gp_inject_fault('compaction_before_cleanup_phase', 'wait_until_triggered', '', '', 'crash_master_before_cleanup_phase', 0, 0, 1);
+SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 2:VACUUM crash_master_before_segmentfile_drop;
 1<:
 

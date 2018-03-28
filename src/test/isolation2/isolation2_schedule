@@ -1,6 +1,7 @@
 test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 
 test: reindex
+test: reindex_gpfastsequence
 test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate

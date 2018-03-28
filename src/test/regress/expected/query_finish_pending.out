@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+NOTICE:  extension "gp_inject_fault" already exists, skipping
 drop table if exists _tmp_table;
 NOTICE:  table "_tmp_table" does not exist, skipping
 create table _tmp_table (i1 int, i2 int, i3 int, i4 int);
@@ -10,7 +11,7 @@ set statement_mem="2MB";
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -18,7 +19,7 @@ NOTICE:  Success:
 
 -- set QueryFinishPending=true in sort mergeruns. This will stop sort and set result_tape to NULL
 select gp_inject_fault('execsort_mksort_mergeruns', 'finish_pending', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -32,7 +33,7 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
 (1 row)
 
 select gp_inject_fault('execsort_mksort_mergeruns', 'status', 2);
-NOTICE:  Success: fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -56,7 +57,7 @@ set gp_enable_mk_sort=off;
 -- planner on the other hand does not.
 set optimizer=off;
 select gp_inject_fault('execshare_input_next', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -65,7 +66,7 @@ NOTICE:  Success:
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
 select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -80,7 +81,7 @@ select * from cte c1, cte c2 limit 2;
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
-NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -90,7 +91,7 @@ NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' 
 -- where the child is a Sort node and sort_mk algorithm is used
 set gp_enable_mk_sort=on;
 select gp_inject_fault('execshare_input_next', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -99,7 +100,7 @@ NOTICE:  Success:
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
 select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -114,7 +115,7 @@ select * from cte c1, cte c2 limit 2;
 (2 rows)
 
 select gp_inject_fault('execshare_input_next', 'status', 2);
-NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -123,14 +124,14 @@ NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' 
 reset gp_enable_mk_sort;
 -- Disable faultinjectors
 select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
 select gp_inject_fault('execshare_input_next', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -160,16 +161,16 @@ select gp_request_fts_probe_scan();
  t
 (1 row)
 
-select gp_inject_fault('fts_probe', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
 
 -- make one QE sleep before reading command
 select gp_inject_fault('before_read_command', 'sleep', '', '', '', 1, 50, 2::smallint);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t
@@ -177,10 +178,10 @@ NOTICE:  Success:
 
 begin;
 select count(*) from _tmp_table1, _tmp_table2 where 100 / _tmp_table2.c2 > 1;
-ERROR:  division by zero  (seg0 slice1 172.17.0.2:25433 pid=31180)
+ERROR:  division by zero  (seg0 slice1 127.0.1.1:25432 pid=15478)
 end;
 select gp_inject_fault('before_read_command', 'reset', 2);
-NOTICE:  Success:
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15470)
  gp_inject_fault 
 -----------------
  t

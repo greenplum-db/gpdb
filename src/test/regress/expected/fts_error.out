@@ -19,7 +19,7 @@ NOTICE:  Success:
 -- injected on content 0 primary.
 select gp_inject_fault('fts_handle_message', 'error', '', '', '', -1, 0, dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 10.64.6.27:25432 pid=42073)
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15439)
  gp_inject_fault 
 -----------------
  t
@@ -28,16 +28,16 @@ NOTICE:  Success:  (seg0 10.64.6.27:25432 pid=42073)
 -- Upon failure to probe content 0 primary, FTS will try to update the
 -- configuration.  The update to configuration will hit error due to
 -- the "fts_update_config" fault.
-select gp_inject_fault('fts_update_config', 'wait_until_triggered', 1);
+select gp_wait_until_triggered_fault('fts_update_config', 1, 1);
 NOTICE:  Success:
- gp_inject_fault 
------------------
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
 
 select gp_inject_fault('fts_handle_message', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 10.64.6.27:25432 pid=42073)
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15439)
  gp_inject_fault 
 -----------------
  t
