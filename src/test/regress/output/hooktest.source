@@ -1,10 +1,31 @@
 LOAD '@abs_builddir@/hooktest/test_hook@DLSUFFIX@';
+-----------------------------------
+-- Test planner hook
+-----------------------------------
 SET client_min_messages='log';
 SELECT 1 AS a;
 LOG:  statement: SELECT 1 AS a;
-LOG:  In test_hook
+LOG:  In test_planner_hook
  a 
 ---
  1
+(1 row)
+
+-----------------------------------
+-- Test idle_session_timeout hooks
+-----------------------------------
+-- Disable the gang timeout so we don't have to wait a long time for the idle
+-- session timeout
+SET gp_vmem_idle_resource_timeout = 0;
+LOG:  statement: SET gp_vmem_idle_resource_timeout = 0;
+-- Make the session idle for 100ms to trigger the idle session timeout
+\!sleep 0.1s
+SELECT 1;
+LOG:  In test_idle_session_timeout_action
+LOG:  statement: SELECT 1;
+LOG:  In test_planner_hook
+ ?column? 
+----------
+        1
 (1 row)
 
